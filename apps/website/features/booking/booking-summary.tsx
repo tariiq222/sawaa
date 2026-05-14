@@ -1,6 +1,6 @@
 'use client';
 
-import type { GuestClientInfo, Service, EmployeeWithUser, AvailableSlot } from '@deqah/shared';
+import type { GuestClientInfo, Service, EmployeeWithUser, AvailableSlot } from '@sawaa/shared';
 import { halalasToSarNumber } from '@/lib/money';
 
 interface BookingSummaryProps {

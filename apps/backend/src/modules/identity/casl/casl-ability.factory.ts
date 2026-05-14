@@ -3,15 +3,15 @@ import { AbilityBuilder, createMongoAbility, MongoAbility } from '@casl/ability'
 import type {
   PermissionSubject,
   PermissionAction,
-} from '@deqah/shared/constants';
+} from '@sawaa/shared/constants';
 
 export type AppAbility = MongoAbility;
 
 /**
  * Built-in role → permission-rule map.
  *
- * Subjects come from `@deqah/shared/constants` (`PERMISSION_SUBJECTS`).
- * Actions come from `@deqah/shared/constants` (`PERMISSION_ACTIONS`),
+ * Subjects come from `@sawaa/shared/constants` (`PERMISSION_SUBJECTS`).
+ * Actions come from `@sawaa/shared/constants` (`PERMISSION_ACTIONS`),
  * with the additional CASL-only literal `'all'` reserved for SUPER_ADMIN.
  *
  * OWNER is the per-org top-level role (`MembershipRole.OWNER`). It carries

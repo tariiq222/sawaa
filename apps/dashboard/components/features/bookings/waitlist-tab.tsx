@@ -9,7 +9,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { Clock01Icon } from "@hugeicons/core-free-icons"
 import { useWaitlist } from "@/hooks/use-waitlist"
 import { useWaitlistMutations } from "@/hooks/use-waitlist"

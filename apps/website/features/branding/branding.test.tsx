@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { BrandingStyle } from './branding-style';
-import type { PublicBranding } from '@deqah/shared';
+import type { PublicBranding } from '@sawaa/shared';
 
 const branding: PublicBranding = {
   organizationNameAr: 'عيادتي',

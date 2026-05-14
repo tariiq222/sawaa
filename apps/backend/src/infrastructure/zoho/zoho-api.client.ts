@@ -118,7 +118,7 @@ export class ZohoApiClient {
       line_items: ZohoLineItem[];
       date?: string;
       due_date?: string;
-      /** Pass Deqah's own invoice number so Zoho records it verbatim. */
+      /** Pass Sawaa's own invoice number so Zoho records it verbatim. */
       invoice_number?: string;
       reference_number?: string;
       notes?: string;
@@ -175,7 +175,7 @@ export class ZohoApiClient {
 
   /**
    * Toggles Zoho's auto-numbering for invoices.
-   * Set enabled=false so Deqah's invoice number is used verbatim instead of
+   * Set enabled=false so Sawaa's invoice number is used verbatim instead of
    * Zoho generating its own sequential number. Call once per org after connect.
    * Failure is non-fatal — log warn and continue.
    */

@@ -16,7 +16,7 @@ import { StatsGrid } from "@/components/features/stats-grid"
 import { StatCard } from "@/components/features/stat-card"
 import { DataTable } from "@/components/features/data-table"
 import { FilterBar } from "@/components/features/filter-bar"
-import { Button } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 
 import { getIntakeFormsColumns } from "@/components/features/intake-forms/intake-forms-columns"

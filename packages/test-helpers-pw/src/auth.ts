@@ -24,7 +24,7 @@ export async function loginViaApi(
   password: string,
 ): Promise<LoginResult> {
   const res = await ctx.post(`${PWConfig.backendBaseUrl}/api/v1/auth/login`, {
-    data: { email, password, hCaptchaToken: PWConfig.captchaToken },
+    data: { email, password },
   });
   if (!res.ok()) {
     throw new Error(`Login failed for ${email}: ${res.status()} ${await res.text()}`);
@@ -77,7 +77,7 @@ export async function writePersonaStorageState(
           {
             origin,
             localStorage: [
-              { name: 'deqah.accessToken', value: result.accessToken },
+              { name: 'sawaa.accessToken', value: result.accessToken },
             ],
           },
         ],
@@ -88,7 +88,7 @@ export async function writePersonaStorageState(
       const state = {
         cookies: [
           {
-            name: 'deqah.client_session',
+            name: 'sawaa.client_session',
             value: result.accessToken,
             domain: url.hostname,
             path: '/',

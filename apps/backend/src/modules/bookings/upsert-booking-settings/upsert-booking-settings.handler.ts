@@ -30,7 +30,7 @@ export class UpsertBookingSettingsHandler {
   ) {}
 
   async execute(cmd: UpsertBookingSettingsCommand): Promise<BookingSettings> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
     const { branchId, ...fields } = cmd;
 
     const updateData = Object.fromEntries(

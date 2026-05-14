@@ -1,5 +1,5 @@
-import { OtpChannel, OtpPurpose } from '@deqah/shared';
-import type { OtpRequestPayload, OtpVerifyPayload, OtpVerifyResponse } from '@deqah/shared';
+import { OtpChannel, OtpPurpose } from '@sawaa/shared';
+import type { OtpRequestPayload, OtpVerifyPayload, OtpVerifyResponse } from '@sawaa/shared';
 
 import { getApiBase } from '@/lib/api-base';
 
@@ -19,14 +19,12 @@ export async function verifyOtp(
   identifier: string,
   code: string,
   purpose: OtpPurpose = OtpPurpose.GUEST_BOOKING,
-  hCaptchaToken = 'dev-bypass',
 ): Promise<OtpVerifyResponse> {
   const payload: OtpVerifyPayload = {
     channel: OtpChannel.EMAIL,
     identifier,
     code,
     purpose,
-    hCaptchaToken,
   };
   const res = await fetch(`${getApiBase()}/public/otp/verify`, {
     method: 'POST',

@@ -5,7 +5,7 @@ import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 
-import { Button } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
 import {
   Dialog,
   DialogContent,
@@ -14,17 +14,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@deqah/ui"
-import { Input } from "@deqah/ui"
-import { Label } from "@deqah/ui"
-import { Switch } from "@deqah/ui"
+} from "@sawaa/ui"
+import { Input } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
+import { Switch } from "@sawaa/ui"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { useCategoryMutations } from "@/hooks/use-services"
 import { useDepartmentOptions } from "@/hooks/use-departments"
 import { useLocale } from "@/components/locale-provider"

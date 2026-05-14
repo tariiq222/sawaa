@@ -1,5 +1,5 @@
 /**
- * Chatbot API — Deqah Dashboard
+ * Chatbot API — Sawaa Dashboard
  * Controller: dashboard/comms/chat
  */
 

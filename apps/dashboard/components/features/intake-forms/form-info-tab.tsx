@@ -1,15 +1,15 @@
 "use client"
 
-import { Input } from "@deqah/ui"
-import { Label } from "@deqah/ui"
-import { Switch } from "@deqah/ui"
+import { Input } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
+import { Switch } from "@sawaa/ui"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import type { IntakeFormDraft, FormType, FormScope } from "@/lib/types/intake-form"
 import {

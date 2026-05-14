@@ -22,7 +22,7 @@ export class UpdateNotificationDefaultsHandler {
   ) {}
 
   async execute(cmd: UpdateNotificationDefaultsCommand): Promise<void> {
-    const { dto, superAdminUserId, ipAddress, userAgent } = cmd;
+    const { dto, superAdminUserId, ipAddress: _ipAddress, userAgent: _userAgent } = cmd;
 
     const updates: Array<[string, unknown]> = [];
 

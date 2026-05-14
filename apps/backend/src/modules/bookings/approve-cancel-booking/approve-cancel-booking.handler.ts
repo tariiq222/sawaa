@@ -29,7 +29,7 @@ export class ApproveCancelBookingHandler {
   ) {}
 
   async execute(cmd: ApproveCancelBookingCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
     const booking = await this.prisma.booking.findFirst({
       where: { id: cmd.bookingId },
     });

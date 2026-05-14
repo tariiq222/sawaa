@@ -2,17 +2,17 @@
 
 import { HugeiconsIcon } from "@hugeicons/react"
 import { StarIcon, UploadSquare01Icon } from "@hugeicons/core-free-icons"
-import { Input } from "@deqah/ui"
-import { Label } from "@deqah/ui"
-import { Textarea } from "@deqah/ui"
-import { Checkbox } from "@deqah/ui"
+import { Input } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
+import { Textarea } from "@sawaa/ui"
+import { Checkbox } from "@sawaa/ui"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
 import type { FieldType } from "@/lib/types/intake-form"

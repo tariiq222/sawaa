@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { PublicBranding } from '@deqah/shared/types';
+import type { PublicBranding } from '@sawaa/shared/types';
 
 const mockApiRequest = vi.fn();
 vi.mock('../client.js', () => ({ apiRequest: mockApiRequest }));

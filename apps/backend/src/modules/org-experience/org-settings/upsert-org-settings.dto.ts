@@ -9,7 +9,7 @@ export class UpsertOrgSettingsDto {
   @ApiPropertyOptional({ description: 'Company name in Arabic', example: 'عيادة الرعاية' })
   @IsOptional() @IsString() companyNameAr?: string;
 
-  @ApiPropertyOptional({ description: 'Company name in English', example: 'Deqah Clinic' })
+  @ApiPropertyOptional({ description: 'Company name in English', example: 'Sawaa Clinic' })
   @IsOptional() @IsString() companyNameEn?: string;
 
   @ApiPropertyOptional({ description: 'Commercial registration number', example: '1234567890' })

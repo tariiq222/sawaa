@@ -9,7 +9,7 @@
  * nested in different trees; a global CustomEvent is simpler and zero-cost.
  */
 
-const NAV_START = "deqah:nav:start"
+const NAV_START = "sawaa:nav:start"
 
 export function emitNavStart(href: string): void {
   if (typeof window === "undefined") return

@@ -13,7 +13,7 @@ import { DEFAULT_ORGANIZATION_ID } from "../../../../common/tenant/tenant.consta
  * Validates the selection by calling /organizations again — the user might
  * have revoked the app between consent and selection.
  *
- * Also disables Zoho's auto-numbering on the chosen org so Deqah's
+ * Also disables Zoho's auto-numbering on the chosen org so Sawaa's
  * invoice_number is recorded verbatim (non-fatal if Zoho unreachable).
  */
 @Injectable()
@@ -48,7 +48,7 @@ export class SelectOrganizationHandler {
     }
     if (match.currency_code !== 'SAR') {
       throw new BadRequestException(
-        `The Zoho organization "${match.name}" uses ${match.currency_code}; Deqah currently supports SAR only.`,
+        `The Zoho organization "${match.name}" uses ${match.currency_code}; Sawaa currently supports SAR only.`,
       );
     }
 
@@ -62,7 +62,7 @@ export class SelectOrganizationHandler {
       { isActive: true },
     );
 
-    // Disable Zoho's own invoice numbering so Deqah's invoice_number is used
+    // Disable Zoho's own invoice numbering so Sawaa's invoice_number is used
     // verbatim. Non-fatal: if Zoho is unreachable, log and continue.
     try {
       const apiCtx = {

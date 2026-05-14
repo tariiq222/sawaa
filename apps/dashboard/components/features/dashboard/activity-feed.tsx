@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Card } from "@deqah/ui"
+import { Card } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import type { Notification } from "@/lib/types/notification"
 

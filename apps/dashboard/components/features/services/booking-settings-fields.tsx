@@ -1,8 +1,8 @@
 "use client"
 
-import { Input } from "@deqah/ui"
-import { Label } from "@deqah/ui"
-import { Switch } from "@deqah/ui"
+import { Input } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
+import { Switch } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 
 /* ─── Number Field with optional hint ─── */

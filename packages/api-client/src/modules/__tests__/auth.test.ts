@@ -8,7 +8,7 @@ const fakeRefresh = 'refresh.jwt'
 
 const fakeUser: UserPayload = {
   id: 'usr_1',
-  email: 'admin@deqah.app',
+  email: 'admin@sawaa.app',
   name: 'Admin Owner',
   firstName: 'Admin',
   lastName: 'Owner',
@@ -70,9 +70,9 @@ describe('authApi.login', () => {
     )
 
     const result = await authApi.login({
-      email: 'admin@deqah.app',
+      email: 'admin@sawaa.app',
       password: 'pw',
-      hCaptchaToken: 'tok',
+      
     })
 
     expect(result).toEqual(fakeAuth)
@@ -81,9 +81,9 @@ describe('authApi.login', () => {
     expect(url).toBe('http://api.test/auth/login')
     expect(init?.method).toBe('POST')
     expect(JSON.parse(init?.body as string)).toEqual({
-      email: 'admin@deqah.app',
+      email: 'admin@sawaa.app',
       password: 'pw',
-      hCaptchaToken: 'tok',
+      
     })
   })
 
@@ -93,7 +93,7 @@ describe('authApi.login', () => {
     const result = await authApi.login({
       email: 'a@b.c',
       password: 'pw',
-      hCaptchaToken: 'tok',
+      
     })
 
     expect(result).toEqual(fakeAuth)
@@ -105,7 +105,7 @@ describe('authApi.login', () => {
     )
 
     await expect(
-      authApi.login({ email: 'a@b.c', password: 'wrong', hCaptchaToken: 'tok' }),
+      authApi.login({ email: 'a@b.c', password: 'wrong' }),
     ).rejects.toMatchObject({ status: 401, message: 'Bad credentials' })
   })
 })

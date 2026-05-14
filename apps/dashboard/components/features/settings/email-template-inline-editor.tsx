@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
-import { Card, CardContent, Button, Input, Label, Switch } from "@deqah/ui"
+import { Card, CardContent, Button, Input, Label, Switch } from "@sawaa/ui"
 import { useEmailTemplateMutations } from "@/hooks/use-email-templates"
 import type { EmailTemplate, EmailBlock } from "@/lib/types/email-template"
 import { BlockList } from "./email-builder/block-list"

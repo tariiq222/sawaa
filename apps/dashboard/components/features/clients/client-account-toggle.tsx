@@ -12,11 +12,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@deqah/ui"
-import { Button } from "@deqah/ui"
-import { Badge } from "@deqah/ui"
-import { Textarea } from "@deqah/ui"
-import { Label } from "@deqah/ui"
+} from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
+import { Badge } from "@sawaa/ui"
+import { Textarea } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useSetClientActiveWithToast } from "@/hooks/use-set-client-active"
 import type { Client } from "@/lib/types/client"

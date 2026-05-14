@@ -2,7 +2,7 @@
 
 import { useLocale } from "@/components/locale-provider"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Card, CardContent, CardHeader, CardTitle } from "@deqah/ui"
+import { Card, CardContent, CardHeader, CardTitle } from "@sawaa/ui"
 import { StatusBadge } from "@/components/features/status-badge"
 import { cn } from "@/lib/utils"
 import type { IconSvgElement } from "@hugeicons/react"

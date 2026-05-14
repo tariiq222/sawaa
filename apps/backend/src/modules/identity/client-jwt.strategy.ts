@@ -45,13 +45,6 @@ export class ClientJwtStrategy extends PassportStrategy(Strategy, 'client-jwt') 
       throw new UnauthorizedException('Client token missing tenant claim');
     }
 
-    this.tenantContext.set({
-      organizationId: payload.organizationId,
-      id: payload.sub,
-      role: 'CLIENT',
-      isSuperAdmin: false,
-    });
-
     const client = await this.prisma.client.findUnique({
       where: { id: payload.sub },
     });
@@ -63,6 +56,14 @@ export class ClientJwtStrategy extends PassportStrategy(Strategy, 'client-jwt') 
     if (client.organizationId !== payload.organizationId) {
       throw new UnauthorizedException('Client organization mismatch');
     }
+
+    // Set tenant context ONLY after all DB validations pass (P1-5)
+    this.tenantContext.set({
+      organizationId: payload.organizationId,
+      id: payload.sub,
+      role: 'CLIENT',
+      isSuperAdmin: false,
+    });
 
     return {
       id: client.id,

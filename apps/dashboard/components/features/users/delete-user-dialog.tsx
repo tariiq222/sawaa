@@ -9,8 +9,8 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@deqah/ui"
-import { Button } from "@deqah/ui"
+} from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
 
 import { useUserMutations } from "@/hooks/use-users"
 import { useLocale } from "@/components/locale-provider"

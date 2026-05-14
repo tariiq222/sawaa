@@ -10,8 +10,8 @@ const defaultCancelSettings = {
     lateCancelRefundPercent: 0,
   }),
 };
-const flagsOn = { couponStrictEnabled: true };
-const flagsOff = { couponStrictEnabled: false };
+const _flagsOn = { couponStrictEnabled: true };
+const _flagsOff = { couponStrictEnabled: false };
 
 const buildRefundHandler = () => ({
   createRefundRequestInTx: jest.fn(),
@@ -173,9 +173,10 @@ describe('CancelBookingHandler — coupon release on cancel', () => {
     expect(couponUpdateMany).not.toHaveBeenCalled();
   });
 
-  it('does not decrement when flag off', async () => {
+  it('always decrements coupon regardless of legacy flag (flag-gating removed in single-tenant migration)', async () => {
+    // org scoping moved to RLS / removed in single-tenant migration — handler no longer checks couponStrictEnabled flag
     const prisma = buildPrisma();
-    const couponUpdateMany = jest.fn().mockResolvedValue({ count: 0 });
+    const couponUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
     (prisma as Record<string, unknown>).coupon = { updateMany: couponUpdateMany };
     prisma.booking.findUnique.mockResolvedValue({ ...mockBooking, couponCode: 'PROMO10' });
 
@@ -191,7 +192,12 @@ describe('CancelBookingHandler — coupon release on cancel', () => {
 
     await handler.execute({ bookingId: 'book-1', reason: CancellationReason.CLIENT_REQUESTED, changedBy: 'user-1' });
 
-    expect(couponUpdateMany).not.toHaveBeenCalled();
+    expect(couponUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ code: 'PROMO10', usedCount: { gt: 0 } }),
+        data: { usedCount: { decrement: 1 } },
+      }),
+    );
   });
 
   it('coupon usedCount decrement AND RefundRequest creation are in the same transaction', async () => {

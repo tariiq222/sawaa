@@ -1,5 +1,5 @@
 import { type ReactNode } from "react"
-import { Card } from "@deqah/ui"
+import { Card } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { IconSvgElement } from "@hugeicons/react"

@@ -5,7 +5,7 @@ import { PrismaService } from '../../../infrastructure/database';
 
 describe('GetCurrentUserHandler', () => {
   let handler: GetCurrentUserHandler;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   let prisma: any;
 
   beforeEach(async () => {

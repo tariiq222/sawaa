@@ -72,7 +72,7 @@ describe('ResetPasswordForm — OTP step', () => {
   });
 
   it('uses CLIENT_PASSWORD_RESET purpose when verifying OTP', async () => {
-    const { OtpPurpose } = await import('@deqah/shared');
+    const { OtpPurpose } = await import('@sawaa/shared');
     expect(OtpPurpose.CLIENT_PASSWORD_RESET).toBe('CLIENT_PASSWORD_RESET');
   });
 });

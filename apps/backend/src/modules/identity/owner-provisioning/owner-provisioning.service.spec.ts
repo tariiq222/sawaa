@@ -9,7 +9,7 @@ describe('OwnerProvisioningService', () => {
       findUnique: jest.fn(),
       create: jest.fn(),
     },
-  } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  } as any;  
 
   const passwordService = {
     hash: jest.fn().mockResolvedValue('hashed'),

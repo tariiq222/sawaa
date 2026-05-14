@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.6
-# Deqah Public Website — Next.js 15 standalone build.
+# Sawaa Public Website — Next.js 15 standalone build.
 # Build context MUST be the monorepo root.
 #
 # Stage 1 (deps):         install all workspace deps — cached layer
@@ -45,13 +45,13 @@ RUN pnpm --filter=backend run prisma:generate
 # not in the .pnpm store that pnpm's script runner expects.
 RUN cd /app/packages/shared && node /app/node_modules/typescript/bin/tsc -p tsconfig.json && test -f dist/constants/feature-keys.js
 
-# Establish node_modules/@deqah/* symlinks pointing to packages/* (see backend note)
-RUN mkdir -p /app/node_modules/@deqah \
- && rm -rf /app/node_modules/@deqah/shared /app/node_modules/@deqah/api-client /app/node_modules/@deqah/ui \
- && ln -sf /app/packages/shared     /app/node_modules/@deqah/shared \
- && ln -sf /app/packages/api-client /app/node_modules/@deqah/api-client \
- && ln -sf /app/packages/ui         /app/node_modules/@deqah/ui \
- && test -f /app/node_modules/@deqah/shared/dist/constants/feature-keys.js
+# Establish node_modules/@sawaa/* symlinks pointing to packages/* (see backend note)
+RUN mkdir -p /app/node_modules/@sawaa \
+ && rm -rf /app/node_modules/@sawaa/shared /app/node_modules/@sawaa/api-client /app/node_modules/@sawaa/ui \
+ && ln -sf /app/packages/shared     /app/node_modules/@sawaa/shared \
+ && ln -sf /app/packages/api-client /app/node_modules/@sawaa/api-client \
+ && ln -sf /app/packages/ui         /app/node_modules/@sawaa/ui \
+ && test -f /app/node_modules/@sawaa/shared/dist/constants/feature-keys.js
 
 # ── Stage 3: app-build ───────────────────────────────────────────────────────
 FROM node:20-bookworm-slim AS app-build
@@ -74,10 +74,8 @@ RUN ARCH=$(uname -m | sed 's/aarch64/arm64/;s/x86_64/x64/') \
 # These ARGs are passed via --build-arg from the GitHub Actions workflow.
 ARG NEXT_PUBLIC_API_URL=http://localhost:5100
 ARG NEXT_PUBLIC_DEFAULT_ORG_ID=
-ARG NEXT_PUBLIC_HCAPTCHA_SITE_KEY=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_DEFAULT_ORG_ID=$NEXT_PUBLIC_DEFAULT_ORG_ID
-ENV NEXT_PUBLIC_HCAPTCHA_SITE_KEY=$NEXT_PUBLIC_HCAPTCHA_SITE_KEY
 
 RUN pnpm --filter=website run build
 

@@ -4,19 +4,19 @@ import { useState, useEffect, useMemo, useRef } from "react"
 import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Clock01Icon } from "@hugeicons/core-free-icons"
-import { Card, CardContent } from "@deqah/ui"
-import { Button } from "@deqah/ui"
-import { Switch } from "@deqah/ui"
-import { Input } from "@deqah/ui"
-import { Label } from "@deqah/ui"
-import { Skeleton } from "@deqah/ui"
+import { Card, CardContent } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
+import { Switch } from "@sawaa/ui"
+import { Input } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
+import { Skeleton } from "@sawaa/ui"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import type { OrganizationHour } from "@/lib/api/organization"
 import { useOrganizationHours, useOrganizationHoursMutation } from "@/hooks/use-organization-settings"

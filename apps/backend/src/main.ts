@@ -14,7 +14,6 @@ import { ConfigService } from '@nestjs/config';
 import { LoggingInterceptor, AuditInterceptor } from './common/interceptors';
 import { PrismaService } from './infrastructure/database';
 import { TenantContextService } from './common/tenant/tenant-context.service';
-import { ClsService } from 'nestjs-cls';
 import { configureCors } from './cors';
 import { setShuttingDown } from './common/shutdown.state';
 
@@ -62,11 +61,11 @@ async function bootstrap(): Promise<void> {
 
   // ─── Swagger / OpenAPI ──────────────────────────────────────────────────────
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Deqah API')
-    .setDescription('Deqah — نظام إدارة الحجوزات والمواعيد — dashboard & mobile API')
+    .setTitle('Sawaa API')
+    .setDescription('Sawaa — نظام إدارة الحجوزات والمواعيد — dashboard & mobile API')
     .setVersion('2.0')
-    .setContact('Deqah Engineering', 'https://deqah.app', 'dev@deqah.app')
-    .setLicense('Proprietary', 'https://deqah.app/license')
+    .setContact('Sawaa Engineering', 'https://sawaa.app', 'dev@sawaa.app')
+    .setLicense('Proprietary', 'https://sawaa.app/license')
     .addBearerAuth()
     .addServer('http://localhost:5100', 'Local dev')
     .build();
@@ -136,14 +135,14 @@ async function bootstrap(): Promise<void> {
   let requestCount = 0;
   const server = app.getHttpServer();
 
-  server.on('request', (req: any, res: any) => {
+  server.on('request', (req: unknown, res: { on: (event: string, fn: () => void) => void }) => {
     requestCount++;
     res.on('finish', () => { requestCount--; });
     res.on('close', () => { requestCount--; });
   });
 
   await app.listen(port);
-  Logger.log(`Deqah Backend listening on http://localhost:${port}`, 'Bootstrap');
+  Logger.log(`Sawaa Backend listening on http://localhost:${port}`, 'Bootstrap');
 
   process.on('SIGTERM', async () => {
     console.log('SIGTERM received — starting graceful shutdown');

@@ -8,7 +8,7 @@ import { PrismaService } from '../../../infrastructure/database';
 import { RlsTransactionService } from '../../../infrastructure/database';
 import { ZoomApiClient } from '../../../infrastructure/zoom/zoom-api.client';
 import { ZoomCredentialsService } from '../../../infrastructure/zoom/zoom-credentials.service';
-import { Prisma, ZoomMeetingStatus } from '@prisma/client';
+import { ZoomMeetingStatus } from '@prisma/client';
 
 export interface CreateZoomMeetingCommand {
   bookingId: string;

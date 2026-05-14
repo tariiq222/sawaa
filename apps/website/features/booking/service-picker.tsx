@@ -1,6 +1,6 @@
 'use client';
 
-import type { Service } from '@deqah/shared';
+import type { Service } from '@sawaa/shared';
 import { halalasToSarNumber } from '@/lib/money';
 
 interface ServicePickerProps {

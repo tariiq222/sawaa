@@ -1,7 +1,7 @@
 "use client"
 
 import { ar } from "date-fns/locale"
-import { Card, CardContent } from "@deqah/ui"
+import { Card, CardContent } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { formatRelativeTime } from "@/lib/date"
 import { useLocale } from "@/components/locale-provider"

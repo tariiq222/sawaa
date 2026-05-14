@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Delete02Icon } from "@hugeicons/core-free-icons"
 
-import { Button } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
 import { formatDatePattern } from "@/lib/date"
 import type { KnowledgeBaseFile } from "@/lib/types/chatbot"
 

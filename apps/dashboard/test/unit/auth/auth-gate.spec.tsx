@@ -66,7 +66,7 @@ const defaultFlow = {
 
 const mockUser = {
   id: 'u1',
-  email: 'admin@deqah-test.com',
+  email: 'admin@sawaa-test.com',
   firstName: 'Admin',
   lastName: 'Test',
   phone: null,
@@ -116,7 +116,7 @@ describe('AuthGate', () => {
     mockUseLoginFlow.mockReturnValue({
       ...defaultFlow,
       step: 'password',
-      identifier: 'admin@deqah-test.com',
+      identifier: 'admin@sawaa-test.com',
       submitPassword: mockLogin,
     })
     renderAuthGate(<div>Protected</div>)

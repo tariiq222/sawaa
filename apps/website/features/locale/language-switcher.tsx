@@ -11,7 +11,7 @@ export function LanguageSwitcher({ current }: Props) {
   const router = useRouter();
 
   const switchTo = (next: Locale) => {
-    document.cookie = `deqah-locale=${next}; path=/; max-age=${60 * 60 * 24 * 365}`;
+    document.cookie = `sawaa-locale=${next}; path=/; max-age=${60 * 60 * 24 * 365}`;
     router.refresh();
   };
 

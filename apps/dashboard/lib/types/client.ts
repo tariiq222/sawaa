@@ -1,5 +1,5 @@
 /**
- * Client Types — Deqah Dashboard
+ * Client Types — Sawaa Dashboard
  */
 
 import type { PaginatedQuery, UserGender } from "./common"

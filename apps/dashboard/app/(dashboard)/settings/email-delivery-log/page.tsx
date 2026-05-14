@@ -4,16 +4,16 @@ import { useState } from "react"
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
-import { Badge } from "@deqah/ui"
-import { Button } from "@deqah/ui"
+import { Badge } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@deqah/ui"
-import { Skeleton } from "@deqah/ui"
+} from "@sawaa/ui"
+import { Skeleton } from "@sawaa/ui"
 import { useDeliveryLogs } from "@/hooks/use-delivery-logs"
 import { useLocale } from "@/components/locale-provider"
 

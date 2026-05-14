@@ -6,7 +6,7 @@ import {
 } from '../../../../infrastructure/zoho';
 
 /**
- * Creates a Zoho credit-note + refund pair to mirror a Deqah refund.
+ * Creates a Zoho credit-note + refund pair to mirror a Sawaa refund.
  *
  * Idempotent through `ZohoCreditNoteLink (organizationId, deqahRefundRequestId)`.
  */
@@ -67,11 +67,11 @@ export class CreateCreditNoteHandler {
       customer_id: link.zohoCustomerId,
       reference_invoice_id: link.zohoInvoiceId,
       date: today,
-      reason: input.reason ?? `Deqah refund ${input.refundRequestId}`,
+      reason: input.reason ?? `Sawaa refund ${input.refundRequestId}`,
       line_items: [
         {
           name: 'Refund',
-          description: `Deqah refund ${input.refundRequestId}`,
+          description: `Sawaa refund ${input.refundRequestId}`,
           rate: input.amount,
           quantity: 1,
         },

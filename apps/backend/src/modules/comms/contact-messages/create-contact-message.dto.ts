@@ -17,6 +17,5 @@ export class CreateContactMessageDto {
   @ApiProperty({ description: 'Message body', example: 'أرغب بمعرفة...' })
   @IsString() @MinLength(5) @MaxLength(5000) body!: string;
 
-  @ApiPropertyOptional({ description: 'hCaptcha token (required in prod)', example: '10000000-aaaa-bbbb-cccc-000000000001' })
-  @IsOptional() @IsString() captchaToken?: string;
+
 }

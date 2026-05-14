@@ -1,10 +1,9 @@
 import { Test } from '@nestjs/testing';
-import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { CreateContactMessageHandler } from './create-contact-message.handler';
 import { ListContactMessagesHandler } from './list-contact-messages.handler';
 import { UpdateContactMessageStatusHandler } from './update-contact-message-status.handler';
-import { CAPTCHA_VERIFIER, NoopCaptchaVerifier } from './captcha.verifier';
 import { TenantContextService } from '../../../common/tenant';
 
 const tenantProvider = {
@@ -16,7 +15,7 @@ describe('ContactMessages handlers', () => {
   let createHandler: CreateContactMessageHandler;
   let listHandler: ListContactMessagesHandler;
   let updateHandler: UpdateContactMessageStatusHandler;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   let prisma: any;
 
   beforeEach(async () => {
@@ -25,7 +24,6 @@ describe('ContactMessages handlers', () => {
         CreateContactMessageHandler,
         ListContactMessagesHandler,
         UpdateContactMessageStatusHandler,
-        { provide: CAPTCHA_VERIFIER, useClass: NoopCaptchaVerifier },
         tenantProvider,
         {
           provide: PrismaService,
@@ -55,32 +53,10 @@ describe('ContactMessages handlers', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('creates message when captcha passes (noop)', async () => {
+  it('creates message', async () => {
     prisma.contactMessage.create.mockResolvedValue({ id: 'm1', createdAt: new Date(), status: 'NEW' });
     const result = await createHandler.execute({ name: 'Ali', email: 'a@b.com', body: 'hello world' });
     expect(result.id).toBe('m1');
-  });
-
-  it('rejects when captcha fails', async () => {
-    const failing = {
-      provide: CAPTCHA_VERIFIER,
-      useValue: { verify: async () => false },
-    };
-    const module = await Test.createTestingModule({
-      providers: [
-        CreateContactMessageHandler,
-        failing,
-        tenantProvider,
-        {
-          provide: PrismaService,
-          useValue: { contactMessage: { create: jest.fn() } },
-        },
-      ],
-    }).compile();
-    const handler = module.get(CreateContactMessageHandler);
-    await expect(
-      handler.execute({ name: 'Ali', email: 'a@b.com', body: 'hello world' }),
-    ).rejects.toThrow(UnauthorizedException);
   });
 
   it('lists with pagination', async () => {

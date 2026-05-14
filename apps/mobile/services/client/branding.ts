@@ -1,4 +1,4 @@
-import type { PublicBranding } from '@deqah/shared';
+import type { PublicBranding } from '@sawaa/shared';
 import api from '../api';
 
 export const publicBrandingService = {

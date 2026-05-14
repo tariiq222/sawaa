@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Button, Input } from "@deqah/ui"
+import { Button, Input } from "@sawaa/ui"
 import { fetchClients } from "@/lib/api/clients"
 import { useLocale } from "@/components/locale-provider"
 

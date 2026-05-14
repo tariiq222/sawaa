@@ -38,7 +38,7 @@ export function membershipInvitationTemplate(vars: MembershipInvitationVars): {
   const ar = `
     <h1 style="color:${BRAND.primary};font-size:20px;margin:0 0 12px;">دعوة للانضمام إلى ${orgAr}</h1>
     <p style="color:${BRAND.textBody};font-size:15px;">مرحباً ${recipient}،</p>
-    <p style="color:${BRAND.textBody};font-size:15px;">تمت دعوتك للانضمام إلى ${orgAr} على Deqah. اضغط زر القبول أدناه لاستكمال التفعيل.</p>
+    <p style="color:${BRAND.textBody};font-size:15px;">تمت دعوتك للانضمام إلى ${orgAr} على Sawaa. اضغط زر القبول أدناه لاستكمال التفعيل.</p>
     ${ctaBlock}
     <p style="color:${BRAND.textMuted};font-size:13px;">تنتهي صلاحية هذه الدعوة خلال ${expires}.</p>
     <p style="color:${BRAND.textMuted};font-size:13px;">إذا لم تكن تتوقع هذه الدعوة، تجاهل هذه الرسالة.</p>
@@ -46,7 +46,7 @@ export function membershipInvitationTemplate(vars: MembershipInvitationVars): {
   const en = `
     <h1 style="color:${BRAND.primary};font-size:20px;margin:0 0 12px;">Invitation to join ${orgEn}</h1>
     <p style="color:${BRAND.textBody};font-size:15px;">Hi ${recipient},</p>
-    <p style="color:${BRAND.textBody};font-size:15px;">You’ve been invited to join ${orgEn} on Deqah. Click the button below to accept and finish setup.</p>
+    <p style="color:${BRAND.textBody};font-size:15px;">You’ve been invited to join ${orgEn} on Sawaa. Click the button below to accept and finish setup.</p>
     ${ctaBlock}
     <p style="color:${BRAND.textMuted};font-size:13px;">This invitation expires in ${expires}.</p>
     <p style="color:${BRAND.textMuted};font-size:13px;">If you weren’t expecting this, you can safely ignore this email.</p>
@@ -54,7 +54,7 @@ export function membershipInvitationTemplate(vars: MembershipInvitationVars): {
 
   return {
     subjectAr: `دعوة للانضمام إلى ${vars.orgNameAr}`,
-    subjectEn: `You’re invited to join ${vars.orgNameEn ?? vars.orgNameAr} on Deqah`,
+    subjectEn: `You’re invited to join ${vars.orgNameEn ?? vars.orgNameAr} on Sawaa`,
     html: bilingualLayout({ ar, en }),
   };
 }

@@ -11,7 +11,7 @@ import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-s
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant';
 
-import { ClientGender } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 const FUTURE_DATE = new Date(Date.now() + 86400000).toISOString();
 const PAST_DATE = new Date(Date.now() - 3600000).toISOString();
@@ -49,7 +49,10 @@ describe('CreateGuestBookingHandler', () => {
   };
 
   const mockSettingsHandler = {
-    execute: jest.fn().mockResolvedValue({}),
+    execute: jest.fn().mockResolvedValue({
+      maxAdvanceBookingDays: 90,
+      minBookingLeadMinutes: 60,
+    }),
   };
 
   const mockTenant = {
@@ -115,23 +118,25 @@ describe('CreateGuestBookingHandler', () => {
 
   it('should throw BadRequestException when employee is not assigned to branch', async () => {
     mockPrisma.branch.findFirst.mockResolvedValue({ id: 'branch-1' });
-    mockPrisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+    mockPrisma.employee.findFirst.mockResolvedValue({ id: 'emp-1', isActive: true, isPublic: true });
     mockPrisma.employeeBranch.findUnique.mockResolvedValue(null);
     await expect(handler.execute(baseCmd())).rejects.toThrow(BadRequestException);
   });
 
   it('should throw UnauthorizedException on single-use replay (jti already exists)', async () => {
     mockPrisma.branch.findFirst.mockResolvedValue({ id: 'branch-1' });
-    mockPrisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+    mockPrisma.employee.findFirst.mockResolvedValue({ id: 'emp-1', isActive: true, isPublic: true });
     mockPrisma.employeeBranch.findUnique.mockResolvedValue({ id: 'eb-1' });
-    mockPrisma.service.findFirst.mockResolvedValue({ id: 'service-1' });
+    mockPrisma.service.findFirst.mockResolvedValue({ id: 'service-1', isActive: true, isHidden: false });
     mockPrisma.employeeService.findUnique.mockResolvedValue({ id: 'es-1' });
 
     // Simulate unique constraint error on usedOtpSession.create
     mockPrisma.$transaction.mockImplementation(async (fn) => {
       const txMock = {
+        $executeRaw: jest.fn().mockResolvedValue(undefined),
         ...mockPrisma,
-        usedOtpSession: { create: jest.fn().mockRejectedValue(new Error('Unique constraint')) },
+        usedOtpSession: { create: jest.fn().mockRejectedValue(new Prisma.PrismaClientKnownRequestError('Unique constraint', { code: 'P2002', clientVersion: '0.0.0' })) },
+        organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0.15 }) },
       };
       return fn(txMock);
     });
@@ -141,13 +146,14 @@ describe('CreateGuestBookingHandler', () => {
 
   it('should create guest booking successfully', async () => {
     mockPrisma.branch.findFirst.mockResolvedValue({ id: 'branch-1' });
-    mockPrisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+    mockPrisma.employee.findFirst.mockResolvedValue({ id: 'emp-1', isActive: true, isPublic: true });
     mockPrisma.employeeBranch.findUnique.mockResolvedValue({ id: 'eb-1' });
-    mockPrisma.service.findFirst.mockResolvedValue({ id: 'service-1' });
+    mockPrisma.service.findFirst.mockResolvedValue({ id: 'service-1', isActive: true, isHidden: false });
     mockPrisma.employeeService.findUnique.mockResolvedValue({ id: 'es-1' });
 
     mockPrisma.$transaction.mockImplementation(async (fn) => {
       const txMock = {
+        $executeRaw: jest.fn().mockResolvedValue(undefined),
         usedOtpSession: { create: jest.fn().mockResolvedValue({}) },
         booking: {
           findFirst: jest.fn().mockResolvedValue(null),
@@ -159,6 +165,7 @@ describe('CreateGuestBookingHandler', () => {
           update: jest.fn(),
         },
         invoice: { create: jest.fn().mockResolvedValue({ id: 'invoice-1' }) },
+        organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0.15 }) },
       };
       return fn(txMock);
     });
@@ -170,17 +177,19 @@ describe('CreateGuestBookingHandler', () => {
 
   it('should throw ConflictException when time slot is taken', async () => {
     mockPrisma.branch.findFirst.mockResolvedValue({ id: 'branch-1' });
-    mockPrisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+    mockPrisma.employee.findFirst.mockResolvedValue({ id: 'emp-1', isActive: true, isPublic: true });
     mockPrisma.employeeBranch.findUnique.mockResolvedValue({ id: 'eb-1' });
-    mockPrisma.service.findFirst.mockResolvedValue({ id: 'service-1' });
+    mockPrisma.service.findFirst.mockResolvedValue({ id: 'service-1', isActive: true, isHidden: false });
     mockPrisma.employeeService.findUnique.mockResolvedValue({ id: 'es-1' });
 
     mockPrisma.$transaction.mockImplementation(async (fn) => {
       const txMock = {
+        $executeRaw: jest.fn().mockResolvedValue(undefined),
         usedOtpSession: { create: jest.fn().mockResolvedValue({}) },
         booking: { findFirst: jest.fn().mockResolvedValue({ id: 'existing-booking' }), create: jest.fn() },
         client: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
         invoice: { create: jest.fn() },
+        organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0.15 }) },
       };
       return fn(txMock);
     });

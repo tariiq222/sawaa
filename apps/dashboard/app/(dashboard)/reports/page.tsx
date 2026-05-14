@@ -5,7 +5,7 @@ import { subDays, format } from "date-fns"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@deqah/ui"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { FilterBar } from "@/components/features/filter-bar"
 import { EmployeeCombobox } from "@/components/features/reports/employee-combobox"

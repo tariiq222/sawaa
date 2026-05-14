@@ -31,7 +31,7 @@ vi.mock("next/link", () => ({
   ),
 }))
 
-vi.mock("@deqah/ui", () => ({
+vi.mock("@sawaa/ui", () => ({
   Button: ({ children, asChild, ...props }: React.PropsWithChildren<{ asChild?: boolean; [k: string]: unknown }>) =>
     asChild ? <>{children}</> : <button {...props}>{children}</button>,
   Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,

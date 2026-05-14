@@ -11,7 +11,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useBranchMutations } from "@/hooks/use-branches"
 import type { Branch } from "@/lib/types/branch"

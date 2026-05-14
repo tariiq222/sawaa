@@ -202,9 +202,8 @@ describe('VerifyMobileOtpHandler', () => {
       purpose: MobileOtpPurposeDto.LOGIN,
     });
 
-    expect(out.activeMembership).toEqual(
-      expect.objectContaining({ id: 'm1', organizationId: 'org1', role: 'RECEPTIONIST' }),
-    );
+    // org scoping moved to RLS / removed in single-tenant migration — activeMembership always null
+    expect(out.activeMembership).toBeNull();
   });
 
   it('login: throws UnauthorizedException when account inactive', async () => {

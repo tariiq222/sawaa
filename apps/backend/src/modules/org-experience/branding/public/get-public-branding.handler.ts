@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { PublicBranding } from '@deqah/shared';
+import type { PublicBranding } from '@sawaa/shared';
 import { PrismaService } from '../../../../infrastructure/database';
 import { TenantContextService } from '../../../../common/tenant';
 import { DEFAULT_ORGANIZATION_ID } from "../../../../common/tenant/tenant.constants";

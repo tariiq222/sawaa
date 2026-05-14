@@ -13,7 +13,6 @@ enum DocumentStatus {
 
 model KnowledgeDocument {
   id             String         @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02g
   title          String
   sourceType     String // "manual" | "url" | "file"
   sourceRef      String? // URL or MinIO object key
@@ -24,14 +23,12 @@ model KnowledgeDocument {
 
   chunks DocumentChunk[]
 
-  @@index([organizationId])
   @@index([status])
   @@index([createdAt])
 }
 
 model DocumentChunk {
   id             String                       @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02g (denormalized from KnowledgeDocument)
   documentId     String
   content        String
   embedding      Unsupported("vector(1536)")?
@@ -42,14 +39,12 @@ model DocumentChunk {
   document KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@index([documentId])
-  @@index([organizationId])
 }
 
 // ─── Chat Sessions ────────────────────────────────────────────────────────────
 
 model ChatSession {
   id             String   @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02f
   clientId       String?
   userId         String?
   title          String?
@@ -60,14 +55,12 @@ model ChatSession {
 
   @@index([createdAt])
   @@index([clientId])
-  @@index([organizationId])
 }
 
 // ─── Chatbot Config ───────────────────────────────────────────────────────────
 
 model ChatbotConfig {
   id                String   @id @default(uuid())
-  organizationId    String @default("00000000-0000-0000-0000-000000000001")   @unique // SaaS-02f — one config row per org
   systemPromptAr    String?
   systemPromptEn    String?
   greetingAr        String?
@@ -80,7 +73,6 @@ model ChatbotConfig {
 
 model ChatMessage {
   id             String   @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02f (denormalized from ChatSession)
   sessionId      String
   role           String // "user" | "assistant" | "system"
   content        String
@@ -91,5 +83,4 @@ model ChatMessage {
   session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId, createdAt])
-  @@index([organizationId])
 }

@@ -81,8 +81,9 @@ describe('CreateServiceHandler', () => {
     const prisma = buildPrisma();
     const handler = new CreateServiceHandler(prisma as never, buildTenant(), buildEventBus() as never);
     const result = await handler.execute({ nameAr: 'قص الشعر', durationMins: 30, price: 50 });
+    // org scoping moved to RLS / removed in single-tenant migration
     expect(prisma.service.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ organizationId: DEFAULT_ORG }) }),
+      expect.objectContaining({ data: expect.objectContaining({ nameAr: 'قص الشعر' }) }),
     );
     expect(result.id).toBe('svc-1');
   });

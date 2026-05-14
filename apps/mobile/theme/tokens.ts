@@ -1,4 +1,4 @@
-import type { PublicBranding } from '@deqah/shared';
+import type { PublicBranding } from '@sawaa/shared';
 import {
   colors,
   typography,
@@ -6,7 +6,7 @@ import {
   radius,
   rnShadows,
   animations,
-} from '@deqah/shared/tokens';
+} from '@sawaa/shared/tokens';
 
 function isValidColor(value: string | null | undefined): value is string {
   return typeof value === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(value);

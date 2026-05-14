@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import type { AvailabilitySlot } from "@/lib/types/employee"

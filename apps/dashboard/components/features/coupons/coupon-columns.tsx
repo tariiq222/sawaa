@@ -4,15 +4,15 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { MoreHorizontalIcon, PencilEdit01Icon, Delete02Icon, CheckmarkCircle02Icon, Cancel01Icon } from "@hugeicons/core-free-icons"
 
-import { Badge } from "@deqah/ui"
-import { Button } from "@deqah/ui"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@deqah/ui"
+import { Badge } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@sawaa/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { ar } from "date-fns/locale"
 import { formatDatePattern } from "@/lib/date"
 import type { Coupon } from "@/lib/types/coupon"

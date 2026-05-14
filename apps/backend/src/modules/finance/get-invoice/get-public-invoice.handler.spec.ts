@@ -74,7 +74,7 @@ describe('GetPublicInvoiceHandler', () => {
     expect(result.sellerName).toBe('عيادة احتياطية');
   });
 
-  it('falls back to "Deqah" when branding has no names', async () => {
+  it('falls back to "Sawaa" when branding has no names', async () => {
     const prisma = buildPrisma();
     prisma.brandingConfig.findUnique.mockResolvedValueOnce({
       organizationNameEn: null,
@@ -83,7 +83,7 @@ describe('GetPublicInvoiceHandler', () => {
     const handler = new GetPublicInvoiceHandler(prisma as never);
 
     const result = await handler.execute('inv-1', 'client-1');
-    expect(result.sellerName).toBe('Deqah');
+    expect(result.sellerName).toBe('Sawaa');
   });
 
   it('throws NotFoundException when no invoice belongs to this client', async () => {

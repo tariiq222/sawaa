@@ -1,9 +1,9 @@
 "use client"
 
-import { Button } from "@deqah/ui"
-import { Input } from "@deqah/ui"
-import { Label } from "@deqah/ui"
-import { Switch } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
+import { Input } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
+import { Switch } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import type { AvailabilitySlot } from "@/lib/types/employee"
 import type { LocalBreak } from "./schedule-types"

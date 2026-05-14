@@ -1,5 +1,5 @@
 /**
- * Payments API — Deqah Dashboard
+ * Payments API — Sawaa Dashboard
  * Controller: dashboard/finance/payments
  */
 

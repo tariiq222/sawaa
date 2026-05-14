@@ -17,7 +17,7 @@ export class AddToWaitlistHandler {
   ) {}
 
   async execute(cmd: AddToWaitlistCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
     const existing = await this.prisma.waitlistEntry.findFirst({
       where: {
         clientId: cmd.clientId,

@@ -1,4 +1,4 @@
-import type { PublicEmployee } from '@deqah/api-client';
+import type { PublicEmployee } from '@sawaa/api-client';
 
 interface Props {
   therapist: PublicEmployee;

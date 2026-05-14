@@ -39,8 +39,8 @@ export function subscriptionPaymentFailedTemplate(
   `;
 
   return {
-    subjectAr: 'فشل دفع اشتراك Deqah',
-    subjectEn: 'Deqah subscription payment failed',
+    subjectAr: 'فشل دفع اشتراك Sawaa',
+    subjectEn: 'Sawaa subscription payment failed',
     html: bilingualLayout({ ar, en }),
   };
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import type { ClientProfile } from '@deqah/shared';
+import type { ClientProfile } from '@sawaa/shared';
 
 let storedAccessToken: string | null = null;
 let storedRefreshToken: string | null = null;

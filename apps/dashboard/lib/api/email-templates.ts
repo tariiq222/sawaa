@@ -1,5 +1,5 @@
 /**
- * Email Templates API — Deqah Dashboard
+ * Email Templates API — Sawaa Dashboard
  */
 
 import { api } from "@/lib/api"

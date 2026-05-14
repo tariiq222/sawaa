@@ -87,7 +87,7 @@ export class ZohoConfigService {
     });
   }
 
-  async remove(organizationId: string): Promise<void> {
+  async remove(_organizationId: string): Promise<void> {
     await this.prisma.integration.deleteMany({
       where: { provider: ZOHO_PROVIDER },
     });

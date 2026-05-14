@@ -16,7 +16,7 @@ export class CreateEmailTemplateHandler {
   ) {}
 
   async execute(cmd: CreateEmailTemplateCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
     // SaaS-02f: slug uniqueness is now per-org (composite unique). The Proxy
     // auto-scopes `where` by organizationId, so findFirst by slug is safe.
     const existing = await this.prisma.emailTemplate.findFirst({

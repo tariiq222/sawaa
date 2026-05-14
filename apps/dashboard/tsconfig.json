@@ -28,10 +28,10 @@
       "@/*": [
         "./*"
       ],
-      "@deqah/ui": [
+      "@sawaa/ui": [
         "../../packages/ui/src/index.ts"
       ],
-      "@deqah/ui/*": [
+      "@sawaa/ui/*": [
         "../../packages/ui/src/*"
       ]
     }

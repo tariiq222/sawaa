@@ -1,5 +1,5 @@
-import type { PublicBranding } from '@deqah/shared';
-import { PLATFORM_BRAND } from '@deqah/shared';
+import type { PublicBranding } from '@sawaa/shared';
+import { PLATFORM_BRAND } from '@sawaa/shared';
 
 const DEFAULTS: Record<string, string> = {
   '--primary': PLATFORM_BRAND.colors.primary,

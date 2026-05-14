@@ -1,4 +1,4 @@
-import type { ClientProfile, ClientBookingItem } from '@deqah/shared';
+import type { ClientProfile, ClientBookingItem } from '@sawaa/shared';
 
 export type { ClientProfile, ClientBookingItem };
 

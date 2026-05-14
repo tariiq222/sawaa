@@ -138,7 +138,7 @@ export class BookGroupSessionHandler {
   private async addToWaitlist(
     clientId: string,
     session: { id: string },
-    organizationId: string,
+    _organizationId: string,
   ): Promise<BookGroupSessionResult> {
     const lastEntry = await this.prisma.groupSessionWaitlist.findFirst({
       where: { groupSessionId: session.id },

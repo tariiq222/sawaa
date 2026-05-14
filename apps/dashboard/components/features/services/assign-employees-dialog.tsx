@@ -28,10 +28,10 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@deqah/ui"
-import { Button } from "@deqah/ui"
-import { Input } from "@deqah/ui"
-import { Skeleton } from "@deqah/ui"
+} from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
+import { Input } from "@sawaa/ui"
+import { Skeleton } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { fetchEmployees } from "@/lib/api/employees"

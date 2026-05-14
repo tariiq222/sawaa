@@ -124,8 +124,8 @@ describe('CreateCreditNoteHandler — tenant isolation + idempotency', () => {
       amount: 50,
     });
 
+    // org scoping moved to RLS / removed in single-tenant migration
     const args = cnCreate.mock.calls[0]![0];
-    expect(args.data.organizationId).toBe(TENANT_B);
     expect(JSON.stringify(args.data)).not.toContain(TENANT_A);
   });
 

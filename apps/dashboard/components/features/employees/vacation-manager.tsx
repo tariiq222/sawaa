@@ -7,7 +7,7 @@ import { z } from "zod"
 import { toast } from "sonner"
 
 import { Controller } from "react-hook-form"
-import { Button } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
 import {
   Sheet,
   SheetContent,
@@ -16,9 +16,9 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from "@deqah/ui"
-import { Label } from "@deqah/ui"
-import { Textarea } from "@deqah/ui"
+} from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
+import { Textarea } from "@sawaa/ui"
 import { DatePicker } from "@/components/ui/date-picker"
 import {
   AlertDialog,
@@ -29,7 +29,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import {
   useEmployeeVacations,
   useVacationMutations,

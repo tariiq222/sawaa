@@ -21,7 +21,7 @@ export class CreateInvoiceHandler {
   ) {}
 
   async execute(dto: CreateInvoiceCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
 
     const subtotal = dto.subtotal;
     const discountAmt = dto.discountAmt ?? 0;

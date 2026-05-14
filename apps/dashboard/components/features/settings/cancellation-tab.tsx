@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Card, CardContent, Button, Input, Skeleton, Switch } from "@deqah/ui"
+import { Card, CardContent, Button, Input, Skeleton, Switch } from "@sawaa/ui"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { useBookingSettings, useBookingSettingsMutation } from "@/hooks/use-organization-settings"
 import type { RefundType } from "@/lib/api/booking-settings"

@@ -1,18 +1,18 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { SidebarTrigger } from "@deqah/ui"
-import { Separator } from "@deqah/ui"
-import { Button } from "@deqah/ui"
-import { Switch } from "@deqah/ui"
-import { Avatar, AvatarFallback } from "@deqah/ui"
+import { SidebarTrigger } from "@sawaa/ui"
+import { Separator } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
+import { Switch } from "@sawaa/ui"
+import { Avatar, AvatarFallback } from "@sawaa/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Moon02Icon,

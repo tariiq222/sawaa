@@ -1,6 +1,6 @@
 "use client"
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@deqah/ui"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { BookingWizard } from "./booking-wizard"
 

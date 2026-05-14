@@ -3,11 +3,10 @@ import * as bcrypt from 'bcryptjs';
 import { OtpPurpose } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant';
-import { TokenService, TokenPair } from '../shared/token.service';
+import { TokenService } from '../shared/token.service';
 import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
 import { flattenPermissions } from '../casl/flatten-permissions';
 import type { VerifyDashboardOtpCommand } from './verify-dashboard-otp.command';
-import type { JwtPayload } from '../shared/token.service';
 
 const LOCKOUT_WINDOW_MINUTES = 15;
 

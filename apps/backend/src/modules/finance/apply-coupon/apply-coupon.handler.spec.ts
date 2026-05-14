@@ -6,7 +6,7 @@ const buildTenant = () => ({
   requireOrganizationIdOrDefault: jest.fn().mockReturnValue('00000000-0000-0000-0000-000000000001'),
 });
 
-const buildFeatureCheck = (enabled = true) => ({
+const _buildFeatureCheck = (enabled = true) => ({
   isEnabled: jest.fn().mockResolvedValue(enabled),
 });
 const buildRlsTx = (db: ReturnType<typeof buildPrisma>) =>
@@ -92,11 +92,11 @@ describe('ApplyCouponHandler', () => {
     await expect(new ApplyCouponHandler(prisma as never, buildTenant() as never, buildRlsTx(prisma)).execute(cmd)).rejects.toThrow(BadRequestException);
   });
 
-  it('throws BadRequestException when COUPONS feature is disabled', async () => {
+  it('proceeds without feature-flag check (COUPONS feature-flag removed in single-tenant migration)', async () => {
+    // org scoping moved to RLS / removed in single-tenant migration — handler no longer gates on COUPONS feature flag
     const prisma = buildPrisma();
-    await expect(
-      new ApplyCouponHandler(prisma as never, buildTenant() as never, buildRlsTx(prisma)).execute(cmd),
-    ).rejects.toThrow(BadRequestException);
-    expect(prisma.coupon.findFirst).not.toHaveBeenCalled();
+    const result = await new ApplyCouponHandler(prisma as never, buildTenant() as never, buildRlsTx(prisma)).execute(cmd);
+    expect(result.id).toBe('red-1');
+    expect(prisma.coupon.findFirst).toHaveBeenCalled();
   });
 });

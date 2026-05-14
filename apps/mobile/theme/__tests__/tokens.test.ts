@@ -1,7 +1,7 @@
 import { buildTheme } from '../tokens';
 
 describe('buildTheme', () => {
-  it('falls back to Deqah platform defaults when no branding is loaded', () => {
+  it('falls back to Sawaa platform defaults when no branding is loaded', () => {
     const t = buildTheme();
     expect(t.colors.primary).toBe('#354FD8');
     expect(t.colors.accent).toBe('#82CC17');

@@ -7,7 +7,7 @@ import { TenantContextService } from '../../../common/tenant';
 import { RlsTransactionService } from '../../../infrastructure/database';
 
 const buildEventBus = () => ({ publish: jest.fn().mockResolvedValue(undefined) });
-const buildSubscriptionCache = () => ({ get: jest.fn().mockResolvedValue(null) });
+const _buildSubscriptionCache = () => ({ get: jest.fn().mockResolvedValue(null) });
 const buildRlsTx = (prisma: ReturnType<typeof buildPrisma>) =>
   ({
     withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
@@ -74,8 +74,9 @@ describe('CreateBranchHandler', () => {
     const handler = new CreateBranchHandler(prisma as never, buildTenant(), buildEventBus() as never, buildRlsTx(prisma) as never);
     const result = await handler.execute({ nameAr: 'الفرع الرئيسي' });
     expect(result.id).toBe('branch-1');
+    // org scoping moved to RLS / removed in single-tenant migration
     expect(prisma.branch.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ organizationId: DEFAULT_ORG }) }),
+      expect.objectContaining({ data: expect.objectContaining({ nameAr: 'الفرع الرئيسي' }) }),
     );
   });
 

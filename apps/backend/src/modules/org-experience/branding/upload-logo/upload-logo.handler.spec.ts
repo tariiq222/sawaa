@@ -8,7 +8,7 @@ const DEFAULT_ORG = '00000000-0000-0000-0000-000000000001';
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const MOCK_FILE_ROW = {
   id: 'file-7',
-  bucket: 'deqah',
+  bucket: 'sawaa',
   storageKey: 'tenant/new-logo.png',
   url: 'https://cdn/new-logo.png',
 };

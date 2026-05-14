@@ -1,6 +1,6 @@
 "use client"
 
-import { Button, Input, Label, Textarea } from "@deqah/ui"
+import { Button, Input, Label, Textarea } from "@sawaa/ui"
 import {
   ArrowUp01Icon,
   ArrowDown01Icon,

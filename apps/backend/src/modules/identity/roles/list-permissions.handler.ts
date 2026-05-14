@@ -4,7 +4,7 @@ import {
   PERMISSION_ACTIONS,
   type PermissionSubject,
   type PermissionAction,
-} from '@deqah/shared/constants/permissions-catalog';
+} from '@sawaa/shared/constants/permissions-catalog';
 
 export interface PermissionDto {
   id: string;

@@ -1,7 +1,7 @@
 /**
- * API Client — Deqah Dashboard
+ * API Client — Sawaa Dashboard
  *
- * Thin wrapper that wires `@deqah/api-client` for the dashboard:
+ * Thin wrapper that wires `@sawaa/api-client` for the dashboard:
  *   - in-memory access token + setter/getter
  *   - same-origin `/api/proxy` baseUrl (Next rewrite → backend)
  *
@@ -15,7 +15,7 @@ import {
   ApiError,
   apiRequest,
   initClient,
-} from "@deqah/api-client"
+} from "@sawaa/api-client"
 import type { ApiResponse, PaginatedResponse } from "@/lib/types/common"
 
 export type { ApiResponse, PaginatedResponse }
@@ -41,7 +41,7 @@ export function getAccessToken(): string | null {
 function clearAuthState() {
   accessToken = null
   if (typeof window !== "undefined") {
-    localStorage.removeItem("deqah_user")
+    localStorage.removeItem("sawaa_user")
   }
 }
 

@@ -16,7 +16,7 @@ const {
   setAccessTokenMock: vi.fn(),
 }))
 
-vi.mock("@deqah/api-client", () => ({
+vi.mock("@sawaa/api-client", () => ({
   authApi: {
     login: loginMock,
     refreshToken: refreshTokenMock,
@@ -66,7 +66,7 @@ describe("auth api", () => {
   })
 
   it("login delegates to authApi.login and persists access token + user", async () => {
-    // Refresh tokens are managed as HttpOnly cookies by @deqah/api-client; the
+    // Refresh tokens are managed as HttpOnly cookies by @sawaa/api-client; the
     // dashboard wrapper only persists the access token + user payload locally.
     loginMock.mockResolvedValueOnce({
       accessToken: "token123",
@@ -75,11 +75,11 @@ describe("auth api", () => {
       user: fakeUser,
     })
 
-    const result = await login("a@b.com", "pass", "tok")
+    const result = await login("a@b.com", "pass")
 
-    expect(loginMock).toHaveBeenCalledWith({ email: "a@b.com", password: "pass", hCaptchaToken: "tok" })
+    expect(loginMock).toHaveBeenCalledWith({ email: "a@b.com", password: "pass" })
     expect(setAccessTokenMock).toHaveBeenCalledWith("token123")
-    expect(localStorage.getItem("deqah_user")).toContain("a@b.com")
+    expect(localStorage.getItem("sawaa_user")).toContain("a@b.com")
     expect(result.accessToken).toBe("token123")
   })
 
@@ -89,7 +89,7 @@ describe("auth api", () => {
     const result = await fetchMe()
 
     expect(getMeMock).toHaveBeenCalledOnce()
-    expect(localStorage.getItem("deqah_user")).toContain("a@b.com")
+    expect(localStorage.getItem("sawaa_user")).toContain("a@b.com")
     expect(result.email).toBe("a@b.com")
   })
 
@@ -118,29 +118,29 @@ describe("auth api", () => {
 
   it("logoutApi delegates to authApi.logout and clears state", async () => {
     logoutMock.mockResolvedValueOnce(undefined)
-    localStorage.setItem("deqah_user", "{}")
+    localStorage.setItem("sawaa_user", "{}")
 
     await logoutApi()
 
     expect(logoutMock).toHaveBeenCalledOnce()
-    expect(localStorage.getItem("deqah_user")).toBeNull()
+    expect(localStorage.getItem("sawaa_user")).toBeNull()
     expect(setAccessTokenMock).toHaveBeenCalledWith(null)
   })
 
   it("logoutApi still clears state when API call fails", async () => {
     logoutMock.mockRejectedValueOnce(new Error("fail"))
-    localStorage.setItem("deqah_user", "{}")
+    localStorage.setItem("sawaa_user", "{}")
 
     await logoutApi()
 
-    expect(localStorage.getItem("deqah_user")).toBeNull()
+    expect(localStorage.getItem("sawaa_user")).toBeNull()
     expect(setAccessTokenMock).toHaveBeenCalledWith(null)
   })
 
   it("logout clears state without API call", () => {
-    localStorage.setItem("deqah_user", "{}")
+    localStorage.setItem("sawaa_user", "{}")
     logout()
-    expect(localStorage.getItem("deqah_user")).toBeNull()
+    expect(localStorage.getItem("sawaa_user")).toBeNull()
     expect(setAccessTokenMock).toHaveBeenCalledWith(null)
     expect(logoutMock).not.toHaveBeenCalled()
   })
@@ -159,12 +159,12 @@ describe("auth api", () => {
   })
 
   it("getStoredUser returns parsed user when stored", () => {
-    localStorage.setItem("deqah_user", JSON.stringify(fakeUser))
+    localStorage.setItem("sawaa_user", JSON.stringify(fakeUser))
     expect(getStoredUser()).toEqual(fakeUser)
   })
 
   it("getStoredUser returns null for invalid JSON", () => {
-    localStorage.setItem("deqah_user", "not-json")
+    localStorage.setItem("sawaa_user", "not-json")
     expect(getStoredUser()).toBeNull()
   })
 })

@@ -1,6 +1,5 @@
 import { Injectable, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
 import { Request } from 'express';
-import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../infrastructure/database';
 import { OtpSessionService } from '../otp/otp-session.service';
 import { ClientTokenService } from '../shared/client-token.service';

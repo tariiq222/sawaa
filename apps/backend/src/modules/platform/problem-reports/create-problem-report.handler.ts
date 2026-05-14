@@ -14,7 +14,7 @@ export class CreateProblemReportHandler {
   ) {}
 
   async execute(cmd: CreateProblemReportCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
     return this.prisma.problemReport.create({
       data: {
         reporterId: cmd.reporterId,

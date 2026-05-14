@@ -5,7 +5,6 @@ import { OtpSessionService } from '../../otp/otp-session.service';
 import { PasswordService } from '../../shared/password.service';
 import { ResetPasswordDto } from './reset-password.dto';
 import { TenantContextService } from '../../../../common/tenant';
-import { RlsHelper } from '../../../../common/tenant/rls.helper';
 import { maskIdentifier } from '../../../../common/helpers/mask-pii.helper';
 import { PasswordHistoryService } from '../shared/password-history.service';
 import { DEFAULT_ORGANIZATION_ID } from "../../../../common/tenant/tenant.constants";

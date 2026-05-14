@@ -19,8 +19,7 @@ export const PWConfig = {
 
   authStateDir: process.env.PW_AUTH_STATE_DIR ?? 'e2e/.auth',
 
-  // hCaptcha shim — backend reads CAPTCHA_PROVIDER. Tests must run with `noop`.
-  captchaToken: 'pw-test-captcha',
+
 } as const;
 
 export type PWConfigT = typeof PWConfig;

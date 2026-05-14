@@ -3,8 +3,8 @@
   "compilerOptions": {
     "paths": {
       "@/*": ["./src/*"],
-      "@deqah/shared": ["../../packages/shared/index.ts"],
-      "@deqah/shared/*": ["../../packages/shared/*"]
+      "@sawaa/shared": ["../../packages/shared/index.ts"],
+      "@sawaa/shared/*": ["../../packages/shared/*"]
     }
   }
 }

@@ -14,10 +14,10 @@ export function LoginForm() {
   const [notice, setNotice] = useState("")
 
   useEffect(() => {
-    const reason = sessionStorage.getItem("deqah_auth_reason")
+    const reason = sessionStorage.getItem("sawaa_auth_reason")
     if (reason === "ORG_SUSPENDED") {
       startTransition(() => setNotice(t("login.orgSuspended")))
-      sessionStorage.removeItem("deqah_auth_reason")
+      sessionStorage.removeItem("sawaa_auth_reason")
     }
   }, [t])
 

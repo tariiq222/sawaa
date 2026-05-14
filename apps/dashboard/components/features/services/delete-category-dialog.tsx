@@ -12,7 +12,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { useCategoryMutations } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
 import type { ServiceCategory } from "@/lib/types/service"

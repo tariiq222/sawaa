@@ -1,8 +1,8 @@
 'use client';
 
 import { useReducer, useState, useEffect } from 'react';
-import { reduce, INITIAL_WIZARD_STATE, WizardStep } from '@deqah/shared';
-import type { Service, EmployeeWithUser, AvailableSlot } from '@deqah/shared';
+import { reduce, INITIAL_WIZARD_STATE, WizardStep } from '@sawaa/shared';
+import type { Service, EmployeeWithUser, AvailableSlot } from '@sawaa/shared';
 import { ServicePicker } from '@/features/booking/service-picker';
 import { TherapistPicker } from '@/features/booking/therapist-picker';
 import { SlotPicker } from '@/features/booking/slot-picker';

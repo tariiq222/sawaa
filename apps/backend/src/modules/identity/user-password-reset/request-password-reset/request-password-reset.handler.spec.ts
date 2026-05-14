@@ -16,7 +16,7 @@ describe('RequestPasswordResetHandler', () => {
       passwordResetToken: { create: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({}) },
     };
     sendEmail = { execute: jest.fn().mockResolvedValue(undefined) };
-    config = { get: jest.fn().mockReturnValue('https://app.deqah.test') };
+    config = { get: jest.fn().mockReturnValue('https://app.sawaa.test') };
     const moduleRef = await Test.createTestingModule({
       providers: [
         RequestPasswordResetHandler,
@@ -46,7 +46,7 @@ describe('RequestPasswordResetHandler', () => {
     expect(sendEmail.execute).toHaveBeenCalledWith(expect.objectContaining({
       to: 'a@b.com',
       templateSlug: 'user_password_reset',
-      vars: expect.objectContaining({ userName: 'Alice', resetUrl: expect.stringContaining('https://app.deqah.test/reset-password?token=') }),
+      vars: expect.objectContaining({ userName: 'Alice', resetUrl: expect.stringContaining('https://app.sawaa.test/reset-password?token=') }),
     }));
   });
 

@@ -35,7 +35,6 @@ enum ReportStatus {
 
 model ActivityLog {
   id             String         @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02g
   userId         String?
   userEmail      String?
   action         ActivityAction
@@ -47,7 +46,7 @@ model ActivityLog {
   userAgent      String?
   occurredAt     DateTime       @default(now())
 
-  @@index([organizationId, occurredAt]) // DB-06: replaces (organizationId) + (occurredAt) — composite for ListActivityHandler
+  @@index([ occurredAt])
   @@index([entity, entityId])
   @@index([userId])
 }
@@ -67,7 +66,6 @@ model CronHeartbeat {
 
 model Report {
   id             String       @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02g
   type           ReportType
   format         ReportFormat @default(JSON)
   status         ReportStatus @default(PENDING)
@@ -79,7 +77,6 @@ model Report {
   createdAt      DateTime     @default(now())
   completedAt    DateTime?
 
-  @@index([organizationId])
   @@index([type, createdAt])
 }
 

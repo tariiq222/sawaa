@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Button, Input, Label } from "@deqah/ui"
+import { Button, Input, Label } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { identifierSchema } from "@/lib/schemas/auth-login.schema"
 

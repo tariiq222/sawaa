@@ -1,5 +1,5 @@
 /**
- * Notification Types — Deqah Dashboard
+ * Notification Types — Sawaa Dashboard
  */
 
 import type { PaginatedQuery } from "./common"

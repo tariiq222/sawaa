@@ -12,7 +12,6 @@ import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
 import { ApiStandardResponses } from '../../common/swagger';
 import { TenantContextService } from '../../common/tenant';
-import { FeatureKey } from '@deqah/shared/constants/feature-keys';
 import { GenerateReportHandler } from '../../modules/ops/generate-report/generate-report.handler';
 import { GenerateReportDto } from '../../modules/ops/generate-report/generate-report.dto';
 import { ListActivityHandler } from '../../modules/ops/log-activity/list-activity.handler';

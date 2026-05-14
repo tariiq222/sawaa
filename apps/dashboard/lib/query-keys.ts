@@ -1,5 +1,5 @@
 /**
- * Query Keys — Deqah Dashboard
+ * Query Keys — Sawaa Dashboard
  *
  * Centralized query key factory for TanStack Query.
  * Ensures consistent keys for cache invalidation.

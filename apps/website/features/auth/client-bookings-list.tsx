@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ClientBookingItem } from '@deqah/shared';
+import type { ClientBookingItem } from '@sawaa/shared';
 import { getMyBookingsApi } from '@/features/auth/auth.api';
 import { t } from '@/features/locale/dictionary';
 import type { Locale } from '@/features/locale/locale';

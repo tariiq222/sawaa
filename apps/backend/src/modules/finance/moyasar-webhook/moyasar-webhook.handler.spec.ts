@@ -113,10 +113,17 @@ interface HandlerOverrides {
   eventBus?: ReturnType<typeof buildEventBus>;
   creds?: ReturnType<typeof buildCreds>;
   cls?: ReturnType<typeof buildCls>;
+  tenantContext?: ReturnType<typeof buildTenantContext>;
 }
 
 const buildAppMetrics = () => ({
   paymentAttempts: { labels: jest.fn().mockReturnValue({ inc: jest.fn() }) },
+});
+
+const buildTenantContext = () => ({
+  set: jest.fn(),
+  get: jest.fn(),
+  getOrganizationId: jest.fn(),
 });
 
 function makeHandler(overrides: HandlerOverrides = {}) {
@@ -126,8 +133,9 @@ function makeHandler(overrides: HandlerOverrides = {}) {
   const cls = overrides.cls ?? buildCls();
   const rlsTx = { withTransaction: jest.fn(async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)) };
   const appMetrics = buildAppMetrics();
-  const handler = new MoyasarWebhookHandler(prisma as never, eventBus as never, cls as never, creds as never, rlsTx as never, appMetrics as never);
-  return { handler, prisma, eventBus, creds, cls, appMetrics };
+  const tenantContext = overrides.tenantContext ?? buildTenantContext();
+  const handler = new MoyasarWebhookHandler(prisma as never, eventBus as never, cls as never, creds as never, rlsTx as never, tenantContext as never, appMetrics as never);
+  return { handler, prisma, eventBus, creds, cls, appMetrics, tenantContext };
 }
 
 describe('MoyasarWebhookHandler', () => {
@@ -154,9 +162,10 @@ describe('MoyasarWebhookHandler', () => {
     it('processes paid webhook and emits PaymentCompletedEvent', async () => {
       const { handler, prisma, eventBus } = makeHandler();
       const result = await handler.execute(makeReq());
+      // org scoping moved to RLS / removed in single-tenant migration
       expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
         where: { idempotencyKey: 'moyasar:moyasar-pay-1' },
-        create: expect.objectContaining({ amount: 230, status: 'COMPLETED', organizationId: ORG_A }),
+        create: expect.objectContaining({ amount: 230, status: 'COMPLETED' }),
       }));
       expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'PAID' }) }));
       expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.completed', expect.anything());
@@ -177,8 +186,9 @@ describe('MoyasarWebhookHandler', () => {
         creds: buildCreds(TEST_SECRET),
       });
       await handler.execute(makeReq({ ...paidPayload, metadata: { invoiceId: 'inv-b' } }));
+      // org scoping moved to RLS / removed in single-tenant migration
       expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
-        create: expect.objectContaining({ organizationId: ORG_B }),
+        create: expect.objectContaining({ invoiceId: 'inv-b' }),
       }));
       const envelope = eventBus.publish.mock.calls[0][1] as { payload: { organizationId: string } };
       expect(envelope.payload.organizationId).toBe(ORG_B);
@@ -217,8 +227,9 @@ describe('MoyasarWebhookHandler', () => {
       const { handler, prisma } = makeHandler();
       const failedPayload = { ...paidPayload, status: 'failed' as const, message: 'Declined' } as MoyasarWebhookDto;
       await handler.execute(makeReq(failedPayload));
+      // org scoping moved to RLS / removed in single-tenant migration
       expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
-        create: expect.objectContaining({ status: 'FAILED', failureReason: 'Declined', organizationId: ORG_A }),
+        create: expect.objectContaining({ status: 'FAILED', failureReason: 'Declined' }),
       }));
       expect(prisma.invoice.update).not.toHaveBeenCalled();
     });
@@ -259,10 +270,10 @@ describe('MoyasarWebhookHandler', () => {
     });
 
     it('enters system context for tenant resolution (bypass flag set)', async () => {
-      const { handler, cls } = makeHandler();
+      const { handler, cls, tenantContext } = makeHandler();
       await handler.execute(makeReq());
       expect(cls.set).toHaveBeenCalledWith('systemContext', true);
-      expect(cls.set).toHaveBeenCalledWith('tenant', expect.objectContaining({ organizationId: ORG_A }));
+      expect(tenantContext.set).toHaveBeenCalledWith(expect.objectContaining({ organizationId: ORG_A }));
     });
 
     it('rejects payload when amount does not match invoice.total * 100', async () => {

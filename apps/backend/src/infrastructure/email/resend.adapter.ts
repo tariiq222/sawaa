@@ -22,7 +22,7 @@ export class ResendEmailAdapter implements EmailProvider {
     const from =
       payload.fromName && payload.fromEmail
         ? `${payload.fromName} <${payload.fromEmail}>`
-        : payload.fromEmail ?? 'noreply@deqah.sa';
+        : payload.fromEmail ?? 'noreply@sawaa.sa';
 
     const res = await fetchWithTimeout(
       'https://api.resend.com/emails',

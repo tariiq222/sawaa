@@ -31,9 +31,9 @@ import { SettingsProfileSection } from './settings-profile-section';
 import { clientProfileService } from '@/services/client/profile';
 import { registerForPushAsync, unregisterPushAsync } from '@/services/push';
 
-const LANGUAGE_KEY = '@deqah/language';
-const PUSH_KEY = '@deqah/push-enabled';
-const DARK_KEY = '@deqah/dark-mode';
+const LANGUAGE_KEY = '@sawaa/language';
+const PUSH_KEY = '@sawaa/push-enabled';
+const DARK_KEY = '@sawaa/dark-mode';
 
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation();

@@ -1,5 +1,5 @@
 /**
- * Branch Types — Deqah Dashboard
+ * Branch Types — Sawaa Dashboard
  */
 
 import type { PaginatedQuery } from "./common"

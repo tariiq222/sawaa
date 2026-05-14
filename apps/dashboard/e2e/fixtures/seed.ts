@@ -299,7 +299,7 @@ export async function seedEmployee(
   // Generate a unique email if none provided to avoid unique-constraint collisions
   const suffix = uniqueSuffix();
   const email =
-    overrides.email ?? `e2e-employee-${suffix}@deqah-test.com`;
+    overrides.email ?? `e2e-employee-${suffix}@sawaa-test.com`;
 
   const body = {
     name: overrides.name ?? `موظف اختبار ${suffix}`,

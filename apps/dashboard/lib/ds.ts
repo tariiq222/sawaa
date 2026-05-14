@@ -1,5 +1,5 @@
 /**
- * Design System Tokens — Deqah Dashboard
+ * Design System Tokens — Sawaa Dashboard
  *
  * مرجع موحد للـ tokens المستخدمة في الكود.
  * الألوان الفعلية معرّفة في globals.css كـ CSS custom properties.

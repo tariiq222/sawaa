@@ -9,7 +9,7 @@ import {
   SUPER_ADMIN_CONTEXT_CLS_KEY,
 } from '../../common/tenant/tenant.constants';
 
-const SCOPED_MODELS = new Set<string>([
+const _SCOPED_MODELS = new Set<string>([
   'RefreshToken',
   'CustomRole',
   'Permission',
@@ -86,7 +86,7 @@ const SCOPED_MODELS = new Set<string>([
   // 2026-04-28 — mobile OTP-only auth
   'EmailVerificationToken',
   // 04 — billing (Plan and SubscriptionInvoice are deliberately PLATFORM-level
-  // and NOT scoped — they describe Deqah's catalog / receivables respectively).
+  // and NOT scoped — they describe Sawaa's catalog / receivables respectively).
   'Subscription',
   'UsageRecord',
   'SavedCard',
@@ -97,7 +97,7 @@ const SCOPED_MODELS = new Set<string>([
   'Invitation',
   // ImpersonationSession deliberately NOT scoped — list-impersonation-sessions handler
   // must read across all organizations via $allTenants bypass.
-  // WebhookEvent is platform-level (Deqah's own webhook dedup), intentionally unscoped
+  // WebhookEvent is platform-level (Sawaa's own webhook dedup), intentionally unscoped
   // Phase 5 — materialized quota counters (tenant-scoped for RLS safety)
   'UsageCounter',
   // Bug B5 (2026-05-03) — per-tenant invoice numbering counter. The schema

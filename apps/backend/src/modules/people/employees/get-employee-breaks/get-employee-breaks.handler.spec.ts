@@ -5,7 +5,7 @@ import { PrismaService } from '../../../../infrastructure/database/prisma.servic
 
 describe('GetEmployeeBreaksHandler', () => {
   let handler: GetEmployeeBreaksHandler;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   let prisma: any;
 
   beforeEach(async () => {

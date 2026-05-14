@@ -50,7 +50,7 @@ export class ZohoBootstrapService implements OnApplicationBootstrap {
 
     try {
       await this.api.setAutoGenerateInvoiceNumber(ctx, false);
-      this.logger.log('Platform Zoho auto-numbering disabled (invoice_number will use Deqah\'s number)');
+      this.logger.log('Platform Zoho auto-numbering disabled (invoice_number will use Sawaa\'s number)');
     } catch (err) {
       this.logger.warn(
         `Failed to disable Zoho auto-numbering on platform org at boot: ${(err as Error).message}. ` +

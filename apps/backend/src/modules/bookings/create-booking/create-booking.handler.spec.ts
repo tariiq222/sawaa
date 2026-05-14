@@ -6,7 +6,7 @@ import { RlsTransactionService } from '../../../infrastructure/database';
 
 const mockTenant = { requireOrganizationIdOrDefault: jest.fn().mockReturnValue('00000000-0000-0000-0000-000000000001') };
 const mockEventBus = { publish: jest.fn().mockResolvedValue(undefined) };
-const mockSubscriptionCache = { get: jest.fn().mockResolvedValue(null) };
+const _mockSubscriptionCache = { get: jest.fn().mockResolvedValue(null) };
 
 const buildSettingsHandler = (overrides = {}) => ({
   execute: jest.fn().mockResolvedValue({ ...DEFAULT_BOOKING_SETTINGS, ...overrides }),
@@ -97,7 +97,7 @@ describe('CreateBookingHandler', () => {
     expect(prisma.invoice.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          organizationId: '00000000-0000-0000-0000-000000000001',
+          // org scoping moved to RLS / removed in single-tenant migration
           bookingId: 'book-1',
           clientId: 'client-1',
           branchId: 'branch-1',

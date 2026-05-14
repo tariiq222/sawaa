@@ -11,7 +11,7 @@ import { PriceResolverService } from '../../org-experience/services/price-resolv
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 
 import { CreateGuestBookingDto } from './create-guest-booking.dto';
-import type { OtpChannel } from '@prisma/client';
+import { Prisma, type OtpChannel } from '@prisma/client';
 import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type CreateGuestBookingCommand = CreateGuestBookingDto & {
@@ -21,7 +21,17 @@ export type CreateGuestBookingCommand = CreateGuestBookingDto & {
   sessionChannel: OtpChannel;
 };
 
-const DEFAULT_VAT_RATE = 0.15;
+
+
+/** FNV-1a 32-bit hash → signed int32 (Postgres int4 range). */
+function hashToInt32(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return h | 0;
+}
 
 @Injectable()
 export class CreateGuestBookingHandler {
@@ -40,6 +50,23 @@ export class CreateGuestBookingHandler {
       throw new BadRequestException('Booking must be scheduled in the future');
     }
 
+    // P2-8: enforce booking window constraints from branch/global settings
+    const settings = await this.settingsHandler.execute({ branchId: cmd.branchId });
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + settings.maxAdvanceBookingDays);
+    maxDate.setHours(23, 59, 59, 999);
+    if (scheduledAt > maxDate) {
+      throw new BadRequestException(
+        `Booking cannot be scheduled more than ${settings.maxAdvanceBookingDays} days in advance`,
+      );
+    }
+    const earliestAllowed = new Date(Date.now() + settings.minBookingLeadMinutes * 60_000);
+    if (scheduledAt < earliestAllowed) {
+      throw new BadRequestException(
+        `Booking must be scheduled at least ${settings.minBookingLeadMinutes} minutes in advance`,
+      );
+    }
+
     // Fix B — identifier match: session.identifier must equal the contact being booked
     const identifierMatchesEmail = cmd.sessionChannel === 'EMAIL' && cmd.identifier === cmd.client.email;
     const identifierMatchesPhone = cmd.sessionChannel === 'SMS' && cmd.identifier === cmd.client.phone;
@@ -55,9 +82,15 @@ export class CreateGuestBookingHandler {
 
     const employee = await this.prisma.employee.findFirst({
       where: { id: cmd.employeeId },
-      select: { id: true },
+      select: { id: true, isActive: true, isPublic: true },
     });
     if (!employee) throw new NotFoundException('Employee not found');
+    if (!employee.isActive) {
+      throw new BadRequestException('Employee is not active');
+    }
+    if (!employee.isPublic) {
+      throw new BadRequestException('Employee is not available for public booking');
+    }
 
     // Fix D — employee must belong to the requested branch
     const employeeBranch = await this.prisma.employeeBranch.findUnique({
@@ -72,9 +105,15 @@ export class CreateGuestBookingHandler {
 
     const service = await this.prisma.service.findFirst({
       where: { id: cmd.serviceId },
-      select: { id: true },
+      select: { id: true, isActive: true, isHidden: true },
     });
     if (!service) throw new NotFoundException('Service not found');
+    if (!service.isActive) {
+      throw new BadRequestException('Service is not active');
+    }
+    if (service.isHidden) {
+      throw new BadRequestException('Service is not available for public booking');
+    }
 
     const employeeService = await this.prisma.employeeService.findUnique({
       where: { employeeId_serviceId: { employeeId: cmd.employeeId, serviceId: cmd.serviceId } },
@@ -104,8 +143,11 @@ export class CreateGuestBookingHandler {
             expiresAt: new Date(cmd.sessionExp * 1000),
           },
         });
-      } catch {
-        throw new UnauthorizedException('OTP session already used');
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+          throw new UnauthorizedException('OTP session already used');
+        }
+        throw err;
       }
 
       const conflict = await tx.booking.findFirst({
@@ -153,6 +195,13 @@ export class CreateGuestBookingHandler {
         });
       }
 
+      // P1-2: serialize bookingNumber generation within the org using an
+      // advisory lock so two concurrent transactions cannot read the same
+      // 'last' number and both insert it.
+      const numberLockKey1 = hashToInt32(`booking_number:${organizationId}`);
+      const numberLockKey2 = 0;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${numberLockKey1}::int, ${numberLockKey2}::int)`;
+
       const lastBooking = await tx.booking.findFirst({
         where: { organizationId },
         orderBy: { bookingNumber: 'desc' },
@@ -179,9 +228,15 @@ export class CreateGuestBookingHandler {
         },
       });
 
-      const subtotal = Number(price);
-      const vatAmt = parseFloat((subtotal * DEFAULT_VAT_RATE).toFixed(2));
-      const total = subtotal + vatAmt;
+      const orgSettings = await tx.organizationSettings.findFirst({
+        where: { organizationId },
+        select: { vatRate: true },
+      });
+      const vatRate = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
+
+      const subtotal = new Prisma.Decimal(price.toString());
+      const vatAmt = parseFloat(subtotal.mul(vatRate).toFixed(2));
+      const total = parseFloat(subtotal.add(vatAmt).toFixed(2));
 
       const invoice = await tx.invoice.create({
         data: {
@@ -189,9 +244,9 @@ export class CreateGuestBookingHandler {
           clientId: client.id,
           employeeId: cmd.employeeId,
           bookingId: booking.id,
-          subtotal,
+          subtotal: subtotal.toNumber(),
           discountAmt: 0,
-          vatRate: DEFAULT_VAT_RATE,
+          vatRate: vatRate.toNumber(),
           vatAmt,
           total,
           status: 'ISSUED',

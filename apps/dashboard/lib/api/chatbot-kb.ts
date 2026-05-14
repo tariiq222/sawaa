@@ -1,5 +1,5 @@
 /**
- * Chatbot Knowledge Base API — Deqah Dashboard
+ * Chatbot Knowledge Base API — Sawaa Dashboard
  */
 
 import { api, getAccessToken } from "@/lib/api"

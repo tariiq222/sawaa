@@ -6,7 +6,7 @@ import { SLUG_REGEX } from './common/tenant/subdomain-resolver.service';
  * Configures CORS on the given NestJS application.
  *
  * Allowed origins:
- *  1. Valid tenant subdomain of PLATFORM_ROOT_DOMAIN (e.g. sawa.deqah.net)
+ *  1. Valid tenant subdomain of PLATFORM_ROOT_DOMAIN (e.g. sawa.sawaa.net)
  *  2. Exact origins listed in CORS_ORIGINS (comma-separated)
  *  3. In non-production: standard local dev ports
  */

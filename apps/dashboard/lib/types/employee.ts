@@ -1,5 +1,5 @@
 /**
- * Employee Types — Deqah Dashboard
+ * Employee Types — Sawaa Dashboard
  */
 
 import type { SearchableQuery } from "./common"

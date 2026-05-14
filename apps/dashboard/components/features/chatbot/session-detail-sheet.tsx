@@ -11,11 +11,11 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-} from "@deqah/ui"
-import { Badge } from "@deqah/ui"
-import { Button } from "@deqah/ui"
-import { Input } from "@deqah/ui"
-import { Skeleton } from "@deqah/ui"
+} from "@sawaa/ui"
+import { Badge } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
+import { Input } from "@sawaa/ui"
+import { Skeleton } from "@sawaa/ui"
 import { useChatSession, useChatbotMutations } from "@/hooks/use-chatbot"
 import { useLocale } from "@/components/locale-provider"
 import { formatDatePattern } from "@/lib/date"

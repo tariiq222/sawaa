@@ -8,7 +8,7 @@ import { useLocale } from "@/components/locale-provider"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { StatsGrid } from "@/components/features/stats-grid"
 import { StatCard } from "@/components/features/stat-card"
-import { Skeleton } from "@deqah/ui"
+import { Skeleton } from "@sawaa/ui"
 import {
   Calendar03Icon,
   CheckmarkCircle02Icon,

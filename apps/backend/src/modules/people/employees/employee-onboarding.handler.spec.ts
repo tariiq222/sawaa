@@ -19,7 +19,7 @@ const mockEmployee = {
 
 describe('EmployeeOnboardingHandler', () => {
   let handler: EmployeeOnboardingHandler;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   let prisma: any;
   let rlsTx: { withTransaction: jest.Mock };
 

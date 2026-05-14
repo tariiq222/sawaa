@@ -2,7 +2,7 @@ export const enZoho: Record<string, string> = {
   "zoho.menuLabel": "Zoho Invoice",
   "zoho.title": "Zoho Invoice Integration",
   "zoho.description":
-    "After every successful payment we issue an invoice in your Zoho Invoice organization and send the client a link. Subscriptions stay in Deqah — Zoho only issues the invoice.",
+    "After every successful payment we issue an invoice in your Zoho Invoice organization and send the client a link. Subscriptions stay in Sawaa — Zoho only issues the invoice.",
 
   "zoho.notConnected.title": "Not connected",
   "zoho.notConnected.body":
@@ -48,7 +48,7 @@ export const enZoho: Record<string, string> = {
   "zoho.payments.colDate": "Date",
   "zoho.payments.colAmount": "Amount",
   "zoho.payments.colMethod": "Method",
-  "zoho.payments.colInvoice": "Deqah invoice",
+  "zoho.payments.colInvoice": "Sawaa invoice",
   "zoho.payments.colZoho": "Zoho status",
   "zoho.payments.colActions": "Actions",
   "zoho.payments.zohoNotMirrored": "Not mirrored",

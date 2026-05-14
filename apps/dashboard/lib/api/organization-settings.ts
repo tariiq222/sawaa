@@ -1,5 +1,5 @@
 /**
- * Clinic Settings API — Deqah Dashboard
+ * Clinic Settings API — Sawaa Dashboard
  */
 
 import { api } from "@/lib/api"

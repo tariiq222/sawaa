@@ -14,7 +14,7 @@ export class OnboardEmployeeHandler {
   ) {}
 
   async execute(dto: OnboardEmployeeCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
 
     const existing = await this.prisma.employee.findFirst({
       where: { email: dto.email },

@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { PublicBranding } from '@deqah/shared';
+import type { PublicBranding } from '@sawaa/shared';
 
 import { publicBrandingService } from '@/services/client';
 import { getSecureItem, setSecureItem } from '@/stores/secure-storage';
 
-const CACHE_KEY = 'deqah.branding.cache.v1';
+const CACHE_KEY = 'sawaa.branding.cache.v1';
 
 export const brandingKeys = {
   all: ['branding'] as const,

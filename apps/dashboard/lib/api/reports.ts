@@ -1,5 +1,5 @@
 /**
- * Reports API — Deqah Dashboard
+ * Reports API — Sawaa Dashboard
  * Controller: dashboard/ops/reports
  */
 

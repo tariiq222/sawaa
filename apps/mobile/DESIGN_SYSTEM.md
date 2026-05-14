@@ -1,4 +1,4 @@
-# Deqah Mobile — Design System
+# Sawaa Mobile — Design System
 
 > **STATUS (2026-04-26):** Visual-language reference for the "Mental Health
 > Home" prototype. The runtime tokens have since been ported to

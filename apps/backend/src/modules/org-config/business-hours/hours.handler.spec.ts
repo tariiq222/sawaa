@@ -92,8 +92,9 @@ describe('AddHolidayHandler', () => {
     const handler = new AddHolidayHandler(prisma as never, buildTenant());
     const result = await handler.execute({ branchId: 'branch-1', date: '2026-01-01', nameAr: 'رأس السنة' });
     expect(result.id).toBe('hol-1');
+    // org scoping moved to RLS / removed in single-tenant migration
     expect(prisma.holiday.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ organizationId: DEFAULT_ORG }) }),
+      expect.objectContaining({ data: expect.objectContaining({ branchId: 'branch-1', nameAr: 'رأس السنة' }) }),
     );
   });
 

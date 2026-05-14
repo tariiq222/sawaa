@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { Locale } from '@/features/locale/locale';
 import { t } from '@/features/locale/dictionary';
 import { useCurrentClient } from '@/features/auth/public';
-import type { ClientBookingItem } from '@deqah/shared';
+import type { ClientBookingItem } from '@sawaa/shared';
 import { getMyBookingsApi, cancelMyBookingApi, rescheduleMyBookingApi } from '@/features/auth/auth.api';
 
 interface BookingDetailFeatureProps {

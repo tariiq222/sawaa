@@ -103,7 +103,7 @@ describe('InitGuestPaymentHandler', () => {
       });
       expect(prisma.payment.create).toHaveBeenCalledWith({
         data: {
-          organizationId: '00000000-0000-0000-0000-000000000001',
+          // org scoping moved to RLS / removed in single-tenant migration
           invoiceId: 'inv-1',
           amount: mockInvoice.total,
           currency: 'SAR',

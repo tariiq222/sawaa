@@ -2,7 +2,7 @@ import { getLocale } from '@/features/locale/public';
 import { t } from '@/features/locale/dictionary';
 import { getMyBookingsApi } from '@/features/auth/auth.api';
 import { ClientBookingsList } from '@/features/auth/client-bookings-list';
-import type { ClientBookingItem } from '@deqah/shared';
+import type { ClientBookingItem } from '@sawaa/shared';
 
 interface AccountBookingsPageProps {
   searchParams: Promise<{ page?: string; pageSize?: string }>;

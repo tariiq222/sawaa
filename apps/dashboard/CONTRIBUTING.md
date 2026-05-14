@@ -1,4 +1,4 @@
-# CONTRIBUTING — Deqah Dashboard
+# CONTRIBUTING — Sawaa Dashboard
 
 > اقرأ هذا الملف أولاً قبل كتابة أي سطر كود.
 > يُكمّل: `CLAUDE.md` (القواعد الكاملة + Layer rules) + `DESIGN-SYSTEM.md` (التصميم) + `tokens.md` (مرجع التوكنز).
@@ -52,7 +52,7 @@ dashboard/
 │
 ├── components/
 │   ├── ui/                   # App-local wrappers فقط (date-picker, nationality-select)
-│   │                         #   shadcn primitives → @deqah/ui (workspace package)
+│   │                         #   shadcn primitives → @sawaa/ui (workspace package)
 │   └── features/
 │       ├── [feature]/        # مكونات خاصة بكل feature
 │       └── *.tsx             # shared components (3+ features)
@@ -197,7 +197,7 @@ docs(arch): update hook ownership rules
 A: إذا feature واحدة → داخلها. إذا featureان → انتظر الثالثة ثم انقل لـ `components/features/` root أو `lib/`.
 
 **Q: هل أستطيع تعديل shadcn primitives؟**
-A: لا. الـ primitives موجودة في `@deqah/ui` (workspace package). إذا احتجت تعديلاً → عدّلها داخل `packages/ui/src/primitives/` لتظل مشتركة بين dashboard/admin/website. `components/ui/` في الـ dashboard للـ wrappers المحلية فقط (date-picker, nationality-select).
+A: لا. الـ primitives موجودة في `@sawaa/ui` (workspace package). إذا احتجت تعديلاً → عدّلها داخل `packages/ui/src/primitives/` لتظل مشتركة بين dashboard/admin/website. `components/ui/` في الـ dashboard للـ wrappers المحلية فقط (date-picker, nationality-select).
 
 **Q: أين أحفظ constants؟**
 A: في `lib/types/[feature].ts` كـ `const` عادية، أو `lib/utils.ts` إذا كانت عامة.

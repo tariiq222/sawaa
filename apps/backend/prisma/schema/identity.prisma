@@ -16,7 +16,6 @@ enum OtpPurpose {
 
 model OtpCode {
   id             String     @id @default(uuid())
-  organizationId String?
   channel        OtpChannel
   identifier     String
   codeHash       String
@@ -29,18 +28,16 @@ model OtpCode {
   createdAt      DateTime   @default(now())
 
   @@index([identifier, purpose])
-  @@index([organizationId, identifier, channel, purpose])
+  @@index([ identifier, channel, purpose])
   @@index([expiresAt])
   @@index([lockedUntil])
 }
 
 model UsedOtpSession {
   jti            String   @id
-  organizationId String?
   consumedAt     DateTime @default(now())
   expiresAt      DateTime
 
-  @@index([organizationId])
   @@index([expiresAt])
 }
 
@@ -101,7 +98,6 @@ model RefreshToken {
   id             String    @id @default(uuid())
   userId         String
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organizationId String?
   tokenHash      String    @unique
   // First 8 chars of the raw UUID used as a fast lookup key.
   // Lets us do an indexed DB lookup to a single row before the bcrypt compare,
@@ -113,7 +109,6 @@ model RefreshToken {
 
   @@index([userId])
   @@index([tokenSelector])
-  @@index([organizationId])
 }
 
 model PasswordResetToken {
@@ -135,7 +130,6 @@ model PasswordResetToken {
 
 model EmailVerificationToken {
   id             String    @id @default(uuid())
-  organizationId String?
   userId         String
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   tokenHash      String    @unique
@@ -147,12 +141,10 @@ model EmailVerificationToken {
   @@index([userId])
   @@index([tokenSelector])
   @@index([expiresAt])
-  @@index([organizationId])
 }
 
 model ClientRefreshToken {
   id             String    @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001")
   clientId       String
   tokenHash      String    @unique
   tokenSelector  String
@@ -162,21 +154,16 @@ model ClientRefreshToken {
 
   @@index([clientId])
   @@index([tokenSelector])
-  @@index([organizationId])
 }
 
 model CustomRole {
   id             String       @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001")
   name           String
   permissions    Permission[]
   users          User[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  @@unique([id, organizationId], name: "custom_role_id_org") // DB-05
-  @@unique([organizationId, name])
-  @@index([organizationId])
 }
 
 model Permission {
@@ -184,11 +171,9 @@ model Permission {
   customRoleId   String
   customRole     CustomRole @relation(fields: [customRoleId], references: [id], onDelete: Cascade)
   // Denormalized from CustomRole — Prisma scoping extension cannot traverse joins.
-  organizationId String @default("00000000-0000-0000-0000-000000000001")
   action         String
   subject        String
   createdAt      DateTime   @default(now())
 
   @@unique([customRoleId, action, subject])
-  @@index([organizationId])
 }

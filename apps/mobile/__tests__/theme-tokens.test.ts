@@ -26,7 +26,7 @@ describe('Theme Tokens System', () => {
     expect(SawaaText.heading).toBeDefined();
   });
 
-  it('uses Deqah defaults for the locked Sawaa token fallback', () => {
+  it('uses Sawaa defaults for the locked Sawaa token fallback', () => {
     expect(sawaaTokens.primary.light).toBe('#354FD8');
     expect(sawaaTokens.primary.dark).toBe('#2438B0');
     expect(sawaaTokens.accent.light).toBe('#82CC17');

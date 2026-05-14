@@ -37,7 +37,7 @@ test.describe('[D1-OTP] Dashboard OTP login flow', () => {
     await page.locator('#identifier').waitFor({ state: 'visible', timeout: 15_000 });
 
     // 2. Step 1 — enter identifier
-    await page.locator('#identifier').fill('admin@deqah-test.com');
+    await page.locator('#identifier').fill('admin@sawaa-test.com');
     await page.getByRole('button', { name: 'متابعة' }).click();
 
     // 3. Step 2 — choose password method
@@ -76,7 +76,7 @@ test.describe('[D1-OTP] Dashboard OTP login flow', () => {
     await page.locator('#identifier').waitFor({ state: 'visible', timeout: 15_000 });
 
     // 2. Step 1 — enter identifier
-    await page.locator('#identifier').fill('admin@deqah-test.com');
+    await page.locator('#identifier').fill('admin@sawaa-test.com');
     await page.getByRole('button', { name: 'متابعة' }).click();
 
     // 3. Step 2 — method step is visible

@@ -1,4 +1,4 @@
-# Deqah Dashboard — Design Tokens
+# Sawaa Dashboard — Design Tokens
 
 **Single source of truth** for every design token used in the dashboard.
 If a token exists in code but not here, it's a bug in this doc — update it.
@@ -6,7 +6,7 @@ If a token exists in code but not here, it's a bug in this doc — update it.
 - **Token values** live in [`app/globals.css`](./app/globals.css) as CSS custom properties
 - **Type-safe references** live in [`lib/ds.ts`](./lib/ds.ts)
 - **Tailwind mapping** happens inside the `@theme inline` block in `globals.css`
-- **Runtime branding overrides** are injected by `BrandingProvider` via a `#deqah-dark-theme` style tag
+- **Runtime branding overrides** are injected by `BrandingProvider` via a `#sawaa-dark-theme` style tag
 
 > Branding rule: clinic deployments override **brand tokens only** (`--primary`, `--accent`, `--ring`, `--sidebar-*`). Neutrals, states, and decorative tokens stay fixed.
 

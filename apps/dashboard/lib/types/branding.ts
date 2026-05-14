@@ -1,5 +1,5 @@
 /**
- * Branding Types — Deqah Dashboard
+ * Branding Types — Sawaa Dashboard
  */
 
 export type WebsiteTheme = "SAWAA" | "PREMIUM"

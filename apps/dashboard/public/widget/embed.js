@@ -1,5 +1,5 @@
 /**
- * Deqah Booking Widget — Embed Script
+ * Sawaa Booking Widget — Embed Script
  *
  * Usage (auto locale detection):
  *   <script src="/widget/embed.js" data-auto-open></script>
@@ -8,12 +8,12 @@
  *   <script src="/widget/embed.js" data-locale="en" data-auto-open></script>
  *
  * Programmatically:
- *   DeqahWidget.open()
- *   DeqahWidget.open({ locale: 'en' })
+ *   SawaaWidget.open()
+ *   SawaaWidget.open({ locale: 'en' })
  *
  * Events:
- *   DeqahWidget.on('deqah:booking:complete', fn)
- *   DeqahWidget.on('deqah:widget:close', fn)
+ *   SawaaWidget.on('sawaa:booking:complete', fn)
+ *   SawaaWidget.on('sawaa:widget:close', fn)
  */
 
 ;(function () {
@@ -60,7 +60,7 @@
 
   function createFrame(opts) {
     var overlay = document.createElement('div')
-    overlay.id = 'deqah-widget-overlay'
+    overlay.id = 'sawaa-widget-overlay'
     overlay.style.cssText = [
       'position:fixed', 'inset:0', 'z-index:99999',
       'display:flex', 'align-items:center', 'justify-content:center',
@@ -80,7 +80,7 @@
     frame.setAttribute('title', 'Booking Widget')
 
     overlay.onclick = function (e) {
-      if (e.target === overlay) DeqahWidget.close()
+      if (e.target === overlay) SawaaWidget.close()
     }
 
     overlay.appendChild(frame)
@@ -94,13 +94,13 @@
 
     var data = event.data
     if (!data || typeof data.type !== 'string') return
-    if (!data.type.startsWith('deqah:')) return
+    if (!data.type.startsWith('sawaa:')) return
 
-    if (data.type === 'deqah:widget:close') {
-      DeqahWidget.close()
+    if (data.type === 'sawaa:widget:close') {
+      SawaaWidget.close()
     }
 
-    if (data.type === 'deqah:widget:resize' && currentFrame && data.height) {
+    if (data.type === 'sawaa:widget:resize' && currentFrame && data.height) {
       var maxH = window.innerHeight - 32
       currentFrame.style.height = Math.min(data.height, maxH) + 'px'
     }
@@ -114,7 +114,7 @@
 
   var listeners = {}
 
-  window.DeqahWidget = {
+  window.SawaaWidget = {
     open: function (opts) {
       opts = opts || {}
       var s = document.currentScript || document.querySelector('script[src*="embed.js"]')
@@ -128,12 +128,12 @@
         opts.flow = s.getAttribute('data-flow') || undefined
       }
 
-      if (document.getElementById('deqah-widget-overlay')) return
+      if (document.getElementById('sawaa-widget-overlay')) return
       createFrame(opts)
     },
 
     close: function () {
-      var overlay = document.getElementById('deqah-widget-overlay')
+      var overlay = document.getElementById('sawaa-widget-overlay')
       if (overlay) overlay.remove()
       currentFrame = null
     },
@@ -152,6 +152,6 @@
   /* Auto-open if data-auto-open attribute is set */
   document.addEventListener('DOMContentLoaded', function () {
     var s = document.querySelector('script[src*="embed.js"][data-auto-open]')
-    if (s) DeqahWidget.open()
+    if (s) SawaaWidget.open()
   })
 })()

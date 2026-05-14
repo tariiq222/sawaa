@@ -12,9 +12,9 @@ import {
   MailValidation01Icon,
   Delete02Icon,
 } from "@hugeicons/core-free-icons"
-import { Avatar, AvatarFallback, AvatarImage } from "@deqah/ui"
-import { Badge } from "@deqah/ui"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@deqah/ui"
+import { Avatar, AvatarFallback, AvatarImage } from "@sawaa/ui"
+import { Badge } from "@sawaa/ui"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@sawaa/ui"
 import type { Client } from "@/lib/types/client"
 
 interface ClientColumnOptions {

@@ -1,5 +1,5 @@
 /**
- * Rating Types — Deqah Dashboard
+ * Rating Types — Sawaa Dashboard
  */
 
 import type { PaginatedQuery } from "./common"

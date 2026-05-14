@@ -3,7 +3,6 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swa
 import { ApiStandardResponses } from '../../common/swagger';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
-import { FeatureKey } from '@deqah/shared/constants/feature-keys';
 import { GetZoomConfigHandler } from '../../modules/integrations/zoom/get-zoom-config.handler';
 import { UpsertZoomConfigHandler } from '../../modules/integrations/zoom/upsert-zoom-config.handler';
 import { TestZoomConfigHandler } from '../../modules/integrations/zoom/test-zoom-config.handler';

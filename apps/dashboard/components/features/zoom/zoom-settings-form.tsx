@@ -9,7 +9,7 @@ import {
   CardTitle,
   Input,
   Label,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import {
   useTestZoomConfig,

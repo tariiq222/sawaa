@@ -9,7 +9,6 @@ import {
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
 import { ApiStandardResponses, ApiErrorDto } from '../../common/swagger';
-import { FeatureKey } from '@deqah/shared/constants/feature-keys';
 import { CreateBranchHandler } from '../../modules/org-config/branches/create-branch.handler';
 import { CreateBranchDto } from '../../modules/org-config/branches/create-branch.dto';
 import { UpdateBranchHandler } from '../../modules/org-config/branches/update-branch.handler';

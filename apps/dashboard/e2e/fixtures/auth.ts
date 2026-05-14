@@ -42,16 +42,13 @@ const PERSONA_CREDENTIALS: Record<Persona, { email: string; password: string }> 
     password: process.env.SEED_OWNER_PASSWORD ?? TEST_TENANT.adminPassword,
   },
   receptionist: {
-    email: process.env.SEED_RECEPTIONIST_EMAIL ?? 'receptionist@deqah-test.com',
+    email: process.env.SEED_RECEPTIONIST_EMAIL ?? 'receptionist@sawaa-test.com',
     password: process.env.SEED_RECEPTIONIST_PASSWORD ?? 'Recept@1234',
   },
 };
 
 /**
  * Log in as a given persona by filling the login form.
- *
- * hCaptcha is bypassed automatically when NEXT_PUBLIC_HCAPTCHA_SITE_KEY
- * is unset — CaptchaField auto-issues "dev-bypass" on mount.
  *
  * Optimization: skip login if already authenticated as the target persona.
  * This avoids rate-limiting the auth endpoint when running many tests in sequence.
@@ -82,9 +79,6 @@ export async function loginAs(page: Page, persona: Persona = 'admin'): Promise<v
 
   await page.goto('/login');
   await expect(page).toHaveURL(/\/login/);
-
-  // Wait for hCaptcha bypass to fire (mount effect) before filling form.
-  await page.waitForLoadState('networkidle');
 
   await page.fill('input[type="email"], #email', email);
   await page.fill('input[type="password"], #password', password);

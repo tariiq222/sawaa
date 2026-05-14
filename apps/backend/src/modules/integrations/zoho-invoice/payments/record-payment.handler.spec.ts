@@ -75,7 +75,7 @@ describe('RecordPaymentHandler — tenant isolation + payment-mode mapping', () 
     ['BANK_TRANSFER', 'banktransfer'],
     ['CASH', 'cash'],
     ['COUPON', 'cash'],
-  ])('maps Deqah PaymentMethod %s → Zoho payment_mode %s', async (deqah, zoho) => {
+  ])('maps Sawaa PaymentMethod %s → Zoho payment_mode %s', async (deqah, zoho) => {
     const { handler, findFirstOrThrow, recordCustomerPayment } = makeHandler();
     findFirstOrThrow.mockResolvedValue({
       id: 'pay-1',

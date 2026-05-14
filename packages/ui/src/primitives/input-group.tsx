@@ -4,7 +4,7 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "../lib/cn"
-import { Button } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
 import { Input } from "./input"
 import { Textarea } from "./textarea"
 

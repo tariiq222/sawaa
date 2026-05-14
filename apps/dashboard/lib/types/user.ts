@@ -1,5 +1,5 @@
 /**
- * User & Role Types — Deqah Dashboard
+ * User & Role Types — Sawaa Dashboard
  */
 
 import type { SearchableQuery } from "./common"

@@ -16,7 +16,7 @@ const makeCmd = (overrides = {}) => ({
 
 describe('SetEmployeeBreaksHandler', () => {
   let handler: SetEmployeeBreaksHandler;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   let prisma: any;
 
   beforeEach(async () => {

@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PlatformMailQueueService } from './platform-mail-queue/platform-mail-queue.service';
 
-const DEFAULT_FROM = 'Deqah <noreply@webvue.pro>';
+const DEFAULT_FROM = 'Sawaa <noreply@webvue.pro>';
 
 /**
  * Public façade for platform-level transactional emails (welcome, trial,

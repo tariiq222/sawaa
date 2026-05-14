@@ -45,8 +45,9 @@ describe('SubmitRatingHandler', () => {
     const prisma = buildPrisma();
     const handler = new SubmitRatingHandler(prisma as never, buildTenant());
     const result = await handler.execute(validDto);
+    // org scoping moved to RLS / removed in single-tenant migration
     expect(prisma.rating.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ organizationId: DEFAULT_ORG }) }),
+      expect.objectContaining({ data: expect.objectContaining({ bookingId: 'booking-1', score: 5 }) }),
     );
     expect(result.score).toBe(5);
   });

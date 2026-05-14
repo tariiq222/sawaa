@@ -27,7 +27,7 @@ export function bilingualLayout({ ar, en }: BilingualSections): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Deqah</title>
+<title>Sawaa</title>
 </head>
 <body style="margin:0;padding:24px;background:${BRAND.surface};font-family:${BRAND.fontFamily};">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;">

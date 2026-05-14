@@ -1,5 +1,5 @@
 export const PLATFORM_BRAND = {
-  nameEn: 'Deqah',
+  nameEn: 'Sawaa',
   nameAr: 'دِقة',
   taglineEn: 'Scheduling and appointment operations platform',
   taglineAr: 'نظام إدارة المواعيد والحجوزات للمنشآت',

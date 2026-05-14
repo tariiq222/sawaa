@@ -20,7 +20,7 @@ export class MailchimpEmailAdapter implements EmailProvider {
   }
 
   async sendMail(payload: EmailSendPayload): Promise<EmailSendResult> {
-    const fromEmail = payload.fromEmail ?? 'noreply@deqah.sa';
+    const fromEmail = payload.fromEmail ?? 'noreply@sawaa.sa';
     const fromName = payload.fromName ?? '';
 
     const res = await fetchWithTimeout(

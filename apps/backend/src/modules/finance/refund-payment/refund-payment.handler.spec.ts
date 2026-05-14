@@ -41,7 +41,7 @@ describe('RefundPaymentHandler', () => {
     rlsTx = module.get(RlsTransactionService) as unknown as { withTransaction: jest.Mock };
   });
 
-  const completedPayment = (overrides: any = {}) => ({
+  const _completedPayment = (overrides: any = {}) => ({
     id: 'pay_1',
     status: 'COMPLETED',
     amount: 100,

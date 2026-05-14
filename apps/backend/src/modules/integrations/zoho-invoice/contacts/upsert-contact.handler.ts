@@ -6,7 +6,7 @@ import {
 } from '../../../../infrastructure/zoho';
 
 /**
- * Ensures a Deqah Client is mirrored as a Zoho Contact and returns the
+ * Ensures a Sawaa Client is mirrored as a Zoho Contact and returns the
  * Zoho contact_id. Idempotent: re-uses any existing `ZohoContactLink` row
  * before issuing a /contacts POST.
  *

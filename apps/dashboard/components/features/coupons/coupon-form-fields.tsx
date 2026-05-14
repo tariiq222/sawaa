@@ -8,18 +8,18 @@ import {
   TextAlignLeftIcon,
   Settings01Icon,
 } from "@hugeicons/core-free-icons"
-import { Input } from "@deqah/ui"
-import { Label } from "@deqah/ui"
-import { DateTimeInput } from "@deqah/ui"
-import { Switch } from "@deqah/ui"
-import { Card, CardContent } from "@deqah/ui"
+import { Input } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
+import { DateTimeInput } from "@sawaa/ui"
+import { Switch } from "@sawaa/ui"
+import { Card, CardContent } from "@sawaa/ui"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { SectionHeader } from "@/components/features/section-header"
 import { useLocale } from "@/components/locale-provider"
 

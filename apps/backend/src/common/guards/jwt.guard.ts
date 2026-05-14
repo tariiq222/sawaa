@@ -10,16 +10,15 @@ import { PrismaService } from '../../infrastructure/database';
 import { RedisService } from '../../infrastructure/cache';
 import { TenantContextService } from '../tenant/tenant-context.service';
 import { DEFAULT_ORGANIZATION_ID } from '../tenant/tenant.constants';
-import { parseUuidHeader } from '../tenant/uuid-header.util';
 import { ALLOW_DURING_SUSPENSION_KEY } from './allow-during-suspension.decorator';
 
 export const IS_PUBLIC_KEY = 'isPublic';
-const ORG_SUSPENSION_CACHE_TTL_SECONDS = 30;
-const ACTIVE_ORG_CACHE_SENTINEL = 'active';
+const _ORG_SUSPENSION_CACHE_TTL_SECONDS = 30;
+const _ACTIVE_ORG_CACHE_SENTINEL = 'active';
 
-const SUSPENSION_HINT_AR =
+const _SUSPENSION_HINT_AR =
   'حسابك معلّق. صاحب الحساب يمكنه تحديث طريقة الدفع لإعادة التفعيل.';
-const SUSPENSION_HINT_EN =
+const _SUSPENSION_HINT_EN =
   'Your organization is suspended. The owner can update the payment method to reactivate.';
 
 /** Mark a route as public — skips JWT validation. */
@@ -74,7 +73,7 @@ export class JwtGuard extends AuthGuard('jwt') {
     const effectiveOrgId = this.resolveEffectiveOrgId(req.user, req.headers);
     this.stampTenantContext(req.user, effectiveOrgId);
 
-    const allowDuringSuspension = this.reflector.getAllAndOverride<boolean>(
+    const _allowDuringSuspension = this.reflector.getAllAndOverride<boolean>(
       ALLOW_DURING_SUSPENSION_KEY,
       [ctx.getHandler(), ctx.getClass()],
     );
@@ -126,7 +125,7 @@ export class JwtGuard extends AuthGuard('jwt') {
    */
   private resolveEffectiveOrgId(
     user: AuthenticatedReqUser | undefined,
-    headers: Record<string, string | string[] | undefined> | undefined,
+    _headers: Record<string, string | string[] | undefined> | undefined,
   ): string | undefined {
     if (!user) return undefined;
     return DEFAULT_ORGANIZATION_ID;

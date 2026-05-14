@@ -25,6 +25,7 @@ export type InitClientPaymentCommand = InitClientPaymentDto & {
 export interface InitClientPaymentResult {
   paymentId: string;
   redirectUrl: string;
+  status?: string;
 }
 
 @Injectable()
@@ -77,9 +78,12 @@ export class InitClientPaymentHandler {
       if (!existingPayment.gatewayRef) {
         await this.prisma.payment.delete({ where: { id: existingPayment.id } });
       } else {
+        // P1-7: return the existing payment with its status so the client
+        // knows it is already pending instead of receiving a blank redirectUrl.
         return {
           paymentId: existingPayment.id,
           redirectUrl: '',
+          status: existingPayment.status,
         };
       }
     }

@@ -1,5 +1,5 @@
 /**
- * Site Settings API — Deqah Dashboard
+ * Site Settings API — Sawaa Dashboard
  */
 
 import { api } from "@/lib/api"

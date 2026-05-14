@@ -1,5 +1,5 @@
 /**
- * Chatbot Types — Deqah Dashboard
+ * Chatbot Types — Sawaa Dashboard
  *
  * Matches the backend Prisma schema + API response shapes
  * for sessions, messages, knowledge base, config, and analytics.

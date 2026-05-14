@@ -1,6 +1,6 @@
 "use client"
 
-import { Badge } from "@deqah/ui"
+import { Badge } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { bookingStatusStyles, bookingTypeStyles } from "@/lib/ds"
 import { cn } from "@/lib/utils"

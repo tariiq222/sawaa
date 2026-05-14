@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 
-import { Button } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
 
 import type { Payment } from "@/lib/types/payment"
 import { RefundDialog } from "./refund-dialog"

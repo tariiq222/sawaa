@@ -1,32 +1,22 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import type HCaptcha from '@hcaptcha/react-hcaptcha';
-import type { GuestClientInfo } from '@deqah/shared';
-import { OtpChannel, OtpPurpose } from '@deqah/shared';
-import { CaptchaField } from './captcha-field';
+import { useState } from 'react';
+import type { GuestClientInfo } from '@sawaa/shared';
+import { OtpChannel, OtpPurpose } from '@sawaa/shared';
 
 interface OtpRequestFormProps {
   client: GuestClientInfo;
-  /** Current hCaptcha token (null until user completes the widget). */
-  hcaptchaToken: string | null;
-  /** Called when hCaptcha emits a new verified token. */
-  onHcaptchaVerify: (token: string) => void;
   onRequestSent: () => void;
 }
 
 export function OtpRequestForm({
   client,
-  hcaptchaToken,
-  onHcaptchaVerify,
   onRequestSent,
 }: OtpRequestFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const captchaRef = useRef<HCaptcha>(null);
 
   const handleRequest = async () => {
-    if (!hcaptchaToken) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -35,13 +25,10 @@ export function OtpRequestForm({
         channel: OtpChannel.EMAIL,
         identifier: client.email,
         purpose: OtpPurpose.GUEST_BOOKING,
-        hCaptchaToken: hcaptchaToken,
       });
       onRequestSent();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send OTP');
-      // Reset widget so the user can re-verify after an error.
-      captchaRef.current?.resetCaptcha();
     } finally {
       setIsLoading(false);
     }
@@ -52,12 +39,6 @@ export function OtpRequestForm({
       <div style={{ fontSize: '0.875rem', opacity: 0.7 }}>
         We will send a verification code to {client.email}
       </div>
-
-      <CaptchaField
-        ref={captchaRef}
-        onVerify={(token) => onHcaptchaVerify(token)}
-        onExpire={() => onHcaptchaVerify('')}
-      />
 
       {error && (
         <div
@@ -75,7 +56,7 @@ export function OtpRequestForm({
 
       <button
         onClick={handleRequest}
-        disabled={isLoading || !hcaptchaToken}
+        disabled={isLoading}
         style={{
           padding: '0.875rem',
           background: 'var(--primary)',
@@ -83,8 +64,8 @@ export function OtpRequestForm({
           border: 'none',
           borderRadius: 'var(--radius)',
           fontWeight: 600,
-          cursor: isLoading || !hcaptchaToken ? 'not-allowed' : 'pointer',
-          opacity: isLoading || !hcaptchaToken ? 0.6 : 1,
+          cursor: isLoading ? 'not-allowed' : 'pointer',
+          opacity: isLoading ? 0.6 : 1,
         }}
       >
         {isLoading ? 'Sending...' : 'Send Verification Code'}

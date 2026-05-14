@@ -37,8 +37,8 @@ export function trialEndingTemplate(vars: TrialEndingVars): {
   `;
 
   return {
-    subjectAr: `تجربة Deqah تنتهي خلال ${days} ${days === 1 ? 'يوم' : 'أيام'}`,
-    subjectEn: `Your Deqah trial ends in ${days} day${days === 1 ? '' : 's'}`,
+    subjectAr: `تجربة Sawaa تنتهي خلال ${days} ${days === 1 ? 'يوم' : 'أيام'}`,
+    subjectEn: `Your Sawaa trial ends in ${days} day${days === 1 ? '' : 's'}`,
     html: bilingualLayout({ ar, en }),
   };
 }

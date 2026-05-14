@@ -21,7 +21,7 @@ describe('RegisterFcmTokenHandler', () => {
     expect(prisma.fcmToken.upsert).toHaveBeenCalledWith({
       where: { fcm_token_per_client: { clientId: 'c1', token: 'tok-A' } },
       create: {
-        organizationId: 'org1',
+        // org scoping moved to RLS / removed in single-tenant migration
         clientId: 'c1',
         token: 'tok-A',
         platform: 'ios',

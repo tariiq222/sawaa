@@ -10,9 +10,9 @@ import {
 } from "@hugeicons/core-free-icons"
 
 import { DataTable } from "@/components/features/data-table"
-import { Button } from "@deqah/ui"
-import { Skeleton } from "@deqah/ui"
-import { Card, CardContent, CardHeader, CardTitle } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
+import { Skeleton } from "@sawaa/ui"
+import { Card, CardContent, CardHeader, CardTitle } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import {
   useKnowledgeBase,

@@ -48,7 +48,6 @@ import { TestEmailConfigHandler } from '../../modules/comms/org-email-config/tes
 import { TestEmailConfigDto } from '../../modules/comms/org-email-config/test-email-config.dto';
 import { PrismaService } from '../../infrastructure/database';
 import { TenantContextService } from '../../common/tenant';
-import { FeatureKey } from '@deqah/shared/constants/feature-keys';
 import { ListTenantDeliveryLogsHandler } from '../../modules/comms/list-tenant-delivery-logs/list-tenant-delivery-logs.handler';
 import { ListTenantDeliveryLogsDto } from '../../modules/comms/list-tenant-delivery-logs/list-tenant-delivery-logs.dto';
 import { DEFAULT_ORGANIZATION_ID } from "../../common/tenant/tenant.constants";

@@ -1,5 +1,5 @@
 /**
- * Service Types — Deqah Dashboard
+ * Service Types — Sawaa Dashboard
  */
 
 import type { PaginatedQuery } from "./common"

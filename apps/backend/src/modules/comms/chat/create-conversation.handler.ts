@@ -17,7 +17,7 @@ export class CreateConversationHandler {
   ) {}
 
   async execute(dto: CreateConversationDto) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
     const isAiChat = !dto.employeeId;
 
     const existing = await this.prisma.chatConversation.findFirst({

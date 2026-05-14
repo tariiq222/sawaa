@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 
-import { Badge } from "@deqah/ui"
-import { Button } from "@deqah/ui"
+import { Badge } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
 import {
   useEmployeeAvailability,
   useEmployeeBreaks,

@@ -12,10 +12,10 @@ import {
   DialogDescription,
   DialogBody,
   DialogFooter,
-} from "@deqah/ui"
-import { Input } from "@deqah/ui"
-import { Label } from "@deqah/ui"
-import { Button } from "@deqah/ui"
+} from "@sawaa/ui"
+import { Input } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
 
 import { useRoleMutations } from "@/hooks/use-users"
 import { useLocale } from "@/components/locale-provider"

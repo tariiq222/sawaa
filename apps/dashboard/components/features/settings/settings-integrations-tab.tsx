@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Card } from "@deqah/ui"
+import { Card } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
 import { ZoomSettingsForm } from "@/components/features/zoom/zoom-settings-form"

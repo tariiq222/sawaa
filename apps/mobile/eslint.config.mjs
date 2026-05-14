@@ -88,7 +88,7 @@ export default defineConfig([
       "no-redeclare": "off",
       "no-dupe-class-members": "off",
 
-      // Deqah golden rule: no `any`. Warn (not error) until a follow-up
+      // Sawaa golden rule: no `any`. Warn (not error) until a follow-up
       // can clean up pre-existing call sites.
       "@typescript-eslint/no-explicit-any": "warn",
 

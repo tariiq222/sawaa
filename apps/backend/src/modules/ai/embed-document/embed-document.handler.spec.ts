@@ -41,7 +41,7 @@ const mockEmbedding = () => ({
 });
 
 const dto = {
-  title: 'Deqah FAQ',
+  title: 'Sawaa FAQ',
   content: 'A'.repeat(3000),
   sourceType: 'manual' as const,
 };

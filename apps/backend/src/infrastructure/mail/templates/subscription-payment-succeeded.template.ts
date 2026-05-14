@@ -55,8 +55,8 @@ export function subscriptionPaymentSucceededTemplate(
   `;
 
   return {
-    subjectAr: 'تم استلام دفع اشتراك Deqah',
-    subjectEn: 'Deqah subscription payment received',
+    subjectAr: 'تم استلام دفع اشتراك Sawaa',
+    subjectEn: 'Sawaa subscription payment received',
     html: bilingualLayout({ ar, en }),
   };
 }

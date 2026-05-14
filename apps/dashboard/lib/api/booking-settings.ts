@@ -1,5 +1,5 @@
 /**
- * Booking Settings API — Deqah Dashboard
+ * Booking Settings API — Sawaa Dashboard
  */
 
 import { api } from "@/lib/api"

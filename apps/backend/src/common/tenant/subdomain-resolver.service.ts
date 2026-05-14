@@ -39,7 +39,7 @@ export class SubdomainResolverService {
     private readonly redis: RedisService,
     config: ConfigService,
   ) {
-    this.rootDomain = config.get<string>('PLATFORM_ROOT_DOMAIN', 'deqah.net');
+    this.rootDomain = config.get<string>('PLATFORM_ROOT_DOMAIN', 'sawaa.net');
     const extra = (config.get<string>('RESERVED_SUBDOMAINS', '') || '')
       .split(',')
       .map((s) => s.trim().toLowerCase())

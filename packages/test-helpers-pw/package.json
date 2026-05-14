@@ -1,5 +1,5 @@
 {
-  "name": "@deqah/test-helpers-pw",
+  "name": "@sawaa/test-helpers-pw",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",

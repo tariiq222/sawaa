@@ -1,5 +1,5 @@
 /**
- * Activity Log API — Deqah Dashboard
+ * Activity Log API — Sawaa Dashboard
  */
 
 import { api } from "@/lib/api"

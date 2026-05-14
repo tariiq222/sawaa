@@ -5,17 +5,17 @@ import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons"
 
-import { Button } from "@deqah/ui"
-import { Input } from "@deqah/ui"
-import { Label } from "@deqah/ui"
-import { Switch } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
+import { Input } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
+import { Switch } from "@sawaa/ui"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { useIntakeFormMutations } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
 import type { IntakeFieldApi } from "@/lib/types/intake-form-api"

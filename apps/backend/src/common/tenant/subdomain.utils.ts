@@ -13,7 +13,7 @@ export const DEFAULT_RESERVED_SUBDOMAINS: ReadonlySet<string> = new Set([
   'blog',
   'cdn',
   'dashboard',
-  'deqah',
+  'sawaa',
   'dev',
   'docs',
   'errors',

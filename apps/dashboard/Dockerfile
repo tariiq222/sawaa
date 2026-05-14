@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.6
-# Deqah Dashboard — Next.js 15 production build (App Router).
+# Sawaa Dashboard — Next.js 15 production build (App Router).
 # Build context MUST be the monorepo root.
 #
 # Stage 1 (deps):         install all workspace deps — cached layer
@@ -47,13 +47,13 @@ RUN pnpm --filter=backend run prisma:generate
 # not in the .pnpm store that pnpm's script runner expects.
 RUN cd /app/packages/shared && node /app/node_modules/typescript/bin/tsc -p tsconfig.json && test -f dist/constants/feature-keys.js
 
-# Establish node_modules/@deqah/* symlinks pointing to packages/* (see backend note)
-RUN mkdir -p /app/node_modules/@deqah \
- && rm -rf /app/node_modules/@deqah/shared /app/node_modules/@deqah/api-client /app/node_modules/@deqah/ui \
- && ln -sf /app/packages/shared     /app/node_modules/@deqah/shared \
- && ln -sf /app/packages/api-client /app/node_modules/@deqah/api-client \
- && ln -sf /app/packages/ui         /app/node_modules/@deqah/ui \
- && test -f /app/node_modules/@deqah/shared/dist/constants/feature-keys.js
+# Establish node_modules/@sawaa/* symlinks pointing to packages/* (see backend note)
+RUN mkdir -p /app/node_modules/@sawaa \
+ && rm -rf /app/node_modules/@sawaa/shared /app/node_modules/@sawaa/api-client /app/node_modules/@sawaa/ui \
+ && ln -sf /app/packages/shared     /app/node_modules/@sawaa/shared \
+ && ln -sf /app/packages/api-client /app/node_modules/@sawaa/api-client \
+ && ln -sf /app/packages/ui         /app/node_modules/@sawaa/ui \
+ && test -f /app/node_modules/@sawaa/shared/dist/constants/feature-keys.js
 
 # ── Stage 3: app-build ───────────────────────────────────────────────────────
 FROM node:20-bookworm-slim AS app-build
@@ -76,14 +76,12 @@ RUN ARCH=$(uname -m | sed 's/aarch64/arm64/;s/x86_64/x64/') \
 # These ARGs are passed via --build-arg from the GitHub Actions workflow.
 # WARNING: defaults are localhost/test placeholders — always pass real values in CI.
 ARG NEXT_PUBLIC_API_URL=http://localhost:5100/api/v1
-ARG NEXT_PUBLIC_HCAPTCHA_SITE_KEY=8c765c14-831e-4a76-a1c0-0e3eac06c7f6
 ARG NEXT_PUBLIC_MOYASAR_PLATFORM_PUBLISHABLE_KEY=pk_test_replace_me
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_HCAPTCHA_SITE_KEY=$NEXT_PUBLIC_HCAPTCHA_SITE_KEY
 ENV NEXT_PUBLIC_MOYASAR_PLATFORM_PUBLISHABLE_KEY=$NEXT_PUBLIC_MOYASAR_PLATFORM_PUBLISHABLE_KEY
 
 RUN if echo "$NEXT_PUBLIC_API_URL" | grep -q "localhost"; then \
-      echo "❌ NEXT_PUBLIC_API_URL is localhost — pass --build-arg NEXT_PUBLIC_API_URL=https://api.deqah.net/api/v1" && exit 1; \
+      echo "❌ NEXT_PUBLIC_API_URL is localhost — pass --build-arg NEXT_PUBLIC_API_URL=https://api.sawaa.net/api/v1" && exit 1; \
     fi && \
     if [ "$NEXT_PUBLIC_MOYASAR_PLATFORM_PUBLISHABLE_KEY" = "pk_test_replace_me" ]; then \
       echo "❌ NEXT_PUBLIC_MOYASAR_PLATFORM_PUBLISHABLE_KEY is placeholder — pass a real key" && exit 1; \

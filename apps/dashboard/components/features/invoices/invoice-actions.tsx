@@ -2,14 +2,14 @@
 
 import { useState } from "react"
 
-import { Button } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetFooter,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 
 import { useLocale } from "@/components/locale-provider"
 import type { Invoice } from "@/lib/types/invoice"

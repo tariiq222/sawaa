@@ -47,8 +47,9 @@ describe('CreateCategoryHandler', () => {
     const prisma = buildPrisma();
     const handler = new CreateCategoryHandler(prisma as never, buildTenant());
     const result = await handler.execute({ nameAr: 'فحص', nameEn: 'Checkup' });
+    // org scoping moved to RLS / removed in single-tenant migration
     expect(prisma.serviceCategory.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ organizationId: DEFAULT_ORG, nameAr: 'فحص' }) }),
+      expect.objectContaining({ data: expect.objectContaining({ nameAr: 'فحص' }) }),
     );
     expect(result).toMatchObject({ id: 'cat-1' });
   });

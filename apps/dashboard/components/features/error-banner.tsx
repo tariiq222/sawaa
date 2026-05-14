@@ -1,6 +1,6 @@
 "use client"
 
-import { Button } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
 

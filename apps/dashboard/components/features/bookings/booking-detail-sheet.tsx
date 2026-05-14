@@ -8,8 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@deqah/ui"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@deqah/ui"
+} from "@sawaa/ui"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@sawaa/ui"
 
 import { StatusBadge, BookingTypeBadge } from "@/components/features/status-badge"
 import { useLocale } from "@/components/locale-provider"

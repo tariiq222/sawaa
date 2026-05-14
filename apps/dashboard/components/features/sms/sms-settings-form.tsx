@@ -16,7 +16,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import {
   useSmsConfig,
@@ -113,7 +113,7 @@ export function SmsSettingsForm() {
                   id="sms-sender"
                   value={senderId}
                   onChange={(e) => setSenderId(e.target.value)}
-                  placeholder="Deqah"
+                  placeholder="Sawaa"
                 />
               </div>
             )}

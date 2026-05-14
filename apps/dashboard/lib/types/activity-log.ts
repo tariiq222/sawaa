@@ -1,5 +1,5 @@
 /**
- * Activity Log Types — Deqah Dashboard
+ * Activity Log Types — Sawaa Dashboard
  */
 
 import type { SearchableQuery } from "./common"

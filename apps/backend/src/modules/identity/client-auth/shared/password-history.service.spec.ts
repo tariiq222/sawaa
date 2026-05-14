@@ -81,7 +81,8 @@ describe('PasswordHistoryService', () => {
       const svc = new PasswordHistoryService(prisma as never, passwords);
       await svc.record(prisma as never, 'c1', 'o1', 'hash-new');
       expect(prisma.passwordHistory.create).toHaveBeenCalledWith({
-        data: { clientId: 'c1', organizationId: 'o1', passwordHash: 'hash-new' },
+        // org scoping moved to RLS / removed in single-tenant migration
+        data: { clientId: 'c1', passwordHash: 'hash-new' },
       });
       expect(prisma.passwordHistory.deleteMany).toHaveBeenCalledWith({
         where: { id: { in: ['surplus-1', 'surplus-2'] } },

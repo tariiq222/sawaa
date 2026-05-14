@@ -14,8 +14,5 @@ export class RegisterDto {
   @Matches(/[0-9]/, { message: 'Password must contain at least 1 digit' })
   password!: string;
 
-  @ApiPropertyOptional({ example: '<captcha token>', description: 'Captcha token (ignored — kept for client compatibility until Cloudflare Turnstile lands)' })
-  @IsOptional()
-  @IsString()
-  hCaptchaToken?: string;
+
 }

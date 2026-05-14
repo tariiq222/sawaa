@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import { TenantContextService } from '../../../common/tenant';
 import { PrismaService } from '../../../infrastructure/database';

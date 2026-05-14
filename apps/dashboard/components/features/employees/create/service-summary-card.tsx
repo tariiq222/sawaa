@@ -3,8 +3,8 @@
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Delete02Icon } from "@hugeicons/core-free-icons"
 
-import { Button } from "@deqah/ui"
-import { Badge } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
+import { Badge } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import type { DraftService } from "./services-tab"
 

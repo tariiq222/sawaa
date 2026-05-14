@@ -12,15 +12,15 @@ import {
   Cancel01Icon,
 } from "@hugeicons/core-free-icons"
 
-import { Badge } from "@deqah/ui"
-import { Button } from "@deqah/ui"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@deqah/ui"
+import { Badge } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@sawaa/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import type { Branch } from "@/lib/types/branch"
 
 type TFn = (key: string) => string

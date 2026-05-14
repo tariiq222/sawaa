@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { ClientProfile } from '@deqah/shared';
+import type { ClientProfile } from '@sawaa/shared';
 import { getClient, setClient } from './auth-store';
 import { getMeApi } from './auth.api';
 

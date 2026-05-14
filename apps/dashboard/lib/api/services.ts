@@ -1,5 +1,5 @@
 /**
- * Services API — Deqah Dashboard
+ * Services API — Sawaa Dashboard
  */
 
 import { api, getAccessToken } from "@/lib/api"

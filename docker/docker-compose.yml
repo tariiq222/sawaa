@@ -9,7 +9,7 @@ services:
       - "3450:5100"
     environment:
       # ── DB / cache / queue ──
-      DATABASE_URL: postgresql://deqah:deqah_dev_password@postgres:5432/deqah_dev
+      DATABASE_URL: postgresql://sawaa:sawaa_dev_password@postgres:5432/sawaa_dev
       REDIS_URL: redis://redis:6379
       REDIS_HOST: redis
       REDIS_PORT: "6379"
@@ -70,13 +70,13 @@ services:
     ports:
       - "3453:5432"
     environment:
-      POSTGRES_USER: deqah
-      POSTGRES_PASSWORD: deqah_dev_password
-      POSTGRES_DB: deqah_dev
+      POSTGRES_USER: sawaa
+      POSTGRES_PASSWORD: sawaa_dev_password
+      POSTGRES_DB: sawaa_dev
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U deqah -d deqah_dev"]
+      test: ["CMD-SHELL", "pg_isready -U sawaa -d sawaa_dev"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -13,10 +13,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 
-import { Badge } from "@deqah/ui"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@deqah/ui"
+import { Badge } from "@sawaa/ui"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import type { Service } from "@/lib/types/service"
 import { ServiceAvatar } from "./service-avatar"

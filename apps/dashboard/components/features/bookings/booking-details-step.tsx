@@ -12,15 +12,15 @@ import {
   Clock01Icon,
 } from "@hugeicons/core-free-icons"
 
-import { Button } from "@deqah/ui"
-import { Label } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { DatePicker } from "@/components/ui/date-picker"
 
 import { useEmployees } from "@/hooks/use-employees"

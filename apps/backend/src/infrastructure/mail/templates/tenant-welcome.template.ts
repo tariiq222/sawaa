@@ -31,7 +31,7 @@ export function tenantWelcomeTemplate(vars: TenantWelcomeVars): {
   const ar = `
     <h1 style="color:${BRAND.primary};font-size:22px;margin:0 0 16px;">أهلاً ${name} 👋</h1>
     <p style="color:${BRAND.textBody};font-size:15px;line-height:1.7;">
-      شكرًا لانضمامك إلى Deqah. حسابك "${org}" جاهز، ومدّة التجربة المجانية ١٤ يومًا.
+      شكرًا لانضمامك إلى Sawaa. حسابك "${org}" جاهز، ومدّة التجربة المجانية ١٤ يومًا.
     </p>
     ${passwordBlockAr}
     <p style="text-align:center;margin:28px 0;">
@@ -42,7 +42,7 @@ export function tenantWelcomeTemplate(vars: TenantWelcomeVars): {
   const en = `
     <h1 style="color:${BRAND.primary};font-size:22px;margin:0 0 16px;">Welcome, ${name} 👋</h1>
     <p style="color:${BRAND.textBody};font-size:15px;line-height:1.7;">
-      Thanks for joining Deqah. Your "${org}" workspace is ready and your 14-day free trial has started.
+      Thanks for joining Sawaa. Your "${org}" workspace is ready and your 14-day free trial has started.
     </p>
     ${passwordBlockEn}
     <p style="text-align:center;margin:28px 0;">
@@ -51,8 +51,8 @@ export function tenantWelcomeTemplate(vars: TenantWelcomeVars): {
   `;
 
   return {
-    subjectAr: 'مرحبًا بك في Deqah',
-    subjectEn: 'Welcome to Deqah',
+    subjectAr: 'مرحبًا بك في Sawaa',
+    subjectEn: 'Welcome to Sawaa',
     html: bilingualLayout({ ar, en }),
   };
 }

@@ -7,13 +7,13 @@ import {
   ViewIcon,
   SentIcon,
 } from "@hugeicons/core-free-icons"
-import { Button } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import type { Invoice } from "@/lib/types/invoice"
 import { formatClinicDate } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"

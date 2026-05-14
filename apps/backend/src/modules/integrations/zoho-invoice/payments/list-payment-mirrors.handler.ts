@@ -16,7 +16,7 @@ interface ListPaymentMirrorsQuery {
  * formatted invoice URL/PDF to the client without leaving the dashboard.
  *
  * The Zoho link is matched by the local Invoice id, NOT by the payment id —
- * one Zoho invoice mirrors one Deqah invoice, but a Deqah invoice may have
+ * one Zoho invoice mirrors one Sawaa invoice, but a Sawaa invoice may have
  * multiple Payment rows (split payments).
  */
 @Injectable()

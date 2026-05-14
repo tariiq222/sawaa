@@ -34,7 +34,7 @@ export class GroupSessionMinReachedHandler {
   ) {}
 
   async execute(cmd: GroupSessionMinReachedCommand): Promise<void> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
     const PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
     const expiresAt = new Date(Date.now() + PAYMENT_WINDOW_MS);
     const groupSessionKey = `${cmd.employeeId}:${cmd.serviceId}:${cmd.scheduledAt.toISOString()}`;

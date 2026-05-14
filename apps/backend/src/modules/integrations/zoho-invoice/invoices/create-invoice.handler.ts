@@ -8,7 +8,7 @@ import { UpsertContactHandler } from '../contacts/upsert-contact.handler';
 import { RecordPaymentHandler } from '../payments/record-payment.handler';
 
 /**
- * Internal handler — creates a Zoho invoice for a Deqah Invoice that has
+ * Internal handler — creates a Zoho invoice for a Sawaa Invoice that has
  * already been paid (or just charged). NOT exposed via HTTP; the only
  * caller is `PaymentCapturedEventHandler` (and the SaaS-billing module's
  * platform-side counterpart).
@@ -72,10 +72,10 @@ export class CreateZohoInvoiceHandler {
       },
     });
 
-    // Use the Deqah invoice id as the Zoho invoice number so both systems
+    // Use the Sawaa invoice id as the Zoho invoice number so both systems
     // show the same reference. Zoho auto-numbering must be OFF on the org
     // (disabled during OAuth connect via setAutoGenerateInvoiceNumber).
-    const deqahInvoiceNumber = invoice.id;
+    const sawaaInvoiceNumber = invoice.id;
 
     const { zohoContactId } = await this.upsertContact.execute({
       organizationId: input.organizationId,
@@ -94,7 +94,7 @@ export class CreateZohoInvoiceHandler {
       apiCtx,
       {
         customer_id: zohoContactId,
-        invoice_number: deqahInvoiceNumber,
+        invoice_number: sawaaInvoiceNumber,
         reference_number: invoice.id,
         notes: invoice.notes ?? undefined,
         line_items: [
@@ -103,7 +103,7 @@ export class CreateZohoInvoiceHandler {
               ? undefined
               : `Booking ${invoice.bookingId}`,
             item_id: input.config.defaults.itemId,
-            description: `Deqah invoice ${invoice.id}`,
+            description: `Sawaa invoice ${invoice.id}`,
             quantity: 1,
             rate: Number(invoice.total),
           },

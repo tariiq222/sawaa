@@ -14,7 +14,7 @@ export class CreateCategoryHandler {
   ) {}
 
   async execute(dto: CreateCategoryCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
     return this.prisma.serviceCategory.create({
       data: {
         nameAr: dto.nameAr,

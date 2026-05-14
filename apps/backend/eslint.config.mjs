@@ -2,10 +2,10 @@ import js from "@eslint/js";
 import tsParser from "@typescript-eslint/parser";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import { defineConfig, globalIgnores } from "eslint/config";
-import deqahPlugin from "./eslint-rules/deqah-plugin.mjs";
+import sawaaPlugin from "./eslint-rules/sawaa-plugin.mjs";
 
 /**
- * Backend ESLint — Deqah NestJS.
+ * Backend ESLint — Sawaa NestJS.
  *
  * Keeps the rule set small and shared-parser (monorepo root installs the
  * @typescript-eslint packages). Additional domain-specific rules belong in
@@ -48,7 +48,7 @@ export default defineConfig([
     },
     plugins: {
       "@typescript-eslint": tsPlugin,
-      deqah: deqahPlugin,
+      sawaa: sawaaPlugin,
     },
     rules: {
       // Disable core JS rules that TS handles or that produce false positives on .ts syntax
@@ -57,7 +57,7 @@ export default defineConfig([
       "no-dupe-class-members": "off",
       "no-redeclare": "off",
 
-      // Deqah golden rule: no `any` in TypeScript
+      // Sawaa golden rule: no `any` in TypeScript
       // Dropped to "warn" temporarily — 6 pre-existing occurrences surfaced when
       // the missing eslint.config.mjs was restored (bookings handlers). Track
       // and fix in a follow-up, then promote back to "error".
@@ -74,7 +74,7 @@ export default defineConfig([
       ],
 
       // Require @ApiOperation on every NestJS HTTP handler.
-      "deqah/require-api-operation": "error",
+      "sawaa/require-api-operation": "error",
 
       // `$allTenantsUnsafe` is reserved for CLI/bootstrap code (seed/scripts).
       // Application code must go through the CLS-gated `$allTenants` escape hatch.
@@ -105,7 +105,7 @@ export default defineConfig([
     files: ["test/**/*.ts", "**/*.spec.ts"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
-      "deqah/require-api-operation": "off",
+      "sawaa/require-api-operation": "off",
       // Test helpers and e2e fixtures legitimately call $transaction directly for
       // database setup/teardown; they are not application code subject to RLS rules.
       "no-restricted-syntax": "off",

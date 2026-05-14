@@ -50,6 +50,8 @@ const buildPrismaProxy = (
 
 describe('RunOrphanAuditHandler', () => {
   it('writes an ActivityLog entry for each orphaned row', async () => {
+    // org scoping moved to RLS / removed in single-tenant migration — handler uses
+    // DEFAULT_ORGANIZATION_ID; activityLog.create no longer writes organizationId
     const orgs = [{ id: 'org-1' }];
     const { prisma, activityLogCreate } = buildPrismaProxy(orgs, ['booking-x'], false);
     const cls = buildClsMock();
@@ -61,7 +63,6 @@ describe('RunOrphanAuditHandler', () => {
     expect(activityLogCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          organizationId: 'org-1',
           action: ActivityAction.SYSTEM,
           entity: 'orphan_audit',
         }),
@@ -84,18 +85,23 @@ describe('RunOrphanAuditHandler', () => {
     expect(activityLogCreate).not.toHaveBeenCalled();
   });
 
-  it('scopes detection to each org separately (tenant isolation)', async () => {
+  it('runs audit scoped to DEFAULT_ORGANIZATION_ID (single-tenant migration)', async () => {
+    // org scoping moved to RLS / removed in single-tenant migration — handler no longer
+    // iterates organization.findMany; runs once with DEFAULT_ORGANIZATION_ID
     const orgs = [{ id: 'org-A' }, { id: 'org-B' }];
-    const { prisma, activityLogCreate } = buildPrismaProxy(orgs, ['child-id-1'], false);
+    const { prisma, activityLogCreate, findMany: _findMany } = buildPrismaProxy(orgs, ['child-id-1'], false);
     const cls = buildClsMock();
 
     const handler = new RunOrphanAuditHandler(prisma as never, cls as never);
     await handler.execute();
 
-    // Every ActivityLog write must include organizationId from one of the orgs
+    // Handler runs checks once (single org), activityLog entries written for orphans found
+    expect(activityLogCreate).toHaveBeenCalled();
+    // All log entries have action=SYSTEM entity=orphan_audit
     for (const call of activityLogCreate.mock.calls) {
-      const data = (call[0] as { data: { organizationId: string } }).data;
-      expect(['org-A', 'org-B']).toContain(data.organizationId);
+      const data = (call[0] as { data: { action: string; entity: string } }).data;
+      expect(data.action).toBe(ActivityAction.SYSTEM);
+      expect(data.entity).toBe('orphan_audit');
     }
   });
 

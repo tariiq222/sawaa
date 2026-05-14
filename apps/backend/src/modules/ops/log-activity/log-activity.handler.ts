@@ -27,7 +27,7 @@ export class LogActivityHandler {
 
   async execute(cmd: LogActivityCommand): Promise<void> {
     try {
-      const organizationId = DEFAULT_ORGANIZATION_ID;
+      const _organizationId = DEFAULT_ORGANIZATION_ID;
       await this.prisma.activityLog.create({
         data: {
           userId: cmd.userId,

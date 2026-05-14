@@ -1,5 +1,5 @@
 import { PaymentCompletedEventHandler } from './payment-completed.handler';
-import { buildPrisma, buildEventBus, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
 import { BookingStatus } from '@prisma/client';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
 

@@ -1,5 +1,5 @@
 /**
- * Invoice Types — Deqah Dashboard
+ * Invoice Types — Sawaa Dashboard
  */
 
 import type { PaginatedQuery } from "./common"

@@ -27,7 +27,7 @@ export class RejectCancelBookingHandler {
   ) {}
 
   async execute(cmd: RejectCancelBookingCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
     const booking = await this.prisma.booking.findFirst({
       where: { id: cmd.bookingId },
     });

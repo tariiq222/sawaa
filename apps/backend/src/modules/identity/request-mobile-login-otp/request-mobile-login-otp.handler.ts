@@ -7,7 +7,6 @@ import type { RequestMobileLoginOtpDto } from './request-mobile-login-otp.dto';
 
 export type RequestMobileLoginOtpCommand = RequestMobileLoginOtpDto & {
   organizationId?: string;
-  hCaptchaToken?: string;
 };
 
 export type RequestMobileLoginOtpResult = {
@@ -41,7 +40,7 @@ export class RequestMobileLoginOtpHandler {
         channel: channel === 'SMS' ? OtpChannel.SMS : OtpChannel.EMAIL,
         purpose: OtpPurpose.MOBILE_LOGIN,
         organizationId: cmd.organizationId,
-        hCaptchaToken: cmd.hCaptchaToken ?? 'mobile-app',
+        
       });
     }
 

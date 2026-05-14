@@ -50,7 +50,7 @@ describe('CreateCouponHandler', () => {
     expect(prisma.coupon.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          organizationId: '00000000-0000-0000-0000-000000000001',
+          // org scoping moved to RLS / removed in single-tenant migration
           code: 'SAVE10',
           discountType: 'PERCENTAGE',
           discountValue: 10,

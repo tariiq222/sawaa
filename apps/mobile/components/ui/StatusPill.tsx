@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { colors } from '@deqah/shared/tokens';
+import { colors } from '@sawaa/shared/tokens';
 
 const STATUS_COLOR: Record<string, string> = {
   pending: colors.status.pending,

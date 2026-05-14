@@ -117,7 +117,7 @@ graphify-out/
 testsprite_tests/
 test-results/
 
-# ─── Deqah Orchestrator runtime state (local-only) ────────────
+# ─── Sawaa Orchestrator runtime state (local-only) ────────────
 .kilo/orchestrator/tasks/
 .kilo/orchestrator/pending/
 .kilo/orchestrator/trace.jsonl
@@ -136,4 +136,4 @@ secrets/
 *.secrets.md
 *.credentials.md
 credentials.local.md
-deqah-prod-secrets.md
+sawaa-prod-secrets.md

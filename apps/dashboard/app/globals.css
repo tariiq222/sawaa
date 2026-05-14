@@ -216,7 +216,7 @@
 /* ─── Dark Theme ─── */
 .dark {
     /* Brand vars (--primary, --accent, --ring, --sidebar-primary, etc.)
-       are injected dynamically by BrandingProvider via #deqah-dark-theme <style> tag.
+       are injected dynamically by BrandingProvider via #sawaa-dark-theme <style> tag.
        Fallback defaults live in :root above and activate when no branding API is loaded. */
     --background: #0F1117;
     --foreground: #F1F4F8;

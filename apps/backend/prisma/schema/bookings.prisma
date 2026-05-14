@@ -53,7 +53,6 @@ enum ZoomMeetingStatus {
 
 model Booking {
   id                   String              @id @default(uuid())
-  organizationId       String @default("00000000-0000-0000-0000-000000000001") // SaaS-02d
   branchId             String
   clientId             String
   employeeId           String
@@ -95,8 +94,6 @@ model Booking {
 
   groupEnrollment GroupEnrollment?
 
-  @@unique([id, organizationId], name: "booking_id_org") // DB-05: composite unique for future composite FK
-  @@unique([organizationId, bookingNumber], name: "booking_org_number")
   @@index([clientId])
   // DB-07: @@index([employeeId]) dropped — redundant prefix of [employeeId, scheduledAt] and [employeeId, endsAt]
   @@index([scheduledAt])
@@ -104,19 +101,17 @@ model Booking {
   @@index([employeeId, scheduledAt])
   @@index([employeeId, endsAt])
   @@index([recurringGroupId])
-  @@index([organizationId])
-  @@index([organizationId, scheduledAt])
-  @@index([organizationId, status])
-  @@index([organizationId, clientId])
+  @@index([ scheduledAt])
+  @@index([ status])
+  @@index([ clientId])
 }
 
 // ─── Waitlist ─────────────────────────────────────────────────────────────────
 
-// Partial unique index on (organizationId, clientId, employeeId, serviceId) WHERE status = 'WAITING'
+// Partial unique index on (clientId, employeeId, serviceId) WHERE status = 'WAITING'
 // is enforced via migration 20260506110000_waitlist_unique_waiting (Prisma can't express partial uniques).
 model WaitlistEntry {
   id             String         @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02d
   clientId       String
   employeeId     String
   serviceId      String
@@ -132,7 +127,6 @@ model WaitlistEntry {
   @@index([clientId])
   @@index([employeeId])
   @@index([status])
-  @@index([organizationId])
 }
 
 // ─── Group Session ────────────────────────────────────────────────────────────
@@ -146,7 +140,6 @@ enum GroupSessionStatus {
 
 model GroupSession {
   id                  String             @id @default(uuid())
-  organizationId      String @default("00000000-0000-0000-0000-000000000001") // SaaS-02d
   branchId            String
   employeeId          String
   serviceId           String
@@ -174,16 +167,13 @@ model GroupSession {
   waitlistEntries GroupSessionWaitlist[]
   bookings        Booking[]
 
-  @@unique([id, organizationId], name: "group_session_id_org") // DB-05
   @@index([employeeId])
   @@index([scheduledAt])
   @@index([isPublic])
-  @@index([organizationId])
 }
 
 model GroupEnrollment {
   id             String       @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02d (denormalized from GroupSession)
   groupSessionId String
   groupSession   GroupSession @relation(fields: [groupSessionId], references: [id], onDelete: Cascade)
   clientId       String
@@ -193,12 +183,10 @@ model GroupEnrollment {
 
   @@unique([groupSessionId, clientId])
   @@index([clientId])
-  @@index([organizationId])
 }
 
 model GroupSessionWaitlist {
   id             String       @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02d (denormalized from GroupSession)
   groupSessionId String
   groupSession   GroupSession @relation(fields: [groupSessionId], references: [id], onDelete: Cascade)
   clientId       String
@@ -208,14 +196,12 @@ model GroupSessionWaitlist {
   @@unique([groupSessionId, clientId])
   @@index([groupSessionId])
   @@index([clientId])
-  @@index([organizationId])
 }
 
 // ─── BookingStatusLog ─────────────────────────────────────────────────────────
 
 model BookingStatusLog {
   id             String         @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02d (denormalized from Booking)
   bookingId      String
   fromStatus     BookingStatus?
   toStatus       BookingStatus
@@ -225,7 +211,6 @@ model BookingStatusLog {
 
   @@index([bookingId])
   @@index([createdAt])
-  @@index([organizationId])
 }
 
 // ─── BookingSettings ──────────────────────────────────────────────────────────
@@ -238,7 +223,6 @@ enum RefundType {
 
 model BookingSettings {
   id             String  @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02d
   branchId       String? // null = global default; one settings row per branch
 
   bufferMinutes           Int        @default(0)
@@ -266,6 +250,4 @@ model BookingSettings {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([organizationId, branchId])
-  @@index([organizationId])
 }

@@ -11,7 +11,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { useCouponMutations } from "@/hooks/use-coupons"
 import { useLocale } from "@/components/locale-provider"
 import type { Coupon } from "@/lib/types/coupon"

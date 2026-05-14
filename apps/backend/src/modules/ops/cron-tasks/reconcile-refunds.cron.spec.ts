@@ -29,7 +29,7 @@ function buildPrisma(stuckRows: StuckRow[]) {
   };
   const txFn = jest.fn().mockImplementation(async (fn: (t: TxMock) => Promise<void>) => fn(tx));
   return {
-    $queryRaw: jest.fn().mockImplementation((strings: TemplateStringsArray, ...values: unknown[]) => {
+    $queryRaw: jest.fn().mockImplementation((strings: TemplateStringsArray, ..._values: unknown[]) => {
       if (strings[0].includes('hashtext')) return Promise.resolve([{ v: BigInt(12345) }]);
       if (strings[0].includes('pg_try_advisory_lock')) return Promise.resolve([{ acquired: true }]);
       if (strings[0].includes('pg_advisory_unlock')) return Promise.resolve([]);

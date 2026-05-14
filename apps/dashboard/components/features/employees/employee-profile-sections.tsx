@@ -14,8 +14,8 @@ import {
   Cancel01Icon,
 } from "@hugeicons/core-free-icons"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@deqah/ui"
-import { Skeleton } from "@deqah/ui"
+import { Card, CardContent, CardHeader, CardTitle } from "@sawaa/ui"
+import { Skeleton } from "@sawaa/ui"
 import {
   useEmployeeAvailability,
   useEmployeeVacations,

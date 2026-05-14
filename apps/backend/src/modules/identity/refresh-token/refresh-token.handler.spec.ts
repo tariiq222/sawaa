@@ -7,9 +7,9 @@ import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant';
 
 describe('RefreshTokenHandler', () => {
   let handler: RefreshTokenHandler;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   let prisma: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   let tokenService: any;
 
   const futureDate = new Date(Date.now() + 86400000);

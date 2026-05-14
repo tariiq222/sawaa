@@ -1,5 +1,5 @@
 /**
- * Tenant Moyasar config API — Deqah Dashboard.
+ * Tenant Moyasar config API — Sawaa Dashboard.
  *
  * Secret keys are submitted only to the backend and never returned.
  */

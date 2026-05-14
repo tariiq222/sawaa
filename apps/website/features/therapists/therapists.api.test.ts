@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { listPublicEmployees, getPublicEmployee } from './therapists.api';
-import type { PublicEmployee } from '@deqah/api-client';
+import type { PublicEmployee } from '@sawaa/api-client';
 
 const sample: PublicEmployee = {
   id: 'e1',

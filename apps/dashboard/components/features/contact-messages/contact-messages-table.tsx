@@ -1,9 +1,9 @@
 "use client"
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@deqah/ui"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@deqah/ui"
-import { Button } from "@deqah/ui"
-import { Badge } from "@deqah/ui"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@sawaa/ui"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
+import { Badge } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useContactMessages, useUpdateContactMessageStatus } from "@/hooks/use-contact-messages"
 import { ErrorBanner } from "@/components/features/error-banner"

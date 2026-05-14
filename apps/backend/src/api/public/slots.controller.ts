@@ -3,7 +3,7 @@ import { Throttle } from '@nestjs/throttler';
 import { BookingType } from '@prisma/client';
 import { IsDateString, IsEnum, IsInt, IsOptional, IsUUID, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
 import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';

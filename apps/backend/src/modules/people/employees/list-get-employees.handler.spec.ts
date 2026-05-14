@@ -31,7 +31,7 @@ const mockEmployee = {
 describe('List/Get Employees handlers', () => {
   let listHandler: ListEmployeesHandler;
   let getHandler: GetEmployeeHandler;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   let prisma: any;
 
   beforeEach(async () => {

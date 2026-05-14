@@ -24,7 +24,7 @@ vi.mock("next/link", () => ({
   ),
 }))
 
-vi.mock("@deqah/ui", () => ({
+vi.mock("@sawaa/ui", () => ({
   Card: ({ children, className }: React.PropsWithChildren<{ className?: string }>) => (
     <div className={className}>{children}</div>
   ),

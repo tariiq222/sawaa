@@ -1,6 +1,6 @@
 "use client"
 
-import { SidebarTrigger } from "@deqah/ui"
+import { SidebarTrigger } from "@sawaa/ui"
 
 export function MobileSidebarTrigger() {
   return (

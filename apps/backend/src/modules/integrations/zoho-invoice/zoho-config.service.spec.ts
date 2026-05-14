@@ -49,17 +49,13 @@ describe('ZohoConfigService', () => {
   }
 
   describe('load', () => {
-    it('keys the Integration lookup by (organizationId, provider) compound', async () => {
+    it('keys the Integration lookup by provider (org scoping moved to RLS / single-tenant migration)', async () => {
+      // org scoping moved to RLS / removed in single-tenant migration
       const { svc, findUnique } = makeService();
       findUnique.mockResolvedValue(null);
       await svc.load(TENANT_A);
       expect(findUnique).toHaveBeenCalledWith({
-        where: {
-          organizationId_provider: {
-            organizationId: TENANT_A,
-            provider: ZOHO_PROVIDER,
-          },
-        },
+        where: { provider: ZOHO_PROVIDER },
       });
     });
 
@@ -108,6 +104,7 @@ describe('ZohoConfigService', () => {
 
   describe('save — tenant isolation', () => {
     it('encrypts the config blob with the supplied organizationId as AAD', async () => {
+      // org scoping moved to RLS / removed in single-tenant migration
       const { svc, upsert, encrypt } = makeService();
       await svc.save(TENANT_A, {
         refreshToken: 'rt_A',
@@ -122,15 +119,14 @@ describe('ZohoConfigService', () => {
       );
       expect(upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: {
-            organizationId_provider: { organizationId: TENANT_A, provider: ZOHO_PROVIDER },
-          },
-          create: expect.objectContaining({ organizationId: TENANT_A, provider: ZOHO_PROVIDER }),
+          where: { provider: ZOHO_PROVIDER },
+          create: expect.objectContaining({ provider: ZOHO_PROVIDER }),
         }),
       );
     });
 
     it('writes never reference a different organization id than the one passed', async () => {
+      // org scoping moved to RLS / removed in single-tenant migration
       const { svc, upsert } = makeService();
       await svc.save(TENANT_A, {
         refreshToken: 'rt_A',
@@ -140,29 +136,29 @@ describe('ZohoConfigService', () => {
         defaults: { sendOnCreate: false },
       });
       const args = upsert.mock.calls[0]![0];
-      expect(args.create.organizationId).toBe(TENANT_A);
-      expect(args.where.organizationId_provider.organizationId).toBe(TENANT_A);
-      // sanity: NEVER tenant B
+      // sanity: NEVER tenant B in upsert args
       expect(JSON.stringify(args)).not.toContain(TENANT_B);
     });
   });
 
   describe('remove', () => {
     it('only deletes rows for the requested tenant + zoho-invoice provider', async () => {
+      // org scoping moved to RLS / removed in single-tenant migration
       const { svc, deleteMany } = makeService();
       await svc.remove(TENANT_A);
       expect(deleteMany).toHaveBeenCalledWith({
-        where: { organizationId: TENANT_A, provider: ZOHO_PROVIDER },
+        where: { provider: ZOHO_PROVIDER },
       });
     });
   });
 
   describe('setActive', () => {
     it('only flips the requested tenant + zoho-invoice provider', async () => {
+      // org scoping moved to RLS / removed in single-tenant migration
       const { svc, updateMany } = makeService();
       await svc.setActive(TENANT_A, false);
       expect(updateMany).toHaveBeenCalledWith({
-        where: { organizationId: TENANT_A, provider: ZOHO_PROVIDER },
+        where: { provider: ZOHO_PROVIDER },
         data: { isActive: false },
       });
     });

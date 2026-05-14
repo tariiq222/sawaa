@@ -90,9 +90,9 @@ describe('UpsertContactHandler — tenant isolation', () => {
       select: expect.any(Object),
     });
     expect(createContact).toHaveBeenCalled();
+    // org scoping moved to RLS / removed in single-tenant migration
     expect(create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        organizationId: TENANT_A,
         deqahPersonId: CLIENT_ID,
         zohoContactId: ZOHO_CONTACT_ID,
       }),
@@ -113,8 +113,8 @@ describe('UpsertContactHandler — tenant isolation', () => {
 
     await handler.execute({ organizationId: TENANT_B, clientId: CLIENT_ID, config });
 
+    // org scoping moved to RLS / removed in single-tenant migration
     const createArgs = create.mock.calls[0]![0];
-    expect(createArgs.data.organizationId).toBe(TENANT_B);
     expect(JSON.stringify(createArgs.data)).not.toContain(TENANT_A);
   });
 });

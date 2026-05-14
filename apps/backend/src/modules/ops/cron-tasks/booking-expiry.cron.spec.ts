@@ -1,7 +1,9 @@
 import { BookingExpiryCron } from './booking-expiry.cron';
 
 describe('BookingExpiryCron', () => {
-  describe('legacy path (flag off)', () => {
+  // org scoping moved to RLS / removed in single-tenant migration — legacy flag-gated path removed,
+  // execute() always uses enhancedExpire(). Tests rewritten as enhanced path smoke tests.
+  describe('enhanced path — basic smoke (no stale bookings)', () => {
     const buildCls = () => ({
       run: jest.fn().mockImplementation((fn: () => Promise<void>) => fn()),
       set: jest.fn(),
@@ -12,30 +14,29 @@ describe('BookingExpiryCron', () => {
         .mockResolvedValueOnce([{ v: BigInt(12345) }])
         .mockResolvedValueOnce([{ acquired: true }]),
       $allTenants: {
-        booking: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
+        booking: {
+          findMany: jest.fn().mockResolvedValue([]),
+          updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        },
+        coupon: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
       },
     });
 
-    it('expires PENDING bookings past expiresAt via $allTenants', async () => {
+    it('runs inside cls.run context and calls findMany', async () => {
       const prisma = buildPrisma();
-      const flags = { bookingExpiryEnabled: false };
       const cls = buildCls();
       const cron = new BookingExpiryCron(prisma as never, cls as never);
       await cron.execute();
       expect(cls.run).toHaveBeenCalledTimes(1);
-      expect(prisma.$allTenants.booking.updateMany).toHaveBeenCalledWith({
-        where: { status: 'PENDING', expiresAt: { lte: expect.any(Date) } },
-        data: { status: 'EXPIRED' },
-      });
+      expect(prisma.$allTenants.booking.findMany).toHaveBeenCalledTimes(1);
     });
 
-    it('legacy path silent when no rows match', async () => {
+    it('does not call updateMany when no stale bookings found', async () => {
       const prisma = buildPrisma();
-      const flags = { bookingExpiryEnabled: false };
       const cls = buildCls();
       const cron = new BookingExpiryCron(prisma as never, cls as never);
       await cron.execute();
-      expect(prisma.$allTenants.booking.updateMany).toHaveBeenCalledTimes(1);
+      expect(prisma.$allTenants.booking.updateMany).not.toHaveBeenCalled();
     });
   });
 
@@ -69,7 +70,7 @@ describe('BookingExpiryCron', () => {
       ];
       const prisma = buildPrisma();
       prisma.$allTenants.booking.findMany.mockResolvedValue(stale);
-      const flags = { bookingExpiryEnabled: true };
+      const _flags = { bookingExpiryEnabled: true };
       const cron = new BookingExpiryCron(prisma as never, buildCls() as never);
       await cron.execute();
 
@@ -92,7 +93,7 @@ describe('BookingExpiryCron', () => {
 
     it('idempotent: empty result is a no-op', async () => {
       const prisma = buildPrisma();
-      const flags = { bookingExpiryEnabled: true };
+      const _flags = { bookingExpiryEnabled: true };
       const cron = new BookingExpiryCron(prisma as never, buildCls() as never);
       await cron.execute();
       expect(prisma.$allTenants.booking.findMany).toHaveBeenCalledTimes(1);
@@ -106,7 +107,7 @@ describe('BookingExpiryCron', () => {
       ];
       const prisma = buildPrisma();
       prisma.$allTenants.booking.findMany.mockResolvedValue(stale);
-      const flags = { bookingExpiryEnabled: true };
+      const _flags = { bookingExpiryEnabled: true };
       const cron = new BookingExpiryCron(prisma as never, buildCls() as never);
       await cron.execute();
       const calls = prisma.$allTenants.coupon.updateMany.mock.calls;

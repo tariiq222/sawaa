@@ -2,17 +2,17 @@
 
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Add01Icon } from "@hugeicons/core-free-icons"
-import { Button } from "@deqah/ui"
-import { Input } from "@deqah/ui"
-import { Label } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
+import { Input } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@deqah/ui"
-import { Separator } from "@deqah/ui"
+} from "@sawaa/ui"
+import { Separator } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import type { FormField, ConditionOperator } from "@/lib/types/intake-form"
 import { CONDITION_OPERATOR_LABELS } from "@/lib/types/intake-form"

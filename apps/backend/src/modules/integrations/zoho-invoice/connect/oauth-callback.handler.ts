@@ -72,7 +72,7 @@ export class OAuthCallbackHandler {
     const sarOrgs = orgs.organizations.filter((o) => o.currency_code === 'SAR');
     if (sarOrgs.length === 0) {
       throw new BadRequestException(
-        'None of your Zoho organizations use SAR currency. Deqah currently supports SAR only — change your Zoho org currency or reconnect with a different account.',
+        'None of your Zoho organizations use SAR currency. Sawaa currently supports SAR only — change your Zoho org currency or reconnect with a different account.',
       );
     }
 
@@ -90,7 +90,7 @@ export class OAuthCallbackHandler {
         zohoOrganizationId: only.organization_id,
         zohoOrganizationName: only.name,
       });
-      // Disable Zoho's own invoice numbering so Deqah's invoice_number
+      // Disable Zoho's own invoice numbering so Sawaa's invoice_number
       // is recorded verbatim. Non-fatal: log warn and continue on failure.
       try {
         const apiCtx: ZohoTenantContext = {

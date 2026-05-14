@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { ClientRescheduleBookingHandler } from './client-reschedule-booking.handler';
 import { mockBooking, buildPrisma, buildTenant, buildRlsTx } from '../testing/booking-test-helpers';

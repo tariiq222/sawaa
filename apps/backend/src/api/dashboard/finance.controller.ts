@@ -36,7 +36,6 @@ import { VerifyPaymentHandler } from '../../modules/finance/verify-payment/verif
 import { VerifyPaymentDto } from '../../modules/finance/verify-payment/verify-payment.dto';
 import { BankTransferUploadHandler } from '../../modules/finance/bank-transfer-upload/bank-transfer-upload.handler';
 import { BankTransferUploadDto } from '../../modules/finance/bank-transfer-upload/bank-transfer-upload.dto';
-import { FeatureKey } from '@deqah/shared/constants/feature-keys';
 import { GetMoyasarConfigHandler } from '../../modules/finance/moyasar-config/get-moyasar-config.handler';
 import { UpsertMoyasarConfigHandler } from '../../modules/finance/moyasar-config/upsert-moyasar-config.handler';
 import { TestMoyasarConfigHandler } from '../../modules/finance/moyasar-config/test-moyasar-config.handler';

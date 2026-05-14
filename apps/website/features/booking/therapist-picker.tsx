@@ -1,6 +1,6 @@
 'use client';
 
-import type { EmployeeWithUser } from '@deqah/shared';
+import type { EmployeeWithUser } from '@sawaa/shared';
 
 interface TherapistPickerProps {
   therapists: EmployeeWithUser[];

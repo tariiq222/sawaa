@@ -2,7 +2,7 @@ import type {
   ClientLoginPayload,
   ClientRegisterPayload,
   ClientAuthResponse,
-} from '@deqah/shared';
+} from '@sawaa/shared';
 
 let clientBaseUrl = '';
 let getRefreshToken: (() => string | null) | null = null;
@@ -70,7 +70,7 @@ export async function clientRegister(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${payload.otpSessionToken}`,
     },
-    body: JSON.stringify({ password: payload.password, name: payload.name, hCaptchaToken: payload.hCaptchaToken }),
+    body: JSON.stringify({ password: payload.password, name: payload.name }),
   });
 }
 
@@ -96,7 +96,6 @@ export async function clientLogout(): Promise<void> {
 export async function clientResetPassword(payload: {
   sessionToken: string;
   newPassword: string;
-  hCaptchaToken: string;
 }): Promise<void> {
   return clientFetch<void>('/public/auth/reset-password', {
     method: 'POST',

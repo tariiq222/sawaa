@@ -1,5 +1,5 @@
 /**
- * Intake Forms API — Deqah Dashboard
+ * Intake Forms API — Sawaa Dashboard
  */
 
 import { api } from "@/lib/api"

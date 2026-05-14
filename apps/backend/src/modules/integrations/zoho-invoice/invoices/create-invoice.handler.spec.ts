@@ -5,7 +5,7 @@ import type { PrismaService } from '../../../../infrastructure/database';
 import type { ZohoApiClient, ZohoIntegrationConfig } from '../../../../infrastructure/zoho';
 
 /**
- * CreateZohoInvoiceHandler is the engine that mirrors a paid Deqah invoice
+ * CreateZohoInvoiceHandler is the engine that mirrors a paid Sawaa invoice
  * into the tenant's Zoho organization. Tenant isolation requires:
  *
  *   - The idempotency lookup uses (organizationId, scope, deqahInvoiceId).
@@ -103,9 +103,9 @@ describe('CreateZohoInvoiceHandler — tenant isolation + idempotency', () => {
         },
       },
     });
+    // org scoping moved to RLS / removed in single-tenant migration
     expect(linkCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        organizationId: TENANT_A,
         scope: 'TENANT_CLIENT',
         deqahInvoiceId: INVOICE_ID,
       }),

@@ -10,7 +10,7 @@ import { test, expect } from "@playwright/test"
 test.describe("[D1b] Login error alert", () => {
   test("wrong password shows Arabic alert with forgot-password link", async ({ page }) => {
     await page.goto("/login")
-    await page.locator("#identifier").fill("admin@deqah-test.com")
+    await page.locator("#identifier").fill("admin@sawaa-test.com")
     await page.getByRole("button", { name: "متابعة" }).click()
 
     await expect(
@@ -33,7 +33,7 @@ test.describe("[D1b] Login error alert", () => {
 
   test("alert clears when user edits the password", async ({ page }) => {
     await page.goto("/login")
-    await page.locator("#identifier").fill("admin@deqah-test.com")
+    await page.locator("#identifier").fill("admin@sawaa-test.com")
     await page.getByRole("button", { name: "متابعة" }).click()
     await page.getByRole("button", { name: "باستخدام كلمة المرور" }).click()
     await page.locator("#password").fill("wrong-password-123")

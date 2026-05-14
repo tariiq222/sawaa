@@ -17,8 +17,8 @@ const PAYMENT_MODE_MAP: Record<string, string> = {
  * Zoho invoice. Idempotent through the unique constraint on the linked
  * Payment.gatewayRef → reference_number passed to Zoho.
  *
- * The Deqah `Payment` row is the source of truth for amount + mode; we
- * read it once and forward to Zoho. We never mutate Deqah's payment state
+ * The Sawaa `Payment` row is the source of truth for amount + mode; we
+ * read it once and forward to Zoho. We never mutate Sawaa's payment state
  * here — that's already done by the time this handler runs.
  */
 @Injectable()

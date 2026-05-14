@@ -14,7 +14,7 @@ export class CreateIntakeFormHandler {
   ) {}
 
   async execute(dto: CreateIntakeFormCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
     return this.prisma.intakeForm.create({
       data: {
         nameAr: dto.nameAr,

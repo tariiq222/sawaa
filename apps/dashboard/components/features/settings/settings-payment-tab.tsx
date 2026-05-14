@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Card, CardContent, Button, Input, Label, Skeleton, Switch } from "@deqah/ui"
+import { Card, CardContent, Button, Input, Label, Skeleton, Switch } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
 import { usePaymentSettings, usePaymentSettingsMutation } from "@/hooks/use-organization-settings"

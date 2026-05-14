@@ -1,5 +1,5 @@
 import { UserIcon } from "@hugeicons/core-free-icons"
-import { Card, CardContent } from "@deqah/ui"
+import { Card, CardContent } from "@sawaa/ui"
 import { BookingTypeBadge } from "@/components/features/status-badge"
 import { SectionHeader } from "@/components/features/section-header"
 import { useLocale } from "@/components/locale-provider"

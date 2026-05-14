@@ -1,5 +1,5 @@
 /**
- * Branches API — Deqah Dashboard
+ * Branches API — Sawaa Dashboard
  */
 
 import { api } from "@/lib/api"

@@ -21,7 +21,7 @@ export class ClientLogoutHandler {
 
     for (const c of candidates) {
       if (await bcrypt.compare(rawToken, c.tokenHash)) {
-        const revoked = await this.prisma.clientRefreshToken.update({
+        const _revoked = await this.prisma.clientRefreshToken.update({
           where: { id: c.id },
           data: { revokedAt: new Date() },
         });

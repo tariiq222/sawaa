@@ -1,5 +1,5 @@
 /**
- * Coupons API — Deqah Dashboard
+ * Coupons API — Sawaa Dashboard
  *
  * Dashboard types mirror the backend (PERCENTAGE/FIXED + minOrderAmt),
  * so this module is a thin pass-through to the network layer.

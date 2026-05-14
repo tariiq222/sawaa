@@ -76,7 +76,7 @@ export class RequestEmailVerificationHandler {
       vars: {
         userName: user.name,
         verifyUrl,
-        subject: 'Verify your Deqah email',
+        subject: 'Verify your Sawaa email',
       },
     });
 

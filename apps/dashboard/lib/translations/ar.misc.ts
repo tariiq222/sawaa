@@ -217,7 +217,6 @@ export const arMisc: Record<string, string> = {
   "login.signingIn": "جارٍ تسجيل الدخول...",
   "login.signIn": "تسجيل الدخول",
   "login.orgSuspended": "تم تعليق حساب المنظمة. تواصل مع الإدارة لإعادة التفعيل.",
-  "login.captchaDevMode": "وضع التطوير — تم تخطي التحقق",
 
   // — Error banner —
   "common.retry": "إعادة المحاولة",

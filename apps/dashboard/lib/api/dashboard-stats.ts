@@ -1,5 +1,5 @@
 /**
- * Dashboard Stats API — Deqah Dashboard
+ * Dashboard Stats API — Sawaa Dashboard
  * Endpoint: GET /dashboard/stats
  */
 

@@ -1,6 +1,6 @@
 # Sawa operations mode — single-company
 
-This repository is currently operated for مركز سواء as one company/one organization, not as the legacy Deqah multi-tenant SaaS platform.
+This repository is currently operated for مركز سواء as one company/one organization, not as the legacy Sawaa multi-tenant SaaS platform.
 
 ## Required defaults
 
@@ -11,7 +11,7 @@ This repository is currently operated for مركز سواء as one company/one o
 
 ## Legacy SaaS surfaces
 
-The following are legacy Deqah SaaS concepts and must not be used as operational runbooks for Sawa without a fresh design review:
+The following are legacy Sawaa SaaS concepts and must not be used as operational runbooks for Sawa without a fresh design review:
 
 - standalone `apps/admin` super-admin app
 - tenant subdomain routing / tenant switching

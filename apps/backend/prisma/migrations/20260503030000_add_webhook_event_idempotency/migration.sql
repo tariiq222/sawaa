@@ -4,7 +4,7 @@
 -- to ensure each (provider, eventId) pair is only processed once even when
 -- Moyasar redelivers on receipt failure.
 --
--- Intentionally NOT in SCOPED_MODELS — webhook events belong to Deqah, not a tenant.
+-- Intentionally NOT in SCOPED_MODELS — webhook events belong to Sawaa, not a tenant.
 
 CREATE TABLE "WebhookEvent" (
     "id"          TEXT NOT NULL,

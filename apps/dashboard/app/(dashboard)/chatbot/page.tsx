@@ -3,7 +3,7 @@
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@deqah/ui"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 
 

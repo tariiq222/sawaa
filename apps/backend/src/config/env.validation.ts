@@ -122,7 +122,7 @@ export const envValidationSchema = Joi.object({
   // token + zoho_organization_id + webhook secret stored in `Integration.config`.
   // Generate: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
   ZOHO_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
-  // Shared OAuth client used by Deqah's Zoho integration. Same client_id/secret
+  // Shared OAuth client used by Sawaa's Zoho integration. Same client_id/secret
   // serves all tenants — Zoho rate-limits per Zoho organization, not per OAuth
   // client, so pooling is safe. Required in production; optional in dev so a
   // developer who hasn't created a Zoho client can still boot the app.
@@ -143,7 +143,7 @@ export const envValidationSchema = Joi.object({
       then: Joi.string().uri({ scheme: ['https'] }).required(),
       otherwise: Joi.string().uri().allow('').optional(),
     }),
-  // SaaS→tenant invoicing: Deqah's own Zoho organization. All optional so
+  // SaaS→tenant invoicing: Sawaa's own Zoho organization. All optional so
   // self-hosters who don't use Zoho for SaaS billing can leave them blank.
   ZOHO_PLATFORM_ORGANIZATION_ID: Joi.string().allow('').optional(),
   ZOHO_PLATFORM_REFRESH_TOKEN: Joi.string().allow('').optional(),
@@ -223,7 +223,7 @@ export const envValidationSchema = Joi.object({
   }),
   // Public origin of the backend itself (where third-party webhooks like Zoho
   // will POST to). Distinct from DASHBOARD_PUBLIC_URL: the dashboard and the
-  // API typically live on different subdomains (app.deqah.app vs api.deqah.app)
+  // API typically live on different subdomains (app.sawaa.app vs api.sawaa.app)
   // and only the API origin is reachable by external services.
   // In production this MUST be HTTPS — Zoho refuses non-TLS webhook URLs.
   API_PUBLIC_URL: Joi.when('NODE_ENV', {
@@ -254,26 +254,6 @@ export const envValidationSchema = Joi.object({
   }),
   AUTHENTICA_BASE_URL: Joi.string().uri().default('https://api.authentica.sa'),
   AUTHENTICA_DEFAULT_TEMPLATE_ID: Joi.string().default('1'),
-
-  // CAPTCHA (auth bot protection on OTP endpoints).
-  // In production, 'noop' is FORBIDDEN — a real provider (hcaptcha | turnstile) is required.
-  // Per-account lockout (5 attempts → 15-minute lock) remains in place as a secondary defense.
-  CAPTCHA_PROVIDER: Joi.string().valid('noop', 'hcaptcha', 'turnstile').when('NODE_ENV', {
-    is: 'production',
-    then: Joi.string().valid('hcaptcha', 'turnstile').required(),
-    otherwise: Joi.string().valid('noop', 'hcaptcha', 'turnstile').default('noop'),
-  }),
-  HCAPTCHA_SECRET: Joi.when('CAPTCHA_PROVIDER', {
-    is: 'hcaptcha',
-    then: Joi.string().min(8).required(),
-    otherwise: Joi.string().allow('').optional(),
-  }),
-  // Cloudflare Turnstile. Required only when CAPTCHA_PROVIDER='turnstile'.
-  TURNSTILE_SECRET: Joi.when('CAPTCHA_PROVIDER', {
-    is: 'turnstile',
-    then: Joi.string().min(8).required(),
-    otherwise: Joi.string().allow('').optional(),
-  }),
 
   // Subdomain tenant routing (Task 7)
   // Root domain used to derive tenant slug from the Host header (e.g. sawa.<root> → "sawa").
@@ -324,7 +304,6 @@ export const envValidationSchema = Joi.object({
       'ZOHO_PLATFORM_WEBHOOK_SECRET',
       'MOYASAR_PLATFORM_SECRET_KEY',
       'MOYASAR_PLATFORM_WEBHOOK_SECRET',
-      'HCAPTCHA_SECRET',
       'AUTHENTICA_API_KEY',
     ];
     for (const key of sensitiveKeys) {

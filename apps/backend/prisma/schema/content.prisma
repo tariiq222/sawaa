@@ -2,10 +2,9 @@
 //
 // Phase 1 (MVP): key-value SiteSetting for Hero/Features/Stats/CTA/SiteInfo texts.
 // Future phases will add BlogPost, FaqItem, Testimonial, SupportGroup entities.
-// SaaS-02g: SiteSetting scoped — composite PK (organizationId, key) per 02g plan.
+// SaaS-02g: SiteSetting scoped.
 
 model SiteSetting {
-  organizationId String @default("00000000-0000-0000-0000-000000000001")
   key            String
   valueText      String?
   valueAr        String?
@@ -14,7 +13,5 @@ model SiteSetting {
   valueMedia     String?
   updatedAt      DateTime @updatedAt
 
-  @@id([organizationId, key])
-  @@index([organizationId])
   @@index([updatedAt])
 }

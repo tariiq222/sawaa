@@ -9,7 +9,7 @@ import {
   UserAdd01Icon,
   MoneyBag02Icon,
 } from "@hugeicons/core-free-icons"
-import { Card } from "@deqah/ui"
+import { Card } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import type { QuickActionKey } from "@/lib/dashboard-widgets"
 

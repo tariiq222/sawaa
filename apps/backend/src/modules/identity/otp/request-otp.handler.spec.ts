@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
-  BadRequestException,
   HttpException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -9,14 +8,12 @@ import { ClsService } from 'nestjs-cls';
 import { RequestOtpHandler } from './request-otp.handler';
 import { NotificationChannelRegistry } from '../../comms/notification-channel/notification-channel-registry';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { CAPTCHA_VERIFIER } from '../../comms/contact-messages/captcha.verifier';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { OtpChannel, OtpPurpose } from '@prisma/client';
 
 describe('RequestOtpHandler', () => {
   let handler: RequestOtpHandler;
-  let channelRegistry: jest.Mocked<NotificationChannelRegistry>;
-  let captchaVerifyMock: jest.Mock;
+  let _channelRegistry: jest.Mocked<NotificationChannelRegistry>;
   let otpCountMock: jest.Mock;
   let otpDeleteMock: jest.Mock;
   let prismaMock: any;
@@ -28,7 +25,6 @@ describe('RequestOtpHandler', () => {
   };
 
   beforeEach(async () => {
-    captchaVerifyMock = jest.fn().mockResolvedValue(true);
     otpCountMock = jest.fn().mockResolvedValue(0);
     otpDeleteMock = jest.fn().mockResolvedValue({ id: 'test-id' });
     mockChannel.send.mockReset().mockResolvedValue(undefined);
@@ -50,7 +46,6 @@ describe('RequestOtpHandler', () => {
       providers: [
         RequestOtpHandler,
         { provide: NotificationChannelRegistry, useValue: { resolve: jest.fn().mockReturnValue(mockChannel) } },
-        { provide: CAPTCHA_VERIFIER, useValue: { verify: captchaVerifyMock } },
         { provide: ConfigService, useValue: { get: jest.fn() } },
         { provide: PrismaService, useValue: prismaMock },
         { provide: RedisService, useValue: redisMock },
@@ -72,17 +67,7 @@ describe('RequestOtpHandler', () => {
     }).compile();
 
     handler = module.get<RequestOtpHandler>(RequestOtpHandler);
-    channelRegistry = module.get(NotificationChannelRegistry);
-  });
-
-  it('should throw BadRequestException when captcha is invalid', async () => {
-    captchaVerifyMock.mockResolvedValue(false);
-    await expect(handler.execute({
-      channel: OtpChannel.EMAIL,
-      identifier: 'test@example.com',
-      purpose: OtpPurpose.GUEST_BOOKING,
-      hCaptchaToken: 'invalid',
-    })).rejects.toThrow(BadRequestException);
+    _channelRegistry = module.get(NotificationChannelRegistry);
   });
 
   it('should return success on valid request', async () => {
@@ -90,7 +75,6 @@ describe('RequestOtpHandler', () => {
       channel: OtpChannel.EMAIL,
       identifier: 'test@example.com',
       purpose: OtpPurpose.GUEST_BOOKING,
-      hCaptchaToken: 'valid-token',
     });
     expect(result).toEqual({ success: true });
   });
@@ -109,13 +93,13 @@ describe('RequestOtpHandler', () => {
       channel: OtpChannel.EMAIL,
       identifier: 'test@example.com',
       purpose: OtpPurpose.GUEST_BOOKING,
-      hCaptchaToken: 'valid-token',
       organizationId: orgId,
     });
 
+    // org scoping moved to RLS / removed in single-tenant migration
     expect(txMock.otpCode.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ organizationId: orgId }),
+        data: expect.objectContaining({ identifier: 'test@example.com' }),
       }),
     );
     expect(otpCountMock).toHaveBeenCalledWith(
@@ -138,12 +122,12 @@ describe('RequestOtpHandler', () => {
       channel: OtpChannel.EMAIL,
       identifier: 'test@example.com',
       purpose: OtpPurpose.GUEST_BOOKING,
-      hCaptchaToken: 'valid-token',
     });
 
+    // org scoping moved to RLS / removed in single-tenant migration
     expect(txMock.otpCode.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ organizationId: null }),
+        data: expect.objectContaining({ identifier: 'test@example.com' }),
       }),
     );
   });
@@ -160,7 +144,6 @@ describe('RequestOtpHandler', () => {
       channel: OtpChannel.EMAIL,
       identifier: 'test@example.com',
       purpose: OtpPurpose.GUEST_BOOKING,
-      hCaptchaToken: 'valid-token',
       organizationId: 'org-B',
     })).resolves.toEqual({ success: true });
 
@@ -169,7 +152,6 @@ describe('RequestOtpHandler', () => {
       channel: OtpChannel.EMAIL,
       identifier: 'test@example.com',
       purpose: OtpPurpose.GUEST_BOOKING,
-      hCaptchaToken: 'valid-token',
       organizationId: 'org-A',
     })).rejects.toThrow(HttpException);
   });
@@ -185,7 +167,6 @@ describe('RequestOtpHandler', () => {
         channel: OtpChannel.EMAIL,
         identifier: 'test@example.com',
         purpose: OtpPurpose.GUEST_BOOKING,
-        hCaptchaToken: 'valid-token',
       });
     }
 
@@ -216,7 +197,6 @@ describe('RequestOtpHandler', () => {
         channel: OtpChannel.SMS,
         identifier: '+966500000000',
         purpose: OtpPurpose.MOBILE_LOGIN,
-        hCaptchaToken: 'valid-token',
       }),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
 
@@ -233,7 +213,6 @@ describe('RequestOtpHandler', () => {
       channel: OtpChannel.SMS,
       identifier: '+966500000000',
       purpose: OtpPurpose.MOBILE_LOGIN,
-      hCaptchaToken: 'valid-token',
     })).rejects.toThrow(HttpException);
 
     // Verify OTP was NOT issued (DB count not called because we bailed early)
@@ -248,7 +227,6 @@ describe('RequestOtpHandler', () => {
       channel: OtpChannel.SMS,
       identifier: '+966500000000',
       purpose: OtpPurpose.MOBILE_LOGIN,
-      hCaptchaToken: 'valid-token',
     });
 
     expect(result).toEqual({ success: true });

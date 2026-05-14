@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Card, CardContent, Button, Input, Skeleton, Switch, RadioGroup, RadioGroupItem } from "@deqah/ui"
+import { Card, CardContent, Button, Input, Skeleton, Switch, RadioGroup, RadioGroupItem } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import type { BookingFlowOrder } from "@/lib/api/organization-settings"
 import {

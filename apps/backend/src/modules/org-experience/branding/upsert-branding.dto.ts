@@ -8,7 +8,7 @@ export class UpsertBrandingDto {
   @ApiProperty({ description: 'Organization name in Arabic', example: 'عيادة الرعاية' })
   @IsString() @MaxLength(200) organizationNameAr!: string;
 
-  @ApiPropertyOptional({ description: 'Organization name in English', example: 'Deqah Clinic' })
+  @ApiPropertyOptional({ description: 'Organization name in English', example: 'Sawaa Clinic' })
   @IsOptional() @IsString() @MaxLength(200) organizationNameEn?: string;
 
   @ApiPropertyOptional({ description: 'Product tagline shown under the organization name', example: 'نحو رعاية أفضل' })

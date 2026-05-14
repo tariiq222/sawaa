@@ -13,10 +13,10 @@ import {
   DialogBody,
   DialogHeader,
   DialogTitle,
-} from "@deqah/ui"
-import { Button } from "@deqah/ui"
-import { Input } from "@deqah/ui"
-import { Skeleton } from "@deqah/ui"
+} from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
+import { Input } from "@sawaa/ui"
+import { Skeleton } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useBranchEmployees, useBranchEmployeeMutations } from "@/hooks/use-branches"
 import { fetchEmployees } from "@/lib/api/employees"

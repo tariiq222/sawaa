@@ -46,9 +46,9 @@ describe('CreateDepartmentHandler', () => {
       descriptionEn: 'Department description',
       icon: 'clinic-icon',
     });
+    // org scoping moved to RLS / removed in single-tenant migration
     expect(prisma.department.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        organizationId: DEFAULT_ORG,
         nameAr: 'عيادة',
         descriptionAr: 'وصف القسم',
       }),

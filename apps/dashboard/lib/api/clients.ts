@@ -1,5 +1,5 @@
 /**
- * Clients API — Deqah Dashboard
+ * Clients API — Sawaa Dashboard
  * Controller: dashboard/people/clients
  */
 

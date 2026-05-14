@@ -1,4 +1,4 @@
-import type { CreateContactMessagePayload } from '@deqah/api-client';
+import type { CreateContactMessagePayload } from '@sawaa/api-client';
 
 import { getApiBase } from '@/lib/api-base';
 

@@ -10,11 +10,11 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import {
   InputGroup,
   InputGroupAddon,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { SearchIcon, Tick02Icon } from "@hugeicons/core-free-icons"
 

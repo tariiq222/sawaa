@@ -23,7 +23,6 @@ import {
 import { ApiStandardResponses } from '../../common/swagger';
 import { JwtGuard, Public } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
-import { FeatureKey } from '@deqah/shared/constants/feature-keys';
 
 import { StartConnectHandler } from '../../modules/integrations/zoho-invoice/connect/start-connect.handler';
 import { OAuthCallbackHandler } from '../../modules/integrations/zoho-invoice/connect/oauth-callback.handler';
@@ -45,7 +44,6 @@ import {
   UpdateConfigDto,
 } from '../../modules/integrations/zoho-invoice/dto/connect.dto';
 
-const FEATURE = FeatureKey.ZOHO_INVOICE_INTEGRATION;
 
 @ApiTags('Dashboard / Integrations / Zoho')
 @ApiBearerAuth()

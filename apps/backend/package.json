@@ -2,7 +2,7 @@
   "name": "backend",
   "version": "2.1.9",
   "private": true,
-  "description": "Deqah Backend v2 — NestJS + Bounded Contexts + Vertical Slices",
+  "description": "Sawaa Backend v2 — NestJS + Bounded Contexts + Vertical Slices",
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",
@@ -13,8 +13,8 @@
     "test:cov": "jest --coverage",
     "test:e2e": "NODE_OPTIONS=\"--max-old-space-size=4096\" jest --config test/jest-e2e.json --json --outputFile=test-results-clients.json && pnpm run test:report",
     "test:smoke": "jest --config test/jest-smoke.json --runInBand",
-    "test:kiwi": "jest --json --outputFile=/tmp/jest-backend-unit.json || true && node ../../scripts/kiwi/kiwi-sync-manual-qa.mjs --jest /tmp/jest-backend-unit.json --tag backend --domain Backend --plan-name 'Deqah / Backend / Unit' --plan-summary 'Automated Jest unit tests for apps/backend.'",
-    "test:kiwi:e2e": "jest --config test/jest-e2e.json --json --outputFile=/tmp/jest-backend-e2e.json || true && node ../../scripts/kiwi/kiwi-sync-manual-qa.mjs --jest /tmp/jest-backend-e2e.json --tag backend-e2e --domain 'Backend E2E' --plan-name 'Deqah / Backend / E2E' --plan-summary 'Jest E2E tests for apps/backend.'",
+    "test:kiwi": "jest --json --outputFile=/tmp/jest-backend-unit.json || true && node ../../scripts/kiwi/kiwi-sync-manual-qa.mjs --jest /tmp/jest-backend-unit.json --tag backend --domain Backend --plan-name 'Sawaa / Backend / Unit' --plan-summary 'Automated Jest unit tests for apps/backend.'",
+    "test:kiwi:e2e": "jest --config test/jest-e2e.json --json --outputFile=/tmp/jest-backend-e2e.json || true && node ../../scripts/kiwi/kiwi-sync-manual-qa.mjs --jest /tmp/jest-backend-e2e.json --tag backend-e2e --domain 'Backend E2E' --plan-name 'Sawaa / Backend / E2E' --plan-summary 'Jest E2E tests for apps/backend.'",
     "test:kiwi:all": "pnpm run test:kiwi && pnpm run test:kiwi:e2e",
     "test:e2e:cov": "NODE_OPTIONS=\"--max-old-space-size=4096\" jest --config test/jest-e2e.json --coverage --coverageReporters=text-summary --coverageReporters=html",
     "test:security": "jest --config test/jest-security.json --runInBand",
@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "@casl/ability": "^6.8.0",
-    "@deqah/shared": "workspace:*",
+    "@sawaa/shared": "workspace:*",
     "@nest-lab/throttler-storage-redis": "^1.2.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",

@@ -1,5 +1,5 @@
 {
-  "name": "@deqah/website",
+  "name": "@sawaa/website",
   "version": "0.2.1",
   "private": true,
   "scripts": {
@@ -12,9 +12,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@deqah/api-client": "workspace:*",
-    "@deqah/shared": "workspace:*",
-    "@hcaptcha/react-hcaptcha": "^1.17.4",
+    "@sawaa/api-client": "workspace:*",
+    "@sawaa/shared": "workspace:*",
     "@sentry/nextjs": "^10.51.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

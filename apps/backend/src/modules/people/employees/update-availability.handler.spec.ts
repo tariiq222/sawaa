@@ -16,7 +16,7 @@ const makeCmd = (overrides = {}) => ({
 
 describe('UpdateAvailabilityHandler', () => {
   let handler: UpdateAvailabilityHandler;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   let prisma: any;
 
   beforeEach(async () => {

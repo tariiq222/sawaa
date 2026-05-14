@@ -4,7 +4,7 @@ import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { LockPasswordIcon } from "@hugeicons/core-free-icons"
 
-import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from "@deqah/ui"
+import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from "@sawaa/ui"
 
 import { ChangePasswordDialog } from "@/components/features/change-password-dialog"
 import { useAuth } from "@/components/providers/auth-provider"

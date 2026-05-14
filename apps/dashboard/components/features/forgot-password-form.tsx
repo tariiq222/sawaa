@@ -3,9 +3,9 @@
 import { useState } from "react"
 import type { FormEvent } from "react"
 import Link from "next/link"
-import { Button } from "@deqah/ui"
-import { Input } from "@deqah/ui"
-import { Label } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
+import { Input } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { requestStaffPasswordReset } from "@/lib/api/auth"
 

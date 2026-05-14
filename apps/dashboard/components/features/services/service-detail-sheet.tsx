@@ -10,10 +10,10 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@deqah/ui"
-import { Badge } from "@deqah/ui"
-import { Button } from "@deqah/ui"
-import { Separator } from "@deqah/ui"
+} from "@sawaa/ui"
+import { Badge } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
+import { Separator } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { ar } from "date-fns/locale"
 import { formatDatePattern } from "@/lib/date"

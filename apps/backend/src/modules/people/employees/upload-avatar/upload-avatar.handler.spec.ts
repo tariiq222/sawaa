@@ -8,7 +8,7 @@ const MAX_AVATAR_BYTES = 1 * 1024 * 1024;
 
 const MOCK_FILE_ROW = {
   id: 'file-9',
-  bucket: 'deqah',
+  bucket: 'sawaa',
   storageKey: 'org/new.png',
   filename: 'a.png',
   mimetype: 'image/png',

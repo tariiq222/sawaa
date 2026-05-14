@@ -59,7 +59,7 @@ export class RequestPasswordResetHandler {
       vars: {
         userName: user.name,
         resetUrl,
-        subject: 'Reset your Deqah password',
+        subject: 'Reset your Sawaa password',
       },
     });
 

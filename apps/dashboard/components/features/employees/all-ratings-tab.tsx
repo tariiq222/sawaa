@@ -5,18 +5,18 @@ import { useQuery } from "@tanstack/react-query"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { StarIcon } from "@hugeicons/core-free-icons"
 
-import { Card, CardContent } from "@deqah/ui"
-import { Badge } from "@deqah/ui"
-import { Skeleton } from "@deqah/ui"
-import { Button } from "@deqah/ui"
-import { Label } from "@deqah/ui"
+import { Card, CardContent } from "@sawaa/ui"
+import { Badge } from "@sawaa/ui"
+import { Skeleton } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 
 import { EmptyState } from "@/components/features/empty-state"
 import { fetchEmployeeRatings } from "@/lib/api/employees"

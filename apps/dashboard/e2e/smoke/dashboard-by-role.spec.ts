@@ -24,7 +24,7 @@
  */
 import { test, expect, Page } from '@playwright/test';
 
-const OWNER_EMAIL = process.env.SEED_OWNER_EMAIL ?? process.env.SEED_EMAIL ?? 'admin@deqah-test.com';
+const OWNER_EMAIL = process.env.SEED_OWNER_EMAIL ?? process.env.SEED_EMAIL ?? 'admin@sawaa-test.com';
 const OWNER_PASSWORD = process.env.SEED_OWNER_PASSWORD ?? process.env.SEED_PASSWORD ?? 'Admin@1234';
 
 const RECEPTIONIST_EMAIL = process.env.SEED_RECEPTIONIST_EMAIL;

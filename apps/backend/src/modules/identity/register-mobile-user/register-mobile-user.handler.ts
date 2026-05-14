@@ -7,7 +7,6 @@ import type { RegisterMobileUserDto } from './register-mobile-user.dto';
 
 export type RegisterMobileUserCommand = RegisterMobileUserDto & {
   organizationId?: string;
-  hCaptchaToken?: string;
 };
 
 export type RegisterMobileUserResult = {
@@ -52,7 +51,6 @@ export class RegisterMobileUserHandler {
       channel: OtpChannel.SMS,
       identifier: phone,
       purpose: OtpPurpose.MOBILE_REGISTER,
-      hCaptchaToken: cmd.hCaptchaToken ?? 'mobile-app',
       organizationId: cmd.organizationId,
     });
 

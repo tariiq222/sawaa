@@ -1,5 +1,5 @@
 {
-  "name": "@deqah/api-client",
+  "name": "@sawaa/api-client",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     "./types": "./src/types/index.js"
   },
   "dependencies": {
-    "@deqah/shared": "workspace:*"
+    "@sawaa/shared": "workspace:*"
   },
   "scripts": {
     "test": "vitest run",

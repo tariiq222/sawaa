@@ -2,15 +2,15 @@
 
 import { DataTable } from "@/components/features/data-table"
 import { ErrorBanner } from "@/components/features/error-banner"
-import { Skeleton } from "@deqah/ui"
-import { Button } from "@deqah/ui"
+import { Skeleton } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { DatePicker } from "@/components/ui/date-picker"
 
 import { getActivityLogColumns } from "@/components/features/activity-log/activity-log-columns"

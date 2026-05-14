@@ -43,14 +43,14 @@ export class TestEmailConfigHandler {
     try {
       const result = await adapter.sendMail({
         to: cmd.toEmail,
-        subject: 'Deqah test email — رسالة اختبار دقّة',
+        subject: 'Sawaa test email — رسالة اختبار دقّة',
         html: `
           <div dir="rtl" style="font-family: Arial, sans-serif; padding: 24px;">
             <h2 style="color: #354FD8;">تم الاتصال بمزود البريد بنجاح ✓</h2>
             <p>هذه رسالة اختبار من منصة دقّة للتحقق من إعداد مزود البريد الإلكتروني.</p>
             <hr/>
             <p style="direction: ltr; text-align: left;">
-              <strong>Deqah Email Provider Test</strong><br/>
+              <strong>Sawaa Email Provider Test</strong><br/>
               This is a test message to verify your email provider configuration.
             </p>
           </div>

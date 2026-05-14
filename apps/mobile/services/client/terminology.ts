@@ -1,5 +1,5 @@
 import api from '../api';
-import type { TerminologyPack } from '@deqah/shared/terminology';
+import type { TerminologyPack } from '@sawaa/shared/terminology';
 
 /**
  * Fetches the merged terminology pack for a vertical from the public catalog.

@@ -12,7 +12,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
-import { colors as sharedColors } from '@deqah/shared/tokens';
+import { colors as sharedColors } from '@sawaa/shared/tokens';
 
 import { ThemedText } from '@/theme/components/ThemedText';
 import { useTheme } from '@/theme/useTheme';

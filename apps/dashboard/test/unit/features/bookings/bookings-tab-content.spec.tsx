@@ -81,7 +81,7 @@ vi.mock("@/components/features/filter-bar", () => ({
 vi.mock("@/components/features/error-banner", () => ({
   ErrorBanner: () => null,
 }))
-vi.mock("@deqah/ui", () => ({
+vi.mock("@sawaa/ui", () => ({
   Skeleton: () => <div data-testid="skeleton" />,
 }))
 vi.mock("@/components/features/bookings/booking-columns", () => ({

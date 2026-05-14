@@ -12,7 +12,7 @@ services:
     build:
       context: ..
       dockerfile: apps/backend/Dockerfile
-    container_name: deqah-migrate
+    container_name: sawaa-migrate
     command: ["sh", "-c", "npx prisma migrate deploy --schema=prisma/schema"]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -44,7 +44,7 @@ services:
       MINIO_PORT: "9000"
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-      MINIO_BUCKET: ${MINIO_BUCKET:-deqah}
+      MINIO_BUCKET: ${MINIO_BUCKET:-sawaa}
       MINIO_USE_SSL: "${MINIO_USE_SSL:-false}"
 
       # CORS — comma-separated, no trailing slash
@@ -83,7 +83,7 @@ services:
       OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
       OPENROUTER_CHAT_MODEL: ${OPENROUTER_CHAT_MODEL:-anthropic/claude-3.5-haiku}
 
-      # Single-company mode. Tenant isolation jobs/workflows are legacy Deqah SaaS.
+      # Single-company mode. Tenant isolation jobs/workflows are legacy Sawaa SaaS.
       TENANT_ENFORCEMENT: "${TENANT_ENFORCEMENT:-off}"
       DEFAULT_ORGANIZATION_ID: ${DEFAULT_ORGANIZATION_ID:-00000000-0000-0000-0000-000000000001}
 
@@ -104,10 +104,6 @@ services:
       AUTHENTICA_API_KEY: ${AUTHENTICA_API_KEY}
       AUTHENTICA_BASE_URL: ${AUTHENTICA_BASE_URL:-https://api.authentica.sa}
       AUTHENTICA_DEFAULT_TEMPLATE_ID: ${AUTHENTICA_DEFAULT_TEMPLATE_ID:-1}
-
-      # CAPTCHA (auth bot protection)
-      CAPTCHA_PROVIDER: ${CAPTCHA_PROVIDER:-hcaptcha}
-      HCAPTCHA_SECRET: ${HCAPTCHA_SECRET}
 
       # Public site URL (used in emails/notifications)
       PUBLIC_WEBSITE_URL: ${PUBLIC_WEBSITE_URL}
@@ -140,7 +136,7 @@ services:
     build:
       context: ..
       dockerfile: apps/dashboard/Dockerfile
-    container_name: deqah-dashboard
+    container_name: sawaa-dashboard
     stop_grace_period: 40s
     restart: unless-stopped
     environment:
@@ -172,7 +168,7 @@ services:
     build:
       context: ..
       dockerfile: apps/website/Dockerfile
-    container_name: deqah-website
+    container_name: sawaa-website
     stop_grace_period: 40s
     restart: unless-stopped
     environment:
@@ -319,7 +315,7 @@ services:
 
   nginx:
     image: nginx:1.27-alpine
-    container_name: deqah-nginx
+    container_name: sawaa-nginx
     stop_grace_period: 40s
     restart: unless-stopped
     ports:
@@ -355,7 +351,7 @@ services:
 
   minio-backup:
     image: minio/mc:latest
-    container_name: deqah-minio-backup
+    container_name: sawaa-minio-backup
     depends_on:
       minio:
         condition: service_healthy

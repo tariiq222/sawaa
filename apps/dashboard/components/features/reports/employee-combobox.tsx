@@ -4,12 +4,12 @@ import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowDown01Icon, CheckmarkCircle01Icon } from "@hugeicons/core-free-icons"
 
-import { Button } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import {
   Command,
   CommandEmpty,
@@ -17,7 +17,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useEmployees } from "@/hooks/use-employees"
 import { cn } from "@/lib/utils"

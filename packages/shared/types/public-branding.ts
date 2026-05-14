@@ -1,5 +1,5 @@
 /**
- * PublicBranding — single source of truth for branding across all Deqah apps.
+ * PublicBranding — single source of truth for branding across all Sawaa apps.
  *
  * Consumed identically by:
  *   - apps/backend (returns it from GET /api/public/branding)

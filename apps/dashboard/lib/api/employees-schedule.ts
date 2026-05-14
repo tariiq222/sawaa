@@ -1,5 +1,5 @@
 /**
- * Employees Schedule API — Deqah Dashboard
+ * Employees Schedule API — Sawaa Dashboard
  * (availability, breaks, slots, vacations, services, ratings)
  */
 

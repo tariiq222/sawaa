@@ -2,9 +2,10 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
-import { DEFAULT_ORGANIZATION_ID, SUPER_ADMIN_CONTEXT_CLS_KEY } from '../../../common/tenant';
+import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant';
 import { PasswordService } from '../shared/password.service';
 import { TokenService, TokenPair } from '../shared/token.service';
+import type { User } from '@prisma/client';
 import type { LoginCommand } from './login.command';
 
 const LOCKOUT_WINDOW_MINUTES = 15;
@@ -23,19 +24,21 @@ export class LoginHandler {
     private readonly redis: RedisService,
   ) {}
 
-  async execute(cmd: LoginCommand): Promise<TokenPair> {
+  async execute(cmd: LoginCommand): Promise<TokenPair & { user: User & { customRole: { permissions: { action: string; subject: string }[] } | null } }> {
     const ip = cmd.ip ?? 'unknown';
     const emailKey = `staff_login:email:${cmd.email}`;
     const ipKey = `staff_login:ip:${ip}`;
     const redisClient = this.redis.getClient();
 
-    const [emailAttempts, ipAttempts] = await Promise.all([
-      redisClient.incr(emailKey),
-      redisClient.incr(ipKey),
+    // P2-10: atomic INCR + EXPIRE via multi/exec to prevent race condition
+    // where a crash between incr and expire leaves a key without TTL.
+    const [emailMultiRes, ipMultiRes] = await Promise.all([
+      redisClient.multi().incr(emailKey).expire(emailKey, RATE_LIMIT_WINDOW_SECONDS).exec(),
+      redisClient.multi().incr(ipKey).expire(ipKey, RATE_LIMIT_WINDOW_SECONDS).exec(),
     ]);
 
-    if (emailAttempts === 1) await redisClient.expire(emailKey, RATE_LIMIT_WINDOW_SECONDS);
-    if (ipAttempts === 1) await redisClient.expire(ipKey, RATE_LIMIT_WINDOW_SECONDS);
+    const emailAttempts = (emailMultiRes?.[0]?.[1] as number | undefined) ?? 0;
+    const ipAttempts = (ipMultiRes?.[0]?.[1] as number | undefined) ?? 0;
 
     if (emailAttempts > MAX_EMAIL_RATE_LIMIT || ipAttempts > MAX_IP_RATE_LIMIT) {
       await Promise.all([
@@ -48,7 +51,7 @@ export class LoginHandler {
     try {
       const result = await this.doLogin(cmd);
       await Promise.all([redisClient.del(emailKey), redisClient.del(ipKey)]);
-      return result;
+      return result as TokenPair & { user: User & { customRole: { permissions: { action: string; subject: string }[] } | null } };
     } catch (err) {
       if (err instanceof UnauthorizedException) {
         await Promise.all([
@@ -60,7 +63,7 @@ export class LoginHandler {
     }
   }
 
-  private async doLogin(cmd: LoginCommand): Promise<TokenPair> {
+  private async doLogin(cmd: LoginCommand): Promise<TokenPair & { user: User & { customRole: { permissions: { action: string; subject: string }[] } | null } }> {
     const user = await this.prisma.user.findUnique({
       where: { email: cmd.email },
       include: { customRole: { include: { permissions: true } } },
@@ -99,9 +102,11 @@ export class LoginHandler {
       });
     }
 
-    return this.tokens.issueTokenPair(user, {
+    const tokens = await this.tokens.issueTokenPair(user, {
       organizationId: DEFAULT_ORGANIZATION_ID,
       isSuperAdmin: user.isSuperAdmin ?? false,
     });
+
+    return { ...tokens, user };
   }
 }

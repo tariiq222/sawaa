@@ -1,5 +1,5 @@
 /**
- * Coupon Types — Deqah Dashboard
+ * Coupon Types — Sawaa Dashboard
  */
 
 import type { PaginatedQuery } from "./common"

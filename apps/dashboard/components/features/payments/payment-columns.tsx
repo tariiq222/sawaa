@@ -7,14 +7,14 @@ import {
   ViewIcon,
   ArrowTurnBackwardIcon,
 } from "@hugeicons/core-free-icons"
-import { Badge } from "@deqah/ui"
-import { Button } from "@deqah/ui"
+import { Badge } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import type { Payment } from "@/lib/types/payment"
 import { formatClinicDate } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"

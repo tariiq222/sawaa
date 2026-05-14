@@ -194,6 +194,12 @@ export class CreateBookingHandler {
         }
 
         if (dto.couponCode) {
+          // P2-6: acquire advisory lock on the coupon to prevent concurrent
+          // redemptions from exceeding the usage limit.
+          const couponLockKey1 = hashToInt32(`coupon:${organizationId}`);
+          const couponLockKey2 = hashToInt32(dto.couponCode);
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${couponLockKey1}::int, ${couponLockKey2}::int)`;
+
           const result = await this.couponValidator.validate({
             tx,
             code: dto.couponCode,
@@ -208,6 +214,13 @@ export class CreateBookingHandler {
             data: { usedCount: { increment: 1 } },
           });
         }
+
+        // P1-2: serialize bookingNumber generation within the org using an
+        // advisory lock so two concurrent transactions cannot read the same
+        // 'last' number and both insert it.
+        const numberLockKey1 = hashToInt32(`booking_number:${organizationId}`);
+        const numberLockKey2 = 0;
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${numberLockKey1}::int, ${numberLockKey2}::int)`;
 
         const lastBooking = await tx.booking.findFirst({
           where: { organizationId },

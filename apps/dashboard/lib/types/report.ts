@@ -1,5 +1,5 @@
 /**
- * Report Types — Deqah Dashboard
+ * Report Types — Sawaa Dashboard
  */
 
 /* ─── Query ─── */

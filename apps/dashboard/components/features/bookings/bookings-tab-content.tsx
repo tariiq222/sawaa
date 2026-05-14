@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Skeleton } from "@deqah/ui"
-import { Button } from "@deqah/ui"
+import { Skeleton } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
 import { DataTable } from "@/components/features/data-table"
 import { FilterBar } from "@/components/features/filter-bar"
 import { ErrorBanner } from "@/components/features/error-banner"

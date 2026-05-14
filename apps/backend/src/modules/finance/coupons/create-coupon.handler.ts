@@ -15,7 +15,7 @@ export class CreateCouponHandler {
   ) {}
 
   async execute(cmd: CreateCouponCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
     const exists = await this.prisma.coupon.findFirst({
       where: { code: cmd.code },
     });

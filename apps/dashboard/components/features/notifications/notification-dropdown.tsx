@@ -8,11 +8,11 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@deqah/ui"
-import { ScrollArea } from "@deqah/ui"
-import { Separator } from "@deqah/ui"
-import { Button } from "@deqah/ui"
-import { Skeleton } from "@deqah/ui"
+} from "@sawaa/ui"
+import { ScrollArea } from "@sawaa/ui"
+import { Separator } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
+import { Skeleton } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { formatRelativeTime } from "@/lib/date"
 import { useLocale } from "@/components/locale-provider"

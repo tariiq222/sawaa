@@ -10,7 +10,7 @@ import {
   type HomeSectionIntros,
   type SiteSettingsMap,
 } from '@/features/site-content/public';
-import type { PublicEmployee } from '@deqah/api-client';
+import type { PublicEmployee } from '@sawaa/api-client';
 import { Blog } from '../components/sections/blog';
 import { Clinics, type ClinicItem } from '../components/sections/clinics';
 import { CTA } from '../components/sections/cta';

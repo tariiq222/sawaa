@@ -1,4 +1,4 @@
-export function DeqahMark() {
+export function SawaaMark() {
   return (
     <div
       aria-hidden="true"

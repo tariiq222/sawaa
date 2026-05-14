@@ -9,13 +9,13 @@ import {
   PlusSignIcon,
 } from "@hugeicons/core-free-icons"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@deqah/ui"
-import { Button } from "@deqah/ui"
-import { Input } from "@deqah/ui"
-import { Label } from "@deqah/ui"
+import { Card, CardContent, CardHeader, CardTitle } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
+import { Input } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
 import { DatePicker } from "@/components/ui/date-picker"
-import { Separator } from "@deqah/ui"
-import { Skeleton } from "@deqah/ui"
+import { Separator } from "@sawaa/ui"
+import { Skeleton } from "@sawaa/ui"
 import type { OrganizationHoliday } from "@/lib/api/organization"
 import {
   useOrganizationHolidays,

@@ -1,5 +1,5 @@
 /**
- * Organization Settings Types — Deqah Dashboard
+ * Organization Settings Types — Sawaa Dashboard
  */
 
 export interface OrganizationSettings {

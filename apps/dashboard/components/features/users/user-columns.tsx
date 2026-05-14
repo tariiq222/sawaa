@@ -11,16 +11,16 @@ import {
   UserCheck01Icon,
   UserBlock01Icon,
 } from "@hugeicons/core-free-icons"
-import { Avatar, AvatarFallback } from "@deqah/ui"
-import { Badge } from "@deqah/ui"
-import { Button } from "@deqah/ui"
+import { Avatar, AvatarFallback } from "@sawaa/ui"
+import { Badge } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import type { User } from "@/lib/types/user"
 import type { Locale } from "@/lib/translations"
 import type { UserRole } from "@/lib/types/user"

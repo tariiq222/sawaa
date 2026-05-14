@@ -1,5 +1,5 @@
 {
-  "name": "deqah-mobile",
+  "name": "sawaa-mobile",
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
@@ -16,7 +16,7 @@
     "preset": "jest-expo"
   },
   "dependencies": {
-    "@deqah/shared": "workspace:*",
+    "@sawaa/shared": "workspace:*",
     "@expo/metro-runtime": "~55.0.6",
     "@hookform/resolvers": "^5.2.2",
     "@react-native-async-storage/async-storage": "^3.0.1",

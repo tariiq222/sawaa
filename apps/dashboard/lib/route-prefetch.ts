@@ -1,5 +1,5 @@
 /**
- * Route Query Prefetch Map — Deqah Dashboard
+ * Route Query Prefetch Map — Sawaa Dashboard
  *
  * Maps each sidebar route to the queryKey + queryFn of its primary list query.
  * Called on sidebar hover BEFORE the user clicks, so by click time the data

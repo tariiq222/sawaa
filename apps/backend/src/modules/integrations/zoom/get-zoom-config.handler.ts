@@ -11,7 +11,7 @@ export class GetZoomConfigHandler {
   ) {}
 
   async execute() {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
     const integration = await this.prisma.integration.findFirst({
       where: { provider: 'zoom' },
     });

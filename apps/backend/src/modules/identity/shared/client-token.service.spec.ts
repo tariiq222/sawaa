@@ -68,7 +68,7 @@ describe('ClientTokenService.issueTokenPair', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           clientId: 'client-1',
-          organizationId: 'org-1',
+          // org scoping moved to RLS / removed in single-tenant migration
         }),
       }),
     );

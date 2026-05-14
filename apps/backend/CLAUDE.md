@@ -1,4 +1,4 @@
-# Deqah Backend — Conventions
+# Sawa Backend — Conventions
 
 This file provides guidance to Claude Code when working inside `apps/backend`. Read the root [CLAUDE.md](../../CLAUDE.md) first for stack-wide rules (multi-tenancy, immutable migrations, golden rules).
 
@@ -126,7 +126,7 @@ npm run openapi:build-and-snapshot   # Rebuild openapi.json snapshot — commit 
 
 - **Platform billing** lives at `modules/platform/billing/` — plans, subscriptions, invoices, usage metering, dunning. Two Moyasar accounts are in play: the **platform** account collects tenant subscription fees; each tenant's own Moyasar handles their booking-payment revenue.
 - Hybrid model: flat plan fee + usage overage. SMS is **not** metered by the platform (per-tenant providers — see SaaS-02g-sms).
-- Super-admin oversight (waive, grant, change-plan, refund) lives under `modules/platform/admin/` and is exposed only to the `apps/admin` control plane (separate Next.js app on its own port).
+- Super-admin oversight (waive, grant, change-plan, refund) lives under `modules/platform/admin/`. The original multi-tenant fork had a separate `apps/admin` Next.js control plane; sawa does not ship it. Either expose these endpoints through the dashboard behind a super-admin guard or treat them as ops-only (curl + JWT) — do not assume `apps/admin` exists.
 
 ## Platform transactional emails (`infrastructure/mail/PlatformMailerService`)
 

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ChevronDown, Star, UserRound, Users } from 'lucide-react';
-import type { PublicEmployee } from '@deqah/api-client';
+import type { PublicEmployee } from '@sawaa/api-client';
 import type { SectionIntro } from '@/features/site-content/public';
 import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';

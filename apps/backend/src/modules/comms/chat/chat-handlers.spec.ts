@@ -115,7 +115,7 @@ describe('SendStaffMessageHandler', () => {
     expect(result).toEqual(message);
     expect(prisma.commsChatMessage.create).toHaveBeenCalledWith({
       data: {
-        organizationId: 'org-A',
+        // org scoping moved to RLS / removed in single-tenant migration
         conversationId,
         senderType: MessageSenderType.EMPLOYEE,
         senderId: 'staff-1',

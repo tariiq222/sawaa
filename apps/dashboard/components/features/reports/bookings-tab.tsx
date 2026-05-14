@@ -5,8 +5,8 @@ import { ErrorBanner } from "@/components/features/error-banner"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchBookingReport } from "@/lib/api/reports"
 import { useLocale } from "@/components/locale-provider"
-import { Card, CardContent, CardHeader, CardTitle } from "@deqah/ui"
-import { Skeleton } from "@deqah/ui"
+import { Card, CardContent, CardHeader, CardTitle } from "@sawaa/ui"
+import { Skeleton } from "@sawaa/ui"
 
 interface BookingsTabProps {
   dateFrom: string

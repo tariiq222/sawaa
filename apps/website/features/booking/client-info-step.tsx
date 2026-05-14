@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { GuestClientInfo, AvailableSlot } from '@deqah/shared';
+import type { GuestClientInfo, AvailableSlot } from '@sawaa/shared';
 import { OtpRequestForm } from '@/features/otp/otp-request-form';
 import { OtpVerifyForm } from '@/features/otp/otp-verify-form';
 import { useOtpSession } from '@/features/otp/use-otp-session';
@@ -16,7 +16,6 @@ interface ClientInfoStepProps {
 export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInfoStepProps) {
   const [client, setClient] = useState<GuestClientInfo>({ name: '', phone: '', email: '' });
   const [otpStep, setOtpStep] = useState<'form' | 'request' | 'verify'>('form');
-  const [hcaptchaToken, setHcaptchaToken] = useState<string | null>(null);
   const { token, storeToken } = useOtpSession();
 
   return (
@@ -84,8 +83,6 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
       {otpStep === 'request' && (
         <OtpRequestForm
           client={client}
-          onHcaptchaVerify={setHcaptchaToken}
-          hcaptchaToken={hcaptchaToken}
           onRequestSent={() => setOtpStep('verify')}
         />
       )}

@@ -32,7 +32,6 @@ import { OnGroupSessionPaymentLinksReadyHandler } from './events/on-group-sessio
 import { CreateContactMessageHandler } from './contact-messages/create-contact-message.handler';
 import { ListContactMessagesHandler } from './contact-messages/list-contact-messages.handler';
 import { UpdateContactMessageStatusHandler } from './contact-messages/update-contact-message-status.handler';
-import { CAPTCHA_VERIFIER, createCaptchaVerifier } from './contact-messages/captcha.verifier';
 import { NotificationChannelModule } from './notification-channel/notification-channel.module';
 import { SmsModule } from '../../infrastructure/sms/sms.module';
 import { EmailModule } from '../../infrastructure/email/email.module';
@@ -110,7 +109,7 @@ const eventHandlers = [
 @Module({
   imports: [DatabaseModule, MessagingModule, MailModule, NotificationChannelModule, SmsModule, EmailModule, ],
   controllers: [DashboardCommsController],
-  providers: [...handlers, ...eventHandlers, { provide: CAPTCHA_VERIFIER, useFactory: () => createCaptchaVerifier() }],
+  providers: [...handlers, ...eventHandlers],
   exports: [...handlers, NotificationChannelModule],
 })
 export class CommsModule implements OnModuleInit {

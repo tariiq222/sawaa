@@ -1,26 +1,25 @@
 /**
- * Auth API — Deqah Dashboard
+ * Auth API — Sawaa Dashboard
  *
- * Thin wrapper over @deqah/api-client/authApi. The shared package owns
+ * Thin wrapper over @sawaa/api-client/authApi. The shared package owns
  * request shape, envelope unwrapping, and 401 retry logic; this file only
  * adds persist/clear localStorage helpers and dashboard-specific aliases.
  */
 
-import { authApi } from "@deqah/api-client"
-import type { AuthResponse, UserPayload } from "@deqah/api-client"
+import { authApi } from "@sawaa/api-client"
+import type { AuthResponse, UserPayload } from "@sawaa/api-client"
 import { setAccessToken, getAccessToken } from "@/lib/api"
 
 export type AuthUser = UserPayload
 export type { AuthResponse }
 
-const USER_KEY = "deqah_user"
+const USER_KEY = "sawaa_user"
 
 export async function login(
   identifier: string,
   password: string,
-  hCaptchaToken: string,
 ): Promise<AuthResponse> {
-  const data = await authApi.login({ email: identifier, password, hCaptchaToken })
+  const data = await authApi.login({ email: identifier, password })
   persistAuth(data)
   return data
 }

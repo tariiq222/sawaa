@@ -67,9 +67,9 @@ describe('InitClientPaymentHandler', () => {
       paymentId: 'payment-1',
       redirectUrl: 'https://checkout.moyasar.com/pay/moyasar-payment-1',
     });
+    // org scoping moved to RLS / removed in single-tenant migration
     expect(prisma.payment.create).toHaveBeenCalledWith({
       data: {
-        organizationId,
         invoiceId,
         amount: 230,
         currency: 'SAR',
@@ -120,7 +120,7 @@ describe('InitClientPaymentHandler', () => {
 
     const result = await handler.execute({ invoiceId, clientId });
 
-    expect(result).toEqual({ paymentId: 'payment-existing', redirectUrl: '' });
+    expect(result).toEqual({ paymentId: 'payment-existing', redirectUrl: '', status: PaymentStatus.PENDING });
     expect(prisma.payment.delete).not.toHaveBeenCalled();
     expect(prisma.payment.create).not.toHaveBeenCalled();
     expect(moyasar.createPayment).not.toHaveBeenCalled();
@@ -133,9 +133,9 @@ describe('InitClientPaymentHandler', () => {
 
     await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(error);
 
+    // org scoping moved to RLS / removed in single-tenant migration
     expect(prisma.payment.create).toHaveBeenCalledWith({
       data: {
-        organizationId,
         invoiceId,
         amount: 230,
         currency: 'SAR',
@@ -164,9 +164,9 @@ describe('InitClientPaymentHandler', () => {
       redirectUrl: 'https://checkout.moyasar.com/pay/moyasar-payment-1',
     });
     expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'payment-orphan' } });
+    // org scoping moved to RLS / removed in single-tenant migration
     expect(prisma.payment.create).toHaveBeenCalledWith({
       data: {
-        organizationId,
         invoiceId,
         amount: 230,
         currency: 'SAR',

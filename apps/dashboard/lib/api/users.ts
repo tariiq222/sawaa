@@ -1,5 +1,5 @@
 /**
- * Users & Roles API — Deqah Dashboard
+ * Users & Roles API — Sawaa Dashboard
  */
 
 import { api } from "@/lib/api"

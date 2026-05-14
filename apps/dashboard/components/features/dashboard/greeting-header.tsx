@@ -7,8 +7,8 @@ import {
   Add01Icon,
 } from "@hugeicons/core-free-icons"
 
-import { Button } from "@deqah/ui"
-import { Input } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
+import { Input } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 
 interface GreetingHeaderProps {

@@ -75,7 +75,7 @@ const buildMoyasar = () => ({
 const PAY_ID = 'pay-1';
 
 describe('RefundPaymentHandler', () => {
-  const PAYMENT_BASE = {
+  const _PAYMENT_BASE = {
     id: PAY_ID,
     amount: 100,
     gatewayRef: 'pay_test_gw_123',

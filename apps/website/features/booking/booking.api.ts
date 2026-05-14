@@ -1,5 +1,5 @@
-import type { AvailableSlot, GuestBookingPayload, GuestBookingResponse } from '@deqah/shared';
-import type { PublicEmployee } from '@deqah/api-client';
+import type { AvailableSlot, GuestBookingPayload, GuestBookingResponse } from '@sawaa/shared';
+import type { PublicEmployee } from '@sawaa/api-client';
 import { publicFetch } from '@/lib/public-fetch';
 
 export interface PublicBranch {

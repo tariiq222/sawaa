@@ -40,7 +40,7 @@ const config: ExpoConfig = {
       {
         url: 'http://100.124.231.44:8000/',
         organization: 'webvue',
-        project: 'deqah-mobile',
+        project: 'sawaa-mobile',
       },
     ],
   ],

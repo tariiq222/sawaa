@@ -33,7 +33,7 @@ const { useLocale } = vi.hoisted(() => ({
 vi.mock("@/hooks/use-waitlist", () => ({ useWaitlist, useWaitlistMutations }))
 vi.mock("@/components/locale-provider", () => ({ useLocale }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
-vi.mock("@deqah/ui", () => ({
+vi.mock("@sawaa/ui", () => ({
   Select: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   SelectContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   SelectItem: ({ children }: { children: ReactNode }) => <div>{children}</div>,

@@ -45,8 +45,9 @@ describe('CreateIntakeFormHandler', () => {
       type: IntakeFormType.PRE_SESSION,
       scope: IntakeFormScope.GLOBAL,
     });
+    // org scoping moved to RLS / removed in single-tenant migration
     expect(prisma.intakeForm.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ organizationId: DEFAULT_ORG }) }),
+      expect.objectContaining({ data: expect.objectContaining({ nameAr: 'استمارة المريض' }) }),
     );
     expect(result.id).toBe('form-1');
   });

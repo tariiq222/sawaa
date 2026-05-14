@@ -32,17 +32,16 @@ describe('ForgotPasswordForm — API call', () => {
   it('calls requestOtp with CLIENT_PASSWORD_RESET purpose', async () => {
     // Verify that the function signature for requestOtp accepts CLIENT_PASSWORD_RESET
     // This is a smoke test for the enum value existing
-    const { OtpPurpose } = await import('@deqah/shared');
+    const { OtpPurpose } = await import('@sawaa/shared');
     expect(OtpPurpose.CLIENT_PASSWORD_RESET).toBe('CLIENT_PASSWORD_RESET');
   });
 
   it('passes valid email to requestOtp on submit', async () => {
-    const { OtpChannel, OtpPurpose } = await import('@deqah/shared');
+    const { OtpChannel, OtpPurpose } = await import('@sawaa/shared');
     const expectedPayload = {
       channel: OtpChannel.EMAIL,
       identifier: 'user@example.com',
       purpose: OtpPurpose.CLIENT_PASSWORD_RESET,
-      hCaptchaToken: '',
     };
     // Confirm the shape matches what the form builds
     expect(expectedPayload.purpose).toBe('CLIENT_PASSWORD_RESET');

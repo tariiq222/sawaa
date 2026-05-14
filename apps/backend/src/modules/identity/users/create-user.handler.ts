@@ -1,10 +1,8 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 import { PasswordService } from '../shared/password.service';
 import { CreateUserDto } from './create-user.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type CreateUserCommand = CreateUserDto;
 

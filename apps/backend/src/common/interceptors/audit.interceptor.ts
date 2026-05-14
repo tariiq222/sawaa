@@ -195,7 +195,7 @@ export class AuditInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap(async (response) => {
         try {
-          const organizationId = DEFAULT_ORGANIZATION_ID;
+          const _organizationId = DEFAULT_ORGANIZATION_ID;
           const entityId = extractEntityId(response);
           await this.prisma.activityLog.create({
             data: {
@@ -242,7 +242,7 @@ export class AuditInterceptor implements NestInterceptor {
     userAgent?: string,
   ): Promise<void> {
     try {
-      const organizationId = DEFAULT_ORGANIZATION_ID;
+      const _organizationId = DEFAULT_ORGANIZATION_ID;
       await this.prisma.activityLog.create({
         data: {
           userId,

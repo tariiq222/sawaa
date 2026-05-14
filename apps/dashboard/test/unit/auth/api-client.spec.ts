@@ -114,7 +114,7 @@ describe('API Client (lib/api.ts)', () => {
 
   it('should route every endpoint through the same-origin /api/proxy prefix', async () => {
     // The split direct/proxy routing was removed when lib/api delegated to
-    // @deqah/api-client. The Next rewrite (next.config.mjs) forwards
+    // @sawaa/api-client. The Next rewrite (next.config.mjs) forwards
     // /api/proxy/:path* → backend, so a single base keeps cookie-bearing
     // and authenticated endpoints on the same origin.
     const { api } = await import('@/lib/api')
@@ -138,11 +138,11 @@ describe('API Client (lib/api.ts)', () => {
   it('should unwrap { success, data } envelope from backend', async () => {
     const { api } = await import('@/lib/api')
 
-    fetchMock.mockResolvedValueOnce(makeOkResponse({ name: 'Deqah' }))
+    fetchMock.mockResolvedValueOnce(makeOkResponse({ name: 'Sawaa' }))
 
     const result = await api.get<{ name: string }>('/health')
 
-    expect(result).toEqual({ name: 'Deqah' })
+    expect(result).toEqual({ name: 'Sawaa' })
   })
 
   // =========================================================================
@@ -198,7 +198,7 @@ describe('API Client (lib/api.ts)', () => {
   it('should retry request with new token after successful 401 refresh', async () => {
     const { api, setAccessToken } = await import('@/lib/api')
     setAccessToken('old-token')
-    localStorage.setItem('deqah_refresh_token', 'stored-rt')
+    localStorage.setItem('sawaa_refresh_token', 'stored-rt')
 
     // First call returns 401
     const response401 = {
@@ -226,7 +226,7 @@ describe('API Client (lib/api.ts)', () => {
   it('should clear token + localStorage and throw when refresh also fails', async () => {
     const { api, setAccessToken, getAccessToken } = await import('@/lib/api')
     setAccessToken('stale-token')
-    localStorage.setItem('deqah_user', JSON.stringify({ id: 'u1' }))
+    localStorage.setItem('sawaa_user', JSON.stringify({ id: 'u1' }))
 
     // Original request → 401
     const response401_1 = {
@@ -247,7 +247,7 @@ describe('API Client (lib/api.ts)', () => {
 
     await expect(api.get('/clients')).rejects.toThrow()
     expect(getAccessToken()).toBeNull()
-    expect(localStorage.getItem('deqah_user')).toBeNull()
+    expect(localStorage.getItem('sawaa_user')).toBeNull()
   })
 
   // =========================================================================
@@ -257,7 +257,7 @@ describe('API Client (lib/api.ts)', () => {
   it('should only call refresh once for concurrent 401 responses', async () => {
     const { api, setAccessToken } = await import('@/lib/api')
     setAccessToken('expired-token')
-    localStorage.setItem('deqah_refresh_token', 'stored-rt')
+    localStorage.setItem('sawaa_refresh_token', 'stored-rt')
 
     // Both requests fail with 401
     const response401_a = {

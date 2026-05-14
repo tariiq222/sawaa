@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import { VerifyOtpHandler } from './verify-otp.handler';
 import { OtpSessionService } from './otp-session.service';
@@ -52,7 +51,7 @@ describe('VerifyOtpHandler', () => {
       code: '1234',
       purpose: OtpPurpose.GUEST_BOOKING,
       organizationId: 'org-B',
-      hCaptchaToken: 'test-token',
+      
     })).rejects.toThrow('Invalid or expired OTP code');
 
     expect(prismaMock.otpCode.updateMany).not.toHaveBeenCalled();
@@ -84,7 +83,7 @@ describe('VerifyOtpHandler', () => {
       identifier: 'test@example.com',
       code: correctCode,
       purpose: OtpPurpose.GUEST_BOOKING,
-      hCaptchaToken: 'test-token',
+      
       // organizationId is omitted -> null
     });
 
@@ -122,7 +121,7 @@ describe('VerifyOtpHandler', () => {
       code: correctCode,
       purpose: OtpPurpose.GUEST_BOOKING,
       organizationId: orgA,
-      hCaptchaToken: 'test-token',
+      
     });
 
     expect(result).toEqual({ sessionToken: 'mock-token' });

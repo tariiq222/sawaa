@@ -1,5 +1,5 @@
 /**
- * Translation dictionaries — Deqah Dashboard
+ * Translation dictionaries — Sawaa Dashboard
  */
 
 import { en } from "./translations/en"

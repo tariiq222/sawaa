@@ -1,4 +1,4 @@
-# Deqah Mobile — Expo React Native
+# Sawa Mobile — Expo React Native
 
 ## Tech
 

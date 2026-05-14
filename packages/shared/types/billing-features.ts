@@ -1,5 +1,5 @@
 /**
- * Billing Features Types — @deqah/shared
+ * Billing Features Types — @sawaa/shared
  *
  * Shared types for the billing features endpoint
  * `GET /dashboard/billing/my-features`.

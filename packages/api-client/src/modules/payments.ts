@@ -7,7 +7,7 @@ import type {
   PaymentListResponse,
   PaymentStats,
 } from '../types/payment'
-import type { InitPaymentResponse } from '@deqah/shared'
+import type { InitPaymentResponse } from '@sawaa/shared'
 
 export async function list(
   query: PaymentListQuery = {},

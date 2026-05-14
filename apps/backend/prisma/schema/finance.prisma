@@ -37,7 +37,6 @@ enum DiscountType {
 
 model Invoice {
   id             String        @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02e
   branchId       String
   clientId       String
   employeeId     String
@@ -61,18 +60,15 @@ model Invoice {
   payments       Payment[]
   refundRequests RefundRequest[]
 
-  @@unique([id, organizationId], name: "invoice_id_org") // DB-05
   @@index([clientId])
   @@index([bookingId])
-  @@index([organizationId])
-  @@index([organizationId, status, dueAt]) // DB-06: AR aging query (30ms→Index Scan)
+  @@index([ status, dueAt])
 }
 
 // ─── Payment ──────────────────────────────────────────────────────────────────
 
 model Payment {
   id             String        @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02e (denormalized from Invoice)
   invoiceId      String
   invoice        Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
   amount         Decimal       @db.Decimal(12, 2)
@@ -92,14 +88,12 @@ model Payment {
 
   @@index([invoiceId])
   @@index([gatewayRef])
-  @@index([organizationId])
 }
 
 // ─── Coupon ───────────────────────────────────────────────────────────────────
 
 model Coupon {
   id             String       @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02e
   code           String // uniqueness now composite-per-org
   discountType   DiscountType
   discountValue  Decimal      @db.Decimal(12, 2)
@@ -117,13 +111,10 @@ model Coupon {
 
   redemptions CouponRedemption[]
 
-  @@unique([organizationId, code])
-  @@index([organizationId])
 }
 
 model CouponRedemption {
   id             String   @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02e (denormalized from Coupon)
   couponId       String
   coupon         Coupon   @relation(fields: [couponId], references: [id], onDelete: Restrict)
   invoiceId      String
@@ -133,7 +124,6 @@ model CouponRedemption {
 
   @@unique([couponId, invoiceId])
   @@index([invoiceId])
-  @@index([organizationId])
 }
 
 // ─── Refund Request ──────────────────────────────────────────────────────────────
@@ -149,7 +139,6 @@ enum RefundStatus {
 
 model RefundRequest {
   id             String       @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02e (denormalized from Invoice)
   invoiceId      String
   invoice        Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
   paymentId      String
@@ -168,7 +157,6 @@ model RefundRequest {
   @@index([clientId])
   @@index([invoiceId])
   @@index([status])
-  @@index([organizationId])
 }
 
 // ─── Per-tenant Moyasar credentials (singleton per org) ──────────────────────
@@ -179,9 +167,8 @@ model RefundRequest {
 
 model OrganizationPaymentConfig {
   id                 String    @id @default(uuid())
-  organizationId     String @default("00000000-0000-0000-0000-000000000001")    @unique // singleton per org (matches BrandingConfig pattern)
   publishableKey     String // pk_test_… / pk_live_… — not secret, stored plain
-  secretKeyEnc       String // AES-256-GCM ciphertext (base64), AAD = organizationId
+  secretKeyEnc       String // AES-256-GCM ciphertext (base64)
   webhookSecretEnc   String // REQUIRED — AES-256-GCM, per-tenant webhook signing secret (2026-05-05)
   isLive             Boolean   @default(false)
   lastVerifiedAt     DateTime?

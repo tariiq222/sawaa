@@ -1,5 +1,5 @@
 /**
- * Deqah Design System — Color Tokens
+ * Sawaa Design System — Color Tokens
  * Source of truth: packages/shared/constants/brand.ts
  *
  * Primary: Royal Blue   #354FD8 (dark: #2438B0)

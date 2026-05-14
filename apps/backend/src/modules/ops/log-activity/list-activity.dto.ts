@@ -1,5 +1,4 @@
 import { IsDateString, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
-import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ActivityAction } from '@prisma/client';
 import { PaginationDto } from '../../../common/dto';

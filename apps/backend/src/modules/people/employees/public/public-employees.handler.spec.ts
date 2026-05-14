@@ -22,7 +22,7 @@ const BASE_EMPLOYEE = {
 describe('Public employees handlers', () => {
   let listHandler: ListPublicEmployeesHandler;
   let getHandler: GetPublicEmployeeHandler;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   let prisma: any;
 
   beforeEach(async () => {

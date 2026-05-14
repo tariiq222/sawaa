@@ -5,7 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Delete02Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 
-import { Button } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
 import { EmptyState } from "@/components/features/empty-state"
 import {
   Sheet,
@@ -14,7 +14,7 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 
 import { useRoles, usePermissions, useRoleMutations } from "@/hooks/use-users"
 import { useLocale } from "@/components/locale-provider"

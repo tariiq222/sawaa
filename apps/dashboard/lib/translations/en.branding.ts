@@ -54,7 +54,7 @@ export const enBranding: Record<string, string> = {
   "branding.website.theme": "Theme",
   "branding.website.themes.sawaa": "Sawaa",
   "branding.website.themes.premium": "Premium",
-  "branding.organizationNamePlaceholderAr": "Deqah Clinic (Arabic)",
+  "branding.organizationNamePlaceholderAr": "Sawaa Clinic (Arabic)",
   "branding.productTaglinePlaceholder": "Toward better care",
   "branding.preview.accentOnBg": "Accent on background",
   "branding.preview.primaryText": "Primary text — نص أساسي",

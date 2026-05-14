@@ -1,18 +1,18 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@deqah/ui"
-import { Label } from "@deqah/ui"
-import { Input } from "@deqah/ui"
-import { Button } from "@deqah/ui"
-import { Separator } from "@deqah/ui"
+import { Card, CardContent, CardHeader, CardTitle } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
+import { Input } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
+import { Separator } from "@sawaa/ui"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { useBranding } from "@/components/providers/branding-provider"
 import { isValidHex } from "@/lib/color-utils"
 import { useLocale } from "@/components/locale-provider"
@@ -123,7 +123,7 @@ export function BrandingForm({ branding, onSave, isPending }: Props) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>{t("branding.organizationNameEn")}</Label>
-            <Input value={organizationNameEn} onChange={(e) => setOrganizationNameEn(e.target.value)} dir="ltr" placeholder="Deqah Clinic" />
+            <Input value={organizationNameEn} onChange={(e) => setOrganizationNameEn(e.target.value)} dir="ltr" placeholder="Sawaa Clinic" />
           </div>
           <div className="space-y-2">
             <Label>{t("branding.organizationNameAr")}</Label>

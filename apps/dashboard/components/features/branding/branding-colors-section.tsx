@@ -1,9 +1,9 @@
 "use client"
 
 import { ColorSwatchInput } from "@/components/features/shared/color-swatch-input"
-import { Input } from "@deqah/ui"
-import { Label } from "@deqah/ui"
-import { Separator } from "@deqah/ui"
+import { Input } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
+import { Separator } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { isValidHex, contrastRatio, pickForeground } from "@/lib/color-utils"
 
@@ -131,7 +131,7 @@ export function BrandingColorsSection({
             <div className="space-y-3 rounded-lg border p-4" style={{ background: isValidHex(colorBackground) ? colorBackground : "var(--background)" }}>
               <div className="flex items-center gap-3">
                 <div className="inline-flex items-center rounded-full px-4 py-1.5 text-sm font-medium shadow-sm" style={{ background: colorPrimary, color: pickForeground(colorPrimary) }}>
-                  {organizationNameEn || organizationNameAr || "Deqah"}
+                  {organizationNameEn || organizationNameAr || "Sawaa"}
                 </div>
                 <ContrastBadge ratio={contrastRatio(colorPrimary, isValidHex(colorBackground) ? colorBackground : FALLBACK_PREVIEW_BG_HEX)} />
               </div>

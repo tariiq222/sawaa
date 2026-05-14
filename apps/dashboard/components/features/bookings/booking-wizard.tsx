@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowLeft01Icon, UserSwitchIcon } from "@hugeicons/core-free-icons"
 
-import { Button } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchBookingFlowOrder } from "@/lib/api/organization-settings"

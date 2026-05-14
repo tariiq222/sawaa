@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { Skeleton } from "@deqah/ui"
+import { Skeleton } from "@sawaa/ui"
 import { useTopPerformers } from "@/hooks/use-top-performers"
 import { useLocale } from "@/components/locale-provider"
 import { formatPrice } from "@/lib/money"

@@ -5,7 +5,6 @@ export interface OtpRequestPayload {
   channel: OtpChannel;
   identifier: string;
   purpose: OtpPurpose;
-  hCaptchaToken: string;
 }
 
 export interface OtpVerifyPayload {
@@ -13,7 +12,6 @@ export interface OtpVerifyPayload {
   identifier: string;
   code: string;
   purpose: OtpPurpose;
-  hCaptchaToken: string;
 }
 
 export interface OtpVerifyResponse {

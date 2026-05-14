@@ -45,7 +45,7 @@ export class GetZohoConfigHandler {
   private buildWebhookUrl(organizationId: string): string {
     // Webhook URL must point at the BACKEND's public origin — Zoho's servers
     // POST here from the internet. DASHBOARD_PUBLIC_URL is the dashboard host
-    // (e.g. app.deqah.app) and won't route to the API in production. Prefer
+    // (e.g. app.sawaa.app) and won't route to the API in production. Prefer
     // API_PUBLIC_URL; fall back to legacy SMS_WEBHOOK_URL_BASE for backwards
     // compatibility, then dev localhost as a last resort.
     const base =

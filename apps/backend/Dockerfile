@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1.6
-# Deqah Backend — NestJS 11 + Prisma 7
+# Sawaa Backend — NestJS 11 + Prisma 7
 # Build context MUST be the monorepo root.
 #
 # Stage 1 (deps):         install all workspace deps — cached layer keyed on lockfile
-# Stage 2 (shared-build): compile packages/shared into dist/ — fixes TS2307 on @deqah/shared/* imports
+# Stage 2 (shared-build): compile packages/shared into dist/ — fixes TS2307 on @sawaa/shared/* imports
 # Stage 3 (app-build):    compile the NestJS app consuming the built shared dist
 # Stage 4 (runner):       minimal runtime image
 #
@@ -58,17 +58,17 @@ RUN pnpm --filter=backend run prisma:generate
 # lands at node_modules/typescript/ (not .pnpm/). Invoke tsc directly.
 RUN cd /app/packages/shared && node /app/node_modules/typescript/bin/tsc -p tsconfig.json && ls -la dist/ && test -f dist/constants/feature-keys.js
 
-# Manually establish node_modules/@deqah/* → packages/* symlinks so consumers
+# Manually establish node_modules/@sawaa/* → packages/* symlinks so consumers
 # resolve via the package.json#exports map. pnpm's hoisted linker doesn't
 # always create these reliably for workspace packages with empty stubs at
 # install time. Force them to exist now that dist/ is built.
-RUN mkdir -p /app/node_modules/@deqah \
- && rm -rf /app/node_modules/@deqah/shared /app/node_modules/@deqah/api-client /app/node_modules/@deqah/ui \
- && ln -sf /app/packages/shared     /app/node_modules/@deqah/shared \
- && ln -sf /app/packages/api-client /app/node_modules/@deqah/api-client \
- && ln -sf /app/packages/ui         /app/node_modules/@deqah/ui \
- && test -f /app/node_modules/@deqah/shared/dist/constants/feature-keys.js \
- && test -f /app/node_modules/@deqah/shared/dist/constants/feature-keys.d.ts
+RUN mkdir -p /app/node_modules/@sawaa \
+ && rm -rf /app/node_modules/@sawaa/shared /app/node_modules/@sawaa/api-client /app/node_modules/@sawaa/ui \
+ && ln -sf /app/packages/shared     /app/node_modules/@sawaa/shared \
+ && ln -sf /app/packages/api-client /app/node_modules/@sawaa/api-client \
+ && ln -sf /app/packages/ui         /app/node_modules/@sawaa/ui \
+ && test -f /app/node_modules/@sawaa/shared/dist/constants/feature-keys.js \
+ && test -f /app/node_modules/@sawaa/shared/dist/constants/feature-keys.d.ts
 
 # ── Stage 3: app-build ───────────────────────────────────────────────────────
 FROM node:20-bookworm-slim AS app-build
@@ -91,15 +91,15 @@ RUN test -f /app/packages/shared/dist/constants/feature-keys.js \
 # --frozen-lockfile --prefer-offline → fast (cache hits from deps stage).
 RUN pnpm install --frozen-lockfile --prefer-offline
 
-# Force @deqah/* symlinks to point at /app/packages (pnpm install may reset them
+# Force @sawaa/* symlinks to point at /app/packages (pnpm install may reset them
 # to point through .pnpm/ store). Direct symlinks let TS resolve via the package's
 # package.json#exports map directly to dist/.
-RUN mkdir -p /app/node_modules/@deqah \
- && rm -rf /app/node_modules/@deqah/shared /app/node_modules/@deqah/api-client \
- && ln -sf /app/packages/shared     /app/node_modules/@deqah/shared \
- && ln -sf /app/packages/api-client /app/node_modules/@deqah/api-client \
- && test -f /app/node_modules/@deqah/shared/dist/constants/feature-keys.d.ts \
-  || (echo "❌ @deqah/shared/dist not reachable through symlink" && exit 1) \
+RUN mkdir -p /app/node_modules/@sawaa \
+ && rm -rf /app/node_modules/@sawaa/shared /app/node_modules/@sawaa/api-client \
+ && ln -sf /app/packages/shared     /app/node_modules/@sawaa/shared \
+ && ln -sf /app/packages/api-client /app/node_modules/@sawaa/api-client \
+ && test -f /app/node_modules/@sawaa/shared/dist/constants/feature-keys.d.ts \
+  || (echo "❌ @sawaa/shared/dist not reachable through symlink" && exit 1) \
  && test -f /app/node_modules/@types/uuid/package.json \
   || (echo "❌ @types/uuid not hoisted by pnpm install" && exit 1)
 
@@ -117,7 +117,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
 
 # Workspace layout the runner needs:
 #   /app/node_modules/             — prod deps
-#   /app/packages/shared/dist/    — compiled shared (symlinked via @deqah/shared)
+#   /app/packages/shared/dist/    — compiled shared (symlinked via @sawaa/shared)
 #   /app/packages/api-client/src/ — api-client (no build step; consumed directly)
 #   /app/apps/backend/dist/        — compiled NestJS
 #   /app/apps/backend/prisma/      — schema + migrations
@@ -131,10 +131,10 @@ COPY --from=app-build /app/apps/backend/prisma                ./apps/backend/pri
 COPY --from=app-build /app/apps/backend/dist                  ./apps/backend/dist
 
 # Ensure pnpm workspace symlinks resolve at runtime
-RUN mkdir -p /app/node_modules/@deqah \
- && rm -rf /app/node_modules/@deqah/shared /app/node_modules/@deqah/api-client \
- && ln -sf /app/packages/shared     /app/node_modules/@deqah/shared \
- && ln -sf /app/packages/api-client /app/node_modules/@deqah/api-client
+RUN mkdir -p /app/node_modules/@sawaa \
+ && rm -rf /app/node_modules/@sawaa/shared /app/node_modules/@sawaa/api-client \
+ && ln -sf /app/packages/shared     /app/node_modules/@sawaa/shared \
+ && ln -sf /app/packages/api-client /app/node_modules/@sawaa/api-client
 
 # Non-root user — drops capability surface dramatically.
 RUN groupadd --system --gid 1001 app \

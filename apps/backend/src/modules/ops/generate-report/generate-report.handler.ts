@@ -33,7 +33,7 @@ export class GenerateReportHandler {
     }
 
     const format = dto.format ?? ReportFormat.JSON;
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
 
     const report = await this.prisma.report.create({
       data: {

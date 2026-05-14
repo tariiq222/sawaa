@@ -13,7 +13,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useSmsDeliveries } from "@/hooks/use-sms-config"
 import { formatLocaleDate } from "@/lib/date"

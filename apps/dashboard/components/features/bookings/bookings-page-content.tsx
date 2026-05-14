@@ -12,9 +12,9 @@ import {
 } from "@hugeicons/core-free-icons"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
-import { Button } from "@deqah/ui"
-import { Skeleton } from "@deqah/ui"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
+import { Skeleton } from "@sawaa/ui"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@sawaa/ui"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { PageHeader } from "@/components/features/page-header"
 import { StatsGrid } from "@/components/features/stats-grid"

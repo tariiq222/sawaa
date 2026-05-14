@@ -8,7 +8,7 @@ import { test, expect } from '@playwright/test';
  * [D1] Dashboard login golden path — identifier-first flow
  *
  * Credentials: seeded by apps/backend/prisma/seed.ts
- *   SEED_EMAIL    (default: admin@deqah-test.com)
+ *   SEED_EMAIL    (default: admin@sawaa-test.com)
  *   SEED_PASSWORD (default: Admin@1234)
  *
  * Flow: identifier → choose password → login → dashboard → logout
@@ -21,7 +21,7 @@ test.describe('[D1] Dashboard login flow', () => {
     await page.waitForLoadState('domcontentloaded');
 
     // 2. Step 1 — enter identifier
-    await page.locator('#identifier').fill('admin@deqah-test.com');
+    await page.locator('#identifier').fill('admin@sawaa-test.com');
     await page.getByRole('button', { name: 'متابعة' }).click();
 
     // 3. Step 2 — choose password method

@@ -6,7 +6,7 @@ import {
   CustomerService01Icon,
   Book02Icon,
 } from "@hugeicons/core-free-icons"
-import { DeqahMark } from "@/components/brand/deqah-mark"
+import { SawaaMark } from "@/components/brand/sawaa-mark"
 
 import {
   Sidebar,
@@ -20,13 +20,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@deqah/ui"
-import { Separator } from "@deqah/ui"
+} from "@sawaa/ui"
+import { Separator } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { cn } from "@/lib/utils"
 import { useSidebarNav } from "@/hooks/use-sidebar-nav"
@@ -53,7 +53,7 @@ export function AppSidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild>
                 <Link href="/">
-                  <DeqahMark />
+                  <SawaaMark />
                   <div className="grid flex-1 text-start leading-tight">
                     <span className="truncate text-lg font-bold">{t("app.name")}</span>
                     <span className="truncate text-xs text-muted-foreground">

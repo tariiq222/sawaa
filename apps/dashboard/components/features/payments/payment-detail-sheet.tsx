@@ -9,10 +9,10 @@ import {
   SheetFooter,
   SheetTitle,
   SheetDescription,
-} from "@deqah/ui"
-import { Badge } from "@deqah/ui"
-import { Separator } from "@deqah/ui"
-import { Skeleton } from "@deqah/ui"
+} from "@sawaa/ui"
+import { Badge } from "@sawaa/ui"
+import { Separator } from "@sawaa/ui"
+import { Skeleton } from "@sawaa/ui"
 import { DetailSection, DetailRow } from "@/components/features/detail-sheet-parts"
 import { fetchPayments } from "@/lib/api/payments"
 import { queryKeys } from "@/lib/query-keys"

@@ -53,7 +53,6 @@ describe('RegisterMobileUserHandler', () => {
       identifier: '+966500000000',
       channel: OtpChannel.SMS,
       purpose: OtpPurpose.MOBILE_REGISTER,
-      hCaptchaToken: expect.any(String),
     }));
     expect(result.userId).toBe('u2');
     expect(result.maskedPhone).toMatch(/\*/);

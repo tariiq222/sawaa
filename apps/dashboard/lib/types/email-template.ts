@@ -1,5 +1,5 @@
 /**
- * Email Template Types — Deqah Dashboard
+ * Email Template Types — Sawaa Dashboard
  */
 
 export type EmailBlock =

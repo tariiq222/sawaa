@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Button } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
 
 export default function NotFound() {
   return (

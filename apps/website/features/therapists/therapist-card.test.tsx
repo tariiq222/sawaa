@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TherapistCard } from './therapist-card';
-import type { PublicEmployee } from '@deqah/api-client';
+import type { PublicEmployee } from '@sawaa/api-client';
 
 const full: PublicEmployee = {
   id: 'e1',

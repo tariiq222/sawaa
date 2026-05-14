@@ -1,5 +1,5 @@
 /**
- * Payment Types — Deqah Dashboard
+ * Payment Types — Sawaa Dashboard
  */
 
 import type {

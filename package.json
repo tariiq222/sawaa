@@ -5,9 +5,9 @@
   "scripts": {
     "dev:backend": "turbo run dev --filter=backend",
     "dev:dashboard": "turbo run dev --filter=dashboard -- --port 5103",
-    "dev:website": "turbo run dev --filter=@deqah/website -- --port 5105",
-    "dev:all": "turbo run dev --filter=backend --filter=dashboard --filter=@deqah/website",
-    "build": "turbo run build --filter=backend --filter=dashboard --filter=@deqah/website",
+    "dev:website": "turbo run dev --filter=@sawaa/website -- --port 5105",
+    "dev:all": "turbo run dev --filter=backend --filter=dashboard --filter=@sawaa/website",
+    "build": "turbo run build --filter=backend --filter=dashboard --filter=@sawaa/website",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",

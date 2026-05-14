@@ -15,7 +15,7 @@ export class UpsertIntegrationHandler {
   ) {}
 
   async execute(cmd: UpsertIntegrationCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
     return this.prisma.integration.upsert({
       where: { provider: cmd.provider },
       create: {

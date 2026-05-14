@@ -74,7 +74,7 @@ describe('ClientLoginHandler', () => {
       mockPrisma.client.update.mockResolvedValue({ id: 'cl-1' });
 
       const result = await handler.execute(
-        { email: 'test@example.com', password: 'SecurePass123', hCaptchaToken: 'test-token' },
+        { email: 'test@example.com', password: 'SecurePass123' },
         '1.2.3.4',
       );
 
@@ -97,7 +97,7 @@ describe('ClientLoginHandler', () => {
       mockPrisma.client.findFirst.mockResolvedValue(null);
 
       await expect(
-        handler.execute({ email: 'nobody@example.com', password: 'WrongPass1', hCaptchaToken: 'test-token' }, '1.2.3.4'),
+        handler.execute({ email: 'nobody@example.com', password: 'WrongPass1' }, '1.2.3.4'),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -110,7 +110,7 @@ describe('ClientLoginHandler', () => {
       });
 
       await expect(
-        handler.execute({ email: 'locked@example.com', password: 'SecurePass123', hCaptchaToken: 'test-token' }, '1.2.3.4'),
+        handler.execute({ email: 'locked@example.com', password: 'SecurePass123' }, '1.2.3.4'),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -127,7 +127,7 @@ describe('ClientLoginHandler', () => {
       mockPrisma.client.update.mockResolvedValue({ id: 'cl-3' });
 
       await expect(
-        handler.execute({ email: 'test@example.com', password: 'WrongPass1', hCaptchaToken: 'test-token' }, '1.2.3.4'),
+        handler.execute({ email: 'test@example.com', password: 'WrongPass1' }, '1.2.3.4'),
       ).rejects.toThrow(UnauthorizedException);
 
       expect(mockPrisma.client.update).toHaveBeenCalledWith({
@@ -149,7 +149,7 @@ describe('ClientLoginHandler', () => {
       mockPrisma.client.update.mockResolvedValue({ id: 'cl-4' });
 
       await expect(
-        handler.execute({ email: 'test@example.com', password: 'WrongPass1', hCaptchaToken: 'test-token' }, '1.2.3.4'),
+        handler.execute({ email: 'test@example.com', password: 'WrongPass1' }, '1.2.3.4'),
       ).rejects.toThrow(UnauthorizedException);
 
       expect(mockPrisma.client.update).toHaveBeenCalledWith({
@@ -174,7 +174,7 @@ describe('ClientLoginHandler', () => {
         .mockResolvedValueOnce(1);
 
       await expect(
-        handler.execute({ email: 'test@example.com', password: 'WrongPass1', hCaptchaToken: 'test-token' }, '1.2.3.4'),
+        handler.execute({ email: 'test@example.com', password: 'WrongPass1' }, '1.2.3.4'),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -191,7 +191,7 @@ describe('ClientLoginHandler', () => {
         .mockResolvedValueOnce(21);
 
       await expect(
-        handler.execute({ email: 'test@example.com', password: 'WrongPass1', hCaptchaToken: 'test-token' }, '5.5.5.5'),
+        handler.execute({ email: 'test@example.com', password: 'WrongPass1' }, '5.5.5.5'),
       ).rejects.toThrow(UnauthorizedException);
     });
   });

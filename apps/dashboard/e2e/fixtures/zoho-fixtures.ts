@@ -3,14 +3,14 @@
  *
  * Provides:
  *   - `authedPage` — a Page with the organization-owner's JWT injected via
- *     localStorage (no /login UI round-trip, no captcha).
+ *     localStorage (no /login UI round-trip).
  *   - `apiCtx` — an APIRequestContext with the same organization-owner's
  *     Bearer token for direct backend assertions.
  *   - `backendUrl` — backend base URL for direct API calls.
  */
 import { test as base, type Page, type APIRequestContext } from '@playwright/test';
-import { loginViaApi, type LoginResult } from '@deqah/test-helpers-pw';
-import { PWConfig } from '@deqah/test-helpers-pw';
+import { loginViaApi, type LoginResult } from '@sawaa/test-helpers-pw';
+import { PWConfig } from '@sawaa/test-helpers-pw';
 
 type ZohoFixtures = {
   authedPage: Page;
@@ -23,10 +23,10 @@ export const test = base.extend<ZohoFixtures>({
   backendUrl: [PWConfig.backendBaseUrl, { option: true }],
 
   loginResult: async ({ request }, runFixture) => {
-    // Use admin@deqah-test.com (the seed user who owns the default org).
+    // Use admin@sawaa-test.com (the seed user who owns the default org).
     const result = await loginViaApi(
       request,
-      process.env.PW_OWNER_EMAIL ?? 'admin@deqah-test.com',
+      process.env.PW_OWNER_EMAIL ?? 'admin@sawaa-test.com',
       process.env.PW_OWNER_PASSWORD ?? 'Admin@1234',
     );
     await runFixture(result);
@@ -53,7 +53,7 @@ export const test = base.extend<ZohoFixtures>({
     // CR-9: refresh token is httpOnly cookie (ck_refresh); not stored in localStorage.
     await page.addInitScript(
       ({ access }) => {
-        window.localStorage.setItem('deqah.accessToken', access);
+        window.localStorage.setItem('sawaa.accessToken', access);
       },
       { access: loginResult.accessToken },
     );

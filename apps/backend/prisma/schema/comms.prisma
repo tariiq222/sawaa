@@ -1,5 +1,5 @@
 // Comms BC — notifications, chat, email templates.
-// Phase 9 (p9-t*). SaaS-02f: organizationId added to all models.
+// Phase 9 (p9-t*).
 
 enum NotificationType {
   BOOKING_CREATED
@@ -32,7 +32,6 @@ enum MessageSenderType {
 
 model Notification {
   id             String           @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02f
   recipientId    String
   recipientType  RecipientType
   type           NotificationType
@@ -46,12 +45,10 @@ model Notification {
 
   @@index([recipientId])
   @@index([recipientId, isRead, createdAt]) // DB-06: replaces (recipientId, createdAt) — adds isRead to avoid heap filter
-  @@index([organizationId])
 }
 
 model ChatConversation {
   id             String             @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02f
   clientId       String
   employeeId     String?
   isAiChat       Boolean            @default(false)
@@ -65,12 +62,10 @@ model ChatConversation {
   @@index([clientId])
   @@index([employeeId])
   @@index([status, lastMessageAt])
-  @@index([organizationId])
 }
 
 model CommsChatMessage {
   id             String            @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02f (denormalized from ChatConversation)
   conversationId String
   conversation   ChatConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   senderType     MessageSenderType
@@ -80,7 +75,6 @@ model CommsChatMessage {
   createdAt      DateTime          @default(now())
 
   @@index([conversationId, createdAt])
-  @@index([organizationId])
 }
 
 enum ContactMessageStatus {
@@ -92,7 +86,6 @@ enum ContactMessageStatus {
 
 model ContactMessage {
   id             String               @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02f
   name           String
   phone          String?
   email          String?
@@ -104,12 +97,10 @@ model ContactMessage {
   archivedAt     DateTime?
 
   @@index([status, createdAt])
-  @@index([organizationId])
 }
 
 model EmailTemplate {
   id             String   @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02f — slug namespace now per-org
   slug           String
   name           String
   subject        String
@@ -119,8 +110,6 @@ model EmailTemplate {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  @@unique([organizationId, slug])
-  @@index([organizationId])
 }
 
 // SaaS-02g-sms — per-tenant SMS provider configuration.
@@ -141,7 +130,6 @@ enum SmsDeliveryStatus {
 
 model OrganizationSmsConfig {
   id                    String      @id @default(uuid())
-  organizationId        String @default("00000000-0000-0000-0000-000000000001")      @unique // SaaS-02g-sms — singleton per org
   provider              SmsProvider @default(NONE)
   senderId              String? // e.g. "Deqah" or per-tenant brand
   // Encrypted credential payload (AES-GCM). JSON-stringified provider-specific fields.
@@ -152,12 +140,10 @@ model OrganizationSmsConfig {
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 
-  @@index([organizationId])
 }
 
 model SmsDelivery {
   id                String            @id @default(uuid())
-  organizationId    String @default("00000000-0000-0000-0000-000000000001") // SaaS-02g-sms
   provider          SmsProvider
   toPhone           String
   body              String
@@ -171,7 +157,6 @@ model SmsDelivery {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
-  @@index([organizationId])
   @@index([status, createdAt]) // DB-06: replaces (status) + (createdAt) — composite for retry sweep
 }
 
@@ -187,7 +172,6 @@ enum EmailProvider {
 
 model OrganizationEmailConfig {
   id                    String        @id @default(uuid())
-  organizationId        String @default("00000000-0000-0000-0000-000000000001")        @unique // singleton per org
   provider              EmailProvider @default(NONE)
   senderName            String? // e.g. "عيادة الأمل"
   senderEmail           String? // e.g. "noreply@clinic.com"
@@ -198,12 +182,10 @@ model OrganizationEmailConfig {
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
-  @@index([organizationId])
 }
 
 model FcmToken {
   id             String   @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001")
   clientId       String
   token          String
   platform       String   @db.VarChar(8)
@@ -211,7 +193,6 @@ model FcmToken {
   createdAt      DateTime @default(now())
 
   @@unique([clientId, token], name: "fcm_token_per_client")
-  @@index([organizationId])
   @@index([clientId])
 }
 
@@ -244,7 +225,6 @@ enum NotificationSenderActor {
 
 model NotificationDeliveryLog {
   id             String                  @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001")
   recipientId    String
   type           NotificationType
   priority       NotificationPriority    @default(STANDARD)
@@ -261,9 +241,8 @@ model NotificationDeliveryLog {
   createdAt      DateTime                @default(now())
   updatedAt      DateTime                @updatedAt
 
-  @@index([organizationId])
-  @@index([organizationId, status])
-  @@index([organizationId, type])
+  @@index([ status])
+  @@index([ type])
   @@index([status, createdAt]) // DB-06: composite for retry sweep — replaces standalone (createdAt)
 }
 
@@ -292,7 +271,6 @@ enum PlatformEmailLogStatus {
 
 model PlatformEmailLog {
   id                String                 @id @default(cuid())
-  organizationId    String?
   templateSlug      String
   toAddress         String
   status            PlatformEmailLogStatus @default(QUEUED)
@@ -301,7 +279,6 @@ model PlatformEmailLog {
   createdAt         DateTime               @default(now())
   sentAt            DateTime?
 
-  @@index([organizationId])
   @@index([templateSlug])
   @@index([status, createdAt])
 }

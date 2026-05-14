@@ -2,7 +2,7 @@
 
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
-import { Skeleton } from "@deqah/ui"
+import { Skeleton } from "@sawaa/ui"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { useLocale } from "@/components/locale-provider"
 import { useBranding, useUpdateBranding } from "@/hooks/use-branding"

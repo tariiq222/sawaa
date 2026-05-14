@@ -21,7 +21,7 @@ export class GetPublicAvailabilityHandler {
     });
 
     if (!employee) {
-      throw new NotFoundException('Employee not found or not publicly available');
+      throw new NotFoundException('Resource not found or not available');
     }
 
     let branchId = query.branchId;
@@ -35,7 +35,7 @@ export class GetPublicAvailabilityHandler {
     }
 
     if (!branchId) {
-      throw new NotFoundException('No branch found for employee');
+      throw new NotFoundException('Resource not found or not available');
     }
 
     let serviceId = query.serviceId;
@@ -49,7 +49,7 @@ export class GetPublicAvailabilityHandler {
     }
 
     if (!serviceId) {
-      throw new NotFoundException('No service found for employee');
+      throw new NotFoundException('Resource not found or not available');
     }
 
     const date = new Date(query.date);

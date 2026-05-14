@@ -1,6 +1,6 @@
 import { PrismaService } from '../../../infrastructure/database';
 
-const DEFAULT_INVOICE_SELLER_NAME = 'Deqah';
+const DEFAULT_INVOICE_SELLER_NAME = 'Sawaa';
 
 export async function resolveInvoiceSellerName(
   prisma: PrismaService,

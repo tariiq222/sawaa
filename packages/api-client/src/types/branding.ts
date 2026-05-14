@@ -1,4 +1,4 @@
-import type { BrandingConfig } from '@deqah/shared/types'
+import type { BrandingConfig } from '@sawaa/shared/types'
 
 export type UpdateBrandingPayload = Partial<Omit<BrandingConfig, 'id' | 'createdAt' | 'updatedAt'>>
 

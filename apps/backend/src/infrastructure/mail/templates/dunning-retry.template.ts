@@ -51,8 +51,8 @@ export function dunningRetryTemplate(
   `;
 
   return {
-    subjectAr: 'فشلت محاولة دفع اشتراك Deqah',
-    subjectEn: 'Deqah payment retry failed',
+    subjectAr: 'فشلت محاولة دفع اشتراك Sawaa',
+    subjectEn: 'Sawaa payment retry failed',
     html: bilingualLayout({ ar, en }),
   };
 }

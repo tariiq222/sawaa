@@ -33,7 +33,6 @@ enum ClientBloodType {
 
 model Client {
   id                String            @id @default(uuid())
-  organizationId    String @default("00000000-0000-0000-0000-000000000001")
   userId            String?
   // Legacy single-name field kept in sync with first/middle/last on write.
   // Downstream readers that still key off `name` keep working; new code reads the components.
@@ -70,12 +69,9 @@ model Client {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
-  @@unique([id, organizationId], name: "client_id_org") // DB-05
-  @@unique([organizationId, phone], name: "client_org_phone")
   @@index([userId])
   @@index([deletedAt])
   @@index([phone])
-  @@index([organizationId])
 }
 
 enum EmployeeGender {
@@ -99,7 +95,6 @@ enum EmploymentType {
 // no Prisma FK relations to Clinic BC. Referential integrity is event-driven.
 model Employee {
   id               String           @id @default(uuid())
-  organizationId   String @default("00000000-0000-0000-0000-000000000001")
   userId           String?
   name             String
   nameEn           String?
@@ -133,35 +128,27 @@ model Employee {
   exceptions   EmployeeAvailabilityException[]
   breaks       EmployeeBreak[]
 
-  @@unique([id, organizationId], name: "employee_id_org") // DB-05
-  @@unique([organizationId, email], name: "employee_org_email")
-  @@unique([organizationId, slug], name: "employee_org_slug")
   @@index([userId])
-  @@index([organizationId])
 }
 
 model EmployeeBranch {
   id             String   @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001")
   employeeId     String
   employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   branchId       String
 
   @@unique([employeeId, branchId])
   @@index([employeeId])
-  @@index([organizationId])
 }
 
 model EmployeeService {
   id             String   @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001")
   employeeId     String
   employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   serviceId      String
 
   @@unique([employeeId, serviceId])
   @@index([employeeId])
-  @@index([organizationId])
 }
 
 // Multiple rows per (employeeId, dayOfWeek) represent split shifts
@@ -169,7 +156,6 @@ model EmployeeService {
 // A missing dayOfWeek row = weekly off day.
 model EmployeeAvailability {
   id             String   @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001")
   employeeId     String
   employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   dayOfWeek      Int
@@ -180,7 +166,6 @@ model EmployeeAvailability {
   updatedAt      DateTime @updatedAt
 
   @@index([employeeId, dayOfWeek])
-  @@index([organizationId])
 }
 
 // Date-range exception — employee is off from startDate to endDate (inclusive).
@@ -188,7 +173,6 @@ model EmployeeAvailability {
 // endTime + isStartTimeOnly support partial-day leave (e.g. 2:00 PM to 5:00 PM).
 model EmployeeAvailabilityException {
   id              String    @id @default(uuid())
-  organizationId  String @default("00000000-0000-0000-0000-000000000001")
   employeeId      String
   employee        Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   startDate       DateTime  @db.Date
@@ -199,12 +183,10 @@ model EmployeeAvailabilityException {
   createdAt       DateTime  @default(now())
 
   @@index([employeeId, startDate, endDate])
-  @@index([organizationId])
 }
 
 model EmployeeBreak {
   id             String   @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001")
   employeeId     String
   employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   dayOfWeek      Int
@@ -214,18 +196,15 @@ model EmployeeBreak {
   updatedAt      DateTime @updatedAt
 
   @@index([employeeId, dayOfWeek])
-  @@index([organizationId])
 }
 
 // Password history for Client — prevents password reuse within N previous passwords.
 // Used for password reset/change flows to enforce history policy.
 model PasswordHistory {
   id             String   @id @default(uuid())
-  organizationId String @default("00000000-0000-0000-0000-000000000001")
   clientId       String
   passwordHash   String
   createdAt      DateTime @default(now())
 
   @@index([clientId, createdAt])
-  @@index([organizationId])
 }

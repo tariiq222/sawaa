@@ -1,5 +1,5 @@
 import { guestApiRequest } from './guest-client';
-import type { OtpRequestPayload, OtpVerifyPayload, OtpVerifyResponse } from '@deqah/shared';
+import type { OtpRequestPayload, OtpVerifyPayload, OtpVerifyResponse } from '@sawaa/shared';
 
 export async function requestOtp(payload: OtpRequestPayload): Promise<void> {
   return guestApiRequest<void>('/public/otp/request', {

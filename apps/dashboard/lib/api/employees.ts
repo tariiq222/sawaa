@@ -1,5 +1,5 @@
 /**
- * Employees API — Deqah Dashboard
+ * Employees API — Sawaa Dashboard
  */
 
 export * from "./employees-schedule"

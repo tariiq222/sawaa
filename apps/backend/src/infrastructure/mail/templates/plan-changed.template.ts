@@ -33,8 +33,8 @@ export function planChangedTemplate(vars: PlanChangedVars): {
   `;
 
   return {
-    subjectAr: 'تم تحديث باقة اشتراك Deqah',
-    subjectEn: 'Your Deqah plan changed',
+    subjectAr: 'تم تحديث باقة اشتراك Sawaa',
+    subjectEn: 'Your Sawaa plan changed',
     html: bilingualLayout({ ar, en }),
   };
 }

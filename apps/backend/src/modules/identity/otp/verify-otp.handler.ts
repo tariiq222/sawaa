@@ -6,7 +6,7 @@ import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants'
 import { VerifyOtpDto } from './verify-otp.dto';
 import { OtpSessionService } from './otp-session.service';
 
-const LOCKOUT_WINDOW_MINUTES = 15;
+const _LOCKOUT_WINDOW_MINUTES = 15;
 
 export type VerifyOtpCommand = VerifyOtpDto;
 

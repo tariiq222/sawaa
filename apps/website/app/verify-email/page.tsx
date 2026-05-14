@@ -25,7 +25,7 @@ export default function VerifyEmailPage() {
       .then(() => {
         setResult({ status: "ok" })
         const timeout = setTimeout(() => {
-          window.location.href = "deqah://settings?verified=1"
+          window.location.href = "sawaa://settings?verified=1"
         }, 800)
         return () => clearTimeout(timeout)
       })

@@ -20,9 +20,6 @@ const personas: PersonaCredentials[] = [
 ];
 
 export default async function globalSetup(): Promise<void> {
-  // Force the captcha shim regardless of caller env.
-  process.env.CAPTCHA_PROVIDER = 'noop';
-
   const ROOT = process.env.PW_REPO_ROOT ?? process.cwd();
 
   for (const root of APP_ROOTS) {

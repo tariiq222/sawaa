@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { GuestClientInfo } from '@deqah/shared';
-import { OtpChannel, OtpPurpose } from '@deqah/shared';
+import type { GuestClientInfo } from '@sawaa/shared';
+import { OtpChannel, OtpPurpose } from '@sawaa/shared';
 
 interface OtpVerifyFormProps {
   client: GuestClientInfo;

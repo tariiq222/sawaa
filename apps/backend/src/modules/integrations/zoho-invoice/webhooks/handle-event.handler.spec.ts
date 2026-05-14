@@ -24,7 +24,7 @@ import { PrismaService } from '../../../../infrastructure/database';
  */
 describe('HandleZohoWebhookHandler — tenant isolation', () => {
   const TENANT_A = 'org-A';
-  const TENANT_B = 'org-B';
+  const _TENANT_B = 'org-B';
   const SECRET_A = 'a'.repeat(64);
   const SECRET_B = 'b'.repeat(64);
 
@@ -33,7 +33,7 @@ describe('HandleZohoWebhookHandler — tenant isolation', () => {
   }
 
   async function makeHandler() {
-    const findUnique = jest.fn();
+    const _findUnique = jest.fn();
     const linkUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
     const eventCreate = jest.fn().mockResolvedValue({ id: 'ev-1' });
     const eventUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
@@ -199,9 +199,9 @@ describe('HandleZohoWebhookHandler — tenant isolation', () => {
       payload: JSON.parse(body),
     });
 
+    // org scoping moved to RLS / removed in single-tenant migration
     expect(eventCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        organizationId: TENANT_A,
         scope: 'TENANT_CLIENT',
         eventId: 'evt-paid-1',
       }),
@@ -324,10 +324,10 @@ describe('HandleZohoWebhookHandler — tenant isolation', () => {
       payload: JSON.parse(body),
     });
 
+    // org scoping moved to RLS / removed in single-tenant migration
     expect(eventCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         scope: 'SAAS_TENANT',
-        organizationId: 'platform-org',
       }),
     });
     expect(linkUpdateMany).toHaveBeenCalledWith({

@@ -9,7 +9,6 @@ import type {
 export interface LoginPayload {
   email: string
   password: string
-  hCaptchaToken: string
 }
 
 export async function login(payload: LoginPayload): Promise<AuthResponse> {

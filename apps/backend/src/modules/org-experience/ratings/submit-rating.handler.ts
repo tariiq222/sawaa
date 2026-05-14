@@ -14,7 +14,7 @@ export class SubmitRatingHandler {
   ) {}
 
   async execute(dto: SubmitRatingCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
     if (dto.score < 1 || dto.score > 5) {
       throw new BadRequestException('Score must be between 1 and 5');
     }

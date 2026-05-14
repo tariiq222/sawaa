@@ -21,7 +21,6 @@ import { ApiStandardResponses } from '../../../common/swagger';
 import { ChatCompletionHandler } from '../../../modules/ai/chat-completion/chat-completion.handler';
 import { ListConversationsHandler } from '../../../modules/comms/chat/list-conversations.handler';
 import { ListMessagesHandler } from '../../../modules/comms/chat/list-messages.handler';
-import { FeatureKey } from '@deqah/shared/constants/feature-keys';
 
 export class MobileChatBody {
   @ApiProperty({ description: 'The message text sent by the client', example: 'What are your opening hours?' })

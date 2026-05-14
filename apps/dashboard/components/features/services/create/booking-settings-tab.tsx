@@ -1,16 +1,16 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { Input } from "@deqah/ui"
-import { Label } from "@deqah/ui"
-import { Switch } from "@deqah/ui"
+import { Input } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
+import { Switch } from "@sawaa/ui"
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { fetchBookingSettings, RECURRING_PATTERNS } from "@/lib/api/booking-settings"
 

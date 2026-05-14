@@ -9,16 +9,16 @@ import {
   RawBodyRequest,
   Req,
 } from '@nestjs/common';
-import { SkipThrottle, Throttle } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { Public } from '../../common/guards/jwt.guard';
 import { HandleZohoWebhookHandler } from '../../modules/integrations/zoho-invoice/webhooks/handle-event.handler';
 
 /**
- * Public endpoint Zoho posts to. The path token is the tenant's Deqah
+ * Public endpoint Zoho posts to. The path token is the tenant's Sawaa
  * organizationId for tenant→client mirror events, or the literal
- * `platform` for events on Deqah's own SaaS-billing Zoho org.
+ * `platform` for events on Sawaa's own SaaS-billing Zoho org.
  *
  * **Rate limiting**: Two layers:
  *   1. The global ThrottlerGuard (app.module) applies a 300/min limit per IP.

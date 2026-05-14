@@ -1,5 +1,5 @@
 /**
- * Waitlist Types — Deqah Dashboard
+ * Waitlist Types — Sawaa Dashboard
  */
 
 export type WaitlistStatus =

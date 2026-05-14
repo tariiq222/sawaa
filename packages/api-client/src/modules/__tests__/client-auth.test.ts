@@ -45,7 +45,6 @@ describe('clientLogin', () => {
     const result = await clientLogin({
       email: 'a@b.c',
       password: 'pw',
-      hCaptchaToken: 'tok',
     })
 
     expect(result).toEqual(fakeAuth)
@@ -55,7 +54,6 @@ describe('clientLogin', () => {
     expect(JSON.parse(init?.body as string)).toEqual({
       email: 'a@b.c',
       password: 'pw',
-      hCaptchaToken: 'tok',
     })
     expect((init as RequestInit).credentials).toBe('include')
   })
@@ -65,7 +63,7 @@ describe('clientLogin', () => {
       jsonResponse({ message: 'Bad creds' }, 401),
     )
     await expect(
-      clientLogin({ email: 'a@b.c', password: 'wrong', hCaptchaToken: 'tok' }),
+      clientLogin({ email: 'a@b.c', password: 'wrong' }),
     ).rejects.toThrow('Bad creds')
   })
 })
@@ -80,7 +78,7 @@ describe('clientRegister', () => {
       otpSessionToken: 'otp.session',
       password: 'pw',
       name: 'Alice',
-      hCaptchaToken: 'tok',
+
     })
 
     const [url, init] = vi.mocked(fetch).mock.calls[0]!
@@ -90,7 +88,6 @@ describe('clientRegister', () => {
     expect(JSON.parse(init?.body as string)).toEqual({
       password: 'pw',
       name: 'Alice',
-      hCaptchaToken: 'tok',
     })
   })
 })
@@ -134,7 +131,6 @@ describe('clientResetPassword', () => {
     await clientResetPassword({
       sessionToken: 'reset.tok',
       newPassword: 'newPw',
-      hCaptchaToken: 'tok',
     })
 
     const [url, init] = vi.mocked(fetch).mock.calls[0]!
@@ -142,7 +138,6 @@ describe('clientResetPassword', () => {
     expect(JSON.parse(init?.body as string)).toEqual({
       sessionToken: 'reset.tok',
       newPassword: 'newPw',
-      hCaptchaToken: 'tok',
     })
   })
 })

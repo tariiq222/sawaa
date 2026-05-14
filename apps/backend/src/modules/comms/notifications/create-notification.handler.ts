@@ -21,7 +21,7 @@ export class CreateNotificationHandler {
   ) {}
 
   async execute(dto: CreateNotificationDto) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
     return this.prisma.notification.create({
       data: {
         recipientId: dto.recipientId,

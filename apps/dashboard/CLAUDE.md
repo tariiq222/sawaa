@@ -2,7 +2,7 @@
 
 ## Tech
 
-Next.js 15 (App Router), React 19, TanStack Query v5, Tailwind 4, Zod, React Hook Form. UI primitives come from the workspace `@deqah/ui` package name. Custom i18n runtime — `next-intl` is installed but not used at runtime.
+Next.js 15 (App Router), React 19, TanStack Query v5, Tailwind 4, Zod, React Hook Form. UI primitives come from the workspace `@sawaa/ui` package name. Custom i18n runtime — `next-intl` is installed but not used at runtime.
 
 ## Layer Rules (strict — no exceptions)
 
@@ -11,7 +11,7 @@ app/(dashboard)/[feature]/page.tsx     ≤150 lines — orchestration only
     ↓ imports from
 components/features/[feature]/         ≤300 lines per file
 components/features/shared/            shared across 3+ features
-@deqah/ui                            shadcn primitives — DO NOT MODIFY
+@sawaa/ui                            shadcn primitives — DO NOT MODIFY
 components/ui/                         app-local wrappers only (date-picker, nationality-select)
     ↓ import from
 hooks/use-[feature].ts                 TanStack Query — ≤200 lines
@@ -51,12 +51,12 @@ Top-level layout/error/loading: `layout.tsx`, `error.tsx`, `loading.tsx`, `page.
 
 ## UI Primitive Sourcing
 
-- **Source of truth:** `@deqah/ui` (`packages/ui/src/primitives/*` + `packages/ui/src/hooks/*`).
-  Import as `import { Button } from "@deqah/ui"`.
+- **Source of truth:** `@sawaa/ui` (`packages/ui/src/primitives/*` + `packages/ui/src/hooks/*`).
+  Import as `import { Button } from "@sawaa/ui"`.
 - **Never modify primitives in place.** Bug-fix or extend them inside the workspace package.
 - **`apps/dashboard/components/ui/`** holds only app-local wrappers
   (currently `date-picker.tsx` and `nationality-select.tsx`). Do NOT
-  add new primitives here — they belong in `@deqah/ui` so mobile/admin
+  add new primitives here — they belong in `@sawaa/ui` so mobile/admin
   can share them.
 - Two carve-outs intentionally remain (sidebar primitives + a couple of
   app-only components); see `packages/ui/CLAUDE.md` for the list.
@@ -104,7 +104,7 @@ Top-level layout/error/loading: `layout.tsx`, `error.tsx`, `loading.tsx`, `page.
 
 | Component type | Location |
 |---------------|----------|
-| shadcn primitive | `@deqah/ui` (workspace package) — never modify in place |
+| shadcn primitive | `@sawaa/ui` (workspace package) — never modify in place |
 | App-local primitive wrapper | `components/ui/` (date-picker, nationality-select only) |
 | Feature-specific | `components/features/[feature]/` |
 | Shared (3+ features) | `components/features/shared/` or `components/features/[name].tsx` |
@@ -133,7 +133,7 @@ Top-level layout/error/loading: `layout.tsx`, `error.tsx`, `loading.tsx`, `page.
 □ npm run i18n:verify        → AR/EN parity
 □ لا يوجد ملف يتجاوز 350 سطر
 □ لا cross-feature imports
-□ Primitives imported from @deqah/ui (not components/ui/)
+□ Primitives imported from @sawaa/ui (not components/ui/)
 □ كل Query في use-[feature].ts
 □ كل Mutation في use-[feature]-mutations.ts
 □ page.tsx لا يحتوي على business logic

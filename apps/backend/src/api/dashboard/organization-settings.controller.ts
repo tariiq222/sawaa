@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
-  ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiQuery,
+  ApiTags, ApiBearerAuth, ApiOperation, ApiParam,
   ApiOkResponse, ApiCreatedResponse, ApiNoContentResponse, ApiResponse,
   ApiConsumes, ApiBody,
 } from '@nestjs/swagger';
@@ -46,16 +46,6 @@ import { UpsertBookingSettingsDto } from '../../modules/bookings/upsert-booking-
 import { UploadLogoHandler } from '../../modules/org-experience/branding/upload-logo/upload-logo.handler';
 import { PrismaService } from '../../infrastructure/database';
 import { TenantContextService } from '../../common/tenant/tenant-context.service';
-import { FeatureKey } from '@deqah/shared/constants/feature-keys';
-import { IsString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-import { DEFAULT_ORGANIZATION_ID } from "../../common/tenant/tenant.constants";
-
-class SeedVerticalDto {
-  @ApiProperty({ description: 'Vertical slug to seed (e.g. clinic, salon)', example: 'clinic' })
-  @IsString() verticalSlug!: string;
-}
-
 @ApiTags('Dashboard / Org Experience')
 @ApiBearerAuth()
 @ApiStandardResponses()

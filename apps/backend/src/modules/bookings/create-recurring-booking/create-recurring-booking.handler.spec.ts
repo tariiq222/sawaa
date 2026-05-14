@@ -4,7 +4,7 @@ import { CreateRecurringBookingHandler } from './create-recurring-booking.handle
 import { RlsTransactionService } from '../../../infrastructure/database';
 
 const mockTenant = { requireOrganizationIdOrDefault: jest.fn().mockReturnValue('00000000-0000-0000-0000-000000000001') };
-const buildFeatureCheck = (enabled = true) => ({ isEnabled: jest.fn().mockResolvedValue(enabled) });
+const _buildFeatureCheck = (enabled = true) => ({ isEnabled: jest.fn().mockResolvedValue(enabled) });
 const buildRlsTx = (prisma: ReturnType<typeof buildPrisma>) =>
   ({
     withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),

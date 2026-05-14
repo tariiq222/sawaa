@@ -11,11 +11,11 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://cdn.moyasar.com https://*.moyasar.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.moyasar.com https://*.moyasar.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "connect-src 'self' https://*.deqah.net https://api.deqah.net https://*.moyasar.com",
+      "connect-src 'self' https://*.sawaa.net https://api.sawaa.net https://*.moyasar.com",
       "frame-src https://*.moyasar.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
@@ -36,7 +36,7 @@ const isProduction = process.env.NODE_ENV === "production"
 const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: repoRoot,
-  transpilePackages: ["@deqah/ui", "@deqah/shared", "@deqah/api-client"],
+  transpilePackages: ["@sawaa/ui", "@sawaa/shared", "@sawaa/api-client"],
   skipTrailingSlashRedirect: true,
   // Production builds: don't fail on existing lint/type warnings — those
   // are tracked separately by CI typecheck/lint jobs. Build must produce
@@ -88,7 +88,7 @@ const nextConfig = {
 
 export default withSentryConfig(nextConfig, {
   org: 'webvue',
-  project: 'deqah-dashboard',
+  project: 'sawaa-dashboard',
   url: 'https://errors.webvue.pro/',
   silent: true,
   disableLogger: true,

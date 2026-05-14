@@ -6,7 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Add01Icon, StarIcon } from "@hugeicons/core-free-icons"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
-import { Button } from "@deqah/ui"
+import { Button } from "@sawaa/ui"
 import { EmployeesListContent } from "@/components/features/employees/employees-list-content"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { PageHeader } from "@/components/features/page-header"

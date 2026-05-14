@@ -1,5 +1,5 @@
 /**
- * Booking Types — Deqah Dashboard
+ * Booking Types — Sawaa Dashboard
  *
  * Matches the backend Prisma schema + API response shapes.
  */

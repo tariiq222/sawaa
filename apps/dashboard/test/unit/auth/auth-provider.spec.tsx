@@ -43,7 +43,7 @@ vi.mock('@/lib/api', () => ({
 
 const mockUser = {
   id: 'user-1',
-  email: 'admin@deqah-test.com',
+  email: 'admin@sawaa-test.com',
   firstName: 'Admin',
   lastName: 'User',
   phone: null,
@@ -75,7 +75,7 @@ function TestConsumer() {
       <div data-testid="can-bookings-read">{canDo('bookings', 'read') ? 'yes' : 'no'}</div>
       <div data-testid="can-invoices-delete">{canDo('invoices', 'delete') ? 'yes' : 'no'}</div>
       <div data-testid="can-clients-anything">{canDo('clients', 'anything') ? 'yes' : 'no'}</div>
-      <button onClick={() => login('test@test.com', 'Pass123!', 'tok')}>Login</button>
+      <button onClick={() => login('test@test.com', 'Pass123!')}>Login</button>
       <button onClick={() => logout()}>Logout</button>
     </div>
   )
@@ -139,8 +139,8 @@ describe('AuthProvider', () => {
       expect(screen.getByTestId('authenticated').textContent).toBe('no')
     })
 
-    it('should remove deqah_user from localStorage on failed restore', async () => {
-      localStorage.setItem('deqah_user', JSON.stringify(mockUser))
+    it('should remove sawaa_user from localStorage on failed restore', async () => {
+      localStorage.setItem('sawaa_user', JSON.stringify(mockUser))
       mockRefreshToken.mockRejectedValue(new Error('expired'))
 
       renderWithProvider()
@@ -149,7 +149,7 @@ describe('AuthProvider', () => {
         expect(screen.getByTestId('loading').textContent).toBe('ready'),
       )
 
-      expect(localStorage.getItem('deqah_user')).toBeNull()
+      expect(localStorage.getItem('sawaa_user')).toBeNull()
     })
   })
 
@@ -189,7 +189,7 @@ describe('AuthProvider', () => {
         await userEvent.click(screen.getByText('Login'))
       })
 
-      expect(mockLogin).toHaveBeenCalledWith('test@test.com', 'Pass123!', 'tok')
+      expect(mockLogin).toHaveBeenCalledWith('test@test.com', 'Pass123!')
     })
   })
 

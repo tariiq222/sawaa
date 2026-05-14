@@ -69,7 +69,7 @@ export const TEST_TENANT: Readonly<Omit<TestTenant, 'accessToken'>> = {
   nameAr: 'منظمتي',
   nameEn: 'My Organization',
   branchId: DEFAULT_BRANCH_ID,
-  adminEmail: process.env.SEED_EMAIL ?? 'admin@deqah-test.com',
+  adminEmail: process.env.SEED_EMAIL ?? 'admin@sawaa-test.com',
   adminPassword: process.env.SEED_PASSWORD ?? 'Admin@1234',
 };
 
@@ -98,7 +98,7 @@ export async function getTestTenant(): Promise<TestTenant> {
     res = await fetch(`${API_BASE}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: adminEmail, password: adminPassword, hCaptchaToken: 'e2e-bypass' }),
+      body: JSON.stringify({ email: adminEmail, password: adminPassword }),
     });
   } catch (err) {
     throw new Error(

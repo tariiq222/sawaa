@@ -9,7 +9,6 @@ import {
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
 import { ApiStandardResponses, ApiErrorDto } from '../../common/swagger';
-import { FeatureKey } from '@deqah/shared/constants/feature-keys';
 import { CreateDepartmentHandler } from '../../modules/org-config/departments/create-department.handler';
 import { CreateDepartmentDto } from '../../modules/org-config/departments/create-department.dto';
 import { UpdateDepartmentHandler } from '../../modules/org-config/departments/update-department.handler';

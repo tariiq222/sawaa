@@ -9,9 +9,9 @@ import {
   Delete02Icon,
 } from "@hugeicons/core-free-icons"
 
-import { Badge } from "@deqah/ui"
-import { Button } from "@deqah/ui"
-import { Skeleton } from "@deqah/ui"
+import { Badge } from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
+import { Skeleton } from "@sawaa/ui"
 import { useEmployeeServices } from "@/hooks/use-employees"
 import { useLocale } from "@/components/locale-provider"
 import { AssignServiceSheet } from "./assign-service-sheet"

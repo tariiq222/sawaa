@@ -1,16 +1,13 @@
 import {
   Controller, Post, Get, Patch, Body, HttpCode, HttpStatus, UnauthorizedException, UseGuards,
-  Req, Res, Param, UseInterceptors, UploadedFile, Ip,
+  Req, Res, Ip,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiConsumes, ApiBody } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import * as bcrypt from 'bcryptjs';
 import { ConfigService } from '@nestjs/config';
 import {
-  ApiTags, ApiBearerAuth, ApiOperation, ApiOkResponse, ApiNoContentResponse, ApiResponse,
-  ApiCreatedResponse, ApiParam,
+  ApiTags, ApiBearerAuth, ApiOperation, ApiOkResponse, ApiNoContentResponse, ApiResponse
 } from '@nestjs/swagger';
 import { LoginHandler } from '../../modules/identity/login/login.handler';
 import { LogoutHandler } from '../../modules/identity/logout/logout.handler';
@@ -42,8 +39,6 @@ import { IsString, MinLength, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { ApiPublicResponses, ApiErrorDto } from '../../common/swagger';
 import { flattenPermissions } from '../../modules/identity/casl/flatten-permissions';
-import { Inject, BadRequestException } from '@nestjs/common';
-import { CAPTCHA_VERIFIER, CaptchaVerifier } from '../../modules/comms/contact-messages/captcha.verifier';
 import { PlatformSettingsService } from '../../modules/platform/settings/platform-settings.service';
 
 class ChangePasswordDto {
@@ -70,7 +65,6 @@ export class AuthController {
     private readonly getCurrentUser: GetCurrentUserHandler,
     private readonly changePassword: ChangePasswordHandler,
     private readonly config: ConfigService,
-    @Inject(CAPTCHA_VERIFIER) private readonly captcha: CaptchaVerifier,
     private readonly requestPasswordReset: RequestPasswordResetHandler,
     private readonly performPasswordReset: PerformPasswordResetHandler,
     private readonly tenant: TenantContextService,
@@ -120,36 +114,14 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    if (!(await this.captcha.verify(body.hCaptchaToken))) {
-      throw new BadRequestException('Invalid captcha token');
-    }
-
     const tokens = await this.login.execute({ email: body.email, password: body.password, ip });
+    const user = tokens.user;
 
     // Host-based namespace enforcement (TAR-99)
     const requestHost = String(req.headers.host ?? '').toLowerCase();
-    const adminHosts = (this.config.get<string>('ADMIN_HOSTS', 'admin.deqah.app'))
+    const adminHosts = (this.config.get<string>('ADMIN_HOSTS', 'admin.sawaa.app'))
       .split(',').map((h) => h.trim().toLowerCase());
     const isAdminHost = adminHosts.includes(requestHost);
-
-    const user = await this.prisma.user.findUnique({
-      where: { email: body.email },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        gender: true,
-        avatarUrl: true,
-        isActive: true,
-        role: true,
-        isSuperAdmin: true,
-        customRoleId: true,
-        customRole: { include: { permissions: true } },
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
 
     if (isAdminHost && !user?.isSuperAdmin) {
       throw new UnauthorizedException('Invalid credentials');

@@ -1,5 +1,5 @@
 /**
- * Common Types — Deqah Dashboard
+ * Common Types — Sawaa Dashboard
  *
  * Shared types used across all modules.
  */

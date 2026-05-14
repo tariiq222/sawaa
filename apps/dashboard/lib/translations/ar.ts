@@ -1,5 +1,5 @@
 /**
- * Arabic translations — Deqah Dashboard
+ * Arabic translations — Sawaa Dashboard
  *
  * This file is an index that merges all module translation files.
  * Each module file is kept under 350 lines.

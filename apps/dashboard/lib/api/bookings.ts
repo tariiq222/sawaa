@@ -1,5 +1,5 @@
 /**
- * Bookings API — Deqah Dashboard
+ * Bookings API — Sawaa Dashboard
  * Controller: dashboard/bookings
  */
 

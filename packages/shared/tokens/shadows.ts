@@ -1,5 +1,5 @@
 /**
- * Deqah Design System — Shadow Tokens
+ * Sawaa Design System — Shadow Tokens
  * Rule: Never use pure black shadows — use #001551 tint
  *
  * Levels (from DS spec):

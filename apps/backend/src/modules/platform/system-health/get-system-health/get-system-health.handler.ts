@@ -95,7 +95,7 @@ export class GetSystemHealthHandler {
   }
 
   private async probeMinio(): Promise<{ status: 'ok' | 'degraded'; detail?: string }> {
-    const bucket = process.env.MINIO_BUCKET ?? 'deqah';
+    const bucket = process.env.MINIO_BUCKET ?? 'sawaa';
     const exists = await this.minio.bucketExists(bucket);
     if (exists) return { status: 'ok' };
     return { status: 'degraded', detail: `bucket ${bucket} missing` };

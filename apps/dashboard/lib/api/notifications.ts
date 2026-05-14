@@ -1,5 +1,5 @@
 /**
- * Notifications API — Deqah Dashboard
+ * Notifications API — Sawaa Dashboard
  */
 
 import { api } from "@/lib/api"

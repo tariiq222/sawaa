@@ -10,7 +10,7 @@ import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { seedVerticals } from './seeds/verticals';
 
-const ADMIN_EMAIL    = process.env.SEED_EMAIL    ?? 'admin@deqah-test.com';
+const ADMIN_EMAIL    = process.env.SEED_EMAIL    ?? 'admin@sawaa-test.com';
 const ADMIN_PASSWORD = process.env.SEED_PASSWORD ?? 'Admin@1234';
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL;
 const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD;
@@ -168,11 +168,11 @@ async function main() {
     {
       slug: 'user_password_reset',
       name: 'إعادة تعيين كلمة المرور',
-      subject: 'إعادة تعيين كلمة المرور — Deqah',
+      subject: 'إعادة تعيين كلمة المرور — Sawaa',
       htmlBody: layout(
         'إعادة تعيين كلمة المرور',
         `<p>مرحباً {{userName}}،</p>
-  <p>وصلنا طلب لإعادة تعيين كلمة مرورك في Deqah. اضغط الزر بالأسفل لتعيين كلمة جديدة. الرابط صالح لمدة 30 دقيقة.</p>
+  <p>وصلنا طلب لإعادة تعيين كلمة مرورك في Sawaa. اضغط الزر بالأسفل لتعيين كلمة جديدة. الرابط صالح لمدة 30 دقيقة.</p>
   ${button('{{resetUrl}}', 'إعادة تعيين كلمة المرور')}
   <p style="color:#6b7280;font-size:14px;">إذا لم تطلب هذا، يمكنك تجاهل الرسالة بأمان.</p>`,
       ),
@@ -180,11 +180,11 @@ async function main() {
     {
       slug: 'user_email_verification',
       name: 'تأكيد البريد الإلكتروني',
-      subject: 'تأكيد بريدك الإلكتروني — Deqah',
+      subject: 'تأكيد بريدك الإلكتروني — Sawaa',
       htmlBody: layout(
         'تأكيد البريد الإلكتروني',
         `<p>مرحباً {{userName}}،</p>
-  <p>اضغط الزر بالأسفل لتأكيد بريدك الإلكتروني وتفعيل حسابك في Deqah.</p>
+  <p>اضغط الزر بالأسفل لتأكيد بريدك الإلكتروني وتفعيل حسابك في Sawaa.</p>
   ${button('{{verifyUrl}}', 'تأكيد البريد')}
   <p style="color:#6b7280;font-size:14px;">إذا لم تنشئ هذا الحساب، يمكنك تجاهل الرسالة.</p>`,
       ),
@@ -192,7 +192,7 @@ async function main() {
     {
       slug: 'welcome',
       name: 'رسالة ترحيب',
-      subject: 'أهلاً بك في Deqah',
+      subject: 'أهلاً بك في Sawaa',
       htmlBody: layout(
         'أهلاً بك',
         `<p>مرحباً {{client_name}}،</p>
@@ -208,7 +208,7 @@ async function main() {
         `<p>مرحباً {{client_name}}،</p>
   <p>نأسف لإبلاغك بأنه تم إلغاء حجزك رقم <strong>{{booking_id}}</strong>.</p>
   <p>السبب: {{reason}}</p>
-  <p>يمكنك إعادة الحجز في أي وقت من تطبيق Deqah.</p>`,
+  <p>يمكنك إعادة الحجز في أي وقت من تطبيق Sawaa.</p>`,
       ),
     },
     {

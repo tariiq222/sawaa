@@ -3,7 +3,7 @@ import type {
   ClientBookingListResponse,
   CancelMyBookingPayload,
   RescheduleMyBookingPayload,
-} from '@deqah/shared';
+} from '@sawaa/shared';
 
 async function meFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {

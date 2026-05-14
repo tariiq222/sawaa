@@ -74,7 +74,7 @@ describe('BookingAutocompleteCron', () => {
 describe('BookingExpiryCron', () => {
   // Legacy path (flag off) preserves the pre-launch-readiness behavior.
   // Enhanced-path coverage lives in booking-expiry.cron.spec.ts.
-  const buildFlags = () => ({ bookingExpiryEnabled: false });
+  const _buildFlags = () => ({ bookingExpiryEnabled: false });
 
   it('executes without throwing', async () => {
     const prisma = buildPrisma();
@@ -85,18 +85,21 @@ describe('BookingExpiryCron', () => {
     await expect(cron.execute()).resolves.not.toThrow();
   });
 
-  it('updates pending bookings that have expired', async () => {
+  it('calls findMany to discover expired bookings (enhanced path always active)', async () => {
+    // org scoping moved to RLS / removed in single-tenant migration — execute() always uses
+    // enhancedExpire() which calls findMany first, then updateMany by IDs
     const prisma = buildPrisma();
-    prisma.$allTenants.booking.updateMany = jest.fn().mockResolvedValue({ count: 3 });
+    prisma.$allTenants.booking.findMany = jest.fn().mockResolvedValue([]);
+    prisma.$allTenants.booking.updateMany = jest.fn().mockResolvedValue({ count: 0 });
     const cron = new BookingExpiryCron(
       prisma as never,
       buildCls() as never,
     );
     await cron.execute();
-    expect(prisma.$allTenants.booking.updateMany).toHaveBeenCalledWith(
+    expect(prisma.$allTenants.booking.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          status: BookingStatus.PENDING,
+          status: expect.objectContaining({ in: expect.arrayContaining([BookingStatus.PENDING]) }),
           expiresAt: expect.anything(),
         }),
       }),
@@ -129,17 +132,16 @@ describe('BookingNoShowCron', () => {
     );
   });
 
-  it('iterates each active tenant and reads its own bookingSettings', async () => {
+  it('reads bookingSettings for default org and calls updateMany once (single-tenant)', async () => {
+    // org scoping moved to RLS / removed in single-tenant migration — handler uses
+    // DEFAULT_ORGANIZATION_ID directly; no organization.findMany iteration
     const prisma = buildPrisma();
     const cron = new BookingNoShowCron(prisma as never, buildCls() as never);
     await cron.execute();
 
-    expect(prisma.$allTenants.organization.findMany).toHaveBeenCalledTimes(1);
-    expect(prisma.$allTenants.bookingSettings.findFirst).toHaveBeenCalledTimes(2);
-    expect(prisma.$allTenants.bookingSettings.findFirst).toHaveBeenNthCalledWith(1,
-      expect.objectContaining({ where: expect.objectContaining({ organizationId: 'org-1', branchId: null }) }),
-    );
-    expect(prisma.$allTenants.booking.updateMany).toHaveBeenCalledTimes(2);
+    expect(prisma.$allTenants.organization.findMany).not.toHaveBeenCalled();
+    expect(prisma.$allTenants.bookingSettings.findFirst).toHaveBeenCalledTimes(1);
+    expect(prisma.$allTenants.booking.updateMany).toHaveBeenCalledTimes(1);
   });
 });
 

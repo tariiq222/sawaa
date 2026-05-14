@@ -4,7 +4,6 @@ import {
   HttpException,
   HttpStatus,
   Logger,
-  Inject,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -14,7 +13,6 @@ import * as bcrypt from 'bcryptjs';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
 import { NotificationChannelRegistry } from '../../comms/notification-channel/notification-channel-registry';
-import { CAPTCHA_VERIFIER, type CaptchaVerifier } from '../../comms/contact-messages/captcha.verifier';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { RequestOtpDto } from './request-otp.dto';
 import { maskIdentifier } from '../../../common/helpers/mask-pii.helper';
@@ -34,7 +32,6 @@ export class RequestOtpHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly channelRegistry: NotificationChannelRegistry,
-    @Inject(CAPTCHA_VERIFIER) private readonly captchaVerifier: CaptchaVerifier,
     private readonly config: ConfigService,
     private readonly cls: ClsService,
     private readonly redisService: RedisService,
@@ -42,11 +39,6 @@ export class RequestOtpHandler {
   ) {}
 
   async execute(dto: RequestOtpCommand): Promise<{ success: boolean }> {
-    const captchaValid = await this.captchaVerifier.verify(dto.hCaptchaToken);
-    if (!captchaValid) {
-      throw new BadRequestException('Invalid captcha token');
-    }
-
     if (dto.channel === 'EMAIL') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(dto.identifier)) {

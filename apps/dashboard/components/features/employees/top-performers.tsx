@@ -3,8 +3,8 @@
 import { HugeiconsIcon } from "@hugeicons/react"
 import { StarIcon, Award01Icon } from "@hugeicons/core-free-icons"
 
-import { Card } from "@deqah/ui"
-import { Avatar, AvatarFallback } from "@deqah/ui"
+import { Card } from "@sawaa/ui"
+import { Avatar, AvatarFallback } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
 import type { Employee } from "@/lib/types/employee"

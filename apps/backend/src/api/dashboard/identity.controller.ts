@@ -8,7 +8,6 @@ import {
 } from '@nestjs/swagger';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
-import { FeatureKey } from '@deqah/shared/constants/feature-keys';
 import { ApiStandardResponses, ApiErrorDto } from '../../common/swagger';
 import { ListUsersHandler } from '../../modules/identity/users/list-users.handler';
 import { GetUserHandler } from '../../modules/identity/users/get-user.handler';

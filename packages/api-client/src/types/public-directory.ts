@@ -40,5 +40,4 @@ export interface CreateContactMessagePayload {
   email?: string
   subject?: string
   body: string
-  captchaToken?: string
 }

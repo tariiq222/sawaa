@@ -114,7 +114,7 @@ describe("hexToHsl", () => {
     expect(result.l).toBeCloseTo(0.5, 2)
   })
 
-  it("converts Deqah primary blue", () => {
+  it("converts Sawaa primary blue", () => {
     const result = hexToHsl("#354FD8")
     expect(result.h).toBeCloseTo(230, 0)
     expect(result.s).toBeGreaterThan(0.6)
@@ -164,7 +164,7 @@ describe("buildStyleFromVars", () => {
 })
 
 describe("darkVariant", () => {
-  it("makes a dark primary from Deqah blue", () => {
+  it("makes a dark primary from Sawaa blue", () => {
     const result = darkVariant("#354FD8", 0.68)
     const { l } = hexToHsl(result)
     expect(l).toBeCloseTo(0.68, 1)

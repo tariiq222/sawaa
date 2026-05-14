@@ -1,4 +1,4 @@
--- Rename the SaaS-02h RLS probe role for the Deqah rebrand.
+-- Rename the SaaS-02h RLS probe role for the Sawaa rebrand.
 -- Existing migrations are immutable, so this forward migration preserves
 -- the historical migration chain and moves the runtime role name.
 

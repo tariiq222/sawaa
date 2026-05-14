@@ -2,8 +2,8 @@
 
 import { ar } from "date-fns/locale"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Badge } from "@deqah/ui"
-import { Avatar, AvatarFallback } from "@deqah/ui"
+import { Badge } from "@sawaa/ui"
+import { Avatar, AvatarFallback } from "@sawaa/ui"
 import { getInitials } from "@/lib/utils"
 import { formatDatePattern } from "@/lib/date"
 import type { ActivityLog } from "@/lib/types/activity-log"

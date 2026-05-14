@@ -1,15 +1,15 @@
 "use client"
 
-import { Input } from "@deqah/ui"
-import { Label } from "@deqah/ui"
-import { Switch } from "@deqah/ui"
+import { Input } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
+import { Switch } from "@sawaa/ui"
 import { DatePicker } from "@/components/ui/date-picker"
 import {
   Card,
   CardContent,
   CardTitle,
   CardDescription,
-} from "@deqah/ui"
+} from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import type { LocalVacation } from "./schedule-types"
 

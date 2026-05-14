@@ -4,7 +4,7 @@ import { withSentryConfig } from '@sentry/nextjs';
 const nextConfig = {
   output: 'standalone',
   outputFileTracingRoot: new URL('../', import.meta.url).pathname,
-  transpilePackages: ['@deqah/api-client', '@deqah/shared'],
+  transpilePackages: ['@sawaa/api-client', '@sawaa/shared'],
   typedRoutes: false,
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
@@ -12,7 +12,7 @@ const nextConfig = {
 
 export default withSentryConfig(nextConfig, {
   org: 'webvue',
-  project: 'deqah-website',
+  project: 'sawaa-website',
   url: 'http://100.124.231.44:8000/',
   silent: true,
   disableLogger: true,

@@ -1,4 +1,4 @@
-import type { WebsiteTheme } from '@deqah/shared';
+import type { WebsiteTheme } from '@sawaa/shared';
 import type { Theme } from './types';
 import { SawaaLayout } from './sawaa/layout/layout';
 import { SawaaHomePage } from './sawaa/pages/home';

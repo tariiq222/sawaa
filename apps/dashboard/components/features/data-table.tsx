@@ -19,8 +19,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@deqah/ui"
-import { Button } from "@deqah/ui"
+} from "@sawaa/ui"
+import { Button } from "@sawaa/ui"
 import { EmptyState } from "@/components/features/empty-state"
 import { useLocale } from "@/components/locale-provider"
 import { cn } from "@/lib/utils"

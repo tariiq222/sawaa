@@ -1,10 +1,10 @@
 /**
- * Auth types — re-exports the canonical UserPayload from @deqah/api-client
+ * Auth types — re-exports the canonical UserPayload from @sawaa/api-client
  * so the mobile screens read the same shape the backend actually returns,
  * plus mobile-only enums and form payloads.
  */
 
-import type { UserPayload, AuthResponse as CanonicalAuthResponse } from '@deqah/api-client';
+import type { UserPayload, AuthResponse as CanonicalAuthResponse } from '@sawaa/api-client';
 
 // The canonical user payload returned by /auth/login + /auth/me, extended
 // with mobile-only fields the backend does not (yet) return. Re-exported as
@@ -75,7 +75,7 @@ export interface VerifyOtpRequest {
 /**
  * Mobile wraps the canonical AuthResponse in the legacy `{success, data}`
  * envelope its callers (login screen, otp-verify, register) expect. The
- * shared @deqah/api-client returns the unwrapped shape, so services/auth.ts
+ * shared @sawaa/api-client returns the unwrapped shape, so services/auth.ts
  * re-wraps it before resolving to this interface.
  */
 export interface AuthResponse {

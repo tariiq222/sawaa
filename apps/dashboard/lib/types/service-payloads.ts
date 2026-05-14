@@ -1,5 +1,5 @@
 /**
- * Service Payload Types (DTOs) — Deqah Dashboard
+ * Service Payload Types (DTOs) — Sawaa Dashboard
  */
 
 /* ─── Category DTOs ─── */

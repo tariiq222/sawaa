@@ -35,8 +35,8 @@ export function trialSuspendedNoCardTemplate(vars: TrialSuspendedNoCardVars): {
   `;
 
   return {
-    subjectAr: 'تجربة Deqah موقوفة بانتظار بطاقة دفع',
-    subjectEn: 'Your Deqah trial is suspended until a card is added',
+    subjectAr: 'تجربة Sawaa موقوفة بانتظار بطاقة دفع',
+    subjectEn: 'Your Sawaa trial is suspended until a card is added',
     html: bilingualLayout({ ar, en }),
   };
 }

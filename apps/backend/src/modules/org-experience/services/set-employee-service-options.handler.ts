@@ -17,7 +17,7 @@ export class SetEmployeeServiceOptionsHandler {
   ) {}
 
   async execute(dto: SetEmployeeServiceOptionsCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORGANIZATION_ID;
     const optionIds = dto.options.map((o) => o.durationOptionId);
     const validOptions = await this.prisma.serviceDurationOption.findMany({
       where: { id: { in: optionIds } },

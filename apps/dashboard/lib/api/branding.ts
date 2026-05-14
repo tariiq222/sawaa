@@ -1,5 +1,5 @@
 /**
- * Branding API — Deqah Dashboard
+ * Branding API — Sawaa Dashboard
  */
 
 import { api } from "@/lib/api"

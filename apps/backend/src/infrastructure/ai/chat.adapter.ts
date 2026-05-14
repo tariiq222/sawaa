@@ -41,8 +41,8 @@ export class ChatAdapter implements IChatService, OnModuleInit {
       apiKey: cfg.openrouterApiKey,
       baseURL: cfg.openrouterBaseUrl,
       defaultHeaders: {
-        'HTTP-Referer': 'https://deqah.app',
-        'X-Title': 'Deqah AI',
+        'HTTP-Referer': 'https://sawaa.app',
+        'X-Title': 'Sawaa AI',
       },
     });
     this.logger.log(`ChatAdapter ready (model: ${this.defaultModel})`);

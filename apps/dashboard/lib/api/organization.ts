@@ -1,5 +1,5 @@
 /**
- * Clinic API — Deqah Dashboard
+ * Clinic API — Sawaa Dashboard
  *
  * Working hours and holidays management.
  */
