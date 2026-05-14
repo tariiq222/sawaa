@@ -272,6 +272,9 @@ export const arMisc: Record<string, string> = {
 
   // — OTP Login flow —
   "login.identifierLabel": "البريد الإلكتروني أو رقم الجوال",
+  "login.identifier.placeholder": "user@example.com",
+  "login.password.submit": "تسجيل الدخول",
+  "login.errors.passwordTooShort": "كلمة المرور يجب أن تكون 8 أحرف على الأقل",
   "login.continue": "متابعة",
   "login.chooseMethod": "كيف تريد تسجيل الدخول؟",
   "login.usePassword": "باستخدام كلمة المرور",

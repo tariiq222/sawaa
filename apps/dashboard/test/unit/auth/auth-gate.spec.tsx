@@ -19,26 +19,24 @@ vi.mock('@/components/locale-provider', () => ({
   LocaleProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-// Mock step components so AuthGate tests focus on gate logic, not form internals
-vi.mock('@/components/features/login/identifier-step', () => ({
-  IdentifierStep: () => (
+// Mock combined step so AuthGate tests focus on gate logic, not form internals
+vi.mock('@/components/features/login/combined-step', () => ({
+  CombinedStep: ({
+    onSubmit,
+    error,
+  }: {
+    onSubmit: (id: string, password: string) => void
+    onSwitchToOtp: (id: string) => void
+    error?: unknown
+    onClearError?: () => void
+    loading?: boolean
+  }) => (
     <div>
       <label htmlFor="identifier">البريد الإلكتروني</label>
       <input id="identifier" placeholder="user@example.com" />
-    </div>
-  ),
-}))
-
-vi.mock('@/components/features/login/method-step', () => ({
-  MethodStep: () => <div>MethodStep</div>,
-}))
-
-vi.mock('@/components/features/login/password-step', () => ({
-  PasswordStep: ({ onSubmit, error }: { onSubmit: (p: string) => void; error?: string | null }) => (
-    <div>
       <input type="password" placeholder="••••••••" />
-      <button onClick={() => onSubmit('pass')}>تسجيل الدخول</button>
-      {error && <div>{error}</div>}
+      <button onClick={() => onSubmit('admin@sawaa-test.com', 'pass')}>تسجيل الدخول</button>
+      {typeof error === 'string' && error ? <div>{error}</div> : null}
     </div>
   ),
 }))
@@ -51,17 +49,17 @@ import { AuthGate } from '@/components/providers/auth-gate'
 import { LocaleProvider } from '@/components/locale-provider'
 
 const defaultFlow = {
-  step: 'identifier' as const,
+  mode: 'login' as const,
   identifier: '',
   loading: false,
   error: null,
   otpSentAt: null,
-  submitIdentifier: vi.fn(),
-  submitPassword: vi.fn(),
-  chooseMethod: vi.fn(),
-  back: vi.fn(),
+  submitLogin: vi.fn(),
+  switchToOtp: vi.fn(),
+  backToLogin: vi.fn(),
   resendOtp: vi.fn(),
   submitOtp: vi.fn(),
+  clearError: vi.fn(),
 }
 
 const mockUser = {
@@ -110,26 +108,22 @@ describe('AuthGate', () => {
     expect(screen.queryByLabelText(/البريد الإلكتروني/)).not.toBeInTheDocument()
   })
 
-  it('should call login() with entered password on submit', async () => {
-    const mockLogin = vi.fn().mockResolvedValue(undefined)
-    mockUseAuth.mockReturnValue({ user: null, loading: false, login: mockLogin, logout: vi.fn() })
+  it('should call submitLogin() with entered credentials on submit', async () => {
+    const mockSubmitLogin = vi.fn().mockResolvedValue(undefined)
+    mockUseAuth.mockReturnValue({ user: null, loading: false, login: vi.fn(), logout: vi.fn() })
     mockUseLoginFlow.mockReturnValue({
       ...defaultFlow,
-      step: 'password',
-      identifier: 'admin@sawaa-test.com',
-      submitPassword: mockLogin,
+      submitLogin: mockSubmitLogin,
     })
     renderAuthGate(<div>Protected</div>)
     await userEvent.click(screen.getByRole('button', { name: /تسجيل الدخول/ }))
-    expect(mockLogin).toHaveBeenCalledWith('pass')
+    expect(mockSubmitLogin).toHaveBeenCalledWith('admin@sawaa-test.com', 'pass')
   })
 
   it('should display error message when login throws', () => {
     mockUseAuth.mockReturnValue({ user: null, loading: false, login: vi.fn(), logout: vi.fn() })
     mockUseLoginFlow.mockReturnValue({
       ...defaultFlow,
-      step: 'password',
-      identifier: 'bad@test.com',
       error: 'Invalid email or password',
     })
     renderAuthGate(<div>Protected</div>)
@@ -194,11 +188,10 @@ describe('AuthGate', () => {
     mockUseAuth.mockReturnValue({ user: null, loading: false, login: vi.fn(), logout: vi.fn() })
     mockUseLoginFlow.mockReturnValue({
       ...defaultFlow,
-      step: 'password',
       loading: true,
     })
     renderAuthGate(<div>Protected</div>)
-    // When loading=true the PasswordStep mock still renders the button
+    // When loading=true the CombinedStep mock still renders the button
     expect(screen.getByRole('button', { name: /تسجيل الدخول/ })).toBeInTheDocument()
   })
 })

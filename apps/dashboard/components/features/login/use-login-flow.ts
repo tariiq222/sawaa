@@ -3,53 +3,25 @@
 import { useState, useCallback } from "react"
 import { login as apiLogin, requestDashboardOtp, verifyDashboardOtp } from "@/lib/api/auth"
 import { useAuth } from "@/components/providers/auth-provider"
-import type { LoginStep, LoginMethod } from "@/lib/schemas/auth-login.schema"
+
+type LoginMode = "login" | "otp"
 
 export function useLoginFlow() {
   const { loginWithTokens } = useAuth()
-  const [step, setStep] = useState<LoginStep>("identifier")
+  const [mode, setMode] = useState<LoginMode>("login")
   const [identifier, setIdentifier] = useState("")
-  const [method, setMethod] = useState<LoginMethod | null>(null)
   const [error, setError] = useState<unknown>(null)
   const [loading, setLoading] = useState(false)
   const [otpSentAt, setOtpSentAt] = useState<number | null>(null)
 
   const clearError = useCallback(() => setError(null), [])
 
-  const submitIdentifier = useCallback((value: string) => {
-    setIdentifier(value)
-    setError(null)
-    setStep("method")
-  }, [])
-
-  const chooseMethod = useCallback(
-    async (m: LoginMethod) => {
-      setMethod(m)
-      setError(null)
-      if (m === "otp") {
-        setLoading(true)
-        try {
-          await requestDashboardOtp(identifier)
-          setOtpSentAt(Date.now())
-          setStep("otp")
-        } catch (e) {
-          setError(e)
-        } finally {
-          setLoading(false)
-        }
-      } else {
-        setStep("password")
-      }
-    },
-    [identifier],
-  )
-
-  const submitPassword = useCallback(
-    async (password: string) => {
+  const submitLogin = useCallback(
+    async (id: string, password: string) => {
       setLoading(true)
       setError(null)
       try {
-        const res = await apiLogin(identifier, password)
+        const res = await apiLogin(id, password)
         loginWithTokens(res)
       } catch (e) {
         setError(e)
@@ -57,8 +29,23 @@ export function useLoginFlow() {
         setLoading(false)
       }
     },
-    [identifier, loginWithTokens],
+    [loginWithTokens],
   )
+
+  const switchToOtp = useCallback(async (id: string) => {
+    setIdentifier(id)
+    setError(null)
+    setLoading(true)
+    try {
+      await requestDashboardOtp(id)
+      setOtpSentAt(Date.now())
+      setMode("otp")
+    } catch (e) {
+      setError(e)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   const submitOtp = useCallback(
     async (code: string) => {
@@ -89,14 +76,22 @@ export function useLoginFlow() {
     }
   }, [identifier])
 
-  const back = useCallback(() => {
+  const backToLogin = useCallback(() => {
+    setMode("login")
     setError(null)
-    if (step === "method") setStep("identifier")
-    else if (step === "password" || step === "otp") setStep("method")
-  }, [step])
+  }, [])
 
   return {
-    step, identifier, method, error, loading, otpSentAt,
-    submitIdentifier, chooseMethod, submitPassword, submitOtp, resendOtp, back, clearError,
+    mode,
+    identifier,
+    error,
+    loading,
+    otpSentAt,
+    submitLogin,
+    switchToOtp,
+    submitOtp,
+    resendOtp,
+    backToLogin,
+    clearError,
   }
 }

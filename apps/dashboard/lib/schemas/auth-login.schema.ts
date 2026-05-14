@@ -14,5 +14,4 @@ export const otpCodeSchema = z
   .string()
   .regex(/^[0-9]{6}$/, { message: "INVALID_OTP" })
 
-export type LoginStep = "identifier" | "method" | "password" | "otp"
 export type LoginMethod = "password" | "otp"

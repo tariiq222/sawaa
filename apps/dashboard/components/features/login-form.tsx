@@ -2,9 +2,7 @@
 
 import { useEffect, useState, startTransition } from "react"
 import { useLoginFlow } from "@/components/features/login/use-login-flow"
-import { IdentifierStep } from "@/components/features/login/identifier-step"
-import { MethodStep } from "@/components/features/login/method-step"
-import { PasswordStep } from "@/components/features/login/password-step"
+import { CombinedStep } from "@/components/features/login/combined-step"
 import { OtpStep } from "@/components/features/login/otp-step"
 import { useLocale } from "@/components/locale-provider"
 
@@ -21,12 +19,7 @@ export function LoginForm() {
     }
   }, [t])
 
-  const stepTitles: Record<typeof flow.step, string> = {
-    identifier: t("login.welcome"),
-    method: t("login.chooseMethod"),
-    password: t("login.welcome"),
-    otp: t("login.otp.title"),
-  }
+  const title = flow.mode === "otp" ? t("login.otp.title") : t("login.welcome")
 
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background p-4">
@@ -34,7 +27,7 @@ export function LoginForm() {
         <div aria-hidden className="login-grid-pattern pointer-events-none absolute inset-x-0 top-0 h-72" />
         <div aria-hidden className="login-blob pointer-events-none absolute inset-x-0 top-0 h-72" />
         <div className="relative p-8">
-          <h1 className="mb-1 text-center text-2xl font-semibold">{stepTitles[flow.step]}</h1>
+          <h1 className="mb-1 text-center text-2xl font-semibold">{title}</h1>
           <p className="mb-6 text-center text-sm text-muted-foreground">{t("login.subtitle")}</p>
 
           {notice && (
@@ -43,32 +36,16 @@ export function LoginForm() {
             </div>
           )}
 
-          {flow.step === "identifier" && (
-            <IdentifierStep
-              initial={flow.identifier}
-              loading={flow.loading}
-              onSubmit={flow.submitIdentifier}
-            />
-          )}
-          {flow.step === "method" && (
-            <MethodStep
-              identifier={flow.identifier}
-              loading={flow.loading}
-              onPick={flow.chooseMethod}
-              onBack={flow.back}
-            />
-          )}
-          {flow.step === "password" && (
-            <PasswordStep
-              identifier={flow.identifier}
+          {flow.mode === "login" && (
+            <CombinedStep
               loading={flow.loading}
               error={flow.error}
-              onSubmit={flow.submitPassword}
-              onBack={flow.back}
+              onSubmit={flow.submitLogin}
+              onSwitchToOtp={flow.switchToOtp}
               onClearError={flow.clearError}
             />
           )}
-          {flow.step === "otp" && (
+          {flow.mode === "otp" && (
             <OtpStep
               identifier={flow.identifier}
               loading={flow.loading}
@@ -76,7 +53,7 @@ export function LoginForm() {
               otpSentAt={flow.otpSentAt}
               onSubmit={flow.submitOtp}
               onResend={flow.resendOtp}
-              onBack={flow.back}
+              onBack={flow.backToLogin}
             />
           )}
         </div>

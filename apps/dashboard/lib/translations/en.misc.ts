@@ -272,6 +272,9 @@ export const enMisc: Record<string, string> = {
 
   // — OTP Login flow —
   "login.identifierLabel": "Email or mobile number",
+  "login.identifier.placeholder": "user@example.com",
+  "login.password.submit": "Sign in",
+  "login.errors.passwordTooShort": "Password must be at least 8 characters",
   "login.continue": "Continue",
   "login.chooseMethod": "How would you like to sign in?",
   "login.usePassword": "Use password",
