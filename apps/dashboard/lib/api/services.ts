@@ -24,30 +24,6 @@ import type {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5100/api/v1"
 
-function downloadFile(url: string, filename: string) {
-  const token = getAccessToken()
-  const a = document.createElement("a")
-  fetch(`${API_BASE}${url}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    credentials: "include",
-  })
-    .then((res) => res.blob())
-    .then((blob) => {
-      a.href = URL.createObjectURL(blob)
-      a.download = filename
-      a.click()
-      URL.revokeObjectURL(a.href)
-    })
-}
-
-export function exportServicesCsv() {
-  downloadFile("/dashboard/organization/services/export?format=csv", "services.csv")
-}
-
-export function exportServicesExcel() {
-  downloadFile("/dashboard/organization/services/export?format=xlsx", "services.xlsx")
-}
-
 /* ─── Categories ─── */
 
 export async function fetchCategories(

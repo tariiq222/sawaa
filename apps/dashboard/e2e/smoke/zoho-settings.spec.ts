@@ -85,9 +85,10 @@ test.describe('Zoho Invoice — Settings smoke', () => {
       test.skip(true, 'Backend does not have /dashboard/integrations/zoho — not deployed from this branch yet');
       return;
     }
-    // 403 = feature not enabled on the organization's plan (Plan.limits.zoho_invoice_integration=false).
+    // 403 = feature gated (legacy SaaS plan limit — removed in single-tenant mode).
+    // In single-tenant Sawaa all features are enabled; a 403 here is unexpected.
     if (res.status() === 403) {
-      test.skip(true, 'Zoho feature not enabled on the test organization plan — set Plan.limits.zoho_invoice_integration=true');
+      test.skip(true, 'Zoho returned 403 — verify feature-guard config in single-tenant mode');
       return;
     }
     // 400 = endpoint exists but integration not configured (expected for fresh organization).

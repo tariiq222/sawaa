@@ -80,22 +80,22 @@ export async function loginAs(page: Page, persona: Persona = 'admin'): Promise<v
   await page.goto('/login');
   await expect(page).toHaveURL(/\/login/);
 
-  await page.fill('input[type="email"], #email', email);
-  await page.fill('input[type="password"], #password', password);
-  await page.click('button[type="submit"]');
+  // Identifier-first login flow (single-tenant)
+  await page.locator('#identifier').fill(email);
+  await page.getByRole('button', { name: 'متابعة' }).click();
 
-  // Verify redirect to dashboard home
-  try {
-    await page.waitForURL('/', { timeout: 20_000 });
-  } catch {
-    // If timeout, reload the page - might be a transient rate limit issue
-    await page.reload();
-    await page.waitForLoadState('networkidle').catch(() => {});
-    // If still not on home, try waiting one more time
-    if (page.url() !== '/') {
-      await page.waitForURL('/', { timeout: 15_000 }).catch(() => {});
-    }
-  }
+  await expect(
+    page.getByRole('button', { name: 'باستخدام كلمة المرور' }),
+  ).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: 'باستخدام كلمة المرور' }).click();
+
+  await expect(page.locator('#password')).toBeVisible({ timeout: 10_000 });
+  await page.locator('#password').fill(password);
+  await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
+
+  // Verify redirect away from /login
+  await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 });
+  await expect(page.locator('header').first()).toBeVisible({ timeout: 10_000 });
 }
 
 /**

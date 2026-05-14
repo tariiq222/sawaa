@@ -129,9 +129,11 @@ test.describe('Settings CRUD Operations', () => {
     }
   })
 
-  test.skip('should require premium plan for some settings', async ({ page }) => {
-    const premiumButton = page.locator('button:has-text("Upgrade"), button:has-text("ترقية"), [class*="premium"]')
-    const hasPremium = await premiumButton.isVisible().catch(() => false)
-    test.skip(!hasPremium, 'Premium features not available')
+  test.skip('should display advanced settings sections', async ({ page }) => {
+    // Single-tenant mode: no premium plan gating — test checks that
+    // advanced settings sections render for the sole organization.
+    const advancedSection = page.locator('text=/advanced|متقدم|integrations|تكاملات/i').first()
+    const hasAdvanced = await advancedSection.isVisible().catch(() => false)
+    test.skip(!hasAdvanced, 'Advanced settings section not found')
   })
 })

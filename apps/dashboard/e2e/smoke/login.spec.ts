@@ -1,5 +1,4 @@
-// TODO post-launch: D2 create booking · D3 confirm → invoice
-// Admin: A1 impersonate · A2 create organization · A3 plan editor
+// Dashboard E2E — D1 login golden path
 // Website: W1 guest booking · W2 client invoice
 
 import { test, expect } from '@playwright/test';

@@ -100,6 +100,3 @@ export async function adminCancelBooking(
   return api.patch<Booking>(`/dashboard/bookings/${id}/cancel`, payload)
 }
 
-export async function addToWaitlist(payload: unknown): Promise<unknown> {
-  return api.post<unknown>("/dashboard/bookings/waitlist", payload)
-}

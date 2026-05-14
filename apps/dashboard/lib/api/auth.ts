@@ -114,9 +114,6 @@ export function getStoredUser(): AuthUser | null {
   }
 }
 
-export function isAuthenticated(): boolean {
-  return !!getAccessToken()
-}
 
 function persistAuth(data: AuthResponse): void {
   localStorage.setItem(USER_KEY, JSON.stringify(data.user))
