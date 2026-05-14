@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-primary-dark: var(--primary-dark);
+  --color-accent: var(--accent);
+  --color-accent-dark: var(--accent-dark);
+  --color-bg: var(--bg);
+  --font-primary: var(--font-primary);
+}
+
+/* Fallback values are emitted by <BrandingStyle /> from SSR. This file only
+   declares the Tailwind mapping and base body rules. */
+
+html {
+  direction: rtl;
+}
+
+body {
+  font-family: var(--font-primary);
+  background: var(--bg);
+  color: #111;
+  margin: 0;
+}

@@ -1,0 +1,76 @@
+import { Injectable } from '@nestjs/common';
+import { BookingStatus } from '@prisma/client';
+import { PrismaService } from '../../../infrastructure/database';
+import { RlsTransactionService } from '../../../infrastructure/database';
+import { TenantContextService } from '../../../common/tenant';
+import { EventBusService } from '../../../infrastructure/events';
+import { BookingConfirmedEvent } from '../events/booking-confirmed.event';
+import { CreateZoomMeetingHandler } from '../create-zoom-meeting/create-zoom-meeting.handler';
+import { fetchBookingOrFail } from '../booking-lifecycle.helper';
+import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+
+export interface ConfirmBookingCommand {
+  bookingId: string;
+  changedBy: string;
+}
+
+@Injectable()
+export class ConfirmBookingHandler {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rlsTx: RlsTransactionService,
+    private readonly tenant: TenantContextService,
+    private readonly eventBus: EventBusService,
+    private readonly createZoomMeeting: CreateZoomMeetingHandler,
+  ) {}
+
+  async execute(cmd: ConfirmBookingCommand) {
+    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.PENDING], 'confirmed');
+
+    const [updated] = await this.rlsTx.withTransaction((tx) => Promise.all([
+      tx.booking.update({
+        where: { id: cmd.bookingId, organizationId },
+        data: { status: BookingStatus.CONFIRMED, confirmedAt: new Date() },
+      }),
+      tx.bookingStatusLog.create({
+        data: {
+          bookingId: cmd.bookingId,
+          fromStatus: booking.status,
+          toStatus: BookingStatus.CONFIRMED,
+          changedBy: cmd.changedBy,
+        },
+      }),
+    ]));
+
+    const event = new BookingConfirmedEvent({
+      bookingId: booking.id,
+      clientId: booking.clientId,
+      employeeId: booking.employeeId,
+      branchId: booking.branchId,
+      serviceId: booking.serviceId,
+      scheduledAt: booking.scheduledAt,
+      price: Number(booking.price),
+      currency: booking.currency,
+      couponCode: (booking as Record<string, unknown>).couponCode as string | null ?? null,
+      discountedPrice: (booking as Record<string, unknown>).discountedPrice
+        ? Number((booking as Record<string, unknown>).discountedPrice)
+        : null,
+      bookingType: booking.bookingType,
+    });
+    await this.eventBus.publish(event.eventName, event.toEnvelope());
+
+    if ((booking.bookingType as string) === 'ONLINE') {
+      try {
+        await this.createZoomMeeting.execute({
+          bookingId: cmd.bookingId,
+        });
+      } catch {
+        // Never throw from here; the handler already persists FAILED status internally for Zoom API errors.
+        // This catch handles unexpected non-Zoom exceptions (e.g. DB down during update).
+      }
+    }
+
+    return updated;
+  }
+}

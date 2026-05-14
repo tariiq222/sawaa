@@ -1,0 +1,122 @@
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: apps/backend/Dockerfile
+    container_name: sawa-backend
+    restart: unless-stopped
+    ports:
+      - "3450:5100"
+    environment:
+      # ── DB / cache / queue ──
+      DATABASE_URL: postgresql://deqah:deqah_dev_password@postgres:5432/deqah_dev
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      # ── Auth secrets ──
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_TTL: 30d
+      JWT_CLIENT_ACCESS_SECRET: ${JWT_CLIENT_ACCESS_SECRET}
+      JWT_CLIENT_REFRESH_SECRET: ${JWT_CLIENT_REFRESH_SECRET}
+      JWT_CLIENT_ACCESS_TTL: 15m
+      JWT_CLIENT_REFRESH_TTL: 30d
+      # ── Encryption keys (32-byte base64) ──
+      EMAIL_PROVIDER_ENCRYPTION_KEY: ${EMAIL_PROVIDER_ENCRYPTION_KEY}
+      SMS_PROVIDER_ENCRYPTION_KEY: ${SMS_PROVIDER_ENCRYPTION_KEY}
+      ZOOM_PROVIDER_ENCRYPTION_KEY: ${ZOOM_PROVIDER_ENCRYPTION_KEY}
+      MOYASAR_TENANT_ENCRYPTION_KEY: ${MOYASAR_TENANT_ENCRYPTION_KEY}
+      # ── External providers ──
+      AUTHENTICA_API_KEY: ${AUTHENTICA_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      MOYASAR_PLATFORM_SECRET_KEY: ${MOYASAR_PLATFORM_SECRET_KEY}
+      MOYASAR_PLATFORM_WEBHOOK_SECRET: ${MOYASAR_PLATFORM_WEBHOOK_SECRET}
+      # ── Zoho ──
+      ZOHO_PROVIDER_ENCRYPTION_KEY: ${ZOHO_PROVIDER_ENCRYPTION_KEY}
+      # ── Platform identity ──
+      PLATFORM_VAT_NUMBER: ${PLATFORM_VAT_NUMBER}
+      PLATFORM_COMPANY_NAME_AR: ${PLATFORM_COMPANY_NAME_AR}
+      PLATFORM_COMPANY_NAME_EN: ${PLATFORM_COMPANY_NAME_EN}
+      # ── Single-tenant config ──
+      TENANT_ENFORCEMENT: off
+      DEFAULT_ORGANIZATION_ID: 00000000-0000-0000-0000-000000000001
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET: sawa
+      PORT: 5100
+      NODE_ENV: development
+      BACKEND_URL: http://localhost:3450
+      CORS_ORIGINS: http://localhost:3451,http://localhost:3452
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5100/api/v1/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: sawa-postgres
+    restart: unless-stopped
+    ports:
+      - "3453:5432"
+    environment:
+      POSTGRES_USER: deqah
+      POSTGRES_PASSWORD: deqah_dev_password
+      POSTGRES_DB: deqah_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deqah -d deqah_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: sawa-redis
+    restart: unless-stopped
+    ports:
+      - "3454:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: sawa-minio
+    restart: unless-stopped
+    ports:
+      - "3455:9000"
+      - "3456:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

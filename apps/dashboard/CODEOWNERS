@@ -1,0 +1,81 @@
+# CODEOWNERS — Deqah Dashboard
+#
+# تحدد هذا الملف من يملك كل جزء من الكود.
+# عند فتح PR يمس هذه الملفات، يُطلب review من المالك تلقائياً.
+#
+# الصيغة: pattern  @owner1 @owner2
+# الأولوية: الأقاعد الأخيرة تأخذ الأولوية على ما قبلها.
+#
+# المالك الحالي: @tariq (lead engineer)
+# ─────────────────────────────────────────────────────
+
+# ── Global defaults ─────────────────────────────────
+*                                   @tariq
+
+# ── Architecture & Design System (high-sensitivity) ──
+ARCHITECTURE.md                     @tariq
+DESIGN-SYSTEM.md                    @tariq
+CONTRIBUTING.md                     @tariq
+CODEOWNERS                          @tariq
+eslint.config.mjs                   @tariq
+app/globals.css                     @tariq
+lib/ds.ts                           @tariq
+lib/query-keys.ts                   @tariq
+
+# ── Core Infrastructure ──────────────────────────────
+lib/api/                            @tariq
+lib/types/                          @tariq
+lib/schemas/                        @tariq
+hooks/                              @tariq
+components/ui/                      @tariq
+
+# ── Shared Feature Components ────────────────────────
+components/features/*.tsx           @tariq
+
+# ── Clinical Core Features ───────────────────────────
+# الميزات الأساسية للعيادة — حساسة للبيانات الطبية
+components/features/bookings/       @tariq
+components/features/patients/       @tariq
+components/features/practitioners/  @tariq
+app/(dashboard)/bookings/           @tariq
+app/(dashboard)/patients/           @tariq
+app/(dashboard)/practitioners/      @tariq
+
+# ── Financial Features ───────────────────────────────
+# الميزات المالية — حساسة للمعاملات والفواتير
+components/features/payments/       @tariq
+components/features/invoices/       @tariq
+components/features/coupons/        @tariq
+app/(dashboard)/payments/           @tariq
+app/(dashboard)/invoices/           @tariq
+app/(dashboard)/coupons/            @tariq
+
+# ── Configuration & Settings ─────────────────────────
+components/features/settings/       @tariq
+components/features/branding/        @tariq
+app/(dashboard)/settings/           @tariq
+app/(dashboard)/branding/           @tariq
+
+# ── Services & Catalog ───────────────────────────────
+components/features/services/       @tariq
+components/features/branches/       @tariq
+components/features/intake-forms/   @tariq
+app/(dashboard)/services/           @tariq
+app/(dashboard)/branches/           @tariq
+app/(dashboard)/intake-forms/       @tariq
+
+# ── AI & Communication ───────────────────────────────
+components/features/chatbot/        @tariq
+components/features/notifications/  @tariq
+app/(dashboard)/chatbot/            @tariq
+app/(dashboard)/notifications/      @tariq
+
+# ── Operations & Reports ─────────────────────────────
+components/features/reports/        @tariq
+components/features/activity-log/   @tariq
+app/(dashboard)/reports/            @tariq
+app/(dashboard)/activity-log/       @tariq
+
+# ── User Management ──────────────────────────────────
+components/features/users/          @tariq
+app/(dashboard)/users/              @tariq

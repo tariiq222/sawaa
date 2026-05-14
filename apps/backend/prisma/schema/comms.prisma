@@ -1,0 +1,324 @@
+// Comms BC — notifications, chat, email templates.
+// Phase 9 (p9-t*). SaaS-02f: organizationId added to all models.
+
+enum NotificationType {
+  BOOKING_CREATED
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  BOOKING_REMINDER
+  PAYMENT_RECEIVED
+  PAYMENT_FAILED
+  PAYMENT_COMPLETED
+  PAYMENT_REMINDER
+  WELCOME
+  GENERAL
+}
+
+enum RecipientType {
+  CLIENT
+  EMPLOYEE
+}
+
+enum ConversationStatus {
+  OPEN
+  CLOSED
+}
+
+enum MessageSenderType {
+  CLIENT
+  EMPLOYEE
+  AI
+}
+
+model Notification {
+  id             String           @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02f
+  recipientId    String
+  recipientType  RecipientType
+  type           NotificationType
+  title          String
+  body           String
+  metadata       Json?
+  isRead         Boolean          @default(false)
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([recipientId])
+  @@index([recipientId, isRead, createdAt]) // DB-06: replaces (recipientId, createdAt) — adds isRead to avoid heap filter
+  @@index([organizationId])
+}
+
+model ChatConversation {
+  id             String             @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02f
+  clientId       String
+  employeeId     String?
+  isAiChat       Boolean            @default(false)
+  status         ConversationStatus @default(OPEN)
+  lastMessageAt  DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  messages CommsChatMessage[]
+
+  @@index([clientId])
+  @@index([employeeId])
+  @@index([status, lastMessageAt])
+  @@index([organizationId])
+}
+
+model CommsChatMessage {
+  id             String            @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02f (denormalized from ChatConversation)
+  conversationId String
+  conversation   ChatConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderType     MessageSenderType
+  senderId       String?
+  body           String
+  isRead         Boolean           @default(false)
+  createdAt      DateTime          @default(now())
+
+  @@index([conversationId, createdAt])
+  @@index([organizationId])
+}
+
+enum ContactMessageStatus {
+  NEW
+  READ
+  REPLIED
+  ARCHIVED
+}
+
+model ContactMessage {
+  id             String               @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02f
+  name           String
+  phone          String?
+  email          String?
+  subject        String?
+  body           String
+  status         ContactMessageStatus @default(NEW)
+  createdAt      DateTime             @default(now())
+  readAt         DateTime?
+  archivedAt     DateTime?
+
+  @@index([status, createdAt])
+  @@index([organizationId])
+}
+
+model EmailTemplate {
+  id             String   @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02f — slug namespace now per-org
+  slug           String
+  name           String
+  subject        String
+  htmlBody       String
+  blocks         Json? // SaaS — block-builder source of truth; htmlBody is rendered from this
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+}
+
+// SaaS-02g-sms — per-tenant SMS provider configuration.
+
+enum SmsProvider {
+  NONE
+  UNIFONIC
+  TAQNYAT
+}
+
+enum SmsDeliveryStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  UNKNOWN
+}
+
+model OrganizationSmsConfig {
+  id                    String      @id @default(uuid())
+  organizationId        String @default("00000000-0000-0000-0000-000000000001")      @unique // SaaS-02g-sms — singleton per org
+  provider              SmsProvider @default(NONE)
+  senderId              String? // e.g. "Deqah" or per-tenant brand
+  // Encrypted credential payload (AES-GCM). JSON-stringified provider-specific fields.
+  credentialsCiphertext String? // base64(nonce || tag || ciphertext)
+  webhookSecret         String? // HMAC secret for DLR signature
+  lastTestAt            DateTime?
+  lastTestOk            Boolean?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  @@index([organizationId])
+}
+
+model SmsDelivery {
+  id                String            @id @default(uuid())
+  organizationId    String @default("00000000-0000-0000-0000-000000000001") // SaaS-02g-sms
+  provider          SmsProvider
+  toPhone           String
+  body              String
+  bodyHash          String // sha256, used for idempotency with retries
+  status            SmsDeliveryStatus @default(QUEUED)
+  providerMessageId String?           @unique
+  errorCode         String?
+  errorMessage      String?
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([organizationId])
+  @@index([status, createdAt]) // DB-06: replaces (status) + (createdAt) — composite for retry sweep
+}
+
+// SaaS-email-provider — per-tenant email provider configuration.
+
+enum EmailProvider {
+  NONE
+  SMTP
+  RESEND
+  SENDGRID
+  MAILCHIMP
+}
+
+model OrganizationEmailConfig {
+  id                    String        @id @default(uuid())
+  organizationId        String @default("00000000-0000-0000-0000-000000000001")        @unique // singleton per org
+  provider              EmailProvider @default(NONE)
+  senderName            String? // e.g. "عيادة الأمل"
+  senderEmail           String? // e.g. "noreply@clinic.com"
+  // Encrypted credential payload (AES-GCM). JSON-stringified provider-specific fields.
+  credentialsCiphertext String? // base64(nonce || tag || ciphertext)
+  lastTestAt            DateTime?
+  lastTestOk            Boolean?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([organizationId])
+}
+
+model FcmToken {
+  id             String   @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001")
+  clientId       String
+  token          String
+  platform       String   @db.VarChar(8)
+  lastSeenAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  @@unique([clientId, token], name: "fcm_token_per_client")
+  @@index([organizationId])
+  @@index([clientId])
+}
+
+// Notification delivery log — resilient multi-channel dispatch tracking.
+
+enum DeliveryChannel {
+  EMAIL
+  SMS
+  PUSH
+  IN_APP
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum NotificationPriority {
+  CRITICAL
+  STANDARD
+}
+
+enum NotificationSenderActor {
+  PLATFORM
+  TENANT
+  PLATFORM_FALLBACK
+}
+
+model NotificationDeliveryLog {
+  id             String                  @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001")
+  recipientId    String
+  type           NotificationType
+  priority       NotificationPriority    @default(STANDARD)
+  channel        DeliveryChannel
+  status         DeliveryStatus          @default(PENDING)
+  toAddress      String?
+  providerName   String?
+  senderActor    NotificationSenderActor @default(TENANT)
+  attempts       Int                     @default(0)
+  lastAttemptAt  DateTime?
+  sentAt         DateTime?
+  errorMessage   String?
+  jobId          String?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, type])
+  @@index([status, createdAt]) // DB-06: composite for retry sweep — replaces standalone (createdAt)
+}
+
+model PlatformEmailTemplate {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  subjectAr   String
+  subjectEn   String
+  htmlBody    String   @db.Text
+  blocks      Json?
+  isActive    Boolean  @default(true)
+  isLocked    Boolean  @default(false)
+  version     Int      @default(1)
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum PlatformEmailLogStatus {
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED_NOT_CONFIGURED
+}
+
+model PlatformEmailLog {
+  id                String                 @id @default(cuid())
+  organizationId    String?
+  templateSlug      String
+  toAddress         String
+  status            PlatformEmailLogStatus @default(QUEUED)
+  providerMessageId String?
+  errorMessage      String?
+  createdAt         DateTime               @default(now())
+  sentAt            DateTime?
+
+  @@index([organizationId])
+  @@index([templateSlug])
+  @@index([status, createdAt])
+}
+
+// Platform-level mail delivery audit. Intentionally NOT in SCOPED_MODELS — these are Deqah-side mails (welcome, trial, suspension), not tenant data.
+model PlatformMailDeliveryLog {
+  id           String    @id @default(cuid())
+  recipient    String
+  templateName String
+  attempt      Int       @default(0)
+  status       String // 'QUEUED' | 'SENT' | 'FAILED'
+  errorMessage String?
+  jobId        String?
+  sentAt       DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status, createdAt])
+  @@index([recipient])
+}

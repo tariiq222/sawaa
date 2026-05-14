@@ -1,0 +1,1 @@
+ALTER TABLE "PlatformSetting" ADD COLUMN "isSecret" BOOLEAN NOT NULL DEFAULT false;

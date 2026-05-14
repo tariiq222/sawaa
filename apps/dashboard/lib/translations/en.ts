@@ -1,0 +1,48 @@
+/**
+ * English translations — Deqah Dashboard
+ *
+ * This file is an index that merges all module translation files.
+ * Each module file is kept under 350 lines.
+ */
+
+import { enNav } from "./en.nav"
+import { enDashboard } from "./en.dashboard"
+import { enBookings } from "./en.bookings"
+import { enClients } from "./en.clients"
+import { enEmployees } from "./en.employees"
+import { enServices } from "./en.services"
+import { enFinance } from "./en.finance"
+import { enUsers } from "./en.users"
+import { enSettings } from "./en.settings"
+import { enMisc } from "./en.misc"
+import { enIntakeForms } from "./en.intake-forms"
+import { enBranding } from "./en.branding"
+import { enDepartments } from "./en.departments"
+import { enContent } from "./en.content"
+import { enSms } from "./en.sms"
+import { enOps } from "./en.ops"
+import { enZoom } from "./en.zoom"
+import { enZoho } from "./en.zoho"
+import { enRegister } from "./en.register"
+
+export const en: Record<string, string> = {
+  ...enNav,
+  ...enDashboard,
+  ...enBookings,
+  ...enClients,
+  ...enEmployees,
+  ...enServices,
+  ...enFinance,
+  ...enUsers,
+  ...enSettings,
+  ...enMisc,
+  ...enIntakeForms,
+  ...enBranding,
+  ...enDepartments,
+  ...enContent,
+  ...enSms,
+  ...enOps,
+  ...enZoom,
+  ...enZoho,
+  ...enRegister,
+}

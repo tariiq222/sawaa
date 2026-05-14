@@ -1,0 +1,1 @@
+# p1-t3 — redis.service.ts (also used for JWT blacklist, caching, rate limits)

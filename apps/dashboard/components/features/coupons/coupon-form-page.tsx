@@ -1,0 +1,144 @@
+"use client"
+
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { toast } from "sonner"
+import { useQuery } from "@tanstack/react-query"
+
+import { ListPageShell } from "@/components/features/list-page-shell"
+import { PageHeader } from "@/components/features/page-header"
+import { Breadcrumbs } from "@/components/features/breadcrumbs"
+import { Button } from "@deqah/ui"
+import { Skeleton } from "@deqah/ui"
+import { useCouponMutations } from "@/hooks/use-coupons"
+import { useLocale } from "@/components/locale-provider"
+import { fetchCoupon } from "@/lib/api/coupons"
+import { queryKeys } from "@/lib/query-keys"
+import { formatDateTimeLocalValue } from "@/lib/date"
+import { CouponFormFields } from "./coupon-form-fields"
+import { couponSchema, type CouponFormData } from "@/lib/schemas/coupon.schema"
+
+/* ─── Types ─── */
+
+type Props =
+  | { mode: "create" }
+  | { mode: "edit"; couponId: string }
+
+const DEFAULT_VALUES: CouponFormData = {
+  code: "", descriptionEn: "", descriptionAr: "",
+  discountType: "PERCENTAGE", discountValue: 10,
+  minOrderAmt: "", maxUses: "", maxUsesPerUser: "", expiresAt: "", isActive: true,
+}
+
+/* ─── Helpers ─── */
+
+function toDisplayValue(value: number, type: "PERCENTAGE" | "FIXED") {
+  return type === "FIXED" ? value / 100 : value
+}
+
+function toStorageValue(value: number, type: "PERCENTAGE" | "FIXED") {
+  return type === "FIXED" ? Math.round(value * 100) : value
+}
+
+/* ─── Coupon Form Page ─── */
+
+export function CouponFormPage(props: Props) {
+  const isEdit = props.mode === "edit"
+  const couponId = isEdit ? props.couponId : undefined
+
+  const router = useRouter()
+  const { t } = useLocale()
+  const { createMut, updateMut } = useCouponMutations()
+  const isPending = isEdit ? updateMut.isPending : createMut.isPending
+
+  const { data: coupon, isLoading } = useQuery({
+    queryKey: queryKeys.coupons.detail(couponId ?? ""),
+    queryFn: () => fetchCoupon(couponId!),
+    enabled: isEdit,
+  })
+
+  const form = useForm<CouponFormData>({
+    resolver: zodResolver(couponSchema),
+    defaultValues: DEFAULT_VALUES,
+  })
+
+  useEffect(() => {
+    if (!coupon) return
+    form.reset({
+      code: coupon.code,
+      descriptionEn: coupon.descriptionEn ?? "",
+      descriptionAr: coupon.descriptionAr ?? "",
+      discountType: coupon.discountType as "PERCENTAGE" | "FIXED",
+      discountValue: toDisplayValue(coupon.discountValue, coupon.discountType as "PERCENTAGE" | "FIXED"),
+      minOrderAmt: coupon.minOrderAmt != null ? coupon.minOrderAmt / 100 : "",
+      maxUses: coupon.maxUses ?? "",
+      maxUsesPerUser: coupon.maxUsesPerUser ?? "",
+      expiresAt: formatDateTimeLocalValue(coupon.expiresAt),
+      isActive: coupon.isActive,
+    })
+  }, [coupon, form])
+
+  const onSubmit = form.handleSubmit(async (data) => {
+    const payload = {
+      code: data.code.toUpperCase(),
+      descriptionEn: data.descriptionEn || undefined,
+      descriptionAr: data.descriptionAr || undefined,
+      discountType: data.discountType,
+      discountValue: toStorageValue(data.discountValue, data.discountType),
+      minOrderAmt: data.minOrderAmt !== "" && data.minOrderAmt !== undefined ? Math.round(Number(data.minOrderAmt) * 100) : undefined,
+      maxUses: data.maxUses !== "" && data.maxUses !== undefined ? Number(data.maxUses) : undefined,
+      maxUsesPerUser: data.maxUsesPerUser !== "" && data.maxUsesPerUser !== undefined ? Number(data.maxUsesPerUser) : undefined,
+      expiresAt: data.expiresAt || undefined,
+      isActive: data.isActive,
+    }
+    try {
+      if (isEdit) {
+        await updateMut.mutateAsync({ id: couponId!, ...payload })
+        toast.success(t("coupons.edit.success"))
+      } else {
+        await createMut.mutateAsync(payload)
+        toast.success(t("coupons.create.success"))
+      }
+      router.push("/coupons")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t(isEdit ? "coupons.edit.error" : "coupons.create.error"))
+    }
+  })
+
+  if (isEdit && isLoading) {
+    return (
+      <ListPageShell>
+        <Skeleton className="h-8 w-48" />
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={`skeleton-${i}`} className="h-48 w-full rounded-xl" />
+          ))}
+        </div>
+      </ListPageShell>
+    )
+  }
+
+  const title = isEdit ? t("coupons.edit.title") : t("coupons.create.title")
+  const description = isEdit ? (coupon?.code ?? "") : t("coupons.create.description")
+  const submitLabel = isPending
+    ? t(isEdit ? "coupons.edit.submitting" : "coupons.create.submitting")
+    : t(isEdit ? "coupons.edit.submit" : "coupons.create.submit")
+
+  return (
+    <ListPageShell>
+      <Breadcrumbs />
+      <PageHeader title={title} description={description} />
+      <form onSubmit={onSubmit} className="flex flex-col gap-6">
+        <CouponFormFields form={form} isEdit={isEdit} mode={props.mode} />
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={() => router.push("/coupons")}>
+            {t(isEdit ? "coupons.edit.cancel" : "coupons.create.cancel")}
+          </Button>
+          <Button type="submit" disabled={isPending}>{submitLabel}</Button>
+        </div>
+      </form>
+    </ListPageShell>
+  )
+}

@@ -1,0 +1,271 @@
+// Bookings BC — appointments, waitlist, group sessions.
+// Models added in Phase 8 (p8-t*). Cross-BC IDs (clientId, employeeId, serviceId, branchId)
+// are plain strings — no Prisma FK relations. Referential integrity is event-driven.
+
+enum BookingStatus {
+  PENDING
+  PENDING_GROUP_FILL
+  AWAITING_PAYMENT
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+  EXPIRED
+  CANCEL_REQUESTED
+}
+
+enum BookingType {
+  INDIVIDUAL
+  WALK_IN
+  GROUP
+  ONLINE
+}
+
+enum CancellationReason {
+  CLIENT_REQUESTED
+  EMPLOYEE_UNAVAILABLE
+  NO_SHOW
+  SYSTEM_EXPIRED
+  OTHER
+}
+
+enum WaitlistStatus {
+  WAITING
+  PROMOTED
+  EXPIRED
+  REMOVED
+}
+
+enum RecurringFrequency {
+  DAILY
+  WEEKLY
+  CUSTOM
+}
+
+enum ZoomMeetingStatus {
+  PENDING
+  CREATED
+  FAILED
+  CANCELLED
+}
+
+// ─── Booking ─────────────────────────────────────────────────────────────────
+
+model Booking {
+  id                   String              @id @default(uuid())
+  organizationId       String @default("00000000-0000-0000-0000-000000000001") // SaaS-02d
+  branchId             String
+  clientId             String
+  employeeId           String
+  serviceId            String
+  bookingType          BookingType         @default(INDIVIDUAL)
+  status               BookingStatus       @default(PENDING)
+  scheduledAt          DateTime
+  endsAt               DateTime // scheduledAt + durationMins — stored for overlap index queries
+  durationMins         Int
+  price                Decimal             @db.Decimal(12, 2)
+  currency             String              @default("SAR")
+  notes                String?
+  cancelReason         CancellationReason?
+  cancelNotes          String?
+  cancelledAt          DateTime?
+  confirmedAt          DateTime?
+  checkedInAt          DateTime?
+  completedAt          DateTime?
+  noShowAt             DateTime?
+  expiresAt            DateTime?
+  durationOptionId     String? // cross-BC ref to ServiceDurationOption — plain string, no FK
+  groupSessionId       String?
+  groupSession         GroupSession?       @relation(fields: [groupSessionId], references: [id], onDelete: SetNull)
+  recurringGroupId     String?
+  recurringPattern     RecurringFrequency?
+  payAtClinic          Boolean             @default(false)
+  couponCode           String?
+  discountedPrice      Decimal?            @db.Decimal(12, 2)
+  zoomMeetingId        String?
+  zoomJoinUrl          String?
+  zoomHostUrl          String?
+  zoomStartUrl         String?
+  zoomMeetingStatus    ZoomMeetingStatus?
+  zoomMeetingError     String?
+  zoomMeetingCreatedAt DateTime?
+  bookingNumber        Int
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  groupEnrollment GroupEnrollment?
+
+  @@unique([id, organizationId], name: "booking_id_org") // DB-05: composite unique for future composite FK
+  @@unique([organizationId, bookingNumber], name: "booking_org_number")
+  @@index([clientId])
+  // DB-07: @@index([employeeId]) dropped — redundant prefix of [employeeId, scheduledAt] and [employeeId, endsAt]
+  @@index([scheduledAt])
+  @@index([status])
+  @@index([employeeId, scheduledAt])
+  @@index([employeeId, endsAt])
+  @@index([recurringGroupId])
+  @@index([organizationId])
+  @@index([organizationId, scheduledAt])
+  @@index([organizationId, status])
+  @@index([organizationId, clientId])
+}
+
+// ─── Waitlist ─────────────────────────────────────────────────────────────────
+
+// Partial unique index on (organizationId, clientId, employeeId, serviceId) WHERE status = 'WAITING'
+// is enforced via migration 20260506110000_waitlist_unique_waiting (Prisma can't express partial uniques).
+model WaitlistEntry {
+  id             String         @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02d
+  clientId       String
+  employeeId     String
+  serviceId      String
+  branchId       String
+  preferredDate  DateTime?
+  status         WaitlistStatus @default(WAITING)
+  promotedAt     DateTime?
+  expiresAt      DateTime?
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([clientId])
+  @@index([employeeId])
+  @@index([status])
+  @@index([organizationId])
+}
+
+// ─── Group Session ────────────────────────────────────────────────────────────
+
+enum GroupSessionStatus {
+  OPEN
+  FULL
+  CANCELLED
+  COMPLETED
+}
+
+model GroupSession {
+  id                  String             @id @default(uuid())
+  organizationId      String @default("00000000-0000-0000-0000-000000000001") // SaaS-02d
+  branchId            String
+  employeeId          String
+  serviceId           String
+  title               String
+  descriptionAr       String?
+  descriptionEn       String?
+  scheduledAt         DateTime
+  durationMins        Int
+  maxCapacity         Int
+  enrolledCount       Int                @default(0)
+  price               Decimal            @db.Decimal(12, 2)
+  currency            String             @default("SAR")
+  status              GroupSessionStatus @default(OPEN)
+  isPublic            Boolean            @default(false)
+  publicDescriptionAr String?
+  publicDescriptionEn String?
+  waitlistEnabled     Boolean            @default(true)
+  waitlistCount       Int                @default(0)
+  cancelReason        String?
+  cancelledAt         DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  enrollments     GroupEnrollment[]
+  waitlistEntries GroupSessionWaitlist[]
+  bookings        Booking[]
+
+  @@unique([id, organizationId], name: "group_session_id_org") // DB-05
+  @@index([employeeId])
+  @@index([scheduledAt])
+  @@index([isPublic])
+  @@index([organizationId])
+}
+
+model GroupEnrollment {
+  id             String       @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02d (denormalized from GroupSession)
+  groupSessionId String
+  groupSession   GroupSession @relation(fields: [groupSessionId], references: [id], onDelete: Cascade)
+  clientId       String
+  bookingId      String       @unique
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  enrolledAt     DateTime     @default(now())
+
+  @@unique([groupSessionId, clientId])
+  @@index([clientId])
+  @@index([organizationId])
+}
+
+model GroupSessionWaitlist {
+  id             String       @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02d (denormalized from GroupSession)
+  groupSessionId String
+  groupSession   GroupSession @relation(fields: [groupSessionId], references: [id], onDelete: Cascade)
+  clientId       String
+  position       Int
+  createdAt      DateTime     @default(now())
+
+  @@unique([groupSessionId, clientId])
+  @@index([groupSessionId])
+  @@index([clientId])
+  @@index([organizationId])
+}
+
+// ─── BookingStatusLog ─────────────────────────────────────────────────────────
+
+model BookingStatusLog {
+  id             String         @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02d (denormalized from Booking)
+  bookingId      String
+  fromStatus     BookingStatus?
+  toStatus       BookingStatus
+  changedBy      String
+  reason         String?
+  createdAt      DateTime       @default(now())
+
+  @@index([bookingId])
+  @@index([createdAt])
+  @@index([organizationId])
+}
+
+// ─── BookingSettings ──────────────────────────────────────────────────────────
+
+enum RefundType {
+  FULL
+  PARTIAL
+  NONE
+}
+
+model BookingSettings {
+  id             String  @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02d
+  branchId       String? // null = global default; one settings row per branch
+
+  bufferMinutes           Int        @default(0)
+  freeCancelBeforeHours   Int        @default(24)
+  freeCancelRefundType    RefundType @default(FULL)
+  lateCancelRefundPercent Int        @default(0)
+
+  maxReschedulesPerBooking Int @default(3)
+
+  autoCompleteAfterHours Int @default(2)
+  autoNoShowAfterMinutes Int @default(30)
+
+  minBookingLeadMinutes Int @default(60)
+  maxAdvanceBookingDays Int @default(90)
+
+  waitlistEnabled    Boolean @default(true)
+  waitlistMaxPerSlot Int     @default(5)
+
+  payAtClinicEnabled    Boolean @default(false)
+  requireCancelApproval Boolean @default(false)
+  autoRefundOnCancel    Boolean @default(true)
+
+  clientRescheduleMinHoursBefore Int @default(24)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, branchId])
+  @@index([organizationId])
+}

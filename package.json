@@ -1,0 +1,51 @@
+{
+  "name": "sawa-family-counseling",
+  "private": true,
+  "packageManager": "pnpm@10.10.0",
+  "scripts": {
+    "dev:backend": "turbo run dev --filter=backend",
+    "dev:dashboard": "turbo run dev --filter=dashboard -- --port 5103",
+    "dev:website": "turbo run dev --filter=@deqah/website -- --port 5105",
+    "dev:all": "turbo run dev --filter=backend --filter=dashboard --filter=@deqah/website",
+    "build": "turbo run build --filter=backend --filter=dashboard --filter=@deqah/website",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "docker:up": "docker compose -f docker/docker-compose.yml --env-file docker/.env up -d",
+    "docker:down": "docker compose -f docker/docker-compose.yml --env-file docker/.env down",
+    "db:migrate": "pnpm --filter=backend run prisma:migrate:deploy",
+    "db:seed": "pnpm --filter=backend run seed",
+    "db:reset": "pnpm --filter=backend run prisma:migrate:deploy && pnpm --filter=backend run seed",
+    "openapi:sync": "pnpm --filter=backend run openapi:export && pnpm --filter=dashboard run openapi:generate",
+    "test:report": "py scripts/qa/generate_html_report.py",
+    "e2e:dashboard": "pnpm --filter dashboard e2e"
+  },
+  "devDependencies": {
+    "react-test-renderer": "19.2.4",
+    "turbo": "^2"
+  },
+  "pnpm": {
+    "overrides": {
+      "react": "19.2.4",
+      "react-dom": "19.2.4",
+      "react-test-renderer": "19.2.4",
+      "@types/react": "18.3.28",
+      "@types/react-dom": "18.3.7",
+      "fast-xml-builder@<1.1.7": ">=1.1.7",
+      "fast-uri@<3.1.2": ">=3.1.2"
+    },
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "prisma",
+      "@prisma/engines",
+      "esbuild",
+      "sharp",
+      "bcrypt",
+      "@swc/core",
+      "@biomejs/biome"
+    ]
+  },
+  "dependencies": {
+    "ts-morph": "^28.0.0"
+  }
+}

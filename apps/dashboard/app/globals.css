@@ -1,0 +1,422 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Scan shared UI package for Tailwind classes (SaaS-05a extraction) */
+@source "../../../packages/ui/src/**/*.{ts,tsx}";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-heading: var(--font-arabic);
+    --font-sans: var(--font-arabic);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-surface: var(--surface);
+    --color-surface-muted: var(--surface-muted);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary-light: var(--primary-light);
+    --color-primary-dark: var(--primary-dark);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-success: var(--success);
+    --color-warning: var(--warning);
+    --color-error: var(--error);
+    --color-info: var(--info);
+    --color-refunded: var(--refunded);
+    --color-border: var(--border);
+    --color-border-strong: var(--border-strong);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-overlay: var(--overlay);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-primary-ultra-light: var(--primary-ultra-light);
+    --color-accent-ultra-light: var(--accent-ultra-light);
+    --color-surface-solid: var(--surface-solid);
+
+    /* Avatar gradient colors */
+    --color-avatar-1-from: var(--avatar-1-from);
+    --color-avatar-1-to: var(--avatar-1-to);
+    --color-avatar-2-from: var(--avatar-2-from);
+    --color-avatar-2-to: var(--avatar-2-to);
+    --color-avatar-3-from: var(--avatar-3-from);
+    --color-avatar-3-to: var(--avatar-3-to);
+    --color-avatar-4-from: var(--avatar-4-from);
+    --color-avatar-4-to: var(--avatar-4-to);
+    --color-avatar-5-from: var(--avatar-5-from);
+    --color-avatar-5-to: var(--avatar-5-to);
+    --color-avatar-6-from: var(--avatar-6-from);
+    --color-avatar-6-to: var(--avatar-6-to);
+    --color-avatar-7-from: var(--avatar-7-from);
+    --color-avatar-7-to: var(--avatar-7-to);
+    --color-avatar-8-from: var(--avatar-8-from);
+    --color-avatar-8-to: var(--avatar-8-to);
+
+    /* Rank colors — decorative tokens for leaderboard/top-performers.
+       Not semantic. Do not use for UI states. */
+    --color-rank-gold-from: var(--rank-gold-from);
+    --color-rank-gold-to: var(--rank-gold-to);
+    --color-rank-gold-border: var(--rank-gold-border);
+    --color-rank-gold-badge-from: var(--rank-gold-badge-from);
+    --color-rank-gold-badge-to: var(--rank-gold-badge-to);
+    --color-rank-gold-badge-text: var(--rank-gold-badge-text);
+    --color-rank-silver-from: var(--rank-silver-from);
+    --color-rank-silver-to: var(--rank-silver-to);
+    --color-rank-silver-border: var(--rank-silver-border);
+    --color-rank-silver-badge-from: var(--rank-silver-badge-from);
+    --color-rank-silver-badge-to: var(--rank-silver-badge-to);
+    --color-rank-silver-badge-text: var(--rank-silver-badge-text);
+    --color-rank-bronze-from: var(--rank-bronze-from);
+    --color-rank-bronze-to: var(--rank-bronze-to);
+    --color-rank-bronze-border: var(--rank-bronze-border);
+    --color-rank-bronze-badge-from: var(--rank-bronze-badge-from);
+    --color-rank-bronze-badge-to: var(--rank-bronze-badge-to);
+
+    /* Radius — iOS-inspired */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --radius-2xl: 24px;
+    --radius-3xl: 28px;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.04);
+    --shadow-md: 0 8px 24px rgba(16, 24, 40, 0.06);
+    --shadow-lg: 0 20px 60px rgba(16, 24, 40, 0.08);
+    --shadow-primary: 0 4px 12px var(--shadow-primary-color);
+    --shadow-primary-hover: 0 6px 20px var(--shadow-primary-hover-color);
+
+    /* Glassmorphism — light mode uses solid white for maximum contrast */
+    --glass-blur: 0px;
+    --glass-bg: #FFFFFF;
+    --glass-bg-solid: #FFFFFF;
+    --glass-border: #E4E7EC;
+}
+
+/* ─── Light Theme ─── */
+:root {
+    --primary: #354FD8;
+    --primary-foreground: #FFFFFF;
+    --primary-light: #5B72E8;
+    --primary-dark: #2438B0;
+    --primary-ultra-light: rgba(53, 79, 216, 0.08);
+    --accent: #82CC17;
+    --accent-foreground: #1B2026;
+    --accent-ultra-light: rgba(130, 204, 23, 0.10);
+    --background: #F2F4F8;
+    --foreground: #1B2026;
+    --surface: #FFFFFF;
+    --surface-solid: #FFFFFF;
+    --surface-muted: #F7F9FC;
+    --muted: #F1F4F8;
+    --muted-foreground: #667085;
+    /* --card is a shadcn-compat alias of --surface. Do not diverge. */
+    --card: var(--surface);
+    --card-foreground: #1B2026;
+    --popover: #FFFFFF;
+    --popover-foreground: #1B2026;
+    --secondary: #F1F4F8;
+    --secondary-foreground: #1B2026;
+    --border: #E4E7EC;
+    --border-strong: #D0D5DD;
+    --input: #D0D5DD;
+    --ring: rgba(53, 79, 216, 0.28);
+    --overlay: rgba(27, 32, 38, 0.6);
+    /* State colors.
+       `--error` is the semantic source of truth for destructive/error states.
+       `--destructive` exists as a shadcn-compat alias and MUST always mirror --error. */
+    --success: #166534;
+    --warning: #B45309;
+    --error: #B91C1C;
+    --destructive: var(--error);
+    --info: #2563EB;
+    --refunded: #7C3AED;
+    --chart-1: #166534;
+    --chart-2: #2563EB;
+    --chart-3: #92400E;
+    --chart-4: #7C3AED;
+    --chart-5: #EC4899;
+    --sidebar: #FFFFFF;
+    --sidebar-foreground: #1B2026;
+    --sidebar-primary: #354FD8;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: rgba(53, 79, 216, 0.08);
+    --sidebar-accent-foreground: #354FD8;
+    --sidebar-border: #E4E7EC;
+    --sidebar-ring: rgba(53, 79, 216, 0.28);
+    --shadow-primary-color: rgba(53, 79, 216, 0.25);
+    --shadow-primary-hover-color: rgba(53, 79, 216, 0.3);
+    --blob-primary: transparent;
+    --blob-accent: transparent;
+
+    /* Decorative avatar gradient pairs (from → to) */
+    --avatar-1-from: #354FD8;
+    --avatar-1-to: #5B72E8;
+    --avatar-2-from: #EC4899;
+    --avatar-2-to: #F472B6;
+    --avatar-3-from: #16A34A;
+    --avatar-3-to: #34D399;
+    --avatar-4-from: #7C3AED;
+    --avatar-4-to: #9F67FF;
+    --avatar-5-from: #D97706;
+    --avatar-5-to: #FBBF24;
+    --avatar-6-from: #0891B2;
+    --avatar-6-to: #22D3EE;
+    --avatar-7-from: #DC2626;
+    --avatar-7-to: #F87171;
+    --avatar-8-from: #14B8A6;
+    --avatar-8-to: #5EEAD4;
+
+    /* Rank colors — gold / silver / bronze (decorative, leaderboard only) */
+    --rank-gold-from: #FFFBEB;
+    --rank-gold-to: #FEF3C7;
+    --rank-gold-border: rgba(252, 211, 77, 0.3);
+    --rank-gold-badge-from: #F59E0B;
+    --rank-gold-badge-to: #EAB308;
+    --rank-gold-badge-text: #451A03;
+    --rank-gold-shadow: rgba(255, 193, 7, 0.3);
+    --rank-silver-from: #F8FAFC;
+    --rank-silver-to: #E2E8F0;
+    --rank-silver-border: rgba(148, 163, 184, 0.35);
+    --rank-silver-badge-from: #94A3B8;
+    --rank-silver-badge-to: #64748B;
+    --rank-silver-badge-text: #1E293B;
+    --rank-silver-shadow: rgba(100, 116, 139, 0.3);
+    --rank-bronze-from: #FFF7ED;
+    --rank-bronze-to: #FFEDD5;
+    --rank-bronze-border: rgba(251, 146, 60, 0.3);
+    --rank-bronze-badge-from: #F97316;
+    --rank-bronze-badge-to: #D97706;
+    --rank-bronze-shadow: rgba(180, 83, 9, 0.3);
+}
+
+/* ─── Dark Theme ─── */
+.dark {
+    /* Brand vars (--primary, --accent, --ring, --sidebar-primary, etc.)
+       are injected dynamically by BrandingProvider via #deqah-dark-theme <style> tag.
+       Fallback defaults live in :root above and activate when no branding API is loaded. */
+    --background: #0F1117;
+    --foreground: #F1F4F8;
+    --surface: rgba(27, 32, 38, 0.72);
+    --surface-solid: #1B2026;
+    --surface-muted: #252B33;
+    --muted: #252B33;
+    --muted-foreground: #98A2B3;
+    /* --card is a shadcn-compat alias of --surface. Do not diverge. */
+    --card: var(--surface);
+    --card-foreground: #F1F4F8;
+    --popover: rgba(27, 32, 38, 0.92);
+    --popover-foreground: #F1F4F8;
+    --secondary: #252B33;
+    --secondary-foreground: #F1F4F8;
+    --border: rgba(255, 255, 255, 0.06);
+    --border-strong: rgba(255, 255, 255, 0.12);
+    --input: rgba(255, 255, 255, 0.08);
+    --overlay: rgba(0, 0, 0, 0.60);
+    /* State colors — dark theme.
+       `--destructive` alias must mirror --error (see :root for rationale). */
+    --success: #4ADE80;
+    --warning: #FBBF24;
+    --error: #F87171;
+    --destructive: var(--error);
+    --info: #60A5FA;
+    --refunded: #A78BFA;
+    --chart-1: #4ADE80;
+    --chart-2: #60A5FA;
+    --chart-3: #FBBF24;
+    --chart-4: #A78BFA;
+    --chart-5: #F472B6;
+    --sidebar: rgba(27, 32, 38, 0.72);
+    --sidebar-foreground: #F1F4F8;
+    --sidebar-border: rgba(255, 255, 255, 0.06);
+    --glass-bg: rgba(27, 32, 38, 0.72);
+    --glass-bg-solid: rgba(27, 32, 38, 0.88);
+    --glass-border: rgba(255, 255, 255, 0.06);
+
+    /* Decorative avatar gradient pairs (dark) */
+    --avatar-1-from: #9ADB40;
+    --avatar-1-to: #B0EF60;
+    --avatar-2-from: #F472B6;
+    --avatar-2-to: #FBCFE8;
+    --avatar-3-from: #4ADE80;
+    --avatar-3-to: #6EE7B7;
+    --avatar-4-from: #A78BFA;
+    --avatar-4-to: #C4B5FD;
+    --avatar-5-from: #FBBF24;
+    --avatar-5-to: #FDE68A;
+    --avatar-6-from: #22D3EE;
+    --avatar-6-to: #67E8F9;
+    --avatar-7-from: #F87171;
+    --avatar-7-to: #FCA5A5;
+    --avatar-8-from: #2DD4BF;
+    --avatar-8-to: #99F6E4;
+
+    /* Rank colors — gold / silver / bronze (dark) */
+    --rank-gold-from: rgba(251, 191, 36, 0.12);
+    --rank-gold-to: rgba(251, 191, 36, 0.06);
+    --rank-gold-border: rgba(251, 191, 36, 0.2);
+    --rank-gold-badge-from: #FBBF24;
+    --rank-gold-badge-to: #F59E0B;
+    --rank-gold-badge-text: #78350F;
+    --rank-gold-shadow: rgba(251, 191, 36, 0.3);
+    --rank-silver-from: rgba(148, 163, 184, 0.12);
+    --rank-silver-to: rgba(148, 163, 184, 0.06);
+    --rank-silver-border: rgba(148, 163, 184, 0.2);
+    --rank-silver-badge-from: #CBD5E1;
+    --rank-silver-badge-to: #94A3B8;
+    --rank-silver-badge-text: #0F172A;
+    --rank-silver-shadow: rgba(148, 163, 184, 0.3);
+    --rank-bronze-from: rgba(251, 146, 60, 0.12);
+    --rank-bronze-to: rgba(251, 146, 60, 0.06);
+    --rank-bronze-border: rgba(251, 146, 60, 0.2);
+    --rank-bronze-badge-from: #FB923C;
+    --rank-bronze-badge-to: #F97316;
+    --rank-bronze-shadow: rgba(234, 88, 12, 0.3);
+}
+
+@layer base {
+    * { @apply border-border outline-ring/50; }
+    body { @apply bg-background text-foreground; }
+    html { @apply font-sans; }
+    html[dir="rtl"] { text-align: right; }
+    html[dir="ltr"] { text-align: left; }
+}
+
+/* ─── Animated Background Blobs ─── */
+@layer base {
+    body::before,
+    body::after {
+        content: '';
+        position: fixed;
+        border-radius: 50%;
+        z-index: 0;
+        pointer-events: none;
+    }
+    body::before {
+        top: -120px;
+        left: -120px;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, var(--blob-primary, var(--primary-ultra-light)) 0%, transparent 70%);
+        will-change: transform;
+        transform: translateZ(0);
+    }
+    body::after {
+        bottom: -100px;
+        right: -100px;
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(circle, var(--blob-accent, var(--accent-ultra-light)) 0%, transparent 70%);
+        will-change: transform;
+        transform: translateZ(0);
+    }
+}
+
+@utility flip-icon {
+    [dir="rtl"] & { transform: scaleX(-1); }
+}
+
+@layer components {
+    /* ─── Glassmorphism Surface ─── */
+    .glass {
+        background: var(--glass-bg);
+        backdrop-filter: blur(var(--glass-blur));
+        -webkit-backdrop-filter: blur(var(--glass-blur));
+        border: 1px solid var(--glass-border);
+    }
+    .glass-solid {
+        background: var(--glass-bg-solid);
+        backdrop-filter: blur(var(--glass-blur));
+        -webkit-backdrop-filter: blur(var(--glass-blur));
+        border: 1px solid var(--glass-border);
+    }
+
+    /* ─── Card lift ─── */
+    .card-lift:hover {
+        box-shadow: var(--shadow-md);
+        border-color: var(--ring);
+    }
+
+    /* ─── Sidebar Active Item ─── */
+    .sidebar-active {
+        background: var(--primary-ultra-light);
+        color: var(--primary);
+        font-weight: 600;
+    }
+
+    /* ─── Toolbar Icon Hover ─── */
+    .toolbar-icon {
+        overflow: hidden;
+    }
+    .toolbar-icon:hover {
+        background: var(--sidebar-accent);
+    }
+    .toolbar-icon:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 1px;
+    }
+
+}
+
+
+/* ─── Rating Bar (dynamic width via CSS variable) ─── */
+.rating-bar {
+    width: var(--bar-w, 0%);
+}
+
+/* ─── Login Form Decoratives ─── */
+.login-card {
+    box-shadow: 0 8px 40px rgba(16, 24, 40, 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+
+.login-grid-pattern {
+    background-image:
+        linear-gradient(color-mix(in srgb, var(--primary) 10%, transparent) 1px, transparent 1px),
+        linear-gradient(90deg, color-mix(in srgb, var(--primary) 10%, transparent) 1px, transparent 1px);
+    background-size: 40px 40px;
+    -webkit-mask-image: radial-gradient(ellipse 90% 100% at 50% 0%, black 20%, transparent 100%);
+    mask-image: radial-gradient(ellipse 90% 100% at 50% 0%, black 20%, transparent 100%);
+}
+
+.login-blob {
+    background: radial-gradient(ellipse 90% 100% at 50% 0%, color-mix(in srgb, var(--primary) 10%, transparent) 0%, transparent 100%);
+}
+
+.login-brand-icon {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    box-shadow: var(--shadow-primary);
+}
+
+
+/* ─── Force English (Latin) Numerals ─── */
+/* Applied to all numeric displays: prices, counts, IDs, times, dates */
+/* Overrides Arabic-Indic digits that browsers may render in ar locale */
+/* Uses font-feature-settings to force lining numerals without breaking RTL layout */
+@utility font-numeric {
+    font-variant-numeric: lining-nums tabular-nums;
+    font-feature-settings: "lnum" 1, "tnum" 1;
+    font-family: "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+}

@@ -1,0 +1,449 @@
+import {
+  Controller, Post, Get, Patch, Body, HttpCode, HttpStatus, UnauthorizedException, UseGuards,
+  Req, Res, Param, UseInterceptors, UploadedFile, Ip,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiConsumes, ApiBody } from '@nestjs/swagger';
+import type { Request, Response } from 'express';
+import { Throttle } from '@nestjs/throttler';
+import * as bcrypt from 'bcryptjs';
+import { ConfigService } from '@nestjs/config';
+import {
+  ApiTags, ApiBearerAuth, ApiOperation, ApiOkResponse, ApiNoContentResponse, ApiResponse,
+  ApiCreatedResponse, ApiParam,
+} from '@nestjs/swagger';
+import { LoginHandler } from '../../modules/identity/login/login.handler';
+import { LogoutHandler } from '../../modules/identity/logout/logout.handler';
+import { LoginDto } from '../../modules/identity/login/login.dto';
+import { RefreshTokenDto } from '../../modules/identity/refresh-token/refresh-token.dto';
+import { LogoutDto } from '../../modules/identity/logout/logout.dto';
+import { RequestDashboardOtpHandler } from '../../modules/identity/request-dashboard-otp/request-dashboard-otp.handler';
+import { RequestDashboardOtpDto } from '../../modules/identity/request-dashboard-otp/request-dashboard-otp.dto';
+import { VerifyDashboardOtpHandler } from '../../modules/identity/verify-dashboard-otp/verify-dashboard-otp.handler';
+import { VerifyDashboardOtpDto } from '../../modules/identity/verify-dashboard-otp/verify-dashboard-otp.dto';
+import { ClsService } from 'nestjs-cls';
+import { PrismaService } from '../../infrastructure/database';
+import { TokenService } from '../../modules/identity/shared/token.service';
+import { DEFAULT_ORGANIZATION_ID, SUPER_ADMIN_CONTEXT_CLS_KEY } from '../../common/tenant';
+import { UserId } from '../../common/auth/user-id.decorator';
+import { JwtGuard } from '../../common/guards/jwt.guard';
+import { GetCurrentUserHandler } from '../../modules/identity/get-current-user/get-current-user.handler';
+import { GetCurrentUserQuery } from '../../modules/identity/get-current-user/get-current-user.query';
+import { ChangePasswordHandler } from '../../modules/identity/users/change-password.handler';
+
+import { TenantContextService } from '../../common/tenant/tenant-context.service';
+import { RequestPasswordResetHandler } from '../../modules/identity/user-password-reset/request-password-reset/request-password-reset.handler';
+import { RequestPasswordResetDto } from '../../modules/identity/user-password-reset/request-password-reset/request-password-reset.dto';
+import { PerformPasswordResetHandler } from '../../modules/identity/user-password-reset/perform-password-reset/perform-password-reset.handler';
+import { PerformPasswordResetDto } from '../../modules/identity/user-password-reset/perform-password-reset/perform-password-reset.dto';
+import { Public } from '../../common/guards/jwt.guard';
+import { AllowDuringSuspension } from '../../common/guards/allow-during-suspension.decorator';
+import { IsString, MinLength, Matches } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { ApiPublicResponses, ApiErrorDto } from '../../common/swagger';
+import { flattenPermissions } from '../../modules/identity/casl/flatten-permissions';
+import { Inject, BadRequestException } from '@nestjs/common';
+import { CAPTCHA_VERIFIER, CaptchaVerifier } from '../../modules/comms/contact-messages/captcha.verifier';
+import { PlatformSettingsService } from '../../modules/platform/settings/platform-settings.service';
+
+class ChangePasswordDto {
+  @ApiProperty({ description: 'Current account password', example: 'P@ssw0rd123' })
+  @IsString() currentPassword!: string;
+
+  @ApiProperty({ description: 'New password (min 8 characters)', example: 'NewP@ss456', format: 'password' })
+  @IsString()
+  @MinLength(8)
+  @Matches(/[A-Z]/, { message: 'newPassword must contain at least one uppercase letter' })
+  @Matches(/[0-9]/, { message: 'newPassword must contain at least one digit' })
+  newPassword!: string;
+}
+
+@ApiTags('Public / Auth')
+@ApiPublicResponses()
+@Controller('auth')
+export class AuthController {
+  constructor(
+    private readonly login: LoginHandler,
+    private readonly logout: LogoutHandler,
+    private readonly prisma: PrismaService,
+    private readonly tokens: TokenService,
+    private readonly getCurrentUser: GetCurrentUserHandler,
+    private readonly changePassword: ChangePasswordHandler,
+    private readonly config: ConfigService,
+    @Inject(CAPTCHA_VERIFIER) private readonly captcha: CaptchaVerifier,
+    private readonly requestPasswordReset: RequestPasswordResetHandler,
+    private readonly performPasswordReset: PerformPasswordResetHandler,
+    private readonly tenant: TenantContextService,
+    private readonly requestDashboardOtp: RequestDashboardOtpHandler,
+    private readonly verifyDashboardOtp: VerifyDashboardOtpHandler,
+    private readonly cls: ClsService,
+    private readonly settings: PlatformSettingsService,
+  ) {}
+
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Log in with email and password' })
+  @ApiOkResponse({
+    description: 'Access token with user profile (refresh token delivered as httpOnly cookie ck_refresh), or a 2FA challenge when super-admin login requires OTP',
+    schema: {
+      type: 'object',
+      properties: {
+        requiresOtp: { type: 'boolean', description: 'True when 2FA is required — use OTP flow to complete login' },
+        accessToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+        expiresIn: { type: 'number', example: 900 },
+        user: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            email: { type: 'string', format: 'email' },
+            name: { type: 'string' },
+            phone: { type: 'string', nullable: true },
+            gender: { type: 'string', nullable: true },
+            avatarUrl: { type: 'string', nullable: true },
+            isActive: { type: 'boolean' },
+            role: { type: 'string' },
+            isSuperAdmin: { type: 'boolean' },
+            firstName: { type: 'string' },
+            lastName: { type: 'string' },
+            organizationId: { type: 'string', format: 'uuid', nullable: true },
+            permissions: { type: 'array', items: { type: 'string' } },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Invalid credentials', type: ApiErrorDto })
+  @ApiResponse({ status: 429, description: 'Too many attempts, try again later', type: ApiErrorDto })
+  async loginEndpoint(
+    @Body() body: LoginDto,
+    @Ip() ip: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    if (!(await this.captcha.verify(body.hCaptchaToken))) {
+      throw new BadRequestException('Invalid captcha token');
+    }
+
+    const tokens = await this.login.execute({ email: body.email, password: body.password, ip });
+
+    // Host-based namespace enforcement (TAR-99)
+    const requestHost = String(req.headers.host ?? '').toLowerCase();
+    const adminHosts = (this.config.get<string>('ADMIN_HOSTS', 'admin.deqah.app'))
+      .split(',').map((h) => h.trim().toLowerCase());
+    const isAdminHost = adminHosts.includes(requestHost);
+
+    const user = await this.prisma.user.findUnique({
+      where: { email: body.email },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        gender: true,
+        avatarUrl: true,
+        isActive: true,
+        role: true,
+        isSuperAdmin: true,
+        customRoleId: true,
+        customRole: { include: { permissions: true } },
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (isAdminHost && !user?.isSuperAdmin) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    if (!isAdminHost && user?.isSuperAdmin) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // If 2FA required and user is super-admin → require OTP step
+    if (user?.isSuperAdmin) {
+      const require2fa = await this.settings.get<boolean>('security.twoFactor.required');
+      if (require2fa) {
+        return { requiresOtp: true };
+      }
+    }
+
+    if (!user) {
+      this.setRefreshCookie(res, tokens.refreshToken);
+      return {
+        accessToken: tokens.accessToken,
+        user,
+        expiresIn: this.parseTtlSeconds(this.config.get<string>('JWT_ACCESS_TTL') ?? '15m'),
+      };
+    }
+
+    // Match GetCurrentUserHandler: derive firstName/lastName from `name`
+    // by splitting on the first whitespace run.
+    const [firstName = '', ...rest] = (user.name ?? '').trim().split(/\s+/);
+
+    this.setRefreshCookie(res, tokens.refreshToken);
+    return {
+      accessToken: tokens.accessToken,
+      user: {
+        ...user,
+        firstName,
+        lastName: rest.join(' '),
+        isSuperAdmin: user.isSuperAdmin,
+        organizationId: DEFAULT_ORGANIZATION_ID,
+        permissions: flattenPermissions({
+          role: user.role,
+          customRole: user.customRole,
+        }),
+      },
+      expiresIn: this.parseTtlSeconds(this.config.get<string>('JWT_ACCESS_TTL') ?? '15m'),
+    };
+  }
+
+  @Post('refresh')
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Rotate a refresh token and issue new access token (refresh token rotated via cookie)' })
+  @ApiOkResponse({
+    description: 'New access token (rotated refresh token delivered as httpOnly cookie ck_refresh)',
+    schema: {
+      type: 'object',
+      properties: {
+        accessToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+        expiresIn: { type: 'number', example: 900 },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Invalid or expired refresh token', type: ApiErrorDto })
+  async refreshEndpoint(
+    @Body() body: RefreshTokenDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const rawToken = (req.cookies as Record<string, string>)?.['ck_refresh'] ?? body.refreshToken;
+    if (!rawToken) throw new UnauthorizedException('No refresh token');
+
+    // RefreshToken/Membership are tenant-scoped, but the refresh endpoint runs
+    // before any tenant context exists. Set SUPER_ADMIN_CONTEXT to allow the
+    // $allTenants reads/updates. Identity is enforced by tokenHash + bcrypt
+    // inside findActiveToken.
+    return this.cls.run(async () => {
+      this.cls.set(SUPER_ADMIN_CONTEXT_CLS_KEY, true);
+
+      const record = await this.findActiveToken(rawToken);
+
+      await this.prisma.$allTenants.refreshToken.update({
+        where: { id: record.id },
+        data: { revokedAt: new Date() },
+      });
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: record.userId },
+        include: { customRole: { include: { permissions: true } } },
+      });
+
+      if (!user || !user.isActive) throw new UnauthorizedException('User not found or inactive');
+
+      const orgId = record.organizationId ?? DEFAULT_ORGANIZATION_ID;
+
+      const tokens = await this.tokens.issueTokenPair(user, {
+        organizationId: orgId,
+        isSuperAdmin: user.isSuperAdmin,
+      });
+      this.setRefreshCookie(res, tokens.refreshToken);
+      return {
+        accessToken: tokens.accessToken,
+        expiresIn: this.parseTtlSeconds(this.config.get<string>('JWT_ACCESS_TTL') ?? '15m'),
+      };
+    });
+  }
+
+  @Post('logout')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Revoke a refresh token (log out)' })
+  @ApiNoContentResponse({ description: 'Token revoked; no body returned' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired refresh token', type: ApiErrorDto })
+  async logoutEndpoint(
+    @Body() body: LogoutDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const rawToken = (req.cookies as Record<string, string>)?.['ck_refresh'] ?? body.refreshToken;
+    res.clearCookie('ck_refresh', { path: '/' });
+    if (!rawToken) return;
+    // Same reasoning as refreshEndpoint — public path, no tenant context.
+    await this.cls.run(async () => {
+      this.cls.set(SUPER_ADMIN_CONTEXT_CLS_KEY, true);
+      const record = await this.findActiveToken(rawToken);
+      await this.logout.execute({ userId: record.userId });
+    });
+  }
+
+  @Get('me')
+  @UseGuards(JwtGuard)
+  @AllowDuringSuspension()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get the currently authenticated user' })
+  @ApiOkResponse({
+    description: 'Current user profile with role and permissions',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        email: { type: 'string', format: 'email' },
+        name: { type: 'string' },
+        phone: { type: 'string', nullable: true },
+        avatarUrl: { type: 'string', nullable: true },
+        role: { type: 'string' },
+        isSuperAdmin: { type: 'boolean' },
+        organizationId: { type: 'string', format: 'uuid', nullable: true },
+        permissions: { type: 'array', items: { type: 'string' } },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Missing or invalid JWT', type: ApiErrorDto })
+  async meEndpoint(@UserId() userId: string) {
+    const user = await this.getCurrentUser.execute({ userId } satisfies GetCurrentUserQuery);
+    return { ...user, permissions: flattenPermissions(user) };
+  }
+
+  @Patch('password/change')
+  @UseGuards(JwtGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change the current user\'s password' })
+  @ApiNoContentResponse({ description: 'Password changed successfully' })
+  @ApiResponse({ status: 401, description: 'Missing/invalid JWT or wrong current password', type: ApiErrorDto })
+  async changePasswordEndpoint(
+    @UserId() userId: string,
+    @Body() body: ChangePasswordDto,
+  ) {
+    await this.changePassword.execute({
+      userId,
+      currentPassword: body.currentPassword,
+      newPassword: body.newPassword,
+    });
+  }
+
+  @Public()
+  @Post('request-password-reset')
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Request a password reset email for a staff (User) account' })
+  @ApiNoContentResponse({ description: 'Reset email sent (response is identical regardless of whether the email exists)' })
+  async requestPasswordResetEndpoint(@Body() dto: RequestPasswordResetDto): Promise<void> {
+    await this.requestPasswordReset.execute(dto);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Reset staff (User) password using a token from the reset email' })
+  @ApiNoContentResponse({ description: 'Password reset successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired reset token', type: ApiErrorDto })
+  async performPasswordResetEndpoint(@Body() dto: PerformPasswordResetDto): Promise<void> {
+    await this.performPasswordReset.execute(dto);
+  }
+
+  @Public()
+  @Post('otp/request-dashboard')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request OTP for dashboard login' })
+  @ApiOkResponse({
+    description: 'OTP sent successfully',
+    schema: { properties: { success: { type: 'boolean' } } },
+  })
+  async requestDashboardOtpEndpoint(@Body() dto: RequestDashboardOtpDto): Promise<{ success: boolean }> {
+    return this.requestDashboardOtp.execute(dto);
+  }
+
+  @Public()
+  @Post('otp/verify-dashboard')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify OTP for dashboard login' })
+  @ApiOkResponse({
+    description: 'Access token with user profile (refresh token delivered as httpOnly cookie ck_refresh)',
+    schema: {
+      type: 'object',
+      properties: {
+        accessToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+        expiresIn: { type: 'number', example: 900 },
+        user: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            email: { type: 'string', format: 'email' },
+            name: { type: 'string' },
+            phone: { type: 'string', nullable: true },
+            gender: { type: 'string', nullable: true },
+            avatarUrl: { type: 'string', nullable: true },
+            isActive: { type: 'boolean' },
+            role: { type: 'string' },
+            isSuperAdmin: { type: 'boolean' },
+            firstName: { type: 'string' },
+            lastName: { type: 'string' },
+            organizationId: { type: 'string', format: 'uuid', nullable: true },
+            permissions: { type: 'array', items: { type: 'string' } },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Invalid OTP code', type: ApiErrorDto })
+  @ApiResponse({ status: 400, description: 'Invalid or expired code', type: ApiErrorDto })
+  async verifyDashboardOtpEndpoint(
+    @Body() dto: VerifyDashboardOtpDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.verifyDashboardOtp.execute(dto);
+    this.setRefreshCookie(res, result.refreshToken);
+    const { refreshToken: _rt, ...safeResult } = result;
+    return safeResult;
+  }
+
+  private setRefreshCookie(res: Response, token: string): void {
+    const ttlMs = this.parseTtlSeconds(
+      this.config.get<string>('JWT_REFRESH_TTL') ?? '30d',
+    ) * 1000;
+    res.cookie('ck_refresh', token, {
+      httpOnly: true,
+      secure: this.config.get('NODE_ENV') === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: ttlMs,
+    });
+  }
+
+  private parseTtlSeconds(ttl: string): number {
+    const match = /^(\d+)([smhd])$/.exec(ttl);
+    if (!match) return 900;
+    const n = parseInt(match[1], 10);
+    const multipliers: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400 };
+    return n * multipliers[match[2]];
+  }
+
+  // Uses tokenSelector (first 8 chars of the raw UUID) as an indexed DB filter
+  // so the bcrypt.compare runs on at most a handful of rows, not the full table.
+  //
+  // RefreshToken is in SCOPED_MODELS, but /auth/refresh and /auth/logout are
+  // public — there is no CLS tenant context yet (the whole point of refresh
+  // is that we are about to *issue* one). $allTenants requires the
+  // SUPER_ADMIN_CONTEXT_CLS_KEY flag, so callers must wrap this in
+  // `cls.run(() => { cls.set(SUPER_ADMIN_CONTEXT_CLS_KEY, true); ... })`.
+  // The bcrypt.compare below is the actual identity check.
+  private async findActiveToken(rawToken: string) {
+    const selector = rawToken.slice(0, 8);
+
+    const candidates = await this.prisma.$allTenants.refreshToken.findMany({
+      where: { tokenSelector: selector, revokedAt: null, expiresAt: { gt: new Date() } },
+    });
+
+    for (const c of candidates) {
+      if (await bcrypt.compare(rawToken, c.tokenHash)) return c;
+    }
+
+    throw new UnauthorizedException('Invalid or expired refresh token');
+  }
+}

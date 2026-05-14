@@ -1,0 +1,28 @@
+// Deqah Backend v2 — Prisma schema root
+//
+// Split-schema strategy (Prisma 7 schema folder — GA):
+//   - This folder contains one .prisma file per Bounded Context.
+//   - `datasource` and `generator` live ONLY here in main.prisma.
+//   - Each BC file declares its own models; NO cross-BC relations at
+//     the Prisma level. Referential integrity across contexts is
+//     enforced by domain events, not foreign keys.
+//
+// Datasource URL:
+//   - In Prisma 7 the connection URL no longer lives in schema.prisma.
+//     It is declared in ../../prisma.config.ts and consumed by the
+//     PrismaClient through the `@prisma/adapter-pg` driver adapter.
+//
+// Extensions:
+//   - pgvector → required by the AI BC (embeddings, semantic search).
+//
+// Changing this file? See docs/superpowers/specs/2026-04-11-backend-architecture-design.md §9.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [pgvector(map: "vector")]
+}

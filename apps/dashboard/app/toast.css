@@ -1,0 +1,130 @@
+/* ─── Deqah Toast Styles ─── */
+/* sonner unstyled=true — data-type is set directly on [data-sonner-toast] */
+
+[data-sonner-toaster] {
+  font-family: "IBM Plex Sans Arabic", sans-serif !important;
+}
+
+/* ─── Base ─── */
+.ck-toast {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-solid);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.07),
+    0 1px 4px rgba(0, 0, 0, 0.04);
+  color: var(--foreground);
+  min-width: 280px;
+  max-width: 400px;
+  overflow: hidden;
+}
+
+.ck-toast:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+
+/* ─── Tinted backgrounds ─── */
+.ck-toast[data-type="success"] {
+  border-color: color-mix(in srgb, var(--success) 22%, var(--border-strong));
+  background: color-mix(in srgb, var(--success) 5%, var(--surface-solid));
+}
+
+.ck-toast[data-type="info"] {
+  border-color: color-mix(in srgb, var(--info) 22%, var(--border-strong));
+  background: color-mix(in srgb, var(--info) 5%, var(--surface-solid));
+}
+
+.ck-toast[data-type="warning"] {
+  border-color: color-mix(in srgb, var(--warning) 22%, var(--border-strong));
+  background: color-mix(in srgb, var(--warning) 5%, var(--surface-solid));
+}
+
+.ck-toast[data-type="error"] {
+  border-color: color-mix(in srgb, var(--error) 22%, var(--border-strong));
+  background: color-mix(in srgb, var(--error) 5%, var(--surface-solid));
+}
+
+/* ─── Icon ─── */
+.ck-toast-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.ck-toast-icon-success { color: var(--success); }
+.ck-toast-icon-info    { color: var(--info); }
+.ck-toast-icon-warning { color: var(--warning); }
+.ck-toast-icon-error   { color: var(--error); }
+
+/* ─── Text ─── */
+.ck-toast-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--foreground);
+}
+
+.ck-toast-description {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* ─── Buttons ─── */
+.ck-toast-action {
+  margin-inline-start: auto;
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  cursor: pointer;
+}
+.ck-toast-action:hover { opacity: 0.85; }
+
+.ck-toast-cancel {
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+}
+.ck-toast-cancel:hover { background: var(--surface-muted); }
+
+/* ─── Dark mode ─── */
+.dark .ck-toast {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.35),
+    0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.dark .ck-toast[data-type="success"] {
+  background: color-mix(in srgb, var(--success) 12%, var(--surface-solid));
+}
+.dark .ck-toast[data-type="info"] {
+  background: color-mix(in srgb, var(--info) 12%, var(--surface-solid));
+}
+.dark .ck-toast[data-type="warning"] {
+  background: color-mix(in srgb, var(--warning) 12%, var(--surface-solid));
+}
+.dark .ck-toast[data-type="error"] {
+  background: color-mix(in srgb, var(--error) 12%, var(--surface-solid));
+}
+

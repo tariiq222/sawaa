@@ -1,0 +1,399 @@
+# Production overrides for Sawa (single-company). Legacy deployment identifiers
+# are intentionally left as env-driven values; do not change live IDs here.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d
+# Requires: .env.prod populated from .env.prod.example with real secrets.
+#
+# Env-var keys here mirror the Joi schema in apps/backend/src/config/env.validation.ts.
+# If a key is renamed in the schema, this file MUST follow — the backend aborts boot
+# on unknown/invalid required vars.
+
+services:
+  migrate:
+    build:
+      context: ..
+      dockerfile: apps/backend/Dockerfile
+    container_name: deqah-migrate
+    command: ["sh", "-c", "npx prisma migrate deploy --schema=prisma/schema"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    stop_grace_period: 40s
+    stop_signal: SIGTERM
+    restart: unless-stopped
+    environment:
+      # Runtime
+      NODE_ENV: production
+      PORT: "5100"
+
+      # Database (Prisma) — runtime uses the NOBYPASSRLS app role; migrate uses OWNER
+      DATABASE_URL: postgresql://${APP_DB_USER:-deqah_app}:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
+
+      # Redis (BullMQ + cache + token blacklist)
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_DB: "0"
+
+      # MinIO (object storage)
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: "9000"
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET:-deqah}
+      MINIO_USE_SSL: "${MINIO_USE_SSL:-false}"
+
+      # CORS — comma-separated, no trailing slash
+      CORS_ORIGINS: ${CORS_ORIGINS}
+
+      # Sentry — optional
+      SENTRY_DSN: ${SENTRY_DSN:-}
+
+      # JWT (Identity BC)
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-30d}
+      JWT_OTP_SECRET: ${JWT_OTP_SECRET}
+
+      # Client JWT — separate namespace for mobile/website clients
+      JWT_CLIENT_ACCESS_SECRET: ${JWT_CLIENT_ACCESS_SECRET}
+      JWT_CLIENT_ACCESS_TTL: ${JWT_CLIENT_ACCESS_TTL:-7d}
+
+      # SMTP (Comms BC)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+
+      # FCM (push notifications)
+      FCM_PROJECT_ID: ${FCM_PROJECT_ID:-}
+      FCM_CLIENT_EMAIL: ${FCM_CLIENT_EMAIL:-}
+      FCM_PRIVATE_KEY: ${FCM_PRIVATE_KEY:-}
+
+      # OpenAI / OpenRouter (AI BC)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENROUTER_CHAT_MODEL: ${OPENROUTER_CHAT_MODEL:-anthropic/claude-3.5-haiku}
+
+      # Single-company mode. Tenant isolation jobs/workflows are legacy Deqah SaaS.
+      TENANT_ENFORCEMENT: "${TENANT_ENFORCEMENT:-off}"
+      DEFAULT_ORGANIZATION_ID: ${DEFAULT_ORGANIZATION_ID:-00000000-0000-0000-0000-000000000001}
+
+      # Per-tenant SMS + Zoom credential encryption — both REQUIRED at boot
+      SMS_PROVIDER_ENCRYPTION_KEY: ${SMS_PROVIDER_ENCRYPTION_KEY}
+      ZOOM_PROVIDER_ENCRYPTION_KEY: ${ZOOM_PROVIDER_ENCRYPTION_KEY}
+      SMS_WEBHOOK_URL_BASE: ${SMS_WEBHOOK_URL_BASE:-}
+
+      # Legacy SaaS billing (disabled by default for Sawa single-company mode)
+      MOYASAR_PLATFORM_SECRET_KEY: ${MOYASAR_PLATFORM_SECRET_KEY:-}
+      MOYASAR_PLATFORM_WEBHOOK_SECRET: ${MOYASAR_PLATFORM_WEBHOOK_SECRET:-}
+      SAAS_TRIAL_DAYS: "${SAAS_TRIAL_DAYS:-14}"
+      SAAS_GRACE_PERIOD_DAYS: "${SAAS_GRACE_PERIOD_DAYS:-2}"
+      BILLING_CRON_ENABLED: "${BILLING_CRON_ENABLED:-false}"
+      PLATFORM_DEFAULT_PLAN_SLUG: ${PLATFORM_DEFAULT_PLAN_SLUG:-BASIC}
+
+      # Authentica (platform OTP)
+      AUTHENTICA_API_KEY: ${AUTHENTICA_API_KEY}
+      AUTHENTICA_BASE_URL: ${AUTHENTICA_BASE_URL:-https://api.authentica.sa}
+      AUTHENTICA_DEFAULT_TEMPLATE_ID: ${AUTHENTICA_DEFAULT_TEMPLATE_ID:-1}
+
+      # CAPTCHA (auth bot protection)
+      CAPTCHA_PROVIDER: ${CAPTCHA_PROVIDER:-hcaptcha}
+      HCAPTCHA_SECRET: ${HCAPTCHA_SECRET}
+
+      # Public site URL (used in emails/notifications)
+      PUBLIC_WEBSITE_URL: ${PUBLIC_WEBSITE_URL}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    expose:
+      - "5100"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5100/api/v1/health/live || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  dashboard:
+    build:
+      context: ..
+      dockerfile: apps/dashboard/Dockerfile
+    container_name: deqah-dashboard
+    stop_grace_period: 40s
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "5103"
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    depends_on:
+      backend:
+        condition: service_healthy
+    expose:
+      - "5103"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5103/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  website:
+    build:
+      context: ..
+      dockerfile: apps/website/Dockerfile
+    container_name: deqah-website
+    stop_grace_period: 40s
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "5105"
+    depends_on:
+      backend:
+        condition: service_healthy
+    expose:
+      - "5105"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5105/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  postgres:
+    stop_grace_period: 40s
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      APP_DB_USER: ${APP_DB_USER:-deqah_app}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-}
+    ports: !override []
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  redis:
+    stop_grace_period: 40s
+    restart: unless-stopped
+    volumes:
+      - ./redis.conf:/etc/redis/redis.conf:ro
+    # Use entrypoint to write requirepass into config to keep password out of process args
+    entrypoint: >
+      sh -c "
+        cp /etc/redis/redis.conf /tmp/redis-runtime.conf &&
+        echo 'requirepass ${REDIS_PASSWORD}' >> /tmp/redis-runtime.conf &&
+        exec redis-server /tmp/redis-runtime.conf
+      "
+    ports: !override []
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  minio:
+    stop_grace_period: 40s
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    ports: !override []
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  backup:
+    image: postgres:16-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY}
+    volumes:
+      - ./scripts/backup.sh:/scripts/backup.sh:ro
+      - backup_data:/backups
+    entrypoint: /bin/sh
+    command: >
+      -c "
+      chmod +x /scripts/backup.sh &&
+      echo '0 2 * * * /scripts/backup.sh >> /var/log/backup.log 2>&1' > /etc/crontabs/root &&
+      crond -f -l 2
+      "
+    stop_grace_period: 40s
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep crond || exit 1"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: deqah-nginx
+    stop_grace_period: 40s
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/proxy_params_common.conf:/etc/nginx/proxy_params_common.conf:ro
+      - ./nginx/security_headers.conf:/etc/nginx/security_headers.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      backend:
+        condition: service_healthy
+      dashboard:
+        condition: service_healthy
+      website:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/nginx-health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  minio-backup:
+    image: minio/mc:latest
+    container_name: deqah-minio-backup
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY}
+    volumes:
+      - ./scripts/backup-minio.sh:/scripts/backup-minio.sh:ro
+      - minio_backup_data:/backups
+    entrypoint: /bin/sh
+    command: >
+      -c "
+      chmod +x /scripts/backup-minio.sh &&
+      echo '30 2 * * * /scripts/backup-minio.sh >> /var/log/minio-backup.log 2>&1' | crontab - &&
+      crond -f -l 2
+      "
+    stop_grace_period: 40s
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep crond || exit 1"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+volumes:
+  backup_data:
+  minio_backup_data:
+  nginx_logs:

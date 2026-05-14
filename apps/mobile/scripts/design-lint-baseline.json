@@ -1,0 +1,1237 @@
+{
+  "generated": "2026-04-24",
+  "violations": [
+    {
+      "file": "app/(auth)/login.tsx",
+      "line": 303,
+      "rule": "no-hex-color",
+      "detail": "#E74C3C",
+      "level": "error"
+    },
+    {
+      "file": "app/(auth)/otp-verify.tsx",
+      "line": 18,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(auth)/otp-verify.tsx",
+      "line": 181,
+      "rule": "no-hex-color",
+      "detail": "#0037B0",
+      "level": "error"
+    },
+    {
+      "file": "app/(auth)/otp-verify.tsx",
+      "line": 181,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "app/(auth)/otp-verify.tsx",
+      "line": 19,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(auth)/otp-verify.tsx",
+      "line": 211,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "app/(auth)/otp-verify.tsx",
+      "line": 240,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED866",
+      "level": "error"
+    },
+    {
+      "file": "app/(auth)/otp-verify.tsx",
+      "line": 276,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "app/(auth)/register.tsx",
+      "line": 347,
+      "rule": "no-hex-color",
+      "detail": "#E74C3C",
+      "level": "error"
+    },
+    {
+      "file": "app/(auth)/welcome.tsx",
+      "line": 97,
+      "rule": "no-hex-color",
+      "detail": "#eaf8f4",
+      "level": "error"
+    },
+    {
+      "file": "app/(auth)/welcome.tsx",
+      "line": 98,
+      "rule": "no-hex-color",
+      "detail": "#b4e2da",
+      "level": "error"
+    },
+    {
+      "file": "app/(auth)/welcome.tsx",
+      "line": 99,
+      "rule": "no-hex-color",
+      "detail": "#7fc9bd",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/appointments.tsx",
+      "line": 37,
+      "rule": "no-hex-color",
+      "detail": "#e88f6c",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/appointments.tsx",
+      "line": 37,
+      "rule": "no-hex-color",
+      "detail": "#f7cbb7",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/appointments.tsx",
+      "line": 38,
+      "rule": "no-hex-color",
+      "detail": "#7aa8e0",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/appointments.tsx",
+      "line": 38,
+      "rule": "no-hex-color",
+      "detail": "#c9e4ff",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/appointments.tsx",
+      "line": 39,
+      "rule": "no-hex-color",
+      "detail": "#8c78d0",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/appointments.tsx",
+      "line": 39,
+      "rule": "no-hex-color",
+      "detail": "#d4c8f0",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/appointments.tsx",
+      "line": 40,
+      "rule": "no-hex-color",
+      "detail": "#e09b5a",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/appointments.tsx",
+      "line": 40,
+      "rule": "no-hex-color",
+      "detail": "#ffd5a8",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/appointments.tsx",
+      "line": 41,
+      "rule": "no-hex-color",
+      "detail": "#5aa893",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/appointments.tsx",
+      "line": 41,
+      "rule": "no-hex-color",
+      "detail": "#b8e4d6",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/chat.tsx",
+      "line": 9,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(client)/(tabs)/home.tsx",
+      "line": 16,
+      "rule": "no-hex-color",
+      "detail": "#8ca8c4",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/home.tsx",
+      "line": 17,
+      "rule": "no-hex-color",
+      "detail": "#a9b5a8",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/home.tsx",
+      "line": 18,
+      "rule": "no-hex-color",
+      "detail": "#7fc9a8",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/home.tsx",
+      "line": 19,
+      "rule": "no-hex-color",
+      "detail": "#f0b869",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/home.tsx",
+      "line": 20,
+      "rule": "no-hex-color",
+      "detail": "#e88aa6",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/home.tsx",
+      "line": 276,
+      "rule": "no-hex-color",
+      "detail": "#e88f6c",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/home.tsx",
+      "line": 276,
+      "rule": "no-hex-color",
+      "detail": "#f7cbb7",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/home.tsx",
+      "line": 277,
+      "rule": "no-hex-color",
+      "detail": "#7aa8e0",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/home.tsx",
+      "line": 277,
+      "rule": "no-hex-color",
+      "detail": "#c9e4ff",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/home.tsx",
+      "line": 278,
+      "rule": "no-hex-color",
+      "detail": "#8c78d0",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/home.tsx",
+      "line": 278,
+      "rule": "no-hex-color",
+      "detail": "#d4c8f0",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/home.tsx",
+      "line": 279,
+      "rule": "no-hex-color",
+      "detail": "#e09b5a",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/home.tsx",
+      "line": 279,
+      "rule": "no-hex-color",
+      "detail": "#ffd5a8",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/home.tsx",
+      "line": 388,
+      "rule": "no-hex-color",
+      "detail": "#4bd67a",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/(tabs)/home.tsx",
+      "line": 398,
+      "rule": "no-hex-color",
+      "detail": "#4bd67a",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/appointment/[id].tsx",
+      "line": 129,
+      "rule": "no-hex-color",
+      "detail": "#e88f6c",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/appointment/[id].tsx",
+      "line": 129,
+      "rule": "no-hex-color",
+      "detail": "#f7cbb7",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/appointment/[id].tsx",
+      "line": 260,
+      "rule": "no-hex-color",
+      "detail": "#4bd67a",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/clinic/[id].tsx",
+      "line": 43,
+      "rule": "no-hex-color",
+      "detail": "#2b8f82",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/clinic/[id].tsx",
+      "line": 43,
+      "rule": "no-hex-color",
+      "detail": "#5fbcae",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/clinic/[id].tsx",
+      "line": 43,
+      "rule": "no-hex-color",
+      "detail": "#9ad6cd",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/employee/[id].tsx",
+      "line": 102,
+      "rule": "no-hex-color",
+      "detail": "#e88f6c",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/employee/[id].tsx",
+      "line": 102,
+      "rule": "no-hex-color",
+      "detail": "#f7cbb7",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/employee/[id].tsx",
+      "line": 241,
+      "rule": "no-hex-color",
+      "detail": "#e88f6c",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/employee/[id].tsx",
+      "line": 247,
+      "rule": "no-hex-color",
+      "detail": "#4bd67a",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/rate/[bookingId].tsx",
+      "line": 98,
+      "rule": "no-hex-color",
+      "detail": "#e88f6c",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/rate/[bookingId].tsx",
+      "line": 98,
+      "rule": "no-hex-color",
+      "detail": "#f7cbb7",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/settings.tsx",
+      "line": 137,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED880",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/settings.tsx",
+      "line": 137,
+      "rule": "no-hex-color",
+      "detail": "#E2E8F0",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/settings.tsx",
+      "line": 138,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/settings.tsx",
+      "line": 138,
+      "rule": "no-hex-color",
+      "detail": "#CBD5E1",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/settings.tsx",
+      "line": 163,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED814",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/settings.tsx",
+      "line": 164,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/settings.tsx",
+      "line": 187,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED808",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/settings.tsx",
+      "line": 193,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/settings.tsx",
+      "line": 26,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(client)/settings.tsx",
+      "line": 27,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(client)/therapists.tsx",
+      "line": 19,
+      "rule": "no-hex-color",
+      "detail": "#e88f6c",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/therapists.tsx",
+      "line": 19,
+      "rule": "no-hex-color",
+      "detail": "#f7cbb7",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/therapists.tsx",
+      "line": 20,
+      "rule": "no-hex-color",
+      "detail": "#7fa8d9",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/therapists.tsx",
+      "line": 20,
+      "rule": "no-hex-color",
+      "detail": "#bed7f0",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/therapists.tsx",
+      "line": 21,
+      "rule": "no-hex-color",
+      "detail": "#c47db0",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/therapists.tsx",
+      "line": 21,
+      "rule": "no-hex-color",
+      "detail": "#e8c4dd",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/therapists.tsx",
+      "line": 22,
+      "rule": "no-hex-color",
+      "detail": "#7ac4a0",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/therapists.tsx",
+      "line": 22,
+      "rule": "no-hex-color",
+      "detail": "#c4e8d7",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/therapists.tsx",
+      "line": 23,
+      "rule": "no-hex-color",
+      "detail": "#e09b5a",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/therapists.tsx",
+      "line": 23,
+      "rule": "no-hex-color",
+      "detail": "#ffd5a8",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/therapists.tsx",
+      "line": 240,
+      "rule": "no-hex-color",
+      "detail": "#4bd67a",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/therapists.tsx",
+      "line": 260,
+      "rule": "no-hex-color",
+      "detail": "#1f8f3e",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/video-call.tsx",
+      "line": 213,
+      "rule": "no-hex-color",
+      "detail": "#e88f6c",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/video-call.tsx",
+      "line": 221,
+      "rule": "no-hex-color",
+      "detail": "#ff5b5b",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/video-call.tsx",
+      "line": 222,
+      "rule": "no-hex-color",
+      "detail": "#ff5b5b",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/video-call.tsx",
+      "line": 232,
+      "rule": "no-hex-color",
+      "detail": "#4bd67a",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/video-call.tsx",
+      "line": 264,
+      "rule": "no-hex-color",
+      "detail": "#ff3b30",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/video-call.tsx",
+      "line": 265,
+      "rule": "no-hex-color",
+      "detail": "#ff3b30",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/video-call.tsx",
+      "line": 83,
+      "rule": "no-hex-color",
+      "detail": "#e88f6c",
+      "level": "error"
+    },
+    {
+      "file": "app/(client)/video-call.tsx",
+      "line": 83,
+      "rule": "no-hex-color",
+      "detail": "#f7cbb7",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/(tabs)/_layout.tsx",
+      "line": 36,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/(tabs)/_layout.tsx",
+      "line": 37,
+      "rule": "no-hex-color",
+      "detail": "#64748B",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/(tabs)/calendar.tsx",
+      "line": 10,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(employee)/(tabs)/calendar.tsx",
+      "line": 11,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(employee)/(tabs)/calendar.tsx",
+      "line": 9,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(employee)/(tabs)/clients.tsx",
+      "line": 14,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(employee)/(tabs)/clients.tsx",
+      "line": 15,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(employee)/(tabs)/profile.tsx",
+      "line": 102,
+      "rule": "no-hex-color",
+      "detail": "#F59E0B",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/(tabs)/profile.tsx",
+      "line": 102,
+      "rule": "no-hex-color",
+      "detail": "#F59E0B",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/(tabs)/profile.tsx",
+      "line": 20,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(employee)/(tabs)/today.tsx",
+      "line": 21,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(employee)/(tabs)/today.tsx",
+      "line": 22,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(employee)/(tabs)/today.tsx",
+      "line": 37,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/(tabs)/today.tsx",
+      "line": 38,
+      "rule": "no-hex-color",
+      "detail": "#7C3AED",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/(tabs)/today.tsx",
+      "line": 39,
+      "rule": "no-hex-color",
+      "detail": "#059669",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/(tabs)/today.tsx",
+      "line": 74,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/(tabs)/today.tsx",
+      "line": 75,
+      "rule": "no-hex-color",
+      "detail": "#F59E0B",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/(tabs)/today.tsx",
+      "line": 76,
+      "rule": "no-hex-color",
+      "detail": "#059669",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/(tabs)/today.tsx",
+      "line": 87,
+      "rule": "no-hex-color",
+      "detail": "#0037B0",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/(tabs)/today.tsx",
+      "line": 87,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/appointment/[id].tsx",
+      "line": 173,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED814",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/appointment/[id].tsx",
+      "line": 174,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/appointment/[id].tsx",
+      "line": 181,
+      "rule": "no-hex-color",
+      "detail": "#F59E0B14",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/appointment/[id].tsx",
+      "line": 182,
+      "rule": "no-hex-color",
+      "detail": "#F59E0B",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/appointment/[id].tsx",
+      "line": 25,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(employee)/appointment/[id].tsx",
+      "line": 26,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(employee)/appointment/[id].tsx",
+      "line": 27,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(employee)/appointment/[id].tsx",
+      "line": 35,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/appointment/[id].tsx",
+      "line": 36,
+      "rule": "no-hex-color",
+      "detail": "#7C3AED",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/appointment/[id].tsx",
+      "line": 37,
+      "rule": "no-hex-color",
+      "detail": "#059669",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/appointment/[id].tsx",
+      "line": 63,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "app/(employee)/availability.tsx",
+      "line": 14,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(employee)/availability.tsx",
+      "line": 15,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(employee)/client/[id].tsx",
+      "line": 21,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/(employee)/client/[id].tsx",
+      "line": 22,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "app/index.tsx",
+      "line": 69,
+      "rule": "no-hex-color",
+      "detail": "#F7F9FB",
+      "level": "error"
+    },
+    {
+      "file": "app/index.tsx",
+      "line": 70,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "components/chat/chat-quick-actions.tsx",
+      "line": 24,
+      "rule": "no-literal-row-reverse",
+      "detail": "row-reverse",
+      "level": "error"
+    },
+    {
+      "file": "components/chat/chat-quick-actions.tsx",
+      "line": 4,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "components/features/AppointmentCard.tsx",
+      "line": 19,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "components/features/AppointmentCard.tsx",
+      "line": 20,
+      "rule": "no-hex-color",
+      "detail": "#7C3AED",
+      "level": "error"
+    },
+    {
+      "file": "components/features/AppointmentCard.tsx",
+      "line": 21,
+      "rule": "no-hex-color",
+      "detail": "#059669",
+      "level": "error"
+    },
+    {
+      "file": "components/features/AppointmentCard.tsx",
+      "line": 6,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "components/features/AppointmentCard.tsx",
+      "line": 85,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "components/features/NotificationItem.tsx",
+      "line": 146,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "components/features/NotificationItem.tsx",
+      "line": 17,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "components/features/NotificationItem.tsx",
+      "line": 33,
+      "rule": "no-hex-color",
+      "detail": "#059669",
+      "level": "error"
+    },
+    {
+      "file": "components/features/NotificationItem.tsx",
+      "line": 34,
+      "rule": "no-hex-color",
+      "detail": "#DC2626",
+      "level": "error"
+    },
+    {
+      "file": "components/features/NotificationItem.tsx",
+      "line": 35,
+      "rule": "no-hex-color",
+      "detail": "#F59E0B",
+      "level": "error"
+    },
+    {
+      "file": "components/features/NotificationItem.tsx",
+      "line": 36,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "components/features/NotificationItem.tsx",
+      "line": 37,
+      "rule": "no-hex-color",
+      "detail": "#7C3AED",
+      "level": "error"
+    },
+    {
+      "file": "components/features/NotificationItem.tsx",
+      "line": 38,
+      "rule": "no-hex-color",
+      "detail": "#DC2626",
+      "level": "error"
+    },
+    {
+      "file": "components/features/PractitionerCard.tsx",
+      "line": 109,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "components/features/PractitionerCard.tsx",
+      "line": 6,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "components/features/PractitionerCard.tsx",
+      "line": 61,
+      "rule": "no-hex-color",
+      "detail": "#F59E0B",
+      "level": "error"
+    },
+    {
+      "file": "components/features/PractitionerCard.tsx",
+      "line": 61,
+      "rule": "no-hex-color",
+      "detail": "#F59E0B",
+      "level": "error"
+    },
+    {
+      "file": "components/features/PractitionerCard.tsx",
+      "line": 64,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "components/features/PractitionerCard.tsx",
+      "line": 7,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "components/features/PractitionerCard.tsx",
+      "line": 97,
+      "rule": "no-hex-color",
+      "detail": "#F59E0B",
+      "level": "error"
+    },
+    {
+      "file": "components/features/PractitionerCard.tsx",
+      "line": 97,
+      "rule": "no-hex-color",
+      "detail": "#F59E0B",
+      "level": "error"
+    },
+    {
+      "file": "components/features/VideoCallScreen.tsx",
+      "line": 168,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "components/features/VideoCallScreen.tsx",
+      "line": 174,
+      "rule": "no-hex-color",
+      "detail": "#7C3AED",
+      "level": "error"
+    },
+    {
+      "file": "components/features/VideoCallScreen.tsx",
+      "line": 184,
+      "rule": "no-hex-color",
+      "detail": "#F59E0B24",
+      "level": "error"
+    },
+    {
+      "file": "components/features/VideoCallScreen.tsx",
+      "line": 185,
+      "rule": "no-hex-color",
+      "detail": "#F59E0B",
+      "level": "error"
+    },
+    {
+      "file": "components/features/VideoCallScreen.tsx",
+      "line": 189,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "components/features/VideoCallScreen.tsx",
+      "line": 200,
+      "rule": "no-hex-color",
+      "detail": "#DC262614",
+      "level": "error"
+    },
+    {
+      "file": "components/features/VideoCallScreen.tsx",
+      "line": 201,
+      "rule": "no-hex-color",
+      "detail": "#DC2626",
+      "level": "error"
+    },
+    {
+      "file": "components/features/VideoCallScreen.tsx",
+      "line": 209,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "components/features/VideoCallScreen.tsx",
+      "line": 24,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "components/features/VideoCallScreen.tsx",
+      "line": 25,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "components/features/VideoCallScreen.tsx",
+      "line": 253,
+      "rule": "no-hex-color",
+      "detail": "#64748B",
+      "level": "error"
+    },
+    {
+      "file": "components/features/VideoCallScreen.tsx",
+      "line": 26,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "components/ui/Avatar.tsx",
+      "line": 15,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/Avatar.tsx",
+      "line": 25,
+      "rule": "no-hex-color",
+      "detail": "#F2F4F6",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/EmailVerificationBanner.tsx",
+      "line": 39,
+      "rule": "no-hex-color",
+      "detail": "#F59E0B14",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/EmailVerificationBanner.tsx",
+      "line": 40,
+      "rule": "no-hex-color",
+      "detail": "#F59E0B",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/EmailVerificationBanner.tsx",
+      "line": 46,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/EmailVerificationBanner.tsx",
+      "line": 7,
+      "rule": "legacy-themed-import",
+      "detail": "Themed*",
+      "level": "warning"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 10,
+      "rule": "no-hex-color",
+      "detail": "#F97316",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 10,
+      "rule": "no-hex-color",
+      "detail": "#F973161A",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 11,
+      "rule": "no-hex-color",
+      "detail": "#84CC16",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 11,
+      "rule": "no-hex-color",
+      "detail": "#84CC161A",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 12,
+      "rule": "no-hex-color",
+      "detail": "#059669",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 12,
+      "rule": "no-hex-color",
+      "detail": "#0596691A",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 13,
+      "rule": "no-hex-color",
+      "detail": "#7C3AED",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 13,
+      "rule": "no-hex-color",
+      "detail": "#7C3AED1A",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 14,
+      "rule": "no-hex-color",
+      "detail": "#DC2626",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 14,
+      "rule": "no-hex-color",
+      "detail": "#DC26261A",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 6,
+      "rule": "no-hex-color",
+      "detail": "#F59E0B",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 6,
+      "rule": "no-hex-color",
+      "detail": "#F59E0B1A",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 7,
+      "rule": "no-hex-color",
+      "detail": "#059669",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 7,
+      "rule": "no-hex-color",
+      "detail": "#0596691A",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 8,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED8",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 8,
+      "rule": "no-hex-color",
+      "detail": "#1D4ED81A",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 9,
+      "rule": "no-hex-color",
+      "detail": "#DC2626",
+      "level": "error"
+    },
+    {
+      "file": "components/ui/StatusPill.tsx",
+      "line": 9,
+      "rule": "no-hex-color",
+      "detail": "#DC26261A",
+      "level": "error"
+    }
+  ]
+}

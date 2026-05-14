@@ -1,0 +1,8 @@
+packages:
+  - "apps/backend"
+  - "apps/dashboard"
+  - "apps/website"
+  - "packages/shared"
+  - "packages/api-client"
+  - "packages/ui"
+  - "packages/*"

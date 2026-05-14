@@ -1,0 +1,139 @@
+// Integrations BC — outbound third-party links.
+//
+// This file holds models that map Deqah-side records to identifiers in
+// external SaaS systems (Zoho Invoice, in this iteration). The OAuth
+// credentials themselves live in the existing `Integration` model
+// (platform.prisma:33) under provider="zoho-invoice"; the rows below are
+// link / mirror tables that exist purely for idempotency, status mirroring,
+// and webhook deduplication. They never carry billing source-of-truth —
+// Deqah + Moyasar remain authoritative for money state.
+
+// ─── Zoho contact link ──────────────────────────────────────────────────────
+//
+// Maps a Deqah Client → its Zoho Contact id within the tenant's own Zoho
+// organization. Created lazily on the first invoice we issue for that client.
+
+model ZohoContactLink {
+  id             String   @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001") // Deqah tenant
+  deqahPersonId  String // FK to Client.id (people.prisma)
+  zohoContactId  String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, deqahPersonId])
+  @@unique([organizationId, zohoContactId])
+  @@index([organizationId])
+}
+
+// ─── Zoho invoice link ──────────────────────────────────────────────────────
+//
+// Mirrors one Zoho invoice. Two scopes:
+//   - TENANT_CLIENT  → tenant invoicing its own client (issued in the tenant's
+//                      Zoho organization). `deqahInvoiceId` references the
+//                      local Invoice row (finance.prisma:37).
+//   - SAAS_TENANT    → Deqah invoicing a tenant for their SaaS subscription
+//                      (issued in Deqah's platform Zoho organization).
+//                      `deqahInvoiceId` references SubscriptionInvoice.id
+//                      (platform.prisma).
+//
+// `status` mirrors the Zoho-side status string — it is updated by webhooks
+// for visibility only and NEVER drives Deqah business logic.
+//
+// `invoiceUrl` is the Zoho hosted invoice page; `pdfUrl` is the rendered
+// PDF download link. Both are surfaced to the client (email/WhatsApp) and
+// to the tenant in the dashboard.
+
+model ZohoInvoiceLink {
+  id                 String    @id @default(uuid())
+  organizationId     String @default("00000000-0000-0000-0000-000000000001") // Deqah tenant (or platform org for SAAS_TENANT scope)
+  scope              String // 'TENANT_CLIENT' | 'SAAS_TENANT'
+  deqahInvoiceId     String?
+  deqahBookingId     String?
+  zohoInvoiceId      String    @unique
+  zohoCustomerId     String
+  zohoOrganizationId String
+  status             String // mirrors Zoho: draft|sent|paid|partially_paid|void|overdue
+  total              Decimal   @db.Decimal(12, 2)
+  currency           String    @default("SAR")
+  invoiceUrl         String?
+  pdfUrl             String?
+  viewedAt           DateTime?
+  lastSentAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  refunds ZohoCreditNoteLink[]
+
+  @@unique([organizationId, scope, deqahInvoiceId], name: "zoho_link_org_scope_invoice")
+  @@index([organizationId, status])
+  @@index([zohoCustomerId])
+  @@index([deqahInvoiceId])
+}
+
+// ─── Zoho credit-note link ─────────────────────────────────────────────────
+//
+// Mirrors a credit note we created in Zoho when a Moyasar refund settled.
+
+model ZohoCreditNoteLink {
+  id                   String          @id @default(uuid())
+  organizationId       String @default("00000000-0000-0000-0000-000000000001")
+  zohoInvoiceLinkId    String
+  zohoInvoiceLink      ZohoInvoiceLink @relation(fields: [zohoInvoiceLinkId], references: [id], onDelete: Cascade)
+  deqahRefundRequestId String?
+  zohoCreditNoteId     String          @unique
+  amount               Decimal         @db.Decimal(12, 2)
+  currency             String          @default("SAR")
+  status               String
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  @@unique([organizationId, deqahRefundRequestId])
+  @@index([organizationId])
+  @@index([zohoInvoiceLinkId])
+}
+
+// ─── Integration audit log ─────────────────────────────────────────────────
+//
+// Records every mutating Zoho API call (POST, PUT, DELETE) with a redacted
+// snapshot of the request and response. Used for compliance auditing and
+// debugging — never for business logic. Bodies are JSON-redacted: any key
+// whose name contains "token", "secret", "password", or "key" has its
+// value replaced with "***" before persistence.
+
+model IntegrationAuditLog {
+  id             String   @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001")
+  provider       String // 'zoho-invoice'
+  method         String // 'POST' | 'PUT' | 'DELETE'
+  path           String // e.g. '/invoice/v3/invoices'
+  statusCode     Int // HTTP status from Zoho
+  requestBody    Json? // redacted request payload
+  responseBody   Json? // redacted response (first 4 KB)
+  durationMs     Int // wall-clock time of the fetch
+  error          String? // error message if the call failed
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, provider])
+  @@index([organizationId, createdAt])
+  @@index([provider, method])
+}
+
+// ─── Zoho webhook event ────────────────────────────────────────────────────
+//
+// Stores every signature-verified Zoho webhook delivery for dedup + audit.
+// `processedAt` is set after the mirror-only handler completes.
+
+model ZohoWebhookEvent {
+  id             String    @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001")
+  scope          String // 'TENANT_CLIENT' | 'SAAS_TENANT'
+  eventId        String // Zoho-supplied event identifier
+  eventType      String
+  payload        Json
+  processedAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@unique([organizationId, eventId])
+  @@index([organizationId, eventType])
+}

@@ -1,0 +1,1 @@
+# p1-t2 — prisma.service.ts (wraps PrismaClient). Schema DSL lives at apps/backend/prisma/schema/.

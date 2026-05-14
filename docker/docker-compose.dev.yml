@@ -1,0 +1,50 @@
+# Dev override — adds hot-reload to the base stack.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# What it changes vs the base:
+#   - Stops the build at `deps` stage (node_modules only, no source copy).
+#   - Mounts apps/ + packages/ from host so edits reload instantly.
+#   - Runs nest --watch / next dev instead of the prod `node dist/main.js` / `next start`.
+#   - Keeps node_modules inside the container (anonymous named volume) so the host
+#     (which may have no node_modules) cannot shadow the Linux install.
+
+services:
+  backend:
+    build:
+      target: deps
+    environment:
+      NODE_ENV: development
+      THROTTLER_DISABLED: "true"
+    command: ["sh", "-c", "npx prisma generate && npx prisma migrate deploy && npx prisma db execute --file prisma/hooks/ensure_vector_indexes.sql && exec npx nest start --watch"]
+    working_dir: /app/apps/backend
+    volumes:
+      - ../apps/backend:/app/apps/backend
+      - ../packages:/app/packages
+      - backend_node_modules:/app/node_modules
+      - backend_prisma_cache:/app/apps/backend/node_modules
+
+  dashboard:
+    build:
+      target: deps
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_DEV_EMAIL: admin@deqah-test.com
+      NEXT_PUBLIC_DEV_PASSWORD: Admin@1234
+      # Browser → Next.js rewrites → backend. Public URL is what the host's
+      # browser can reach; internal URL is how Next.js (inside the container)
+      # reaches the backend service on the Docker network.
+      NEXT_PUBLIC_API_URL: http://localhost:5100/api/v1
+      INTERNAL_API_URL: http://backend:5100/api/v1
+    command: ["sh", "-c", "exec npx next dev --turbopack -p 5103 -H 0.0.0.0"]
+    working_dir: /app/apps/dashboard
+    volumes:
+      - ../apps/dashboard:/app/apps/dashboard
+      - ../packages:/app/packages
+      - dashboard_node_modules:/app/node_modules
+      - dashboard_next_cache:/app/apps/dashboard/.next
+
+volumes:
+  backend_node_modules:
+  backend_prisma_cache:
+  dashboard_node_modules:
+  dashboard_next_cache:

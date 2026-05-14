@@ -1,0 +1,326 @@
+"use client"
+
+import { useState, useEffect, useMemo, useRef } from "react"
+import { toast } from "sonner"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Clock01Icon } from "@hugeicons/core-free-icons"
+import { Card, CardContent } from "@deqah/ui"
+import { Button } from "@deqah/ui"
+import { Switch } from "@deqah/ui"
+import { Input } from "@deqah/ui"
+import { Label } from "@deqah/ui"
+import { Skeleton } from "@deqah/ui"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@deqah/ui"
+import { cn } from "@/lib/utils"
+import type { OrganizationHour } from "@/lib/api/organization"
+import { useOrganizationHours, useOrganizationHoursMutation } from "@/hooks/use-organization-settings"
+import { HolidaysSection } from "./holidays-section"
+import { useOrganizationConfig } from "@/hooks/use-organization-config"
+import { useLocale } from "@/components/locale-provider"
+import { useBranches } from "@/hooks/use-branches"
+
+/* ─── Constants ─── */
+
+const DAYS_BASE = [
+  { value: 0, en: "Sunday",    tKey: "settings.day.sunday" },
+  { value: 1, en: "Monday",    tKey: "settings.day.monday" },
+  { value: 2, en: "Tuesday",   tKey: "settings.day.tuesday" },
+  { value: 3, en: "Wednesday", tKey: "settings.day.wednesday" },
+  { value: 4, en: "Thursday",  tKey: "settings.day.thursday" },
+  { value: 5, en: "Friday",    tKey: "settings.day.friday" },
+  { value: 6, en: "Saturday",  tKey: "settings.day.saturday" },
+]
+
+function getOrderedDays(weekStart: 0 | 1) {
+  if (weekStart === 1) return [...DAYS_BASE.slice(1), DAYS_BASE[0]]
+  return DAYS_BASE
+}
+
+function buildDefaultHours(days: typeof DAYS_BASE): OrganizationHour[] {
+  return days.map((d) => ({
+    dayOfWeek: d.value,
+    startTime: "09:00",
+    endTime: "17:00",
+    isActive: d.value >= 0 && d.value <= 4,
+  }))
+}
+
+/* ─── Props ─── */
+
+interface Props {
+  t: (key: string) => string
+}
+
+type TabId = "hours" | "holidays"
+
+/* ─── Working Hours Panel ─── */
+
+function WorkingHoursPanel({ t, branchId }: Props & { branchId: string }) {
+  const { weekStartDayNumber } = useOrganizationConfig()
+  const orderedDays = useMemo(() => getOrderedDays(weekStartDayNumber), [weekStartDayNumber])
+  const [hours, setHours] = useState<OrganizationHour[]>(() => buildDefaultHours(orderedDays))
+  const hoursRef = useRef(hours)
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  const { data: serverHours, isLoading } = useOrganizationHours(branchId)
+  const mutation = useOrganizationHoursMutation()
+
+  useEffect(() => {
+    const defaults = buildDefaultHours(orderedDays)
+    const nextHours = !serverHours || serverHours.length === 0
+      ? defaults
+      : defaults.map((def) => {
+          const match = serverHours.find((s: OrganizationHour) => s.dayOfWeek === def.dayOfWeek)
+          return match ?? { ...def, isActive: false }
+        })
+    hoursRef.current = nextHours
+    // Sync hours grid with server data (and re-seed when weekStart day order changes).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHours(nextHours)
+  }, [serverHours, orderedDays])
+
+  const updateDay = (index: number, patch: Partial<OrganizationHour>) => {
+    setHours((prev) => {
+      const nextHours = prev.map((h, i) => (i === index ? { ...h, ...patch } : h))
+      hoursRef.current = nextHours
+      return nextHours
+    })
+  }
+
+  const handleSave = () => {
+    const timeInputs = Array.from(
+      panelRef.current?.querySelectorAll<HTMLInputElement>("input[data-time-field='true']") ?? [],
+    )
+    const currentHours = hoursRef.current.map((hour, index) => {
+      const startInput = timeInputs[index * 2]
+      const endInput = timeInputs[index * 2 + 1]
+      return {
+        ...hour,
+        startTime: startInput?.value || hour.startTime,
+        endTime: endInput?.value || hour.endTime,
+      }
+    })
+    hoursRef.current = currentHours
+    setHours(currentHours)
+    const payload = currentHours.map(({ dayOfWeek, startTime, endTime, isActive }) => ({
+      dayOfWeek, startTime, endTime, isActive,
+    }))
+    mutation.mutate({ branchId, hours: payload }, {
+      onSuccess: () => toast.success(t("settings.saved")),
+      onError: (err: Error) => toast.error(err.message),
+    })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 7 }).map((_, i) => <Skeleton key={`skeleton-${i}`} className="h-12 rounded-lg" />)}
+      </div>
+    )
+  }
+
+  return (
+    <div ref={panelRef} className="flex flex-col gap-3 h-full">
+      <div className="grid grid-cols-2 gap-3">
+        {hours.map((hour, index) => (
+          <Card key={hour.dayOfWeek} className="shadow-sm bg-surface">
+            <CardContent className="pt-2 pb-2">
+              <DayRow
+                day={orderedDays[index]}
+                hour={hour}
+                onChange={(patch) => updateDay(index, patch)}
+              />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="flex justify-end mt-auto pt-2">
+        <Button type="button" size="sm" disabled={mutation.isPending} onClick={handleSave}>
+          {t("settings.save")}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Day Row ─── */
+
+function DayRow({
+  day,
+  hour,
+  onChange,
+}: {
+  day: { value: number; en: string; tKey: string }
+  hour: OrganizationHour
+  onChange: (patch: Partial<OrganizationHour>) => void
+}) {
+  const { t } = useLocale()
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-between gap-4 rounded-md border p-3 transition-colors",
+        hour.isActive ? "border-border bg-surface" : "border-border bg-surface-muted"
+      )}
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <Switch checked={hour.isActive} onCheckedChange={(v) => onChange({ isActive: v })} />
+        <Label className="cursor-pointer select-none text-sm font-medium">
+          <span className={hour.isActive ? "text-foreground" : "text-muted-foreground"}>{t(day.tKey)}</span>
+        </Label>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <Input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-2][0-9]:[0-5][0-9]"
+          maxLength={5}
+          dir="ltr"
+          disabled={!hour.isActive}
+          value={hour.startTime}
+          data-time-field="true"
+          data-day={hour.dayOfWeek}
+          data-field="startTime"
+          onChange={(e) => onChange({ startTime: e.currentTarget.value })}
+          onInput={(e) => onChange({ startTime: e.currentTarget.value })}
+          onBlur={(e) => onChange({ startTime: e.currentTarget.value })}
+          className="h-8 w-28 text-center text-xs tabular-nums disabled:opacity-40"
+        />
+        <span className="text-xs text-muted-foreground">–</span>
+        <Input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-2][0-9]:[0-5][0-9]"
+          maxLength={5}
+          dir="ltr"
+          disabled={!hour.isActive}
+          value={hour.endTime}
+          data-time-field="true"
+          data-day={hour.dayOfWeek}
+          data-field="endTime"
+          onChange={(e) => onChange({ endTime: e.currentTarget.value })}
+          onInput={(e) => onChange({ endTime: e.currentTarget.value })}
+          onBlur={(e) => onChange({ endTime: e.currentTarget.value })}
+          className="h-8 w-28 text-center text-xs tabular-nums disabled:opacity-40"
+        />
+      </div>
+    </div>
+  )
+}
+
+/* ─── Holidays Panel ─── */
+
+function HolidaysPanel({ t, branchId }: Props & { branchId: string }) {
+  return (
+    <div className="flex flex-col gap-3 h-full">
+      <HolidaysSection t={t} branchId={branchId} />
+    </div>
+  )
+}
+
+/* ─── Main Component ─── */
+
+export function WorkingHoursTab({ t }: Props) {
+  const [activeTab, setActiveTab] = useState<TabId>("hours")
+  const { branches, isLoading: branchesLoading } = useBranches()
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("")
+
+  useEffect(() => {
+    if (selectedBranchId || branches.length === 0) return
+    const defaultBranch = branches.find((branch) => branch.isMain && branch.isActive)
+      ?? branches.find((branch) => branch.isActive)
+      ?? branches[0]
+    // Seed the selected branch once from server branches.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedBranchId(defaultBranch.id)
+  }, [branches, selectedBranchId])
+
+  const tabs: { id: TabId; label: string; desc: string }[] = [
+    {
+      id: "hours",
+      label: t("settings.workingHours"),
+      desc: t("settings.workingHoursDesc"),
+    },
+    {
+      id: "holidays",
+      label: t("settings.holidays"),
+      desc: t("settings.holidaysDesc"),
+    },
+  ]
+
+  return (
+    <Card className="overflow-hidden p-0">
+      <div className="flex min-h-[420px]">
+        {/* ── Sidebar ── */}
+        <div className="w-64 shrink-0 border-e border-border bg-surface-muted flex flex-col">
+          <div className="px-4 py-3 border-b border-border">
+            <div className="flex items-center gap-2">
+              <HugeiconsIcon icon={Clock01Icon} size={14} className="text-muted-foreground" />
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                {t("settings.tabs.hours")}
+              </p>
+            </div>
+          </div>
+          <div role="tablist" className="flex-1 p-3 space-y-1.5">
+            {tabs.map((tab) => (
+              <div
+                key={tab.id}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                tabIndex={0}
+                onClick={() => setActiveTab(tab.id)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setActiveTab(tab.id) }}
+                className={cn(
+                  "w-full rounded-lg px-3 py-2.5 cursor-pointer select-none transition-all",
+                  activeTab === tab.id
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
+                )}
+              >
+                <p className="text-sm font-medium truncate leading-tight">{tab.label}</p>
+                {activeTab === tab.id && (
+                  <p className="text-xs mt-0.5 line-clamp-2 leading-tight opacity-80">{tab.desc}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Content ── */}
+        <div className="flex-1 p-5 overflow-y-auto bg-surface-muted/50 flex flex-col gap-4">
+          {branchesLoading ? (
+            <Skeleton className="h-10 w-64 rounded-lg" />
+          ) : branches.length === 0 ? (
+            <div className="flex h-full min-h-[260px] items-center justify-center text-sm text-muted-foreground">
+              {t("settings.branches.emptyForHours")}
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-end">
+                <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                  <SelectTrigger className="w-64">
+                    <SelectValue placeholder={t("settings.branches.selectForHours")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        {branch.nameAr || branch.nameEn}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {activeTab === "hours" && selectedBranchId && <WorkingHoursPanel t={t} branchId={selectedBranchId} />}
+              {activeTab === "holidays" && selectedBranchId && <HolidaysPanel t={t} branchId={selectedBranchId} />}
+            </>
+          )}
+        </div>
+      </div>
+    </Card>
+  )
+}

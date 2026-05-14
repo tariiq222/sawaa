@@ -1,0 +1,95 @@
+// AI BC — knowledge base, embeddings (pgvector), RAG chat sessions.
+// Uses the `vector` type from pgvector declared in main.prisma.
+// SaaS-02f: ChatSession + ChatMessage scoped; ChatbotConfig converted to org singleton.
+// SaaS-02g: KnowledgeDocument + DocumentChunk scoped.
+
+enum DocumentStatus {
+  PENDING
+  EMBEDDED
+  FAILED
+}
+
+// ─── Knowledge Base ───────────────────────────────────────────────────────────
+
+model KnowledgeDocument {
+  id             String         @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02g
+  title          String
+  sourceType     String // "manual" | "url" | "file"
+  sourceRef      String? // URL or MinIO object key
+  status         DocumentStatus @default(PENDING)
+  metadata       Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  chunks DocumentChunk[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model DocumentChunk {
+  id             String                       @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02g (denormalized from KnowledgeDocument)
+  documentId     String
+  content        String
+  embedding      Unsupported("vector(1536)")?
+  chunkIndex     Int
+  tokenCount     Int                          @default(0)
+  createdAt      DateTime                     @default(now())
+
+  document KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([organizationId])
+}
+
+// ─── Chat Sessions ────────────────────────────────────────────────────────────
+
+model ChatSession {
+  id             String   @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02f
+  clientId       String?
+  userId         String?
+  title          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  messages ChatMessage[]
+
+  @@index([createdAt])
+  @@index([clientId])
+  @@index([organizationId])
+}
+
+// ─── Chatbot Config ───────────────────────────────────────────────────────────
+
+model ChatbotConfig {
+  id                String   @id @default(uuid())
+  organizationId    String @default("00000000-0000-0000-0000-000000000001")   @unique // SaaS-02f — one config row per org
+  systemPromptAr    String?
+  systemPromptEn    String?
+  greetingAr        String?
+  greetingEn        String?
+  escalateToHumanAt Int? // message count threshold; null = never auto-escalate
+  settings          Json? // catchall for future keyed settings
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model ChatMessage {
+  id             String   @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001") // SaaS-02f (denormalized from ChatSession)
+  sessionId      String
+  role           String // "user" | "assistant" | "system"
+  content        String
+  tokensUsed     Int      @default(0)
+  model          String?
+  createdAt      DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@index([organizationId])
+}

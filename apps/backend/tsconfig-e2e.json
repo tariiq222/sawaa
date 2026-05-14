@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@deqah/shared": ["../../packages/shared/index.ts"],
+      "@deqah/shared/*": ["../../packages/shared/*"]
+    }
+  }
+}

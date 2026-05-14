@@ -1,0 +1,1 @@
+# BaseEvent contract (eventId, correlationId, source, version, occurredAt) + event-bus.service.ts

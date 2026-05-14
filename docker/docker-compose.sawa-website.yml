@@ -1,0 +1,26 @@
+# ⚠️ PAUSED 2026-05-08 — Sawa website is excluded from the production pipeline.
+# This compose file remains for local development only (run with `docker compose -f`).
+# To resume production builds: re-add `website` to .github/workflows/build-images.yml matrix
+# and uncomment the `website` service in docker/docker-compose.prod.yml.
+
+services:
+  website:
+    build:
+      context: ..
+      dockerfile: apps/website/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:5100
+    container_name: deqah-website
+    restart: unless-stopped
+    ports:
+      - "5104:5104"
+    environment:
+      NODE_ENV: production
+      PORT: "5104"
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_API_URL: http://localhost:5100
+      INTERNAL_API_URL: http://backend:5100
+      NEXT_TELEMETRY_DISABLED: "1"
+    depends_on:
+      backend:
+        condition: service_healthy

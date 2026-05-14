@@ -1,0 +1,172 @@
+/*
+ * Sawaa theme — design tokens
+ *
+ * Extends the brand tokens (--primary / --accent / --bg / --font-primary) emitted
+ * by <BrandingStyle /> with a full color scale + neutrals so the tempsawaa visual
+ * language (Apple-style glass + teal/navy/warm mix) maps cleanly to the clinic's
+ * dashboard-configured branding. Every hue ultimately derives from the branding
+ * primary/accent — swap those in the dashboard and the entire theme reflows.
+ */
+
+.theme-sawaa {
+  /* ═══ Primary scale (derived from --primary) ═══ */
+  --sw-primary: var(--primary);
+  --sw-primary-50:  color-mix(in srgb, var(--primary) 8%,  #ffffff);
+  --sw-primary-100: color-mix(in srgb, var(--primary) 18%, #ffffff);
+  --sw-primary-200: color-mix(in srgb, var(--primary) 35%, #ffffff);
+  --sw-primary-300: color-mix(in srgb, var(--primary) 55%, #ffffff);
+  --sw-primary-400: color-mix(in srgb, var(--primary) 78%, #ffffff);
+  --sw-primary-500: var(--primary);
+  --sw-primary-600: var(--primary-dark);
+  --sw-primary-700: color-mix(in srgb, var(--primary) 70%, #000000);
+  --sw-primary-800: color-mix(in srgb, var(--primary) 55%, #000000);
+  --sw-primary-900: color-mix(in srgb, var(--primary) 35%, #000000);
+
+  /* ═══ Secondary — deep navy (fixed; serves as heading/text container) ═══ */
+  --sw-secondary-50:  #EEF2F5;
+  --sw-secondary-100: #D4DDE3;
+  --sw-secondary-200: #A4B5BF;
+  --sw-secondary-500: #153245;
+  --sw-secondary-700: #0A2E3F;
+  --sw-secondary-800: #061E2A;
+  --sw-secondary-900: #03111A;
+
+  /* ═══ Tertiary scale (derived from --accent) ═══ */
+  --sw-tertiary-50:  color-mix(in srgb, var(--accent) 12%, #ffffff);
+  --sw-tertiary-100: color-mix(in srgb, var(--accent) 22%, #ffffff);
+  --sw-tertiary-300: color-mix(in srgb, var(--accent) 55%, #ffffff);
+  --sw-tertiary-400: color-mix(in srgb, var(--accent) 75%, #ffffff);
+  --sw-tertiary-500: var(--accent);
+  --sw-tertiary-600: var(--accent-dark);
+  --sw-tertiary-700: color-mix(in srgb, var(--accent) 60%, #000000);
+
+  /* ═══ Neutrals (fixed; not brand-controlled) ═══ */
+  --sw-neutral-0:   #FFFFFF;
+  --sw-neutral-50:  #F8FAFC;
+  --sw-neutral-100: #F1F5F9;
+  --sw-neutral-200: #E2E8F0;
+  --sw-neutral-300: #CBD5E1;
+  --sw-neutral-400: #94A3B8;
+  --sw-neutral-500: #64748B;
+  --sw-neutral-600: #475569;
+  --sw-neutral-700: #334155;
+  --sw-neutral-800: #1E293B;
+  --sw-neutral-900: #0F172A;
+
+  /* ═══ Surfaces / shadows ═══ */
+  --sw-cream: #F8FAFC;
+  --sw-heading: var(--sw-secondary-700);
+  --sw-body: #4B5D6B;
+
+  --sw-shadow-xs: 0 1px 2px 0 rgba(10, 46, 63, 0.04);
+  --sw-shadow-sm: 0 2px 4px -1px rgba(10, 46, 63, 0.05),
+                  0 1px 2px -1px rgba(10, 46, 63, 0.04);
+  --sw-shadow-md: 0 6px 14px -4px rgba(10, 46, 63, 0.08),
+                  0 2px 4px -2px rgba(10, 46, 63, 0.05);
+  --sw-shadow-lg: 0 14px 30px -8px rgba(10, 46, 63, 0.10),
+                  0 4px 8px -4px rgba(10, 46, 63, 0.06);
+  --sw-shadow-xl: 0 24px 48px -12px rgba(10, 46, 63, 0.14),
+                  0 8px 16px -8px rgba(10, 46, 63, 0.08);
+  --sw-shadow-2xl: 0 36px 64px -16px rgba(10, 46, 63, 0.18);
+  --sw-shadow-primary: 0 10px 24px -8px color-mix(in srgb, var(--primary) 35%, transparent),
+                       0 4px 8px -4px color-mix(in srgb, var(--primary) 18%, transparent);
+  --sw-shadow-primary-lg: 0 18px 40px -10px color-mix(in srgb, var(--primary) 45%, transparent),
+                          0 6px 12px -6px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+/* ═══ Page-wide base ═══ */
+.theme-sawaa {
+  min-height: 100vh;
+  background: var(--sw-cream);
+  color: var(--sw-body);
+  font-family: var(--font-primary);
+  overflow-x: hidden;
+}
+
+.theme-sawaa body,
+.theme-sawaa * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ═══ Reveal animation (replaces framer-motion) ═══ */
+.theme-sawaa .sw-reveal {
+  opacity: 0;
+  transform: translateY(36px);
+  transition: opacity 700ms ease-out, transform 700ms ease-out;
+  transition-delay: var(--sw-reveal-delay, 0ms);
+  will-change: transform, opacity;
+}
+
+.theme-sawaa .sw-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-sawaa .sw-reveal,
+  .theme-sawaa .sw-reveal.is-visible {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ═══ Float keyframes for decorative shapes ═══ */
+@keyframes sw-float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-20px) rotate(3deg); }
+}
+
+.theme-sawaa .sw-float-slow   { animation: sw-float-slow 20s ease-in-out infinite; }
+.theme-sawaa .sw-float-slow-r { animation: sw-float-slow 25s ease-in-out infinite reverse; }
+
+/* ═══ Section tinted backgrounds ═══ */
+.theme-sawaa .sw-section-mint {
+  background:
+    radial-gradient(ellipse 900px 500px at 20% 10%,
+      color-mix(in srgb, var(--primary) 10%, transparent) 0%, transparent 65%),
+    radial-gradient(ellipse 700px 500px at 80% 90%,
+      color-mix(in srgb, var(--sw-secondary-700) 4%, transparent) 0%, transparent 60%),
+    linear-gradient(180deg, #F1FBF9 0%, #F7FDFB 100%);
+}
+
+.theme-sawaa .sw-section-cream {
+  background:
+    radial-gradient(ellipse 800px 500px at 85% 20%,
+      color-mix(in srgb, var(--accent) 10%, transparent) 0%, transparent 60%),
+    radial-gradient(ellipse 700px 450px at 15% 80%,
+      color-mix(in srgb, var(--primary) 6%, transparent) 0%, transparent 60%),
+    linear-gradient(180deg, #FBF7F2 0%, #FDFAF6 100%);
+}
+
+/* ═══ Navbar glass ═══ */
+.theme-sawaa .sw-nav-glass {
+  backdrop-filter: blur(32px) saturate(220%) brightness(1.05);
+  -webkit-backdrop-filter: blur(32px) saturate(220%) brightness(1.05);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 10px 32px -8px rgba(10, 46, 63, 0.12),
+    0 2px 8px -2px rgba(10, 46, 63, 0.06),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.3);
+}
+
+/* ═══ Scrollbar ═══ */
+.theme-sawaa ::-webkit-scrollbar { width: 8px; }
+.theme-sawaa ::-webkit-scrollbar-track { background: transparent; }
+.theme-sawaa ::-webkit-scrollbar-thumb {
+  background: rgba(10, 46, 63, 0.12);
+  border-radius: 4px;
+}
+.theme-sawaa ::-webkit-scrollbar-thumb:hover { background: rgba(10, 46, 63, 0.22); }
+
+/* ═══ Selection ═══ */
+.theme-sawaa ::selection {
+  background: color-mix(in srgb, var(--primary) 25%, transparent);
+  color: var(--sw-secondary-700);
+}
+
+/* ═══ Utility: hide scrollbar for horizontal strip ═══ */
+.theme-sawaa .sw-no-scrollbar::-webkit-scrollbar { display: none; }
+.theme-sawaa .sw-no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }

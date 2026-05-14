@@ -1,0 +1,231 @@
+// People BC — clients, employees, availability, onboarding.
+// Models added in Phase 4 (p4-t*).
+
+// Gender is redeclared here independently — no cross-BC Prisma relations.
+// The generated enum name is `ClientGender` to avoid collision with `UserGender`.
+enum ClientGender {
+  MALE
+  FEMALE
+}
+
+enum ClientSource {
+  WALK_IN
+  ONLINE
+  REFERRAL
+}
+
+enum ClientAccountType {
+  FULL
+  WALK_IN
+}
+
+enum ClientBloodType {
+  A_POS
+  A_NEG
+  B_POS
+  B_NEG
+  AB_POS
+  AB_NEG
+  O_POS
+  O_NEG
+  UNKNOWN
+}
+
+model Client {
+  id                String            @id @default(uuid())
+  organizationId    String @default("00000000-0000-0000-0000-000000000001")
+  userId            String?
+  // Legacy single-name field kept in sync with first/middle/last on write.
+  // Downstream readers that still key off `name` keep working; new code reads the components.
+  name              String
+  firstName         String?
+  middleName        String?
+  lastName          String?
+  phone             String?
+  email             String?
+  emailVerified     DateTime?
+  phoneVerified     DateTime?
+  gender            ClientGender?
+  dateOfBirth       DateTime?
+  nationality       String?
+  nationalId        String?
+  emergencyName     String?
+  emergencyPhone    String?
+  bloodType         ClientBloodType?
+  allergies         String?
+  chronicConditions String?
+  avatarUrl         String?
+  notes             String?
+  source            ClientSource      @default(WALK_IN)
+  accountType       ClientAccountType @default(WALK_IN)
+  claimedAt         DateTime?
+  isActive          Boolean           @default(true)
+  deletedAt         DateTime?
+  passwordHash      String?
+  loginAttempts     Int               @default(0)
+  lockoutUntil      DateTime?
+  lastLoginAt       DateTime?
+  preferredLocale   String?           @db.VarChar(8)
+  pushEnabled       Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@unique([id, organizationId], name: "client_id_org") // DB-05
+  @@unique([organizationId, phone], name: "client_org_phone")
+  @@index([userId])
+  @@index([deletedAt])
+  @@index([phone])
+  @@index([organizationId])
+}
+
+enum EmployeeGender {
+  MALE
+  FEMALE
+}
+
+enum OnboardingStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+}
+
+// Cross-BC IDs (branchId, serviceId) are plain strings —
+// no Prisma FK relations to Clinic BC. Referential integrity is event-driven.
+model Employee {
+  id               String           @id @default(uuid())
+  organizationId   String @default("00000000-0000-0000-0000-000000000001")
+  userId           String?
+  name             String
+  nameEn           String?
+  nameAr           String?
+  title            String?
+  specialty        String?
+  specialtyAr      String?
+  phone            String?
+  email            String?
+  gender           EmployeeGender?
+  avatarUrl        String?
+  bio              String?
+  bioAr            String?
+  education        String?
+  educationAr      String?
+  experience       Int?
+  employmentType   EmploymentType   @default(FULL_TIME)
+  onboardingStatus OnboardingStatus @default(PENDING)
+  isActive         Boolean          @default(true)
+  slug             String?
+  isPublic         Boolean          @default(false)
+  publicBioAr      String?
+  publicBioEn      String?
+  publicImageUrl   String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  branches     EmployeeBranch[]
+  services     EmployeeService[]
+  availability EmployeeAvailability[]
+  exceptions   EmployeeAvailabilityException[]
+  breaks       EmployeeBreak[]
+
+  @@unique([id, organizationId], name: "employee_id_org") // DB-05
+  @@unique([organizationId, email], name: "employee_org_email")
+  @@unique([organizationId, slug], name: "employee_org_slug")
+  @@index([userId])
+  @@index([organizationId])
+}
+
+model EmployeeBranch {
+  id             String   @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001")
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  branchId       String
+
+  @@unique([employeeId, branchId])
+  @@index([employeeId])
+  @@index([organizationId])
+}
+
+model EmployeeService {
+  id             String   @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001")
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  serviceId      String
+
+  @@unique([employeeId, serviceId])
+  @@index([employeeId])
+  @@index([organizationId])
+}
+
+// Multiple rows per (employeeId, dayOfWeek) represent split shifts
+// (e.g. 09:00-13:00 then 16:00-21:00). The gap between shifts IS the break.
+// A missing dayOfWeek row = weekly off day.
+model EmployeeAvailability {
+  id             String   @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001")
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  dayOfWeek      Int
+  startTime      String
+  endTime        String
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([employeeId, dayOfWeek])
+  @@index([organizationId])
+}
+
+// Date-range exception — employee is off from startDate to endDate (inclusive).
+// Single-day leave: startDate == endDate. Annual leave: multi-day range.
+// endTime + isStartTimeOnly support partial-day leave (e.g. 2:00 PM to 5:00 PM).
+model EmployeeAvailabilityException {
+  id              String    @id @default(uuid())
+  organizationId  String @default("00000000-0000-0000-0000-000000000001")
+  employeeId      String
+  employee        Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  startDate       DateTime  @db.Date
+  endDate         DateTime  @db.Date
+  endTime         DateTime? // nullable — null means end of day (23:59:59.999)
+  isStartTimeOnly Boolean   @default(false) // when true, only startTime matters (full-day leave)
+  reason          String?
+  createdAt       DateTime  @default(now())
+
+  @@index([employeeId, startDate, endDate])
+  @@index([organizationId])
+}
+
+model EmployeeBreak {
+  id             String   @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001")
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  dayOfWeek      Int
+  startTime      String
+  endTime        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([employeeId, dayOfWeek])
+  @@index([organizationId])
+}
+
+// Password history for Client — prevents password reuse within N previous passwords.
+// Used for password reset/change flows to enforce history policy.
+model PasswordHistory {
+  id             String   @id @default(uuid())
+  organizationId String @default("00000000-0000-0000-0000-000000000001")
+  clientId       String
+  passwordHash   String
+  createdAt      DateTime @default(now())
+
+  @@index([clientId, createdAt])
+  @@index([organizationId])
+}

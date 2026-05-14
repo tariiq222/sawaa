@@ -1,0 +1,68 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { randomBytes, createHash } from 'crypto';
+import { PrismaService } from '../../../../infrastructure/database';
+import { SendEmailHandler } from '../../../comms/send-email/send-email.handler';
+import { RequestPasswordResetDto } from './request-password-reset.dto';
+import { maskEmail } from '../../../../common/helpers/mask-pii.helper';
+
+const TOKEN_TTL_MS = 30 * 60 * 1000;
+
+@Injectable()
+export class RequestPasswordResetHandler {
+  private readonly logger = new Logger(RequestPasswordResetHandler.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sendEmail: SendEmailHandler,
+    private readonly config: ConfigService,
+  ) {}
+
+  async execute(dto: RequestPasswordResetDto): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      select: { id: true, email: true, name: true, isActive: true },
+    });
+
+    if (!user || !user.isActive) {
+      this.logger.log('Password reset requested for unknown or inactive account');
+      return;
+    }
+
+    await this.prisma.passwordResetToken.updateMany({
+      where: { userId: user.id, consumedAt: null },
+      data: { consumedAt: new Date() },
+    });
+
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenSelector = rawToken.slice(0, 8);
+    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        tokenSelector,
+        expiresAt: new Date(Date.now() + TOKEN_TTL_MS),
+      },
+    });
+
+    const baseUrl =
+      this.config.get<string>('PASSWORD_RESET_BASE_URL') ??
+      this.config.get<string>('DASHBOARD_URL') ??
+      'http://localhost:5103';
+    const resetUrl = `${baseUrl}/reset-password?token=${rawToken}`;
+
+    await this.sendEmail.execute({
+      to: user.email,
+      templateSlug: 'user_password_reset',
+      vars: {
+        userName: user.name,
+        resetUrl,
+        subject: 'Reset your Deqah password',
+      },
+    });
+
+    this.logger.log(`Password reset email sent to ${maskEmail(user.email)}`);
+  }
+}
