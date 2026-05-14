@@ -9,7 +9,7 @@ import { EventBusService } from '../../../infrastructure/events';
 import { FileUploadedEvent } from '../events/file-uploaded.event';
 import { UploadFileDto } from './upload-file.dto';
 import { validateMagicBytes } from '../../../common/security/magic-byte-validator';
-import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
@@ -70,7 +70,7 @@ export class UploadFileHandler {
 
     const ext = extname(cmd.filename).toLowerCase();
     const safeFilename = cmd.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const organizationId = DEFAULT_ORG_ID;
     const storageKey = `${organizationId}/${randomUUID()}${ext}`;
 
     const url = await this.storage.uploadFile(this.defaultBucket, storageKey, buffer, cmd.mimetype);

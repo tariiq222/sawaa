@@ -1,8 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
-import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../../infrastructure/database';
-import { SUPER_ADMIN_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
 
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
 
@@ -12,7 +10,6 @@ export class BookingExpiryCron {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly cls: ClsService,
   ) {}
 
   async execute(): Promise<void> {
@@ -20,47 +17,43 @@ export class BookingExpiryCron {
   }
 
   private async enhancedExpire(): Promise<void> {
-    // SAFE: cron job running as platform-level op; sets SUPER_ADMIN_CONTEXT explicitly.
-    await this.cls.run(async () => {
-      this.cls.set(SUPER_ADMIN_CONTEXT_CLS_KEY, true);
-      this.logger.log('systemContext: booking-expiry tick');
+    this.logger.log('booking-expiry tick');
 
-      await withCronLeader(this.prisma, 'booking-expiry', async () => {
-        const now = new Date();
-        const stale = await this.prisma.$allTenants.booking.findMany({
-          where: {
-            expiresAt: { lt: now },
-            status: {
-              in: [
-                BookingStatus.PENDING,
-                BookingStatus.AWAITING_PAYMENT,
-                BookingStatus.PENDING_GROUP_FILL,
-              ],
-            },
+    await withCronLeader(this.prisma, 'booking-expiry', async () => {
+      const now = new Date();
+      const stale = await this.prisma.booking.findMany({
+        where: {
+          expiresAt: { lt: now },
+          status: {
+            in: [
+              BookingStatus.PENDING,
+              BookingStatus.AWAITING_PAYMENT,
+              BookingStatus.PENDING_GROUP_FILL,
+            ],
           },
-          select: { id: true, couponCode: true },
-        });
-        if (stale.length === 0) return;
-
-        const ids = stale.map((b) => b.id);
-        await this.prisma.$allTenants.booking.updateMany({
-          where: { id: { in: ids } },
-          data: { status: BookingStatus.EXPIRED },
-        });
-
-        for (const b of stale) {
-          if (!b.couponCode) continue;
-          await this.prisma.$allTenants.coupon.updateMany({
-            where: {
-              code: b.couponCode,
-              usedCount: { gt: 0 },
-            },
-            data: { usedCount: { decrement: 1 } },
-          });
-        }
-
-        this.logger.log(`expired ${ids.length} bookings`);
+        },
+        select: { id: true, couponCode: true },
       });
+      if (stale.length === 0) return;
+
+      const ids = stale.map((b) => b.id);
+      await this.prisma.booking.updateMany({
+        where: { id: { in: ids } },
+        data: { status: BookingStatus.EXPIRED },
+      });
+
+      for (const b of stale) {
+        if (!b.couponCode) continue;
+        await this.prisma.coupon.updateMany({
+          where: {
+            code: b.couponCode,
+            usedCount: { gt: 0 },
+          },
+          data: { usedCount: { decrement: 1 } },
+        });
+      }
+
+      this.logger.log(`expired ${ids.length} bookings`);
     });
   }
 }

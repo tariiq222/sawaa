@@ -346,20 +346,20 @@ describe('DashboardFinanceController (e2e)', () => {
 
   describe('PATCH /dashboard/finance/moyasar/config', () => {
     it('returns 200 on upsert', async () => {
-      mockUpsertMoyasarConfig.execute.mockResolvedValue({ publishableKey: 'pk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx' });
+      mockUpsertMoyasarConfig.execute.mockResolvedValue({ publishableKey: 'pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx' });
 
       const res = await request(app.getHttpServer())
         .patch('/dashboard/finance/moyasar/config')
         .set('Authorization', 'Bearer fake-jwt')
         .send({
-          publishableKey: 'pk_test_demo_key_only',
-          secretKey: 'sk_test_demo_key_only',
-          webhookSecret: 'whsec_demo_secret',
+          publishableKey: 'pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+          secretKey: 'sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+          webhookSecret: 'whsecxxxxxxxxxxxxxxxx',
           isLive: true,
         })
         .expect(200);
 
-      expect(res.body.publishableKey).toBe('pk_test_demo_key_only');
+      expect(res.body.publishableKey).toBe('pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
     });
   });
 });

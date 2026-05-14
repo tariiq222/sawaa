@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { CompleteBookingHandler } from './complete-booking.handler';
-import { buildPrisma, buildTenant, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
 
 describe('CompleteBookingHandler', () => {
   it('completes CONFIRMED booking', async () => {

@@ -1,10 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../../infrastructure/database';
-import { SUPER_ADMIN_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
+import { RlsTransactionService } from '../../../common/database/rls-transaction';
 import { MoyasarApiClient } from '../../finance/moyasar-api/moyasar-api.client';
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
-import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 /**
  * Reconciles RefundRequest rows that are stuck in PROCESSING.
@@ -31,22 +30,19 @@ export class ReconcileRefundsCron {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly cls: ClsService,
     private readonly moyasar: MoyasarApiClient,
+    private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(): Promise<void> {
-    await this.cls.run(async () => {
-      this.cls.set(SUPER_ADMIN_CONTEXT_CLS_KEY, true);
-      await this.reconcile();
-    });
+    await this.reconcile();
   }
 
   private async reconcile(): Promise<void> {
     await withCronLeader(this.prisma, 'reconcile-refunds', async () => {
       const cutoff = new Date(Date.now() - ReconcileRefundsCron.STALE_THRESHOLD_MS);
 
-      const stuckRows = await this.prisma.$allTenants.refundRequest.findMany({
+      const stuckRows = await this.prisma.refundRequest.findMany({
         where: {
           status: 'PROCESSING',
           updatedAt: { lt: cutoff },
@@ -68,7 +64,7 @@ export class ReconcileRefundsCron {
         // gatewayRef is guaranteed non-null by the query filter above
         const gatewayRef = row.gatewayRef as string;
         try {
-          await this.processRow(row.id, DEFAULT_ORGANIZATION_ID, row.paymentId, row.invoiceId, gatewayRef);
+          await this.processRow(row.id, DEFAULT_ORG_ID, row.paymentId, row.invoiceId, gatewayRef);
         } catch (err) {
           this.logger.error(
             `reconcile-refunds: failed to process RefundRequest ${row.id}`,
@@ -97,7 +93,7 @@ export class ReconcileRefundsCron {
     }
 
     if (status === 'failed') {
-      await this.prisma.$allTenants.refundRequest.update({
+      await this.prisma.refundRequest.update({
         where: { id: refundRequestId },
         data: { status: 'FAILED' },
       });
@@ -109,7 +105,7 @@ export class ReconcileRefundsCron {
 
     // status === 'paid' — finalize atomically
     if (status === 'paid') {
-      await this.prisma.$allTenants.$transaction(async (tx) => {
+      await this.rlsTx.withTransaction(async (tx) => {
         await tx.refundRequest.update({
           where: { id: refundRequestId },
           data: { status: 'COMPLETED' },
@@ -129,4 +125,3 @@ export class ReconcileRefundsCron {
     }
   }
 }
-

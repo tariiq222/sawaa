@@ -6,7 +6,7 @@ import { PrismaService } from '../../../infrastructure/database';
 import { EmailCredentialsService } from '../../../infrastructure/email/email-credentials.service';
 import type { UpsertOrgEmailConfigDto } from './upsert-org-email-config.dto';
 import type { OrgEmailConfigView } from './get-org-email-config.handler';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type UpsertOrgEmailConfigCommand = UpsertOrgEmailConfigDto;
 
@@ -34,7 +34,7 @@ export class UpsertOrgEmailConfigHandler {
         }
         credentialsCiphertext = this.credentials.encrypt(
           { host: cmd.smtp.host, port: cmd.smtp.port, user: cmd.smtp.user, pass: cmd.smtp.pass, secure: cmd.smtp.secure },
-          DEFAULT_ORGANIZATION_ID,
+          DEFAULT_ORG_ID,
         );
         break;
       case 'RESEND':
@@ -46,7 +46,7 @@ export class UpsertOrgEmailConfigHandler {
         }
         credentialsCiphertext = this.credentials.encrypt(
           { apiKey: cmd.resend.apiKey },
-          DEFAULT_ORGANIZATION_ID,
+          DEFAULT_ORG_ID,
         );
         break;
       case 'SENDGRID':
@@ -58,7 +58,7 @@ export class UpsertOrgEmailConfigHandler {
         }
         credentialsCiphertext = this.credentials.encrypt(
           { apiKey: cmd.sendgrid.apiKey },
-          DEFAULT_ORGANIZATION_ID,
+          DEFAULT_ORG_ID,
         );
         break;
       case 'MAILCHIMP':
@@ -70,7 +70,7 @@ export class UpsertOrgEmailConfigHandler {
         }
         credentialsCiphertext = this.credentials.encrypt(
           { apiKey: cmd.mailchimp.apiKey },
-          DEFAULT_ORGANIZATION_ID,
+          DEFAULT_ORG_ID,
         );
         break;
     }

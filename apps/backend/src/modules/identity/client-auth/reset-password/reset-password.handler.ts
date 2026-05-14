@@ -6,7 +6,7 @@ import { PasswordService } from '../../shared/password.service';
 import { ResetPasswordDto } from './reset-password.dto';
 import { maskIdentifier } from '../../../../common/helpers/mask-pii.helper';
 import { PasswordHistoryService } from '../shared/password-history.service';
-import { DEFAULT_ORGANIZATION_ID } from "../../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../../common/constants';
 
 @Injectable()
 export class ResetPasswordHandler {
@@ -36,7 +36,7 @@ export class ResetPasswordHandler {
       ? new Date(session.exp * 1000)
       : new Date(now.getTime() + 30 * 60 * 1000);
 
-    const organizationId = session.organizationId ?? DEFAULT_ORGANIZATION_ID;
+    const organizationId = session.organizationId ?? DEFAULT_ORG_ID;
 
     const identifier = session.identifier;
     const isEmail = session.channel === OtpChannel.EMAIL;

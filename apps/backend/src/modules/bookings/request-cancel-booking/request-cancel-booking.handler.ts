@@ -6,10 +6,8 @@ import {
 import { BookingStatus, CancellationReason } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingCancelRequestedEvent } from '../events/booking-cancel-requested.event';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export interface RequestCancelBookingCommand {
   bookingId: string;

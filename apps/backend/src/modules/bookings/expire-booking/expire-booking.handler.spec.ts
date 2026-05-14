@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { ExpireBookingHandler } from './expire-booking.handler';
-import { buildPrisma, buildTenant, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
 
 describe('ExpireBookingHandler', () => {
   it('expires PENDING booking', async () => {

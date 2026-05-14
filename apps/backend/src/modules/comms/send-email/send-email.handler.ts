@@ -5,7 +5,7 @@ import { SmtpService } from '../../../infrastructure/mail';
 import { EmailProviderFactory } from '../../../infrastructure/email/email-provider.factory';
 
 import { SendEmailDto } from './send-email.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type SendEmailCommand = SendEmailDto;
 
@@ -21,7 +21,7 @@ export class SendEmailHandler {
 
   async execute(dto: SendEmailCommand): Promise<void> {
     // organizationId kept as AES-GCM AAD for credential decryption via factory
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const organizationId = DEFAULT_ORG_ID;
 
     const template = await this.prisma.emailTemplate.findFirst({
       where: { slug: dto.templateSlug },

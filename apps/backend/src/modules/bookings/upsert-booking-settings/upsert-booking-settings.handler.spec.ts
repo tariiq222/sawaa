@@ -1,5 +1,5 @@
 import { UpsertBookingSettingsHandler } from './upsert-booking-settings.handler';
-import { buildPrisma, buildTenant } from '../testing/booking-test-helpers';
+import { buildPrisma } from '../testing/booking-test-helpers';
 
 const dbSettings = {
   id: 'settings-1', branchId: null,

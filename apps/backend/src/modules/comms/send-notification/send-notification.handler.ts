@@ -9,7 +9,7 @@ import {
   CRITICAL_TYPES,
 } from '../resilient-notification-dispatcher/resilient-notification-dispatcher.service';
 import { SendNotificationDto } from './send-notification.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type SendNotificationCommand = SendNotificationDto & {
   /** Explicit override for background-bus event handlers where CLS isn't set. */
@@ -29,7 +29,7 @@ export class SendNotificationHandler {
   ) {}
 
   async execute(dto: SendNotificationCommand): Promise<void> {
-    const organizationId = dto.organizationId ?? DEFAULT_ORGANIZATION_ID;
+    const organizationId = dto.organizationId ?? DEFAULT_ORG_ID;
 
     // ── 1. Persist in-app notification ────────────────────────────────────
     try {

@@ -3,7 +3,7 @@ import { PrismaService, RlsTransactionService } from '../../../../../infrastruct
 import { TenantContextService } from '../../../../../common/tenant/tenant-context.service';
 import { MoyasarApiClient } from '../../../moyasar-api/moyasar-api.client';
 import { InitGuestPaymentDto } from './init-guest-payment.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../../../common/constants';
 
 export interface InitGuestPaymentResult {
   paymentId: string;
@@ -20,7 +20,7 @@ export class InitGuestPaymentHandler {
   ) {}
 
   async execute(dto: InitGuestPaymentDto): Promise<InitGuestPaymentResult> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const organizationId = DEFAULT_ORG_ID;
     const booking = await this.prisma.booking.findFirst({
       where: { id: dto.bookingId },
       select: { id: true, status: true, price: true, currency: true },

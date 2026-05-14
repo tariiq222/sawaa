@@ -7,7 +7,7 @@ import { PrismaService } from '../../../infrastructure/database';
 import { SmsProviderFactory } from '../../../infrastructure/sms/sms-provider.factory';
 import { SmsProviderNotConfiguredError } from '../../../infrastructure/sms/sms-provider.interface';
 import { SendSmsDto } from './send-sms.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type SendSmsCommand = SendSmsDto;
 
@@ -21,7 +21,7 @@ export class SendSmsHandler {
   ) {}
 
   async execute(cmd: SendSmsCommand): Promise<void> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const organizationId = DEFAULT_ORG_ID;
     const adapter = await this.factory.forCurrentTenant(organizationId);
     const bodyHash = createHash('sha256').update(cmd.body).digest('hex');
 

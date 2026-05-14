@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { ClientCancelBookingHandler } from './client-cancel-booking.handler';
-import { mockBooking, buildPrisma, buildTenant, buildRlsTx } from '../testing/booking-test-helpers';
+import { mockBooking, buildPrisma, buildRlsTx } from '../testing/booking-test-helpers';
 
 const futureBooking = {
   ...mockBooking,

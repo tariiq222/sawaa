@@ -7,7 +7,7 @@ import { PasswordService } from '../shared/password.service';
 import { RegisterDto } from './register.dto';
 import { OtpPurpose, OtpChannel } from '@prisma/client';
 import { maskIdentifier } from '../../../common/helpers/mask-pii.helper';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 @Injectable()
 export class RegisterHandler {
@@ -39,7 +39,7 @@ export class RegisterHandler {
 
     const isEmailChannel = payload.channel === OtpChannel.EMAIL;
     const identifier = payload.identifier;
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const organizationId = DEFAULT_ORG_ID;
 
     const passwordHash = await this.passwords.hash(dto.password);
 

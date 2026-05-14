@@ -8,7 +8,7 @@ import { PrismaService } from '../../../infrastructure/database';
 import { SmsCredentialsService } from '../../../infrastructure/sms/sms-credentials.service';
 import type { UpsertOrgSmsConfigDto } from './upsert-org-sms-config.dto';
 import type { OrgSmsConfigView } from './get-org-sms-config.handler';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type UpsertOrgSmsConfigCommand = UpsertOrgSmsConfigDto;
 
@@ -21,7 +21,7 @@ export class UpsertOrgSmsConfigHandler {
 
   async execute(cmd: UpsertOrgSmsConfigCommand): Promise<OrgSmsConfigView> {
     // organizationId kept as AES-GCM AAD for credential encryption/decryption
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const organizationId = DEFAULT_ORG_ID;
 
     const existing = await this.prisma.organizationSmsConfig.findFirst();
 

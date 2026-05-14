@@ -5,7 +5,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { EmailProviderFactory } from '../../../infrastructure/email/email-provider.factory';
 import type { TestEmailConfigDto } from './test-email-config.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type TestEmailConfigCommand = TestEmailConfigDto;
 
@@ -23,8 +23,6 @@ export class TestEmailConfigHandler {
   ) {}
 
   async execute(cmd: TestEmailConfigCommand): Promise<TestEmailConfigResult> {
-    // organizationId kept as AES-GCM AAD for credential decryption
-    const organizationId = DEFAULT_ORGANIZATION_ID;
 
     const cfg = await this.prisma.organizationEmailConfig.findFirst();
 
@@ -35,7 +33,7 @@ export class TestEmailConfigHandler {
       });
     }
 
-    const adapter = await this.factory.forCurrentTenant(DEFAULT_ORGANIZATION_ID);
+    const adapter = await this.factory.forCurrentTenant(DEFAULT_ORG_ID);
 
     try {
       const result = await adapter.sendMail({

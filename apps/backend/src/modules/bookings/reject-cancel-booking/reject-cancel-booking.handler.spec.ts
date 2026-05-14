@@ -1,7 +1,7 @@
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { RejectCancelBookingHandler } from './reject-cancel-booking.handler';
-import { buildPrisma, buildEventBus, buildTenant, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, buildEventBus, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
 
 const cancelRequestedBooking = { ...mockBooking, status: 'CANCEL_REQUESTED' as BookingStatus };
 

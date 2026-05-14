@@ -1,9 +1,7 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { AddToWaitlistDto } from './add-to-waitlist.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type AddToWaitlistCommand = Omit<AddToWaitlistDto, 'preferredDate'> & {
   preferredDate?: Date;

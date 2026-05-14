@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BookingStatus, CancellationReason } from '@prisma/client';
 import { CancelBookingHandler } from './cancel-booking.handler';
-import { buildPrisma, buildEventBus, buildTenant, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, buildEventBus, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
 
 const defaultCancelSettings = {
   execute: jest.fn().mockResolvedValue({

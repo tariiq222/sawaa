@@ -7,7 +7,7 @@ import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-s
 import { ClientCancelBookingDto } from './client-cancel-booking.dto';
 import { BookingCancelledEvent } from '../events/booking-cancelled.event';
 import { RefundPaymentHandler } from '../../finance/refund-payment/refund-payment.handler';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type ClientCancelCommand = ClientCancelBookingDto & {
   bookingId: string;
@@ -139,7 +139,7 @@ export class ClientCancelBookingHandler {
     });
 
     const event = new BookingCancelledEvent({
-      organizationId: DEFAULT_ORGANIZATION_ID,
+      organizationId: DEFAULT_ORG_ID,
       scheduledAt: booking.scheduledAt,
       bookingId: booking.id,
       clientId: booking.clientId,

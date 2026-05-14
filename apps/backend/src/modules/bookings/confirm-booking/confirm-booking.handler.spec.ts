@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { ConfirmBookingHandler } from './confirm-booking.handler';
-import { buildPrisma, buildEventBus, buildZoomHandler, buildTenant, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, buildEventBus, buildZoomHandler, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
 
 describe('ConfirmBookingHandler', () => {
   it('confirms PENDING booking and emits BookingConfirmedEvent', async () => {

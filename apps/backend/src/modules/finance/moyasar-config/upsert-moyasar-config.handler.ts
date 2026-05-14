@@ -3,7 +3,7 @@ import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant';
 import { MoyasarCredentialsService } from '../../../infrastructure/payments/moyasar-credentials.service';
 import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export interface UpsertMoyasarConfigCommand {
   publishableKey: string;
@@ -29,7 +29,7 @@ export class UpsertMoyasarConfigHandler {
   ) {}
 
   async execute(cmd: UpsertMoyasarConfigCommand): Promise<UpsertMoyasarConfigResult> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const organizationId = DEFAULT_ORG_ID;
     const secretKeyEnc = this.creds.encrypt({ secretKey: cmd.secretKey }, organizationId);
     const webhookSecretEnc = this.creds.encrypt(
       { webhookSecret: cmd.webhookSecret },
@@ -67,7 +67,7 @@ export class UpsertMoyasarConfigHandler {
     this.moyasarClient.invalidate(organizationId);
 
     return {
-      organizationId: DEFAULT_ORGANIZATION_ID,
+      organizationId: DEFAULT_ORG_ID,
       publishableKey: row.publishableKey,
       isLive: row.isLive,
       updatedAt: row.updatedAt,

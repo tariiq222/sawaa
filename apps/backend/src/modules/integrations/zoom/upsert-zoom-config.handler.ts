@@ -3,7 +3,7 @@ import { PrismaService } from '../../../infrastructure/database';
 import { ZoomCredentialsService } from '../../../infrastructure/zoom/zoom-credentials.service';
 import { ZoomApiClient } from '../../../infrastructure/zoom/zoom-api.client';
 import { UpsertZoomConfigDto } from './dto/upsert-zoom-config.dto';
-import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 @Injectable()
 export class UpsertZoomConfigHandler {
@@ -20,7 +20,7 @@ export class UpsertZoomConfigHandler {
         zoomClientSecret: dto.zoomClientSecret,
         zoomAccountId: dto.zoomAccountId,
       },
-      DEFAULT_ORGANIZATION_ID,
+      DEFAULT_ORG_ID,
     );
 
     await this.prisma.integration.upsert({
@@ -38,7 +38,7 @@ export class UpsertZoomConfigHandler {
 
     // Invalidate cached OAuth token so the new credentials take effect immediately
     // instead of waiting up to ~1h for the previous token to expire.
-    this.zoomApi.invalidateToken(DEFAULT_ORGANIZATION_ID);
+    this.zoomApi.invalidateToken(DEFAULT_ORG_ID);
 
     return { configured: true, isActive: true };
   }

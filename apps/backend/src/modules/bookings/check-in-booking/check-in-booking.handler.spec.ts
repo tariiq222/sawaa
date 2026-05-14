@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { CheckInBookingHandler } from './check-in-booking.handler';
-import { buildPrisma, buildTenant, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
 
 describe('CheckInBookingHandler', () => {
   it('sets checkedInAt on CONFIRMED booking', async () => {

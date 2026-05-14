@@ -5,7 +5,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { SmsProviderFactory } from '../../../infrastructure/sms/sms-provider.factory';
 import type { TestSmsConfigDto } from './test-sms-config.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type TestSmsConfigCommand = TestSmsConfigDto;
 
@@ -32,7 +32,7 @@ export class TestSmsConfigHandler {
     }
 
     // organizationId kept as AES-GCM AAD for credential decryption
-    const adapter = await this.factory.forCurrentTenant(DEFAULT_ORGANIZATION_ID);
+    const adapter = await this.factory.forCurrentTenant(DEFAULT_ORG_ID);
     try {
       const result = await adapter.send(
         cmd.toPhone,

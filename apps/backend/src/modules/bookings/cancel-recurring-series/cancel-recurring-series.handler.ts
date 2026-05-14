@@ -4,7 +4,7 @@ import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant';
 import { CancelBookingHandler } from '../cancel-booking/cancel-booking.handler';
 import type { CancelRecurringSeriesDto } from './cancel-recurring-series.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type CancelRecurringSeriesCommand = CancelRecurringSeriesDto & {
   changedBy: string;
@@ -27,7 +27,7 @@ export class CancelRecurringSeriesHandler {
   ) {}
 
   async execute(cmd: CancelRecurringSeriesCommand): Promise<{ cancelled: number; skipped: number }> {
-    DEFAULT_ORGANIZATION_ID;
+    DEFAULT_ORG_ID;
 
     const where: Prisma.BookingWhereInput = {
       recurringGroupId: cmd.recurringGroupId,

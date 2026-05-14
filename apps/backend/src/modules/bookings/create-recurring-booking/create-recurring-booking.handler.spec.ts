@@ -3,7 +3,6 @@ import { RecurringFrequency } from '@prisma/client';
 import { CreateRecurringBookingHandler } from './create-recurring-booking.handler';
 import { RlsTransactionService } from '../../../infrastructure/database';
 
-const mockTenant = { requireOrganizationIdOrDefault: jest.fn().mockReturnValue('00000000-0000-0000-0000-000000000001') };
 const _buildFeatureCheck = (enabled = true) => ({ isEnabled: jest.fn().mockResolvedValue(enabled) });
 const buildRlsTx = (prisma: ReturnType<typeof buildPrisma>) =>
   ({

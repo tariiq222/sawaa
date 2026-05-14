@@ -18,7 +18,7 @@ import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-s
 import { RescheduleBookingDto } from './reschedule-booking.dto';
 import { fetchBookingOrFail } from '../booking-lifecycle.helper';
 import { ZoomMeetingService } from '../zoom-meeting.service';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type RescheduleBookingCommand = Omit<RescheduleBookingDto, 'newScheduledAt'> & {
   bookingId: string;
@@ -99,7 +99,7 @@ export class RescheduleBookingHandler {
     if (booking.zoomMeetingId) {
       // Best effort update
       this.zoomMeetingService
-        .updateMeeting(DEFAULT_ORGANIZATION_ID, booking.zoomMeetingId, {
+        .updateMeeting(DEFAULT_ORG_ID, booking.zoomMeetingId, {
           topic: `Booking ${booking.id}`,
           startTime: newScheduledAt.toISOString(),
           durationMins,

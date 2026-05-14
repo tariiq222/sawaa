@@ -1,12 +1,7 @@
 import { ReconcileRefundsCron } from './reconcile-refunds.cron';
-import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 const NOW = new Date('2026-05-10T10:00:00Z');
-
-const buildCls = () => ({
-  run: jest.fn().mockImplementation((fn: () => Promise<void>) => fn()),
-  set: jest.fn(),
-});
 
 type StuckRow = {
   id: string;
@@ -21,13 +16,21 @@ interface TxMock {
   invoice: { update: jest.Mock };
 }
 
-function buildPrisma(stuckRows: StuckRow[]) {
-  const tx: TxMock = {
+function buildTx(): TxMock {
+  return {
     refundRequest: { update: jest.fn().mockResolvedValue({}) },
     payment: { update: jest.fn().mockResolvedValue({}) },
     invoice: { update: jest.fn().mockResolvedValue({}) },
   };
-  const txFn = jest.fn().mockImplementation(async (fn: (t: TxMock) => Promise<void>) => fn(tx));
+}
+
+function buildRlsTx(tx: TxMock) {
+  return {
+    withTransaction: jest.fn().mockImplementation(async (fn: (t: TxMock) => Promise<void>) => fn(tx)),
+  };
+}
+
+function buildPrisma(stuckRows: StuckRow[]) {
   return {
     $queryRaw: jest.fn().mockImplementation((strings: TemplateStringsArray, ..._values: unknown[]) => {
       if (strings[0].includes('hashtext')) return Promise.resolve([{ v: BigInt(12345) }]);
@@ -35,13 +38,9 @@ function buildPrisma(stuckRows: StuckRow[]) {
       if (strings[0].includes('pg_advisory_unlock')) return Promise.resolve([]);
       return Promise.resolve([]);
     }),
-    $allTenants: {
-      refundRequest: {
-        findMany: jest.fn().mockResolvedValue(stuckRows),
-        update: jest.fn().mockResolvedValue({}),
-      },
-      $transaction: txFn,
-      _tx: tx,
+    refundRequest: {
+      findMany: jest.fn().mockResolvedValue(stuckRows),
+      update: jest.fn().mockResolvedValue({}),
     },
   };
 }
@@ -72,14 +71,14 @@ describe('ReconcileRefundsCron', () => {
     };
     const prisma = buildPrisma([row]);
     const moyasar = buildMoyasar({ moyasar_ref_1: 'paid' });
-    const cls = buildCls();
+    const tx = buildTx();
+    const rlsTx = buildRlsTx(tx);
 
-    const cron = new ReconcileRefundsCron(prisma as never, cls as never, moyasar as never);
+    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never, rlsTx as never);
     await cron.execute();
 
-    expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORGANIZATION_ID, 'moyasar_ref_1');
+    expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORG_ID, 'moyasar_ref_1');
 
-    const tx = prisma.$allTenants._tx;
     expect(tx.refundRequest.update).toHaveBeenCalledWith({
       where: { id: 'rr_1' },
       data: { status: 'COMPLETED' },
@@ -103,18 +102,19 @@ describe('ReconcileRefundsCron', () => {
     };
     const prisma = buildPrisma([row]);
     const moyasar = buildMoyasar({ moyasar_ref_2: 'failed' });
-    const cls = buildCls();
+    const tx = buildTx();
+    const rlsTx = buildRlsTx(tx);
 
-    const cron = new ReconcileRefundsCron(prisma as never, cls as never, moyasar as never);
+    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never, rlsTx as never);
     await cron.execute();
 
-    expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORGANIZATION_ID, 'moyasar_ref_2');
-    expect(prisma.$allTenants.refundRequest.update).toHaveBeenCalledWith({
+    expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORG_ID, 'moyasar_ref_2');
+    expect(prisma.refundRequest.update).toHaveBeenCalledWith({
       where: { id: 'rr_2' },
       data: { status: 'FAILED' },
     });
     // No payment or invoice update for a failed refund
-    expect(prisma.$allTenants._tx.payment.update).not.toHaveBeenCalled();
+    expect(tx.payment.update).not.toHaveBeenCalled();
   });
 
   it('leaves RefundRequest in PROCESSING when Moyasar status is "pending" (Moyasar still processing)', async () => {
@@ -126,15 +126,16 @@ describe('ReconcileRefundsCron', () => {
     };
     const prisma = buildPrisma([row]);
     const moyasar = buildMoyasar({ moyasar_ref_3: 'pending' });
-    const cls = buildCls();
+    const tx = buildTx();
+    const rlsTx = buildRlsTx(tx);
 
-    const cron = new ReconcileRefundsCron(prisma as never, cls as never, moyasar as never);
+    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never, rlsTx as never);
     await cron.execute();
 
-    expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORGANIZATION_ID, 'moyasar_ref_3');
+    expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORG_ID, 'moyasar_ref_3');
     // No DB mutation — row stays as-is
-    expect(prisma.$allTenants.refundRequest.update).not.toHaveBeenCalled();
-    expect(prisma.$allTenants._tx.refundRequest.update).not.toHaveBeenCalled();
+    expect(prisma.refundRequest.update).not.toHaveBeenCalled();
+    expect(tx.refundRequest.update).not.toHaveBeenCalled();
   });
 
   it('passes the same Idempotency-Key to Moyasar on every call (idempotency guarantee via refund-payment handler)', async () => {
@@ -158,22 +159,20 @@ describe('ReconcileRefundsCron', () => {
     };
     const prisma = buildPrisma([row]);
     const moyasar = buildMoyasar({ moyasar_ref_idem: 'paid' });
-    const cls = buildCls();
+    const tx = buildTx();
+    const rlsTx = buildRlsTx(tx);
 
-    const cron = new ReconcileRefundsCron(prisma as never, cls as never, moyasar as never);
+    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never, rlsTx as never);
 
     // Call execute twice — simulates the cron firing twice for the same stuck row
-    // (e.g., first run finalized successfully via tx; row status is COMPLETED so
-    //  findMany would return empty on the real DB, but if it somehow returned the
-    //  row twice we should not double-update)
     await cron.execute();
     await cron.execute();
 
     // getRefundStatus is called once per execute tick — uses gatewayRef from DB,
     // never re-issues a new refund to Moyasar (no createRefund call).
     expect(moyasar.getRefundStatus).toHaveBeenCalledTimes(2);
-    expect(moyasar.getRefundStatus).toHaveBeenNthCalledWith(1, DEFAULT_ORGANIZATION_ID, 'moyasar_ref_idem');
-    expect(moyasar.getRefundStatus).toHaveBeenNthCalledWith(2, DEFAULT_ORGANIZATION_ID, 'moyasar_ref_idem');
+    expect(moyasar.getRefundStatus).toHaveBeenNthCalledWith(1, DEFAULT_ORG_ID, 'moyasar_ref_idem');
+    expect(moyasar.getRefundStatus).toHaveBeenNthCalledWith(2, DEFAULT_ORG_ID, 'moyasar_ref_idem');
     // No createRefund — cron only reads Moyasar status, never re-issues
     expect((moyasar as Record<string, unknown>)['createRefund']).toBeUndefined();
   });
@@ -181,13 +180,14 @@ describe('ReconcileRefundsCron', () => {
   it('is a no-op when there are no stuck rows', async () => {
     const prisma = buildPrisma([]);
     const moyasar = buildMoyasar({});
-    const cls = buildCls();
+    const tx = buildTx();
+    const rlsTx = buildRlsTx(tx);
 
-    const cron = new ReconcileRefundsCron(prisma as never, cls as never, moyasar as never);
+    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never, rlsTx as never);
     await cron.execute();
 
     expect(moyasar.getRefundStatus).not.toHaveBeenCalled();
-    expect(prisma.$allTenants.refundRequest.update).not.toHaveBeenCalled();
+    expect(prisma.refundRequest.update).not.toHaveBeenCalled();
   });
 
   it('continues processing remaining rows if one row throws', async () => {
@@ -201,14 +201,14 @@ describe('ReconcileRefundsCron', () => {
         .mockRejectedValueOnce(new Error('network error'))
         .mockResolvedValueOnce({ id: 'ref_ok', status: 'paid' }),
     };
-    const cls = buildCls();
+    const tx = buildTx();
+    const rlsTx = buildRlsTx(tx);
 
-    const cron = new ReconcileRefundsCron(prisma as never, cls as never, moyasar as never);
+    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never, rlsTx as never);
     await cron.execute(); // should not throw
 
     // Second row should still be processed despite the first throwing
     expect(moyasar.getRefundStatus).toHaveBeenCalledTimes(2);
-    const tx = prisma.$allTenants._tx;
     expect(tx.refundRequest.update).toHaveBeenCalledWith({
       where: { id: 'rr_ok' },
       data: { status: 'COMPLETED' },
@@ -218,12 +218,13 @@ describe('ReconcileRefundsCron', () => {
   it('queries rows with status=PROCESSING, updatedAt < cutoff, and gatewayRef not null', async () => {
     const prisma = buildPrisma([]);
     const moyasar = buildMoyasar({});
-    const cls = buildCls();
+    const tx = buildTx();
+    const rlsTx = buildRlsTx(tx);
 
-    const cron = new ReconcileRefundsCron(prisma as never, cls as never, moyasar as never);
+    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never, rlsTx as never);
     await cron.execute();
 
-    expect(prisma.$allTenants.refundRequest.findMany).toHaveBeenCalledWith({
+    expect(prisma.refundRequest.findMany).toHaveBeenCalledWith({
       where: {
         status: 'PROCESSING',
         updatedAt: { lt: expect.any(Date) },
@@ -237,7 +238,7 @@ describe('ReconcileRefundsCron', () => {
       },
     });
     // Verify cutoff is ~15 min before NOW
-    const callArgs = (prisma.$allTenants.refundRequest.findMany as jest.Mock).mock.calls[0][0] as {
+    const callArgs = (prisma.refundRequest.findMany as jest.Mock).mock.calls[0][0] as {
       where: { updatedAt: { lt: Date } };
     };
     const cutoff = callArgs.where.updatedAt.lt;

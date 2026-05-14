@@ -5,7 +5,7 @@ import { PasswordService } from '../shared/password.service';
 import { ClientTokenService } from '../shared/client-token.service';
 import { ClientLoginDto } from './client-login.dto';
 import { maskEmail } from '../../../common/helpers/mask-pii.helper';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 const MAX_EMAIL_ATTEMPTS = 5;
 const MAX_IP_ATTEMPTS = 20;
@@ -24,7 +24,7 @@ export class ClientLoginHandler {
   ) {}
 
   async execute(dto: ClientLoginDto, ip = 'unknown') {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
+    const organizationId = DEFAULT_ORG_ID;
 
     const client = await this.prisma.client.findFirst({
       where: { email: dto.email, deletedAt: null },

@@ -1,8 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ActivityAction } from '@prisma/client';
-import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../../infrastructure/database';
-import { SUPER_ADMIN_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
 import { ORPHAN_CHECKS, OrphanCheck } from './orphan-audit.types';
 
 /**
@@ -15,8 +13,6 @@ import { ORPHAN_CHECKS, OrphanCheck } from './orphan-audit.types';
  * to ActivityLog (action=SYSTEM, entity='orphan_audit') for owner review.
  *
  * Runs on the BullMQ `ops-cron` queue, weekly cadence.
- * Uses cls.run() + SUPER_ADMIN_CONTEXT_CLS_KEY to access prisma.$allTenants
- * outside of the HTTP request lifecycle.
  */
 @Injectable()
 export class RunOrphanAuditHandler {
@@ -24,16 +20,11 @@ export class RunOrphanAuditHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly cls: ClsService,
   ) {}
 
   async execute(): Promise<void> {
-    // Wrap in a super-admin CLS context so prisma.$allTenants is accessible.
-    await this.cls.run(async () => {
-      this.cls.set(SUPER_ADMIN_CONTEXT_CLS_KEY, true);
-      this.logger.log('systemContext: orphan-audit tick');
-      await this.runAudit();
-    });
+    this.logger.log('orphan-audit tick');
+    await this.runAudit();
   }
 
   private async runAudit(): Promise<void> {
@@ -55,8 +46,7 @@ export class RunOrphanAuditHandler {
   }
 
   private async runCheck(check: OrphanCheck): Promise<number> {
-    // Access the child model dynamically via $allTenants (bypasses tenant scoping).
-    const childModel = (this.prisma.$allTenants as unknown as Record<string, unknown>)[
+    const childModel = (this.prisma as unknown as Record<string, unknown>)[
       check.childModel
     ] as {
       findMany: (args: unknown) => Promise<Array<Record<string, string>>>;
@@ -73,7 +63,7 @@ export class RunOrphanAuditHandler {
       const refId = candidate[check.childField];
       if (!refId) continue; // nullable field, skip nulls
 
-      const parentModel = (this.prisma.$allTenants as unknown as Record<string, unknown>)[
+      const parentModel = (this.prisma as unknown as Record<string, unknown>)[
         check.parentModel
       ] as {
         findFirst: (args: unknown) => Promise<Record<string, string> | null>;
@@ -104,7 +94,7 @@ export class RunOrphanAuditHandler {
     childId: string,
     missingParentId: string,
   ): Promise<void> {
-    await this.prisma.$allTenants.activityLog.create({
+    await this.prisma.activityLog.create({
       data: {
         action: ActivityAction.SYSTEM,
         entity: 'orphan_audit',

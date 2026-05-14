@@ -1,13 +1,9 @@
-import { ForbiddenException, Injectable, Logger, Optional, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, Optional, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
-import {
-  REQUEST_TX_CLS_KEY,
-  SUPER_ADMIN_CONTEXT_CLS_KEY,
-} from '../../common/tenant/tenant.constants';
-import { TenantContextService } from '../../common/tenant/tenant-context.service';
+import { REQUEST_TX_CLS_KEY } from '../../common/constants';
 
 /**
  * Single PrismaClient instance shared across all Bounded Contexts.
@@ -32,11 +28,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   constructor(
     // `@Optional()` lets isolated test modules instantiate PrismaService
-    // without wiring ConfigModule/TenantModule. In prod both are global and
-    // always present — the optionals are only for narrow unit-test fixtures.
+    // without wiring ConfigModule. In prod ConfigModule is global and always
+    // present — the optional is only for narrow unit-test fixtures.
     @Optional() private readonly config?: ConfigService,
     @Optional() private readonly cls?: ClsService,
-    @Optional() private readonly tenantCtx?: TenantContextService,
   ) {
     super({
       adapter: new PrismaPg({
@@ -60,10 +55,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
           prop === 'logger' ||
           prop === 'config' ||
           prop === 'cls' ||
-          prop === 'tenantCtx' ||
           prop === 'basePrisma' ||
           prop === 'extended' ||
-          prop === '$allTenants' ||
           prop === '$connect' ||
           prop === '$disconnect'
         ) {
@@ -109,12 +102,5 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   async onModuleDestroy(): Promise<void> {
     await this.$disconnect();
     this.logger.log('Prisma disconnected');
-  }
-
-  get $allTenants(): PrismaClient {
-    if (this.cls?.get<boolean | undefined>(SUPER_ADMIN_CONTEXT_CLS_KEY) !== true) {
-      throw new ForbiddenException('super_admin_context_required');
-    }
-    return this.basePrisma;
   }
 }

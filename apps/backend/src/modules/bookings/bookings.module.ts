@@ -1,7 +1,6 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database';
 import { MessagingModule } from '../../infrastructure/messaging.module';
-import { TenantModule } from '../../common/tenant';
 import { OrgExperienceModule } from '../org-experience/org-experience.module';
 import { FinanceModule } from '../finance/finance.module';
 import { CreateBookingHandler } from './create-booking/create-booking.handler';
@@ -90,7 +89,6 @@ const handlers = [
   imports: [
     DatabaseModule,
     MessagingModule,
-    TenantModule,
     OrgExperienceModule,
     ZoomModule,
     FinanceModule,

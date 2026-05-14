@@ -1,5 +1,5 @@
 import { ListBookingsHandler } from './list-bookings.handler';
-import { buildPrisma, buildTenant, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, mockBooking } from '../testing/booking-test-helpers';
 import { BookingStatus } from '@prisma/client';
 
 describe('ListBookingsHandler', () => {

@@ -9,7 +9,7 @@ import { RlsTransactionService } from '../../../infrastructure/database';
 import { ZoomApiClient } from '../../../infrastructure/zoom/zoom-api.client';
 import { ZoomCredentialsService } from '../../../infrastructure/zoom/zoom-credentials.service';
 import { ZoomMeetingStatus } from '@prisma/client';
-import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export interface CreateZoomMeetingCommand {
   bookingId: string;
@@ -52,7 +52,7 @@ export class CreateZoomMeetingHandler {
       );
     }
 
-    const key1 = hashToInt32(DEFAULT_ORGANIZATION_ID);
+    const key1 = hashToInt32(DEFAULT_ORG_ID);
     const key2 = hashToInt32(booking.id);
 
     // Step 3: advisory-locked critical section
@@ -96,7 +96,7 @@ export class CreateZoomMeetingHandler {
       const ciphertext = config?.ciphertext;
 
       if (!ciphertext) {
-        this.logger.error(`Zoom config missing ciphertext for org ${DEFAULT_ORGANIZATION_ID}`);
+        this.logger.error(`Zoom config missing ciphertext for org ${DEFAULT_ORG_ID}`);
         return tx.booking.update({
           where: { id: cmd.bookingId },
           data: {
@@ -113,7 +113,7 @@ export class CreateZoomMeetingHandler {
             zoomClientId: string;
             zoomClientSecret: string;
             zoomAccountId: string;
-          }>(ciphertext, DEFAULT_ORGANIZATION_ID);
+          }>(ciphertext, DEFAULT_ORG_ID);
 
         const settings = await tx.organizationSettings.findFirst({
           where: {},
@@ -121,7 +121,7 @@ export class CreateZoomMeetingHandler {
         const timezone = settings?.timezone || 'Asia/Riyadh';
 
         const token = await this.zoomApi.getAccessToken(
-          DEFAULT_ORGANIZATION_ID,
+          DEFAULT_ORG_ID,
           zoomClientId,
           zoomClientSecret,
           zoomAccountId,

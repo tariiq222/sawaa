@@ -1,5 +1,6 @@
 import { BookingStatus } from '@prisma/client';
 import { RlsTransactionService } from '../../../infrastructure/database';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 const future = new Date(Date.now() + 86400_000);
 
@@ -118,7 +119,6 @@ export const buildZoomHandler = () => ({
   execute: jest.fn().mockResolvedValue({ joinUrl: 'https://zoom.example/join' }),
 });
 
-export const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
 
 /** Minimal TenantContextService mock — always returns the default org id. */
 export const buildTenant = () => ({

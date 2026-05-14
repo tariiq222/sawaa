@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ZoomApiClient } from '../../../infrastructure/zoom/zoom-api.client';
 import { UpsertZoomConfigDto } from './dto/upsert-zoom-config.dto';
-import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 @Injectable()
 export class TestZoomConfigHandler {
@@ -12,7 +12,7 @@ export class TestZoomConfigHandler {
   async execute(dto: UpsertZoomConfigDto) {
     try {
       await this.zoomApi.getAccessToken(
-        DEFAULT_ORGANIZATION_ID,
+        DEFAULT_ORG_ID,
         dto.zoomClientId,
         dto.zoomClientSecret,
         dto.zoomAccountId,

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe, UnauthorizedException } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import bcrypt from 'bcryptjs';
 import { AuthController } from './auth.controller';
@@ -12,10 +12,8 @@ import { ChangePasswordHandler } from '../../modules/identity/users/change-passw
 import { ConfigService } from '@nestjs/config';
 import { RequestPasswordResetHandler } from '../../modules/identity/user-password-reset/request-password-reset/request-password-reset.handler';
 import { PerformPasswordResetHandler } from '../../modules/identity/user-password-reset/perform-password-reset/perform-password-reset.handler';
-import { TenantContextService } from '../../common/tenant/tenant-context.service';
 import { RequestDashboardOtpHandler } from '../../modules/identity/request-dashboard-otp/request-dashboard-otp.handler';
 import { VerifyDashboardOtpHandler } from '../../modules/identity/verify-dashboard-otp/verify-dashboard-otp.handler';
-import { ClsService } from 'nestjs-cls';
 import { PlatformSettingsService } from '../../modules/platform/settings/platform-settings.service';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 
@@ -31,10 +29,8 @@ describe('AuthController (e2e)', () => {
   const mockConfig = { get: jest.fn(), getOrThrow: jest.fn() };
   const mockRequestPasswordReset = { execute: jest.fn() };
   const mockPerformPasswordReset = { execute: jest.fn() };
-  const mockTenant = { requireOrganizationIdOrDefault: jest.fn().mockReturnValue('00000000-0000-0000-0000-000000000001') };
   const mockRequestDashboardOtp = { execute: jest.fn() };
   const mockVerifyDashboardOtp = { execute: jest.fn() };
-  const mockCls = { run: jest.fn().mockImplementation((fn) => fn()), set: jest.fn() };
   const mockSettings = { get: jest.fn() };
 
   beforeAll(async () => {
@@ -42,14 +38,9 @@ describe('AuthController (e2e)', () => {
   });
 
   const buildMockPrisma = () => ({
-    $allTenants: {
-      refreshToken: {
-        findMany: jest.fn(),
-        update: jest.fn(),
-      },
-    },
     refreshToken: {
       findMany: jest.fn(),
+      update: jest.fn(),
     },
     user: {
       findUnique: jest.fn(),
@@ -69,10 +60,8 @@ describe('AuthController (e2e)', () => {
         { provide: ConfigService, useValue: mockConfig },
         { provide: RequestPasswordResetHandler, useValue: mockRequestPasswordReset },
         { provide: PerformPasswordResetHandler, useValue: mockPerformPasswordReset },
-        { provide: TenantContextService, useValue: mockTenant },
         { provide: RequestDashboardOtpHandler, useValue: mockRequestDashboardOtp },
         { provide: VerifyDashboardOtpHandler, useValue: mockVerifyDashboardOtp },
-        { provide: ClsService, useValue: mockCls },
         { provide: PlatformSettingsService, useValue: mockSettings },
       ],
     })
@@ -171,18 +160,17 @@ describe('AuthController (e2e)', () => {
   describe('POST /auth/refresh', () => {
     it('returns 200 with new access token', async () => {
       const mockPrisma = buildMockPrisma();
-      mockPrisma.$allTenants.refreshToken.findMany.mockResolvedValue([
+      mockPrisma.refreshToken.findMany.mockResolvedValue([
         {
           id: 'rt-1',
           tokenHash,
           tokenSelector: 'raw-toke',
           userId: 'user-1',
-          organizationId: '00000000-0000-0000-0000-000000000001',
           revokedAt: null,
           expiresAt: new Date(Date.now() + 86400000),
         },
       ]);
-      mockPrisma.$allTenants.refreshToken.update.mockResolvedValue({});
+      mockPrisma.refreshToken.update.mockResolvedValue({});
       mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-1', isActive: true, isSuperAdmin: false, customRole: null });
       mockTokens.issueTokenPair.mockResolvedValue({ accessToken: 'new-acc', refreshToken: 'new-ref' });
       mockConfig.get.mockReturnValue('15m');
@@ -245,13 +233,12 @@ describe('AuthController (e2e)', () => {
   describe('POST /auth/logout', () => {
     it('returns 200 on valid logout', async () => {
       const mockPrisma = buildMockPrisma();
-      mockPrisma.$allTenants.refreshToken.findMany.mockResolvedValue([
+      mockPrisma.refreshToken.findMany.mockResolvedValue([
         {
           id: 'rt-1',
           tokenHash,
           tokenSelector: 'raw-toke',
           userId: 'user-1',
-          organizationId: '00000000-0000-0000-0000-000000000001',
           revokedAt: null,
           expiresAt: new Date(Date.now() + 86400000),
         },

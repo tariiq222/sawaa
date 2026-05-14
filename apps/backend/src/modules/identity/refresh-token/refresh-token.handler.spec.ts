@@ -3,7 +3,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { RefreshTokenHandler } from './refresh-token.handler';
 import { TokenService } from '../shared/token.service';
 import { PrismaService } from '../../../infrastructure/database';
-import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 describe('RefreshTokenHandler', () => {
   let handler: RefreshTokenHandler;
@@ -139,9 +139,9 @@ describe('RefreshTokenHandler', () => {
     expect(tokenService.issueTokenPair).not.toHaveBeenCalled();
   });
 
-  it('uses DEFAULT_ORGANIZATION_ID for new token pair (single-tenant: no per-token org)', async () => {
+  it('uses DEFAULT_ORG_ID for new token pair (single-tenant: no per-token org)', async () => {
     // Single-tenant migration removed organizationId from RefreshToken model.
-    // Handler always uses DEFAULT_ORGANIZATION_ID regardless of token source.
+    // Handler always uses DEFAULT_ORG_ID regardless of token source.
     prisma.refreshToken.findFirst.mockResolvedValue(baseToken);
     jest.spyOn(require('bcryptjs'), 'compare').mockResolvedValue(true);
     prisma.user.findUnique.mockResolvedValue({ id: 'user-1', email: 'a@b.com', role: 'RECEPTIONIST', customRoleId: null, customRole: null, isActive: true });
@@ -152,7 +152,7 @@ describe('RefreshTokenHandler', () => {
 
     expect(tokenService.issueTokenPair).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'user-1' }),
-      expect.objectContaining({ organizationId: DEFAULT_ORGANIZATION_ID, isSuperAdmin: false }),
+      expect.objectContaining({ organizationId: DEFAULT_ORG_ID, isSuperAdmin: false }),
     );
   });
 

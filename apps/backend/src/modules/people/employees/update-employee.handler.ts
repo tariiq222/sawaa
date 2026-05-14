@@ -4,7 +4,7 @@ import { EventBusService } from '../../../infrastructure/events';
 import { EmployeeDeactivatedEvent } from '../events/employee-deactivated.event';
 import { EmployeeReactivatedEvent } from '../events/employee-reactivated.event';
 import { UpdateEmployeeDto } from './update-employee.dto';
-import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type UpdateEmployeeCommand = UpdateEmployeeDto & {
   employeeId: string;
@@ -39,8 +39,8 @@ export class UpdateEmployeeHandler {
 
     if (cmd.isActive !== undefined && cmd.isActive !== wasActive) {
       const event = cmd.isActive
-        ? new EmployeeReactivatedEvent({ employeeId: updated.id, organizationId: DEFAULT_ORGANIZATION_ID })
-        : new EmployeeDeactivatedEvent({ employeeId: updated.id, organizationId: DEFAULT_ORGANIZATION_ID });
+        ? new EmployeeReactivatedEvent({ employeeId: updated.id, organizationId: DEFAULT_ORG_ID })
+        : new EmployeeDeactivatedEvent({ employeeId: updated.id, organizationId: DEFAULT_ORG_ID });
       await this.eventBus.publish(event.eventName, event.toEnvelope()).catch(() => undefined);
     }
 

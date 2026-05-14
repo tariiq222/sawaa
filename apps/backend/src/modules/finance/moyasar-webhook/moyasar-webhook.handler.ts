@@ -6,12 +6,13 @@ import { PaymentMethod, PaymentStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { MoyasarCredentialsService } from '../../../infrastructure/payments/moyasar-credentials.service';
-import { DEFAULT_ORGANIZATION_ID, SYSTEM_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
+import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
 import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 import { PaymentCompletedEvent } from '../events/payment-completed.event';
 import { PaymentFailedEvent } from '../events/payment-failed.event';
 import { MoyasarWebhookDto } from './moyasar-webhook.dto';
 import { AppMetricsService } from '../../../infrastructure/telemetry/app-metrics.service';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export interface MoyasarWebhookRequest {
   payload: MoyasarWebhookDto;
@@ -95,12 +96,12 @@ export class MoyasarWebhookHandler {
     try {
       const decoded = this.creds.decrypt<{ webhookSecret: string }>(
         cfg.webhookSecretEnc,
-        DEFAULT_ORGANIZATION_ID,
+        DEFAULT_ORG_ID,
       );
       webhookSecret = decoded.webhookSecret;
     } catch (err) {
       this.logger.error(
-        `Failed to decrypt webhook secret for org ${DEFAULT_ORGANIZATION_ID}: ${err instanceof Error ? err.message : 'unknown'}`,
+        `Failed to decrypt webhook secret for org ${DEFAULT_ORG_ID}: ${err instanceof Error ? err.message : 'unknown'}`,
       );
       throw new BadRequestException('Invalid webhook request');
     }
@@ -162,7 +163,7 @@ export class MoyasarWebhookHandler {
       const result = await this.cls.run(async () => {
         // P2-9: use the official TenantContextService API instead of raw cls.set
         this.tenantContext.set({
-          organizationId: DEFAULT_ORGANIZATION_ID,
+          organizationId: DEFAULT_ORG_ID,
           id: 'system',
           role: 'system',
           isSuperAdmin: false,

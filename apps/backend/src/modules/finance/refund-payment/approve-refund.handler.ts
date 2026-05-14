@@ -8,7 +8,7 @@ import { EventBusService } from '../../../infrastructure/events';
 import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
 import { RefundCompletedEvent } from '../events/refund-completed.event';
 import { computeRefundAccounting } from './refund-vat.helper';
-import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export interface ApproveRefundCommand {
   refundRequestId: string;
@@ -60,7 +60,7 @@ export class ApproveRefundHandler {
 
     try {
       const moyasarRefund = await this.moyasarClient.createRefund(
-        DEFAULT_ORGANIZATION_ID,
+        DEFAULT_ORG_ID,
         {
           paymentId: refundRequest.paymentId,
           amount: Math.round(Number(refundRequest.amount) * 100),
@@ -116,7 +116,7 @@ export class ApproveRefundHandler {
       // never break the refund itself; reconcile cron is the safety net.
       const event = new RefundCompletedEvent({
         refundRequestId: updated.id,
-        organizationId: DEFAULT_ORGANIZATION_ID,
+        organizationId: DEFAULT_ORG_ID,
         invoiceId: invoice.id,
         paymentId: refundRequest.paymentId,
         bookingId: invoice.bookingId,

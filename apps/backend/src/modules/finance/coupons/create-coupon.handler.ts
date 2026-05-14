@@ -3,7 +3,7 @@ import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 import { CreateCouponDto } from './create-coupon.dto';
 import type { DiscountType } from '@prisma/client';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type CreateCouponCommand = CreateCouponDto;
 
@@ -15,7 +15,7 @@ export class CreateCouponHandler {
   ) {}
 
   async execute(cmd: CreateCouponCommand) {
-    const _organizationId = DEFAULT_ORGANIZATION_ID;
+    const _organizationId = DEFAULT_ORG_ID;
     const exists = await this.prisma.coupon.findFirst({
       where: { code: cmd.code },
     });

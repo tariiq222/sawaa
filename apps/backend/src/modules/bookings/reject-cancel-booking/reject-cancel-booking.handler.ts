@@ -6,10 +6,8 @@ import {
 import { BookingStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingCancelRejectedEvent } from '../events/booking-cancel-rejected.event';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export interface RejectCancelBookingCommand {
   bookingId: string;

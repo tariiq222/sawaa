@@ -16,7 +16,7 @@ import { GenerateReportHandler } from '../../modules/ops/generate-report/generat
 import { GenerateReportDto } from '../../modules/ops/generate-report/generate-report.dto';
 import { ListActivityHandler } from '../../modules/ops/log-activity/list-activity.handler';
 import { ListActivityDto } from '../../modules/ops/log-activity/list-activity.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../common/constants';
 
 @ApiTags('Dashboard / Ops')
 @ApiBearerAuth()
@@ -85,7 +85,7 @@ export class DashboardOpsController {
   listActivityEndpoint(@Query() query: ListActivityDto) {
     return this.listActivity.execute({
       ...query,
-      organizationId: DEFAULT_ORGANIZATION_ID,
+      organizationId: DEFAULT_ORG_ID,
     });
   }
 }

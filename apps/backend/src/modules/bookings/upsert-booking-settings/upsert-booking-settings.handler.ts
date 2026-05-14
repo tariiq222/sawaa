@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { BookingSettings, RefundType } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export interface UpsertBookingSettingsCommand {
   branchId: string | null;

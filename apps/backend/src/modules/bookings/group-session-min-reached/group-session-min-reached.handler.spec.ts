@@ -1,7 +1,6 @@
 import { GroupSessionMinReachedHandler } from './group-session-min-reached.handler';
 import { RlsTransactionService } from '../../../infrastructure/database';
 
-const mockTenant = { requireOrganizationIdOrDefault: jest.fn().mockReturnValue('00000000-0000-0000-0000-000000000001') };
 const mockEventBus = { publish: jest.fn().mockResolvedValue(undefined) };
 const buildRlsTx = (prisma: ReturnType<typeof buildPrisma>) =>
   ({

@@ -13,7 +13,7 @@ import { EventBusService } from '../../../infrastructure/events';
 import { BookingCreatedEvent } from '../events/booking-created.event';
 import { ValidateCouponService } from '../coupons/validate-coupon.service';
 import { CreateBookingDto } from './create-booking.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 /** FNV-1a 32-bit hash → signed int32 (Postgres int4 range). Same algorithm as create-zoom-meeting. */
 function hashToInt32(s: string): number {
@@ -198,7 +198,7 @@ export class CreateBookingHandler {
           const result = await this.couponValidator.validate({
             tx,
             code: dto.couponCode,
-            orgId: DEFAULT_ORGANIZATION_ID,
+            orgId: DEFAULT_ORG_ID,
             clientId: dto.clientId,
             serviceId: dto.serviceId,
             subtotal: Number(price),
@@ -285,7 +285,7 @@ export class CreateBookingHandler {
           bookingId: booking.id,
           clientId: booking.clientId,
           employeeId: booking.employeeId ?? '',
-          organizationId: DEFAULT_ORGANIZATION_ID,
+          organizationId: DEFAULT_ORG_ID,
           scheduledAt: booking.scheduledAt,
           serviceId: booking.serviceId,
         });

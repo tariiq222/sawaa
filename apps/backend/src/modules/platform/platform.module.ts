@@ -6,7 +6,6 @@ import { MessagingModule } from '../../infrastructure/messaging.module';
 import { DashboardPlatformController } from '../../api/dashboard/platform.controller';
 import { DatabaseModule } from '../../infrastructure/database';
 import { RedisService } from '../../infrastructure/cache/redis.service';
-import { TenantModule } from '../../common/tenant';
 import { PasswordService } from '../identity/shared/password.service';
 import { CreateProblemReportHandler } from './problem-reports/create-problem-report.handler';
 import { ListProblemReportsHandler } from './problem-reports/list-problem-reports.handler';
@@ -23,7 +22,6 @@ import { SystemHealthModule } from './system-health/system-health.module';
 @Module({
   imports: [
     DatabaseModule,
-    TenantModule,
    
     FinanceModule,
     IdentityModule,

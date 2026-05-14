@@ -7,7 +7,7 @@ import { RefundCompletedEvent } from '../events/refund-completed.event';
 import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
 import { assertValidTransition } from '../payment-state-machine';
 import { computeRefundAccounting } from './refund-vat.helper';
-import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 interface CreateRefundRequestInTxResult {
   refundRequestId: string;
@@ -249,7 +249,7 @@ export class RefundPaymentHandler {
       select: { id: true, gatewayRef: true },
     });
 
-    const moyasarRefund = await this.moyasar.createRefund(DEFAULT_ORGANIZATION_ID, {
+    const moyasarRefund = await this.moyasar.createRefund(DEFAULT_ORG_ID, {
       paymentId: payment.gatewayRef ?? '',
       amount: Math.round(Number(refundReq.amount) * 100),
       idempotencyKey: cmd.idempotencyKey,
@@ -299,7 +299,7 @@ export class RefundPaymentHandler {
 
     const event = new RefundCompletedEvent({
       refundRequestId: cmd.refundRequestId,
-      organizationId: DEFAULT_ORGANIZATION_ID,
+      organizationId: DEFAULT_ORG_ID,
       invoiceId: refundReq.invoiceId,
       paymentId: refundReq.paymentId,
       bookingId: invoice?.bookingId ?? '',
@@ -394,7 +394,7 @@ export class RefundPaymentHandler {
     // transaction across an external HTTP call.
     let moyasarRefundId: string | undefined;
     try {
-      const moyasarRefund = await this.moyasar.createRefund(DEFAULT_ORGANIZATION_ID, {
+      const moyasarRefund = await this.moyasar.createRefund(DEFAULT_ORG_ID, {
         paymentId: payment.gatewayRef,
         amount: Math.round(refundAmount * 100),
         idempotencyKey,
@@ -469,7 +469,7 @@ export class RefundPaymentHandler {
 
     const event = new RefundCompletedEvent({
       refundRequestId,
-      organizationId: DEFAULT_ORGANIZATION_ID,
+      organizationId: DEFAULT_ORG_ID,
       invoiceId: payment.invoice.id,
       paymentId: payment.id,
       bookingId: payment.invoice.bookingId,

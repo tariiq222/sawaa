@@ -11,7 +11,7 @@ import { PrismaService } from '../../../../../infrastructure/database';
 import { TenantContextService } from '../../../../../common/tenant/tenant-context.service';
 import { MoyasarApiClient } from '../../../moyasar-api/moyasar-api.client';
 import { InitClientPaymentDto } from './init-client-payment.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../../../common/constants';
 
 const PAYMENT_INIT_BOOKING_STATUSES: readonly BookingStatus[] = [
   BookingStatus.PENDING,
@@ -102,7 +102,7 @@ export class InitClientPaymentHandler {
 
     let moyasarPayment: Awaited<ReturnType<MoyasarApiClient['createPayment']>>;
     try {
-      moyasarPayment = await this.moyasar.createPayment(DEFAULT_ORGANIZATION_ID, {
+      moyasarPayment = await this.moyasar.createPayment(DEFAULT_ORG_ID, {
         amountHalalas,
         currency: invoice.currency,
         description: `Invoice payment - ${invoice.id}`,
@@ -112,7 +112,7 @@ export class InitClientPaymentHandler {
           bookingId: invoice.bookingId,
           source: 'mobile-client',
         },
-        idempotencyKey: `payment:${DEFAULT_ORGANIZATION_ID}:${invoice.id}`,
+        idempotencyKey: `payment:${DEFAULT_ORG_ID}:${invoice.id}`,
       });
     } catch (error) {
       await this.deleteFailedPaymentInit(payment.id);

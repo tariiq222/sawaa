@@ -4,7 +4,7 @@ import { EventBusService } from '../../../infrastructure/events';
 import { ClientEnrolledEvent } from '../events/client-enrolled.event';
 import { CreateClientDto } from './create-client.dto';
 import { serializeClient } from './client.serializer';
-import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type CreateClientCommand = CreateClientDto;
 
@@ -65,7 +65,7 @@ export class CreateClientHandler {
       name: client.name,
       phone: client.phone ?? undefined,
       email: client.email ?? undefined,
-      organizationId: DEFAULT_ORGANIZATION_ID,
+      organizationId: DEFAULT_ORG_ID,
     });
     await this.eventBus.publish(event.eventName, event.toEnvelope());
 

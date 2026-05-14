@@ -1,7 +1,7 @@
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { BookingStatus, CancellationReason } from '@prisma/client';
 import { RequestCancelBookingHandler } from './request-cancel-booking.handler';
-import { buildPrisma, buildEventBus, buildTenant, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, buildEventBus, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
 
 describe('RequestCancelBookingHandler', () => {
   it('sets status to CANCEL_REQUESTED for PENDING booking', async () => {

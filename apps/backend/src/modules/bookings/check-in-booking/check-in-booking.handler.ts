@@ -2,9 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { fetchBookingOrFail } from '../booking-lifecycle.helper';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export interface CheckInBookingCommand {
   bookingId: string;

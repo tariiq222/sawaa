@@ -3,13 +3,8 @@ import { ActivityAction } from '@prisma/client';
 
 /**
  * We mock Prisma at the level of the dynamic model accessor.
- * The handler accesses models via prisma.$allTenants[model].
- * ClsService is mocked to call the callback immediately (no real CLS context needed).
+ * The handler accesses models directly via prisma[model] (single-tenant mode).
  */
-const buildClsMock = () => ({
-  run: jest.fn().mockImplementation((fn: () => Promise<void>) => fn()),
-  set: jest.fn(),
-});
 
 const buildPrismaProxy = (
   orgs: Array<{ id: string }>,
@@ -25,7 +20,7 @@ const buildPrismaProxy = (
     .fn()
     .mockResolvedValue(parentExists ? { id: orphanIds[0] } : null);
 
-  const baseProxy = new Proxy(
+  const prisma = new Proxy(
     {
       organization: { findMany: jest.fn().mockResolvedValue(orgs) },
       activityLog: { create: activityLogCreate },
@@ -39,12 +34,6 @@ const buildPrismaProxy = (
     },
   );
 
-  const prisma = {
-    get $allTenants() {
-      return baseProxy;
-    },
-  };
-
   return { prisma, activityLogCreate, findMany, parentFindFirst };
 };
 
@@ -54,9 +43,8 @@ describe('RunOrphanAuditHandler', () => {
     // DEFAULT_ORGANIZATION_ID; activityLog.create no longer writes organizationId
     const orgs = [{ id: 'org-1' }];
     const { prisma, activityLogCreate } = buildPrismaProxy(orgs, ['booking-x'], false);
-    const cls = buildClsMock();
 
-    const handler = new RunOrphanAuditHandler(prisma as never, cls as never);
+    const handler = new RunOrphanAuditHandler(prisma as never);
     await handler.execute();
 
     // At least one orphan_audit log entry per orphan detected
@@ -77,9 +65,8 @@ describe('RunOrphanAuditHandler', () => {
       [], // no children → no orphan candidates
       false,
     );
-    const cls = buildClsMock();
 
-    const handler = new RunOrphanAuditHandler(prisma as never, cls as never);
+    const handler = new RunOrphanAuditHandler(prisma as never);
     await handler.execute();
 
     expect(activityLogCreate).not.toHaveBeenCalled();
@@ -90,9 +77,8 @@ describe('RunOrphanAuditHandler', () => {
     // iterates organization.findMany; runs once with DEFAULT_ORGANIZATION_ID
     const orgs = [{ id: 'org-A' }, { id: 'org-B' }];
     const { prisma, activityLogCreate, findMany: _findMany } = buildPrismaProxy(orgs, ['child-id-1'], false);
-    const cls = buildClsMock();
 
-    const handler = new RunOrphanAuditHandler(prisma as never, cls as never);
+    const handler = new RunOrphanAuditHandler(prisma as never);
     await handler.execute();
 
     // Handler runs checks once (single org), activityLog entries written for orphans found
@@ -103,17 +89,5 @@ describe('RunOrphanAuditHandler', () => {
       expect(data.action).toBe(ActivityAction.SYSTEM);
       expect(data.entity).toBe('orphan_audit');
     }
-  });
-
-  it('uses a super-admin CLS context for cross-tenant access', async () => {
-    const orgs = [{ id: 'org-1' }];
-    const { prisma } = buildPrismaProxy(orgs, [], false);
-    const cls = buildClsMock();
-
-    const handler = new RunOrphanAuditHandler(prisma as never, cls as never);
-    await handler.execute();
-
-    expect(cls.run).toHaveBeenCalledTimes(1);
-    expect(cls.set).toHaveBeenCalledWith(expect.any(String), true);
   });
 });

@@ -4,7 +4,7 @@ import { EventBusService } from '../../../infrastructure/events';
 
 import { EmployeeCreatedEvent } from '../events/employee-created.event';
 import { CreateEmployeeDto } from './create-employee.dto';
-import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type CreateEmployeeCommand = CreateEmployeeDto;
 
@@ -48,7 +48,7 @@ export class CreateEmployeeHandler {
       return created;
     });
 
-    const event = new EmployeeCreatedEvent({ employeeId: employee.id, organizationId: DEFAULT_ORGANIZATION_ID });
+    const event = new EmployeeCreatedEvent({ employeeId: employee.id, organizationId: DEFAULT_ORG_ID });
     this.eventBus.publish(event.eventName, event.toEnvelope()).catch(() => {});
 
     return employee;

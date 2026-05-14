@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { BookingStatus, Prisma } from '@prisma/client';
 import { RescheduleBookingHandler } from './reschedule-booking.handler';
-import { buildPrisma, buildTenant, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
 
 const defaultRescheduleSettings = {
   execute: jest.fn().mockResolvedValue({ maxReschedulesPerBooking: 3 }),

@@ -18,17 +18,15 @@ import { RequestDashboardOtpHandler } from '../../modules/identity/request-dashb
 import { RequestDashboardOtpDto } from '../../modules/identity/request-dashboard-otp/request-dashboard-otp.dto';
 import { VerifyDashboardOtpHandler } from '../../modules/identity/verify-dashboard-otp/verify-dashboard-otp.handler';
 import { VerifyDashboardOtpDto } from '../../modules/identity/verify-dashboard-otp/verify-dashboard-otp.dto';
-import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../infrastructure/database';
 import { TokenService } from '../../modules/identity/shared/token.service';
-import { DEFAULT_ORGANIZATION_ID, SUPER_ADMIN_CONTEXT_CLS_KEY } from '../../common/tenant';
+import { DEFAULT_ORG_ID } from '../../common/constants';
 import { UserId } from '../../common/auth/user-id.decorator';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { GetCurrentUserHandler } from '../../modules/identity/get-current-user/get-current-user.handler';
 import { GetCurrentUserQuery } from '../../modules/identity/get-current-user/get-current-user.query';
 import { ChangePasswordHandler } from '../../modules/identity/users/change-password.handler';
 
-import { TenantContextService } from '../../common/tenant/tenant-context.service';
 import { RequestPasswordResetHandler } from '../../modules/identity/user-password-reset/request-password-reset/request-password-reset.handler';
 import { RequestPasswordResetDto } from '../../modules/identity/user-password-reset/request-password-reset/request-password-reset.dto';
 import { PerformPasswordResetHandler } from '../../modules/identity/user-password-reset/perform-password-reset/perform-password-reset.handler';
@@ -67,10 +65,8 @@ export class AuthController {
     private readonly config: ConfigService,
     private readonly requestPasswordReset: RequestPasswordResetHandler,
     private readonly performPasswordReset: PerformPasswordResetHandler,
-    private readonly tenant: TenantContextService,
     private readonly requestDashboardOtp: RequestDashboardOtpHandler,
     private readonly verifyDashboardOtp: VerifyDashboardOtpHandler,
-    private readonly cls: ClsService,
     private readonly settings: PlatformSettingsService,
   ) {}
 
@@ -159,7 +155,7 @@ export class AuthController {
         firstName,
         lastName: rest.join(' '),
         isSuperAdmin: user.isSuperAdmin,
-        organizationId: DEFAULT_ORGANIZATION_ID,
+        organizationId: DEFAULT_ORG_ID,
         permissions: flattenPermissions({
           role: user.role,
           customRole: user.customRole,
@@ -192,37 +188,29 @@ export class AuthController {
     const rawToken = (req.cookies as Record<string, string>)?.['ck_refresh'] ?? body.refreshToken;
     if (!rawToken) throw new UnauthorizedException('No refresh token');
 
-    // RefreshToken/Membership are tenant-scoped, but the refresh endpoint runs
-    // before any tenant context exists. Set SUPER_ADMIN_CONTEXT to allow the
-    // $allTenants reads/updates. Identity is enforced by tokenHash + bcrypt
-    // inside findActiveToken.
-    return this.cls.run(async () => {
-      this.cls.set(SUPER_ADMIN_CONTEXT_CLS_KEY, true);
+    const record = await this.findActiveToken(rawToken);
 
-      const record = await this.findActiveToken(rawToken);
-
-      await this.prisma.$allTenants.refreshToken.update({
-        where: { id: record.id },
-        data: { revokedAt: new Date() },
-      });
-
-      const user = await this.prisma.user.findUnique({
-        where: { id: record.userId },
-        include: { customRole: { include: { permissions: true } } },
-      });
-
-      if (!user || !user.isActive) throw new UnauthorizedException('User not found or inactive');
-
-      const tokens = await this.tokens.issueTokenPair(user, {
-        organizationId: DEFAULT_ORGANIZATION_ID,
-        isSuperAdmin: user.isSuperAdmin,
-      });
-      this.setRefreshCookie(res, tokens.refreshToken);
-      return {
-        accessToken: tokens.accessToken,
-        expiresIn: this.parseTtlSeconds(this.config.get<string>('JWT_ACCESS_TTL') ?? '15m'),
-      };
+    await this.prisma.refreshToken.update({
+      where: { id: record.id },
+      data: { revokedAt: new Date() },
     });
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: record.userId },
+      include: { customRole: { include: { permissions: true } } },
+    });
+
+    if (!user || !user.isActive) throw new UnauthorizedException('User not found or inactive');
+
+    const tokens = await this.tokens.issueTokenPair(user, {
+      organizationId: DEFAULT_ORG_ID,
+      isSuperAdmin: user.isSuperAdmin,
+    });
+    this.setRefreshCookie(res, tokens.refreshToken);
+    return {
+      accessToken: tokens.accessToken,
+      expiresIn: this.parseTtlSeconds(this.config.get<string>('JWT_ACCESS_TTL') ?? '15m'),
+    };
   }
 
   @Post('logout')
@@ -239,12 +227,8 @@ export class AuthController {
     const rawToken = (req.cookies as Record<string, string>)?.['ck_refresh'] ?? body.refreshToken;
     res.clearCookie('ck_refresh', { path: '/' });
     if (!rawToken) return;
-    // Same reasoning as refreshEndpoint — public path, no tenant context.
-    await this.cls.run(async () => {
-      this.cls.set(SUPER_ADMIN_CONTEXT_CLS_KEY, true);
-      const record = await this.findActiveToken(rawToken);
-      await this.logout.execute({ userId: record.userId });
-    });
+    const record = await this.findActiveToken(rawToken);
+    await this.logout.execute({ userId: record.userId });
   }
 
   @Get('me')
@@ -396,17 +380,11 @@ export class AuthController {
 
   // Uses tokenSelector (first 8 chars of the raw UUID) as an indexed DB filter
   // so the bcrypt.compare runs on at most a handful of rows, not the full table.
-  //
-  // RefreshToken is in SCOPED_MODELS, but /auth/refresh and /auth/logout are
-  // public — there is no CLS tenant context yet (the whole point of refresh
-  // is that we are about to *issue* one). $allTenants requires the
-  // SUPER_ADMIN_CONTEXT_CLS_KEY flag, so callers must wrap this in
-  // `cls.run(() => { cls.set(SUPER_ADMIN_CONTEXT_CLS_KEY, true); ... })`.
   // The bcrypt.compare below is the actual identity check.
   private async findActiveToken(rawToken: string) {
     const selector = rawToken.slice(0, 8);
 
-    const candidates = await this.prisma.$allTenants.refreshToken.findMany({
+    const candidates = await this.prisma.refreshToken.findMany({
       where: { tokenSelector: selector, revokedAt: null, expiresAt: { gt: new Date() } },
     });
 

@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { NoShowBookingHandler } from './no-show-booking.handler';
-import { buildPrisma, buildTenant, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
 
 describe('NoShowBookingHandler', () => {
   it('marks CONFIRMED booking as NO_SHOW', async () => {

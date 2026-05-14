@@ -4,7 +4,6 @@ import { CreateBookingHandler } from './create-booking.handler';
 import { DEFAULT_BOOKING_SETTINGS } from '../get-booking-settings/get-booking-settings.handler';
 import { RlsTransactionService } from '../../../infrastructure/database';
 
-const mockTenant = { requireOrganizationIdOrDefault: jest.fn().mockReturnValue('00000000-0000-0000-0000-000000000001') };
 const mockEventBus = { publish: jest.fn().mockResolvedValue(undefined) };
 const _mockSubscriptionCache = { get: jest.fn().mockResolvedValue(null) };
 

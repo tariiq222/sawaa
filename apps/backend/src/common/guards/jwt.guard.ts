@@ -9,7 +9,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { PrismaService } from '../../infrastructure/database';
 import { RedisService } from '../../infrastructure/cache';
 import { TenantContextService } from '../tenant/tenant-context.service';
-import { DEFAULT_ORGANIZATION_ID } from '../tenant/tenant.constants';
+import { DEFAULT_ORG_ID } from '../constants';
 import { ALLOW_DURING_SUSPENSION_KEY } from './allow-during-suspension.decorator';
 
 export const IS_PUBLIC_KEY = 'isPublic';
@@ -107,8 +107,6 @@ export class JwtGuard extends AuthGuard('jwt') {
     // Single-tenant: no organization suspension
   }
 
-
-
   /**
    * Resolves the effective tenant org for the current request (TAR-10).
    *
@@ -128,7 +126,7 @@ export class JwtGuard extends AuthGuard('jwt') {
     _headers: Record<string, string | string[] | undefined> | undefined,
   ): string | undefined {
     if (!user) return undefined;
-    return DEFAULT_ORGANIZATION_ID;
+    return DEFAULT_ORG_ID;
   }
 
   /**

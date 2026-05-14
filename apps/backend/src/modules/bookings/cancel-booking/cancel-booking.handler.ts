@@ -9,7 +9,7 @@ import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-s
 import { CancelBookingDto } from './cancel-booking.dto';
 import { ZoomMeetingService } from '../zoom-meeting.service';
 import { RefundPaymentHandler } from '../../finance/refund-payment/refund-payment.handler';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type CancelBookingCommand = CancelBookingDto & {
   bookingId: string;
@@ -119,7 +119,7 @@ export class CancelBookingHandler {
     });
 
     const event = new BookingCancelledEvent({
-      organizationId: DEFAULT_ORGANIZATION_ID,
+      organizationId: DEFAULT_ORG_ID,
       scheduledAt: booking.scheduledAt,
       bookingId: booking.id,
       clientId: booking.clientId,
@@ -135,7 +135,7 @@ export class CancelBookingHandler {
     await this.eventBus.publish(event.eventName, event.toEnvelope());
 
     if (booking.zoomMeetingId) {
-      this.zoomMeetingService.deleteMeeting(DEFAULT_ORGANIZATION_ID, booking.zoomMeetingId).catch(() => {});
+      this.zoomMeetingService.deleteMeeting(DEFAULT_ORG_ID, booking.zoomMeetingId).catch(() => {});
     }
 
     return { ...updated, refundType };

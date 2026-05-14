@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant';
 import { MoyasarCredentialsService } from '../../../infrastructure/payments/moyasar-credentials.service';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export interface TestMoyasarConfigResult {
   ok: boolean;
@@ -31,7 +31,7 @@ export class TestMoyasarConfigHandler {
     }
     const { secretKey } = this.creds.decrypt<{ secretKey: string }>(
       cfg.secretKeyEnc,
-      DEFAULT_ORGANIZATION_ID,
+      DEFAULT_ORG_ID,
     );
 
     let status: TestMoyasarConfigResult['status'];

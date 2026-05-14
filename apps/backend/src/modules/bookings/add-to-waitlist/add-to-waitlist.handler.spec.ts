@@ -1,7 +1,7 @@
 import { ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { AddToWaitlistHandler } from './add-to-waitlist.handler';
-import { buildPrisma, buildTenant } from '../testing/booking-test-helpers';
+import { buildPrisma } from '../testing/booking-test-helpers';
 
 describe('AddToWaitlistHandler', () => {
   it('adds client to waitlist', async () => {

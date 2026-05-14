@@ -5,7 +5,6 @@ import { DatabaseModule } from '../../infrastructure/database';
 import { MessagingModule } from '../../infrastructure/messaging.module';
 import { PaymentsInfraModule } from '../../infrastructure/payments/payments.module';
 import { StorageModule } from '../../infrastructure/storage';
-import { TenantModule } from '../../common/tenant';
 import { CreateInvoiceHandler } from './create-invoice/create-invoice.handler';
 import { BookingConfirmedHandler } from './create-invoice/booking-confirmed.handler';
 import { ProcessPaymentHandler } from './process-payment/process-payment.handler';
@@ -69,7 +68,7 @@ const handlers = [
 ];
 
 @Module({
-  imports: [DatabaseModule, MessagingModule, PaymentsInfraModule, StorageModule, TenantModule, ],
+  imports: [DatabaseModule, MessagingModule, PaymentsInfraModule, StorageModule, ],
   controllers: [DashboardFinanceController, RefundsController],
   providers: [
     ...handlers,

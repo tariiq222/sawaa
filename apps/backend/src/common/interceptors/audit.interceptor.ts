@@ -11,7 +11,7 @@ import { ActivityAction } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { RequestContextStorage } from '../http/request-context';
 import { TenantContextService } from '../tenant/tenant-context.service';
-import { DEFAULT_ORGANIZATION_ID } from "../tenant/tenant.constants";
+import { DEFAULT_ORG_ID } from "../constants";
 
 /** HTTP methods considered write operations and subject to audit logging. */
 const WRITE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
@@ -195,7 +195,7 @@ export class AuditInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap(async (response) => {
         try {
-          const _organizationId = DEFAULT_ORGANIZATION_ID;
+          const _organizationId = DEFAULT_ORG_ID;
           const entityId = extractEntityId(response);
           await this.prisma.activityLog.create({
             data: {
@@ -242,7 +242,7 @@ export class AuditInterceptor implements NestInterceptor {
     userAgent?: string,
   ): Promise<void> {
     try {
-      const _organizationId = DEFAULT_ORGANIZATION_ID;
+      const _organizationId = DEFAULT_ORG_ID;
       await this.prisma.activityLog.create({
         data: {
           userId,

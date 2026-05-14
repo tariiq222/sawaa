@@ -6,10 +6,8 @@ import { DashboardIntegrationsController } from '../../../api/dashboard/integrat
 import { ZoomApiClient } from '../../../infrastructure/zoom/zoom-api.client';
 import { ZoomCredentialsService } from '../../../infrastructure/zoom/zoom-credentials.service';
 import { DatabaseModule } from '../../../infrastructure/database';
-import { TenantModule } from '../../../common/tenant';
-
 @Module({
-  imports: [DatabaseModule, TenantModule],
+  imports: [DatabaseModule],
   controllers: [DashboardIntegrationsController],
   providers: [
     GetZoomConfigHandler,
