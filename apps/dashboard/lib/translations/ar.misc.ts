@@ -208,6 +208,7 @@ export const arMisc: Record<string, string> = {
   "common.noPermission": "ليس لديك صلاحية للوصول لهذه الصفحة",
 
   // — Login form —
+  "login.forgotPassword": "نسيت كلمة المرور؟",
   "login.welcome": "مرحباً بعودتك",
   "login.subtitle": "أدخل بياناتك لتسجيل الدخول",
   "login.emailLabel": "البريد الإلكتروني",

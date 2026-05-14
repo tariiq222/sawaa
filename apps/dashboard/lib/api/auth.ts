@@ -103,6 +103,30 @@ export async function performStaffPasswordReset(
   await authApi.performStaffPasswordReset(token, newPassword)
 }
 
+export async function requestPasswordReset(email: string): Promise<void> {
+  const res = await fetch('/api/proxy/auth/request-password-reset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { message?: string }).message ?? 'Failed to send reset link')
+  }
+}
+
+export async function performPasswordReset(token: string, newPassword: string): Promise<void> {
+  const res = await fetch('/api/proxy/auth/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, newPassword }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { message?: string }).message ?? 'Failed to reset password')
+  }
+}
+
 export function getStoredUser(): AuthUser | null {
   if (typeof window === "undefined") return null
   const raw = localStorage.getItem(USER_KEY)

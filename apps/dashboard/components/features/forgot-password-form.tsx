@@ -3,11 +3,14 @@
 import { useState } from "react"
 import type { FormEvent } from "react"
 import Link from "next/link"
+import { z } from "zod"
 import { Button } from "@sawaa/ui"
 import { Input } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { requestStaffPasswordReset } from "@/lib/api/auth"
+
+const emailSchema = z.string().email()
 
 export function ForgotPasswordForm() {
   const { t } = useLocale()
@@ -15,13 +18,22 @@ export function ForgotPasswordForm() {
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [fieldError, setFieldError] = useState("")
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError("")
+    setFieldError("")
+
+    const parsed = emailSchema.safeParse(email.trim())
+    if (!parsed.success) {
+      setFieldError(t("login.errors.identifierShape"))
+      return
+    }
+
     setLoading(true)
     try {
-      await requestStaffPasswordReset(email)
+      await requestStaffPasswordReset(parsed.data)
       setSubmitted(true)
     } catch {
       setError(t("forgotPassword.requestFailed"))
@@ -32,7 +44,7 @@ export function ForgotPasswordForm() {
 
   if (submitted) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+      <div className="text-center">
         <div className="mb-4 flex justify-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
             <svg
@@ -53,7 +65,7 @@ export function ForgotPasswordForm() {
             </svg>
           </div>
         </div>
-        <h2 className="mb-2 text-xl font-bold text-foreground">
+        <h2 className="mb-2 text-xl font-semibold text-foreground">
           {t("forgotPassword.successTitle")}
         </h2>
         <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
@@ -70,13 +82,13 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
+    <div>
       {/* Heading */}
-      <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-foreground">
+      <div className="mb-6 text-center">
+        <h1 className="mb-1 text-2xl font-semibold">
           {t("forgotPassword.title")}
         </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {t("forgotPassword.subtitle")}
         </p>
       </div>
@@ -89,27 +101,33 @@ export function ForgotPasswordForm() {
       )}
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="email" className="text-sm font-medium text-foreground">
+          <Label htmlFor="email">
             {t("forgotPassword.emailLabel")}
           </Label>
           <Input
             id="email"
             type="email"
+            dir="ltr"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value)
+              if (fieldError) setFieldError("")
+            }}
             placeholder="you@example.com"
-            required
             autoComplete="email"
-            className="h-11 text-sm"
+            disabled={loading}
           />
+          {fieldError && (
+            <p className="text-sm text-destructive">{fieldError}</p>
+          )}
         </div>
 
         <Button
           type="submit"
-          disabled={loading}
-          className="h-11 w-full text-sm font-semibold"
+          disabled={loading || !email.trim()}
+          className="w-full"
         >
           {loading ? t("forgotPassword.submitting") : t("forgotPassword.submit")}
         </Button>
@@ -119,7 +137,7 @@ export function ForgotPasswordForm() {
       <div className="mt-6 text-center">
         <Link
           href="/"
-          className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+          className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
         >
           {t("forgotPassword.back")}
         </Link>

@@ -208,6 +208,7 @@ export const enMisc: Record<string, string> = {
   "common.noPermission": "You don't have permission to access this page",
 
   // — Login form —
+  "login.forgotPassword": "Forgot password?",
   "login.welcome": "Welcome back",
   "login.subtitle": "Enter your credentials to sign in",
   "login.emailLabel": "Email",

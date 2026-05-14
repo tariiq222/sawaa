@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { Button, Input, Label } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -115,13 +116,19 @@ export function CombinedStep({ loading, error, onSubmit, onSwitchToOtp, onClearE
       <Button type="submit" disabled={loading || !identifier.trim() || !password} className="w-full">
         {loading ? t("login.signingIn") : t("login.password.submit")}
       </Button>
+      <Link
+        href="/forgot-password"
+        className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline text-center"
+      >
+        {t("login.forgotPassword")}
+      </Link>
       <button
         type="button"
         onClick={handleSwitchToOtp}
         disabled={loading}
         className="text-sm text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline disabled:opacity-50"
       >
-        نسيت كلمة المرور؟ استخدم رمز التحقق
+        دخول بدون كلمة المرور
       </button>
     </form>
   )

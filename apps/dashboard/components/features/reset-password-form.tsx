@@ -4,11 +4,18 @@ import { Suspense, useState } from "react"
 import type { FormEvent } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
+import { z } from "zod"
 import { Button } from "@sawaa/ui"
 import { Input } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { performStaffPasswordReset } from "@/lib/api/auth"
+
+const strongPasswordSchema = z
+  .string()
+  .min(8)
+  .regex(/[A-Z]/)
+  .regex(/[0-9]/)
 
 export function ResetPasswordForm() {
   return (
@@ -33,7 +40,9 @@ function ResetPasswordFormInner() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
-    if (newPassword.length < 8) {
+
+    const parsed = strongPasswordSchema.safeParse(newPassword)
+    if (!parsed.success) {
       setError(t("resetPassword.weakPassword"))
       return
     }
@@ -57,17 +66,23 @@ function ResetPasswordFormInner() {
 
   if (!token) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
-        <p className="text-sm text-destructive">
+      <div className="text-center">
+        <p className="mb-4 text-sm text-destructive">
           {t("resetPassword.invalidToken")}
         </p>
+        <Link
+          href="/"
+          className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+        >
+          {t("resetPassword.backToLogin")}
+        </Link>
       </div>
     )
   }
 
   if (success) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-sm space-y-3">
+      <div className="text-center space-y-3">
         <div className="mb-4 flex justify-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
             <svg
@@ -88,7 +103,7 @@ function ResetPasswordFormInner() {
             </svg>
           </div>
         </div>
-        <h2 className="text-xl font-bold text-foreground">
+        <h2 className="text-xl font-semibold text-foreground">
           {t("resetPassword.successTitle")}
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
@@ -99,13 +114,13 @@ function ResetPasswordFormInner() {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
+    <div>
       {/* Heading */}
-      <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-foreground">
+      <div className="mb-6 text-center">
+        <h1 className="mb-1 text-2xl font-semibold">
           {t("resetPassword.title")}
         </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {t("resetPassword.subtitle")}
         </p>
       </div>
@@ -118,47 +133,47 @@ function ResetPasswordFormInner() {
       )}
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <Label
-            htmlFor="new-password"
-            className="text-sm font-medium text-foreground"
-          >
+          <Label htmlFor="new-password">
             {t("resetPassword.newPasswordLabel")}
           </Label>
           <Input
             id="new-password"
             type="password"
             value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
+            onChange={(e) => {
+              setNewPassword(e.target.value)
+              if (error) setError(null)
+            }}
             required
             autoComplete="new-password"
-            className="h-11 text-sm"
+            disabled={loading}
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label
-            htmlFor="confirm-password"
-            className="text-sm font-medium text-foreground"
-          >
+          <Label htmlFor="confirm-password">
             {t("resetPassword.confirmLabel")}
           </Label>
           <Input
             id="confirm-password"
             type="password"
             value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
+            onChange={(e) => {
+              setConfirm(e.target.value)
+              if (error) setError(null)
+            }}
             required
             autoComplete="new-password"
-            className="h-11 text-sm"
+            disabled={loading}
           />
         </div>
 
         <Button
           type="submit"
-          disabled={loading}
-          className="h-11 w-full text-sm font-semibold"
+          disabled={loading || !newPassword || !confirm}
+          className="w-full"
         >
           {loading ? t("resetPassword.submitting") : t("resetPassword.submit")}
         </Button>
@@ -168,7 +183,7 @@ function ResetPasswordFormInner() {
       <div className="mt-6 text-center">
         <Link
           href="/"
-          className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+          className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
         >
           {t("resetPassword.backToLogin")}
         </Link>
