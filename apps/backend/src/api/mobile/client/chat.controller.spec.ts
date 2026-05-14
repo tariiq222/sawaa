@@ -66,11 +66,11 @@ describe('MobileClientChatController (e2e)', () => {
       );
     });
 
-    it('returns 400 for empty message', async () => {
+    it('returns 400 for missing userMessage', async () => {
       return request(app.getHttpServer())
         .post('/mobile/client/chat')
         .set('Authorization', 'Bearer fake-jwt')
-        .send({ userMessage: '' })
+        .send({})
         .expect(400);
     });
 

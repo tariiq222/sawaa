@@ -4,7 +4,6 @@ import * as Sentry from '@sentry/node';
 const SCRUBBED_HEADER_KEYS = new Set([
   'authorization',
   'cookie',
-  'x-org-id',
 ]);
 
 // Field name pattern: matches any key containing these substrings.

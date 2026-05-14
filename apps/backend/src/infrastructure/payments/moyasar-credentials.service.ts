@@ -30,14 +30,14 @@ export class MoyasarCredentialsService {
   private readonly masterKey: Buffer;
 
   constructor(cfg: ConfigService) {
-    const raw = cfg.get<string>('MOYASAR_TENANT_ENCRYPTION_KEY');
+    const raw = cfg.get<string>('MOYASAR_ENCRYPTION_KEY');
     if (!raw) {
-      throw new InternalServerErrorException('MOYASAR_TENANT_ENCRYPTION_KEY missing');
+      throw new InternalServerErrorException('MOYASAR_ENCRYPTION_KEY missing');
     }
     const buf = Buffer.from(raw, 'base64');
     if (buf.length !== 32) {
       throw new InternalServerErrorException(
-        'MOYASAR_TENANT_ENCRYPTION_KEY must decode to 32 bytes',
+        'MOYASAR_ENCRYPTION_KEY must decode to 32 bytes',
       );
     }
     this.masterKey = buf;

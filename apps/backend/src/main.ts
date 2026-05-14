@@ -113,7 +113,7 @@ async function bootstrap(): Promise<void> {
     for (const key of [
       'SMS_PROVIDER_ENCRYPTION_KEY',
       'ZOOM_PROVIDER_ENCRYPTION_KEY',
-      'MOYASAR_TENANT_ENCRYPTION_KEY',
+      'MOYASAR_ENCRYPTION_KEY',
       'EMAIL_PROVIDER_ENCRYPTION_KEY',
       'SUPER_ADMIN_PASSWORD',
     ]) {

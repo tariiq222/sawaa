@@ -13,7 +13,7 @@ import {
   setSecureItem,
   deleteSecureItem,
 } from '@/stores/secure-storage';
-import { clearCurrentOrgId, getCurrentOrgIdSync } from './tenant';
+import { clearCurrentOrgId } from './tenant';
 
 const ORG_SUSPENDED_CODE = 'ORG_SUSPENDED';
 
@@ -23,21 +23,6 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-});
-
-// Tenant header: every request — public and authenticated. On authenticated
-// routes the backend's TenantResolverMiddleware ignores this header (JWT
-// claim wins); on public routes it scopes catalog data to the active tenant.
-// Reads from secure-store cache (hydrated at boot via loadCurrentOrgId),
-// falling back to the build-time default for first-launch / pre-login state.
-api.interceptors.request.use((config) => {
-  const orgId = getCurrentOrgIdSync();
-  if (config.headers && typeof (config.headers as { set?: unknown }).set === 'function') {
-    (config.headers as { set: (k: string, v: string) => void }).set('X-Org-Id', orgId);
-  } else if (config.headers) {
-    (config.headers as Record<string, string>)['X-Org-Id'] = orgId;
-  }
-  return config;
 });
 
 // Request interceptor: inject JWT token

@@ -13,8 +13,7 @@ export class PublicFetchError extends Error {
 /**
  * Utility for public website fetches (Sawa single-tenant):
  * 1. Prefixes the request with the API base (`/api/v1`).
- * 2. No X-Org-Id header needed — backend runs in single-tenant mode.
- * 3. Throws `PublicFetchError(status, body)` on non-2xx.
+ * 2. Throws `PublicFetchError(status, body)` on non-2xx.
  */
 export async function publicFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const base = getApiBase();

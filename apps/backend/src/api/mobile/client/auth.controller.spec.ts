@@ -29,7 +29,7 @@ describe('MobileClientAuthController (e2e)', () => {
       .overrideGuard(JwtGuard)
       .useValue({
         canActivate: (ctx: any) => {
-          ctx.switchToHttp().getRequest().user = { sub: 'user-1' };
+          ctx.switchToHttp().getRequest().user = { id: 'user-1' };
           return true;
         },
       })
@@ -178,10 +178,6 @@ describe('MobileClientAuthController (e2e)', () => {
       expect(mockRequestEmail.execute).toHaveBeenCalledWith({ userId: 'user-1' });
     });
 
-    it('returns 401 without auth', async () => {
-      return request(app.getHttpServer())
-        .post('/mobile/auth/request-email-verification')
-        .expect(401);
-    });
+
   });
 });

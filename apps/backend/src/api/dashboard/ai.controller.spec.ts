@@ -76,18 +76,18 @@ describe('DashboardAiController (e2e)', () => {
       mockKnowledgeBase.listDocuments.mockResolvedValue({ data: [], total: 0, page: 1, totalPages: 0 });
 
       await request(app.getHttpServer())
-        .get('/dashboard/ai/knowledge-base?status=ACTIVE&page=1&limit=10')
+        .get('/dashboard/ai/knowledge-base?status=PENDING&page=1&limit=10')
         .set('Authorization', 'Bearer fake-jwt')
         .expect(200);
 
       expect(mockKnowledgeBase.listDocuments).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'ACTIVE' }),
+        expect.objectContaining({ status: 'PENDING' }),
       );
     });
 
     it('returns 400 for invalid status', async () => {
       return request(app.getHttpServer())
-        .get('/dashboard/ai/knowledge-base?status=INVALID')
+        .get('/dashboard/ai/knowledge-base?status=ACTIVE')
         .set('Authorization', 'Bearer fake-jwt')
         .expect(400);
     });
@@ -165,15 +165,15 @@ describe('DashboardAiController (e2e)', () => {
 
   describe('PATCH /dashboard/ai/chatbot-config', () => {
     it('returns 200 on upsert', async () => {
-      mockUpsertChatbotConfig.execute.mockResolvedValue({ id: 'cfg-1', isEnabled: false });
+      mockUpsertChatbotConfig.execute.mockResolvedValue({ id: 'cfg-1', greetingAr: 'مرحباً' });
 
       const res = await request(app.getHttpServer())
         .patch('/dashboard/ai/chatbot-config')
         .set('Authorization', 'Bearer fake-jwt')
-        .send({ isEnabled: false, greetingAr: 'مرحباً' })
+        .send({ greetingAr: 'مرحباً' })
         .expect(200);
 
-      expect(res.body.isEnabled).toBe(false);
+      expect(res.body.greetingAr).toBe('مرحباً');
     });
 
     it('returns 400 for invalid escalateToHumanAt', async () => {

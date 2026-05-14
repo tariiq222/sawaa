@@ -1,11 +1,7 @@
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
 
-/**
- * The tenant this binary is locked to. Defaults to dev DEFAULT_ORGANIZATION_ID.
- * Override per-environment via EXPO_PUBLIC_TENANT_ID. Sent as the X-Org-Id
- * header on every API call by services/api.ts.
- */
+/** Hard-coded org id for this single-tenant build. Override via EXPO_PUBLIC_TENANT_ID. */
 export const TENANT_ID =
   process.env.EXPO_PUBLIC_TENANT_ID ?? '00000000-0000-0000-0000-000000000001';
 

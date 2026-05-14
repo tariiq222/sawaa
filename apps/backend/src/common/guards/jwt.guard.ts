@@ -57,11 +57,6 @@ export class JwtGuard extends AuthGuard('jwt') {
       headers?: Record<string, string | string[] | undefined>;
     }>();
 
-    // TAR-10: Resolve the effective tenant once (honoring super-admin
-    // X-Org-Id override) and use it for BOTH the tenant-context stamp
-    // AND the suspension check. Otherwise a super-admin overriding into
-    // a suspended tenant would silently bypass the ORG_SUSPENDED guard
-    // because the suspension check would target their own platform org.
     const effectiveOrgId = this.resolveEffectiveOrgId(req.user, req.headers);
     this.stampTenantContext(req.user, effectiveOrgId);
 
@@ -83,18 +78,8 @@ export class JwtGuard extends AuthGuard('jwt') {
   }
 
   /**
-   * Resolves the effective tenant org for the current request (TAR-10).
-   *
-   * Runs after Passport has populated `req.user`, so this is the canonical
-   * point to resolve tenant for authenticated requests. The
-   * TenantResolverMiddleware now only handles unauthenticated paths
-   * (public routes, subdomain binding, auth-bootstrap bypass).
-   *
-   * Super-admin override: when `user.isSuperAdmin === true` and a
-   * well-formed UUID `X-Org-Id` header is present, that org wins over the
-   * super-admin's own JWT `organizationId` claim. This is how platform
-   * operators inspect / act on a specific tenant. The header is ignored
-   * for non-super-admin users (security: never trust caller-supplied org).
+   * Resolves the effective org for the current request.
+   * Single-tenant: always returns DEFAULT_ORG_ID.
    */
   private resolveEffectiveOrgId(
     user: AuthenticatedReqUser | undefined,

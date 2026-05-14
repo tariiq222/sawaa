@@ -102,7 +102,7 @@ export const envValidationSchema = Joi.object({
 
   // Per-tenant Moyasar AES-256-GCM key — REQUIRED; 32 raw bytes base64-encoded (ASCII length 44).
   // Used to wrap each tenant's MoyasarPublishableKey + secretKey at rest.
-  MOYASAR_TENANT_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
+  MOYASAR_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
 
   // SMS per-tenant (SaaS-02g-sms) — encryption key is REQUIRED; 32 raw bytes base64-encoded (ASCII length 44).
   // Webhook base URL is the public origin registered with providers for DLR callbacks.
@@ -209,7 +209,7 @@ export const envValidationSchema = Joi.object({
       'JWT_CLIENT_ACCESS_SECRET',
       'SMS_PROVIDER_ENCRYPTION_KEY',
       'ZOOM_PROVIDER_ENCRYPTION_KEY',
-      'MOYASAR_TENANT_ENCRYPTION_KEY',
+      'MOYASAR_ENCRYPTION_KEY',
       'EMAIL_PROVIDER_ENCRYPTION_KEY',
       'AUTHENTICA_API_KEY',
     ];
