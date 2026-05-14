@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { Job, Queue, Worker } from 'bullmq';
 import { ClsService } from 'nestjs-cls';
 import { BullMqService } from '../queue/bull-mq.service';
-import { SUPER_ADMIN_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../common/tenant/tenant.constants';
+import { SUPER_ADMIN_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../common/constants';
 
 /**
  * Minimal envelope every domain event must produce. The full `BaseEvent`

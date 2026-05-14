@@ -1,21 +1,17 @@
 import { Test } from '@nestjs/testing';
 import { GetTopPerformersHandler } from './get-top-performers.handler';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 
 describe('GetTopPerformersHandler', () => {
   let handler: GetTopPerformersHandler;
   let prisma: { $queryRaw: jest.Mock };
-  let tenant: { requireOrganizationIdOrDefault: jest.Mock };
 
   beforeEach(async () => {
     prisma = { $queryRaw: jest.fn() };
-    tenant = { requireOrganizationIdOrDefault: jest.fn().mockReturnValue('org-1') };
     const mod = await Test.createTestingModule({
       providers: [
         GetTopPerformersHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: TenantContextService, useValue: tenant },
       ],
     }).compile();
     handler = mod.get(GetTopPerformersHandler);

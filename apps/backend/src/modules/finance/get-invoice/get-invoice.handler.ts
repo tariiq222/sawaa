@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 
 export interface GetInvoiceQuery {
   invoiceId: string;
@@ -11,7 +10,6 @@ export interface GetInvoiceQuery {
 export class GetInvoiceHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(query: GetInvoiceQuery) {

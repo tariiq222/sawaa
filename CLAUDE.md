@@ -1,6 +1,6 @@
 # Sawa Family Counseling — Monorepo
 
-Single-tenant family counseling SaaS forked from a multi-tenant base. The codebase still carries multi-tenant scaffolding (CLS context, scoped models) — keep it intact unless an explicit phase removes it.
+Single-tenant family counseling SaaS forked from a multi-tenant base.
 
 ## Stack
 
@@ -42,9 +42,11 @@ pnpm db:reset             # migrate + seed
 pnpm openapi:sync         # backend exports openapi.json + dashboard regenerates client
 ```
 
-## Multi-tenancy (still enforced)
+## Single-tenant
 
-Even though sawa is single-tenant in production, the backend still runs the tenant CLS guard. `TENANT_ENFORCEMENT=strict` is the default — any scoped-model Prisma query without CLS tenant context throws `UnauthorizedTenantAccessError`. See `apps/backend/CLAUDE.md` for the scoped-models list and the `$allTenants` bypass for billing/cron paths.
+Sawa is a single-tenant deployment. The multi-tenant scaffolding from the original SaaS fork (TenantModule, CLS guard, scoped models, `$allTenants` bypass, subscription billing, verticals, memberships) has been fully removed. The codebase no longer carries `organizationId` filters in Prisma queries.
+
+Provider credentials (Zoom, SMS, Email, Moyasar) are encrypted with AES-256-GCM using a static `DEFAULT_ORG_ID` constant as AAD — see [apps/backend/src/common/constants.ts](apps/backend/src/common/constants.ts).
 
 ## Migrations are immutable
 

@@ -1,6 +1,6 @@
 # Sawa Backend — Conventions
 
-This file provides guidance to Claude Code when working inside `apps/backend`. Read the root [CLAUDE.md](../../CLAUDE.md) first for stack-wide rules (multi-tenancy, immutable migrations, golden rules).
+This file provides guidance to Claude Code when working inside `apps/backend`. Read the root [CLAUDE.md](../../CLAUDE.md) first for stack-wide rules (immutable migrations, golden rules).
 
 ## Architecture: Domain Clusters + Vertical Slices
 
@@ -27,7 +27,7 @@ src/
 
 | Cluster | Slices inside |
 |---|---|
-| `identity/` | login, logout, refresh-token, get-current-user, client-auth, otp, list-memberships, switch-organization, users, roles, casl |
+| `identity/` | login, logout, refresh-token, get-current-user, client-auth, otp, users, roles, casl |
 | `people/` | clients, employees, specialties |
 | `bookings/` | create-/cancel-/confirm-/check-in-/reschedule-/complete-/no-show-/expire-booking, check-availability, create-recurring-booking, waitlist, walk-in, create-zoom-meeting, retry-zoom-meeting |
 | `finance/` | payments, moyasar-api, moyasar-webhook, refunds, coupons, bank-transfer-upload |
@@ -39,7 +39,7 @@ src/
 | `org-config/` | branches, categories, departments, business-hours |
 | `org-experience/` | branding, intake-forms, ratings, services, org-settings |
 | `integrations/` | zoom (encrypted creds get/upsert/test), public branding |
-| `platform/` | admin (super-admin), billing, verticals, problem-reports, tenant-registration |
+| `platform/` | problem-reports |
 | `dashboard/` | get-dashboard-stats |
 
 ### Vertical slice anatomy
@@ -101,12 +101,12 @@ npm run prisma:studio                # GUI
 npm run openapi:build-and-snapshot   # Rebuild openapi.json snapshot — commit alongside any endpoint change
 ```
 
-## Comms cluster — SMS (SaaS-02g-sms)
+## Comms cluster — SMS
 
-- **SMS is per-tenant.** Each Organization picks Unifonic or Taqnyat via `/settings/sms` and provides their own credentials. Platform billing does NOT meter SMS — tenants pay their chosen provider directly.
+- **SMS uses a single provider** (Unifonic or Taqnyat) configured via `/settings/sms`.
 - Dispatch always goes through `SmsProviderFactory.forCurrentTenant(orgId)` — never construct an adapter manually from a handler.
-- Credentials are AES-256-GCM encrypted with `SMS_PROVIDER_ENCRYPTION_KEY` and `organizationId` as AAD — a DB dump alone cannot decrypt under a different tenant context.
-- DLR webhooks (`POST /api/v1/public/sms/webhooks/:provider/:organizationId`) follow the 02e three-stage flow: system-context config lookup → signature verify → `cls.run` mutation.
+- Credentials are AES-256-GCM encrypted with `SMS_PROVIDER_ENCRYPTION_KEY` and `DEFAULT_ORG_ID` as AAD (single-tenant) — a DB dump alone cannot decrypt without the encryption key.
+- DLR webhooks (`POST /api/v1/public/sms/webhooks/:provider`) follow the three-stage flow: config lookup → signature verify → mutation.
 - The `GetOrgSmsConfigHandler` NEVER returns `credentialsCiphertext` or `webhookSecret` — the dashboard form is write-only.
 
 ## AI cluster (`src/modules/ai/`)
@@ -116,36 +116,23 @@ npm run openapi:build-and-snapshot   # Rebuild openapi.json snapshot — commit 
 - **To enable Anthropic native prompt caching** (cache_control breakpoints, ~10× cheaper reads): requires switching ChatAdapter from OpenRouter to `@anthropic-ai/sdk` directly. This is an intentional future decision, not an oversight.
 - **Semantic search** (`semantic-search.handler.ts`) uses `pgvector` via `PrismaService.$queryRaw`. Always pass `topK` to limit chunks; default is 5.
 
-## Verticals + Terminology (SaaS-03)
-
-- **Verticals** (`modules/platform/verticals/`) define the activity type a tenant operates under (clinic, salon, gym, etc.) — seeded via 11 verticals × 4 family templates.
-- **Terminology packs** rewrite domain nouns per vertical (e.g., `client` → `patient` / `member`). Backend exposes the active pack via `GetTerminologyHandler`; UIs consume through the shared `useTerminology` hook.
-- The platform-internal name stays English (`Vertical`); user-facing Arabic is "القطاع".
-
-## Billing / Subscriptions (SaaS-04)
-
-- **Platform billing** lives at `modules/platform/billing/` — plans, subscriptions, invoices, usage metering, dunning. Two Moyasar accounts are in play: the **platform** account collects tenant subscription fees; each tenant's own Moyasar handles their booking-payment revenue.
-- Hybrid model: flat plan fee + usage overage. SMS is **not** metered by the platform (per-tenant providers — see SaaS-02g-sms).
-- Super-admin oversight (waive, grant, change-plan, refund) lives under `modules/platform/admin/`. The original multi-tenant fork had a separate `apps/admin` Next.js control plane; sawa does not ship it. Either expose these endpoints through the dashboard behind a super-admin guard or treat them as ops-only (curl + JWT) — do not assume `apps/admin` exists.
 
 ## Platform transactional emails (`infrastructure/mail/PlatformMailerService`)
 
-- **Resend SDK** sends all platform↔tenant-owner lifecycle emails (welcome, trial ending/expired, payment success/failure, plan changed, account suspended/reinstated).
-- Configured via `RESEND_API_KEY`, `RESEND_FROM`, `RESEND_REPLY_TO`, `PLATFORM_DASHBOARD_URL` in `.env`. Missing key in dev = warn + skip; in production throws on startup.
+- **Resend SDK** sends transactional emails (OTP login currently the only template).
+- Configured via `RESEND_API_KEY`, `RESEND_FROM`, `RESEND_REPLY_TO` in `.env`. Missing key in dev = warn + skip; in production throws on startup.
 - Templates live under `infrastructure/mail/templates/` — one file per email type, each exporting a typed `Vars` interface and a builder function returning `{ subjectAr, subjectEn, html }`.
 - All templates are bilingual AR+EN via `bilingualLayout()` in `templates/shared.ts`. Use `escapeHtml()` for any user-supplied string interpolated into HTML — it is the single XSS guard.
-- Owner lookup pattern used in every billing/admin handler: `prisma.$allTenants.membership.findFirst({ where: { organizationId, role: 'OWNER', isActive: true }, include: { user, organization } })`. The `$allTenants` bypass is required because billing/cron handlers run outside CLS tenant context.
-- `sendAccountStatusChanged` accepts `status: 'SUSPENDED' | 'REINSTATED'` and renders the correct copy branch.
 
 ## Integrations cluster (`modules/integrations/`)
 
-- **Zoom** (`integrations/zoom/`) owns the encrypted-credentials lifecycle: get/upsert/test of `accountId`, `clientId`, `clientSecret` per tenant. Credentials are AES-256-GCM encrypted with `organizationId` as AAD — the `Get*` handler never returns ciphertext.
+- **Zoom** (`integrations/zoom/`) owns the encrypted-credentials lifecycle: get/upsert/test of `accountId`, `clientId`, `clientSecret`. Credentials are AES-256-GCM encrypted with `DEFAULT_ORG_ID` as AAD (single-tenant) — the `Get*` handler never returns ciphertext.
 - The bookings cluster (`bookings/create-zoom-meeting/`, `bookings/retry-zoom-meeting/`) **consumes** integrations via `ZoomMeetingService`. Never reach into Zoom credentials from a booking handler — go through the integrations slice.
 - Public branding read endpoints also live here (used by unauthenticated mobile/website surfaces).
 
 ## Conventions that catch new contributors
 
-- **Multi-tenancy (default).** The backend runs multi-tenant by default. As of SaaS-02h, `TENANT_ENFORCEMENT=strict` is the platform default — any scoped-model query without CLS tenant context throws `UnauthorizedTenantAccessError`. Every cluster (02a–02g) is scoped; `SCOPED_MODELS` in `prisma.service.ts` lists the 52 tenant-scoped entities. `permissive` and `off` remain only for local dev + migration bootstrap. See `test/e2e/security/` for the contract (direct-id probe, IDOR, FK injection, `$queryRaw` backstop, webhook forgery, strict-mode enforcement).
+- **Single-tenant deployment.** Sawa runs as a single-tenant deployment. The old multi-tenant CLS guard, SCOPED_MODELS list, `$allTenants` bypass, and tenant context service were removed in the SaaS cleanup phase. Handlers no longer carry an `organizationId` filter. Encryption AAD for provider credentials uses a static `DEFAULT_ORG_ID` constant (`apps/backend/src/common/constants.ts`).
 - **One handler = one public method (`execute`).** Don't add `executeVariant()`; create a new slice.
 - **Tests colocated as `*.handler.spec.ts`** next to the handler, not in a parallel `test/` tree.
 - **Payments, auth, and migrations are owner-only** (see root CLAUDE.md "Security Sensitivity Tiers").
@@ -169,44 +156,6 @@ Client auth (website users) is **fully isolated** from admin JWT auth:
 - **Password login** — primary path. Client submits phone + password → `POST /api/v1/public/auth/login`.
 - **OTP-only login** — escape hatch for clients who forgot password. Uses existing `CLIENT_LOGIN` purpose via `POST /api/v1/public/otp/request` + `verify`. No password required.
 
-## Role precedence — `Membership.role` is canonical for org-scoped checks
-
-The codebase carries two role columns:
-
-- **`Membership.role`** (`MembershipRole` enum) — the **per-organization** role.
-  This is the single source of truth for any authorization decision scoped to
-  a tenant: who may book, who may issue refunds, who may invite new users, etc.
-- **`User.role`** (`UserRole` enum) — global / legacy. Phase A of DB-08 left it
-  in place for backward compatibility but new code MUST NOT branch on it for
-  org-scoped permissions. DB-14 will eventually drop it.
-- **`User.isSuperAdmin`** (boolean) — the only canonical signal for platform-
-  wide super-admin checks. Never compare `user.role === 'SUPER_ADMIN'` — that
-  pattern was removed by DB-08 phase A.
-
-When fetching membership rows, prefer `select` (not `include`) and pull both
-`role` and any per-org display profile fields you need (`displayName`,
-`jobTitle`, `avatarUrl`) — the global `User.name` / `User.avatarUrl` should
-only be used as a fallback when the membership has no per-org override, and
-ONLY in account-level surfaces (login response, password reset email, super-
-admin audit log). Org-scoped surfaces (in-app activity log, billing emails,
-notifications) prefer `Membership.displayName ?? User.name`.
-
-JWT carries `membershipRole` in `TenantClaims` (phase-A dual-carry alongside
-the deprecated `role` claim). Phase-B readers should consume `membershipRole`.
-
-## Per-membership display profile
-
-`Membership` has three nullable per-org overrides — `displayName`, `jobTitle`,
-`avatarUrl` — set at invite time or via `PATCH /auth/memberships/:id/profile`
-(caller-owned only). Avatars upload via `POST /auth/memberships/:id/avatar`
-(multipart) and are stored at `memberships/{id}/avatar-{ts}.{ext}` in MinIO.
-Deleting a Membership does NOT delete the avatar object — that is intentional
-audit-trail behavior; cleanup is a separate offline concern.
-
-`User.lastActiveOrganizationId` is a soft reference (no FK) used by
-`LoginHandler` to resolve the active membership preferentially when the user
-belongs to multiple orgs. `SwitchOrganizationHandler` writes to it on every
-successful switch.
 
 ## API Documentation (Standard level)
 

@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { SetBusinessHoursDto } from './set-business-hours.dto';
 
 export type SetBusinessHoursCommand = SetBusinessHoursDto;
@@ -9,7 +8,6 @@ export type SetBusinessHoursCommand = SetBusinessHoursDto;
 export class SetBusinessHoursHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly rlsTx: RlsTransactionService,
   ) {}
 

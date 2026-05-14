@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 
 export type GetAvailabilityCommand = { employeeId: string };
 
@@ -8,7 +7,6 @@ export type GetAvailabilityCommand = { employeeId: string };
 export class GetAvailabilityHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: GetAvailabilityCommand) {

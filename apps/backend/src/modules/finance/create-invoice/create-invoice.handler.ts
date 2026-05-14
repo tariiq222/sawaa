@@ -2,7 +2,6 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 import { CreateInvoiceDto } from './create-invoice.dto';
 
 const DEFAULT_VAT_RATE = 0.15;
@@ -16,7 +15,6 @@ export class CreateInvoiceHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventBus: EventBusService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(dto: CreateInvoiceCommand) {

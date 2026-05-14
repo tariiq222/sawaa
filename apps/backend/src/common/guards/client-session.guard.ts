@@ -1,6 +1,7 @@
+import { TENANT_CLS_KEY } from '../constants';
+import { ClsService } from 'nestjs-cls';
 import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { TenantContextService } from '../tenant';
 
 interface ClientSessionUser {
   id?: string;
@@ -10,7 +11,7 @@ interface ClientSessionUser {
 
 @Injectable()
 export class ClientSessionGuard extends AuthGuard('client-jwt') {
-  constructor(private readonly tenantContext: TenantContextService) {
+  constructor(private readonly cls: ClsService) {
     super();
   }
 
@@ -27,7 +28,7 @@ export class ClientSessionGuard extends AuthGuard('client-jwt') {
     if (err || !client || !client.id || !client.organizationId) {
       throw new UnauthorizedException('Invalid or expired client session');
     }
-    this.tenantContext.set({
+    this.cls.set(TENANT_CLS_KEY, {
       organizationId: client.organizationId,
       id: client.id,
       role: client.role ?? 'CLIENT',

@@ -35,20 +35,19 @@ export class GetTopPerformersHandler {
     >(Prisma.sql`
       SELECT
         e.id                                          AS "employeeId",
-        COALESCE(m."displayName", u.name, e.name)     AS "displayName",
-        COALESCE(m."avatarUrl", u."avatarUrl")        AS "avatarUrl",
+        COALESCE(e.name, u.name)                      AS "displayName",
+        COALESCE(e."avatarUrl", u."avatarUrl")         AS "avatarUrl",
         COUNT(DISTINCT b.id)                          AS "bookingsCount",
         COALESCE(SUM(p.amount), 0)::float             AS "revenue"
       FROM "Employee" e
-      LEFT JOIN "User"       u ON u.id = e."userId"
-      LEFT JOIN "Membership" m ON m."userId" = e."userId"
+      LEFT JOIN "User"    u ON u.id = e."userId"
       LEFT JOIN "Booking" b ON b."employeeId" = e.id
       LEFT JOIN "Invoice" i ON i."bookingId" = b.id
       LEFT JOIN "Payment" p ON p."invoiceId" = i.id
                            AND p.status = 'COMPLETED'
                            AND p."processedAt" >= ${start}
                            AND p."processedAt" <  ${end}
-      GROUP BY e.id, m."displayName", m."avatarUrl", u.name, u."avatarUrl"
+      GROUP BY e.id, e.name, e."avatarUrl", u.name, u."avatarUrl"
       ORDER BY "revenue" DESC NULLS LAST, "bookingsCount" DESC
       LIMIT 5
     `);

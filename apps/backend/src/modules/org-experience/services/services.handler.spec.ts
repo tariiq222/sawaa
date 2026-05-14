@@ -12,7 +12,6 @@ import { SetDurationOptionsHandler } from './set-duration-options.handler';
 import { SetEmployeeServiceOptionsHandler } from './set-employee-service-options.handler';
 import { SetServiceBookingConfigsHandler } from './set-service-booking-configs.handler';
 import { GetServiceBookingConfigsHandler } from './get-service-booking-configs.handler';
-import { TenantContextService } from '../../../common/tenant';
 import { RlsTransactionService } from '../../../common/database/rls-transaction';
 
 const mockService = {
@@ -61,11 +60,6 @@ const buildPrisma = () => ({
   $transaction: jest.fn().mockImplementation((ops) => Promise.all(ops as Promise<unknown>[])),
 });
 
-const buildTenant = () =>
-  ({
-    requireOrganizationId: jest.fn(),
-    requireOrganizationIdOrDefault: jest.fn(),
-  }) as unknown as TenantContextService;
 
 const buildRlsTx = (prisma: Record<string, any>) =>
   ({
@@ -253,7 +247,7 @@ describe('UpdateServiceHandler', () => {
 describe('ListServicesHandler', () => {
   it('returns paginated services', async () => {
     const prisma = buildPrisma();
-    const handler = new ListServicesHandler(prisma as never, buildTenant(), buildRlsTx(prisma) as never);
+    const handler = new ListServicesHandler(prisma as never, buildRlsTx(prisma) as never);
     const result = await handler.execute({});
     expect(prisma.service.findMany).toHaveBeenCalled();
     expect(result.items).toHaveLength(1);
@@ -262,7 +256,7 @@ describe('ListServicesHandler', () => {
 
   it('excludes hidden services by default', async () => {
     const prisma = buildPrisma();
-    const handler = new ListServicesHandler(prisma as never, buildTenant(), buildRlsTx(prisma) as never);
+    const handler = new ListServicesHandler(prisma as never, buildRlsTx(prisma) as never);
     await handler.execute({});
     const callArgs = (prisma.service.findMany as jest.Mock).mock.calls[0][0] as { where: Record<string, unknown> };
     expect(callArgs.where.isHidden).toBe(false);
@@ -270,7 +264,7 @@ describe('ListServicesHandler', () => {
 
   it('includes hidden services when includeHidden = true', async () => {
     const prisma = buildPrisma();
-    const handler = new ListServicesHandler(prisma as never, buildTenant(), buildRlsTx(prisma) as never);
+    const handler = new ListServicesHandler(prisma as never, buildRlsTx(prisma) as never);
     await handler.execute({ includeHidden: true });
     const callArgs = (prisma.service.findMany as jest.Mock).mock.calls[0][0] as { where: Record<string, unknown> };
     expect(callArgs.where.isHidden).toBeUndefined();
@@ -278,7 +272,7 @@ describe('ListServicesHandler', () => {
 
   it('adds search OR clause when search is provided', async () => {
     const prisma = buildPrisma();
-    const handler = new ListServicesHandler(prisma as never, buildTenant(), buildRlsTx(prisma) as never);
+    const handler = new ListServicesHandler(prisma as never, buildRlsTx(prisma) as never);
     await handler.execute({ search: 'قص' });
     const callArgs = (prisma.service.findMany as jest.Mock).mock.calls[0][0] as { where: Record<string, unknown> };
     expect(callArgs.where.OR).toBeDefined();

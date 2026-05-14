@@ -20,7 +20,7 @@ import { RedisService } from '../../infrastructure/cache/redis.service';
 import { DbRowCountCron } from './cron-tasks/db-row-count.cron';
 import { DbMetricsService } from '../../infrastructure/telemetry/db-metrics.service';
 import { RunOrphanAuditHandler } from './orphan-audit/run-orphan-audit.handler';
-import { ReconcileUsageCountersHandler } from './cron-tasks/reconcile-usage-counters/reconcile-usage-counters.handler';
+
 import { ReconcileRefundsCron } from './cron-tasks/reconcile-refunds.cron';
 import { OutboxPublisherCron } from './cron-tasks/outbox-publisher.cron';
 import { AuthenticaBalanceCheckCron } from './cron-tasks/authentica-balance-check.cron';
@@ -41,8 +41,7 @@ const cronHandlers = [
   RefreshTokenCleanupCron,
   // DB-12/13
   DbRowCountCron,
-  // Phase 5 — usage counter reconciliation
-  ReconcileUsageCountersHandler,
+
   // CR-6 — refund reconciliation
   ReconcileRefundsCron,
   // CR-5 — outbox publisher

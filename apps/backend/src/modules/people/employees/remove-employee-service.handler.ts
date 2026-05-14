@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 
 export interface RemoveEmployeeServiceCommand { employeeId: string; serviceId: string; }
 
@@ -8,7 +7,6 @@ export interface RemoveEmployeeServiceCommand { employeeId: string; serviceId: s
 export class RemoveEmployeeServiceHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: RemoveEmployeeServiceCommand): Promise<void> {

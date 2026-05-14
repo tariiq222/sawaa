@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 
 export type UnassignEmployeeFromBranchCommand = {
   branchId: string;
@@ -11,7 +10,6 @@ export type UnassignEmployeeFromBranchCommand = {
 export class UnassignEmployeeFromBranchHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(dto: UnassignEmployeeFromBranchCommand) {

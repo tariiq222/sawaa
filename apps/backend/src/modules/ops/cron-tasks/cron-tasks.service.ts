@@ -9,7 +9,7 @@ import { RefreshTokenCleanupCron } from './refresh-token-cleanup.cron';
 
 import { DbRowCountCron } from './db-row-count.cron';
 import { RunOrphanAuditHandler } from '../orphan-audit/run-orphan-audit.handler';
-import { ReconcileUsageCountersHandler } from './reconcile-usage-counters/reconcile-usage-counters.handler';
+
 import { ReconcileRefundsCron } from './reconcile-refunds.cron';
 import { OutboxPublisherCron } from './outbox-publisher.cron';
 import { AuthenticaBalanceCheckCron } from './authentica-balance-check.cron';
@@ -34,7 +34,7 @@ export const CRON_JOBS = {
   DUNNING_RETRY: 'dunning-retry',
   DB_ROW_COUNT: 'db-row-count',
   ORPHAN_AUDIT: 'orphan-audit',
-  RECONCILE_USAGE_COUNTERS: 'reconcile-usage-counters',
+
   RECONCILE_REFUNDS: 'reconcile-refunds',
   OUTBOX_PUBLISHER: 'outbox-publisher',
   AUTHENTICA_BALANCE_CHECK: 'authentica-balance-check',
@@ -54,7 +54,7 @@ export class CronTasksService implements OnModuleInit {
     private readonly refreshTokenCleanup: RefreshTokenCleanupCron,
     private readonly dbRowCount: DbRowCountCron,
     private readonly orphanAudit: RunOrphanAuditHandler,
-    private readonly reconcileUsageCounters: ReconcileUsageCountersHandler,
+
     private readonly reconcileRefunds: ReconcileRefundsCron,
     private readonly outboxPublisher: OutboxPublisherCron,
     private readonly authenticaBalanceCheck: AuthenticaBalanceCheckCron,
@@ -77,7 +77,7 @@ export class CronTasksService implements OnModuleInit {
       { name: CRON_JOBS.REFRESH_TOKEN_CLEANUP, cron: '0 3 * * *' },
       { name: CRON_JOBS.DB_ROW_COUNT, cron: '0 1 * * 0' }, // weekly Sunday 01:00
       { name: CRON_JOBS.ORPHAN_AUDIT, cron: '0 2 * * 0' }, // weekly Sunday 02:00
-      { name: CRON_JOBS.RECONCILE_USAGE_COUNTERS, cron: '0 3 * * *' }, // daily at 03:00 KSA (= UTC+3)
+
       { name: CRON_JOBS.RECONCILE_REFUNDS, cron: '*/15 * * * *' },    // every 15 min
       { name: CRON_JOBS.OUTBOX_PUBLISHER, cron: '*/1 * * * *' },      // every minute (BullMQ min granularity; real tick is every 5s via worker loop)
       { name: CRON_JOBS.AUTHENTICA_BALANCE_CHECK, cron: '0 8 * * *' }, // daily at 08:00 AST
@@ -134,9 +134,7 @@ export class CronTasksService implements OnModuleInit {
           case CRON_JOBS.ORPHAN_AUDIT:
             await this.orphanAudit.execute();
             break;
-          case CRON_JOBS.RECONCILE_USAGE_COUNTERS:
-            await this.reconcileUsageCounters.execute();
-            break;
+
           case CRON_JOBS.RECONCILE_REFUNDS:
             await this.reconcileRefunds.execute();
             break;

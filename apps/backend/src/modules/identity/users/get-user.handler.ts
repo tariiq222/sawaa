@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 
 export interface GetUserQuery {
   userId: string;
@@ -10,7 +9,6 @@ export interface GetUserQuery {
 export class GetUserHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenantCtx: TenantContextService,
   ) {}
 
   async execute(query: GetUserQuery) {

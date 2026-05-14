@@ -1,6 +1,5 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { CreateDepartmentDto } from './create-department.dto';
 
 export type CreateDepartmentCommand = CreateDepartmentDto;
@@ -9,7 +8,6 @@ export type CreateDepartmentCommand = CreateDepartmentDto;
 export class CreateDepartmentHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(dto: CreateDepartmentCommand) {

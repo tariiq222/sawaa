@@ -4,8 +4,6 @@ import { PrismaService } from '../../../../infrastructure/database/prisma.servic
 import { RedisService } from '../../../../infrastructure/cache/redis.service';
 import { BullMqService } from '../../../../infrastructure/queue/bull-mq.service';
 import { MinioService } from '../../../../infrastructure/storage/minio.service';
-import { PlatformSettingsService } from '../../settings/platform-settings.service';
-
 describe('GetSystemHealthHandler', () => {
   let handler: GetSystemHealthHandler;
   let prisma: { $queryRaw: jest.Mock };
@@ -15,7 +13,6 @@ describe('GetSystemHealthHandler', () => {
   let bullmqClient: { ping: jest.Mock };
   let bullmqQueue: { client: Promise<typeof bullmqClient> };
   let minio: { bucketExists: jest.Mock };
-  let settings: { get: jest.Mock };
 
   beforeEach(async () => {
     prisma = { $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]) };
@@ -25,9 +22,8 @@ describe('GetSystemHealthHandler', () => {
     bullmqQueue = { client: Promise.resolve(bullmqClient) };
     bullmq = { getQueue: jest.fn().mockReturnValue(bullmqQueue) };
     minio = { bucketExists: jest.fn().mockResolvedValue(true) };
-    settings = { get: jest.fn().mockResolvedValue('sk_test_xxx') };
 
-    // Mock global fetch for moyasar/resend probes
+    // Mock global fetch for resend probe
     global.fetch = jest.fn().mockResolvedValue({ status: 200 }) as unknown as typeof fetch;
     process.env.RESEND_API_KEY = 're_xxx';
     process.env.MINIO_BUCKET = 'test-bucket';
@@ -39,7 +35,6 @@ describe('GetSystemHealthHandler', () => {
         { provide: RedisService, useValue: redis },
         { provide: BullMqService, useValue: bullmq },
         { provide: MinioService, useValue: minio },
-        { provide: PlatformSettingsService, useValue: settings },
       ],
     }).compile();
     handler = module.get(GetSystemHealthHandler);
@@ -54,9 +49,9 @@ describe('GetSystemHealthHandler', () => {
   it('returns overall=ok when every subsystem is healthy', async () => {
     const result = await handler.execute();
     expect(result.overall).toBe('ok');
-    expect(result.subsystems).toHaveLength(6);
+    expect(result.subsystems).toHaveLength(5);
     expect(result.subsystems.map((s) => s.name).sort()).toEqual(
-      ['bullmq', 'minio', 'moyasar', 'postgres', 'redis', 'resend'],
+      ['bullmq', 'minio', 'postgres', 'redis', 'resend'],
     );
     expect(result.subsystems.every((s) => s.status === 'ok')).toBe(true);
   });
@@ -103,21 +98,6 @@ describe('GetSystemHealthHandler', () => {
     const m = result.subsystems.find((s) => s.name === 'minio')!;
     expect(m.status).toBe('degraded');
     expect(m.detail).toContain('missing');
-  });
-
-  it('marks moyasar degraded when no secret key is configured', async () => {
-    settings.get.mockResolvedValue(null);
-    const result = await handler.execute();
-    expect(result.subsystems.find((s) => s.name === 'moyasar')!.status).toBe('degraded');
-  });
-
-  it('marks moyasar degraded on 401', async () => {
-    // resend calls fetch synchronously (no async pre-check); moyasar calls fetch
-    // only after awaiting platformSettings.get(), so resend consumes the first mock.
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ status: 200 }); // resend
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ status: 401 }); // moyasar
-    const result = await handler.execute();
-    expect(result.subsystems.find((s) => s.name === 'moyasar')!.status).toBe('degraded');
   });
 
   it('marks resend degraded when env not set', async () => {

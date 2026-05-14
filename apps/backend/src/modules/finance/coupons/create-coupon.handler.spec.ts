@@ -1,10 +1,6 @@
 import { ConflictException } from '@nestjs/common';
 import { CreateCouponHandler } from './create-coupon.handler';
 
-const buildTenant = () => ({
-  requireOrganizationIdOrDefault: jest.fn().mockReturnValue('00000000-0000-0000-0000-000000000001'),
-});
-
 const mockCoupon = {
   id: 'coupon-1',
   organizationId: '00000000-0000-0000-0000-000000000001',
@@ -42,7 +38,7 @@ const cmd = {
 describe('CreateCouponHandler', () => {
   it('creates a coupon with organizationId scoped to current tenant', async () => {
     const prisma = buildPrisma();
-    const handler = new CreateCouponHandler(prisma as never, buildTenant() as never);
+    const handler = new CreateCouponHandler(prisma as never);
 
     const result = await handler.execute(cmd);
 
@@ -63,7 +59,7 @@ describe('CreateCouponHandler', () => {
   it('throws ConflictException when coupon code already exists', async () => {
     const prisma = buildPrisma();
     prisma.coupon.findFirst = jest.fn().mockResolvedValue(mockCoupon);
-    const handler = new CreateCouponHandler(prisma as never, buildTenant() as never);
+    const handler = new CreateCouponHandler(prisma as never);
 
     await expect(handler.execute(cmd)).rejects.toThrow(ConflictException);
     expect(prisma.coupon.create).not.toHaveBeenCalled();

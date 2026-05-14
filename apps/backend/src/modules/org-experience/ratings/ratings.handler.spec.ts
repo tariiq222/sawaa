@@ -1,7 +1,6 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { SubmitRatingHandler } from './submit-rating.handler';
 import { ListRatingsHandler } from './list-ratings.handler';
-import { TenantContextService } from '../../../common/tenant';
 import { RlsTransactionService } from '../../../infrastructure/database';
 
 const mockRating = {
@@ -25,10 +24,6 @@ const buildPrisma = () => ({
   $transaction: jest.fn().mockImplementation((ops) => Promise.all(ops as Promise<unknown>[])),
 });
 
-const buildTenant = () =>
-  ({
-    requireOrganizationId: jest.fn(),
-  }) as unknown as TenantContextService;
 const buildRlsTx = (prisma: ReturnType<typeof buildPrisma>) =>
   ({
     withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
@@ -66,7 +61,7 @@ describe('SubmitRatingHandler', () => {
 describe('ListRatingsHandler', () => {
   it('returns paginated ratings', async () => {
     const prisma = buildPrisma();
-    const handler = new ListRatingsHandler(prisma as never, buildTenant(), buildRlsTx(prisma) as never);
+    const handler = new ListRatingsHandler(prisma as never, buildRlsTx(prisma) as never);
     const result = await handler.execute({});
     expect(prisma.rating.findMany).toHaveBeenCalled();
     expect(result.items).toHaveLength(1);
@@ -75,7 +70,7 @@ describe('ListRatingsHandler', () => {
 
   it('filters by employeeId', async () => {
     const prisma = buildPrisma();
-    const handler = new ListRatingsHandler(prisma as never, buildTenant(), buildRlsTx(prisma) as never);
+    const handler = new ListRatingsHandler(prisma as never, buildRlsTx(prisma) as never);
     await handler.execute({ employeeId: 'emp-1' });
     const call = (prisma.rating.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where.employeeId).toBe('emp-1');

@@ -3,12 +3,6 @@ import { CreateProblemReportHandler } from './create-problem-report.handler';
 import { ListProblemReportsHandler } from './list-problem-reports.handler';
 import { UpdateProblemReportStatusHandler } from './update-problem-report-status.handler';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
-
-const tenantProvider = {
-  provide: TenantContextService,
-  useValue: { requireOrganizationIdOrDefault: jest.fn().mockReturnValue('org-A') },
-};
 
 describe('ProblemReport handlers', () => {
   let create: CreateProblemReportHandler;
@@ -28,7 +22,6 @@ describe('ProblemReport handlers', () => {
             problemReport: { create: jest.fn(), findMany: jest.fn(), count: jest.fn(), update: jest.fn() },
           },
         },
-        tenantProvider,
       ],
     }).compile();
 

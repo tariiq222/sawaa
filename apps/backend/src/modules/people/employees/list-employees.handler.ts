@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 import { toListResponse } from '../../../common/dto';
 import { ListEmployeesDto, type EmployeeSortField } from './list-employees.dto';
 import { mapEmployeeRow } from './employee-row.mapper';
@@ -29,7 +28,6 @@ function buildOrderBy(
 export class ListEmployeesHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(query: ListEmployeesQuery) {

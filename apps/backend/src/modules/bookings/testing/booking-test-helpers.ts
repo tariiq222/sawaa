@@ -118,9 +118,3 @@ export const buildRlsTx = (prisma: ReturnType<typeof buildPrisma>, tx?: unknown)
 export const buildZoomHandler = () => ({
   execute: jest.fn().mockResolvedValue({ joinUrl: 'https://zoom.example/join' }),
 });
-
-
-/** Minimal TenantContextService mock — always returns the default org id. */
-export const buildTenant = () => ({
-  requireOrganizationIdOrDefault: jest.fn().mockReturnValue(DEFAULT_ORG_ID),
-});

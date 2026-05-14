@@ -5,7 +5,7 @@ import { validate } from 'class-validator';
 import { PaymentStatus } from '@prisma/client';
 import { MoyasarWebhookHandler, MoyasarWebhookRequest } from './moyasar-webhook.handler';
 import { MoyasarWebhookDto } from './moyasar-webhook.dto';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { DEFAULT_ORG_ID, TENANT_CLS_KEY } from '../../../common/constants';
 
 const TEST_SECRET = 'test-secret';
 const FAKE_CIPHERTEXT = 'fake-encrypted-webhook-secret-ciphertext';
@@ -114,18 +114,12 @@ interface HandlerOverrides {
   eventBus?: ReturnType<typeof buildEventBus>;
   creds?: ReturnType<typeof buildCreds>;
   cls?: ReturnType<typeof buildCls>;
-  tenantContext?: ReturnType<typeof buildTenantContext>;
 }
 
 const buildAppMetrics = () => ({
   paymentAttempts: { labels: jest.fn().mockReturnValue({ inc: jest.fn() }) },
 });
 
-const buildTenantContext = () => ({
-  set: jest.fn(),
-  get: jest.fn(),
-  getOrganizationId: jest.fn(),
-});
 
 function makeHandler(overrides: HandlerOverrides = {}) {
   const prisma = overrides.prisma ?? buildPrisma();
@@ -134,9 +128,8 @@ function makeHandler(overrides: HandlerOverrides = {}) {
   const cls = overrides.cls ?? buildCls();
   const rlsTx = { withTransaction: jest.fn(async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)) };
   const appMetrics = buildAppMetrics();
-  const tenantContext = overrides.tenantContext ?? buildTenantContext();
-  const handler = new MoyasarWebhookHandler(prisma as never, eventBus as never, cls as never, creds as never, rlsTx as never, tenantContext as never, appMetrics as never);
-  return { handler, prisma, eventBus, creds, cls, appMetrics, tenantContext };
+  const handler = new MoyasarWebhookHandler(prisma as never, eventBus as never, cls as never, creds as never, rlsTx as never, appMetrics as never);
+  return { handler, prisma, eventBus, creds, cls, appMetrics };
 }
 
 describe('MoyasarWebhookHandler', () => {
@@ -269,10 +262,10 @@ describe('MoyasarWebhookHandler', () => {
     });
 
     it('enters system context for tenant resolution (bypass flag set)', async () => {
-      const { handler, cls, tenantContext } = makeHandler();
+      const { handler, cls } = makeHandler();
       await handler.execute(makeReq());
       expect(cls.set).toHaveBeenCalledWith('systemContext', true);
-      expect(tenantContext.set).toHaveBeenCalledWith(expect.objectContaining({ organizationId: DEFAULT_ORG_ID }));
+      expect(cls.set).toHaveBeenCalledWith(TENANT_CLS_KEY, expect.objectContaining({ organizationId: DEFAULT_ORG_ID }));
     });
 
     it('rejects payload when amount does not match invoice.total * 100', async () => {

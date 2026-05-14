@@ -6,8 +6,7 @@ import { PaymentMethod, PaymentStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { MoyasarCredentialsService } from '../../../infrastructure/payments/moyasar-credentials.service';
-import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
+import { SYSTEM_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../../common/constants';
 import { PaymentCompletedEvent } from '../events/payment-completed.event';
 import { PaymentFailedEvent } from '../events/payment-failed.event';
 import { MoyasarWebhookDto } from './moyasar-webhook.dto';
@@ -48,7 +47,6 @@ export class MoyasarWebhookHandler {
     private readonly cls: ClsService,
     private readonly creds: MoyasarCredentialsService,
     private readonly rlsTx: RlsTransactionService,
-    private readonly tenantContext: TenantContextService,
     @Optional() private readonly appMetrics: AppMetricsService | null = null,
   ) {}
 
@@ -161,8 +159,7 @@ export class MoyasarWebhookHandler {
 
       // STAGE 8 — run mutations inside the resolved tenant's CLS context.
       const result = await this.cls.run(async () => {
-        // P2-9: use the official TenantContextService API instead of raw cls.set
-        this.tenantContext.set({
+        this.cls.set(TENANT_CLS_KEY, {
           organizationId: DEFAULT_ORG_ID,
           id: 'system',
           role: 'system',

@@ -1,6 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 import { UpdateClientDto } from './update-client.dto';
 import { serializeClient } from './client.serializer';
 
@@ -10,7 +9,6 @@ export type UpdateClientCommand = UpdateClientDto & { clientId: string };
 export class UpdateClientHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: UpdateClientCommand) {

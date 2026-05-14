@@ -13,7 +13,6 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { LoggingInterceptor, AuditInterceptor } from './common/interceptors';
 import { PrismaService } from './infrastructure/database';
-import { TenantContextService } from './common/tenant/tenant-context.service';
 import { configureCors } from './cors';
 import { setShuttingDown } from './common/shutdown.state';
 
@@ -57,7 +56,7 @@ async function bootstrap(): Promise<void> {
   );
 
   app.useGlobalInterceptors(new LoggingInterceptor());
-  app.useGlobalInterceptors(new AuditInterceptor(app.get(PrismaService), app.get(TenantContextService)));
+  app.useGlobalInterceptors(new AuditInterceptor(app.get(PrismaService)));
 
   // ─── Swagger / OpenAPI ──────────────────────────────────────────────────────
   const swaggerConfig = new DocumentBuilder()

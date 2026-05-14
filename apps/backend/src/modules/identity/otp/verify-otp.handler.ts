@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, UnauthorizedException, Logger } from '
 import { ClsService } from 'nestjs-cls';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../infrastructure/database';
-import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
+import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { VerifyOtpDto } from './verify-otp.dto';
 import { OtpSessionService } from './otp-session.service';
 

@@ -23,8 +23,6 @@ import { GetOrgSettingsHandler } from '../../modules/org-experience/org-settings
 import { UpsertOrgSettingsHandler } from '../../modules/org-experience/org-settings/upsert-org-settings.handler';
 import { GetBookingSettingsHandler } from '../../modules/bookings/get-booking-settings/get-booking-settings.handler';
 import { UpsertBookingSettingsHandler } from '../../modules/bookings/upsert-booking-settings/upsert-booking-settings.handler';
-import { PrismaService } from '../../infrastructure/database';
-import { TenantContextService } from '../../common/tenant/tenant-context.service';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
@@ -52,8 +50,6 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
   const mockUpsertOrgSettings = { execute: jest.fn() };
   const mockGetBookingSettings = { execute: jest.fn() };
   const mockUpsertBookingSettings = { execute: jest.fn() };
-  const mockPrisma = {};
-  const mockTenant = { requireOrganizationIdOrDefault: jest.fn().mockReturnValue('00000000-0000-4000-a000-000000000001') };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -80,8 +76,6 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
         { provide: UpsertOrgSettingsHandler, useValue: mockUpsertOrgSettings },
         { provide: GetBookingSettingsHandler, useValue: mockGetBookingSettings },
         { provide: UpsertBookingSettingsHandler, useValue: mockUpsertBookingSettings },
-        { provide: PrismaService, useValue: mockPrisma },
-        { provide: TenantContextService, useValue: mockTenant },
       ],
     })
       .overrideGuard(JwtGuard)

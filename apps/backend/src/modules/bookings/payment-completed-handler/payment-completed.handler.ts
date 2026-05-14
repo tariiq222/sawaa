@@ -3,7 +3,7 @@ import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../../infrastructure/database';
 import { RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
-import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
+import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 interface PaymentCompletedPayload {

@@ -11,7 +11,7 @@ import { ClsService } from 'nestjs-cls';
 import { randomInt } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
+import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { NotificationChannelRegistry } from '../../comms/notification-channel/notification-channel-registry';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { RequestOtpDto } from './request-otp.dto';

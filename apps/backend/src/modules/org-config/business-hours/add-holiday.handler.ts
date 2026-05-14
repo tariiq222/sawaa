@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { AddHolidayDto } from './add-holiday.dto';
 
 export type AddHolidayCommand = AddHolidayDto;
@@ -9,7 +8,6 @@ export type AddHolidayCommand = AddHolidayDto;
 export class AddHolidayHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(dto: AddHolidayCommand) {

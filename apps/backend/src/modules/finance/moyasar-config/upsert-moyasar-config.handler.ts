@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { MoyasarCredentialsService } from '../../../infrastructure/payments/moyasar-credentials.service';
 import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
@@ -23,7 +22,6 @@ export interface UpsertMoyasarConfigResult {
 export class UpsertMoyasarConfigHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly creds: MoyasarCredentialsService,
     private readonly moyasarClient: MoyasarApiClient,
   ) {}

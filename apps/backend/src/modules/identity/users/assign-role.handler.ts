@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 
 export interface AssignRoleCommand {
   userId: string;
@@ -11,7 +10,6 @@ export interface AssignRoleCommand {
 export class AssignRoleHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: AssignRoleCommand): Promise<void> {

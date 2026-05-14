@@ -33,8 +33,8 @@ export class EmployeeScheduleQuery {
 }
 
 export class UpdateAvailabilityBody {
-  @IsArray() @ValidateNested({ each: true }) windows!: AvailabilityWindow[];
-  @IsOptional() @IsArray() @ValidateNested({ each: true }) exceptions?: AvailabilityException[];
+  @IsArray() @ValidateNested({ each: true }) @Type(() => AvailabilityWindow) windows!: AvailabilityWindow[];
+  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => AvailabilityException) exceptions?: AvailabilityException[];
 }
 
 @ApiTags('Mobile Employee / Schedule')

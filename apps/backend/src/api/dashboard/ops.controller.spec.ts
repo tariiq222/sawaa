@@ -4,7 +4,6 @@ import request from 'supertest';
 import { DashboardOpsController } from './ops.controller';
 import { GenerateReportHandler } from '../../modules/ops/generate-report/generate-report.handler';
 import { ListActivityHandler } from '../../modules/ops/log-activity/list-activity.handler';
-import { TenantContextService } from '../../common/tenant';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
@@ -13,7 +12,6 @@ describe('DashboardOpsController (e2e)', () => {
 
   const mockGenerateReport = { execute: jest.fn() };
   const mockListActivity = { execute: jest.fn() };
-  const mockTenant = { requireOrganizationIdOrDefault: jest.fn().mockReturnValue('00000000-0000-4000-a000-000000000001') };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -21,7 +19,6 @@ describe('DashboardOpsController (e2e)', () => {
       providers: [
         { provide: GenerateReportHandler, useValue: mockGenerateReport },
         { provide: ListActivityHandler, useValue: mockListActivity },
-        { provide: TenantContextService, useValue: mockTenant },
       ],
     })
       .overrideGuard(JwtGuard)

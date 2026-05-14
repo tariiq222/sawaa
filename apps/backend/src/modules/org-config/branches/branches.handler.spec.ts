@@ -3,7 +3,6 @@ import { CreateBranchHandler } from './create-branch.handler';
 import { UpdateBranchHandler } from './update-branch.handler';
 import { ListBranchesHandler } from './list-branches.handler';
 import { GetBranchHandler } from './get-branch.handler';
-import { TenantContextService } from '../../../common/tenant';
 import { RlsTransactionService } from '../../../infrastructure/database';
 
 const buildEventBus = () => ({ publish: jest.fn().mockResolvedValue(undefined) });
@@ -61,11 +60,6 @@ const buildPrisma = (overrides: Record<string, unknown> = {}) => {
   };
 };
 
-const buildTenant = (organizationId = DEFAULT_ORG) =>
-  ({
-    requireOrganizationId: jest.fn().mockReturnValue(organizationId),
-    requireOrganizationIdOrDefault: jest.fn().mockReturnValue(organizationId),
-  }) as unknown as TenantContextService;
 
 describe('CreateBranchHandler', () => {
   it('creates branch scoped by org when name is unique', async () => {
@@ -178,7 +172,7 @@ describe('UpdateBranchHandler', () => {
 describe('ListBranchesHandler', () => {
   it('returns paginated branches scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new ListBranchesHandler(prisma as never, buildTenant(), buildRlsTx(prisma) as never);
+    const handler = new ListBranchesHandler(prisma as never, buildRlsTx(prisma) as never);
     const result = await handler.execute({});
     expect(result.items).toHaveLength(1);
     expect(result.meta.total).toBe(1);
@@ -189,7 +183,7 @@ describe('GetBranchHandler', () => {
   it('returns branch with hours and holidays', async () => {
     const prisma = buildPrisma();
     prisma.branch.findFirst = jest.fn().mockResolvedValue(mockBranch);
-    const handler = new GetBranchHandler(prisma as never, buildTenant());
+    const handler = new GetBranchHandler(prisma as never);
     const result = await handler.execute({ branchId: 'branch-1' });
     expect(result.id).toBe('branch-1');
   });
@@ -197,7 +191,7 @@ describe('GetBranchHandler', () => {
   it('throws NotFoundException when branch not found', async () => {
     const prisma = buildPrisma();
     prisma.branch.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new GetBranchHandler(prisma as never, buildTenant());
+    const handler = new GetBranchHandler(prisma as never);
     await expect(handler.execute({ branchId: 'missing' })).rejects.toThrow(NotFoundException);
   });
 });

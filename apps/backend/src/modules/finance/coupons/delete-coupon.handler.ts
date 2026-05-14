@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 
 export interface DeleteCouponCommand { couponId: string; }
 
@@ -8,7 +7,6 @@ export interface DeleteCouponCommand { couponId: string; }
 export class DeleteCouponHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: DeleteCouponCommand): Promise<void> {

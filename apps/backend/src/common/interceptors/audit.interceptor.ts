@@ -10,7 +10,6 @@ import { Request } from 'express';
 import { ActivityAction } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { RequestContextStorage } from '../http/request-context';
-import { TenantContextService } from '../tenant/tenant-context.service';
 import { DEFAULT_ORG_ID } from "../constants";
 
 /** HTTP methods considered write operations and subject to audit logging. */
@@ -165,7 +164,6 @@ export class AuditInterceptor implements NestInterceptor {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   intercept(ctx: ExecutionContext, next: CallHandler): Observable<unknown> {

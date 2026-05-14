@@ -1,5 +1,4 @@
 import { GetPublicBranchesHandler, PublicBranchItem } from './get-public-branches.handler';
-import { TenantContextService } from '../../../../common/tenant';
 
 const DEFAULT_ORG = '00000000-0000-0000-0000-000000000001';
 
@@ -25,15 +24,11 @@ const buildPrisma = (rows: PublicBranchItem[]) => ({
   },
 });
 
-const buildTenant = (organizationId = DEFAULT_ORG) =>
-  ({
-    requireOrganizationIdOrDefault: jest.fn().mockReturnValue(organizationId),
-  }) as unknown as TenantContextService;
 
 describe('GetPublicBranchesHandler', () => {
   it('returns only active branches with public-safe projection', async () => {
     const prisma = buildPrisma([activeBranch]);
-    const handler = new GetPublicBranchesHandler(prisma as never, buildTenant());
+    const handler = new GetPublicBranchesHandler(prisma as never);
 
     const result = await handler.execute();
 
@@ -49,7 +44,7 @@ describe('GetPublicBranchesHandler', () => {
 
   it('returns empty array when no active branches exist', async () => {
     const prisma = buildPrisma([]);
-    const handler = new GetPublicBranchesHandler(prisma as never, buildTenant());
+    const handler = new GetPublicBranchesHandler(prisma as never);
 
     const result = await handler.execute();
 
@@ -58,7 +53,7 @@ describe('GetPublicBranchesHandler', () => {
 
   it('does not include inactive branch (query filters at DB level)', async () => {
     const prisma = buildPrisma([activeBranch]);
-    const handler = new GetPublicBranchesHandler(prisma as never, buildTenant());
+    const handler = new GetPublicBranchesHandler(prisma as never);
 
     await handler.execute();
 
@@ -70,7 +65,7 @@ describe('GetPublicBranchesHandler', () => {
 
   it('result items do not expose internal-only fields', async () => {
     const prisma = buildPrisma([activeBranch]);
-    const handler = new GetPublicBranchesHandler(prisma as never, buildTenant());
+    const handler = new GetPublicBranchesHandler(prisma as never);
 
     const result = await handler.execute();
 
@@ -83,7 +78,7 @@ describe('GetPublicBranchesHandler', () => {
   it('returns multiple active branches ordered by creation', async () => {
     const second = { ...inactiveBranch, id: 'branch-3', nameAr: 'فرع آخر' };
     const prisma = buildPrisma([activeBranch, second]);
-    const handler = new GetPublicBranchesHandler(prisma as never, buildTenant());
+    const handler = new GetPublicBranchesHandler(prisma as never);
 
     const result = await handler.execute();
 

@@ -5,7 +5,6 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 
 export interface RequestRefundCommand {
   invoiceId: string;
@@ -24,7 +23,6 @@ export interface RefundRequestResult {
 export class RequestRefundHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: RequestRefundCommand): Promise<RefundRequestResult> {

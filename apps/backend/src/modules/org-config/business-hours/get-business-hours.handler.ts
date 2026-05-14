@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 
 export type GetBusinessHoursQuery = { branchId: string };
 
@@ -8,7 +7,6 @@ export type GetBusinessHoursQuery = { branchId: string };
 export class GetBusinessHoursHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(dto: GetBusinessHoursQuery) {

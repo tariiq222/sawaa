@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 
 export type DeleteBranchCommand = { branchId: string };
 
@@ -8,7 +7,6 @@ export type DeleteBranchCommand = { branchId: string };
 export class DeleteBranchHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(dto: DeleteBranchCommand) {

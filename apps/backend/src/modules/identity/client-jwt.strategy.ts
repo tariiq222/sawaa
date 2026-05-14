@@ -1,10 +1,11 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, ExtractJwt } from 'passport-jwt';
+import { ClsService } from 'nestjs-cls';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
+import { TENANT_CLS_KEY } from '../../common/constants';
 import { PrismaService } from '../../infrastructure/database';
-import { TenantContextService } from '../../common/tenant';
 
 export interface ClientJwtPayload {
   sub: string;
@@ -19,7 +20,7 @@ export class ClientJwtStrategy extends PassportStrategy(Strategy, 'client-jwt') 
   constructor(
     config: ConfigService,
     private readonly prisma: PrismaService,
-    private readonly tenantContext: TenantContextService,
+    private readonly cls: ClsService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
@@ -54,7 +55,7 @@ export class ClientJwtStrategy extends PassportStrategy(Strategy, 'client-jwt') 
     }
 
     // Set tenant context ONLY after all DB validations pass (P1-5)
-    this.tenantContext.set({
+    this.cls.set(TENANT_CLS_KEY, {
       organizationId: payload.organizationId,
       id: payload.sub,
       role: 'CLIENT',

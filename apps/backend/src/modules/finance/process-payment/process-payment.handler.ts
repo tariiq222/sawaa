@@ -2,7 +2,6 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InvoiceStatus, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 import { PaymentCompletedEvent } from '../events/payment-completed.event';
 import { ProcessPaymentDto } from './process-payment.dto';
 
@@ -13,7 +12,6 @@ export class ProcessPaymentHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventBus: EventBusService,
-    private readonly tenant: TenantContextService,
     private readonly rlsTx: RlsTransactionService,
   ) {}
 

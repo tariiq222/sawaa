@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../../../infrastructure/database';
-import { TenantContextService } from '../../../../../common/tenant/tenant-context.service';
 import { MoyasarApiClient } from '../../../moyasar-api/moyasar-api.client';
 import { InitGuestPaymentDto } from './init-guest-payment.dto';
 import { DEFAULT_ORG_ID } from '../../../../../common/constants';
@@ -14,7 +13,6 @@ export interface InitGuestPaymentResult {
 export class InitGuestPaymentHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly moyasar: MoyasarApiClient,
     private readonly rlsTx: RlsTransactionService,
   ) {}

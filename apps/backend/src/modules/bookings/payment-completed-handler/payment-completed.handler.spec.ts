@@ -1,7 +1,7 @@
 import { PaymentCompletedEventHandler } from './payment-completed.handler';
 import { buildPrisma, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
 import { BookingStatus } from '@prisma/client';
-import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
+import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 
 function buildCls() {
   return {

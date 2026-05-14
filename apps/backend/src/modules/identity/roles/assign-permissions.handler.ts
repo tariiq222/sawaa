@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { AssignPermissionsDto } from './assign-permissions.dto';
 
 export type AssignPermissionsCommand = AssignPermissionsDto & {
@@ -11,7 +10,6 @@ export type AssignPermissionsCommand = AssignPermissionsDto & {
 export class AssignPermissionsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: AssignPermissionsCommand): Promise<void> {

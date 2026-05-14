@@ -6,20 +6,13 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
+import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../infrastructure/database';
 import { RedisService } from '../../infrastructure/cache';
-import { TenantContextService } from '../tenant/tenant-context.service';
-import { DEFAULT_ORG_ID } from '../constants';
+import { DEFAULT_ORG_ID, TENANT_CLS_KEY } from '../constants';
 import { ALLOW_DURING_SUSPENSION_KEY } from './allow-during-suspension.decorator';
 
 export const IS_PUBLIC_KEY = 'isPublic';
-const _ORG_SUSPENSION_CACHE_TTL_SECONDS = 30;
-const _ACTIVE_ORG_CACHE_SENTINEL = 'active';
-
-const _SUSPENSION_HINT_AR =
-  'حسابك معلّق. صاحب الحساب يمكنه تحديث طريقة الدفع لإعادة التفعيل.';
-const _SUSPENSION_HINT_EN =
-  'Your organization is suspended. The owner can update the payment method to reactivate.';
 
 /** Mark a route as public — skips JWT validation. */
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
@@ -46,7 +39,7 @@ export class JwtGuard extends AuthGuard('jwt') {
     private readonly reflector: Reflector,
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly tenantContext: TenantContextService,
+    private readonly cls: ClsService,
   ) {
     super();
   }
@@ -94,19 +87,6 @@ export class JwtGuard extends AuthGuard('jwt') {
     return user;
   }
 
-  async assertOrganizationIsActive(): Promise<void> {
-    // Single-tenant: no organization suspension
-  }
-
-  /**
-   * Throws ORG_SUSPENDED unless the route opted into recovery mode AND the
-   * caller is OWNER. Anything else (ADMIN, RECEPTIONIST, missing role) on a
-   * suspended org is rejected with the bilingual recovery hint.
-   */
-  private rejectSuspended(): void {
-    // Single-tenant: no organization suspension
-  }
-
   /**
    * Resolves the effective tenant org for the current request (TAR-10).
    *
@@ -140,7 +120,7 @@ export class JwtGuard extends AuthGuard('jwt') {
   ): void {
     if (!user || !effectiveOrgId) return;
 
-    this.tenantContext.set({
+    this.cls.set(TENANT_CLS_KEY, {
       organizationId: effectiveOrgId,
       id: user.id ?? user.sub ?? '',
       role: user.role ?? '',

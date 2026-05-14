@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { ListIntakeFormsDto } from './list-intake-forms.dto';
 
 export type ListIntakeFormsCommand = ListIntakeFormsDto;
@@ -9,7 +8,6 @@ export type ListIntakeFormsCommand = ListIntakeFormsDto;
 export class ListIntakeFormsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(dto: ListIntakeFormsCommand) {

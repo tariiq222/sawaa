@@ -9,7 +9,6 @@ import { ListHolidaysHandler } from './list-holidays.handler';
 import { AddHolidayDto } from './add-holiday.dto';
 import { ListHolidaysDto } from './list-holidays.dto';
 import { SetBusinessHoursDto } from './set-business-hours.dto';
-import { TenantContextService } from '../../../common/tenant';
 import { RlsTransactionService } from '../../../infrastructure/database';
 
 const DEFAULT_ORG = '00000000-0000-0000-0000-000000000001';
@@ -36,10 +35,6 @@ const buildPrisma = () => ({
   $transaction: jest.fn((ops) => Promise.all(ops as Promise<unknown>[])),
 });
 
-const buildTenant = (organizationId = DEFAULT_ORG) =>
-  ({
-    requireOrganizationId: jest.fn().mockReturnValue(organizationId),
-  }) as unknown as TenantContextService;
 const buildRlsTx = (prisma: ReturnType<typeof buildPrisma>) =>
   ({
     withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
@@ -49,7 +44,7 @@ const buildRlsTx = (prisma: ReturnType<typeof buildPrisma>) =>
 describe('SetBusinessHoursHandler', () => {
   it('upserts schedule and returns hours', async () => {
     const prisma = buildPrisma();
-    const handler = new SetBusinessHoursHandler(prisma as never, buildTenant(), buildRlsTx(prisma) as never);
+    const handler = new SetBusinessHoursHandler(prisma as never, buildRlsTx(prisma) as never);
     const result = await handler.execute({ branchId: 'branch-1', schedule });
     expect(result).toEqual([mockHour]);
   });
@@ -57,13 +52,13 @@ describe('SetBusinessHoursHandler', () => {
   it('throws NotFoundException when branch not found', async () => {
     const prisma = buildPrisma();
     prisma.branch.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new SetBusinessHoursHandler(prisma as never, buildTenant(), buildRlsTx(prisma) as never);
+    const handler = new SetBusinessHoursHandler(prisma as never, buildRlsTx(prisma) as never);
     await expect(handler.execute({ branchId: 'missing', schedule })).rejects.toThrow(NotFoundException);
   });
 
   it('throws BadRequestException for invalid dayOfWeek', async () => {
     const prisma = buildPrisma();
-    const handler = new SetBusinessHoursHandler(prisma as never, buildTenant(), buildRlsTx(prisma) as never);
+    const handler = new SetBusinessHoursHandler(prisma as never, buildRlsTx(prisma) as never);
     await expect(
       handler.execute({ branchId: 'branch-1', schedule: [{ dayOfWeek: 9, startTime: '09:00', endTime: '17:00', isOpen: true }] }),
     ).rejects.toThrow(BadRequestException);
@@ -73,7 +68,7 @@ describe('SetBusinessHoursHandler', () => {
 describe('GetBusinessHoursHandler', () => {
   it('returns hours for branch', async () => {
     const prisma = buildPrisma();
-    const handler = new GetBusinessHoursHandler(prisma as never, buildTenant());
+    const handler = new GetBusinessHoursHandler(prisma as never);
     const result = await handler.execute({ branchId: 'branch-1' });
     expect(result).toEqual([mockHour]);
   });
@@ -81,7 +76,7 @@ describe('GetBusinessHoursHandler', () => {
   it('throws NotFoundException when branch not found', async () => {
     const prisma = buildPrisma();
     prisma.branch.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new GetBusinessHoursHandler(prisma as never, buildTenant());
+    const handler = new GetBusinessHoursHandler(prisma as never);
     await expect(handler.execute({ branchId: 'missing' })).rejects.toThrow(NotFoundException);
   });
 });
@@ -89,7 +84,7 @@ describe('GetBusinessHoursHandler', () => {
 describe('AddHolidayHandler', () => {
   it('creates holiday scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new AddHolidayHandler(prisma as never, buildTenant());
+    const handler = new AddHolidayHandler(prisma as never);
     const result = await handler.execute({ branchId: 'branch-1', date: '2026-01-01', nameAr: 'رأس السنة' });
     expect(result.id).toBe('hol-1');
     // org scoping moved to RLS / removed in single-tenant migration
@@ -101,7 +96,7 @@ describe('AddHolidayHandler', () => {
   it('throws ConflictException when holiday exists on same date', async () => {
     const prisma = buildPrisma();
     prisma.holiday.findUnique = jest.fn().mockResolvedValue(mockHoliday);
-    const handler = new AddHolidayHandler(prisma as never, buildTenant());
+    const handler = new AddHolidayHandler(prisma as never);
     await expect(
       handler.execute({ branchId: 'branch-1', date: '2026-01-01', nameAr: 'رأس السنة' }),
     ).rejects.toThrow(ConflictException);
@@ -112,14 +107,14 @@ describe('RemoveHolidayHandler', () => {
   it('deletes holiday when found in org', async () => {
     const prisma = buildPrisma();
     prisma.holiday.findFirst = jest.fn().mockResolvedValue(mockHoliday);
-    const handler = new RemoveHolidayHandler(prisma as never, buildTenant());
+    const handler = new RemoveHolidayHandler(prisma as never);
     const result = await handler.execute({ holidayId: 'hol-1' });
     expect(result.deleted).toBe(true);
   });
 
   it('throws NotFoundException when holiday not found', async () => {
     const prisma = buildPrisma();
-    const handler = new RemoveHolidayHandler(prisma as never, buildTenant());
+    const handler = new RemoveHolidayHandler(prisma as never);
     await expect(handler.execute({ holidayId: 'missing' })).rejects.toThrow(NotFoundException);
   });
 });
@@ -127,7 +122,7 @@ describe('RemoveHolidayHandler', () => {
 describe('ListHolidaysHandler', () => {
   it('returns holidays for branch scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new ListHolidaysHandler(prisma as never, buildTenant());
+    const handler = new ListHolidaysHandler(prisma as never);
     const result = await handler.execute({ branchId: 'branch-1' });
     expect(result).toHaveLength(1);
   });

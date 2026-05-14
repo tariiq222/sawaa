@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PaymentMethod, PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { BankTransferUploadDto } from './bank-transfer-upload.dto';
 import { validateMagicBytes } from '../../../common/security/magic-byte-validator';
@@ -26,7 +25,6 @@ export type BankTransferUploadCommand = BankTransferUploadDto & {
 export class BankTransferUploadHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly storage: MinioService,
   ) {}
 

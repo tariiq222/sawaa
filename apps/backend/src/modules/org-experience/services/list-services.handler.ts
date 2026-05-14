@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { toListResponse } from '../../../common/dto';
 import { ListServicesDto } from './list-services.dto';
 
@@ -10,7 +9,6 @@ export type ListServicesCommand = ListServicesDto;
 export class ListServicesHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly rlsTx: RlsTransactionService,
   ) {}
 

@@ -107,24 +107,10 @@ export class AuthController {
   async loginEndpoint(
     @Body() body: LoginDto,
     @Ip() ip: string,
-    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const tokens = await this.login.execute({ email: body.email, password: body.password, ip });
     const user = tokens.user;
-
-    // Host-based namespace enforcement (TAR-99)
-    const requestHost = String(req.headers.host ?? '').toLowerCase();
-    const adminHosts = (this.config.get<string>('ADMIN_HOSTS', 'admin.sawaa.app'))
-      .split(',').map((h) => h.trim().toLowerCase());
-    const isAdminHost = adminHosts.includes(requestHost);
-
-    if (isAdminHost && !user?.isSuperAdmin) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-    if (!isAdminHost && user?.isSuperAdmin) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
 
     // If 2FA required and user is super-admin → require OTP step
     if (user?.isSuperAdmin) {

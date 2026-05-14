@@ -8,7 +8,6 @@ import { APP_FILTER, APP_GUARD } from "@nestjs/core";
 import { HttpExceptionFilter } from "./common/filters";
 import { ClsModule } from "nestjs-cls";
 import { envValidationSchema } from "./config/env.validation";
-import { TenantModule } from "./common/tenant";
 
 import { DatabaseModule } from "./infrastructure/database";
 import { MessagingModule } from "./infrastructure/messaging.module";
@@ -50,7 +49,6 @@ import { AppMetricsService } from "./infrastructure/telemetry/app-metrics.servic
       global: true,
       middleware: { mount: true },
     }),
-    TenantModule,
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

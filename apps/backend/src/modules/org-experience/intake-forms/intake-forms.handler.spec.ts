@@ -4,7 +4,6 @@ import { CreateIntakeFormHandler } from './create-intake-form.handler';
 import { DeleteIntakeFormHandler } from './delete-intake-form.handler';
 import { GetIntakeFormHandler } from './get-intake-form.handler';
 import { ListIntakeFormsHandler } from './list-intake-forms.handler';
-import { TenantContextService } from '../../../common/tenant';
 
 const mockForm = {
   id: 'form-1',
@@ -28,10 +27,6 @@ const buildPrisma = () => ({
   },
 });
 
-const buildTenant = () =>
-  ({
-    requireOrganizationId: jest.fn(),
-  }) as unknown as TenantContextService;
 
 describe('CreateIntakeFormHandler', () => {
   it('creates form', async () => {
@@ -52,7 +47,7 @@ describe('CreateIntakeFormHandler', () => {
 describe('GetIntakeFormHandler', () => {
   it('returns form by id', async () => {
     const prisma = buildPrisma();
-    const handler = new GetIntakeFormHandler(prisma as never, buildTenant());
+    const handler = new GetIntakeFormHandler(prisma as never);
     const result = await handler.execute({ formId: 'form-1' });
     expect(prisma.intakeForm.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: 'form-1' }) }),
@@ -63,7 +58,7 @@ describe('GetIntakeFormHandler', () => {
   it('throws NotFoundException when form not found', async () => {
     const prisma = buildPrisma();
     prisma.intakeForm.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new GetIntakeFormHandler(prisma as never, buildTenant());
+    const handler = new GetIntakeFormHandler(prisma as never);
     await expect(handler.execute({ formId: 'missing' })).rejects.toThrow(NotFoundException);
   });
 });
@@ -71,7 +66,7 @@ describe('GetIntakeFormHandler', () => {
 describe('ListIntakeFormsHandler', () => {
   it('returns forms', async () => {
     const prisma = buildPrisma();
-    const handler = new ListIntakeFormsHandler(prisma as never, buildTenant());
+    const handler = new ListIntakeFormsHandler(prisma as never);
     const result = await handler.execute({});
     expect(prisma.intakeForm.findMany).toHaveBeenCalled();
     expect(result).toHaveLength(1);
@@ -81,7 +76,7 @@ describe('ListIntakeFormsHandler', () => {
 describe('DeleteIntakeFormHandler', () => {
   it('deletes form by id', async () => {
     const prisma = buildPrisma();
-    const handler = new DeleteIntakeFormHandler(prisma as never, buildTenant());
+    const handler = new DeleteIntakeFormHandler(prisma as never);
     await expect(handler.execute({ formId: 'form-1' })).resolves.toBeUndefined();
     expect(prisma.intakeForm.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: 'form-1' }) }),
@@ -92,7 +87,7 @@ describe('DeleteIntakeFormHandler', () => {
   it('throws NotFoundException when form not found', async () => {
     const prisma = buildPrisma();
     prisma.intakeForm.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new DeleteIntakeFormHandler(prisma as never, buildTenant());
+    const handler = new DeleteIntakeFormHandler(prisma as never);
     await expect(handler.execute({ formId: 'missing' })).rejects.toThrow(NotFoundException);
   });
 });

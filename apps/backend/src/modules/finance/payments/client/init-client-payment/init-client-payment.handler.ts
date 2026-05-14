@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import { BookingStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../../../../../infrastructure/database';
-import { TenantContextService } from '../../../../../common/tenant/tenant-context.service';
 import { MoyasarApiClient } from '../../../moyasar-api/moyasar-api.client';
 import { InitClientPaymentDto } from './init-client-payment.dto';
 import { DEFAULT_ORG_ID } from '../../../../../common/constants';
@@ -35,7 +34,6 @@ export class InitClientPaymentHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly moyasar: MoyasarApiClient,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: InitClientPaymentCommand): Promise<InitClientPaymentResult> {

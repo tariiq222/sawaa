@@ -1,6 +1,5 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 import { PasswordService } from '../shared/password.service';
 import { CreateUserDto } from './create-user.dto';
 
@@ -11,7 +10,6 @@ export class CreateUserHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly password: PasswordService,
-    private readonly tenantCtx: TenantContextService,
     private readonly rlsTx: RlsTransactionService,
   ) {}
 

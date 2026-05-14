@@ -9,7 +9,7 @@ import {
   type RetryJobData,
 } from './resilient-notification-dispatcher.service';
 import { ClsService } from 'nestjs-cls';
-import { TENANT_CLS_KEY } from '../../../common/tenant/tenant.constants';
+import { TENANT_CLS_KEY } from '../../../common/constants';
 
 @Injectable()
 export class NotificationRetryWorker implements OnModuleInit {

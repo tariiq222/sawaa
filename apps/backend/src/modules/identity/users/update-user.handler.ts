@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserGender, UserRole } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 
 export interface UpdateUserCommand {
   userId: string;
@@ -19,7 +18,6 @@ export interface UpdateUserCommand {
 export class UpdateUserHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenantCtx: TenantContextService,
     private readonly rlsTx: RlsTransactionService,
   ) {}
 

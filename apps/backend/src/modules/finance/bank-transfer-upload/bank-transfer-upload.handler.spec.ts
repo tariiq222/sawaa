@@ -53,10 +53,6 @@ const buildStorage = () => ({
   uploadFile: jest.fn().mockResolvedValue('http://minio/bucket/path.jpg'),
 });
 
-const buildTenant = () => ({
-  requireOrganizationIdOrDefault: jest.fn().mockReturnValue('00000000-0000-0000-0000-000000000001'),
-});
-
 const baseCmd = {
   invoiceId: 'inv-1',
   clientId: 'client-1',
@@ -68,7 +64,7 @@ describe('BankTransferUploadHandler', () => {
     it('uploads JPEG receipt and creates PENDING_VERIFICATION payment', async () => {
       const prisma = buildPrisma();
       const storage = buildStorage();
-      const handler = new BankTransferUploadHandler(prisma as never, buildTenant() as never, storage as never);
+      const handler = new BankTransferUploadHandler(prisma as never, storage as never);
 
       const result = await handler.execute({
         ...baseCmd,
@@ -97,7 +93,7 @@ describe('BankTransferUploadHandler', () => {
 
     it('uploads PNG receipt', async () => {
       const storage = buildStorage();
-      const handler = new BankTransferUploadHandler(buildPrisma() as never, buildTenant() as never, storage as never);
+      const handler = new BankTransferUploadHandler(buildPrisma() as never, storage as never);
 
       await handler.execute({
         ...baseCmd,
@@ -116,7 +112,7 @@ describe('BankTransferUploadHandler', () => {
 
     it('uploads PDF receipt', async () => {
       const storage = buildStorage();
-      const handler = new BankTransferUploadHandler(buildPrisma() as never, buildTenant() as never, storage as never);
+      const handler = new BankTransferUploadHandler(buildPrisma() as never, storage as never);
 
       await handler.execute({
         ...baseCmd,
@@ -137,7 +133,7 @@ describe('BankTransferUploadHandler', () => {
   describe('magic-byte rejection', () => {
     it('rejects MP4 bytes claimed as image/jpeg', async () => {
       const storage = buildStorage();
-      const handler = new BankTransferUploadHandler(buildPrisma() as never, buildTenant() as never, storage as never);
+      const handler = new BankTransferUploadHandler(buildPrisma() as never, storage as never);
 
       await expect(
         handler.execute({
@@ -152,7 +148,7 @@ describe('BankTransferUploadHandler', () => {
 
     it('rejects PNG bytes claimed as application/pdf', async () => {
       const storage = buildStorage();
-      const handler = new BankTransferUploadHandler(buildPrisma() as never, buildTenant() as never, storage as never);
+      const handler = new BankTransferUploadHandler(buildPrisma() as never, storage as never);
 
       await expect(
         handler.execute({
@@ -173,7 +169,7 @@ describe('BankTransferUploadHandler', () => {
       // To simulate: return null from findFirst (invoice not visible under tenant scope).
       const prisma = buildPrisma();
       prisma.invoice.findFirst = jest.fn().mockResolvedValue(null);
-      const handler = new BankTransferUploadHandler(prisma as never, buildTenant() as never, buildStorage() as never);
+      const handler = new BankTransferUploadHandler(prisma as never, buildStorage() as never);
 
       await expect(
         handler.execute({
@@ -189,7 +185,7 @@ describe('BankTransferUploadHandler', () => {
     it('accepts transfer amount within tolerance of invoice total (e.g. partial payment rounding)', async () => {
       const prisma = buildPrisma();
       const storage = buildStorage();
-      const handler = new BankTransferUploadHandler(prisma as never, buildTenant() as never, storage as never);
+      const handler = new BankTransferUploadHandler(prisma as never, storage as never);
 
       await expect(
         handler.execute({
@@ -204,7 +200,7 @@ describe('BankTransferUploadHandler', () => {
 
     it('throws BadRequestException when transfer amount does not match invoice total', async () => {
       const prisma = buildPrisma();
-      const handler = new BankTransferUploadHandler(prisma as never, buildTenant() as never, buildStorage() as never);
+      const handler = new BankTransferUploadHandler(prisma as never, buildStorage() as never);
 
       await expect(
         handler.execute({
@@ -219,7 +215,7 @@ describe('BankTransferUploadHandler', () => {
     });
 
     it('throws BadRequestException for disallowed mime type', async () => {
-      const handler = new BankTransferUploadHandler(buildPrisma() as never, buildTenant() as never, buildStorage() as never);
+      const handler = new BankTransferUploadHandler(buildPrisma() as never, buildStorage() as never);
       await expect(
         handler.execute({ ...baseCmd, fileBuffer: JPEG_BUFFER, mimetype: 'text/html', filename: 'x.html' }),
       ).rejects.toThrow(BadRequestException);
@@ -228,7 +224,7 @@ describe('BankTransferUploadHandler', () => {
     it('throws NotFoundException when invoice not found', async () => {
       const prisma = buildPrisma();
       prisma.invoice.findFirst = jest.fn().mockResolvedValue(null);
-      const handler = new BankTransferUploadHandler(prisma as never, buildTenant() as never, buildStorage() as never);
+      const handler = new BankTransferUploadHandler(prisma as never, buildStorage() as never);
       await expect(
         handler.execute({ ...baseCmd, fileBuffer: JPEG_BUFFER, mimetype: 'image/jpeg', filename: 'receipt.jpg' }),
       ).rejects.toThrow(NotFoundException);

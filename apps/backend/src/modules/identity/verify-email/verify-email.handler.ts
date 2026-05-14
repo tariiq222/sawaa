@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import { createHash } from 'crypto';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
+import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 
 export interface VerifyEmailCommand {
   token: string;

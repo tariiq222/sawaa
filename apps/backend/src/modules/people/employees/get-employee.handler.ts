@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 import { mapEmployeeRow } from './employee-row.mapper';
 
 export interface GetEmployeeQuery {
@@ -11,7 +10,6 @@ export interface GetEmployeeQuery {
 export class GetEmployeeHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(query: GetEmployeeQuery) {

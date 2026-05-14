@@ -111,8 +111,7 @@ export class ApproveRefundHandler {
         return { updated, invoice };
       });
 
-      // Phase 2 / Bug B11 — fire RefundCompletedEvent so the billing
-      // listener can decrement the UsageCounter. Failure to publish must
+      // Fire RefundCompletedEvent for downstream listeners. Failure to publish must
       // never break the refund itself; reconcile cron is the safety net.
       const event = new RefundCompletedEvent({
         refundRequestId: updated.id,

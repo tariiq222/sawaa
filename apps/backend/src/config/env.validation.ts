@@ -105,11 +105,6 @@ export const envValidationSchema = Joi.object({
   // Used to wrap each tenant's MoyasarPublishableKey + secretKey at rest.
   MOYASAR_TENANT_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
 
-  // Multi-tenancy — default `strict` as of SaaS-02h.
-  //   strict     → platform default. Any scoped query without CLS org throws.
-  //   permissive → falls back to DEFAULT_ORGANIZATION_ID. Dev-only.
-  //   off        → no scoping. Legacy single-tenant mode. Never in multi-tenant prod.
-  TENANT_ENFORCEMENT: Joi.string().valid('off', 'permissive', 'strict').default('strict'),
   DEFAULT_ORGANIZATION_ID: Joi.string().uuid().default('00000000-0000-0000-0000-000000000001'),
 
   // SMS per-tenant (SaaS-02g-sms) — encryption key is REQUIRED; 32 raw bytes base64-encoded (ASCII length 44).
@@ -147,29 +142,6 @@ export const envValidationSchema = Joi.object({
     otherwise: Joi.string().allow('').optional(),
   }),
 
-  // Billing (SaaS-04) — PLATFORM Moyasar (charges clinics for SaaS subscriptions).
-  // Distinct from OrganizationPaymentConfig.moyasar* (tenant Moyasar, Plan 02e).
-  // Required in production so billing webhooks are always signed and the platform
-  // can charge tenants. Optional in dev/test.
-  MOYASAR_PLATFORM_SECRET_KEY: Joi.when('NODE_ENV', {
-    is: 'production',
-    then: Joi.string().min(16).required(),
-    otherwise: Joi.string().min(16).allow('').optional(),
-  }),
-  MOYASAR_PLATFORM_WEBHOOK_SECRET: Joi.when('NODE_ENV', {
-    is: 'production',
-    then: Joi.string().min(16).required(),
-    otherwise: Joi.string().min(16).allow('').optional(),
-  }),
-  SAAS_TRIAL_DAYS: Joi.number().integer().min(0).max(90).default(14),
-  SAAS_GRACE_PERIOD_DAYS: Joi.number().integer().min(0).max(30).default(2),
-  BILLING_CRON_ENABLED: Joi.boolean().default(false),
-  // Slug of the plan assigned to organizations without an active subscription
-  // (trial/entry tier). Must match an existing Plan.slug after seed.
-  PLATFORM_DEFAULT_PLAN_SLUG: Joi.string()
-    .pattern(/^[A-Z][A-Z0-9_]{1,31}$/)
-    .default('BASIC'),
-
   // Dedicated OTP-token secret. Falls back to JWT_ACCESS_SECRET in dev with a
   // warning; production REQUIRES a distinct secret so a leaked OTP token
   // cannot forge an access token.
@@ -203,14 +175,6 @@ export const envValidationSchema = Joi.object({
     otherwise: Joi.string().uri().allow('').optional(),
   }),
 
-  // Super-admin panel (SaaS-05b) — AdminHostGuard accepts only these Host headers.
-  // Required in prod so super-admin endpoints aren't reachable from arbitrary hosts.
-  ADMIN_HOSTS: Joi.when('NODE_ENV', {
-    is: 'production',
-    then: Joi.string().required(),
-    otherwise: Joi.string().allow('').default('localhost:5104,localhost:5100'),
-  }),
-
   // Authentica platform OTP — REQUIRED in prod since OTP is the primary mobile/website
   // login mechanism. https://portal.authentica.sa/settings/apikeys/
   AUTHENTICA_API_KEY: Joi.when('NODE_ENV', {
@@ -220,16 +184,6 @@ export const envValidationSchema = Joi.object({
   }),
   AUTHENTICA_BASE_URL: Joi.string().uri().default('https://api.authentica.sa'),
   AUTHENTICA_DEFAULT_TEMPLATE_ID: Joi.string().default('1'),
-
-  // Subdomain tenant routing (Task 7)
-  // Root domain used to derive tenant slug from the Host header (e.g. sawa.<root> → "sawa").
-  // Required in production so the subdomain resolver can strip the apex and extract the slug.
-  // Optional in dev — consumer code defaults to "localhost" when unset.
-  PLATFORM_ROOT_DOMAIN: Joi.when('NODE_ENV', {
-    is: 'production',
-    then: Joi.string().required(),
-    otherwise: Joi.string().allow('').optional(),
-  }),
 
   INTERNAL_METRICS_ALLOWED_IPS: Joi.string().when('NODE_ENV', {
     is: 'production',
@@ -241,10 +195,6 @@ export const envValidationSchema = Joi.object({
     then: Joi.string().min(32).required(),
     otherwise: Joi.string().allow('').optional(),
   }),
-
-  // Optional CSV of additional reserved subdomains merged with the built-in list.
-  // Example: "ops,beta" — prevents tenants from registering those slugs.
-  RESERVED_SUBDOMAINS: Joi.string().allow('').optional(),
 
 })
   .unknown(true)
@@ -264,8 +214,6 @@ export const envValidationSchema = Joi.object({
       'ZOOM_PROVIDER_ENCRYPTION_KEY',
       'MOYASAR_TENANT_ENCRYPTION_KEY',
       'EMAIL_PROVIDER_ENCRYPTION_KEY',
-      'MOYASAR_PLATFORM_SECRET_KEY',
-      'MOYASAR_PLATFORM_WEBHOOK_SECRET',
       'AUTHENTICA_API_KEY',
     ];
     for (const key of sensitiveKeys) {

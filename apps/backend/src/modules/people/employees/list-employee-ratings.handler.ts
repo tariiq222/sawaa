@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { toListResponse } from '../../../common/dto';
 
 export interface ListEmployeeRatingsQuery {
@@ -13,7 +12,6 @@ export interface ListEmployeeRatingsQuery {
 export class ListEmployeeRatingsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly rlsTx: RlsTransactionService,
   ) {}
 

@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 
 export interface EmployeeStatsResult {
   total: number;
@@ -13,7 +12,6 @@ export interface EmployeeStatsResult {
 export class EmployeeStatsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(): Promise<EmployeeStatsResult> {

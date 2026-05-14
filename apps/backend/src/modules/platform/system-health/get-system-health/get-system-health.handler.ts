@@ -3,7 +3,6 @@ import { PrismaService } from '../../../../infrastructure/database/prisma.servic
 import { RedisService } from '../../../../infrastructure/cache/redis.service';
 import { BullMqService } from '../../../../infrastructure/queue/bull-mq.service';
 import { MinioService } from '../../../../infrastructure/storage/minio.service';
-import { PlatformSettingsService } from '../../settings/platform-settings.service';
 
 export interface SubsystemHealth {
   name: string;
@@ -27,7 +26,6 @@ export class GetSystemHealthHandler {
     private readonly redis: RedisService,
     private readonly bullmq: BullMqService,
     private readonly minio: MinioService,
-    private readonly platformSettings: PlatformSettingsService,
   ) {}
 
   async execute(): Promise<SystemHealthResult> {
@@ -36,7 +34,6 @@ export class GetSystemHealthHandler {
       this.probe('redis', () => this.probeRedis()),
       this.probe('bullmq', () => this.probeBullMq()),
       this.probe('minio', () => this.probeMinio()),
-      this.probe('moyasar', () => this.probeMoyasar()),
       this.probe('resend', () => this.probeResend()),
     ]);
 
@@ -99,29 +96,6 @@ export class GetSystemHealthHandler {
     const exists = await this.minio.bucketExists(bucket);
     if (exists) return { status: 'ok' };
     return { status: 'degraded', detail: `bucket ${bucket} missing` };
-  }
-
-  private async probeMoyasar(): Promise<{ status: 'ok' | 'degraded'; detail?: string }> {
-    const secret = await this.platformSettings.get<string>(
-      'billing.moyasar.platformSecretKey',
-      'MOYASAR_PLATFORM_SECRET_KEY',
-    );
-    if (!secret) {
-      return { status: 'degraded', detail: 'no platform secret key configured' };
-    }
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), PROBE_TIMEOUT_MS);
-    try {
-      const res = await fetch('https://api.moyasar.com/v1/payments?per_page=1', {
-        headers: { Authorization: `Basic ${Buffer.from(secret + ':').toString('base64')}` },
-        signal: ctrl.signal,
-      });
-      if (res.status === 401) return { status: 'degraded', detail: 'invalid key' };
-      if (res.status >= 500) return { status: 'degraded', detail: `moyasar ${res.status}` };
-      return { status: 'ok' };
-    } finally {
-      clearTimeout(t);
-    }
   }
 
   private async probeResend(): Promise<{ status: 'ok' | 'degraded'; detail?: string }> {

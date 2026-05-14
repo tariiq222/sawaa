@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { MoyasarCredentialsService } from '../../../infrastructure/payments/moyasar-credentials.service';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
@@ -20,7 +19,6 @@ export class TestMoyasarConfigHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly creds: MoyasarCredentialsService,
   ) {}
 

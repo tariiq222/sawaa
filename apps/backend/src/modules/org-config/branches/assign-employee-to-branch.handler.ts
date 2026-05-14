@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { AssignEmployeeToBranchDto } from './assign-employee-to-branch.dto';
 
 export type AssignEmployeeToBranchCommand = AssignEmployeeToBranchDto & {
@@ -12,7 +11,6 @@ export type AssignEmployeeToBranchCommand = AssignEmployeeToBranchDto & {
 export class AssignEmployeeToBranchHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(dto: AssignEmployeeToBranchCommand) {

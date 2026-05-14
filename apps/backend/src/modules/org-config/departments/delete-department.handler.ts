@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 
 export type DeleteDepartmentCommand = { departmentId: string };
 
@@ -8,7 +7,6 @@ export type DeleteDepartmentCommand = { departmentId: string };
 export class DeleteDepartmentHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(dto: DeleteDepartmentCommand) {

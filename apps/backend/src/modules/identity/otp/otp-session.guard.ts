@@ -3,7 +3,7 @@ import { Request } from 'express';
 import { ClsService } from 'nestjs-cls';
 import { OtpSessionService } from './otp-session.service';
 import { PrismaService } from '../../../infrastructure/database';
-import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
+import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { OtpPurpose } from '@prisma/client';
 
 @Injectable()

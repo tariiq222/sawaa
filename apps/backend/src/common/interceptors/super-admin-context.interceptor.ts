@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import { Observable } from 'rxjs';
-import { SUPER_ADMIN_CONTEXT_CLS_KEY } from '../tenant/tenant.constants';
+import { SUPER_ADMIN_CONTEXT_CLS_KEY } from '../constants';
 
 interface SuperAdminRequestUser {
   scope?: string;

@@ -11,8 +11,9 @@ import {
 import { Request, Response } from 'express';
 import * as Sentry from '@sentry/node';
 import { ClsService } from 'nestjs-cls';
-import { TENANT_CLS_KEY } from '../tenant/tenant.constants';
-import { TenantContext } from '../tenant/tenant-context.service';
+import { TENANT_CLS_KEY } from '../constants';
+// TenantContext interface inlined after service removal
+interface TenantContext { organizationId: string; id: string; role: string; isSuperAdmin: boolean; }
 import { RequestContextStorage } from '../http/request-context';
 import { AppMetricsService } from '../../infrastructure/telemetry/app-metrics.service';
 

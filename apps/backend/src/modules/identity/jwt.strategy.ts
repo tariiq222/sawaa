@@ -4,7 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../infrastructure/database';
-import { SYSTEM_CONTEXT_CLS_KEY } from '../../common/tenant/tenant.constants';
+import { SYSTEM_CONTEXT_CLS_KEY } from '../../common/constants';
 import { CaslAbilityFactory } from './casl/casl-ability.factory';
 import type { JwtPayload } from './shared/token.service';
 

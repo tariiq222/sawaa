@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
-import { TenantContextService } from '../../../../common/tenant';
 
 export interface PublicBranchDetail {
   id: string;
@@ -25,7 +24,6 @@ export interface PublicBranchDetail {
 export class GetPublicBranchHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(branchId: string): Promise<PublicBranchDetail> {

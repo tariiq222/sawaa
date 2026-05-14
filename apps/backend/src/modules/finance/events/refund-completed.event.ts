@@ -14,9 +14,6 @@ export interface RefundCompletedPayload {
  * Emitted when a refund reaches COMPLETED status — either via the
  * gateway-driven `ApproveRefundHandler` flow (Moyasar refund) or the
  * legacy single-step `RefundPaymentHandler` flow.
- *
- * billing/ subscribes to decrement the corresponding UsageCounter rows
- * (idempotently, via RefundUsageRevertLog).
  */
 export class RefundCompletedEvent extends BaseEvent<RefundCompletedPayload> {
   readonly eventName = 'finance.refund.completed';

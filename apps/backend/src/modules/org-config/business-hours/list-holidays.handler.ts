@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { ListHolidaysDto } from './list-holidays.dto';
 
 export type ListHolidaysQuery = ListHolidaysDto;
@@ -9,7 +8,6 @@ export type ListHolidaysQuery = ListHolidaysDto;
 export class ListHolidaysHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(dto: ListHolidaysQuery) {

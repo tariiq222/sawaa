@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 import { toListResponse } from '../../../common/dto';
 import { ListClientsDto } from './list-clients.dto';
 import { serializeClient } from './client.serializer';
@@ -14,7 +13,6 @@ export type ListClientsQuery = ListClientsDto & {
 export class ListClientsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(query: ListClientsQuery) {

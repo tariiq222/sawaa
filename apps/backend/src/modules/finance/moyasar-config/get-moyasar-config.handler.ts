@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 
 export interface GetMoyasarConfigResult {
   publishableKey: string;
@@ -16,7 +15,6 @@ export interface GetMoyasarConfigResult {
 export class GetMoyasarConfigHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(): Promise<GetMoyasarConfigResult | null> {

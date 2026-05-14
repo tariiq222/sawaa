@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { UpdateDepartmentDto } from './update-department.dto';
 
 export type UpdateDepartmentCommand = UpdateDepartmentDto & { departmentId: string };
@@ -9,7 +8,6 @@ export type UpdateDepartmentCommand = UpdateDepartmentDto & { departmentId: stri
 export class UpdateDepartmentHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(dto: UpdateDepartmentCommand) {

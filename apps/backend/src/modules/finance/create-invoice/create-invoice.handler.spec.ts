@@ -33,15 +33,11 @@ const buildPrisma = () => ({
 
 const buildEventBus = () => ({ publish: jest.fn().mockResolvedValue(undefined) });
 
-const buildTenant = () => ({
-  requireOrganizationIdOrDefault: jest.fn().mockReturnValue('00000000-0000-0000-0000-000000000001'),
-});
-
 describe('CreateInvoiceHandler', () => {
   it('creates invoice with correct VAT calculation', async () => {
     const prisma = buildPrisma();
     const eventBus = buildEventBus();
-    const handler = new CreateInvoiceHandler(prisma as never, eventBus as never, buildTenant() as never);
+    const handler = new CreateInvoiceHandler(prisma as never, eventBus as never);
 
     const result = await handler.execute({
       branchId: 'branch-1',
@@ -76,7 +72,7 @@ describe('CreateInvoiceHandler', () => {
   it('applies discount before VAT', async () => {
     const prisma = buildPrisma();
     prisma.invoice.create = jest.fn().mockResolvedValue({ ...mockInvoice, discountAmt: 50, vatAmt: 22.5, total: 172.5 });
-    const handler = new CreateInvoiceHandler(prisma as never, buildEventBus() as never, buildTenant() as never);
+    const handler = new CreateInvoiceHandler(prisma as never, buildEventBus() as never);
 
     await handler.execute({
       branchId: 'branch-1',
@@ -98,7 +94,7 @@ describe('CreateInvoiceHandler', () => {
     const prisma = buildPrisma();
     prisma.invoice.findUnique = jest.fn().mockResolvedValue({ id: 'inv-1' });
     const eventBus = buildEventBus();
-    const handler = new CreateInvoiceHandler(prisma as never, eventBus as never, buildTenant() as never);
+    const handler = new CreateInvoiceHandler(prisma as never, eventBus as never);
 
     await expect(
       handler.execute({
@@ -117,7 +113,7 @@ describe('CreateInvoiceHandler', () => {
   it('publishes finance.invoice.created exactly once per booking', async () => {
     const prisma = buildPrisma();
     const eventBus = buildEventBus();
-    const handler = new CreateInvoiceHandler(prisma as never, eventBus as never, buildTenant() as never);
+    const handler = new CreateInvoiceHandler(prisma as never, eventBus as never);
 
     await handler.execute({
       branchId: 'branch-1',
@@ -142,7 +138,7 @@ describe('CreateInvoiceHandler', () => {
     });
     prisma.invoice.create = jest.fn().mockRejectedValue(p2002);
     const eventBus = buildEventBus();
-    const handler = new CreateInvoiceHandler(prisma as never, eventBus as never, buildTenant() as never);
+    const handler = new CreateInvoiceHandler(prisma as never, eventBus as never);
 
     await expect(
       handler.execute({

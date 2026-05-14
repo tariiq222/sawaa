@@ -1,6 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 
 export interface DeleteEmployeeCommand { employeeId: string; }
 
@@ -8,7 +7,6 @@ export interface DeleteEmployeeCommand { employeeId: string; }
 export class DeleteEmployeeHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: DeleteEmployeeCommand): Promise<void> {

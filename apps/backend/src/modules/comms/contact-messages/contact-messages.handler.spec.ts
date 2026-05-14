@@ -4,12 +4,6 @@ import { PrismaService } from '../../../infrastructure/database';
 import { CreateContactMessageHandler } from './create-contact-message.handler';
 import { ListContactMessagesHandler } from './list-contact-messages.handler';
 import { UpdateContactMessageStatusHandler } from './update-contact-message-status.handler';
-import { TenantContextService } from '../../../common/tenant';
-
-const tenantProvider = {
-  provide: TenantContextService,
-  useValue: { requireOrganizationIdOrDefault: () => 'org-A' },
-};
 
 describe('ContactMessages handlers', () => {
   let createHandler: CreateContactMessageHandler;
@@ -24,7 +18,6 @@ describe('ContactMessages handlers', () => {
         CreateContactMessageHandler,
         ListContactMessagesHandler,
         UpdateContactMessageStatusHandler,
-        tenantProvider,
         {
           provide: PrismaService,
           useValue: {

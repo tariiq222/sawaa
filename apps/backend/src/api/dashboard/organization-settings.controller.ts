@@ -44,8 +44,6 @@ import { GetBookingSettingsHandler } from '../../modules/bookings/get-booking-se
 import { UpsertBookingSettingsHandler } from '../../modules/bookings/upsert-booking-settings/upsert-booking-settings.handler';
 import { UpsertBookingSettingsDto } from '../../modules/bookings/upsert-booking-settings/upsert-booking-settings.dto';
 import { UploadLogoHandler } from '../../modules/org-experience/branding/upload-logo/upload-logo.handler';
-import { PrismaService } from '../../infrastructure/database';
-import { TenantContextService } from '../../common/tenant/tenant-context.service';
 @ApiTags('Dashboard / Org Experience')
 @ApiBearerAuth()
 @ApiStandardResponses()
@@ -74,8 +72,6 @@ export class DashboardOrganizationSettingsController {
     private readonly setServiceBookingConfigs: SetServiceBookingConfigsHandler,
     private readonly getServiceBookingConfigs: GetServiceBookingConfigsHandler,
     private readonly listServiceEmployees: ListServiceEmployeesHandler,
-    private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   // ── Services ─────────────────────────────────────────────────────────────

@@ -11,7 +11,7 @@ import { ClsService } from 'nestjs-cls';
 import {
   SYSTEM_CONTEXT_CLS_KEY,
   TENANT_CLS_KEY,
-} from '../../../common/tenant/tenant.constants';
+} from '../../../common/constants';
 import { PrismaService } from '../../../infrastructure/database';
 import { SmsProviderFactory } from '../../../infrastructure/sms/sms-provider.factory';
 
