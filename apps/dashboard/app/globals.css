@@ -118,14 +118,14 @@
 
 /* ─── Light Theme ─── */
 :root {
-    --primary: #354FD8;
+    --primary: #14a89a;
     --primary-foreground: #FFFFFF;
-    --primary-light: #5B72E8;
-    --primary-dark: #2438B0;
-    --primary-ultra-light: rgba(53, 79, 216, 0.08);
-    --accent: #82CC17;
-    --accent-foreground: #1B2026;
-    --accent-ultra-light: rgba(130, 204, 23, 0.10);
+    --primary-light: #2fc0b0;
+    --primary-dark: #098a7d;
+    --primary-ultra-light: rgba(20, 168, 154, 0.08);
+    --accent: #ef7a6b;
+    --accent-foreground: #FFFFFF;
+    --accent-ultra-light: rgba(239, 122, 107, 0.10);
     --background: #F2F4F8;
     --foreground: #1B2026;
     --surface: #FFFFFF;
@@ -143,7 +143,7 @@
     --border: #E4E7EC;
     --border-strong: #D0D5DD;
     --input: #D0D5DD;
-    --ring: rgba(53, 79, 216, 0.28);
+    --ring: rgba(20, 168, 154, 0.28);
     --overlay: rgba(27, 32, 38, 0.6);
     /* State colors.
        `--error` is the semantic source of truth for destructive/error states.
@@ -161,20 +161,20 @@
     --chart-5: #EC4899;
     --sidebar: #FFFFFF;
     --sidebar-foreground: #1B2026;
-    --sidebar-primary: #354FD8;
+    --sidebar-primary: #14a89a;
     --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: rgba(53, 79, 216, 0.08);
-    --sidebar-accent-foreground: #354FD8;
+    --sidebar-accent: rgba(20, 168, 154, 0.08);
+    --sidebar-accent-foreground: #14a89a;
     --sidebar-border: #E4E7EC;
-    --sidebar-ring: rgba(53, 79, 216, 0.28);
-    --shadow-primary-color: rgba(53, 79, 216, 0.25);
-    --shadow-primary-hover-color: rgba(53, 79, 216, 0.3);
+    --sidebar-ring: rgba(20, 168, 154, 0.28);
+    --shadow-primary-color: rgba(20, 168, 154, 0.25);
+    --shadow-primary-hover-color: rgba(20, 168, 154, 0.3);
     --blob-primary: transparent;
     --blob-accent: transparent;
 
     /* Decorative avatar gradient pairs (from → to) */
-    --avatar-1-from: #354FD8;
-    --avatar-1-to: #5B72E8;
+    --avatar-1-from: #14a89a;
+    --avatar-1-to: #2fc0b0;
     --avatar-2-from: #EC4899;
     --avatar-2-to: #F472B6;
     --avatar-3-from: #16A34A;

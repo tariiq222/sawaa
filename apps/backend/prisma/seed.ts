@@ -14,6 +14,11 @@ const ADMIN_PASSWORD = process.env.SEED_PASSWORD ?? 'Admin@1234';
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL;
 const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD;
 
+const RECEPTIONIST_EMAIL    = process.env.SEED_RECEPTIONIST_EMAIL    ?? 'receptionist@sawaa-test.com';
+const RECEPTIONIST_PASSWORD = process.env.SEED_RECEPTIONIST_PASSWORD ?? 'Recept@1234';
+const EMPLOYEE_EMAIL        = process.env.SEED_EMPLOYEE_EMAIL        ?? 'employee@sawaa-test.com';
+const EMPLOYEE_PASSWORD     = process.env.SEED_EMPLOYEE_PASSWORD     ?? 'Employee@1234';
+
 async function main() {
   if (process.env.NODE_ENV === 'production') {
     throw new Error('prisma db seed must not run in production');
@@ -47,6 +52,34 @@ async function main() {
     update: {},
   });
 
+  // 1a. Receptionist user (for E2E role-based tests)
+  const receptionistPasswordHash = await bcrypt.hash(RECEPTIONIST_PASSWORD, 10);
+  await prisma.user.upsert({
+    where: { email: RECEPTIONIST_EMAIL },
+    create: {
+      email: RECEPTIONIST_EMAIL,
+      passwordHash: receptionistPasswordHash,
+      name: 'Receptionist',
+      role: 'RECEPTIONIST',
+      isActive: true,
+    },
+    update: {},
+  });
+
+  // 1b. Employee user (for E2E role-based tests)
+  const employeePasswordHash = await bcrypt.hash(EMPLOYEE_PASSWORD, 10);
+  await prisma.user.upsert({
+    where: { email: EMPLOYEE_EMAIL },
+    create: {
+      email: EMPLOYEE_EMAIL,
+      passwordHash: employeePasswordHash,
+      name: 'Employee',
+      role: 'EMPLOYEE',
+      isActive: true,
+    },
+    update: {},
+  });
+
   if (!SUPER_ADMIN_EMAIL || !SUPER_ADMIN_PASSWORD) {
     throw new Error('SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD are required to seed the initial super-admin user');
   }
@@ -75,10 +108,14 @@ async function main() {
   if (!branding) {
     await prisma.brandingConfig.create({
       data: {
-        organizationNameAr: 'منظمتي',
-        organizationNameEn: 'My Organization',
-        colorPrimary: '#354FD8',
-        colorAccent:  '#82CC17',
+        organizationNameAr: 'سواء',
+        organizationNameEn: 'Sawaa',
+        colorPrimary: '#14a89a',
+        colorPrimaryLight: '#2fc0b0',
+        colorPrimaryDark: '#098a7d',
+        colorAccent: '#ef7a6b',
+        colorAccentDark: '#d96050',
+        colorBackground: '#f5fbfa',
       },
     });
   }
@@ -210,8 +247,10 @@ async function main() {
   await prisma.$disconnect();
 
   console.log('─────────────────────────────────────────────');
-  console.log(`✔  Admin  : ${ADMIN_EMAIL}`);
-  console.log(`✔  Super admin: ${SUPER_ADMIN_EMAIL}`);
+  console.log(`✔  Admin        : ${ADMIN_EMAIL}`);
+  console.log(`✔  Receptionist : ${RECEPTIONIST_EMAIL}`);
+  console.log(`✔  Employee     : ${EMPLOYEE_EMAIL}`);
+  console.log(`✔  Super admin  : ${SUPER_ADMIN_EMAIL}`);
   console.log(`✔  Branding singleton ready`);
   console.log(`✔  OrganizationSettings singleton ready`);
   console.log(`✔  Main branch created`);
