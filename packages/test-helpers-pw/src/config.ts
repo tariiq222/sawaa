@@ -7,10 +7,10 @@ const required = (name: string, fallback?: string): string => {
 };
 
 export const PWConfig = {
-  backendBaseUrl: required('PW_BACKEND_URL', 'http://localhost:5100'),
-  dashboardBaseUrl: required('PW_DASHBOARD_URL', 'http://localhost:5103'),
-  adminBaseUrl: required('PW_ADMIN_URL', 'http://localhost:5104'),
-  websiteBaseUrl: required('PW_WEBSITE_URL', 'http://localhost:5105'),
+  backendBaseUrl: required('PW_BACKEND_URL', 'http://localhost:5200'),
+  dashboardBaseUrl: required('PW_DASHBOARD_URL', 'http://localhost:5203'),
+  adminBaseUrl: required('PW_ADMIN_URL', 'http://localhost:5204'),
+  websiteBaseUrl: required('PW_WEBSITE_URL', 'http://localhost:5205'),
 
   superAdminEmail: required('PW_SUPER_ADMIN_EMAIL', 'tariq.alwalidi@gmail.com'),
   superAdminPassword: required('PW_SUPER_ADMIN_PASSWORD', 'Admin@2026'),

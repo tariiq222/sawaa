@@ -78,9 +78,7 @@ test.describe('Dashboard Pages Navigation', () => {
     const header = page.locator('header').first();
     await expect(header).toBeVisible({ timeout: 10000 });
 
-    const userMenuTrigger = header.locator('button').filter({
-      has: page.locator('[data-slot="avatar-fallback"], svg'),
-    });
+    const userMenuTrigger = header.locator('button').last();
     await expect(userMenuTrigger).toBeVisible({ timeout: 5000 });
   });
 

@@ -1,5 +1,5 @@
 /**
- * Fetches the OpenAPI spec from the running backend (http://localhost:5100)
+ * Fetches the OpenAPI spec from the running backend (http://localhost:5200)
  * and writes it to openapi.json.
  *
  * Prerequisite: backend must be running (`npm run dev:backend` or docker stack).
@@ -11,7 +11,7 @@
 import { writeFileSync } from 'fs';
 import { resolve } from 'path';
 
-const API_BASE = process.env.API_URL ?? 'http://localhost:5100';
+const API_BASE = process.env.API_URL ?? 'http://localhost:5200';
 const SPEC_URL = `${API_BASE}/api/docs-json`;
 const OUT_PATH = resolve(__dirname, '../openapi.json');
 

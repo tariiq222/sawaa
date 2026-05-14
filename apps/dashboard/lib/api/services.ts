@@ -22,7 +22,7 @@ import type {
   SetServiceBookingTypesPayload,
 } from "@/lib/types/service-payloads"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5100/api/v1"
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5200/api/v1"
 
 /* ─── Categories ─── */
 

@@ -2,7 +2,7 @@
  * booking-create-flow.spec.ts
  *
  * E2E: user logs in, opens create booking dialog, completes the wizard.
- * Requires: backend on :5100, dashboard on :5103, docker stack up.
+ * Requires: backend on :5200, dashboard on :5203, docker stack up.
  *
  * User flow:
  *   1. Login as admin

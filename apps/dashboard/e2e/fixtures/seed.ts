@@ -3,7 +3,7 @@
  *
  * Typed API helpers for creating and cleaning up test data in e2e tests.
  *
- * All helpers POST / DELETE to the live backend running on :5100 using a
+ * All helpers POST / DELETE to the live backend running on :5200 using a
  * JWT obtained from getTestTenant(). They operate inside the seeded
  * default org (DEFAULT_ORG_ID) and are safe to call in beforeEach/afterEach.
  *
@@ -24,7 +24,7 @@
 
 // ─── Backend base URL ─────────────────────────────────────────────────────
 
-const API_BASE = process.env.PW_API_URL ?? 'http://localhost:5100';
+const API_BASE = process.env.PW_API_URL ?? 'http://localhost:5200';
 
 // ─── Input types (mirrors backend DTOs — only required + common optionals) ─
 

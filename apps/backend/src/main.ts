@@ -36,11 +36,13 @@ async function bootstrap(): Promise<void> {
     message: 'Too many requests, please try again later',
   }));
 
-  app.use('/api/v1/auth', rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 20,
-    message: 'Too many authentication attempts',
-  }));
+  if (process.env.THROTTLER_DISABLED !== 'true') {
+    app.use('/api/v1/auth', rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 20,
+      message: 'Too many authentication attempts',
+    }));
+  }
 
   app.setGlobalPrefix('api/v1');
 
@@ -66,7 +68,7 @@ async function bootstrap(): Promise<void> {
     .setContact('Sawaa Engineering', 'https://sawaa.app', 'dev@sawaa.app')
     .setLicense('Proprietary', 'https://sawaa.app/license')
     .addBearerAuth()
-    .addServer('http://localhost:5100', 'Local dev')
+    .addServer('http://localhost:5200', 'Local dev')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
@@ -126,7 +128,7 @@ async function bootstrap(): Promise<void> {
     }
   }
 
-  const port = Number(process.env.PORT ?? 5100);
+  const port = Number(process.env.PORT ?? 5200);
 
   app.enableShutdownHooks();
 

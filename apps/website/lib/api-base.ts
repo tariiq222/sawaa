@@ -1,4 +1,4 @@
-const DEFAULT_ORIGIN = 'http://localhost:5100';
+const DEFAULT_ORIGIN = 'http://localhost:5200';
 const API_PREFIX = '/api/v1';
 
 export function getApiBase(): string {

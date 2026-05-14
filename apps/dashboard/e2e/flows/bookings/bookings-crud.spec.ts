@@ -2,7 +2,7 @@
  * bookings-crud.spec.ts
  *
  * Core CRUD operations on the bookings list page.
- * Requires a live backend (:5100) and dashboard (:5103).
+ * Requires a live backend (:5200) and dashboard (:5203).
  *
  * Strategy: seed a client + service + employee + booking in beforeAll so
  * the bookings table is guaranteed to have at least one row, enabling

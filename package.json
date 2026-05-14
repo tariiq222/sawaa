@@ -4,8 +4,8 @@
   "packageManager": "pnpm@10.10.0",
   "scripts": {
     "dev:backend": "turbo run dev --filter=backend",
-    "dev:dashboard": "turbo run dev --filter=dashboard -- --port 5103",
-    "dev:website": "turbo run dev --filter=@sawaa/website -- --port 5105",
+    "dev:dashboard": "turbo run dev --filter=dashboard -- --port 5203",
+    "dev:website": "turbo run dev --filter=@sawaa/website -- --port 5205",
     "dev:all": "turbo run dev --filter=backend --filter=dashboard --filter=@sawaa/website",
     "build": "turbo run build --filter=backend --filter=dashboard --filter=@sawaa/website",
     "lint": "turbo run lint",

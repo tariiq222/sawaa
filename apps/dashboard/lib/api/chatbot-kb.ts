@@ -13,7 +13,7 @@ import type {
 } from "@/lib/types/chatbot"
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5100/api/v1"
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5200/api/v1"
 
 /* ═══════════════════════════════════════════════════════════
  *  KNOWLEDGE BASE

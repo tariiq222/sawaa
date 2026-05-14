@@ -31,7 +31,7 @@ export const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
 export const DEFAULT_BRANCH_ID = 'c1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5';
 
 /** Backend base URL — override via PW_API_URL in CI. */
-const API_BASE = process.env.PW_API_URL ?? 'http://localhost:5100';
+const API_BASE = process.env.PW_API_URL ?? 'http://localhost:5200';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -132,8 +132,8 @@ export async function getTestTenant(): Promise<TestTenant> {
 
 /**
  * Return the dashboard base URL (for baseURL overrides in tests).
- * Defaults to the PW_DASHBOARD_URL env var or localhost:5103.
+ * Defaults to the PW_DASHBOARD_URL env var or localhost:5203.
  */
 export function dashboardBaseUrl(): string {
-  return process.env.PW_DASHBOARD_URL ?? 'http://localhost:5103';
+  return process.env.PW_DASHBOARD_URL ?? 'http://localhost:5203';
 }

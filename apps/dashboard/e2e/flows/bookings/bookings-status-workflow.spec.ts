@@ -2,7 +2,7 @@
  * bookings-status-workflow.spec.ts
  *
  * Tests booking status transitions and workflow actions.
- * Requires a live backend (:5100) and dashboard (:5103).
+ * Requires a live backend (:5200) and dashboard (:5203).
  *
  * Strategy: seed a client + service + employee + booking in beforeAll so
  * every test in this suite has at least one table row to work with.

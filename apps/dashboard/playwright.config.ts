@@ -2,7 +2,7 @@
  * Playwright configuration for apps/dashboard (single-organization clinic).
  *
  * Prerequisites (run separately before `pnpm e2e`):
- *   1. Backend must be running:  npm run dev:backend  (port 5100)
+ *   1. Backend must be running:  npm run dev:backend  (port 5200)
  *   2. Docker stack (DB/Redis):  npm run docker:up
  *
  * The webServer block below spawns the Next.js dev server automatically
@@ -28,24 +28,17 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
 
   use: {
-    baseURL: process.env.PW_DASHBOARD_URL ?? 'http://localhost:5103',
+    baseURL: process.env.PW_DASHBOARD_URL ?? 'http://localhost:5203',
     headless: true,
     locale: 'ar-SA',
     timezoneId: 'Asia/Riyadh',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    storageState: './e2e/.auth/admin.json',
   },
 
-  // globalSetup / globalTeardown — wired here for future persona pre-seeding.
-  // Once D2+ tests use `test.use({ storageState })` patterns, enable these:
-  //
-  // TODO (playwright.config.ts): enable globalSetup once fixtures/auth.ts
-  //   storageState approach is ready. Reference: e2e/fixtures/auth.ts →
-  //   storageStatePath() + the planned e2e/global-setup.ts entry point.
-  //
-  // globalSetup: require.resolve('./e2e/global-setup'),
-  // globalTeardown: require.resolve('./e2e/global-teardown'),
+  globalSetup: require.resolve('./e2e/global-setup'),
 
   projects: [
     {
@@ -62,7 +55,7 @@ export default defineConfig({
 
   webServer: {
     command: 'pnpm --filter dashboard dev',
-    port: 5103,
+    port: 5203,
     timeout: 120_000,
     reuseExistingServer: !process.env.CI,
     env: {},

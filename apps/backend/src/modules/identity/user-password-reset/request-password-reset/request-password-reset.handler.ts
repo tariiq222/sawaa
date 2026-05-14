@@ -50,7 +50,7 @@ export class RequestPasswordResetHandler {
     const baseUrl =
       this.config.get<string>('PASSWORD_RESET_BASE_URL') ??
       this.config.get<string>('DASHBOARD_URL') ??
-      'http://localhost:5103';
+      'http://localhost:5203';
     const resetUrl = `${baseUrl}/reset-password?token=${rawToken}`;
 
     await this.sendEmail.execute({

@@ -2,7 +2,7 @@
  * bookings-list-flow.spec.ts
  *
  * E2E: user logs in, navigates to bookings list, views a booking detail.
- * Requires: backend on :5100, dashboard on :5103, docker stack up.
+ * Requires: backend on :5200, dashboard on :5203, docker stack up.
  *
  * User flow:
  *   1. Login as admin

@@ -12,7 +12,7 @@ export function configureCors(app: INestApplication): void {
     .split(',').map((s) => s.trim()).filter(Boolean);
   const devDefaults = process.env.NODE_ENV === 'production'
     ? []
-    : ['http://localhost:3000', 'http://localhost:5103', 'http://localhost:5104', 'http://localhost:5105'];
+    : ['http://localhost:3000', 'http://localhost:5203', 'http://localhost:5204', 'http://localhost:5205'];
   const allowed = new Set([...fixedAllowed, ...devDefaults]);
 
   app.enableCors({

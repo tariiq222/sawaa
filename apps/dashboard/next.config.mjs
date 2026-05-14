@@ -74,7 +74,7 @@ const nextConfig = {
     ]
   },
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5100/api/v1"
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5200/api/v1"
     // Strip /api/proxy prefix then forward to backend
     const backendBase = apiUrl.replace(/\/api\/v\d+$/, "")
     return [

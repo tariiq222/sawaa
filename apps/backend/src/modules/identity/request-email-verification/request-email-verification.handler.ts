@@ -63,7 +63,7 @@ export class RequestEmailVerificationHandler {
     const baseUrl =
       this.config.get<string>('PUBLIC_WEBSITE_URL') ??
       this.config.get<string>('WEBSITE_URL') ??
-      'http://localhost:5105';
+      'http://localhost:5205';
     const verifyUrl = `${baseUrl}/verify-email?token=${rawToken}`;
 
     await this.sendEmail.execute({

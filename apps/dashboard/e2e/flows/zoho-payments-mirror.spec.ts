@@ -92,7 +92,7 @@ test.describe('Zoho payments mirror — unconfigured state', () => {
 
 test.describe('Zoho webhook endpoint — public, no auth', () => {
   test.beforeEach(async ({ request }) => {
-    const res = await request.get(`${process.env.PW_BACKEND_URL ?? 'http://localhost:5100'}/api/v1/public/webhooks/zoho/test-probe`);
+    const res = await request.get(`${process.env.PW_BACKEND_URL ?? 'http://localhost:5200'}/api/v1/public/webhooks/zoho/test-probe`);
     if (res.status() === 404 && (await res.text()).includes('Cannot')) {
       test.skip(true, 'Webhook route not available on running backend');
     }
@@ -102,7 +102,7 @@ test.describe('Zoho webhook endpoint — public, no auth', () => {
     request,
   }) => {
     const res = await request.post(
-      `${process.env.PW_BACKEND_URL ?? 'http://localhost:5100'}/api/v1/public/webhooks/zoho/nonexistent-org`,
+      `${process.env.PW_BACKEND_URL ?? 'http://localhost:5200'}/api/v1/public/webhooks/zoho/nonexistent-org`,
       {
         data: { event_id: 'e1', event_type: 'invoice.paid' },
         headers: { 'Content-Type': 'application/json' },
@@ -116,7 +116,7 @@ test.describe('Zoho webhook endpoint — public, no auth', () => {
     request,
   }) => {
     const res = await request.post(
-      `${process.env.PW_BACKEND_URL ?? 'http://localhost:5100'}/api/v1/public/webhooks/zoho/platform`,
+      `${process.env.PW_BACKEND_URL ?? 'http://localhost:5200'}/api/v1/public/webhooks/zoho/platform`,
       {
         data: { event_id: 'e2', event_type: 'invoice.paid' },
         headers: {

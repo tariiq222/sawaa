@@ -28,7 +28,7 @@ services:
     environment:
       # Runtime
       NODE_ENV: production
-      PORT: "5100"
+      PORT: "5200"
 
       # Database (Prisma) — runtime uses the NOBYPASSRLS app role; migrate uses OWNER
       DATABASE_URL: postgresql://${APP_DB_USER:-deqah_app}:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -115,9 +115,9 @@ services:
       minio:
         condition: service_healthy
     expose:
-      - "5100"
+      - "5200"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:5100/api/v1/health/live || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5200/api/v1/health/live || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -141,15 +141,15 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: "5103"
+      PORT: "5203"
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     depends_on:
       backend:
         condition: service_healthy
     expose:
-      - "5103"
+      - "5203"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:5103/ >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5203/ >/dev/null 2>&1 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -173,14 +173,14 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: "5105"
+      PORT: "5205"
     depends_on:
       backend:
         condition: service_healthy
     expose:
-      - "5105"
+      - "5205"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:5105/ >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5205/ >/dev/null 2>&1 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

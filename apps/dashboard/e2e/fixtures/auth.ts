@@ -50,37 +50,25 @@ const PERSONA_CREDENTIALS: Record<Persona, { email: string; password: string }> 
 /**
  * Log in as a given persona by filling the login form.
  *
- * Optimization: skip login if already authenticated as the target persona.
- * This avoids rate-limiting the auth endpoint when running many tests in sequence.
+ * ⚠️  Prefer `test.use({ storageState: storageStatePath('admin') })` in spec files
+ *    so Playwright reuses a pre-authenticated context.  Only call `loginAs` when
+ *    you need a *different* persona mid-test or when the global setup state is
+ *    stale.
  */
 export async function loginAs(page: Page, persona: Persona = 'admin'): Promise<void> {
   const { email, password } = PERSONA_CREDENTIALS[persona];
 
-  // Fast path: if we're already on the dashboard, we're logged in
-  const currentUrl = page.url();
-  if (currentUrl === '/' || currentUrl === '') {
+  // Fast path: already authenticated (storageState or previous login)
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded').catch(() => {});
+  if (!page.url().includes('/login')) {
     return;
   }
 
-  // Check if we're on a dashboard page (authenticated)
-  if (currentUrl.startsWith('http://localhost:5103/') && currentUrl !== '/login' && currentUrl !== '/forgot-password') {
-    return;
-  }
-
-  // Try to stay logged in by navigating to home first
-  await page.goto('/').catch(() => {});
-  await page.waitForLoadState('networkidle').catch(() => {});
-  if (page.url() === '/' || page.url() === '') {
-    return;
-  }
-
-  // Need to login fresh - clear cookies and proceed
-  await page.context().clearCookies();
-
+  // Full identifier-first login flow
   await page.goto('/login');
   await expect(page).toHaveURL(/\/login/);
 
-  // Identifier-first login flow (single-tenant)
   await page.locator('#identifier').fill(email);
   await page.getByRole('button', { name: 'متابعة' }).click();
 
@@ -93,7 +81,6 @@ export async function loginAs(page: Page, persona: Persona = 'admin'): Promise<v
   await page.locator('#password').fill(password);
   await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
 
-  // Verify redirect away from /login
   await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 });
   await expect(page.locator('header').first()).toBeVisible({ timeout: 10_000 });
 }

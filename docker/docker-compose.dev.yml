@@ -33,9 +33,9 @@ services:
       # Browser → Next.js rewrites → backend. Public URL is what the host's
       # browser can reach; internal URL is how Next.js (inside the container)
       # reaches the backend service on the Docker network.
-      NEXT_PUBLIC_API_URL: http://localhost:5100/api/v1
-      INTERNAL_API_URL: http://backend:5100/api/v1
-    command: ["sh", "-c", "exec npx next dev --turbopack -p 5103 -H 0.0.0.0"]
+      NEXT_PUBLIC_API_URL: http://localhost:5200/api/v1
+      INTERNAL_API_URL: http://backend:5200/api/v1
+    command: ["sh", "-c", "exec npx next dev --turbopack -p 5203 -H 0.0.0.0"]
     working_dir: /app/apps/dashboard
     volumes:
       - ../apps/dashboard:/app/apps/dashboard

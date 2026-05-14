@@ -18,7 +18,7 @@ export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string()
     .valid('development', 'test', 'staging', 'production')
     .default('development'),
-  PORT: Joi.number().port().default(5100),
+  PORT: Joi.number().port().default(5200),
 
   // CORS — comma-separated list of allowed origins.
   // In production MUST be set to the dashboard + mobile origins (no localhost).

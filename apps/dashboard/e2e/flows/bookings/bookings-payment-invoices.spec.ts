@@ -2,7 +2,7 @@
  * bookings-payment-invoices.spec.ts
  *
  * Payment and invoice flows on the bookings detail page.
- * Requires a live backend (:5100) and dashboard (:5103).
+ * Requires a live backend (:5200) and dashboard (:5203).
  *
  * Strategy: seed a client + service + employee + booking in beforeAll so
  * the bookings table is guaranteed non-empty.  Tests that click into a

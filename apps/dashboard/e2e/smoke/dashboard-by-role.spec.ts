@@ -27,11 +27,11 @@ import { test, expect, Page } from '@playwright/test';
 const OWNER_EMAIL = process.env.SEED_OWNER_EMAIL ?? process.env.SEED_EMAIL ?? 'admin@sawaa-test.com';
 const OWNER_PASSWORD = process.env.SEED_OWNER_PASSWORD ?? process.env.SEED_PASSWORD ?? 'Admin@1234';
 
-const RECEPTIONIST_EMAIL = process.env.SEED_RECEPTIONIST_EMAIL;
-const RECEPTIONIST_PASSWORD = process.env.SEED_RECEPTIONIST_PASSWORD;
+const RECEPTIONIST_EMAIL = process.env.SEED_RECEPTIONIST_EMAIL ?? 'receptionist@sawaa-test.com';
+const RECEPTIONIST_PASSWORD = process.env.SEED_RECEPTIONIST_PASSWORD ?? 'Recept@1234';
 
-const EMPLOYEE_EMAIL = process.env.SEED_EMPLOYEE_EMAIL;
-const EMPLOYEE_PASSWORD = process.env.SEED_EMPLOYEE_PASSWORD;
+const EMPLOYEE_EMAIL = process.env.SEED_EMPLOYEE_EMAIL ?? 'employee@sawaa-test.com';
+const EMPLOYEE_PASSWORD = process.env.SEED_EMPLOYEE_PASSWORD ?? 'Employee@1234';
 
 async function loginIdentifierFirst(page: Page, email: string, password: string): Promise<void> {
   await page.goto('/login');
