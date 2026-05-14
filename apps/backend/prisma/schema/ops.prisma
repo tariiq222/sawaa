@@ -52,7 +52,7 @@ model ActivityLog {
 }
 
 // ─── CronHeartbeat ────────────────────────────────────────────────────────────
-// Platform-level (no organizationId). One row per cron job name, updated after
+// Platform-level. One row per cron job name, updated after
 // each successful run. Used by the watchdog cron to alert on missed heartbeats.
 
 model CronHeartbeat {
