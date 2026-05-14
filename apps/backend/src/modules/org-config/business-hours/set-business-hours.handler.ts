@@ -2,7 +2,6 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant';
 import { SetBusinessHoursDto } from './set-business-hours.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type SetBusinessHoursCommand = SetBusinessHoursDto;
 
@@ -15,9 +14,8 @@ export class SetBusinessHoursHandler {
   ) {}
 
   async execute(dto: SetBusinessHoursCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const branch = await this.prisma.branch.findFirst({
-      where: { id: dto.branchId, organizationId },
+      where: { id: dto.branchId },
     });
     if (!branch) throw new NotFoundException('Branch not found');
 
@@ -48,7 +46,7 @@ export class SetBusinessHoursHandler {
     );
 
     return this.prisma.businessHour.findMany({
-      where: { branchId: dto.branchId, organizationId },
+      where: { branchId: dto.branchId },
       orderBy: { dayOfWeek: 'asc' },
     });
   }

@@ -4,7 +4,6 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 
 import { ApplyCouponDto } from './apply-coupon.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type ApplyCouponCommand = ApplyCouponDto;
 
@@ -19,8 +18,6 @@ export class ApplyCouponHandler {
   ) {}
 
   async execute(cmd: ApplyCouponCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
-
     const invoice = await this.prisma.invoice.findFirst({
       where: { id: cmd.invoiceId },
     });
@@ -64,12 +61,12 @@ export class ApplyCouponHandler {
     return this.rlsTx.withTransaction(async (tx) => {
       if (coupon.maxUses !== null) {
         const { count } = await tx.coupon.updateMany({
-          where: { id: coupon.id, organizationId, usedCount: { lt: coupon.maxUses } },
+          where: { id: coupon.id, usedCount: { lt: coupon.maxUses } },
           data: { usedCount: { increment: 1 } },
         });
         if (count === 0) throw new BadRequestException(`Coupon ${cmd.code} has reached its usage limit`);
       } else {
-        const owned = await tx.coupon.findFirst({ where: { id: coupon.id, organizationId } });
+        const owned = await tx.coupon.findFirst({ where: { id: coupon.id } });
         if (!owned) throw new NotFoundException(`Coupon ${cmd.code} not found`);
         await tx.coupon.update({ where: { id: coupon.id }, data: { usedCount: { increment: 1 } } });
       }

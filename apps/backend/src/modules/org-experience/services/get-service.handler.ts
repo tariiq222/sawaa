@@ -1,7 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type GetServiceCommand = { serviceId: string };
 
@@ -9,13 +7,11 @@ export type GetServiceCommand = { serviceId: string };
 export class GetServiceHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(dto: GetServiceCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const service = await this.prisma.service.findFirst({
-      where: { id: dto.serviceId, archivedAt: null, organizationId },
+      where: { id: dto.serviceId, archivedAt: null },
       include: {
         category: true,
         durationOptions: { orderBy: { sortOrder: 'asc' } },

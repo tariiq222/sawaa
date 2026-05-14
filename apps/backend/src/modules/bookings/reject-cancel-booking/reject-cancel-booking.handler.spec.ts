@@ -11,7 +11,7 @@ describe('RejectCancelBookingHandler', () => {
     prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
     prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CONFIRMED });
     const eb = buildEventBus();
-    const handler = new RejectCancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildTenant() as never, eb as never);
+    const handler = new RejectCancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, eb as never);
 
     await handler.execute({ bookingId: 'book-1', rejectedBy: 'admin-1', rejectReason: 'No reason' });
 
@@ -25,7 +25,7 @@ describe('RejectCancelBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findFirst = jest.fn().mockResolvedValue(null);
     await expect(
-      new RejectCancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildTenant() as never, buildEventBus() as never).execute({
+      new RejectCancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildEventBus() as never).execute({
         bookingId: 'bad', rejectedBy: 'admin-1', rejectReason: 'x',
       }),
     ).rejects.toThrow(NotFoundException);
@@ -35,7 +35,7 @@ describe('RejectCancelBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.PENDING });
     await expect(
-      new RejectCancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildTenant() as never, buildEventBus() as never).execute({
+      new RejectCancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildEventBus() as never).execute({
         bookingId: 'book-1', rejectedBy: 'admin-1', rejectReason: 'x',
       }),
     ).rejects.toThrow(BadRequestException);
@@ -45,7 +45,7 @@ describe('RejectCancelBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
     prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CONFIRMED });
-    const handler = new RejectCancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildTenant() as never, buildEventBus() as never);
+    const handler = new RejectCancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildEventBus() as never);
 
     await handler.execute({ bookingId: 'book-1', rejectedBy: 'admin-1', rejectReason: 'policy' });
 

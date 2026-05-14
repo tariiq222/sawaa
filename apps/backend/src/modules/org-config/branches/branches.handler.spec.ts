@@ -71,7 +71,7 @@ describe('CreateBranchHandler', () => {
   it('creates branch scoped by org when name is unique', async () => {
     const prisma = buildPrisma();
     prisma.branch.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new CreateBranchHandler(prisma as never, buildTenant(), buildEventBus() as never, buildRlsTx(prisma) as never);
+    const handler = new CreateBranchHandler(prisma as never, buildEventBus() as never, buildRlsTx(prisma) as never);
     const result = await handler.execute({ nameAr: 'الفرع الرئيسي' });
     expect(result.id).toBe('branch-1');
     // org scoping moved to RLS / removed in single-tenant migration
@@ -83,7 +83,7 @@ describe('CreateBranchHandler', () => {
   it('throws ConflictException when name already exists in same org', async () => {
     const prisma = buildPrisma();
     prisma.branch.findFirst = jest.fn().mockResolvedValue(mockBranch);
-    const handler = new CreateBranchHandler(prisma as never, buildTenant(), buildEventBus() as never, buildRlsTx(prisma) as never);
+    const handler = new CreateBranchHandler(prisma as never, buildEventBus() as never, buildRlsTx(prisma) as never);
     await expect(handler.execute({ nameAr: 'الفرع الرئيسي' })).rejects.toThrow(ConflictException);
   });
 
@@ -92,8 +92,8 @@ describe('CreateBranchHandler', () => {
     prismaA.branch.findFirst = jest.fn().mockResolvedValue(null);
     const prismaB = buildPrisma();
     prismaB.branch.findFirst = jest.fn().mockResolvedValue(null);
-    const handlerA = new CreateBranchHandler(prismaA as never, buildTenant('org-A'), buildEventBus() as never, buildRlsTx(prismaA) as never);
-    const handlerB = new CreateBranchHandler(prismaB as never, buildTenant('org-B'), buildEventBus() as never, buildRlsTx(prismaB) as never);
+    const handlerA = new CreateBranchHandler(prismaA as never, buildEventBus() as never, buildRlsTx(prismaA) as never);
+    const handlerB = new CreateBranchHandler(prismaB as never, buildEventBus() as never, buildRlsTx(prismaB) as never);
     await expect(handlerA.execute({ nameAr: 'الفرع الرئيسي' })).resolves.toBeDefined();
     await expect(handlerB.execute({ nameAr: 'الفرع الرئيسي' })).resolves.toBeDefined();
   });
@@ -104,7 +104,7 @@ describe('UpdateBranchHandler', () => {
     const prisma = buildPrisma();
     prisma.branch.findFirst = jest.fn().mockResolvedValue(mockBranch);
     const eventBus = buildEventBus();
-    const handler = new UpdateBranchHandler(prisma as never, buildTenant(), eventBus as never, buildRlsTx(prisma) as never);
+    const handler = new UpdateBranchHandler(prisma as never, eventBus as never, buildRlsTx(prisma) as never);
     const result = await handler.execute({ branchId, city: 'Riyadh' });
     expect(result).toEqual(mockBranch);
   });
@@ -112,7 +112,7 @@ describe('UpdateBranchHandler', () => {
   it('throws NotFoundException when branch not found', async () => {
     const prisma = buildPrisma();
     prisma.branch.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new UpdateBranchHandler(prisma as never, buildTenant(), buildEventBus() as never, buildRlsTx(prisma) as never);
+    const handler = new UpdateBranchHandler(prisma as never, buildEventBus() as never, buildRlsTx(prisma) as never);
     await expect(handler.execute({ branchId: 'missing', city: 'Riyadh' })).rejects.toThrow(NotFoundException);
   });
 
@@ -121,14 +121,14 @@ describe('UpdateBranchHandler', () => {
     prisma.branch.findFirst = jest.fn().mockResolvedValue(mockBranch); // isActive: true
     prisma.branch.update = jest.fn().mockResolvedValue({ ...mockBranch, isActive: false });
     const eventBus = buildEventBus();
-    const handler = new UpdateBranchHandler(prisma as never, buildTenant(), eventBus as never, buildRlsTx(prisma) as never);
+    const handler = new UpdateBranchHandler(prisma as never, eventBus as never, buildRlsTx(prisma) as never);
 
     await handler.execute({ branchId, isActive: false });
 
     expect(eventBus.publish).toHaveBeenCalledWith(
       'org-config.branch.deactivated',
       expect.objectContaining({
-        payload: { branchId, organizationId: DEFAULT_ORG },
+        payload: { branchId },
       }),
     );
   });
@@ -138,14 +138,14 @@ describe('UpdateBranchHandler', () => {
     prisma.branch.findFirst = jest.fn().mockResolvedValue(mockBranchInactive); // isActive: false
     prisma.branch.update = jest.fn().mockResolvedValue({ ...mockBranch, isActive: true });
     const eventBus = buildEventBus();
-    const handler = new UpdateBranchHandler(prisma as never, buildTenant(), eventBus as never, buildRlsTx(prisma) as never);
+    const handler = new UpdateBranchHandler(prisma as never, eventBus as never, buildRlsTx(prisma) as never);
 
     await handler.execute({ branchId, isActive: true });
 
     expect(eventBus.publish).toHaveBeenCalledWith(
       'org-config.branch.reactivated',
       expect.objectContaining({
-        payload: { branchId, organizationId: DEFAULT_ORG },
+        payload: { branchId },
       }),
     );
   });
@@ -155,7 +155,7 @@ describe('UpdateBranchHandler', () => {
     prisma.branch.findFirst = jest.fn().mockResolvedValue(mockBranch); // isActive: true
     prisma.branch.update = jest.fn().mockResolvedValue(mockBranch);
     const eventBus = buildEventBus();
-    const handler = new UpdateBranchHandler(prisma as never, buildTenant(), eventBus as never, buildRlsTx(prisma) as never);
+    const handler = new UpdateBranchHandler(prisma as never, eventBus as never, buildRlsTx(prisma) as never);
 
     await handler.execute({ branchId, isActive: true }); // same value — no transition
 
@@ -167,7 +167,7 @@ describe('UpdateBranchHandler', () => {
     prisma.branch.findFirst = jest.fn().mockResolvedValue(mockBranch);
     prisma.branch.update = jest.fn().mockResolvedValue(mockBranch);
     const eventBus = buildEventBus();
-    const handler = new UpdateBranchHandler(prisma as never, buildTenant(), eventBus as never, buildRlsTx(prisma) as never);
+    const handler = new UpdateBranchHandler(prisma as never, eventBus as never, buildRlsTx(prisma) as never);
 
     await handler.execute({ branchId, city: 'Riyadh' }); // no isActive in payload
 

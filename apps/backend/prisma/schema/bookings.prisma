@@ -94,16 +94,13 @@ model Booking {
 
   groupEnrollment GroupEnrollment?
 
-  @@index([clientId])
   // DB-07: @@index([employeeId]) dropped — redundant prefix of [employeeId, scheduledAt] and [employeeId, endsAt]
+  @@index([clientId])
   @@index([scheduledAt])
   @@index([status])
   @@index([employeeId, scheduledAt])
   @@index([employeeId, endsAt])
   @@index([recurringGroupId])
-  @@index([ scheduledAt])
-  @@index([ status])
-  @@index([ clientId])
 }
 
 // ─── Waitlist ─────────────────────────────────────────────────────────────────

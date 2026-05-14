@@ -213,10 +213,8 @@ export class AuthController {
 
       if (!user || !user.isActive) throw new UnauthorizedException('User not found or inactive');
 
-      const orgId = record.organizationId ?? DEFAULT_ORGANIZATION_ID;
-
       const tokens = await this.tokens.issueTokenPair(user, {
-        organizationId: orgId,
+        organizationId: DEFAULT_ORGANIZATION_ID,
         isSuperAdmin: user.isSuperAdmin,
       });
       this.setRefreshCookie(res, tokens.refreshToken);

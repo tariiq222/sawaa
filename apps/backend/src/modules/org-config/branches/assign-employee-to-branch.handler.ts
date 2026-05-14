@@ -3,7 +3,6 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant';
 import { AssignEmployeeToBranchDto } from './assign-employee-to-branch.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type AssignEmployeeToBranchCommand = AssignEmployeeToBranchDto & {
   branchId: string;
@@ -17,14 +16,13 @@ export class AssignEmployeeToBranchHandler {
   ) {}
 
   async execute(dto: AssignEmployeeToBranchCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const [branch, employee] = await Promise.all([
       this.prisma.branch.findFirst({
-        where: { id: dto.branchId, organizationId },
+        where: { id: dto.branchId },
         select: { id: true },
       }),
       this.prisma.employee.findFirst({
-        where: { id: dto.employeeId, organizationId },
+        where: { id: dto.employeeId },
         select: { id: true },
       }),
     ]);

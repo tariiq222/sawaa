@@ -4,7 +4,6 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { TenantContextService } from '../../../common/tenant';
 import { toListResponse } from '../../../common/dto';
 import { ListCategoriesDto } from './list-categories.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type ListCategoriesQuery = ListCategoriesDto;
 
@@ -17,13 +16,11 @@ export class ListCategoriesHandler {
   ) {}
 
   async execute(dto: ListCategoriesQuery) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const page = dto.page ?? 1;
     const limit = dto.limit ?? 20;
     const skip = (page - 1) * limit;
 
     const where: Prisma.ServiceCategoryWhereInput = {
-      organizationId,
       ...(dto.departmentId !== undefined && { departmentId: dto.departmentId }),
       ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       ...(dto.search && {

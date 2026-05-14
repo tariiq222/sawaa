@@ -6,7 +6,7 @@ import { PaymentMethod, PaymentStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { MoyasarCredentialsService } from '../../../infrastructure/payments/moyasar-credentials.service';
-import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
+import { DEFAULT_ORGANIZATION_ID, SYSTEM_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
 import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 import { PaymentCompletedEvent } from '../events/payment-completed.event';
 import { PaymentFailedEvent } from '../events/payment-failed.event';
@@ -84,9 +84,7 @@ export class MoyasarWebhookHandler {
     const cfg = await this.cls.run(async () => {
       this.logger.warn('systemContext bypass activated', { context: 'MoyasarWebhookHandler' });
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-      return this.prisma.organizationPaymentConfig.findUnique({
-        where: { organizationId: invoice.organizationId },
-      });
+      return this.prisma.organizationPaymentConfig.findFirst();
     });
     if (!cfg) {
       throw new BadRequestException('Invalid webhook request');
@@ -97,12 +95,12 @@ export class MoyasarWebhookHandler {
     try {
       const decoded = this.creds.decrypt<{ webhookSecret: string }>(
         cfg.webhookSecretEnc,
-        invoice.organizationId,
+        DEFAULT_ORGANIZATION_ID,
       );
       webhookSecret = decoded.webhookSecret;
     } catch (err) {
       this.logger.error(
-        `Failed to decrypt webhook secret for org ${invoice.organizationId}: ${err instanceof Error ? err.message : 'unknown'}`,
+        `Failed to decrypt webhook secret for org ${DEFAULT_ORGANIZATION_ID}: ${err instanceof Error ? err.message : 'unknown'}`,
       );
       throw new BadRequestException('Invalid webhook request');
     }
@@ -164,7 +162,7 @@ export class MoyasarWebhookHandler {
       const result = await this.cls.run(async () => {
         // P2-9: use the official TenantContextService API instead of raw cls.set
         this.tenantContext.set({
-          organizationId: invoice.organizationId,
+          organizationId: DEFAULT_ORGANIZATION_ID,
           id: 'system',
           role: 'system',
           isSuperAdmin: false,
@@ -201,12 +199,12 @@ export class MoyasarWebhookHandler {
           }
 
           return payment.id;
-        }, { organizationId: invoice.organizationId });
+        });
 
         // Event emission is intentionally OUTSIDE the transaction:
         // - The payment and invoice are durably committed.
         // - If eventBus.publish fails, BullMQ will retry (at-least-once semantics).
-        // - Consumers (booking confirmation, Zoho sync) are idempotent.
+        // - Consumers (e.g. booking confirmation) are idempotent.
         if (status === PaymentStatus.COMPLETED) {
           this.appMetrics?.paymentAttempts.labels({ result: 'succeeded' }).inc();
           const event = new PaymentCompletedEvent({
@@ -215,7 +213,6 @@ export class MoyasarWebhookHandler {
             bookingId: invoice.bookingId,
             amount: amountSar,
             currency: invoice.currency,
-            organizationId: invoice.organizationId,
           });
           await this.eventBus.publish(event.eventName, event.toEnvelope());
         } else if (status === PaymentStatus.FAILED) {
@@ -227,7 +224,6 @@ export class MoyasarWebhookHandler {
             amount: amountSar,
             currency: invoice.currency,
             reason: payload.message,
-            organizationId: invoice.organizationId,
           });
           await this.eventBus.publish(failedEvent.eventName, failedEvent.toEnvelope());
         }

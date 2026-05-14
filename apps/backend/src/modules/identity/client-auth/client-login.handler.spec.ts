@@ -5,7 +5,6 @@ import { PrismaService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { PasswordService } from '../shared/password.service';
 import { ClientTokenService } from '../shared/client-token.service';
-import { TenantContextService } from '../../../common/tenant';
 
 describe('ClientLoginHandler', () => {
   let handler: ClientLoginHandler;
@@ -53,7 +52,6 @@ describe('ClientLoginHandler', () => {
         { provide: RedisService, useValue: mockRedis },
         { provide: PasswordService, useValue: mockPasswords },
         { provide: ClientTokenService, useValue: mockClientTokens },
-        { provide: TenantContextService, useValue: { requireOrganizationIdOrDefault: () => 'org-test' } },
       ],
     }).compile();
 

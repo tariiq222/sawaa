@@ -14,7 +14,7 @@ describe('ListNotificationsHandler', () => {
     (prisma.notification.findMany as jest.Mock).mockResolvedValue([{ id: 'notif-1', isRead: false }]);
     (prisma.notification.count as jest.Mock).mockResolvedValue(1);
     const handler = new ListNotificationsHandler(prisma as unknown as PrismaService);
-    const result = await handler.execute({ organizationId: 'org-1', recipientId: 'client-1', page: 1, limit: 20 });
+    const result = await handler.execute({ recipientId: 'client-1', page: 1, limit: 20 });
     expect(result.items).toHaveLength(1);
     expect(result.meta.total).toBe(1);
   });
@@ -22,7 +22,7 @@ describe('ListNotificationsHandler', () => {
   it('filters unread when unreadOnly=true', async () => {
     const prisma = buildPrisma();
     const handler = new ListNotificationsHandler(prisma as unknown as PrismaService);
-    await handler.execute({ organizationId: 'org-1', recipientId: 'client-1', unreadOnly: true, page: 1, limit: 20 });
+    await handler.execute({ recipientId: 'client-1', unreadOnly: true, page: 1, limit: 20 });
     expect(prisma.notification.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ isRead: false }) }),
     );

@@ -4,7 +4,6 @@ import { TenantContextService } from '../../../common/tenant/tenant-context.serv
 import { toListResponse } from '../../../common/dto';
 import { ListClientsDto } from './list-clients.dto';
 import { serializeClient } from './client.serializer';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type ListClientsQuery = ListClientsDto & {
   page: number;
@@ -19,10 +18,7 @@ export class ListClientsHandler {
   ) {}
 
   async execute(query: ListClientsQuery) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
-
     const where = {
-      organizationId,
       deletedAt: null,
       isActive: query.isActive,
       gender: query.gender,
@@ -52,7 +48,6 @@ export class ListClientsHandler {
 
     const bookingSummaries = await this.loadBookingSummaries(
       items.map((c) => c.id),
-      organizationId,
     );
 
     return toListResponse(
@@ -73,7 +68,6 @@ export class ListClientsHandler {
   // round-trips regardless of page size.
   private async loadBookingSummaries(
     clientIds: string[],
-    organizationId: string,
   ) {
     const empty = {
       last: new Map<string, { id: string; date: string; status: string }>(),
@@ -87,7 +81,6 @@ export class ListClientsHandler {
       this.prisma.booking.findMany({
         where: {
           clientId: { in: clientIds },
-          organizationId,
           scheduledAt: { lte: now },
         },
         orderBy: { scheduledAt: 'desc' },
@@ -96,7 +89,6 @@ export class ListClientsHandler {
       this.prisma.booking.findMany({
         where: {
           clientId: { in: clientIds },
-          organizationId,
           scheduledAt: { gt: now },
         },
         orderBy: { scheduledAt: 'asc' },

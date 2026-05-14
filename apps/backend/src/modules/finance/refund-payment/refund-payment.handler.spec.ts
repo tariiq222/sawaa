@@ -4,6 +4,7 @@ import { RefundPaymentHandler } from './refund-payment.handler';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
+import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
 
 describe('RefundPaymentHandler', () => {
   let handler: RefundPaymentHandler;
@@ -91,7 +92,7 @@ describe('RefundPaymentHandler', () => {
 
     await handler.execute({ paymentId: 'pay_1', reason: 'test' });
 
-    expect(moyasar.createRefund).toHaveBeenCalledWith('org_1', expect.objectContaining({
+    expect(moyasar.createRefund).toHaveBeenCalledWith(DEFAULT_ORGANIZATION_ID, expect.objectContaining({
       paymentId: 'moyasar_pay_abc',
       amount: expect.any(Number),
       idempotencyKey: 'refund:pay_1:100.00',
@@ -311,7 +312,7 @@ describe('RefundPaymentHandler', () => {
 
       await handler.finalizeRefundFromCancellation({ refundRequestId: 'rr_1', idempotencyKey: 'refund:pay_1:100.00' });
 
-      expect(moyasar.createRefund).toHaveBeenCalledWith('org_1', {
+      expect(moyasar.createRefund).toHaveBeenCalledWith(DEFAULT_ORGANIZATION_ID, {
         paymentId: 'moyasar_pay_abc',
         amount: 10000,
         idempotencyKey: 'refund:pay_1:100.00',
@@ -348,7 +349,7 @@ describe('RefundPaymentHandler', () => {
 
       expect(eventBus.publish).toHaveBeenCalledWith(
         'finance.refund.completed',
-        expect.objectContaining({ payload: expect.objectContaining({ refundRequestId: 'rr_1', organizationId: 'org_1', paymentId: 'pay_1' }) }),
+        expect.objectContaining({ payload: expect.objectContaining({ refundRequestId: 'rr_1', organizationId: DEFAULT_ORGANIZATION_ID, paymentId: 'pay_1' }) }),
       );
     });
 

@@ -3,7 +3,6 @@ import { PrismaService } from '../../../infrastructure/database';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { TenantContextService } from '../../../common/tenant';
 import { GeneratePresignedUrlDto } from './generate-presigned-url.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 const DEFAULT_EXPIRY_SECONDS = 3600;
 
@@ -20,9 +19,8 @@ export class GeneratePresignedUrlHandler {
   ) {}
 
   async execute(query: GeneratePresignedUrlQuery) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const file = await this.prisma.file.findFirst({
-      where: { id: query.fileId, isDeleted: false, organizationId },
+      where: { id: query.fileId, isDeleted: false },
     });
     if (!file) throw new NotFoundException('File not found');
 

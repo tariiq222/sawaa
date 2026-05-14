@@ -16,16 +16,14 @@ export class NoShowBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTx: RlsTransactionService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: NoShowBookingCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.CONFIRMED], 'marked as no-show');
 
     const [updated] = await this.rlsTx.withTransaction((tx) => Promise.all([
       tx.booking.update({
-        where: { id: cmd.bookingId, organizationId },
+        where: { id: cmd.bookingId },
         data: { status: BookingStatus.NO_SHOW, noShowAt: new Date() },
       }),
       tx.bookingStatusLog.create({

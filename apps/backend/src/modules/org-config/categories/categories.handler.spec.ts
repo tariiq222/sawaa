@@ -45,7 +45,7 @@ const buildRlsTx = (prisma: ReturnType<typeof buildPrisma>) =>
 describe('CreateCategoryHandler', () => {
   it('creates a category scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new CreateCategoryHandler(prisma as never, buildTenant());
+    const handler = new CreateCategoryHandler(prisma as never);
     const result = await handler.execute({ nameAr: 'فحص', nameEn: 'Checkup' });
     // org scoping moved to RLS / removed in single-tenant migration
     expect(prisma.serviceCategory.create).toHaveBeenCalledWith(
@@ -61,7 +61,7 @@ describe('ListCategoriesHandler', () => {
     const handler = new ListCategoriesHandler(prisma as never, buildTenant(), buildRlsTx(prisma) as never);
     const result = await handler.execute({ page: 1, limit: 10 });
     expect(prisma.serviceCategory.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ organizationId: DEFAULT_ORG }) }),
+      expect.objectContaining({ where: expect.any(Object) }),
     );
     expect(result.items).toHaveLength(1);
   });
@@ -93,7 +93,7 @@ describe('UpdateCategoryHandler', () => {
     const handler = new UpdateCategoryHandler(prisma as never, buildTenant());
     await handler.execute({ categoryId: 'cat-1', nameEn: 'Updated' });
     expect(prisma.serviceCategory.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'cat-1', organizationId: DEFAULT_ORG } }),
+      expect.objectContaining({ where: { id: 'cat-1' } }),
     );
     expect(prisma.serviceCategory.update).toHaveBeenCalled();
   });
@@ -112,7 +112,7 @@ describe('DeleteCategoryHandler', () => {
     const handler = new DeleteCategoryHandler(prisma as never, buildTenant());
     await handler.execute({ categoryId: 'cat-1' });
     expect(prisma.serviceCategory.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'cat-1', organizationId: DEFAULT_ORG } }),
+      expect.objectContaining({ where: { id: 'cat-1' } }),
     );
     expect(prisma.serviceCategory.delete).toHaveBeenCalledWith({ where: { id: 'cat-1' } });
   });

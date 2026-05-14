@@ -23,7 +23,7 @@ export class PasswordHistoryService {
       throw new BadRequestException(PASSWORD_REUSED_ERROR);
     }
     const history = await this.prisma.passwordHistory.findMany({
-      where: { clientId, organizationId },
+      where: { clientId },
       orderBy: { createdAt: 'desc' },
       take: PASSWORD_HISTORY_DEPTH,
     });
@@ -44,7 +44,7 @@ export class PasswordHistoryService {
       data: { clientId, passwordHash },
     });
     const surplus = await tx.passwordHistory.findMany({
-      where: { clientId, organizationId },
+      where: { clientId },
       orderBy: { createdAt: 'desc' },
       skip: PASSWORD_HISTORY_DEPTH,
       select: { id: true },

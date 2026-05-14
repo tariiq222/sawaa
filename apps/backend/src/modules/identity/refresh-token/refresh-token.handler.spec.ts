@@ -139,7 +139,9 @@ describe('RefreshTokenHandler', () => {
     expect(tokenService.issueTokenPair).not.toHaveBeenCalled();
   });
 
-  it('carries organizationId from old refresh token into new token pair', async () => {
+  it('uses DEFAULT_ORGANIZATION_ID for new token pair (single-tenant: no per-token org)', async () => {
+    // Single-tenant migration removed organizationId from RefreshToken model.
+    // Handler always uses DEFAULT_ORGANIZATION_ID regardless of token source.
     prisma.refreshToken.findFirst.mockResolvedValue(baseToken);
     jest.spyOn(require('bcryptjs'), 'compare').mockResolvedValue(true);
     prisma.user.findUnique.mockResolvedValue({ id: 'user-1', email: 'a@b.com', role: 'RECEPTIONIST', customRoleId: null, customRole: null, isActive: true });
@@ -150,22 +152,7 @@ describe('RefreshTokenHandler', () => {
 
     expect(tokenService.issueTokenPair).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'user-1' }),
-      expect.objectContaining({ organizationId: 'org-A', isSuperAdmin: false }),
-    );
-  });
-
-  it('falls back to DEFAULT_ORGANIZATION_ID when old token has no organizationId', async () => {
-    prisma.refreshToken.findFirst.mockResolvedValue({ ...baseToken, organizationId: null });
-    jest.spyOn(require('bcryptjs'), 'compare').mockResolvedValue(true);
-    prisma.user.findUnique.mockResolvedValue({ id: 'user-1', email: 'a@b.com', role: 'RECEPTIONIST', customRoleId: null, customRole: null, isActive: true });
-    prisma.refreshToken.updateMany.mockResolvedValue({ count: 1 });
-    tokenService.issueTokenPair.mockResolvedValue({ accessToken: 'new-acc', refreshToken: 'new-ref' });
-
-    await handler.execute({ userId: 'user-1', rawToken: RAW_TOKEN });
-
-    expect(tokenService.issueTokenPair).toHaveBeenCalledWith(
-      expect.any(Object),
-      expect.objectContaining({ organizationId: DEFAULT_ORGANIZATION_ID }),
+      expect.objectContaining({ organizationId: DEFAULT_ORGANIZATION_ID, isSuperAdmin: false }),
     );
   });
 

@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { ListTenantDeliveryLogsDto } from './list-tenant-delivery-logs.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type ListTenantDeliveryLogsCommand = ListTenantDeliveryLogsDto;
 
@@ -10,14 +8,10 @@ export type ListTenantDeliveryLogsCommand = ListTenantDeliveryLogsDto;
 export class ListTenantDeliveryLogsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: ListTenantDeliveryLogsCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
-
     const where = {
-      organizationId,
       ...(cmd.status ? { status: cmd.status } : {}),
       ...(cmd.channel ? { channel: cmd.channel } : {}),
     };
@@ -30,7 +24,7 @@ export class ListTenantDeliveryLogsHandler {
         take: cmd.perPage,
         select: {
           id: true,
-          organizationId: true,
+          // organizationId removed in single-tenant migration
           recipientId: true,
           type: true,
           priority: true,

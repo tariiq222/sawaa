@@ -11,7 +11,7 @@ export class RegisterFcmTokenHandler {
   async execute(cmd: RegisterFcmTokenCommand) {
     const client = await this.prisma.client.findFirst({
       where: { id: cmd.clientId, deletedAt: null },
-      select: { id: true, organizationId: true },
+      select: { id: true },
     });
     if (!client) throw new NotFoundException('Client not found');
 

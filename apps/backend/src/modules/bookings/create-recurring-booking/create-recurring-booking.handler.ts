@@ -7,11 +7,9 @@ import {
 import { RecurringFrequency } from '@prisma/client';
 import type { Booking } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 
 import { randomUUID } from 'crypto';
 import { CreateRecurringBookingDto } from './create-recurring-booking.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type CreateRecurringBookingCommand = Omit<
   CreateRecurringBookingDto,
@@ -29,13 +27,10 @@ export class CreateRecurringBookingHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(dto: CreateRecurringBookingCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
-
     this.validate(dto);
 
     const dates = this.resolveDates(dto);
@@ -45,10 +40,10 @@ export class CreateRecurringBookingHandler {
     // skipConflicts=false (default): all-or-nothing — wrap in transaction so a mid-series
     // conflict rolls back already-created bookings.
     if (dto.skipConflicts) {
-      return this.createBookings(this.prisma, dto, dates, recurringGroupId, organizationId);
+      return this.createBookings(this.prisma, dto, dates, recurringGroupId);
     }
     return this.rlsTx.withTransaction((tx) =>
-      this.createBookings(tx as unknown as PrismaService, dto, dates, recurringGroupId, organizationId),
+      this.createBookings(tx as unknown as PrismaService, dto, dates, recurringGroupId),
     );
   }
 
@@ -57,12 +52,11 @@ export class CreateRecurringBookingHandler {
     dto: CreateRecurringBookingCommand,
     dates: Date[],
     recurringGroupId: string,
-    organizationId: string,
   ): Promise<Booking[]> {
     const created: Booking[] = [];
 
     const lastBooking = await db.booking.findFirst({
-      where: { organizationId },
+      where: {},
       orderBy: { bookingNumber: 'desc' },
       select: { bookingNumber: true },
     });
@@ -73,7 +67,6 @@ export class CreateRecurringBookingHandler {
 
       const conflict = await db.booking.findFirst({
         where: {
-          organizationId,
           employeeId: dto.employeeId,
           status: { in: ['PENDING', 'CONFIRMED'] },
           scheduledAt: { lt: endsAt },

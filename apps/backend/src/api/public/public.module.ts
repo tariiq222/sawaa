@@ -24,10 +24,8 @@ import { PublicInvoicesController } from './invoices.controller';
 import { PublicRefundsController } from './refunds.controller';
 import { PublicContentController } from './content.controller';
 import { PublicSmsWebhooksController } from './sms-webhooks.controller';
-import { BillingWebhookController } from './billing-webhook.controller';
+
 import { PublicPaymentWebhookController } from './payment-webhook.controller';
-import { PublicZohoWebhookController } from './zoho-webhook.controller';
-import { ZohoInvoiceModule } from '../../modules/integrations/zoho-invoice/zoho-invoice.module';
 import { PublicVerifyEmailController } from './verify-email.controller';
 import { OrgConfigModule } from '../../modules/org-config/org-config.module';
 import { PlatformModule } from '../../modules/platform/platform.module';
@@ -38,8 +36,8 @@ import { DbMetricsService } from '../../infrastructure/telemetry/db-metrics.serv
 import { PublicMetricsController } from './metrics.controller';
 
 @Module({
-  imports: [DatabaseModule, BookingsModule, OrgExperienceModule, IdentityModule, PeopleModule, CommsModule, FinanceModule, OrgConfigModule, ContentModule, PlatformModule, OpsModule, ZohoInvoiceModule],
-  controllers: [AuthController, PublicAuthController, PublicMeController, PublicBrandingController, PublicCatalogController, PublicSlotsController, PublicEmployeesController, PublicContactMessagesController, PublicOtpController, PublicAvailabilityController, PublicBookingsController, PublicPaymentsController, PublicBranchesController, PublicInvoicesController, PublicRefundsController, PublicContentController, PublicSmsWebhooksController, BillingWebhookController, PublicPaymentWebhookController, PublicZohoWebhookController, PublicVerifyEmailController, PublicHealthController, PublicMetricsController],
+  imports: [DatabaseModule, BookingsModule, OrgExperienceModule, IdentityModule, PeopleModule, CommsModule, FinanceModule, OrgConfigModule, ContentModule, PlatformModule, OpsModule],
+  controllers: [AuthController, PublicAuthController, PublicMeController, PublicBrandingController, PublicCatalogController, PublicSlotsController, PublicEmployeesController, PublicContactMessagesController, PublicOtpController, PublicAvailabilityController, PublicBookingsController, PublicPaymentsController, PublicBranchesController, PublicInvoicesController, PublicRefundsController, PublicContentController, PublicSmsWebhooksController, PublicPaymentWebhookController, PublicVerifyEmailController, PublicHealthController, PublicMetricsController],
   providers: [AppMetricsService, DbMetricsService],
 })
 export class PublicModule {}

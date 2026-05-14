@@ -7,7 +7,7 @@ describe('NoShowBookingHandler', () => {
   it('marks CONFIRMED booking as NO_SHOW', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
-    await new NoShowBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildTenant() as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new NoShowBookingHandler(prisma as never, buildRlsTx(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
     expect(prisma.booking.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.NO_SHOW }) }),
     );
@@ -17,7 +17,7 @@ describe('NoShowBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.COMPLETED });
     await expect(
-      new NoShowBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildTenant() as never).execute({ bookingId: 'book-1', changedBy: 'user-42' }),
+      new NoShowBookingHandler(prisma as never, buildRlsTx(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' }),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -25,7 +25,7 @@ describe('NoShowBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue(null);
     await expect(
-      new NoShowBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildTenant() as never).execute({ bookingId: 'bad', changedBy: 'user-42' }),
+      new NoShowBookingHandler(prisma as never, buildRlsTx(prisma) as never).execute({ bookingId: 'bad', changedBy: 'user-42' }),
     ).rejects.toThrow(NotFoundException);
   });
 });
@@ -35,7 +35,7 @@ describe('NoShowBookingHandler — status log', () => {
     const prisma = buildPrisma();
     const confirmedBooking = { ...mockBooking, status: BookingStatus.CONFIRMED };
     prisma.booking.findUnique.mockResolvedValue(confirmedBooking);
-    const handler = new NoShowBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildTenant() as never);
+    const handler = new NoShowBookingHandler(prisma as never, buildRlsTx(prisma) as never);
 
     await handler.execute({ bookingId: 'book-1', changedBy: 'system' });
 

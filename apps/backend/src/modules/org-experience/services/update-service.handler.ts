@@ -1,11 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { EventBusService } from '../../../infrastructure/events';
 import { ServiceDeactivatedEvent } from '../events/service-deactivated.event';
 import { ServiceReactivatedEvent } from '../events/service-reactivated.event';
 import { UpdateServiceDto } from './update-service.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type UpdateServiceCommand = UpdateServiceDto & { serviceId: string };
 
@@ -13,14 +11,12 @@ export type UpdateServiceCommand = UpdateServiceDto & { serviceId: string };
 export class UpdateServiceHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly eventBus: EventBusService,
   ) {}
 
   async execute(dto: UpdateServiceCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const service = await this.prisma.service.findFirst({
-      where: { id: dto.serviceId, archivedAt: null, organizationId },
+      where: { id: dto.serviceId, archivedAt: null },
     });
     if (!service) throw new NotFoundException('Service not found');
 
@@ -94,8 +90,8 @@ export class UpdateServiceHandler {
 
     if (dto.isActive !== undefined && dto.isActive !== wasActive) {
       const event = dto.isActive
-        ? new ServiceReactivatedEvent({ serviceId: updated.id, organizationId })
-        : new ServiceDeactivatedEvent({ serviceId: updated.id, organizationId });
+        ? new ServiceReactivatedEvent({ serviceId: updated.id })
+        : new ServiceDeactivatedEvent({ serviceId: updated.id });
       await this.eventBus.publish(event.eventName, event.toEnvelope()).catch(() => undefined);
     }
 

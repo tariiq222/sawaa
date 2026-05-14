@@ -78,10 +78,6 @@ model User {
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
 
-  // Sticky-organization fallback for login when user has multiple memberships.
-  // Soft reference (no FK) — validated at login against active memberships.
-  lastActiveOrganizationId String?
-
   // Per-account login lockout (mirrors OtpCode lockout pattern).
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?

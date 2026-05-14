@@ -16,8 +16,6 @@ import { GetUnreadCountHandler } from '../../../modules/comms/notifications/get-
 import { RegisterFcmTokenHandler } from '../../../modules/comms/fcm-tokens/register-fcm-token.handler';
 import { UnregisterFcmTokenHandler } from '../../../modules/comms/fcm-tokens/unregister-fcm-token.handler';
 import { RegisterFcmTokenDto } from '../../../modules/comms/fcm-tokens/register-fcm-token.dto';
-import { TenantContextService } from '../../../common/tenant';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export class MobileListNotificationsQuery {
   @ApiPropertyOptional({ description: 'Return only unread notifications', example: true })
@@ -42,7 +40,6 @@ export class MobileClientNotificationsController {
     private readonly getUnreadCount: GetUnreadCountHandler,
     private readonly registerFcm: RegisterFcmTokenHandler,
     private readonly unregisterFcm: UnregisterFcmTokenHandler,
-    private readonly tenant: TenantContextService,
   ) {}
 
   @ApiOperation({ summary: 'List notifications for the current client' })
@@ -53,7 +50,6 @@ export class MobileClientNotificationsController {
     @Query() q: MobileListNotificationsQuery,
   ) {
     return this.listNotifications.execute({
-      organizationId: DEFAULT_ORGANIZATION_ID,
       recipientId: user.id,
       unreadOnly: q.unreadOnly,
       page: q.page ?? 1,
@@ -66,7 +62,6 @@ export class MobileClientNotificationsController {
   @Get('unread-count')
   getUnreadCountEndpoint(@ClientSession() user: ClientSession) {
     return this.getUnreadCount.execute({
-      organizationId: DEFAULT_ORGANIZATION_ID,
       recipientId: user.id,
     });
   }
@@ -83,7 +78,6 @@ export class MobileClientNotificationsController {
     @Body() body: MarkReadDto = {},
   ) {
     return this.markRead.execute({
-      organizationId: DEFAULT_ORGANIZATION_ID,
       recipientId: user.id,
       ...body,
     });

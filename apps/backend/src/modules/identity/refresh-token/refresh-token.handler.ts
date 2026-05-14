@@ -19,7 +19,7 @@ export class RefreshTokenHandler {
     // Use it for an O(1) indexed lookup instead of scanning all active tokens for the user.
     const selector = cmd.rawToken.length >= 8 ? cmd.rawToken.slice(0, 8) : null;
 
-    let matched: { id: string; userId: string; organizationId: string | null; tokenHash: string; expiresAt: Date; revokedAt: Date | null } | undefined;
+    let matched: { id: string; userId: string; tokenHash: string; expiresAt: Date; revokedAt: Date | null } | undefined;
 
     if (selector) {
       // ── Fast path (new format: all tokens issued by TokenService have a selector) ──
@@ -86,7 +86,7 @@ export class RefreshTokenHandler {
     // Carry the tenant through the refresh cycle. DEFAULT_ORGANIZATION_ID is
     // the safety net for tokens issued before the SaaS-02a backfill — should
     // be zero in prod once the backfill migration runs.
-    const orgId = matched.organizationId ?? DEFAULT_ORGANIZATION_ID;
+    const orgId = DEFAULT_ORGANIZATION_ID;
     return this.tokens.issueTokenPair(user, {
       organizationId: orgId,
       isSuperAdmin: user.isSuperAdmin ?? false,

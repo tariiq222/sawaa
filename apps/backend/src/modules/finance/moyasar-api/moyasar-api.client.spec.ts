@@ -6,7 +6,7 @@ const ORG_ID = 'org-cache-test';
 function makePrisma(secretKeyEnc = 'enc-key') {
   return {
     organizationPaymentConfig: {
-      findUnique: jest.fn().mockResolvedValue(secretKeyEnc ? { secretKeyEnc } : null),
+      findFirst: jest.fn().mockResolvedValue(secretKeyEnc ? { secretKeyEnc } : null),
     },
   };
 }
@@ -34,7 +34,7 @@ describe('MoyasarApiClient — key cache', () => {
     const key = await (client as unknown as { getApiKeyForOrg(id: string): Promise<string> }).getApiKeyForOrg(ORG_ID);
 
     expect(key).toBe('sk_live_abc');
-    expect(prisma.organizationPaymentConfig.findUnique).toHaveBeenCalledTimes(1);
+    expect(prisma.organizationPaymentConfig.findFirst).toHaveBeenCalledTimes(1);
     expect(creds.decrypt).toHaveBeenCalledTimes(1);
   });
 
@@ -49,7 +49,7 @@ describe('MoyasarApiClient — key cache', () => {
     await getKey(ORG_ID);
 
     // Second call should hit the in-memory cache
-    expect(prisma.organizationPaymentConfig.findUnique).toHaveBeenCalledTimes(1);
+    expect(prisma.organizationPaymentConfig.findFirst).toHaveBeenCalledTimes(1);
     expect(creds.decrypt).toHaveBeenCalledTimes(1);
   });
 
@@ -65,14 +65,14 @@ describe('MoyasarApiClient — key cache', () => {
     await getKey(ORG_ID);
 
     // After invalidation, DB is called again
-    expect(prisma.organizationPaymentConfig.findUnique).toHaveBeenCalledTimes(2);
+    expect(prisma.organizationPaymentConfig.findFirst).toHaveBeenCalledTimes(2);
     expect(creds.decrypt).toHaveBeenCalledTimes(2);
   });
 
   it('throws BadRequestException when org has no payment config', async () => {
     const prisma = {
       organizationPaymentConfig: {
-        findUnique: jest.fn().mockResolvedValue(null),
+        findFirst: jest.fn().mockResolvedValue(null),
       },
     };
     const client = buildClient(prisma as never, makeCreds() as never);

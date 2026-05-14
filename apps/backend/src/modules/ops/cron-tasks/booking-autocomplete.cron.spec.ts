@@ -122,7 +122,6 @@ describe('BookingNoShowCron', () => {
     expect(prisma.$allTenants.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          organizationId: expect.any(String),
           status: BookingStatus.CONFIRMED,
         }),
         data: expect.objectContaining({

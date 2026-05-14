@@ -4,7 +4,6 @@ import { PrismaService, RlsTransactionService } from '../../../../infrastructure
 import { OtpSessionService } from '../../otp/otp-session.service';
 import { PasswordService } from '../../shared/password.service';
 import { ResetPasswordDto } from './reset-password.dto';
-import { TenantContextService } from '../../../../common/tenant';
 import { maskIdentifier } from '../../../../common/helpers/mask-pii.helper';
 import { PasswordHistoryService } from '../shared/password-history.service';
 import { DEFAULT_ORGANIZATION_ID } from "../../../../common/tenant/tenant.constants";
@@ -17,7 +16,6 @@ export class ResetPasswordHandler {
     private readonly prisma: PrismaService,
     private readonly otpSession: OtpSessionService,
     private readonly passwords: PasswordService,
-    private readonly tenant: TenantContextService,
     private readonly passwordHistory: PasswordHistoryService,
     private readonly rlsTx: RlsTransactionService,
   ) {}
@@ -43,8 +41,8 @@ export class ResetPasswordHandler {
     const identifier = session.identifier;
     const isEmail = session.channel === OtpChannel.EMAIL;
     const existing = isEmail
-      ? await this.prisma.client.findFirst({ where: { organizationId, email: identifier, deletedAt: null } })
-      : await this.prisma.client.findFirst({ where: { organizationId, phone: identifier, deletedAt: null } });
+      ? await this.prisma.client.findFirst({ where: { email: identifier, deletedAt: null } })
+      : await this.prisma.client.findFirst({ where: { phone: identifier, deletedAt: null } });
 
     if (!existing) {
       throw new UnauthorizedException('Invalid session');
@@ -84,7 +82,7 @@ export class ResetPasswordHandler {
 
       // Revoke all existing refresh tokens for this client
       await tx.clientRefreshToken.updateMany({
-        where: { clientId: existing.id, organizationId, revokedAt: null },
+        where: { clientId: existing.id, revokedAt: null },
         data: { revokedAt: now },
       });
     });

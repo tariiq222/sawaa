@@ -1,4 +1,5 @@
-import { IsDateString, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsDateString, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ClientGender } from '@prisma/client';
 import { NormalizePhone } from '../../identity/shared/normalize-phone.transform';
@@ -49,5 +50,7 @@ export class CreateGuestBookingDto {
 
   @ApiProperty({ description: 'Client information', type: GuestClientInfoDto })
   @IsNotEmpty()
+  @ValidateNested()
+  @Type(() => GuestClientInfoDto)
   client!: GuestClientInfoDto;
 }

@@ -81,9 +81,10 @@ describe('UpdateAvailabilityHandler', () => {
       where: { employeeId: 'emp-1' },
     });
     expect(prisma.employeeAvailability.createMany).toHaveBeenCalledWith({
-      data: expect.arrayContaining([
-        expect.objectContaining({ dayOfWeek: 1, employeeId: 'emp-1', organizationId: 'org-test' }),
-      ]),
+      data: [
+        { dayOfWeek: 1, employeeId: 'emp-1', startTime: '09:00', endTime: '17:00', isActive: true },
+        { dayOfWeek: 2, employeeId: 'emp-1', startTime: '09:00', endTime: '17:00', isActive: true },
+      ],
     });
     expect(result.windows).toEqual(windowRows);
     expect(result.exceptions).toEqual([]);

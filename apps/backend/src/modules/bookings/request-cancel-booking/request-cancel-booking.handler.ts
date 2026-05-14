@@ -23,12 +23,10 @@ export class RequestCancelBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTx: RlsTransactionService,
-    private readonly tenant: TenantContextService,
     private readonly eventBus: EventBusService,
   ) {}
 
   async execute(cmd: RequestCancelBookingCommand) {
-    const _organizationId = DEFAULT_ORGANIZATION_ID;
     const booking = await this.prisma.booking.findFirst({
       where: { id: cmd.bookingId },
     });

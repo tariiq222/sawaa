@@ -17,11 +17,9 @@ export class CheckInBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTx: RlsTransactionService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: CheckInBookingCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.CONFIRMED], 'checked in');
     if (booking.checkedInAt) {
       throw new BadRequestException('Booking is already checked in');
@@ -29,7 +27,7 @@ export class CheckInBookingHandler {
 
     const [updated] = await this.rlsTx.withTransaction((tx) => Promise.all([
       tx.booking.update({
-        where: { id: cmd.bookingId, organizationId },
+        where: { id: cmd.bookingId },
         data: { checkedInAt: new Date() },
       }),
       tx.bookingStatusLog.create({

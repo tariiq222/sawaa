@@ -37,9 +37,7 @@ export class SmsDlrHandler {
     const cfg = await this.cls.run(async () => {
       this.logger.warn('systemContext bypass activated', { context: 'SmsDlrHandler' });
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-      return this.prisma.organizationSmsConfig.findFirst({
-        where: { organizationId: req.organizationId },
-      });
+      return this.prisma.organizationSmsConfig.findFirst();
     });
 
     if (!cfg) {

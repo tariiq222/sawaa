@@ -2,7 +2,6 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { BookingStatus, RefundType } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingCancelledEvent } from '../events/booking-cancelled.event';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
@@ -30,7 +29,6 @@ export class CancelBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTx: RlsTransactionService,
-    private readonly tenant: TenantContextService,
     private readonly eventBus: EventBusService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly zoomMeetingService: ZoomMeetingService,
@@ -38,7 +36,6 @@ export class CancelBookingHandler {
   ) {}
 
   async execute(cmd: CancelBookingCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const booking = await this.prisma.booking.findFirst({
       where: { id: cmd.bookingId },
     });
@@ -104,7 +101,6 @@ export class CancelBookingHandler {
         await tx.coupon.updateMany({
           where: {
             code: booking.couponCode,
-            organizationId,
             usedCount: { gt: 0 },
           },
           data: { usedCount: { decrement: 1 } },
@@ -123,7 +119,7 @@ export class CancelBookingHandler {
     });
 
     const event = new BookingCancelledEvent({
-      organizationId,
+      organizationId: DEFAULT_ORGANIZATION_ID,
       scheduledAt: booking.scheduledAt,
       bookingId: booking.id,
       clientId: booking.clientId,
@@ -139,7 +135,7 @@ export class CancelBookingHandler {
     await this.eventBus.publish(event.eventName, event.toEnvelope());
 
     if (booking.zoomMeetingId) {
-      this.zoomMeetingService.deleteMeeting(organizationId, booking.zoomMeetingId).catch(() => {});
+      this.zoomMeetingService.deleteMeeting(DEFAULT_ORGANIZATION_ID, booking.zoomMeetingId).catch(() => {});
     }
 
     return { ...updated, refundType };

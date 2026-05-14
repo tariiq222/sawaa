@@ -2,7 +2,6 @@
 // Encrypts credentials with AES-GCM (orgId AAD) before persisting.
 
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { TenantContextService } from '../../../common/tenant';
 import { PrismaService } from '../../../infrastructure/database';
 import { EmailCredentialsService } from '../../../infrastructure/email/email-credentials.service';
 import type { UpsertOrgEmailConfigDto } from './upsert-org-email-config.dto';
@@ -15,13 +14,11 @@ export type UpsertOrgEmailConfigCommand = UpsertOrgEmailConfigDto;
 export class UpsertOrgEmailConfigHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly credentials: EmailCredentialsService,
   ) {}
 
   async execute(cmd: UpsertOrgEmailConfigCommand): Promise<OrgEmailConfigView> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
-
+    // organizationId kept as AES-GCM AAD for credential encryption/decryption
     let credentialsCiphertext: string | null;
 
     switch (cmd.provider) {
@@ -37,7 +34,7 @@ export class UpsertOrgEmailConfigHandler {
         }
         credentialsCiphertext = this.credentials.encrypt(
           { host: cmd.smtp.host, port: cmd.smtp.port, user: cmd.smtp.user, pass: cmd.smtp.pass, secure: cmd.smtp.secure },
-          organizationId,
+          DEFAULT_ORGANIZATION_ID,
         );
         break;
       case 'RESEND':
@@ -49,7 +46,7 @@ export class UpsertOrgEmailConfigHandler {
         }
         credentialsCiphertext = this.credentials.encrypt(
           { apiKey: cmd.resend.apiKey },
-          organizationId,
+          DEFAULT_ORGANIZATION_ID,
         );
         break;
       case 'SENDGRID':
@@ -61,7 +58,7 @@ export class UpsertOrgEmailConfigHandler {
         }
         credentialsCiphertext = this.credentials.encrypt(
           { apiKey: cmd.sendgrid.apiKey },
-          organizationId,
+          DEFAULT_ORGANIZATION_ID,
         );
         break;
       case 'MAILCHIMP':
@@ -73,30 +70,36 @@ export class UpsertOrgEmailConfigHandler {
         }
         credentialsCiphertext = this.credentials.encrypt(
           { apiKey: cmd.mailchimp.apiKey },
-          organizationId,
+          DEFAULT_ORGANIZATION_ID,
         );
         break;
     }
 
-    const row = await this.prisma.organizationEmailConfig.upsert({
-      where: { organizationId },
-      create: {
-        provider: cmd.provider,
-        senderName: cmd.senderName ?? null,
-        senderEmail: cmd.senderEmail ?? null,
-        credentialsCiphertext: credentialsCiphertext ?? null,
-      },
-      update: {
-        provider: cmd.provider,
-        senderName: cmd.senderName ?? null,
-        senderEmail: cmd.senderEmail ?? null,
-        credentialsCiphertext: credentialsCiphertext ?? null,
-      },
-    });
+    const existing = await this.prisma.organizationEmailConfig.findFirst();
+    let row;
+    if (existing) {
+      row = await this.prisma.organizationEmailConfig.update({
+        where: { id: existing.id },
+        data: {
+          provider: cmd.provider,
+          senderName: cmd.senderName ?? null,
+          senderEmail: cmd.senderEmail ?? null,
+          credentialsCiphertext: credentialsCiphertext ?? null,
+        },
+      });
+    } else {
+      row = await this.prisma.organizationEmailConfig.create({
+        data: {
+          provider: cmd.provider,
+          senderName: cmd.senderName ?? null,
+          senderEmail: cmd.senderEmail ?? null,
+          credentialsCiphertext: credentialsCiphertext ?? null,
+        },
+      });
+    }
 
     return {
       id: row.id,
-      organizationId: row.organizationId,
       provider: row.provider as OrgEmailConfigView['provider'],
       senderName: row.senderName,
       senderEmail: row.senderEmail,

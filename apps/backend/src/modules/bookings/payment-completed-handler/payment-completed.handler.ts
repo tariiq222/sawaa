@@ -3,7 +3,7 @@ import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../../infrastructure/database';
 import { RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
-import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
+import { SYSTEM_CONTEXT_CLS_KEY, DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
 
 interface PaymentCompletedPayload {
   paymentId: string;
@@ -43,11 +43,9 @@ export class PaymentCompletedEventHandler {
           if (!booking) return;
           if (booking.status !== 'PENDING' && booking.status !== 'AWAITING_PAYMENT') return;
 
-          const organizationId = (booking as { organizationId: string }).organizationId;
-
           await this.cls.run(async () => {
             this.cls.set('tenant', {
-              organizationId,
+              organizationId: DEFAULT_ORGANIZATION_ID,
               id: 'system',
               role: 'system',
               isSuperAdmin: false,

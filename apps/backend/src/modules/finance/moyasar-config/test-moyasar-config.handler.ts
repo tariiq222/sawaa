@@ -25,16 +25,13 @@ export class TestMoyasarConfigHandler {
   ) {}
 
   async execute(): Promise<TestMoyasarConfigResult> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
-    const cfg = await this.prisma.organizationPaymentConfig.findUnique({
-      where: { organizationId },
-    });
+    const cfg = await this.prisma.organizationPaymentConfig.findFirst();
     if (!cfg) {
       throw new BadRequestException('Moyasar is not configured for this organization');
     }
     const { secretKey } = this.creds.decrypt<{ secretKey: string }>(
       cfg.secretKeyEnc,
-      organizationId,
+      DEFAULT_ORGANIZATION_ID,
     );
 
     let status: TestMoyasarConfigResult['status'];
@@ -53,15 +50,17 @@ export class TestMoyasarConfigHandler {
       }
     } catch (err) {
       this.logger.warn(
-        `Moyasar connectivity test failed for org ${organizationId}: ${err instanceof Error ? err.message : 'unknown'}`,
+        `Moyasar connectivity test failed: ${err instanceof Error ? err.message : 'unknown'}`,
       );
       status = 'NETWORK_ERROR';
     }
 
-    await this.prisma.organizationPaymentConfig.update({
-      where: { organizationId },
-      data: { lastVerifiedAt: new Date(), lastVerifiedStatus: status },
-    });
+    if (cfg) {
+      await this.prisma.organizationPaymentConfig.update({
+        where: { id: cfg.id },
+        data: { lastVerifiedAt: new Date(), lastVerifiedStatus: status },
+      });
+    }
 
     return { ok, status };
   }

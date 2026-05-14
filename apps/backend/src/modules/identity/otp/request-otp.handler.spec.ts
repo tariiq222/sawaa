@@ -79,7 +79,10 @@ describe('RequestOtpHandler', () => {
     expect(result).toEqual({ success: true });
   });
 
-  it('persists organizationId when provided', async () => {
+  it('accepts optional organizationId without filtering DB by it (single-tenant: org scoping removed)', async () => {
+    // Single-tenant migration: organizationId removed from OtpCode model.
+    // The handler accepts organizationId for cooldown key namespacing but does NOT
+    // filter the DB count or create queries by organizationId.
     const orgId = 'org-123';
     const txMock = {
       otpCode: {
@@ -96,15 +99,15 @@ describe('RequestOtpHandler', () => {
       organizationId: orgId,
     });
 
-    // org scoping moved to RLS / removed in single-tenant migration
     expect(txMock.otpCode.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ identifier: 'test@example.com' }),
       }),
     );
+    // count query does NOT filter by organizationId
     expect(otpCountMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ organizationId: orgId }),
+        where: expect.not.objectContaining({ organizationId: orgId }),
       }),
     );
   });
@@ -132,27 +135,15 @@ describe('RequestOtpHandler', () => {
     );
   });
 
-  it('rate-limit is per-org', async () => {
-    // Org A is at cap
-    otpCountMock.mockImplementation(({ where }) => {
-      if (where.organizationId === 'org-A') return Promise.resolve(5);
-      return Promise.resolve(0);
-    });
+  it('rate-limit is per-identifier (single-tenant: no per-org isolation)', async () => {
+    // Single-tenant migration: rate limit is global per identifier+purpose, not per-org.
+    // When identifier is at cap (>= 5 requests), the next request fails regardless of org.
+    otpCountMock.mockResolvedValue(5);
 
-    // Request for Org B should succeed
     await expect(handler.execute({
       channel: OtpChannel.EMAIL,
       identifier: 'test@example.com',
       purpose: OtpPurpose.GUEST_BOOKING,
-      organizationId: 'org-B',
-    })).resolves.toEqual({ success: true });
-
-    // Request for Org A should fail
-    await expect(handler.execute({
-      channel: OtpChannel.EMAIL,
-      identifier: 'test@example.com',
-      purpose: OtpPurpose.GUEST_BOOKING,
-      organizationId: 'org-A',
     })).rejects.toThrow(HttpException);
   });
 

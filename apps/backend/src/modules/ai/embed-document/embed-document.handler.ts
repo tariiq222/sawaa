@@ -2,9 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EmbeddingAdapter } from '../../../infrastructure/ai';
-import { TenantContextService } from '../../../common/tenant';
 import { EmbedDocumentDto } from './embed-document.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type EmbedDocumentCommand = EmbedDocumentDto;
 
@@ -27,7 +25,6 @@ export class EmbedDocumentHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly embedding: EmbeddingAdapter,
-    private readonly tenant: TenantContextService,
     private readonly rlsTx: RlsTransactionService,
   ) {}
 
@@ -35,8 +32,6 @@ export class EmbedDocumentHandler {
     if (!this.embedding.isAvailable()) {
       throw new BadRequestException('EmbeddingAdapter is not available — set OPENAI_API_KEY');
     }
-
-    const organizationId = DEFAULT_ORGANIZATION_ID;
 
     const doc = await this.prisma.knowledgeDocument.create({
       data: {
@@ -56,7 +51,6 @@ export class EmbedDocumentHandler {
       await this.rlsTx.withTransaction(async (tx) => {
         await tx.documentChunk.createMany({
           data: chunks.map((content, i) => ({
-            organizationId,
             documentId: doc.id,
             content,
             chunkIndex: i,

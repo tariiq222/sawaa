@@ -15,10 +15,7 @@ export type AppAbility = MongoAbility;
  * with the additional CASL-only literal `'all'` reserved for SUPER_ADMIN.
  *
  * OWNER is the per-org top-level role (`MembershipRole.OWNER`). It carries
- * everything ADMIN does, PLUS exclusive control over `Billing`, `Plan`, and
- * `Subscription` — the three subjects that govern subscription state and
- * platform billing. ADMIN handles day-to-day clinic ops but cannot change
- * the plan, refund a platform invoice, or cancel the subscription.
+ * everything ADMIN does. ADMIN handles day-to-day clinic ops.
  *
  * Super-admin platform access is gated by `User.isSuperAdmin` (boolean),
  * NOT by this map. The `SUPER_ADMIN` row here is a transitional fallback
@@ -46,17 +43,10 @@ const ADMIN_RULES: readonly Rule[] = [
 
 const BUILT_IN: Record<string, readonly Rule[]> = {
   SUPER_ADMIN: [{ action: 'manage', subject: 'all' }],
-  // OWNER inherits everything ADMIN can do AND adds platform-billing
-  // control: subscription state, plan changes, platform-invoice oversight.
-  // ADMIN stays out of these three subjects so a clinic operator cannot
-  // accidentally cancel or upgrade the subscription, refund a platform
-  // invoice, or reassign the plan. OWNER is typically the founder /
+  // OWNER inherits everything ADMIN can do. OWNER is typically the founder /
   // financial decision maker; ADMIN is the day-to-day operations lead.
   OWNER: [
     ...ADMIN_RULES,
-    { action: 'manage', subject: 'Billing' },
-    { action: 'manage', subject: 'Plan' },
-    { action: 'manage', subject: 'Subscription' },
   ],
   ADMIN: ADMIN_RULES,
   RECEPTIONIST: [

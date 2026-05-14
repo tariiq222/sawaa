@@ -4,7 +4,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { MailModule } from '../../infrastructure/mail';
 import { MessagingModule } from '../../infrastructure/messaging.module';
 import { DashboardPlatformController } from '../../api/dashboard/platform.controller';
-import { DashboardVerticalsController } from '../../api/dashboard/verticals.controller';
 import { DatabaseModule } from '../../infrastructure/database';
 import { RedisService } from '../../infrastructure/cache/redis.service';
 import { TenantModule } from '../../common/tenant';
@@ -46,7 +45,6 @@ import { SystemHealthModule } from './system-health/system-health.module';
 
   controllers: [
     DashboardPlatformController,
-    DashboardVerticalsController,
   ],
   providers: [
     RedisService,

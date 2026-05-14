@@ -90,7 +90,7 @@ const dto = {
 describe('CreateBookingHandler', () => {
   it('creates booking and invoice with price and duration derived from Service', async () => {
     const prisma = buildPrisma();
-    const result = await new CreateBookingHandler(prisma as never, mockTenant as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto);
+    const result = await new CreateBookingHandler(prisma as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto);
     expect(prisma.booking.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: 'PENDING', employeeId: 'emp-1' }) }),
     );
@@ -120,7 +120,6 @@ describe('CreateBookingHandler', () => {
     const prisma = buildPrisma();
     const result = await new CreateBookingHandler(
       prisma as never,
-      mockTenant as never,
       buildPriceResolver() as never,
       buildSettingsHandler({ payAtClinicEnabled: true }) as never,
       {} as never,
@@ -151,7 +150,6 @@ describe('CreateBookingHandler', () => {
 
     const result = await new CreateBookingHandler(
       prisma as never,
-      mockTenant as never,
       buildPriceResolver() as never,
       buildSettingsHandler() as never,
       { execute: jest.fn().mockResolvedValue(undefined) } as never,
@@ -199,7 +197,6 @@ describe('CreateBookingHandler', () => {
 
     await new CreateBookingHandler(
       prisma as never,
-      mockTenant as never,
       buildPriceResolver() as never,
       buildSettingsHandler() as never,
       { execute: jest.fn().mockResolvedValue(undefined) } as never,
@@ -220,20 +217,20 @@ describe('CreateBookingHandler', () => {
   it('throws ConflictException when employee has overlapping booking', async () => {
     const prisma = buildPrisma();
     prisma.booking.findFirst = jest.fn().mockResolvedValue(mockBooking);
-    await expect(new CreateBookingHandler(prisma as never, mockTenant as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto)).rejects.toThrow(ConflictException);
+    await expect(new CreateBookingHandler(prisma as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto)).rejects.toThrow(ConflictException);
   });
 
   it('throws BadRequestException when scheduledAt is in the past', async () => {
     const pastDate = new Date(Date.now() - 86400_000);
     const prisma = buildPrisma();
     await expect(
-      new CreateBookingHandler(prisma as never, mockTenant as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute({ ...dto, scheduledAt: pastDate }),
+      new CreateBookingHandler(prisma as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute({ ...dto, scheduledAt: pastDate }),
     ).rejects.toThrow(BadRequestException);
   });
 
   it('defaults currency to SAR and type to INDIVIDUAL from Service', async () => {
     const prisma = buildPrisma();
-    await new CreateBookingHandler(prisma as never, mockTenant as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto);
+    await new CreateBookingHandler(prisma as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto);
     expect(prisma.booking.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ currency: 'SAR', bookingType: 'INDIVIDUAL' }) }),
     );
@@ -241,7 +238,7 @@ describe('CreateBookingHandler', () => {
 
   it('accepts mapped bookingType INDIVIDUAL (from in_person)', async () => {
     const prisma = buildPrisma();
-    await new CreateBookingHandler(prisma as never, mockTenant as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute({
+    await new CreateBookingHandler(prisma as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute({
       ...dto,
       bookingType: 'INDIVIDUAL' as any,
     });
@@ -252,7 +249,7 @@ describe('CreateBookingHandler', () => {
 
   it('accepts uppercase passthrough for bookingType (e.g. WALK_IN)', async () => {
     const prisma = buildPrisma();
-    await new CreateBookingHandler(prisma as never, mockTenant as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute({
+    await new CreateBookingHandler(prisma as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute({
       ...dto,
       bookingType: 'WALK_IN' as any,
     });
@@ -264,31 +261,31 @@ describe('CreateBookingHandler', () => {
   it('throws NotFoundException when branch not found', async () => {
     const prisma = buildPrisma();
     prisma.branch.findFirst = jest.fn().mockResolvedValue(null);
-    await expect(new CreateBookingHandler(prisma as never, mockTenant as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto)).rejects.toThrow(NotFoundException);
+    await expect(new CreateBookingHandler(prisma as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto)).rejects.toThrow(NotFoundException);
   });
 
   it('throws NotFoundException when client not found', async () => {
     const prisma = buildPrisma();
     prisma.client.findFirst = jest.fn().mockResolvedValue(null);
-    await expect(new CreateBookingHandler(prisma as never, mockTenant as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto)).rejects.toThrow(NotFoundException);
+    await expect(new CreateBookingHandler(prisma as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto)).rejects.toThrow(NotFoundException);
   });
 
   it('throws NotFoundException when service does not exist', async () => {
     const prisma = buildPrisma();
     prisma.service.findFirst = jest.fn().mockResolvedValue(null);
-    await expect(new CreateBookingHandler(prisma as never, mockTenant as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto)).rejects.toThrow(NotFoundException);
+    await expect(new CreateBookingHandler(prisma as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto)).rejects.toThrow(NotFoundException);
   });
 
   it('throws NotFoundException when employee does not exist', async () => {
     const prisma = buildPrisma();
     prisma.employee.findFirst = jest.fn().mockResolvedValue(null);
-    await expect(new CreateBookingHandler(prisma as never, mockTenant as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto)).rejects.toThrow(NotFoundException);
+    await expect(new CreateBookingHandler(prisma as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto)).rejects.toThrow(NotFoundException);
   });
 
   it('throws BadRequestException when employee does not provide the service', async () => {
     const prisma = buildPrisma();
     prisma.employeeService.findUnique = jest.fn().mockResolvedValue(null);
-    await expect(new CreateBookingHandler(prisma as never, mockTenant as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto)).rejects.toThrow(BadRequestException);
+    await expect(new CreateBookingHandler(prisma as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto)).rejects.toThrow(BadRequestException);
   });
 
   it('assigns sequential bookingNumber per org — uses last + 1', async () => {
@@ -300,7 +297,7 @@ describe('CreateBookingHandler', () => {
       .mockResolvedValueOnce({ bookingNumber: 7 }); // bookingNumber lookup
     prisma.booking.create = jest.fn().mockResolvedValue({ ...mockBooking, bookingNumber: 8 });
 
-    await new CreateBookingHandler(prisma as never, mockTenant as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto);
+    await new CreateBookingHandler(prisma as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto);
 
     expect(prisma.booking.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ bookingNumber: 8 }) }),
@@ -313,7 +310,7 @@ describe('CreateBookingHandler', () => {
     prisma.booking.findFirst = jest.fn().mockResolvedValue(null);
     prisma.booking.create = jest.fn().mockResolvedValue({ ...mockBooking, bookingNumber: 1 });
 
-    await new CreateBookingHandler(prisma as never, mockTenant as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto);
+    await new CreateBookingHandler(prisma as never, buildPriceResolver() as never, buildSettingsHandler() as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma)).execute(dto);
 
     expect(prisma.booking.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ bookingNumber: 1 }) }),
@@ -336,7 +333,6 @@ describe('CreateBookingHandler — DB exclusion constraint error mapping', () =>
     await expect(
       new CreateBookingHandler(
         prisma as never,
-        mockTenant as never,
         buildPriceResolver() as never,
         buildSettingsHandler() as never,
         {} as never,
@@ -353,7 +349,7 @@ describe('CreateBookingHandler — validation guards', () => {
     const prisma = buildPrisma();
     const priceResolver = { resolve: jest.fn().mockResolvedValue({ price: 200, durationMins: 60, durationOptionId: 'opt-1', currency: 'SAR', isEmployeeOverride: false }) };
     const settings = { execute: jest.fn().mockResolvedValue({ maxAdvanceBookingDays: 60, payAtClinicEnabled: false }) };
-    const handler = new CreateBookingHandler(prisma as never, mockTenant as never, priceResolver as never, settings as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma));
+    const handler = new CreateBookingHandler(prisma as never, priceResolver as never, settings as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma));
 
     await expect(handler.execute({
       scheduledAt: new Date(Date.now() - 86400_000),
@@ -367,7 +363,7 @@ describe('CreateBookingHandler — validation guards', () => {
     prisma.branch = { findFirst: jest.fn().mockResolvedValue(null) };
     const priceResolver = { resolve: jest.fn() };
     const settings = { execute: jest.fn().mockResolvedValue({ payAtClinicEnabled: false }) };
-    const handler = new CreateBookingHandler(prisma as never, mockTenant as never, priceResolver as never, settings as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma));
+    const handler = new CreateBookingHandler(prisma as never, priceResolver as never, settings as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma));
 
     await expect(handler.execute({
       scheduledAt: new Date(Date.now() + 86400_000),
@@ -382,7 +378,7 @@ describe('CreateBookingHandler — validation guards', () => {
     prisma.client = { findFirst: jest.fn().mockResolvedValue(null) };
     const priceResolver = { resolve: jest.fn() };
     const settings = { execute: jest.fn().mockResolvedValue({ payAtClinicEnabled: false }) };
-    const handler = new CreateBookingHandler(prisma as never, mockTenant as never, priceResolver as never, settings as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma));
+    const handler = new CreateBookingHandler(prisma as never, priceResolver as never, settings as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma));
 
     await expect(handler.execute({
       scheduledAt: new Date(Date.now() + 86400_000),
@@ -394,7 +390,7 @@ describe('CreateBookingHandler — validation guards', () => {
   it('throws BadRequestException when pay-at-clinic is disabled', async () => {
     const prisma = buildPrisma();
     const settings = { execute: jest.fn().mockResolvedValue({ payAtClinicEnabled: false }) };
-    const handler = new CreateBookingHandler(prisma as never, mockTenant as never, { resolve: jest.fn() } as never, settings as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma));
+    const handler = new CreateBookingHandler(prisma as never, { resolve: jest.fn() } as never, settings as never, {} as never, mockEventBus as never, {} as never, buildRlsTx(prisma));
 
     await expect(handler.execute({
       scheduledAt: new Date(Date.now() + 86400_000),
@@ -413,7 +409,6 @@ describe('CreateBookingHandler — coupon strict validation', () => {
     };
     const handler = new CreateBookingHandler(
       prisma as never,
-      mockTenant as never,
       buildPriceResolver() as never,
       buildSettingsHandler() as never,
       {} as never,
@@ -451,7 +446,6 @@ describe('CreateBookingHandler — advisory lock for individual bookings', () =>
 
     await new CreateBookingHandler(
       prisma as never,
-      mockTenant as never,
       buildPriceResolver() as never,
       buildSettingsHandler() as never,
       {} as never,
@@ -480,7 +474,6 @@ describe('CreateBookingHandler — advisory lock for individual bookings', () =>
     await expect(
       new CreateBookingHandler(
         prisma as never,
-        mockTenant as never,
         buildPriceResolver() as never,
         buildSettingsHandler() as never,
         {} as never,
@@ -502,7 +495,6 @@ describe('CreateBookingHandler — outbox pattern', () => {
 
     await new CreateBookingHandler(
       prisma as never,
-      mockTenant as never,
       buildPriceResolver() as never,
       buildSettingsHandler() as never,
       {} as never,
@@ -535,7 +527,6 @@ describe('per-org VAT rate', () => {
 
     const handler = new CreateBookingHandler(
       prisma as never,
-      mockTenant as never,
       buildPriceResolver() as never,
       buildSettingsHandler() as never,
       {} as never,
@@ -564,7 +555,6 @@ describe('per-org VAT rate', () => {
 
     const handler = new CreateBookingHandler(
       prisma as never,
-      mockTenant as never,
       buildPriceResolver() as never,
       buildSettingsHandler() as never,
       {} as never,

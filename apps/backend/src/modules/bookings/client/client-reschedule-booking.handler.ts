@@ -2,10 +2,8 @@ import { Injectable, BadRequestException, ForbiddenException, ConflictException 
 import { BookingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { ClientRescheduleBookingDto } from './client-reschedule-booking.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type ClientRescheduleCommand = ClientRescheduleBookingDto & {
   bookingId: string;
@@ -17,12 +15,10 @@ export class ClientRescheduleBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTx: RlsTransactionService,
-    private readonly tenant: TenantContextService,
     private readonly settingsHandler: GetBookingSettingsHandler,
   ) {}
 
   async execute(cmd: ClientRescheduleCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const booking = await this.prisma.booking.findUnique({
       where: { id: cmd.bookingId },
     });
@@ -70,7 +66,6 @@ export class ClientRescheduleBookingHandler {
       async (tx) => {
         const conflict = await tx.booking.findFirst({
           where: {
-            organizationId,
             employeeId: booking.employeeId,
             id: { not: cmd.bookingId },
             status: { in: ['PENDING', 'CONFIRMED'] },

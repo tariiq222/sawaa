@@ -40,7 +40,7 @@ export class GetPublicInvoiceHandler {
       throw new NotFoundException(`Invoice ${invoiceId} not found`);
     }
 
-    const sellerName = await resolveInvoiceSellerName(this.prisma, invoice.organizationId);
+    const sellerName = await resolveInvoiceSellerName(this.prisma);
 
     return {
       id: invoice.id,

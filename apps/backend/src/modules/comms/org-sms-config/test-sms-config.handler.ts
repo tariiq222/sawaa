@@ -2,7 +2,6 @@
 // Updates lastTestAt / lastTestOk on the row. Returns bilingual errors.
 
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { TenantContextService } from '../../../common/tenant';
 import { PrismaService } from '../../../infrastructure/database';
 import { SmsProviderFactory } from '../../../infrastructure/sms/sms-provider.factory';
 import type { TestSmsConfigDto } from './test-sms-config.dto';
@@ -20,15 +19,11 @@ export type TestSmsConfigResult = {
 export class TestSmsConfigHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly factory: SmsProviderFactory,
   ) {}
 
   async execute(cmd: TestSmsConfigCommand): Promise<TestSmsConfigResult> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
-    const cfg = await this.prisma.organizationSmsConfig.findFirst({
-      where: { organizationId },
-    });
+    const cfg = await this.prisma.organizationSmsConfig.findFirst();
     if (!cfg || cfg.provider === 'NONE' || !cfg.credentialsCiphertext) {
       throw new BadRequestException({
         ar: 'مزود الرسائل غير مُكوَّن. احفظ بيانات الاعتماد أولاً.',
@@ -36,7 +31,8 @@ export class TestSmsConfigHandler {
       });
     }
 
-    const adapter = await this.factory.forCurrentTenant(organizationId);
+    // organizationId kept as AES-GCM AAD for credential decryption
+    const adapter = await this.factory.forCurrentTenant(DEFAULT_ORGANIZATION_ID);
     try {
       const result = await adapter.send(
         cmd.toPhone,
@@ -44,13 +40,13 @@ export class TestSmsConfigHandler {
         cfg.senderId ?? null,
       );
       await this.prisma.organizationSmsConfig.update({
-        where: { organizationId },
+        where: { id: cfg.id },
         data: { lastTestAt: new Date(), lastTestOk: true },
       });
       return { ok: true, providerMessageId: result.providerMessageId };
     } catch (err) {
       await this.prisma.organizationSmsConfig.update({
-        where: { organizationId },
+        where: { id: cfg.id },
         data: { lastTestAt: new Date(), lastTestOk: false },
       });
       const message =

@@ -2,12 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingConfirmedEvent } from '../events/booking-confirmed.event';
 import { CreateZoomMeetingHandler } from '../create-zoom-meeting/create-zoom-meeting.handler';
 import { fetchBookingOrFail } from '../booking-lifecycle.helper';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export interface ConfirmBookingCommand {
   bookingId: string;
@@ -19,18 +17,16 @@ export class ConfirmBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTx: RlsTransactionService,
-    private readonly tenant: TenantContextService,
     private readonly eventBus: EventBusService,
     private readonly createZoomMeeting: CreateZoomMeetingHandler,
   ) {}
 
   async execute(cmd: ConfirmBookingCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.PENDING], 'confirmed');
 
     const [updated] = await this.rlsTx.withTransaction((tx) => Promise.all([
       tx.booking.update({
-        where: { id: cmd.bookingId, organizationId },
+        where: { id: cmd.bookingId },
         data: { status: BookingStatus.CONFIRMED, confirmedAt: new Date() },
       }),
       tx.bookingStatusLog.create({

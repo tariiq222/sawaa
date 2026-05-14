@@ -3,7 +3,6 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { TenantContextService } from '../../../common/tenant';
 import { toListResponse } from '../../../common/dto';
 import { ListServicesDto } from './list-services.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type ListServicesCommand = ListServicesDto;
 
@@ -16,13 +15,11 @@ export class ListServicesHandler {
   ) {}
 
   async execute(dto: ListServicesCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const page = dto.page ?? 1;
     const limit = dto.limit ?? 20;
     const skip = (page - 1) * limit;
 
     const where = {
-      organizationId,
       archivedAt: null,
       ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       // إخفاء الخدمات المخفية افتراضياً ما لم يُطلب تضمينها صراحةً

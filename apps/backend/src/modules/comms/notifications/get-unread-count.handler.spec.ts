@@ -8,12 +8,11 @@ describe('GetUnreadCountHandler', () => {
   it('returns count of unread notifications for recipient', async () => {
     const prisma = buildPrisma();
     const result = await new GetUnreadCountHandler(prisma as never).execute({
-      organizationId: 'org-1',
       recipientId: 'user-1',
     });
     expect(result).toEqual({ count: 3 });
     expect(prisma.notification.count).toHaveBeenCalledWith({
-      where: { organizationId: 'org-1', recipientId: 'user-1', isRead: false },
+      where: { recipientId: 'user-1', isRead: false },
     });
   });
 
@@ -21,7 +20,6 @@ describe('GetUnreadCountHandler', () => {
     const prisma = buildPrisma();
     prisma.notification.count = jest.fn().mockResolvedValue(0);
     const result = await new GetUnreadCountHandler(prisma as never).execute({
-      organizationId: 'org-1',
       recipientId: 'user-1',
     });
     expect(result).toEqual({ count: 0 });

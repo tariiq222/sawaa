@@ -3,121 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
-import { TenantContextService } from '../../common/tenant/tenant-context.service';
 import {
   REQUEST_TX_CLS_KEY,
   SUPER_ADMIN_CONTEXT_CLS_KEY,
 } from '../../common/tenant/tenant.constants';
-
-const _SCOPED_MODELS = new Set<string>([
-  'RefreshToken',
-  'CustomRole',
-  'Permission',
-  'Client',
-  'ClientRefreshToken',
-  'PasswordHistory',
-  'Employee',
-  'EmployeeBranch',
-  'EmployeeService',
-  'EmployeeAvailability',
-  'EmployeeAvailabilityException',
-  'EmployeeBreak',
-  // SaaS-02c — org-config + org-experience cluster.
-  'Branch',
-  'Department',
-  'ServiceCategory',
-  'Service',
-  'ServiceBookingConfig',
-  'ServiceDurationOption',
-  'EmployeeServiceOption',
-  'BusinessHour',
-  'Holiday',
-  'BrandingConfig',
-  'IntakeForm',
-  'IntakeField',
-  'Rating',
-  'OrganizationSettings',
-  // 02d — bookings
-  'Booking', 'BookingStatusLog', 'WaitlistEntry',
-  'GroupSession', 'GroupEnrollment', 'GroupSessionWaitlist',
-  'BookingSettings',
-  // 02e — finance
-  'Invoice',
-  'Payment',
-  'Coupon',
-  'CouponRedemption',
-  'RefundRequest',
-  // P0 2026-04-27 — per-tenant Moyasar credentials
-  'OrganizationPaymentConfig',
-  // 02f — comms + ai
-  'EmailTemplate',
-  'Notification',
-  'ChatConversation',
-  'CommsChatMessage',
-  'ChatSession',
-  'ChatMessage',
-  'ContactMessage',
-  'ChatbotConfig',
-  'FcmToken',
-  // Bug B5 (2026-05-03) — comms tenant models that were silently unscoped.
-  // OrganizationEmailConfig holds per-tenant SMTP credentials (encrypted but
-  // still tenant-secret); a `findFirst()` without an explicit where would
-  // otherwise return any tenant's config.
-  'OrganizationEmailConfig',
-  // NotificationDeliveryLog is per-tenant audit data — must not bleed across orgs.
-  'NotificationDeliveryLog',
-  // 02g — AI + media + ops + platform + content
-  'KnowledgeDocument',
-  'DocumentChunk',
-  'File',
-  'ActivityLog',
-  'Report',
-  'ProblemReport',
-  'Integration',
-  'SiteSetting',
-  // 02g-sms — per-tenant SMS provider
-  'OrganizationSmsConfig',
-  'SmsDelivery',
-  // 02g — platform cluster
-  'Membership',
-  // 2026-04-26 — OTP scoping fix
-  'OtpCode',
-  'UsedOtpSession',
-  // 2026-04-28 — mobile OTP-only auth
-  'EmailVerificationToken',
-  // 04 — billing (Plan and SubscriptionInvoice are deliberately PLATFORM-level
-  // and NOT scoped — they describe Sawaa's catalog / receivables respectively).
-  'Subscription',
-  'UsageRecord',
-  'SavedCard',
-  'DunningLog',
-  // Platform models with organizationId (admin-level, but scoped for defense-in-depth)
-  // NOTE: PasswordResetToken deliberately NOT scoped — it has no organizationId column.
-  'BillingCredit',
-  'Invitation',
-  // ImpersonationSession deliberately NOT scoped — list-impersonation-sessions handler
-  // must read across all organizations via $allTenants bypass.
-  // WebhookEvent is platform-level (Sawaa's own webhook dedup), intentionally unscoped
-  // Phase 5 — materialized quota counters (tenant-scoped for RLS safety)
-  'UsageCounter',
-  // Bug B5 (2026-05-03) — per-tenant invoice numbering counter. The schema
-  // comment used to claim "intentionally not scoped" because writes are
-  // server-side, but a Prisma extension scope is the only thing preventing
-  // a future bug from selecting another tenant's `lastSequence` and
-  // colliding invoice numbers across orgs.
-  'OrganizationInvoiceCounter',
-  // Phase 2 / Bug B11 — refund→usage decrement idempotency log
-  'RefundUsageRevertLog',
-  // Zoho Invoice integration — link/mirror tables (organizationId scoped).
-  // ZohoWebhookEvent is also scoped because each Zoho webhook delivery is
-  // resolved to a tenant before signature verification, and we never want
-  // a query to bleed events across orgs.
-  'ZohoContactLink',
-  'ZohoInvoiceLink',
-  'ZohoCreditNoteLink',
-  'ZohoWebhookEvent',
-  'IntegrationAuditLog',
-]);
+import { TenantContextService } from '../../common/tenant/tenant-context.service';
 
 /**
  * Single PrismaClient instance shared across all Bounded Contexts.
@@ -131,8 +21,8 @@ const _SCOPED_MODELS = new Set<string>([
  * - Callers that read `prisma.user.findMany(...)` transparently hit the
  *   extended client's hooks, which is exactly what we want.
  *
- * With `SCOPED_MODELS` empty in Plan 01 the hook is a per-query `Set.has()`
- * lookup that returns false and short-circuits — no behavior change.
+ * Single-tenant: no automatic organizationId scoping. Every handler is
+ * responsible for passing the correct organizationId explicitly.
  */
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -179,9 +69,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         ) {
           return Reflect.get(target, prop, receiver);
         }
-        // CLS-pinned transaction routing: when TenantGucInterceptor wrapped this
-        // request in a transaction, route model accessors through the pinned tx
-        // so every query reuses the same connection (and sees app.current_org_id).
+        // CLS-pinned transaction routing: when a request interceptor wrapped
+        // this request in a transaction, route model accessors through the pinned
+        // tx so every query reuses the same connection.
         // Skip $-prefixed methods and well-known internal symbols -- those are the
         // orchestration API of PrismaClient itself, not model accessors.
         if (
@@ -213,9 +103,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   async onModuleInit(): Promise<void> {
     await this.$connect();
-    this.logger.log(
-      `Prisma connected (tenant mode = ${this.config?.get('TENANT_ENFORCEMENT', 'strict') ?? 'strict'})`,
-    );
+    this.logger.log('Prisma connected (single-tenant)');
   }
 
   async onModuleDestroy(): Promise<void> {

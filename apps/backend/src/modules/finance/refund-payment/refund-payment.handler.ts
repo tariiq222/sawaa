@@ -7,6 +7,7 @@ import { RefundCompletedEvent } from '../events/refund-completed.event';
 import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
 import { assertValidTransition } from '../payment-state-machine';
 import { computeRefundAccounting } from './refund-vat.helper';
+import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
 
 interface CreateRefundRequestInTxResult {
   refundRequestId: string;
@@ -20,7 +21,6 @@ interface CreateRefundRequestInTxResult {
       bookingId: string;
       clientId: string;
       currency: string;
-      organizationId: string;
     };
   };
 }
@@ -66,12 +66,11 @@ export class RefundPaymentHandler {
     amount: unknown;
     status: string;
     gatewayRef: string | null;
-    organizationId: string;
   } | null> {
     return this.prisma.refundRequest.findUnique({
       where: query,
-      select: { id: true, paymentId: true, amount: true, status: true, gatewayRef: true, organizationId: true },
-    }) as Promise<{ id: string; paymentId: string; amount: unknown; status: string; gatewayRef: string | null; organizationId: string; } | null>;
+      select: { id: true, paymentId: true, amount: true, status: true, gatewayRef: true },
+    }) as Promise<{ id: string; paymentId: string; amount: unknown; status: string; gatewayRef: string | null; } | null>;
   }
 
   /**
@@ -191,7 +190,7 @@ export class RefundPaymentHandler {
 
     const invoice = await tx.invoice.findUniqueOrThrow({
       where: { id: row.invoiceId },
-      select: { id: true, bookingId: true, clientId: true, currency: true, organizationId: true },
+      select: { id: true, bookingId: true, clientId: true, currency: true },
     });
 
     const refundAmount = Number(row.amount);
@@ -237,7 +236,7 @@ export class RefundPaymentHandler {
   ): Promise<void> {
     const refundReq = await this.prisma.refundRequest.findUniqueOrThrow({
       where: { id: cmd.refundRequestId },
-      select: { id: true, paymentId: true, amount: true, invoiceId: true, organizationId: true, status: true },
+      select: { id: true, paymentId: true, amount: true, invoiceId: true, status: true },
     });
 
     if (refundReq.status === RefundStatus.COMPLETED) {
@@ -250,7 +249,7 @@ export class RefundPaymentHandler {
       select: { id: true, gatewayRef: true },
     });
 
-const moyasarRefund = await this.moyasar.createRefund(refundReq.organizationId, {
+    const moyasarRefund = await this.moyasar.createRefund(DEFAULT_ORGANIZATION_ID, {
       paymentId: payment.gatewayRef ?? '',
       amount: Math.round(Number(refundReq.amount) * 100),
       idempotencyKey: cmd.idempotencyKey,
@@ -295,12 +294,12 @@ const moyasarRefund = await this.moyasar.createRefund(refundReq.organizationId, 
 
     const invoice = await this.prisma.invoice.findUnique({
       where: { id: refundReq.invoiceId },
-      select: { id: true, bookingId: true, currency: true, organizationId: true },
+      select: { id: true, bookingId: true, currency: true },
     });
 
     const event = new RefundCompletedEvent({
       refundRequestId: cmd.refundRequestId,
-      organizationId: refundReq.organizationId,
+      organizationId: DEFAULT_ORGANIZATION_ID,
       invoiceId: refundReq.invoiceId,
       paymentId: refundReq.paymentId,
       bookingId: invoice?.bookingId ?? '',
@@ -345,7 +344,7 @@ const moyasarRefund = await this.moyasar.createRefund(refundReq.organizationId, 
         // Fetch invoice relation (needed for org/client/booking context).
         const invoice = await tx.invoice.findUniqueOrThrow({
           where: { id: row.invoiceId },
-          select: { id: true, bookingId: true, clientId: true, currency: true, organizationId: true },
+          select: { id: true, bookingId: true, clientId: true, currency: true },
         });
 
         const lockedPayment = {
@@ -395,7 +394,7 @@ const moyasarRefund = await this.moyasar.createRefund(refundReq.organizationId, 
     // transaction across an external HTTP call.
     let moyasarRefundId: string | undefined;
     try {
-      const moyasarRefund = await this.moyasar.createRefund(payment.invoice.organizationId, {
+      const moyasarRefund = await this.moyasar.createRefund(DEFAULT_ORGANIZATION_ID, {
         paymentId: payment.gatewayRef,
         amount: Math.round(refundAmount * 100),
         idempotencyKey,
@@ -470,7 +469,7 @@ const moyasarRefund = await this.moyasar.createRefund(refundReq.organizationId, 
 
     const event = new RefundCompletedEvent({
       refundRequestId,
-      organizationId: payment.invoice.organizationId,
+      organizationId: DEFAULT_ORGANIZATION_ID,
       invoiceId: payment.invoice.id,
       paymentId: payment.id,
       bookingId: payment.invoice.bookingId,

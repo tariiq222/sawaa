@@ -43,8 +43,6 @@ import { ClientLogoutHandler } from './client-auth/client-logout.handler';
 import { GetMeHandler } from './client-auth/get-me.handler';
 import { ResetPasswordHandler } from './client-auth/reset-password/reset-password.handler';
 import { PasswordHistoryService } from './client-auth/shared/password-history.service';
-import { UpdateMembershipProfileHandler } from './update-membership-profile/update-membership-profile.handler';
-import { UploadMembershipAvatarHandler } from './update-membership-profile/upload-membership-avatar.handler';
 import { MailModule } from '../../infrastructure/mail';
 import { StorageModule } from '../../infrastructure/storage';
 import { RequestPasswordResetHandler } from './user-password-reset/request-password-reset/request-password-reset.handler';
@@ -76,8 +74,6 @@ const handlers = [
   ClientLogoutHandler,
   GetMeHandler,
   ResetPasswordHandler,
-  UpdateMembershipProfileHandler,
-  UploadMembershipAvatarHandler,
   RegisterMobileUserHandler,
   RequestMobileLoginOtpHandler,
   VerifyMobileOtpHandler,

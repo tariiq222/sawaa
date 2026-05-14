@@ -5,7 +5,6 @@ import { TenantContextService } from '../../../common/tenant/tenant-context.serv
 import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { BankTransferUploadDto } from './bank-transfer-upload.dto';
 import { validateMagicBytes } from '../../../common/security/magic-byte-validator';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 const RECEIPTS_BUCKET = 'finance-receipts';
 const ALLOWED_MIME_TYPES: ReadonlySet<string> = new Set([
@@ -32,7 +31,6 @@ export class BankTransferUploadHandler {
   ) {}
 
   async execute(cmd: BankTransferUploadCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     if (!ALLOWED_MIME_TYPES.has(cmd.mimetype)) {
       throw new BadRequestException(`File type ${cmd.mimetype} not allowed. Use JPEG, PNG, WebP, or PDF.`);
     }
@@ -45,7 +43,7 @@ export class BankTransferUploadHandler {
     }
 
     const invoice = await this.prisma.invoice.findFirst({
-      where: { id: cmd.invoiceId, organizationId },
+      where: { id: cmd.invoiceId },
     });
     if (!invoice) {
       throw new NotFoundException(`Invoice ${cmd.invoiceId} not found`);
@@ -60,7 +58,7 @@ export class BankTransferUploadHandler {
     }
 
     const ext = cmd.filename.split('.').pop() ?? 'bin';
-    const key = `${organizationId}/${cmd.invoiceId}/${Date.now()}.${ext}`;
+    const key = `invoices/${cmd.invoiceId}/${Date.now()}.${ext}`;
 
     const receiptUrl = await this.storage.uploadFile(RECEIPTS_BUCKET, key, cmd.fileBuffer, cmd.mimetype);
 

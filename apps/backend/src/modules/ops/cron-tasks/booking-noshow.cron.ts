@@ -4,7 +4,6 @@ import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../../infrastructure/database';
 import { SUPER_ADMIN_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
 import { DEFAULT_BOOKING_SETTINGS } from '../../bookings/get-booking-settings/get-booking-settings.handler';
-import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
 
 /**
@@ -32,9 +31,8 @@ export class BookingNoShowCron {
       this.cls.set(SUPER_ADMIN_CONTEXT_CLS_KEY, true);
 
       await withCronLeader(this.prisma, 'booking-noshow', async () => {
-        const organizationId = DEFAULT_ORGANIZATION_ID;
         const settings = await this.prisma.$allTenants.bookingSettings.findFirst({
-          where: { organizationId, branchId: null },
+          where: { branchId: null },
           select: { autoNoShowAfterMinutes: true },
         });
         const minutes =
@@ -43,7 +41,6 @@ export class BookingNoShowCron {
 
         const result = await this.prisma.$allTenants.booking.updateMany({
           where: {
-            organizationId,
             status: BookingStatus.CONFIRMED,
             scheduledAt: { lte: cutoff },
             checkedInAt: null,

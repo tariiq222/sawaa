@@ -8,7 +8,7 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-import { seedVerticals } from './seeds/verticals';
+// Verticals seed removed — Vertical table dropped in single-tenant migration.
 
 const ADMIN_EMAIL    = process.env.SEED_EMAIL    ?? 'admin@sawaa-test.com';
 const ADMIN_PASSWORD = process.env.SEED_PASSWORD ?? 'Admin@1234';
@@ -49,23 +49,6 @@ async function main() {
     update: {},
   });
 
-  // 1.1 Admin membership to the default org — login requires an active
-  //     Membership since SaaS-05b. @@unique([userId]) lets us upsert on userId.
-  await prisma.membership.upsert({
-    where: { userId_organizationId: { userId: adminUser.id, organizationId: DEFAULT_ORG_ID } },
-    create: {
-      userId: adminUser.id,
-      organizationId: DEFAULT_ORG_ID,
-      role: 'OWNER',
-      isActive: true,
-      acceptedAt: new Date(),
-    },
-    update: {
-      role: 'OWNER',
-      isActive: true,
-    },
-  });
-
   if (!SUPER_ADMIN_EMAIL || !SUPER_ADMIN_PASSWORD) {
     throw new Error('SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD are required to seed the initial super-admin user');
   }
@@ -89,32 +72,24 @@ async function main() {
     },
   });
 
-  // 1.5 Default org — clear any leftover suspension state from SaaS-05b tests.
-  //     `updateMany` is a no-op if the row is missing, safe for fresh DBs.
-  await prisma.organization.updateMany({
-    where: { id: DEFAULT_ORG_ID, suspendedAt: { not: null } },
-    data: { suspendedAt: null, suspendedReason: null, status: 'ACTIVE' },
-  });
+  // 2. Branding singleton
+  const branding = await prisma.brandingConfig.findFirst();
+  if (!branding) {
+    await prisma.brandingConfig.create({
+      data: {
+        organizationNameAr: 'منظمتي',
+        organizationNameEn: 'My Organization',
+        colorPrimary: '#354FD8',
+        colorAccent:  '#82CC17',
+      },
+    });
+  }
 
-  // 2. Branding singleton (org-unique per SaaS-02c)
-  await prisma.brandingConfig.upsert({
-    where: { organizationId: DEFAULT_ORG_ID },
-    create: {
-      organizationId: DEFAULT_ORG_ID,
-      organizationNameAr: 'منظمتي',
-      organizationNameEn: 'My Organization',
-      colorPrimary: '#354FD8',
-      colorAccent:  '#82CC17',
-    },
-    update: {},
-  });
-
-  // 3. Organization settings singleton (org-unique per SaaS-02c)
-  await prisma.organizationSettings.upsert({
-    where: { organizationId: DEFAULT_ORG_ID },
-    create: { organizationId: DEFAULT_ORG_ID },
-    update: {},
-  });
+  // 3. Organization settings singleton
+  const settings = await prisma.organizationSettings.findFirst();
+  if (!settings) {
+    await prisma.organizationSettings.create({ data: {} });
+  }
 
   // 4. Main branch
   const DEFAULT_BRANCH_ID = 'c1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5';
@@ -122,7 +97,6 @@ async function main() {
     where: { id: DEFAULT_BRANCH_ID },
     create: {
       id:       DEFAULT_BRANCH_ID,
-      organizationId: DEFAULT_ORG_ID,
       nameAr:   'الفرع الرئيسي',
       nameEn:   'Main Branch',
       isActive: true,
@@ -140,7 +114,6 @@ async function main() {
     await prisma.businessHour.upsert({
       where: { branchId_dayOfWeek: { branchId: DEFAULT_BRANCH_ID, dayOfWeek } },
       create: {
-        organizationId: DEFAULT_ORG_ID,
         branchId:       DEFAULT_BRANCH_ID,
         dayOfWeek,
         startTime:      '09:00',
@@ -150,9 +123,6 @@ async function main() {
       update: {},
     });
   }
-
-  // 5.5. Canonical verticals
-  await seedVerticals(prisma);
 
   // 6. Email templates — one row per slug the backend sends.
   //    Free-form: owners rewrite name/subject/body in any language they want.
@@ -225,18 +195,18 @@ async function main() {
   ];
 
   for (const tmpl of TEMPLATES) {
-    await prisma.emailTemplate.upsert({
-      where: { organizationId_slug: { organizationId: DEFAULT_ORG_ID, slug: tmpl.slug } },
-      update: {},
-      create: {
-        organizationId: DEFAULT_ORG_ID,
-        slug: tmpl.slug,
-        name: tmpl.name,
-        subject: tmpl.subject,
-        htmlBody: tmpl.htmlBody,
-        isActive: true,
-      },
-    });
+    const existing = await prisma.emailTemplate.findFirst({ where: { slug: tmpl.slug } });
+    if (!existing) {
+      await prisma.emailTemplate.create({
+        data: {
+          slug: tmpl.slug,
+          name: tmpl.name,
+          subject: tmpl.subject,
+          htmlBody: tmpl.htmlBody,
+          isActive: true,
+        },
+      });
+    }
   }
 
   await prisma.$disconnect();

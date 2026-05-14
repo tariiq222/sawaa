@@ -4,7 +4,6 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { TenantContextService } from '../../../common/tenant';
 import { toListResponse } from '../../../common/dto';
 import { ListBranchesDto } from './list-branches.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type ListBranchesQuery = ListBranchesDto;
 
@@ -17,13 +16,11 @@ export class ListBranchesHandler {
   ) {}
 
   async execute(dto: ListBranchesQuery) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const page = dto.page ?? 1;
     const limit = dto.limit ?? 20;
     const skip = (page - 1) * limit;
 
     const where: Prisma.BranchWhereInput = {
-      organizationId,
       ...(dto.isActive !== undefined && { isActive: dto.isActive }),
     };
 

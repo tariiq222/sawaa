@@ -1,8 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
-
 export interface ClientProfile {
   id: string;
   name: string;
@@ -19,14 +16,11 @@ export interface ClientProfile {
 export class GetMeHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(clientId: string): Promise<ClientProfile> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
-
     const client = await this.prisma.client.findFirst({
-      where: { id: clientId, organizationId, deletedAt: null },
+      where: { id: clientId, deletedAt: null },
       select: {
         id: true,
         name: true,

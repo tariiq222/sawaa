@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import { TenantContextService } from '../../../common/tenant';
 import { PrismaService } from '../../../infrastructure/database';
 import { SmtpService } from '../../../infrastructure/mail';
 import { EmailProviderFactory } from '../../../infrastructure/email/email-provider.factory';
@@ -17,15 +16,13 @@ export class SendEmailHandler {
   constructor(
     private readonly smtp: SmtpService,
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly emailFactory: EmailProviderFactory,
   ) {}
 
   async execute(dto: SendEmailCommand): Promise<void> {
+    // organizationId kept as AES-GCM AAD for credential decryption via factory
     const organizationId = DEFAULT_ORGANIZATION_ID;
 
-    // SaaS-02f: slug uniqueness is now composite-per-org. The Prisma Proxy
-    // auto-scopes `where` by organizationId from CLS, so findFirst is correct here.
     const template = await this.prisma.emailTemplate.findFirst({
       where: { slug: dto.templateSlug },
     });
@@ -67,14 +64,6 @@ export class SendEmailHandler {
       await this.smtp.sendMail(to, subject, html);
     } catch (err) {
       this.logger.error(`Failed to send email to ${to}`, err);
-    }
-  }
-
-  private safeGetOrgId(): string | null {
-    try {
-      return DEFAULT_ORGANIZATION_ID;
-    } catch {
-      return null;
     }
   }
 

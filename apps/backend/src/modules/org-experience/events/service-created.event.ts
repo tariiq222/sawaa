@@ -2,7 +2,6 @@ import { BaseEvent } from '../../../common/events';
 
 export interface ServiceCreatedPayload {
   serviceId: string;
-  organizationId: string;
 }
 
 export class ServiceCreatedEvent extends BaseEvent<ServiceCreatedPayload> {

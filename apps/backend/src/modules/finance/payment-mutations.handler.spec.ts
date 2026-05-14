@@ -3,6 +3,7 @@ import { InvoiceStatus, PaymentStatus } from '@prisma/client';
 import { RefundPaymentHandler } from './refund-payment/refund-payment.handler';
 import { VerifyPaymentHandler } from './verify-payment/verify-payment.handler';
 import { RlsTransactionService } from '../../infrastructure/database';
+import { DEFAULT_ORGANIZATION_ID } from '../../common/tenant/tenant.constants';
 
 const buildPaymentRow = (overrides: Partial<{
   id: string;
@@ -125,7 +126,7 @@ describe('RefundPaymentHandler', () => {
         payload: expect.objectContaining({
           paymentId: PAY_ID,
           bookingId: 'book-1',
-          organizationId: 'org-1',
+          organizationId: DEFAULT_ORGANIZATION_ID,
         }),
       }),
     );

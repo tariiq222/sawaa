@@ -23,7 +23,7 @@ export class SmsProviderFactory {
 
   async forCurrentTenant(organizationId: string): Promise<SmsProvider> {
     const cfg = await this.prisma.organizationSmsConfig.findFirst({
-      where: { organizationId },
+      where: {},
     });
     if (
       !cfg ||

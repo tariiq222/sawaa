@@ -5,7 +5,7 @@
 // SaaS-02g: SiteSetting scoped.
 
 model SiteSetting {
-  key            String
+  key            String   @id
   valueText      String?
   valueAr        String?
   valueEn        String?

@@ -118,39 +118,6 @@ export const envValidationSchema = Joi.object({
   ZOOM_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
   // Email provider per-tenant encryption key — 32 raw bytes base64-encoded (ASCII length 44).
   EMAIL_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
-  // Zoho Invoice integration (Phase Z) — encrypts the per-tenant OAuth refresh
-  // token + zoho_organization_id + webhook secret stored in `Integration.config`.
-  // Generate: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
-  ZOHO_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
-  // Shared OAuth client used by Sawaa's Zoho integration. Same client_id/secret
-  // serves all tenants — Zoho rate-limits per Zoho organization, not per OAuth
-  // client, so pooling is safe. Required in production; optional in dev so a
-  // developer who hasn't created a Zoho client can still boot the app.
-  ZOHO_OAUTH_CLIENT_ID: Joi.when('NODE_ENV', {
-      is: 'production',
-      then: Joi.string().min(8).required(),
-      otherwise: Joi.string().allow('').optional(),
-    }),
-  ZOHO_OAUTH_CLIENT_SECRET: Joi.when('NODE_ENV', {
-      is: 'production',
-      then: Joi.string().min(8).required(),
-      otherwise: Joi.string().allow('').optional(),
-    }),
-  // Public origin used to build the Zoho OAuth redirect URI. Must be HTTPS in
-  // prod; localhost in dev.
-  ZOHO_OAUTH_REDIRECT_URI: Joi.when('NODE_ENV', {
-      is: 'production',
-      then: Joi.string().uri({ scheme: ['https'] }).required(),
-      otherwise: Joi.string().uri().allow('').optional(),
-    }),
-  // SaaS→tenant invoicing: Sawaa's own Zoho organization. All optional so
-  // self-hosters who don't use Zoho for SaaS billing can leave them blank.
-  ZOHO_PLATFORM_ORGANIZATION_ID: Joi.string().allow('').optional(),
-  ZOHO_PLATFORM_REFRESH_TOKEN: Joi.string().allow('').optional(),
-  ZOHO_PLATFORM_DC: Joi.string()
-    .valid('com', 'sa', 'eu', 'in', 'au', 'jp', 'ca')
-    .default('sa'),
-  ZOHO_PLATFORM_WEBHOOK_SECRET: Joi.string().allow('').optional(),
   SMS_WEBHOOK_URL_BASE: Joi.string().uri().allow('').optional(),
 
   // Super-admin bootstrap password. Must be changed before production.
@@ -221,11 +188,10 @@ export const envValidationSchema = Joi.object({
     then: Joi.string().uri({ scheme: ['https'] }).required(),
     otherwise: Joi.string().uri().allow('').optional(),
   }),
-  // Public origin of the backend itself (where third-party webhooks like Zoho
+  // Public origin of the backend itself (where third-party webhooks
   // will POST to). Distinct from DASHBOARD_PUBLIC_URL: the dashboard and the
   // API typically live on different subdomains (app.sawaa.app vs api.sawaa.app)
   // and only the API origin is reachable by external services.
-  // In production this MUST be HTTPS — Zoho refuses non-TLS webhook URLs.
   API_PUBLIC_URL: Joi.when('NODE_ENV', {
       is: 'production',
       then: Joi.string().uri({ scheme: ['https'] }).required(),
@@ -298,10 +264,6 @@ export const envValidationSchema = Joi.object({
       'ZOOM_PROVIDER_ENCRYPTION_KEY',
       'MOYASAR_TENANT_ENCRYPTION_KEY',
       'EMAIL_PROVIDER_ENCRYPTION_KEY',
-      'ZOHO_PROVIDER_ENCRYPTION_KEY',
-      'ZOHO_OAUTH_CLIENT_SECRET',
-      'ZOHO_PLATFORM_REFRESH_TOKEN',
-      'ZOHO_PLATFORM_WEBHOOK_SECRET',
       'MOYASAR_PLATFORM_SECRET_KEY',
       'MOYASAR_PLATFORM_WEBHOOK_SECRET',
       'AUTHENTICA_API_KEY',
@@ -336,15 +298,10 @@ export const envValidationSchema = Joi.object({
         });
       }
     }
-    // P0 hardening: RLS_GUC_INTERCEPTOR_ENABLED MUST be true in production. The Postgres
-    // RLS policies are fail-closed (post 2026-05-09) — leaving the interceptor off either
-    // (a) breaks every authenticated query if the role is deqah_app, or (b) silently
-    // bypasses RLS if the role is the OWNER. Both are unacceptable.
-if (value.RLS_GUC_INTERCEPTOR_ENABLED !== 'true') {
-      return helpers.error('any.invalid', {
-        message: 'RLS_GUC_INTERCEPTOR_ENABLED must be "true" in production. Setting it false disables the per-request tenant GUC and leaves the database with no enforced tenant boundary.',
-      });
-    }
+    // Single-tenant mode: RLS policies and GUC interceptor are not required.
+    // The deqah_app role is still enforced, but without RLS policies the
+    // interceptor is a no-op. Skipping the check allows single-company
+    // deployments to boot without legacy SaaS infrastructure.
     // P0-8: production secret banlist - reject weak/default values at startup
     const BANNED_IN_PRODUCTION: Array<{ key: string; bannedValues?: string[]; bannedSubstrings?: string[] }> = [
       { key: 'JWT_SECRET', bannedValues: ['secret', 'change-me', 'development-secret', ''] },

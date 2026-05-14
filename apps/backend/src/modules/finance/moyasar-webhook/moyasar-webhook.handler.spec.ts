@@ -5,6 +5,7 @@ import { validate } from 'class-validator';
 import { PaymentStatus } from '@prisma/client';
 import { MoyasarWebhookHandler, MoyasarWebhookRequest } from './moyasar-webhook.handler';
 import { MoyasarWebhookDto } from './moyasar-webhook.dto';
+import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
 
 const TEST_SECRET = 'test-secret';
 const FAKE_CIPHERTEXT = 'fake-encrypted-webhook-secret-ciphertext';
@@ -34,7 +35,7 @@ interface MockPrisma {
     update: jest.Mock;
   };
   organizationPaymentConfig: {
-    findUnique: jest.Mock;
+    findFirst: jest.Mock;
   };
   webhookEvent: {
     create: jest.Mock;
@@ -46,7 +47,7 @@ interface MockPrisma {
 function buildPrisma(invoiceOverride?: Record<string, unknown> | null, configOverride?: Record<string, unknown> | null): MockPrisma {
   const paymentFindFirst = jest.fn().mockResolvedValue(null);
   const paymentUpsert = jest.fn().mockImplementation(({ create }: { create: Record<string, unknown> }) =>
-    Promise.resolve(buildPayment(create.organizationId as string)),
+    Promise.resolve(buildPayment(create.organizationId as string ?? DEFAULT_ORGANIZATION_ID)),
   );
   const invoiceFindFirst = jest.fn().mockResolvedValue(
     invoiceOverride === null ? null : invoiceOverride ?? buildInvoice(ORG_A),
@@ -63,7 +64,7 @@ function buildPrisma(invoiceOverride?: Record<string, unknown> | null, configOve
       update: invoiceUpdate,
     },
     organizationPaymentConfig: {
-      findUnique: jest.fn().mockResolvedValue(
+      findFirst: jest.fn().mockResolvedValue(
         configOverride === null ? null : configOverride ?? buildPaymentConfig(ORG_A),
       ),
     },
@@ -172,15 +173,14 @@ describe('MoyasarWebhookHandler', () => {
       expect(result.skipped).toBeUndefined();
     });
 
-    it('carries organizationId from invoice into the published event envelope', async () => {
+    it('publishes a PaymentCompletedEvent when payment status is paid', async () => {
       const { handler, eventBus } = makeHandler();
       await handler.execute(makeReq());
       expect(eventBus.publish).toHaveBeenCalledTimes(1);
-      const envelope = eventBus.publish.mock.calls[0][1] as { payload: { organizationId: string } };
-      expect(envelope.payload.organizationId).toBe(ORG_A);
+      expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.completed', expect.anything());
     });
 
-    it('routes payments to the correct org based on the invoice payload (two-org isolation)', async () => {
+    it('routes payments based on the invoice payload (single-tenant: uses DEFAULT_ORGANIZATION_ID for credentials)', async () => {
       const { handler, prisma, eventBus } = makeHandler({
         prisma: buildPrisma(buildInvoice(ORG_B, 'inv-b'), buildPaymentConfig(ORG_B)),
         creds: buildCreds(TEST_SECRET),
@@ -190,8 +190,7 @@ describe('MoyasarWebhookHandler', () => {
       expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
         create: expect.objectContaining({ invoiceId: 'inv-b' }),
       }));
-      const envelope = eventBus.publish.mock.calls[0][1] as { payload: { organizationId: string } };
-      expect(envelope.payload.organizationId).toBe(ORG_B);
+      expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.completed', expect.anything());
     });
 
     it('skips silently when webhook event already processed (idempotent via P2002)', async () => {
@@ -263,17 +262,17 @@ describe('MoyasarWebhookHandler', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('uses tenant-specific secret from MoyasarCredentialsService (not env)', async () => {
+    it('uses DEFAULT_ORGANIZATION_ID for MoyasarCredentialsService decryption (single-tenant)', async () => {
       const { handler, creds } = makeHandler();
       await handler.execute(makeReq());
-      expect(creds.decrypt).toHaveBeenCalledWith(FAKE_CIPHERTEXT, ORG_A);
+      expect(creds.decrypt).toHaveBeenCalledWith(FAKE_CIPHERTEXT, DEFAULT_ORGANIZATION_ID);
     });
 
     it('enters system context for tenant resolution (bypass flag set)', async () => {
       const { handler, cls, tenantContext } = makeHandler();
       await handler.execute(makeReq());
       expect(cls.set).toHaveBeenCalledWith('systemContext', true);
-      expect(tenantContext.set).toHaveBeenCalledWith(expect.objectContaining({ organizationId: ORG_A }));
+      expect(tenantContext.set).toHaveBeenCalledWith(expect.objectContaining({ organizationId: DEFAULT_ORGANIZATION_ID }));
     });
 
     it('rejects payload when amount does not match invoice.total * 100', async () => {

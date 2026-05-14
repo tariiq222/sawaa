@@ -21,7 +21,7 @@ export class EmailProviderFactory {
 
   async forCurrentTenant(organizationId: string): Promise<EmailProvider> {
     const cfg = await this.prisma.organizationEmailConfig.findFirst({
-      where: { organizationId },
+      where: {},
     });
 
     if (!cfg || cfg.provider === 'NONE' || !cfg.credentialsCiphertext) {

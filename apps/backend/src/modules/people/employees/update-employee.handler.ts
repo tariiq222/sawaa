@@ -1,11 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { EventBusService } from '../../../infrastructure/events';
 import { EmployeeDeactivatedEvent } from '../events/employee-deactivated.event';
 import { EmployeeReactivatedEvent } from '../events/employee-reactivated.event';
 import { UpdateEmployeeDto } from './update-employee.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
 
 export type UpdateEmployeeCommand = UpdateEmployeeDto & {
   employeeId: string;
@@ -15,14 +14,12 @@ export type UpdateEmployeeCommand = UpdateEmployeeDto & {
 export class UpdateEmployeeHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly eventBus: EventBusService,
   ) {}
 
   async execute(cmd: UpdateEmployeeCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const employee = await this.prisma.employee.findFirst({
-      where: { id: cmd.employeeId, organizationId },
+      where: { id: cmd.employeeId },
     });
     if (!employee) throw new NotFoundException('Employee not found');
 
@@ -41,10 +38,9 @@ export class UpdateEmployeeHandler {
     });
 
     if (cmd.isActive !== undefined && cmd.isActive !== wasActive) {
-      const organizationId = DEFAULT_ORGANIZATION_ID;
       const event = cmd.isActive
-        ? new EmployeeReactivatedEvent({ employeeId: updated.id, organizationId })
-        : new EmployeeDeactivatedEvent({ employeeId: updated.id, organizationId });
+        ? new EmployeeReactivatedEvent({ employeeId: updated.id, organizationId: DEFAULT_ORGANIZATION_ID })
+        : new EmployeeDeactivatedEvent({ employeeId: updated.id, organizationId: DEFAULT_ORGANIZATION_ID });
       await this.eventBus.publish(event.eventName, event.toEnvelope()).catch(() => undefined);
     }
 

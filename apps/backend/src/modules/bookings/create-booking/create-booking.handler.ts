@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { PriceResolverService } from '../../org-experience/services/price-resolver.service';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { GroupSessionMinReachedHandler } from '../group-session-min-reached/group-session-min-reached.handler';
@@ -50,7 +49,6 @@ export type CreateBookingCommand = Omit<CreateBookingDto, 'scheduledAt' | 'expir
 export class CreateBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly priceResolver: PriceResolverService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly groupMinReachedHandler: GroupSessionMinReachedHandler,
@@ -60,7 +58,6 @@ export class CreateBookingHandler {
   ) {}
 
   async execute(dto: CreateBookingCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const scheduledAt = new Date(dto.scheduledAt);
     if (scheduledAt <= new Date()) {
       throw new BadRequestException('Booking must be scheduled in the future');
@@ -150,15 +147,14 @@ export class CreateBookingHandler {
           // CR-5: acquire advisory lock BEFORE the conflict check so that two
           // concurrent requests on the same employee+slot cannot both see "no
           // conflict" and both proceed. Lock key is scoped to
-          // (employeeId, organizationId) + slot window.
-          const lockKey1 = hashToInt32(`${dto.employeeId ?? 'noemp'}:${organizationId}`);
+          // employeeId + slot window.
+          const lockKey1 = hashToInt32(`${dto.employeeId ?? 'noemp'}`);
           const lockKey2 = hashToInt32(`${scheduledAt.toISOString()}:${endsAt.toISOString()}`);
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey1}::int, ${lockKey2}::int)`;
 
           // Now that the lock is held, check for an overlap with PENDING/CONFIRMED bookings.
           const conflict = await tx.booking.findFirst({
             where: {
-              organizationId,
               employeeId: dto.employeeId,
               status: { in: ['PENDING', 'CONFIRMED'] },
               scheduledAt: { lt: endsAt },
@@ -181,7 +177,6 @@ export class CreateBookingHandler {
           // Check capacity now that the lock is held
           const slotCount = await tx.booking.count({
             where: {
-              organizationId,
               serviceId: dto.serviceId,
               employeeId: dto.employeeId,
               scheduledAt,
@@ -196,14 +191,14 @@ export class CreateBookingHandler {
         if (dto.couponCode) {
           // P2-6: acquire advisory lock on the coupon to prevent concurrent
           // redemptions from exceeding the usage limit.
-          const couponLockKey1 = hashToInt32(`coupon:${organizationId}`);
+          const couponLockKey1 = hashToInt32(`coupon`);
           const couponLockKey2 = hashToInt32(dto.couponCode);
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(${couponLockKey1}::int, ${couponLockKey2}::int)`;
 
           const result = await this.couponValidator.validate({
             tx,
             code: dto.couponCode,
-            orgId: organizationId,
+            orgId: DEFAULT_ORGANIZATION_ID,
             clientId: dto.clientId,
             serviceId: dto.serviceId,
             subtotal: Number(price),
@@ -218,12 +213,12 @@ export class CreateBookingHandler {
         // P1-2: serialize bookingNumber generation within the org using an
         // advisory lock so two concurrent transactions cannot read the same
         // 'last' number and both insert it.
-        const numberLockKey1 = hashToInt32(`booking_number:${organizationId}`);
+        const numberLockKey1 = hashToInt32(`booking_number`);
         const numberLockKey2 = 0;
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(${numberLockKey1}::int, ${numberLockKey2}::int)`;
 
         const lastBooking = await tx.booking.findFirst({
-          where: { organizationId },
+          where: {},
           orderBy: { bookingNumber: 'desc' },
           select: { bookingNumber: true },
         });
@@ -256,7 +251,7 @@ export class CreateBookingHandler {
         let invoice: { id: string } | null = null;
         if (!dto.payAtClinic && !isGroupService) {
           const orgSettings = await tx.organizationSettings.findFirst({
-            where: { organizationId },
+            where: {},
             select: { vatRate: true },
           });
           const vatRate = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
@@ -290,7 +285,7 @@ export class CreateBookingHandler {
           bookingId: booking.id,
           clientId: booking.clientId,
           employeeId: booking.employeeId ?? '',
-          organizationId,
+          organizationId: DEFAULT_ORGANIZATION_ID,
           scheduledAt: booking.scheduledAt,
           serviceId: booking.serviceId,
         });

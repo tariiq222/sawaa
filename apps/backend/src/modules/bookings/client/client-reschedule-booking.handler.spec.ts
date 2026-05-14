@@ -28,7 +28,7 @@ describe('ClientRescheduleBookingHandler', () => {
     prisma.booking.findUnique.mockResolvedValue(futureBooking);
     prisma.booking.update.mockResolvedValue(updatedBooking);
     const settings = buildSettingsHandler();
-    const handler = new ClientRescheduleBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildTenant() as never, settings as never);
+    const handler = new ClientRescheduleBookingHandler(prisma as never, buildRlsTx(prisma) as never, settings as never);
 
     const result = await handler.execute({
       bookingId: 'book-1',
@@ -57,7 +57,7 @@ describe('ClientRescheduleBookingHandler', () => {
   it('throws ForbiddenException when client does not own the booking', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue(futureBooking);
-    const handler = new ClientRescheduleBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildTenant() as never, buildSettingsHandler() as never);
+    const handler = new ClientRescheduleBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildSettingsHandler() as never);
 
     await expect(
       handler.execute({
@@ -74,7 +74,7 @@ describe('ClientRescheduleBookingHandler', () => {
       ...futureBooking,
       status: BookingStatus.COMPLETED,
     });
-    const handler = new ClientRescheduleBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildTenant() as never, buildSettingsHandler() as never);
+    const handler = new ClientRescheduleBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildSettingsHandler() as never);
 
     await expect(
       handler.execute({
@@ -88,7 +88,7 @@ describe('ClientRescheduleBookingHandler', () => {
   it('throws BadRequestException when newScheduledAt is in the past', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue(futureBooking);
-    const handler = new ClientRescheduleBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildTenant() as never, buildSettingsHandler() as never);
+    const handler = new ClientRescheduleBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildSettingsHandler() as never);
 
     await expect(
       handler.execute({
@@ -108,7 +108,7 @@ describe('ClientRescheduleBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue(soonBooking);
     const settings = buildSettingsHandler({ clientRescheduleMinHoursBefore: 24 });
-    const handler = new ClientRescheduleBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildTenant() as never, settings as never);
+    const handler = new ClientRescheduleBookingHandler(prisma as never, buildRlsTx(prisma) as never, settings as never);
 
     await expect(
       handler.execute({
@@ -124,7 +124,7 @@ describe('ClientRescheduleBookingHandler', () => {
     prisma.booking.findUnique.mockResolvedValue(futureBooking);
     prisma.bookingStatusLog.count = jest.fn().mockResolvedValue(3);
     const settings = buildSettingsHandler({ maxReschedulesPerBooking: 3 });
-    const handler = new ClientRescheduleBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildTenant() as never, settings as never);
+    const handler = new ClientRescheduleBookingHandler(prisma as never, buildRlsTx(prisma) as never, settings as never);
 
     await expect(
       handler.execute({

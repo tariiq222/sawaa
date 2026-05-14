@@ -116,7 +116,6 @@ async function bootstrap(): Promise<void> {
       'ZOOM_PROVIDER_ENCRYPTION_KEY',
       'MOYASAR_TENANT_ENCRYPTION_KEY',
       'EMAIL_PROVIDER_ENCRYPTION_KEY',
-      'ZOHO_PROVIDER_ENCRYPTION_KEY',
       'SUPER_ADMIN_PASSWORD',
     ]) {
       const v = config.get<string>(key);

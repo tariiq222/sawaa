@@ -38,7 +38,7 @@ export class BookingExpiryCron {
               ],
             },
           },
-          select: { id: true, organizationId: true, couponCode: true },
+          select: { id: true, couponCode: true },
         });
         if (stale.length === 0) return;
 
@@ -53,7 +53,6 @@ export class BookingExpiryCron {
           await this.prisma.$allTenants.coupon.updateMany({
             where: {
               code: b.couponCode,
-              organizationId: b.organizationId,
               usedCount: { gt: 0 },
             },
             data: { usedCount: { decrement: 1 } },

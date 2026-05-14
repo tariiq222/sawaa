@@ -1,10 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { toListResponse } from '../../../common/dto';
 import { ListBookingsDto } from './list-bookings.dto';
 import { mapBookingRow, type BookingRelations } from '../booking-row.mapper';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type ListBookingsQuery = Omit<ListBookingsDto, 'page' | 'limit' | 'fromDate' | 'toDate'> & {
   page: number;
@@ -19,16 +17,13 @@ export type ListBookingsQuery = Omit<ListBookingsDto, 'page' | 'limit' | 'fromDa
 export class ListBookingsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(query: ListBookingsQuery) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
-
     let employeeWhere: { employeeId?: string } = {};
     if (query.membershipRole === 'EMPLOYEE' && query.userId) {
       const emp = await this.prisma.employee.findFirst({
-        where: { organizationId, userId: query.userId },
+        where: { userId: query.userId },
         select: { id: true },
       });
       if (!emp) {

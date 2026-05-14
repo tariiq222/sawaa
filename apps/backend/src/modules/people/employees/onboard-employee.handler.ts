@@ -1,8 +1,6 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { OnboardEmployeeDto } from './onboard-employee.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type OnboardEmployeeCommand = OnboardEmployeeDto;
 
@@ -10,11 +8,9 @@ export type OnboardEmployeeCommand = OnboardEmployeeDto;
 export class OnboardEmployeeHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(dto: OnboardEmployeeCommand) {
-    const _organizationId = DEFAULT_ORGANIZATION_ID;
 
     const existing = await this.prisma.employee.findFirst({
       where: { email: dto.email },

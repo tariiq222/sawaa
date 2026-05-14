@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant/tenant-context.service';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export interface EmployeeStatsResult {
   total: number;
@@ -18,12 +17,10 @@ export class EmployeeStatsHandler {
   ) {}
 
   async execute(): Promise<EmployeeStatsResult> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const [total, active, ratingAgg] = await Promise.all([
-      this.prisma.employee.count({ where: { organizationId } }),
-      this.prisma.employee.count({ where: { organizationId, isActive: true } }),
+      this.prisma.employee.count({ where: {} }),
+      this.prisma.employee.count({ where: { isActive: true } }),
       this.prisma.rating.aggregate({
-        where: { organizationId },
         _avg: { score: true },
       }),
     ]);
@@ -32,7 +29,7 @@ export class EmployeeStatsHandler {
       total,
       active,
       inactive: total - active,
-      avgRating: ratingAgg._avg.score ?? null,
+      avgRating: ratingAgg._avg?.score ?? null,
     };
   }
 }

@@ -2,7 +2,6 @@ import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant';
 import { UpsertOrgSettingsDto } from './upsert-org-settings.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 @Injectable()
 export class UpsertOrgSettingsHandler {
@@ -12,18 +11,21 @@ export class UpsertOrgSettingsHandler {
   ) {}
 
   async execute(dto: UpsertOrgSettingsDto) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
-
     if (dto.vatRate !== undefined) {
       if (!this.tenant.isSuperAdmin()) {
         throw new ForbiddenException('Only super-admin can edit VAT rate');
       }
     }
 
-    return this.prisma.organizationSettings.upsert({
-      where: { organizationId },
-      update: dto,
-      create: { ...dto },
+    const existing = await this.prisma.organizationSettings.findFirst({
+      orderBy: { createdAt: 'desc' },
     });
+    if (existing) {
+      return this.prisma.organizationSettings.update({
+        where: { id: existing.id },
+        data: dto,
+      });
+    }
+    return this.prisma.organizationSettings.create({ data: dto });
   }
 }

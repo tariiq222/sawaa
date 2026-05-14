@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type RemoveHolidayCommand = { holidayId: string };
 
@@ -13,9 +12,8 @@ export class RemoveHolidayHandler {
   ) {}
 
   async execute(dto: RemoveHolidayCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const holiday = await this.prisma.holiday.findFirst({
-      where: { id: dto.holidayId, organizationId },
+      where: { id: dto.holidayId },
     });
     if (!holiday) throw new NotFoundException('Holiday not found');
 

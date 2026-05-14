@@ -1,10 +1,8 @@
 import { Injectable, BadRequestException, ServiceUnavailableException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { ChatAdapter } from '../../../infrastructure/ai';
 import { SemanticSearchHandler } from '../semantic-search/semantic-search.handler';
 import { ChatCompletionDto, ChatCompletionResult } from './chat-completion.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type ChatCompletionCommand = ChatCompletionDto;
 
@@ -27,7 +25,6 @@ export class ChatCompletionHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly search: SemanticSearchHandler,
     private readonly chat: ChatAdapter,
   ) {}
@@ -36,8 +33,6 @@ export class ChatCompletionHandler {
     if (!this.chat.isAvailable()) {
       throw new BadRequestException('ChatAdapter is not available — set OPENROUTER_API_KEY');
     }
-
-    const _organizationId = DEFAULT_ORGANIZATION_ID;
 
     const chunks = await this.search.execute({
       query: dto.userMessage,

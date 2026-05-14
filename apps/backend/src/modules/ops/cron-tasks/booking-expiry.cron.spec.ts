@@ -65,8 +65,8 @@ describe('BookingExpiryCron', () => {
 
     it('expires PENDING/AWAITING_PAYMENT/PENDING_GROUP_FILL using $allTenants', async () => {
       const stale = [
-        { id: 'b1', status: 'PENDING', couponCode: 'PROMO', organizationId: 'o1' },
-        { id: 'b2', status: 'AWAITING_PAYMENT', couponCode: null, organizationId: 'o1' },
+        { id: 'b1', status: 'PENDING', couponCode: 'PROMO' },
+        { id: 'b2', status: 'AWAITING_PAYMENT', couponCode: null },
       ];
       const prisma = buildPrisma();
       prisma.$allTenants.booking.findMany.mockResolvedValue(stale);
@@ -79,14 +79,14 @@ describe('BookingExpiryCron', () => {
           expiresAt: { lt: expect.any(Date) },
           status: { in: ['PENDING', 'AWAITING_PAYMENT', 'PENDING_GROUP_FILL'] },
         },
-        select: { id: true, organizationId: true, couponCode: true },
+        select: { id: true, couponCode: true },
       });
       expect(prisma.$allTenants.booking.updateMany).toHaveBeenCalledWith({
         where: { id: { in: ['b1', 'b2'] } },
         data: { status: 'EXPIRED' },
       });
       expect(prisma.$allTenants.coupon.updateMany).toHaveBeenCalledWith({
-        where: { code: 'PROMO', organizationId: 'o1', usedCount: { gt: 0 } },
+        where: { code: 'PROMO', usedCount: { gt: 0 } },
         data: { usedCount: { decrement: 1 } },
       });
     });
@@ -101,9 +101,9 @@ describe('BookingExpiryCron', () => {
 
     it('decrements coupon once per booking that had it (two bookings sharing code = two decrements)', async () => {
       const stale = [
-        { id: 'b1', status: 'PENDING', couponCode: 'X', organizationId: 'o1' },
-        { id: 'b2', status: 'PENDING', couponCode: 'X', organizationId: 'o1' },
-        { id: 'b3', status: 'PENDING', couponCode: 'Y', organizationId: 'o2' },
+        { id: 'b1', status: 'PENDING', couponCode: 'X' },
+        { id: 'b2', status: 'PENDING', couponCode: 'X' },
+        { id: 'b3', status: 'PENDING', couponCode: 'Y' },
       ];
       const prisma = buildPrisma();
       prisma.$allTenants.booking.findMany.mockResolvedValue(stale);

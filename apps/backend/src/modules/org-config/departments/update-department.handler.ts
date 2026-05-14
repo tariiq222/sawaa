@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant';
 import { UpdateDepartmentDto } from './update-department.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type UpdateDepartmentCommand = UpdateDepartmentDto & { departmentId: string };
 
@@ -14,9 +13,8 @@ export class UpdateDepartmentHandler {
   ) {}
 
   async execute(dto: UpdateDepartmentCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const result = await this.prisma.department.updateMany({
-      where: { id: dto.departmentId, organizationId },
+      where: { id: dto.departmentId },
       data: {
         ...(dto.nameAr !== undefined && { nameAr: dto.nameAr }),
         ...(dto.nameEn !== undefined && { nameEn: dto.nameEn }),
@@ -32,7 +30,7 @@ export class UpdateDepartmentHandler {
     if (result.count === 0) throw new NotFoundException('Department not found');
 
     return this.prisma.department.findFirst({
-      where: { id: dto.departmentId, organizationId },
+      where: { id: dto.departmentId },
     });
   }
 }

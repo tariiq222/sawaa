@@ -2,7 +2,6 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant';
 import { CreateDepartmentDto } from './create-department.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type CreateDepartmentCommand = CreateDepartmentDto;
 
@@ -14,10 +13,8 @@ export class CreateDepartmentHandler {
   ) {}
 
   async execute(dto: CreateDepartmentCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
-
-    const existing = await this.prisma.department.findUnique({
-      where: { dept_org_nameAr: { organizationId, nameAr: dto.nameAr } },
+    const existing = await this.prisma.department.findFirst({
+      where: { nameAr: dto.nameAr },
     });
     if (existing) {
       throw new ConflictException({

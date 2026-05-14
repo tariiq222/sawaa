@@ -62,14 +62,12 @@ export class VerifyPaymentHandler {
           throw new NotFoundException(`Invoice ${payment.invoiceId} not found`);
         }
 
-        // payment.organizationId is available from the Proxy-scoped findFirst above.
-        // Pass it explicitly because tx bypasses the tenant Proxy.
         const totalPaid = await tx.payment.aggregate({
-          where: { invoiceId: payment.invoiceId, organizationId: payment.organizationId, status: PaymentStatus.COMPLETED },
+          where: { invoiceId: payment.invoiceId, status: PaymentStatus.COMPLETED },
           _sum: { amount: true },
         });
 
-        const paid = Number(totalPaid._sum.amount ?? 0);
+        const paid = Number(totalPaid._sum?.amount ?? 0);
         const total = Number(invoice.total);
         const status: InvoiceStatus =
           paid >= total ? InvoiceStatus.PAID : InvoiceStatus.PARTIALLY_PAID;

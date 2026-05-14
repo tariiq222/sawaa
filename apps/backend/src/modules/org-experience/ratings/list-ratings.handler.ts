@@ -3,7 +3,6 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { TenantContextService } from '../../../common/tenant';
 import { toListResponse } from '../../../common/dto';
 import { ListRatingsDto } from './list-ratings.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type ListRatingsCommand = ListRatingsDto;
 
@@ -16,13 +15,11 @@ export class ListRatingsHandler {
   ) {}
 
   async execute(dto: ListRatingsCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const page = dto.page ?? 1;
     const limit = dto.limit ?? 20;
     const skip = (page - 1) * limit;
 
     const where = {
-      organizationId,
       ...(dto.employeeId && { employeeId: dto.employeeId }),
       ...(dto.clientId && { clientId: dto.clientId }),
     };

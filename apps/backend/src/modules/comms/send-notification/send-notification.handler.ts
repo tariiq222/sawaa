@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { SendPushHandler } from '../send-push/send-push.handler';
 import { SendEmailHandler } from '../send-email/send-email.handler';
 import { SendSmsHandler } from '../send-sms/send-sms.handler';
@@ -23,7 +22,6 @@ export class SendNotificationHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly push: SendPushHandler,
     private readonly email: SendEmailHandler,
     private readonly sms: SendSmsHandler,

@@ -2,7 +2,6 @@ import { Injectable, BadRequestException, NotFoundException, ForbiddenException 
 import { BookingStatus, CancellationReason, RefundType } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { EventBusService } from '../../../infrastructure/events';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { ClientCancelBookingDto } from './client-cancel-booking.dto';
@@ -20,14 +19,12 @@ export class ClientCancelBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTx: RlsTransactionService,
-    private readonly tenant: TenantContextService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly eventBus: EventBusService,
     private readonly refundHandler: RefundPaymentHandler,
   ) {}
 
   async execute(cmd: ClientCancelCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const booking = await this.prisma.booking.findUnique({
       where: { id: cmd.bookingId },
     });
@@ -142,7 +139,7 @@ export class ClientCancelBookingHandler {
     });
 
     const event = new BookingCancelledEvent({
-      organizationId,
+      organizationId: DEFAULT_ORGANIZATION_ID,
       scheduledAt: booking.scheduledAt,
       bookingId: booking.id,
       clientId: booking.clientId,

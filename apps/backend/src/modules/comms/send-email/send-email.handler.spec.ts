@@ -1,10 +1,7 @@
 import { SendEmailHandler } from './send-email.handler';
 import type { SmtpService } from '../../../infrastructure/mail';
 import type { PrismaService } from '../../../infrastructure/database';
-import type { TenantContextService } from '../../../common/tenant';
 import type { EmailProviderFactory } from '../../../infrastructure/email/email-provider.factory';
-
-const ORG_ID = 'org-test-1';
 
 const mockTemplate = {
   id: 'tpl-1',
@@ -19,10 +16,6 @@ const buildPrisma = () => ({
     findFirst: jest.fn().mockResolvedValue(mockTemplate),
   },
 });
-
-const buildTenant = () => ({
-  requireOrganizationIdOrDefault: jest.fn().mockReturnValue(ORG_ID),
-} as unknown as TenantContextService);
 
 /** NoOp email factory — simulates no tenant provider configured */
 const buildNoOpFactory = () =>
@@ -40,7 +33,6 @@ describe('SendEmailHandler', () => {
     await new SendEmailHandler(
       smtp as unknown as SmtpService,
       prisma as unknown as PrismaService,
-      buildTenant(),
       buildNoOpFactory(),
     ).execute({
       to: 'client@example.com',
@@ -63,7 +55,6 @@ describe('SendEmailHandler', () => {
     await new SendEmailHandler(
       smtp as unknown as SmtpService,
       prisma as unknown as PrismaService,
-      buildTenant(),
       buildNoOpFactory(),
     ).execute({
       to: 'client@example.com',
@@ -83,7 +74,6 @@ describe('SendEmailHandler', () => {
     await new SendEmailHandler(
       smtp as unknown as SmtpService,
       prisma as unknown as PrismaService,
-      buildTenant(),
       buildNoOpFactory(),
     ).execute({
       to: 'client@example.com',
@@ -101,7 +91,6 @@ describe('SendEmailHandler — interpolation', () => {
     await new SendEmailHandler(
       smtp as unknown as SmtpService,
       prisma as unknown as PrismaService,
-      buildTenant(),
       buildNoOpFactory(),
     ).execute({ to: 'a@b.com', templateSlug: 'missing', vars: {} });
     expect(smtp.sendMail).not.toHaveBeenCalled();
@@ -113,7 +102,6 @@ describe('SendEmailHandler — interpolation', () => {
     await new SendEmailHandler(
       smtp as unknown as SmtpService,
       prisma as unknown as PrismaService,
-      buildTenant(),
       buildNoOpFactory(),
     ).execute({ to: 'a@b.com', templateSlug: 'tpl', vars: {} });
     expect(smtp.sendMail).not.toHaveBeenCalled();
@@ -133,7 +121,6 @@ describe('SendEmailHandler — interpolation', () => {
     await new SendEmailHandler(
       smtp as unknown as SmtpService,
       prisma as unknown as PrismaService,
-      buildTenant(),
       buildNoOpFactory(),
     ).execute({ to: 'a@b.com', templateSlug: 'tpl', vars: { name: 'Ahmad' } });
     expect(smtp.sendMail).toHaveBeenCalledWith('a@b.com', 'مرحبا Ahmad', '<p>Hello Ahmad</p>');
@@ -161,7 +148,6 @@ describe('SendEmailHandler — interpolation', () => {
     await new SendEmailHandler(
       smtp as unknown as SmtpService,
       prisma as unknown as PrismaService,
-      buildTenant(),
       tenantFactory,
     ).execute({ to: 'a@b.com', templateSlug: 'tpl', vars: {} });
 
@@ -178,7 +164,6 @@ describe('SendEmailHandler — interpolation', () => {
       new SendEmailHandler(
         smtp as unknown as SmtpService,
         prisma as unknown as PrismaService,
-        buildTenant(),
         buildNoOpFactory(),
       ).execute({ to: 'a@b.com', templateSlug: 'tpl', vars: {} }),
     ).resolves.not.toThrow();

@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant';
 import { ListHolidaysDto } from './list-holidays.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type ListHolidaysQuery = ListHolidaysDto;
 
@@ -14,13 +13,12 @@ export class ListHolidaysHandler {
   ) {}
 
   async execute(dto: ListHolidaysQuery) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const branch = await this.prisma.branch.findFirst({
-      where: { id: dto.branchId, organizationId },
+      where: { id: dto.branchId },
     });
     if (!branch) throw new NotFoundException('Branch not found');
 
-    const where: Record<string, unknown> = { branchId: dto.branchId, organizationId };
+    const where: Record<string, unknown> = { branchId: dto.branchId };
     if (dto.year) {
       where['date'] = {
         gte: new Date(`${dto.year}-01-01`),

@@ -38,6 +38,7 @@ const buildRlsTx = (prisma: ReturnType<typeof buildPrisma>) =>
 describe('CreateDepartmentHandler', () => {
   it('creates a department scoped by org and passes all fields to prisma', async () => {
     const prisma = buildPrisma();
+    prisma.department.findFirst = jest.fn().mockResolvedValue(null);
     const handler = new CreateDepartmentHandler(prisma as never, buildTenant());
     const result = await handler.execute({
       nameAr: 'عيادة',
@@ -58,14 +59,16 @@ describe('CreateDepartmentHandler', () => {
 
   it('throws ConflictException on duplicate nameAr in same org', async () => {
     const prisma = buildPrisma();
-    prisma.department.findUnique = jest.fn().mockResolvedValue(mockDept);
+    prisma.department.findFirst = jest.fn().mockResolvedValue(mockDept);
     const handler = new CreateDepartmentHandler(prisma as never, buildTenant());
     await expect(handler.execute({ nameAr: 'عيادة' })).rejects.toThrow(ConflictException);
   });
 
   it('allows same nameAr in two different orgs', async () => {
     const prismaA = buildPrisma();
+    prismaA.department.findFirst = jest.fn().mockResolvedValue(null);
     const prismaB = buildPrisma();
+    prismaB.department.findFirst = jest.fn().mockResolvedValue(null);
     const handlerA = new CreateDepartmentHandler(prismaA as never, buildTenant('org-A'));
     const handlerB = new CreateDepartmentHandler(prismaB as never, buildTenant('org-B'));
     await expect(handlerA.execute({ nameAr: 'عيادة' })).resolves.toBeDefined();
@@ -80,7 +83,7 @@ describe('ListDepartmentsHandler', () => {
     const result = await handler.execute({ page: 1, limit: 10 });
     expect(result.items).toHaveLength(1);
     expect(prisma.department.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ organizationId: DEFAULT_ORG }) }),
+      expect.objectContaining({ where: expect.any(Object) }),
     );
   });
 
@@ -112,7 +115,7 @@ describe('UpdateDepartmentHandler', () => {
     await handler.execute({ departmentId: 'dept-1', nameEn: 'Updated' });
     expect(prisma.department.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'dept-1', organizationId: DEFAULT_ORG },
+        where: { id: 'dept-1' },
       }),
     );
   });
@@ -131,7 +134,7 @@ describe('DeleteDepartmentHandler', () => {
     const handler = new DeleteDepartmentHandler(prisma as never, buildTenant());
     const result = await handler.execute({ departmentId: 'dept-1' });
     expect(prisma.department.deleteMany).toHaveBeenCalledWith({
-      where: { id: 'dept-1', organizationId: DEFAULT_ORG },
+      where: { id: 'dept-1' },
     });
     expect(result).toEqual({ deleted: true });
   });

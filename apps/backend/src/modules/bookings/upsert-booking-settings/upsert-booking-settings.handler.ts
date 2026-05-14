@@ -26,11 +26,9 @@ export interface UpsertBookingSettingsCommand {
 export class UpsertBookingSettingsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: UpsertBookingSettingsCommand): Promise<BookingSettings> {
-    const _organizationId = DEFAULT_ORGANIZATION_ID;
     const { branchId, ...fields } = cmd;
 
     const updateData = Object.fromEntries(

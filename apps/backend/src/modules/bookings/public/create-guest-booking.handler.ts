@@ -6,13 +6,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { PriceResolverService } from '../../org-experience/services/price-resolver.service';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 
 import { CreateGuestBookingDto } from './create-guest-booking.dto';
 import { Prisma, type OtpChannel } from '@prisma/client';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type CreateGuestBookingCommand = CreateGuestBookingDto & {
   identifier: string;
@@ -37,14 +35,12 @@ function hashToInt32(s: string): number {
 export class CreateGuestBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly priceResolver: PriceResolverService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(cmd: CreateGuestBookingCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const scheduledAt = new Date(cmd.startsAt);
     if (scheduledAt <= new Date()) {
       throw new BadRequestException('Booking must be scheduled in the future');
@@ -152,7 +148,6 @@ export class CreateGuestBookingHandler {
 
       const conflict = await tx.booking.findFirst({
         where: {
-          organizationId,
           employeeId: cmd.employeeId,
           status: { in: ['PENDING', 'CONFIRMED', 'AWAITING_PAYMENT'] },
           scheduledAt: { lt: endsAt },
@@ -166,7 +161,6 @@ export class CreateGuestBookingHandler {
 
       let client = await tx.client.findFirst({
         where: {
-          organizationId,
           OR: [{ phone: cmd.client.phone }, { email: cmd.client.email }],
         },
       });
@@ -198,12 +192,12 @@ export class CreateGuestBookingHandler {
       // P1-2: serialize bookingNumber generation within the org using an
       // advisory lock so two concurrent transactions cannot read the same
       // 'last' number and both insert it.
-      const numberLockKey1 = hashToInt32(`booking_number:${organizationId}`);
+      const numberLockKey1 = hashToInt32(`booking_number`);
       const numberLockKey2 = 0;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${numberLockKey1}::int, ${numberLockKey2}::int)`;
 
       const lastBooking = await tx.booking.findFirst({
-        where: { organizationId },
+        where: {},
         orderBy: { bookingNumber: 'desc' },
         select: { bookingNumber: true },
       });
@@ -229,7 +223,7 @@ export class CreateGuestBookingHandler {
       });
 
       const orgSettings = await tx.organizationSettings.findFirst({
-        where: { organizationId },
+        where: {},
         select: { vatRate: true },
       });
       const vatRate = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');

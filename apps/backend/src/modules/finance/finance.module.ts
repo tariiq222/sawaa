@@ -26,8 +26,7 @@ import { RefundPaymentHandler } from './refund-payment/refund-payment.handler';
 import { VerifyPaymentHandler } from './verify-payment/verify-payment.handler';
 import { GroupSessionReadyHandler } from './group-session-ready/group-session-ready.handler';
 import { MoyasarApiClient } from './moyasar-api/moyasar-api.client';
-import { MoyasarSubscriptionClient } from './moyasar-api/moyasar-subscription.client';
-import { MoyasarSubscriptionWebhookHandler } from './moyasar-api/moyasar-subscription-webhook.handler';
+
 import { InitGuestPaymentHandler } from './payments/public/init-guest-payment/init-guest-payment.handler';
 import { InitClientPaymentHandler } from './payments/client/init-client-payment/init-client-payment.handler';
 import { RequestRefundHandler } from './refund-payment/request-refund.handler';
@@ -77,11 +76,9 @@ const handlers = [
     BookingConfirmedHandler,
     GroupSessionReadyHandler,
     MoyasarApiClient,
-    MoyasarSubscriptionClient,
-    MoyasarSubscriptionWebhookHandler,
     OnBookingCancelledRefundHandler,
   ],
-  exports: [...handlers, MoyasarApiClient, MoyasarSubscriptionClient, MoyasarSubscriptionWebhookHandler],
+  exports: [...handlers, MoyasarApiClient],
 })
 export class FinanceModule implements OnModuleInit {
   constructor(

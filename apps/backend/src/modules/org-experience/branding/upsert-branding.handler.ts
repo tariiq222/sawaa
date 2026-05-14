@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { UpsertBrandingDto } from './upsert-branding.dto';
 import {
   getAllowedAssetHosts,
@@ -8,18 +7,12 @@ import {
   sanitizeCustomCss,
   validateAssetUrl,
 } from './branding-sanitizers';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 @Injectable()
 export class UpsertBrandingHandler {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async execute(dto: UpsertBrandingDto) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
-
     const assetHosts = getAllowedAssetHosts();
     const fontHosts = getAllowedFontHosts();
 
@@ -40,10 +33,17 @@ export class UpsertBrandingHandler {
       if (!r.ok) throw new BadRequestException(`customCss: ${r.reason}`);
     }
 
-    return this.prisma.brandingConfig.upsert({
-      where: { organizationId },
-      create: { ...dto, organizationNameAr: dto.organizationNameAr ?? 'منظمتي' },
-      update: dto,
+    const existing = await this.prisma.brandingConfig.findFirst({
+      orderBy: { createdAt: 'desc' },
+    });
+    if (existing) {
+      return this.prisma.brandingConfig.update({
+        where: { id: existing.id },
+        data: dto,
+      });
+    }
+    return this.prisma.brandingConfig.create({
+      data: { ...dto, organizationNameAr: dto.organizationNameAr ?? 'منظمتي' },
     });
   }
 }

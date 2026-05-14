@@ -24,10 +24,10 @@ export class OnBookingCancelledPromoteWaitlistHandler {
     this.eventBus.subscribe<BookingCancelledPayload>(
       'bookings.booking.cancelled',
       async (envelope) => {
-        const { organizationId, bookingId, employeeId } = envelope.payload;
+        const { bookingId, employeeId } = envelope.payload;
 
         const cancelledBooking = await this.prisma.booking.findFirst({
-          where: { id: bookingId, organizationId },
+          where: { id: bookingId },
           select: { serviceId: true, branchId: true },
         });
 
@@ -40,7 +40,6 @@ export class OnBookingCancelledPromoteWaitlistHandler {
 
         const next = await this.prisma.waitlistEntry.findFirst({
           where: {
-            organizationId,
             employeeId,
             serviceId,
             branchId,

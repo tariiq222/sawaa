@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ActivityAction } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../../infrastructure/database';
-import { SUPER_ADMIN_CONTEXT_CLS_KEY, DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
+import { SUPER_ADMIN_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
 import { ORPHAN_CHECKS, OrphanCheck } from './orphan-audit.types';
 
 /**
@@ -37,25 +37,24 @@ export class RunOrphanAuditHandler {
   }
 
   private async runAudit(): Promise<void> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     this.logger.log(`DB-13 orphan audit starting`);
-    const totalOrphans = await this.auditOrg(organizationId);
+    const totalOrphans = await this.auditAll();
     this.logger.log(
       `DB-13 orphan audit complete — ${totalOrphans} orphans found`,
     );
   }
 
-  private async auditOrg(organizationId: string): Promise<number> {
+  private async auditAll(): Promise<number> {
     let count = 0;
 
     for (const check of ORPHAN_CHECKS) {
-      count += await this.runCheck(organizationId, check);
+      count += await this.runCheck(check);
     }
 
     return count;
   }
 
-  private async runCheck(organizationId: string, check: OrphanCheck): Promise<number> {
+  private async runCheck(check: OrphanCheck): Promise<number> {
     // Access the child model dynamically via $allTenants (bypasses tenant scoping).
     const childModel = (this.prisma.$allTenants as unknown as Record<string, unknown>)[
       check.childModel
@@ -64,7 +63,6 @@ export class RunOrphanAuditHandler {
     };
 
     const candidates = await childModel.findMany({
-      where: { organizationId },
       select: { id: true, [check.childField]: true },
       distinct: [check.childField],
     });
@@ -82,19 +80,19 @@ export class RunOrphanAuditHandler {
       };
 
       const parent = await parentModel.findFirst({
-        where: { id: refId, organizationId },
+        where: { id: refId },
         select: { id: true },
       });
 
       if (!parent) {
         orphansFound++;
-        await this.writeOrphanLog(organizationId, check, candidate['id'], refId);
+        await this.writeOrphanLog(check, candidate['id'], refId);
       }
     }
 
     if (orphansFound > 0) {
       this.logger.warn(
-        `org=${organizationId} check="${check.label}" orphans=${orphansFound}`,
+        `check="${check.label}" orphans=${orphansFound}`,
       );
     }
 
@@ -102,14 +100,12 @@ export class RunOrphanAuditHandler {
   }
 
   private async writeOrphanLog(
-    organizationId: string,
     check: OrphanCheck,
     childId: string,
     missingParentId: string,
   ): Promise<void> {
     await this.prisma.$allTenants.activityLog.create({
       data: {
-
         action: ActivityAction.SYSTEM,
         entity: 'orphan_audit',
         entityId: childId,

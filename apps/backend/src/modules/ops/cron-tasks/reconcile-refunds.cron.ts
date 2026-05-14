@@ -4,6 +4,7 @@ import { PrismaService } from '../../../infrastructure/database';
 import { SUPER_ADMIN_CONTEXT_CLS_KEY } from '../../../common/tenant/tenant.constants';
 import { MoyasarApiClient } from '../../finance/moyasar-api/moyasar-api.client';
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
+import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
 
 /**
  * Reconciles RefundRequest rows that are stuck in PROCESSING.
@@ -53,7 +54,6 @@ export class ReconcileRefundsCron {
         },
         select: {
           id: true,
-          organizationId: true,
           paymentId: true,
           invoiceId: true,
           gatewayRef: true,
@@ -68,7 +68,7 @@ export class ReconcileRefundsCron {
         // gatewayRef is guaranteed non-null by the query filter above
         const gatewayRef = row.gatewayRef as string;
         try {
-          await this.processRow(row.id, row.organizationId, row.paymentId, row.invoiceId, gatewayRef);
+          await this.processRow(row.id, DEFAULT_ORGANIZATION_ID, row.paymentId, row.invoiceId, gatewayRef);
         } catch (err) {
           this.logger.error(
             `reconcile-refunds: failed to process RefundRequest ${row.id}`,

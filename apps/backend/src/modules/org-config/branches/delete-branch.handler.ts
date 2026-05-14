@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type DeleteBranchCommand = { branchId: string };
 
@@ -13,9 +12,8 @@ export class DeleteBranchHandler {
   ) {}
 
   async execute(dto: DeleteBranchCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const branch = await this.prisma.branch.findFirst({
-      where: { id: dto.branchId, organizationId },
+      where: { id: dto.branchId },
     });
     if (!branch) throw new NotFoundException('Branch not found');
 

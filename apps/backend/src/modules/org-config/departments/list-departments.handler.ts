@@ -3,7 +3,6 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { TenantContextService } from '../../../common/tenant';
 import { toListResponse } from '../../../common/dto';
 import { ListDepartmentsDto } from './list-departments.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type ListDepartmentsQuery = ListDepartmentsDto;
 
@@ -16,13 +15,11 @@ export class ListDepartmentsHandler {
   ) {}
 
   async execute(dto: ListDepartmentsQuery) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const page = dto.page ?? 1;
     const limit = dto.limit ?? 20;
     const skip = (page - 1) * limit;
 
     const where = {
-      organizationId,
       ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       ...(dto.search && {
         OR: [

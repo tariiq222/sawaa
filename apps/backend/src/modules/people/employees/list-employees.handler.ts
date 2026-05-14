@@ -5,7 +5,6 @@ import { TenantContextService } from '../../../common/tenant/tenant-context.serv
 import { toListResponse } from '../../../common/dto';
 import { ListEmployeesDto, type EmployeeSortField } from './list-employees.dto';
 import { mapEmployeeRow } from './employee-row.mapper';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type ListEmployeesQuery = ListEmployeesDto & {
   page: number;
@@ -34,10 +33,7 @@ export class ListEmployeesHandler {
   ) {}
 
   async execute(query: ListEmployeesQuery) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
-
     const where = {
-      organizationId,
       isActive: query.isActive,
       gender: query.gender,
       employmentType: query.employmentType,
@@ -80,15 +76,15 @@ export class ListEmployeesHandler {
           }),
           this.prisma.booking.groupBy({
             by: ['employeeId'],
-            where: { employeeId: { in: ids }, organizationId },
+            where: { employeeId: { in: ids } },
             _count: { _all: true },
           }),
         ])
       : [[], []];
     const ratingsByEmployee = new Map(
-      ratings.map((r) => [r.employeeId, { avg: r._avg.score, count: r._count._all }]),
+      ratings.map((r) => [r.employeeId, { avg: r._avg?.score ?? null, count: r._count?._all ?? 0 }]),
     );
-    const bookingsByEmployee = new Map(bookings.map((b) => [b.employeeId, b._count._all]));
+    const bookingsByEmployee = new Map(bookings.map((b) => [b.employeeId, b._count?._all ?? 0]));
 
     return toListResponse(
       items.map((e) => mapEmployeeRow(e, ratingsByEmployee.get(e.id), bookingsByEmployee.get(e.id))),

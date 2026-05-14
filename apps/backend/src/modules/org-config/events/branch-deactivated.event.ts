@@ -2,7 +2,6 @@ import { BaseEvent } from '../../../common/events';
 
 export interface BranchDeactivatedPayload {
   branchId: string;
-  organizationId: string;
 }
 
 export class BranchDeactivatedEvent extends BaseEvent<BranchDeactivatedPayload> {

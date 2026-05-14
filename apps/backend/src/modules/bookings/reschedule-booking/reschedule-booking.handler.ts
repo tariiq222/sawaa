@@ -14,7 +14,6 @@ function mapDbConflict(err: unknown): never {
 }
 import { PrismaService } from '../../../infrastructure/database';
 import { RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { RescheduleBookingDto } from './reschedule-booking.dto';
 import { fetchBookingOrFail } from '../booking-lifecycle.helper';
@@ -33,13 +32,11 @@ export class RescheduleBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTx: RlsTransactionService,
-    private readonly tenant: TenantContextService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly zoomMeetingService: ZoomMeetingService,
   ) {}
 
   async execute(cmd: RescheduleBookingCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.PENDING, BookingStatus.CONFIRMED], 'rescheduled');
     if (cmd.clientId && booking.clientId !== cmd.clientId) {
       throw new ForbiddenException('Not your booking');
@@ -70,7 +67,6 @@ export class RescheduleBookingHandler {
     const [updated] = await this.rlsTx.withTransaction(async (tx) => {
         const conflict = await tx.booking.findFirst({
           where: {
-            organizationId,
             employeeId: booking.employeeId,
             id: { not: cmd.bookingId },
             status: { in: ['PENDING', 'CONFIRMED'] },
@@ -103,7 +99,7 @@ export class RescheduleBookingHandler {
     if (booking.zoomMeetingId) {
       // Best effort update
       this.zoomMeetingService
-        .updateMeeting(organizationId, booking.zoomMeetingId, {
+        .updateMeeting(DEFAULT_ORGANIZATION_ID, booking.zoomMeetingId, {
           topic: `Booking ${booking.id}`,
           startTime: newScheduledAt.toISOString(),
           durationMins,

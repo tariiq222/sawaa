@@ -3,7 +3,6 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { createHash } from 'crypto';
-import { TenantContextService } from '../../../common/tenant';
 import { PrismaService } from '../../../infrastructure/database';
 import { SmsProviderFactory } from '../../../infrastructure/sms/sms-provider.factory';
 import { SmsProviderNotConfiguredError } from '../../../infrastructure/sms/sms-provider.interface';
@@ -18,7 +17,6 @@ export class SendSmsHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly factory: SmsProviderFactory,
   ) {}
 

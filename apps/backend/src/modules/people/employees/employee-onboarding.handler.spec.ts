@@ -117,7 +117,7 @@ describe('EmployeeOnboardingHandler', () => {
       expect(rlsTx.withTransaction).toHaveBeenCalled();
       expect(prisma.employeeBranch.deleteMany).toHaveBeenCalledWith({ where: { employeeId: 'emp-1' } });
       expect(prisma.employeeBranch.createMany).toHaveBeenCalledWith({
-        data: [{ employeeId: 'emp-1', organizationId: 'org-test', branchId: 'br-1' }],
+        data: [{ employeeId: 'emp-1', branchId: 'br-1' }],
       });
     });
   });

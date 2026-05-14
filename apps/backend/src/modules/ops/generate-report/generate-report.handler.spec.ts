@@ -2,9 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { ReportType, ReportFormat } from '@prisma/client';
 import { GenerateReportHandler } from './generate-report.handler';
 
-const buildTenant = (organizationId = 'org-A') => ({
-  requireOrganizationIdOrDefault: jest.fn().mockReturnValue(organizationId),
-});
+
 
 const mockReport = { id: 'report-1', type: ReportType.REVENUE, status: 'PENDING' as const };
 
@@ -33,7 +31,7 @@ jest.mock('./excel-export.builder', () => ({
 describe('GenerateReportHandler', () => {
   it('throws BadRequestException when from >= to', async () => {
     const prisma = buildPrisma();
-    const handler = new GenerateReportHandler(prisma as never, buildTenant() as never);
+    const handler = new GenerateReportHandler(prisma as never);
 
     await expect(
       handler.execute({
@@ -46,7 +44,7 @@ describe('GenerateReportHandler', () => {
 
   it('creates a report record with PENDING status initially', async () => {
     const prisma = buildPrisma();
-    const handler = new GenerateReportHandler(prisma as never, buildTenant() as never);
+    const handler = new GenerateReportHandler(prisma as never);
 
     await handler.execute({
       type: ReportType.REVENUE,
@@ -61,7 +59,7 @@ describe('GenerateReportHandler', () => {
 
   it('generates a REVENUE report successfully', async () => {
     const prisma = buildPrisma();
-    const handler = new GenerateReportHandler(prisma as never, buildTenant() as never);
+    const handler = new GenerateReportHandler(prisma as never);
 
     const result = await handler.execute({
       type: ReportType.REVENUE,
@@ -75,7 +73,7 @@ describe('GenerateReportHandler', () => {
 
   it('generates an ACTIVITY report successfully', async () => {
     const prisma = buildPrisma();
-    const handler = new GenerateReportHandler(prisma as never, buildTenant() as never);
+    const handler = new GenerateReportHandler(prisma as never);
 
     const result = await handler.execute({
       type: ReportType.ACTIVITY,
@@ -88,7 +86,7 @@ describe('GenerateReportHandler', () => {
 
   it('defaults format to JSON when not specified', async () => {
     const prisma = buildPrisma();
-    const handler = new GenerateReportHandler(prisma as never, buildTenant() as never);
+    const handler = new GenerateReportHandler(prisma as never);
 
     await handler.execute({
       type: ReportType.REVENUE,
@@ -107,7 +105,7 @@ describe('GenerateReportHandler', () => {
       { status: 'COMPLETED', _count: { status: 10 } },
       { status: 'CANCELLED', _count: { status: 2 } },
     ]);
-    const handler = new GenerateReportHandler(prisma as never, buildTenant() as never);
+    const handler = new GenerateReportHandler(prisma as never);
 
     const result = await handler.execute({
       type: ReportType.BOOKINGS,
@@ -124,7 +122,7 @@ describe('GenerateReportHandler', () => {
     prisma.booking.groupBy = jest.fn().mockResolvedValue([
       { employeeId: 'emp-1', status: 'COMPLETED', _count: { employeeId: 5 } },
     ]);
-    const handler = new GenerateReportHandler(prisma as never, buildTenant() as never);
+    const handler = new GenerateReportHandler(prisma as never);
 
     const result = await handler.execute({
       type: ReportType.EMPLOYEES,

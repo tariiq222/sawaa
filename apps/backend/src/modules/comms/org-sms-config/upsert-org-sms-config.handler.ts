@@ -4,7 +4,6 @@
 
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { randomBytes } from 'crypto';
-import { TenantContextService } from '../../../common/tenant';
 import { PrismaService } from '../../../infrastructure/database';
 import { SmsCredentialsService } from '../../../infrastructure/sms/sms-credentials.service';
 import type { UpsertOrgSmsConfigDto } from './upsert-org-sms-config.dto';
@@ -17,16 +16,14 @@ export type UpsertOrgSmsConfigCommand = UpsertOrgSmsConfigDto;
 export class UpsertOrgSmsConfigHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly credentials: SmsCredentialsService,
   ) {}
 
   async execute(cmd: UpsertOrgSmsConfigCommand): Promise<OrgSmsConfigView> {
+    // organizationId kept as AES-GCM AAD for credential encryption/decryption
     const organizationId = DEFAULT_ORGANIZATION_ID;
 
-    const existing = await this.prisma.organizationSmsConfig.findFirst({
-      where: { organizationId },
-    });
+    const existing = await this.prisma.organizationSmsConfig.findFirst();
 
     let credentialsCiphertext: string | null | undefined;
     if (cmd.provider === 'NONE') {
@@ -63,25 +60,30 @@ export class UpsertOrgSmsConfigHandler {
         : randomBytes(32).toString('hex')
       : existing?.webhookSecret ?? null;
 
-    const row = await this.prisma.organizationSmsConfig.upsert({
-      where: { organizationId },
-      create: {
-        provider: cmd.provider,
-        senderId: cmd.senderId ?? null,
-        credentialsCiphertext: credentialsCiphertext ?? null,
-        webhookSecret,
-      },
-      update: {
-        provider: cmd.provider,
-        senderId: cmd.senderId ?? null,
-        credentialsCiphertext: credentialsCiphertext ?? null,
-        webhookSecret,
-      },
-    });
+    let row;
+    if (existing) {
+      row = await this.prisma.organizationSmsConfig.update({
+        where: { id: existing.id },
+        data: {
+          provider: cmd.provider,
+          senderId: cmd.senderId ?? null,
+          credentialsCiphertext: credentialsCiphertext ?? null,
+          webhookSecret,
+        },
+      });
+    } else {
+      row = await this.prisma.organizationSmsConfig.create({
+        data: {
+          provider: cmd.provider,
+          senderId: cmd.senderId ?? null,
+          credentialsCiphertext: credentialsCiphertext ?? null,
+          webhookSecret,
+        },
+      });
+    }
 
     return {
       id: row.id,
-      organizationId: row.organizationId,
       provider: row.provider,
       senderId: row.senderId,
       credentialsConfigured: !!row.credentialsCiphertext,

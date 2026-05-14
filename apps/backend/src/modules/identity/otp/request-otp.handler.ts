@@ -65,7 +65,6 @@ export class RequestOtpHandler {
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
       const recentCount = await this.prisma.otpCode.count({
         where: {
-          organizationId: orgId,
           identifier: dto.identifier,
           purpose: dto.purpose,
           createdAt: { gt: oneHourAgo },
@@ -86,7 +85,6 @@ export class RequestOtpHandler {
         // bypassRls: OTP codes have nullable organizationId (cross-org) and run in SYSTEM_CONTEXT
         await tx.otpCode.updateMany({
           where: {
-            organizationId: orgId,
             identifier: dto.identifier,
             purpose: dto.purpose,
             consumedAt: null,

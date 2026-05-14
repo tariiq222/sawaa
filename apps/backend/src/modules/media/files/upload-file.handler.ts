@@ -5,12 +5,11 @@ import { extname } from 'node:path';
 import { File, FileVisibility } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
-import { TenantContextService } from '../../../common/tenant';
 import { EventBusService } from '../../../infrastructure/events';
 import { FileUploadedEvent } from '../events/file-uploaded.event';
 import { UploadFileDto } from './upload-file.dto';
 import { validateMagicBytes } from '../../../common/security/magic-byte-validator';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
 
 export const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
@@ -42,7 +41,6 @@ export class UploadFileHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: MinioService,
-    private readonly tenant: TenantContextService,
     private readonly eventBus: EventBusService,
     config: ConfigService,
   ) {

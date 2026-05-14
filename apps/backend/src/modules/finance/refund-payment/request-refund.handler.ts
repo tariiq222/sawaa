@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant/tenant-context.service';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export interface RequestRefundCommand {
   invoiceId: string;
@@ -29,12 +28,10 @@ export class RequestRefundHandler {
   ) {}
 
   async execute(cmd: RequestRefundCommand): Promise<RefundRequestResult> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const invoice = await this.prisma.invoice.findFirst({
       where: {
         id: cmd.invoiceId,
         clientId: cmd.clientId,
-        organizationId,
       },
       include: {
         payments: {
@@ -63,7 +60,6 @@ export class RequestRefundHandler {
     const existingRequest = await this.prisma.refundRequest.findFirst({
       where: {
         invoiceId: cmd.invoiceId,
-        organizationId,
         status: { in: ['PENDING_REVIEW', 'APPROVED', 'PROCESSING', 'COMPLETED'] },
       },
     });

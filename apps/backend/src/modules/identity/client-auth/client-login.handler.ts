@@ -4,7 +4,6 @@ import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { PasswordService } from '../shared/password.service';
 import { ClientTokenService } from '../shared/client-token.service';
 import { ClientLoginDto } from './client-login.dto';
-import { TenantContextService } from '../../../common/tenant';
 import { maskEmail } from '../../../common/helpers/mask-pii.helper';
 import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
@@ -22,14 +21,13 @@ export class ClientLoginHandler {
     private readonly redis: RedisService,
     private readonly passwords: PasswordService,
     private readonly clientTokens: ClientTokenService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(dto: ClientLoginDto, ip = 'unknown') {
     const organizationId = DEFAULT_ORGANIZATION_ID;
 
     const client = await this.prisma.client.findFirst({
-      where: { organizationId, email: dto.email, deletedAt: null },
+      where: { email: dto.email, deletedAt: null },
     });
 
     if (!client || !client.passwordHash) {

@@ -51,12 +51,6 @@ const cronHandlers = [
   AuthenticaBalanceCheckCron,
 ];
 
-// Note: UsageAggregatorService, SubscriptionStateMachine and
-// SubscriptionCacheService are *exported* from BillingModule. Re-declaring
-// them here would create separate instances — the in-memory UsageAggregator
-// Map would diverge between the request-time interceptor and the cron flush,
-// silently dropping every increment. Import BillingModule instead.
-//
 // FinanceModule is imported to make MoyasarApiClient available to
 // ReconcileRefundsCron. MoyasarApiClient is exported by FinanceModule.
 @Module({

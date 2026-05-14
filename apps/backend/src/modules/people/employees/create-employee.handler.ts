@@ -1,11 +1,10 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { EventBusService } from '../../../infrastructure/events';
 
 import { EmployeeCreatedEvent } from '../events/employee-created.event';
 import { CreateEmployeeDto } from './create-employee.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
+import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
 
 export type CreateEmployeeCommand = CreateEmployeeDto;
 
@@ -13,14 +12,11 @@ export type CreateEmployeeCommand = CreateEmployeeDto;
 export class CreateEmployeeHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly eventBus: EventBusService,
     private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(dto: CreateEmployeeCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
-
     if (dto.email) {
       const existing = await this.prisma.employee.findFirst({
         where: { email: dto.email },
@@ -40,10 +36,10 @@ export class CreateEmployeeHandler {
           employmentType: dto.employmentType,
           userId: dto.userId,
           branches: dto.branchIds?.length
-            ? { create: dto.branchIds.map((branchId) => ({ branchId, organizationId })) }
+            ? { create: dto.branchIds.map((branchId) => ({ branchId })) }
             : undefined,
           services: dto.serviceIds?.length
-            ? { create: dto.serviceIds.map((serviceId) => ({ serviceId, organizationId })) }
+            ? { create: dto.serviceIds.map((serviceId) => ({ serviceId })) }
             : undefined,
         },
         include: { branches: true, services: true },
@@ -52,7 +48,7 @@ export class CreateEmployeeHandler {
       return created;
     });
 
-    const event = new EmployeeCreatedEvent({ employeeId: employee.id, organizationId });
+    const event = new EmployeeCreatedEvent({ employeeId: employee.id, organizationId: DEFAULT_ORGANIZATION_ID });
     this.eventBus.publish(event.eventName, event.toEnvelope()).catch(() => {});
 
     return employee;

@@ -1,4 +1,5 @@
 import { ReconcileRefundsCron } from './reconcile-refunds.cron';
+import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant/tenant.constants';
 
 const NOW = new Date('2026-05-10T10:00:00Z');
 
@@ -9,7 +10,6 @@ const buildCls = () => ({
 
 type StuckRow = {
   id: string;
-  organizationId: string;
   paymentId: string;
   invoiceId: string;
   gatewayRef: string;
@@ -66,7 +66,6 @@ describe('ReconcileRefundsCron', () => {
   it('updates RefundRequest → COMPLETED + Payment → REFUNDED + Invoice → REFUNDED when Moyasar status is "paid"', async () => {
     const row: StuckRow = {
       id: 'rr_1',
-      organizationId: 'org_1',
       paymentId: 'pay_1',
       invoiceId: 'inv_1',
       gatewayRef: 'moyasar_ref_1',
@@ -78,7 +77,7 @@ describe('ReconcileRefundsCron', () => {
     const cron = new ReconcileRefundsCron(prisma as never, cls as never, moyasar as never);
     await cron.execute();
 
-    expect(moyasar.getRefundStatus).toHaveBeenCalledWith('org_1', 'moyasar_ref_1');
+    expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORGANIZATION_ID, 'moyasar_ref_1');
 
     const tx = prisma.$allTenants._tx;
     expect(tx.refundRequest.update).toHaveBeenCalledWith({
@@ -98,7 +97,6 @@ describe('ReconcileRefundsCron', () => {
   it('updates RefundRequest → FAILED when Moyasar status is "failed"', async () => {
     const row: StuckRow = {
       id: 'rr_2',
-      organizationId: 'org_2',
       paymentId: 'pay_2',
       invoiceId: 'inv_2',
       gatewayRef: 'moyasar_ref_2',
@@ -110,7 +108,7 @@ describe('ReconcileRefundsCron', () => {
     const cron = new ReconcileRefundsCron(prisma as never, cls as never, moyasar as never);
     await cron.execute();
 
-    expect(moyasar.getRefundStatus).toHaveBeenCalledWith('org_2', 'moyasar_ref_2');
+    expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORGANIZATION_ID, 'moyasar_ref_2');
     expect(prisma.$allTenants.refundRequest.update).toHaveBeenCalledWith({
       where: { id: 'rr_2' },
       data: { status: 'FAILED' },
@@ -122,7 +120,6 @@ describe('ReconcileRefundsCron', () => {
   it('leaves RefundRequest in PROCESSING when Moyasar status is "pending" (Moyasar still processing)', async () => {
     const row: StuckRow = {
       id: 'rr_3',
-      organizationId: 'org_3',
       paymentId: 'pay_3',
       invoiceId: 'inv_3',
       gatewayRef: 'moyasar_ref_3',
@@ -134,7 +131,7 @@ describe('ReconcileRefundsCron', () => {
     const cron = new ReconcileRefundsCron(prisma as never, cls as never, moyasar as never);
     await cron.execute();
 
-    expect(moyasar.getRefundStatus).toHaveBeenCalledWith('org_3', 'moyasar_ref_3');
+    expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORGANIZATION_ID, 'moyasar_ref_3');
     // No DB mutation — row stays as-is
     expect(prisma.$allTenants.refundRequest.update).not.toHaveBeenCalled();
     expect(prisma.$allTenants._tx.refundRequest.update).not.toHaveBeenCalled();
@@ -155,7 +152,6 @@ describe('ReconcileRefundsCron', () => {
      */
     const row: StuckRow = {
       id: 'rr_idem',
-      organizationId: 'org_idem',
       paymentId: 'pay_idem',
       invoiceId: 'inv_idem',
       gatewayRef: 'moyasar_ref_idem',
@@ -176,8 +172,8 @@ describe('ReconcileRefundsCron', () => {
     // getRefundStatus is called once per execute tick — uses gatewayRef from DB,
     // never re-issues a new refund to Moyasar (no createRefund call).
     expect(moyasar.getRefundStatus).toHaveBeenCalledTimes(2);
-    expect(moyasar.getRefundStatus).toHaveBeenNthCalledWith(1, 'org_idem', 'moyasar_ref_idem');
-    expect(moyasar.getRefundStatus).toHaveBeenNthCalledWith(2, 'org_idem', 'moyasar_ref_idem');
+    expect(moyasar.getRefundStatus).toHaveBeenNthCalledWith(1, DEFAULT_ORGANIZATION_ID, 'moyasar_ref_idem');
+    expect(moyasar.getRefundStatus).toHaveBeenNthCalledWith(2, DEFAULT_ORGANIZATION_ID, 'moyasar_ref_idem');
     // No createRefund — cron only reads Moyasar status, never re-issues
     expect((moyasar as Record<string, unknown>)['createRefund']).toBeUndefined();
   });
@@ -196,8 +192,8 @@ describe('ReconcileRefundsCron', () => {
 
   it('continues processing remaining rows if one row throws', async () => {
     const rows: StuckRow[] = [
-      { id: 'rr_err', organizationId: 'org_err', paymentId: 'pay_err', invoiceId: 'inv_err', gatewayRef: 'ref_err' },
-      { id: 'rr_ok', organizationId: 'org_ok', paymentId: 'pay_ok', invoiceId: 'inv_ok', gatewayRef: 'ref_ok' },
+      { id: 'rr_err', paymentId: 'pay_err', invoiceId: 'inv_err', gatewayRef: 'ref_err' },
+      { id: 'rr_ok', paymentId: 'pay_ok', invoiceId: 'inv_ok', gatewayRef: 'ref_ok' },
     ];
     const prisma = buildPrisma(rows);
     const moyasar = {
@@ -235,7 +231,6 @@ describe('ReconcileRefundsCron', () => {
       },
       select: {
         id: true,
-        organizationId: true,
         paymentId: true,
         invoiceId: true,
         gatewayRef: true,

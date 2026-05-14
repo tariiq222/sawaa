@@ -6,8 +6,6 @@ import {
 } from '@nestjs/common';
 import { BookingStatus, GroupSessionStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 interface BookGroupSessionCommand {
   groupSessionId: string;
@@ -25,11 +23,9 @@ export class BookGroupSessionHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTx: RlsTransactionService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: BookGroupSessionCommand): Promise<BookGroupSessionResult> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const session = await this.prisma.groupSession.findFirst({
       where: {
         id: cmd.groupSessionId,
@@ -75,9 +71,9 @@ export class BookGroupSessionHandler {
     const spotsLeft = session.maxCapacity - session.enrolledCount;
 
     if (spotsLeft > 0) {
-      return this.createBooking(cmd.clientId, session, organizationId);
+      return this.createBooking(cmd.clientId, session);
     } else if (session.waitlistEnabled) {
-      return this.addToWaitlist(cmd.clientId, session, organizationId);
+      return this.addToWaitlist(cmd.clientId, session);
     } else {
       throw new BadRequestException('Group session is full and waitlist is not enabled');
     }
@@ -86,12 +82,11 @@ export class BookGroupSessionHandler {
   private async createBooking(
     clientId: string,
     session: { id: string; price: unknown; currency: string; employeeId: string; serviceId: string; branchId: string; scheduledAt: Date },
-    organizationId: string,
   ): Promise<BookGroupSessionResult> {
     const price = Number(session.price);
 
     const lastBooking = await this.prisma.booking.findFirst({
-      where: { organizationId },
+      where: {},
       orderBy: { bookingNumber: 'desc' },
       select: { bookingNumber: true },
     });
@@ -138,7 +133,6 @@ export class BookGroupSessionHandler {
   private async addToWaitlist(
     clientId: string,
     session: { id: string },
-    _organizationId: string,
   ): Promise<BookGroupSessionResult> {
     const lastEntry = await this.prisma.groupSessionWaitlist.findFirst({
       where: { groupSessionId: session.id },

@@ -56,7 +56,7 @@ export class InitGuestPaymentHandler {
       if (!existingPayment.gatewayRef) {
         await this.rlsTx.withTransaction(async (tx) => {
           await tx.payment.delete({ where: { id: existingPayment.id } });
-        }, { organizationId });
+        });
       } else {
         return {
           paymentId: existingPayment.id,
@@ -79,7 +79,7 @@ export class InitGuestPaymentHandler {
         },
         select: { id: true },
       });
-    }, { organizationId });
+    });
 
     let moyasarPayment: Awaited<ReturnType<MoyasarApiClient['createPayment']>>;
     try {
@@ -97,7 +97,7 @@ export class InitGuestPaymentHandler {
     } catch (moyasarError) {
       await this.rlsTx.withTransaction(async (tx) => {
         await tx.payment.delete({ where: { id: payment.id } });
-      }, { organizationId });
+      });
       throw moyasarError;
     }
 
@@ -109,7 +109,7 @@ export class InitGuestPaymentHandler {
         },
         select: { id: true },
       });
-    }, { organizationId });
+    });
 
     return {
       paymentId: updatedPayment.id,

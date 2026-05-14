@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type GetBusinessHoursQuery = { branchId: string };
 
@@ -13,14 +12,13 @@ export class GetBusinessHoursHandler {
   ) {}
 
   async execute(dto: GetBusinessHoursQuery) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const branch = await this.prisma.branch.findFirst({
-      where: { id: dto.branchId, organizationId },
+      where: { id: dto.branchId },
     });
     if (!branch) throw new NotFoundException('Branch not found');
 
     return this.prisma.businessHour.findMany({
-      where: { branchId: dto.branchId, organizationId },
+      where: { branchId: dto.branchId },
       orderBy: { dayOfWeek: 'asc' },
     });
   }

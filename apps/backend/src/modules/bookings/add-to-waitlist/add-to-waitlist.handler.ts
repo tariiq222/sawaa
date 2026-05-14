@@ -13,11 +13,9 @@ export type AddToWaitlistCommand = Omit<AddToWaitlistDto, 'preferredDate'> & {
 export class AddToWaitlistHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: AddToWaitlistCommand) {
-    const _organizationId = DEFAULT_ORGANIZATION_ID;
     const existing = await this.prisma.waitlistEntry.findFirst({
       where: {
         clientId: cmd.clientId,

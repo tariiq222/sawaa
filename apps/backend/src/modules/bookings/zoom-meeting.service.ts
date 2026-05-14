@@ -66,7 +66,7 @@ export class ZoomMeetingService {
 
     try {
       const settings = await this.prisma.organizationSettings.findFirst({
-        where: { organizationId },
+        where: {},
       });
       const timezone = settings?.timezone || 'Asia/Riyadh';
 

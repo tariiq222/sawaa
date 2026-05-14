@@ -4,10 +4,8 @@ const DEFAULT_INVOICE_SELLER_NAME = 'Sawaa';
 
 export async function resolveInvoiceSellerName(
   prisma: PrismaService,
-  organizationId: string,
 ): Promise<string> {
-  const branding = await prisma.brandingConfig.findUnique({
-    where: { organizationId },
+  const branding = await prisma.brandingConfig.findFirst({
     select: { organizationNameEn: true, organizationNameAr: true },
   });
 

@@ -1,11 +1,7 @@
 import { GetPublicBrandingHandler } from './get-public-branding.handler';
-import { TenantContextService } from '../../../../common/tenant';
-
-const DEFAULT_ORG = '00000000-0000-0000-0000-000000000001';
 
 const mockRow = {
   id: 'some-uuid',
-  organizationId: DEFAULT_ORG,
   organizationNameAr: 'عيادتي',
   organizationNameEn: 'My Clinic',
   productTagline: null,
@@ -28,19 +24,14 @@ const mockRow = {
 
 const buildPrisma = (row: typeof mockRow | null = mockRow) => ({
   brandingConfig: {
-    findUnique: jest.fn().mockResolvedValue(row),
+    findFirst: jest.fn().mockResolvedValue(row),
   },
 });
-
-const buildTenant = (organizationId = DEFAULT_ORG) =>
-  ({
-    requireOrganizationIdOrDefault: jest.fn().mockReturnValue(organizationId),
-  }) as unknown as TenantContextService;
 
 describe('GetPublicBrandingHandler', () => {
   it('maps the Prisma row to PublicBranding shape', async () => {
     const prisma = buildPrisma();
-    const handler = new GetPublicBrandingHandler(prisma as never, buildTenant());
+    const handler = new GetPublicBrandingHandler(prisma as never);
 
     const result = await handler.execute();
 
@@ -65,20 +56,20 @@ describe('GetPublicBrandingHandler', () => {
     expect(result).not.toHaveProperty('id');
   });
 
-  it('reads via findUnique scoped by organizationId (no write)', async () => {
+  it('reads via findFirst (no write)', async () => {
     const prisma = buildPrisma();
-    const handler = new GetPublicBrandingHandler(prisma as never, buildTenant());
+    const handler = new GetPublicBrandingHandler(prisma as never);
 
     await handler.execute();
 
-    expect(prisma.brandingConfig.findUnique).toHaveBeenCalledWith({
-      where: { organizationId: DEFAULT_ORG },
+    expect(prisma.brandingConfig.findFirst).toHaveBeenCalledWith({
+      orderBy: { createdAt: 'desc' },
     });
   });
 
   it('returns safe defaults when no row exists (does not create one)', async () => {
     const prisma = buildPrisma(null);
-    const handler = new GetPublicBrandingHandler(prisma as never, buildTenant());
+    const handler = new GetPublicBrandingHandler(prisma as never);
 
     const result = await handler.execute();
 

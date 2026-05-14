@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export interface GetMoyasarConfigResult {
   publishableKey: string;
@@ -21,10 +20,7 @@ export class GetMoyasarConfigHandler {
   ) {}
 
   async execute(): Promise<GetMoyasarConfigResult | null> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
-    const cfg = await this.prisma.organizationPaymentConfig.findUnique({
-      where: { organizationId },
-    });
+    const cfg = await this.prisma.organizationPaymentConfig.findFirst();
     if (!cfg) return null;
 
     // Mask: never return the encrypted secret over the wire. The publishable

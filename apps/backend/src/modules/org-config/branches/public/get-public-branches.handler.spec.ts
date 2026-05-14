@@ -41,7 +41,7 @@ describe('GetPublicBranchesHandler', () => {
     expect(result[0]).toEqual(activeBranch);
     expect(prisma.branch.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ isActive: true, organizationId: DEFAULT_ORG }),
+        where: expect.objectContaining({ isActive: true }),
         select: expect.objectContaining({ id: true, nameAr: true }),
       }),
     );

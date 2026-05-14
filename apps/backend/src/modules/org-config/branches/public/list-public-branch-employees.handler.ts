@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
 import { TenantContextService } from '../../../../common/tenant';
-import { DEFAULT_ORGANIZATION_ID } from "../../../../common/tenant/tenant.constants";
 
 export interface PublicBranchEmployee {
   id: string;
@@ -24,9 +23,8 @@ export class ListPublicBranchEmployeesHandler {
   ) {}
 
   async execute(branchId: string): Promise<PublicBranchEmployee[]> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const branch = await this.prisma.branch.findFirst({
-      where: { id: branchId, isActive: true, organizationId },
+      where: { id: branchId, isActive: true },
       select: { id: true },
     });
     if (!branch) throw new NotFoundException('Branch not found');

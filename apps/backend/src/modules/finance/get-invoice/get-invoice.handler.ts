@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant/tenant-context.service';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export interface GetInvoiceQuery {
   invoiceId: string;
@@ -16,9 +15,8 @@ export class GetInvoiceHandler {
   ) {}
 
   async execute(query: GetInvoiceQuery) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const invoice = await this.prisma.invoice.findFirst({
-      where: { id: query.invoiceId, organizationId },
+      where: { id: query.invoiceId },
       include: {
         payments: { orderBy: { createdAt: 'desc' } },
       },

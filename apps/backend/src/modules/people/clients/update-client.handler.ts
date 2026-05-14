@@ -3,7 +3,6 @@ import { PrismaService } from '../../../infrastructure/database';
 import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 import { UpdateClientDto } from './update-client.dto';
 import { serializeClient } from './client.serializer';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type UpdateClientCommand = UpdateClientDto & { clientId: string };
 
@@ -15,9 +14,8 @@ export class UpdateClientHandler {
   ) {}
 
   async execute(cmd: UpdateClientCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const client = await this.prisma.client.findFirst({
-      where: { id: cmd.clientId, organizationId, deletedAt: null },
+      where: { id: cmd.clientId, deletedAt: null },
     });
     if (!client) throw new NotFoundException('Client not found');
 
@@ -25,7 +23,6 @@ export class UpdateClientHandler {
       const duplicate = await this.prisma.client.findFirst({
         where: {
           phone: cmd.phone,
-          organizationId,
           deletedAt: null,
           NOT: { id: cmd.clientId },
         },

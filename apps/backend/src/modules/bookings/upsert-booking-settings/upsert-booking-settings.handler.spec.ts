@@ -18,7 +18,7 @@ describe('UpsertBookingSettingsHandler', () => {
       findFirst: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue({ ...dbSettings, branchId: 'branch-1', bufferMinutes: 15 }),
     };
-    const handler = new UpsertBookingSettingsHandler(prisma as never, buildTenant() as never);
+    const handler = new UpsertBookingSettingsHandler(prisma as never);
 
     const result = await handler.execute({ branchId: 'branch-1', bufferMinutes: 15 });
 
@@ -37,7 +37,7 @@ describe('UpsertBookingSettingsHandler', () => {
       findFirst: jest.fn().mockResolvedValue(dbSettings),
       update: jest.fn().mockResolvedValue({ ...dbSettings, bufferMinutes: 5 }),
     };
-    const handler = new UpsertBookingSettingsHandler(prisma as never, buildTenant() as never);
+    const handler = new UpsertBookingSettingsHandler(prisma as never);
 
     await handler.execute({ branchId: null, bufferMinutes: 5 });
 

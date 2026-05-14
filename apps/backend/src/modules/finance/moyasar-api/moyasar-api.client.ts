@@ -101,9 +101,7 @@ export class MoyasarApiClient {
       return cached.key;
     }
 
-    const cfg = await this.prisma.organizationPaymentConfig.findUnique({
-      where: { organizationId },
-    });
+    const cfg = await this.prisma.organizationPaymentConfig.findFirst();
     if (!cfg) {
       throw new BadRequestException(
         `Moyasar is not configured for organization ${organizationId}. ` +

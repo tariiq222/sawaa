@@ -6,7 +6,7 @@ import { buildPrisma, buildTenant } from '../testing/booking-test-helpers';
 describe('AddToWaitlistHandler', () => {
   it('adds client to waitlist', async () => {
     const prisma = buildPrisma();
-    const result = await new AddToWaitlistHandler(prisma as never, buildTenant() as never).execute({
+    const result = await new AddToWaitlistHandler(prisma as never).execute({
       clientId: 'client-1', employeeId: 'emp-1',
       serviceId: 'svc-1', branchId: 'branch-1',
     });
@@ -17,7 +17,7 @@ describe('AddToWaitlistHandler', () => {
     const prisma = buildPrisma();
     prisma.waitlistEntry.findFirst = jest.fn().mockResolvedValue({ id: 'wl-1' });
     await expect(
-      new AddToWaitlistHandler(prisma as never, buildTenant() as never).execute({
+      new AddToWaitlistHandler(prisma as never).execute({
         clientId: 'client-1', employeeId: 'emp-1',
         serviceId: 'svc-1', branchId: 'branch-1',
       }),
@@ -35,7 +35,7 @@ describe('AddToWaitlistHandler', () => {
     });
     prisma.waitlistEntry.create = jest.fn().mockRejectedValue(p2002);
     await expect(
-      new AddToWaitlistHandler(prisma as never, buildTenant() as never).execute({
+      new AddToWaitlistHandler(prisma as never).execute({
         clientId: 'client-1', employeeId: 'emp-1',
         serviceId: 'svc-1', branchId: 'branch-1',
       }),

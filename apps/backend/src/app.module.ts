@@ -24,8 +24,6 @@ import { OrgExperienceModule } from "./modules/org-experience/org-experience.mod
 import { FinanceModule } from "./modules/finance/finance.module";
 import { BookingsModule } from "./modules/bookings/bookings.module";
 import { ZoomModule } from "./modules/integrations/zoom/zoom.module";
-import { ZohoInfrastructureModule } from "./infrastructure/zoho/zoho-infrastructure.module";
-import { ZohoInvoiceModule } from "./modules/integrations/zoho-invoice/zoho-invoice.module";
 
 import { OpsModule } from "./modules/ops/ops.module";
 import { DashboardModule } from "./modules/dashboard/dashboard.module";
@@ -87,8 +85,6 @@ import { AppMetricsService } from "./infrastructure/telemetry/app-metrics.servic
     FinanceModule,
     BookingsModule,
     ZoomModule,
-    ZohoInfrastructureModule,
-    ZohoInvoiceModule,
 
     OpsModule,
     DashboardModule,

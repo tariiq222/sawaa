@@ -4,7 +4,6 @@ import { PrismaService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 import { CreateInvoiceDto } from './create-invoice.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 const DEFAULT_VAT_RATE = 0.15;
 
@@ -21,8 +20,6 @@ export class CreateInvoiceHandler {
   ) {}
 
   async execute(dto: CreateInvoiceCommand) {
-    const _organizationId = DEFAULT_ORGANIZATION_ID;
-
     const subtotal = dto.subtotal;
     const discountAmt = dto.discountAmt ?? 0;
     const vatRate = dto.vatRate ?? DEFAULT_VAT_RATE;
@@ -80,7 +77,6 @@ export class CreateInvoiceHandler {
       version: 1,
       occurredAt: new Date(),
       payload: {
-        organizationId: invoice.organizationId,
         invoiceId: invoice.id,
         bookingId: invoice.bookingId,
         clientId: invoice.clientId,

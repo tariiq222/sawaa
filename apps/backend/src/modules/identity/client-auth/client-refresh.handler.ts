@@ -2,24 +2,21 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../infrastructure/database';
 import { ClientTokenService } from '../shared/client-token.service';
-import { DEFAULT_ORGANIZATION_ID, TenantContextService } from '../../../common/tenant';
+import { DEFAULT_ORGANIZATION_ID } from '../../../common/tenant';
 
 @Injectable()
 export class ClientRefreshHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly clientTokens: ClientTokenService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(rawToken: string, clientId: string) {
     const selector = rawToken.slice(0, 8);
-    const organizationId = DEFAULT_ORGANIZATION_ID;
 
     const candidates = await this.prisma.clientRefreshToken.findMany({
       where: {
         clientId,
-        organizationId,
         tokenSelector: selector,
         revokedAt: null,
         expiresAt: { gt: new Date() },
@@ -46,7 +43,7 @@ export class ClientRefreshHandler {
     }
 
     const client = await this.prisma.client.findFirst({
-      where: { id: clientId, organizationId },
+      where: { id: clientId },
     });
     if (!client || !client.isActive || client.deletedAt) {
       throw new UnauthorizedException('Client not found or inactive');
@@ -54,7 +51,7 @@ export class ClientRefreshHandler {
 
     const tokens = await this.clientTokens.issueTokenPair(
       { id: clientId, email: client.email },
-      { organizationId: matched.organizationId ?? client.organizationId ?? DEFAULT_ORGANIZATION_ID },
+      { organizationId: DEFAULT_ORGANIZATION_ID },
     );
 
     return {

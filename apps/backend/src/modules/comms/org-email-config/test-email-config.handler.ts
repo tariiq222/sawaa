@@ -2,7 +2,6 @@
 // Updates lastTestAt / lastTestOk on the row. Returns bilingual errors.
 
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { TenantContextService } from '../../../common/tenant';
 import { PrismaService } from '../../../infrastructure/database';
 import { EmailProviderFactory } from '../../../infrastructure/email/email-provider.factory';
 import type { TestEmailConfigDto } from './test-email-config.dto';
@@ -20,16 +19,14 @@ export type TestEmailConfigResult = {
 export class TestEmailConfigHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly factory: EmailProviderFactory,
   ) {}
 
   async execute(cmd: TestEmailConfigCommand): Promise<TestEmailConfigResult> {
+    // organizationId kept as AES-GCM AAD for credential decryption
     const organizationId = DEFAULT_ORGANIZATION_ID;
 
-    const cfg = await this.prisma.organizationEmailConfig.findFirst({
-      where: { organizationId },
-    });
+    const cfg = await this.prisma.organizationEmailConfig.findFirst();
 
     if (!cfg || cfg.provider === 'NONE' || !cfg.credentialsCiphertext) {
       throw new BadRequestException({
@@ -38,7 +35,7 @@ export class TestEmailConfigHandler {
       });
     }
 
-    const adapter = await this.factory.forCurrentTenant(organizationId);
+    const adapter = await this.factory.forCurrentTenant(DEFAULT_ORGANIZATION_ID);
 
     try {
       const result = await adapter.sendMail({
@@ -58,14 +55,14 @@ export class TestEmailConfigHandler {
       });
 
       await this.prisma.organizationEmailConfig.update({
-        where: { organizationId },
+        where: { id: cfg.id },
         data: { lastTestAt: new Date(), lastTestOk: true },
       });
 
       return { ok: true, messageId: result.messageId };
     } catch (err) {
       await this.prisma.organizationEmailConfig.update({
-        where: { organizationId },
+        where: { id: cfg.id },
         data: { lastTestAt: new Date(), lastTestOk: false },
       });
 

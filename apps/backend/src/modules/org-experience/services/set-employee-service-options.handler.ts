@@ -1,8 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { SetEmployeeServiceOptionsDto } from './set-employee-service-options.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type SetEmployeeServiceOptionsCommand = SetEmployeeServiceOptionsDto & {
   employeeServiceId: string;
@@ -12,12 +10,10 @@ export type SetEmployeeServiceOptionsCommand = SetEmployeeServiceOptionsDto & {
 export class SetEmployeeServiceOptionsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(dto: SetEmployeeServiceOptionsCommand) {
-    const _organizationId = DEFAULT_ORGANIZATION_ID;
     const optionIds = dto.options.map((o) => o.durationOptionId);
     const validOptions = await this.prisma.serviceDurationOption.findMany({
       where: { id: { in: optionIds } },

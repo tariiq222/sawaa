@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant/tenant-context.service';
 import { BookingStatus, PaymentStatus, PaymentMethod } from '@prisma/client';
 import { todayRangeInTz } from '../../../common/helpers/date-tz.helper';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export interface DashboardStatsCommand {
   userId: string;
@@ -25,18 +23,15 @@ const PAYMENT_READ_ROLES = new Set(['OWNER', 'ADMIN', 'ACCOUNTANT']);
 export class GetDashboardStatsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: DashboardStatsCommand): Promise<DashboardStats> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
-
     const { start: today, end: tomorrow } = todayRangeInTz();
 
     let employeeFilter: { employeeId: string } | object = {};
     if (cmd.role === 'EMPLOYEE') {
       const emp = await this.prisma.employee.findFirst({
-        where: { organizationId, userId: cmd.userId },
+        where: { userId: cmd.userId },
         select: { id: true },
       });
       if (!emp) {
@@ -51,7 +46,7 @@ export class GetDashboardStatsHandler {
       employeeFilter = { employeeId: emp.id };
     }
 
-    const baseWhere = { organizationId, ...employeeFilter };
+    const baseWhere = { ...employeeFilter };
     const includePayments = PAYMENT_READ_ROLES.has(cmd.role ?? '');
 
     const [todayBookingsCount, confirmedCount, pendingCount, cancelRequestedCount] =
@@ -89,14 +84,14 @@ export class GetDashboardStatsHandler {
       const [pendingPaymentsCount, revenueResult] = await Promise.all([
         this.prisma.payment.count({
           where: {
-            invoice: { organizationId },
+            invoice: {},
             method: PaymentMethod.BANK_TRANSFER,
             status: PaymentStatus.PENDING_VERIFICATION,
           },
         }),
         this.prisma.payment.aggregate({
           where: {
-            invoice: { organizationId },
+            invoice: {},
             status: PaymentStatus.COMPLETED,
             processedAt: { gte: today, lt: tomorrow },
           },

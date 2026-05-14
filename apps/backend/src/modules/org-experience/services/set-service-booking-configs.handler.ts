@@ -1,9 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { SetServiceBookingConfigsDto } from './set-service-booking-configs.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type SetServiceBookingConfigsCommand = SetServiceBookingConfigsDto & {
   serviceId: string;
@@ -13,14 +11,12 @@ export type SetServiceBookingConfigsCommand = SetServiceBookingConfigsDto & {
 export class SetServiceBookingConfigsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
     private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(cmd: SetServiceBookingConfigsCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const service = await this.prisma.service.findFirst({
-      where: { id: cmd.serviceId, organizationId },
+      where: { id: cmd.serviceId },
     });
     if (!service) throw new NotFoundException('Service not found');
 

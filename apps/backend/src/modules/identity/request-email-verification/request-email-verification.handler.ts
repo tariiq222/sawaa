@@ -2,10 +2,8 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes, createHash } from 'crypto';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { SendEmailHandler } from '../../comms/send-email/send-email.handler';
 import { maskEmail } from '../../../common/helpers/mask-pii.helper';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 const TOKEN_TTL_MS = 30 * 60 * 1000;
 const EMAIL_TEMPLATE_SLUG = 'user_email_verification';
@@ -27,7 +25,6 @@ export class RequestEmailVerificationHandler {
     private readonly prisma: PrismaService,
     private readonly sendEmail: SendEmailHandler,
     private readonly config: ConfigService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: RequestEmailVerificationCommand): Promise<RequestEmailVerificationResult> {
@@ -49,10 +46,9 @@ export class RequestEmailVerificationHandler {
     const tokenSelector = rawToken.slice(0, 8);
     const tokenHash = createHash('sha256').update(rawToken).digest('hex');
     const expiresAt = new Date(Date.now() + TOKEN_TTL_MS);
-    const organizationId = cmd.organizationId ?? DEFAULT_ORGANIZATION_ID;
 
     await this.prisma.emailVerificationToken.deleteMany({
-      where: { userId: user.id, organizationId },
+      where: { userId: user.id },
     });
 
     await this.prisma.emailVerificationToken.create({

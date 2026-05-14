@@ -9,7 +9,6 @@ import { CreateGuestBookingHandler, CreateGuestBookingCommand } from './create-g
 import { PriceResolverService } from '../../org-experience/services/price-resolver.service';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 
 import { Prisma } from '@prisma/client';
 
@@ -55,16 +54,11 @@ describe('CreateGuestBookingHandler', () => {
     }),
   };
 
-  const mockTenant = {
-    requireOrganizationIdOrDefault: jest.fn().mockReturnValue('00000000-0000-0000-0000-000000000001'),
-  };
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CreateGuestBookingHandler,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: TenantContextService, useValue: mockTenant },
         { provide: PriceResolverService, useValue: mockPriceResolver },
         { provide: GetBookingSettingsHandler, useValue: mockSettingsHandler },
         {

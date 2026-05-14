@@ -19,7 +19,7 @@ export class GetBookingInvoiceHandler {
       throw new NotFoundException(`Invoice for booking ${bookingId} not found`);
     }
 
-    const sellerName = await resolveInvoiceSellerName(this.prisma, invoice.organizationId);
+    const sellerName = await resolveInvoiceSellerName(this.prisma);
 
     return {
       id: invoice.id,

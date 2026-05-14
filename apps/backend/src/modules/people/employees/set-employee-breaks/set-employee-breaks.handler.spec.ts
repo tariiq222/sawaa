@@ -77,14 +77,14 @@ describe('SetEmployeeBreaksHandler', () => {
     prisma.employeeAvailability.findMany.mockResolvedValue([SHIFT_MON]);
     prisma.employeeBreak.deleteMany.mockResolvedValue({ count: 2 });
     prisma.employeeBreak.createMany.mockResolvedValue({ count: 1 });
-    const created = [{ id: 'br-1', dayOfWeek: 1, startTime: '12:00', endTime: '13:00', organizationId: 'org-1', employeeId: 'emp-1' }];
+    const created = [{ id: 'br-1', dayOfWeek: 1, startTime: '12:00', endTime: '13:00', employeeId: 'emp-1' }];
     prisma.employeeBreak.findMany.mockResolvedValue(created);
 
     const result = await handler.execute(makeCmd());
 
     expect(prisma.employeeBreak.deleteMany).toHaveBeenCalledWith({ where: { employeeId: 'emp-1' } });
     expect(prisma.employeeBreak.createMany).toHaveBeenCalledWith({
-      data: [{ employeeId: 'emp-1', organizationId: 'org-1', dayOfWeek: 1, startTime: '12:00', endTime: '13:00' }],
+      data: [{ employeeId: 'emp-1', dayOfWeek: 1, startTime: '12:00', endTime: '13:00' }],
     });
     expect(result).toEqual({ breaks: created });
   });

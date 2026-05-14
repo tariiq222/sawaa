@@ -63,7 +63,6 @@ export class SetEmployeeBreaksHandler {
           await tx.employeeBreak.createMany({
             data: breaks.map((b) => ({
               employeeId,
-              organizationId: employee.organizationId,
               dayOfWeek: b.dayOfWeek,
               startTime: b.startTime,
               endTime: b.endTime,

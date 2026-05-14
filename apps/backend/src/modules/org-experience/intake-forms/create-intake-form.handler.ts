@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { TenantContextService } from '../../../common/tenant';
 import { CreateIntakeFormDto } from './create-intake-form.dto';
-import { DEFAULT_ORGANIZATION_ID } from "../../../common/tenant/tenant.constants";
 
 export type CreateIntakeFormCommand = CreateIntakeFormDto;
 
@@ -10,11 +8,9 @@ export type CreateIntakeFormCommand = CreateIntakeFormDto;
 export class CreateIntakeFormHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(dto: CreateIntakeFormCommand) {
-    const _organizationId = DEFAULT_ORGANIZATION_ID;
     return this.prisma.intakeForm.create({
       data: {
         nameAr: dto.nameAr,

@@ -18,7 +18,7 @@ export interface ValidateCouponResult {
 @Injectable()
 export class ValidateCouponService {
   async validate(input: ValidateCouponInput): Promise<ValidateCouponResult> {
-    const coupon = await input.tx.coupon.findFirst({ where: { code: input.code, organizationId: input.orgId } });
+    const coupon = await input.tx.coupon.findFirst({ where: { code: input.code } });
     if (!coupon) throw new NotFoundException(`Coupon ${input.code} not found`);
     if (!coupon.isActive) throw new BadRequestException(`Coupon ${input.code} is inactive`);
     if (coupon.expiresAt && coupon.expiresAt < new Date()) {

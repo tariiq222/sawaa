@@ -6,11 +6,8 @@ import { GetIntakeFormHandler } from './get-intake-form.handler';
 import { ListIntakeFormsHandler } from './list-intake-forms.handler';
 import { TenantContextService } from '../../../common/tenant';
 
-const DEFAULT_ORG = '00000000-0000-0000-0000-000000000001';
-
 const mockForm = {
   id: 'form-1',
-  organizationId: DEFAULT_ORG,
   nameAr: 'استمارة المريض',
   nameEn: null,
   type: IntakeFormType.PRE_SESSION,
@@ -31,21 +28,20 @@ const buildPrisma = () => ({
   },
 });
 
-const buildTenant = (organizationId = DEFAULT_ORG) =>
+const buildTenant = () =>
   ({
-    requireOrganizationId: jest.fn().mockReturnValue(organizationId),
+    requireOrganizationId: jest.fn(),
   }) as unknown as TenantContextService;
 
 describe('CreateIntakeFormHandler', () => {
-  it('creates form scoped by org', async () => {
+  it('creates form', async () => {
     const prisma = buildPrisma();
-    const handler = new CreateIntakeFormHandler(prisma as never, buildTenant());
+    const handler = new CreateIntakeFormHandler(prisma as never);
     const result = await handler.execute({
       nameAr: 'استمارة المريض',
       type: IntakeFormType.PRE_SESSION,
       scope: IntakeFormScope.GLOBAL,
     });
-    // org scoping moved to RLS / removed in single-tenant migration
     expect(prisma.intakeForm.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ nameAr: 'استمارة المريض' }) }),
     );
@@ -54,12 +50,12 @@ describe('CreateIntakeFormHandler', () => {
 });
 
 describe('GetIntakeFormHandler', () => {
-  it('returns form scoped by org', async () => {
+  it('returns form by id', async () => {
     const prisma = buildPrisma();
     const handler = new GetIntakeFormHandler(prisma as never, buildTenant());
     const result = await handler.execute({ formId: 'form-1' });
     expect(prisma.intakeForm.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ organizationId: DEFAULT_ORG }) }),
+      expect.objectContaining({ where: expect.objectContaining({ id: 'form-1' }) }),
     );
     expect(result.nameAr).toBe('استمارة المريض');
   });
@@ -73,24 +69,22 @@ describe('GetIntakeFormHandler', () => {
 });
 
 describe('ListIntakeFormsHandler', () => {
-  it('returns forms scoped by org', async () => {
+  it('returns forms', async () => {
     const prisma = buildPrisma();
     const handler = new ListIntakeFormsHandler(prisma as never, buildTenant());
     const result = await handler.execute({});
-    expect(prisma.intakeForm.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ organizationId: DEFAULT_ORG }) }),
-    );
+    expect(prisma.intakeForm.findMany).toHaveBeenCalled();
     expect(result).toHaveLength(1);
   });
 });
 
 describe('DeleteIntakeFormHandler', () => {
-  it('deletes form scoped by org', async () => {
+  it('deletes form by id', async () => {
     const prisma = buildPrisma();
     const handler = new DeleteIntakeFormHandler(prisma as never, buildTenant());
     await expect(handler.execute({ formId: 'form-1' })).resolves.toBeUndefined();
     expect(prisma.intakeForm.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ organizationId: DEFAULT_ORG }) }),
+      expect.objectContaining({ where: expect.objectContaining({ id: 'form-1' }) }),
     );
     expect(prisma.intakeForm.delete).toHaveBeenCalledWith({ where: { id: 'form-1' } });
   });

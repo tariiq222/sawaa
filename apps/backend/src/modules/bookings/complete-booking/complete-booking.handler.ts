@@ -17,16 +17,14 @@ export class CompleteBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTx: RlsTransactionService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: CompleteBookingCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.CONFIRMED], 'completed');
 
     return this.rlsTx.withTransaction(async (tx) => {
       const updated = await tx.booking.update({
-        where: { id: cmd.bookingId, organizationId },
+        where: { id: cmd.bookingId },
         data: {
           status: BookingStatus.COMPLETED,
           completedAt: new Date(),
@@ -51,7 +49,7 @@ export class CompleteBookingHandler {
         const existing = await tx.invoice.findUnique({ where: { bookingId: booking.id } });
         if (!existing) {
           const orgSettings = await tx.organizationSettings.findFirst({
-            where: { organizationId },
+            where: {},
             select: { vatRate: true },
           });
           const vatRate = orgSettings?.vatRate ? Number(orgSettings.vatRate) : 0.15;

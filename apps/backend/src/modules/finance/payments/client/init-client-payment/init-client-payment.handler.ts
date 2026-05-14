@@ -39,10 +39,9 @@ export class InitClientPaymentHandler {
   ) {}
 
   async execute(cmd: InitClientPaymentCommand): Promise<InitClientPaymentResult> {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const invoice = await this.prisma.invoice.findFirst({
-      where: { id: cmd.invoiceId, organizationId },
-      select: { id: true, clientId: true, bookingId: true, total: true, currency: true, organizationId: true },
+      where: { id: cmd.invoiceId },
+      select: { id: true, clientId: true, bookingId: true, total: true, currency: true },
     });
 
     if (!invoice) {
@@ -103,7 +102,7 @@ export class InitClientPaymentHandler {
 
     let moyasarPayment: Awaited<ReturnType<MoyasarApiClient['createPayment']>>;
     try {
-      moyasarPayment = await this.moyasar.createPayment(invoice.organizationId, {
+      moyasarPayment = await this.moyasar.createPayment(DEFAULT_ORGANIZATION_ID, {
         amountHalalas,
         currency: invoice.currency,
         description: `Invoice payment - ${invoice.id}`,
@@ -113,7 +112,7 @@ export class InitClientPaymentHandler {
           bookingId: invoice.bookingId,
           source: 'mobile-client',
         },
-        idempotencyKey: `payment:${invoice.organizationId}:${invoice.id}`,
+        idempotencyKey: `payment:${DEFAULT_ORGANIZATION_ID}:${invoice.id}`,
       });
     } catch (error) {
       await this.deleteFailedPaymentInit(payment.id);

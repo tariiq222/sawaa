@@ -16,11 +16,9 @@ export class ExpireBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTx: RlsTransactionService,
-    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(cmd: ExpireBookingCommand) {
-    const organizationId = DEFAULT_ORGANIZATION_ID;
     const booking = await fetchBookingOrFail(
       this.prisma,
       cmd.bookingId,
@@ -30,7 +28,7 @@ export class ExpireBookingHandler {
 
     const [updated] = await this.rlsTx.withTransaction((tx) => Promise.all([
       tx.booking.update({
-        where: { id: cmd.bookingId, organizationId },
+        where: { id: cmd.bookingId },
         data: { status: BookingStatus.EXPIRED, expiresAt: new Date() },
       }),
       tx.bookingStatusLog.create({

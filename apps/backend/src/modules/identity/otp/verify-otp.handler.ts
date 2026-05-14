@@ -29,7 +29,6 @@ export class VerifyOtpHandler {
 
       const otpRecord = await this.prisma.otpCode.findFirst({
         where: {
-          organizationId: orgId,
           identifier: dto.identifier,
           purpose: dto.purpose,
           consumedAt: null,
@@ -77,7 +76,6 @@ export class VerifyOtpHandler {
       if (otpRecord.channel === 'EMAIL') {
         await this.prisma.client.updateMany({
           where: {
-            ...(orgId ? { organizationId: orgId } : {}),
             email: dto.identifier,
           },
           data: { emailVerified: new Date() },
@@ -85,7 +83,6 @@ export class VerifyOtpHandler {
       } else if (otpRecord.channel === 'SMS') {
         await this.prisma.client.updateMany({
           where: {
-            ...(orgId ? { organizationId: orgId } : {}),
             phone: dto.identifier,
           },
           data: { phoneVerified: new Date() },
