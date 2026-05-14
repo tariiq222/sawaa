@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { PrismaService } from '../../../../infrastructure/database';
 import { SetEmployeeBreaksDto } from './set-employee-breaks.dto';
 
 export type SetEmployeeBreaksCommand = SetEmployeeBreaksDto & { employeeId: string };
@@ -13,7 +13,6 @@ function timeToMinutes(time: string): number {
 export class SetEmployeeBreaksHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(cmd: SetEmployeeBreaksCommand) {
@@ -55,7 +54,7 @@ export class SetEmployeeBreaksHandler {
       }
     }
 
-    const result = await this.rlsTx.withTransaction(
+    const result = await this.prisma.$transaction(
       async (tx) => {
         await tx.employeeBreak.deleteMany({ where: { employeeId } });
 

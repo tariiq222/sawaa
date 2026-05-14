@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService } from '../../../infrastructure/database';
 import { SetBusinessHoursDto } from './set-business-hours.dto';
 
 export type SetBusinessHoursCommand = SetBusinessHoursDto;
@@ -8,7 +8,6 @@ export type SetBusinessHoursCommand = SetBusinessHoursDto;
 export class SetBusinessHoursHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(dto: SetBusinessHoursCommand) {
@@ -23,7 +22,7 @@ export class SetBusinessHoursHandler {
       }
     }
 
-    await this.rlsTx.withTransaction((tx) =>
+    await this.prisma.$transaction((tx) =>
       Promise.all(dto.schedule.map((slot) =>
         tx.businessHour.upsert({
           where: { branchId_dayOfWeek: { branchId: dto.branchId, dayOfWeek: slot.dayOfWeek } },

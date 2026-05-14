@@ -132,20 +132,20 @@ model Employee {
 }
 
 model EmployeeBranch {
-  id             String   @id @default(uuid())
-  employeeId     String
-  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  branchId       String
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  branchId   String
 
   @@unique([employeeId, branchId])
   @@index([employeeId])
 }
 
 model EmployeeService {
-  id             String   @id @default(uuid())
-  employeeId     String
-  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  serviceId      String
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  serviceId  String
 
   @@unique([employeeId, serviceId])
   @@index([employeeId])
@@ -155,15 +155,15 @@ model EmployeeService {
 // (e.g. 09:00-13:00 then 16:00-21:00). The gap between shifts IS the break.
 // A missing dayOfWeek row = weekly off day.
 model EmployeeAvailability {
-  id             String   @id @default(uuid())
-  employeeId     String
-  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  dayOfWeek      Int
-  startTime      String
-  endTime        String
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  dayOfWeek  Int
+  startTime  String
+  endTime    String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([employeeId, dayOfWeek])
 }
@@ -186,14 +186,14 @@ model EmployeeAvailabilityException {
 }
 
 model EmployeeBreak {
-  id             String   @id @default(uuid())
-  employeeId     String
-  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  dayOfWeek      Int
-  startTime      String
-  endTime        String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  dayOfWeek  Int
+  startTime  String
+  endTime    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([employeeId, dayOfWeek])
 }
@@ -201,10 +201,10 @@ model EmployeeBreak {
 // Password history for Client — prevents password reuse within N previous passwords.
 // Used for password reset/change flows to enforce history policy.
 model PasswordHistory {
-  id             String   @id @default(uuid())
-  clientId       String
-  passwordHash   String
-  createdAt      DateTime @default(now())
+  id           String   @id @default(uuid())
+  clientId     String
+  passwordHash String
+  createdAt    DateTime @default(now())
 
   @@index([clientId, createdAt])
 }

@@ -1,7 +1,6 @@
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { InvoiceStatus, PaymentMethod, Prisma } from '@prisma/client';
 import { ProcessPaymentHandler } from './process-payment.handler';
-import { RlsTransactionService } from '../../../infrastructure/database';
 
 const mockInvoice = {
   id: 'inv-1',
@@ -47,17 +46,13 @@ const buildPrisma = (tx = buildTx()) => ({
 });
 
 const buildEventBus = () => ({ publish: jest.fn().mockResolvedValue(undefined) });
-const buildRlsTx = (tx: ReturnType<typeof buildTx>) =>
-  ({
-    withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx)),
-  } as unknown as RlsTransactionService);
 
 describe('ProcessPaymentHandler', () => {
   it('creates payment and marks invoice PAID when fully paid', async () => {
     const tx = buildTx();
     const prisma = buildPrisma(tx);
     const eventBus = buildEventBus();
-    const handler = new ProcessPaymentHandler(prisma as never, eventBus as never, buildRlsTx(tx));
+    const handler = new ProcessPaymentHandler(prisma as never, eventBus as never);
 
     const result = await handler.execute({
       invoiceId: 'inv-1',
@@ -91,7 +86,7 @@ describe('ProcessPaymentHandler', () => {
     });
     const prisma = buildPrisma(tx);
     const eventBus = buildEventBus();
-    const handler = new ProcessPaymentHandler(prisma as never, eventBus as never, buildRlsTx(tx));
+    const handler = new ProcessPaymentHandler(prisma as never, eventBus as never);
 
     await handler.execute({
       invoiceId: 'inv-1',
@@ -124,7 +119,7 @@ describe('ProcessPaymentHandler', () => {
       },
     });
     const prisma = buildPrisma(tx);
-    const handler = new ProcessPaymentHandler(prisma as never, buildEventBus() as never, buildRlsTx(tx));
+    const handler = new ProcessPaymentHandler(prisma as never, buildEventBus() as never);
 
     const result = await handler.execute({
       invoiceId: 'inv-1',
@@ -150,7 +145,7 @@ describe('ProcessPaymentHandler', () => {
       payment: { findFirst: jest.fn(), create: jest.fn(), aggregate: jest.fn() },
     });
     const prisma = buildPrisma(tx);
-    const handler = new ProcessPaymentHandler(prisma as never, buildEventBus() as never, buildRlsTx(tx));
+    const handler = new ProcessPaymentHandler(prisma as never, buildEventBus() as never);
 
     await expect(
       handler.execute({
@@ -170,7 +165,7 @@ describe('ProcessPaymentHandler', () => {
       payment: { findFirst: jest.fn(), create: jest.fn(), aggregate: jest.fn() },
     });
     const prisma = buildPrisma(tx);
-    const handler = new ProcessPaymentHandler(prisma as never, buildEventBus() as never, buildRlsTx(tx));
+    const handler = new ProcessPaymentHandler(prisma as never, buildEventBus() as never);
 
     await expect(
       handler.execute({

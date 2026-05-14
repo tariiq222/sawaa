@@ -16,6 +16,7 @@ import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import type { Request } from 'express';
 import { Public } from '../../common/guards/jwt.guard';
 import { SmsDlrHandler } from '../../modules/comms/sms-dlr/sms-dlr.handler';
+import { DEFAULT_ORG_ID } from '../../common/constants';
 
 const SUPPORTED_PROVIDERS = new Set(['UNIFONIC', 'TAQNYAT']);
 
@@ -41,6 +42,9 @@ export class PublicSmsWebhooksController {
     const providerUpper = provider.toUpperCase();
     if (!SUPPORTED_PROVIDERS.has(providerUpper)) {
       throw new BadRequestException(`Unsupported SMS provider: ${provider}`);
+    }
+    if (organizationId !== DEFAULT_ORG_ID) {
+      throw new BadRequestException(`Unknown organization: ${organizationId}`);
     }
     const raw = req.rawBody?.toString('utf8');
     if (!raw) {

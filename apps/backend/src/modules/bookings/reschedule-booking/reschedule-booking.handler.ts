@@ -13,7 +13,6 @@ function mapDbConflict(err: unknown): never {
   throw err;
 }
 import { PrismaService } from '../../../infrastructure/database';
-import { RlsTransactionService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { RescheduleBookingDto } from './reschedule-booking.dto';
 import { fetchBookingOrFail } from '../booking-lifecycle.helper';
@@ -31,7 +30,6 @@ export type RescheduleBookingCommand = Omit<RescheduleBookingDto, 'newScheduledA
 export class RescheduleBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTx: RlsTransactionService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly zoomMeetingService: ZoomMeetingService,
   ) {}
@@ -64,7 +62,7 @@ export class RescheduleBookingHandler {
     const newEndsAt = new Date(newScheduledAt.getTime() + durationMins * 60_000);
 
     // Serialize conflict check + update + status log inside one transaction.
-    const [updated] = await this.rlsTx.withTransaction(async (tx) => {
+    const [updated] = await this.prisma.$transaction(async (tx) => {
         const conflict = await tx.booking.findFirst({
           where: {
             employeeId: booking.employeeId,

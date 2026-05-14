@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService } from '../../../infrastructure/database';
 import { SetServiceBookingConfigsDto } from './set-service-booking-configs.dto';
 
 export type SetServiceBookingConfigsCommand = SetServiceBookingConfigsDto & {
@@ -11,7 +11,6 @@ export type SetServiceBookingConfigsCommand = SetServiceBookingConfigsDto & {
 export class SetServiceBookingConfigsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(cmd: SetServiceBookingConfigsCommand) {
@@ -21,7 +20,7 @@ export class SetServiceBookingConfigsHandler {
     if (!service) throw new NotFoundException('Service not found');
 
     // Upsert each booking type config; delete types not included in the payload.
-    await this.rlsTx.withTransaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
       // Remove configs for types not present in the new payload
       await tx.serviceBookingConfig.deleteMany({
         where: {

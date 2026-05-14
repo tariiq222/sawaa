@@ -79,7 +79,6 @@ export class DashboardBookingsController {
         scheduledAt: { type: 'string', format: 'date-time' },
         clientId: { type: 'string', format: 'uuid' },
         employeeId: { type: 'string', format: 'uuid' },
-        organizationId: { type: 'string', format: 'uuid' },
         createdAt: { type: 'string', format: 'date-time' },
       },
     },

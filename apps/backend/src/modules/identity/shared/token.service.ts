@@ -18,13 +18,11 @@ export interface TenantClaims {
   organizationId: string;
   isSuperAdmin?: boolean;
   scope?: string;
-  impersonationSessionId?: string;
 }
 
 export interface JwtPayload {
   sub: string;
   email: string;
-  /** @deprecated — Use membershipRole for per-org authorization. Kept during Phase A/B rollout. */
   role: string;
   customRoleId: string | null;
   permissions: Array<{ action: string; subject: string }>;
@@ -32,7 +30,6 @@ export interface JwtPayload {
   organizationId?: string;
   isSuperAdmin?: boolean;
   scope?: string;
-  impersonationSessionId?: string;
   // P0-6: Session invalidation via tokenVersion. If the JWT's tokenVersion
   // does not match the User.tokenVersion in the DB, the session is stale.
   tokenVersion?: number;

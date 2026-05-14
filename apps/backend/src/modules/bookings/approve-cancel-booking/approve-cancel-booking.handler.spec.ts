@@ -1,7 +1,7 @@
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { ApproveCancelBookingHandler } from './approve-cancel-booking.handler';
-import { buildPrisma, buildEventBus, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, buildEventBus, mockBooking } from '../testing/booking-test-helpers';
 
 const cancelRequestedBooking = {
   ...mockBooking,
@@ -21,7 +21,7 @@ describe('ApproveCancelBookingHandler', () => {
     prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
     prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CANCELLED });
     const eb = buildEventBus();
-    const handler = new ApproveCancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, eb as never, defaultSettings as never);
+    const handler = new ApproveCancelBookingHandler(prisma as never, eb as never, defaultSettings as never);
 
     const result = await handler.execute({
       bookingId: 'book-1',
@@ -39,7 +39,7 @@ describe('ApproveCancelBookingHandler', () => {
   it('throws NotFoundException when booking not found', async () => {
     const prisma = buildPrisma();
     prisma.booking.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new ApproveCancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildEventBus() as never, defaultSettings as never);
+    const handler = new ApproveCancelBookingHandler(prisma as never, buildEventBus() as never, defaultSettings as never);
 
     await expect(
       handler.execute({ bookingId: 'bad', approvedBy: 'admin-1' }),
@@ -49,7 +49,7 @@ describe('ApproveCancelBookingHandler', () => {
   it('throws BadRequestException when status is not CANCEL_REQUESTED', async () => {
     const prisma = buildPrisma();
     prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
-    const handler = new ApproveCancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildEventBus() as never, defaultSettings as never);
+    const handler = new ApproveCancelBookingHandler(prisma as never, buildEventBus() as never, defaultSettings as never);
 
     await expect(
       handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1' }),
@@ -60,7 +60,7 @@ describe('ApproveCancelBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
     prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CANCELLED });
-    const handler = new ApproveCancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildEventBus() as never, defaultSettings as never);
+    const handler = new ApproveCancelBookingHandler(prisma as never, buildEventBus() as never, defaultSettings as never);
 
     await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1', approverNotes: 'ok' });
 
@@ -80,7 +80,7 @@ describe('ApproveCancelBookingHandler', () => {
     prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking);
     prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CANCELLED });
     const settingsNoRefund = { execute: jest.fn().mockResolvedValue({}) };
-    const handler = new ApproveCancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildEventBus() as never, settingsNoRefund as never);
+    const handler = new ApproveCancelBookingHandler(prisma as never, buildEventBus() as never, settingsNoRefund as never);
 
     const result = await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1' });
     expect(result.autoRefund).toBe(true);

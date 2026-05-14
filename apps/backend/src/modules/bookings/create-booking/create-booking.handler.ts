@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService } from '../../../infrastructure/database';
 import { PriceResolverService } from '../../org-experience/services/price-resolver.service';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { GroupSessionMinReachedHandler } from '../group-session-min-reached/group-session-min-reached.handler';
@@ -54,7 +54,6 @@ export class CreateBookingHandler {
     private readonly groupMinReachedHandler: GroupSessionMinReachedHandler,
     private readonly eventBus: EventBusService,
     private readonly couponValidator: ValidateCouponService,
-    private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(dto: CreateBookingCommand) {
@@ -141,7 +140,7 @@ export class CreateBookingHandler {
     const initialStatus = isGroupService ? 'PENDING_GROUP_FILL' : 'PENDING';
 
     // Serializable: prevents two concurrent group-session bookings from both reading slotCount=N-1 and overflowing capacity.
-    const booking = await this.rlsTx.withTransaction(
+    const booking = await this.prisma.$transaction(
       async (tx) => {
         if (!isGroupService) {
           // CR-5: acquire advisory lock BEFORE the conflict check so that two

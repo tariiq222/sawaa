@@ -1,13 +1,13 @@
 import { BadRequestException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { ConfirmBookingHandler } from './confirm-booking.handler';
-import { buildPrisma, buildEventBus, buildZoomHandler, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, buildEventBus, buildZoomHandler, mockBooking } from '../testing/booking-test-helpers';
 
 describe('ConfirmBookingHandler', () => {
   it('confirms PENDING booking and emits BookingConfirmedEvent', async () => {
     const prisma = buildPrisma();
     const eb = buildEventBus();
-    await new ConfirmBookingHandler(prisma as never, buildRlsTx(prisma) as never, eb as never, buildZoomHandler() as never).execute({
+    await new ConfirmBookingHandler(prisma as never, eb as never, buildZoomHandler() as never).execute({
       bookingId: 'book-1', changedBy: 'user-42',
     });
     expect(prisma.booking.update).toHaveBeenCalledWith(
@@ -20,7 +20,7 @@ describe('ConfirmBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
     await expect(
-      new ConfirmBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildEventBus() as never, buildZoomHandler() as never).execute({
+      new ConfirmBookingHandler(prisma as never, buildEventBus() as never, buildZoomHandler() as never).execute({
         bookingId: 'book-1', changedBy: 'user-42',
       }),
     ).rejects.toThrow(BadRequestException);
@@ -31,7 +31,7 @@ describe('ConfirmBookingHandler — status log', () => {
   it('writes a BookingStatusLog entry on confirm', async () => {
     const prisma = buildPrisma();
     const eventBus = { publish: jest.fn() };
-    const handler = new ConfirmBookingHandler(prisma as never, buildRlsTx(prisma) as never, eventBus as never, buildZoomHandler() as never);
+    const handler = new ConfirmBookingHandler(prisma as never, eventBus as never, buildZoomHandler() as never);
 
     await handler.execute({ bookingId: 'book-1', changedBy: 'user-42' });
 

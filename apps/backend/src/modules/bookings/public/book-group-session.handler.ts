@@ -5,7 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { BookingStatus, GroupSessionStatus } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService } from '../../../infrastructure/database';
 
 interface BookGroupSessionCommand {
   groupSessionId: string;
@@ -22,7 +22,6 @@ export interface BookGroupSessionResult {
 export class BookGroupSessionHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(cmd: BookGroupSessionCommand): Promise<BookGroupSessionResult> {

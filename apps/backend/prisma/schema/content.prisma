@@ -5,13 +5,13 @@
 // SaaS-02g: SiteSetting scoped.
 
 model SiteSetting {
-  key            String   @id
-  valueText      String?
-  valueAr        String?
-  valueEn        String?
-  valueJson      Json?
-  valueMedia     String?
-  updatedAt      DateTime @updatedAt
+  key        String   @id
+  valueText  String?
+  valueAr    String?
+  valueEn    String?
+  valueJson  Json?
+  valueMedia String?
+  updatedAt  DateTime @updatedAt
 
   @@index([updatedAt])
 }

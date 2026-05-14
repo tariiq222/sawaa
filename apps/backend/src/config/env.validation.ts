@@ -49,7 +49,6 @@ export const envValidationSchema = Joi.object({
   DB_CONNECTION_LIMIT: Joi.number().integer().default(10),
   APP_DB_USER: Joi.string().optional(),
   APP_DB_PASSWORD: Joi.string().optional(),
-  RLS_GUC_INTERCEPTOR_ENABLED: Joi.string().valid('true', 'false').default('false'),
 
   // Redis (BullMQ + cache + token blacklist)
   REDIS_HOST: Joi.string().hostname().required(),
@@ -104,8 +103,6 @@ export const envValidationSchema = Joi.object({
   // Per-tenant Moyasar AES-256-GCM key — REQUIRED; 32 raw bytes base64-encoded (ASCII length 44).
   // Used to wrap each tenant's MoyasarPublishableKey + secretKey at rest.
   MOYASAR_TENANT_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
-
-  DEFAULT_ORGANIZATION_ID: Joi.string().uuid().default('00000000-0000-0000-0000-000000000001'),
 
   // SMS per-tenant (SaaS-02g-sms) — encryption key is REQUIRED; 32 raw bytes base64-encoded (ASCII length 44).
   // Webhook base URL is the public origin registered with providers for DLR callbacks.

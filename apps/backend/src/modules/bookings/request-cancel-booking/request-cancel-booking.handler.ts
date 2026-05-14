@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { BookingStatus, CancellationReason } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
-import { RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingCancelRequestedEvent } from '../events/booking-cancel-requested.event';
 
@@ -20,7 +19,6 @@ export interface RequestCancelBookingCommand {
 export class RequestCancelBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTx: RlsTransactionService,
     private readonly eventBus: EventBusService,
   ) {}
 
@@ -42,7 +40,7 @@ export class RequestCancelBookingHandler {
       );
     }
 
-    const [updated] = await this.rlsTx.withTransaction((tx) => Promise.all([
+    const [updated] = await this.prisma.$transaction((tx) => Promise.all([
       tx.booking.update({
         where: { id: cmd.bookingId },
         data: {

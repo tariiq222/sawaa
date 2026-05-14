@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListBranchesDto } from './list-branches.dto';
 
@@ -10,7 +10,6 @@ export type ListBranchesQuery = ListBranchesDto;
 export class ListBranchesHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(dto: ListBranchesQuery) {
@@ -33,7 +32,7 @@ export class ListBranchesHandler {
       }
     }
 
-    const [items, total] = await this.rlsTx.withTransaction((tx) =>
+    const [items, total] = await this.prisma.$transaction((tx) =>
       Promise.all([
         tx.branch.findMany({
           where,

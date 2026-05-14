@@ -62,7 +62,7 @@ model Invoice {
 
   @@index([clientId])
   @@index([bookingId])
-  @@index([ status, dueAt])
+  @@index([status, dueAt])
 }
 
 // ─── Payment ──────────────────────────────────────────────────────────────────
@@ -110,17 +110,16 @@ model Coupon {
   updatedAt      DateTime     @updatedAt
 
   redemptions CouponRedemption[]
-
 }
 
 model CouponRedemption {
-  id             String   @id @default(uuid())
-  couponId       String
-  coupon         Coupon   @relation(fields: [couponId], references: [id], onDelete: Restrict)
-  invoiceId      String
-  clientId       String
-  discount       Decimal  @db.Decimal(12, 2)
-  redeemedAt     DateTime @default(now())
+  id         String   @id @default(uuid())
+  couponId   String
+  coupon     Coupon   @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  invoiceId  String
+  clientId   String
+  discount   Decimal  @db.Decimal(12, 2)
+  redeemedAt DateTime @default(now())
 
   @@unique([couponId, invoiceId])
   @@index([invoiceId])
@@ -138,21 +137,21 @@ enum RefundStatus {
 }
 
 model RefundRequest {
-  id             String       @id @default(uuid())
-  invoiceId      String
-  invoice        Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
-  paymentId      String
-  payment        Payment      @relation(fields: [paymentId], references: [id], onDelete: Restrict)
-  clientId       String
-  amount         Decimal      @db.Decimal(12, 2)
-  reason         String?
-  status         RefundStatus @default(PENDING_REVIEW)
-  processedAt    DateTime?
-  processedBy    String?
-  denialReason   String?
-  gatewayRef     String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id           String       @id @default(uuid())
+  invoiceId    String
+  invoice      Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  paymentId    String
+  payment      Payment      @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  clientId     String
+  amount       Decimal      @db.Decimal(12, 2)
+  reason       String?
+  status       RefundStatus @default(PENDING_REVIEW)
+  processedAt  DateTime?
+  processedBy  String?
+  denialReason String?
+  gatewayRef   String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   @@index([clientId])
   @@index([invoiceId])

@@ -5155,11 +5155,6 @@
                         "name": {
                           "type": "string"
                         },
-                        "organizationId": {
-                          "format": "uuid",
-                          "nullable": true,
-                          "type": "string"
-                        },
                         "permissions": {
                           "items": {
                             "type": "string"
@@ -5311,11 +5306,6 @@
                       "type": "boolean"
                     },
                     "name": {
-                      "type": "string"
-                    },
-                    "organizationId": {
-                      "format": "uuid",
-                      "nullable": true,
                       "type": "string"
                     },
                     "permissions": {
@@ -5495,11 +5485,6 @@
                           "type": "string"
                         },
                         "name": {
-                          "type": "string"
-                        },
-                        "organizationId": {
-                          "format": "uuid",
-                          "nullable": true,
                           "type": "string"
                         },
                         "permissions": {
@@ -6663,10 +6648,6 @@
                       "type": "string"
                     },
                     "id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "organizationId": {
                       "format": "uuid",
                       "type": "string"
                     },
@@ -11746,10 +11727,6 @@
                       "type": "string"
                     },
                     "name": {
-                      "type": "string"
-                    },
-                    "organizationId": {
-                      "format": "uuid",
                       "type": "string"
                     }
                   },
@@ -19590,10 +19567,6 @@
                       "type": "string"
                     },
                     "id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "organizationId": {
                       "format": "uuid",
                       "type": "string"
                     },

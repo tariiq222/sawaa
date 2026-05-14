@@ -28,7 +28,6 @@ describe('GetInvoiceHandler', () => {
 
   it('throws ForbiddenException when client does not own the invoice', async () => {
     const prisma = { invoice: { findFirst: jest.fn().mockResolvedValue({ ...mockInvoice, clientId: 'client-other' }) } };
-    const tenant = { requireOrganizationId: jest.fn().mockReturnValue('org-1') } as never;
     await expect(
       new GetInvoiceHandler(prisma as never).execute({ invoiceId: 'inv-1', clientId: 'client-1' }),
     ).rejects.toThrow(ForbiddenException);
@@ -36,7 +35,6 @@ describe('GetInvoiceHandler', () => {
 
   it('throws NotFoundException when invoice not found', async () => {
     const prisma = { invoice: { findFirst: jest.fn().mockResolvedValue(null) } };
-    const tenant = { requireOrganizationId: jest.fn().mockReturnValue('org-1') } as never;
     await expect(new GetInvoiceHandler(prisma as never).execute({ invoiceId: 'bad', clientId: 'client-1' }))
       .rejects.toThrow(NotFoundException);
   });

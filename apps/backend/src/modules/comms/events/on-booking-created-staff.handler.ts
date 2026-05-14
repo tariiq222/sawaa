@@ -31,7 +31,7 @@ export class OnBookingCreatedStaffHandler {
     try {
       const targets = await this.staffTargets.execute({
         organizationId: payload.organizationId,
-        roles: ['OWNER', 'ADMIN', 'RECEPTIONIST'],
+        roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPTIONIST'],
         includeUserId: payload.employeeId || undefined,
       });
 

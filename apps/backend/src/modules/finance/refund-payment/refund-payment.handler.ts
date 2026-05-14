@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PaymentStatus, RefundStatus, Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { RefundCompletedEvent } from '../events/refund-completed.event';
 import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
@@ -53,7 +53,6 @@ export class RefundPaymentHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventBus: EventBusService,
-    private readonly rlsTx: RlsTransactionService,
     private readonly moyasar: MoyasarApiClient,
   ) {}
 
@@ -102,7 +101,7 @@ export class RefundPaymentHandler {
     idempotencyKey: string,
     gatewayRef: string,
   ): Promise<void> {
-    await this.rlsTx.withTransaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
       await tx.refundRequest.update({
         where: { id: refundRequestId },
         data: { status: RefundStatus.COMPLETED, gatewayRef },
@@ -255,7 +254,7 @@ export class RefundPaymentHandler {
       idempotencyKey: cmd.idempotencyKey,
     });
 
-    await this.rlsTx.withTransaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.refundRequest.updateMany({
         where: { id: cmd.refundRequestId, status: RefundStatus.PROCESSING },
         data: { status: RefundStatus.COMPLETED, gatewayRef: moyasarRefund.id },
@@ -316,7 +315,7 @@ export class RefundPaymentHandler {
     // SELECT FOR UPDATE prevents two concurrent requests from both reading
     // Payment.status=COMPLETED and proceeding to issue a double-refund.
     const { payment, refundAmount, refundRequestId, idempotencyKey } =
-      await this.rlsTx.withTransaction(async (tx) => {
+      await this.prisma.$transaction(async (tx) => {
         // Lock the payment row for the duration of this transaction.
         const rows = await tx.$queryRaw<
           Array<{
@@ -418,7 +417,7 @@ export class RefundPaymentHandler {
     // leave the row in PROCESSING for reconciliation.
     let updatedPayment;
     try {
-      updatedPayment = await this.rlsTx.withTransaction(async (tx) => {
+      updatedPayment = await this.prisma.$transaction(async (tx) => {
         await tx.refundRequest.update({
           where: { id: refundRequestId },
           data: { status: RefundStatus.COMPLETED, gatewayRef: moyasarRefundId },

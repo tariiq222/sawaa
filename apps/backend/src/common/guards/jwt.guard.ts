@@ -10,7 +10,6 @@ import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../infrastructure/database';
 import { RedisService } from '../../infrastructure/cache';
 import { DEFAULT_ORG_ID, TENANT_CLS_KEY } from '../constants';
-import { ALLOW_DURING_SUSPENSION_KEY } from './allow-during-suspension.decorator';
 
 export const IS_PUBLIC_KEY = 'isPublic';
 
@@ -66,10 +65,6 @@ export class JwtGuard extends AuthGuard('jwt') {
     const effectiveOrgId = this.resolveEffectiveOrgId(req.user, req.headers);
     this.stampTenantContext(req.user, effectiveOrgId);
 
-    const _allowDuringSuspension = this.reflector.getAllAndOverride<boolean>(
-      ALLOW_DURING_SUSPENSION_KEY,
-      [ctx.getHandler(), ctx.getClass()],
-    );
     // Single-tenant: organization suspension check disabled
     // Impersonation sessions removed in single-tenant mode
     return activated as boolean;

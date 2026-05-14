@@ -14,8 +14,8 @@ export type AppAbility = MongoAbility;
  * Actions come from `@sawaa/shared/constants` (`PERMISSION_ACTIONS`),
  * with the additional CASL-only literal `'all'` reserved for SUPER_ADMIN.
  *
- * OWNER is the per-org top-level role (`MembershipRole.OWNER`). It carries
- * everything ADMIN does. ADMIN handles day-to-day clinic ops.
+ * OWNER is the top-level role. It carries everything ADMIN does.
+ * ADMIN handles day-to-day clinic ops.
  *
  * Super-admin platform access is gated by `User.isSuperAdmin` (boolean),
  * NOT by this map. The `SUPER_ADMIN` row here is a transitional fallback
@@ -76,16 +76,8 @@ const BUILT_IN: Record<string, readonly Rule[]> = {
 /**
  * Input shape for `buildForUser`.
  *
- * `membershipRole` is the canonical per-organization role (`Membership.role`)
- * and MUST be used for any tenant-scoped authz decision. It is propagated
- * from the JWT `membershipRole` claim onto `req.user` by `JwtStrategy`.
- *
- * `role` is the legacy global `User.role` enum. Phase A of DB-08 left it in
- * place during JWT-rotation rollout; new code MUST NOT branch on it for
- * tenant authz. We accept it here only so callers without a tenant context
- * (super-admin platform surfaces, /auth/me, /tenants/register) can still
- * resolve a role, and as a transitional fallback for in-flight pre-rollout
- * tokens that lack `membershipRole`.
+ * `role` is the canonical `User.role` field in single-tenant mode.
+ * It is propagated from the JWT `role` claim onto `req.user` by `JwtStrategy`.
  */
 export interface AbilitySubjectUser {
   role?: string | null;

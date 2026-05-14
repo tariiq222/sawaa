@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { RefundPaymentHandler } from './refund-payment.handler';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
@@ -11,12 +11,11 @@ describe('RefundPaymentHandler', () => {
   let moyasar: { createRefund: jest.Mock };
   let prisma: any;
   let eventBus: { publish: jest.Mock };
-  let rlsTx: { withTransaction: jest.Mock };
 
   beforeEach(async () => {
     moyasar = { createRefund: jest.fn() };
     prisma = {
-      $transaction: jest.fn(), // must NOT be called after fix#3
+      $transaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
       $queryRaw: jest.fn().mockResolvedValue([]),
       payment: { findFirst: jest.fn(), update: jest.fn(), findUniqueOrThrow: jest.fn() },
       refundRequest: { create: jest.fn(), findFirst: jest.fn().mockResolvedValue(null), update: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }), findUniqueOrThrow: jest.fn() },
@@ -29,17 +28,10 @@ describe('RefundPaymentHandler', () => {
         RefundPaymentHandler,
         { provide: PrismaService, useValue: prisma },
         { provide: EventBusService, useValue: eventBus },
-        {
-          provide: RlsTransactionService,
-          useValue: {
-            withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
-          },
-        },
         { provide: MoyasarApiClient, useValue: moyasar },
       ],
     }).compile();
     handler = module.get(RefundPaymentHandler);
-    rlsTx = module.get(RlsTransactionService) as unknown as { withTransaction: jest.Mock };
   });
 
   const _completedPayment = (overrides: any = {}) => ({
@@ -134,8 +126,8 @@ describe('RefundPaymentHandler', () => {
     prisma.refundRequest.create.mockResolvedValue({ id: 'rr_1' });
     moyasar.createRefund.mockResolvedValue({ id: 'ref_partial', amount: 10000, currency: 'SAR', status: 'refunded', paymentId: 'moyasar_pay_abc', createdAt: new Date().toISOString() });
     // First call (locking tx) succeeds; second call (finalize tx) fails
-    rlsTx.withTransaction = jest.fn()
-      .mockImplementationOnce(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma))
+    prisma.$transaction = jest.fn()
+      .mockImplementationOnce((fn: (tx: unknown) => Promise<unknown>) => fn(prisma))
       .mockRejectedValueOnce(new Error('DB unavailable'));
     prisma.refundRequest.update.mockResolvedValue({});
 
@@ -167,7 +159,7 @@ describe('RefundPaymentHandler', () => {
     expect(moyasar.createRefund).not.toHaveBeenCalled();
   });
 
-  it('uses RlsTransactionService for both locking and finalize transactions', async () => {
+  it('uses prisma.$transaction for both locking and finalize transactions', async () => {
     prisma.$queryRaw.mockResolvedValueOnce([buildPaymentRow()]);
     prisma.refundRequest.create.mockResolvedValue({ id: 'rr_1' });
     moyasar.createRefund.mockResolvedValue({ id: 'ref_xyz', amount: 10000, currency: 'SAR', status: 'refunded', paymentId: 'moyasar_pay_abc', createdAt: new Date().toISOString() });
@@ -177,10 +169,8 @@ describe('RefundPaymentHandler', () => {
 
     await handler.execute({ paymentId: 'pay_1', reason: 'test' });
 
-    // withTransaction called twice: once for locking, once for finalize
-    expect(rlsTx.withTransaction).toHaveBeenCalledTimes(2);
-    // prisma.$transaction must NOT have been called
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+    // $transaction called twice: once for locking, once for finalize
+    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
   });
 
   it('sets status PARTIALLY_REFUNDED and stores proportional VAT when refund < invoice total', async () => {
@@ -281,7 +271,7 @@ describe('RefundPaymentHandler', () => {
       }));
     });
 
-    it('uses the tx parameter without calling rlsTx.withTransaction', async () => {
+    it('uses the tx parameter without calling prisma.$transaction', async () => {
       prisma.$queryRaw.mockResolvedValueOnce([buildPaymentRow()]);
       prisma.refundRequest.findFirst.mockResolvedValue(null);
       prisma.invoice.findUniqueOrThrow.mockResolvedValue({ id: 'inv_1', bookingId: 'bk_1', clientId: 'cli_1', currency: 'SAR', organizationId: 'org_1' });
@@ -289,7 +279,8 @@ describe('RefundPaymentHandler', () => {
 
       await handler.createRefundRequestInTx(prisma, { paymentId: 'pay_1', reason: 'test' });
 
-      expect(rlsTx.withTransaction).not.toHaveBeenCalled();
+      // createRefundRequestInTx takes a tx directly — it must not open a new transaction
+      expect(prisma.$transaction).not.toHaveBeenCalled();
     });
   });
 
@@ -319,15 +310,13 @@ describe('RefundPaymentHandler', () => {
       });
     });
 
-    it('calls rlsTx.withTransaction for the finalize step', async () => {
+    it('uses prisma.$transaction for the finalize step', async () => {
       moyasar.createRefund.mockResolvedValue({ id: 'ref_xyz', amount: 10000, currency: 'SAR', status: 'refunded', paymentId: 'moyasar_pay_abc', createdAt: new Date().toISOString() });
+      prisma.invoice.findUniqueOrThrow.mockResolvedValue({ total: '100.00', vatAmt: '15.00', refundedAmount: '0.00' });
 
       await handler.finalizeRefundFromCancellation({ refundRequestId: 'rr_1', idempotencyKey: 'refund:pay_1:100.00' });
 
-      expect(rlsTx.withTransaction).toHaveBeenCalledTimes(1);
-      const withTransactionCall = (rlsTx.withTransaction as jest.Mock).mock.calls[0][0];
-      prisma.invoice.findUniqueOrThrow.mockResolvedValueOnce({ total: '100.00', vatAmt: '15.00', refundedAmount: '0.00' });
-      await withTransactionCall(prisma);
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
       expect(prisma.refundRequest.updateMany).toHaveBeenCalledWith(expect.objectContaining({
         where: expect.objectContaining({ id: 'rr_1' }),
         data: expect.objectContaining({ status: 'COMPLETED', gatewayRef: 'ref_xyz' }),
@@ -358,7 +347,7 @@ describe('RefundPaymentHandler', () => {
 
       await expect(handler.finalizeRefundFromCancellation({ refundRequestId: 'rr_1', idempotencyKey: 'refund:pay_1:100.00' }))
         .rejects.toThrow('Moyasar 502');
-      expect(rlsTx.withTransaction).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
     });
   });
 });

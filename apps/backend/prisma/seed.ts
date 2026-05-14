@@ -8,13 +8,11 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-// Verticals seed removed — Vertical table dropped in single-tenant migration.
 
 const ADMIN_EMAIL    = process.env.SEED_EMAIL    ?? 'admin@sawaa-test.com';
 const ADMIN_PASSWORD = process.env.SEED_PASSWORD ?? 'Admin@1234';
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL;
 const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD;
-const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
 
 async function main() {
   if (process.env.NODE_ENV === 'production') {

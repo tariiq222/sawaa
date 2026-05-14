@@ -28,9 +28,7 @@ export const CheckPermissions = (...permissions: RequiredPermission[]) =>
 export type { AppAbility };
 
 type RequestUser = {
-  /** Per-org role from `Membership.role` — populated by `JwtStrategy` from the JWT claim. */
-  membershipRole?: string | null;
-  /** @deprecated legacy global role; consulted only when membershipRole is absent. */
+  /** User role — canonical single-tenant role from `User.role`. */
   role?: string | null;
   customRole: { permissions: Array<{ action: string; subject: string }> } | null;
 };

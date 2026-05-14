@@ -3,31 +3,27 @@ import { CreateDepartmentHandler } from './create-department.handler';
 import { ListDepartmentsHandler } from './list-departments.handler';
 import { UpdateDepartmentHandler } from './update-department.handler';
 import { DeleteDepartmentHandler } from './delete-department.handler';
-import { RlsTransactionService } from '../../../infrastructure/database';
-
 const DEFAULT_ORG = '00000000-0000-0000-0000-000000000001';
 
 const mockDept = { id: 'dept-1', organizationId: DEFAULT_ORG, nameAr: 'عيادة', nameEn: 'Clinic', sortOrder: 0, isActive: true, isVisible: true, categories: [] };
 
-const buildPrisma = () => ({
-  department: {
-    create: jest.fn().mockResolvedValue(mockDept),
-    findMany: jest.fn().mockResolvedValue([mockDept]),
-    count: jest.fn().mockResolvedValue(1),
-    findFirst: jest.fn().mockResolvedValue(mockDept),
-    findUnique: jest.fn().mockResolvedValue(null),
-    update: jest.fn().mockResolvedValue(mockDept),
-    updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-    deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
-  },
-  $transaction: jest.fn().mockImplementation((promises) => Promise.all(promises as Promise<unknown>[])),
-});
-
-const buildRlsTx = (prisma: ReturnType<typeof buildPrisma>) =>
-  ({
-    withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
-    withBypassTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
-  } as unknown as RlsTransactionService);
+const buildPrisma = () => {
+  const prisma = {
+    department: {
+      create: jest.fn().mockResolvedValue(mockDept),
+      findMany: jest.fn().mockResolvedValue([mockDept]),
+      count: jest.fn().mockResolvedValue(1),
+      findFirst: jest.fn().mockResolvedValue(mockDept),
+      findUnique: jest.fn().mockResolvedValue(null),
+      update: jest.fn().mockResolvedValue(mockDept),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
+    $transaction: jest.fn(),
+  };
+  prisma.$transaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(prisma));
+  return prisma;
+};
 
 describe('CreateDepartmentHandler', () => {
   it('creates a department scoped by org and passes all fields to prisma', async () => {
@@ -73,7 +69,7 @@ describe('CreateDepartmentHandler', () => {
 describe('ListDepartmentsHandler', () => {
   it('returns departments scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new ListDepartmentsHandler(prisma as never, buildRlsTx(prisma) as never);
+    const handler = new ListDepartmentsHandler(prisma as never);
     const result = await handler.execute({ page: 1, limit: 10 });
     expect(result.items).toHaveLength(1);
     expect(prisma.department.findMany).toHaveBeenCalledWith(
@@ -83,7 +79,7 @@ describe('ListDepartmentsHandler', () => {
 
   it('passes search term to where clause', async () => {
     const prisma = buildPrisma();
-    const handler = new ListDepartmentsHandler(prisma as never, buildRlsTx(prisma) as never);
+    const handler = new ListDepartmentsHandler(prisma as never);
     await handler.execute({ page: 1, limit: 10, search: 'طب' });
     const call = (prisma.department.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where).toMatchObject({
@@ -95,7 +91,7 @@ describe('ListDepartmentsHandler', () => {
 
   it('omits search clause when search is undefined', async () => {
     const prisma = buildPrisma();
-    const handler = new ListDepartmentsHandler(prisma as never, buildRlsTx(prisma) as never);
+    const handler = new ListDepartmentsHandler(prisma as never);
     await handler.execute({ page: 1, limit: 10 });
     const call = (prisma.department.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where).not.toHaveProperty('OR');

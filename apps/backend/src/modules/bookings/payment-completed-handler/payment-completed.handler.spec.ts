@@ -1,5 +1,5 @@
 import { PaymentCompletedEventHandler } from './payment-completed.handler';
-import { buildPrisma, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, mockBooking } from '../testing/booking-test-helpers';
 import { BookingStatus } from '@prisma/client';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 
@@ -19,7 +19,7 @@ function buildHandler(clsOverride?: ReturnType<typeof buildCls>) {
   let subscriber: ((envelope: { payload: { bookingId: string; paymentId: string; invoiceId: string } }) => Promise<void>) | null = null;
   eb.subscribe = jest.fn((_, cb) => { subscriber = cb as typeof subscriber; });
   const cls = clsOverride ?? buildCls();
-  const handler = new PaymentCompletedEventHandler(prisma as never, buildRlsTx(prisma) as never, eb as never, cls as never);
+  const handler = new PaymentCompletedEventHandler(prisma as never, eb as never, cls as never);
   handler.register();
   return { prisma, eb, handler, cls, getSubscriber: () => subscriber! };
 }

@@ -34,19 +34,19 @@ enum ReportStatus {
 // SaaS-02g: scoped.
 
 model ActivityLog {
-  id             String         @id @default(uuid())
-  userId         String?
-  userEmail      String?
-  action         ActivityAction
-  entity         String
-  entityId       String?
-  description    String
-  metadata       Json?
-  ipAddress      String?
-  userAgent      String?
-  occurredAt     DateTime       @default(now())
+  id          String         @id @default(uuid())
+  userId      String?
+  userEmail   String?
+  action      ActivityAction
+  entity      String
+  entityId    String?
+  description String
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  occurredAt  DateTime       @default(now())
 
-  @@index([ occurredAt])
+  @@index([occurredAt])
   @@index([entity, entityId])
   @@index([userId])
 }
@@ -65,17 +65,17 @@ model CronHeartbeat {
 // SaaS-02g: scoped.
 
 model Report {
-  id             String       @id @default(uuid())
-  type           ReportType
-  format         ReportFormat @default(JSON)
-  status         ReportStatus @default(PENDING)
-  params         Json
-  resultUrl      String?
-  resultData     Json?
-  errorMsg       String?
-  requestedBy    String?
-  createdAt      DateTime     @default(now())
-  completedAt    DateTime?
+  id          String       @id @default(uuid())
+  type        ReportType
+  format      ReportFormat @default(JSON)
+  status      ReportStatus @default(PENDING)
+  params      Json
+  resultUrl   String?
+  resultData  Json?
+  errorMsg    String?
+  requestedBy String?
+  createdAt   DateTime     @default(now())
+  completedAt DateTime?
 
   @@index([type, createdAt])
 }

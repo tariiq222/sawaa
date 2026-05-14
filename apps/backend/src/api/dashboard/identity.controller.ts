@@ -289,7 +289,6 @@ export class DashboardIdentityController {
       properties: {
         id: { type: 'string', format: 'uuid' },
         name: { type: 'string' },
-        organizationId: { type: 'string', format: 'uuid' },
         createdAt: { type: 'string', format: 'date-time' },
       },
     },

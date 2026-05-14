@@ -56,7 +56,32 @@ test.describe('Dashboard Pages Navigation', () => {
   }
 
   test('should display header with user menu', async ({ page }) => {
-    test.skip(true, 'Header component verified manually via Chrome DevTools MCP');
+    // Login via dev button if available (avoids rate-limiting the auth endpoint)
+    await page.goto('/login');
+    const devLoginButton = page.locator('button:has-text("Dev Admin Login")');
+    if (await devLoginButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await devLoginButton.click();
+      await page.waitForURL('/', { timeout: 10000 });
+    } else {
+      // Fall back to identifier-first flow
+      await page.locator('#identifier').fill('admin@sawaa-test.com');
+      await page.getByRole('button', { name: 'متابعة' }).click();
+      await expect(page.getByRole('button', { name: 'باستخدام كلمة المرور' })).toBeVisible({ timeout: 10000 });
+      await page.getByRole('button', { name: 'باستخدام كلمة المرور' }).click();
+      await expect(page.locator('#password')).toBeVisible({ timeout: 10000 });
+      await page.locator('#password').fill('Admin@1234');
+      await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
+      await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 });
+    }
+
+    // Header should be visible with user menu trigger
+    const header = page.locator('header').first();
+    await expect(header).toBeVisible({ timeout: 10000 });
+
+    const userMenuTrigger = header.locator('button').filter({
+      has: page.locator('[data-slot="avatar-fallback"], svg'),
+    });
+    await expect(userMenuTrigger).toBeVisible({ timeout: 5000 });
   });
 
   test('should collapse sidebar when toggle is clicked', async ({ page }) => {

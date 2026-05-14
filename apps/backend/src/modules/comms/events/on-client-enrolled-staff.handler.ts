@@ -31,7 +31,7 @@ export class OnClientEnrolledStaffHandler {
     try {
       const targets = await this.staffTargets.execute({
         organizationId: payload.organizationId,
-        roles: ['OWNER', 'ADMIN'],
+        roles: ['SUPER_ADMIN', 'ADMIN'],
       });
 
       await Promise.allSettled(

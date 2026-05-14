@@ -108,18 +108,18 @@ model Booking {
 // Partial unique index on (clientId, employeeId, serviceId) WHERE status = 'WAITING'
 // is enforced via migration 20260506110000_waitlist_unique_waiting (Prisma can't express partial uniques).
 model WaitlistEntry {
-  id             String         @id @default(uuid())
-  clientId       String
-  employeeId     String
-  serviceId      String
-  branchId       String
-  preferredDate  DateTime?
-  status         WaitlistStatus @default(WAITING)
-  promotedAt     DateTime?
-  expiresAt      DateTime?
-  notes          String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id            String         @id @default(uuid())
+  clientId      String
+  employeeId    String
+  serviceId     String
+  branchId      String
+  preferredDate DateTime?
+  status        WaitlistStatus @default(WAITING)
+  promotedAt    DateTime?
+  expiresAt     DateTime?
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@index([clientId])
   @@index([employeeId])
@@ -198,13 +198,13 @@ model GroupSessionWaitlist {
 // ─── BookingStatusLog ─────────────────────────────────────────────────────────
 
 model BookingStatusLog {
-  id             String         @id @default(uuid())
-  bookingId      String
-  fromStatus     BookingStatus?
-  toStatus       BookingStatus
-  changedBy      String
-  reason         String?
-  createdAt      DateTime       @default(now())
+  id         String         @id @default(uuid())
+  bookingId  String
+  fromStatus BookingStatus?
+  toStatus   BookingStatus
+  changedBy  String
+  reason     String?
+  createdAt  DateTime       @default(now())
 
   @@index([bookingId])
   @@index([createdAt])
@@ -219,8 +219,8 @@ enum RefundType {
 }
 
 model BookingSettings {
-  id             String  @id @default(uuid())
-  branchId       String? // null = global default; one settings row per branch
+  id       String  @id @default(uuid())
+  branchId String? // null = global default; one settings row per branch
 
   bufferMinutes           Int        @default(0)
   freeCancelBeforeHours   Int        @default(24)
@@ -246,5 +246,4 @@ model BookingSettings {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
 }

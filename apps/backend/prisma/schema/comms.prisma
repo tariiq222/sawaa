@@ -31,31 +31,31 @@ enum MessageSenderType {
 }
 
 model Notification {
-  id             String           @id @default(uuid())
-  recipientId    String
-  recipientType  RecipientType
-  type           NotificationType
-  title          String
-  body           String
-  metadata       Json?
-  isRead         Boolean          @default(false)
-  readAt         DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id            String           @id @default(uuid())
+  recipientId   String
+  recipientType RecipientType
+  type          NotificationType
+  title         String
+  body          String
+  metadata      Json?
+  isRead        Boolean          @default(false)
+  readAt        DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   @@index([recipientId])
   @@index([recipientId, isRead, createdAt]) // DB-06: replaces (recipientId, createdAt) — adds isRead to avoid heap filter
 }
 
 model ChatConversation {
-  id             String             @id @default(uuid())
-  clientId       String
-  employeeId     String?
-  isAiChat       Boolean            @default(false)
-  status         ConversationStatus @default(OPEN)
-  lastMessageAt  DateTime?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  id            String             @id @default(uuid())
+  clientId      String
+  employeeId    String?
+  isAiChat      Boolean            @default(false)
+  status        ConversationStatus @default(OPEN)
+  lastMessageAt DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
   messages CommsChatMessage[]
 
@@ -85,31 +85,30 @@ enum ContactMessageStatus {
 }
 
 model ContactMessage {
-  id             String               @id @default(uuid())
-  name           String
-  phone          String?
-  email          String?
-  subject        String?
-  body           String
-  status         ContactMessageStatus @default(NEW)
-  createdAt      DateTime             @default(now())
-  readAt         DateTime?
-  archivedAt     DateTime?
+  id         String               @id @default(uuid())
+  name       String
+  phone      String?
+  email      String?
+  subject    String?
+  body       String
+  status     ContactMessageStatus @default(NEW)
+  createdAt  DateTime             @default(now())
+  readAt     DateTime?
+  archivedAt DateTime?
 
   @@index([status, createdAt])
 }
 
 model EmailTemplate {
-  id             String   @id @default(uuid())
-  slug           String
-  name           String
-  subject        String
-  htmlBody       String
-  blocks         Json? // SaaS — block-builder source of truth; htmlBody is rendered from this
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
+  id        String   @id @default(uuid())
+  slug      String
+  name      String
+  subject   String
+  htmlBody  String
+  blocks    Json? // SaaS — block-builder source of truth; htmlBody is rendered from this
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // SaaS-02g-sms — per-tenant SMS provider configuration.
@@ -139,7 +138,6 @@ model OrganizationSmsConfig {
   lastTestOk            Boolean?
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
-
 }
 
 model SmsDelivery {
@@ -181,16 +179,15 @@ model OrganizationEmailConfig {
   lastTestOk            Boolean?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
-
 }
 
 model FcmToken {
-  id             String   @id @default(uuid())
-  clientId       String
-  token          String
-  platform       String   @db.VarChar(8)
-  lastSeenAt     DateTime @default(now())
-  createdAt      DateTime @default(now())
+  id         String   @id @default(uuid())
+  clientId   String
+  token      String
+  platform   String   @db.VarChar(8)
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
 
   @@unique([clientId, token], name: "fcm_token_per_client")
   @@index([clientId])
@@ -224,25 +221,25 @@ enum NotificationSenderActor {
 }
 
 model NotificationDeliveryLog {
-  id             String                  @id @default(uuid())
-  recipientId    String
-  type           NotificationType
-  priority       NotificationPriority    @default(STANDARD)
-  channel        DeliveryChannel
-  status         DeliveryStatus          @default(PENDING)
-  toAddress      String?
-  providerName   String?
-  senderActor    NotificationSenderActor @default(TENANT)
-  attempts       Int                     @default(0)
-  lastAttemptAt  DateTime?
-  sentAt         DateTime?
-  errorMessage   String?
-  jobId          String?
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
+  id            String                  @id @default(uuid())
+  recipientId   String
+  type          NotificationType
+  priority      NotificationPriority    @default(STANDARD)
+  channel       DeliveryChannel
+  status        DeliveryStatus          @default(PENDING)
+  toAddress     String?
+  providerName  String?
+  senderActor   NotificationSenderActor @default(TENANT)
+  attempts      Int                     @default(0)
+  lastAttemptAt DateTime?
+  sentAt        DateTime?
+  errorMessage  String?
+  jobId         String?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
 
-  @@index([ status])
-  @@index([ type])
+  @@index([status])
+  @@index([type])
   @@index([status, createdAt]) // DB-06: composite for retry sweep — replaces standalone (createdAt)
 }
 

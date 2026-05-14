@@ -1,7 +1,6 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { SubmitRatingHandler } from './submit-rating.handler';
 import { ListRatingsHandler } from './list-ratings.handler';
-import { RlsTransactionService } from '../../../infrastructure/database';
 
 const mockRating = {
   id: 'rating-1',
@@ -14,21 +13,19 @@ const mockRating = {
   createdAt: new Date(),
 };
 
-const buildPrisma = () => ({
-  rating: {
-    findUnique: jest.fn().mockResolvedValue(null),
-    create: jest.fn().mockResolvedValue(mockRating),
-    findMany: jest.fn().mockResolvedValue([mockRating]),
-    count: jest.fn().mockResolvedValue(1),
-  },
-  $transaction: jest.fn().mockImplementation((ops) => Promise.all(ops as Promise<unknown>[])),
-});
-
-const buildRlsTx = (prisma: ReturnType<typeof buildPrisma>) =>
-  ({
-    withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
-    withBypassTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
-  } as unknown as RlsTransactionService);
+const buildPrisma = () => {
+  const prisma = {
+    rating: {
+      findUnique: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue(mockRating),
+      findMany: jest.fn().mockResolvedValue([mockRating]),
+      count: jest.fn().mockResolvedValue(1),
+    },
+    $transaction: jest.fn(),
+  };
+  prisma.$transaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(prisma));
+  return prisma;
+};
 
 const validDto = { bookingId: 'booking-1', clientId: 'client-1', employeeId: 'emp-1', score: 5 };
 
@@ -61,7 +58,7 @@ describe('SubmitRatingHandler', () => {
 describe('ListRatingsHandler', () => {
   it('returns paginated ratings', async () => {
     const prisma = buildPrisma();
-    const handler = new ListRatingsHandler(prisma as never, buildRlsTx(prisma) as never);
+    const handler = new ListRatingsHandler(prisma as never);
     const result = await handler.execute({});
     expect(prisma.rating.findMany).toHaveBeenCalled();
     expect(result.items).toHaveLength(1);
@@ -70,7 +67,7 @@ describe('ListRatingsHandler', () => {
 
   it('filters by employeeId', async () => {
     const prisma = buildPrisma();
-    const handler = new ListRatingsHandler(prisma as never, buildRlsTx(prisma) as never);
+    const handler = new ListRatingsHandler(prisma as never);
     await handler.execute({ employeeId: 'emp-1' });
     const call = (prisma.rating.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where.employeeId).toBe('emp-1');

@@ -1,7 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { BookingStatus, CancellationReason, RefundType } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
-import { RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { ClientCancelBookingDto } from './client-cancel-booking.dto';
@@ -18,7 +17,6 @@ export type ClientCancelCommand = ClientCancelBookingDto & {
 export class ClientCancelBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTx: RlsTransactionService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly eventBus: EventBusService,
     private readonly refundHandler: RefundPaymentHandler,
@@ -50,7 +48,7 @@ export class ClientCancelBookingHandler {
     const hoursUntilBooking = (booking.scheduledAt.getTime() - Date.now()) / 3_600_000;
 
     if (settings.requireCancelApproval) {
-      const [updated] = await this.rlsTx.withTransaction((tx) => Promise.all([
+      const [updated] = await this.prisma.$transaction((tx) => Promise.all([
         tx.booking.update({
           where: { id: cmd.bookingId },
           data: {
@@ -72,7 +70,7 @@ export class ClientCancelBookingHandler {
     }
 
     if (hoursUntilBooking < settings.freeCancelBeforeHours) {
-      const [updated] = await this.rlsTx.withTransaction((tx) => Promise.all([
+      const [updated] = await this.prisma.$transaction((tx) => Promise.all([
         tx.booking.update({
           where: { id: cmd.bookingId },
           data: {
@@ -101,7 +99,7 @@ export class ClientCancelBookingHandler {
     let paymentId: string | null = null;
     let idempotencyKey: string | null = null;
 
-    const updated = await this.rlsTx.withTransaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       const cancelled = await tx.booking.update({
         where: { id: cmd.bookingId },
         data: {

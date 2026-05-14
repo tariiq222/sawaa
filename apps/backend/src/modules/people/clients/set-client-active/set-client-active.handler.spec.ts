@@ -1,5 +1,4 @@
 import { NotFoundException } from '@nestjs/common';
-import { RlsTransactionService } from '../../../../infrastructure/database';
 import { SetClientActiveHandler } from './set-client-active.handler';
 
 const makeClient = (overrides: Partial<{ id: string; isActive: boolean; deletedAt: Date | null }> = {}) => ({
@@ -9,24 +8,22 @@ const makeClient = (overrides: Partial<{ id: string; isActive: boolean; deletedA
   ...overrides,
 });
 
-const buildPrisma = (client: ReturnType<typeof makeClient> | null) => ({
-  client: {
-    findFirst: jest.fn().mockResolvedValue(client),
-  },
-});
+const buildPrisma = (client: ReturnType<typeof makeClient> | null, tx?: Record<string, unknown>) => {
+  const txObj = tx ?? {};
+  return {
+    client: {
+      findFirst: jest.fn().mockResolvedValue(client),
+    },
+    $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(txObj)),
+  };
+};
 
 const buildEventBus = () => ({ publish: jest.fn().mockResolvedValue(undefined) });
 const buildLogActivity = () => ({ execute: jest.fn().mockResolvedValue(undefined) });
 
-const buildRlsTx = (txFactory: () => unknown) =>
-  ({
-    withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(txFactory())),
-  } as unknown as RlsTransactionService);
-
 describe('SetClientActiveHandler', () => {
   it('enables a client (happy path — isActive: true)', async () => {
     const disabledClient = makeClient({ isActive: false });
-    const prisma = buildPrisma(disabledClient);
 
     const clientRefreshTokenUpdateMany = jest.fn();
     const tx = {
@@ -35,7 +32,7 @@ describe('SetClientActiveHandler', () => {
       },
       clientRefreshToken: { updateMany: clientRefreshTokenUpdateMany },
     };
-    const rlsTx = buildRlsTx(() => tx);
+    const prisma = buildPrisma(disabledClient, tx);
 
     const eventBus = buildEventBus();
     const logActivity = buildLogActivity();
@@ -43,7 +40,6 @@ describe('SetClientActiveHandler', () => {
       prisma as never,
       eventBus as never,
       logActivity as never,
-      rlsTx,
     );
 
     const result = await handler.execute({
@@ -71,7 +67,6 @@ describe('SetClientActiveHandler', () => {
 
   it('disables a client + revokes refresh tokens (happy path — isActive: false)', async () => {
     const activeClient = makeClient({ isActive: true });
-    const prisma = buildPrisma(activeClient);
 
     const revokeMany = jest.fn().mockResolvedValue({ count: 2 });
     const tx = {
@@ -80,7 +75,7 @@ describe('SetClientActiveHandler', () => {
       },
       clientRefreshToken: { updateMany: revokeMany },
     };
-    const rlsTx = buildRlsTx(() => tx);
+    const prisma = buildPrisma(activeClient, tx);
 
     const eventBus = buildEventBus();
     const logActivity = buildLogActivity();
@@ -88,7 +83,6 @@ describe('SetClientActiveHandler', () => {
       prisma as never,
       eventBus as never,
       logActivity as never,
-      rlsTx,
     );
 
     const result = await handler.execute({
@@ -115,12 +109,10 @@ describe('SetClientActiveHandler', () => {
 
   it('throws 404 when client does not exist', async () => {
     const prisma = buildPrisma(null);
-    const rlsTx = buildRlsTx(() => ({}));
     const handler = new SetClientActiveHandler(
       prisma as never,
       buildEventBus() as never,
       buildLogActivity() as never,
-      rlsTx,
     );
 
     await expect(
@@ -134,19 +126,17 @@ describe('SetClientActiveHandler', () => {
     const prisma = buildPrisma(activeClient);
     const eventBus = buildEventBus();
     const logActivity = buildLogActivity();
-    const rlsTx = buildRlsTx(() => ({}));
     const handler = new SetClientActiveHandler(
       prisma as never,
       eventBus as never,
       logActivity as never,
-      rlsTx,
     );
 
     const result = await handler.execute({ clientId: 'client-1', isActive: true });
 
     expect(result).toEqual({ id: 'client-1', isActive: true });
     // No transaction, no event, no log
-    expect(rlsTx.withTransaction).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(eventBus.publish).not.toHaveBeenCalled();
     expect(logActivity.execute).not.toHaveBeenCalled();
   });

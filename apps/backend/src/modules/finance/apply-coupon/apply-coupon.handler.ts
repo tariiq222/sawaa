@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService } from '../../../infrastructure/database';
 
 import { ApplyCouponDto } from './apply-coupon.dto';
 
@@ -12,7 +12,6 @@ export class ApplyCouponHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(cmd: ApplyCouponCommand) {
@@ -56,7 +55,7 @@ export class ApplyCouponHandler {
     const newVatAmt = newVatBase.times(invoiceVatRate).toDecimalPlaces(2).toNumber();
     const newTotal = newVatBase.plus(newVatAmt).toDecimalPlaces(2).toNumber();
 
-    return this.rlsTx.withTransaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       if (coupon.maxUses !== null) {
         const { count } = await tx.coupon.updateMany({
           where: { id: coupon.id, usedCount: { lt: coupon.maxUses } },

@@ -7081,8 +7081,6 @@ export interface operations {
                             isSuperAdmin?: boolean;
                             lastName?: string;
                             name?: string;
-                            /** Format: uuid */
-                            organizationId?: string | null;
                             permissions?: string[];
                             phone?: string | null;
                             role?: string;
@@ -7200,8 +7198,6 @@ export interface operations {
                         id?: string;
                         isSuperAdmin?: boolean;
                         name?: string;
-                        /** Format: uuid */
-                        organizationId?: string | null;
                         permissions?: string[];
                         phone?: string | null;
                         role?: string;
@@ -7317,8 +7313,6 @@ export interface operations {
                             isSuperAdmin?: boolean;
                             lastName?: string;
                             name?: string;
-                            /** Format: uuid */
-                            organizationId?: string | null;
                             permissions?: string[];
                             phone?: string | null;
                             role?: string;
@@ -8130,8 +8124,6 @@ export interface operations {
                         employeeId?: string;
                         /** Format: uuid */
                         id?: string;
-                        /** Format: uuid */
-                        organizationId?: string;
                         /** Format: date-time */
                         scheduledAt?: string;
                         /** @example PENDING */
@@ -11955,8 +11947,6 @@ export interface operations {
                         /** Format: uuid */
                         id?: string;
                         name?: string;
-                        /** Format: uuid */
-                        organizationId?: string;
                     };
                 };
             };
@@ -17820,8 +17810,6 @@ export interface operations {
                         employeeId?: string;
                         /** Format: uuid */
                         id?: string;
-                        /** Format: uuid */
-                        organizationId?: string;
                         /** Format: uuid */
                         serviceId?: string;
                     };

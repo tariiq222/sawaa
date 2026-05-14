@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService } from '../../../infrastructure/database';
 
 export interface DeleteRoleCommand {
   customRoleId: string;
@@ -9,7 +9,6 @@ export interface DeleteRoleCommand {
 export class DeleteRoleHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(cmd: DeleteRoleCommand): Promise<void> {
@@ -19,7 +18,7 @@ export class DeleteRoleHandler {
     });
     if (!role) throw new NotFoundException(`Role ${cmd.customRoleId} not found`);
 
-    await this.rlsTx.withTransaction((tx) =>
+    await this.prisma.$transaction((tx) =>
       Promise.all([
         tx.user.updateMany({
           where: { customRoleId: cmd.customRoleId },

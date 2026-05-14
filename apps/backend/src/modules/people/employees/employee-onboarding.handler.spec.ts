@@ -1,7 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
-import { RlsTransactionService } from '../../../infrastructure/database';
 import { EmployeeOnboardingHandler } from './employee-onboarding.handler';
 
 const OnboardingStatus = {
@@ -19,14 +18,14 @@ const mockEmployee = {
 
 describe('EmployeeOnboardingHandler', () => {
   let handler: EmployeeOnboardingHandler;
-   
+
   let prisma: any;
-  let rlsTx: { withTransaction: jest.Mock };
 
   beforeEach(async () => {
     jest.clearAllMocks();
 
     prisma = {
+      $transaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
       employee: {
         findUnique: jest.fn(),
         findFirst: jest.fn(),
@@ -41,18 +40,11 @@ describe('EmployeeOnboardingHandler', () => {
       providers: [
         EmployeeOnboardingHandler,
         { provide: PrismaService, useValue: prisma },
-        {
-          provide: RlsTransactionService,
-          useValue: {
-            withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
-          },
-        },
       ],
     }).compile();
 
     handler = module.get(EmployeeOnboardingHandler);
     prisma = module.get(PrismaService);
-    rlsTx = module.get(RlsTransactionService) as unknown as { withTransaction: jest.Mock };
   });
 
   describe('employee not found', () => {
@@ -114,7 +106,7 @@ describe('EmployeeOnboardingHandler', () => {
 
       await handler.execute({ employeeId: 'emp-1', step: 'branches', branchIds: ['br-1'] });
 
-      expect(rlsTx.withTransaction).toHaveBeenCalled();
+      expect(prisma.$transaction).toHaveBeenCalled();
       expect(prisma.employeeBranch.deleteMany).toHaveBeenCalledWith({ where: { employeeId: 'emp-1' } });
       expect(prisma.employeeBranch.createMany).toHaveBeenCalledWith({
         data: [{ employeeId: 'emp-1', branchId: 'br-1' }],

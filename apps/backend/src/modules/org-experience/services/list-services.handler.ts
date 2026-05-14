@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListServicesDto } from './list-services.dto';
 
@@ -9,7 +9,6 @@ export type ListServicesCommand = ListServicesDto;
 export class ListServicesHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(dto: ListServicesCommand) {
@@ -31,7 +30,7 @@ export class ListServicesHandler {
       }),
     };
 
-    const [items, total] = await this.rlsTx.withTransaction((tx) =>
+    const [items, total] = await this.prisma.$transaction((tx) =>
       Promise.all([
         tx.service.findMany({
           where,

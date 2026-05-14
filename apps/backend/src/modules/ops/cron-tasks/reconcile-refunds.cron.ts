@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { RlsTransactionService } from '../../../common/database/rls-transaction';
 import { MoyasarApiClient } from '../../finance/moyasar-api/moyasar-api.client';
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
@@ -31,7 +30,6 @@ export class ReconcileRefundsCron {
   constructor(
     private readonly prisma: PrismaService,
     private readonly moyasar: MoyasarApiClient,
-    private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(): Promise<void> {
@@ -105,7 +103,7 @@ export class ReconcileRefundsCron {
 
     // status === 'paid' — finalize atomically
     if (status === 'paid') {
-      await this.rlsTx.withTransaction(async (tx) => {
+      await this.prisma.$transaction(async (tx) => {
         await tx.refundRequest.update({
           where: { id: refundRequestId },
           data: { status: 'COMPLETED' },

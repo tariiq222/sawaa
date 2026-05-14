@@ -1,5 +1,5 @@
 import { Injectable, ConflictException } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 
 import { BranchCreatedEvent } from '../events/branch-created.event';
@@ -12,11 +12,10 @@ export class CreateBranchHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventBus: EventBusService,
-    private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(dto: CreateBranchCommand) {
-    const branch = await this.rlsTx.withTransaction(
+    const branch = await this.prisma.$transaction(
       async (tx) => {
         const existing = await tx.branch.findFirst({
           where: { nameAr: dto.nameAr },

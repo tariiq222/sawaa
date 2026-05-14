@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BookingStatus, CancellationReason } from '@prisma/client';
 import { CancelBookingHandler } from './cancel-booking.handler';
-import { buildPrisma, buildEventBus, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, buildEventBus, mockBooking } from '../testing/booking-test-helpers';
 
 const defaultCancelSettings = {
   execute: jest.fn().mockResolvedValue({
@@ -26,7 +26,7 @@ describe('CancelBookingHandler', () => {
   it('cancels PENDING booking and emits event', async () => {
     const prisma = buildPrisma();
     const eb = buildEventBus();
-    const result = await new CancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, eb as never, defaultCancelSettings as never, buildZoom() as never, refundHandler as never).execute({
+    const result = await new CancelBookingHandler(prisma as never, eb as never, defaultCancelSettings as never, buildZoom() as never, refundHandler as never).execute({
       bookingId: 'book-1', reason: CancellationReason.CLIENT_REQUESTED, changedBy: 'user-42',
     });
     expect(prisma.booking.update).toHaveBeenCalledWith(
@@ -40,7 +40,7 @@ describe('CancelBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue(null);
     await expect(
-      new CancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildEventBus() as never, defaultCancelSettings as never, buildZoom() as never, refundHandler as never).execute({
+      new CancelBookingHandler(prisma as never, buildEventBus() as never, defaultCancelSettings as never, buildZoom() as never, refundHandler as never).execute({
         bookingId: 'bad', reason: CancellationReason.OTHER, changedBy: 'user-42',
       }),
     ).rejects.toThrow(NotFoundException);
@@ -50,7 +50,7 @@ describe('CancelBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CANCELLED });
     await expect(
-      new CancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, buildEventBus() as never, defaultCancelSettings as never, buildZoom() as never, refundHandler as never).execute({
+      new CancelBookingHandler(prisma as never, buildEventBus() as never, defaultCancelSettings as never, buildZoom() as never, refundHandler as never).execute({
         bookingId: 'book-1', reason: CancellationReason.OTHER, changedBy: 'user-42',
       }),
     ).rejects.toThrow(BadRequestException);
@@ -61,7 +61,7 @@ describe('CancelBookingHandler — status log', () => {
   it('writes a BookingStatusLog entry on cancel', async () => {
     const prisma = buildPrisma();
     const eventBus = { publish: jest.fn() };
-    const handler = new CancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, eventBus as never, defaultCancelSettings as never, buildZoom() as never, refundHandler as never);
+    const handler = new CancelBookingHandler(prisma as never, eventBus as never, defaultCancelSettings as never, buildZoom() as never, refundHandler as never);
 
     await handler.execute({
       bookingId: 'book-1',
@@ -92,7 +92,7 @@ describe('CancelBookingHandler — free cancel window', () => {
         lateCancelRefundPercent: 0,
       }),
     };
-    const handler = new CancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, eventBus as never, settingsHandler as never, buildZoom() as never, refundHandler as never);
+    const handler = new CancelBookingHandler(prisma as never, eventBus as never, settingsHandler as never, buildZoom() as never, refundHandler as never);
 
     const result = await handler.execute({
       bookingId: 'book-1',
@@ -114,7 +114,7 @@ describe('CancelBookingHandler — free cancel window', () => {
         lateCancelRefundPercent: 0,
       }),
     };
-    const handler = new CancelBookingHandler(prisma as never, buildRlsTx(prisma) as never, eventBus as never, settingsHandler as never, buildZoom() as never, refundHandler as never);
+    const handler = new CancelBookingHandler(prisma as never, eventBus as never, settingsHandler as never, buildZoom() as never, refundHandler as never);
 
     const result = await handler.execute({
       bookingId: 'book-1',
@@ -134,7 +134,6 @@ describe('CancelBookingHandler — coupon release on cancel', () => {
 
     const handler = new CancelBookingHandler(
       prisma as never,
-      buildRlsTx(prisma) as never,
       buildEventBus() as never,
       defaultCancelSettings as never,
       buildZoom() as never,
@@ -159,7 +158,6 @@ describe('CancelBookingHandler — coupon release on cancel', () => {
 
     const handler = new CancelBookingHandler(
       prisma as never,
-      buildRlsTx(prisma) as never,
       buildEventBus() as never,
       defaultCancelSettings as never,
       buildZoom() as never,
@@ -180,7 +178,6 @@ describe('CancelBookingHandler — coupon release on cancel', () => {
 
     const handler = new CancelBookingHandler(
       prisma as never,
-      buildRlsTx(prisma) as never,
       buildEventBus() as never,
       defaultCancelSettings as never,
       buildZoom() as never,
@@ -220,7 +217,6 @@ describe('CancelBookingHandler — coupon release on cancel', () => {
 
     const handler = new CancelBookingHandler(
       prisma as never,
-      buildRlsTx(prisma) as never,
       buildEventBus() as never,
       defaultCancelSettings as never,
       buildZoom() as never,

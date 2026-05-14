@@ -24,13 +24,7 @@ function buildTx(): TxMock {
   };
 }
 
-function buildRlsTx(tx: TxMock) {
-  return {
-    withTransaction: jest.fn().mockImplementation(async (fn: (t: TxMock) => Promise<void>) => fn(tx)),
-  };
-}
-
-function buildPrisma(stuckRows: StuckRow[]) {
+function buildPrisma(stuckRows: StuckRow[], tx: TxMock) {
   return {
     $queryRaw: jest.fn().mockImplementation((strings: TemplateStringsArray, ..._values: unknown[]) => {
       if (strings[0].includes('hashtext')) return Promise.resolve([{ v: BigInt(12345) }]);
@@ -38,6 +32,7 @@ function buildPrisma(stuckRows: StuckRow[]) {
       if (strings[0].includes('pg_advisory_unlock')) return Promise.resolve([]);
       return Promise.resolve([]);
     }),
+    $transaction: jest.fn().mockImplementation(async (fn: (t: TxMock) => Promise<void>) => fn(tx)),
     refundRequest: {
       findMany: jest.fn().mockResolvedValue(stuckRows),
       update: jest.fn().mockResolvedValue({}),
@@ -69,12 +64,11 @@ describe('ReconcileRefundsCron', () => {
       invoiceId: 'inv_1',
       gatewayRef: 'moyasar_ref_1',
     };
-    const prisma = buildPrisma([row]);
-    const moyasar = buildMoyasar({ moyasar_ref_1: 'paid' });
     const tx = buildTx();
-    const rlsTx = buildRlsTx(tx);
+    const prisma = buildPrisma([row], tx);
+    const moyasar = buildMoyasar({ moyasar_ref_1: 'paid' });
 
-    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never, rlsTx as never);
+    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never);
     await cron.execute();
 
     expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORG_ID, 'moyasar_ref_1');
@@ -100,12 +94,11 @@ describe('ReconcileRefundsCron', () => {
       invoiceId: 'inv_2',
       gatewayRef: 'moyasar_ref_2',
     };
-    const prisma = buildPrisma([row]);
-    const moyasar = buildMoyasar({ moyasar_ref_2: 'failed' });
     const tx = buildTx();
-    const rlsTx = buildRlsTx(tx);
+    const prisma = buildPrisma([row], tx);
+    const moyasar = buildMoyasar({ moyasar_ref_2: 'failed' });
 
-    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never, rlsTx as never);
+    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never);
     await cron.execute();
 
     expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORG_ID, 'moyasar_ref_2');
@@ -124,12 +117,11 @@ describe('ReconcileRefundsCron', () => {
       invoiceId: 'inv_3',
       gatewayRef: 'moyasar_ref_3',
     };
-    const prisma = buildPrisma([row]);
-    const moyasar = buildMoyasar({ moyasar_ref_3: 'pending' });
     const tx = buildTx();
-    const rlsTx = buildRlsTx(tx);
+    const prisma = buildPrisma([row], tx);
+    const moyasar = buildMoyasar({ moyasar_ref_3: 'pending' });
 
-    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never, rlsTx as never);
+    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never);
     await cron.execute();
 
     expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORG_ID, 'moyasar_ref_3');
@@ -157,12 +149,11 @@ describe('ReconcileRefundsCron', () => {
       invoiceId: 'inv_idem',
       gatewayRef: 'moyasar_ref_idem',
     };
-    const prisma = buildPrisma([row]);
-    const moyasar = buildMoyasar({ moyasar_ref_idem: 'paid' });
     const tx = buildTx();
-    const rlsTx = buildRlsTx(tx);
+    const prisma = buildPrisma([row], tx);
+    const moyasar = buildMoyasar({ moyasar_ref_idem: 'paid' });
 
-    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never, rlsTx as never);
+    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never);
 
     // Call execute twice — simulates the cron firing twice for the same stuck row
     await cron.execute();
@@ -178,12 +169,11 @@ describe('ReconcileRefundsCron', () => {
   });
 
   it('is a no-op when there are no stuck rows', async () => {
-    const prisma = buildPrisma([]);
-    const moyasar = buildMoyasar({});
     const tx = buildTx();
-    const rlsTx = buildRlsTx(tx);
+    const prisma = buildPrisma([], tx);
+    const moyasar = buildMoyasar({});
 
-    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never, rlsTx as never);
+    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never);
     await cron.execute();
 
     expect(moyasar.getRefundStatus).not.toHaveBeenCalled();
@@ -195,16 +185,15 @@ describe('ReconcileRefundsCron', () => {
       { id: 'rr_err', paymentId: 'pay_err', invoiceId: 'inv_err', gatewayRef: 'ref_err' },
       { id: 'rr_ok', paymentId: 'pay_ok', invoiceId: 'inv_ok', gatewayRef: 'ref_ok' },
     ];
-    const prisma = buildPrisma(rows);
+    const tx = buildTx();
+    const prisma = buildPrisma(rows, tx);
     const moyasar = {
       getRefundStatus: jest.fn()
         .mockRejectedValueOnce(new Error('network error'))
         .mockResolvedValueOnce({ id: 'ref_ok', status: 'paid' }),
     };
-    const tx = buildTx();
-    const rlsTx = buildRlsTx(tx);
 
-    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never, rlsTx as never);
+    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never);
     await cron.execute(); // should not throw
 
     // Second row should still be processed despite the first throwing
@@ -216,12 +205,11 @@ describe('ReconcileRefundsCron', () => {
   });
 
   it('queries rows with status=PROCESSING, updatedAt < cutoff, and gatewayRef not null', async () => {
-    const prisma = buildPrisma([]);
-    const moyasar = buildMoyasar({});
     const tx = buildTx();
-    const rlsTx = buildRlsTx(tx);
+    const prisma = buildPrisma([], tx);
+    const moyasar = buildMoyasar({});
 
-    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never, rlsTx as never);
+    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never);
     await cron.execute();
 
     expect(prisma.refundRequest.findMany).toHaveBeenCalledWith({

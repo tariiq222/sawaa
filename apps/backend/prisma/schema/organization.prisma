@@ -4,42 +4,41 @@
 // ─── Branches ────────────────────────────────────────────────────────────────
 
 model Branch {
-  id             String   @id @default(uuid())
-  nameAr         String
-  nameEn         String?
-  phone          String?
-  addressAr      String?
-  addressEn      String?
-  city           String?
-  country        String   @default("SA")
-  latitude       Float?
-  longitude      Float?
-  isActive       Boolean  @default(true)
-  isMain         Boolean  @default(false)
-  timezone       String   @default("Asia/Riyadh")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id        String   @id @default(uuid())
+  nameAr    String
+  nameEn    String?
+  phone     String?
+  addressAr String?
+  addressEn String?
+  city      String?
+  country   String   @default("SA")
+  latitude  Float?
+  longitude Float?
+  isActive  Boolean  @default(true)
+  isMain    Boolean  @default(false)
+  timezone  String   @default("Asia/Riyadh")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   businessHours BusinessHour[]
   holidays      Holiday[]
-
 }
 
 // ─── Departments ─────────────────────────────────────────────────────────────
 
 // isVisible = false → يُخفى القسم في الواجهة وتُعرض فئاته مباشرة تحت الجذر.
 model Department {
-  id             String   @id @default(uuid())
-  nameAr         String @unique // was @unique globally
-  nameEn         String?
-  descriptionAr  String?
-  descriptionEn  String?
-  icon           String?
-  isVisible      Boolean  @default(true)
-  sortOrder      Int      @default(0)
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(uuid())
+  nameAr        String   @unique // was @unique globally
+  nameEn        String?
+  descriptionAr String?
+  descriptionEn String?
+  icon          String?
+  isVisible     Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   categories ServiceCategory[]
 
@@ -50,15 +49,15 @@ model Department {
 
 // departmentId nullable لدعم فئات بلا قسم (hierarchy مسطح).
 model ServiceCategory {
-  id             String      @id @default(uuid())
-  departmentId   String?
-  department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  nameAr         String
-  nameEn         String?
-  sortOrder      Int         @default(0)
-  isActive       Boolean     @default(true)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  id           String      @id @default(uuid())
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  nameAr       String
+  nameEn       String?
+  sortOrder    Int         @default(0)
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   services Service[]
 
@@ -76,21 +75,21 @@ enum RecurringPattern {
 }
 
 model Service {
-  id             String           @id @default(uuid())
-  categoryId     String?
-  category       ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  nameAr         String
-  nameEn         String?
-  descriptionAr  String?
-  descriptionEn  String?
-  durationMins   Int
-  price          Decimal          @db.Decimal(12, 2)
-  currency       String           @default("SAR")
-  imageUrl       String?
-  isActive       Boolean          @default(true)
-  archivedAt     DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id            String           @id @default(uuid())
+  categoryId    String?
+  category      ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  nameAr        String
+  nameEn        String?
+  descriptionAr String?
+  descriptionEn String?
+  durationMins  Int
+  price         Decimal          @db.Decimal(12, 2)
+  currency      String           @default("SAR")
+  imageUrl      String?
+  isActive      Boolean          @default(true)
+  archivedAt    DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   // ─── العرض/الإخفاء ───────────────────────────────────────────────────────
   isHidden              Boolean @default(false)
@@ -148,16 +147,16 @@ enum ServiceBookingMode {
 // Per-service booking type configuration (IN_PERSON / ONLINE).
 // Each (serviceId, bookingType) pair is unique.
 model ServiceBookingConfig {
-  id             String             @id @default(uuid())
-  serviceId      String
-  service        Service            @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  id           String             @id @default(uuid())
+  serviceId    String
+  service      Service            @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   // DB-10: was String ('in_person' | 'online') — now typed enum
-  bookingType    ServiceBookingMode
-  price          Decimal            @default(0) @db.Decimal(12, 2)
-  durationMins   Int                @default(30)
-  isActive       Boolean            @default(true)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  bookingType  ServiceBookingMode
+  price        Decimal            @default(0) @db.Decimal(12, 2)
+  durationMins Int                @default(30)
+  isActive     Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 
   @@unique([serviceId, bookingType])
   @@index([serviceId])
@@ -170,20 +169,20 @@ model ServiceBookingConfig {
 // flow (e.g. different durations for GROUP vs INDIVIDUAL of the same service).
 // BookingType enum is defined in bookings.prisma — shared across BCs.
 model ServiceDurationOption {
-  id             String       @id @default(uuid())
-  serviceId      String
-  service        Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  bookingType    BookingType?
-  label          String
-  labelAr        String
-  durationMins   Int
-  price          Decimal      @db.Decimal(12, 2)
-  currency       String       @default("SAR")
-  isDefault      Boolean      @default(false)
-  sortOrder      Int          @default(0)
-  isActive       Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id           String       @id @default(uuid())
+  serviceId    String
+  service      Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  bookingType  BookingType?
+  label        String
+  labelAr      String
+  durationMins Int
+  price        Decimal      @db.Decimal(12, 2)
+  currency     String       @default("SAR")
+  isDefault    Boolean      @default(false)
+  sortOrder    Int          @default(0)
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   employeeOptions EmployeeServiceOption[]
 
@@ -218,15 +217,15 @@ model EmployeeServiceOption {
 
 // dayOfWeek: 0=Sunday … 6=Saturday
 model BusinessHour {
-  id             String   @id @default(uuid())
-  branchId       String
-  branch         Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  dayOfWeek      Int
-  startTime      String // "HH:mm"
-  endTime        String // "HH:mm"
-  isOpen         Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id        String   @id @default(uuid())
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  dayOfWeek Int
+  startTime String // "HH:mm"
+  endTime   String // "HH:mm"
+  isOpen    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([branchId, dayOfWeek])
   @@index([branchId])
@@ -235,13 +234,13 @@ model BusinessHour {
 // ─── Holidays ────────────────────────────────────────────────────────────────
 
 model Holiday {
-  id             String   @id @default(uuid())
-  branchId       String
-  branch         Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  date           DateTime @db.Date
-  nameAr         String
-  nameEn         String?
-  createdAt      DateTime @default(now())
+  id        String   @id @default(uuid())
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  nameAr    String
+  nameEn    String?
+  createdAt DateTime @default(now())
 
   @@unique([branchId, date])
   @@index([branchId])
@@ -255,7 +254,7 @@ enum WebsiteTheme {
 }
 
 model BrandingConfig {
-  id             String @id @default(uuid()) // SaaS-02c: was @default("default")
+  id String @id @default(uuid()) // SaaS-02c: was @default("default")
 
   organizationNameAr String
   organizationNameEn String?
@@ -309,32 +308,31 @@ enum IntakeFormScope {
 }
 
 model IntakeForm {
-  id             String          @id @default(uuid())
-  nameAr         String
-  nameEn         String?
-  type           IntakeFormType  @default(PRE_SESSION)
-  scope          IntakeFormScope @default(GLOBAL)
-  scopeId        String?
-  isActive       Boolean         @default(true)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id        String          @id @default(uuid())
+  nameAr    String
+  nameEn    String?
+  type      IntakeFormType  @default(PRE_SESSION)
+  scope     IntakeFormScope @default(GLOBAL)
+  scopeId   String?
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
   fields IntakeField[]
-
 }
 
 model IntakeField {
-  id             String          @id @default(uuid())
-  formId         String
-  form           IntakeForm      @relation(fields: [formId], references: [id], onDelete: Cascade)
-  labelAr        String
-  labelEn        String?
-  fieldType      IntakeFieldType
-  isRequired     Boolean         @default(false)
-  options        Json? // string[] for SELECT/RADIO/CHECKBOX
-  position       Int             @default(0)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id         String          @id @default(uuid())
+  formId     String
+  form       IntakeForm      @relation(fields: [formId], references: [id], onDelete: Cascade)
+  labelAr    String
+  labelEn    String?
+  fieldType  IntakeFieldType
+  isRequired Boolean         @default(false)
+  options    Json? // string[] for SELECT/RADIO/CHECKBOX
+  position   Int             @default(0)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
   @@index([formId])
 }
@@ -342,14 +340,14 @@ model IntakeField {
 // ─── Ratings ──────────────────────────────────────────────────────────────────
 
 model Rating {
-  id             String   @id @default(uuid())
-  bookingId      String   @unique // one rating per booking
-  clientId       String
-  employeeId     String
-  score          Int // 1–5
-  comment        String?
-  isPublic       Boolean  @default(false)
-  createdAt      DateTime @default(now())
+  id         String   @id @default(uuid())
+  bookingId  String   @unique // one rating per booking
+  clientId   String
+  employeeId String
+  score      Int // 1–5
+  comment    String?
+  isPublic   Boolean  @default(false)
+  createdAt  DateTime @default(now())
 
   @@index([employeeId])
   @@index([clientId])

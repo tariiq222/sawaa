@@ -32,7 +32,7 @@ export class OnPaymentCompletedStaffHandler {
     try {
       const targets = await this.staffTargets.execute({
         organizationId: payload.organizationId,
-        roles: ['OWNER', 'ADMIN', 'ACCOUNTANT'],
+        roles: ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT'],
       });
 
       const amountStr = `${payload.amount} ${payload.currency}`;

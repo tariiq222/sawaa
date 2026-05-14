@@ -1,13 +1,13 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { CompleteBookingHandler } from './complete-booking.handler';
-import { buildPrisma, buildRlsTx, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, mockBooking } from '../testing/booking-test-helpers';
 
 describe('CompleteBookingHandler', () => {
   it('completes CONFIRMED booking', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
-    await new CompleteBookingHandler(prisma as never, buildRlsTx(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new CompleteBookingHandler(prisma as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
     expect(prisma.booking.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.COMPLETED }) }),
     );
@@ -17,7 +17,7 @@ describe('CompleteBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CANCELLED });
     await expect(
-      new CompleteBookingHandler(prisma as never, buildRlsTx(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' }),
+      new CompleteBookingHandler(prisma as never).execute({ bookingId: 'book-1', changedBy: 'user-42' }),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -25,7 +25,7 @@ describe('CompleteBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue(null);
     await expect(
-      new CompleteBookingHandler(prisma as never, buildRlsTx(prisma) as never).execute({ bookingId: 'bad', changedBy: 'user-42' }),
+      new CompleteBookingHandler(prisma as never).execute({ bookingId: 'bad', changedBy: 'user-42' }),
     ).rejects.toThrow(NotFoundException);
   });
 });
@@ -35,7 +35,7 @@ describe('CompleteBookingHandler — status log', () => {
     const prisma = buildPrisma();
     const confirmedBooking = { ...mockBooking, status: BookingStatus.CONFIRMED };
     prisma.booking.findUnique.mockResolvedValue(confirmedBooking);
-    const handler = new CompleteBookingHandler(prisma as never, buildRlsTx(prisma) as never);
+    const handler = new CompleteBookingHandler(prisma as never);
 
     await handler.execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
@@ -77,7 +77,7 @@ describe('payAtClinic invoice creation', () => {
     };
     prisma.booking.findUnique = jest.fn().mockResolvedValue(confirmedBooking);
 
-    await new CompleteBookingHandler(prisma as never, buildRlsTx(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new CompleteBookingHandler(prisma as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
     expect(prisma.invoice.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -101,7 +101,7 @@ describe('payAtClinic invoice creation', () => {
     };
     prisma.booking.findUnique = jest.fn().mockResolvedValue(confirmedBooking);
 
-    await new CompleteBookingHandler(prisma as never, buildRlsTx(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new CompleteBookingHandler(prisma as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
     expect(prisma.invoice.create).not.toHaveBeenCalled();
   });
@@ -116,7 +116,7 @@ describe('payAtClinic invoice creation', () => {
     };
     prisma.booking.findUnique = jest.fn().mockResolvedValue(confirmedBooking);
 
-    await new CompleteBookingHandler(prisma as never, buildRlsTx(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new CompleteBookingHandler(prisma as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
     expect(prisma.invoice.create).not.toHaveBeenCalled();
   });
@@ -133,7 +133,7 @@ describe('payAtClinic invoice creation', () => {
     };
     prisma.booking.findUnique = jest.fn().mockResolvedValue(confirmedBooking);
 
-    await new CompleteBookingHandler(prisma as never, buildRlsTx(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new CompleteBookingHandler(prisma as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
     expect(prisma.invoice.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -155,7 +155,7 @@ describe('payAtClinic invoice creation', () => {
     };
     prisma.booking.findUnique = jest.fn().mockResolvedValue(confirmedBooking);
 
-    await new CompleteBookingHandler(prisma as never, buildRlsTx(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await new CompleteBookingHandler(prisma as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
     expect(prisma.invoice.create).toHaveBeenCalledWith(
       expect.objectContaining({

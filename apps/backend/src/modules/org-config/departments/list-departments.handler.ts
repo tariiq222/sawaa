@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListDepartmentsDto } from './list-departments.dto';
 
@@ -9,7 +9,6 @@ export type ListDepartmentsQuery = ListDepartmentsDto;
 export class ListDepartmentsHandler {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTx: RlsTransactionService,
   ) {}
 
   async execute(dto: ListDepartmentsQuery) {
@@ -27,7 +26,7 @@ export class ListDepartmentsHandler {
       }),
     };
 
-    const [items, total] = await this.rlsTx.withTransaction((tx) =>
+    const [items, total] = await this.prisma.$transaction((tx) =>
       Promise.all([
         tx.department.findMany({
           where,
