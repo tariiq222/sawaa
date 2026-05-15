@@ -8,6 +8,7 @@ import type { DraftService } from "@/components/features/employees/create/servic
 import type { AvailabilitySlot, EmployeeService } from "@/lib/types/employee"
 import {
   assignService,
+  uploadEmployeeAvatar,
 } from "@/lib/api/employees"
 import {
   useEmployeeMutations,
@@ -122,8 +123,8 @@ export function useEmployeeForm({
     setDraftServices(existingServices.map((ps: EmployeeService) => ({
       key: ps.id, serviceId: ps.serviceId,
       serviceName: ps.service.nameAr || ps.service.nameEn,
-      bufferMinutes: ps.bufferMinutes, isActive: ps.isActive,
-      availableTypes: ps.availableTypes,
+      bufferMinutes: ps.bufferMinutes ?? 0, isActive: ps.isActive,
+      availableTypes: ps.availableTypes ?? [],
       types: (ps.serviceTypes ?? []).map((st) => ({
         bookingType: st.bookingType, price: st.price ?? undefined,
         duration: st.duration ?? undefined, isActive: st.isActive,
@@ -157,6 +158,10 @@ export function useEmployeeForm({
       toast.error(err instanceof Error ? err.message : t("employees.edit.error"))
       setIsSubmitting(false)
       return
+    }
+    if (data.avatarFile) {
+      try { await uploadEmployeeAvatar(id, data.avatarFile) }
+      catch { stepErrors.push(t("employees.form.stepErrorAvatar")) }
     }
     const activeSlots = schedule.filter((s) => s.isActive)
     if (activeSlots.length > 0) {
@@ -232,6 +237,10 @@ export function useEmployeeForm({
       toast.error(err instanceof Error ? err.message : t("employees.create.error"))
       setIsSubmitting(false)
       return
+    }
+    if (data.avatarFile) {
+      try { await uploadEmployeeAvatar(newId, data.avatarFile) }
+      catch { stepErrors.push(t("employees.form.stepErrorAvatar")) }
     }
     const activeSlots = schedule.filter((s) => s.isActive)
     if (activeSlots.length > 0) {

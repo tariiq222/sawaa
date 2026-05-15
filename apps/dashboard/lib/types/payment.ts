@@ -1,5 +1,7 @@
 /**
  * Payment Types — Sawaa Dashboard
+ *
+ * Mirrors the backend Prisma Payment model (finance.prisma).
  */
 
 import type {
@@ -13,26 +15,23 @@ import type {
 
 export interface Payment {
   id: string
-  bookingId: string
+  invoiceId: string
   amount: number
-  vatAmount: number
-  totalAmount: number
+  refundedAmount: number
+  currency: string
   method: PaymentMethod
   status: PaymentStatus
-  moyasarPaymentId: string | null
-  transactionRef: string | null
+  gatewayRef: string | null
+  idempotencyKey: string | null
+  receiptUrl: string | null
+  failureReason: string | null
+  processedAt: string | null
   createdAt: string
   updatedAt: string
-  booking?: {
-    id: string
-    date: string
-    type: string
-    client: { firstName: string; lastName: string; email: string } | null
-    employee: {
-      user: { firstName: string; lastName: string }
-      specialty: { nameAr: string; nameEn: string } | null
-    }
-    service: { nameAr: string; nameEn: string }
+  invoice?: {
+    bookingId: string
+    clientId: string
+    total: number
   }
   receipts?: BankTransferReceipt[]
 }
@@ -81,8 +80,7 @@ export interface RefundPayload {
 
 export interface UpdatePaymentStatusPayload {
   status: PaymentStatus
-  moyasarPaymentId?: string
-  transactionRef?: string
+  gatewayRef?: string
 }
 
 export interface VerifyBankTransferPayload {

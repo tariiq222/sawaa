@@ -1,20 +1,23 @@
+import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { useLocale } from '@/components/locale-provider'
 import { useCreateBookingSlots } from '../use-booking-slots'
 
+/** Format date as YYYY-MM-DD using LOCAL time (not UTC) to avoid date shift near midnight. */
 function toISODate(d: Date): string {
-  return d.toISOString().slice(0, 10)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
-function generateDays(count = 14): Date[] {
+function generateDays(count: number): Date[] {
   return Array.from({ length: count }, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() + i)
     return d
   })
 }
-
-const days = generateDays()
 
 interface StepDatetimeProps {
   employeeId: string
@@ -25,6 +28,7 @@ interface StepDatetimeProps {
   selectedTime: string | null
   onSelectDate: (date: string) => void
   onSelectTime: (startTime: string) => void
+  maxAdvanceDays?: number
 }
 
 export function StepDatetime({
@@ -36,8 +40,11 @@ export function StepDatetime({
   selectedTime,
   onSelectDate,
   onSelectTime,
+  maxAdvanceDays = 90,
 }: StepDatetimeProps) {
   const { t } = useLocale()
+
+  const days = useMemo(() => generateDays(Math.min(maxAdvanceDays, 90)), [maxAdvanceDays])
 
   const { slots = [], slotsLoading } = useCreateBookingSlots({
     employeeId,

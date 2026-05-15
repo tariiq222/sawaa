@@ -19,6 +19,7 @@ import { queryClient } from '@/services/query-client';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { DirContext, buildDirState } from '@/hooks/useDir';
 import { loadCurrentOrgId } from '@/services/tenant';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { useAppSelector } from '@/hooks/use-redux';
 import { registerForPushAsync } from '@/services/push';
 import '@/i18n';
@@ -66,16 +67,18 @@ function RootLayout() {
     <ReduxProvider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <QueryClientProvider client={queryClient}>
-          <PushBootstrap />
-          <AuthRouter />
-          <DirContext.Provider value={dirState}>
-            <ThemeProvider language="ar">
-              <SafeAreaProvider>
-                <Slot />
-                <StatusBar style="dark" />
-              </SafeAreaProvider>
-            </ThemeProvider>
-          </DirContext.Provider>
+          <ErrorBoundary>
+            <PushBootstrap />
+            <AuthRouter />
+            <DirContext.Provider value={dirState}>
+              <ThemeProvider language="ar">
+                <SafeAreaProvider>
+                  <Slot />
+                  <StatusBar style="dark" />
+                </SafeAreaProvider>
+              </ThemeProvider>
+            </DirContext.Provider>
+          </ErrorBoundary>
         </QueryClientProvider>
       </PersistGate>
     </ReduxProvider>

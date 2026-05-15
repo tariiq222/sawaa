@@ -107,7 +107,7 @@ export function EditEmployeeServiceSheet({
     if (!ps || !serviceBookingTypes || !open) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTypeConfigs(
-      ps.availableTypes.map((bt) => ({
+      (ps.availableTypes ?? []).map((bt) => ({
         bookingType: bt,
         price: null,
         duration: null,

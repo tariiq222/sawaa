@@ -92,10 +92,6 @@ export function AppSidebar() {
                         >
                           <HugeiconsIcon icon={item.icon} size={18} />
                           <span className="flex-1">{t(item.titleKey)}</span>
-                          {item.href === "/bookings" && false && (
-                            <span className="flex size-5 items-center justify-center rounded-full text-[11px] font-bold tabular-nums bg-accent text-accent-foreground">
-                            </span>
-                          )}
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )
@@ -113,24 +109,27 @@ export function AppSidebar() {
           <div className="flex items-center justify-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
+                <a
+                  href="mailto:support@sawaa.sa"
                   aria-label={t("nav.support")}
                   className="flex size-9 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60 transition-colors"
                 >
                   <HugeiconsIcon icon={CustomerService01Icon} size={18} />
-                </button>
+                </a>
               </TooltipTrigger>
               <TooltipContent side="top">{t("nav.support")}</TooltipContent>
             </Tooltip>
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
+                <Link
+                  href="/chatbot"
                   aria-label={t("nav.knowledge")}
+                  onClick={isMobile ? () => setOpenMobile(false) : undefined}
                   className="flex size-9 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60 transition-colors"
                 >
                   <HugeiconsIcon icon={Book02Icon} size={18} />
-                </button>
+                </Link>
               </TooltipTrigger>
               <TooltipContent side="top">{t("nav.knowledge")}</TooltipContent>
             </Tooltip>

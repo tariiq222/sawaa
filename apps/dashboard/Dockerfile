@@ -97,10 +97,14 @@ ENV PORT=5103
 ENV HOSTNAME=0.0.0.0
 ENV NEXT_TELEMETRY_DISABLED=1
 
-COPY --from=app-build /app/apps/dashboard/.next/standalone    ./
-COPY --from=app-build /app/apps/dashboard/.next/static        ./apps/dashboard/.next/static
-COPY --from=app-build /app/apps/dashboard/public              ./apps/dashboard/public
+# Create non-root user for security
+RUN groupadd -g 1001 app && useradd -u 1001 -g app -s /bin/sh -d /app app
 
+COPY --from=app-build --chown=app:app /app/apps/dashboard/.next/standalone    ./
+COPY --from=app-build --chown=app:app /app/apps/dashboard/.next/static        ./apps/dashboard/.next/static
+COPY --from=app-build --chown=app:app /app/apps/dashboard/public              ./apps/dashboard/public
+
+USER app
 WORKDIR /app
 EXPOSE 5103
 

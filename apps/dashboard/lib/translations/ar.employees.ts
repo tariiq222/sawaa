@@ -327,6 +327,7 @@ export const arEmployees: Record<string, string> = {
   "employees.form.stepErrorBreaks": "فترات الاستراحة",
   "employees.form.stepErrorVacation": "الإجازة",
   "employees.form.stepErrorServices": "الخدمات",
+  "employees.form.stepErrorAvatar": "الصورة الشخصية",
   "employees.form.createPartialSuccess": "تم إنشاء الممارس الصحي، لكن فشل حفظ: {steps}",
 
   // — Vacation Manager —

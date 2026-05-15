@@ -43,6 +43,16 @@ export class ApproveRefundHandler {
       throw new NotFoundException('Refund request not found or not pending review');
     }
 
+    // Load the Payment record to get the Moyasar gatewayRef.
+    const payment = await this.prisma.payment.findUniqueOrThrow({
+      where: { id: refundRequest.paymentId },
+      select: { gatewayRef: true },
+    });
+
+    if (!payment.gatewayRef) {
+      throw new NotFoundException('Payment has no gateway reference — cannot refund via Moyasar');
+    }
+
     await this.prisma.refundRequest.update({
       where: { id: cmd.refundRequestId },
       data: {
@@ -61,7 +71,7 @@ export class ApproveRefundHandler {
       const moyasarRefund = await this.moyasarClient.createRefund(
         DEFAULT_ORG_ID,
         {
-          paymentId: refundRequest.paymentId,
+          paymentId: payment.gatewayRef,
           amount: Math.round(Number(refundRequest.amount) * 100),
           idempotencyKey: `refund:${refundRequest.id}`,
         },

@@ -60,9 +60,10 @@ export async function setAvailability(
 /* ─── Breaks ─── */
 
 export async function fetchBreaks(id: string): Promise<BreakSlot[]> {
-  return api.get<BreakSlot[]>(
+  const res = await api.get<{ breaks: BreakSlot[] }>(
     `/dashboard/people/employees/${id}/breaks`,
   )
+  return res.breaks
 }
 
 export async function setBreaks(

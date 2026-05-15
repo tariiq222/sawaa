@@ -14,14 +14,38 @@ export class UpsertZoomConfigHandler {
   ) {}
 
   async execute(dto: UpsertZoomConfigDto) {
-    const encryptedConfig = this.zoomCredentials.encrypt(
-      {
-        zoomClientId: dto.zoomClientId,
-        zoomClientSecret: dto.zoomClientSecret,
-        zoomAccountId: dto.zoomAccountId,
-      },
-      DEFAULT_ORG_ID,
-    );
+    const existing = await this.prisma.integration.findUnique({
+      where: { provider: 'zoom' },
+    });
+
+    let config: { zoomClientId: string; zoomClientSecret: string; zoomAccountId: string };
+
+    if (existing && existing.config && typeof existing.config === 'object' && 'ciphertext' in existing.config) {
+      // Decrypt existing config to merge with partial update
+      const existingConfig = this.zoomCredentials.decrypt<{
+        zoomClientId?: string;
+        zoomClientSecret?: string;
+        zoomAccountId?: string;
+      }>(existing.config.ciphertext as string, DEFAULT_ORG_ID);
+
+      config = {
+        zoomClientId: dto.zoomClientId ?? existingConfig.zoomClientId ?? '',
+        zoomClientSecret: dto.zoomClientSecret ?? existingConfig.zoomClientSecret ?? '',
+        zoomAccountId: dto.zoomAccountId ?? existingConfig.zoomAccountId ?? '',
+      };
+    } else {
+      config = {
+        zoomClientId: dto.zoomClientId ?? '',
+        zoomClientSecret: dto.zoomClientSecret ?? '',
+        zoomAccountId: dto.zoomAccountId ?? '',
+      };
+    }
+
+    if (!config.zoomClientId || !config.zoomClientSecret || !config.zoomAccountId) {
+      throw new Error('zoomClientId, zoomClientSecret, and zoomAccountId are required');
+    }
+
+    const encryptedConfig = this.zoomCredentials.encrypt(config, DEFAULT_ORG_ID);
 
     await this.prisma.integration.upsert({
       where: { provider: 'zoom' },

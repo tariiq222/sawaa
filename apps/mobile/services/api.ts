@@ -13,7 +13,7 @@ import {
   setSecureItem,
   deleteSecureItem,
 } from '@/stores/secure-storage';
-import { clearCurrentOrgId } from './tenant';
+import { clearCurrentOrgId, getCurrentOrgIdSync } from './tenant';
 
 const ORG_SUSPENDED_CODE = 'ORG_SUSPENDED';
 
@@ -25,12 +25,16 @@ const api = axios.create({
   },
 });
 
-// Request interceptor: inject JWT token
+// Request interceptor: inject JWT token + tenant header
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     const token = await getSecureItem('accessToken');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    // X-Org-Id is required by backend for tenant resolution on public routes
+    if (config.headers) {
+      config.headers['X-Org-Id'] = getCurrentOrgIdSync();
     }
     return config;
   },

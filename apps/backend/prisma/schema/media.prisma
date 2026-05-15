@@ -17,7 +17,7 @@ enum FileVisibility {
 model File {
   id         String         @id @default(uuid())
   bucket     String
-  storageKey String // now composite-unique per (orgId, storageKey)
+  storageKey String         @unique
   filename   String
   mimetype   String
   size       Int

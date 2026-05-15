@@ -31,7 +31,7 @@ services:
       PORT: "5200"
 
       # Database (Prisma) — runtime uses the NOBYPASSRLS app role; migrate uses OWNER
-      DATABASE_URL: postgresql://${APP_DB_USER:-deqah_app}:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql://${APP_DB_USER:-deqah_app}:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}?connection_limit=${DB_CONNECTION_LIMIT:-10}&pool_timeout=${DB_POOL_TIMEOUT_S:-20}
 
       # Redis (BullMQ + cache + token blacklist)
       REDIS_HOST: redis
@@ -107,6 +107,17 @@ services:
 
       # Public site URL (used in emails/notifications)
       PUBLIC_WEBSITE_URL: ${PUBLIC_WEBSITE_URL}
+
+      # Required public URLs
+      DASHBOARD_PUBLIC_URL: ${DASHBOARD_PUBLIC_URL}
+      API_PUBLIC_URL: ${API_PUBLIC_URL}
+
+      # Super-admin bootstrap (min 16 chars)
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD}
+
+      # Internal metrics
+      INTERNAL_METRICS_ALLOWED_IPS: ${INTERNAL_METRICS_ALLOWED_IPS}
+      INTERNAL_METRICS_TOKEN: ${INTERNAL_METRICS_TOKEN}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -126,6 +137,7 @@ services:
       resources:
         limits:
           memory: 1536M
+          cpus: '1.5'
     logging:
       driver: json-file
       options:
@@ -136,6 +148,9 @@ services:
     build:
       context: ..
       dockerfile: apps/dashboard/Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_MOYASAR_PLATFORM_PUBLISHABLE_KEY=${NEXT_PUBLIC_MOYASAR_PLATFORM_PUBLISHABLE_KEY}
     container_name: sawaa-dashboard
     stop_grace_period: 40s
     restart: unless-stopped
@@ -158,6 +173,7 @@ services:
       resources:
         limits:
           memory: 512M
+          cpus: '0.5'
     logging:
       driver: json-file
       options:
@@ -168,6 +184,9 @@ services:
     build:
       context: ..
       dockerfile: apps/website/Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_DEFAULT_ORG_ID=${NEXT_PUBLIC_DEFAULT_ORG_ID}
     container_name: sawaa-website
     stop_grace_period: 40s
     restart: unless-stopped
@@ -189,6 +208,7 @@ services:
       resources:
         limits:
           memory: 512M
+          cpus: '0.5'
     logging:
       driver: json-file
       options:
@@ -204,6 +224,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       APP_DB_USER: ${APP_DB_USER:-deqah_app}
       APP_DB_PASSWORD: ${APP_DB_PASSWORD:-}
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
     ports: !override []
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -215,6 +237,7 @@ services:
       resources:
         limits:
           memory: 1G
+          cpus: '1.0'
     logging:
       driver: json-file
       options:
@@ -243,6 +266,7 @@ services:
       resources:
         limits:
           memory: 256M
+          cpus: '0.25'
     logging:
       driver: json-file
       options:
@@ -266,6 +290,7 @@ services:
       resources:
         limits:
           memory: 512M
+          cpus: '0.5'
     logging:
       driver: json-file
       options:
@@ -343,6 +368,7 @@ services:
       resources:
         limits:
           memory: 128M
+          cpus: '0.25'
     logging:
       driver: json-file
       options:
@@ -383,6 +409,7 @@ services:
       resources:
         limits:
           memory: 128M
+          cpus: '0.25'
     logging:
       driver: json-file
       options:

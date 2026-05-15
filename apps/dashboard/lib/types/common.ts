@@ -47,15 +47,14 @@ export interface SearchableQuery extends SortableQuery {
 
 export type UserGender = "male" | "female"
 
-export type PaymentMethod = "moyasar" | "bank_transfer" | "cash"
+export type PaymentMethod = "ONLINE_CARD" | "BANK_TRANSFER" | "CASH" | "COUPON"
 
 export type PaymentStatus =
-  | "pending"
-  | "awaiting"
-  | "paid"
-  | "refunded"
-  | "failed"
-  | "rejected"
+  | "PENDING"
+  | "PENDING_VERIFICATION"
+  | "COMPLETED"
+  | "FAILED"
+  | "REFUNDED"
 
 export type TransferVerificationStatus =
   | "pending"

@@ -128,6 +128,19 @@ export interface KnowledgeBaseFile {
 
 /* ─── Chatbot Config ─── */
 
+export interface ChatbotConfig {
+  id: string
+  systemPromptAr: string | null
+  systemPromptEn: string | null
+  greetingAr: string | null
+  greetingEn: string | null
+  escalateToHumanAt: number | null
+  settings: Record<string, unknown> | null
+  createdAt: string
+  updatedAt: string
+}
+
+/** @deprecated Use ChatbotConfig instead — backend is now a singleton */
 export interface ChatbotConfigEntry {
   id: string
   key: string
@@ -194,6 +207,15 @@ export interface ConfigItemPayload {
 
 export interface UpdateChatbotConfigPayload {
   configs: ConfigItemPayload[]
+}
+
+export interface UpsertChatbotConfigPayload {
+  systemPromptAr?: string
+  systemPromptEn?: string
+  greetingAr?: string
+  greetingEn?: string
+  escalateToHumanAt?: number
+  settings?: Record<string, unknown>
 }
 
 /* ─── Create Session Response ─── */

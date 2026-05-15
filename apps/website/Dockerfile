@@ -86,11 +86,15 @@ ENV NODE_ENV=production
 ENV PORT=5105
 ENV HOSTNAME=0.0.0.0
 
+# Create non-root user for security
+RUN groupadd -g 1001 app && useradd -u 1001 -g app -s /bin/sh -d /app app
+
 # Website uses output:'standalone' with outputFileTracingRoot=monorepo root,
 # so the standalone dir mirrors the monorepo layout. We copy it to /app.
-COPY --from=app-build /app/apps/website/.next/standalone ./
-COPY --from=app-build /app/apps/website/.next/static     ./apps/website/.next/static
+COPY --from=app-build --chown=app:app /app/apps/website/.next/standalone ./
+COPY --from=app-build --chown=app:app /app/apps/website/.next/static     ./apps/website/.next/static
 
+USER app
 EXPOSE 5105
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \

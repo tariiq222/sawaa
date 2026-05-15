@@ -54,6 +54,12 @@ jest.mock('@sentry/node', () => ({
   captureException: jest.fn(),
 }));
 
+// Shutdown state — never report shutting down in tests
+jest.mock('../src/common/shutdown.state', () => ({
+  setShuttingDown: jest.fn(),
+  isShuttingDown: jest.fn().mockReturnValue(false),
+}));
+
 // MinIO
 jest.mock('minio', () => ({
   Client: jest.fn().mockImplementation(() => ({
@@ -156,5 +162,5 @@ process.env.SMTP_USER = 'test';
 process.env.SMTP_PASS = 'test';
 process.env.SMS_PROVIDER = 'NONE';
 process.env.OPENAI_API_KEY = 'sk-test';
-process.env.MOYASAR_SECRET_KEY = 'sk_test_moyasar';
-process.env.MOYASAR_PUBLISHABLE_KEY = 'pk_test_moyasar';
+process.env.MOYASAR_SECRET_KEY = 'sk_test_dC1t7MVaXhJUmfwSj3QDpT2yRuRSMmdsjQB71zxo';
+process.env.MOYASAR_PUBLISHABLE_KEY = 'pk_test_9WmjNQjvWeKh67QscDUg7Y7YGpuvcpDY9ugi3qkv';

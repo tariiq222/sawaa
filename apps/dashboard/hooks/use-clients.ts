@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient, useMutation, keepPreviousData } from "@tanstack/react-query"
 import { useState, useEffect, useCallback } from "react"
 import { queryKeys } from "@/lib/query-keys"
-import { fetchClients, fetchClient, updateClient, createWalkInClient, deleteClient } from "@/lib/api/clients"
+import { fetchClients, fetchClient, updateClient, createWalkInClient, deleteClient, setClientActive } from "@/lib/api/clients"
 import type { ClientListQuery } from "@/lib/types/client"
 
 /* ─── List Hook ─── */
@@ -61,23 +61,32 @@ export function useClients() {
 /* ─── Stats Hook (unfiltered — for StatsGrid) ─── */
 
 export function useClientStats() {
-  const query: ClientListQuery = { page: 1, perPage: 200 }
-  const { data, isLoading } = useQuery({
-    queryKey: queryKeys.clients.list(query),
-    queryFn: () => fetchClients(query),
+  const allQuery: ClientListQuery = { page: 1, perPage: 1 }
+  const activeQuery: ClientListQuery = { page: 1, perPage: 1, isActive: true }
+  const inactiveQuery: ClientListQuery = { page: 1, perPage: 1, isActive: false }
+
+  const { data: allData, isLoading: l1 } = useQuery({
+    queryKey: queryKeys.clients.list(allQuery),
+    queryFn: () => fetchClients(allQuery),
     staleTime: 5 * 60 * 1000,
   })
-  const items = data?.items ?? []
-  const now = new Date()
+  const { data: activeData, isLoading: l2 } = useQuery({
+    queryKey: queryKeys.clients.list(activeQuery),
+    queryFn: () => fetchClients(activeQuery),
+    staleTime: 5 * 60 * 1000,
+  })
+  const { data: inactiveData, isLoading: l3 } = useQuery({
+    queryKey: queryKeys.clients.list(inactiveQuery),
+    queryFn: () => fetchClients(inactiveQuery),
+    staleTime: 5 * 60 * 1000,
+  })
+
   return {
-    isLoading,
-    total: data?.meta?.total ?? 0,
-    active: items.filter((c) => c.isActive).length,
-    inactive: items.filter((c) => !c.isActive).length,
-    newThisMonth: items.filter((c) => {
-      const d = new Date(c.createdAt)
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
-    }).length,
+    isLoading: l1 || l2 || l3,
+    total: allData?.meta?.total ?? 0,
+    active: activeData?.meta?.total ?? 0,
+    inactive: inactiveData?.meta?.total ?? 0,
+    newThisMonth: 0, // requires backend stats endpoint
   }
 }
 
@@ -123,7 +132,7 @@ export function useClientMutations() {
 
   const toggleActiveMut = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      updateClient(id, { isActive }),
+      setClientActive(id, { isActive }),
     onSuccess: () => invalidate(),
   })
 

@@ -18,6 +18,7 @@ export const departmentSchema = z.object({
   icon: z.string().max(100, { message: "validation.maxLength" }).optional().or(z.literal("")),
   sortOrder: z.number().int().min(0, { message: "validation.minZero" }),
   isActive: z.boolean(),
+  isVisible: z.boolean(),
 })
 
 export type DepartmentFormData = z.infer<typeof departmentSchema>

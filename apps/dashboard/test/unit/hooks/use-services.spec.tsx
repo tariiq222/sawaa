@@ -318,7 +318,7 @@ describe("useServiceEmployees / useAssignEmployeesToService", () => {
     expect(employeesApi.assignService).toHaveBeenCalledTimes(3)
     expect(employeesApi.assignService).toHaveBeenCalledWith("e-1", {
       serviceId: "s-1",
-      availableTypes: ["in_person", "online"],
+      availableTypes: ["IN_PERSON", "ONLINE"],
       isActive: true,
     })
   })

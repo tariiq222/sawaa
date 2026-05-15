@@ -14,18 +14,18 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
 
 const statusConfig: Record<PaymentStatus, { tKey: string; tone: string }> = {
-  paid: { tKey: "payments.status.paid", tone: "bg-success/10 text-success" },
-  pending: { tKey: "payments.status.pending", tone: "bg-warning/10 text-warning" },
-  refunded: { tKey: "payments.status.refunded", tone: "bg-muted text-muted-foreground" },
-  failed: { tKey: "payments.status.failed", tone: "bg-error/10 text-error" },
-  awaiting: { tKey: "payments.status.waiting", tone: "bg-warning/10 text-warning" },
-  rejected: { tKey: "payments.status.rejected", tone: "bg-error/10 text-error" },
+  COMPLETED: { tKey: "payments.status.paid", tone: "bg-success/10 text-success" },
+  PENDING: { tKey: "payments.status.pending", tone: "bg-warning/10 text-warning" },
+  PENDING_VERIFICATION: { tKey: "payments.status.waiting", tone: "bg-warning/10 text-warning" },
+  REFUNDED: { tKey: "payments.status.refunded", tone: "bg-muted text-muted-foreground" },
+  FAILED: { tKey: "payments.status.failed", tone: "bg-error/10 text-error" },
 }
 
 const methodKey: Record<PaymentMethod, string> = {
-  moyasar: "payments.method.moyasar",
-  bank_transfer: "payments.method.bankTransfer",
-  cash: "payments.method.cash",
+  ONLINE_CARD: "payments.method.moyasar",
+  BANK_TRANSFER: "payments.method.bankTransfer",
+  CASH: "payments.method.cash",
+  COUPON: "payments.method.coupon",
 }
 
 const RECENT_QUERY = { page: 1, perPage: 5 }
@@ -91,11 +91,8 @@ export function RecentPayments() {
             <tbody className="divide-y divide-border/60">
               {payments.map((p) => {
                 const s = statusConfig[p.status]
-                const client = p.booking?.client
                 const unknown = t("dashboard.recentPayments.unknownClient")
-                const clientName = client
-                  ? formatName(client.firstName, client.lastName, unknown)
-                  : unknown
+                const clientName = unknown
                 const amountDisplay = formatPrice(p.amount, { locale, decimals: 2 })
                 const currency = t("dashboard.currency")
 

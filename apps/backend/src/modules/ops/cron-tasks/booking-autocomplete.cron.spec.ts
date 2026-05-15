@@ -34,7 +34,7 @@ describe('BookingAutocompleteCron', () => {
     await expect(cron.execute()).resolves.not.toThrow();
   });
 
-  it('calls updateMany with CONFIRMED status and cutoff', async () => {
+  it('calls updateMany with CONFIRMED status, cutoff, and checkedInAt not null', async () => {
     const prisma = buildPrisma();
     const cron = new BookingAutocompleteCron(prisma as never);
     await cron.execute();
@@ -42,6 +42,7 @@ describe('BookingAutocompleteCron', () => {
       expect.objectContaining({
         where: expect.objectContaining({
           status: BookingStatus.CONFIRMED,
+          checkedInAt: { not: null },
         }),
         data: expect.objectContaining({ status: BookingStatus.COMPLETED }),
       }),

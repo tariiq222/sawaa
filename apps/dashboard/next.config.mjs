@@ -38,12 +38,10 @@ const nextConfig = {
   outputFileTracingRoot: repoRoot,
   transpilePackages: ["@sawaa/ui", "@sawaa/shared", "@sawaa/api-client"],
   skipTrailingSlashRedirect: true,
-  // Production builds: don't fail on existing lint/type warnings — those
-  // are tracked separately by CI typecheck/lint jobs. Build must produce
-  // a deployable artifact even with known stylistic issues.
-  // (Mirrors apps/admin/next.config.mjs and apps/website/next.config.mjs.)
-  eslint: { ignoreDuringBuilds: true },
-  typescript: { ignoreBuildErrors: true },
+  // Production builds: fail on lint/type errors to prevent broken code from reaching production.
+  // CI typecheck/lint jobs should catch these before build, but this is the final safety net.
+  eslint: { ignoreDuringBuilds: !isProduction },
+  typescript: { ignoreBuildErrors: !isProduction },
   serverExternalPackages: [
     '@opentelemetry/instrumentation',
     '@opentelemetry/api-logs',

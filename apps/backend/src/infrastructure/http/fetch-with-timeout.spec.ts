@@ -1,30 +1,37 @@
 import { fetchWithTimeout } from './fetch-with-timeout';
 
 describe('fetchWithTimeout', () => {
-  beforeEach(() => {
-    jest.restoreAllMocks();
+  afterEach(() => jest.restoreAllMocks());
+
+  it('should return response on success', async () => {
+    const mockResponse = { ok: true } as Response;
+    global.fetch = jest.fn().mockResolvedValue(mockResponse);
+
+    const result = await fetchWithTimeout('https://example.com/test');
+    expect(result).toBe(mockResponse);
   });
 
-  it('should fetch successfully', async () => {
-    global.fetch = jest.fn().mockResolvedValue(new Response('ok'));
-    const res = await fetchWithTimeout('http://example.com/test');
-    expect(res).toBeInstanceOf(Response);
+  it('should throw original error for non-timeout abort', async () => {
+    const abortError = new Error('User aborted');
+    abortError.name = 'AbortError';
+    global.fetch = jest.fn().mockRejectedValue(abortError);
+
+    await expect(fetchWithTimeout('https://example.com')).rejects.toThrow('User aborted');
+  });
+
+  it('should throw generic fetch error', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error('network'));
+    await expect(fetchWithTimeout('https://example.com')).rejects.toThrow('network');
   });
 
   it('should merge caller signal with timeout signal', async () => {
-    global.fetch = jest.fn().mockResolvedValue(new Response('ok'));
+    const mockResponse = { ok: true } as Response;
+    global.fetch = jest.fn().mockResolvedValue(mockResponse);
     const controller = new AbortController();
-    await fetchWithTimeout('http://example.com/test', { signal: controller.signal });
-    expect(global.fetch).toHaveBeenCalled();
-  });
 
-  it('should rethrow non-timeout abort errors', async () => {
-    global.fetch = jest.fn().mockRejectedValue(new DOMException('Aborted', 'AbortError'));
-    await expect(fetchWithTimeout('http://example.com/test')).rejects.toThrow('Aborted');
-  });
-
-  it('should rethrow other errors', async () => {
-    global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
-    await expect(fetchWithTimeout('http://example.com/test')).rejects.toThrow('Network error');
+    await fetchWithTimeout('https://example.com', { signal: controller.signal }, 5000);
+    expect(global.fetch).toHaveBeenCalledWith('https://example.com', expect.objectContaining({
+      signal: expect.any(AbortSignal),
+    }));
   });
 });

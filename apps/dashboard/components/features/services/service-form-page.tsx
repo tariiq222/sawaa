@@ -144,7 +144,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
         await updateMut.mutateAsync({
           id: serviceId,
           ...buildPayload(data),
-          price: firstEnabled ? Math.round(firstEnabled.price * 100) : undefined,
+          price: firstEnabled ? firstEnabled.price : undefined,
           durationMins: firstEnabled ? firstEnabled.durationMins : undefined,
         })
 
@@ -163,7 +163,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
         const created = await createMut.mutateAsync({
           ...buildPayload(data),
           categoryId: data.categoryId ?? "",
-          price: firstEnabled ? Math.round(firstEnabled.price * 100) : 0,
+          price: firstEnabled ? firstEnabled.price : 0,
           durationMins: firstEnabled ? firstEnabled.durationMins : 30,
         })
 

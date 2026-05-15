@@ -84,4 +84,6 @@ export const arDepartments: Record<string, string> = {
   "departments.field.iconPlaceholder": "مثلاً: stethoscope",
   "departments.field.sortOrder": "ترتيب العرض",
   "departments.field.isActive": "نشط",
+  "departments.isVisible": "ظاهر للمستفيدين",
+  "departments.isVisibleDesc": "يظهر في صفحة الحجز العامة",
 }

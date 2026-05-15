@@ -169,6 +169,18 @@ export class MoyasarWebhookHandler {
         const status: PaymentStatus =
           payload.status === 'paid' ? PaymentStatus.COMPLETED : PaymentStatus.FAILED;
 
+        // Guard: never overwrite a terminal (REFUNDED) payment back to COMPLETED/FAILED.
+        const existingPayment = await this.prisma.payment.findUnique({
+          where: { idempotencyKey: `moyasar:${payload.id}` },
+          select: { status: true },
+        });
+        if (existingPayment?.status === PaymentStatus.REFUNDED) {
+          this.logger.warn(
+            `Webhook: skipping update for REFUNDED payment (gatewayRef=${payload.id})`,
+          );
+          return {};
+        }
+
         // Wrap payment upsert + invoice update in a single transaction to ensure
         // atomicity — if either fails, both roll back and no inconsistent state is stored.
         const paymentId = await this.prisma.$transaction(async (tx) => {

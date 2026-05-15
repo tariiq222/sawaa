@@ -17,7 +17,9 @@ export const arMisc: Record<string, string> = {
   "reports.revenue.bookings": "إجمالي الحجوزات",
   "reports.bookings.byStatus": "حسب الحالة",
   "reports.bookings.byType": "حسب النوع",
-  "reports.exportCsv": "تصدير CSV",
+  "reports.exportCsv": "تصدير Excel",
+  "reports.exporting": "جارٍ التصدير...",
+  "reports.exportError": "فشل تصدير التقرير",
   "reports.employeeSearch": "ابحث عن ممارس بالاسم أو ID...",
   "reports.employeeSearchHint": "ابحث عن ممارس لعرض تقريره",
 
@@ -305,4 +307,36 @@ export const arMisc: Record<string, string> = {
   // — Brand identity (login panel) —
   "brand.name": "سواء للإرشاد الأسري",
   "brand.tagline": "منصة الإرشاد الأسري المتخصصة",
+
+  // — Not Found page —
+  "notFound.title": "الصفحة غير موجودة",
+  "notFound.description": "الصفحة التي تبحث عنها غير موجودة أو تم نقلها.",
+  "notFound.backToDashboard": "العودة للوحة التحكم",
+
+  // — Auth Gate —
+  "authGate.loading": "جارٍ التحميل...",
+
+  // — Loading page —
+  "loading.text": "جارٍ التحميل...",
+
+  // — Validation messages —
+  "validation.phoneRequired": "رقم الجوال مطلوب",
+  "validation.phoneInternational": "أدخل الرقم بصيغة دولية مثل: +966501234567",
+  "validation.phoneInternationalShort": "أدخل الرقم بصيغة دولية",
+  "validation.selectEmployee": "اختر الممارس",
+  "validation.selectService": "اختر الخدمة",
+  "validation.selectDate": "اختر التاريخ",
+  "validation.selectTime": "اختر الوقت",
+  "validation.saudiPhone": "رقم سعودي غير صحيح — مثال +966501234567",
+  "validation.bloodTypeUnknown": "غير معروف",
+
+  // — Pagination —
+  "pagination.prev": "السابق",
+  "pagination.next": "التالي",
+  "pagination.reset": "إعادة تعيين",
+
+  // — Global Error —
+  "globalError.title": "حدث خطأ غير متوقع",
+  "globalError.description": "نعتذر، حدث خطأ في النظام. يرجى المحاولة مرة أخرى.",
+  "globalError.retry": "إعادة المحاولة",
 }

@@ -38,7 +38,7 @@ const config: ExpoConfig = {
     [
       '@sentry/react-native/expo',
       {
-        url: 'http://100.124.231.44:8000/',
+        url: process.env.SENTRY_URL || 'https://errors.webvue.pro/',
         organization: 'webvue',
         project: 'sawaa-mobile',
       },

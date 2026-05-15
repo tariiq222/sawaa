@@ -66,7 +66,7 @@ export function getInvoiceColumns(
       header: t("invoices.col.total"),
       cell: ({ row }) => (
         <span className="tabular-nums text-sm font-medium">
-          {(row.original.totalAmount / 100).toFixed(2)}
+          {Number(row.original.totalAmount).toFixed(2)}
         </span>
       ),
     },
@@ -75,7 +75,7 @@ export function getInvoiceColumns(
       header: t("invoices.col.vat"),
       cell: ({ row }) => (
         <span className="tabular-nums text-sm text-muted-foreground">
-          {(row.original.taxAmount / 100).toFixed(2)}
+          {Number(row.original.taxAmount).toFixed(2)}
         </span>
       ),
     },

@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { PrismaService } from '../../src/infrastructure/database';
@@ -19,15 +20,19 @@ export type MockPrisma = {
   };
 };
 
+export function createAuthToken(jwtService: JwtService, payload: object = {}): string {
+  return jwtService.sign({ sub: 'user-1', email: 'owner@sawaa.app', role: 'OWNER', isSuperAdmin: true, ...payload });
+}
+
 export async function createTestApp(): Promise<{ app: INestApplication; prisma: MockPrisma }> {
   const prismaMock: MockPrisma = {};
 
   const addModel = (...names: string[]) => {
     for (const name of names) {
       prismaMock[name] = {
-        findUnique: jest.fn(),
-        findFirst: jest.fn(),
-        findMany: jest.fn(),
+        findUnique: jest.fn().mockResolvedValue(null),
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn(),
         update: jest.fn(),
         upsert: jest.fn(),
@@ -44,11 +49,11 @@ export async function createTestApp(): Promise<{ app: INestApplication; prisma: 
     'payment', 'refundRequest', 'groupSession', 'groupEnrollment', 'notification',
     'notificationDeliveryLog', 'smsDelivery', 'organizationEmailConfig',
     'organizationSmsConfig', 'organizationPaymentConfig', 'brandingConfig',
-    'employeeBranch', 'employeeService', 'serviceBookingConfig',
+    'employeeBranch', 'employeeService', 'employeeAvailability', 'serviceBookingConfig',
     'serviceDurationOption', 'employeeServiceOption', 'employeeAvailabilityException',
     'contactMessage', 'file', 'platformSetting', 'emailTemplate', 'rating',
     'waitlistEntry', 'clientRefreshToken', 'customRole', 'permission', 'coupon',
-    'department', 'category', 'conversation', 'chatMessage', 'fcmToken',
+    'department', 'category', 'serviceCategory', 'conversation', 'chatMessage', 'fcmToken',
     'outboxEvent', 'activityLog',
   );
 

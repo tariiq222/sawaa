@@ -4,6 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { PencilEdit01Icon } from "@hugeicons/core-free-icons"
 
 import { Button } from "@sawaa/ui"
+import { Input } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { cn } from "@/lib/utils"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
@@ -17,6 +18,7 @@ interface StepConfirmProps {
   onJump: (step: WizardStep) => void
   onSubmit: () => void
   onTogglePayAtClinic: (value: boolean) => void
+  onCouponChange: (code: string | null) => void
 }
 
 interface SummaryRowProps {
@@ -108,6 +110,7 @@ export function StepConfirm({
   onJump,
   onSubmit,
   onTogglePayAtClinic,
+  onCouponChange,
 }: StepConfirmProps) {
   const { t } = useLocale()
   const { formatDate, formatTime } = useOrganizationConfig()
@@ -175,6 +178,19 @@ export function StepConfirm({
         description={t("bookings.wizard.step.confirm.payAtClinicDescription")}
         onSelect={() => onTogglePayAtClinic(!state.payAtClinic)}
       />
+
+      {/* Coupon code */}
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          {t("bookings.wizard.step.confirm.couponHeader")}
+        </p>
+        <Input
+          placeholder={t("bookings.wizard.step.confirm.couponPlaceholder")}
+          value={state.couponCode ?? ""}
+          onChange={(e) => onCouponChange(e.target.value || null)}
+          className="bg-surface"
+        />
+      </div>
 
       {/* Submit */}
       <Button

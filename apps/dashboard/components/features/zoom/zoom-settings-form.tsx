@@ -35,13 +35,18 @@ export function ZoomSettingsForm() {
     // Only show the "configured" badge; fields stay empty for re-entry.
   }, [config])
 
-  const buildInput = (): UpsertZoomConfigInput => ({
-    zoomClientId: clientId.trim(),
-    zoomClientSecret: clientSecret.trim(),
-    zoomAccountId: accountId.trim(),
-  })
+  const buildInput = (): UpsertZoomConfigInput => {
+    const input: UpsertZoomConfigInput = {}
+    if (clientId.trim()) input.zoomClientId = clientId.trim()
+    if (accountId.trim()) input.zoomAccountId = accountId.trim()
+    if (clientSecret.trim()) input.zoomClientSecret = clientSecret.trim()
+    return input
+  }
 
-  const allFilled = clientId.trim() && clientSecret.trim() && accountId.trim()
+  const isExisting = config?.configured ?? false
+  const allFilled = isExisting
+    ? (clientId.trim() || accountId.trim() || clientSecret.trim())
+    : (clientId.trim() && clientSecret.trim() && accountId.trim())
 
   const onSave = async () => {
     if (!allFilled) return

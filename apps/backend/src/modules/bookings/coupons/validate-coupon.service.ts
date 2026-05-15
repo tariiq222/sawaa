@@ -47,10 +47,11 @@ export class ValidateCouponService {
       }
     }
     const discountValueDec = new Prisma.Decimal(coupon.discountValue.toString());
-    const discount =
+    const rawDiscount =
       coupon.discountType === 'PERCENTAGE'
-        ? subtotalDec.times(discountValueDec).div(100).toDecimalPlaces(2).toNumber()
-        : Prisma.Decimal.min(discountValueDec, subtotalDec).toNumber();
+        ? subtotalDec.times(Prisma.Decimal.min(discountValueDec, new Prisma.Decimal(100))).div(100).toDecimalPlaces(2)
+        : Prisma.Decimal.min(discountValueDec, subtotalDec);
+    const discount = Prisma.Decimal.min(rawDiscount, subtotalDec).toNumber();
     return { couponId: coupon.id, discount };
   }
 }

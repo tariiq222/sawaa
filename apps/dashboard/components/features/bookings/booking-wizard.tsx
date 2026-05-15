@@ -21,6 +21,8 @@ import { StepTypeDuration } from "./wizard-steps/step-type-duration"
 import { StepDatetime } from "./wizard-steps/step-datetime"
 import { StepConfirm } from "./wizard-steps/step-confirm"
 import { useBookingMutations } from "@/hooks/use-bookings"
+import { useBranches } from "@/hooks/use-branches"
+import { useBookingSettings } from "@/hooks/use-organization-settings"
 import { cn } from "@/lib/utils"
 
 /* ─── Props ─── */
@@ -107,6 +109,11 @@ function WizardInner({
   const { state, effectiveFlow } = wizard
   const { createMut } = useBookingMutations()
 
+  const { branches } = useBranches()
+  const mainBranch = branches.find((b) => b.isMain) ?? branches[0]
+  const { data: bookingSettings } = useBookingSettings()
+  const maxAdvanceDays = bookingSettings?.maxAdvanceBookingDays ?? 90
+
   const stepTitle = useStepTitle(state.step, flowOrder, state.chosenPath, t)
 
   const handleSubmit = async () => {
@@ -130,6 +137,8 @@ function WizardInner({
         date: state.date,
         startTime: state.startTime,
         payAtClinic: state.payAtClinic,
+        branchId: mainBranch?.id,
+        couponCode: state.couponCode ?? undefined,
       })
       wizard.reset()
       onSuccess()
@@ -243,6 +252,7 @@ function WizardInner({
             selectedTime={state.startTime}
             onSelectDate={wizard.selectDate}
             onSelectTime={wizard.selectTime}
+            maxAdvanceDays={maxAdvanceDays}
           />
         )}
 
@@ -253,6 +263,7 @@ function WizardInner({
             onJump={(step: WizardStep) => wizard.jumpToStep(step)}
             onSubmit={handleSubmit}
             onTogglePayAtClinic={wizard.setPayAtClinic}
+            onCouponChange={wizard.setCouponCode}
           />
         )}
       </div>

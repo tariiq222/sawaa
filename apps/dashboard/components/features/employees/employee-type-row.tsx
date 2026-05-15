@@ -7,7 +7,7 @@ import { Button } from "@sawaa/ui"
 import { Input } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { Switch } from "@sawaa/ui"
-import { halalasToSar, sarToHalalas } from "@/lib/money"
+
 import type { ServiceBookingType } from "@/lib/types/service"
 import type { EmployeeTypeConfigPayload } from "@/lib/types/employee"
 
@@ -34,7 +34,7 @@ export function EmployeeTypeRow({
   onUpdate,
   onRemove,
 }: EmployeeTypeRowProps) {
-  const defaultPrice = serviceDefault ? halalasToSar(serviceDefault.price).toFixed(2) : ""
+  const defaultPrice = serviceDefault ? Number(serviceDefault.price).toFixed(2) : ""
   const defaultDuration = serviceDefault ? String(serviceDefault.durationMins) : ""
   const hasDefault = !!serviceDefault
 
@@ -46,7 +46,7 @@ export function EmployeeTypeRow({
     : t("employees.services.required")
 
   const priceDisplay =
-    config.price != null ? halalasToSar(config.price).toFixed(2) : ""
+    config.price != null ? Number(config.price).toFixed(2) : ""
   const durationDisplay =
     config.duration != null ? String(config.duration) : ""
 
@@ -54,7 +54,7 @@ export function EmployeeTypeRow({
     if (val === "") {
       onUpdate({ price: null })
     } else {
-      onUpdate({ price: sarToHalalas(parseFloat(val)) })
+      onUpdate({ price: parseFloat(val) })
     }
   }
 

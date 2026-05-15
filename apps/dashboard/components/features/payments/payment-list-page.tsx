@@ -57,8 +57,8 @@ export function PaymentListPage() {
       <FilterBar
         search={{ value: search, onChange: setSearch, placeholder: t("payments.searchPlaceholder") }}
         selects={[
-          { key: "status", value: status, placeholder: t("payments.filters.status"), options: [{ value: "all", label: t("payments.filters.allStatuses") }, { value: "pending", label: t("payments.filters.pending") }, { value: "paid", label: t("payments.filters.paid") }, { value: "refunded", label: t("payments.filters.refunded") }, { value: "failed", label: t("payments.filters.failed") }], onValueChange: (v) => setStatus(v as typeof status) },
-          { key: "method", value: method, placeholder: t("payments.filters.method"), options: [{ value: "all", label: t("payments.filters.allMethods") }, { value: "moyasar", label: "Moyasar" }, { value: "bank_transfer", label: t("payments.filters.bankTransfer") }], onValueChange: (v) => setMethod(v as typeof method) },
+          { key: "status", value: status, placeholder: t("payments.filters.status"), options: [{ value: "all", label: t("payments.filters.allStatuses") }, { value: "PENDING", label: t("payments.filters.pending") }, { value: "COMPLETED", label: t("payments.filters.paid") }, { value: "REFUNDED", label: t("payments.filters.refunded") }, { value: "FAILED", label: t("payments.filters.failed") }], onValueChange: (v) => setStatus(v as typeof status) },
+          { key: "method", value: method, placeholder: t("payments.filters.method"), options: [{ value: "all", label: t("payments.filters.allMethods") }, { value: "ONLINE_CARD", label: "Moyasar" }, { value: "BANK_TRANSFER", label: t("payments.filters.bankTransfer") }, { value: "CASH", label: t("payments.filters.cash") }], onValueChange: (v) => setMethod(v as typeof method) },
         ]}
         hasFilters={hasFilters}
         onReset={resetFilters}

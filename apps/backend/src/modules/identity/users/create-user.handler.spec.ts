@@ -1,36 +1,38 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from '../../../infrastructure/database';
-import { PasswordService } from '../shared/password.service';
 import { CreateUserHandler } from './create-user.handler';
+import { ConflictException } from '@nestjs/common';
 
 describe('CreateUserHandler', () => {
   let handler: CreateUserHandler;
-  let prisma: PrismaService;
+  let prisma: { user: { findUnique: jest.Mock; create: jest.Mock }; $transaction: jest.Mock };
+  let password: { hash: jest.Mock };
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CreateUserHandler,
-    { provide: PrismaService, useValue: {
-    user: { findUnique: jest.fn() }
-    } },
-    { provide: PasswordService, useValue: {} }
-      ],
-    }).compile();
-
-    handler = module.get<CreateUserHandler>(CreateUserHandler);
-    prisma = module.get<PrismaService>(PrismaService);
+  beforeEach(() => {
+    prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'u1' }),
+      },
+      $transaction: jest.fn((cb) => cb(prisma)),
+    };
+    password = { hash: jest.fn().mockResolvedValue('hashed') };
+    handler = new CreateUserHandler(prisma as any, password as any);
   });
 
-  it('should be defined', () => {
-    expect(handler).toBeDefined();
+  it('creates user when email is unique', async () => {
+    const result = await handler.execute({
+      email: 'test@example.com',
+      password: 'secret',
+      name: 'Test',
+      role: 'OWNER',
+    } as any);
+    expect(result.id).toBe('u1');
+    expect(password.hash).toHaveBeenCalledWith('secret');
   });
 
-  it('should execute', async () => {
-    try {
-      await handler.execute({ id: '00000000-0000-0000-0000-000000000001' });
-    } catch (e) {
-      // Expected for incomplete mocks
-    }
+  it('throws when email already registered', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'existing' });
+    await expect(
+      handler.execute({ email: 'test@example.com', password: 'secret' } as any),
+    ).rejects.toThrow(ConflictException);
   });
 });

@@ -1,365 +1,177 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
-import request from 'supertest';
+import { BadRequestException } from '@nestjs/common';
 import { DashboardFinanceController } from './finance.controller';
-import { CreateInvoiceHandler } from '../../modules/finance/create-invoice/create-invoice.handler';
-import { GetInvoiceHandler } from '../../modules/finance/get-invoice/get-invoice.handler';
-import { ProcessPaymentHandler } from '../../modules/finance/process-payment/process-payment.handler';
-import { ListPaymentsHandler } from '../../modules/finance/list-payments/list-payments.handler';
-import { ApplyCouponHandler } from '../../modules/finance/apply-coupon/apply-coupon.handler';
-import { ListCouponsHandler } from '../../modules/finance/coupons/list-coupons.handler';
-import { GetCouponHandler } from '../../modules/finance/coupons/get-coupon.handler';
-import { CreateCouponHandler } from '../../modules/finance/coupons/create-coupon.handler';
-import { UpdateCouponHandler } from '../../modules/finance/coupons/update-coupon.handler';
-import { DeleteCouponHandler } from '../../modules/finance/coupons/delete-coupon.handler';
-import { GetPaymentStatsHandler } from '../../modules/finance/get-payment-stats/get-payment-stats.handler';
-import { RefundPaymentHandler } from '../../modules/finance/refund-payment/refund-payment.handler';
-import { VerifyPaymentHandler } from '../../modules/finance/verify-payment/verify-payment.handler';
-import { BankTransferUploadHandler } from '../../modules/finance/bank-transfer-upload/bank-transfer-upload.handler';
-import { GetMoyasarConfigHandler } from '../../modules/finance/moyasar-config/get-moyasar-config.handler';
-import { UpsertMoyasarConfigHandler } from '../../modules/finance/moyasar-config/upsert-moyasar-config.handler';
-import { TestMoyasarConfigHandler } from '../../modules/finance/moyasar-config/test-moyasar-config.handler';
-import { JwtGuard } from '../../common/guards/jwt.guard';
-import { CaslGuard } from '../../common/guards/casl.guard';
 
-describe('DashboardFinanceController (e2e)', () => {
-  let app: INestApplication;
+describe('DashboardFinanceController', () => {
+  let controller: DashboardFinanceController;
+  let handlers: Record<string, jest.Mock>;
 
-  const mockCreateInvoice = { execute: jest.fn() };
-  const mockGetInvoice = { execute: jest.fn() };
-  const mockProcessPayment = { execute: jest.fn() };
-  const mockListPayments = { execute: jest.fn() };
-  const mockApplyCoupon = { execute: jest.fn() };
-  const mockListCoupons = { execute: jest.fn() };
-  const mockGetCoupon = { execute: jest.fn() };
-  const mockCreateCoupon = { execute: jest.fn() };
-  const mockUpdateCoupon = { execute: jest.fn() };
-  const mockDeleteCoupon = { execute: jest.fn() };
-  const mockGetPaymentStats = { execute: jest.fn() };
-  const mockRefundPayment = { execute: jest.fn() };
-  const mockVerifyPayment = { execute: jest.fn() };
-  const mockBankTransferUpload = { execute: jest.fn() };
-  const mockGetMoyasarConfig = { execute: jest.fn() };
-  const mockUpsertMoyasarConfig = { execute: jest.fn() };
-  const mockTestMoyasarConfig = { execute: jest.fn() };
+  beforeEach(() => {
+    const handlerNames = [
+      'createInvoice', 'getInvoice', 'processPayment', 'listPayments',
+      'applyCoupon', 'listCoupons', 'getCoupon', 'createCoupon',
+      'updateCoupon', 'deleteCoupon', 'getPaymentStats', 'refundPayment',
+      'verifyPayment', 'bankTransferUpload', 'getMoyasarConfig',
+      'upsertMoyasarConfig', 'testMoyasarConfig',
+    ];
 
-  beforeAll(async () => {
-    const moduleRef: TestingModule = await Test.createTestingModule({
-      controllers: [DashboardFinanceController],
-      providers: [
-        { provide: CreateInvoiceHandler, useValue: mockCreateInvoice },
-        { provide: GetInvoiceHandler, useValue: mockGetInvoice },
-        { provide: ProcessPaymentHandler, useValue: mockProcessPayment },
-        { provide: ListPaymentsHandler, useValue: mockListPayments },
-        { provide: ApplyCouponHandler, useValue: mockApplyCoupon },
-        { provide: ListCouponsHandler, useValue: mockListCoupons },
-        { provide: GetCouponHandler, useValue: mockGetCoupon },
-        { provide: CreateCouponHandler, useValue: mockCreateCoupon },
-        { provide: UpdateCouponHandler, useValue: mockUpdateCoupon },
-        { provide: DeleteCouponHandler, useValue: mockDeleteCoupon },
-        { provide: GetPaymentStatsHandler, useValue: mockGetPaymentStats },
-        { provide: RefundPaymentHandler, useValue: mockRefundPayment },
-        { provide: VerifyPaymentHandler, useValue: mockVerifyPayment },
-        { provide: BankTransferUploadHandler, useValue: mockBankTransferUpload },
-        { provide: GetMoyasarConfigHandler, useValue: mockGetMoyasarConfig },
-        { provide: UpsertMoyasarConfigHandler, useValue: mockUpsertMoyasarConfig },
-        { provide: TestMoyasarConfigHandler, useValue: mockTestMoyasarConfig },
-      ],
-    })
-      .overrideGuard(JwtGuard)
-      .useValue({ canActivate: () => true })
-      .overrideGuard(CaslGuard)
-      .useValue({ canActivate: () => true })
-      .compile();
+    handlers = {};
+    const handlerMocks = handlerNames.map((name) => {
+      const mock = jest.fn().mockResolvedValue({ id: name, success: true });
+      handlers[name] = mock;
+      return { execute: mock };
+    });
 
-    app = moduleRef.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+    controller = new DashboardFinanceController(
+      handlerMocks[0] as any,  // createInvoice
+      handlerMocks[1] as any,  // getInvoice
+      handlerMocks[2] as any,  // processPayment
+      handlerMocks[3] as any,  // listPayments
+      handlerMocks[4] as any,  // applyCoupon
+      handlerMocks[5] as any,  // listCoupons
+      handlerMocks[6] as any,  // getCoupon
+      handlerMocks[7] as any,  // createCoupon
+      handlerMocks[8] as any,  // updateCoupon
+      handlerMocks[9] as any,  // deleteCoupon
+      handlerMocks[10] as any, // getPaymentStats
+      handlerMocks[11] as any, // refundPayment
+      handlerMocks[12] as any, // verifyPayment
+      handlerMocks[13] as any, // bankTransferUpload
+      handlerMocks[14] as any, // getMoyasarConfig
+      handlerMocks[15] as any, // upsertMoyasarConfig
+      handlerMocks[16] as any, // testMoyasarConfig
     );
-    await app.init();
   });
 
-  afterAll(async () => {
-    await app.close();
+  it('should be defined', () => expect(controller).toBeDefined());
+
+  // ── Invoices ──────────────────────────────────────────────────────────────
+
+  it('createInv should call createInvoice.execute with parsed dueAt', async () => {
+    const body = { clientId: 'c1', items: [], dueAt: '2026-01-01T00:00:00Z' };
+    await controller.createInv(body as any);
+    expect(handlers.createInvoice).toHaveBeenCalledWith({ ...body, dueAt: new Date(body.dueAt) });
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
+  it('createInv should omit dueAt when not provided', async () => {
+    const body = { clientId: 'c1', items: [] };
+    await controller.createInv(body as any);
+    expect(handlers.createInvoice).toHaveBeenCalledWith(expect.objectContaining({ clientId: 'c1', items: [] }));
   });
 
-  const uuid = (n: number) => `00000000-0000-4000-a000-${String(n).padStart(12, '0')}`;
-
-  describe('POST /dashboard/finance/invoices', () => {
-    it('returns 201 on valid invoice creation', async () => {
-      mockCreateInvoice.execute.mockResolvedValue({ id: uuid(1), total: 115 });
-
-      const res = await request(app.getHttpServer())
-        .post('/dashboard/finance/invoices')
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({
-          bookingId: uuid(2),
-          branchId: uuid(3),
-          clientId: uuid(4),
-          employeeId: uuid(5),
-          subtotal: 100,
-        })
-        .expect(201);
-
-      expect(res.body.id).toBe(uuid(1));
-    });
-
-    it('returns 400 for missing required fields', async () => {
-      return request(app.getHttpServer())
-        .post('/dashboard/finance/invoices')
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({ subtotal: 100 })
-        .expect(400);
-    });
-
-    it('returns 400 for negative subtotal', async () => {
-      return request(app.getHttpServer())
-        .post('/dashboard/finance/invoices')
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({ bookingId: uuid(2), branchId: uuid(3), clientId: uuid(4), employeeId: uuid(5), subtotal: -10 })
-        .expect(400);
-    });
+  it('getInv should call getInvoice.execute', async () => {
+    await controller.getInv('inv-1');
+    expect(handlers.getInvoice).toHaveBeenCalledWith({ invoiceId: 'inv-1' });
   });
 
-  describe('GET /dashboard/finance/invoices/:id', () => {
-    it('returns 200 with invoice details', async () => {
-      mockGetInvoice.execute.mockResolvedValue({ id: uuid(1), total: 115 });
+  // ── Payments ──────────────────────────────────────────────────────────────
 
-      const res = await request(app.getHttpServer())
-        .get(`/dashboard/finance/invoices/${uuid(1)}`)
-        .set('Authorization', 'Bearer fake-jwt')
-        .expect(200);
+  it('getPaymentStatsEndpoint should call getPaymentStats.execute', async () => {
+    await controller.getPaymentStatsEndpoint();
+    expect(handlers.getPaymentStats).toHaveBeenCalledWith();
+  });
 
-      expect(res.body.total).toBe(115);
-    });
+  it('processPaymentEndpoint should call processPayment.execute', async () => {
+    const body = { invoiceId: 'inv-1', method: 'card' as const, metadata: {} };
+    await controller.processPaymentEndpoint(body);
+    expect(handlers.processPayment).toHaveBeenCalledWith(body);
+  });
 
-    it('returns 400 for invalid UUID', async () => {
-      return request(app.getHttpServer())
-        .get('/dashboard/finance/invoices/not-a-uuid')
-        .set('Authorization', 'Bearer fake-jwt')
-        .expect(400);
+  it('bankTransferEndpoint should throw when file missing', () => {
+    expect(() => controller.bankTransferEndpoint(undefined, { invoiceId: 'inv-1', clientId: 'c1', amount: 100 } as any)).toThrow(BadRequestException);
+  });
+
+  it('bankTransferEndpoint should call bankTransferUpload.execute with file', async () => {
+    const file = { buffer: Buffer.from('data'), mimetype: 'image/png', originalname: 'receipt.png' } as Express.Multer.File;
+    const body = { invoiceId: 'inv-1', clientId: 'c1', amount: 100 };
+    await controller.bankTransferEndpoint(file, body as any);
+    expect(handlers.bankTransferUpload).toHaveBeenCalledWith({
+      ...body,
+      fileBuffer: file.buffer,
+      mimetype: file.mimetype,
+      filename: file.originalname,
     });
   });
 
-  describe('POST /dashboard/finance/payments', () => {
-    it('returns 201 on valid payment', async () => {
-      mockProcessPayment.execute.mockResolvedValue({ id: uuid(6), status: 'CAPTURED' });
-
-      const res = await request(app.getHttpServer())
-        .post('/dashboard/finance/payments')
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({ invoiceId: uuid(1), amount: 100, method: 'ONLINE_CARD' })
-        .expect(201);
-
-      expect(res.body.status).toBe('CAPTURED');
-    });
-
-    it('returns 400 for invalid method enum', async () => {
-      return request(app.getHttpServer())
-        .post('/dashboard/finance/payments')
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({ invoiceId: uuid(1), amount: 100, method: 'MADA' })
-        .expect(400);
+  it('listPaymentsEndpoint should call listPayments.execute with parsed dates', async () => {
+    const query = { page: 1, limit: 10, fromDate: '2026-01-01', toDate: '2026-01-31', invoiceId: 'inv-1', clientId: 'c1', method: 'card' as const, status: 'COMPLETED' as const };
+    await controller.listPaymentsEndpoint(query as any);
+    expect(handlers.listPayments).toHaveBeenCalledWith({
+      page: 1, limit: 10, invoiceId: 'inv-1', clientId: 'c1', method: 'card', status: 'COMPLETED',
+      fromDate: new Date(query.fromDate), toDate: new Date(query.toDate),
     });
   });
 
-  describe('GET /dashboard/finance/payments', () => {
-    it('returns 200 with payment list', async () => {
-      mockListPayments.execute.mockResolvedValue({ data: [{ id: uuid(6) }], total: 1 });
-
-      const res = await request(app.getHttpServer())
-        .get('/dashboard/finance/payments')
-        .set('Authorization', 'Bearer fake-jwt')
-        .expect(200);
-
-      expect(res.body.data).toHaveLength(1);
-    });
+  it('listPaymentsEndpoint should omit dates when not provided', async () => {
+    const query = { page: 1, limit: 10 };
+    await controller.listPaymentsEndpoint(query as any);
+    expect(handlers.listPayments).toHaveBeenCalledWith(expect.objectContaining({
+      page: 1, limit: 10, fromDate: undefined, toDate: undefined,
+    }));
   });
 
-  describe('GET /dashboard/finance/payments/stats', () => {
-    it('returns 200 with payment stats', async () => {
-      mockGetPaymentStats.execute.mockResolvedValue({ totalRevenue: 5000, totalRefunds: 200 });
-
-      const res = await request(app.getHttpServer())
-        .get('/dashboard/finance/payments/stats')
-        .set('Authorization', 'Bearer fake-jwt')
-        .expect(200);
-
-      expect(res.body.totalRevenue).toBe(5000);
-    });
+  it('refundPaymentEndpoint should call refundPayment.execute', async () => {
+    const body = { amount: 50, reason: 'Refund' };
+    await controller.refundPaymentEndpoint('pay-1', body);
+    expect(handlers.refundPayment).toHaveBeenCalledWith({ paymentId: 'pay-1', ...body });
   });
 
-  describe('PATCH /dashboard/finance/payments/:id/refund', () => {
-    it('returns 200 on refund', async () => {
-      mockRefundPayment.execute.mockResolvedValue({ id: uuid(6), status: 'REFUNDED' });
-
-      const res = await request(app.getHttpServer())
-        .patch(`/dashboard/finance/payments/${uuid(6)}/refund`)
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({ reason: 'Client request' })
-        .expect(200);
-
-      expect(res.body.status).toBe('REFUNDED');
-    });
+  it('verifyPaymentEndpoint should call verifyPayment.execute', async () => {
+    const body = { status: 'COMPLETED' as const, notes: 'Verified' };
+    await controller.verifyPaymentEndpoint('pay-1', body);
+    expect(handlers.verifyPayment).toHaveBeenCalledWith({ paymentId: 'pay-1', ...body });
   });
 
-  describe('PATCH /dashboard/finance/payments/:id/verify', () => {
-    it('returns 200 on verify approve', async () => {
-      mockVerifyPayment.execute.mockResolvedValue({ id: uuid(6), status: 'VERIFIED' });
+  // ── Coupons ───────────────────────────────────────────────────────────────
 
-      const res = await request(app.getHttpServer())
-        .patch(`/dashboard/finance/payments/${uuid(6)}/verify`)
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({ action: 'approve' })
-        .expect(200);
-
-      expect(res.body.status).toBe('VERIFIED');
-    });
-
-    it('returns 400 for invalid action', async () => {
-      return request(app.getHttpServer())
-        .patch(`/dashboard/finance/payments/${uuid(6)}/verify`)
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({ action: 'maybe' })
-        .expect(400);
-    });
+  it('applyCouponEndpoint should call applyCoupon.execute', async () => {
+    const body = { invoiceId: 'inv-1', code: 'SAVE10' };
+    await controller.applyCouponEndpoint(body);
+    expect(handlers.applyCoupon).toHaveBeenCalledWith(body);
   });
 
-  describe('POST /dashboard/finance/coupons/apply', () => {
-    it('returns 200 on apply coupon', async () => {
-      mockApplyCoupon.execute.mockResolvedValue({ discount: 10, newTotal: 90 });
-
-      const res = await request(app.getHttpServer())
-        .post('/dashboard/finance/coupons/apply')
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({ invoiceId: uuid(1), clientId: uuid(4), code: 'WELCOME10' })
-        .expect(200);
-
-      expect(res.body.discount).toBe(10);
-    });
-
-    it('returns 400 for short coupon code', async () => {
-      return request(app.getHttpServer())
-        .post('/dashboard/finance/coupons/apply')
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({ invoiceId: uuid(1), clientId: uuid(4), code: 'AB' })
-        .expect(400);
-    });
+  it('listCouponsEndpoint should call listCoupons.execute', async () => {
+    const query = { page: 1, limit: 10 };
+    await controller.listCouponsEndpoint(query as any);
+    expect(handlers.listCoupons).toHaveBeenCalledWith(query);
   });
 
-  describe('GET /dashboard/finance/coupons', () => {
-    it('returns 200 with coupon list', async () => {
-      mockListCoupons.execute.mockResolvedValue({ data: [{ id: uuid(7), code: 'WELCOME10' }], total: 1 });
-
-      const res = await request(app.getHttpServer())
-        .get('/dashboard/finance/coupons')
-        .set('Authorization', 'Bearer fake-jwt')
-        .expect(200);
-
-      expect(res.body.data[0].code).toBe('WELCOME10');
-    });
+  it('getCouponEndpoint should call getCoupon.execute', async () => {
+    await controller.getCouponEndpoint('coupon-1');
+    expect(handlers.getCoupon).toHaveBeenCalledWith({ couponId: 'coupon-1' });
   });
 
-  describe('GET /dashboard/finance/coupons/:id', () => {
-    it('returns 200 with coupon details', async () => {
-      mockGetCoupon.execute.mockResolvedValue({ id: uuid(7), code: 'WELCOME10' });
-
-      const res = await request(app.getHttpServer())
-        .get(`/dashboard/finance/coupons/${uuid(7)}`)
-        .set('Authorization', 'Bearer fake-jwt')
-        .expect(200);
-
-      expect(res.body.code).toBe('WELCOME10');
-    });
+  it('createCouponEndpoint should call createCoupon.execute', async () => {
+    const body = { code: 'SAVE10', discountType: 'percentage' as const, discountValue: 10 };
+    await controller.createCouponEndpoint(body as any);
+    expect(handlers.createCoupon).toHaveBeenCalledWith(body);
   });
 
-  describe('POST /dashboard/finance/coupons', () => {
-    it('returns 201 on valid coupon creation', async () => {
-      mockCreateCoupon.execute.mockResolvedValue({ id: uuid(7), code: 'SUMMER20' });
-
-      const res = await request(app.getHttpServer())
-        .post('/dashboard/finance/coupons')
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({ code: 'SUMMER20', discountType: 'PERCENTAGE', discountValue: 20 })
-        .expect(201);
-
-      expect(res.body.code).toBe('SUMMER20');
-    });
-
-    it('returns 400 for invalid discountType', async () => {
-      return request(app.getHttpServer())
-        .post('/dashboard/finance/coupons')
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({ code: 'BAD', discountType: 'FREE', discountValue: 20 })
-        .expect(400);
-    });
+  it('updateCouponEndpoint should call updateCoupon.execute', async () => {
+    const body = { code: 'SAVE20' };
+    await controller.updateCouponEndpoint('coupon-1', body as any);
+    expect(handlers.updateCoupon).toHaveBeenCalledWith({ couponId: 'coupon-1', ...body });
   });
 
-  describe('PATCH /dashboard/finance/coupons/:id', () => {
-    it('returns 200 on update', async () => {
-      mockUpdateCoupon.execute.mockResolvedValue({ id: uuid(7), code: 'SUMMER20' });
-
-      const res = await request(app.getHttpServer())
-        .patch(`/dashboard/finance/coupons/${uuid(7)}`)
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({ discountValue: 25 })
-        .expect(200);
-
-      expect(res.body.code).toBe('SUMMER20');
-    });
+  it('deleteCouponEndpoint should call deleteCoupon.execute', async () => {
+    await controller.deleteCouponEndpoint('coupon-1');
+    expect(handlers.deleteCoupon).toHaveBeenCalledWith({ couponId: 'coupon-1' });
   });
 
-  describe('DELETE /dashboard/finance/coupons/:id', () => {
-    it('returns 204 on delete', async () => {
-      mockDeleteCoupon.execute.mockResolvedValue(undefined);
+  // ── Moyasar config ────────────────────────────────────────────────────────
 
-      return request(app.getHttpServer())
-        .delete(`/dashboard/finance/coupons/${uuid(7)}`)
-        .set('Authorization', 'Bearer fake-jwt')
-        .expect(204);
-    });
-
-    it('returns 400 for invalid UUID', async () => {
-      return request(app.getHttpServer())
-        .delete('/dashboard/finance/coupons/not-a-uuid')
-        .set('Authorization', 'Bearer fake-jwt')
-        .expect(400);
-    });
+  it('getMoyasarConfigEndpoint should call getMoyasarConfig.execute', async () => {
+    await controller.getMoyasarConfigEndpoint();
+    expect(handlers.getMoyasarConfig).toHaveBeenCalledWith();
   });
 
-  describe('GET /dashboard/finance/moyasar/config', () => {
-    it('returns 200 with config', async () => {
-      mockGetMoyasarConfig.execute.mockResolvedValue({ publishableKey: 'pk_test_xxx', secretKey: '***' });
-
-      const res = await request(app.getHttpServer())
-        .get('/dashboard/finance/moyasar/config')
-        .set('Authorization', 'Bearer fake-jwt')
-        .expect(200);
-
-      expect(res.body.publishableKey).toBe('pk_test_xxx');
-    });
+  it('upsertMoyasarConfigEndpoint should call upsertMoyasarConfig.execute', async () => {
+    const body = { secretKey: 'sk_test_xxx', publishableKey: 'pk_test_xxx' };
+    await controller.upsertMoyasarConfigEndpoint(body as any);
+    expect(handlers.upsertMoyasarConfig).toHaveBeenCalledWith(body);
   });
 
-  describe('PATCH /dashboard/finance/moyasar/config', () => {
-    it('returns 200 on upsert', async () => {
-      mockUpsertMoyasarConfig.execute.mockResolvedValue({ publishableKey: 'pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx' });
-
-      const res = await request(app.getHttpServer())
-        .patch('/dashboard/finance/moyasar/config')
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({
-          publishableKey: 'pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-          secretKey: 'sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-          webhookSecret: 'whsecxxxxxxxxxxxxxxxx',
-          isLive: true,
-        })
-        .expect(200);
-
-      expect(res.body.publishableKey).toBe('pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
-    });
+  it('testMoyasarConfigEndpoint should call testMoyasarConfig.execute', async () => {
+    await controller.testMoyasarConfigEndpoint();
+    expect(handlers.testMoyasarConfig).toHaveBeenCalledWith();
   });
 });

@@ -18,6 +18,7 @@ export interface ClientJwtPayload {
   namespace: 'client';
   jti: string;
   organizationId: string;
+  tokenVersion: number;
 }
 
 export interface ClientTenantClaims {
@@ -49,6 +50,7 @@ export class ClientTokenService {
     client: {
       id: string;
       email: string | null;
+      tokenVersion?: number;
     },
     tenantClaims: ClientTenantClaims,
   ): Promise<ClientTokenPair> {
@@ -59,6 +61,7 @@ export class ClientTokenService {
       namespace: 'client',
       jti,
       organizationId: tenantClaims.organizationId,
+      tokenVersion: client.tokenVersion ?? 0,
     };
 
     const accessTtl = (this.config.get<string>('JWT_CLIENT_ACCESS_TTL') ?? '15m') as `${number}${'s' | 'm' | 'h' | 'd'}`;

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { CompleteBookingDto } from './complete-booking.dto';
 import { fetchBookingOrFail } from '../booking-lifecycle.helper';
@@ -48,18 +48,18 @@ export class CompleteBookingHandler {
             where: {},
             select: { vatRate: true },
           });
-          const vatRate = orgSettings?.vatRate ? Number(orgSettings.vatRate) : 0.15;
-          const subtotal = Number(booking.discountedPrice ?? booking.price);
-          const vatAmt = Number((subtotal * vatRate).toFixed(2));
-          const total = Number((subtotal + vatAmt).toFixed(2));
+          const vatRateDec = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
+          const subtotalDec = new Prisma.Decimal((booking.discountedPrice ?? booking.price).toString());
+          const vatAmt = subtotalDec.mul(vatRateDec).toDecimalPlaces(2).toNumber();
+          const total = subtotalDec.add(subtotalDec.mul(vatRateDec)).toDecimalPlaces(2).toNumber();
           await tx.invoice.create({
             data: {
               branchId: booking.branchId,
               clientId: booking.clientId,
               employeeId: booking.employeeId,
               bookingId: booking.id,
-              subtotal,
-              vatRate,
+              subtotal: subtotalDec.toNumber(),
+              vatRate: vatRateDec.toNumber(),
               vatAmt,
               total,
               currency: booking.currency,

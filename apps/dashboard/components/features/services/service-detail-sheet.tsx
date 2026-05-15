@@ -169,7 +169,7 @@ export function ServiceDetailSheet({
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
               <Field
                 label={t("services.detail.price")}
-                value={<span className="tabular-nums">{(service.price / 100).toFixed(2)} {t("services.bookingTypes.priceCurrency")}</span>}
+                value={<span className="tabular-nums">{Number(service.price).toFixed(2)} {t("services.bookingTypes.priceCurrency")}</span>}
               />
               <Field
                 label={t("services.detail.duration")}

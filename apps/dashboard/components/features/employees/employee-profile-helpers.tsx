@@ -16,19 +16,14 @@ import {
   Stethoscope02Icon,
   GraduateMaleIcon,
   BookOpen01Icon,
-  Building04Icon,
-  CallIcon,
-  Video01Icon,
   Calendar03Icon,
 } from "@hugeicons/core-free-icons"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { useLocale } from "@/components/locale-provider"
 import { Skeleton } from "@sawaa/ui"
-import { Card, CardContent, CardHeader, CardTitle } from "@sawaa/ui"
-import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
+import { Card, CardContent } from "@sawaa/ui"
 import { formatLocaleDate } from "@/lib/date"
-import { sarToHalalas } from "@/lib/money"
 
 /* ─── ProfileSkeleton ─── */
 
@@ -184,40 +179,4 @@ export function CombinedInfoCard({
   )
 }
 
-/* ─── PricingCard ─── */
 
-interface PricingCardProps {
-  priceClinic: number | null
-  pricePhone: number | null
-  priceVideo: number | null
-  locale: string
-  /** @deprecated unused — component uses useLocale() internally */
-  isAr?: boolean
-}
-export function PricingCard({ priceClinic, pricePhone, priceVideo, locale }: PricingCardProps) {
-  const { t } = useLocale()
-  const loc = locale === "ar" ? "ar" : "en"
-  // priceClinic/Phone/Video are stored in SAR (not halalas) on the employee
-  // record — promote to halalas via sarToHalalas() so FormattedCurrency
-  // (halalas-native) renders correctly.
-  const fmt = (v: number | null) => v != null
-    ? <FormattedCurrency amount={sarToHalalas(v)} locale={loc} decimals={2} />
-    : "—"
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base font-semibold">
-          <div className="flex size-7 items-center justify-center rounded-md bg-success/10">
-            <HugeiconsIcon icon={Building04Icon} size={16} className="text-success" />
-          </div>
-          {t("employees.detail.pricing")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2">
-        <PricingRow icon={Building04Icon} label={t("employees.detail.clinicVisit")} value={fmt(priceClinic)} color="text-primary" bg="bg-primary/10" />
-        <PricingRow icon={CallIcon} label={t("employees.detail.phoneConsultation")} value={fmt(pricePhone)} color="text-success" bg="bg-success/10" />
-        <PricingRow icon={Video01Icon} label={t("employees.detail.videoConsultation")} value={fmt(priceVideo)} color="text-info" bg="bg-info/10" />
-      </CardContent>
-    </Card>
-  )
-}

@@ -135,14 +135,14 @@ export default function EmployeeProfileScreen() {
         </View>
 
         <View style={styles.menuGroup}>
-          <MenuItem icon={User} label={t('profile.personalInfo')} onPress={() => {}} />
-          <MenuItem icon={Star} label={t('doctor.ratingsReviews')} onPress={() => {}} />
-          <MenuItem icon={Globe} label={t('profile.language')} value={t('profile.arabic')} onPress={() => {}} />
-          <MenuItem icon={Bell} label={t('profile.notifications')} onPress={() => {}} />
+          <MenuItem icon={User} label={t('profile.personalInfo')} onPress={() => Alert.alert('قريباً', 'هذه الميزة قيد التطوير')} />
+          <MenuItem icon={Star} label={t('doctor.ratingsReviews')} onPress={() => Alert.alert('قريباً', 'هذه الميزة قيد التطوير')} />
+          <MenuItem icon={Globe} label={t('profile.language')} value={t('profile.arabic')} onPress={() => Alert.alert('قريباً', 'هذه الميزة قيد التطوير')} />
+          <MenuItem icon={Bell} label={t('profile.notifications')} onPress={() => Alert.alert('قريباً', 'هذه الميزة قيد التطوير')} />
         </View>
 
         <View style={styles.menuGroup}>
-          <MenuItem icon={Info} label={t('profile.about')} onPress={() => {}} />
+          <MenuItem icon={Info} label={t('profile.about')} onPress={() => Alert.alert('مركز سواء', 'نسخة 1.0.0')} />
           <MenuItem icon={Shield} label={t('profile.privacy')} onPress={() => Linking.openURL(PRIVACY_POLICY_URL)} />
         </View>
 

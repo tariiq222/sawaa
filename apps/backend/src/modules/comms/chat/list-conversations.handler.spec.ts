@@ -1,21 +1,46 @@
+import { Test, TestingModule } from '@nestjs/testing';
 import { ListConversationsHandler } from './list-conversations.handler';
-import type { PrismaService } from '../../../infrastructure/database';
-
-const buildPrisma = () => ({
-  chatConversation: {
-    findMany: jest.fn().mockResolvedValue([]),
-    count: jest.fn().mockResolvedValue(0),
-  },
-});
+import { PrismaService } from '../../../infrastructure/database';
 
 describe('ListConversationsHandler', () => {
-  it('returns paginated conversations for a client', async () => {
-    const prisma = buildPrisma();
-    prisma.chatConversation.findMany.mockResolvedValue([{ id: 'conv-1' }]);
-    prisma.chatConversation.count.mockResolvedValue(1);
-    const handler = new ListConversationsHandler(prisma as unknown as PrismaService);
-    const result = await handler.execute({ clientId: 'client-1', page: 1, limit: 20 });
-    expect(result.items).toHaveLength(1);
-    expect(result.meta.total).toBe(1);
+  let handler: ListConversationsHandler;
+  let prisma: any;
+
+  beforeEach(async () => {
+    prisma = {
+      chatConversation: { findMany: jest.fn(), count: jest.fn() },
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [ListConversationsHandler, { provide: PrismaService, useValue: prisma }],
+    }).compile();
+
+    handler = module.get<ListConversationsHandler>(ListConversationsHandler);
+  });
+
+  it('should list conversations with filters', async () => {
+    prisma.chatConversation.findMany.mockResolvedValue([]);
+    prisma.chatConversation.count.mockResolvedValue(0);
+
+    const result = await handler.execute({ clientId: 'c1', page: 1, limit: 10 });
+    expect(prisma.chatConversation.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { clientId: 'c1' },
+      skip: 0,
+      take: 10,
+    }));
+    expect(result.meta.page).toBe(1);
+  });
+
+  it('should list conversations without filters', async () => {
+    prisma.chatConversation.findMany.mockResolvedValue([]);
+    prisma.chatConversation.count.mockResolvedValue(0);
+
+    const result = await handler.execute({ page: 2, limit: 5 });
+    expect(prisma.chatConversation.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {},
+      skip: 5,
+      take: 5,
+    }));
+    expect(result.meta.page).toBe(2);
   });
 });

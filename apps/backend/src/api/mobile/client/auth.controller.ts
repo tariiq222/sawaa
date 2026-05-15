@@ -2,7 +2,7 @@ import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ApiStandardResponses } from '../../../common/swagger';
-import { JwtGuard } from '../../../common/guards/jwt.guard';
+import { JwtGuard, Public } from '../../../common/guards/jwt.guard';
 import { UserId } from '../../../common/auth/user-id.decorator';
 import { RegisterMobileUserDto } from '../../../modules/identity/register-mobile-user/register-mobile-user.dto';
 import { RegisterMobileUserHandler } from '../../../modules/identity/register-mobile-user/register-mobile-user.handler';
@@ -24,6 +24,7 @@ export class MobileClientAuthController {
 
   @Post('register')
   @HttpCode(200)
+  @Public()
   @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @ApiOperation({ summary: 'Register a new mobile user (creates user + sends SMS OTP)' })
   @ApiStandardResponses()
@@ -33,6 +34,7 @@ export class MobileClientAuthController {
 
   @Post('request-login-otp')
   @HttpCode(200)
+  @Public()
   @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @ApiOperation({ summary: 'Request a login OTP via phone or verified email' })
   @ApiStandardResponses()
@@ -42,6 +44,7 @@ export class MobileClientAuthController {
 
   @Post('verify-otp')
   @HttpCode(200)
+  @Public()
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @ApiOperation({ summary: 'Verify register/login OTP and issue tokens' })
   @ApiStandardResponses()

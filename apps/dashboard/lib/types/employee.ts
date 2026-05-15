@@ -67,9 +67,9 @@ export interface Vacation {
 export interface EmployeeService {
   id: string
   serviceId: string
-  customDuration: number | null
-  bufferMinutes: number
-  availableTypes: string[]
+  customDuration?: number | null
+  bufferMinutes?: number
+  availableTypes?: string[]
   isActive: boolean
   priceClinic?: number | null
   pricePhone?: number | null

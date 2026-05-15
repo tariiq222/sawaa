@@ -15,7 +15,11 @@ export interface AvailableSlot {
   endTime: Date;
 }
 
-const SLOT_INTERVAL_MINS = 30;
+function slotInterval(durationMins: number): number {
+  if (durationMins <= 15) return 15;
+  if (durationMins <= 30) return 30;
+  return 30; // for longer sessions, keep 30-min grid
+}
 
 function parseHHmm(hhmm: string, anchor: Date): Date {
   const [h, m] = hhmm.split(':').map(Number);
@@ -61,9 +65,23 @@ export class CheckAvailabilityHandler {
     }
     if (!durationMins) return [];
 
+    const serviceOverrides = query.serviceId
+      ? await this.prisma.service.findFirst({
+          where: { id: query.serviceId },
+          select: { bufferMinutes: true, minLeadMinutes: true, maxAdvanceDays: true },
+        })
+      : null;
+
+    if (serviceOverrides?.maxAdvanceDays != null) {
+      const svcMaxDate = new Date();
+      svcMaxDate.setDate(svcMaxDate.getDate() + serviceOverrides.maxAdvanceDays);
+      svcMaxDate.setHours(23, 59, 59, 999);
+      if (dateOnly > svcMaxDate) return [];
+    }
+
     const dayOfWeek = dateOnly.getDay();
 
-    const [businessHour, holiday, shifts, exception] = await Promise.all([
+    const [businessHour, holiday, shifts, exception, breaks] = await Promise.all([
       this.prisma.businessHour.findUnique({
         where: { branchId_dayOfWeek: { branchId: query.branchId, dayOfWeek } },
       }),
@@ -81,11 +99,21 @@ export class CheckAvailabilityHandler {
           endDate: { gte: dateOnly },
         },
       }),
+      this.prisma.employeeBreak.findMany({
+        where: { employeeId: query.employeeId, dayOfWeek },
+        orderBy: { startTime: 'asc' },
+      }),
     ]);
 
     if (!businessHour || !businessHour.isOpen) return [];
     if (holiday) return [];
     if (shifts.length === 0) return [];
+
+    const employeeBranch = await this.prisma.employeeBranch.findUnique({
+      where: { employeeId_branchId: { employeeId: query.employeeId, branchId: query.branchId } },
+      select: { id: true },
+    });
+    if (!employeeBranch) return [];
 
     // Exception handling: full block unless it's the last day AND endTime is set,
     // in which case the day is only blocked up to endTime.
@@ -122,40 +150,64 @@ export class CheckAvailabilityHandler {
       if (intersection) windows.push(intersection);
     }
 
-    if (windows.length === 0) return [];
+    // Subtract employee breaks from available windows
+    const adjustedWindows: [Date, Date][] = [];
+    for (const [wStart, wEnd] of windows) {
+      let segments: [Date, Date][] = [[wStart, wEnd]];
+      for (const brk of breaks) {
+        const brkStart = parseHHmm(brk.startTime, dateOnly);
+        const brkEnd = parseHHmm(brk.endTime, dateOnly);
+        const next: [Date, Date][] = [];
+        for (const [sStart, sEnd] of segments) {
+          if (brkEnd <= sStart || brkStart >= sEnd) {
+            next.push([sStart, sEnd]); // no overlap
+          } else {
+            if (sStart < brkStart) next.push([sStart, brkStart]);
+            if (brkEnd < sEnd) next.push([brkEnd, sEnd]);
+          }
+        }
+        segments = next;
+      }
+      adjustedWindows.push(...segments);
+    }
 
-    const earliestStart = windows[0][0];
-    const latestEnd = windows[windows.length - 1][1];
+    if (adjustedWindows.length === 0) return [];
+
+    const earliestStart = adjustedWindows[0][0];
+    const latestEnd = adjustedWindows[adjustedWindows.length - 1][1];
 
     const existingBookings = await this.prisma.booking.findMany({
       where: {
         employeeId: query.employeeId,
-        status: { in: ['PENDING', 'CONFIRMED'] },
+        status: { in: ['PENDING', 'CONFIRMED', 'AWAITING_PAYMENT'] },
         scheduledAt: { gte: earliestStart, lt: latestEnd },
       },
       orderBy: { scheduledAt: 'asc' },
     });
 
-    const earliestAllowed = new Date(Date.now() + settings.minBookingLeadMinutes * 60_000);
-    const bufferMs = settings.bufferMinutes * 60_000;
+    const effectiveMinLead = serviceOverrides?.minLeadMinutes ?? settings.minBookingLeadMinutes;
+    const effectiveBuffer = serviceOverrides?.bufferMinutes ?? settings.bufferMinutes;
+    const earliestAllowed = new Date(Date.now() + effectiveMinLead * 60_000);
+    const bufferMs = effectiveBuffer * 60_000;
 
     const slots: AvailableSlot[] = [];
 
-    for (const [windowStart, windowEnd] of windows) {
+    for (const [windowStart, windowEnd] of adjustedWindows) {
       let cursor = new Date(windowStart);
       while (cursor.getTime() + durationMins * 60_000 <= windowEnd.getTime()) {
         const slotEnd = new Date(cursor.getTime() + durationMins * 60_000);
 
         const hasConflict = existingBookings.some((b) => {
+          const bStart = new Date(b.scheduledAt.getTime() - bufferMs);
           const bEnd = new Date(b.scheduledAt.getTime() + b.durationMins * 60_000 + bufferMs);
-          return b.scheduledAt < slotEnd && bEnd > cursor;
+          return bStart < slotEnd && bEnd > cursor;
         });
 
         if (!hasConflict && cursor >= earliestAllowed) {
           slots.push({ startTime: new Date(cursor), endTime: slotEnd });
         }
 
-        cursor = new Date(cursor.getTime() + SLOT_INTERVAL_MINS * 60_000);
+        cursor = new Date(cursor.getTime() + slotInterval(durationMins) * 60_000);
       }
     }
 

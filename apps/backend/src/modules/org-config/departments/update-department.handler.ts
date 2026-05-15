@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { UpdateDepartmentDto } from './update-department.dto';
 
@@ -11,6 +11,18 @@ export class UpdateDepartmentHandler {
   ) {}
 
   async execute(dto: UpdateDepartmentCommand) {
+    if (dto.nameAr !== undefined) {
+      const existing = await this.prisma.department.findFirst({
+        where: { nameAr: dto.nameAr, id: { not: dto.departmentId } },
+      });
+      if (existing) {
+        throw new ConflictException({
+          error: 'DEPARTMENT_NAME_EXISTS',
+          message: 'Department with this Arabic name already exists',
+        });
+      }
+    }
+
     const result = await this.prisma.department.updateMany({
       where: { id: dto.departmentId },
       data: {

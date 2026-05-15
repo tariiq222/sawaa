@@ -97,8 +97,8 @@ describe("useKnowledgeFiles", () => {
 describe("useChatbotConfig", () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it("fetches all config when no category given", async () => {
-    const config = [{ key: "greeting", value: "Hello" }]
+  it("fetches singleton config", async () => {
+    const config = { id: "1", systemPromptAr: null, systemPromptEn: null, greetingAr: "مرحبا", greetingEn: "Hello", escalateToHumanAt: null, settings: null, createdAt: "", updatedAt: "" }
     fetchChatbotConfig.mockResolvedValueOnce(config)
 
     const { result } = renderHook(() => useChatbotConfig(), { wrapper: makeWrapper() })
@@ -106,19 +106,6 @@ describe("useChatbotConfig", () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
 
     expect(fetchChatbotConfig).toHaveBeenCalled()
-    expect(fetchChatbotConfigByCategory).not.toHaveBeenCalled()
-    expect(result.current.config).toEqual(config)
-  })
-
-  it("fetches config by category when category is provided", async () => {
-    const config = [{ key: "tone", value: "formal" }]
-    fetchChatbotConfig.mockResolvedValueOnce(config)
-
-    const { result } = renderHook(() => useChatbotConfig("general"), { wrapper: makeWrapper() })
-
-    await waitFor(() => expect(result.current.loading).toBe(false))
-
-    expect(fetchChatbotConfig).toHaveBeenCalledWith("general")
     expect(result.current.config).toEqual(config)
   })
 })

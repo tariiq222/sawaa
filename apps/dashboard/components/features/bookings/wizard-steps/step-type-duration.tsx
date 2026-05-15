@@ -12,6 +12,7 @@ import type { IconSvgElement } from "@hugeicons/react"
 
 import { WizardCard } from "@/components/features/bookings/wizard-card"
 import { useLocale } from "@/components/locale-provider"
+import { formatPrice } from "@/lib/money"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchEmployeeServiceTypes } from "@/lib/api/employees-schedule"
 import type { EmployeeServiceType, EmployeeDurationOption } from "@/lib/types/employee"
@@ -116,7 +117,6 @@ function DurationCard({
   locale: string
 }) {
   const label = locale === "ar" && option.labelAr ? option.labelAr : option.label
-  const price = Number(option.price)
 
   return (
     <WizardCard onClick={onSelect} selected={selected} className="py-5">
@@ -129,7 +129,7 @@ function DurationCard({
         </span>
         {option.price > 0 && (
           <span className="text-sm text-primary font-semibold">
-            {price} {t("bookings.wizard.step.service.currency")}
+            {formatPrice(Number(option.price))} {t("bookings.wizard.step.service.currency")}
           </span>
         )}
       </div>

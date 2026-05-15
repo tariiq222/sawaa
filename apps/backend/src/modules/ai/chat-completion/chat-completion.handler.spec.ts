@@ -4,6 +4,7 @@ import { ChatCompletionHandler } from './chat-completion.handler';
 import { PrismaService } from '../../../infrastructure/database';
 import { ChatAdapter } from '../../../infrastructure/ai';
 import { SemanticSearchHandler } from '../semantic-search/semantic-search.handler';
+import { GetChatbotConfigHandler } from '../chatbot-config/get-chatbot-config.handler';
 
 describe('ChatCompletionHandler', () => {
   let handler: ChatCompletionHandler;
@@ -18,7 +19,10 @@ describe('ChatCompletionHandler', () => {
           provide: PrismaService,
           useValue: {
             chatSession: { create: jest.fn().mockResolvedValue({ id: 'session-1' }) },
-            chatMessage: { create: jest.fn().mockResolvedValue({}) },
+            chatMessage: {
+              create: jest.fn().mockResolvedValue({}),
+              findMany: jest.fn().mockResolvedValue([]),
+            },
           },
         },
         {
@@ -32,6 +36,12 @@ describe('ChatCompletionHandler', () => {
           useValue: {
             isAvailable: jest.fn().mockReturnValue(true),
             complete: jest.fn().mockResolvedValue({ content: 'Reply', tokensUsed: 10, model: 'test' }),
+          },
+        },
+        {
+          provide: GetChatbotConfigHandler,
+          useValue: {
+            execute: jest.fn().mockResolvedValue({ systemPromptAr: null, systemPromptEn: null }),
           },
         },
       ],

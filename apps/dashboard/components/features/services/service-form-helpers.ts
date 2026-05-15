@@ -31,7 +31,7 @@ export function buildPayload(data: CreateServiceFormData) {
 export function buildBookingTypesPayload(bookingTypes: DraftBookingType[]) {
   return bookingTypes.filter((bt) => bt.enabled).map((d) => ({
     bookingType: d.bookingType,
-    price: Math.round(d.price * 100),
+    price: d.price,
     durationMins: d.durationMins,
     isActive: true,
   }))

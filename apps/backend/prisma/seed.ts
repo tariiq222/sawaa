@@ -8,6 +8,26 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { createCipheriv, hkdfSync, randomBytes } from 'crypto';
+
+// ─── Moyasar encryption helper (same algo as MoyasarCredentialsService) ─────
+const HKDF_SALT = 'deqah-moyasar-creds-v1';
+const HKDF_KEY_LEN = 32;
+
+function encryptMoyasar(payload: Record<string, unknown>, organizationId: string): string {
+  const masterKeyRaw = process.env.MOYASAR_ENCRYPTION_KEY;
+  if (!masterKeyRaw) throw new Error('MOYASAR_ENCRYPTION_KEY is not set');
+  const masterKey = Buffer.from(masterKeyRaw, 'base64');
+  if (masterKey.length !== 32) throw new Error('MOYASAR_ENCRYPTION_KEY must decode to 32 bytes');
+
+  const key = Buffer.from(hkdfSync('sha256', masterKey, HKDF_SALT, organizationId, HKDF_KEY_LEN));
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  const plain = Buffer.from(JSON.stringify(payload), 'utf8');
+  const ct = Buffer.concat([cipher.update(plain), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, tag, ct]).toString('base64');
+}
 
 const ADMIN_EMAIL    = process.env.SEED_EMAIL    ?? 'admin@sawaa-test.com';
 const ADMIN_PASSWORD = process.env.SEED_PASSWORD ?? 'Admin@1234';
@@ -121,9 +141,36 @@ async function main() {
   }
 
   // 3. Organization settings singleton
+  const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
   const settings = await prisma.organizationSettings.findFirst();
   if (!settings) {
-    await prisma.organizationSettings.create({ data: {} });
+    await prisma.organizationSettings.create({ data: { paymentMoyasarEnabled: true } });
+  } else {
+    await prisma.organizationSettings.updateMany({
+      data: { paymentMoyasarEnabled: true },
+    });
+  }
+
+  // 3a. Moyasar test config (singleton per org) — seeded with real test keys.
+  //     Secrets are encrypted at rest using MOYASAR_ENCRYPTION_KEY.
+  const existingMoyasar = await prisma.organizationPaymentConfig.findFirst();
+  if (!existingMoyasar) {
+    const secretKeyEnc = encryptMoyasar(
+      { secretKey: 'sk_test_dC1t7MVaXhJUmfwSj3QDpT2yRuRSMmdsjQB71zxo' },
+      DEFAULT_ORG_ID,
+    );
+    const webhookSecretEnc = encryptMoyasar(
+      { webhookSecret: 'whsec_test_dev_webhook_secret_12345' },
+      DEFAULT_ORG_ID,
+    );
+    await prisma.organizationPaymentConfig.create({
+      data: {
+        publishableKey: 'pk_test_9WmjNQjvWeKh67QscDUg7Y7YGpuvcpDY9ugi3qkv',
+        secretKeyEnc,
+        webhookSecretEnc,
+        isLive: false,
+      },
+    });
   }
 
   // 4. Main branch
@@ -256,6 +303,7 @@ async function main() {
   console.log(`✔  Main branch created`);
   console.log(`✔  BusinessHours seeded (Sun–Thu 09:00–17:00, Fri/Sat closed)`);
   console.log(`✔  Email templates upserted: ${TEMPLATES.map(t => t.slug).join(', ')}`);
+  console.log(`✔  Moyasar test config seeded (pk_test_…)`);
   console.log('─────────────────────────────────────────────');
 }
 

@@ -21,9 +21,9 @@ export function PaymentActions({ payment, onAction }: PaymentActionsProps) {
   const [refundOpen, setRefundOpen] = useState(false)
   const [verifyOpen, setVerifyOpen] = useState(false)
 
-  const canRefund = payment.status === "paid"
+  const canRefund = payment.status === "COMPLETED"
   const canVerify =
-    payment.method === "bank_transfer" &&
+    payment.method === "BANK_TRANSFER" &&
     payment.receipts &&
     payment.receipts.length > 0
 

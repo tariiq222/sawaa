@@ -176,7 +176,7 @@ export function getServiceColumns(
       enableSorting: true,
       cell: ({ row }) => (
         <span className="tabular-nums text-sm font-medium">
-          {(row.original.price / 100).toFixed(2)}
+          {Number(row.original.price).toFixed(2)}
         </span>
       ),
     },

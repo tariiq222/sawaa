@@ -1,9 +1,19 @@
-import { BadRequestException } from '@nestjs/common';
-import { MoyasarApiClient } from './moyasar-api.client';
+import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { PaymentMethod, PaymentStatus } from '@prisma/client';
+import { MoyasarApiClient, MoyasarCreatePaymentParams, MoyasarRefundStatus } from './moyasar-api.client';
+import { PrismaService } from '../../../infrastructure/database';
+import { MoyasarCredentialsService } from '../../../infrastructure/payments/moyasar-credentials.service';
 
-const ORG_ID = 'org-cache-test';
+jest.mock('../../../infrastructure/http', () => ({
+  fetchWithTimeout: jest.fn(),
+}));
 
-function makePrisma(secretKeyEnc = 'enc-key') {
+import { fetchWithTimeout } from '../../../infrastructure/http';
+
+const ORG_ID = 'org-test-123';
+
+function makePrisma(secretKeyEnc: string | null = 'enc-key') {
   return {
     organizationPaymentConfig: {
       findFirst: jest.fn().mockResolvedValue(secretKeyEnc ? { secretKeyEnc } : null),
@@ -17,68 +27,299 @@ function makeCreds(secretKey = 'sk_live_abc') {
   };
 }
 
-function buildClient(
-  prisma: ReturnType<typeof makePrisma>,
-  creds: ReturnType<typeof makeCreds>,
-) {
-  return new MoyasarApiClient(prisma as never, creds as never);
-}
+describe('MoyasarApiClient', () => {
+  let client: MoyasarApiClient;
+  let prisma: ReturnType<typeof makePrisma>;
+  let creds: ReturnType<typeof makeCreds>;
 
-describe('MoyasarApiClient — key cache', () => {
-  it('fetches DB + decrypts on first call', async () => {
-    const prisma = makePrisma();
-    const creds = makeCreds();
-    const client = buildClient(prisma, creds);
+  beforeEach(async () => {
+    prisma = makePrisma();
+    creds = makeCreds();
 
-    // Access private via casting — test-only
-    const key = await (client as unknown as { getApiKeyForOrg(id: string): Promise<string> }).getApiKeyForOrg(ORG_ID);
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        MoyasarApiClient,
+        { provide: PrismaService, useValue: prisma },
+        { provide: MoyasarCredentialsService, useValue: creds },
+      ],
+    }).compile();
 
-    expect(key).toBe('sk_live_abc');
-    expect(prisma.organizationPaymentConfig.findFirst).toHaveBeenCalledTimes(1);
-    expect(creds.decrypt).toHaveBeenCalledTimes(1);
+    client = module.get<MoyasarApiClient>(MoyasarApiClient);
+    jest.clearAllMocks();
   });
 
-  it('returns cached key on second call without hitting DB', async () => {
-    const prisma = makePrisma();
-    const creds = makeCreds();
-    const client = buildClient(prisma, creds);
-    const getKey = (id: string) =>
-      (client as unknown as { getApiKeyForOrg(id: string): Promise<string> }).getApiKeyForOrg(id);
-
-    await getKey(ORG_ID);
-    await getKey(ORG_ID);
-
-    // Second call should hit the in-memory cache
-    expect(prisma.organizationPaymentConfig.findFirst).toHaveBeenCalledTimes(1);
-    expect(creds.decrypt).toHaveBeenCalledTimes(1);
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
-  it('re-fetches DB after invalidate()', async () => {
-    const prisma = makePrisma();
-    const creds = makeCreds();
-    const client = buildClient(prisma, creds);
-    const getKey = (id: string) =>
-      (client as unknown as { getApiKeyForOrg(id: string): Promise<string> }).getApiKeyForOrg(id);
+  describe('getApiKeyForOrg', () => {
+    it('returns cached key without hitting DB on cache hit', async () => {
+      // Prime cache by calling once
+      await (client as unknown as { getApiKeyForOrg(id: string): Promise<string> }).getApiKeyForOrg(ORG_ID);
+      expect(prisma.organizationPaymentConfig.findFirst).toHaveBeenCalledTimes(1);
+      expect(creds.decrypt).toHaveBeenCalledTimes(1);
 
-    await getKey(ORG_ID);
-    client.invalidate(ORG_ID);
-    await getKey(ORG_ID);
+      jest.clearAllMocks();
 
-    // After invalidation, DB is called again
-    expect(prisma.organizationPaymentConfig.findFirst).toHaveBeenCalledTimes(2);
-    expect(creds.decrypt).toHaveBeenCalledTimes(2);
+      // Second call should be a cache hit
+      const key = await (client as unknown as { getApiKeyForOrg(id: string): Promise<string> }).getApiKeyForOrg(ORG_ID);
+      expect(key).toBe('sk_live_abc');
+      expect(prisma.organizationPaymentConfig.findFirst).not.toHaveBeenCalled();
+      expect(creds.decrypt).not.toHaveBeenCalled();
+    });
+
+    it('fetches from DB + decrypts + caches on cache miss', async () => {
+      const key = await (client as unknown as { getApiKeyForOrg(id: string): Promise<string> }).getApiKeyForOrg(ORG_ID);
+      expect(key).toBe('sk_live_abc');
+      expect(prisma.organizationPaymentConfig.findFirst).toHaveBeenCalledTimes(1);
+      expect(creds.decrypt).toHaveBeenCalledWith('enc-key', ORG_ID);
+    });
+
+    it('throws BadRequestException when DB returns no config', async () => {
+      prisma.organizationPaymentConfig.findFirst.mockResolvedValue(null);
+      await expect(
+        (client as unknown as { getApiKeyForOrg(id: string): Promise<string> }).getApiKeyForOrg('org-no-config'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
   });
 
-  it('throws BadRequestException when org has no payment config', async () => {
-    const prisma = {
-      organizationPaymentConfig: {
-        findFirst: jest.fn().mockResolvedValue(null),
-      },
-    };
-    const client = buildClient(prisma as never, makeCreds() as never);
-    const getKey = (id: string) =>
-      (client as unknown as { getApiKeyForOrg(id: string): Promise<string> }).getApiKeyForOrg(id);
+  describe('request', () => {
+    it('returns JSON when response.ok is true', async () => {
+      (fetchWithTimeout as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 'pay_123' }),
+      });
 
-    await expect(getKey('org-no-config')).rejects.toBeInstanceOf(BadRequestException);
+      const result = await (client as unknown as { request<T>(org: string, path: string, opts: RequestInit): Promise<T> }).request(
+        ORG_ID,
+        '/payments',
+        { method: 'GET' },
+      );
+
+      expect(result).toEqual({ id: 'pay_123' });
+      expect(fetchWithTimeout).toHaveBeenCalledWith(
+        'https://api.moyasar.com/v1/payments',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer sk_live_abc',
+            'Content-Type': 'application/json',
+          }),
+        }),
+        15_000,
+      );
+    });
+
+    it('throws InternalServerErrorException with parsed error message when !response.ok and JSON parse succeeds', async () => {
+      (fetchWithTimeout as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+        json: async () => ({ message: 'Invalid card', type: 'error', status: 400 }),
+      });
+
+      await expect(
+        (client as unknown as { request<T>(org: string, path: string, opts: RequestInit): Promise<T> }).request(
+          ORG_ID,
+          '/payments',
+          { method: 'POST', body: '{}' },
+        ),
+      ).rejects.toThrow(InternalServerErrorException);
+
+      await expect(
+        (client as unknown as { request<T>(org: string, path: string, opts: RequestInit): Promise<T> }).request(
+          ORG_ID,
+          '/payments',
+          { method: 'POST', body: '{}' },
+        ),
+      ).rejects.toThrow('Moyasar API error: Invalid card (status: 400)');
+    });
+
+    it('throws InternalServerErrorException with statusText fallback when !response.ok and JSON parse fails', async () => {
+      (fetchWithTimeout as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 502,
+        statusText: 'Bad Gateway',
+        json: async () => {
+          throw new Error('parse failed');
+        },
+      });
+
+      await expect(
+        (client as unknown as { request<T>(org: string, path: string, opts: RequestInit): Promise<T> }).request(
+          ORG_ID,
+          '/payments',
+          { method: 'GET' },
+        ),
+      ).rejects.toThrow('Moyasar API error: Bad Gateway (status: 502)');
+    });
+  });
+
+  describe('createPayment', () => {
+    it('builds body, calls request, and maps response', async () => {
+      (fetchWithTimeout as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          id: 'pay_123',
+          object: 'payment',
+          amount: 1000,
+          currency: 'SAR',
+          status: 'initiated',
+          description: 'Invoice #1',
+          metadata: { invoiceId: 'inv_1' },
+          redirect_url: 'https://example.com/callback',
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        }),
+      });
+
+      const params: MoyasarCreatePaymentParams = {
+        amountHalalas: 1000,
+        currency: 'SAR',
+        description: 'Invoice #1',
+        callbackUrl: 'https://example.com/callback',
+        metadata: { invoiceId: 'inv_1' },
+        idempotencyKey: 'idem-123',
+      };
+
+      const result = await client.createPayment(ORG_ID, params);
+
+      expect(result).toEqual({
+        id: 'pay_123',
+        amount: 1000,
+        currency: 'SAR',
+        status: 'initiated',
+        description: 'Invoice #1',
+        metadata: { invoiceId: 'inv_1' },
+        redirectUrl: 'https://example.com/callback',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      });
+
+      expect(fetchWithTimeout).toHaveBeenCalledWith(
+        'https://api.moyasar.com/v1/payments',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            amount: 1000,
+            currency: 'SAR',
+            description: 'Invoice #1',
+            callback_url: 'https://example.com/callback',
+            metadata: { invoiceId: 'inv_1' },
+            source: { type: 'card' },
+          }),
+          headers: expect.objectContaining({
+            'Idempotency-Key': 'idem-123',
+            Authorization: 'Bearer sk_live_abc',
+            'Content-Type': 'application/json',
+          }),
+        }),
+        15_000,
+      );
+    });
+  });
+
+  describe('toPaymentStatus', () => {
+    const cases: Array<{ input: Parameters<MoyasarApiClient['toPaymentStatus']>[0]; expected: PaymentStatus }> = [
+      { input: 'paid', expected: PaymentStatus.COMPLETED },
+      { input: 'failed', expected: PaymentStatus.FAILED },
+      { input: 'refunded', expected: PaymentStatus.REFUNDED },
+      { input: 'initiated', expected: PaymentStatus.PENDING },
+      { input: 'unknown' as any, expected: PaymentStatus.PENDING },
+    ];
+
+    it.each(cases)('maps $input to $expected', ({ input, expected }) => {
+      expect(client.toPaymentStatus(input)).toBe(expected);
+    });
+  });
+
+  describe('toPaymentMethod', () => {
+    it('returns ONLINE_CARD', () => {
+      expect(client.toPaymentMethod()).toBe(PaymentMethod.ONLINE_CARD);
+    });
+  });
+
+  describe('createRefund', () => {
+    it('builds body, calls request, and maps response', async () => {
+      (fetchWithTimeout as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          id: 'ref_123',
+          amount: 500,
+          currency: 'SAR',
+          status: 'refunded',
+          payment_id: 'pay_123',
+          created_at: '2024-01-02T00:00:00Z',
+        }),
+      });
+
+      const result = await client.createRefund(ORG_ID, {
+        paymentId: 'pay_123',
+        amount: 500,
+        idempotencyKey: 'idem-refund-123',
+      });
+
+      expect(result).toEqual({
+        id: 'ref_123',
+        amount: 500,
+        currency: 'SAR',
+        status: 'refunded',
+        paymentId: 'pay_123',
+        createdAt: '2024-01-02T00:00:00Z',
+      });
+
+      expect(fetchWithTimeout).toHaveBeenCalledWith(
+        'https://api.moyasar.com/v1/refunds',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            payment_id: 'pay_123',
+            amount: 500,
+          }),
+          headers: expect.objectContaining({
+            'Idempotency-Key': 'idem-refund-123',
+            Authorization: 'Bearer sk_live_abc',
+            'Content-Type': 'application/json',
+          }),
+        }),
+        15_000,
+      );
+    });
+  });
+
+  describe('getRefundStatus', () => {
+    const cases: Array<{ rawStatus: string; expected: MoyasarRefundStatus }> = [
+      { rawStatus: 'paid', expected: 'paid' },
+      { rawStatus: 'failed', expected: 'failed' },
+      { rawStatus: 'pending', expected: 'pending' },
+      { rawStatus: 'invalid', expected: 'pending' },
+    ];
+
+    it.each(cases)('maps raw status "$rawStatus" to "$expected"', async ({ rawStatus, expected }) => {
+      (fetchWithTimeout as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 'ref_123', status: rawStatus }),
+      });
+
+      const result = await client.getRefundStatus(ORG_ID, 'ref_123');
+      expect(result).toEqual({ id: 'ref_123', status: expected });
+    });
+  });
+
+  describe('invalidate', () => {
+    it('removes the cached key so the next call re-fetches from DB', async () => {
+      const getKey = (id: string) =>
+        (client as unknown as { getApiKeyForOrg(id: string): Promise<string> }).getApiKeyForOrg(id);
+
+      await getKey(ORG_ID);
+      expect(prisma.organizationPaymentConfig.findFirst).toHaveBeenCalledTimes(1);
+
+      client.invalidate(ORG_ID);
+      jest.clearAllMocks();
+
+      await getKey(ORG_ID);
+      expect(prisma.organizationPaymentConfig.findFirst).toHaveBeenCalledTimes(1);
+      expect(creds.decrypt).toHaveBeenCalledTimes(1);
+    });
   });
 });

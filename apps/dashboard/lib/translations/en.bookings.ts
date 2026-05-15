@@ -247,6 +247,8 @@ export const enBookings: Record<string, string> = {
   "bookings.wizard.step.confirm.payAtClinicDescription": "Pay when you visit",
   "bookings.wizard.step.confirm.summaryHeader": "Booking Summary",
   "bookings.wizard.step.confirm.paymentHeader": "Payment Method",
+  "bookings.wizard.step.confirm.couponHeader": "Discount Coupon",
+  "bookings.wizard.step.confirm.couponPlaceholder": "Enter coupon code (optional)",
   "bookings.wizard.back": "Back",
   "bookings.wizard.close": "Close",
   "bookings.wizard.changeClient": "Change Client",

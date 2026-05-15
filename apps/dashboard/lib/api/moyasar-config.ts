@@ -18,9 +18,9 @@ export interface MoyasarConfig {
 
 export interface UpsertMoyasarConfigPayload {
   publishableKey: string
-  secretKey: string
-  webhookSecret: string
-  isLive: boolean
+  secretKey?: string
+  webhookSecret?: string
+  isLive?: boolean
 }
 
 export interface TestMoyasarConfigResult {

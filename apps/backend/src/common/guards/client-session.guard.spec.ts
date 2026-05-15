@@ -57,4 +57,11 @@ describe('ClientSessionGuard', () => {
       expect.objectContaining({ role: 'CLIENT' }),
     );
   });
+
+  it('should call super.canActivate in canActivate', async () => {
+    const superCanActivate = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(guard)), 'canActivate').mockResolvedValue(true);
+    const result = await guard.canActivate(createContext());
+    expect(result).toBe(true);
+    expect(superCanActivate).toHaveBeenCalled();
+  });
 });

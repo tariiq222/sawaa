@@ -11,6 +11,7 @@ import {
   useTestMoyasarConfig,
   useUpsertMoyasarConfig,
 } from "@/hooks/use-moyasar-config"
+import type { UpsertMoyasarConfigPayload } from "@/lib/api/moyasar-config"
 
 type TabId = "moyasar" | "atclinic"
 
@@ -44,20 +45,25 @@ export function SettingsPaymentTab() {
   }
 
   const handleSaveMoyasar = () => {
-    upsertMoyasar.mutate(
-      {
-        publishableKey: publishableKey.trim(),
-        secretKey: secretKey.trim(),
-        webhookSecret: webhookSecret.trim(),
-        isLive,
+    const payload: UpsertMoyasarConfigPayload = {
+      publishableKey: publishableKey.trim(),
+      isLive,
+    }
+    // Only send secrets if the user re-entered them
+    if (secretKey.trim().length > 0) {
+      payload.secretKey = secretKey.trim()
+    }
+    if (webhookSecret.trim().length > 0) {
+      payload.webhookSecret = webhookSecret.trim()
+    }
+    upsertMoyasar.mutate(payload, {
+      onSuccess: () => {
+        toast.success(t("settings.saved"))
+        setSecretKey("")
+        setWebhookSecret("")
       },
-      {
-        onSuccess: () => {
-          toast.success(t("settings.saved"))
-        },
-        onError: (err: Error) => toast.error(err.message),
-      },
-    )
+      onError: (err: Error) => toast.error(err.message),
+    })
   }
 
   const handleTestMoyasar = () => {

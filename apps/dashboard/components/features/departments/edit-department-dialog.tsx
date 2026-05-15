@@ -52,6 +52,7 @@ export function EditDepartmentDialog({
       icon: "",
       sortOrder: 0,
       isActive: true,
+      isVisible: true,
     },
   })
 
@@ -65,6 +66,7 @@ export function EditDepartmentDialog({
         icon: department.icon ?? "",
         sortOrder: department.sortOrder ?? 0,
         isActive: department.isActive,
+        isVisible: department.isVisible,
       })
     } else if (!open) {
       form.reset({
@@ -75,6 +77,7 @@ export function EditDepartmentDialog({
         icon: "",
         sortOrder: 0,
         isActive: true,
+        isVisible: true,
       })
     }
   }, [department, open, form])
@@ -91,6 +94,7 @@ export function EditDepartmentDialog({
         icon: data.icon || undefined,
         sortOrder: data.sortOrder,
         isActive: data.isActive,
+        isVisible: data.isVisible,
       })
       toast.success(t("departments.edit.success"))
       onOpenChange(false)
@@ -195,6 +199,20 @@ export function EditDepartmentDialog({
                 id="edit-dept-active"
                 checked={form.watch("isActive")}
                 onCheckedChange={(v) => form.setValue("isActive", v)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="flex flex-col gap-0.5">
+                <Label htmlFor="edit-dept-visible" className="cursor-pointer">
+                  {t("departments.isVisible")}
+                </Label>
+                <span className="text-xs text-muted-foreground">{t("departments.isVisibleDesc")}</span>
+              </div>
+              <Switch
+                id="edit-dept-visible"
+                checked={form.watch("isVisible")}
+                onCheckedChange={(v) => form.setValue("isVisible", v)}
               />
             </div>
           </form>

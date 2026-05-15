@@ -17,7 +17,13 @@ export function configureCors(app: INestApplication): void {
 
   app.enableCors({
     origin: (requestOrigin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
-      if (!requestOrigin) return cb(null, true);
+      // In production, block requests with no Origin header (curl, server-side scripts, bots)
+      if (!requestOrigin) {
+        if (process.env.NODE_ENV === 'production') {
+          return cb(new Error('CORS blocked: missing Origin header'), false);
+        }
+        return cb(null, true);
+      }
       if (allowed.has(requestOrigin)) return cb(null, true);
       return cb(new Error(`CORS blocked: ${requestOrigin}`), false);
     },

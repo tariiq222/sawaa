@@ -84,4 +84,6 @@ export const enDepartments: Record<string, string> = {
   "departments.field.iconPlaceholder": "e.g. stethoscope",
   "departments.field.sortOrder": "Sort Order",
   "departments.field.isActive": "Active",
+  "departments.isVisible": "Visible to clients",
+  "departments.isVisibleDesc": "Shows in the public booking page",
 }

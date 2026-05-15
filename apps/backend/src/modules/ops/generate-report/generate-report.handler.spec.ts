@@ -101,10 +101,8 @@ describe('GenerateReportHandler', () => {
 
   it('generates a BOOKINGS report', async () => {
     const prisma = buildPrisma();
-    prisma.booking.groupBy = jest.fn().mockResolvedValue([
-      { status: 'COMPLETED', _count: { status: 10 } },
-      { status: 'CANCELLED', _count: { status: 2 } },
-    ]);
+    prisma.booking.groupBy = jest.fn().mockResolvedValue([]);
+    prisma.booking.findMany = jest.fn().mockResolvedValue([]);
     const handler = new GenerateReportHandler(prisma as never);
 
     const result = await handler.execute({
@@ -119,9 +117,7 @@ describe('GenerateReportHandler', () => {
 
   it('generates an EMPLOYEES report', async () => {
     const prisma = buildPrisma();
-    prisma.booking.groupBy = jest.fn().mockResolvedValue([
-      { employeeId: 'emp-1', status: 'COMPLETED', _count: { employeeId: 5 } },
-    ]);
+    prisma.booking.findMany = jest.fn().mockResolvedValue([]);
     const handler = new GenerateReportHandler(prisma as never);
 
     const result = await handler.execute({

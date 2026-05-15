@@ -1,7 +1,7 @@
 import {
   Controller, Get, Post, Put, Patch, Delete, Body, Param, Query,
   UseGuards, ParseUUIDPipe, HttpCode, HttpStatus,
-  UseInterceptors, UploadedFile, BadRequestException, Request,
+  UseInterceptors, UploadedFile, BadRequestException, NotFoundException, Request,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -10,6 +10,7 @@ import {
   ApiNotFoundResponse, ApiExtraModels, getSchemaPath,
 } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../common/swagger';
+import { PrismaService } from '../../infrastructure/database';
 import {
   ClientResponseDto, EmployeeResponseDto,
   PaginatedClientsDto, PaginatedEmployeesDto,
@@ -47,9 +48,12 @@ import { ListEmployeeServicesHandler } from '../../modules/people/employees/list
 import { GetEmployeeServiceTypesHandler } from '../../modules/people/employees/get-employee-service-types.handler';
 import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
 import { Type } from 'class-transformer';
-import { IsDateString, IsInt, IsOptional, Min } from 'class-validator';
+import { IsDateString, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { AssignEmployeeServiceHandler } from '../../modules/people/employees/assign-employee-service.handler';
+import { UpdateEmployeeServiceHandler } from '../../modules/people/employees/update-employee-service.handler';
 import { RemoveEmployeeServiceHandler } from '../../modules/people/employees/remove-employee-service.handler';
+import { SetEmployeeServiceOptionsHandler } from '../../modules/org-experience/services/set-employee-service-options.handler';
+import { SetEmployeeServiceOptionsDto } from '../../modules/org-experience/services/set-employee-service-options.dto';
 import { ListEmployeeExceptionsHandler } from '../../modules/people/employees/list-employee-exceptions.handler';
 import { CreateEmployeeExceptionHandler } from '../../modules/people/employees/create-employee-exception.handler';
 import { CreateEmployeeExceptionDto } from '../../modules/people/employees/create-employee-exception.dto';
@@ -67,6 +71,8 @@ class EmployeeSlotsQuery {
   @IsDateString() date!: string;
 
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) duration?: number;
+
+  @IsOptional() @IsString() branchId?: string;
 }
 
 function formatHHmm(d: Date): string {
@@ -87,6 +93,7 @@ function formatHHmm(d: Date): string {
 @UseGuards(JwtGuard, CaslGuard)
 export class DashboardPeopleController {
   constructor(
+    private readonly prisma: PrismaService,
     private readonly createClient: CreateClientHandler,
     private readonly updateClient: UpdateClientHandler,
     private readonly listClients: ListClientsHandler,
@@ -106,7 +113,9 @@ export class DashboardPeopleController {
     private readonly getEmployeeServiceTypes: GetEmployeeServiceTypesHandler,
     private readonly checkAvailability: CheckAvailabilityHandler,
     private readonly assignEmployeeService: AssignEmployeeServiceHandler,
+    private readonly updateEmployeeService: UpdateEmployeeServiceHandler,
     private readonly removeEmployeeService: RemoveEmployeeServiceHandler,
+    private readonly setEmployeeServiceOptions: SetEmployeeServiceOptionsHandler,
     private readonly listEmployeeExceptions: ListEmployeeExceptionsHandler,
     private readonly createEmployeeException: CreateEmployeeExceptionHandler,
     private readonly deleteEmployeeException: DeleteEmployeeExceptionHandler,
@@ -590,11 +599,46 @@ export class DashboardPeopleController {
     return this.assignEmployeeService.execute({ employeeId: id, serviceId: body.serviceId });
   }
 
+  @Patch('employees/:id/services/:serviceId')
+  @CheckPermissions({ action: 'update', subject: 'Employee' })
+  @ApiOperation({ summary: 'Update an employee-service assignment' })
+  @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Employee-service assignment updated' })
+  @ApiNotFoundResponse({ description: 'Employee-service assignment not found' })
+  updateEmployeeServiceEndpoint(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('serviceId', ParseUUIDPipe) serviceId: string,
+    @Body() body: { isActive?: boolean },
+  ) {
+    return this.updateEmployeeService.execute({ employeeId: id, serviceId, ...body });
+  }
+
+  @Put('employees/:id/services/:serviceId/options')
+  @CheckPermissions({ action: 'update', subject: 'Employee' })
+  @ApiOperation({ summary: 'Set employee-specific service options' })
+  @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Employee service options updated' })
+  @ApiNotFoundResponse({ description: 'Employee-service link not found' })
+  async setEmployeeServiceOptionsEndpoint(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('serviceId', ParseUUIDPipe) serviceId: string,
+    @Body() body: SetEmployeeServiceOptionsDto,
+  ) {
+    const link = await this.prisma.employeeService.findUnique({
+      where: { employeeId_serviceId: { employeeId: id, serviceId } },
+    });
+    if (!link) throw new NotFoundException('Employee-service assignment not found');
+    return this.setEmployeeServiceOptions.execute({ employeeServiceId: link.id, ...body });
+  }
+
   @Get('employees/:id/slots')
   @CheckPermissions({ action: 'read', subject: 'Employee' })
   @ApiOperation({ summary: 'Available booking slots for an employee on a given date' })
   @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiQuery({ name: 'date', description: 'Date (ISO 8601, YYYY-MM-DD)', example: '2026-05-01' })
+  @ApiQuery({ name: 'branchId', description: 'Branch UUID (defaults to main branch)', required: false, example: '00000000-0000-0000-0000-000000000000' })
   @ApiQuery({ name: 'duration', description: 'Slot duration in minutes', required: false, example: 30 })
   @ApiOkResponse({
     description: 'Available slots',
@@ -614,10 +658,15 @@ export class DashboardPeopleController {
     @Param('id', ParseUUIDPipe) id: string,
     @Query() q: EmployeeSlotsQuery,
   ) {
-    const mainBranch = 'main-branch';
+    let branchId = q.branchId;
+    if (!branchId) {
+      const mainBranch = await this.prisma.branch.findFirst({ where: { isMain: true } });
+      if (!mainBranch) throw new NotFoundException('No main branch configured');
+      branchId = mainBranch.id;
+    }
     const slots = await this.checkAvailability.execute({
       employeeId: id,
-      branchId: mainBranch,
+      branchId,
       date: new Date(q.date),
       durationMins: q.duration,
     });

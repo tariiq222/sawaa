@@ -11,8 +11,12 @@ describe('DeleteRoleHandler', () => {
       providers: [
         DeleteRoleHandler,
         { provide: PrismaService, useValue: {
-          customRole: { findFirst: jest.fn() },
-          $transaction: jest.fn(),
+          customRole: { findFirst: jest.fn(), delete: jest.fn() },
+          user: { updateMany: jest.fn() },
+          $transaction: jest.fn(async (cb) => await cb({
+            user: { updateMany: jest.fn() },
+            customRole: { delete: jest.fn() },
+          })),
         } },
       ],
     }).compile();

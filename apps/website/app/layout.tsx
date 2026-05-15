@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { BrandingProvider, BrandingStyle, getPublicBrandingForSsr } from '@/features/branding/public';
+import { QueryProvider } from '@/providers/query-provider';
 import './globals.css';
 import { generateMedicalBusinessSchema } from '@/lib/seo/schema';
 
@@ -55,7 +56,9 @@ export default async function RootLayout({
         />
       </head>
       <body>
-        <BrandingProvider branding={branding}>{children}</BrandingProvider>
+        <QueryProvider>
+          <BrandingProvider branding={branding}>{children}</BrandingProvider>
+        </QueryProvider>
       </body>
     </html>
   );

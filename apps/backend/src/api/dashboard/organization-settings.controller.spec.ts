@@ -7,6 +7,8 @@ import { UpdateServiceHandler } from '../../modules/org-experience/services/upda
 import { ListServicesHandler } from '../../modules/org-experience/services/list-services.handler';
 import { GetServiceHandler } from '../../modules/org-experience/services/get-service.handler';
 import { ArchiveServiceHandler } from '../../modules/org-experience/services/archive-service.handler';
+import { SetDurationOptionsHandler } from '../../modules/org-experience/services/set-duration-options.handler';
+import { SetDurationOptionsHandler } from '../../modules/org-experience/services/set-duration-options.handler';
 import { SetServiceBookingConfigsHandler } from '../../modules/org-experience/services/set-service-booking-configs.handler';
 import { GetServiceBookingConfigsHandler } from '../../modules/org-experience/services/get-service-booking-configs.handler';
 import { ListServiceEmployeesHandler } from '../../modules/org-experience/services/list-service-employees.handler';
@@ -23,6 +25,7 @@ import { GetOrgSettingsHandler } from '../../modules/org-experience/org-settings
 import { UpsertOrgSettingsHandler } from '../../modules/org-experience/org-settings/upsert-org-settings.handler';
 import { GetBookingSettingsHandler } from '../../modules/bookings/get-booking-settings/get-booking-settings.handler';
 import { UpsertBookingSettingsHandler } from '../../modules/bookings/upsert-booking-settings/upsert-booking-settings.handler';
+import { PrismaService } from '../../infrastructure/database';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
@@ -50,6 +53,8 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
   const mockUpsertOrgSettings = { execute: jest.fn() };
   const mockGetBookingSettings = { execute: jest.fn() };
   const mockUpsertBookingSettings = { execute: jest.fn() };
+  const mockSetDurationOptions = { execute: jest.fn() };
+  const mockPrisma = { serviceDurationOption: { findMany: jest.fn() } };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -76,6 +81,8 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
         { provide: UpsertOrgSettingsHandler, useValue: mockUpsertOrgSettings },
         { provide: GetBookingSettingsHandler, useValue: mockGetBookingSettings },
         { provide: UpsertBookingSettingsHandler, useValue: mockUpsertBookingSettings },
+        { provide: SetDurationOptionsHandler, useValue: mockSetDurationOptions },
+        { provide: PrismaService, useValue: mockPrisma },
       ],
     })
       .overrideGuard(JwtGuard)

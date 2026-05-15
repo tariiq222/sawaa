@@ -17,7 +17,9 @@ export const enMisc: Record<string, string> = {
   "reports.revenue.bookings": "Total Bookings",
   "reports.bookings.byStatus": "By Status",
   "reports.bookings.byType": "By Type",
-  "reports.exportCsv": "Export CSV",
+  "reports.exportCsv": "Export Excel",
+  "reports.exporting": "Exporting...",
+  "reports.exportError": "Failed to export report",
   "reports.employeeSearch": "Search employee by name or ID...",
   "reports.employeeSearchHint": "Search for an employee to view their report",
 
@@ -305,4 +307,36 @@ export const enMisc: Record<string, string> = {
   // — Brand identity (login panel) —
   "brand.name": "Sawaa Family Counseling",
   "brand.tagline": "Specialized family counseling platform",
+
+  // — Not Found page —
+  "notFound.title": "Page Not Found",
+  "notFound.description": "The page you are looking for does not exist or has been moved.",
+  "notFound.backToDashboard": "Back to Dashboard",
+
+  // — Auth Gate —
+  "authGate.loading": "Loading...",
+
+  // — Loading page —
+  "loading.text": "Loading...",
+
+  // — Validation messages —
+  "validation.phoneRequired": "Phone number is required",
+  "validation.phoneInternational": "Enter number in international format e.g. +966501234567",
+  "validation.phoneInternationalShort": "Enter number in international format",
+  "validation.selectEmployee": "Select an employee",
+  "validation.selectService": "Select a service",
+  "validation.selectDate": "Select a date",
+  "validation.selectTime": "Select a time",
+  "validation.saudiPhone": "Invalid Saudi number — example +966501234567",
+  "validation.bloodTypeUnknown": "Unknown",
+
+  // — Pagination —
+  "pagination.prev": "Prev",
+  "pagination.next": "Next",
+  "pagination.reset": "Reset",
+
+  // — Global Error —
+  "globalError.title": "An unexpected error occurred",
+  "globalError.description": "We're sorry, a system error occurred. Please try again.",
+  "globalError.retry": "Try Again",
 }

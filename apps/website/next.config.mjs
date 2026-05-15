@@ -6,14 +6,14 @@ const nextConfig = {
   outputFileTracingRoot: new URL('../', import.meta.url).pathname,
   transpilePackages: ['@sawaa/api-client', '@sawaa/shared'],
   typedRoutes: false,
-  eslint: { ignoreDuringBuilds: true },
-  typescript: { ignoreBuildErrors: true },
+  eslint: { ignoreDuringBuilds: process.env.NODE_ENV !== 'production' },
+  typescript: { ignoreBuildErrors: process.env.NODE_ENV !== 'production' },
 };
 
 export default withSentryConfig(nextConfig, {
   org: 'webvue',
   project: 'sawaa-website',
-  url: 'http://100.124.231.44:8000/',
+  url: process.env.SENTRY_URL || 'https://errors.webvue.pro/',
   silent: true,
   disableLogger: true,
   authToken: process.env.SENTRY_AUTH_TOKEN,

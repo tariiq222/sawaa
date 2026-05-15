@@ -34,7 +34,6 @@ import {
 import {
   ProfileSkeleton,
   CombinedInfoCard,
-  PricingCard,
 } from "@/components/features/employees/employee-profile-helpers"
 import { EmployeeBookingsChart } from "@/components/features/employees/employee-bookings-chart"
 import { PublicProfileTab } from "@/components/features/employees/public-profile-tab"
@@ -198,26 +197,17 @@ export function EmployeeDetailPage({ employeeId }: Props) {
 
         <TabsContent value="overview" className="space-y-4 pt-4">
           <EmployeeBookingsChart employeeId={employeeId} />
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <CombinedInfoCard
-              email={p.user.email}
-              phone={p.user.phone ?? null}
-              specialty={specialty ?? "—"}
-              experience={p.experience ?? null}
-              education={education ?? null}
-              createdAt={p.createdAt}
-              updatedAt={p.updatedAt}
-              locale={locale}
-              isAr={isAr}
-            />
-            <PricingCard
-              priceClinic={p.priceClinic ?? null}
-              pricePhone={p.pricePhone ?? null}
-              priceVideo={p.priceVideo ?? null}
-              locale={locale}
-              isAr={isAr}
-            />
-          </div>
+          <CombinedInfoCard
+            email={p.user.email}
+            phone={p.user.phone ?? null}
+            specialty={specialty ?? "—"}
+            experience={p.experience ?? null}
+            education={education ?? null}
+            createdAt={p.createdAt}
+            updatedAt={p.updatedAt}
+            locale={locale}
+            isAr={isAr}
+          />
         </TabsContent>
 
         <TabsContent value="services" className="pt-4">

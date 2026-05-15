@@ -4,7 +4,7 @@
 
 export * from "./employees-schedule"
 
-import { api } from "@/lib/api"
+import { api, getAccessToken } from "@/lib/api"
 import type { PaginatedResponse } from "@/lib/types/common"
 import type {
   Employee,
@@ -127,6 +127,36 @@ export interface EmployeeStats {
 
 export async function fetchEmployeeStats(): Promise<EmployeeStats> {
   return api.get<EmployeeStats>("/dashboard/people/employees/stats")
+}
+
+/* ─── Avatar Upload ─── */
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5200/api/v1"
+
+export async function uploadEmployeeAvatar(
+  employeeId: string,
+  file: File,
+): Promise<{ url: string }> {
+  const token = getAccessToken()
+  const formData = new FormData()
+  formData.append("file", file)
+
+  const res = await fetch(
+    `${API_BASE}/dashboard/people/employees/${employeeId}/avatar`,
+    {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    },
+  )
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { message?: string }
+    throw new Error(body?.message ?? res.statusText)
+  }
+
+  const data = await res.json() as { url: string }
+  return data
 }
 
 

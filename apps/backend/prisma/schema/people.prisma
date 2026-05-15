@@ -60,6 +60,7 @@ model Client {
   claimedAt         DateTime?
   isActive          Boolean           @default(true)
   deletedAt         DateTime?
+  tokenVersion      Int               @default(0)
   passwordHash      String?
   loginAttempts     Int               @default(0)
   lockoutUntil      DateTime?

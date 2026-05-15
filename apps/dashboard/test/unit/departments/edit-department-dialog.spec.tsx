@@ -60,6 +60,7 @@ const mockDepartment: Department = {
   icon: "heart",
   sortOrder: 5,
   isActive: true,
+  isVisible: true,
   createdAt: "2024-01-01T00:00:00Z",
   updatedAt: "2024-01-01T00:00:00Z",
 }

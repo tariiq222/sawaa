@@ -67,7 +67,7 @@ export class CreateRecurringBookingHandler {
       const conflict = await db.booking.findFirst({
         where: {
           employeeId: dto.employeeId,
-          status: { in: ['PENDING', 'CONFIRMED'] },
+          status: { in: ['PENDING', 'CONFIRMED', 'AWAITING_PAYMENT'] },
           scheduledAt: { lt: endsAt },
           endsAt: { gt: scheduledAt },
         },

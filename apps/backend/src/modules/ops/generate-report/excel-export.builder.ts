@@ -11,46 +11,32 @@ export async function buildRevenueExcel(report: RevenueReportResult): Promise<Bu
     { header: 'Metric', key: 'metric', width: 30 },
     { header: 'Value', key: 'value', width: 20 },
   ];
-  const s = report.summary;
   summary.addRows([
-    { metric: 'Total Revenue (⃁)', value: s.totalRevenue.toFixed(2) },
-    { metric: 'Total Payments', value: s.totalPayments },
-    { metric: 'Total Bookings', value: s.totalBookings },
-    { metric: 'Completed Bookings', value: s.completedBookings },
-    { metric: 'Cancelled Bookings', value: s.cancelledBookings },
-    { metric: 'Avg Booking Value (⃁)', value: s.averageBookingValue.toFixed(2) },
+    { metric: 'Total Revenue (⃁)', value: report.totalRevenue.toFixed(2) },
+    { metric: 'Total Bookings', value: report.totalBookings },
+    { metric: 'Avg Per Booking (⃁)', value: report.averagePerBooking.toFixed(2) },
   ]);
   styleHeaderRow(summary);
+
+  // By Method sheet
+  const byMethod = wb.addWorksheet('By Method');
+  byMethod.columns = [
+    { header: 'Method', key: 'method', width: 20 },
+    { header: 'Amount (⃁)', key: 'amount', width: 18 },
+    { header: 'Payments', key: 'count', width: 12 },
+  ];
+  byMethod.addRows(report.byMethod);
+  styleHeaderRow(byMethod);
 
   // By Day sheet
   const byDay = wb.addWorksheet('By Day');
   byDay.columns = [
     { header: 'Date', key: 'date', width: 15 },
-    { header: 'Revenue (⃁)', key: 'revenue', width: 18 },
+    { header: 'Amount (⃁)', key: 'amount', width: 18 },
     { header: 'Payments', key: 'count', width: 12 },
   ];
   byDay.addRows(report.byDay);
   styleHeaderRow(byDay);
-
-  // By Branch sheet
-  const byBranch = wb.addWorksheet('By Branch');
-  byBranch.columns = [
-    { header: 'Branch ID', key: 'branchId', width: 36 },
-    { header: 'Revenue (⃁)', key: 'revenue', width: 18 },
-    { header: 'Bookings', key: 'count', width: 12 },
-  ];
-  byBranch.addRows(report.byBranch);
-  styleHeaderRow(byBranch);
-
-  // By Employee sheet
-  const byEmployee = wb.addWorksheet('By Employee');
-  byEmployee.columns = [
-    { header: 'Employee ID', key: 'employeeId', width: 36 },
-    { header: 'Revenue (⃁)', key: 'revenue', width: 18 },
-    { header: 'Bookings', key: 'count', width: 12 },
-  ];
-  byEmployee.addRows(report.byEmployee);
-  styleHeaderRow(byEmployee);
 
   return wb.xlsx.writeBuffer() as unknown as Promise<Buffer>;
 }

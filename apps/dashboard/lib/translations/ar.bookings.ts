@@ -247,6 +247,8 @@ export const arBookings: Record<string, string> = {
   "bookings.wizard.step.confirm.payAtClinicDescription": "ادفع عند الزيارة",
   "bookings.wizard.step.confirm.summaryHeader": "ملخص الحجز",
   "bookings.wizard.step.confirm.paymentHeader": "طريقة الدفع",
+  "bookings.wizard.step.confirm.couponHeader": "كوبون الخصم",
+  "bookings.wizard.step.confirm.couponPlaceholder": "أدخل رمز الكوبون (اختياري)",
   "bookings.wizard.back": "رجوع",
   "bookings.wizard.close": "إغلاق",
   "bookings.wizard.changeClient": "تغيير المستفيد",

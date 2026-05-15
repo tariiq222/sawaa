@@ -20,7 +20,7 @@ import { useLocale } from "@/components/locale-provider"
 
 export default function NotificationsPage() {
   const { t } = useLocale()
-  const { notifications, isLoading, error } = useNotifications()
+  const { notifications, meta, isLoading, error, page, setPage } = useNotifications()
   const { data: unreadCount, isLoading: unreadLoading } = useUnreadCount()
   const { markAllMut, markOneMut } = useNotificationMutations()
 
@@ -28,8 +28,7 @@ export default function NotificationsPage() {
     markAllMut.mutate()
   }
 
-  const totalCount = notifications.length
-  const _readCount = totalCount - (unreadCount ?? 0)
+  const totalCount = meta?.total ?? notifications.length
 
   return (
     <ListPageShell>
@@ -98,6 +97,33 @@ export default function NotificationsPage() {
               onMarkRead={(id) => markOneMut.mutate(id)}
             />
           ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {meta && meta.totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+          <span className="tabular-nums">
+            {page} / {meta.totalPages}
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              {t("pagination.prev")}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= meta.totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              {t("pagination.next")}
+            </Button>
+          </div>
         </div>
       )}
     </ListPageShell>

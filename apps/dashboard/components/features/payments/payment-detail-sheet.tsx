@@ -25,10 +25,11 @@ import { PaymentActions } from "./payment-actions"
 /* ─── Status Styles ─── */
 
 const statusStyles: Record<string, string> = {
-  pending: "border-warning/30 bg-warning/10 text-warning",
-  paid: "border-success/30 bg-success/10 text-success",
-  refunded: "border-info/30 bg-info/10 text-info",
-  failed: "border-destructive/30 bg-destructive/10 text-destructive",
+  PENDING: "border-warning/30 bg-warning/10 text-warning",
+  PENDING_VERIFICATION: "border-warning/30 bg-warning/10 text-warning",
+  COMPLETED: "border-success/30 bg-success/10 text-success",
+  REFUNDED: "border-info/30 bg-info/10 text-info",
+  FAILED: "border-destructive/30 bg-destructive/10 text-destructive",
 }
 
 const verificationStyles: Record<string, string> = {
@@ -116,14 +117,6 @@ function PaymentDetailBody({
   const { formatDate } = useOrganizationConfig()
   const { locale, t } = useLocale()
 
-  const clientName = payment.booking?.client
-    ? `${payment.booking.client.firstName} ${payment.booking.client.lastName}`
-    : "\u2014"
-
-  const employeeName = payment.booking?.employee?.user
-    ? `${payment.booking.employee.user.firstName} ${payment.booking.employee.user.lastName}`
-    : "\u2014"
-
   return (
     <>
       <SheetBody>
@@ -137,42 +130,23 @@ function PaymentDetailBody({
             />
             <DetailRow
               label={t("detail.total")}
-              value={<FormattedCurrency amount={payment.totalAmount} locale={locale} decimals={2} />}
-              numeric
-            />
-            <DetailRow
-              label={t("detail.tax")}
-              value={<FormattedCurrency amount={payment.vatAmount} locale={locale} decimals={2} />}
+              value={<FormattedCurrency amount={Number(payment.amount)} locale={locale} decimals={2} />}
               numeric
             />
             <DetailRow
               label={t("detail.method")}
-              value={payment.method === "bank_transfer" ? t("detail.bankTransfer") : t("detail.moyasar")}
+              value={payment.method === "BANK_TRANSFER" ? t("detail.bankTransfer") : payment.method === "ONLINE_CARD" ? t("detail.moyasar") : payment.method}
             />
-            {payment.transactionRef && (
-              <DetailRow label={t("detail.transactionRef")} value={payment.transactionRef} numeric />
+            {payment.gatewayRef && (
+              <DetailRow label={t("detail.transactionRef")} value={payment.gatewayRef} numeric />
             )}
           </DetailSection>
 
           <Separator />
 
-          {/* Booking */}
+          {/* Invoice */}
           <DetailSection title={t("nav.bookings")}>
-            <DetailRow label={t("detail.client")} value={clientName} />
-            <DetailRow label={t("detail.employee")} value={employeeName} />
-            <DetailRow
-              label={t("detail.service")}
-              value={payment.booking?.service?.nameEn ?? "\u2014"}
-            />
-            <DetailRow
-              label={t("detail.date")}
-              value={
-                payment.booking?.date
-                  ? formatDate(payment.booking.date)
-                  : "\u2014"
-              }
-              numeric
-            />
+            <DetailRow label={t("detail.invoiceId")} value={payment.invoiceId?.slice(0, 12) ?? "\u2014"} numeric />
           </DetailSection>
 
           {/* Bank Transfer Receipts */}

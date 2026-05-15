@@ -1,75 +1,87 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from './redis.service';
 
 jest.mock('ioredis', () => {
   return jest.fn().mockImplementation(() => ({
     ping: jest.fn().mockResolvedValue('PONG'),
-    quit: jest.fn().mockResolvedValue(undefined),
+    quit: jest.fn().mockResolvedValue('OK'),
   }));
 });
+import Redis from 'ioredis';
 
 describe('RedisService', () => {
   let service: RedisService;
+  let config: any;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    config = {
+      get: jest.fn(),
+      getOrThrow: jest.fn((key) => {
+        if (key === 'REDIS_HOST') return 'localhost';
+        if (key === 'REDIS_PORT') return 6379;
+        return undefined;
+      }),
+    };
+
+    const module = await Test.createTestingModule({
       providers: [
         RedisService,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn((key: string) => {
-              if (key === 'REDIS_PASSWORD') return 'secret';
-              if (key === 'REDIS_DB') return 1;
-              return undefined;
-            }),
-            getOrThrow: jest.fn((key: string) => {
-              if (key === 'REDIS_HOST') return 'localhost';
-              if (key === 'REDIS_PORT') return 6379;
-              throw new Error(`Missing ${key}`);
-            }),
-          },
-        },
+        { provide: ConfigService, useValue: config },
       ],
     }).compile();
 
-    service = module.get<RedisService>(RedisService);
+    service = module.get(RedisService);
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+  it('should be defined', () => expect(service).toBeDefined());
+
+  it('should ping on init', async () => {
+    await service.onModuleInit();
+    const client = (service as any).client;
+    expect(client.ping).toHaveBeenCalled();
   });
 
-  it('should build options with password', () => {
-    const options = service.buildOptions();
-    expect(options.host).toBe('localhost');
-    expect(options.port).toBe(6379);
-    expect(options.db).toBe(1);
-    expect(options.password).toBe('secret');
-  });
-
-  it('should build options without password when empty', () => {
-    const module: TestingModule = Test.createTestingModule({
-      providers: [
-        RedisService,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn(() => ''),
-            getOrThrow: jest.fn((key: string) => {
-              if (key === 'REDIS_HOST') return 'localhost';
-              if (key === 'REDIS_PORT') return 6379;
-              return 0;
-            }),
-          },
-        },
-      ],
-    });
-    // We can't easily test this without re-instantiating, skip for now
+  it('should quit on destroy', async () => {
+    await service.onModuleDestroy();
+    const client = (service as any).client;
+    expect(client.quit).toHaveBeenCalled();
   });
 
   it('should return client', () => {
-    expect(service.getClient()).toBeDefined();
+    const client = service.getClient();
+    expect(client).toBeDefined();
+  });
+
+  it('should build options with password when set', () => {
+    config.get.mockImplementation((key) => {
+      if (key === 'REDIS_PASSWORD') return 'secret';
+      return undefined;
+    });
+    const opts = service.buildOptions();
+    expect(opts.host).toBe('localhost');
+    expect(opts.password).toBe('secret');
+    expect(opts.db).toBe(0);
+  });
+
+  it('should omit password when empty', () => {
+    config.get.mockReturnValue('');
+    const opts = service.buildOptions();
+    expect(opts.password).toBeUndefined();
+  });
+
+  it('should omit password when null', () => {
+    config.get.mockReturnValue(null);
+    const opts = service.buildOptions();
+    expect(opts.password).toBeUndefined();
+  });
+
+  it('should use custom db when set', () => {
+    config.get.mockImplementation((key) => {
+      if (key === 'REDIS_DB') return 3;
+      return key === 'REDIS_PASSWORD' ? null : undefined;
+    });
+    const opts = service.buildOptions();
+    expect(opts.db).toBe(3);
   });
 });

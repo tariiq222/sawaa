@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import type { Locale } from '@/features/locale/locale';
 import { t } from '@/features/locale/dictionary';
 import { useCurrentClient } from '@/features/auth/public';
@@ -16,18 +17,20 @@ interface BookingDetailFeatureProps {
 export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeatureProps) {
   const { client } = useCurrentClient();
   const router = useRouter();
-  const [booking, setBooking] = useState<ClientBookingItem | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [showCancel, setShowCancel] = useState(false);
   const [showReschedule, setShowReschedule] = useState(false);
 
-  useEffect(() => {
-    if (!client) return;
-    getMyBookingsApi(1, 50)
-      .then((result) => setBooking(result.items.find((b) => b.id === bookingId) ?? null))
-      .catch(() => setBooking(null))
-      .finally(() => setIsLoading(false));
-  }, [client, bookingId]);
+  const {
+    data: booking,
+    isLoading,
+  } = useQuery({
+    queryKey: ['client', 'bookings', 'detail', bookingId],
+    queryFn: async () => {
+      const result = await getMyBookingsApi(1, 50);
+      return result.items.find((b) => b.id === bookingId) ?? null;
+    },
+    enabled: !!client && !!bookingId,
+  });
 
   if (isLoading) return <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.6 }}>Loading...</div>;
   if (!booking) return <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.6 }}>Booking not found.</div>;

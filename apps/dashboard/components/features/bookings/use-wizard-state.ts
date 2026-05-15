@@ -17,6 +17,7 @@ export interface WizardState {
   date: string | null        // ISO date YYYY-MM-DD
   startTime: string | null   // HH:MM
   payAtClinic: boolean
+  couponCode: string | null
   chosenPath: 'service_first' | 'employee_first' | null
 }
 
@@ -34,6 +35,7 @@ const INITIAL_STATE: WizardState = {
   date: null,
   startTime: null,
   payAtClinic: false,
+  couponCode: null,
   chosenPath: null,
 }
 
@@ -174,6 +176,10 @@ export function useWizardState(flowOrder: BookingFlowOrder = 'service_first') {
     setState((prev) => ({ ...prev, payAtClinic }))
   }, [])
 
+  const setCouponCode = useCallback((couponCode: string | null) => {
+    setState((prev) => ({ ...prev, couponCode }))
+  }, [])
+
   const goBack = useCallback(() => {
     setState((prev) => {
       const nextStep = Math.max(1, prev.step - 1) as WizardStep
@@ -263,5 +269,6 @@ export function useWizardState(flowOrder: BookingFlowOrder = 'service_first') {
     selectDate,
     selectTime,
     setPayAtClinic,
+    setCouponCode,
   }
 }

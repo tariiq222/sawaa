@@ -26,6 +26,7 @@ export class BookingAutocompleteCron {
         where: {
           status: BookingStatus.CONFIRMED,
           endsAt: { lte: cutoff },
+          checkedInAt: { not: null },
         },
         data: {
           status: BookingStatus.COMPLETED,

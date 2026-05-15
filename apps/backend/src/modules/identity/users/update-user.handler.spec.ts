@@ -1,34 +1,28 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from '../../../infrastructure/database';
 import { UpdateUserHandler } from './update-user.handler';
+import { NotFoundException } from '@nestjs/common';
 
 describe('UpdateUserHandler', () => {
   let handler: UpdateUserHandler;
-  let prisma: PrismaService;
+  let prisma: { user: { findUnique: jest.Mock; update: jest.Mock }; $transaction: jest.Mock };
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        UpdateUserHandler,
-    { provide: PrismaService, useValue: {
-    user: { findUnique: jest.fn() }
-    } }
-      ],
-    }).compile();
-
-    handler = module.get<UpdateUserHandler>(UpdateUserHandler);
-    prisma = module.get<PrismaService>(PrismaService);
+  beforeEach(() => {
+    prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'u1' }),
+        update: jest.fn().mockResolvedValue({ id: 'u1', name: 'Updated' }),
+      },
+      $transaction: jest.fn((cb) => cb(prisma)),
+    };
+    handler = new UpdateUserHandler(prisma as any);
   });
 
-  it('should be defined', () => {
-    expect(handler).toBeDefined();
+  it('updates user when found', async () => {
+    const result = await handler.execute({ userId: 'u1', name: 'Updated' });
+    expect(result.name).toBe('Updated');
   });
 
-  it('should execute', async () => {
-    try {
-      await handler.execute({ id: '00000000-0000-0000-0000-000000000001' });
-    } catch (e) {
-      // Expected for incomplete mocks
-    }
+  it('throws when user not found', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+    await expect(handler.execute({ userId: 'u1' })).rejects.toThrow(NotFoundException);
   });
 });

@@ -1,87 +1,82 @@
+import { Test, TestingModule } from '@nestjs/testing';
 import { ListActivityHandler } from './list-activity.handler';
-
-const ORG_A = 'org-a-00000000-0000-0000-0000-000000000001';
-const ORG_B = 'org-b-00000000-0000-0000-0000-000000000002';
-
-const mockLogsA = [
-  {
-    id: 'log-1',
-    organizationId: ORG_A,
-    userId: null,
-    userEmail: null,
-    action: 'CREATE',
-    entity: 'Booking',
-    entityId: 'booking-a-1',
-    description: 'Org A created a booking',
-    metadata: null,
-    ipAddress: null,
-    userAgent: null,
-    occurredAt: new Date(),
-  },
-];
-
-const mockLogsB = [
-  {
-    id: 'log-2',
-    organizationId: ORG_B,
-    userId: null,
-    userEmail: null,
-    action: 'UPDATE',
-    entity: 'Client',
-    entityId: 'client-b-1',
-    description: 'Org B updated a client',
-    metadata: null,
-    ipAddress: null,
-    userAgent: null,
-    occurredAt: new Date(),
-  },
-];
-
-const buildPrisma = (logs: typeof mockLogsA) => ({
-  activityLog: {
-    findMany: jest.fn().mockResolvedValue(logs),
-    count: jest.fn().mockResolvedValue(logs.length),
-  },
-  user: {
-    findMany: jest.fn().mockResolvedValue([]),
-  },
-});
+import { PrismaService } from '../../../infrastructure/database';
 
 describe('ListActivityHandler', () => {
-  it('returns paginated activity logs scoped to organizationId', async () => {
-    const prisma = buildPrisma(mockLogsA);
-    const handler = new ListActivityHandler(prisma as never);
+  let handler: ListActivityHandler;
+  let prisma: any;
 
-    const result = await handler.execute({ organizationId: ORG_A, page: 1, limit: 10 });
+  beforeEach(async () => {
+    prisma = {
+      activityLog: { findMany: jest.fn(), count: jest.fn() },
+      user: { findMany: jest.fn() },
+    };
 
-    expect(prisma.activityLog.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ organizationId: ORG_A }),
-      }),
-    );
-    expect(result.items).toHaveLength(1);
-    expect(result.meta.total).toBe(1);
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [ListActivityHandler, { provide: PrismaService, useValue: prisma }],
+    }).compile();
+
+    handler = module.get<ListActivityHandler>(ListActivityHandler);
   });
 
-  it('scopes query to the caller org — cross-org isolation at handler level', async () => {
-    // Org A sees only org-A logs
-    const prismaA = buildPrisma(mockLogsA);
-    const handlerA = new ListActivityHandler(prismaA as never);
-    await handlerA.execute({ organizationId: ORG_A, page: 1, limit: 50 });
-    expect(prismaA.activityLog.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ organizationId: ORG_A }),
-      }),
-    );
+  it('should list activity with default pagination', async () => {
+    prisma.activityLog.findMany.mockResolvedValue([]);
+    prisma.activityLog.count.mockResolvedValue(0);
 
-    // Org B sees only org-B logs
-    const prismaB = buildPrisma(mockLogsB);
-    const handlerB = new ListActivityHandler(prismaB as never);
-    await handlerB.execute({ organizationId: ORG_B, page: 1, limit: 50 });
-    expect(prismaB.activityLog.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ organizationId: ORG_B }),
+    const result = await handler.execute({ organizationId: 'org-1' });
+    expect(result.meta.page).toBe(1);
+    expect(result.meta.perPage).toBe(50);
+    expect(prisma.activityLog.findMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 0, take: 50 }));
+  });
+
+  it('should apply all filters', async () => {
+    prisma.activityLog.findMany.mockResolvedValue([]);
+    prisma.activityLog.count.mockResolvedValue(0);
+
+    await handler.execute({
+      organizationId: 'org-1',
+      userId: 'u1',
+      entity: 'Booking',
+      entityId: 'book-1',
+      action: 'CREATE',
+      from: '2026-01-01',
+      to: '2026-01-31',
+      page: 2,
+      limit: 10,
+    });
+
+    expect(prisma.activityLog.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        organizationId: 'org-1',
+        userId: 'u1',
+        entity: 'Booking',
+        entityId: 'book-1',
+        action: 'CREATE',
+        occurredAt: { gte: new Date('2026-01-01'), lte: new Date('2026-01-31') },
       }),
-    );
+      skip: 10,
+      take: 10,
+    }));
+  });
+
+  it('should cap limit at 100', async () => {
+    prisma.activityLog.findMany.mockResolvedValue([]);
+    prisma.activityLog.count.mockResolvedValue(0);
+
+    await handler.execute({ organizationId: 'org-1', limit: 200 });
+    expect(prisma.activityLog.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 100 }));
+  });
+
+  it('should resolve user info for activity items', async () => {
+    prisma.activityLog.findMany.mockResolvedValue([
+      { id: 'a1', userId: 'u1', action: 'CREATE', entity: 'Booking', entityId: 'b1', description: 'Created', ipAddress: null, userAgent: null, occurredAt: new Date(), userEmail: null },
+      { id: 'a2', userId: null, action: 'DELETE', entity: 'Client', entityId: 'c1', description: 'Deleted', ipAddress: null, userAgent: null, occurredAt: new Date(), userEmail: null },
+    ]);
+    prisma.activityLog.count.mockResolvedValue(2);
+    prisma.user.findMany.mockResolvedValue([{ id: 'u1', firstName: 'Admin', lastName: 'User', email: 'admin@test.com' }]);
+
+    const result = await handler.execute({ organizationId: 'org-1' });
+    expect(result.items[0].user).toEqual(expect.objectContaining({ id: 'u1', firstName: 'Admin' }));
+    expect(result.items[1].user).toBeNull();
   });
 });

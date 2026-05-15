@@ -17,7 +17,7 @@ describe("payments api", () => {
 
   it("fetches payment list with filter params", async () => {
     getMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
-    await fetchPayments({ page: 1, status: "paid", method: "bank_transfer" })
+    await fetchPayments({ page: 1, status: "COMPLETED", method: "BANK_TRANSFER" })
     expect(getMock).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({ page: 1 }),

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { halalasToSar } from "@/lib/money"
+
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Add01Icon,
@@ -178,7 +178,7 @@ function ServiceRow({ ps, locale, t, onEdit, onRemove }: ServiceRowProps) {
       </div>
 
       {/* Buffer info (only if non-zero) */}
-      {ps.bufferMinutes > 0 && (
+      {(ps.bufferMinutes ?? 0) > 0 && (
         <div className="text-xs text-muted-foreground tabular-nums">
           {t("employees.services.bufferMinutes")}: {ps.bufferMinutes} {minUnit}
         </div>
@@ -230,7 +230,7 @@ function buildTypeBadges(
         const key = TYPE_LABEL_MAP[st.bookingType]
         const typeLabel = key ? t(`employees.services.${key}`) : st.bookingType
         const price = st.price != null
-          ? halalasToSar(st.price).toFixed(0)
+          ? Number(st.price).toFixed(0)
           : t("employees.services.defaultPrice")
         const duration = st.duration != null
           ? String(st.duration)
@@ -250,11 +250,11 @@ function buildTypeBadges(
     const duration = ps.customDuration ?? ps.service.duration
     const priceVal =
       type === "clinic_visit" && ps.priceClinic != null
-        ? halalasToSar(ps.priceClinic).toFixed(0)
+        ? Number(ps.priceClinic).toFixed(0)
         : type === "phone_consultation" && ps.pricePhone != null
-          ? halalasToSar(ps.pricePhone).toFixed(0)
+          ? Number(ps.pricePhone).toFixed(0)
           : type === "video_consultation" && ps.priceVideo != null
-            ? halalasToSar(ps.priceVideo).toFixed(0)
+            ? Number(ps.priceVideo).toFixed(0)
             : t("employees.services.defaultPrice")
 
     return {

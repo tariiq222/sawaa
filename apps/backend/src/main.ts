@@ -11,7 +11,7 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { LoggingInterceptor, AuditInterceptor } from './common/interceptors';
+import { LoggingInterceptor, AuditInterceptor, RequestContextInterceptor } from './common/interceptors';
 import { PrismaService } from './infrastructure/database';
 import { configureCors } from './cors';
 import { setShuttingDown } from './common/shutdown.state';
@@ -32,7 +32,7 @@ async function bootstrap(): Promise<void> {
 
   app.use('/api/v1/dashboard', rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 1000,
+    max: 200,
     message: 'Too many requests, please try again later',
     skip: () => process.env.THROTTLER_DISABLED === 'true',
   }));
@@ -54,10 +54,13 @@ async function bootstrap(): Promise<void> {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-      transformOptions: { enableImplicitConversion: true },
+      transformOptions: {
+        enableImplicitConversion: process.env.NODE_ENV !== 'production',
+      },
     }),
   );
 
+  app.useGlobalInterceptors(new RequestContextInterceptor());
   app.useGlobalInterceptors(new LoggingInterceptor());
   app.useGlobalInterceptors(new AuditInterceptor(app.get(PrismaService)));
 

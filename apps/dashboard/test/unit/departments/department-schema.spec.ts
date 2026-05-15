@@ -6,6 +6,7 @@ describe("departmentSchema — sortOrder field", () => {
     nameAr: "قلبية",
     nameEn: "Cardiology",
     isActive: true,
+    isVisible: true,
     sortOrder: 0,
   }
 

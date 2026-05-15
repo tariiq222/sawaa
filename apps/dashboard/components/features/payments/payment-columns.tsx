@@ -20,15 +20,18 @@ import { formatClinicDate } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"
 
 const statusStyles: Record<string, string> = {
-  pending: "border-warning/30 bg-warning/10 text-warning",
-  paid: "border-success/30 bg-success/10 text-success",
-  refunded: "border-info/30 bg-info/10 text-info",
-  failed: "border-destructive/30 bg-destructive/10 text-destructive",
+  PENDING: "border-warning/30 bg-warning/10 text-warning",
+  PENDING_VERIFICATION: "border-warning/30 bg-warning/10 text-warning",
+  COMPLETED: "border-success/30 bg-success/10 text-success",
+  REFUNDED: "border-info/30 bg-info/10 text-info",
+  FAILED: "border-destructive/30 bg-destructive/10 text-destructive",
 }
 
 const METHOD_KEYS: Record<string, string> = {
-  moyasar: "payments.method.moyasar",
-  bank_transfer: "payments.method.bankTransfer",
+  ONLINE_CARD: "payments.method.moyasar",
+  BANK_TRANSFER: "payments.method.bankTransfer",
+  CASH: "payments.method.cash",
+  COUPON: "payments.method.coupon",
 }
 
 interface PaymentColumnCallbacks {
@@ -65,21 +68,18 @@ export function getPaymentColumns(
     {
       id: "client",
       header: t("payments.col.client"),
-      cell: ({ row }) => {
-        const p = row.original.booking?.client
-        return (
-          <span className="text-sm text-foreground">
-            {p ? `${p.firstName} ${p.lastName}` : "\u2014"}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <span className="text-sm text-foreground">
+          {row.original.invoice?.clientId?.slice(0, 8) ?? "\u2014"}
+        </span>
+      ),
     },
     {
-      accessorKey: "totalAmount",
+      accessorKey: "amount",
       header: t("payments.col.amount"),
       cell: ({ row }) => (
         <span className="tabular-nums text-sm font-medium">
-          {(row.original.totalAmount / 100).toFixed(2)}
+          {Number(row.original.amount).toFixed(2)}
         </span>
       ),
     },
@@ -136,7 +136,7 @@ export function getPaymentColumns(
                 <HugeiconsIcon icon={ViewIcon} size={14} />
                 {t("payments.col.viewDetails")}
               </DropdownMenuItem>
-              {payment.status === "paid" && (
+              {payment.status === "COMPLETED" && (
                 <DropdownMenuItem onClick={() => callbacks.onRefund(payment)}>
                   <HugeiconsIcon icon={ArrowTurnBackwardIcon} size={14} />
                   {t("payments.col.refund")}

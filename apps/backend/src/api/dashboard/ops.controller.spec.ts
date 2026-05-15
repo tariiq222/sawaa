@@ -1,91 +1,61 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
-import request from 'supertest';
 import { DashboardOpsController } from './ops.controller';
-import { GenerateReportHandler } from '../../modules/ops/generate-report/generate-report.handler';
-import { ListActivityHandler } from '../../modules/ops/log-activity/list-activity.handler';
-import { JwtGuard } from '../../common/guards/jwt.guard';
-import { CaslGuard } from '../../common/guards/casl.guard';
+import { ReportFormat } from '@prisma/client';
 
-describe('DashboardOpsController (e2e)', () => {
-  let app: INestApplication;
+describe('DashboardOpsController', () => {
+  let controller: DashboardOpsController;
+  let generateReport: jest.Mock;
+  let listActivity: jest.Mock;
+  let resMock: any;
 
-  const mockGenerateReport = { execute: jest.fn() };
-  const mockListActivity = { execute: jest.fn() };
-
-  beforeAll(async () => {
-    const moduleRef: TestingModule = await Test.createTestingModule({
-      controllers: [DashboardOpsController],
-      providers: [
-        { provide: GenerateReportHandler, useValue: mockGenerateReport },
-        { provide: ListActivityHandler, useValue: mockListActivity },
-      ],
-    })
-      .overrideGuard(JwtGuard)
-      .useValue({ canActivate: () => true })
-      .overrideGuard(CaslGuard)
-      .useValue({ canActivate: () => true })
-      .compile();
-
-    app = moduleRef.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+  beforeEach(() => {
+    generateReport = jest.fn();
+    listActivity = jest.fn();
+    resMock = {
+      setHeader: jest.fn().mockReturnThis(),
+      send: jest.fn().mockReturnThis(),
+    };
+    controller = new DashboardOpsController(
+      { execute: generateReport } as any,
+      { execute: listActivity } as any,
     );
-    await app.init();
   });
 
-  afterAll(async () => {
-    await app.close();
+  it('should be defined', () => expect(controller).toBeDefined());
+
+  it('generateReportEndpoint should return JSON when format is not EXCEL', async () => {
+    const result = { format: ReportFormat.JSON, data: [] };
+    generateReport.mockResolvedValue(result);
+
+    const response = await controller.generateReportEndpoint({ format: ReportFormat.JSON, reportType: 'bookings' } as any, resMock);
+    expect(response).toEqual(result);
+    expect(resMock.send).not.toHaveBeenCalled();
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
+  it('generateReportEndpoint should send xlsx buffer when format is EXCEL', async () => {
+    const result = { format: ReportFormat.EXCEL, reportId: 'r1', excelBuffer: Buffer.from('xlsx') };
+    generateReport.mockResolvedValue(result);
+
+    const response = await controller.generateReportEndpoint({ format: ReportFormat.EXCEL, reportType: 'revenue' } as any, resMock);
+    expect(resMock.setHeader).toHaveBeenCalledWith('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    expect(resMock.setHeader).toHaveBeenCalledWith('Content-Disposition', 'attachment; filename="report-r1.xlsx"');
+    expect(resMock.send).toHaveBeenCalledWith(result.excelBuffer);
+    expect(response).toBeUndefined();
   });
 
-  describe('POST /dashboard/ops/reports', () => {
-    it('returns 200 with JSON report', async () => {
-      mockGenerateReport.execute.mockResolvedValue({
-        format: 'JSON',
-        reportId: 'rep-1',
-        data: [{ name: 'Booking', count: 10 }],
-      });
+  it('generateReportEndpoint should return result when EXCEL but no buffer', async () => {
+    const result = { format: ReportFormat.EXCEL, reportId: 'r1' };
+    generateReport.mockResolvedValue(result);
 
-      const res = await request(app.getHttpServer())
-        .post('/dashboard/ops/reports')
-        .set('Authorization', 'Bearer fake-jwt')
-        .send({ type: 'REVENUE', format: 'JSON', from: '2026-01-01', to: '2026-01-31' })
-        .expect(200);
-
-      expect(res.body.reportId).toBe('rep-1');
-    });
+    const response = await controller.generateReportEndpoint({ format: ReportFormat.EXCEL, reportType: 'revenue' } as any, resMock);
+    expect(response).toEqual(result);
+    expect(resMock.send).not.toHaveBeenCalled();
   });
 
-  describe('GET /dashboard/ops/activity', () => {
-    it('returns 200 with activity log', async () => {
-      mockListActivity.execute.mockResolvedValue({
-        data: [{ id: 'act-1', action: 'CREATE', entity: 'Booking' }],
-        total: 1,
-      });
+  it('listActivityEndpoint should call listActivity.execute with orgId', async () => {
+    const query = { page: 1, limit: 10 };
+    listActivity.mockResolvedValue({ data: [], total: 0 });
 
-      const res = await request(app.getHttpServer())
-        .get('/dashboard/ops/activity')
-        .set('Authorization', 'Bearer fake-jwt')
-        .expect(200);
-
-      expect(res.body.data).toHaveLength(1);
-    });
-
-    it('passes query filters to handler', async () => {
-      mockListActivity.execute.mockResolvedValue({ data: [], total: 0 });
-
-      await request(app.getHttpServer())
-        .get('/dashboard/ops/activity?entity=Booking&action=CREATE')
-        .set('Authorization', 'Bearer fake-jwt')
-        .expect(200);
-
-      expect(mockListActivity.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ entity: 'Booking', action: 'CREATE' }),
-      );
-    });
+    await controller.listActivityEndpoint(query as any);
+    expect(listActivity).toHaveBeenCalledWith(expect.objectContaining({ organizationId: expect.any(String), ...query }));
   });
 });

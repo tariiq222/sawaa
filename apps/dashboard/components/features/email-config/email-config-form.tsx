@@ -52,8 +52,12 @@ export function EmailConfigForm() {
 
   useEffect(() => {
     if (!config) return
+    // Seed editable form fields from server config; user edits locally and saves explicitly.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProvider(config.provider ?? "NONE")
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSenderName(config.senderName ?? "")
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSenderEmail(config.senderEmail ?? "")
   }, [config])
 
@@ -63,19 +67,29 @@ export function EmailConfigForm() {
       senderName: senderName.trim() || undefined,
       senderEmail: senderEmail.trim() || undefined,
     }
+    // Only send credentials if the user entered them or switched provider
+    const isSameProvider = config?.provider === provider
     if (provider === "SMTP") {
-      base.smtp = {
-        host: smtpHost.trim(),
-        port: parseInt(smtpPort, 10) || 587,
-        user: smtpUser.trim(),
-        pass: smtpPass,
+      if (smtpHost.trim() || !isSameProvider) {
+        base.smtp = {
+          host: smtpHost.trim(),
+          port: parseInt(smtpPort, 10) || 587,
+          user: smtpUser.trim(),
+          pass: smtpPass,
+        }
       }
     } else if (provider === "RESEND") {
-      base.resend = { apiKey: apiKey.trim() }
+      if (apiKey.trim() || !isSameProvider) {
+        base.resend = { apiKey: apiKey.trim() }
+      }
     } else if (provider === "SENDGRID") {
-      base.sendgrid = { apiKey: apiKey.trim() }
+      if (apiKey.trim() || !isSameProvider) {
+        base.sendgrid = { apiKey: apiKey.trim() }
+      }
     } else if (provider === "MAILCHIMP") {
-      base.mailchimp = { apiKey: apiKey.trim() }
+      if (apiKey.trim() || !isSameProvider) {
+        base.mailchimp = { apiKey: apiKey.trim() }
+      }
     }
     return base
   }

@@ -7,7 +7,7 @@ export class ProcessPaymentDto {
   @IsUUID() invoiceId!: string;
 
   @ApiProperty({ description: 'Amount to charge', example: 100.00 })
-  @IsNumber() @Min(0) amount!: number;
+  @IsNumber() @Min(0.01) amount!: number;
 
   @ApiProperty({ description: 'Payment method used', enum: PaymentMethod, enumName: 'PaymentMethod' })
   @IsEnum(PaymentMethod) method!: PaymentMethod;

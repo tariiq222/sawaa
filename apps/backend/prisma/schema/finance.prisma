@@ -94,7 +94,7 @@ model Payment {
 
 model Coupon {
   id             String       @id @default(uuid())
-  code           String // uniqueness now composite-per-org
+  code           String       @unique
   discountType   DiscountType
   discountValue  Decimal      @db.Decimal(12, 2)
   maxUses        Int?

@@ -327,6 +327,7 @@ export const enEmployees: Record<string, string> = {
   "employees.form.stepErrorBreaks": "breaks",
   "employees.form.stepErrorVacation": "vacation",
   "employees.form.stepErrorServices": "services",
+  "employees.form.stepErrorAvatar": "avatar",
   "employees.form.createPartialSuccess": "Employee created, but failed to save: {steps}",
 
   // — Vacation Manager —

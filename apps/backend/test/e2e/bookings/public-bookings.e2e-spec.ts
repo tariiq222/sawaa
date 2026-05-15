@@ -30,15 +30,15 @@ describe('Public Bookings (e2e)', () => {
 
   it('GET /api/v1/public/services returns active services', async () => {
     prisma.service.findMany.mockResolvedValue([
-      { id: 's1', name: 'Consultation', nameAr: 'استشارة', price: 100, durationMins: 30, isActive: true },
+      { id: 's1', name: 'Consultation', nameAr: 'استشارة', price: 100, durationMins: 30, isActive: true, durationOptions: [] },
     ]);
 
     const res = await request(app.getHttpServer())
       .get('/api/v1/public/services')
       .expect(200);
 
-    expect(res.body).toHaveLength(1);
-    expect(res.body[0].name).toBe('Consultation');
+    expect(res.body.services).toHaveLength(1);
+    expect(res.body.services[0].name).toBe('Consultation');
   });
 
   it('GET /api/v1/public/employees returns public employees', async () => {

@@ -18,7 +18,6 @@ function timeToMinutes(time: string): number {
 }
 
 function validateWindows(windows: AvailabilityWindow[]): void {
-  const seenDays = new Set<number>();
   for (const w of windows) {
     if (w.dayOfWeek < 0 || w.dayOfWeek > 6) {
       throw new BadRequestException(`dayOfWeek must be 0–6, got ${w.dayOfWeek}`);
@@ -29,10 +28,6 @@ function validateWindows(windows: AvailabilityWindow[]): void {
     if (timeToMinutes(w.startTime) >= timeToMinutes(w.endTime)) {
       throw new BadRequestException(`startTime must be before endTime for dayOfWeek ${w.dayOfWeek}`);
     }
-    if (seenDays.has(w.dayOfWeek)) {
-      throw new BadRequestException(`Duplicate dayOfWeek ${w.dayOfWeek} in windows`);
-    }
-    seenDays.add(w.dayOfWeek);
   }
 }
 

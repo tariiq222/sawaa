@@ -7,7 +7,8 @@ interface BookingConfirmedPayload {
   clientId: string;
   employeeId: string;
   branchId: string;
-  price: number;        // emitted by BookingConfirmedEvent in bookings/
+  price: number;
+  discountedPrice?: number | null;
   currency: string;
 }
 
@@ -28,7 +29,7 @@ export class BookingConfirmedHandler {
     this.eventBus.subscribe<BookingConfirmedPayload>(
       'bookings.booking.confirmed',
       async (envelope) => {
-        const { bookingId, clientId, employeeId, branchId, price } =
+        const { bookingId, clientId, employeeId, branchId, price, discountedPrice } =
           envelope.payload;
         try {
           await this.createInvoice.execute({
@@ -36,7 +37,7 @@ export class BookingConfirmedHandler {
             clientId,
             employeeId,
             bookingId,
-            subtotal: price,
+            subtotal: discountedPrice ?? price,
           });
         } catch (err) {
           // ConflictException = idempotent re-delivery — safe to ignore

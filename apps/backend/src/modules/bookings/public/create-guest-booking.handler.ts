@@ -228,8 +228,8 @@ export class CreateGuestBookingHandler {
       const vatRate = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
 
       const subtotal = new Prisma.Decimal(price.toString());
-      const vatAmt = parseFloat(subtotal.mul(vatRate).toFixed(2));
-      const total = parseFloat(subtotal.add(vatAmt).toFixed(2));
+      const vatAmt = subtotal.mul(vatRate).toDecimalPlaces(2);
+      const total = subtotal.add(vatAmt).toDecimalPlaces(2);
 
       const invoice = await tx.invoice.create({
         data: {
@@ -240,14 +240,14 @@ export class CreateGuestBookingHandler {
           subtotal: subtotal.toNumber(),
           discountAmt: 0,
           vatRate: vatRate.toNumber(),
-          vatAmt,
-          total,
+          vatAmt: vatAmt.toNumber(),
+          total: total.toNumber(),
           status: 'ISSUED',
           issuedAt: now,
         },
       });
 
-      return { bookingId: booking.id, invoiceId: invoice.id, totalHalalat: Math.round(total * 100) };
+      return { bookingId: booking.id, invoiceId: invoice.id, totalHalalat: Math.round(total.toNumber() * 100) };
     });
 
     return result;

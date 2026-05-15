@@ -172,6 +172,18 @@ export default function LoginScreen() {
                 style={{ marginTop: 8 }}
               />
 
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push('/(auth)/forgot-password');
+                }}
+                style={{ alignSelf: 'center', marginTop: 4 }}
+              >
+                <Text style={[styles.forgotLink, { fontFamily: f600 }]}>
+                  نسيت كلمة المرور؟
+                </Text>
+              </Pressable>
+
               <View style={[styles.registerRow, { flexDirection: dir.row }]}>
                 <Text style={[styles.registerText, { fontFamily: f400 }]}>{t('auth.noAccount')} </Text>
                 <Pressable
@@ -208,6 +220,7 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', width: '100%' },
   inputText: { flex: 1, fontSize: 14, color: sawaaColors.teal[700] },
   error: { fontSize: 12, color: sawaaColors.accent.coral },
+  forgotLink: { fontSize: 13, color: sawaaColors.teal[600] },
   registerRow: { alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8 },
   registerText: { fontSize: 14, color: sawaaColors.ink[500] },
   registerLink: { fontSize: 14, color: sawaaColors.teal[700] },

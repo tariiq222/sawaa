@@ -8,7 +8,7 @@ import { fetchChatbotConfig } from "@/lib/api/chatbot"
 import type {
   KnowledgeBaseQuery,
   KbSource,
-  ChatbotConfigEntry,
+  ChatbotConfig,
 } from "@/lib/types/chatbot"
 
 export function useKnowledgeBase() {
@@ -68,14 +68,14 @@ export function useKnowledgeFiles() {
   }
 }
 
-export function useChatbotConfig(category?: string) {
+export function useChatbotConfig() {
   const { data, isLoading, error } = useQuery({
-    queryKey: queryKeys.chatbot.config.list(category),
-    queryFn: () => fetchChatbotConfig(category),
+    queryKey: queryKeys.chatbot.config.list(),
+    queryFn: () => fetchChatbotConfig(),
     staleTime: 5 * 60 * 1000,
   })
   return {
-    config: data ?? ([] as ChatbotConfigEntry[]),
+    config: data ?? null as ChatbotConfig | null,
     loading: isLoading,
     error: error?.message ?? null,
   }

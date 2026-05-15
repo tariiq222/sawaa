@@ -6,9 +6,9 @@ export interface ZoomConfigView {
 }
 
 export interface UpsertZoomConfigInput {
-  zoomClientId: string
-  zoomClientSecret: string
-  zoomAccountId: string
+  zoomClientId?: string
+  zoomClientSecret?: string
+  zoomAccountId?: string
 }
 
 export interface TestZoomResult {

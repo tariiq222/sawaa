@@ -106,7 +106,7 @@ export async function setClientActive(
   payload: SetClientActivePayload,
 ): Promise<SetClientActiveResult> {
   return api.patch<SetClientActiveResult>(
-    `/dashboard/clients/${id}/active`,
+    `/dashboard/people/clients/${id}/active`,
     payload,
   )
 }

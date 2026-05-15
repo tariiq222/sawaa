@@ -16,6 +16,25 @@ export const BLOOD_TYPES = [
 
 export type BloodType = (typeof BLOOD_TYPES)[number]
 
+/**
+ * Creates blood type labels using i18n.
+ * Call with `t()` from useLocale().
+ */
+export function getBloodLabels(t: (key: string) => string): Record<BloodType, string> {
+  return {
+    A_POS: "A+",
+    A_NEG: "A−",
+    B_POS: "B+",
+    B_NEG: "B−",
+    AB_POS: "AB+",
+    AB_NEG: "AB−",
+    O_POS: "O+",
+    O_NEG: "O−",
+    UNKNOWN: t("validation.bloodTypeUnknown"),
+  }
+}
+
+/** @deprecated Use getBloodLabels(t) for i18n support */
 export const BLOOD_LABELS: Record<BloodType, string> = {
   A_POS: "A+",
   A_NEG: "A−",
@@ -36,16 +55,47 @@ const nameField = z.string().min(1).max(255)
 const optionalNameField = z.string().max(255).optional()
 const optionalNationality = z.string().max(100).optional()
 const optionalNationalId = z.string().max(20).optional()
+const optionalMedicalText = z.string().max(1000).optional()
+
+/* ─── Create Schema (i18n) ─── */
+
+export function createClientSchemaWithI18n(t: (key: string) => string) {
+  const optionalPhone = z
+    .string()
+    .optional()
+    .refine((v) => !v || phoneRegex.test(v), {
+      message: t("validation.saudiPhone"),
+    })
+
+  return z.object({
+    firstName: nameField,
+    middleName: optionalNameField,
+    lastName: nameField,
+    gender: z.enum(["male", "female"]).optional(),
+    dateOfBirth: z.string().optional(),
+    nationality: optionalNationality,
+    nationalId: optionalNationalId,
+    phone: z.string().min(1).regex(phoneRegex, {
+      message: t("validation.saudiPhone"),
+    }),
+    emergencyName: optionalNameField,
+    emergencyPhone: optionalPhone,
+    bloodType: z.enum(BLOOD_TYPES).optional(),
+    allergies: optionalMedicalText,
+    chronicConditions: optionalMedicalText,
+  })
+}
+
+/* ─── Create Schema (legacy) ─── */
+
 const optionalPhone = z
   .string()
   .optional()
   .refine((v) => !v || phoneRegex.test(v), {
     message: "رقم سعودي غير صحيح — مثال +966501234567",
   })
-const optionalMedicalText = z.string().max(1000).optional()
 
-/* ─── Create Schema ─── */
-
+/** @deprecated Use createClientSchemaWithI18n(t) for i18n support */
 export const createClientSchema = z.object({
   firstName: nameField,
   middleName: optionalNameField,

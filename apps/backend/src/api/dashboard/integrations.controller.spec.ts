@@ -79,12 +79,13 @@ describe('DashboardIntegrationsController (e2e)', () => {
       expect(mockUpsertZoom.execute).toHaveBeenCalledWith(validZoomConfig);
     });
 
-    it('returns 400 for missing zoomClientId', async () => {
+    it('returns 200 for missing zoomClientId (partial update allowed)', async () => {
+      mockUpsertZoom.execute.mockResolvedValue({ configured: true });
       return request(app.getHttpServer())
         .put('/dashboard/integrations/zoom')
         .set('Authorization', 'Bearer fake-jwt')
         .send({ zoomClientSecret: 's', zoomAccountId: 'a' })
-        .expect(400);
+        .expect(200);
     });
 
     it('returns 400 for empty zoomClientSecret', async () => {

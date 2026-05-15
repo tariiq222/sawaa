@@ -8,6 +8,35 @@ const requiredName = z.string().min(1).max(255)
 const optionalName = z.string().max(255).optional()
 const optionalMedicalText = z.string().max(1000).optional()
 
+/**
+ * Creates the walk-in client schema with translated messages.
+ * Call inside a component that has access to `t()`.
+ */
+export function createWalkInClientSchema(t: (key: string) => string) {
+  return z.object({
+    firstName: requiredName,
+    middleName: optionalName,
+    lastName: requiredName,
+    gender: z.enum(["male", "female"]).optional(),
+    dateOfBirth: z.string().optional(),
+    nationality: z.string().max(100).optional(),
+    nationalId: z.string().max(20).optional(),
+    phone: z
+      .string()
+      .min(1, t("validation.phoneRequired"))
+      .regex(phoneRegex, t("validation.phoneInternational")),
+    emergencyName: z.string().optional(),
+    emergencyPhone: z
+      .string()
+      .optional()
+      .refine((v) => !v || phoneRegex.test(v), t("validation.phoneInternationalShort")),
+    bloodType: z.enum(BLOOD_TYPES).optional(),
+    allergies: optionalMedicalText,
+    chronicConditions: optionalMedicalText,
+  })
+}
+
+/** @deprecated Use createWalkInClientSchema(t) for i18n support */
 export const walkInClientSchema = z.object({
   firstName: requiredName,
   middleName: optionalName,
@@ -34,6 +63,19 @@ export type WalkInClientFormData = z.infer<typeof walkInClientSchema>
 
 /* ─── Booking create schema (booking-details-step) ─── */
 
+export function createBookingCreateSchema(t: (key: string) => string) {
+  return z.object({
+    employeeId: z.string().min(1, t("validation.selectEmployee")),
+    serviceId: z.string().min(1, t("validation.selectService")),
+    type: z.enum(["in_person", "online", "walk_in"]),
+    durationOptionId: z.string().optional(),
+    date: z.string().min(1, t("validation.selectDate")),
+    startTime: z.string().min(1, t("validation.selectTime")),
+    payAtClinic: z.boolean().optional(),
+  })
+}
+
+/** @deprecated Use createBookingCreateSchema(t) for i18n support */
 export const bookingCreateSchema = z.object({
   employeeId: z.string().min(1, "اختر الممارس"),
   serviceId: z.string().min(1, "اختر الخدمة"),
@@ -52,6 +94,14 @@ export type BookingCreateFormData = z.infer<typeof bookingCreateSchema>
 
 /* ─── Reschedule schema (booking-detail-sheet) ─── */
 
+export function createRescheduleBookingSchema(t: (key: string) => string) {
+  return z.object({
+    date: z.string().min(1, t("validation.selectDate")),
+    startTime: z.string().min(1, t("validation.selectTime")),
+  })
+}
+
+/** @deprecated Use createRescheduleBookingSchema(t) for i18n support */
 export const rescheduleBookingSchema = z.object({
   date: z.string().min(1, "اختر التاريخ"),
   startTime: z.string().min(1, "اختر الوقت"),

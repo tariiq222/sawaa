@@ -29,6 +29,9 @@ import { ClientAccountToggle } from "@/components/features/clients/client-accoun
 import { BLOOD_LABELS, type BloodType } from "@/lib/schemas/client.schema"
 import { ZohoPaymentMirrorTable } from "@/components/features/zoho/zoho-payment-mirror-table"
 import { useZohoStatus } from "@/hooks/use-zoho-invoice"
+import { useQuery } from "@tanstack/react-query"
+import { fetchBookings } from "@/lib/api/bookings"
+import { queryKeys } from "@/lib/query-keys"
 
 /* ─── Props ─── */
 
@@ -86,7 +89,7 @@ export function ClientDetailPage({ clientId }: Props) {
                   {t("clients.detail.walkIn")}
                 </Badge>
               )}
-              {client.accountType === "FULL" && (
+              {client.accountType?.toUpperCase() === "FULL" && (
                 <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary">
                   {t("clients.detail.hasAccount")}
                 </Badge>
@@ -228,13 +231,7 @@ export function ClientDetailPage({ clientId }: Props) {
 
         {/* ── Tab 2: المواعيد ── */}
         <TabsContent value="bookings" className="pt-4">
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground text-center py-8">
-                {t("clients.dialog.noBookings")}
-              </p>
-            </CardContent>
-          </Card>
+          <ClientBookingsPanel clientId={clientId} t={t} formatDate={formatDate} />
         </TabsContent>
 
         {/* ── Tab 3: الفواتير ── */}
@@ -257,6 +254,69 @@ export function ClientDetailPage({ clientId }: Props) {
         onDeleted={() => router.push("/clients")}
       />
     </ListPageShell>
+  )
+}
+
+function ClientBookingsPanel({
+  clientId,
+  t,
+  formatDate,
+}: {
+  clientId: string
+  t: (key: string) => string
+  formatDate: (d: string) => string
+}) {
+  const bookingsQuery = { page: 1, perPage: 20, clientId }
+  const { data, isLoading } = useQuery({
+    queryKey: queryKeys.bookings.list(bookingsQuery),
+    queryFn: () => fetchBookings(bookingsQuery),
+    staleTime: 5 * 60 * 1000,
+  })
+
+  if (isLoading) return <Skeleton className="h-32 w-full" />
+
+  const bookings = data?.items ?? []
+
+  if (bookings.length === 0) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <p className="text-sm text-muted-foreground text-center py-8">
+            {t("clients.dialog.noBookings")}
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <div className="flex flex-col gap-3">
+          {bookings.map((b) => (
+            <div
+              key={b.id}
+              className="flex items-center justify-between rounded-lg border p-3"
+            >
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium">
+                  {b.service?.nameAr ?? b.service?.nameEn ?? b.serviceId}
+                </span>
+                <span className="text-xs text-muted-foreground" dir="ltr">
+                  {formatDate(b.date)} {b.startTime}
+                </span>
+              </div>
+              <Badge
+                variant="outline"
+                className="text-xs"
+              >
+                {b.status}
+              </Badge>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

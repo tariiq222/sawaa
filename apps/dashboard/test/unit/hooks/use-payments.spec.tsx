@@ -70,7 +70,7 @@ describe("usePayments", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    act(() => { result.current.setStatus("paid") })
+    act(() => { result.current.setStatus("COMPLETED") })
 
     await waitFor(() => expect(result.current.hasFilters).toBe(true))
   })
@@ -82,8 +82,8 @@ describe("usePayments", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    act(() => { result.current.setStatus("paid") })
-    await waitFor(() => expect(result.current.status).toBe("paid"))
+    act(() => { result.current.setStatus("COMPLETED") })
+    await waitFor(() => expect(result.current.status).toBe("COMPLETED"))
 
     act(() => { result.current.resetFilters() })
     await waitFor(() => expect(result.current.status).toBe("all"))

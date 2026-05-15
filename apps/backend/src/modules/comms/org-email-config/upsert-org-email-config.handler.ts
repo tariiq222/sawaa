@@ -19,63 +19,76 @@ export class UpsertOrgEmailConfigHandler {
 
   async execute(cmd: UpsertOrgEmailConfigCommand): Promise<OrgEmailConfigView> {
     // organizationId kept as AES-GCM AAD for credential encryption/decryption
-    let credentialsCiphertext: string | null;
+    let credentialsCiphertext: string | null | undefined;
+
+    const existing = await this.prisma.organizationEmailConfig.findFirst();
 
     switch (cmd.provider) {
       case 'NONE':
         credentialsCiphertext = null;
         break;
       case 'SMTP':
-        if (!cmd.smtp) {
+        if (cmd.smtp) {
+          credentialsCiphertext = this.credentials.encrypt(
+            { host: cmd.smtp.host, port: cmd.smtp.port, user: cmd.smtp.user, pass: cmd.smtp.pass, secure: cmd.smtp.secure },
+            DEFAULT_ORG_ID,
+          );
+        } else if (existing?.provider === 'SMTP') {
+          credentialsCiphertext = undefined; // keep existing
+        } else {
           throw new BadRequestException({
             ar: 'بيانات اعتماد SMTP مطلوبة',
             en: 'SMTP credentials are required',
           });
         }
-        credentialsCiphertext = this.credentials.encrypt(
-          { host: cmd.smtp.host, port: cmd.smtp.port, user: cmd.smtp.user, pass: cmd.smtp.pass, secure: cmd.smtp.secure },
-          DEFAULT_ORG_ID,
-        );
         break;
       case 'RESEND':
-        if (!cmd.resend) {
+        if (cmd.resend) {
+          credentialsCiphertext = this.credentials.encrypt(
+            { apiKey: cmd.resend.apiKey },
+            DEFAULT_ORG_ID,
+          );
+        } else if (existing?.provider === 'RESEND') {
+          credentialsCiphertext = undefined; // keep existing
+        } else {
           throw new BadRequestException({
             ar: 'مفتاح Resend API مطلوب',
             en: 'Resend API key is required',
           });
         }
-        credentialsCiphertext = this.credentials.encrypt(
-          { apiKey: cmd.resend.apiKey },
-          DEFAULT_ORG_ID,
-        );
         break;
       case 'SENDGRID':
-        if (!cmd.sendgrid) {
+        if (cmd.sendgrid) {
+          credentialsCiphertext = this.credentials.encrypt(
+            { apiKey: cmd.sendgrid.apiKey },
+            DEFAULT_ORG_ID,
+          );
+        } else if (existing?.provider === 'SENDGRID') {
+          credentialsCiphertext = undefined; // keep existing
+        } else {
           throw new BadRequestException({
             ar: 'مفتاح SendGrid API مطلوب',
             en: 'SendGrid API key is required',
           });
         }
-        credentialsCiphertext = this.credentials.encrypt(
-          { apiKey: cmd.sendgrid.apiKey },
-          DEFAULT_ORG_ID,
-        );
         break;
       case 'MAILCHIMP':
-        if (!cmd.mailchimp) {
+        if (cmd.mailchimp) {
+          credentialsCiphertext = this.credentials.encrypt(
+            { apiKey: cmd.mailchimp.apiKey },
+            DEFAULT_ORG_ID,
+          );
+        } else if (existing?.provider === 'MAILCHIMP') {
+          credentialsCiphertext = undefined; // keep existing
+        } else {
           throw new BadRequestException({
             ar: 'مفتاح Mailchimp API مطلوب',
             en: 'Mailchimp API key is required',
           });
         }
-        credentialsCiphertext = this.credentials.encrypt(
-          { apiKey: cmd.mailchimp.apiKey },
-          DEFAULT_ORG_ID,
-        );
         break;
     }
 
-    const existing = await this.prisma.organizationEmailConfig.findFirst();
     let row;
     if (existing) {
       row = await this.prisma.organizationEmailConfig.update({
@@ -84,16 +97,24 @@ export class UpsertOrgEmailConfigHandler {
           provider: cmd.provider,
           senderName: cmd.senderName ?? null,
           senderEmail: cmd.senderEmail ?? null,
-          credentialsCiphertext: credentialsCiphertext ?? null,
+          ...(credentialsCiphertext !== undefined && {
+            credentialsCiphertext: credentialsCiphertext ?? null,
+          }),
         },
       });
     } else {
+      if (credentialsCiphertext === undefined || credentialsCiphertext === null) {
+        throw new BadRequestException({
+          ar: 'بيانات الاعتماد مطلوبة عند الإنشاء',
+          en: 'Credentials are required when creating a new config',
+        });
+      }
       row = await this.prisma.organizationEmailConfig.create({
         data: {
           provider: cmd.provider,
           senderName: cmd.senderName ?? null,
           senderEmail: cmd.senderEmail ?? null,
-          credentialsCiphertext: credentialsCiphertext ?? null,
+          credentialsCiphertext,
         },
       });
     }

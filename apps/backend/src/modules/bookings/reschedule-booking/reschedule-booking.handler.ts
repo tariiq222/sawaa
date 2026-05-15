@@ -67,7 +67,7 @@ export class RescheduleBookingHandler {
           where: {
             employeeId: booking.employeeId,
             id: { not: cmd.bookingId },
-            status: { in: ['PENDING', 'CONFIRMED'] },
+            status: { in: ['PENDING', 'CONFIRMED', 'AWAITING_PAYMENT'] },
             scheduledAt: { lt: newEndsAt },
             endsAt: { gt: newScheduledAt },
           },

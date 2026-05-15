@@ -10,6 +10,7 @@ import {
   ApiConsumes, ApiBody,
 } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../common/swagger';
+import { PrismaService } from '../../infrastructure/database';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
 import { CreateServiceHandler } from '../../modules/org-experience/services/create-service.handler';
@@ -20,6 +21,8 @@ import { ListServicesHandler } from '../../modules/org-experience/services/list-
 import { ListServicesDto } from '../../modules/org-experience/services/list-services.dto';
 import { GetServiceHandler } from '../../modules/org-experience/services/get-service.handler';
 import { ArchiveServiceHandler } from '../../modules/org-experience/services/archive-service.handler';
+import { SetDurationOptionsHandler } from '../../modules/org-experience/services/set-duration-options.handler';
+import { SetDurationOptionsDto } from '../../modules/org-experience/services/set-duration-options.dto';
 import { SetServiceBookingConfigsHandler } from '../../modules/org-experience/services/set-service-booking-configs.handler';
 import { SetServiceBookingConfigsDto } from '../../modules/org-experience/services/set-service-booking-configs.dto';
 import { GetServiceBookingConfigsHandler } from '../../modules/org-experience/services/get-service-booking-configs.handler';
@@ -51,6 +54,7 @@ import { UploadLogoHandler } from '../../modules/org-experience/branding/upload-
 @Controller('dashboard/organization')
 export class DashboardOrganizationSettingsController {
   constructor(
+    private readonly prisma: PrismaService,
     private readonly createService: CreateServiceHandler,
     private readonly updateService: UpdateServiceHandler,
     private readonly listServices: ListServicesHandler,
@@ -72,6 +76,7 @@ export class DashboardOrganizationSettingsController {
     private readonly setServiceBookingConfigs: SetServiceBookingConfigsHandler,
     private readonly getServiceBookingConfigs: GetServiceBookingConfigsHandler,
     private readonly listServiceEmployees: ListServiceEmployeesHandler,
+    private readonly setDurationOptions: SetDurationOptionsHandler,
   ) {}
 
   // ── Services ─────────────────────────────────────────────────────────────
@@ -156,6 +161,31 @@ export class DashboardOrganizationSettingsController {
     @Body() body: SetServiceBookingConfigsDto,
   ) {
     return this.setServiceBookingConfigs.execute({ serviceId, ...body });
+  }
+
+  @Get('services/:serviceId/duration-options')
+  @CheckPermissions({ action: 'read', subject: 'Service' })
+  @ApiOperation({ summary: 'Get duration options for a service' })
+  @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Duration options for the service' })
+  getDurationOptionsEndpoint(@Param('serviceId', ParseUUIDPipe) serviceId: string) {
+    return this.prisma.serviceDurationOption.findMany({
+      where: { serviceId },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
+  @Put('services/:serviceId/duration-options')
+  @CheckPermissions({ action: 'update', subject: 'Service' })
+  @ApiOperation({ summary: 'Set duration options for a service' })
+  @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Duration options updated' })
+  @ApiResponse({ status: 404, description: 'Service not found' })
+  setDurationOptionsEndpoint(
+    @Param('serviceId', ParseUUIDPipe) serviceId: string,
+    @Body() body: SetDurationOptionsDto,
+  ) {
+    return this.setDurationOptions.execute({ serviceId, ...body });
   }
 
   // ── Branding ──────────────────────────────────────────────────────────────

@@ -1,0 +1,226 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  # Backend
+  # ───────────────────────────────────────────────────────────────────────────
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sawaa_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+      minio:
+        image: minio/minio:latest
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin123
+        options: >-
+          --health-cmd "mc ready local || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 9000:9000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter=backend prisma:generate
+
+      - name: Run migrations
+        run: pnpm --filter=backend prisma:migrate:deploy
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+
+      - name: Lint
+        run: pnpm --filter=backend lint
+
+      - name: Typecheck
+        run: pnpm --filter=backend typecheck
+
+      - name: Unit tests
+        run: pnpm --filter=backend test
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_ACCESS_SECRET: ci-jwt-access-secret-32chars-long
+          JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
+          JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
+          JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
+          MOYASAR_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          SMS_PROVIDER_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          ZOOM_PROVIDER_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          EMAIL_PROVIDER_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          AUTHENTICA_API_KEY: ci-authentica-key
+          MINIO_ENDPOINT: localhost
+          MINIO_PORT: 9000
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin123
+          MINIO_BUCKET: sawaa-test
+          MINIO_USE_SSL: false
+
+      - name: E2E tests
+        run: pnpm --filter=backend test:e2e
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_ACCESS_SECRET: ci-jwt-access-secret-32chars-long
+          JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
+          JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
+          JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
+          MOYASAR_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          SMS_PROVIDER_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          ZOOM_PROVIDER_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          EMAIL_PROVIDER_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          AUTHENTICA_API_KEY: ci-authentica-key
+          MINIO_ENDPOINT: localhost
+          MINIO_PORT: 9000
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin123
+          MINIO_BUCKET: sawaa-test
+          MINIO_USE_SSL: false
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Dashboard
+  # ───────────────────────────────────────────────────────────────────────────
+  dashboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate API client
+        run: pnpm openapi:sync || true
+
+      - name: Lint
+        run: pnpm --filter=dashboard lint
+
+      - name: Typecheck
+        run: pnpm --filter=dashboard typecheck
+
+      - name: Unit tests
+        run: pnpm --filter=dashboard test
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Website
+  # ───────────────────────────────────────────────────────────────────────────
+  website:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm --filter=@sawaa/website lint
+
+      - name: Typecheck
+        run: pnpm --filter=@sawaa/website typecheck
+
+      - name: Unit tests
+        run: pnpm --filter=@sawaa/website test
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Mobile
+  # ───────────────────────────────────────────────────────────────────────────
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm --filter=sawaa-mobile lint
+
+      - name: Typecheck
+        run: pnpm --filter=sawaa-mobile typecheck
+
+      - name: Unit tests
+        run: pnpm --filter=sawaa-mobile test

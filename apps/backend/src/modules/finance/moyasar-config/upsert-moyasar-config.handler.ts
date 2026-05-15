@@ -6,9 +6,9 @@ import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export interface UpsertMoyasarConfigCommand {
   publishableKey: string;
-  secretKey: string;
-  webhookSecret: string;
-  isLive: boolean;
+  secretKey?: string;
+  webhookSecret?: string;
+  isLive?: boolean;
 }
 
 export interface UpsertMoyasarConfigResult {
@@ -28,34 +28,47 @@ export class UpsertMoyasarConfigHandler {
 
   async execute(cmd: UpsertMoyasarConfigCommand): Promise<UpsertMoyasarConfigResult> {
     const organizationId = DEFAULT_ORG_ID;
-    const secretKeyEnc = this.creds.encrypt({ secretKey: cmd.secretKey }, organizationId);
-    const webhookSecretEnc = this.creds.encrypt(
-      { webhookSecret: cmd.webhookSecret },
-      organizationId,
-    );
 
     const existing = await this.prisma.organizationPaymentConfig.findFirst();
+
+    // If updating an existing record and a secret is omitted, keep the existing encrypted value.
+    let secretKeyEnc = existing?.secretKeyEnc ?? null;
+    let webhookSecretEnc = existing?.webhookSecretEnc ?? null;
+
+    if (cmd.secretKey !== undefined) {
+      secretKeyEnc = this.creds.encrypt({ secretKey: cmd.secretKey }, organizationId);
+    }
+    if (cmd.webhookSecret !== undefined) {
+      webhookSecretEnc = this.creds.encrypt(
+        { webhookSecret: cmd.webhookSecret },
+        organizationId,
+      );
+    }
+
     let row;
     if (existing) {
       row = await this.prisma.organizationPaymentConfig.update({
         where: { id: existing.id },
         data: {
           publishableKey: cmd.publishableKey,
-          secretKeyEnc,
-          webhookSecretEnc,
-          isLive: cmd.isLive,
+          ...(secretKeyEnc !== null && { secretKeyEnc }),
+          ...(webhookSecretEnc !== null && { webhookSecretEnc }),
+          isLive: cmd.isLive ?? existing.isLive,
           // updating credentials invalidates the prior verification
           lastVerifiedAt: null,
           lastVerifiedStatus: null,
         },
       });
     } else {
+      if (!cmd.secretKey || !cmd.webhookSecret) {
+        throw new Error('secretKey and webhookSecret are required when creating a new Moyasar config');
+      }
       row = await this.prisma.organizationPaymentConfig.create({
         data: {
           publishableKey: cmd.publishableKey,
-          secretKeyEnc,
-          webhookSecretEnc,
-          isLive: cmd.isLive,
+          secretKeyEnc: secretKeyEnc!,
+          webhookSecretEnc: webhookSecretEnc!,
+          isLive: cmd.isLive ?? false,
         },
       });
     }

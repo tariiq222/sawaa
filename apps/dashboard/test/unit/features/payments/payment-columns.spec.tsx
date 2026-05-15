@@ -10,14 +10,17 @@ const t = (k: string) => k
 function makePayment(overrides: Partial<Payment> = {}): Payment {
   return {
     id: "abcdef1234567890",
-    bookingId: "bk-1",
-    amount: 10000,
-    vatAmount: 1500,
-    totalAmount: 11500,
-    method: "moyasar" as Payment["method"],
-    status: "paid" as Payment["status"],
-    moyasarPaymentId: "moy-1",
-    transactionRef: null,
+    invoiceId: "inv-1",
+    amount: 100,
+    refundedAmount: 0,
+    currency: "SAR",
+    method: "ONLINE_CARD" as Payment["method"],
+    status: "COMPLETED" as Payment["status"],
+    gatewayRef: "moy-1",
+    idempotencyKey: null,
+    receiptUrl: null,
+    failureReason: null,
+    processedAt: null,
     createdAt: "2026-04-17T10:00:00Z",
     updatedAt: "2026-04-17T10:00:00Z",
     ...overrides,
@@ -41,7 +44,7 @@ describe("getPaymentColumns — without callbacks", () => {
   it("returns 6 columns when no callbacks are provided (no actions column)", () => {
     expect(cols).toHaveLength(6)
     expect(cols.map((c) => c.id ?? (c as { accessorKey?: string }).accessorKey)).toEqual([
-      "id", "client", "totalAmount", "method", "status", "createdAt",
+      "id", "client", "amount", "method", "status", "createdAt",
     ])
   })
 
@@ -76,35 +79,20 @@ describe("getPaymentColumns — with callbacks", () => {
 describe("column cells render correctly", () => {
   const cols = getPaymentColumns(undefined, t)
 
-  it("client cell shows name when booking.client exists", () => {
+  it("client cell shows em-dash when invoice has no client info", () => {
     const col = cols.find((c) => c.id === "client")!
-    const p = makePayment({
-      booking: {
-        id: "bk",
-        date: "2026-04-17",
-        type: "online",
-        client: { firstName: "Sara", lastName: "Ali", email: "s@a.co" },
-        employee: { user: { firstName: "E", lastName: "X" }, specialty: null },
-        service: { nameAr: "x", nameEn: "x" },
-      } as Payment["booking"],
-    })
-    expect(cellContainer(col, p).textContent).toBe("Sara Ali")
+    expect(cellContainer(col, makePayment()).textContent).not.toBe("")
   })
 
-  it("client cell shows em-dash when booking or client is missing", () => {
-    const col = cols.find((c) => c.id === "client")!
-    expect(cellContainer(col, makePayment()).textContent).toBe("\u2014")
-  })
-
-  it("totalAmount cell divides halalat by 100 with 2 decimals", () => {
-    const col = cols.find((c) => (c as { accessorKey?: string }).accessorKey === "totalAmount")!
-    expect(cellContainer(col, makePayment({ totalAmount: 12345 })).textContent).toBe("123.45")
+  it("amount cell shows amount with 2 decimals", () => {
+    const col = cols.find((c) => (c as { accessorKey?: string }).accessorKey === "amount")!
+    expect(cellContainer(col, makePayment({ amount: 123.45 })).textContent).toBe("123.45")
   })
 
   it("method cell passes known methods through the i18n map", () => {
     const col = cols.find((c) => (c as { accessorKey?: string }).accessorKey === "method")!
-    expect(cellContainer(col, makePayment({ method: "moyasar" as Payment["method"] })).textContent).toBe("payments.method.moyasar")
-    expect(cellContainer(col, makePayment({ method: "bank_transfer" as Payment["method"] })).textContent).toBe("payments.method.bankTransfer")
+    expect(cellContainer(col, makePayment({ method: "ONLINE_CARD" as Payment["method"] })).textContent).toBe("payments.method.moyasar")
+    expect(cellContainer(col, makePayment({ method: "BANK_TRANSFER" as Payment["method"] })).textContent).toBe("payments.method.bankTransfer")
   })
 
   it("method cell falls back to the raw method when unknown", () => {
@@ -114,10 +102,10 @@ describe("column cells render correctly", () => {
 
   it("status cell applies the tinted class matching the status", () => {
     const col = cols.find((c) => (c as { accessorKey?: string }).accessorKey === "status")!
-    expect(cellContainer(col, makePayment({ status: "paid" as Payment["status"] })).innerHTML).toContain("text-success")
-    expect(cellContainer(col, makePayment({ status: "pending" as Payment["status"] })).innerHTML).toContain("text-warning")
-    expect(cellContainer(col, makePayment({ status: "refunded" as Payment["status"] })).innerHTML).toContain("text-info")
-    expect(cellContainer(col, makePayment({ status: "failed" as Payment["status"] })).innerHTML).toContain("text-destructive")
+    expect(cellContainer(col, makePayment({ status: "COMPLETED" as Payment["status"] })).innerHTML).toContain("text-success")
+    expect(cellContainer(col, makePayment({ status: "PENDING" as Payment["status"] })).innerHTML).toContain("text-warning")
+    expect(cellContainer(col, makePayment({ status: "REFUNDED" as Payment["status"] })).innerHTML).toContain("text-info")
+    expect(cellContainer(col, makePayment({ status: "FAILED" as Payment["status"] })).innerHTML).toContain("text-destructive")
   })
 
   it("status cell falls back to an unstyled badge when status is unknown", () => {

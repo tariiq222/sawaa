@@ -28,6 +28,7 @@ function buildPayment(organizationId: string, id: string = 'pay-1'): Record<stri
 interface MockPrisma {
   payment: {
     findFirst: jest.Mock;
+    findUnique: jest.Mock;
     upsert: jest.Mock;
   };
   invoice: {
@@ -46,6 +47,7 @@ interface MockPrisma {
 
 function buildPrisma(invoiceOverride?: Record<string, unknown> | null, configOverride?: Record<string, unknown> | null): MockPrisma {
   const paymentFindFirst = jest.fn().mockResolvedValue(null);
+  const paymentFindUnique = jest.fn().mockResolvedValue(null);
   const paymentUpsert = jest.fn().mockImplementation(({ create }: { create: Record<string, unknown> }) =>
     Promise.resolve(buildPayment(create.organizationId as string ?? DEFAULT_ORG_ID)),
   );
@@ -57,6 +59,7 @@ function buildPrisma(invoiceOverride?: Record<string, unknown> | null, configOve
   const prisma: MockPrisma = {
     payment: {
       findFirst: paymentFindFirst,
+      findUnique: paymentFindUnique,
       upsert: paymentUpsert,
     },
     invoice: {

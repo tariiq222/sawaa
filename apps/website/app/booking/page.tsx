@@ -1,8 +1,9 @@
 'use client';
 
-import { useReducer, useState, useEffect } from 'react';
+import { useReducer, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { reduce, INITIAL_WIZARD_STATE, WizardStep } from '@sawaa/shared';
-import type { Service, EmployeeWithUser, AvailableSlot } from '@sawaa/shared';
+import type { Service, EmployeeWithUser } from '@sawaa/shared';
 import { ServicePicker } from '@/features/booking/service-picker';
 import { TherapistPicker } from '@/features/booking/therapist-picker';
 import { SlotPicker } from '@/features/booking/slot-picker';
@@ -19,6 +20,7 @@ import {
   type PublicBranch,
 } from '@/features/booking/booking.api';
 import { PaymentRedirect } from '@/features/payment/payment-redirect';
+import { BookingSkeleton } from '@/features/booking/booking-skeleton';
 
 function ProgressBar({ current, total }: { current: number; total: number }) {
   return (
@@ -47,48 +49,43 @@ export default function BookingWizardPage() {
   const [awaitingBranch, setAwaitingBranch] = useState(false);
   const [pendingEmployee, setPendingEmployee] = useState<EmployeeWithUser | null>(null);
 
-  const [services, setServices] = useState<Service[]>([]);
-  const [employees, setEmployees] = useState<EmployeeWithUser[]>([]);
-  const [slots, setSlots] = useState<AvailableSlot[]>([]);
-  const [branches, setBranches] = useState<PublicBranch[]>([]);
+
   const [selectedBranch, setSelectedBranch] = useState<PublicBranch | null>(null);
 
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0],
   );
-  const [loadingSlots, setLoadingSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const { token } = useOtpSession();
 
-  const [loadError, setLoadError] = useState<string | null>(null);
+  // React Query: fetch initial data with caching, deduping, and error handling
+  const { data: employees = [], isLoading: loadingEmployees, error: employeesError } = useQuery({
+    queryKey: ['public', 'employees'],
+    queryFn: async () => {
+      const json = await publicFetch<{ data?: EmployeeWithUser[] } | EmployeeWithUser[]>('/public/employees');
+      return Array.isArray(json) ? json : (json.data ?? []);
+    },
+  });
 
-  useEffect(() => {
-    publicFetch<{ data?: EmployeeWithUser[] } | EmployeeWithUser[]>('/public/employees')
-      .then((json) => {
-        const list = Array.isArray(json) ? json : (json.data ?? []);
-        setEmployees(list);
-      })
-      .catch((err) => {
-        console.error('Failed to load employees', err);
-        setLoadError('Failed to load therapists. Please try again later.');
-      });
-    publicFetch<{ data?: { services: Service[] } } | { services: Service[] }>('/public/services')
-      .then((json) => {
-        const payload = 'data' in json && json.data ? json.data : (json as { services: Service[] });
-        setServices(payload.services ?? []);
-      })
-      .catch((err) => {
-        console.error('Failed to load catalog', err);
-        setLoadError('Failed to load services. Please try again later.');
-      });
-    getPublicBranches().then((bs) => {
-      setBranches(bs);
-      if (bs.length === 1) setSelectedBranch(bs[0]);
-    });
-  }, []);
+  const { data: services = [], isLoading: loadingServices, error: servicesError } = useQuery({
+    queryKey: ['public', 'services'],
+    queryFn: async () => {
+      const json = await publicFetch<{ data?: { services: Service[] } } | { services: Service[] }>('/public/services');
+      const payload = 'data' in json && json.data ? json.data : (json as { services: Service[] });
+      return payload.services ?? [];
+    },
+  });
+
+  const { data: branches = [], isLoading: loadingBranches } = useQuery({
+    queryKey: ['public', 'branches'],
+    queryFn: getPublicBranches,
+  });
+
+  const loadingData = loadingEmployees || loadingServices || loadingBranches;
+  const loadError = employeesError?.message ?? servicesError?.message ?? null;
 
   const service =
     state.step === WizardStep.THERAPIST ||
@@ -126,34 +123,11 @@ export default function BookingWizardPage() {
   const employeeId = employee?.id;
   const serviceId = service?.id;
 
-  useEffect(() => {
-    if (state.step !== WizardStep.SLOT || !employeeId) {
-      return;
-    }
-
-    let cancelled = false;
-    void Promise.resolve().then(async () => {
-      setLoadingSlots(true);
-      try {
-        const availableSlots = await getPublicAvailability(employeeId, selectedDate, serviceId);
-        if (!cancelled) {
-          setSlots(availableSlots);
-        }
-      } catch {
-        if (!cancelled) {
-          setSlots([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingSlots(false);
-        }
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [state.step, employeeId, selectedDate, serviceId]);
+  const { data: slots = [], isLoading: loadingSlots } = useQuery({
+    queryKey: ['public', 'availability', employeeId, selectedDate, serviceId],
+    queryFn: () => getPublicAvailability(employeeId!, selectedDate, serviceId),
+    enabled: state.step === WizardStep.SLOT && !!employeeId,
+  });
 
   if (redirectUrl && bookingId) {
     return <PaymentRedirect redirectUrl={redirectUrl} bookingId={bookingId} />;
@@ -210,17 +184,25 @@ export default function BookingWizardPage() {
       )}
 
       {state.step === WizardStep.SERVICE && (
-        <ServicePicker
-          services={services}
-          selected={null}
-          onSelect={(svc) => dispatch({ type: 'SELECT_SERVICE', service: svc })}
-        />
+        loadingData ? (
+          <BookingSkeleton count={4} />
+        ) : (
+          <ServicePicker
+            services={services}
+            selected={null}
+            onSelect={(svc) => dispatch({ type: 'SELECT_SERVICE', service: svc })}
+          />
+        )
       )}
 
       {state.step === WizardStep.THERAPIST && !awaitingBranch && service && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {backBtn(() => dispatch({ type: 'RESET' }))}
-          <TherapistPicker therapists={employees} selected={null} onSelect={handleEmployeeSelect} />
+          {loadingData ? (
+            <BookingSkeleton count={4} />
+          ) : (
+            <TherapistPicker therapists={employees} selected={null} onSelect={handleEmployeeSelect} />
+          )}
         </div>
       )}
 

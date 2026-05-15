@@ -62,11 +62,12 @@ export class CreateBookingHandler {
       throw new BadRequestException('Booking must be scheduled in the future');
     }
 
+    const bookingSettings = await this.settingsHandler.execute({
+      branchId: dto.branchId,
+    });
+
     if (dto.payAtClinic) {
-      const settings = await this.settingsHandler.execute({
-        branchId: dto.branchId,
-      });
-      if (!('payAtClinicEnabled' in settings) || !(settings as Record<string, unknown>).payAtClinicEnabled) {
+      if (!('payAtClinicEnabled' in bookingSettings) || !(bookingSettings as Record<string, unknown>).payAtClinicEnabled) {
         throw new BadRequestException('Pay at clinic is not enabled for this branch');
       }
     }
@@ -112,6 +113,17 @@ export class CreateBookingHandler {
       throw new BadRequestException('Employee does not provide this service');
     }
 
+    if (dto.bookingType && dto.bookingType !== 'WALK_IN') {
+      const allowedConfigs = await this.prisma.serviceBookingConfig.findMany({
+        where: { serviceId: dto.serviceId },
+        select: { bookingType: true },
+      });
+      const allowedTypes = allowedConfigs.map(c => c.bookingType);
+      if (allowedTypes.length > 0 && !allowedTypes.includes(dto.bookingType as any)) {
+        throw new BadRequestException(`Service does not support ${dto.bookingType} booking type`);
+      }
+    }
+
     // Resolve price + duration via PriceResolverService (3-tier: employee override → duration option → service base).
     const resolved = await this.priceResolver.resolve({
       serviceId: dto.serviceId,
@@ -123,6 +135,9 @@ export class CreateBookingHandler {
     const durationMins = resolved.durationMins;
     const price = resolved.price;
     const currency = dto.currency ?? resolved.currency;
+    if (currency !== resolved.currency) {
+      throw new BadRequestException(`Currency mismatch: service uses ${resolved.currency} but ${currency} was requested`);
+    }
 
     const endsAt = new Date(scheduledAt.getTime() + durationMins * 60_000);
 
@@ -152,12 +167,16 @@ export class CreateBookingHandler {
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey1}::int, ${lockKey2}::int)`;
 
           // Now that the lock is held, check for an overlap with PENDING/CONFIRMED bookings.
+          const bufferMs = bookingSettings.bufferMinutes * 60_000;
+          const bufferedStart = new Date(scheduledAt.getTime() - bufferMs);
+          const bufferedEnd = new Date(endsAt.getTime() + bufferMs);
+
           const conflict = await tx.booking.findFirst({
             where: {
               employeeId: dto.employeeId,
-              status: { in: ['PENDING', 'CONFIRMED'] },
-              scheduledAt: { lt: endsAt },
-              endsAt: { gt: scheduledAt },
+              status: { in: ['PENDING', 'CONFIRMED', 'AWAITING_PAYMENT'] },
+              scheduledAt: { lt: bufferedEnd },
+              endsAt: { gt: bufferedStart },
             },
             select: { id: true },
           });
@@ -202,7 +221,7 @@ export class CreateBookingHandler {
             serviceId: dto.serviceId,
             subtotal: Number(price),
           });
-          discountedPrice = new Prisma.Decimal(price.toString()).sub(new Prisma.Decimal(result.discount.toString())).toDecimalPlaces(2).toNumber();
+          discountedPrice = Math.max(0, new Prisma.Decimal(price.toString()).sub(new Prisma.Decimal(result.discount.toString())).toDecimalPlaces(2).toNumber());
           await tx.coupon.update({
             where: { id: result.couponId },
             data: { usedCount: { increment: 1 } },
@@ -255,9 +274,13 @@ export class CreateBookingHandler {
           });
           const vatRate = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
 
-          const subtotalDec = new Prisma.Decimal((discountedPrice ?? price).toString());
-          const vatAmt = roundMoney(subtotalDec.mul(vatRate));
-          const total = roundMoney(subtotalDec.add(vatAmt));
+          const subtotalDec = new Prisma.Decimal(price.toString());
+          const discountAmtDec = discountedPrice !== null
+            ? subtotalDec.sub(new Prisma.Decimal(discountedPrice.toString()))
+            : new Prisma.Decimal(0);
+          const vatBaseDec = subtotalDec.sub(discountAmtDec);
+          const vatAmt = roundMoney(vatBaseDec.mul(vatRate));
+          const total = roundMoney(vatBaseDec.add(vatAmt));
 
           invoice = await tx.invoice.create({
             data: {
@@ -266,6 +289,7 @@ export class CreateBookingHandler {
               employeeId: booking.employeeId,
               bookingId: booking.id,
               subtotal: subtotalDec.toDecimalPlaces(2).toNumber(),
+              discountAmt: discountAmtDec.toDecimalPlaces(2).toNumber(),
               vatRate: vatRate.toNumber(),
               vatAmt: vatAmt.toNumber(),
               total: total.toNumber(),

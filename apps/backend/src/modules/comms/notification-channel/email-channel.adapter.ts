@@ -28,7 +28,7 @@ const buildOtpHtml = (code: string) => `
     <div style="background:#F5F7FA;border-radius:12px;padding:24px;margin:24px 0;">
       <span style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#354FD8;">${code}</span>
     </div>
-    <p style="font-size:14px;color:#888;">سينتهي هذا الرمز خلال 10 دقائق</p>
+    <p style="font-size:14px;color:#888;">سينتهي هذا الرمز خلال ${PLATFORM_OTP_EXPIRY_MINUTES} دقائق</p>
   </div>
   <div dir="ltr" style="font-family:Arial,sans-serif;text-align:center;padding:20px;border-top:1px solid #eee;margin-top:20px;">
     <h2 style="color:#354FD8;margin-bottom:24px;">Your Verification Code</h2>
@@ -36,7 +36,7 @@ const buildOtpHtml = (code: string) => `
     <div style="background:#F5F7FA;border-radius:12px;padding:24px;margin:24px 0;">
       <span style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#354FD8;">${code}</span>
     </div>
-    <p style="font-size:14px;color:#888;">This code expires in 10 minutes</p>
+    <p style="font-size:14px;color:#888;">This code expires in ${PLATFORM_OTP_EXPIRY_MINUTES} minutes</p>
   </div>`;
 
 @Injectable()

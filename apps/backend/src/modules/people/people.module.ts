@@ -6,6 +6,7 @@ import { MediaModule } from '../media/media.module';
 import { MessagingModule } from '../../infrastructure/messaging.module';
 import { BookingsModule } from '../bookings/bookings.module';
 import { IdentityModule } from '../identity/identity.module';
+import { OrgExperienceModule } from '../org-experience/org-experience.module';
 import { UploadAvatarHandler } from './employees/upload-avatar/upload-avatar.handler';
 import { CreateClientHandler } from './clients/create-client.handler';
 import { UpdateClientHandler } from './clients/update-client.handler';
@@ -24,6 +25,7 @@ import { DeleteEmployeeHandler } from './employees/delete-employee.handler';
 import { ListEmployeeServicesHandler } from './employees/list-employee-services.handler';
 import { GetEmployeeServiceTypesHandler } from './employees/get-employee-service-types.handler';
 import { AssignEmployeeServiceHandler } from './employees/assign-employee-service.handler';
+import { UpdateEmployeeServiceHandler } from './employees/update-employee-service.handler';
 import { RemoveEmployeeServiceHandler } from './employees/remove-employee-service.handler';
 import { ListEmployeeExceptionsHandler } from './employees/list-employee-exceptions.handler';
 import { CreateEmployeeExceptionHandler } from './employees/create-employee-exception.handler';
@@ -45,7 +47,7 @@ const handlers = [
   CreateEmployeeHandler, UpdateAvailabilityHandler, EmployeeOnboardingHandler, OnboardEmployeeHandler, GetAvailabilityHandler, UpdateEmployeeHandler,
   ListEmployeesHandler, GetEmployeeHandler,
   DeleteEmployeeHandler, ListEmployeeServicesHandler, GetEmployeeServiceTypesHandler, AssignEmployeeServiceHandler,
-  RemoveEmployeeServiceHandler, ListEmployeeExceptionsHandler, CreateEmployeeExceptionHandler,
+  UpdateEmployeeServiceHandler, RemoveEmployeeServiceHandler, ListEmployeeExceptionsHandler, CreateEmployeeExceptionHandler,
   DeleteEmployeeExceptionHandler, ListEmployeeRatingsHandler, EmployeeStatsHandler,
   UploadAvatarHandler,
   ListPublicEmployeesHandler, GetPublicEmployeeHandler,
@@ -53,7 +55,7 @@ const handlers = [
 ];
 
 @Module({
-  imports: [DatabaseModule, MediaModule, MessagingModule, MulterModule.register({ storage: memoryStorage(), limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 } }), forwardRef(() => BookingsModule), forwardRef(() => IdentityModule)],
+  imports: [DatabaseModule, MediaModule, MessagingModule, MulterModule.register({ storage: memoryStorage(), limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 } }), forwardRef(() => BookingsModule), forwardRef(() => IdentityModule), OrgExperienceModule],
   controllers: [DashboardPeopleController],
   providers: [...handlers],
   exports: [...handlers],

@@ -9,11 +9,9 @@ export default function ClientLayout() {
 
   usePushNotifications(!!token);
 
-  // DEV preview: auth guard temporarily disabled to review client UI without
-  // a working backend login. Re-enable when auth flow is wired up.
-  // if (!token) {
-  //   return <Redirect href="/(auth)/login" />;
-  // }
+  if (!token) {
+    return <Redirect href="/(auth)/login" />;
+  }
 
   if (token && user && getPrimaryRole(user) === 'employee') {
     return <Redirect href="/(employee)/(tabs)/today" />;

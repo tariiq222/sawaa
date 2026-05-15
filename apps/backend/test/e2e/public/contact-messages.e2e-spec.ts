@@ -20,13 +20,13 @@ describe('Public Contact Messages (e2e)', () => {
       id: 'cm-1',
       name: 'Ali',
       email: 'ali@example.com',
-      message: 'Hello',
+      body: 'Hello',
       status: 'NEW',
     });
 
     const res = await request(app.getHttpServer())
       .post('/api/v1/public/contact-messages')
-      .send({ name: 'Ali', email: 'ali@example.com', message: 'Hello' })
+      .send({ name: 'Ali', email: 'ali@example.com', body: 'Hello world' })
       .expect(201);
 
     expect(res.body.id).toBe('cm-1');

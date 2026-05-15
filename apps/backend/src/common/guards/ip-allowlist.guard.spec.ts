@@ -14,8 +14,8 @@ describe('IpAllowlistGuard', () => {
     const context = {
       switchToHttp: () => ({
         getRequest: () => ({
-          headers: { 'x-real-ip': '127.0.0.1' },
-          ip: '',
+          headers: {},
+          ip: '127.0.0.1',
         }),
       }),
     } as ExecutionContext;

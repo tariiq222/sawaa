@@ -47,6 +47,7 @@ export function CreateDepartmentDialog({
     icon: "",
     sortOrder: 0,
     isActive: true,
+    isVisible: true,
   }
 
   const form = useForm<DepartmentFormData>({
@@ -68,6 +69,7 @@ export function CreateDepartmentDialog({
         icon: data.icon || undefined,
         sortOrder: data.sortOrder,
         isActive: data.isActive,
+        isVisible: data.isVisible,
       })
       toast.success(t("departments.create.success"))
       form.reset()
@@ -173,6 +175,20 @@ export function CreateDepartmentDialog({
                 id="create-dept-active"
                 checked={form.watch("isActive")}
                 onCheckedChange={(v) => form.setValue("isActive", v)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="flex flex-col gap-0.5">
+                <Label htmlFor="create-dept-visible" className="cursor-pointer">
+                  {t("departments.isVisible")}
+                </Label>
+                <span className="text-xs text-muted-foreground">{t("departments.isVisibleDesc")}</span>
+              </div>
+              <Switch
+                id="create-dept-visible"
+                checked={form.watch("isVisible")}
+                onCheckedChange={(v) => form.setValue("isVisible", v)}
               />
             </div>
           </form>

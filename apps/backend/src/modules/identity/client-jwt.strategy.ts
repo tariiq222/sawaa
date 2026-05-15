@@ -13,6 +13,7 @@ export interface ClientJwtPayload {
   namespace: 'client';
   jti: string;
   organizationId?: string;
+  tokenVersion: number;
 }
 
 @Injectable()
@@ -52,6 +53,10 @@ export class ClientJwtStrategy extends PassportStrategy(Strategy, 'client-jwt') 
 
     if (!client || !client.isActive || client.deletedAt) {
       throw new UnauthorizedException('Client not found or inactive');
+    }
+
+    if (client.tokenVersion !== payload.tokenVersion) {
+      throw new UnauthorizedException('Token has been revoked');
     }
 
     // Set tenant context ONLY after all DB validations pass (P1-5)

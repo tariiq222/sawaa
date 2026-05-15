@@ -7,6 +7,7 @@ export interface Department {
   icon: string | null
   sortOrder: number
   isActive: boolean
+  isVisible: boolean
   createdAt: string
   updatedAt: string
   _count?: { categories: number }
@@ -28,6 +29,7 @@ export interface CreateDepartmentPayload {
   icon?: string
   sortOrder?: number
   isActive?: boolean
+  isVisible?: boolean
 }
 
 export interface UpdateDepartmentPayload {
@@ -38,4 +40,5 @@ export interface UpdateDepartmentPayload {
   icon?: string
   sortOrder?: number
   isActive?: boolean
+  isVisible?: boolean
 }

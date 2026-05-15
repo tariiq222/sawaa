@@ -94,7 +94,7 @@ export default function EmailDeliveryLogPage() {
 
         {(status || channel) && (
           <Button variant="ghost" size="sm" onClick={resetFilters}>
-            Reset
+            {t("pagination.reset")}
           </Button>
         )}
       </div>
@@ -193,7 +193,7 @@ export default function EmailDeliveryLogPage() {
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
             >
-              Prev
+              {t("pagination.prev")}
             </Button>
             <Button
               variant="outline"
@@ -201,7 +201,7 @@ export default function EmailDeliveryLogPage() {
               disabled={page >= data.meta.totalPages}
               onClick={() => setPage((p) => p + 1)}
             >
-              Next
+              {t("pagination.next")}
             </Button>
           </div>
         </div>

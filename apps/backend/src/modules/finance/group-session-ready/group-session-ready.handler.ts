@@ -60,18 +60,26 @@ export class GroupSessionReadyHandler {
     bookingIds: string[],
     groupSessionKey: string,
   ): Promise<void> {
-    const bookings = await this.prisma.booking.findMany({
-      where: { id: { in: bookingIds } },
-      select: {
-        id: true,
-        clientId: true,
-        employeeId: true,
-        branchId: true,
-        price: true,
-        discountedPrice: true,
-        currency: true,
-      },
-    });
+    const [bookings, orgSettings] = await Promise.all([
+      this.prisma.booking.findMany({
+        where: { id: { in: bookingIds } },
+        select: {
+          id: true,
+          clientId: true,
+          employeeId: true,
+          branchId: true,
+          price: true,
+          discountedPrice: true,
+          currency: true,
+        },
+      }),
+      this.prisma.organizationSettings.findFirst({
+        where: {},
+        select: { vatRate: true },
+      }),
+    ]);
+
+    const vatRate = orgSettings?.vatRate ? Number(orgSettings.vatRate) : undefined;
 
     const paymentLinks: GroupSessionPaymentLink[] = [];
 
@@ -86,6 +94,7 @@ export class GroupSessionReadyHandler {
           employeeId: booking.employeeId,
           bookingId: booking.id,
           subtotal,
+          ...(vatRate !== undefined && { vatRate }),
         });
       } catch (err) {
         // ConflictException (409) = invoice already exists — fetch it

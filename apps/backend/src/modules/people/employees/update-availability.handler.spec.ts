@@ -57,10 +57,22 @@ describe('UpdateAvailabilityHandler', () => {
     await expect(handler.execute(makeCmd({ windows: [{ dayOfWeek: 1, startTime: '17:00', endTime: '09:00' }] }))).rejects.toThrow(BadRequestException);
   });
 
-  it('throws BadRequestException for duplicate dayOfWeek', async () => {
-    await expect(
-      handler.execute(makeCmd({ windows: [{ dayOfWeek: 1, startTime: '09:00', endTime: '12:00' }, { dayOfWeek: 1, startTime: '13:00', endTime: '17:00' }] })),
-    ).rejects.toThrow(BadRequestException);
+  it('allows multiple windows for the same dayOfWeek (split shifts)', async () => {
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1', organizationId: 'org-test' });
+    prisma.employeeAvailability.deleteMany.mockResolvedValue({ count: 0 });
+    prisma.employeeAvailability.createMany.mockResolvedValue({ count: 2 });
+    const windowRows = [
+      { id: 'w1', dayOfWeek: 1, startTime: '09:00', endTime: '12:00' },
+      { id: 'w2', dayOfWeek: 1, startTime: '13:00', endTime: '17:00' },
+    ];
+    prisma.employeeAvailability.findMany.mockResolvedValue(windowRows);
+    prisma.employeeAvailabilityException.deleteMany.mockResolvedValue({ count: 0 });
+    prisma.employeeAvailabilityException.findMany.mockResolvedValue([]);
+
+    const result = await handler.execute(
+      makeCmd({ windows: [{ dayOfWeek: 1, startTime: '09:00', endTime: '12:00' }, { dayOfWeek: 1, startTime: '13:00', endTime: '17:00' }] }),
+    );
+    expect(result.windows).toEqual(windowRows);
   });
 
   it('deletes existing windows and creates new ones', async () => {

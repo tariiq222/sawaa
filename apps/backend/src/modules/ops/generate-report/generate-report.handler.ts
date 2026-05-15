@@ -68,7 +68,7 @@ export class GenerateReportHandler {
       } else if (dto.type === ReportType.BOOKINGS) {
         data = await this.buildBookingsReport(from, to, dto.branchId);
       } else {
-        data = await this.buildEmployeesReport(from, to);
+        data = await this.buildEmployeesReport(from, to, dto.employeeId);
       }
 
       await this.prisma.report.update({
@@ -113,42 +113,115 @@ export class GenerateReportHandler {
       ...(branchId ? { branchId } : {}),
     };
 
-    const [total, byStatus] = await Promise.all([
+    const [total, byStatus, byType] = await Promise.all([
       this.prisma.booking.count({ where }),
       this.prisma.booking.groupBy({
         by: ['status'],
         where,
         _count: { status: true },
       }),
+      this.prisma.booking.groupBy({
+        by: ['bookingType'],
+        where,
+        _count: { bookingType: true },
+      }),
     ]);
 
-    return {
-      period: { from: from.toISOString(), to: to.toISOString() },
-      total,
-      byStatus: byStatus.map((s) => ({ status: s.status, count: s._count.status })),
-    };
-  }
-
-  private async buildEmployeesReport(from: Date, to: Date) {
-    const bookings = await this.prisma.booking.groupBy({
-      by: ['employeeId', 'status'],
-      where: { scheduledAt: { gte: from, lte: to } },
-      _count: { employeeId: true },
+    // byDay breakdown — group by date portion of scheduledAt
+    const allBookings = await this.prisma.booking.findMany({
+      where,
+      select: { scheduledAt: true },
     });
-
-    const byEmployee = new Map<string, Record<string, number>>();
-    for (const row of bookings) {
-      const existing = byEmployee.get(row.employeeId) ?? {};
-      existing[row.status] = row._count.employeeId!;
-      byEmployee.set(row.employeeId, existing);
+    const dayMap = new Map<string, number>();
+    for (const b of allBookings) {
+      const day = b.scheduledAt.toISOString().slice(0, 10);
+      dayMap.set(day, (dayMap.get(day) ?? 0) + 1);
     }
 
     return {
-      period: { from: from.toISOString(), to: to.toISOString() },
-      employees: [...byEmployee.entries()].map(([employeeId, stats]) => ({
-        employeeId,
-        ...stats,
-      })),
+      total,
+      byStatus: byStatus.map((s) => ({ status: s.status, count: s._count.status })),
+      byType: byType.map((t) => ({ type: t.bookingType, count: t._count.bookingType })),
+      byDay: [...dayMap.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, count]) => ({ date, count })),
     };
+  }
+
+  private async buildEmployeesReport(from: Date, to: Date, employeeId?: string) {
+    const where = {
+      scheduledAt: { gte: from, lte: to },
+      ...(employeeId ? { employeeId } : {}),
+    };
+
+    const bookings = await this.prisma.booking.findMany({
+      where,
+      select: {
+        employeeId: true,
+        status: true,
+        scheduledAt: true,
+        price: true,
+      },
+    });
+
+    // Group by employee
+    const empMap = new Map<string, {
+      totalBookings: number;
+      completedBookings: number;
+      totalRevenue: number;
+      byDay: Map<string, { bookings: number; revenue: number }>;
+    }>();
+
+    for (const b of bookings) {
+      let entry = empMap.get(b.employeeId);
+      if (!entry) {
+        entry = { totalBookings: 0, completedBookings: 0, totalRevenue: 0, byDay: new Map() };
+        empMap.set(b.employeeId, entry);
+      }
+      entry.totalBookings++;
+      if (b.status === 'COMPLETED') {
+        entry.completedBookings++;
+        entry.totalRevenue += Number(b.price ?? 0);
+      }
+      const day = b.scheduledAt.toISOString().slice(0, 10);
+      const dayEntry = entry.byDay.get(day) ?? { bookings: 0, revenue: 0 };
+      dayEntry.bookings++;
+      if (b.status === 'COMPLETED') {
+        dayEntry.revenue += Number(b.price ?? 0);
+      }
+      entry.byDay.set(day, dayEntry);
+    }
+
+    // If filtering by single employee, return single-employee shape
+    if (employeeId) {
+      const entry = empMap.get(employeeId) ?? {
+        totalBookings: 0,
+        completedBookings: 0,
+        totalRevenue: 0,
+        byDay: new Map(),
+      };
+      return {
+        employeeId,
+        totalBookings: entry.totalBookings,
+        completedBookings: entry.completedBookings,
+        totalRevenue: entry.totalRevenue,
+        averageRating: 0, // TODO: join with ratings table
+        byDay: [...entry.byDay.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([date, v]) => ({ date, bookings: v.bookings, revenue: v.revenue })),
+      };
+    }
+
+    // Multi-employee: return array
+    return [...empMap.entries()].map(([empId, entry]) => ({
+      employeeId: empId,
+      totalBookings: entry.totalBookings,
+      completedBookings: entry.completedBookings,
+      totalRevenue: entry.totalRevenue,
+      averageRating: 0, // TODO: join with ratings table
+      byDay: [...entry.byDay.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, v]) => ({ date, bookings: v.bookings, revenue: v.revenue })),
+    }));
   }
 }

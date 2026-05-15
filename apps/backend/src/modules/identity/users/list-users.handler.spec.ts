@@ -1,32 +1,43 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from '../../../infrastructure/database';
 import { ListUsersHandler } from './list-users.handler';
+import { PrismaService } from '../../../infrastructure/database';
 
 describe('ListUsersHandler', () => {
   let handler: ListUsersHandler;
-  let prisma: PrismaService;
+  let prisma: any;
 
   beforeEach(async () => {
+    prisma = {
+      user: { findMany: jest.fn(), count: jest.fn() },
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        ListUsersHandler,
-        { provide: PrismaService, useValue: {
-    user: { findMany: jest.fn(), count: jest.fn() }
-        } },
-      ],
+      providers: [ListUsersHandler, { provide: PrismaService, useValue: prisma }],
     }).compile();
 
     handler = module.get<ListUsersHandler>(ListUsersHandler);
-    prisma = module.get<PrismaService>(PrismaService);
   });
 
-  it('should be defined', () => {
-    expect(handler).toBeDefined();
+  it('should list users with search', async () => {
+    prisma.user.findMany.mockResolvedValue([]);
+    prisma.user.count.mockResolvedValue(0);
+
+    await handler.execute({ page: 1, limit: 10, search: 'admin', isActive: true });
+    expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        isActive: true,
+        OR: [{ name: { contains: 'admin', mode: 'insensitive' } }, { email: { contains: 'admin', mode: 'insensitive' } }],
+      }),
+    }));
   });
 
-  it('should execute successfully', async () => {
-    (prisma.user.findMany as jest.Mock).mockResolvedValue({ id: 'test-id' });
-    const result = await handler.execute({isActive:true,search:"test",page:1,limit:10});
-    expect(result).toBeDefined();
+  it('should list users without search', async () => {
+    prisma.user.findMany.mockResolvedValue([]);
+    prisma.user.count.mockResolvedValue(0);
+
+    await handler.execute({ page: 1, limit: 10 });
+    expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { isActive: undefined },
+    }));
   });
 });

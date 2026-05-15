@@ -9,9 +9,10 @@ export class IpAllowlistGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest<Request>();
 
-    const clientIp = (req.headers['x-real-ip'] as string) ||
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-      (req.ip ?? '');
+    // Use req.ip which respects the 'trust proxy' setting in main.ts.
+    // Do NOT trust X-Forwarded-For headers directly — they are spoofable
+    // if the proxy chain is not validated.
+    const clientIp = req.ip ?? '';
 
     const allowedIps = this.config
       .getOrThrow<string>('INTERNAL_METRICS_ALLOWED_IPS')
