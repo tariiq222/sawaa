@@ -5,7 +5,7 @@ dist/
 .turbo/
 .git/
 *.env
-.env
+.env.local
 .env.*
 !.env.example
 !.env.prod.example
