@@ -7,7 +7,7 @@ import { SmsProviderFactory } from '../../../infrastructure/sms/sms-provider.fac
 describe('TestSmsConfigHandler', () => {
   let handler: TestSmsConfigHandler;
   let prisma: { organizationSmsConfig: { findFirst: jest.Mock; update: jest.Mock } };
-  let factory: { forCurrentTenant: jest.Mock };
+  let factory: { resolve: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -16,7 +16,7 @@ describe('TestSmsConfigHandler', () => {
         update: jest.fn().mockResolvedValue({}),
       },
     };
-    factory = { forCurrentTenant: jest.fn() };
+    factory = { resolve: jest.fn() };
 
     const module = await Test.createTestingModule({
       providers: [
@@ -46,7 +46,7 @@ describe('TestSmsConfigHandler', () => {
 
   it('sends test sms and updates lastTestOk=true', async () => {
     prisma.organizationSmsConfig.findFirst.mockResolvedValue({ id: '1', provider: 'TAQNYAT', credentialsCiphertext: 'enc', senderId: 'Sawaa' });
-    factory.forCurrentTenant.mockResolvedValue({
+    factory.resolve.mockResolvedValue({
       send: jest.fn().mockResolvedValue({ status: 'SENT', providerMessageId: 'msg-1' }),
     });
     const result = await handler.execute({ toPhone: '+966500000000' });
@@ -59,7 +59,7 @@ describe('TestSmsConfigHandler', () => {
 
   it('handles send failure and updates lastTestOk=false', async () => {
     prisma.organizationSmsConfig.findFirst.mockResolvedValue({ id: '1', provider: 'TAQNYAT', credentialsCiphertext: 'enc', senderId: null });
-    factory.forCurrentTenant.mockResolvedValue({
+    factory.resolve.mockResolvedValue({
       send: jest.fn().mockRejectedValue(new Error('Provider down')),
     });
     const result = await handler.execute({ toPhone: '+966500000000' });
@@ -72,7 +72,7 @@ describe('TestSmsConfigHandler', () => {
 
   it('handles non-Error rejection', async () => {
     prisma.organizationSmsConfig.findFirst.mockResolvedValue({ id: '1', provider: 'TAQNYAT', credentialsCiphertext: 'enc' });
-    factory.forCurrentTenant.mockResolvedValue({
+    factory.resolve.mockResolvedValue({
       send: jest.fn().mockRejectedValue('bad'),
     });
     const result = await handler.execute({ toPhone: '+966500000000' });

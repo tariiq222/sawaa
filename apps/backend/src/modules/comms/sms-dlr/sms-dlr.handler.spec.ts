@@ -1,6 +1,7 @@
 import { createHmac } from 'crypto';
 import { BadRequestException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { SmsCredentialsService } from '../../../infrastructure/sms/sms-credentials.service';
 import { SmsProviderFactory } from '../../../infrastructure/sms/sms-provider.factory';
 import { SmsDlrHandler } from './sms-dlr.handler';
@@ -34,7 +35,7 @@ describe('SmsDlrHandler', () => {
     const creds = buildCreds();
     const ciphertext = creds.encrypt(
       { appSid: 'a', apiKey: 'b' },
-      'org-A',
+      DEFAULT_ORG_ID,
     );
 
     const prisma = {
@@ -59,7 +60,7 @@ describe('SmsDlrHandler', () => {
 
     const res = await handler.execute({
       provider: 'UNIFONIC',
-      organizationId: 'org-A',
+      organizationId: DEFAULT_ORG_ID,
       rawBody,
       signature: sig,
     });
@@ -74,7 +75,7 @@ describe('SmsDlrHandler', () => {
     });
     expect(cls.set).toHaveBeenCalledWith(
       'tenant',
-      expect.objectContaining({ organizationId: 'org-A' }),
+      expect.objectContaining({ organizationId: DEFAULT_ORG_ID }),
     );
   });
 
@@ -94,7 +95,7 @@ describe('SmsDlrHandler', () => {
     );
     const res = await handler.execute({
       provider: 'UNIFONIC',
-      organizationId: 'org-unknown',
+      organizationId: DEFAULT_ORG_ID,
       rawBody,
       signature: sig,
     });
@@ -122,7 +123,7 @@ describe('SmsDlrHandler', () => {
     );
     const res = await handler.execute({
       provider: 'UNIFONIC', // wrong
-      organizationId: 'org-A',
+      organizationId: DEFAULT_ORG_ID,
       rawBody,
       signature: sig,
     });
@@ -134,7 +135,7 @@ describe('SmsDlrHandler', () => {
     const creds = buildCreds();
     const ciphertext = creds.encrypt(
       { appSid: 'a', apiKey: 'b' },
-      'org-A',
+      DEFAULT_ORG_ID,
     );
     const prisma = {
       organizationSmsConfig: {
@@ -155,7 +156,7 @@ describe('SmsDlrHandler', () => {
     await expect(
       handler.execute({
         provider: 'UNIFONIC',
-        organizationId: 'org-A',
+        organizationId: DEFAULT_ORG_ID,
         rawBody,
         signature: 'deadbeef',
       }),
@@ -184,7 +185,7 @@ describe('SmsDlrHandler', () => {
     await expect(
       handler.execute({
         provider: 'UNIFONIC',
-        organizationId: 'org-A',
+        organizationId: DEFAULT_ORG_ID,
         rawBody,
         signature: sig,
       }),

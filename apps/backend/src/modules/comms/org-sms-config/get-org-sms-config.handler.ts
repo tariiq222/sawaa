@@ -1,4 +1,4 @@
-// SaaS-02g-sms — read the tenant's SMS config (upsert-on-read singleton).
+// Read the SMS config (upsert-on-read singleton).
 // Never returns decrypted secrets or the webhook secret.
 
 import { Injectable } from '@nestjs/common';

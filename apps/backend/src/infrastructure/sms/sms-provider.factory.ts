@@ -1,7 +1,8 @@
-// SaaS-02g-sms — resolves the SmsProvider adapter for the current tenant.
+// Single-tenant SMS provider resolver.
 
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { DEFAULT_ORG_ID } from '../../common/constants';
 import { NoOpAdapter } from './no-op.adapter';
 import { SmsCredentialsService } from './sms-credentials.service';
 import type { SmsProvider } from './sms-provider.interface';
@@ -21,10 +22,8 @@ export class SmsProviderFactory {
     private readonly credentials: SmsCredentialsService,
   ) {}
 
-  async forCurrentTenant(organizationId: string): Promise<SmsProvider> {
-    const cfg = await this.prisma.organizationSmsConfig.findFirst({
-      where: {},
-    });
+  async resolve(): Promise<SmsProvider> {
+    const cfg = await this.prisma.organizationSmsConfig.findFirst();
     if (
       !cfg ||
       cfg.provider === 'NONE' ||
@@ -36,14 +35,14 @@ export class SmsProviderFactory {
       case 'UNIFONIC': {
         const creds = this.credentials.decrypt<UnifonicCredentials>(
           cfg.credentialsCiphertext,
-          organizationId,
+          DEFAULT_ORG_ID,
         );
         return new UnifonicAdapter(creds);
       }
       case 'TAQNYAT': {
         const creds = this.credentials.decrypt<TaqnyatCredentials>(
           cfg.credentialsCiphertext,
-          organizationId,
+          DEFAULT_ORG_ID,
         );
         return new TaqnyatAdapter(creds);
       }

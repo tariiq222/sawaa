@@ -16,19 +16,19 @@ describe('SmsProviderFactory', () => {
 
   it('returns NoOpAdapter when no config', async () => {
     prisma.organizationSmsConfig.findFirst.mockResolvedValue(null);
-    const result = await factory.forCurrentTenant('org-1');
+    const result = await factory.resolve();
     expect(result).toBeInstanceOf(NoOpAdapter);
   });
 
   it('returns NoOpAdapter when provider is NONE', async () => {
     prisma.organizationSmsConfig.findFirst.mockResolvedValue({ provider: 'NONE', credentialsCiphertext: null });
-    const result = await factory.forCurrentTenant('org-1');
+    const result = await factory.resolve();
     expect(result).toBeInstanceOf(NoOpAdapter);
   });
 
   it('returns NoOpAdapter when credentials missing', async () => {
     prisma.organizationSmsConfig.findFirst.mockResolvedValue({ provider: 'UNIFONIC', credentialsCiphertext: null });
-    const result = await factory.forCurrentTenant('org-1');
+    const result = await factory.resolve();
     expect(result).toBeInstanceOf(NoOpAdapter);
   });
 
@@ -38,7 +38,7 @@ describe('SmsProviderFactory', () => {
       credentialsCiphertext: 'enc',
     });
     credentials.decrypt.mockReturnValue({ appSid: 'sid', apiKey: 'key' });
-    const result = await factory.forCurrentTenant('org-1');
+    const result = await factory.resolve();
     expect(result).toBeInstanceOf(UnifonicAdapter);
   });
 
@@ -48,7 +48,7 @@ describe('SmsProviderFactory', () => {
       credentialsCiphertext: 'enc',
     });
     credentials.decrypt.mockReturnValue({ apiKey: 'key', senderId: 'sender' });
-    const result = await factory.forCurrentTenant('org-1');
+    const result = await factory.resolve();
     expect(result).toBeInstanceOf(TaqnyatAdapter);
   });
 
@@ -57,7 +57,7 @@ describe('SmsProviderFactory', () => {
       provider: 'UNKNOWN',
       credentialsCiphertext: 'enc',
     });
-    const result = await factory.forCurrentTenant('org-1');
+    const result = await factory.resolve();
     expect(result).toBeInstanceOf(NoOpAdapter);
   });
 

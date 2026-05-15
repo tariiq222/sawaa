@@ -1,4 +1,4 @@
-// email-provider — read the tenant's email provider config (upsert-on-read singleton).
+// Read the email provider config (upsert-on-read singleton).
 // Never returns decrypted credentials (credentialsCiphertext).
 
 import { Injectable } from '@nestjs/common';

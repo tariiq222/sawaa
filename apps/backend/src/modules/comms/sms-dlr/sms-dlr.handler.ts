@@ -1,16 +1,16 @@
-// SaaS-02g-sms — inbound provider DLR webhook handler.
+// Inbound provider DLR webhook handler.
 //
-// Three-stage flow (mirrors 02e Moyasar pattern):
-//   1. System-context read of OrganizationSmsConfig by the :organizationId path param.
+// Three-stage flow:
+//   1. System-context read of OrganizationSmsConfig.
 //   2. Verify HMAC signature (pure crypto, no DB).
-//   3. Run mutation inside cls.run with the resolved organizationId so the
-//      Proxy auto-scopes and RLS is satisfied.
+//   3. Run mutation inside cls.run with the default org so RLS is satisfied.
 
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import {
   SYSTEM_CONTEXT_CLS_KEY,
   TENANT_CLS_KEY,
+  DEFAULT_ORG_ID,
 } from '../../../common/constants';
 import { PrismaService } from '../../../infrastructure/database';
 import { SmsProviderFactory } from '../../../infrastructure/sms/sms-provider.factory';
@@ -33,7 +33,7 @@ export class SmsDlrHandler {
   ) {}
 
   async execute(req: SmsDlrRequest): Promise<{ skipped?: boolean }> {
-    // STAGE 1 — resolve tenant SMS config in system context.
+    // STAGE 1 — resolve SMS config in system context.
     const cfg = await this.cls.run(async () => {
       this.logger.warn('systemContext bypass activated', { context: 'SmsDlrHandler' });
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
@@ -41,14 +41,12 @@ export class SmsDlrHandler {
     });
 
     if (!cfg) {
-      this.logger.warn(
-        `DLR received for unknown org ${req.organizationId}`,
-      );
+      this.logger.warn('DLR received but no SMS config found');
       return { skipped: true };
     }
     if (cfg.provider !== req.provider) {
       this.logger.warn(
-        `DLR provider mismatch for org ${req.organizationId}: expected ${cfg.provider}, got ${req.provider}`,
+        `DLR provider mismatch: expected ${cfg.provider}, got ${req.provider}`,
       );
       return { skipped: true };
     }
@@ -61,7 +59,7 @@ export class SmsDlrHandler {
     const adapter = await this.cls.run(async () => {
       this.logger.warn('systemContext bypass activated', { context: 'SmsDlrHandler' });
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-      return this.factory.forCurrentTenant(req.organizationId);
+      return this.factory.resolve();
     });
     if (adapter.name !== req.provider) {
       throw new BadRequestException('Provider mismatch');

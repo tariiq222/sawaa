@@ -1,12 +1,12 @@
-// email-provider — upsert the tenant's email provider config.
-// Encrypts credentials with AES-GCM (orgId AAD) before persisting.
+// Upsert the email provider config.
+// Encrypts credentials with AES-GCM before persisting.
 
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { EmailCredentialsService } from '../../../infrastructure/email/email-credentials.service';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 import type { UpsertOrgEmailConfigDto } from './upsert-org-email-config.dto';
 import type { OrgEmailConfigView } from './get-org-email-config.handler';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type UpsertOrgEmailConfigCommand = UpsertOrgEmailConfigDto;
 
@@ -18,7 +18,6 @@ export class UpsertOrgEmailConfigHandler {
   ) {}
 
   async execute(cmd: UpsertOrgEmailConfigCommand): Promise<OrgEmailConfigView> {
-    // organizationId kept as AES-GCM AAD for credential encryption/decryption
     let credentialsCiphertext: string | null | undefined;
 
     const existing = await this.prisma.organizationEmailConfig.findFirst();

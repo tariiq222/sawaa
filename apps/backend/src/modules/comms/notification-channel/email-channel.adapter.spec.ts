@@ -14,7 +14,7 @@ describe('EmailChannelAdapter', () => {
   beforeEach(async () => {
     tenantAdapter = { isAvailable: jest.fn().mockReturnValue(true), sendMail: jest.fn().mockResolvedValue(undefined) };
     smtp = { isAvailable: jest.fn().mockReturnValue(true), sendMail: jest.fn().mockResolvedValue(undefined) };
-    factory = { forCurrentTenant: jest.fn().mockResolvedValue(tenantAdapter) };
+    factory = { resolve: jest.fn().mockResolvedValue(tenantAdapter) };
     platformMailer = { sendOtpLogin: jest.fn().mockResolvedValue(undefined) };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -29,32 +29,34 @@ describe('EmailChannelAdapter', () => {
     adapter = module.get<EmailChannelAdapter>(EmailChannelAdapter);
   });
 
-  it('should send via tenant provider when available', async () => {
-    await adapter.send('test@example.com', '123456', 'org-1');
+  it('should send via configured provider when available', async () => {
+    await adapter.send('test@example.com', '123456');
     expect(tenantAdapter.sendMail).toHaveBeenCalledWith(expect.objectContaining({ to: 'test@example.com' }));
     expect(platformMailer.sendOtpLogin).not.toHaveBeenCalled();
   });
 
-  it('should fall through to platform when tenant adapter not available', async () => {
+  it('should fall through to platform when adapter not available', async () => {
     tenantAdapter.isAvailable.mockReturnValue(false);
-    await adapter.send('test@example.com', '123456', 'org-1');
+    await adapter.send('test@example.com', '123456');
     expect(tenantAdapter.sendMail).not.toHaveBeenCalled();
     expect(platformMailer.sendOtpLogin).toHaveBeenCalledWith('test@example.com', { code: '123456', expiresInMinutes: 5 });
   });
 
   it('should fall through to platform when factory throws', async () => {
-    factory.forCurrentTenant.mockRejectedValue(new Error('Factory error'));
-    await adapter.send('test@example.com', '123456', 'org-1');
+    factory.resolve.mockRejectedValue(new Error('Factory error'));
+    await adapter.send('test@example.com', '123456');
     expect(platformMailer.sendOtpLogin).toHaveBeenCalled();
   });
 
-  it('should use platform when no organizationId', async () => {
+  it('should fall through to platform when adapter not available (no org)', async () => {
+    tenantAdapter.isAvailable.mockReturnValue(false);
     await adapter.send('test@example.com', '123456');
-    expect(factory.forCurrentTenant).not.toHaveBeenCalled();
+    expect(factory.resolve).toHaveBeenCalled();
     expect(platformMailer.sendOtpLogin).toHaveBeenCalled();
   });
 
   it('should fall through to SMTP when platform fails', async () => {
+    tenantAdapter.isAvailable.mockReturnValue(false);
     platformMailer.sendOtpLogin.mockRejectedValue(new Error('Platform down'));
     await adapter.send('test@example.com', '123456');
     expect(smtp.sendMail).toHaveBeenCalledWith('test@example.com', expect.any(String), expect.any(String));
@@ -68,6 +70,7 @@ describe('EmailChannelAdapter', () => {
   });
 
   it('should throw when SMTP send fails', async () => {
+    tenantAdapter.isAvailable.mockReturnValue(false);
     platformMailer.sendOtpLogin.mockRejectedValue(new Error('Platform down'));
     smtp.sendMail.mockRejectedValue(new Error('SMTP error'));
     await expect(adapter.send('test@example.com', '123456')).rejects.toThrow('SMTP error');

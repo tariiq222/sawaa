@@ -1,5 +1,5 @@
-// SaaS-02g-sms — dispatch SMS via the current tenant's configured provider
-// and write a SmsDelivery audit row (one per send, success or failure).
+// Single-tenant SMS dispatcher.
+// Writes an SmsDelivery audit row (one per send, success or failure).
 
 import { Injectable, Logger } from '@nestjs/common';
 import { createHash } from 'crypto';
@@ -7,7 +7,6 @@ import { PrismaService } from '../../../infrastructure/database';
 import { SmsProviderFactory } from '../../../infrastructure/sms/sms-provider.factory';
 import { SmsProviderNotConfiguredError } from '../../../infrastructure/sms/sms-provider.interface';
 import { SendSmsDto } from './send-sms.dto';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type SendSmsCommand = SendSmsDto;
 
@@ -21,14 +20,13 @@ export class SendSmsHandler {
   ) {}
 
   async execute(cmd: SendSmsCommand): Promise<void> {
-    const organizationId = DEFAULT_ORG_ID;
-    const adapter = await this.factory.forCurrentTenant(organizationId);
+    const adapter = await this.factory.resolve();
     const bodyHash = createHash('sha256').update(cmd.body).digest('hex');
 
     // When provider is NONE, skip + log (no audit row to avoid polluting history).
     if (adapter.name === 'NONE') {
       this.logger.warn(
-        `SMS skipped — no provider configured for org ${organizationId} → ${cmd.phone}`,
+        `SMS skipped — no provider configured → ${cmd.phone}`,
       );
       return;
     }

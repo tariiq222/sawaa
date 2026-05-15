@@ -1,9 +1,9 @@
-// email-provider-factory — resolves the EmailProvider adapter for the current tenant.
+// Single-tenant email provider resolver.
 // Falls back to NoOpEmailAdapter when no provider is configured.
-// Mirrors SmsProviderFactory pattern exactly.
 
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { DEFAULT_ORG_ID } from '../../common/constants';
 import { EmailCredentialsService } from './email-credentials.service';
 import { NoOpEmailAdapter } from './no-op.adapter';
 import { SmtpEmailAdapter, type SmtpCredentials } from './smtp.adapter';
@@ -19,10 +19,8 @@ export class EmailProviderFactory {
     private readonly credentials: EmailCredentialsService,
   ) {}
 
-  async forCurrentTenant(organizationId: string): Promise<EmailProvider> {
-    const cfg = await this.prisma.organizationEmailConfig.findFirst({
-      where: {},
-    });
+  async resolve(): Promise<EmailProvider> {
+    const cfg = await this.prisma.organizationEmailConfig.findFirst();
 
     if (!cfg || cfg.provider === 'NONE' || !cfg.credentialsCiphertext) {
       return new NoOpEmailAdapter();
@@ -35,7 +33,7 @@ export class EmailProviderFactory {
       case 'SMTP': {
         const creds = this.credentials.decrypt<SmtpCredentials>(
           cfg.credentialsCiphertext,
-          organizationId,
+          DEFAULT_ORG_ID,
         );
         const adapter = new SmtpEmailAdapter(creds);
         return this.withSenderDefaults(adapter, senderName, senderEmail);
@@ -43,7 +41,7 @@ export class EmailProviderFactory {
       case 'RESEND': {
         const creds = this.credentials.decrypt<ResendCredentials>(
           cfg.credentialsCiphertext,
-          organizationId,
+          DEFAULT_ORG_ID,
         );
         const adapter = new ResendEmailAdapter(creds);
         return this.withSenderDefaults(adapter, senderName, senderEmail);
@@ -51,7 +49,7 @@ export class EmailProviderFactory {
       case 'SENDGRID': {
         const creds = this.credentials.decrypt<SendGridCredentials>(
           cfg.credentialsCiphertext,
-          organizationId,
+          DEFAULT_ORG_ID,
         );
         const adapter = new SendGridEmailAdapter(creds);
         return this.withSenderDefaults(adapter, senderName, senderEmail);
@@ -59,7 +57,7 @@ export class EmailProviderFactory {
       case 'MAILCHIMP': {
         const creds = this.credentials.decrypt<MailchimpCredentials>(
           cfg.credentialsCiphertext,
-          organizationId,
+          DEFAULT_ORG_ID,
         );
         const adapter = new MailchimpEmailAdapter(creds);
         return this.withSenderDefaults(adapter, senderName, senderEmail);

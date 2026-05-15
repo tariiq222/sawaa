@@ -1,15 +1,9 @@
 // email-channel-adapter — sends OTP/notification emails.
 //
 // Priority (in order):
-//   1. Tenant's configured provider (Resend / SendGrid / Mailchimp / SMTP)
-//      — only when organizationId is supplied and a provider is configured.
-//   2. PlatformMailerService (Resend via BullMQ) — for platform-level flows
-//      where no organizationId is present (e.g. dashboard OTP before sign-in),
-//      and as the primary fallback when the tenant provider is unavailable.
-//   3. Platform SMTP (SmtpService) — last resort if PlatformMailerService throws
-//      (e.g. queue unavailable / Resend API key missing).
-//
-// Tenant path (step 1) is completely unchanged.
+//   1. Configured email provider (Resend / SendGrid / Mailchimp / SMTP)
+//   2. PlatformMailerService (Resend via BullMQ) — platform-level fallback
+//   3. Platform SMTP (SmtpService) — last resort
 
 import { Injectable, Logger } from '@nestjs/common';
 import { SmtpService, PlatformMailerService } from '../../../infrastructure/mail';
@@ -54,23 +48,21 @@ export class EmailChannelAdapter implements NotificationChannel {
   async send(
     identifier: string,
     message: string,
-    organizationId?: string,
+    _organizationId?: string,
   ): Promise<void> {
     const html = buildOtpHtml(message);
 
-    // ── 1. Tenant provider (if org is known and has a configured provider) ──
-    if (organizationId) {
-      try {
-        const adapter = await this.emailFactory.forCurrentTenant(organizationId);
-        if (adapter.isAvailable()) {
-          await adapter.sendMail({ to: identifier, subject: OTP_SUBJECT, html });
-          this.logger.debug(`OTP email sent via tenant provider to ${identifier} (org: ${organizationId})`);
-          return;
-        }
-      } catch (err) {
-        // Tenant config lookup failed — fall through to platform Resend
-        this.logger.warn(`Tenant email provider lookup failed for org ${organizationId}: ${String(err)}`);
+    // ── 1. Configured email provider ──────────────────────────────────────
+    try {
+      const adapter = await this.emailFactory.resolve();
+      if (adapter.isAvailable()) {
+        await adapter.sendMail({ to: identifier, subject: OTP_SUBJECT, html });
+        this.logger.debug(`OTP email sent via configured provider to ${identifier}`);
+        return;
       }
+    } catch (err) {
+      // Config lookup failed — fall through to platform Resend
+      this.logger.warn(`Email provider lookup failed: ${String(err)}`);
     }
 
     // ── 2. Platform Resend (PlatformMailerService) ────────────────────────

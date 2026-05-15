@@ -1,5 +1,5 @@
-// SaaS-02g-sms — provider DLR webhook endpoint.
-// Authentication: path param :organizationId + HMAC signature header.
+// Provider DLR webhook endpoint.
+// Authentication: path param :provider + HMAC signature header.
 
 import {
   BadRequestException,
@@ -31,7 +31,7 @@ export class PublicSmsWebhooksController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Inbound SMS delivery-receipt webhook' })
   @ApiParam({ name: 'provider', enum: ['UNIFONIC', 'TAQNYAT'] })
-  @ApiParam({ name: 'organizationId', description: 'Owning tenant id' })
+  @ApiParam({ name: 'organizationId', description: 'Organization id (legacy path param)' })
   @ApiOkResponse({ schema: { type: 'object', properties: { received: { type: 'boolean' } } } })
   async handle(
     @Param('provider') provider: string,
@@ -55,7 +55,7 @@ export class PublicSmsWebhooksController {
     }
     return this.dlr.execute({
       provider: providerUpper as 'UNIFONIC' | 'TAQNYAT',
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       rawBody: raw,
       signature: signatureHeader,
     });

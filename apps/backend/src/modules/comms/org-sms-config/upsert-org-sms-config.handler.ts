@@ -1,14 +1,14 @@
-// SaaS-02g-sms — upsert the tenant's SMS provider config.
-// Encrypts credentials with AES-GCM (orgId AAD) before persisting.
+// Upsert the SMS provider config.
+// Encrypts credentials with AES-GCM before persisting.
 // Rotates webhookSecret whenever provider changes.
 
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../../../infrastructure/database';
 import { SmsCredentialsService } from '../../../infrastructure/sms/sms-credentials.service';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 import type { UpsertOrgSmsConfigDto } from './upsert-org-sms-config.dto';
 import type { OrgSmsConfigView } from './get-org-sms-config.handler';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type UpsertOrgSmsConfigCommand = UpsertOrgSmsConfigDto;
 
@@ -20,9 +20,6 @@ export class UpsertOrgSmsConfigHandler {
   ) {}
 
   async execute(cmd: UpsertOrgSmsConfigCommand): Promise<OrgSmsConfigView> {
-    // organizationId kept as AES-GCM AAD for credential encryption/decryption
-    const organizationId = DEFAULT_ORG_ID;
-
     const existing = await this.prisma.organizationSmsConfig.findFirst();
 
     let credentialsCiphertext: string | null | undefined;
@@ -37,7 +34,7 @@ export class UpsertOrgSmsConfigHandler {
       }
       credentialsCiphertext = this.credentials.encrypt(
         { appSid: cmd.unifonic.appSid, apiKey: cmd.unifonic.apiKey },
-        organizationId,
+        DEFAULT_ORG_ID,
       );
     } else if (cmd.provider === 'TAQNYAT') {
       if (!cmd.taqnyat) {
@@ -48,7 +45,7 @@ export class UpsertOrgSmsConfigHandler {
       }
       credentialsCiphertext = this.credentials.encrypt(
         { apiToken: cmd.taqnyat.apiToken },
-        organizationId,
+        DEFAULT_ORG_ID,
       );
     }
 

@@ -17,10 +17,10 @@ const buildPrisma = () => ({
   },
 });
 
-/** NoOp email factory — simulates no tenant provider configured */
+/** NoOp email factory — simulates no provider configured */
 const buildNoOpFactory = () =>
   ({
-    forCurrentTenant: jest.fn().mockResolvedValue({ isAvailable: () => false }),
+    resolve: jest.fn().mockResolvedValue({ isAvailable: () => false }),
   }) as unknown as EmailProviderFactory;
 
 describe('SendEmailHandler', () => {
@@ -126,7 +126,7 @@ describe('SendEmailHandler — interpolation', () => {
     expect(smtp.sendMail).toHaveBeenCalledWith('a@b.com', 'مرحبا Ahmad', '<p>Hello Ahmad</p>');
   });
 
-  it('uses tenant email provider when configured', async () => {
+  it('uses configured email provider when available', async () => {
     const smtp = { isAvailable: jest.fn().mockReturnValue(true), sendMail: jest.fn() };
     const prisma = {
       emailTemplate: {
@@ -137,21 +137,21 @@ describe('SendEmailHandler — interpolation', () => {
         }),
       },
     };
-    const tenantSendMail = jest.fn().mockResolvedValue({ messageId: 'tenant-msg-1' });
-    const tenantFactory = {
-      forCurrentTenant: jest.fn().mockResolvedValue({
+    const configuredSendMail = jest.fn().mockResolvedValue({ messageId: 'msg-1' });
+    const configuredFactory = {
+      resolve: jest.fn().mockResolvedValue({
         isAvailable: () => true,
-        sendMail: tenantSendMail,
+        sendMail: configuredSendMail,
       }),
     } as unknown as EmailProviderFactory;
 
     await new SendEmailHandler(
       smtp as unknown as SmtpService,
       prisma as unknown as PrismaService,
-      tenantFactory,
+      configuredFactory,
     ).execute({ to: 'a@b.com', templateSlug: 'tpl', vars: {} });
 
-    expect(tenantSendMail).toHaveBeenCalled();
+    expect(configuredSendMail).toHaveBeenCalled();
     expect(smtp.sendMail).not.toHaveBeenCalled();
   });
 

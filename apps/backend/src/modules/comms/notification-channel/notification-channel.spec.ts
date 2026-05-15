@@ -8,7 +8,7 @@ import { NotificationChannelRegistry } from './notification-channel-registry';
 import { OtpChannel } from '@prisma/client';
 
 const buildEmailFactoryMock = (): jest.Mocked<Partial<EmailProviderFactory>> => ({
-  forCurrentTenant: jest.fn().mockResolvedValue(null),
+  resolve: jest.fn().mockResolvedValue({ isAvailable: () => false }),
 });
 
 const buildPlatformMailerMock = () => ({

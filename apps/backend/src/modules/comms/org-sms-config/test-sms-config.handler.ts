@@ -1,11 +1,10 @@
-// SaaS-02g-sms — send a test SMS via the tenant's persisted provider config.
+// Send a test SMS via the persisted provider config.
 // Updates lastTestAt / lastTestOk on the row. Returns bilingual errors.
 
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { SmsProviderFactory } from '../../../infrastructure/sms/sms-provider.factory';
 import type { TestSmsConfigDto } from './test-sms-config.dto';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type TestSmsConfigCommand = TestSmsConfigDto;
 
@@ -31,8 +30,7 @@ export class TestSmsConfigHandler {
       });
     }
 
-    // organizationId kept as AES-GCM AAD for credential decryption
-    const adapter = await this.factory.forCurrentTenant(DEFAULT_ORG_ID);
+    const adapter = await this.factory.resolve();
     try {
       const result = await adapter.send(
         cmd.toPhone,

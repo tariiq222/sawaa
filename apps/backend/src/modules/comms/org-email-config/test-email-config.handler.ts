@@ -1,11 +1,10 @@
-// email-provider — send a test email via the tenant's persisted provider config.
+// Send a test email via the persisted provider config.
 // Updates lastTestAt / lastTestOk on the row. Returns bilingual errors.
 
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { EmailProviderFactory } from '../../../infrastructure/email/email-provider.factory';
 import type { TestEmailConfigDto } from './test-email-config.dto';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export type TestEmailConfigCommand = TestEmailConfigDto;
 
@@ -33,7 +32,7 @@ export class TestEmailConfigHandler {
       });
     }
 
-    const adapter = await this.factory.forCurrentTenant(DEFAULT_ORG_ID);
+    const adapter = await this.factory.resolve();
 
     try {
       const result = await adapter.sendMail({

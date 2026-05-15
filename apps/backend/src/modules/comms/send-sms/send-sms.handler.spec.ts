@@ -7,11 +7,11 @@ import { SmsProviderNotConfiguredError } from '../../../infrastructure/sms/sms-p
 describe('SendSmsHandler', () => {
   let handler: SendSmsHandler;
   let prisma: { smsDelivery: { create: jest.Mock } };
-  let factory: { forCurrentTenant: jest.Mock };
+  let factory: { resolve: jest.Mock };
 
   beforeEach(async () => {
     prisma = { smsDelivery: { create: jest.fn().mockResolvedValue({}) } };
-    factory = { forCurrentTenant: jest.fn() };
+    factory = { resolve: jest.fn() };
 
     const module = await Test.createTestingModule({
       providers: [
@@ -27,7 +27,7 @@ describe('SendSmsHandler', () => {
   const cmd = { phone: '+966500000000', body: 'Hello' };
 
   it('skips when provider is NONE', async () => {
-    factory.forCurrentTenant.mockResolvedValue({ name: 'NONE' });
+    factory.resolve.mockResolvedValue({ name: 'NONE' });
     const loggerSpy = jest.spyOn((handler as any).logger, 'warn').mockImplementation(() => {});
     await handler.execute(cmd);
     expect(loggerSpy).toHaveBeenCalledWith(expect.stringContaining('SMS skipped'));
@@ -36,7 +36,7 @@ describe('SendSmsHandler', () => {
   });
 
   it('creates SENT delivery log on success', async () => {
-    factory.forCurrentTenant.mockResolvedValue({
+    factory.resolve.mockResolvedValue({
       name: 'TAQNYAT',
       send: jest.fn().mockResolvedValue({ status: 'SENT', providerMessageId: 'msg-1' }),
     });
@@ -49,7 +49,7 @@ describe('SendSmsHandler', () => {
   });
 
   it('creates QUEUED delivery log when status is not SENT', async () => {
-    factory.forCurrentTenant.mockResolvedValue({
+    factory.resolve.mockResolvedValue({
       name: 'TAQNYAT',
       send: jest.fn().mockResolvedValue({ status: 'PENDING', providerMessageId: 'msg-2' }),
     });
@@ -62,7 +62,7 @@ describe('SendSmsHandler', () => {
   });
 
   it('creates FAILED log on generic error and re-throws', async () => {
-    factory.forCurrentTenant.mockResolvedValue({
+    factory.resolve.mockResolvedValue({
       name: 'TAQNYAT',
       send: jest.fn().mockRejectedValue(new Error('Network down')),
     });
@@ -75,7 +75,7 @@ describe('SendSmsHandler', () => {
   });
 
   it('logs warning and returns on SmsProviderNotConfiguredError', async () => {
-    factory.forCurrentTenant.mockResolvedValue({
+    factory.resolve.mockResolvedValue({
       name: 'TAQNYAT',
       send: jest.fn().mockRejectedValue(new SmsProviderNotConfiguredError()),
     });
@@ -91,7 +91,7 @@ describe('SendSmsHandler', () => {
   });
 
   it('handles non-Error rejection', async () => {
-    factory.forCurrentTenant.mockResolvedValue({
+    factory.resolve.mockResolvedValue({
       name: 'TAQNYAT',
       send: jest.fn().mockRejectedValue('string error'),
     });
