@@ -5,16 +5,16 @@ import type {
 } from '@sawaa/shared';
 
 let clientBaseUrl = '';
-let getRefreshToken: (() => string | null) | null = null;
 
 export function setClientBaseUrl(url: string): void {
   clientBaseUrl = url;
 }
 
-export function initClientAuth(cfg: {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function initClientAuth(_cfg: {
   getRefreshToken: () => string | null;
 }): void {
-  getRefreshToken = cfg.getRefreshToken;
+  // Refresh token is now handled via httpOnly cookie — no localStorage needed.
 }
 
 async function clientFetch<T>(
@@ -75,21 +75,19 @@ export async function clientRegister(
 }
 
 export async function clientRefresh(): Promise<{ accessToken: string; refreshToken: string }> {
-  const rawToken = getRefreshToken?.();
   return clientFetch<{ accessToken: string; refreshToken: string }>(
     '/public/auth/refresh',
     {
       method: 'POST',
-      body: JSON.stringify({ refreshToken: rawToken }),
+      body: JSON.stringify({}),
     },
   );
 }
 
 export async function clientLogout(): Promise<void> {
-  const rawToken = getRefreshToken?.();
   return clientFetch<void>('/public/auth/logout', {
     method: 'POST',
-    body: JSON.stringify({ refreshToken: rawToken }),
+    body: JSON.stringify({}),
   });
 }
 

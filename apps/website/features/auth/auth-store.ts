@@ -2,25 +2,43 @@
 
 import type { ClientProfile } from '@sawaa/shared';
 
-let storedAccessToken: string | null = null;
-let storedRefreshToken: string | null = null;
-let storedClient: ClientProfile | null = null;
+const CLIENT_KEY = 'sawa_client';
 
-export function getAccessToken(): string | null {
-  return storedAccessToken;
+function readLocalStorage(key: string): string | null {
+  try {
+    return typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
+  } catch {
+    return null;
+  }
 }
 
-export function getRefreshToken(): string | null {
-  return storedRefreshToken;
+function writeLocalStorage(key: string, value: string | null): void {
+  try {
+    if (typeof window !== 'undefined') {
+      if (value === null) {
+        window.localStorage.removeItem(key);
+      } else {
+        window.localStorage.setItem(key, value);
+      }
+    }
+  } catch {
+    // Silently fail if localStorage is unavailable
+  }
 }
 
-export function setTokens(accessToken: string, refreshToken: string): void {
-  storedAccessToken = accessToken;
-  storedRefreshToken = refreshToken;
-}
+let storedClient: ClientProfile | null = (() => {
+  const raw = readLocalStorage(CLIENT_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as ClientProfile;
+  } catch {
+    return null;
+  }
+})();
 
 export function setClient(client: ClientProfile | null): void {
   storedClient = client;
+  writeLocalStorage(CLIENT_KEY, client ? JSON.stringify(client) : null);
 }
 
 export function getClient(): ClientProfile | null {
@@ -28,11 +46,10 @@ export function getClient(): ClientProfile | null {
 }
 
 export function clearAuth(): void {
-  storedAccessToken = null;
-  storedRefreshToken = null;
   storedClient = null;
+  writeLocalStorage(CLIENT_KEY, null);
 }
 
 export function isAuthenticated(): boolean {
-  return storedAccessToken !== null && storedClient !== null;
+  return storedClient !== null;
 }

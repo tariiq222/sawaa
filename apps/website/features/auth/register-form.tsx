@@ -4,7 +4,7 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { validatePassword, validateEmail } from './auth.schema';
 import { clientRegisterApi } from './auth.api';
-import { setTokens, setClient } from './auth-store';
+import { setClient } from './auth-store';
 import { getMeApi } from './auth.api';
 import { requestOtp, verifyOtp } from '@/features/otp/otp.api';
 import { OtpChannel, OtpPurpose } from '@sawaa/shared';
@@ -93,7 +93,6 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
         name: name || undefined,
         
       });
-      setTokens(result.accessToken, result.refreshToken);
       const profile = await getMeApi();
       setClient(profile);
       if (onSuccess) {

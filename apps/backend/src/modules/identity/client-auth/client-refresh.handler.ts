@@ -56,7 +56,9 @@ export class ClientRefreshHandler {
 
     return {
       accessToken: tokens.accessToken,
+      accessMaxAgeMs: tokens.accessMaxAgeMs,
       refreshToken: tokens.rawRefresh,
+      refreshMaxAgeMs: tokens.refreshMaxAgeMs,
     };
   }
 }

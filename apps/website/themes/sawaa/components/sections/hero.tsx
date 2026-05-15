@@ -146,7 +146,7 @@ export function Hero({ content }: Props) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={content.heroImageUrl}
-                alt="مركز سواء"
+                alt="صورة لمركز سواء للاستشارات الأسرية والنفسية"
                 className="w-full h-[280px] sm:h-[350px] md:h-[420px] object-cover"
               />
               <div

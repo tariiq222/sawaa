@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Req, Ip, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Req, Ip, UseGuards, Res, UnauthorizedException } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiNoContentResponse } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
@@ -14,7 +14,37 @@ import { ClientLogoutHandler } from '../../modules/identity/client-auth/client-l
 import { RefreshTokenDto, LogoutDto } from '../../modules/identity/client-auth/client-tokens.dto';
 import { ResetPasswordHandler } from '../../modules/identity/client-auth/reset-password/reset-password.handler';
 import { ResetPasswordDto } from '../../modules/identity/client-auth/reset-password/reset-password.dto';
-import { Request } from 'express';
+import { Request, Response } from 'express';
+
+const ACCESS_COOKIE = 'client_access_token';
+const REFRESH_COOKIE = 'client_refresh_token';
+const isProd = process.env.NODE_ENV === 'production';
+
+function setAuthCookies(res: Response, accessToken: string, accessMaxAge: number, refreshToken: string, refreshMaxAge: number) {
+  res.cookie(ACCESS_COOKIE, accessToken, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: accessMaxAge,
+  });
+  res.cookie(REFRESH_COOKIE, refreshToken, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: refreshMaxAge,
+  });
+}
+
+function clearAuthCookies(res: Response) {
+  res.clearCookie(ACCESS_COOKIE, { path: '/' });
+  res.clearCookie(REFRESH_COOKIE, { path: '/' });
+}
+
+function getRefreshTokenFromRequest(req: Request, dto?: { refreshToken?: string }): string | undefined {
+  return dto?.refreshToken ?? req.cookies?.[REFRESH_COOKIE];
+}
 
 @ApiTags('Public / Auth')
 @ApiPublicResponses()
@@ -34,8 +64,10 @@ export class PublicAuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Register a new client account' })
   @ApiCreatedResponse({ schema: { type: 'object', description: 'Created client account with tokens' } })
-  async registerEndpoint(@Body() dto: RegisterDto, @Req() req: Request) {
-    return this.register.execute(dto, req);
+  async registerEndpoint(@Body() dto: RegisterDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const result = await this.register.execute(dto, req);
+    setAuthCookies(res, result.accessToken, result.accessMaxAgeMs, result.refreshToken, result.refreshMaxAgeMs);
+    return { clientId: result.clientId };
   }
 
   @Public()
@@ -44,8 +76,10 @@ export class PublicAuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Log in with phone and password' })
   @ApiOkResponse({ schema: { type: 'object', description: 'Auth tokens' } })
-  async loginEndpoint(@Body() dto: ClientLoginDto, @Ip() ip: string) {
-    return this.login.execute(dto, ip);
+  async loginEndpoint(@Body() dto: ClientLoginDto, @Ip() ip: string, @Res({ passthrough: true }) res: Response) {
+    const result = await this.login.execute(dto, ip);
+    setAuthCookies(res, result.accessToken, result.accessMaxAgeMs, result.refreshToken, result.refreshMaxAgeMs);
+    return { clientId: result.clientId };
   }
 
   @UseGuards(ClientSessionGuard)
@@ -56,8 +90,16 @@ export class PublicAuthController {
   async refreshEndpoint(
     @Body() dto: RefreshTokenDto,
     @ClientSession() session: { id: string },
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.refresh.execute(dto.refreshToken, session.id);
+    const rawToken = getRefreshTokenFromRequest(req, dto);
+    if (!rawToken) {
+      throw new UnauthorizedException('Refresh token required');
+    }
+    const result = await this.refresh.execute(rawToken, session.id);
+    setAuthCookies(res, result.accessToken, result.accessMaxAgeMs, result.refreshToken, result.refreshMaxAgeMs);
+    return { clientId: session.id };
   }
 
   @UseGuards(ClientSessionGuard)
@@ -68,8 +110,14 @@ export class PublicAuthController {
   async logoutEndpoint(
     @Body() dto: LogoutDto,
     @ClientSession() session: { id: string },
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    await this.logout.execute(dto.refreshToken, session.id);
+    const rawToken = getRefreshTokenFromRequest(req, dto);
+    if (rawToken) {
+      await this.logout.execute(rawToken, session.id);
+    }
+    clearAuthCookies(res);
   }
 
   @Public()

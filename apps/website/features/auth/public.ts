@@ -8,4 +8,4 @@ export { ResetPasswordForm } from './reset-password-form';
 export { AuthGuard } from './auth-guard';
 export { useCurrentClient } from './use-current-client';
 export { ClientBookingsList } from './client-bookings-list';
-export { getAccessToken, getRefreshToken, setTokens, setClient, getClient, clearAuth, isAuthenticated } from './auth-store';
+export { setClient, getClient, clearAuth, isAuthenticated } from './auth-store';

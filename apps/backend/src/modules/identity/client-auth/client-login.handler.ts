@@ -101,7 +101,9 @@ export class ClientLoginHandler {
 
     return {
       accessToken: tokens.accessToken,
+      accessMaxAgeMs: tokens.accessMaxAgeMs,
       refreshToken: tokens.rawRefresh,
+      refreshMaxAgeMs: tokens.refreshMaxAgeMs,
       clientId: client.id,
     };
   }

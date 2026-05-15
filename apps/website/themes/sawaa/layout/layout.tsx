@@ -2,6 +2,7 @@ import { getPublicCatalog } from '@/features/public-catalog/public';
 import type { ThemeLayoutProps } from '../../types';
 import { Footer, type FooterClinic } from '../components/layout/footer';
 import { Navbar } from '../components/layout/navbar';
+import { SkipLink } from '../components/ui/skip-link';
 import '../theme.css';
 
 async function loadFooterClinics(): Promise<FooterClinic[]> {
@@ -19,8 +20,11 @@ export async function SawaaLayout({ children }: ThemeLayoutProps) {
   const clinics = await loadFooterClinics();
   return (
     <div className="theme-sawaa">
+      <SkipLink />
       <Navbar />
-      <main className="relative">{children}</main>
+      <main id="main-content" className="relative">
+        {children}
+      </main>
       <Footer clinics={clinics} />
     </div>
   );

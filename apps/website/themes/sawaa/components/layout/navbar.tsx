@@ -18,6 +18,18 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
+
   const brandName = branding.organizationNameAr || SITE.nameShort;
   const logo = branding.logoUrl ?? SITE.logo;
 
@@ -30,17 +42,19 @@ export function Navbar() {
           background: scrolled ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.35)',
           border: '1px solid rgba(255,255,255,0.5)',
         }}
+        aria-label="التنقل الرئيسي"
       >
-        <Link href="/" aria-label={brandName} className="flex items-center ps-2 pe-3">
+        <Link href="/" aria-label={`الصفحة الرئيسية لـ ${brandName}`} className="flex items-center ps-2 pe-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logo} alt={brandName} className="h-7 sm:h-8 w-auto" style={{ display: 'block' }} />
+          <img src={logo} alt={`شعار ${brandName}`} className="h-7 sm:h-8 w-auto" style={{ display: 'block' }} />
         </Link>
 
-        <div className="hidden md:flex gap-0.5 rounded-full p-1">
+        <div className="hidden md:flex gap-0.5 rounded-full p-1" role="menubar">
           {NAV_LINKS.map((l) => (
             <a
               key={l.href}
               href={l.href}
+              role="menuitem"
               className="px-4 py-2 text-[0.813rem] font-semibold rounded-full transition-all duration-200"
               style={{ color: 'var(--sw-neutral-700)' }}
               onMouseEnter={(e) => {
@@ -68,22 +82,28 @@ export function Navbar() {
             }}
           >
             احجز موعدك
-            <Calendar className="w-4 h-4" />
+            <Calendar className="w-4 h-4" aria-hidden="true" />
           </Link>
         </div>
 
         <button
           onClick={() => setMobileOpen(true)}
           aria-label="فتح القائمة"
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-menu"
           className="md:hidden w-10 h-10 rounded-full flex items-center justify-center"
           style={{ background: 'var(--sw-primary-50)' }}
         >
-          <Menu className="w-5 h-5" style={{ color: 'var(--sw-primary-700)' }} />
+          <Menu className="w-5 h-5" style={{ color: 'var(--sw-primary-700)' }} aria-hidden="true" />
         </button>
       </nav>
 
       {mobileOpen ? (
         <div
+          id="mobile-menu"
+          role="dialog"
+          aria-modal="true"
+          aria-label="قائمة التنقل"
           className="fixed inset-0 z-[999] flex flex-col items-center justify-center gap-2 backdrop-blur-xl"
           style={{ background: 'rgba(255,255,255,0.98)' }}
         >
@@ -93,7 +113,7 @@ export function Navbar() {
             className="absolute top-6 end-6 w-11 h-11 rounded-full flex items-center justify-center"
             style={{ background: 'var(--sw-neutral-100)' }}
           >
-            <X className="w-6 h-6" style={{ color: 'var(--sw-secondary-700)' }} />
+            <X className="w-6 h-6" style={{ color: 'var(--sw-secondary-700)' }} aria-hidden="true" />
           </button>
           {NAV_LINKS.map((l) => (
             <a
@@ -117,7 +137,7 @@ export function Navbar() {
             }}
           >
             احجز موعدك
-            <Calendar className="w-4 h-4" />
+            <Calendar className="w-4 h-4" aria-hidden="true" />
           </Link>
         </div>
       ) : null}

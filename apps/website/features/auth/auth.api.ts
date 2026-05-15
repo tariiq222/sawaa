@@ -9,7 +9,6 @@
 
 import {
   setClientBaseUrl,
-  initClientAuth,
   clientLogin,
   clientRegister,
   clientLogout,
@@ -39,7 +38,7 @@ function ensureInitialised(): void {
   const base = getApiBase()
   setClientBaseUrl(base)
   setMeBaseUrl(base)
-  initClientAuth({ getRefreshToken: () => null })
+  // initClientAuth removed — refresh token is now handled via httpOnly cookie
   initialised = true
 }
 

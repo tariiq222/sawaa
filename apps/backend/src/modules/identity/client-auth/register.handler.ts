@@ -91,7 +91,9 @@ export class RegisterHandler {
 
     return {
       accessToken: tokens.accessToken,
+      accessMaxAgeMs: tokens.accessMaxAgeMs,
       refreshToken: tokens.rawRefresh,
+      refreshMaxAgeMs: tokens.refreshMaxAgeMs,
       clientId,
     };
   }

@@ -4,7 +4,7 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { validateEmail } from './auth.schema';
 import { clientLoginApi } from './auth.api';
-import { setTokens, setClient } from './auth-store';
+import { setClient } from './auth-store';
 import { getMeApi } from './auth.api';
 
 interface LoginFormProps {
@@ -36,7 +36,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     setIsLoading(true);
     try {
       const result = await clientLoginApi({ email, password });
-      setTokens(result.accessToken, result.refreshToken);
       const profile = await getMeApi();
       setClient(profile);
       if (onSuccess) {

@@ -135,6 +135,7 @@ export function Footer({ clinics = [] }: FooterProps) {
                 <li key={l.href}>
                   <a
                     href={l.href}
+                    aria-label={l.label}
                     className="text-[0.813rem] transition"
                     style={{ color: 'var(--sw-neutral-500)' }}
                   >
@@ -145,6 +146,7 @@ export function Footer({ clinics = [] }: FooterProps) {
               <li>
                 <Link
                   href="/booking"
+                  aria-label="احجز موعدك"
                   className="text-[0.813rem] transition"
                   style={{ color: 'var(--sw-neutral-500)' }}
                 >
@@ -176,6 +178,7 @@ export function Footer({ clinics = [] }: FooterProps) {
                 <li key={g.slug}>
                   <Link
                     href="/support-groups"
+                    aria-label={g.name}
                     className="text-[0.813rem] transition"
                     style={{ color: 'var(--sw-neutral-500)' }}
                   >
