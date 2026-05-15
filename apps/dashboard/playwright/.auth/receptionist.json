@@ -1,0 +1,29 @@
+{
+  "cookies": [
+    {
+      "name": "ck_refresh",
+      "value": "a3807ecc-1a30-4b15-99a2-60c2c8d49838",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1781344562.117766,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:5203",
+      "localStorage": [
+        {
+          "name": "sawaa_user",
+          "value": "{\"id\":\"8dc0177d-df18-4679-b137-c5023f2e340e\",\"email\":\"receptionist@sawaa-test.com\",\"isSuperAdmin\":false,\"passwordHash\":\"$2b$10$eaFR/X/O8Qi2rCgrdDm.HuqEa9x/zqtmXDahfMszCNmSxB7LHNj5C\",\"firstName\":\"Receptionist\",\"lastName\":\"\",\"name\":\"Receptionist\",\"phone\":null,\"phoneVerifiedAt\":null,\"emailVerifiedAt\":null,\"gender\":null,\"avatarUrl\":null,\"isActive\":true,\"role\":\"RECEPTIONIST\",\"customRoleId\":null,\"createdAt\":\"2026-05-14T08:39:05.065Z\",\"updatedAt\":\"2026-05-14T08:39:05.065Z\",\"failedLoginAttempts\":0,\"lockedUntil\":null,\"tokenVersion\":0,\"customRole\":null,\"organizationId\":\"00000000-0000-0000-0000-000000000001\",\"permissions\":[\"booking:*\",\"client:*\",\"employee:read\",\"invoice:read\"]}"
+        },
+        {
+          "name": "sawaa-locale",
+          "value": "ar"
+        }
+      ]
+    }
+  ]
+}

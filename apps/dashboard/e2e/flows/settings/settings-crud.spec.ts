@@ -29,7 +29,8 @@ test.describe('Settings CRUD Operations', () => {
   })
 
   test('should navigate through settings tabs', async ({ page }) => {
-    const tabs = page.locator('[role="tab"], [class*="tab"], button:has-text("General"), button:has-text("عام")')
+    // Use semantic tab role to avoid matching tablist containers or other elements
+    const tabs = page.locator('[role="tab"]')
     const tabCount = await tabs.count()
 
     if (tabCount > 1) {
@@ -129,11 +130,4 @@ test.describe('Settings CRUD Operations', () => {
     }
   })
 
-  test.skip('should display advanced settings sections', async ({ page }) => {
-    // Single-tenant mode: no premium plan gating — test checks that
-    // advanced settings sections render for the sole organization.
-    const advancedSection = page.locator('text=/advanced|متقدم|integrations|تكاملات/i').first()
-    const hasAdvanced = await advancedSection.isVisible().catch(() => false)
-    test.skip(!hasAdvanced, 'Advanced settings section not found')
-  })
 })

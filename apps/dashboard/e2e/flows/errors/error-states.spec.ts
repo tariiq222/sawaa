@@ -85,6 +85,9 @@ test.describe('Error States', () => {
 
     const submitButton = page.locator('button[type="submit"]')
     if (await submitButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+      // Fill invalid/short values to enable the button and trigger validation
+      await page.locator('#identifier').fill('bad')
+      await page.locator('#password').fill('short')
       await submitButton.click()
       await page.waitForTimeout(1500)
 

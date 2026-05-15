@@ -34,6 +34,7 @@ type StatCardConfig = {
   icon: IconSvgElement
   iconColor: "primary" | "success" | "warning" | "accent"
   description?: string
+  size?: "default" | "lead"
 }
 
 export function DashboardStats({ stats, visibleStats }: DashboardStatsProps) {
@@ -51,6 +52,10 @@ export function DashboardStats({ stats, visibleStats }: DashboardStatsProps) {
       value: todayBookings,
       icon: Calendar03Icon,
       iconColor: "primary" as const,
+      description:
+        confirmedToday > 0 || pendingToday > 0
+          ? `${confirmedToday} ${t("dashboard.confirmedSuffix")} · ${pendingToday} ${t("dashboard.pendingSuffix")}`
+          : undefined,
     },
     visibleStats.clients && {
       key: "clients" as const,
@@ -89,6 +94,7 @@ export function DashboardStats({ stats, visibleStats }: DashboardStatsProps) {
               icon={card.icon}
               iconColor={card.iconColor}
               description={card.description}
+              size={card.size}
             />
           </div>
         ))}

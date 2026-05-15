@@ -54,8 +54,6 @@ export function SettingsPaymentTab() {
       {
         onSuccess: () => {
           toast.success(t("settings.saved"))
-          setSecretKey("")
-          setWebhookSecret("")
         },
         onError: (err: Error) => toast.error(err.message),
       },
@@ -112,7 +110,9 @@ export function SettingsPaymentTab() {
   ]
 
   const activeTabDef = tabs.find((tab) => tab.id === activeTab)!
-  const canSaveMoyasar = publishableKey.trim().length > 0 && secretKey.trim().length > 0 && webhookSecret.trim().length > 0
+  const canSaveMoyasar = publishableKey.trim().length > 0 &&
+    (secretKey.trim().length > 0 || !!moyasarConfig?.secretKeyMasked) &&
+    (webhookSecret.trim().length > 0 || !!moyasarConfig?.hasWebhookSecret)
 
   return (
     <Card className="overflow-hidden p-0">

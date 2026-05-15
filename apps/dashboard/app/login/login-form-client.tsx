@@ -27,9 +27,5 @@ export function LoginFormClient() {
 
   if (user) return null
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <LoginForm />
-    </div>
-  )
+  return <LoginForm />
 }

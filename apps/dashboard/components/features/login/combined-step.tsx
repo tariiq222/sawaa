@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Button, Input, Label } from "@sawaa/ui"
+import { Button, Input, Label, Checkbox } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { EyeIcon, ScanEyeIcon } from "@hugeicons/core-free-icons"
@@ -20,7 +20,7 @@ const combinedSchema = z.object({
 interface Props {
   loading: boolean
   error: unknown
-  onSubmit: (identifier: string, password: string) => void | Promise<void>
+  onSubmit: (identifier: string, password: string, rememberMe?: boolean) => void | Promise<void>
   onSwitchToOtp: (identifier: string) => void
   onClearError: () => void
 }
@@ -30,6 +30,7 @@ export function CombinedStep({ loading, error, onSubmit, onSwitchToOtp, onClearE
   const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<{ identifier?: string; password?: string }>({})
 
   const handle = (e: React.FormEvent) => {
@@ -53,7 +54,7 @@ export function CombinedStep({ loading, error, onSubmit, onSwitchToOtp, onClearE
       return
     }
     setFieldErrors({})
-    onSubmit(parsed.data.identifier, parsed.data.password)
+    onSubmit(parsed.data.identifier, parsed.data.password, rememberMe)
   }
 
   const handleSwitchToOtp = () => {
@@ -112,6 +113,19 @@ export function CombinedStep({ loading, error, onSubmit, onSwitchToOtp, onClearE
         {fieldErrors.password && (
           <p className="text-sm text-destructive">{fieldErrors.password}</p>
         )}
+      </div>
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="rememberMe"
+          checked={rememberMe}
+          onCheckedChange={(checked) => setRememberMe(checked === true)}
+        />
+        <label
+          htmlFor="rememberMe"
+          className="text-sm text-muted-foreground cursor-pointer select-none"
+        >
+          تذكرني
+        </label>
       </div>
       <Button type="submit" disabled={loading || !identifier.trim() || !password} className="w-full">
         {loading ? t("login.signingIn") : t("login.password.submit")}

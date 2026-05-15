@@ -42,6 +42,10 @@ function getOrderedDays(weekStart: 0 | 1) {
   return DAYS_BASE
 }
 
+function isValidTime(value: string): boolean {
+  return /^([01]?\d|2[0-3]):([0-5]\d)$/.test(value)
+}
+
 function buildDefaultHours(days: typeof DAYS_BASE): OrganizationHour[] {
   return days.map((d) => ({
     dayOfWeek: d.value,
@@ -66,7 +70,6 @@ function WorkingHoursPanel({ t, branchId }: Props & { branchId: string }) {
   const orderedDays = useMemo(() => getOrderedDays(weekStartDayNumber), [weekStartDayNumber])
   const [hours, setHours] = useState<OrganizationHour[]>(() => buildDefaultHours(orderedDays))
   const hoursRef = useRef(hours)
-  const panelRef = useRef<HTMLDivElement>(null)
 
   const { data: serverHours, isLoading } = useOrganizationHours(branchId)
   const mutation = useOrganizationHoursMutation()
@@ -94,18 +97,20 @@ function WorkingHoursPanel({ t, branchId }: Props & { branchId: string }) {
   }
 
   const handleSave = () => {
-    const timeInputs = Array.from(
-      panelRef.current?.querySelectorAll<HTMLInputElement>("input[data-time-field='true']") ?? [],
+    const currentHours = hoursRef.current.map((hour) => ({
+      ...hour,
+      startTime: formatTimeInput(hour.startTime),
+      endTime: formatTimeInput(hour.endTime),
+    }))
+
+    const invalid = currentHours.filter(
+      (h) => h.isActive && (!isValidTime(h.startTime) || !isValidTime(h.endTime)),
     )
-    const currentHours = hoursRef.current.map((hour, index) => {
-      const startInput = timeInputs[index * 2]
-      const endInput = timeInputs[index * 2 + 1]
-      return {
-        ...hour,
-        startTime: startInput?.value || hour.startTime,
-        endTime: endInput?.value || hour.endTime,
-      }
-    })
+    if (invalid.length > 0) {
+      toast.error(t("settings.invalidTimeFormat"))
+      return
+    }
+
     hoursRef.current = currentHours
     setHours(currentHours)
     const payload = currentHours.map(({ dayOfWeek, startTime, endTime, isActive }) => ({
@@ -126,7 +131,7 @@ function WorkingHoursPanel({ t, branchId }: Props & { branchId: string }) {
   }
 
   return (
-    <div ref={panelRef} className="flex flex-col gap-3 h-full">
+    <div className="flex flex-col gap-3 h-full">
       <div className="grid grid-cols-2 gap-3">
         {hours.map((hour, index) => (
           <Card key={hour.dayOfWeek} className="shadow-sm bg-surface">
@@ -150,6 +155,12 @@ function WorkingHoursPanel({ t, branchId }: Props & { branchId: string }) {
 }
 
 /* ─── Day Row ─── */
+
+function formatTimeInput(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 4)
+  if (digits.length <= 2) return digits
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`
+}
 
 function DayRow({
   day,
@@ -188,7 +199,7 @@ function DayRow({
           data-field="startTime"
           onChange={(e) => onChange({ startTime: e.currentTarget.value })}
           onInput={(e) => onChange({ startTime: e.currentTarget.value })}
-          onBlur={(e) => onChange({ startTime: e.currentTarget.value })}
+          onBlur={(e) => onChange({ startTime: formatTimeInput(e.currentTarget.value) })}
           className="h-8 w-28 text-center text-xs tabular-nums disabled:opacity-40"
         />
         <span className="text-xs text-muted-foreground">–</span>
@@ -205,7 +216,7 @@ function DayRow({
           data-field="endTime"
           onChange={(e) => onChange({ endTime: e.currentTarget.value })}
           onInput={(e) => onChange({ endTime: e.currentTarget.value })}
-          onBlur={(e) => onChange({ endTime: e.currentTarget.value })}
+          onBlur={(e) => onChange({ endTime: formatTimeInput(e.currentTarget.value) })}
           className="h-8 w-28 text-center text-xs tabular-nums disabled:opacity-40"
         />
       </div>

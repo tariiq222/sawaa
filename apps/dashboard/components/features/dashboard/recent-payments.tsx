@@ -10,41 +10,16 @@ import { useLocale } from "@/components/locale-provider"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchPayments } from "@/lib/api/payments"
 import type { PaymentStatus, PaymentMethod } from "@/lib/types/common"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
 
-const statusConfig: Record<
-  PaymentStatus,
-  { tKey: string; dot: string; text: string }
-> = {
-  paid: {
-    tKey: "payments.status.paid",
-    dot: "bg-success",
-    text: "text-success",
-  },
-  pending: {
-    tKey: "payments.status.pending",
-    dot: "bg-warning",
-    text: "text-warning",
-  },
-  refunded: {
-    tKey: "payments.status.refunded",
-    dot: "bg-muted-foreground",
-    text: "text-muted-foreground",
-  },
-  failed: {
-    tKey: "payments.status.failed",
-    dot: "bg-destructive",
-    text: "text-destructive",
-  },
-  awaiting: {
-    tKey: "payments.status.waiting",
-    dot: "bg-warning",
-    text: "text-warning",
-  },
-  rejected: {
-    tKey: "payments.status.rejected",
-    dot: "bg-destructive",
-    text: "text-destructive",
-  },
+const statusConfig: Record<PaymentStatus, { tKey: string; tone: string }> = {
+  paid: { tKey: "payments.status.paid", tone: "bg-success/10 text-success" },
+  pending: { tKey: "payments.status.pending", tone: "bg-warning/10 text-warning" },
+  refunded: { tKey: "payments.status.refunded", tone: "bg-muted text-muted-foreground" },
+  failed: { tKey: "payments.status.failed", tone: "bg-error/10 text-error" },
+  awaiting: { tKey: "payments.status.waiting", tone: "bg-warning/10 text-warning" },
+  rejected: { tKey: "payments.status.rejected", tone: "bg-error/10 text-error" },
 }
 
 const methodKey: Record<PaymentMethod, string> = {
@@ -67,17 +42,19 @@ export function RecentPayments() {
   const payments = data?.items ?? []
 
   return (
-    <Card className="p-6">
-      <div className="mb-5 flex items-center justify-between">
-        <h2 className="text-base font-bold text-foreground">
-          {t("dashboard.recentPayments")}
-        </h2>
+    <Card className="px-6 py-5">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-foreground">{t("dashboard.recentPayments")}</h2>
         <Link
           href="/payments"
-          className="text-xs font-medium text-primary hover:underline"
+          className="group inline-flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
         >
           {t("dashboard.recentPayments.viewAll")}
-          <span className="inline-block rtl:rotate-180 ms-1">→</span>
+          <HugeiconsIcon
+            icon={ArrowRight01Icon}
+            size={12}
+            className="rtl:rotate-180 motion-safe:transition-transform motion-safe:group-hover:translate-x-0.5 motion-safe:rtl:group-hover:-translate-x-0.5"
+          />
         </Link>
       </div>
 
@@ -93,33 +70,25 @@ export function RecentPayments() {
           ))}
         </div>
       ) : isError ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
+        <p className="py-10 text-center text-sm text-muted-foreground">
           {t("dashboard.error.payments")}
         </p>
       ) : payments.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
+        <p className="py-10 text-center text-sm text-muted-foreground">
           {t("dashboard.recentPayments.noPayments")}
         </p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="-mx-2 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-muted-foreground">
-                <th className="pb-3 text-start font-medium">
-                  {t("dashboard.recentPayments.colClient")}
-                </th>
-                <th className="pb-3 text-start font-medium">
-                  {t("dashboard.recentPayments.colAmount")}
-                </th>
-                <th className="pb-3 text-start font-medium">
-                  {t("dashboard.recentPayments.colMethod")}
-                </th>
-                <th className="pb-3 text-start font-medium">
-                  {t("dashboard.recentPayments.colStatus")}
-                </th>
+              <tr className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                <th className="px-2 pb-3 text-start font-medium">{t("dashboard.recentPayments.colClient")}</th>
+                <th className="px-2 pb-3 text-end font-medium">{t("dashboard.recentPayments.colAmount")}</th>
+                <th className="px-2 pb-3 text-start font-medium">{t("dashboard.recentPayments.colMethod")}</th>
+                <th className="px-2 pb-3 text-start font-medium">{t("dashboard.recentPayments.colStatus")}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border/60">
               {payments.map((p) => {
                 const s = statusConfig[p.status]
                 const client = p.booking?.client
@@ -128,29 +97,22 @@ export function RecentPayments() {
                   ? formatName(client.firstName, client.lastName, unknown)
                   : unknown
                 const amountDisplay = formatPrice(p.amount, { locale, decimals: 2 })
+                const currency = t("dashboard.currency")
 
                 return (
-                  <tr
-                    key={p.id}
-                    className="border-b border-border/50 last:border-0"
-                  >
-                    <td className="py-3 font-medium text-foreground">
-                      {clientName}
+                  <tr key={p.id} className="transition-colors hover:bg-muted/50">
+                    <td className="px-2 py-3 font-medium text-foreground">{clientName}</td>
+                    <td className="px-2 py-3 text-end font-semibold tabular-nums text-foreground">
+                      {amountDisplay} <span className="font-normal text-muted-foreground">{currency}</span>
                     </td>
-                    <td className="py-3 tabular-nums text-foreground">
-                      {amountDisplay} {t("dashboard.currency")}
-                    </td>
-                    <td className="py-3 text-muted-foreground">
-                      {t(methodKey[p.method])}
-                    </td>
-                    <td className="py-3">
+                    <td className="px-2 py-3 text-muted-foreground">{t(methodKey[p.method])}</td>
+                    <td className="px-2 py-3">
                       <span
                         className={cn(
-                          "flex items-center gap-1.5 text-xs font-medium",
-                          s.text,
+                          "inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium",
+                          s.tone,
                         )}
                       >
-                        <span className={cn("size-2 rounded-full", s.dot)} />
                         {t(s.tKey)}
                       </span>
                     </td>

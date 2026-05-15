@@ -183,3 +183,44 @@ npm run e2e:ui
 ```
 
 **Chrome DevTools MCP** remains available as a supplemental ad-hoc debugging tool — it is NOT the primary QA gate. Playwright smoke is the required pre-merge check for any page change.
+
+---
+
+## Design Context
+
+### Users
+داشبورد إداري لـ **مركز سواء للاستشارات الأسرية** (single-tenant). يخدم ثلاث شخصيات بنِسب متقاربة، فلا قرار تصميم يفضّل واحدة على حساب الباقي:
+- **موظفة استقبال** — تستخدمه طول الدوام على شاشة مكتب. عمليات سريعة ومتكررة (حجوزات، دفع، تواصل). تحتاج كثافة معلومات معقولة + سرعة وصول.
+- **استشاريون / أخصائيون** — يفتحونه بين الجلسات لمراجعة ملفات العملاء والملاحظات. يحتاجون قراءة هادئة وتركيز على الكلاينت.
+- **مدير العيادة** — يفتحه أوقات متفرقة للتقارير والإيرادات. يحتاج نظرة شاملة وأرقاماً واضحة.
+
+السياق: شاشات مكتبية وأحياناً تابلت، نهاراً غالباً، تحت إضاءة عيادة. عربي RTL أولاً.
+
+### Brand Personality
+- **ثلاث كلمات**: دافي، هادئ، احترافي (warm، calm، professional).
+- **الإحساس**: warm-human — منصة لعلاقات إنسانية، فيها دفء واحترام لحساسية الاستشارة الأسرية، بدون أن تبدو طبية باردة أو إدارية جافة.
+- **النبرة**: ثقة هادئة. كلام مباشر بأدب. لا hype، لا تعجّب، لا emojis في النصوص الإدارية.
+
+### Aesthetic Direction
+**الاتجاه**: Soft contemporary بنكهة عربية احترامية. روح Stripe في الدقة والتفاصيل، مع دفء Apple Health في التعامل مع البيانات الحساسة. الـ frosted glass الموجود يبقى لكن يُستخدم **بانتقاء** (سايدبار، popovers، overlays)، لا يُلصق على كل سطح.
+
+**الثيم**: الاثنين، مع تفضيل الفاتح كافتراضي.
+
+**Anti-references**:
+- شكل الداشبورد الإداري العربي العادي (جداول مكتظة، badges صارخة، admin panel feel).
+- Glassmorphism في كل مكان — blur عشوائي يضرّ القراءة.
+- AI dashboard 2024-2025: cyan-on-dark، neon gradients، sparklines زخرفية، gradient text، border-left ملوّن على البطاقات.
+- Material Design المبالغ: drop shadows ثقيلة، FABs.
+
+**References**: Stripe Dashboard (typography، rafhah الجداول، lون نادر قوي)، Apple Health (دفء طبي، تعامل إنساني مع بيانات حساسة).
+
+### Design Principles
+
+1. **الكلاينت قبل الـ chrome.** المعلومة عن الإنسان هي البطلة. قلّل البوردرات والبادجات، خلّ المسافة تشتغل.
+2. **دفء بالألوان، هدوء بالشكل.** ألوان البراند في الـ 10% فقط (60-30-10). السطوح نُيوترال دافي tinted toward brand hue بـ chroma خفيف. لا pure gray ولا neon.
+3. **إيقاع، لا تكرار.** مسافات تتنفّس: مجموعات قريبة، فواصل سخية. تفادَ صفوف بطاقات متطابقة. اكسر الشبكة عمداً للعنصر الذي يستحق تركيزاً.
+4. **الزجاج وظيفي، ليس زينة.** glass للسايدبار/popovers/overlays فقط. الـ inline cards وdata tables تستخدم `--surface-solid` بحدود ناعمة وshadow-sm.
+5. **RTL بضمير.** padding/margin منطقي، أرقام `tabular-nums`، أيقونات الاتجاه تنعكس. غير قابل للتفاوض.
+6. **الحركة تخدم الحالة.** ease-out exponential، 150-250ms، عبر `motion` library. لا bounce، لا elastic، لا زينة. احترم `prefers-reduced-motion`.
+
+**Tokens reference**: `tokens.md` + `app/globals.css` + `lib/ds.ts`. كل لون/مسافة/radius من هناك، لا hardcode.

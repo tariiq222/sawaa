@@ -2,16 +2,7 @@
  * booking-cancel-flow.spec.ts
  *
  * E2E: user logs in, navigates to a booking, and cancels it.
- * Requires: backend on :5200, dashboard on :5203, docker stack up.
- *
- * User flow:
- *   1. Login as admin
- *   2. Go to /bookings
- *   3. Click a pending booking row to open detail sheet
- *   4. Open the actions menu
- *   5. Click "Cancel" action
- *   6. Fill cancellation reason
- *   7. Submit cancellation
+ * Requires: backend on :5200, dashboard on :5203.
  */
 
 import { test, expect } from '@playwright/test';
@@ -30,6 +21,9 @@ import {
 
 let token = '';
 let seededBookingId = '';
+let seededClientId = '';
+let seededServiceId = '';
+let seededEmployeeId = '';
 
 test.beforeAll(async () => {
   const organization = await getTestTenant();
@@ -40,6 +34,7 @@ test.beforeAll(async () => {
     lastName: 'اختبار',
     gender: 'FEMALE',
   });
+  seededClientId = client.id;
 
   const service = await seedService(token, {
     nameAr: 'خدمة الإلغاء',
@@ -47,11 +42,13 @@ test.beforeAll(async () => {
     durationMins: 30,
     price: 100,
   });
+  seededServiceId = service.id;
 
   const employee = await seedEmployee(token, {
     name: 'موظف إلغاء',
     gender: 'MALE',
   });
+  seededEmployeeId = employee.id;
 
   const booking = await seedBooking(token, {
     clientId: client.id,
@@ -59,13 +56,21 @@ test.beforeAll(async () => {
     serviceId: service.id,
     payAtClinic: true,
   });
-
   seededBookingId = booking.id;
 });
 
 test.afterAll(async () => {
   if (seededBookingId) {
     await cleanupBooking(seededBookingId, token).catch(() => undefined);
+  }
+  if (seededClientId) {
+    await cleanupClient(seededClientId, token).catch(() => undefined);
+  }
+  if (seededServiceId) {
+    await cleanupService(seededServiceId, token).catch(() => undefined);
+  }
+  if (seededEmployeeId) {
+    await cleanupEmployee(seededEmployeeId, token).catch(() => undefined);
   }
 });
 
@@ -80,49 +85,39 @@ test.describe('Booking Cancel — user flow', () => {
     await expect(page).toHaveURL(/\/bookings/);
     await page.waitForLoadState('networkidle');
 
-    // 3. Find and click the seeded booking row
-    // The seeded booking should appear in the table
-    const rows = page.locator('tbody tr');
-    await expect(rows.first()).toBeVisible({ timeout: 15_000 });
+    // 3. Find and click the seeded booking row (click client name button)
+    const clientBtn = page.getByRole('button', { name: /لإلغاء اختبار/ }).first();
+    await expect(clientBtn).toBeVisible({ timeout: 15_000 });
+    await clientBtn.click();
 
-    // Click the first row to open detail sheet
-    await rows.first().click();
-    await page.waitForTimeout(1_500);
+    // 4. Detail sheet (dialog) should open
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
 
-    // 4. Detail sheet should be open
-    const sheet = page.locator('[data-state="open"]').first();
-    const isSheetOpen = await sheet.isVisible().catch(() => false);
+    // 5. Click "تغيير الحالة" dropdown trigger
+    const actionsBtn = dialog.getByRole('button', { name: 'تغيير الحالة' });
+    await expect(actionsBtn).toBeVisible({ timeout: 5_000 });
+    await actionsBtn.click();
 
-    if (isSheetOpen) {
-      // 5. Look for actions menu (settings icon button)
-      const actionsBtn = page.locator('button:has-text("الإجراءات"), button:has-text("Actions"), [aria-label*="more"]').first();
-      if (await actionsBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-        await actionsBtn.click();
-        await page.waitForTimeout(500);
+    // 6. Select "إلغاء الحجز" from dropdown
+    const cancelOption = page.getByRole('menuitem', { name: 'إلغاء الحجز' });
+    await expect(cancelOption).toBeVisible({ timeout: 5_000 });
+    await cancelOption.click();
 
-        // 6. Click cancel
-        const cancelBtn = page.locator('button:has-text("إلغاء"), button:has-text("Cancel")').first();
-        if (await cancelBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
-          await cancelBtn.click();
-          await page.waitForTimeout(500);
+    // 7. AdminCancelDialog (Sheet) opens — fill reason
+    const reasonTextarea = page.locator('textarea').first();
+    await expect(reasonTextarea).toBeVisible({ timeout: 5_000 });
+    await reasonTextarea.fill('customer requested cancellation via test');
 
-          // 7. Fill reason
-          const reasonInput = page.locator('textarea[id*="reason"], textarea[placeholder*="السبب"]').first();
-          if (await reasonInput.isVisible({ timeout: 3_000 }).catch(() => false)) {
-            await reasonInput.fill(' customer requested cancellation via test');
-          }
+    // 8. Click the destructive "إلغاء الحجز" confirm button
+    const confirmCancelBtn = page.locator('button[data-variant="destructive"]').filter({ hasText: 'إلغاء الحجز' });
+    await expect(confirmCancelBtn).toBeVisible({ timeout: 5_000 });
+    await confirmCancelBtn.click();
 
-          // 8. Confirm
-          const confirmBtn = page.locator('button:has-text("تأكيد"), button:has-text("Confirm")').first();
-          if (await confirmBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
-            await confirmBtn.click();
-            await page.waitForTimeout(2_000);
-          }
-        }
-      }
-    }
+    // Wait for mutation and sheet to close
+    await page.waitForTimeout(2_000);
 
-    // At minimum, page should remain stable
+    // Sheet should close; verify page is stable
     await expect(page.locator('body')).toBeVisible();
   });
 
@@ -132,20 +127,18 @@ test.describe('Booking Cancel — user flow', () => {
     await expect(page).toHaveURL(/\/bookings/);
     await page.waitForLoadState('networkidle');
 
-    const rows = page.locator('tbody tr');
-    await expect(rows.first()).toBeVisible({ timeout: 15_000 });
+    // Click the seeded booking's client name
+    const clientBtn = page.getByRole('button', { name: /لإلغاء اختبار/ }).first();
+    await expect(clientBtn).toBeVisible({ timeout: 15_000 });
+    await clientBtn.click();
 
-    await rows.first().click();
-    await page.waitForTimeout(1_500);
+    // Detail sheet should be open
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
 
-    // Sheet should contain booking info
-    const sheet = page.locator('[data-state="open"]').first();
-    const isOpen = await sheet.isVisible().catch(() => false);
-
-    if (isOpen) {
-      // Sheet should have visible content
-      await expect(sheet.locator('body')).toBeVisible();
-    }
+    // Should contain booking info
+    await expect(dialog.getByText('لإلغاء اختبار')).toBeVisible();
+    await expect(dialog.getByText('موظف إلغاء')).toBeVisible();
   });
 
 });

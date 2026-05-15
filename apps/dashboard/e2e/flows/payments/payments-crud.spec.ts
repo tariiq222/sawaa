@@ -83,11 +83,4 @@ test.describe('Payments CRUD Operations', () => {
     }
   })
 
-  test.skip('should export payments', async ({ page }) => {
-    const exportButton = page.locator('button:has-text("export"), button:has-text("تصدير"), a[href*="export"]')
-    if (await exportButton.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await exportButton.click()
-      await page.waitForTimeout(1000)
-    }
-  })
 })

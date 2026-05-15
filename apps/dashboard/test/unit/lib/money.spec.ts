@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { sarToHalalas, halalasToSarNumber, halalasToSar } from '@/lib/money'
+import { formatPrice, sarToHalalas, halalasToSarNumber, halalasToSar } from '@/lib/money'
 
 // Note: In apps/dashboard, halalasToSar returns a number (established API).
 // halalasToSarNumber is an alias for it.
@@ -21,4 +21,27 @@ describe('halalasToSar', () => {
   it('null input returns 0', () => { expect(halalasToSar(null)).toBe(0) })
   it('undefined input returns 0', () => { expect(halalasToSar(undefined)).toBe(0) })
   it('normal conversion: 10000 halalas returns 100 SAR', () => { expect(halalasToSar(10000)).toBe(100) })
+})
+
+describe('formatPrice', () => {
+  it('formats halalas as SAR string with default 2 decimals', () => {
+    expect(formatPrice(15000)).toBe('150.00')
+    expect(formatPrice(99)).toBe('0.99')
+  })
+
+  it('respects decimals option', () => {
+    expect(formatPrice(15000, { decimals: 0 })).toBe('150')
+    expect(formatPrice(15050, { decimals: 0 })).toBe('151')
+  })
+
+  it('returns em-dash for null/undefined', () => {
+    expect(formatPrice(null)).toBe('—')
+    expect(formatPrice(undefined)).toBe('—')
+  })
+
+  it('uses latn digits for both locales', () => {
+    // Both should produce ASCII digits (we force -u-nu-latn for AR)
+    expect(formatPrice(15000, { locale: 'ar' })).toMatch(/^[\d.,]+$/)
+    expect(formatPrice(15000, { locale: 'en' })).toMatch(/^[\d.,]+$/)
+  })
 })

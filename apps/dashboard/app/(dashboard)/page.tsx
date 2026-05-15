@@ -4,7 +4,6 @@ import { Suspense, useMemo } from "react"
 import { format } from "date-fns"
 import { ar } from "date-fns/locale"
 import { FlashIcon, Analytics01Icon } from "@hugeicons/core-free-icons"
-
 import { GreetingHeader } from "@/components/features/dashboard/greeting-header"
 import { DashboardStats } from "@/components/features/dashboard/dashboard-stats"
 import { AttentionAlerts } from "@/components/features/dashboard/attention-alerts"
@@ -70,10 +69,14 @@ export default function DashboardPage() {
     visible.topPerformers
 
   return (
-    <div className="flex flex-col gap-12">
+    <div className="flex flex-col">
       <Suspense fallback={<div className="h-48 animate-pulse rounded-xl bg-muted" />}>
-        <section className="flex flex-col gap-6">
-          <GreetingHeader userName={userName} dateLabel={dateLabel} bookingsCount={dashboardStats?.todayBookings ?? 0} />
+        <section className="flex flex-col gap-5">
+          <GreetingHeader
+            userName={userName}
+            dateLabel={dateLabel}
+            bookingsCount={dashboardStats?.todayBookings ?? 0}
+          />
           <DashboardStats stats={dashboardStats} visibleStats={visible.stats} />
           <AttentionAlerts
             pendingPayments={dashboardStats?.pendingPayments ?? 0}
@@ -84,16 +87,24 @@ export default function DashboardPage() {
       </Suspense>
 
       {visible.quickActions.length > 0 && (
-        <section className="flex flex-col gap-4">
-          <SectionHeader icon={FlashIcon} title={t("dashboard.quickActions")} />
+        <section className="mt-10 flex flex-col gap-4">
+          <SectionHeader
+            icon={FlashIcon}
+            title={t("dashboard.quickActions")}
+            eyebrow={t("dashboard.section.today")}
+          />
           <QuickActions actions={visible.quickActions} />
         </section>
       )}
 
       {operationalSectionVisible && (
-        <section className="flex flex-col gap-5">
-          <SectionHeader icon={Analytics01Icon} title={t("dashboard.operations")} variant="accent" />
-
+        <section className="mt-12 flex flex-col gap-6">
+          <SectionHeader
+            icon={Analytics01Icon}
+            title={t("dashboard.operations")}
+            variant="accent"
+            eyebrow={t("dashboard.section.operations")}
+          />
           {(visible.todayTimeline || visible.activityFeed) && (
             <div className="grid gap-5 lg:grid-cols-[1fr_380px]">
               {visible.todayTimeline &&

@@ -4,7 +4,7 @@ import { devLogin } from './helpers/auth'
 test.describe('Clients CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await devLogin(page)
-    await page.goto('/clients')
+    await page.goto('/clients', { waitUntil: 'domcontentloaded' })
     await page.waitForLoadState('networkidle')
   })
 

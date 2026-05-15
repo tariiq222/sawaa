@@ -10,9 +10,6 @@
  * Credentials are sourced from env vars (set in CI) or fall back to the
  * seeded defaults from apps/backend/prisma/seed.ts (via TEST_TENANT).
  *
- * TODO: once globalSetup is enabled in playwright.config.ts, replace
- *       direct form login with storageState reuse for speed:
- *         test.use({ storageState: 'e2e/.auth/admin.json' });
  */
 
 import { Page, expect } from '@playwright/test';
@@ -52,8 +49,7 @@ const PERSONA_CREDENTIALS: Record<Persona, { email: string; password: string }> 
  *
  * ⚠️  Prefer `test.use({ storageState: storageStatePath('admin') })` in spec files
  *    so Playwright reuses a pre-authenticated context.  Only call `loginAs` when
- *    you need a *different* persona mid-test or when the global setup state is
- *    stale.
+ *    you need a *different* persona mid-test or when the setup state is stale.
  */
 export async function loginAs(page: Page, persona: Persona = 'admin'): Promise<void> {
   const { email, password } = PERSONA_CREDENTIALS[persona];
@@ -61,28 +57,21 @@ export async function loginAs(page: Page, persona: Persona = 'admin'): Promise<v
   // Fast path: already authenticated (storageState or previous login)
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded').catch(() => {});
-  if (!page.url().includes('/login')) {
+  // Give client-side auth check a moment to settle
+  await page.waitForTimeout(1_000);
+  const isLoginFormVisible = await page.locator('#identifier').isVisible().catch(() => false);
+  if (!isLoginFormVisible) {
     return;
   }
 
-  // Full identifier-first login flow
-  await page.goto('/login');
-  await expect(page).toHaveURL(/\/login/);
-
+  // Traditional email + password login flow
   await page.locator('#identifier').fill(email);
-  await page.getByRole('button', { name: 'متابعة' }).click();
-
-  await expect(
-    page.getByRole('button', { name: 'باستخدام كلمة المرور' }),
-  ).toBeVisible({ timeout: 10_000 });
-  await page.getByRole('button', { name: 'باستخدام كلمة المرور' }).click();
-
-  await expect(page.locator('#password')).toBeVisible({ timeout: 10_000 });
   await page.locator('#password').fill(password);
-  await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
+  await page.locator('button[type="submit"]').click();
 
-  await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 });
-  await expect(page.locator('header').first()).toBeVisible({ timeout: 10_000 });
+  // Wait for login to complete (header becomes visible, login form disappears)
+  await expect(page.locator('header').first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('#identifier')).not.toBeVisible({ timeout: 5_000 });
 }
 
 /**
@@ -106,15 +95,13 @@ export async function logout(page: Page): Promise<void> {
 }
 
 /**
- * Save storageState for a persona to disk.
- * Call this from globalSetup once storageState pre-seeding is enabled.
+ * Path to the Playwright storageState file for a persona.
  *
- * TODO (fixtures/auth.ts): wire into globalSetup in playwright.config.ts
- *   globalSetup: require.resolve('./e2e/global-setup.ts')
- *   Then in tests: test.use({ storageState: storageStatePath('admin') })
+ * Usage in a spec file:
+ *   test.use({ storageState: storageStatePath('admin') });
  */
 export function storageStatePath(persona: Persona): string {
-  return `e2e/.auth/${persona}.json`;
+  return `playwright/.auth/${persona}.json`;
 }
 
 /**

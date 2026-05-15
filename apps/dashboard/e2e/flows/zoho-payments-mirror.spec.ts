@@ -20,15 +20,12 @@ async function backendHasZoho(apiCtx: import('@playwright/test').APIRequestConte
 }
 
 test.describe('Zoho payments mirror — unconfigured state', () => {
-  test.beforeEach(async ({ apiCtx }) => {
-    if (!(await backendHasZoho(apiCtx))) {
-      test.skip(true, 'Backend does not have Zoho routes — not deployed from this branch');
-    }
-  });
-
   test('GET /payments-mirror returns error or empty list when Zoho is not configured', async ({
     apiCtx,
   }) => {
+    if (!(await backendHasZoho(apiCtx))) {
+      test.skip(true, 'Backend does not have Zoho routes — not deployed from this branch');
+    }
     const res = await apiCtx.get(
       '/api/v1/dashboard/integrations/zoho/payments-mirror?page=1&perPage=10',
     );
@@ -47,6 +44,9 @@ test.describe('Zoho payments mirror — unconfigured state', () => {
   test('GET /invoices proxy returns 400 when Zoho is not configured', async ({
     apiCtx,
   }) => {
+    if (!(await backendHasZoho(apiCtx))) {
+      test.skip(true, 'Backend does not have Zoho routes — not deployed from this branch');
+    }
     const res = await apiCtx.get(
       '/api/v1/dashboard/integrations/zoho/invoices',
     );
@@ -55,7 +55,11 @@ test.describe('Zoho payments mirror — unconfigured state', () => {
 
   test('settings Zoho panel does NOT show payments table when unconfigured', async ({
     authedPage: page,
+    apiCtx,
   }) => {
+    if (!(await backendHasZoho(apiCtx))) {
+      test.skip(true, 'Backend does not have Zoho routes — not deployed from this branch');
+    }
     await page.goto('/settings');
     await page.waitForLoadState('networkidle');
 

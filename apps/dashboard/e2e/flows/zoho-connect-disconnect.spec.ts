@@ -24,15 +24,12 @@ async function backendHasZoho(apiCtx: import('@playwright/test').APIRequestConte
 }
 
 test.describe('Zoho Invoice — Connect/Disconnect flow', () => {
-  test.beforeEach(async ({ apiCtx }) => {
-    if (!(await backendHasZoho(apiCtx))) {
-      test.skip(true, 'Backend does not have Zoho routes — not deployed from this branch');
-    }
-  });
-
   test('GET /connect?dc=sa returns a valid Zoho authorization URL', async ({
     apiCtx,
   }) => {
+    if (!(await backendHasZoho(apiCtx))) {
+      test.skip(true, 'Backend does not have Zoho routes — not deployed from this branch');
+    }
     const res = await apiCtx.get('/api/v1/dashboard/integrations/zoho/connect?dc=sa');
 
     // The endpoint may return 500 if ZOHO_OAUTH_CLIENT_ID is not configured
@@ -61,6 +58,9 @@ test.describe('Zoho Invoice — Connect/Disconnect flow', () => {
   test('POST /test returns failure when integration is not configured', async ({
     apiCtx,
   }) => {
+    if (!(await backendHasZoho(apiCtx))) {
+      test.skip(true, 'Backend does not have Zoho routes — not deployed from this branch');
+    }
     const res = await apiCtx.post('/api/v1/dashboard/integrations/zoho/test', {
       data: {},
     });
@@ -79,6 +79,9 @@ test.describe('Zoho Invoice — Connect/Disconnect flow', () => {
   test('DELETE /zoho is idempotent when already disconnected', async ({
     apiCtx,
   }) => {
+    if (!(await backendHasZoho(apiCtx))) {
+      test.skip(true, 'Backend does not have Zoho routes — not deployed from this branch');
+    }
     const res = await apiCtx.delete('/api/v1/dashboard/integrations/zoho');
     expect(res.ok()).toBe(true);
     const body = await res.json();
@@ -94,6 +97,9 @@ test.describe('Zoho Invoice — Connect/Disconnect flow', () => {
   test('PUT /config returns 400 when no integration exists', async ({
     apiCtx,
   }) => {
+    if (!(await backendHasZoho(apiCtx))) {
+      test.skip(true, 'Backend does not have Zoho routes — not deployed from this branch');
+    }
     const res = await apiCtx.put('/api/v1/dashboard/integrations/zoho/config', {
       data: { sendOnCreate: false },
     });
@@ -102,7 +108,11 @@ test.describe('Zoho Invoice — Connect/Disconnect flow', () => {
 
   test('UI Connect button is clickable and DC selector works', async ({
     authedPage: page,
+    apiCtx,
   }) => {
+    if (!(await backendHasZoho(apiCtx))) {
+      test.skip(true, 'Backend does not have Zoho routes — not deployed from this branch');
+    }
     await page.goto('/settings');
     await page.waitForLoadState('networkidle');
 

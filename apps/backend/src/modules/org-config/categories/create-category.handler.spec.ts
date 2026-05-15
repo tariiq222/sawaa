@@ -1,0 +1,32 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { PrismaService } from '../../../infrastructure/database';
+import { CreateCategoryHandler } from './create-category.handler';
+
+describe('CreateCategoryHandler', () => {
+  let handler: CreateCategoryHandler;
+  let prisma: PrismaService;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        CreateCategoryHandler,
+        { provide: PrismaService, useValue: {
+    serviceCategory: { create: jest.fn() }
+        } },
+      ],
+    }).compile();
+
+    handler = module.get<CreateCategoryHandler>(CreateCategoryHandler);
+    prisma = module.get<PrismaService>(PrismaService);
+  });
+
+  it('should be defined', () => {
+    expect(handler).toBeDefined();
+  });
+
+  it('should execute successfully', async () => {
+    (prisma.serviceCategory.create as jest.Mock).mockResolvedValue({ id: 'test-id' });
+    const result = await handler.execute({nameAr:"Test Name",nameEn:"Test Name",departmentId:"00000000-0000-0000-0000-000000000001",sortOrder:"test"});
+    expect(result).toBeDefined();
+  });
+});

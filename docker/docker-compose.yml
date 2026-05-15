@@ -6,7 +6,7 @@ services:
     container_name: sawa-backend
     restart: unless-stopped
     ports:
-      - "3450:5100"
+      - "3450:5200"
     environment:
       # ── DB / cache / queue ──
       DATABASE_URL: postgresql://sawaa:sawaa_dev_password@postgres:5432/sawaa_dev
@@ -47,7 +47,7 @@ services:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin123
       MINIO_BUCKET: sawa
-      PORT: 5100
+      PORT: 5200
       NODE_ENV: development
       BACKEND_URL: http://localhost:3450
       CORS_ORIGINS: http://localhost:3451,http://localhost:3452
@@ -57,7 +57,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:5100/api/v1/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5200/api/v1/health || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 5

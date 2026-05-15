@@ -33,22 +33,14 @@ const RECEPTIONIST_PASSWORD = process.env.SEED_RECEPTIONIST_PASSWORD ?? 'Recept@
 const EMPLOYEE_EMAIL = process.env.SEED_EMPLOYEE_EMAIL ?? 'employee@sawaa-test.com';
 const EMPLOYEE_PASSWORD = process.env.SEED_EMPLOYEE_PASSWORD ?? 'Employee@1234';
 
-async function loginIdentifierFirst(page: Page, email: string, password: string): Promise<void> {
+async function loginAs(page: Page, email: string, password: string): Promise<void> {
   await page.goto('/login');
   await expect(page).toHaveURL(/\/login/);
   await page.waitForLoadState('domcontentloaded');
 
   await page.locator('#identifier').fill(email);
-  await page.getByRole('button', { name: 'متابعة' }).click();
-
-  await expect(
-    page.getByRole('button', { name: 'باستخدام كلمة المرور' }),
-  ).toBeVisible({ timeout: 10_000 });
-  await page.getByRole('button', { name: 'باستخدام كلمة المرور' }).click();
-
-  await expect(page.locator('#password')).toBeVisible({ timeout: 10_000 });
   await page.locator('#password').fill(password);
-  await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
+  await page.locator('button[type="submit"]').click();
 
   await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 });
   // Wait for header chrome to confirm we're authenticated (mirrors login.spec).
@@ -57,7 +49,7 @@ async function loginIdentifierFirst(page: Page, email: string, password: string)
 
 test.describe('Dashboard home — role-based widgets', () => {
   test('OWNER sees TopPerformers + RevenueChart + QuickActions', async ({ page }) => {
-    await loginIdentifierFirst(page, OWNER_EMAIL, OWNER_PASSWORD);
+    await loginAs(page, OWNER_EMAIL, OWNER_PASSWORD);
     await page.waitForURL('/', { timeout: 10_000 }).catch(() => {});
     await expect(page.getByTestId('top-performers')).toBeVisible();
     await expect(page.getByTestId('revenue-chart')).toBeVisible();
@@ -69,7 +61,7 @@ test.describe('Dashboard home — role-based widgets', () => {
       !RECEPTIONIST_EMAIL || !RECEPTIONIST_PASSWORD,
       'No receptionist seed user — set SEED_RECEPTIONIST_EMAIL/SEED_RECEPTIONIST_PASSWORD or seed a RECEPTIONIST membership in apps/backend/prisma/seed.ts.',
     );
-    await loginIdentifierFirst(page, RECEPTIONIST_EMAIL!, RECEPTIONIST_PASSWORD!);
+    await loginAs(page, RECEPTIONIST_EMAIL!, RECEPTIONIST_PASSWORD!);
     await page.goto('/');
     await expect(page.getByTestId('revenue-chart')).toHaveCount(0);
     await expect(page.getByTestId('top-performers')).toHaveCount(0);
@@ -81,7 +73,7 @@ test.describe('Dashboard home — role-based widgets', () => {
       !EMPLOYEE_EMAIL || !EMPLOYEE_PASSWORD,
       'No employee seed user — set SEED_EMPLOYEE_EMAIL/SEED_EMPLOYEE_PASSWORD or seed an EMPLOYEE membership in apps/backend/prisma/seed.ts.',
     );
-    await loginIdentifierFirst(page, EMPLOYEE_EMAIL!, EMPLOYEE_PASSWORD!);
+    await loginAs(page, EMPLOYEE_EMAIL!, EMPLOYEE_PASSWORD!);
     await page.goto('/');
     await expect(page.getByTestId('quick-actions')).toHaveCount(0);
     await expect(page.getByTestId('top-performers')).toHaveCount(0);

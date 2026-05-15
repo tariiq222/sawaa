@@ -35,11 +35,11 @@ components/features/*.tsx           @tariq
 # ── Clinical Core Features ───────────────────────────
 # الميزات الأساسية للعيادة — حساسة للبيانات الطبية
 components/features/bookings/       @tariq
-components/features/patients/       @tariq
-components/features/practitioners/  @tariq
+components/features/clients/        @tariq
+components/features/employees/      @tariq
 app/(dashboard)/bookings/           @tariq
-app/(dashboard)/patients/           @tariq
-app/(dashboard)/practitioners/      @tariq
+app/(dashboard)/clients/            @tariq
+app/(dashboard)/employees/          @tariq
 
 # ── Financial Features ───────────────────────────────
 # الميزات المالية — حساسة للمعاملات والفواتير

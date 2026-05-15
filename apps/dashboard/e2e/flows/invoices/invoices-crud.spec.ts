@@ -56,13 +56,6 @@ test.describe('Invoices CRUD Operations', () => {
     }
   })
 
-  test.skip('should download invoice PDF', async ({ page }) => {
-    const downloadButton = page.locator('button:has-text("download"), button:has-text("تحميل"), a[href*="pdf"], a[href*="download"]')
-    if (await downloadButton.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await downloadButton.click()
-      await page.waitForTimeout(1000)
-    }
-  })
 
   test('should paginate invoices', async ({ page }) => {
     const pagination = page.locator('[class*="pagination"], [class*="pager"], button:has-text("next"), button:has-text("التالي")')

@@ -107,7 +107,7 @@ export class AuthController {
     @Ip() ip: string,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const tokens = await this.login.execute({ email: body.email, password: body.password, ip });
+    const tokens = await this.login.execute({ email: body.email, password: body.password, ip, rememberMe: body.rememberMe });
     const user = tokens.user;
 
     // If 2FA required and user is super-admin → require OTP step
@@ -119,7 +119,7 @@ export class AuthController {
     }
 
     if (!user) {
-      this.setRefreshCookie(res, tokens.refreshToken);
+      this.setRefreshCookie(res, tokens.refreshToken, body.rememberMe);
       return {
         accessToken: tokens.accessToken,
         user,
@@ -131,7 +131,7 @@ export class AuthController {
     // by splitting on the first whitespace run.
     const [firstName = '', ...rest] = (user.name ?? '').trim().split(/\s+/);
 
-    this.setRefreshCookie(res, tokens.refreshToken);
+    this.setRefreshCookie(res, tokens.refreshToken, body.rememberMe);
     return {
       accessToken: tokens.accessToken,
       user: {
@@ -338,17 +338,26 @@ export class AuthController {
     return safeResult;
   }
 
-  private setRefreshCookie(res: Response, token: string): void {
+  private setRefreshCookie(res: Response, token: string, rememberMe?: boolean): void {
     const ttlMs = this.parseTtlSeconds(
       this.config.get<string>('JWT_REFRESH_TTL') ?? '30d',
     ) * 1000;
-    res.cookie('ck_refresh', token, {
+    const cookieOptions: {
+      httpOnly: boolean;
+      secure: boolean;
+      sameSite: 'lax' | 'strict' | 'none';
+      path: string;
+      maxAge?: number;
+    } = {
       httpOnly: true,
       secure: this.config.get('NODE_ENV') === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: ttlMs,
-    });
+    };
+    if (rememberMe) {
+      cookieOptions.maxAge = ttlMs;
+    }
+    res.cookie('ck_refresh', token, cookieOptions);
   }
 
   private parseTtlSeconds(ttl: string): number {

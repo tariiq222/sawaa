@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { Card, CardContent } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
-import { Input } from "@sawaa/ui"
 import { Textarea } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
@@ -14,17 +13,12 @@ import { useLocale } from "@/components/locale-provider"
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-function toPercentRate(rate: number | null | undefined): string {
-  if (rate == null) return "15"
-  return String(rate <= 1 ? rate * 100 : rate)
-}
-
 interface BilingualField {
   ar: string
   en: string
 }
 
-type SectionId = "entity" | "about" | "privacy" | "terms" | "cancellation"
+type SectionId = "about" | "privacy" | "terms" | "cancellation"
 
 // ─── bilingual textarea section ───────────────────────────────────────────────
 
@@ -65,17 +59,7 @@ export function LegalContentTab() {
   const { t } = useLocale()
   const { data: settings, isLoading } = useOrganizationSettings()
   const updateSettings = useUpdateOrganizationSettings()
-  const [activeSection, setActiveSection] = useState<SectionId>("entity")
-
-  // ── entity fields ──
-  const [companyNameAr, setCompanyNameAr] = useState("")
-  const [companyNameEn, setCompanyNameEn] = useState("")
-  const [businessRegistration, setBusinessRegistration] = useState("")
-  const [vatRegistrationNumber, setVatRegistrationNumber] = useState("")
-  const [vatRate, setVatRate] = useState("15")
-  const [sellerAddress, setSellerAddress] = useState("")
-  const [organizationCity, setClinicCity] = useState("")
-  const [postalCode, setPostalCode] = useState("")
+  const [activeSection, setActiveSection] = useState<SectionId>("about")
 
   // ── legal content fields ──
   const [about, setAbout] = useState<BilingualField>({ ar: "", en: "" })
@@ -86,61 +70,35 @@ export function LegalContentTab() {
   useEffect(() => {
     if (!settings) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCompanyNameAr(settings.companyNameAr ?? "")
-    setCompanyNameEn(settings.companyNameEn ?? "")
-    setBusinessRegistration(settings.businessRegistration ?? "")
-    setVatRegistrationNumber(settings.vatRegistrationNumber ?? "")
-    setVatRate(toPercentRate(settings.vatRate))
-    setSellerAddress(settings.sellerAddress ?? "")
-    setClinicCity(settings.organizationCity ?? "")
-    setPostalCode(settings.postalCode ?? "")
-
     setAbout({ ar: settings.aboutAr ?? "", en: settings.aboutEn ?? "" })
     setPrivacy({ ar: settings.privacyPolicyAr ?? "", en: settings.privacyPolicyEn ?? "" })
     setTerms({ ar: settings.termsAr ?? "", en: settings.termsEn ?? "" })
     setCancellation({ ar: settings.cancellationPolicyAr ?? "", en: settings.cancellationPolicyEn ?? "" })
   }, [settings])
 
-  const handleEntitySave = () => {
-    updateSettings.mutate(
-      {
-        companyNameAr: companyNameAr || null,
-        companyNameEn: companyNameEn || null,
-        businessRegistration: businessRegistration || null,
-        vatRegistrationNumber: vatRegistrationNumber || null,
-        vatRate: Number(vatRate) / 100,
-        sellerAddress: sellerAddress || null,
-        organizationCity,
-        postalCode: postalCode || null,
-      },
-      {
-        onSuccess: () => toast.success(t("settings.saved")),
-        onError: () => toast.error(t("settings.error")),
-      },
-    )
-  }
-
   const handleLegalSave = () => {
-    updateSettings.mutate(
-      {
-        aboutAr: about.ar || null,
-        aboutEn: about.en || null,
-        privacyPolicyAr: privacy.ar || null,
-        privacyPolicyEn: privacy.en || null,
-        termsAr: terms.ar || null,
-        termsEn: terms.en || null,
-        cancellationPolicyAr: cancellation.ar || null,
-        cancellationPolicyEn: cancellation.en || null,
-      },
-      {
-        onSuccess: () => toast.success(t("settings.saved")),
-        onError: () => toast.error(t("settings.error")),
-      },
-    )
+    let payload: Record<string, string | null> = {}
+    switch (activeSection) {
+      case "about":
+        payload = { aboutAr: about.ar || null, aboutEn: about.en || null }
+        break
+      case "privacy":
+        payload = { privacyPolicyAr: privacy.ar || null, privacyPolicyEn: privacy.en || null }
+        break
+      case "terms":
+        payload = { termsAr: terms.ar || null, termsEn: terms.en || null }
+        break
+      case "cancellation":
+        payload = { cancellationPolicyAr: cancellation.ar || null, cancellationPolicyEn: cancellation.en || null }
+        break
+    }
+    updateSettings.mutate(payload, {
+      onSuccess: () => toast.success(t("settings.saved")),
+      onError: () => toast.error(t("settings.error")),
+    })
   }
 
   const sections: { id: SectionId; label: string }[] = [
-    { id: "entity",       label: t("settings.tabs.entity") },
     { id: "about",        label: t("settings.legal.about") },
     { id: "privacy",      label: t("settings.legal.privacy") },
     { id: "terms",        label: t("settings.legal.terms") },
@@ -152,7 +110,7 @@ export function LegalContentTab() {
       <Card className="overflow-hidden p-0">
         <div className="flex min-h-[520px]">
           <div className="w-56 shrink-0 border-e border-border bg-surface-muted p-3 space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
+            {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={`skeleton-${i}`} className="h-10 rounded-lg" />
             ))}
           </div>
@@ -207,58 +165,6 @@ export function LegalContentTab() {
 
         {/* ── Content panel ────────────────────────────────────── */}
         <div className="flex flex-1 flex-col overflow-y-auto bg-surface-muted/50 p-5">
-
-          {/* Entity */}
-          {activeSection === "entity" && (
-            <div className="space-y-4">
-              <div className="rounded-lg border border-warning/20 bg-warning/5 px-4 py-3">
-                <p className="text-sm text-warning-foreground">
-                  {t("settings.entity.warning")}
-                </p>
-              </div>
-              <CardContent className="rounded-lg border bg-background p-6 space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>{t("settings.entity.companyNameAr")}</Label>
-                    <Input value={companyNameAr} onChange={(e) => setCompanyNameAr(e.target.value)} dir="rtl" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("settings.entity.companyNameEn")}</Label>
-                    <Input value={companyNameEn} onChange={(e) => setCompanyNameEn(e.target.value)} dir="ltr" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("settings.entity.businessRegistration")}</Label>
-                    <Input value={businessRegistration} onChange={(e) => setBusinessRegistration(e.target.value)} dir="ltr" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("settings.entity.vatRegistration")}</Label>
-                    <Input value={vatRegistrationNumber} onChange={(e) => setVatRegistrationNumber(e.target.value)} dir="ltr" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("settings.entity.vatRate")}</Label>
-                    <Input value={vatRate} onChange={(e) => setVatRate(e.target.value)} type="number" min="0" max="100" dir="ltr" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("settings.entity.sellerAddress")}</Label>
-                    <Input value={sellerAddress} onChange={(e) => setSellerAddress(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("settings.entity.organizationCity")}</Label>
-                    <Input value={organizationCity} onChange={(e) => setClinicCity(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("settings.entity.postalCode")}</Label>
-                    <Input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} dir="ltr" />
-                  </div>
-                </div>
-                <div className="flex justify-end pt-2">
-                  <Button size="sm" disabled={updateSettings.isPending} onClick={handleEntitySave}>
-                    {t("settings.save")}
-                  </Button>
-                </div>
-              </CardContent>
-            </div>
-          )}
 
           {/* About */}
           {activeSection === "about" && (

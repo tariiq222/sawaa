@@ -63,14 +63,10 @@ test.describe('Dashboard Pages Navigation', () => {
       await devLoginButton.click();
       await page.waitForURL('/', { timeout: 10000 });
     } else {
-      // Fall back to identifier-first flow
+      // Fall back to email + password flow
       await page.locator('#identifier').fill('admin@sawaa-test.com');
-      await page.getByRole('button', { name: 'متابعة' }).click();
-      await expect(page.getByRole('button', { name: 'باستخدام كلمة المرور' })).toBeVisible({ timeout: 10000 });
-      await page.getByRole('button', { name: 'باستخدام كلمة المرور' }).click();
-      await expect(page.locator('#password')).toBeVisible({ timeout: 10000 });
       await page.locator('#password').fill('Admin@1234');
-      await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
+      await page.locator('button[type="submit"]').click();
       await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 });
     }
 

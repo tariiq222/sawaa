@@ -47,19 +47,6 @@ test.describe('Ratings CRUD Operations', () => {
     }
   })
 
-  test.skip('should reply to rating', async ({ page }) => {
-    const replyButton = page.locator('button:has-text("reply"), button:has-text("رد"), button:has-text("إرسال رد")')
-    if (await replyButton.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await replyButton.click()
-      await page.waitForTimeout(500)
-
-      const replyInput = page.locator('textarea, input[type="text"]').last()
-      if (await replyInput.isVisible()) {
-        await replyInput.fill('Thank you for your feedback!')
-        await page.waitForTimeout(300)
-      }
-    }
-  })
 
   test('should paginate ratings', async ({ page }) => {
     const pagination = page.locator('[class*="pagination"], [class*="pager"], button:has-text("next"), button:has-text("التالي")')

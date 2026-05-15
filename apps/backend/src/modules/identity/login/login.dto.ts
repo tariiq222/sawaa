@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsOptional, IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class LoginDto {
@@ -11,5 +11,8 @@ export class LoginDto {
   @MinLength(8)
   password!: string;
 
-
+  @ApiProperty({ description: 'Remember me (extends refresh token cookie lifetime)', required: false })
+  @IsOptional()
+  @IsBoolean()
+  rememberMe?: boolean;
 }

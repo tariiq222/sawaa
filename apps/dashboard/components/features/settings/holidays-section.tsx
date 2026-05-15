@@ -50,7 +50,10 @@ export function HolidaysSection({ t, branchId }: Props) {
   }
 
   const handleAdd = () => {
-    if (!date || !nameAr || !nameEn) return
+    if (!date || !nameAr || !nameEn) {
+      toast.error(t("settings.holidayFieldsRequired"))
+      return
+    }
     createMutation.mutate(
       { branchId, date, nameAr, nameEn },
       {

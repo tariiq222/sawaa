@@ -9,6 +9,7 @@ import type {
 export interface LoginPayload {
   email: string
   password: string
+  rememberMe?: boolean
 }
 
 export async function login(payload: LoginPayload): Promise<AuthResponse> {

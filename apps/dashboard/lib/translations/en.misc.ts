@@ -301,4 +301,8 @@ export const enMisc: Record<string, string> = {
   "error.somethingWrong": "Something went wrong",
   "error.unexpected": "An unexpected error occurred. Please try again.",
   "error.tryAgain": "Try Again",
+
+  // — Brand identity (login panel) —
+  "brand.name": "Sawaa Family Counseling",
+  "brand.tagline": "Specialized family counseling platform",
 }

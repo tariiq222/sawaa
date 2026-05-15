@@ -35,20 +35,24 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    storageState: './e2e/.auth/admin.json',
   },
-
-  globalSetup: require.resolve('./e2e/global-setup'),
 
   projects: [
     {
+      name: 'setup',
+      testMatch: 'e2e/setup/**/*.setup.ts',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
       name: 'smoke',
       testMatch: 'e2e/smoke/**/*.spec.ts',
+      dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'flows',
       testMatch: 'e2e/flows/**/*.spec.ts',
+      dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'] },
     },
   ],
@@ -58,6 +62,8 @@ export default defineConfig({
     port: 5203,
     timeout: 120_000,
     reuseExistingServer: !process.env.CI,
-    env: {},
+    env: {
+      NEXT_PUBLIC_API_URL: 'http://localhost:5200/api/v1',
+    },
   },
 });

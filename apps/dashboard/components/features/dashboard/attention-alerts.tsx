@@ -3,10 +3,8 @@
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  InvoiceIcon,
-  CancelCircleIcon,
-} from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon, InvoiceIcon, CancelCircleIcon } from "@hugeicons/core-free-icons"
+import type { IconSvgElement } from "@hugeicons/react"
 import { useLocale } from "@/components/locale-provider"
 import type { VisibleWidgets } from "@/lib/dashboard-widgets"
 
@@ -16,29 +14,86 @@ interface AttentionAlertsProps {
   visible: VisibleWidgets["attentionAlerts"]
 }
 
-const severityStyles = {
+type Severity = "warning" | "error"
+
+const sevStyles: Record<
+  Severity,
+  { surface: string; ring: string; iconBg: string; iconText: string; count: string }
+> = {
   warning: {
-    iconBg: "bg-warning/10",
+    surface: "bg-warning/[0.06]",
+    ring: "ring-warning/15",
+    iconBg: "bg-warning/12",
     iconText: "text-warning",
-    border: "border-s-warning",
+    count: "text-warning",
   },
   error: {
-    iconBg: "bg-error/10",
+    surface: "bg-error/[0.05]",
+    ring: "ring-error/15",
+    iconBg: "bg-error/12",
     iconText: "text-error",
-    border: "border-s-error",
+    count: "text-error",
   },
-  info: {
-    iconBg: "bg-info/10",
-    iconText: "text-info",
-    border: "border-s-info",
-  },
-} as const
+}
 
-export function AttentionAlerts({
-  pendingPayments,
-  cancelRequests,
-  visible,
-}: AttentionAlertsProps) {
+interface AlertTileProps {
+  href: string
+  testId: string
+  count: number
+  label: string
+  hint: string
+  icon: IconSvgElement
+  severity: Severity
+}
+
+function AlertTile({ href, testId, count, label, hint, icon, severity }: AlertTileProps) {
+  const s = sevStyles[severity]
+  return (
+    <Link href={href} data-testid={testId} className="group block">
+      <div
+        className={cn(
+          "relative flex items-center gap-4 rounded-2xl p-4 pe-5 ring-1 transition-colors duration-200",
+          s.surface,
+          s.ring,
+          "hover:bg-card",
+        )}
+      >
+        <div
+          className={cn(
+            "flex size-11 shrink-0 items-center justify-center rounded-xl",
+            s.iconBg,
+            s.iconText,
+          )}
+          aria-hidden
+        >
+          <HugeiconsIcon icon={icon} size={22} />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2">
+            <span className={cn("text-2xl font-semibold leading-none tabular-nums", s.count)}>
+              {count}
+            </span>
+            <span className="truncate text-sm font-medium text-foreground">{label}</span>
+          </div>
+          <p className="mt-1 truncate text-xs text-muted-foreground">{hint}</p>
+        </div>
+
+        <span
+          className={cn(
+            "shrink-0 text-muted-foreground transition-transform duration-200 motion-safe:group-hover:translate-x-0.5 motion-safe:rtl:group-hover:-translate-x-0.5",
+            s.iconText,
+          )}
+          aria-hidden
+        >
+          <HugeiconsIcon icon={ArrowRight01Icon} size={16} className="rtl:rotate-180" />
+        </span>
+      </div>
+    </Link>
+  )
+}
+
+export function AttentionAlerts({ pendingPayments, cancelRequests, visible }: AttentionAlertsProps) {
   const { t } = useLocale()
 
   const showPayments = visible.pendingPayments && pendingPayments > 0
@@ -47,91 +102,28 @@ export function AttentionAlerts({
   if (!showPayments && !showCancels) return null
 
   return (
-    <div
-      data-testid="attention-alerts"
-      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
-    >
+    <div data-testid="attention-alerts" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {showPayments && (
-        <div data-testid="alert-pending-payments">
-          <Link href="/payments">
-            <div
-              className={cn(
-                "glass relative flex items-center gap-3.5 overflow-hidden rounded-xl border-s-[3px] p-4",
-                severityStyles.warning.border
-              )}
-            >
-              <div
-                className={cn(
-                  "flex size-10 shrink-0 items-center justify-center rounded-full",
-                  severityStyles.warning.iconBg
-                )}
-              >
-                <HugeiconsIcon
-                  icon={InvoiceIcon}
-                  size={20}
-                  className={severityStyles.warning.iconText}
-                />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-foreground">
-                  {pendingPayments > 0 && (
-                    <span
-                      className="tabular-nums"
-                      style={{ display: "inline-block" }}
-                    >
-                      {pendingPayments}{" "}
-                    </span>
-                  )}
-                  {t("alerts.pendingPayments")}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {t("alerts.pendingPaymentsDesc")}
-                </p>
-              </div>
-            </div>
-          </Link>
-        </div>
+        <AlertTile
+          href="/payments"
+          testId="alert-pending-payments"
+          count={pendingPayments}
+          label={t("alerts.pendingPayments")}
+          hint={t("alerts.pendingPaymentsDesc")}
+          icon={InvoiceIcon}
+          severity="warning"
+        />
       )}
       {showCancels && (
-        <div data-testid="alert-cancel-requests">
-          <Link href="/bookings">
-            <div
-              className={cn(
-                "glass relative flex items-center gap-3.5 overflow-hidden rounded-xl border-s-[3px] p-4",
-                severityStyles.error.border
-              )}
-            >
-              <div
-                className={cn(
-                  "flex size-10 shrink-0 items-center justify-center rounded-full",
-                  severityStyles.error.iconBg
-                )}
-              >
-                <HugeiconsIcon
-                  icon={CancelCircleIcon}
-                  size={20}
-                  className={severityStyles.error.iconText}
-                />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-foreground">
-                  {cancelRequests > 0 && (
-                    <span
-                      className="tabular-nums"
-                      style={{ display: "inline-block" }}
-                    >
-                      {cancelRequests}{" "}
-                    </span>
-                  )}
-                  {t("alerts.cancelRequests")}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {t("alerts.cancelRequestsDesc")}
-                </p>
-              </div>
-            </div>
-          </Link>
-        </div>
+        <AlertTile
+          href="/bookings"
+          testId="alert-cancel-requests"
+          count={cancelRequests}
+          label={t("alerts.cancelRequests")}
+          hint={t("alerts.cancelRequestsDesc")}
+          icon={CancelCircleIcon}
+          severity="error"
+        />
       )}
     </div>
   )

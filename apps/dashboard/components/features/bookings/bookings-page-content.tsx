@@ -104,6 +104,7 @@ export function BookingsPageContent({
             description={t("bookings.stats.todayDesc")}
             icon={Calendar03Icon}
             iconColor="primary"
+            size="lead"
           />
           <StatCard
             title={t("bookings.stats.pending")}

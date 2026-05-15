@@ -1,0 +1,29 @@
+{
+  "cookies": [
+    {
+      "name": "ck_refresh",
+      "value": "04303b53-5a89-49bb-b24f-8becad31ccb2",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1781344558.008867,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:5203",
+      "localStorage": [
+        {
+          "name": "sawaa_user",
+          "value": "{\"id\":\"a718220b-d3fe-42ce-a5c1-9a29c3848045\",\"email\":\"admin@sawaa-test.com\",\"isSuperAdmin\":false,\"passwordHash\":\"$2b$10$1V4o389gTAWsRdlAOzUh7uF1rkfv3nkNiNH1O1z4xtuRd5GL9UwOO\",\"firstName\":\"Admin\",\"lastName\":\"\",\"name\":\"Admin\",\"phone\":null,\"phoneVerifiedAt\":null,\"emailVerifiedAt\":null,\"gender\":null,\"avatarUrl\":null,\"isActive\":true,\"role\":\"ADMIN\",\"customRoleId\":null,\"createdAt\":\"2026-05-14T08:39:04.837Z\",\"updatedAt\":\"2026-05-14T08:39:04.837Z\",\"failedLoginAttempts\":0,\"lockedUntil\":null,\"tokenVersion\":0,\"customRole\":null,\"organizationId\":\"00000000-0000-0000-0000-000000000001\",\"permissions\":[\"user:*\",\"booking:*\",\"client:*\",\"employee:*\",\"invoice:*\",\"payment:*\",\"report:*\",\"setting:*\",\"department:*\",\"category:*\",\"service:*\",\"branch:*\",\"branding:*\",\"content:*\",\"integration:*\"]}"
+        },
+        {
+          "name": "sawaa-locale",
+          "value": "ar"
+        }
+      ]
+    }
+  ]
+}

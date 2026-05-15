@@ -17,11 +17,11 @@ export function useLoginFlow() {
   const clearError = useCallback(() => setError(null), [])
 
   const submitLogin = useCallback(
-    async (id: string, password: string) => {
+    async (id: string, password: string, rememberMe?: boolean) => {
       setLoading(true)
       setError(null)
       try {
-        const res = await apiLogin(id, password)
+        const res = await apiLogin(id, password, rememberMe)
         loginWithTokens(res)
       } catch (e) {
         setError(e)

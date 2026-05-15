@@ -14,13 +14,16 @@ export type AuthUser = UserPayload
 export type { AuthResponse }
 
 const USER_KEY = "sawaa_user"
+const ACCESS_TOKEN_KEY = "sawaa_access_token"
+const TOKEN_STORAGE_KEY = "sawaa_token_storage"
 
 export async function login(
   identifier: string,
   password: string,
+  rememberMe?: boolean,
 ): Promise<AuthResponse> {
-  const data = await authApi.login({ email: identifier, password })
-  persistAuth(data)
+  const data = await authApi.login({ email: identifier, password, rememberMe })
+  persistAuth(data, rememberMe)
   return data
 }
 
@@ -63,6 +66,11 @@ export async function fetchMe(): Promise<AuthUser> {
 export async function refreshToken(): Promise<AuthResponse> {
   const tokens = await authApi.refreshToken()
   setAccessToken(tokens.accessToken)
+  if (typeof window !== "undefined") {
+    const storageType = localStorage.getItem(TOKEN_STORAGE_KEY)
+    const storage = storageType === "session" ? sessionStorage : localStorage
+    storage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken)
+  }
   const cached = getStoredUser()
   return {
     accessToken: tokens.accessToken,
@@ -139,12 +147,29 @@ export function getStoredUser(): AuthUser | null {
 }
 
 
-function persistAuth(data: AuthResponse): void {
+function persistAuth(data: AuthResponse, rememberMe?: boolean): void {
   localStorage.setItem(USER_KEY, JSON.stringify(data.user))
   setAccessToken(data.accessToken)
+
+  if (typeof window !== "undefined") {
+    if (rememberMe) {
+      localStorage.setItem(TOKEN_STORAGE_KEY, "local")
+      localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken)
+      sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+    } else {
+      localStorage.setItem(TOKEN_STORAGE_KEY, "session")
+      sessionStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken)
+      localStorage.removeItem(ACCESS_TOKEN_KEY)
+    }
+  }
 }
 
 function clearAuth(): void {
   localStorage.removeItem(USER_KEY)
   setAccessToken(null)
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(ACCESS_TOKEN_KEY)
+    localStorage.removeItem(TOKEN_STORAGE_KEY)
+    sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+  }
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Button,
   Card,
@@ -29,6 +29,12 @@ export function ZoomSettingsForm() {
   const [accountId, setAccountId] = useState<string>("")
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (!config) return
+    // Credentials are never returned from backend for security.
+    // Only show the "configured" badge; fields stay empty for re-entry.
+  }, [config])
+
   const buildInput = (): UpsertZoomConfigInput => ({
     zoomClientId: clientId.trim(),
     zoomClientSecret: clientSecret.trim(),
@@ -41,9 +47,6 @@ export function ZoomSettingsForm() {
     if (!allFilled) return
     setStatusMessage(null)
     await upsert.mutateAsync(buildInput())
-    setClientId("")
-    setClientSecret("")
-    setAccountId("")
     setStatusMessage(t("zoom.form.saved"))
   }
 
@@ -80,7 +83,7 @@ export function ZoomSettingsForm() {
                 id="zoom-account-id"
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
-                placeholder="abcDEF1234..."
+                placeholder={config?.configured ? "•••••••• (already connected)" : "abcDEF1234..."}
               />
             </div>
 
@@ -90,6 +93,7 @@ export function ZoomSettingsForm() {
                 id="zoom-client-id"
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
+                placeholder={config?.configured ? "•••••••• (already connected)" : ""}
               />
             </div>
 
@@ -102,6 +106,7 @@ export function ZoomSettingsForm() {
                 type="password"
                 value={clientSecret}
                 onChange={(e) => setClientSecret(e.target.value)}
+                placeholder={config?.configured ? "•••••••• (already connected)" : ""}
               />
             </div>
 

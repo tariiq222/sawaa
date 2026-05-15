@@ -34,6 +34,7 @@ async function bootstrap(): Promise<void> {
     windowMs: 15 * 60 * 1000,
     max: 1000,
     message: 'Too many requests, please try again later',
+    skip: () => process.env.THROTTLER_DISABLED === 'true',
   }));
 
   if (process.env.THROTTLER_DISABLED !== 'true') {

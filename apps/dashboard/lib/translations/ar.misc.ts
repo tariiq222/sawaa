@@ -301,4 +301,8 @@ export const arMisc: Record<string, string> = {
   "error.somethingWrong": "حدث خطأ",
   "error.unexpected": "حدث خطأ غير متوقع. الرجاء المحاولة مرة أخرى.",
   "error.tryAgain": "إعادة المحاولة",
+
+  // — Brand identity (login panel) —
+  "brand.name": "سواء للإرشاد الأسري",
+  "brand.tagline": "منصة الإرشاد الأسري المتخصصة",
 }

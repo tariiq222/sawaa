@@ -107,14 +107,31 @@ function uniqueSuffix(): string {
   return String(Date.now()).slice(-6) + String(phoneCounter++).padStart(2, '0');
 }
 
-// ─── Internal fetch helper ────────────────────────────────────────────────
+// ─── Internal fetch helpers ────────────────────────────────────────────────
+
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  retries = 4,
+  delayMs = 600,
+): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const res = await fetch(url, init);
+    if (res.status !== 429) return res;
+    if (attempt < retries) {
+      await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
+    }
+  }
+  // Last response was 429 — return it so caller can throw
+  return fetch(url, init);
+}
 
 async function apiPost<T>(
   path: string,
   token: string,
   body: Record<string, unknown>,
 ): Promise<T> {
-  const res = await fetch(`${API_BASE}/api/v1${path}`, {
+  const res = await fetchWithRetry(`${API_BASE}/api/v1${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -132,7 +149,7 @@ async function apiPost<T>(
 }
 
 async function apiDelete(path: string, token: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/v1${path}`, {
+  const res = await fetchWithRetry(`${API_BASE}/api/v1${path}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -149,7 +166,7 @@ async function apiPatch<T>(
   token: string,
   body: Record<string, unknown>,
 ): Promise<T> {
-  const res = await fetch(`${API_BASE}/api/v1${path}`, {
+  const res = await fetchWithRetry(`${API_BASE}/api/v1${path}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -212,9 +229,11 @@ export async function seedService(
   overrides: SeedServiceInput = {},
 ): Promise<SeededService> {
   const suffix = uniqueSuffix();
+  const baseNameAr = overrides.nameAr ?? 'خدمة اختبار';
+  const baseNameEn = overrides.nameEn ?? 'Test Service';
   const body = {
-    nameAr: `خدمة اختبار ${suffix}`,
-    nameEn: `Test Service ${suffix}`,
+    nameAr: `${baseNameAr} ${suffix}`,
+    nameEn: `${baseNameEn} ${suffix}`,
     durationMins: overrides.durationMins ?? 30,
     price: overrides.price ?? 100,
     currency: overrides.currency ?? 'SAR',

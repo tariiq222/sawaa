@@ -85,11 +85,11 @@ export function FilterBar({
   const hasAttributeFilters = !!search || (selects && selects.length > 0) || !!dateRange
 
   return (
-    <div className={cn("glass rounded-xl p-4", className)}>
+    <div className={cn("rounded-2xl border border-border bg-card/60 p-3 ring-1 ring-primary/[0.04]", className)}>
       {/* Single row: tabs + attribute filters + trailing */}
       <div className="flex flex-wrap items-center gap-2">
         {tabs && (
-          <div className="flex items-center gap-0.5 rounded-lg border border-border bg-surface-muted p-1 me-1">
+          <div className="flex items-center gap-0.5 rounded-lg border border-border/70 bg-background p-1 me-1">
             {tabs.items.map((tab) => (
               <button
                 key={tab.key}
@@ -97,8 +97,8 @@ export function FilterBar({
                 className={cn(
                   "rounded-md px-3.5 py-1.5 text-[13px] font-medium transition-all duration-200",
                   tabs.activeKey === tab.key
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-border/60"
+                    ? "bg-primary text-primary-foreground shadow-[0_2px_8px_-2px_var(--shadow-primary-color,oklch(70%_0.12_180/0.35))]"
+                    : "text-muted-foreground hover:text-foreground hover:bg-primary/[0.06]"
                 )}
               >
                 {tab.label}

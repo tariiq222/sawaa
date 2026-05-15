@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Button,
   Card,
@@ -49,6 +49,13 @@ export function EmailConfigForm() {
   const [testEmail, setTestEmail] = useState("")
 
   const [statusMessage, setStatusMessage] = useState<{ text: string; ok: boolean } | null>(null)
+
+  useEffect(() => {
+    if (!config) return
+    setProvider(config.provider ?? "NONE")
+    setSenderName(config.senderName ?? "")
+    setSenderEmail(config.senderEmail ?? "")
+  }, [config])
 
   const buildInput = (): UpsertEmailConfigInput => {
     const base: UpsertEmailConfigInput = {

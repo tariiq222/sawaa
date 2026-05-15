@@ -210,9 +210,11 @@ export function CancellationTab({ t }: Props) {
                     <RefundSelect value={freeRefund} onChange={setFreeRefund} t={t} />
                   </div>
                 </CardContent></Card>
-                <Card className="bg-surface shadow-sm"><CardContent className="pt-2 pb-2">
-                  <NumberRow label={t("settings.lateRefundPercent")} desc={t("settings.lateRefundPercentDesc")} value={latePercent} onChange={setLatePercent} unit="%" max={100} />
-                </CardContent></Card>
+                {freeRefund === "PARTIAL" && (
+                  <Card className="bg-surface shadow-sm"><CardContent className="pt-2 pb-2">
+                    <NumberRow label={t("settings.lateRefundPercent")} desc={t("settings.lateRefundPercentDesc")} value={latePercent} onChange={setLatePercent} unit="%" max={100} />
+                  </CardContent></Card>
+                )}
                 <Card className="bg-surface shadow-sm"><CardContent className="pt-2 pb-2">
                   <SwitchRow label={t("settings.requireCancelApproval")} desc={t("settings.requireCancelApprovalDesc")} checked={requireApproval} onChange={setRequireApproval} />
                 </CardContent></Card>

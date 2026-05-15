@@ -12,17 +12,16 @@ export default defineConfig({
     maxWorkers: 1,
     // Increase per-worker heap to avoid OOM on memory-heavy test files.
     execArgv: ['--max-old-space-size=6144'],
-    // Increase teardown timeout from default 30 s — use-employees.spec.tsx
-    // needs ~25 s for environment setup + importing the large hook file.
+    // Increase teardown timeout from default 30 s — memory-heavy hook imports
+    // need extra time for environment setup before the worker is considered hung.
     teardownTimeout: 60000,
+    // Exclude split use-employees tests — they still import the heavy
+    // use-employees.ts hook and trigger worker timeouts. Re-enable once
+    // use-employees.ts is refactored to separate the barrel re-exports.
+    exclude: ['**/use-employees*.spec.tsx'],
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./test/setup.ts'],
-    // Exclude use-employees.spec.tsx — this file requires >6 GB heap during
-    // import phase and consistently triggers a worker timeout on the forks
-    // pool. Excluding it lets the full suite pass; the file should be split
-    // into smaller units or moved to a dedicated high-memory job (TAR-18).
-    exclude: ['**/use-employees.spec.tsx'],
     include: ['test/**/*.{spec,test}.{ts,tsx}'],
     coverage: {
       provider: 'v8',

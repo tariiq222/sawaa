@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils"
 import { useOrganizationSettings, useUpdateOrganizationSettings } from "@/hooks/use-organization-settings"
 import { useLocale } from "@/components/locale-provider"
 
-type TabId = "contact" | "regional" | "notifications" | "entity"
+type TabId = "contact" | "regional" | "notifications"
 
 const DATE_FORMAT_OPTIONS = [
   { value: "DD/MM/YYYY", label: "24/03/2026 (DD/MM/YYYY)" },
@@ -41,11 +41,6 @@ const TIMEZONE_OPTIONS = [
   { value: "Asia/Beirut", label: "Asia/Beirut (UTC+2)" },
   { value: "Asia/Baghdad", label: "Asia/Baghdad (UTC+3)" },
 ]
-
-function toPercentRate(rate: number | null | undefined): string {
-  if (rate == null) return "15"
-  return String(rate <= 1 ? rate * 100 : rate)
-}
 
 export function GeneralTab() {
   const { t } = useLocale()
@@ -74,14 +69,6 @@ export function GeneralTab() {
   const [defaultLanguage, setDefaultLanguage] = useState("ar")
   const [sessionDuration, setSessionDuration] = useState("60")
   const [reminderBeforeMinutes, setReminderBeforeMinutes] = useState("60")
-  const [companyNameAr, setCompanyNameAr] = useState("")
-  const [companyNameEn, setCompanyNameEn] = useState("")
-  const [businessRegistration, setBusinessRegistration] = useState("")
-  const [vatRegistrationNumber, setVatRegistrationNumber] = useState("")
-  const [vatRate, setVatRate] = useState("15")
-  const [sellerAddress, setSellerAddress] = useState("")
-  const [organizationCity, setClinicCity] = useState("")
-  const [postalCode, setPostalCode] = useState("")
 
   useEffect(() => {
     if (!settings) return
@@ -97,14 +84,6 @@ export function GeneralTab() {
     setDefaultLanguage(settings.defaultLanguage ?? "ar")
     setSessionDuration(String(settings.sessionDuration ?? 60))
     setReminderBeforeMinutes(String(settings.reminderBeforeMinutes ?? 60))
-    setCompanyNameAr(settings.companyNameAr ?? "")
-    setCompanyNameEn(settings.companyNameEn ?? "")
-    setBusinessRegistration(settings.businessRegistration ?? "")
-    setVatRegistrationNumber(settings.vatRegistrationNumber ?? "")
-    setVatRate(toPercentRate(settings.vatRate))
-    setSellerAddress(settings.sellerAddress ?? "")
-    setClinicCity(settings.organizationCity ?? "")
-    setPostalCode(settings.postalCode ?? "")
   }, [settings])
 
   const handleSaveContact = () => {
@@ -150,24 +129,7 @@ export function GeneralTab() {
     )
   }
 
-  const handleSaveEntity = () => {
-    updateSettings.mutate(
-      {
-        companyNameAr: companyNameAr || null,
-        companyNameEn: companyNameEn || null,
-        businessRegistration: businessRegistration || null,
-        vatRegistrationNumber: vatRegistrationNumber || null,
-        vatRate: Number(vatRate) / 100,
-        sellerAddress: sellerAddress || null,
-        organizationCity,
-        postalCode: postalCode || null,
-      },
-      {
-        onSuccess: () => toast.success(t("settings.saved")),
-        onError: () => toast.error(t("settings.error")),
-      },
-    )
-  }
+
 
   if (isLoading) {
     return (
@@ -192,7 +154,6 @@ export function GeneralTab() {
     { id: "contact", label: t("settings.tabs.general"), desc: t("settings.organizationEmail") },
     { id: "regional", label: t("settings.regionalSettings"), desc: t("settings.weekStartDay") },
     { id: "notifications", label: t("settings.reminders"), desc: t("settings.sessionDuration") },
-    { id: "entity", label: t("settings.tabs.entity"), desc: t("settings.entity.companyNameAr") },
   ]
 
   return (
@@ -248,7 +209,7 @@ export function GeneralTab() {
                 <Card className="shadow-sm bg-surface">
                   <CardContent className="space-y-2 pt-3 pb-3">
                     <Label>{t("settings.organizationAddress")}</Label>
-                    <Input value={organizationAddress} onChange={(e) => setClinicAddress(e.target.value)} />
+                    <Input value={organizationAddress} onChange={(e) => setClinicAddress(e.target.value)} dir="rtl" />
                   </CardContent>
                 </Card>
                 <div />
@@ -373,70 +334,7 @@ export function GeneralTab() {
             </div>
           )}
 
-          {activeTab === "entity" && (
-            <div className="flex flex-col gap-3 h-full">
-              <div className="rounded-lg border border-warning/20 bg-warning/5 px-4 py-3">
-                <p className="text-sm text-warning-foreground">
-                  {t("settings.entity.warning")}
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Card className="shadow-sm bg-surface">
-                  <CardContent className="space-y-2 pt-3 pb-3">
-                    <Label>{t("settings.entity.companyNameAr")}</Label>
-                    <Input value={companyNameAr} onChange={(e) => setCompanyNameAr(e.target.value)} dir="rtl" />
-                  </CardContent>
-                </Card>
-                <Card className="shadow-sm bg-surface">
-                  <CardContent className="space-y-2 pt-3 pb-3">
-                    <Label>{t("settings.entity.companyNameEn")}</Label>
-                    <Input value={companyNameEn} onChange={(e) => setCompanyNameEn(e.target.value)} dir="ltr" />
-                  </CardContent>
-                </Card>
-                <Card className="shadow-sm bg-surface">
-                  <CardContent className="space-y-2 pt-3 pb-3">
-                    <Label>{t("settings.entity.businessRegistration")}</Label>
-                    <Input value={businessRegistration} onChange={(e) => setBusinessRegistration(e.target.value)} dir="ltr" />
-                  </CardContent>
-                </Card>
-                <Card className="shadow-sm bg-surface">
-                  <CardContent className="space-y-2 pt-3 pb-3">
-                    <Label>{t("settings.entity.vatRegistration")}</Label>
-                    <Input value={vatRegistrationNumber} onChange={(e) => setVatRegistrationNumber(e.target.value)} dir="ltr" />
-                  </CardContent>
-                </Card>
-                <Card className="shadow-sm bg-surface">
-                  <CardContent className="space-y-2 pt-3 pb-3">
-                    <Label>{t("settings.entity.vatRate")}</Label>
-                    <Input value={vatRate} onChange={(e) => setVatRate(e.target.value)} type="number" min="0" max="100" dir="ltr" />
-                  </CardContent>
-                </Card>
-                <Card className="shadow-sm bg-surface">
-                  <CardContent className="space-y-2 pt-3 pb-3">
-                    <Label>{t("settings.entity.sellerAddress")}</Label>
-                    <Input value={sellerAddress} onChange={(e) => setSellerAddress(e.target.value)} />
-                  </CardContent>
-                </Card>
-                <Card className="shadow-sm bg-surface">
-                  <CardContent className="space-y-2 pt-3 pb-3">
-                    <Label>{t("settings.entity.organizationCity")}</Label>
-                    <Input value={organizationCity} onChange={(e) => setClinicCity(e.target.value)} />
-                  </CardContent>
-                </Card>
-                <Card className="shadow-sm bg-surface">
-                  <CardContent className="space-y-2 pt-3 pb-3">
-                    <Label>{t("settings.entity.postalCode")}</Label>
-                    <Input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} dir="ltr" />
-                  </CardContent>
-                </Card>
-              </div>
-              <div className="flex justify-end mt-auto pt-2">
-                <Button size="sm" disabled={updateSettings.isPending} onClick={handleSaveEntity}>
-                  {t("settings.save")}
-                </Button>
-              </div>
-            </div>
-          )}
+
         </div>
       </div>
     </Card>
