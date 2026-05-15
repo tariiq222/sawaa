@@ -103,6 +103,7 @@ RUN groupadd -g 1001 app && useradd -u 1001 -g app -s /bin/sh -d /app app
 COPY --from=app-build --chown=app:app /app/apps/dashboard/.next/standalone    ./
 COPY --from=app-build --chown=app:app /app/apps/dashboard/.next/static        ./apps/dashboard/.next/static
 COPY --from=app-build --chown=app:app /app/apps/dashboard/public              ./apps/dashboard/public
+COPY apps/dashboard/.env ./apps/dashboard/.env
 
 USER app
 WORKDIR /app
