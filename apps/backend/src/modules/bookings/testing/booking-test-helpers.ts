@@ -106,15 +106,6 @@ export const buildPrisma = () => {
 
 export const buildEventBus = () => ({ publish: jest.fn().mockResolvedValue(undefined) });
 
-/** Minimal RlsTransactionService mock — runs the callback with the prisma mock as tx.
- *  When an explicit `tx` object is provided (second argument), the callback receives
- *  that object instead of the base prisma mock, mirroring `$transaction` callback behaviour. */
-export const buildRlsTx = (prisma: ReturnType<typeof buildPrisma>, tx?: unknown) =>
-  ({
-    withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx ?? prisma)),
-    withBypassTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx ?? prisma)),
-  } as unknown as RlsTransactionService);
-
 export const buildZoomHandler = () => ({
   execute: jest.fn().mockResolvedValue({ joinUrl: 'https://zoom.example/join' }),
 });

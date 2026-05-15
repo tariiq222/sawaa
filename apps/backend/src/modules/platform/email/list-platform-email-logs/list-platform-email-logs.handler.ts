@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 
-export type PlatformEmailLogStatus = 'QUEUED' | 'SENT' | 'FAILED' | 'SKIPPED_NOT_CONFIGURED';
+type PlatformEmailLogStatus = 'QUEUED' | 'SENT' | 'FAILED' | 'SKIPPED_NOT_CONFIGURED';
 
 export interface ListPlatformEmailLogsQuery {
   status?: PlatformEmailLogStatus;
@@ -11,7 +11,7 @@ export interface ListPlatformEmailLogsQuery {
   limit?: number;
 }
 
-export interface PlatformEmailLogRow {
+interface PlatformEmailLogRow {
   id: string;
   organizationId: string | null;
   templateSlug: string;

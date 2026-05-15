@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
 
-export interface ISmtpService {
+interface ISmtpService {
   sendMail(to: string, subject: string, html: string, from?: string): Promise<void>;
   sendBulk(recipients: Array<{ to: string; subject: string; html: string }>, from?: string): Promise<void>;
   isAvailable(): boolean;

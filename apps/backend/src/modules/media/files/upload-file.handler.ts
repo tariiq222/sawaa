@@ -13,7 +13,7 @@ import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
-export const ALLOWED_MIME_TYPES: ReadonlySet<string> = new Set([
+const ALLOWED_MIME_TYPES: ReadonlySet<string> = new Set([
   'image/jpeg',
   'image/png',
   'image/webp',

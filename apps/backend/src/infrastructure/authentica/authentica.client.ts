@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { fetchWithTimeout } from '../http';
 
-export type AuthenticaChannel = 'EMAIL' | 'SMS';
+type AuthenticaChannel = 'EMAIL' | 'SMS';
 
 export interface AuthenticaSendOtpInput {
   channel: AuthenticaChannel;

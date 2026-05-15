@@ -4,7 +4,7 @@ import { PrismaService } from '../../../../infrastructure/database';
 import { PasswordService } from '../../shared/password.service';
 
 export const PASSWORD_HISTORY_DEPTH = 5;
-export const PASSWORD_REUSED_ERROR = 'PASSWORD_REUSED';
+const PASSWORD_REUSED_ERROR = 'PASSWORD_REUSED';
 
 @Injectable()
 export class PasswordHistoryService {

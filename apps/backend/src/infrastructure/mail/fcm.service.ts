@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import { PlatformSettingsService } from '../../modules/platform/settings/platform-settings.service';
 
-export interface IFcmService {
+interface IFcmService {
   sendPush(token: string, title: string, body: string, data?: Record<string, string>): Promise<string>;
   sendMulticast(tokens: string[], title: string, body: string, data?: Record<string, string>): Promise<{ successCount: number; failureCount: number }>;
   isAvailable(): boolean;

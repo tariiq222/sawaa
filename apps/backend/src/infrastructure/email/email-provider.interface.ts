@@ -1,6 +1,6 @@
 // email-provider — shared email provider contract (mirrors sms-provider.interface.ts pattern).
 
-export type EmailProviderName = 'NONE' | 'SMTP' | 'RESEND' | 'SENDGRID' | 'MAILCHIMP';
+type EmailProviderName = 'NONE' | 'SMTP' | 'RESEND' | 'SENDGRID' | 'MAILCHIMP';
 
 export type EmailSendPayload = {
   to: string;

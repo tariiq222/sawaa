@@ -2,8 +2,8 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
 import { UploadFileHandler } from '../../../media/files/upload-file.handler';
 
-export const MAX_LOGO_BYTES = 2 * 1024 * 1024;
-export const ALLOWED_LOGO_MIMETYPES: ReadonlySet<string> = new Set([
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const ALLOWED_LOGO_MIMETYPES: ReadonlySet<string> = new Set([
   'image/png',
   'image/jpeg',
   'image/webp',

@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client } from 'minio';
 
-export interface IStorageService {
+interface IStorageService {
   uploadFile(bucket: string, key: string, buffer: Buffer, mimetype: string): Promise<string>;
   deleteFile(bucket: string, key: string): Promise<void>;
   getSignedUrl(bucket: string, key: string, expiry?: number): Promise<string>;

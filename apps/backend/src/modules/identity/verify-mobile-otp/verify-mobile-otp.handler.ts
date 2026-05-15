@@ -13,7 +13,7 @@ const LOCKOUT_WINDOW_MINUTES = 10;
 
 export type VerifyMobileOtpCommand = VerifyMobileOtpDto;
 
-export interface VerifyMobileOtpActiveMembership {
+interface VerifyMobileOtpActiveMembership {
   id: string;
   organizationId: string;
   role: string;

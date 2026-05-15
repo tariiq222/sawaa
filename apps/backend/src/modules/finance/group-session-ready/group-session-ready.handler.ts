@@ -10,7 +10,7 @@ interface GroupSessionMinReachedPayload {
   bookingIds: string[];
 }
 
-export interface GroupSessionPaymentLink {
+interface GroupSessionPaymentLink {
   bookingId: string;
   clientId: string;
   invoiceId: string;

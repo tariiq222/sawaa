@@ -1,6 +1,6 @@
 // SaaS-02g-sms — shared SMS provider contract.
 
-export type SmsProviderName = 'UNIFONIC' | 'TAQNYAT' | 'NONE';
+type SmsProviderName = 'UNIFONIC' | 'TAQNYAT' | 'NONE';
 
 export type SmsSendResult = {
   providerMessageId: string;

@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { PaymentStatus } from '@prisma/client';
 
-export const VALID_TRANSITIONS: Partial<Record<PaymentStatus, PaymentStatus[]>> = {
+const VALID_TRANSITIONS: Partial<Record<PaymentStatus, PaymentStatus[]>> = {
   PENDING: ['PENDING_VERIFICATION', 'COMPLETED', 'FAILED'],
   PENDING_VERIFICATION: ['COMPLETED', 'FAILED'],
   COMPLETED: ['REFUNDED'],

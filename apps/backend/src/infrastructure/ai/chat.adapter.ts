@@ -14,7 +14,7 @@ export interface CompletionResult {
   model: string;
 }
 
-export interface IChatService {
+interface IChatService {
   complete(messages: ChatMessage[], model?: string, options?: { maxTokens?: number }): Promise<CompletionResult>;
   stream(messages: ChatMessage[], model?: string): AsyncIterable<string>;
   isAvailable(): boolean;

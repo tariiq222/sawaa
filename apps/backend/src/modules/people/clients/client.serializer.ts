@@ -3,7 +3,7 @@ import type { Client } from '@prisma/client';
 // Dashboard and mobile clients historically use lowercase enum values
 // ("male" / "female", "walk_in" / "full"). Prisma emits the raw enum names
 // (MALE, WALK_IN). Normalize on the way out so we don't have to touch every UI.
-export type ClientBookingSummary = {
+type ClientBookingSummary = {
   id: string;
   date: string;
   status: string;

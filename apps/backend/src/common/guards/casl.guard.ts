@@ -6,13 +6,10 @@ import {
   SetMetadata,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import {
-  CaslAbilityFactory,
-  AppAbility,
-} from '../../modules/identity/casl/casl-ability.factory';
+import { CaslAbilityFactory } from '../../modules/identity/casl/casl-ability.factory';
 
-export type Action = 'manage' | 'create' | 'read' | 'update' | 'delete';
-export type Subject = string;
+type Action = 'manage' | 'create' | 'read' | 'update' | 'delete';
+type Subject = string;
 
 export interface RequiredPermission {
   action: Action;
@@ -25,7 +22,7 @@ export const CHECK_PERMISSIONS_KEY = 'requiredPermissions';
 export const CheckPermissions = (...permissions: RequiredPermission[]) =>
   SetMetadata(CHECK_PERMISSIONS_KEY, permissions);
 
-export type { AppAbility };
+
 
 type RequestUser = {
   /** User role — canonical single-tenant role from `User.role`. */

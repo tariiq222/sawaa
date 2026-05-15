@@ -149,22 +149,22 @@ async function bootstrap(): Promise<void> {
   Logger.log(`Sawaa Backend listening on http://localhost:${port}`, 'Bootstrap');
 
   process.on('SIGTERM', async () => {
-    console.log('SIGTERM received — starting graceful shutdown');
+    Logger.log('SIGTERM received — starting graceful shutdown', 'Bootstrap');
     setShuttingDown();
-    server.close(() => console.log('HTTP server closed'));
+    server.close(() => Logger.log('HTTP server closed', 'Bootstrap'));
     const deadline = Date.now() + 30_000;
     while (requestCount > 0 && Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 100));
     }
-    console.log(`SIGTERM: ${requestCount} requests still in-flight, proceeding shutdown`);
+    Logger.log(`SIGTERM: ${requestCount} requests still in-flight, proceeding shutdown`, 'Bootstrap');
     await app.close();
     process.exit(0);
   });
 
   process.on('SIGINT', async () => {
-    console.log('SIGINT received — starting graceful shutdown');
+    Logger.log('SIGINT received — starting graceful shutdown', 'Bootstrap');
     setShuttingDown();
-    server.close(() => console.log('HTTP server closed'));
+    server.close(() => Logger.log('HTTP server closed', 'Bootstrap'));
     const deadline = Date.now() + 30_000;
     while (requestCount > 0 && Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 100));

@@ -10,7 +10,7 @@ import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 const LOCKOUT_WINDOW_MINUTES = 15;
 
-export interface AuthResponse {
+interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;

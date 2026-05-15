@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 
 export async function withCronLeader(
@@ -15,7 +16,7 @@ export async function withCronLeader(
   `;
 
   if (!acquired[0].acquired) {
-    console.log(`Cron ${cronName}: lock not acquired, skipping`);
+    Logger.log(`Cron ${cronName}: lock not acquired, skipping`, 'CronLeader');
     return;
   }
 

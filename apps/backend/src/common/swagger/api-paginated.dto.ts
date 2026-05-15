@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from '@nestjs/common';
 
 export class PaginationMetaDto {
   @ApiProperty({ example: 42, description: 'Total matching records' })
@@ -15,14 +14,3 @@ export class PaginationMetaDto {
   totalPages!: number;
 }
 
-/**
- * Generic paginated response envelope. Use via
- * `ApiPaginatedResponse(ItemDto)` from the decorator module — do not
- * extend this class directly.
- */
-export class PaginatedDto<T> {
-  data!: T[];
-  meta!: PaginationMetaDto;
-}
-
-export type PaginatedCtor<T> = Type<PaginatedDto<T>>;

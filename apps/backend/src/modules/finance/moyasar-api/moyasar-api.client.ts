@@ -4,8 +4,6 @@ import { PrismaService } from '../../../infrastructure/database';
 import { fetchWithTimeout } from '../../../infrastructure/http';
 import { MoyasarCredentialsService } from '../../../infrastructure/payments/moyasar-credentials.service';
 
-export const MOYASAR_API_CLIENT = Symbol('MOYASAR_API_CLIENT');
-
 export interface MoyasarCreatePaymentParams {
   amountHalalas: number;
   currency: string;

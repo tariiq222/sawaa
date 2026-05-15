@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsUUID } from 'class-validator';
 
-export const CLIENT_PAYMENT_METHODS = ['ONLINE_CARD', 'APPLE_PAY'] as const;
+const CLIENT_PAYMENT_METHODS = ['ONLINE_CARD', 'APPLE_PAY'] as const;
 
 export type ClientPaymentMethod = typeof CLIENT_PAYMENT_METHODS[number];
 

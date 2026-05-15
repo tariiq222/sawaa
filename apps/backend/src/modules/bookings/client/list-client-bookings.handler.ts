@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 
-export interface ClientBookingItem {
+interface ClientBookingItem {
   id: string;
   status: string;
   scheduledAt: Date;

@@ -4,7 +4,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { EmployeeGender, EmploymentType, OnboardingStatus } from '@prisma/client';
 import { PaginationDto } from '../../../common/dto';
 
-export const EMPLOYEE_SORT_FIELDS = ['name', 'experience', 'isActive', 'createdAt'] as const;
+const EMPLOYEE_SORT_FIELDS = ['name', 'experience', 'isActive', 'createdAt'] as const;
 export type EmployeeSortField = (typeof EMPLOYEE_SORT_FIELDS)[number];
 
 export class ListEmployeesDto extends PaginationDto {

@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import type { AiConfig } from './ai.config';
 
-export interface IEmbeddingService {
+interface IEmbeddingService {
   embed(texts: string[]): Promise<number[][]>;
   isAvailable(): boolean;
 }

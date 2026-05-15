@@ -2,8 +2,8 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../../../../infrastructure/database';
 import { UploadFileHandler } from '../../../media/files/upload-file.handler';
 
-export const MAX_AVATAR_BYTES = 1 * 1024 * 1024;
-export const ALLOWED_AVATAR_MIMETYPES: ReadonlySet<string> = new Set([
+const MAX_AVATAR_BYTES = 1 * 1024 * 1024;
+const ALLOWED_AVATAR_MIMETYPES: ReadonlySet<string> = new Set([
   'image/png',
   'image/jpeg',
   'image/webp',

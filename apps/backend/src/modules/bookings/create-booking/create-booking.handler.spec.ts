@@ -43,7 +43,6 @@ const buildPrisma = () => {
     service: { findFirst: jest.fn().mockResolvedValue(mockService) },
     employeeService: { findUnique: jest.fn().mockResolvedValue({ id: 'es-1', employeeId: 'emp-1', serviceId: 'svc-1' }) },
     integration: { findFirst: jest.fn().mockResolvedValue(null) },
-    serviceBookingConfig: { findMany: jest.fn().mockResolvedValue([]) },
     serviceBookingConfig: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]) },
     booking: {
       findFirst: jest.fn().mockResolvedValue(null),
