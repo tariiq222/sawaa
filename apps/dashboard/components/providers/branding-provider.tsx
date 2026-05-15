@@ -43,14 +43,24 @@ export const useBranding = () => useContext(BrandingContext)
 
 /* ─── CSS var injection ─── */
 
+const LIGHT_STYLE_ID = "sawaa-light-theme"
 const DARK_STYLE_ID = "sawaa-dark-theme"
 const FONT_STYLE_ID = "sawaa-font"
 
 function injectLightVars(vars: CSSVarMap) {
-  const root = document.documentElement
-  for (const [key, value] of Object.entries(vars)) {
-    root.style.setProperty(key, value)
+  // Use `.light` instead of `:root` so dark mode (`.dark` from globals.css)
+  // is not accidentally overridden by the branded light theme.
+  const css = `.light {\n${Object.entries(vars)
+    .map(([k, v]) => `  ${k}: ${v};`)
+    .join("\n")}\n}`
+
+  let el = document.getElementById(LIGHT_STYLE_ID) as HTMLStyleElement | null
+  if (!el) {
+    el = document.createElement("style")
+    el.id = LIGHT_STYLE_ID
+    document.head.appendChild(el)
   }
+  el.textContent = css
 }
 
 function injectDarkVars(vars: CSSVarMap) {
@@ -83,16 +93,8 @@ function injectFont(fontFamily: string | null | undefined, fontUrl: string | nul
   el.href = fontUrl
 }
 
-function injectBackground(colorBackground: string | null | undefined) {
-  if (!colorBackground) return
-  document.documentElement.style.setProperty("--background", colorBackground)
-}
-
-function _clearAllVars(lightVars: CSSVarMap) {
-  const root = document.documentElement
-  for (const key of Object.keys(lightVars)) {
-    root.style.removeProperty(key)
-  }
+function _clearAllVars() {
+  document.getElementById(LIGHT_STYLE_ID)?.remove()
   document.getElementById(DARK_STYLE_ID)?.remove()
 }
 
@@ -100,9 +102,13 @@ function _clearAllVars(lightVars: CSSVarMap) {
 
 function applyBranding(colors: BrandingColors) {
   const { light, dark } = deriveCssVars(colors)
+  // Custom background belongs to light theme only; dark theme keeps its
+  // own --background so the page does not render as a light blob in dark mode.
+  if (colors.background) {
+    light["--background"] = colors.background
+  }
   injectLightVars(light)
   injectDarkVars(dark)
-  injectBackground(colors.background)
   injectFont(colors.fontFamily, colors.fontUrl)
 }
 

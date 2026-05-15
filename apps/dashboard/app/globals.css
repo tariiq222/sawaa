@@ -231,9 +231,9 @@
     --background: #0F1117;
     --foreground: #F1F4F8;
     --surface: rgba(27, 32, 38, 0.72);
-    --surface-solid: #1B2026;
-    --surface-muted: #252B33;
-    --muted: #252B33;
+    --surface-solid: #252B33;
+    --surface-muted: #2E3540;
+    --muted: #2E3540;
     --muted-foreground: #98A2B3;
     /* --card is a shadcn-compat alias of --surface. Do not diverge. */
     --card: var(--surface);
@@ -242,9 +242,9 @@
     --popover-foreground: #F1F4F8;
     --secondary: #252B33;
     --secondary-foreground: #F1F4F8;
-    --border: rgba(255, 255, 255, 0.08);
-    --border-strong: rgba(255, 255, 255, 0.16);
-    --input: rgba(255, 255, 255, 0.10);
+    --border: rgba(255, 255, 255, 0.12);
+    --border-strong: rgba(255, 255, 255, 0.24);
+    --input: rgba(255, 255, 255, 0.14);
     --overlay: rgba(0, 0, 0, 0.60);
     /* State colors — dark theme.
        `--destructive` alias must mirror --error (see :root for rationale). */
@@ -270,7 +270,7 @@
     --shadow-primary-color: rgba(47, 192, 176, 0.35);
     --shadow-primary-hover-color: rgba(47, 192, 176, 0.45);
     --glass-bg: rgba(27, 32, 38, 0.72);
-    --glass-bg-solid: rgba(27, 32, 38, 0.88);
+    --glass-bg-solid: rgba(37, 43, 51, 0.92);
     --glass-border: rgba(255, 255, 255, 0.08);
 
     /* Decorative avatar gradient pairs (dark) */

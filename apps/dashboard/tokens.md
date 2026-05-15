@@ -39,17 +39,17 @@ If a token exists in code but not here, it's a bug in this doc — update it.
 | `--background` | `#F2F4F8` | `#0F1117` | Page background |
 | `--foreground` | `#1B2026` | `#F1F4F8` | Primary text |
 | `--surface` | `rgba(255,255,255,0.72)` | `rgba(27,32,38,0.72)` | Card/panel glass surface |
-| `--surface-solid` | `#FFFFFF` | `#1B2026` | Solid fallback for non-glass surfaces |
-| `--surface-muted` | `#F7F9FC` | `#252B33` | Nested sections inside a card |
-| `--muted` | `#F1F4F8` | `#252B33` | Hover state, skeleton, inactive chip background |
+| `--surface-solid` | `#FFFFFF` | `#252B33` | Solid fallback for non-glass surfaces |
+| `--surface-muted` | `#F7F9FC` | `#2E3540` | Nested sections inside a card |
+| `--muted` | `#F1F4F8` | `#2E3540` | Hover state, skeleton, inactive chip background |
 | `--muted-foreground` | `#667085` | `#98A2B3` | Secondary/helper text |
 | `--card` | alias of `--surface` | alias of `--surface` | shadcn compat — **do not diverge** |
 | `--card-foreground` | `#1B2026` | `#F1F4F8` | Text inside cards |
 | `--popover` | `rgba(255,255,255,0.92)` | `rgba(27,32,38,0.92)` | Popover/dropdown surface (higher opacity than card) |
 | `--popover-foreground` | `#1B2026` | `#F1F4F8` | Text in popovers |
-| `--border` | `rgba(0,0,0,0.06)` | `rgba(255,255,255,0.06)` | Default border |
-| `--border-strong` | `#D0D5DD` | `rgba(255,255,255,0.12)` | Stronger borders (inputs, dividers) |
-| `--input` | `#D0D5DD` | `rgba(255,255,255,0.08)` | Form input borders |
+| `--border` | `rgba(0,0,0,0.06)` | `rgba(255,255,255,0.12)` | Default border |
+| `--border-strong` | `#D0D5DD` | `rgba(255,255,255,0.24)` | Stronger borders (inputs, dividers) |
+| `--input` | `#D0D5DD` | `rgba(255,255,255,0.14)` | Form input borders |
 | `--ring` | `rgba(53,79,216,0.28)` | injected | Focus ring |
 | `--overlay` | `rgba(27,32,38,0.6)` | `rgba(0,0,0,0.60)` | Modal/sheet backdrop |
 

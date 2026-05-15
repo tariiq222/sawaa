@@ -205,6 +205,14 @@ export function deriveCssVars(colors: BrandingColors): { light: CSSVarMap; dark:
   dark["--primary-foreground"] = "#1B2026"
   dark["--sidebar-primary-foreground"] = "#1B2026"
 
+  // In dark mode, ultra-light tints must use opacity so they stay subtle
+  // on dark backgrounds (used by animated blobs, chips, selected rows).
+  // Without opacity they render as huge solid bright circles.
+  const dp = hexToRgb(darkPrimary)
+  const da = hexToRgb(darkAccent)
+  dark["--primary-ultra-light"] = `rgba(${dp.r}, ${dp.g}, ${dp.b}, 0.16)`
+  dark["--accent-ultra-light"] = `rgba(${da.r}, ${da.g}, ${da.b}, 0.18)`
+
   return { light, dark }
 }
 
