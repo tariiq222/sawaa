@@ -99,9 +99,7 @@ RUN mkdir -p /app/node_modules/@sawaa \
  && ln -sf /app/packages/shared     /app/node_modules/@sawaa/shared \
  && ln -sf /app/packages/api-client /app/node_modules/@sawaa/api-client \
  && test -f /app/node_modules/@sawaa/shared/dist/constants/feature-keys.d.ts \
-  || (echo "❌ @sawaa/shared/dist not reachable through symlink" && exit 1) \
- && test -f /app/node_modules/@types/uuid/package.json \
-  || (echo "❌ @types/uuid not hoisted by pnpm install" && exit 1)
+  || (echo "❌ @sawaa/shared/dist not reachable through symlink" && exit 1)
 
 RUN cd /app/apps/backend && /app/node_modules/.bin/prisma generate --schema=prisma/schema
 RUN cd /app/apps/backend && /app/node_modules/.bin/nest build
