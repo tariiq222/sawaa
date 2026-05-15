@@ -4,9 +4,8 @@ dist/
 .expo/
 .turbo/
 .git/
-*.env
-.env.local
-.env.*
+**/.env.local
+**/.env.*
 !.env.example
 !.env.prod.example
 coverage/
