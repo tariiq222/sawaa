@@ -36,7 +36,7 @@ describe('flattenPermissions', () => {
     const result = flattenPermissions({
       role: null,
       customRole: {
-        permissions: [{ action: ['read', 'update'], subject: 'Booking' }],
+        permissions: [{ action: 'read', subject: 'Booking' }, { action: 'update', subject: 'Booking' }],
       },
     });
     expect(result).toContain('booking:read');
@@ -47,7 +47,7 @@ describe('flattenPermissions', () => {
     const result = flattenPermissions({
       role: null,
       customRole: {
-        permissions: [{ action: 'read', subject: ['Booking', 'Invoice'] }],
+        permissions: [{ action: 'read', subject: 'Booking' }, { action: 'read', subject: 'Invoice' }],
       },
     });
     expect(result).toContain('booking:read');

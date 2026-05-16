@@ -9,7 +9,7 @@ describe('RequestEmailVerificationHandler', () => {
   let handler: RequestEmailVerificationHandler;
   let prisma: any;
   let sendEmail: jest.Mocked<Partial<SendEmailHandler>>;
-  let config: jest.Mocked<Partial<ConfigService>>;
+  let config: { get: jest.Mock };
 
   beforeEach(async () => {
     prisma = {

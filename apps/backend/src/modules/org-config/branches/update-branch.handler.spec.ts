@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { UpdateBranchHandler } from './update-branch.handler';
 
@@ -11,6 +11,7 @@ describe('UpdateBranchHandler', () => {
       providers: [
         UpdateBranchHandler,
     { provide: PrismaService, useValue: { $transaction: jest.fn(), service: { findMany: jest.fn() } } },
+    { provide: RlsTransactionService, useValue: { withTransaction: jest.fn() } },
     { provide: EventBusService, useValue: { emit: jest.fn() } }
       ],
     }).compile();
@@ -24,7 +25,7 @@ describe('UpdateBranchHandler', () => {
 
   it('executes without throwing', async () => {
     try {
-      await handler.execute({});
+      await handler.execute({ branchId: '00000000-0000-0000-0000-000000000001' });
     } catch (e) {
       // Expected for incomplete mocks
     }

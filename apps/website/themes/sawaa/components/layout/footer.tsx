@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, Phone, Mail } from 'lucide-react';
 import { useBranding } from '@/features/branding/public';
@@ -90,6 +91,8 @@ export function Footer({ clinics = [] }: FooterProps) {
                 <img
                   src={branding.logoUrl ?? SITE.logo}
                   alt={brandName}
+                  width={42}
+                  height={42}
                   className="w-full h-full rounded-lg object-contain"
                 />
               </div>
@@ -248,11 +251,11 @@ export function Footer({ clinics = [] }: FooterProps) {
                 className="h-9 w-14 sm:h-10 sm:w-16 rounded-lg flex items-center justify-center border shadow-xs transition hover:-translate-y-0.5 overflow-hidden bg-white"
                 style={{ borderColor: 'var(--sw-neutral-200)' }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={p.src}
                   alt={p.label}
-                  loading="lazy"
+                  width={56}
+                  height={24}
                   className="max-h-6 max-w-[80%] object-contain"
                 />
               </div>

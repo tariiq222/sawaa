@@ -23,9 +23,9 @@ describe('OnBookingReminderHandler', () => {
     expect(handler).toBeDefined();
   });
 
-  it('executes without throwing', async () => {
+  it('handles without throwing', async () => {
     try {
-      await handler.execute({});
+      await handler.handle({ payload: { bookingId: 'b1', clientId: 'c1', scheduledAt: new Date() }, source: 'test', version: 1, occurredAt: new Date().toISOString(), eventId: '1' });
     } catch (e) {
       // Expected for incomplete mocks
     }

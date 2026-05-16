@@ -32,7 +32,7 @@ describe('GetNotificationDefaultsHandler', () => {
   });
 
   it('should return masked serverKey when present', async () => {
-    settings.get.mockImplementation((key, def) => {
+    settings.get.mockImplementation((key: string, def?: unknown) => {
       if (key === 'notifications.fcm.serverKey') return 'secret-key';
       if (key === 'notifications.fcm.projectId') return 'my-project';
       if (key === 'notifications.fcm.clientEmail') return 'svc@example.com';
@@ -45,7 +45,7 @@ describe('GetNotificationDefaultsHandler', () => {
   });
 
   it('should return stored custom values', async () => {
-    settings.get.mockImplementation((key) => {
+    settings.get.mockImplementation((key: string) => {
       if (key === 'notifications.defaultChannels') return ['SMS'];
       if (key === 'notifications.quietHours') return { startHour: 1, endHour: 5, timezone: 'UTC' };
       return null;

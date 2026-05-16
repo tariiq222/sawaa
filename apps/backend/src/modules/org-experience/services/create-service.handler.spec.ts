@@ -28,7 +28,7 @@ describe('CreateServiceHandler', () => {
 
   it('should execute', async () => {
     try {
-      await handler.execute({ id: '00000000-0000-0000-0000-000000000001' });
+      await handler.execute({ nameAr: 'خدمة', price: 100, durationMins: 30 } as any);
     } catch (e) {
       // Expected for incomplete mocks
     }

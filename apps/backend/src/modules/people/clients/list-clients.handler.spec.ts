@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ClientSource } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { ListClientsHandler } from './list-clients.handler';
 
@@ -103,7 +104,7 @@ describe('ListClientsHandler', () => {
     (prisma.client.count as jest.Mock).mockResolvedValue(0);
     (prisma.booking.findMany as jest.Mock).mockResolvedValue([]);
 
-    await handler.execute({ page: 1, limit: 10, source: 'WEB' });
+    await handler.execute({ page: 1, limit: 10, source: ClientSource.ONLINE });
 
     expect(prisma.client.findMany).toHaveBeenCalledWith(
       expect.objectContaining({

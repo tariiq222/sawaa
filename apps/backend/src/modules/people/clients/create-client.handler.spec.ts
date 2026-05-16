@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException } from '@nestjs/common';
+import { ClientSource } from '@prisma/client';
 import { CreateClientHandler } from './create-client.handler';
 import { PrismaService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
@@ -37,7 +38,7 @@ describe('CreateClientHandler', () => {
     phone: '+966500000001',
     email: 'ahmed@test.com',
     gender: 'MALE' as const,
-    source: 'dashboard' as const,
+    source: ClientSource.ONLINE,
   };
 
   it('should throw ConflictException when phone exists', async () => {
@@ -112,7 +113,7 @@ describe('CreateClientHandler', () => {
       middleName: null,
     });
 
-    await handler.execute({ firstName: 'Ahmed', lastName: 'Ali' });
+    await handler.execute({ firstName: 'Ahmed', lastName: 'Ali', phone: '+966500000002' });
     expect(prisma.client.findFirst).not.toHaveBeenCalled();
   });
 
@@ -146,7 +147,7 @@ describe('CreateClientHandler', () => {
       deletedAt: null,
     });
 
-    await handler.execute({ firstName: 'Ahmed', middleName: 'Mohammed', lastName: 'Ali', isActive: false });
+    await handler.execute({ firstName: 'Ahmed', middleName: 'Mohammed', lastName: 'Ali', phone: '+966500000003', isActive: false });
     expect(prisma.client.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ name: 'Ahmed Mohammed Ali', isActive: false }),
     }));
@@ -182,7 +183,7 @@ describe('CreateClientHandler', () => {
       middleName: null,
     });
 
-    await handler.execute({ firstName: 'Ahmed', lastName: 'Ali', dateOfBirth: '1990-01-01' });
+    await handler.execute({ firstName: 'Ahmed', lastName: 'Ali', phone: '+966500000004', dateOfBirth: '1990-01-01' });
     expect(prisma.client.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ dateOfBirth: new Date('1990-01-01') }),
     }));

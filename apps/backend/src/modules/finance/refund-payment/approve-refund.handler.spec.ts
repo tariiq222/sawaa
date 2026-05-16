@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ApproveRefundHandler } from './approve-refund.handler';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
 import { EventBusService } from '../../../infrastructure/events';
 import { RefundCompletedEvent } from '../events/refund-completed.event';
@@ -35,13 +35,20 @@ const buildPrisma = () => ({
 describe('ApproveRefundHandler', () => {
   let handler: ApproveRefundHandler;
   let prisma: any;
-  let moyasarClient: jest.Mocked<Partial<MoyasarApiClient>>;
-  let eventBus: jest.Mocked<Partial<EventBusService>>;
+  let moyasarClient: { createRefund: jest.Mock };
+  let eventBus: { publish: jest.Mock };
   let txMock: ReturnType<typeof buildPrisma>;
+  let rlsTransaction: { withTransaction: jest.Mock };
 
   beforeEach(async () => {
     prisma = buildPrisma();
     txMock = buildPrisma();
+
+    rlsTransaction = {
+      withTransaction: jest
+        .fn()
+        .mockImplementation(async (fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock)),
+    };
 
     prisma.$transaction = jest
       .fn()
@@ -59,6 +66,7 @@ describe('ApproveRefundHandler', () => {
       providers: [
         ApproveRefundHandler,
         { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: rlsTransaction },
         { provide: MoyasarApiClient, useValue: moyasarClient },
         { provide: EventBusService, useValue: eventBus },
       ],
@@ -144,7 +152,7 @@ describe('ApproveRefundHandler', () => {
     prisma.refundRequest.findFirst.mockResolvedValue(refundRequestBase);
     prisma.refundRequest.update.mockResolvedValue({ ...refundRequestBase, status: 'PROCESSING' });
 
-    prisma.$transaction.mockRejectedValue(new Error('DB error'));
+    rlsTransaction.withTransaction.mockRejectedValue(new Error('DB error'));
 
     await expect(handler.execute({ refundRequestId: 'rr-1', approvedBy: 'admin' })).rejects.toThrow('DB error');
 
@@ -160,7 +168,7 @@ describe('ApproveRefundHandler', () => {
       .mockResolvedValueOnce({ ...refundRequestBase, status: 'PROCESSING' })
       .mockRejectedValueOnce(new Error('Persist failed'));
 
-    prisma.$transaction.mockRejectedValue(new Error('DB error'));
+    rlsTransaction.withTransaction.mockRejectedValue(new Error('DB error'));
 
     await expect(handler.execute({ refundRequestId: 'rr-1', approvedBy: 'admin' })).rejects.toThrow('DB error');
 

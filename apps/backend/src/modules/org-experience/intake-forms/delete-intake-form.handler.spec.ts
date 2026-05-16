@@ -26,9 +26,9 @@ describe('DeleteIntakeFormHandler', () => {
 
   it('should execute', async () => {
     (prisma.intakeForm.findFirst as jest.Mock).mockResolvedValue({ id: 'test' });
-    await handler.execute({});
+    await handler.execute({ formId: 'test' });
     
     (prisma.intakeForm.findFirst as jest.Mock).mockResolvedValue(null);
-    await expect(handler.execute({})).rejects.toThrow();
+    await expect(handler.execute({ formId: 'test' })).rejects.toThrow();
   });
 });

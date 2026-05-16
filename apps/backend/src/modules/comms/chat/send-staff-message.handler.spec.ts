@@ -27,7 +27,7 @@ describe('SendStaffMessageHandler', () => {
 
   it('should execute', async () => {
     try {
-      await handler.execute({ id: '00000000-0000-0000-0000-000000000001' });
+      await handler.execute({ conversationId: 'conv-1', staffId: 'staff-1', body: 'test' });
     } catch (e) {
       // Expected for incomplete mocks
     }

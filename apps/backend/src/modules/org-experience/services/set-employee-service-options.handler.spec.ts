@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { SetEmployeeServiceOptionsHandler } from './set-employee-service-options.handler';
 
 describe('SetEmployeeServiceOptionsHandler', () => {
@@ -13,7 +13,8 @@ describe('SetEmployeeServiceOptionsHandler', () => {
     { provide: PrismaService, useValue: {
     serviceDurationOption: { findMany: jest.fn() },
     employeeServiceOption: { findMany: jest.fn() }
-    } }
+    } },
+    { provide: RlsTransactionService, useValue: { withTransaction: jest.fn() } }
       ],
     }).compile();
 
@@ -27,7 +28,7 @@ describe('SetEmployeeServiceOptionsHandler', () => {
 
   it('should execute', async () => {
     try {
-      await handler.execute({ id: '00000000-0000-0000-0000-000000000001' });
+      await handler.execute({ employeeServiceId: '00000000-0000-0000-0000-000000000001' } as any);
     } catch (e) {
       // Expected for incomplete mocks
     }

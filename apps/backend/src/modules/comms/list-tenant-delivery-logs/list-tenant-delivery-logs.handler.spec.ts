@@ -25,7 +25,7 @@ describe('ListTenantDeliveryLogsHandler', () => {
   });
 
   it('should execute', async () => {
-    await handler.execute({ id: '00000000-0000-0000-0000-000000000001' });
+    await handler.execute({ page: 1, perPage: 20 });
     expect(prisma.notificationDeliveryLog.findMany).toHaveBeenCalled();
   });
 });

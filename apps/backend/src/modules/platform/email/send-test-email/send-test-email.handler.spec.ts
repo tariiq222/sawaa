@@ -25,7 +25,7 @@ describe('SendTestEmailHandler', () => {
 
   it('executes without throwing', async () => {
     try {
-      await handler.execute({});
+      await handler.execute({ slug: 'test-template', to: 'test@example.com' });
     } catch (e) {
       // Expected for incomplete mocks
     }

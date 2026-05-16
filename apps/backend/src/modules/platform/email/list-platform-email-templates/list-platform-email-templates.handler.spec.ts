@@ -22,7 +22,7 @@ describe('ListPlatformEmailTemplatesHandler', () => {
 
   it('executes without throwing', async () => {
     try {
-      await handler.execute({});
+      await handler.execute();
     } catch (e) {
       // Expected for incomplete mocks
     }

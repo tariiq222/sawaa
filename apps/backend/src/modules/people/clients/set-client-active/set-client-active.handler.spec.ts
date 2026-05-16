@@ -113,6 +113,7 @@ describe('SetClientActiveHandler', () => {
     const prisma = buildPrisma(null);
     const handler = new SetClientActiveHandler(
       prisma as never,
+      prisma as never,
       buildEventBus() as never,
       buildLogActivity() as never,
     );

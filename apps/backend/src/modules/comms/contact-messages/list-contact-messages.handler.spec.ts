@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ContactMessageStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { ListContactMessagesHandler } from './list-contact-messages.handler';
 
@@ -26,7 +27,7 @@ describe('ListContactMessagesHandler', () => {
 
   it('should execute successfully', async () => {
     (prisma.contactMessage.findMany as jest.Mock).mockResolvedValue({ id: 'test-id' });
-    const result = await handler.execute({status:"PENDING",page:1,limit:10});
+    const result = await handler.execute({status:ContactMessageStatus.NEW,page:1,limit:10});
     expect(result).toBeDefined();
   });
 });

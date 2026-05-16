@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { SetDurationOptionsHandler } from './set-duration-options.handler';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 
 describe('SetDurationOptionsHandler', () => {
   let handler: SetDurationOptionsHandler;
@@ -18,8 +18,9 @@ describe('SetDurationOptionsHandler', () => {
       serviceDurationOption: { findMany: jest.fn() },
     };
 
+    const rlsTransaction = { withTransaction: jest.fn().mockImplementation(async (fn: any) => fn(txMock)) };
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SetDurationOptionsHandler, { provide: PrismaService, useValue: prisma }],
+      providers: [SetDurationOptionsHandler, { provide: PrismaService, useValue: prisma }, { provide: RlsTransactionService, useValue: rlsTransaction }],
     }).compile();
 
     handler = module.get<SetDurationOptionsHandler>(SetDurationOptionsHandler);
@@ -37,7 +38,7 @@ describe('SetDurationOptionsHandler', () => {
 
     const result = await handler.execute({
       serviceId: 'svc-1',
-      options: [{ id: 'opt-1', label: 'Standard', durationMins: 30, price: 100, isActive: true }],
+      options: [{ id: 'opt-1', label: 'Standard', labelAr: 'قياسي', durationMins: 30, price: 100, isActive: true }],
     });
     expect(txMock.serviceDurationOption.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: 'opt-1' },
@@ -67,7 +68,7 @@ describe('SetDurationOptionsHandler', () => {
 
     await handler.execute({
       serviceId: 'svc-1',
-      options: [{ label: 'Basic', durationMins: 30, price: 50 }],
+      options: [{ label: 'Basic', labelAr: 'أساسي', durationMins: 30, price: 50 }],
     });
     expect(txMock.serviceDurationOption.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ currency: 'SAR', isDefault: false, sortOrder: 0 }),

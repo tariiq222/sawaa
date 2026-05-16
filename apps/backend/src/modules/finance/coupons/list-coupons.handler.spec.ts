@@ -6,10 +6,11 @@ describe('ListCouponsHandler', () => {
 
   beforeEach(() => {
     prisma = {
-      $transaction: jest.fn((cb) => cb(prisma)),
+      $transaction: jest.fn((cb: any) => cb(prisma)),
       coupon: { findMany: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0) },
     };
-    handler = new ListCouponsHandler(prisma as any);
+    const rlsTransaction = { withTransaction: jest.fn((fn: any) => fn(prisma)) };
+    handler = new ListCouponsHandler(prisma as any, rlsTransaction as any);
   });
 
   it('lists with defaults', async () => {

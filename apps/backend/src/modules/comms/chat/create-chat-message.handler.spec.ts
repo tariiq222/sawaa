@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import { MessageSenderType } from '@prisma/client';
 import { CreateChatMessageHandler } from './create-chat-message.handler';
 import { PrismaService } from '../../../infrastructure/database';
 
@@ -45,7 +46,7 @@ describe('CreateChatMessageHandler', () => {
     prisma.chatConversation.findFirst.mockResolvedValue({ id: 'conv-1' });
     prisma.commsChatMessage.create.mockResolvedValue({ id: 'msg-1' });
 
-    await handler.execute({ conversationId: 'conv-1', senderType: 'SYSTEM', body: 'welcome' });
+    await handler.execute({ conversationId: 'conv-1', senderType: 'AI' as MessageSenderType, body: 'welcome' });
     expect(prisma.commsChatMessage.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ senderId: null }),
     }));

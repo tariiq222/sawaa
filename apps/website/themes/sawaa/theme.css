@@ -89,29 +89,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ═══ Reveal animation (replaces framer-motion) ═══ */
-.theme-sawaa .sw-reveal {
-  opacity: 0;
-  transform: translateY(36px);
-  transition: opacity 700ms ease-out, transform 700ms ease-out;
-  transition-delay: var(--sw-reveal-delay, 0ms);
-  will-change: transform, opacity;
-}
-
-.theme-sawaa .sw-reveal.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .theme-sawaa .sw-reveal,
-  .theme-sawaa .sw-reveal.is-visible {
-    transition: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-
 /* ═══ Float keyframes for decorative shapes ═══ */
 @keyframes sw-float-slow {
   0%, 100% { transform: translateY(0) rotate(0deg); }

@@ -26,7 +26,7 @@ describe('OnboardEmployeeHandler', () => {
 
   it('should execute', async () => {
     try {
-      await handler.execute({ id: '00000000-0000-0000-0000-000000000001' });
+      await handler.execute({ nameEn: 'Test', nameAr: 'تجربة', email: 'test@example.com', specialty: 'Test' });
     } catch (e) {
       // Expected for incomplete mocks
     }

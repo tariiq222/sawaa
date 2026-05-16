@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { LoginForm } from '@/features/auth/public';
 import { getLocale } from '@/features/locale/public';
 import { t } from '@/features/locale/dictionary';
@@ -36,9 +37,11 @@ export async function SawaaLoginPage() {
         }}
       >
         {/* Logo */}
-        <img
+        <Image
           src="/logos/sawa-logo.png"
           alt="سواء"
+          width={120}
+          height={40}
           className="h-10 mb-6 mx-auto block"
         />
 

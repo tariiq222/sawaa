@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { IntakeFormType, IntakeFormScope } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { CreateIntakeFormHandler } from './create-intake-form.handler';
 
@@ -27,8 +28,8 @@ describe('CreateIntakeFormHandler', () => {
   it('should create intake form with fields', async () => {
     (prisma.intakeForm.create as jest.Mock).mockResolvedValue({ id: 'test', fields: [] });
     await handler.execute({
-      nameAr: 'نموذج', nameEn: 'Form', type: 'GENERAL', scope: 'GLOBAL', scopeId: '', isActive: true,
-      fields: [{ labelAr: 'حقل', labelEn: 'Field', fieldType: 'TEXT', isRequired: true, options: [], position: 0 }],
+      nameAr: 'نموذج', nameEn: 'Form', type: IntakeFormType.PRE_SESSION, scope: IntakeFormScope.GLOBAL, scopeId: '', isActive: true,
+      fields: [{ labelAr: 'حقل', labelEn: 'Field', fieldType: 'TEXT' as any, isRequired: true, options: [], position: 0 }],
     });
     expect(prisma.intakeForm.create).toHaveBeenCalled();
   });
@@ -36,7 +37,7 @@ describe('CreateIntakeFormHandler', () => {
   it('should create intake form without fields', async () => {
     (prisma.intakeForm.create as jest.Mock).mockResolvedValue({ id: 'test', fields: [] });
     await handler.execute({
-      nameAr: 'نموذج', nameEn: 'Form', type: 'GENERAL', scope: 'GLOBAL', scopeId: '', isActive: true,
+      nameAr: 'نموذج', nameEn: 'Form', type: IntakeFormType.PRE_SESSION, scope: IntakeFormScope.GLOBAL, scopeId: '', isActive: true,
       fields: [],
     });
     expect(prisma.intakeForm.create).toHaveBeenCalled();

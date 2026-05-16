@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { ArrowLeft, FileText } from 'lucide-react';
 import type { SectionIntro } from '@/features/site-content/public';
 import { BLOG_POSTS } from '../../lib/constants';
@@ -36,12 +37,12 @@ export function Blog({ intro }: Props) {
                   className="h-[180px] sm:h-[200px] md:h-[220px] relative overflow-hidden"
                   style={{ background: 'var(--sw-neutral-100)' }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={p.image}
                     alt={p.title}
-                    loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    sizes="(max-width:640px) 100vw, (max-width:768px) 50vw, 33vw"
                   />
                   <div
                     className="absolute inset-0"

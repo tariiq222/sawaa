@@ -40,14 +40,14 @@ export function Navbar() {
         className="sw-nav-glass fixed top-4 left-1/2 z-[1000] w-[calc(100%-16px)] sm:w-[calc(100%-32px)] max-w-[1260px] rounded-full px-3 py-2 flex items-center justify-between transition-all duration-300"
         style={{
           transform: 'translateX(-50%)',
-          background: scrolled ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.35)',
+          background: scrolled ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.62)',
           border: '1px solid rgba(255,255,255,0.5)',
         }}
         aria-label="التنقل الرئيسي"
       >
-        <Link href="/" aria-label={`الصفحة الرئيسية لـ ${brandName}`} className="flex items-center gap-2 ps-2 pe-3">
+        <Link href="/" aria-label={`الصفحة الرئيسية لـ ${brandName}`} className="flex items-center gap-2 ps-2 pe-3 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logo} alt={`شعار ${brandName}`} className="h-7 sm:h-8 w-auto" style={{ display: 'block' }} />
+          <img src={logo} alt={`شعار ${brandName}`} width={32} height={32} className="h-7 sm:h-8 w-auto" style={{ display: 'block' }} />
           <span className="font-extrabold text-sm sm:text-base whitespace-nowrap" style={{ color: 'var(--sw-primary-600)' }}>
             سواء للإرشاد الأسري
           </span>
@@ -59,16 +59,7 @@ export function Navbar() {
               key={l.href}
               href={l.href}
               role="menuitem"
-              className="px-4 py-2 text-[0.813rem] font-semibold rounded-full transition-all duration-200"
-              style={{ color: 'var(--sw-neutral-700)' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--sw-primary-700)';
-                e.currentTarget.style.background = 'var(--sw-primary-50)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--sw-neutral-700)';
-                e.currentTarget.style.background = 'transparent';
-              }}
+              className="px-4 py-2 text-[0.813rem] font-semibold rounded-full transition-all duration-200 text-[var(--sw-neutral-700)] hover:bg-[var(--sw-primary-50)] hover:text-[var(--sw-primary-700)] focus-visible:bg-[var(--sw-primary-50)] focus-visible:text-[var(--sw-primary-700)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             >
               {l.label}
             </a>
@@ -78,17 +69,14 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-2">
           <Link
             href={isAuthenticated() ? '/account' : '/login'}
-            className="inline-flex items-center gap-2 text-[0.813rem] font-semibold px-4 py-2.5 rounded-full transition-all"
-            style={{ color: 'var(--sw-neutral-700)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--sw-primary-700)'; e.currentTarget.style.background = 'var(--sw-primary-50)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--sw-neutral-700)'; e.currentTarget.style.background = 'transparent'; }}
+            className="inline-flex items-center gap-2 text-[0.813rem] font-semibold px-4 py-2.5 rounded-full transition-all text-[var(--sw-neutral-700)] hover:bg-[var(--sw-primary-50)] hover:text-[var(--sw-primary-700)] focus-visible:bg-[var(--sw-primary-50)] focus-visible:text-[var(--sw-primary-700)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
           >
             <User className="w-4 h-4" aria-hidden="true" />
             {isAuthenticated() ? 'حسابي' : 'تسجيل الدخول'}
           </Link>
           <Link
             href="/booking"
-            className="inline-flex items-center gap-2 text-[0.813rem] font-bold px-5 py-2.5 rounded-full transition-all hover:-translate-y-0.5"
+            className="inline-flex items-center gap-2 text-[0.813rem] font-bold px-5 py-2.5 rounded-full transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{
               background: 'var(--sw-primary-500)',
               color: '#fff',
@@ -105,7 +93,7 @@ export function Navbar() {
           aria-label="فتح القائمة"
           aria-expanded={mobileOpen}
           aria-controls="mobile-menu"
-          className="md:hidden w-10 h-10 rounded-full flex items-center justify-center"
+          className="md:hidden w-10 h-10 rounded-full flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
           style={{ background: 'var(--sw-primary-50)' }}
         >
           <Menu className="w-5 h-5" style={{ color: 'var(--sw-primary-700)' }} aria-hidden="true" />
@@ -124,7 +112,7 @@ export function Navbar() {
           <button
             onClick={() => setMobileOpen(false)}
             aria-label="إغلاق القائمة"
-            className="absolute top-6 end-6 w-11 h-11 rounded-full flex items-center justify-center"
+            className="absolute top-6 end-6 w-11 h-11 rounded-full flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{ background: 'var(--sw-neutral-100)' }}
           >
             <X className="w-6 h-6" style={{ color: 'var(--sw-secondary-700)' }} aria-hidden="true" />
@@ -134,7 +122,7 @@ export function Navbar() {
               key={l.href}
               href={l.href}
               onClick={() => setMobileOpen(false)}
-              className="text-xl font-semibold px-9 py-3.5 rounded-full transition"
+              className="text-xl font-semibold px-9 py-3.5 rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
               style={{ color: 'var(--sw-secondary-700)' }}
             >
               {l.label}
@@ -143,7 +131,7 @@ export function Navbar() {
           <Link
             href={isAuthenticated() ? '/account' : '/login'}
             onClick={() => setMobileOpen(false)}
-            className="text-xl font-semibold px-9 py-3.5 rounded-full transition"
+            className="text-xl font-semibold px-9 py-3.5 rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{ color: 'var(--sw-primary-700)', background: 'var(--sw-primary-50)' }}
           >
             {isAuthenticated() ? 'حسابي' : 'تسجيل الدخول'}
@@ -151,7 +139,7 @@ export function Navbar() {
           <Link
             href="/booking"
             onClick={() => setMobileOpen(false)}
-            className="mt-5 inline-flex items-center gap-2 font-bold px-9 py-4 rounded-full"
+            className="mt-5 inline-flex items-center gap-2 font-bold px-9 py-4 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{
               background: 'var(--sw-primary-500)',
               color: '#fff',

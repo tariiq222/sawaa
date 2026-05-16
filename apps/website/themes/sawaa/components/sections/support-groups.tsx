@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, Clock, UserCheck, Users } from 'lucide-react';
 import type { SectionIntro } from '@/features/site-content/public';
@@ -67,12 +68,12 @@ export function SupportGroups({ intro }: Props) {
                     className="relative w-full h-full rounded-xl overflow-hidden"
                     style={{ boxShadow: `0 0 0 1px ${t.ring}` }}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={g.image}
                       alt={g.name}
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      sizes="(max-width:768px) 150px, 150px"
                     />
                     <span
                       className="absolute top-2 end-2 text-[0.625rem] font-extrabold bg-white/95 backdrop-blur px-2 py-0.5 rounded-full"

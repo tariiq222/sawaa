@@ -53,8 +53,8 @@ describe('UpsertOrgSettingsHandler', () => {
     prisma.organizationSettings.findFirst.mockResolvedValue({ id: 's1' });
     prisma.organizationSettings.update.mockResolvedValue({ id: 's1' });
 
-    const result = await handler.execute({ currency: 'USD' });
-    expect(prisma.organizationSettings.update).toHaveBeenCalledWith({ where: { id: 's1' }, data: { currency: 'USD' } });
+    const result = await handler.execute({ timezone: 'UTC' });
+    expect(prisma.organizationSettings.update).toHaveBeenCalledWith({ where: { id: 's1' }, data: { timezone: 'UTC' } });
   });
 
   it('should create settings when none exist', async () => {
@@ -62,7 +62,7 @@ describe('UpsertOrgSettingsHandler', () => {
     prisma.organizationSettings.findFirst.mockResolvedValue(null);
     prisma.organizationSettings.create.mockResolvedValue({ id: 's2' });
 
-    await handler.execute({ currency: 'SAR' });
-    expect(prisma.organizationSettings.create).toHaveBeenCalledWith({ data: { currency: 'SAR' } });
+    await handler.execute({ timezone: 'Asia/Riyadh' });
+    expect(prisma.organizationSettings.create).toHaveBeenCalledWith({ data: { timezone: 'Asia/Riyadh' } });
   });
 });

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ContactMessageStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { UpdateContactMessageStatusHandler } from './update-contact-message-status.handler';
 
@@ -26,9 +27,9 @@ describe('UpdateContactMessageStatusHandler', () => {
 
   it('should execute', async () => {
     (prisma.contactMessage.findFirst as jest.Mock).mockResolvedValue({ id: 'test' });
-    await handler.execute({id:"00000000-0000-0000-0000-000000000001",status:"PENDING"});
+    await handler.execute({id:"00000000-0000-0000-0000-000000000001",status:ContactMessageStatus.NEW});
     
     (prisma.contactMessage.findFirst as jest.Mock).mockResolvedValue(null);
-    await expect(handler.execute({id:"00000000-0000-0000-0000-000000000001",status:"PENDING"})).rejects.toThrow();
+    await expect(handler.execute({id:"00000000-0000-0000-0000-000000000001",status:ContactMessageStatus.NEW})).rejects.toThrow();
   });
 });

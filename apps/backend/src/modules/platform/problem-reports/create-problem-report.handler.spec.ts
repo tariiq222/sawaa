@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ProblemReportType } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { CreateProblemReportHandler } from './create-problem-report.handler';
 
@@ -26,7 +27,7 @@ describe('CreateProblemReportHandler', () => {
 
   it('should execute successfully', async () => {
     (prisma.problemReport.create as jest.Mock).mockResolvedValue({ id: 'test-id' });
-    const result = await handler.execute({reporterId:"00000000-0000-0000-0000-000000000001",type:"CONSULTATION",title:"test",description:"test notes"});
+    const result = await handler.execute({reporterId:"00000000-0000-0000-0000-000000000001",type:ProblemReportType.BUG,title:"test",description:"test notes test"});
     expect(result).toBeDefined();
   });
 });

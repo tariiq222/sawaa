@@ -26,7 +26,7 @@ describe('UpsertIntegrationHandler', () => {
 
   it('should execute successfully', async () => {
     (prisma.integration.upsert as jest.Mock).mockResolvedValue({ id: 'test-id' });
-    const result = await handler.execute({provider:"00000000-0000-0000-0000-000000000001",config:"test",isActive:true});
+    const result = await handler.execute({provider:"00000000-0000-0000-0000-000000000001",config:{key:"test"},isActive:true});
     expect(result).toBeDefined();
   });
 });

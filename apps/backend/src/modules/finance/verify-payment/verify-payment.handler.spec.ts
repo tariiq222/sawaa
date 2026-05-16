@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { VerifyPaymentHandler } from './verify-payment.handler';
 
@@ -15,6 +15,7 @@ describe('VerifyPaymentHandler', () => {
     payment: { findFirst: jest.fn(), update: jest.fn() },
     invoice: { findFirst: jest.fn() }
     } },
+    { provide: RlsTransactionService, useValue: { withTransaction: jest.fn() } },
     { provide: EventBusService, useValue: { emit: jest.fn() } }
       ],
     }).compile();
@@ -29,7 +30,7 @@ describe('VerifyPaymentHandler', () => {
 
   it('should execute', async () => {
     try {
-      await handler.execute({ id: '00000000-0000-0000-0000-000000000001' });
+      await handler.execute({ paymentId: '00000000-0000-0000-0000-000000000001', action: 'approve' });
     } catch (e) {
       // Expected for incomplete mocks
     }

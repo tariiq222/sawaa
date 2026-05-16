@@ -13,7 +13,8 @@ describe('UpdateUserHandler', () => {
       },
       $transaction: jest.fn((cb) => cb(prisma)),
     };
-    handler = new UpdateUserHandler(prisma as any);
+    const rlsTransaction = { withTransaction: jest.fn((fn: any) => fn(prisma)) };
+    handler = new UpdateUserHandler(prisma as any, rlsTransaction as any);
   });
 
   it('updates user when found', async () => {

@@ -6,9 +6,9 @@ import { EmailProviderFactory } from '../../../infrastructure/email/email-provid
 
 describe('EmailChannelAdapter', () => {
   let adapter: EmailChannelAdapter;
-  let smtp: jest.Mocked<Partial<SmtpService>>;
-  let factory: jest.Mocked<Partial<EmailProviderFactory>>;
-  let platformMailer: jest.Mocked<Partial<PlatformMailerService>>;
+  let smtp: { isAvailable: jest.Mock; sendMail: jest.Mock };
+  let factory: { resolve: jest.Mock };
+  let platformMailer: { sendOtpLogin: jest.Mock };
   let tenantAdapter: { isAvailable: jest.Mock; sendMail: jest.Mock };
 
   beforeEach(async () => {

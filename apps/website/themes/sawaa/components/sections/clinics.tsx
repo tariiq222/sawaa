@@ -178,6 +178,8 @@ export function Clinics({ clinics, intro }: Props) {
                           src={c.image}
                           alt={c.nameAr}
                           loading="lazy"
+                          width={300}
+                          height={160}
                           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         />
                       ) : (

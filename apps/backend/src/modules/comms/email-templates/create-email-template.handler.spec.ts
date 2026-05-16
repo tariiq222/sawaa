@@ -23,7 +23,7 @@ describe('CreateEmailTemplateHandler', () => {
 
   it('should throw ConflictException when slug exists', async () => {
     prisma.emailTemplate.findFirst.mockResolvedValue({ id: 't1', slug: 'welcome' });
-    await expect(handler.execute({ slug: 'welcome', name: 'Welcome', subject: 'Welcome' })).rejects.toThrow(ConflictException);
+    await expect(handler.execute({ slug: 'welcome', name: 'Welcome', subject: 'Welcome', htmlBody: '<p>Hi</p>' })).rejects.toThrow(ConflictException);
   });
 
   it('should create template with htmlBody', async () => {
@@ -41,7 +41,7 @@ describe('CreateEmailTemplateHandler', () => {
     prisma.emailTemplate.findFirst.mockResolvedValue(null);
     prisma.emailTemplate.create.mockResolvedValue({ id: 't2', slug: 'reset' });
 
-    await handler.execute({ slug: 'reset', name: 'Reset', subject: 'Reset', blocks: [{ type: 'text', content: 'hello' }] as any });
+    await handler.execute({ slug: 'reset', name: 'Reset', subject: 'Reset', htmlBody: '', blocks: [{ type: 'text', content: 'hello' }] as any });
     expect(prisma.emailTemplate.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ htmlBody: '<html>rendered</html>', blocks: [{ type: 'text', content: 'hello' }] }),
     }));

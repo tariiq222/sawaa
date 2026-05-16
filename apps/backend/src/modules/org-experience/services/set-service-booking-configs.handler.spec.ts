@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { SetServiceBookingConfigsHandler } from './set-service-booking-configs.handler';
 
 describe('SetServiceBookingConfigsHandler', () => {
@@ -13,7 +13,8 @@ describe('SetServiceBookingConfigsHandler', () => {
     { provide: PrismaService, useValue: {
     service: { findFirst: jest.fn() },
     serviceBookingConfig: { findMany: jest.fn() }
-    } }
+    } },
+    { provide: RlsTransactionService, useValue: { withTransaction: jest.fn() } }
       ],
     }).compile();
 
@@ -27,7 +28,7 @@ describe('SetServiceBookingConfigsHandler', () => {
 
   it('should execute', async () => {
     try {
-      await handler.execute({ id: '00000000-0000-0000-0000-000000000001' });
+      await handler.execute({ serviceId: '00000000-0000-0000-0000-000000000001' } as any);
     } catch (e) {
       // Expected for incomplete mocks
     }

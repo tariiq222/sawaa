@@ -49,7 +49,7 @@ describe('UpdateNotificationDefaultsHandler', () => {
   });
 
   it('should update fcm fields', async () => {
-    settings.get.mockImplementation((key) => {
+    settings.get.mockImplementation((key: string) => {
       if (key === 'notifications.fcm.serverKey') return 'old-key';
       if (key === 'notifications.fcm.projectId') return 'old-pid';
       if (key === 'notifications.fcm.clientEmail') return 'old-email';
