@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { BookingCancelApprovedEvent } from '../events/booking-cancel-approved.event';
@@ -19,6 +19,7 @@ export interface ApproveCancelBookingCommand {
 export class ApproveCancelBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly eventBus: EventBusService,
     private readonly settingsHandler: GetBookingSettingsHandler,
   ) {}
@@ -45,7 +46,7 @@ export class ApproveCancelBookingHandler {
         ? (settings as Record<string, unknown>).autoRefundOnCancel === true
         : true;
 
-    const [updated] = await this.prisma.$transaction((tx) => Promise.all([
+    const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
       tx.booking.update({
         where: { id: cmd.bookingId },
         data: {

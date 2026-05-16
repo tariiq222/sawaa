@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
 import { ExecutionContext } from '@nestjs/common';
-import { JwtGuard, Public, IS_PUBLIC_KEY } from './jwt.guard';
+import { JwtGuard, Public } from './jwt.guard';
 import { PrismaService } from '../../infrastructure/database';
 import { RedisService } from '../../infrastructure/cache';
 import { ClsService } from 'nestjs-cls';

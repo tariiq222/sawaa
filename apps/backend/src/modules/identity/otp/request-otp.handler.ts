@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { ClsService } from 'nestjs-cls';
 import { randomInt } from 'crypto';
 import * as bcrypt from 'bcryptjs';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { NotificationChannelRegistry } from '../../comms/notification-channel/notification-channel-registry';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
@@ -31,6 +31,7 @@ export class RequestOtpHandler {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly channelRegistry: NotificationChannelRegistry,
     private readonly config: ConfigService,
     private readonly cls: ClsService,
@@ -80,7 +81,7 @@ export class RequestOtpHandler {
       const codeHash = await bcrypt.hash(rawCode, 10);
       const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
 
-      const created = await this.prisma.$transaction(async (tx) => {
+      const created = await this.rlsTransaction.withTransaction(async (tx) => {
         // bypassRls: OTP codes have nullable organizationId (cross-org) and run in SYSTEM_CONTEXT
         await tx.otpCode.updateMany({
           where: {

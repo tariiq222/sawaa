@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListCouponsDto } from './list-coupons.dto';
 
@@ -9,6 +9,7 @@ export type ListCouponsQuery = ListCouponsDto;
 export class ListCouponsHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   async execute(query: ListCouponsQuery) {
@@ -27,7 +28,7 @@ export class ListCouponsHandler {
       where['isActive'] = true;
     }
 
-    const [items, total] = await this.prisma.$transaction((tx) =>
+    const [items, total] = await this.rlsTransaction.withTransaction((tx) =>
       Promise.all([
         tx.coupon.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' } }),
         tx.coupon.count({ where }),

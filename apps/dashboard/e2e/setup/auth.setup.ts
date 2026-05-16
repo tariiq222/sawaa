@@ -1,4 +1,4 @@
-import { test as setup, expect, chromium } from '@playwright/test';
+import { test as setup, chromium } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 

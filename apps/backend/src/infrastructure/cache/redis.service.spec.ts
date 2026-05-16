@@ -8,7 +8,7 @@ jest.mock('ioredis', () => {
     quit: jest.fn().mockResolvedValue('OK'),
   }));
 });
-import Redis from 'ioredis';
+import 'ioredis';
 
 describe('RedisService', () => {
   let service: RedisService;

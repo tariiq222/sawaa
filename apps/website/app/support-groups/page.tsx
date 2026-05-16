@@ -24,20 +24,22 @@ function SupportGroupsContent() {
   useEffect(() => {
     if (!pendingGroupId || !client || isBooking || bookingResult) return;
 
-    setIsBooking(true);
-    setBookingError(null);
-
     // Use credentials: 'include' — the httpOnly cookie handles auth
-    bookGroupSession(pendingGroupId, '')
-      .then((result) => {
+    async function autoBook() {
+      setIsBooking(true);
+      setBookingError(null);
+      try {
+        const result = await bookGroupSession(pendingGroupId!, '');
         setBookingResult(result);
-        // Clear groupId from URL
         router.replace('/support-groups');
-      })
-      .catch((err) => {
-          setBookingError(err instanceof Error ? err.message : t('common.bookingFailed'));
-      })
-      .finally(() => setIsBooking(false));
+      } catch (err) {
+        setBookingError(err instanceof Error ? err.message : t('common.bookingFailed'));
+      } finally {
+        setIsBooking(false);
+      }
+    }
+    autoBook();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- t is stable, auto-book runs once on return from login
   }, [pendingGroupId, client, isBooking, bookingResult, router]);
 
   const handleSelectGroup = (group: SupportGroup) => {

@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { RecurringFrequency } from '@prisma/client';
 import type { Booking } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 
 import { randomUUID } from 'crypto';
 import { CreateRecurringBookingDto } from './create-recurring-booking.dto';
@@ -27,6 +27,7 @@ export class CreateRecurringBookingHandler {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   async execute(dto: CreateRecurringBookingCommand) {
@@ -41,7 +42,7 @@ export class CreateRecurringBookingHandler {
     if (dto.skipConflicts) {
       return this.createBookings(this.prisma, dto, dates, recurringGroupId);
     }
-    return this.prisma.$transaction((tx) =>
+    return this.rlsTransaction.withTransaction((tx) =>
       this.createBookings(tx as unknown as PrismaService, dto, dates, recurringGroupId),
     );
   }

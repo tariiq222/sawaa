@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPublicBrandingForSsr } from '@/features/branding/public';
 import { getPublicEmployee } from '@/features/therapists/therapists.api';
@@ -116,7 +117,7 @@ export default async function TherapistProfilePage({ params }: Props) {
         )}
 
         <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-          <a
+          <Link
             href="/booking"
             style={{
               display: 'inline-block',
@@ -130,16 +131,16 @@ export default async function TherapistProfilePage({ params }: Props) {
             }}
           >
             {locale === 'ar' ? 'احجز موعدك' : 'Book Appointment'}
-          </a>
+          </Link>
         </div>
 
         <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-          <a
+          <Link
             href="/therapists"
             style={{ color: 'var(--primary)', fontSize: '0.9375rem' }}
           >
             {locale === 'ar' ? '← جميع المعالجين' : '← All Therapists'}
-          </a>
+          </Link>
         </div>
       </main>
     </Layout>

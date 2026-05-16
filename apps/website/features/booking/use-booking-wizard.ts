@@ -4,8 +4,6 @@ import { useReducer } from 'react';
 import {
   reduce,
   INITIAL_WIZARD_STATE,
-  WizardStep,
-  type WizardState,
 } from '@sawaa/shared';
 
 export function useBookingWizard() {

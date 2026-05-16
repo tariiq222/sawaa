@@ -1,5 +1,5 @@
 import { AuthenticaClient, AuthenticaError } from './authentica.client';
-import { ConfigService } from '@nestjs/config';
+
 import * as fetchModule from '../http/fetch-with-timeout';
 
 describe('AuthenticaClient', () => {

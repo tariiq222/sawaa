@@ -8,7 +8,7 @@ import {
 import { randomInt } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { OtpChannel, OtpPurpose } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { NotificationChannelRegistry } from '../../comms/notification-channel/notification-channel-registry';
 import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
 import type { RequestDashboardOtpCommand } from './request-dashboard-otp.command';
@@ -24,6 +24,7 @@ export class RequestDashboardOtpHandler {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly channelRegistry: NotificationChannelRegistry,
   ) {}
 
@@ -50,7 +51,7 @@ export class RequestDashboardOtpHandler {
     const codeHash = await bcrypt.hash(rawCode, 10);
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
 
-    const created = await this.prisma.$transaction(async (tx) => {
+    const created = await this.rlsTransaction.withTransaction(async (tx) => {
       // bypassRls: dashboard login OTPs have no tenant context — they are pre-auth cross-org lookups
       await tx.otpCode.updateMany({
         where: {

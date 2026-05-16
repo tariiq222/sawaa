@@ -137,7 +137,7 @@ describe('MobileClientNotificationsController (e2e)', () => {
     it('returns 201 on register', async () => {
       mockRegisterFcm.execute.mockResolvedValue({ id: 'token-1' });
 
-      const res = await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .post('/mobile/client/notifications/fcm-token')
         .set('Authorization', 'Bearer fake-jwt')
         .send({ token: 'fcm-token-123', platform: 'ios' })

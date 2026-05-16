@@ -13,8 +13,8 @@ vi.mock("@/lib/api/organization-settings", () => ({
 }))
 
 vi.mock("@/lib/utils", () => ({
-  formatClinicDate: vi.fn((date: string | Date) => "2026-01-01"),
-  formatClinicTime: vi.fn((time: string) => "14:00"),
+  formatClinicDate: vi.fn((_date: string | Date) => "2026-01-01"),
+  formatClinicTime: vi.fn((_time: string) => "14:00"),
   getWeekStartDay: vi.fn((day: string) => day === "monday" ? 1 : 0),
 }))
 

@@ -87,7 +87,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
 
     setIsLoading(true);
     try {
-      const result = await clientRegisterApi({
+      await clientRegisterApi({
         otpSessionToken: otpToken,
         password,
         name: name || undefined,

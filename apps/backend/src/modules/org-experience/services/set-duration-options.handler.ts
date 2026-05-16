@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { SetDurationOptionsDto } from './set-duration-options.dto';
 
 export type SetDurationOptionsCommand = SetDurationOptionsDto & { serviceId: string };
@@ -8,6 +8,7 @@ export type SetDurationOptionsCommand = SetDurationOptionsDto & { serviceId: str
 export class SetDurationOptionsHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   async execute(dto: SetDurationOptionsCommand) {
@@ -16,7 +17,7 @@ export class SetDurationOptionsHandler {
     });
     if (!service) throw new NotFoundException('Service not found');
 
-    await this.prisma.$transaction((tx) =>
+    await this.rlsTransaction.withTransaction((tx) =>
       Promise.all(dto.options.map((opt) =>
         opt.id
           ? tx.serviceDurationOption.update({

@@ -5,7 +5,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { PriceResolverService } from '../../org-experience/services/price-resolver.service';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 
@@ -35,6 +35,7 @@ function hashToInt32(s: string): number {
 export class CreateGuestBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly priceResolver: PriceResolverService,
     private readonly settingsHandler: GetBookingSettingsHandler,
   ) {}
@@ -129,7 +130,7 @@ export class CreateGuestBookingHandler {
     const currency = resolved.currency;
     const endsAt = new Date(scheduledAt.getTime() + durationMins * 60_000);
 
-    const result = await this.prisma.$transaction(async (tx) => {
+    const result = await this.rlsTransaction.withTransaction(async (tx) => {
       // Fix A — enforce single-use: insert UsedOtpSession or throw if already exists
       try {
         await tx.usedOtpSession.create({

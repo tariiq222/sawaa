@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { fetchBookingOrFail } from '../booking-lifecycle.helper';
 
 export interface NoShowBookingCommand {
@@ -12,12 +12,13 @@ export interface NoShowBookingCommand {
 export class NoShowBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   async execute(cmd: NoShowBookingCommand) {
     const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.CONFIRMED], 'marked as no-show');
 
-    const [updated] = await this.prisma.$transaction((tx) => Promise.all([
+    const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
       tx.booking.update({
         where: { id: cmd.bookingId },
         data: { status: BookingStatus.NO_SHOW, noShowAt: new Date() },

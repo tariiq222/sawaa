@@ -90,7 +90,7 @@ describe('PublicSlotsController (e2e)', () => {
     it('passes optional query params to handler', async () => {
       mockCheckAvailability.execute.mockResolvedValue([]);
 
-      const res = await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .get('/public/availability?employeeId=00000000-0000-4000-a000-000000000001&branchId=00000000-0000-4000-a000-000000000002&date=2026-05-20&durationMins=45&serviceId=00000000-0000-4000-a000-000000000003&durationOptionId=00000000-0000-4000-a000-000000000004&bookingType=INDIVIDUAL')
         .expect(200);
 

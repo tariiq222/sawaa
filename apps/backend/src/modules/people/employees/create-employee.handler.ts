@@ -1,5 +1,5 @@
 import { Injectable, ConflictException } from '@nestjs/common';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 
 import { EmployeeCreatedEvent } from '../events/employee-created.event';
@@ -12,6 +12,7 @@ export type CreateEmployeeCommand = CreateEmployeeDto;
 export class CreateEmployeeHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly eventBus: EventBusService,
   ) {}
 
@@ -23,7 +24,7 @@ export class CreateEmployeeHandler {
       if (existing) throw new ConflictException('Email already registered for this employee');
     }
 
-    const employee = await this.prisma.$transaction(async (tx) => {
+    const employee = await this.rlsTransaction.withTransaction(async (tx) => {
       const created = await tx.employee.create({
         data: {
           name: dto.name,

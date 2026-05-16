@@ -19,7 +19,7 @@ export function PaymentRedirect({ redirectUrl, bookingId }: PaymentRedirectProps
       return;
     }
     window.location.href = redirectUrl;
-  }, [redirectUrl, bookingId]);
+  }, [redirectUrl, bookingId, router]);
 
   return (
     <div style={{ textAlign: 'center', padding: '3rem' }}>

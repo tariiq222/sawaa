@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { BookingStatus, Prisma } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { CompleteBookingDto } from './complete-booking.dto';
 import { fetchBookingOrFail } from '../booking-lifecycle.helper';
 
@@ -13,12 +13,13 @@ export type CompleteBookingCommand = CompleteBookingDto & {
 export class CompleteBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   async execute(cmd: CompleteBookingCommand) {
     const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.CONFIRMED], 'completed');
 
-    return this.prisma.$transaction(async (tx) => {
+    return this.rlsTransaction.withTransaction(async (tx) => {
       const updated = await tx.booking.update({
         where: { id: cmd.bookingId },
         data: {

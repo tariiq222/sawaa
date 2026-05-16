@@ -65,7 +65,7 @@ describe("userCreateSchema", () => {
 
 describe("userEditSchema", () => {
   it("makes role optional compared to the create schema", () => {
-    const { password, ...rest } = { ...validBase, password: "Password1", role: "ADMIN" as const }
+    const { password: _password, ...rest } = { ...validBase, password: "Password1", role: "ADMIN" as const }
     expect(userEditSchema.safeParse(rest).success).toBe(true)
     expect(userEditSchema.safeParse({ email: "a@b.co", name: "A" }).success).toBe(true)
   })

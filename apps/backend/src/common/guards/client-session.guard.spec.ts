@@ -19,7 +19,7 @@ describe('ClientSessionGuard', () => {
     cls = module.get<ClsService>(ClsService);
   });
 
-  const createContext = (client?: any): ExecutionContext =>
+  const createContext = (_client?: any): ExecutionContext =>
     ({
       switchToHttp: () => ({
         getRequest: () => ({}),

@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, ForbiddenException, ConflictException } from '@nestjs/common';
-import { BookingStatus, Prisma } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { BookingStatus } from '@prisma/client';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { ClientRescheduleBookingDto } from './client-reschedule-booking.dto';
 
@@ -13,6 +13,7 @@ export type ClientRescheduleCommand = ClientRescheduleBookingDto & {
 export class ClientRescheduleBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly settingsHandler: GetBookingSettingsHandler,
   ) {}
 
@@ -60,7 +61,7 @@ export class ClientRescheduleBookingHandler {
     const durationMins = cmd.newDurationMins ?? booking.durationMins;
     const newEndsAt = new Date(newScheduledAt.getTime() + durationMins * 60_000);
 
-    const [updated] = await this.prisma.$transaction(
+    const [updated] = await this.rlsTransaction.withTransaction(
       async (tx) => {
         const conflict = await tx.booking.findFirst({
           where: {
@@ -92,7 +93,7 @@ export class ClientRescheduleBookingHandler {
           }),
         ]);
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      { isolationLevel: 'Serializable' },
     );
 
     return { booking: updated };

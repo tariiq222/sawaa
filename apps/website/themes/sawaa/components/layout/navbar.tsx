@@ -45,9 +45,12 @@ export function Navbar() {
         }}
         aria-label="التنقل الرئيسي"
       >
-        <Link href="/" aria-label={`الصفحة الرئيسية لـ ${brandName}`} className="flex items-center ps-2 pe-3">
+        <Link href="/" aria-label={`الصفحة الرئيسية لـ ${brandName}`} className="flex items-center gap-2 ps-2 pe-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={logo} alt={`شعار ${brandName}`} className="h-7 sm:h-8 w-auto" style={{ display: 'block' }} />
+          <span className="font-extrabold text-sm sm:text-base whitespace-nowrap" style={{ color: 'var(--sw-primary-600)' }}>
+            سواء للإرشاد الأسري
+          </span>
         </Link>
 
         <div className="hidden md:flex gap-0.5 rounded-full p-1" role="menubar">

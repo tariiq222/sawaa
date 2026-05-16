@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { SetEmployeeServiceOptionsDto } from './set-employee-service-options.dto';
 
 export type SetEmployeeServiceOptionsCommand = SetEmployeeServiceOptionsDto & {
@@ -10,6 +10,7 @@ export type SetEmployeeServiceOptionsCommand = SetEmployeeServiceOptionsDto & {
 export class SetEmployeeServiceOptionsHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   async execute(dto: SetEmployeeServiceOptionsCommand) {
@@ -24,7 +25,7 @@ export class SetEmployeeServiceOptionsHandler {
       throw new NotFoundException(`ServiceDurationOption(s) not found: ${invalid.join(', ')}`);
     }
 
-    await this.prisma.$transaction((tx) =>
+    await this.rlsTransaction.withTransaction((tx) =>
       Promise.all(dto.options.map((opt) =>
         tx.employeeServiceOption.upsert({
           where: {

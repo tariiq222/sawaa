@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InvoiceStatus, PaymentStatus } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { PaymentCompletedEvent } from '../events/payment-completed.event';
 
@@ -14,6 +14,7 @@ interface VerifyPaymentCommand {
 export class VerifyPaymentHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly eventBus: EventBusService,
   ) {}
 
@@ -43,7 +44,7 @@ export class VerifyPaymentHandler {
     // invoice to PAID/PARTIALLY_PAID atomically. Without this, downstream
     // consumers (reports, booking confirmation) see a stuck
     // ISSUED invoice even though the money has been received.
-    const { updatedPayment, newInvoiceStatus } = await this.prisma.$transaction(
+    const { updatedPayment, newInvoiceStatus } = await this.rlsTransaction.withTransaction(
       async (tx) => {
         const updated = await tx.payment.update({
           where: { id: cmd.paymentId },

@@ -49,6 +49,7 @@ export default async function RootLayout({
         {branding.fontUrl ? (
           <link rel="stylesheet" href={branding.fontUrl} />
         ) : (
+          // eslint-disable-next-line @next/next/no-page-custom-font -- dynamic brand font loaded at runtime
           <link
             rel="stylesheet"
             href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap"

@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { fetchBookingOrFail } from '../booking-lifecycle.helper';
 
 export interface CheckInBookingCommand {
@@ -13,6 +13,7 @@ export interface CheckInBookingCommand {
 export class CheckInBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   async execute(cmd: CheckInBookingCommand) {
@@ -21,7 +22,7 @@ export class CheckInBookingHandler {
       throw new BadRequestException('Booking is already checked in');
     }
 
-    const [updated] = await this.prisma.$transaction((tx) => Promise.all([
+    const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
       tx.booking.update({
         where: { id: cmd.bookingId },
         data: { checkedInAt: new Date() },

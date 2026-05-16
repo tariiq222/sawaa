@@ -93,8 +93,8 @@ export function Footer({ clinics = [] }: FooterProps) {
                   className="w-full h-full rounded-lg object-contain"
                 />
               </div>
-              <b style={{ color: 'var(--sw-secondary-700)' }} className="font-extrabold">
-                {brandName}
+              <b style={{ color: 'var(--sw-primary-600)' }} className="font-extrabold">
+                سواء للإرشاد الأسري
               </b>
             </div>
             <p

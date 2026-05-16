@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Suspense } from 'react';
 import { publicFetch } from '@/lib/public-fetch';
 import { useT } from '@/features/locale/locale-provider';
@@ -22,13 +23,12 @@ function ConfirmContent() {
   const t = useT();
   const params = useSearchParams();
   const bookingId = params.get('bookingId');
-  const [state, setState] = useState<ConfirmState>({ phase: 'loading' });
+  const [state, setState] = useState<ConfirmState>(
+    bookingId ? { phase: 'loading' } : { phase: 'failed', bookingId: null },
+  );
 
   useEffect(() => {
-    if (!bookingId) {
-      setState({ phase: 'failed', bookingId: null });
-      return;
-    }
+    if (!bookingId) return;
 
     let cancelled = false;
     let attempts = 0;
@@ -86,12 +86,12 @@ function ConfirmContent() {
         <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>&#x2705;</div>
         <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>{t('booking.confirmed')}</h1>
         <p style={{ opacity: 0.7, marginBottom: '2rem' }}>{t('booking.confirmedDesc')}</p>
-        <a
+        <Link
           href="/booking"
           style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius)', fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
         >
           {t('booking.bookAnother')}
-        </a>
+        </Link>
       </div>
     );
   }
@@ -104,12 +104,12 @@ function ConfirmContent() {
         <p style={{ opacity: 0.7, marginBottom: '2rem' }}>
           {t('booking.paymentProcessingDesc')}
         </p>
-        <a
+        <Link
           href="/account/bookings"
           style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius)', fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
         >
           {t('booking.viewBookings')}
-        </a>
+        </Link>
       </div>
     );
   }
@@ -119,12 +119,12 @@ function ConfirmContent() {
       <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>&#x274C;</div>
       <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>{t('booking.paymentFailed')}</h1>
       <p style={{ opacity: 0.7, marginBottom: '2rem' }}>{t('booking.paymentFailedDesc')}</p>
-      <a
+      <Link
         href="/booking"
         style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius)', fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
       >
         {t('booking.tryAgain')}
-      </a>
+      </Link>
     </div>
   );
 }

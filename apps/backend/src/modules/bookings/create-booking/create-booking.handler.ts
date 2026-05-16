@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { PriceResolverService } from '../../org-experience/services/price-resolver.service';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { GroupSessionMinReachedHandler } from '../group-session-min-reached/group-session-min-reached.handler';
@@ -49,6 +49,7 @@ export type CreateBookingCommand = Omit<CreateBookingDto, 'scheduledAt' | 'expir
 export class CreateBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly priceResolver: PriceResolverService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly groupMinReachedHandler: GroupSessionMinReachedHandler,
@@ -155,7 +156,7 @@ export class CreateBookingHandler {
     const initialStatus = isGroupService ? 'PENDING_GROUP_FILL' : 'PENDING';
 
     // Serializable: prevents two concurrent group-session bookings from both reading slotCount=N-1 and overflowing capacity.
-    const booking = await this.prisma.$transaction(
+    const booking = await this.rlsTransaction.withTransaction(
       async (tx) => {
         if (!isGroupService) {
           // CR-5: acquire advisory lock BEFORE the conflict check so that two
@@ -322,7 +323,7 @@ export class CreateBookingHandler {
 
         return { ...booking, invoiceId: invoice?.id ?? null };
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      { isolationLevel: 'Serializable' },
     ).catch(mapDbConflict);
 
     // After insert: check if minParticipants is now reached for this slot

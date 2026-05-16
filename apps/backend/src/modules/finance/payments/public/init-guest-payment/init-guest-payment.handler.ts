@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
-import { PrismaService } from '../../../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../../../infrastructure/database';
 import { MoyasarApiClient } from '../../../moyasar-api/moyasar-api.client';
 import { InitGuestPaymentDto } from './init-guest-payment.dto';
 import { DEFAULT_ORG_ID } from '../../../../../common/constants';
@@ -13,6 +13,7 @@ export interface InitGuestPaymentResult {
 export class InitGuestPaymentHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly moyasar: MoyasarApiClient,
   ) {}
 
@@ -51,7 +52,7 @@ export class InitGuestPaymentHandler {
         throw new ConflictException('Payment for this booking has already been completed');
       }
       if (!existingPayment.gatewayRef) {
-        await this.prisma.$transaction(async (tx) => {
+        await this.rlsTransaction.withTransaction(async (tx) => {
           await tx.payment.delete({ where: { id: existingPayment.id } });
         });
       } else {
@@ -64,7 +65,7 @@ export class InitGuestPaymentHandler {
 
     const amountHalalas = Math.round(Number(invoice.total) * 100);
 
-    const payment = await this.prisma.$transaction(async (tx) => {
+    const payment = await this.rlsTransaction.withTransaction(async (tx) => {
       return tx.payment.create({
         data: {
           invoiceId: invoice.id,
@@ -92,13 +93,13 @@ export class InitGuestPaymentHandler {
         idempotencyKey: `payment:${organizationId}:${invoice.id}`,
       });
     } catch (moyasarError) {
-      await this.prisma.$transaction(async (tx) => {
+      await this.rlsTransaction.withTransaction(async (tx) => {
         await tx.payment.delete({ where: { id: payment.id } });
       });
       throw moyasarError;
     }
 
-    const updatedPayment = await this.prisma.$transaction(async (tx) => {
+    const updatedPayment = await this.rlsTransaction.withTransaction(async (tx) => {
       return tx.payment.update({
         where: { id: payment.id },
         data: {

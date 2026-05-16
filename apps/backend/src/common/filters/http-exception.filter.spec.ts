@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, ArgumentsHost } from '@nestjs/common';
+import { HttpException, ArgumentsHost } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import { HttpExceptionFilter } from './http-exception.filter';
 import { RequestContextStorage } from '../http/request-context';

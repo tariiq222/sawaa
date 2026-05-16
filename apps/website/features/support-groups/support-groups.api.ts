@@ -59,6 +59,7 @@ export async function getPublicGroupSession(
 
 export async function bookGroupSession(
   groupSessionId: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _accessToken?: string,
 ): Promise<BookGroupSessionResponse> {
   const res = await fetch(

@@ -57,7 +57,7 @@ test.describe('Error States', () => {
 
     const errorBoundary = page.locator('text=Something went wrong')
     const retryButton = page.locator('button:has-text("retry"), button:has-text("إعادة المحاولة")')
-    const hasError = await errorBoundary.isVisible().catch(() => false)
+    await errorBoundary.isVisible().catch(() => false)
     const hasRetry = await retryButton.isVisible().catch(() => false)
 
     if (hasRetry) {

@@ -55,7 +55,7 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
         <CancelModal
           locale={locale}
           onClose={() => setShowCancel(false)}
-          onSuccess={(status) => { setShowCancel(false); router.refresh(); }}
+          onSuccess={() => { setShowCancel(false); router.refresh(); }}
           cancelApi={(reason) => cancelMyBookingApi(bookingId, reason)}
         />
       )}
@@ -103,7 +103,7 @@ function CancelModal({ locale, onClose, onSuccess, cancelApi }: {
   cancelApi: (reason?: string) => Promise<{ status: string; requiresApproval: boolean }>;
 }) {
   const tt = useT();
-  const [reason, setReason] = useState('');
+  const [reason] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

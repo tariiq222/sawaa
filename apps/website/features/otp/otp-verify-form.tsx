@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useT } from '@/features/locale/locale-provider';
 import type { GuestClientInfo } from '@sawaa/shared';
-import { OtpChannel, OtpPurpose } from '@sawaa/shared';
+
 
 interface OtpVerifyFormProps {
   client: GuestClientInfo;

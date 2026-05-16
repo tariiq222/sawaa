@@ -17,7 +17,7 @@ describe("branchSchema", () => {
   })
 
   it("accepts omitted optional fields (address, phone)", () => {
-    const { address, phone, ...rest } = valid
+    const { address: _address, phone: _phone, ...rest } = valid
     expect(branchSchema.safeParse(rest).success).toBe(true)
   })
 
@@ -54,7 +54,7 @@ describe("branchSchema", () => {
   })
 
   it("requires a timezone string", () => {
-    const { timezone, ...rest } = valid
+    const { timezone: _timezone, ...rest } = valid
     expect(branchSchema.safeParse(rest).success).toBe(false)
   })
 })

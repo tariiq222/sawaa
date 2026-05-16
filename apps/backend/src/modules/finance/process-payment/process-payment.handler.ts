@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InvoiceStatus, Prisma } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { PaymentCompletedEvent } from '../events/payment-completed.event';
 import { ProcessPaymentDto } from './process-payment.dto';
@@ -11,6 +11,7 @@ export type ProcessPaymentCommand = ProcessPaymentDto;
 export class ProcessPaymentHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly eventBus: EventBusService,
   ) {}
 
@@ -22,7 +23,7 @@ export class ProcessPaymentHandler {
     // between the aggregate and the update and produce a wrong status or stale
     // paidAt. The @unique(idempotencyKey) constraint is the final guard against
     // duplicate payments — the pre-check is kept only as a fast short-circuit.
-    const { payment, newStatus } = await this.prisma.$transaction(async (tx) => {
+    const { payment, newStatus } = await this.rlsTransaction.withTransaction(async (tx) => {
       const invoice = await tx.invoice.findFirst({
         where: { id: dto.invoiceId },
       });

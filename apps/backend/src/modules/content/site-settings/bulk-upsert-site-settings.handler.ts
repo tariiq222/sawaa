@@ -1,16 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { BulkUpsertSiteSettingsDto } from './bulk-upsert-site-settings.dto';
 
 @Injectable()
 export class BulkUpsertSiteSettingsHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   async execute(dto: BulkUpsertSiteSettingsDto): Promise<{ updated: number }> {
-    await this.prisma.$transaction((tx) =>
+    await this.rlsTransaction.withTransaction((tx) =>
       Promise.all(dto.entries.map((e) =>
         tx.siteSetting.upsert({
           where: { key: e.key },

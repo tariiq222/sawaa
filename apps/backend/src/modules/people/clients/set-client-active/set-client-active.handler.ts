@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ActivityAction } from '@prisma/client';
-import { PrismaService } from '../../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { EventBusService } from '../../../../infrastructure/events';
 import { LogActivityHandler } from '../../../ops/log-activity/log-activity.handler';
 import { ClientAccountToggledEvent } from '../../events/client-account-toggled.event';
@@ -20,6 +20,7 @@ export interface SetClientActiveResult {
 export class SetClientActiveHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly eventBus: EventBusService,
     private readonly logActivity: LogActivityHandler,
   ) {}
@@ -38,7 +39,7 @@ export class SetClientActiveHandler {
 
     const now = new Date();
 
-    const updated = await this.prisma.$transaction(async (tx) => {
+    const updated = await this.rlsTransaction.withTransaction(async (tx) => {
       const updatedClient = await tx.client.update({
         where: { id: cmd.clientId },
         data: { isActive: cmd.isActive },

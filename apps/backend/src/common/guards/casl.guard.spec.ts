@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
-import { CaslGuard, CheckPermissions, CHECK_PERMISSIONS_KEY } from './casl.guard';
+import { CaslGuard, CheckPermissions } from './casl.guard';
 
 describe('CaslGuard', () => {
   let guard: CaslGuard;

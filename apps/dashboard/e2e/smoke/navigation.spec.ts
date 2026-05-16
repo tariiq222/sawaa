@@ -48,7 +48,7 @@ test.describe('Dashboard Pages Navigation', () => {
         if (!bodyVisible) {
           throw new Error('Body not visible')
         }
-      } catch (e) {
+      } catch (_e) {
         const bodyVisible = await page.locator('body').isVisible().catch(() => false);
         expect(bodyVisible).toBe(true);
       }

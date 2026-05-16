@@ -1,6 +1,6 @@
 'use client';
 
-import type { GuestClientInfo, Service, EmployeeWithUser, AvailableSlot } from '@sawaa/shared';
+import type { Service, EmployeeWithUser, AvailableSlot } from '@sawaa/shared';
 import { halalasToSarNumber } from '@/lib/money';
 import { useT } from '@/features/locale/locale-provider';
 

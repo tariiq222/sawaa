@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingCancelRejectedEvent } from '../events/booking-cancel-rejected.event';
 
@@ -18,6 +18,7 @@ export interface RejectCancelBookingCommand {
 export class RejectCancelBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly eventBus: EventBusService,
   ) {}
 
@@ -34,7 +35,7 @@ export class RejectCancelBookingHandler {
       );
     }
 
-    const [updated] = await this.prisma.$transaction((tx) => Promise.all([
+    const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
       tx.booking.update({
         where: { id: cmd.bookingId },
         data: {

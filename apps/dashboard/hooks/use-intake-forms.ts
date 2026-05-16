@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useCallback } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { queryKeys } from "@/lib/query-keys"
@@ -89,7 +89,7 @@ export function useIntakeForms(initialQuery?: IntakeFormListQuery) {
     ...(urlIsActive !== undefined ? { isActive: urlIsActive } : {}),
   }
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.intakeForms.list(query),
     queryFn: () => fetchIntakeForms(query),
     placeholderData: (prev) => prev,

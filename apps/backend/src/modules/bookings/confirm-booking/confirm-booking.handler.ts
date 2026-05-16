@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingConfirmedEvent } from '../events/booking-confirmed.event';
 import { CreateZoomMeetingHandler } from '../create-zoom-meeting/create-zoom-meeting.handler';
@@ -15,6 +15,7 @@ export interface ConfirmBookingCommand {
 export class ConfirmBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly eventBus: EventBusService,
     private readonly createZoomMeeting: CreateZoomMeetingHandler,
   ) {}
@@ -22,7 +23,7 @@ export class ConfirmBookingHandler {
   async execute(cmd: ConfirmBookingCommand) {
     const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.PENDING], 'confirmed');
 
-    const [updated] = await this.prisma.$transaction((tx) => Promise.all([
+    const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
       tx.booking.update({
         where: { id: cmd.bookingId },
         data: { status: BookingStatus.CONFIRMED, confirmedAt: new Date() },

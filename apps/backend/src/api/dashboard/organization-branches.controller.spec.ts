@@ -190,7 +190,7 @@ describe('DashboardOrganizationBranchesController (e2e)', () => {
     it('returns 201 on assign', async () => {
       mockAssign.execute.mockResolvedValue({ branchId, employeeId: 'emp-1' });
 
-      const res = await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .post(`/dashboard/organization/branches/${branchId}/employees`)
         .set('Authorization', 'Bearer fake-jwt')
         .send({ employeeId: '00000000-0000-4000-a000-000000000002' })
