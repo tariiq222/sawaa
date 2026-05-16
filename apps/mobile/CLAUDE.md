@@ -43,13 +43,13 @@ app/
 
 ## Service Files (`services/`)
 
-Top-level: `api.ts` (base Axios + interceptors), `auth.ts`, `branches.ts`, `chatbot.ts`, `clients.ts`, `employees.ts`, `notifications.ts`, `organization.ts`, `payments.ts`, `push.ts`, `query-client.ts`, `tenant.ts`.
+Top-level: `api.ts` (base Axios + interceptors), `auth.ts`, `branches.ts`, `chatbot.ts`, `clients.ts`, `employees.ts`, `memberships.ts` (disabled stub — see below), `notifications.ts`, `organization.ts`, `payments.ts`, `push.ts`, `query-client.ts`, `tenant.ts`, `tenant-switch.ts` (dead code — see below).
 
 Subdirectories: `services/client/` (client-only endpoints), `services/employee/` (employee-only endpoints).
 
 ## Query Hooks (`hooks/queries/`)
 
-`useBooking`, `useBookingMutations`, `useBranding`, `useChat`, `useClientBookings`, `useEmployeeClients`, `useEmployeeDayBookings`, `useNotifications`, `usePortal`, `useSlots`, `useTherapist`, `useTherapists`, `useUpcomingBookings` — re-exported via `hooks/queries/index.ts`.
+`useBooking`, `useBookingMutations`, `useBranding`, `useChat`, `useClientBookings`, `useEmployeeClients`, `useEmployeeDayBookings`, `useMe`, `useMemberships` (disabled stub), `useMobileAuth`, `useNotifications`, `usePortal`, `useSlots`, `useTherapist`, `useTherapists`, `useUpcomingBookings` — re-exported via `hooks/queries/index.ts`.
 
 ## Tenant Strategy — One App per Tenant
 
@@ -58,6 +58,7 @@ Subdirectories: `services/client/` (client-only endpoints), `services/employee/`
 - **Current build:** `سواء للإرشاد الأسري` (Sawa) — bundle `sa.sawa.app`, vertical `family-consulting`. See `app.config.ts`.
 - **Tenant lock mechanism:** `X-Org-Id` header is sent on every request via the Axios interceptor in `services/api.ts`; the org id comes from a hard-coded `TENANT_ID` constant in `constants/config.ts`. Backend `TenantResolverMiddleware` honors this header on public routes only — JWT still wins on authenticated routes (see plan `2026-04-25-mobile-tenant-lock-sawa`).
 - **No runtime tenant switching.** Do not add a tenant switcher, multi-org membership UI, or dynamic vertical hot-swap to mobile. `services/tenant.ts` exists for the header plumbing only.
+- **Membership/tenant-switch code is inert dead scaffolding.** `services/memberships.ts` (`switchOrganization()` throws by design), `services/tenant-switch.ts` (never imported anywhere), and `hooks/queries/useMemberships.ts` (`enabled: false`, always returns `[]`) are leftovers from the multi-tenant fork. The backend has no `/auth/memberships` endpoint. Don't wire them up, don't render a switcher — the auth slice's `organizationId`/`activeMembership` fields exist only for type compatibility and stay constant.
 - **Branding & terminology** are still fetched at runtime via `PublicBranding` + `useTerminology()` — but for the locked tenant only. Switching tenant is not a user-facing operation.
 
 ### Adding a new tenant app

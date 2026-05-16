@@ -36,7 +36,7 @@ lib/utils.ts                           pure utilities
 - Tokens: `--primary`, `--surface`, `--border`, `--success`, `--warning`, `--error`
 - Dark mode: separate token values via CSS custom properties
 - Classes: `.glass`, `.glass-solid`, `.glass-strong` (defined in `globals.css`)
-- Full DS spec: `dashboard/DESIGN-SYSTEM.md`
+- Token reference: `tokens.md` + `app/globals.css` + `lib/ds.ts`
 
 ## Dashboard Routes (app/(dashboard)/)
 
@@ -84,13 +84,7 @@ Top-level layout/error/loading: `layout.tsx`, `error.tsx`, `loading.tsx`, `page.
   `scripts/verify-translation-parity.mjs`). It compares the key set of
   each `ar.*.ts` module against its `en.*.ts` sibling and exits non-zero
   on drift. Run it before every PR that touches translations.
-- **Vertical-aware terminology** goes through the shipped
-  `useTerminology(verticalSlug)` hook (`hooks/use-terminology.ts`,
-  backed by `GET /public/verticals/:slug/terminology`). Use its own
-  `t(key)` return value, distinct from `useLocale().t` — different
-  dictionaries, different purposes. Vertical labels (Patient/Client/
-  Customer/Member, Appointment/Booking/Session/Class) come from this
-  hook so the same screens read correctly across all 4 vertical families.
+- **`useTerminology` is dead multi-tenant scaffolding — do NOT build on it.** The hook (`hooks/use-terminology.ts`) calls `GET /public/verticals/:slug/terminology`, an endpoint the single-tenant backend never implemented. It is still imported in the employees/clients/bookings pages but stays inert because `verticalSlug` is always undefined (query is `enabled: !!verticalSlug`). Don't pass it a slug, don't extend it. Sawa is single-tenant — use plain `t()` from `useLocale()` for all labels.
 - **RTL/LTR direction** is already wired: `LocaleProvider` flips
   `document.documentElement.dir` *and* wraps children in
   `@radix-ui/react-direction`'s `DirectionProvider`. Never hardcode
@@ -143,14 +137,14 @@ Top-level layout/error/loading: `layout.tsx`, `error.tsx`, `loading.tsx`, `page.
 □ لا inline styles
 □ staleTime مضبوط على أي query جديدة
 □ Feature جديدة مضافة في eslint.config.mjs → FEATURES
-□ Vertical-sensitive labels go through useTerminology(), not hardcoded
+□ لا استخدام جديد لـ useTerminology() — single-tenant، النصوص عبر t()
 □ لا توجد واجهات tenant switching أو subscription أو billing-plan gating
 ```
 
 ## Development
 
 ```bash
-npm run dev          # Next.js dev server on :5103 (Turbopack)
+npm run dev          # Next.js dev server on :5203 (Turbopack)
 npm run typecheck    # tsc --noEmit
 npm run lint         # ESLint
 npm run test         # Vitest
@@ -168,7 +162,7 @@ Specs live under `apps/dashboard/e2e/` with two project tiers:
 | `smoke` | `e2e/smoke/` | every PR touching `apps/dashboard/**` or `apps/backend/**` |
 | `flows` | `e2e/flows/` | nightly cron (02:00 UTC) |
 
-CI workflow: `.github/workflows/dashboard-e2e.yml`
+CI: the `.github/workflows/ci.yml` dashboard job runs lint + typecheck + unit tests. Playwright smoke is run locally pre-merge (no dedicated e2e CI workflow exists yet).
 
 ```bash
 # Local smoke run (requires backend on :5100 + docker stack)
