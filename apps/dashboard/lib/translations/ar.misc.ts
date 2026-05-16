@@ -288,6 +288,7 @@ export const arMisc: Record<string, string> = {
   "login.otp.resend": "إعادة الإرسال",
   "login.otp.resendIn": "إعادة الإرسال خلال",
   "login.errors.identifierShape": "أدخل بريداً إلكترونياً صحيحاً أو رقم جوال سعودي",
+  "login.errors.accountNotFound": "هذا الحساب غير مسجّل. تأكّد من رقم الجوال أو البريد، أو تواصل مع مسؤول العيادة.",
   "login.error.invalidCredentials.title": "تعذّر تسجيل الدخول",
   "login.error.invalidCredentials.description": "البريد أو كلمة المرور غير صحيحة. تأكّد من الحقلين وحاول مجدداً.",
   "login.error.accountInactive.title": "الحساب موقوف",

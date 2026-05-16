@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, BadgeCheck, Calendar, Sparkles } from 'lucide-react';
 import type { HeroContent } from '@/features/site-content/public';
@@ -143,12 +144,12 @@ export function Hero({ content }: Props) {
                 border: '1px solid rgba(255,255,255,0.6)',
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={content.heroImageUrl}
                 alt="صورة لمركز سواء للاستشارات الأسرية والنفسية"
                 width={980}
                 height={420}
+                priority
                 className="w-full h-[280px] sm:h-[350px] md:h-[420px] object-cover"
               />
               <div

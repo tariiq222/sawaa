@@ -87,13 +87,13 @@ export function Footer({ clinics = [] }: FooterProps) {
                 className="w-[42px] h-[42px] rounded-xl p-1 flex items-center justify-center"
                 style={{ background: 'var(--sw-primary-50)' }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={branding.logoUrl ?? SITE.logo}
                   alt={brandName}
                   width={42}
                   height={42}
                   className="w-full h-full rounded-lg object-contain"
+                  unoptimized={(branding.logoUrl ?? SITE.logo)?.startsWith('http')}
                 />
               </div>
               <b style={{ color: 'var(--sw-primary-600)' }} className="font-extrabold">

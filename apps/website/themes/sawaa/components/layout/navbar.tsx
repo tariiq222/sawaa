@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Calendar, Menu, X, User } from 'lucide-react';
@@ -46,8 +47,7 @@ export function Navbar() {
         aria-label="التنقل الرئيسي"
       >
         <Link href="/" aria-label={`الصفحة الرئيسية لـ ${brandName}`} className="flex items-center gap-2 ps-2 pe-3 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logo} alt={`شعار ${brandName}`} width={32} height={32} className="h-7 sm:h-8 w-auto" style={{ display: 'block' }} />
+          <Image src={logo} alt={`شعار ${brandName}`} width={32} height={32} className="h-7 sm:h-8 w-auto" style={{ display: 'block' }} unoptimized={logo?.startsWith('http')} />
           <span className="font-extrabold text-sm sm:text-base whitespace-nowrap" style={{ color: 'var(--sw-primary-600)' }}>
             سواء للإرشاد الأسري
           </span>

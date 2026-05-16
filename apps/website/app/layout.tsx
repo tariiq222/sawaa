@@ -6,8 +6,6 @@ import { LocaleProvider } from '@/features/locale/locale-provider';
 import './globals.css';
 import { generateMedicalBusinessSchema } from '@/lib/seo/schema';
 
-export const dynamic = 'force-dynamic';
-
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const branding = await getPublicBrandingForSsr();
@@ -45,6 +43,8 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={dir}>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <BrandingStyle branding={branding} />
         {branding.fontUrl ? (
           <link rel="stylesheet" href={branding.fontUrl} />

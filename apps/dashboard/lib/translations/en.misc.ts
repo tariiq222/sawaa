@@ -288,6 +288,7 @@ export const enMisc: Record<string, string> = {
   "login.otp.resend": "Resend code",
   "login.otp.resendIn": "Resend in",
   "login.errors.identifierShape": "Enter a valid email or Saudi mobile number",
+  "login.errors.accountNotFound": "This account isn't registered. Check the mobile number or email, or contact your clinic administrator.",
   "login.error.invalidCredentials.title": "Couldn't sign in",
   "login.error.invalidCredentials.description": "The email or password is incorrect. Check both fields and try again.",
   "login.error.accountInactive.title": "Account suspended",

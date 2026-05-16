@@ -3,11 +3,13 @@
 import { useState, useCallback } from "react"
 import { login as apiLogin, requestDashboardOtp, verifyDashboardOtp, lookupUser } from "@/lib/api/auth"
 import { useAuth } from "@/components/providers/auth-provider"
+import { useLocale } from "@/components/locale-provider"
 
 type LoginStep = "identifier" | "method" | "password" | "otp"
 
 export function useLoginFlow() {
   const { loginWithTokens } = useAuth()
+  const { t } = useLocale()
   const [step, setStep] = useState<LoginStep>("identifier")
   const [identifier, setIdentifier] = useState("")
   const [error, setError] = useState<unknown>(null)
@@ -26,9 +28,10 @@ export function useLoginFlow() {
       setLookupResult(result)
 
       if (!result.exists) {
-        // User doesn't exist - still go to method step but they'll fail on submit
-        setStep("method")
-      } else if (result.hasPassword) {
+        setError(new Error(t("login.errors.accountNotFound")))
+        return
+      }
+      if (result.hasPassword) {
         // Has password - let them choose
         setStep("method")
       } else {
@@ -42,7 +45,7 @@ export function useLoginFlow() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   const selectMethod = useCallback((method: "password" | "otp") => {
     setError(null)

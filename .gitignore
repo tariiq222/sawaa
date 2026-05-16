@@ -137,3 +137,7 @@ secrets/
 *.credentials.md
 credentials.local.md
 sawaa-prod-secrets.md
+
+# Tariq AI Orchestration
+.tariq/memory/
+.tariq/memory/store.db

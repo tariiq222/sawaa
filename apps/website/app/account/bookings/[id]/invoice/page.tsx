@@ -2,8 +2,7 @@ import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { InvoiceView } from '@/features/account/invoice-view';
 import { getMyBookingInvoice } from '@/features/account/invoice.api';
-import { getPublicBrandingForSsr } from '@/features/branding/public';
-import { themes } from '@/themes/registry';
+import { theme } from '@/themes/registry';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,8 +25,7 @@ export default async function AccountBookingInvoicePage({ params }: InvoicePageP
     notFound();
   }
 
-  const branding = await getPublicBrandingForSsr();
-  const Layout = themes[branding.activeWebsiteTheme].Layout;
+  const Layout = theme.Layout;
 
   return (
     <Layout>

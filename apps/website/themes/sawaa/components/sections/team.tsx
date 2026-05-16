@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronDown, UserRound, Users } from 'lucide-react';
 import type { PublicEmployee } from '@sawaa/api-client';
@@ -67,13 +68,13 @@ export function Team({ therapists, intro, totalCount }: Props) {
                     }}
                   >
                     {t.publicImageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={t.publicImageUrl}
                         alt={name}
                         width={64}
                         height={64}
                         className="w-full h-full object-cover"
+                        unoptimized={t.publicImageUrl?.startsWith('http')}
                       />
                     ) : (
                       <span

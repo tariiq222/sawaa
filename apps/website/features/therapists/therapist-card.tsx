@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import type { PublicEmployee } from '@sawaa/api-client';
 
 interface Props {
@@ -20,11 +21,13 @@ export function TherapistCard({ therapist, locale }: Props) {
       }}
     >
       {therapist.publicImageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={therapist.publicImageUrl}
           alt={name ?? ''}
-          style={{ width: 96, height: 96, borderRadius: '50%', objectFit: 'cover', marginBottom: '1rem' }}
+          width={96}
+          height={96}
+          style={{ borderRadius: '50%', objectFit: 'cover', marginBottom: '1rem' }}
+          unoptimized={therapist.publicImageUrl?.startsWith('http')}
         />
       ) : null}
       <h3 style={{ margin: 0, color: 'var(--primary-dark)' }}>{name ?? '—'}</h3>

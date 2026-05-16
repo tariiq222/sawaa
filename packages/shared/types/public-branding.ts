@@ -11,8 +11,6 @@
  * never redefine it locally.
  */
 
-export type WebsiteTheme = 'SAWAA' | 'PREMIUM';
-
 export interface PublicBranding {
   // Identity
   organizationNameAr: string;
@@ -37,5 +35,4 @@ export interface PublicBranding {
 
   // Website
   websiteDomain: string | null;
-  activeWebsiteTheme: WebsiteTheme;
 }

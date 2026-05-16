@@ -17,7 +17,6 @@ const mockRow = {
   fontUrl: null,
   customCss: null,
   websiteDomain: null,
-  activeWebsiteTheme: 'SAWAA' as const,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -50,7 +49,6 @@ describe('GetPublicBrandingHandler', () => {
       fontFamily: null,
       fontUrl: null,
       websiteDomain: null,
-      activeWebsiteTheme: 'SAWAA',
     });
     expect(result).not.toHaveProperty('customCss');
     expect(result).not.toHaveProperty('id');
@@ -74,7 +72,6 @@ describe('GetPublicBrandingHandler', () => {
     const result = await handler.execute();
 
     expect(result.organizationNameAr).toBe('منظمتي');
-    expect(result.activeWebsiteTheme).toBe('SAWAA');
     expect(result.colorPrimary).toBeNull();
     expect((prisma.brandingConfig as any).create).toBeUndefined();
   });
