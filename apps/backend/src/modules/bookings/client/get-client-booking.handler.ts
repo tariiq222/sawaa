@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
+import { mapBookingRow, type BookingRelations } from '../booking-row.mapper';
 
 @Injectable()
 export class GetClientBookingHandler {
@@ -9,20 +10,33 @@ export class GetClientBookingHandler {
     const booking = await this.prisma.booking.findFirst({
       where: { id: bookingId, clientId },
       include: {
-        service: { select: { id: true, nameAr: true, nameEn: true } },
-        employee: {
-          select: {
-            id: true,
-            user: { select: { name: true } },
-          },
-        },
-        branch: { select: { id: true, nameAr: true, nameEn: true } },
+        groupSession: true,
+        groupEnrollment: true,
       },
     });
 
     if (!booking) {
       throw new NotFoundException('Booking not found');
     }
+
+    const [client, employee, service, branch] = await Promise.all([
+      this.prisma.client.findFirst({ where: { id: booking.clientId } }),
+      this.prisma.employee.findFirst({ where: { id: booking.employeeId } }),
+      this.prisma.service.findFirst({ where: { id: booking.serviceId } }),
+      this.prisma.branch.findFirst({ where: { id: booking.branchId } }),
+    ]);
+
+    const relations: BookingRelations = {
+      clientsById: new Map(client ? [[client.id, client]] : []),
+      employeesById: new Map(employee ? [[employee.id, employee]] : []),
+      servicesById: new Map(service ? [[service.id, service]] : []),
+    };
+
+    const invoice = await this.prisma.invoice.findFirst({
+      where: { bookingId: booking.id },
+      include: { payments: { orderBy: { createdAt: 'desc' }, take: 1 } }
+    });
+    const payment = invoice?.payments[0];
 
     return {
       id: booking.id,
@@ -32,13 +46,15 @@ export class GetClientBookingHandler {
       durationMins: booking.durationMins,
       price: booking.price.toString(),
       currency: booking.currency,
-      serviceName: booking.service?.nameEn ?? booking.service?.nameAr ?? '',
-      serviceNameAr: booking.service?.nameAr ?? null,
-      employeeName: booking.employee?.user?.name ?? '',
+      serviceId: booking.serviceId,
+      serviceName: service?.nameEn ?? service?.nameAr ?? '',
+      serviceNameAr: service?.nameAr ?? null,
+      employeeName: employee?.name ?? '',
       employeeNameAr: null,
-      branchName: booking.branch?.nameEn ?? booking.branch?.nameAr ?? '',
-      branchNameAr: booking.branch?.nameAr ?? null,
-      paymentStatus: booking.paymentStatus,
+      branchId: booking.branchId,
+      branchName: branch?.nameEn ?? branch?.nameAr ?? '',
+      branchNameAr: branch?.nameAr ?? null,
+      paymentStatus: payment?.status ?? null,
       createdAt: booking.createdAt.toISOString(),
     };
   }
