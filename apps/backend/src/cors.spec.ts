@@ -47,6 +47,15 @@ describe('configureCors', () => {
     expect(cb).toHaveBeenCalledWith(null, true);
   });
 
+  it('should allow no origin in production (health checks)', () => {
+    process.env.NODE_ENV = 'production';
+    configureCors(app as INestApplication);
+    const originFn = corsConfig.origin;
+    const cb = jest.fn();
+    originFn(undefined, cb);
+    expect(cb).toHaveBeenCalledWith(null, true);
+  });
+
   it('should allow configured origins', () => {
     process.env.CORS_ORIGINS = 'https://app.example.com';
     process.env.NODE_ENV = 'production';

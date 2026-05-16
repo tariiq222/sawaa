@@ -116,6 +116,6 @@ export class InitGuestPaymentHandler {
 
   private buildCallbackUrl(bookingId: string): string {
     const baseUrl = process.env['PUBLIC_WEBSITE_URL'];
-    return `${baseUrl || 'http://localhost:3000'}/booking/payment-callback?bookingId=${bookingId}`;
+    return `${baseUrl || 'http://localhost:3000'}/booking/confirm?bookingId=${bookingId}`;
   }
 }

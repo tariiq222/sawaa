@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import type { ClientBookingItem } from '@sawaa/shared';
 import { getMyBookingsApi } from '@/features/auth/auth.api';
 import { t } from '@/features/locale/dictionary';
@@ -13,11 +14,18 @@ interface ClientBookingsListProps {
   initialTotal?: number;
 }
 
-export function ClientBookingsList({ locale, initialBookings = [], initialTotal = 0 }: ClientBookingsListProps) {
+export function ClientBookingsList({ locale, initialBookings, initialTotal }: ClientBookingsListProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
-  const [bookings] = useState<ClientBookingItem[]>(initialBookings);
-  const [total] = useState(initialTotal);
+
+  const { data } = useQuery({
+    queryKey: ['client', 'bookings'],
+    queryFn: () => getMyBookingsApi(1, 50),
+    initialData: initialBookings ? { items: initialBookings, total: initialTotal ?? initialBookings.length, page: 1, pageSize: 50 } : undefined,
+  });
+
+  const bookings = data?.items ?? [];
+  const total = data?.total ?? 0;
 
   const now = new Date();
   const upcoming = bookings.filter((b) => new Date(b.scheduledAt) > now);

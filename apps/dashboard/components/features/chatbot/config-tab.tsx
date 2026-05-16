@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useLayoutEffect } from "react"
 import { toast } from "sonner"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@sawaa/ui"
@@ -26,7 +26,7 @@ export function ConfigTab() {
   const [greetingEn, setGreetingEn] = useState("")
   const [escalateToHumanAt, setEscalateToHumanAt] = useState("")
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!config) return
     setSystemPromptAr(config.systemPromptAr ?? "")
     setSystemPromptEn(config.systemPromptEn ?? "")

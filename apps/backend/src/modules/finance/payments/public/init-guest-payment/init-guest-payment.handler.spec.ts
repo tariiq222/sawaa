@@ -116,7 +116,7 @@ describe('InitGuestPaymentHandler', () => {
           amountHalalas: 11500,
           currency: 'SAR',
           description: 'Booking payment - booking-1',
-          callbackUrl: 'https://clinic.example.com/booking/payment-callback?bookingId=booking-1',
+          callbackUrl: 'https://clinic.example.com/booking/confirm?bookingId=booking-1',
           metadata: { invoiceId: 'inv-1', bookingId: 'booking-1' },
           idempotencyKey: 'payment:00000000-0000-0000-0000-000000000001:inv-1',
         },
@@ -224,7 +224,7 @@ describe('InitGuestPaymentHandler', () => {
       expect(moyasar.createPayment).toHaveBeenCalledWith(
         '00000000-0000-0000-0000-000000000001',
         expect.objectContaining({
-          callbackUrl: 'http://localhost:3000/booking/payment-callback?bookingId=booking-1',
+          callbackUrl: 'http://localhost:3000/booking/confirm?bookingId=booking-1',
         }),
       );
     });
