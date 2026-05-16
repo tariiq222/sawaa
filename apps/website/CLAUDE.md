@@ -30,18 +30,17 @@ features/<feature>/        ← feature modules: <feature>.api.ts + components + 
   ├── booking/  payment/  therapists/  public-catalog/
   ├── support-groups/  site-content/  contact/  otp/  burnout-test/
   └── locale/              custom AR/EN i18n (locale-provider.tsx, useT, useLocale)
-themes/                    ← pluggable themes, selected at runtime from PublicBranding
-  ├── registry.ts          maps WebsiteTheme → Layout + Pages
-  ├── sawaa/               default theme (layout/ + pages/)
-  └── premium/             alternative theme
+themes/                    ← single theme for the website
+  ├── registry.ts          exports the single `theme` object (Layout + Pages)
+  └── sawaa/               SAWAA theme (layout/ + pages/)
 lib/                       api-base.ts, public-fetch.ts, money.ts, seo/
 hooks/use-public-query.ts  TanStack Query wrapper
 providers/query-provider.tsx
 ```
 
-### Themes are pluggable
+### Single theme (SAWAA)
 
-The active theme comes from `PublicBranding` (`WebsiteTheme` = `SAWAA` | `PREMIUM`). `themes/registry.ts` maps it to a Layout + per-route Pages. Each `app/<route>/page.tsx` is thin: it fetches data, resolves the theme, and renders the theme's page component. Add a new theme by adding a folder + a registry entry — don't fork `app/`.
+The website uses a single fixed theme under `themes/sawaa/`. `themes/registry.ts` exports a single `theme` object (Layout + per-route Pages). Each `app/<route>/page.tsx` is thin: it imports `theme` directly from `@/themes/registry` and renders the theme's page component.
 
 ## API integration
 

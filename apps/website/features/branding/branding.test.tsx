@@ -18,7 +18,6 @@ const branding: PublicBranding = {
   fontFamily: null,
   fontUrl: null,
   websiteDomain: null,
-  activeWebsiteTheme: 'SAWAA',
 };
 
 describe('BrandingStyle', () => {

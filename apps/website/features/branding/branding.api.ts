@@ -18,7 +18,6 @@ const DEFAULT_BRANDING: PublicBranding = {
   fontFamily: null,
   fontUrl: null,
   websiteDomain: null,
-  activeWebsiteTheme: 'SAWAA',
 };
 
 export async function getPublicBrandingForSsr(): Promise<PublicBranding> {

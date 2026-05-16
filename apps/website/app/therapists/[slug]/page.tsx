@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPublicBrandingForSsr } from '@/features/branding/public';
 import { getPublicEmployee } from '@/features/therapists/therapists.api';
-import { themes } from '@/themes/registry';
+import { theme } from '@/themes/registry';
 import { buildPageMetadata } from '@/lib/seo/page-metadata';
 import { getLocale } from '@/features/locale/public';
 
@@ -39,8 +40,7 @@ export default async function TherapistProfilePage({ params }: Props) {
     notFound();
   }
 
-  const branding = await getPublicBrandingForSsr();
-  const Layout = themes[branding.activeWebsiteTheme].Layout;
+  const Layout = theme.Layout;
 
   const name = locale === 'ar' ? (therapist.nameAr ?? therapist.nameEn) : (therapist.nameEn ?? therapist.nameAr);
   const specialty = locale === 'ar' ? (therapist.specialtyAr ?? therapist.specialty) : (therapist.specialty ?? therapist.specialtyAr);
@@ -51,17 +51,17 @@ export default async function TherapistProfilePage({ params }: Props) {
       <main style={{ maxWidth: 720, margin: '0 auto', padding: '4rem 2rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '1.5rem' }}>
           {therapist.publicImageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={therapist.publicImageUrl}
               alt={name ?? ''}
+              width={160}
+              height={160}
               style={{
-                width: 160,
-                height: 160,
                 borderRadius: '50%',
                 objectFit: 'cover',
                 border: '4px solid color-mix(in srgb, var(--primary) 20%, transparent)',
               }}
+              unoptimized={therapist.publicImageUrl?.startsWith('http')}
             />
           ) : (
             <div

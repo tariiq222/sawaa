@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getPublicBrandingForSsr } from '@/features/branding/public';
-import { themes } from '@/themes/registry';
+import { theme } from '@/themes/registry';
 import { buildPageMetadata } from '@/lib/seo/page-metadata';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -14,8 +14,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ContactRoute() {
-  const branding = await getPublicBrandingForSsr();
-  const theme = themes[branding.activeWebsiteTheme];
   const Page = theme.pages.contact;
   const Layout = theme.Layout;
   return (

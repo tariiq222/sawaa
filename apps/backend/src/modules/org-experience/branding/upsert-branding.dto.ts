@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 const HEX_COLOR_REGEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
@@ -54,8 +54,4 @@ export class UpsertBrandingDto {
   @Matches(HOSTNAME_REGEX, { message: 'websiteDomain must be a valid hostname' })
   websiteDomain?: string | null;
 
-  @ApiPropertyOptional({ description: 'Active website theme', enum: ['SAWAA', 'PREMIUM'] })
-  @IsOptional()
-  @IsEnum(['SAWAA', 'PREMIUM'])
-  activeWebsiteTheme?: 'SAWAA' | 'PREMIUM';
 }

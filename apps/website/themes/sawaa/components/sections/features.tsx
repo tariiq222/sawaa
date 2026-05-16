@@ -1,5 +1,12 @@
-import * as Icons from 'lucide-react';
-import { Activity, BadgeCheck, Sparkles, type LucideIcon } from 'lucide-react';
+import {
+  Activity,
+  BadgeCheck,
+  Sparkles,
+  Heart,
+  Brain,
+  ShieldCheck,
+  type LucideIcon,
+} from 'lucide-react';
 import type { FeatureCards, SectionIntro } from '@/features/site-content/public';
 import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';
@@ -22,9 +29,17 @@ const TONE: Tone = {
   ring: 'color-mix(in srgb, var(--primary) 15%, transparent)',
 };
 
+const ICON_MAP: Record<string, LucideIcon> = {
+  Activity,
+  BadgeCheck,
+  Sparkles,
+  Heart,
+  Brain,
+  ShieldCheck,
+};
+
 function resolveIcon(name: string): LucideIcon {
-  const iconMap = Icons as unknown as Record<string, LucideIcon>;
-  return iconMap[name] ?? BadgeCheck;
+  return ICON_MAP[name] ?? BadgeCheck;
 }
 
 export function Features({ intro, cards }: Props) {

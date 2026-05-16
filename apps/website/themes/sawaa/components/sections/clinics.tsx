@@ -1,9 +1,23 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import * as Icons from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, Heart, Sparkles } from 'lucide-react';
+import Image from 'next/image';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  Sparkles,
+  Users,
+  HandHeart,
+  Baby,
+  Smile,
+  Brain,
+  ClipboardList,
+  RefreshCw,
+  type LucideIcon,
+} from 'lucide-react';
 import type { SectionIntro } from '@/features/site-content/public';
 import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';
@@ -37,11 +51,21 @@ const TONE: Tone = {
   ring: 'color-mix(in srgb, var(--primary) 20%, transparent)',
 };
 
+const ICON_MAP: Record<string, LucideIcon> = {
+  Sparkles,
+  Users,
+  Heart,
+  HandHeart,
+  Baby,
+  Smile,
+  Brain,
+  ClipboardList,
+  RefreshCw,
+};
+
 function resolveIcon(name: string | null): LucideIcon {
   if (!name) return Sparkles;
-  const key = name.charAt(0).toUpperCase() + name.slice(1);
-  const iconMap = Icons as unknown as Record<string, LucideIcon>;
-  return iconMap[key] ?? Sparkles;
+  return ICON_MAP[name] ?? Sparkles;
 }
 
 export function Clinics({ clinics, intro }: Props) {
@@ -159,14 +183,13 @@ export function Clinics({ clinics, intro }: Props) {
                       }}
                     >
                       {c.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <Image
                           src={c.image}
                           alt={c.nameAr}
-                          loading="lazy"
                           width={300}
                           height={160}
                           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                          unoptimized={c.image?.startsWith('http')}
                         />
                       ) : (
                         <Icon

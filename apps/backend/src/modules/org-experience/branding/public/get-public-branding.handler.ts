@@ -27,7 +27,6 @@ export class GetPublicBrandingHandler {
         fontFamily: null,
         fontUrl: null,
         websiteDomain: null,
-        activeWebsiteTheme: 'SAWAA',
       };
     }
 
@@ -46,7 +45,6 @@ export class GetPublicBrandingHandler {
       fontFamily: row.fontFamily,
       fontUrl: row.fontUrl,
       websiteDomain: row.websiteDomain,
-      activeWebsiteTheme: row.activeWebsiteTheme,
     };
   }
 }
