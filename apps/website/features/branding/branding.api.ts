@@ -2,14 +2,37 @@ import type { PublicBranding } from '@sawaa/shared';
 
 import { getApiBase } from '@/lib/api-base';
 
+/** Default branding used when the SSR fetch fails — keeps the page renderable. */
+const DEFAULT_BRANDING: PublicBranding = {
+  organizationNameAr: 'منظمتي',
+  organizationNameEn: null,
+  productTagline: null,
+  logoUrl: null,
+  faviconUrl: null,
+  colorPrimary: null,
+  colorPrimaryLight: null,
+  colorPrimaryDark: null,
+  colorAccent: null,
+  colorAccentDark: null,
+  colorBackground: null,
+  fontFamily: null,
+  fontUrl: null,
+  websiteDomain: null,
+  activeWebsiteTheme: 'SAWAA',
+};
+
 export async function getPublicBrandingForSsr(): Promise<PublicBranding> {
-  const response = await fetch(`${getApiBase()}/public/branding`, {
-    next: { revalidate: 60, tags: ['branding'] },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch public branding: ${response.status}`);
+  try {
+    const response = await fetch(`${getApiBase()}/public/branding`, {
+      next: { revalidate: 60, tags: ['branding'] },
+    });
+    if (!response.ok) {
+      console.warn(`[branding] fetch failed: ${response.status} — using default branding`);
+      return DEFAULT_BRANDING;
+    }
+    return (await response.json()) as PublicBranding;
+  } catch (err) {
+    console.warn('[branding] fetch error — using default branding', err);
+    return DEFAULT_BRANDING;
   }
-
-  return response.json() as Promise<PublicBranding>;
 }

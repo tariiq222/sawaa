@@ -10,10 +10,15 @@ function unwrap<T>(json: unknown): T {
 }
 
 export async function listPublicEmployees(): Promise<PublicEmployee[]> {
-  const json = await publicFetch<unknown>('/public/employees', {
-    next: { revalidate: 60, tags: ['public-employees'] },
-  });
-  return unwrap<PublicEmployee[]>(json);
+  try {
+    const json = await publicFetch<unknown>('/public/employees', {
+      next: { revalidate: 60, tags: ['public-employees'] },
+    });
+    return unwrap<PublicEmployee[]>(json);
+  } catch (err) {
+    console.warn('[therapists] listPublicEmployees error — using empty list', err);
+    return [];
+  }
 }
 
 export async function getPublicEmployee(slug: string): Promise<PublicEmployee> {

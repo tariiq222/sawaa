@@ -35,12 +35,20 @@ export async function getPublicGroupSessions(
     ? `${base}/public/bookings/group-sessions?branchId=${encodeURIComponent(branchId)}`
     : `${base}/public/bookings/group-sessions`;
 
-  const res = await fetch(url, {
-    next: { revalidate: 60, tags: ['public-group-sessions'] },
-  });
-  if (!res.ok) throw new Error(`Failed to fetch group sessions: ${res.status}`);
-  const json = await res.json();
-  return (json.data ?? json) as SupportGroup[];
+  try {
+    const res = await fetch(url, {
+      next: { revalidate: 60, tags: ['public-group-sessions'] },
+    });
+    if (!res.ok) {
+      console.warn(`[support-groups] fetch failed: ${res.status} — using empty list`);
+      return [];
+    }
+    const json = await res.json();
+    return (json.data ?? json) as SupportGroup[];
+  } catch (err) {
+    console.warn('[support-groups] fetch error — using empty list', err);
+    return [];
+  }
 }
 
 export async function getPublicGroupSession(

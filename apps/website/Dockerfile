@@ -71,19 +71,19 @@ RUN ARCH=$(uname -m | sed 's/aarch64/arm64/;s/x86_64/x64/') \
       @tailwindcss/oxide-linux-${ARCH}-gnu
 
 # Next.js bakes NEXT_PUBLIC_* into the JS bundle at build time.
-# These ARGs are passed via --build-arg from Dokploy UI.
-ARG NEXT_PUBLIC_API_URL=http://localhost:5100
-ARG NEXT_PUBLIC_DEFAULT_ORG_ID=
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_DEFAULT_ORG_ID=$NEXT_PUBLIC_DEFAULT_ORG_ID
+# These ARGs MUST be passed via --build-arg (Dokploy) or docker-compose build args.
+# Leaving them empty will fail the build — no silent localhost fallback in production.
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_DEFAULT_ORG_ID
 
-# Fail the build early if the API URL still points to localhost — this
-# means Dokploy Build Time Arguments were not passed correctly.
-RUN if echo "$NEXT_PUBLIC_API_URL" | grep -qi "localhost\|127.0.0.1"; then \
-      echo "ERROR: NEXT_PUBLIC_API_URL is still localhost ($NEXT_PUBLIC_API_URL). \
-Check Dokploy Build Time Arguments." >&2; \
+# Fail fast if required public args are missing
+RUN if [ -z "$NEXT_PUBLIC_API_URL" ]; then \
+      echo "ERROR: NEXT_PUBLIC_API_URL is required. Pass --build-arg NEXT_PUBLIC_API_URL=https://api.sawaa.sa/api/v1" >&2; \
       exit 1; \
     fi
+
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_DEFAULT_ORG_ID=$NEXT_PUBLIC_DEFAULT_ORG_ID
 
 RUN pnpm --filter=website run build
 
