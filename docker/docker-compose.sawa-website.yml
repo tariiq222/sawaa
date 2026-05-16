@@ -10,6 +10,7 @@ services:
       dockerfile: apps/website/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:5200
+        NEXT_PUBLIC_DEFAULT_ORG_ID: 00000000-0000-0000-0000-000000000001
     container_name: sawaa-website
     restart: unless-stopped
     ports:

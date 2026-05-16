@@ -73,23 +73,25 @@ RUN ARCH=$(uname -m | sed 's/aarch64/arm64/;s/x86_64/x64/') \
       @tailwindcss/oxide-linux-${ARCH}-gnu
 
 # Next.js bakes NEXT_PUBLIC_* into the JS bundle at build time.
-# These ARGs are passed via --build-arg from the GitHub Actions workflow.
-# WARNING: defaults are localhost/test placeholders — always pass real values in CI.
-ARG NEXT_PUBLIC_API_URL=http://localhost:5100/api/v1
+# These ARGs MUST be passed via --build-arg (Dokploy) or docker-compose build args.
+# Leaving them empty will fail the build — no silent localhost fallback in production.
+ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_SENTRY_DSN=""
 ARG SENTRY_DSN=""
 ARG SENTRY_RELEASE=""
 ARG SENTRY_AUTH_TOKEN=""
+
+# Fail fast if the required public API URL is missing
+RUN if [ -z "$NEXT_PUBLIC_API_URL" ]; then \
+      echo "ERROR: NEXT_PUBLIC_API_URL is required. Pass --build-arg NEXT_PUBLIC_API_URL=https://api.sawaa.sa/api/v1" >&2; \
+      exit 1; \
+    fi
 
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
 ENV SENTRY_DSN=$SENTRY_DSN
 ENV SENTRY_RELEASE=$SENTRY_RELEASE
 ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
-
-RUN if echo "$NEXT_PUBLIC_API_URL" | grep -q "localhost"; then \
-      echo "⚠️ NEXT_PUBLIC_API_URL is localhost — this is fine for local docker-compose builds, but you should pass --build-arg NEXT_PUBLIC_API_URL=https://api.sawaa.sa/api/v1 for production"; \
-    fi
 
 RUN pnpm --filter=dashboard run build
 
