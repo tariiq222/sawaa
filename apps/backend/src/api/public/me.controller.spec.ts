@@ -6,6 +6,7 @@ import { GetMeHandler } from '../../modules/identity/client-auth/get-me.handler'
 import { ListClientBookingsHandler } from '../../modules/bookings/client/list-client-bookings.handler';
 import { ClientCancelBookingHandler } from '../../modules/bookings/client/client-cancel-booking.handler';
 import { ClientRescheduleBookingHandler } from '../../modules/bookings/client/client-reschedule-booking.handler';
+import { GetClientBookingHandler } from '../../modules/bookings/client/get-client-booking.handler';
 import { GetBookingInvoiceHandler } from '../../modules/finance/get-invoice/get-booking-invoice.handler';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 
@@ -16,6 +17,7 @@ describe('PublicMeController (e2e)', () => {
   const mockListBookings = { execute: jest.fn() };
   const mockCancel = { execute: jest.fn() };
   const mockReschedule = { execute: jest.fn() };
+  const mockGetClientBooking = { execute: jest.fn() };
   const mockGetInvoice = { execute: jest.fn() };
 
   beforeAll(async () => {
@@ -26,6 +28,7 @@ describe('PublicMeController (e2e)', () => {
         { provide: ListClientBookingsHandler, useValue: mockListBookings },
         { provide: ClientCancelBookingHandler, useValue: mockCancel },
         { provide: ClientRescheduleBookingHandler, useValue: mockReschedule },
+        { provide: GetClientBookingHandler, useValue: mockGetClientBooking },
         { provide: GetBookingInvoiceHandler, useValue: mockGetInvoice },
       ],
     })

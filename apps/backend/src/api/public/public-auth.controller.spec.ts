@@ -62,10 +62,12 @@ describe('PublicAuthController (e2e)', () => {
   });
 
   describe('POST /public/auth/register', () => {
-    it('returns 200 with tokens on valid payload', async () => {
+    it('returns 200 with clientId on valid payload', async () => {
       mockRegister.execute.mockResolvedValue({
         accessToken: 'acc-token',
         refreshToken: 'ref-token',
+        accessMaxAgeMs: 900000,
+        refreshMaxAgeMs: 2592000000,
         clientId: 'client-1',
       });
 
@@ -74,7 +76,6 @@ describe('PublicAuthController (e2e)', () => {
         .send({ password: 'SecurePass123', name: 'Test User' })
         .expect(200)
         .expect(({ body }) => {
-          expect(body.accessToken).toBe('acc-token');
           expect(body.clientId).toBe('client-1');
         });
     });
@@ -135,10 +136,12 @@ describe('PublicAuthController (e2e)', () => {
   });
 
   describe('POST /public/auth/login', () => {
-    it('returns 200 with tokens on valid credentials', async () => {
+    it('returns 200 with clientId on valid credentials', async () => {
       mockLogin.execute.mockResolvedValue({
         accessToken: 'acc-token',
         refreshToken: 'ref-token',
+        accessMaxAgeMs: 900000,
+        refreshMaxAgeMs: 2592000000,
         clientId: 'client-1',
       });
 
@@ -147,7 +150,7 @@ describe('PublicAuthController (e2e)', () => {
         .send({ email: 'test@example.com', password: 'SecurePass123' })
         .expect(200)
         .expect(({ body }) => {
-          expect(body.accessToken).toBe('acc-token');
+          expect(body.clientId).toBe('client-1');
         });
     });
 
@@ -177,10 +180,12 @@ describe('PublicAuthController (e2e)', () => {
   });
 
   describe('POST /public/auth/refresh', () => {
-    it('returns 200 with new access token', async () => {
+    it('returns 200 with clientId', async () => {
       mockRefresh.execute.mockResolvedValue({
         accessToken: 'new-acc-token',
-        expiresIn: 900,
+        refreshToken: 'new-ref-token',
+        accessMaxAgeMs: 900000,
+        refreshMaxAgeMs: 2592000000,
       });
 
       return request(app.getHttpServer())
@@ -188,15 +193,15 @@ describe('PublicAuthController (e2e)', () => {
         .send({ refreshToken: 'valid-refresh-token' })
         .expect(200)
         .expect(({ body }) => {
-          expect(body.accessToken).toBe('new-acc-token');
+          expect(body.clientId).toBe('client-1');
         });
     });
 
-    it('returns 400 when refreshToken is empty', async () => {
+    it('returns 401 when refreshToken is empty', async () => {
       return request(app.getHttpServer())
         .post('/public/auth/refresh')
         .send({ refreshToken: '' })
-        .expect(400);
+        .expect(401);
     });
   });
 
@@ -210,11 +215,11 @@ describe('PublicAuthController (e2e)', () => {
         .expect(204);
     });
 
-    it('returns 400 when refreshToken is empty', async () => {
+    it('returns 204 when refreshToken is empty', async () => {
       return request(app.getHttpServer())
         .post('/public/auth/logout')
         .send({ refreshToken: '' })
-        .expect(400);
+        .expect(204);
     });
   });
 

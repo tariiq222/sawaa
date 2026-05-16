@@ -108,7 +108,7 @@ describe('ListClientsHandler', () => {
 
     expect(prisma.client.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ source: 'WEB' }),
+        where: expect.objectContaining({ source: ClientSource.ONLINE }),
       }),
     );
   });

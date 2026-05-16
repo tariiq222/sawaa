@@ -113,7 +113,7 @@ describe('CreateClientHandler', () => {
       middleName: null,
     });
 
-    await handler.execute({ firstName: 'Ahmed', lastName: 'Ali', phone: '+966500000002' });
+    await handler.execute({ firstName: 'Ahmed', lastName: 'Ali' });
     expect(prisma.client.findFirst).not.toHaveBeenCalled();
   });
 

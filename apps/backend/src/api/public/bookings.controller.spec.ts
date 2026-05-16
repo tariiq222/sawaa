@@ -6,6 +6,7 @@ import { CreateGuestBookingHandler } from '../../modules/bookings/public/create-
 import { ListPublicGroupSessionsHandler } from '../../modules/bookings/public/list-public-group-sessions.handler';
 import { GetPublicGroupSessionHandler } from '../../modules/bookings/public/get-public-group-session.handler';
 import { BookGroupSessionHandler } from '../../modules/bookings/public/book-group-session.handler';
+import { GetBookingStatusHandler } from '../../modules/bookings/public/get-booking-status.handler';
 import { OtpSessionGuard } from '../../modules/identity/otp/otp-session.guard';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 
@@ -16,6 +17,7 @@ describe('PublicBookingsController (e2e)', () => {
   const mockListGroup = { execute: jest.fn() };
   const mockGetGroup = { execute: jest.fn() };
   const mockBookGroup = { execute: jest.fn() };
+  const mockGetBookingStatus = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -25,6 +27,7 @@ describe('PublicBookingsController (e2e)', () => {
         { provide: ListPublicGroupSessionsHandler, useValue: mockListGroup },
         { provide: GetPublicGroupSessionHandler, useValue: mockGetGroup },
         { provide: BookGroupSessionHandler, useValue: mockBookGroup },
+        { provide: GetBookingStatusHandler, useValue: mockGetBookingStatus },
       ],
     })
       .overrideGuard(OtpSessionGuard)
