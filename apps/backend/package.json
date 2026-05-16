@@ -11,7 +11,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:e2e": "NODE_OPTIONS=\"--max-old-space-size=4096\" jest --config test/jest-e2e.json --json --outputFile=test-results-clients.json && pnpm run test:report",
+    "test:e2e": "NODE_OPTIONS=\"--max-old-space-size=4096\" jest --config test/jest-e2e.json --json --outputFile=test-results-clients.json",
     "test:smoke": "jest --config test/jest-smoke.json --runInBand",
     "test:kiwi": "jest --json --outputFile=/tmp/jest-backend-unit.json || true && node ../../scripts/kiwi/kiwi-sync-manual-qa.mjs --jest /tmp/jest-backend-unit.json --tag backend --domain Backend --plan-name 'Sawaa / Backend / Unit' --plan-summary 'Automated Jest unit tests for apps/backend.'",
     "test:kiwi:e2e": "jest --config test/jest-e2e.json --json --outputFile=/tmp/jest-backend-e2e.json || true && node ../../scripts/kiwi/kiwi-sync-manual-qa.mjs --jest /tmp/jest-backend-e2e.json --tag backend-e2e --domain 'Backend E2E' --plan-name 'Sawaa / Backend / E2E' --plan-summary 'Jest E2E tests for apps/backend.'",
