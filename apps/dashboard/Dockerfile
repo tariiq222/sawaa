@@ -81,7 +81,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_MOYASAR_PLATFORM_PUBLISHABLE_KEY=$NEXT_PUBLIC_MOYASAR_PLATFORM_PUBLISHABLE_KEY
 
 RUN if echo "$NEXT_PUBLIC_API_URL" | grep -q "localhost"; then \
-      echo "❌ NEXT_PUBLIC_API_URL is localhost — pass --build-arg NEXT_PUBLIC_API_URL=https://api.sawaa.sa/api/v1" && exit 1; \
+      echo "⚠️ NEXT_PUBLIC_API_URL is localhost — this is fine for local docker-compose builds, but you should pass --build-arg NEXT_PUBLIC_API_URL=https://api.sawaa.sa/api/v1 for production"; \
     fi
 
 RUN pnpm --filter=dashboard run build
