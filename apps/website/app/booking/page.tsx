@@ -123,9 +123,10 @@ export default function BookingWizardPage() {
   const employeeId = employee?.id;
   const serviceId = service?.id;
 
+  const branchId = selectedBranch?.id;
   const { data: slots = [], isLoading: loadingSlots } = useQuery({
-    queryKey: ['public', 'availability', employeeId, selectedDate, serviceId],
-    queryFn: () => getPublicAvailability(employeeId!, selectedDate, serviceId),
+    queryKey: ['public', 'availability', employeeId, selectedDate, serviceId, branchId],
+    queryFn: () => getPublicAvailability(employeeId!, selectedDate, serviceId, branchId),
     enabled: state.step === WizardStep.SLOT && !!employeeId,
   });
 

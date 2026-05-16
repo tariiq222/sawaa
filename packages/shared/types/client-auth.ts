@@ -39,8 +39,6 @@ export interface ClientBookingListResponse {
 }
 
 export interface ClientAuthResponse {
-  accessToken: string;
-  refreshToken: string;
   clientId: string;
 }
 

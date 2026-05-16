@@ -23,12 +23,18 @@ export function useCurrentClient(): UseCurrentClientResult {
   } = useQuery<ClientProfile | null, Error>({
     queryKey: ['client', 'me'],
     queryFn: async () => {
-      const profile = await getMeApi();
-      setClient(profile);
-      return profile;
+      try {
+        const profile = await getMeApi();
+        setClient(profile);
+        return profile;
+      } catch {
+        // Session expired — clear stale local cache
+        setClient(null);
+        return null;
+      }
     },
-    enabled: initialClient === null,
-    initialData: initialClient,
+    initialData: initialClient ?? undefined,
+    staleTime: 60_000,
   });
 
   return {

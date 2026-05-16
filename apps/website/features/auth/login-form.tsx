@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { validateEmail } from './auth.schema';
 import { clientLoginApi } from './auth.api';
 import { setClient } from './auth-store';
@@ -13,6 +13,8 @@ interface LoginFormProps {
 
 export function LoginForm({ onSuccess }: LoginFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -35,13 +37,17 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
     setIsLoading(true);
     try {
-      const result = await clientLoginApi({ email, password });
+      await clientLoginApi({ email, password });
       const profile = await getMeApi();
       setClient(profile);
       if (onSuccess) {
         onSuccess();
       } else {
-        router.push('/account');
+        // Preserve full query string from the redirect param (e.g. /support-groups?groupId=xxx)
+        const target = redirectTo
+          ? `${redirectTo}${searchParams.get('groupId') ? `?groupId=${searchParams.get('groupId')}` : ''}`
+          : '/account';
+        router.push(target);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');

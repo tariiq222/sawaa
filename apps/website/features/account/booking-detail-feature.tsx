@@ -7,7 +7,7 @@ import type { Locale } from '@/features/locale/locale';
 import { t } from '@/features/locale/dictionary';
 import { useCurrentClient } from '@/features/auth/public';
 import type { ClientBookingItem } from '@sawaa/shared';
-import { getMyBookingsApi, cancelMyBookingApi, rescheduleMyBookingApi } from '@/features/auth/auth.api';
+import { getMyBookingApi, cancelMyBookingApi, rescheduleMyBookingApi } from '@/features/auth/auth.api';
 
 interface BookingDetailFeatureProps {
   bookingId: string;
@@ -25,10 +25,7 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
     isLoading,
   } = useQuery({
     queryKey: ['client', 'bookings', 'detail', bookingId],
-    queryFn: async () => {
-      const result = await getMyBookingsApi(1, 50);
-      return result.items.find((b) => b.id === bookingId) ?? null;
-    },
+    queryFn: () => getMyBookingApi(bookingId),
     enabled: !!client && !!bookingId,
   });
 

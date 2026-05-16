@@ -59,15 +59,12 @@ export async function getPublicGroupSession(
 
 export async function bookGroupSession(
   groupSessionId: string,
-  accessToken: string,
+  _accessToken?: string,
 ): Promise<BookGroupSessionResponse> {
   const res = await fetch(
     `${getApiBase()}/public/bookings/group-sessions/${encodeURIComponent(groupSessionId)}/book`,
     {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
       credentials: 'include',
     },
   );

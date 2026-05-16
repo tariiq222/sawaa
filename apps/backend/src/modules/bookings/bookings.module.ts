@@ -38,9 +38,11 @@ import { CreateGuestBookingHandler } from './public/create-guest-booking.handler
 import { ListClientBookingsHandler } from './client/list-client-bookings.handler';
 import { ClientCancelBookingHandler } from './client/client-cancel-booking.handler';
 import { ClientRescheduleBookingHandler } from './client/client-reschedule-booking.handler';
+import { GetClientBookingHandler } from './client/get-client-booking.handler';
 import { ListPublicGroupSessionsHandler } from './public/list-public-group-sessions.handler';
 import { GetPublicGroupSessionHandler } from './public/get-public-group-session.handler';
 import { BookGroupSessionHandler } from './public/book-group-session.handler';
+import { GetBookingStatusHandler } from './public/get-booking-status.handler';
 import { CreateEmployeeBookingHandler } from './create-employee-booking/create-employee-booking.handler';
 import { ValidateCouponService } from './coupons/validate-coupon.service';
 import { CancelRecurringSeriesHandler } from './cancel-recurring-series/cancel-recurring-series.handler';
@@ -78,9 +80,11 @@ const handlers = [
   ListClientBookingsHandler,
   ClientCancelBookingHandler,
   ClientRescheduleBookingHandler,
+  GetClientBookingHandler,
   ListPublicGroupSessionsHandler,
   GetPublicGroupSessionHandler,
   BookGroupSessionHandler,
+  GetBookingStatusHandler,
   ValidateCouponService,
   CancelRecurringSeriesHandler,
 ];

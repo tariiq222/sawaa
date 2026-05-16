@@ -9,6 +9,7 @@ import { ClientCancelBookingHandler } from '../../modules/bookings/client/client
 import { ClientCancelBookingDto } from '../../modules/bookings/client/client-cancel-booking.dto';
 import { ClientRescheduleBookingHandler } from '../../modules/bookings/client/client-reschedule-booking.handler';
 import { ClientRescheduleBookingDto } from '../../modules/bookings/client/client-reschedule-booking.dto';
+import { GetClientBookingHandler } from '../../modules/bookings/client/get-client-booking.handler';
 import { GetBookingInvoiceHandler } from '../../modules/finance/get-invoice/get-booking-invoice.handler';
 
 @ApiTags('Public / Me')
@@ -22,6 +23,7 @@ export class PublicMeController {
     private readonly listBookings: ListClientBookingsHandler,
     private readonly cancelBooking: ClientCancelBookingHandler,
     private readonly rescheduleBooking: ClientRescheduleBookingHandler,
+    private readonly getClientBooking: GetClientBookingHandler,
     private readonly getBookingInvoice: GetBookingInvoiceHandler,
   ) {}
 
@@ -47,6 +49,18 @@ export class PublicMeController {
       page ? parseInt(page, 10) : 1,
       pageSize ? parseInt(pageSize, 10) : 10,
     );
+  }
+
+  @Get('bookings/:id')
+  @ApiOperation({ summary: 'Get a single client booking by ID' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ schema: { type: 'object', description: 'Booking detail' } })
+  @ApiResponse({ status: 404, description: 'Booking not found' })
+  async getBookingEndpoint(
+    @ClientSession() session: { id: string },
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.getClientBooking.execute(id, session.id);
   }
 
   @Patch('bookings/:id/cancel')

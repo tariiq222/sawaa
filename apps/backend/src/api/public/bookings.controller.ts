@@ -11,6 +11,7 @@ import { ClientSession } from '../../common/auth/client-session.decorator';
 import { ListPublicGroupSessionsHandler } from '../../modules/bookings/public/list-public-group-sessions.handler';
 import { GetPublicGroupSessionHandler } from '../../modules/bookings/public/get-public-group-session.handler';
 import { BookGroupSessionHandler } from '../../modules/bookings/public/book-group-session.handler';
+import { GetBookingStatusHandler } from '../../modules/bookings/public/get-booking-status.handler';
 import type { OtpSessionPayload } from '../../modules/identity/otp/otp-session.service';
 import type { Request } from 'express';
 @ApiTags('Public / Bookings')
@@ -22,6 +23,7 @@ export class PublicBookingsController {
     private readonly listGroupSessions: ListPublicGroupSessionsHandler,
     private readonly getGroupSession: GetPublicGroupSessionHandler,
     private readonly bookGroupSession: BookGroupSessionHandler,
+    private readonly getBookingStatus: GetBookingStatusHandler,
   ) {}
 
   @Public()
@@ -58,6 +60,17 @@ export class PublicBookingsController {
       groupSessionId: id,
       clientId: client.id,
     });
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
+  @Get(':id/status')
+  @ApiOperation({ summary: 'Get booking status (public, for payment confirmation pages)' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ schema: { type: 'object', properties: { bookingId: { type: 'string' }, status: { type: 'string' }, paymentStatus: { type: 'string' } } } })
+  @ApiResponse({ status: 404, description: 'Booking not found' })
+  async getBookingStatusEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+    return this.getBookingStatus.execute(id);
   }
 
   @Public()

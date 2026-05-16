@@ -27,9 +27,11 @@ export async function getPublicAvailability(
   employeeId: string,
   date: string,
   serviceId?: string,
+  branchId?: string,
 ): Promise<AvailableSlot[]> {
   const params = new URLSearchParams({ date });
   if (serviceId) params.set('serviceId', serviceId);
+  if (branchId) params.set('branchId', branchId);
   const json = await publicFetch<unknown>(
     `/public/employees/${employeeId}/availability?${params}`,
     { cache: 'no-store' },

@@ -24,6 +24,7 @@ import type {
   ClientLoginPayload,
   ClientRegisterPayload,
   ClientProfile,
+  ClientBookingItem,
   ClientBookingListResponse,
 } from '@sawaa/shared'
 
@@ -67,6 +68,21 @@ export async function getMyBookingsApi(
 ): Promise<ClientBookingListResponse> {
   ensureInitialised()
   return getMyBookings(page, pageSize)
+}
+
+export async function getMyBookingApi(bookingId: string): Promise<ClientBookingItem> {
+  ensureInitialised()
+  const base = getApiBase()
+  const res = await fetch(`${base}/public/me/bookings/${encodeURIComponent(bookingId)}`, {
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { message?: string }).message ?? 'Booking not found')
+  }
+  const json = await res.json()
+  if (json && typeof json === 'object' && 'data' in json) return json.data as ClientBookingItem
+  return json as ClientBookingItem
 }
 
 export async function cancelMyBookingApi(

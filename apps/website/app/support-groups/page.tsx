@@ -1,23 +1,68 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { SupportGroupsList } from '@/features/support-groups/support-groups-list';
-import type { SupportGroup } from '@/features/support-groups/support-groups.api';
+import { bookGroupSession } from '@/features/support-groups/support-groups.api';
+import type { SupportGroup, BookGroupSessionResponse } from '@/features/support-groups/support-groups.api';
+import { useCurrentClient } from '@/features/auth/public';
 
-export default function SupportGroupsPage() {
+function SupportGroupsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pendingGroupId = searchParams.get('groupId');
+  const { client } = useCurrentClient();
   const [selectedGroup, setSelectedGroup] = useState<SupportGroup | null>(null);
+  const [isBooking, setIsBooking] = useState(false);
+  const [bookingResult, setBookingResult] = useState<BookGroupSessionResponse | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+
+  // Auto-book when returning from login with groupId
+  useEffect(() => {
+    if (!pendingGroupId || !client || isBooking || bookingResult) return;
+
+    setIsBooking(true);
+    setBookingError(null);
+
+    // Use credentials: 'include' — the httpOnly cookie handles auth
+    bookGroupSession(pendingGroupId, '')
+      .then((result) => {
+        setBookingResult(result);
+        // Clear groupId from URL
+        router.replace('/support-groups');
+      })
+      .catch((err) => {
+        setBookingError(err instanceof Error ? err.message : 'Booking failed');
+      })
+      .finally(() => setIsBooking(false));
+  }, [pendingGroupId, client, isBooking, bookingResult, router]);
 
   const handleSelectGroup = (group: SupportGroup) => {
     setSelectedGroup(group);
+    setBookingResult(null);
+    setBookingError(null);
   };
 
   const handleBook = () => {
     if (!selectedGroup) return;
 
-    const loginUrl = `/login?redirect=/support-groups&groupId=${selectedGroup.id}`;
-    router.push(loginUrl);
+    if (client) {
+      // Already logged in — book directly
+      setIsBooking(true);
+      setBookingError(null);
+      bookGroupSession(selectedGroup.id, '')
+        .then((result) => {
+          setBookingResult(result);
+        })
+        .catch((err) => {
+          setBookingError(err instanceof Error ? err.message : 'Booking failed');
+        })
+        .finally(() => setIsBooking(false));
+    } else {
+      const loginUrl = `/login?redirect=/support-groups&groupId=${selectedGroup.id}`;
+      router.push(loginUrl);
+    }
   };
 
   return (
@@ -31,16 +76,58 @@ export default function SupportGroupsPage() {
         </p>
       </div>
 
+      {bookingResult && (
+        <div
+          style={{
+            marginBottom: '1.5rem',
+            padding: '1rem',
+            borderRadius: '8px',
+            background: 'color-mix(in srgb, var(--success) 10%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)',
+            color: 'var(--success)',
+            textAlign: 'center',
+            fontWeight: 600,
+          }}
+        >
+          {bookingResult.type === 'BOOKED'
+            ? 'You have been booked successfully!'
+            : `You have been added to the waitlist (position ${bookingResult.waitlistPosition}).`}
+        </div>
+      )}
+
+      {bookingError && (
+        <div
+          style={{
+            marginBottom: '1.5rem',
+            padding: '1rem',
+            borderRadius: '8px',
+            background: 'color-mix(in srgb, var(--error) 10%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--error) 30%, transparent)',
+            color: 'var(--error)',
+            textAlign: 'center',
+          }}
+        >
+          {bookingError}
+        </div>
+      )}
+
+      {isBooking && (
+        <div style={{ textAlign: 'center', padding: '1rem', opacity: 0.7 }}>
+          Booking in progress...
+        </div>
+      )}
+
       <SupportGroupsList
         branchId={undefined}
         onSelectGroup={handleSelectGroup}
         selectedGroupId={selectedGroup?.id}
       />
 
-      {selectedGroup && (
+      {selectedGroup && !bookingResult && (
         <div style={{ marginTop: '2rem', textAlign: 'center' }}>
           <button
             onClick={handleBook}
+            disabled={isBooking}
             style={{
               padding: '1rem 3rem',
               background: 'var(--primary)',
@@ -49,7 +136,8 @@ export default function SupportGroupsPage() {
               borderRadius: 'var(--radius)',
               fontSize: '1rem',
               fontWeight: 600,
-              cursor: 'pointer',
+              cursor: isBooking ? 'not-allowed' : 'pointer',
+              opacity: isBooking ? 0.7 : 1,
             }}
           >
             {selectedGroup.isFull && selectedGroup.isWaitlistOnly
@@ -59,5 +147,13 @@ export default function SupportGroupsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SupportGroupsPage() {
+  return (
+    <Suspense fallback={<div style={{ textAlign: 'center', padding: '3rem' }}>Loading...</div>}>
+      <SupportGroupsContent />
+    </Suspense>
   );
 }
