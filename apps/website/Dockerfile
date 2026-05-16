@@ -71,11 +71,19 @@ RUN ARCH=$(uname -m | sed 's/aarch64/arm64/;s/x86_64/x64/') \
       @tailwindcss/oxide-linux-${ARCH}-gnu
 
 # Next.js bakes NEXT_PUBLIC_* into the JS bundle at build time.
-# These ARGs are passed via --build-arg from the GitHub Actions workflow.
+# These ARGs are passed via --build-arg from Dokploy UI.
 ARG NEXT_PUBLIC_API_URL=http://localhost:5100
 ARG NEXT_PUBLIC_DEFAULT_ORG_ID=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_DEFAULT_ORG_ID=$NEXT_PUBLIC_DEFAULT_ORG_ID
+
+# Fail the build early if the API URL still points to localhost — this
+# means Dokploy Build Time Arguments were not passed correctly.
+RUN if echo "$NEXT_PUBLIC_API_URL" | grep -qi "localhost\|127.0.0.1"; then \
+      echo "ERROR: NEXT_PUBLIC_API_URL is still localhost ($NEXT_PUBLIC_API_URL). \
+Check Dokploy Build Time Arguments." >&2; \
+      exit 1; \
+    fi
 
 RUN pnpm --filter=website run build
 
