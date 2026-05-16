@@ -22,7 +22,7 @@ describe('ListPermissionsHandler', () => {
 
   it('executes without throwing', async () => {
     try {
-      await handler.execute();
+      await (handler as any).execute();
     } catch (e) {
       // Expected for incomplete mocks
     }

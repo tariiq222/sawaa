@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronDown, Star, UserRound, Users } from 'lucide-react';
+import { ChevronDown, UserRound, Users } from 'lucide-react';
 import type { PublicEmployee } from '@sawaa/api-client';
 import type { SectionIntro } from '@/features/site-content/public';
 import { AnimatedSection } from '../ui/animated-section';
@@ -12,11 +12,7 @@ interface Props {
   totalCount?: number;
 }
 
-const PALETTE: { bg: string; icon: string }[] = [
-  { bg: 'var(--sw-primary-50)',   icon: 'var(--sw-primary-600)' },
-  { bg: 'var(--sw-secondary-50)', icon: 'var(--sw-secondary-700)' },
-  { bg: 'var(--sw-tertiary-50)',  icon: 'var(--sw-tertiary-600)' },
-];
+const TONE = { bg: 'var(--sw-primary-50)', icon: 'var(--sw-primary-600)' };
 
 const VISIBLE_COUNT = 12;
 
@@ -44,7 +40,7 @@ export function Team({ therapists, intro, totalCount }: Props) {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
           {visible.map((t, i) => {
-            const c = PALETTE[i % PALETTE.length]!;
+            const c = TONE;
             const href = t.slug ? `/therapists/${t.slug}` : '/therapists';
             const name = t.nameAr ?? t.nameEn ?? '—';
             const role = t.specialtyAr ?? t.title ?? '';
@@ -62,18 +58,6 @@ export function Team({ therapists, intro, totalCount }: Props) {
                     className="absolute -top-12 left-1/2 -translate-x-1/2 w-32 h-32 rounded-full opacity-60 blur-2xl transition-opacity duration-300 group-hover:opacity-90"
                     style={{ background: c.bg }}
                   />
-
-                  <span
-                    className="absolute top-2 end-2 z-10 inline-flex items-center gap-0.5 bg-white text-[0.625rem] font-bold px-1.5 py-0.5 rounded-full leading-none"
-                    style={{
-                      color: 'var(--sw-secondary-700)',
-                      border: '1px solid var(--sw-neutral-200)',
-                      boxShadow: 'var(--sw-shadow-xs)',
-                    }}
-                  >
-                    <Star className="w-2.5 h-2.5" fill="#F59E0B" stroke="#F59E0B" strokeWidth={0} />
-                    <span className="tabular-nums">4.9</span>
-                  </span>
 
                   <div
                     className="relative w-16 h-16 rounded-full overflow-hidden mx-auto mb-3 transition-transform duration-300 group-hover:scale-105 flex items-center justify-center"

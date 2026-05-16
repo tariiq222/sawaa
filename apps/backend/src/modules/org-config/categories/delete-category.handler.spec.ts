@@ -26,9 +26,9 @@ describe('DeleteCategoryHandler', () => {
 
   it('should execute', async () => {
     (prisma.serviceCategory.findFirst as jest.Mock).mockResolvedValue({ id: 'test' });
-    await handler.execute({ categoryId: 'test' });
+    await handler.execute({ categoryId: 'test' } as any);
     
     (prisma.serviceCategory.findFirst as jest.Mock).mockResolvedValue(null);
-    await expect(handler.execute({ categoryId: 'test' })).rejects.toThrow();
+    await expect(handler.execute({ categoryId: 'test' } as any)).rejects.toThrow();
   });
 });

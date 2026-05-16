@@ -27,6 +27,8 @@ const config: Config = {
   modulePathIgnorePatterns: ['<rootDir>/dist/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^@sawaa/shared/(.*)$': '<rootDir>/../../packages/shared/$1',
+    '^@sawaa/shared$': '<rootDir>/../../packages/shared/index',
     // file-type@22 is ESM-only and cannot be loaded by ts-jest in CJS mode.
     // Redirect to a CJS-compatible manual mock for the test environment.
     // Production code uses `await import('file-type')` which works at runtime.

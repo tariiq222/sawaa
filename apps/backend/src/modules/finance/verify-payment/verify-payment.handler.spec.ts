@@ -30,7 +30,7 @@ describe('VerifyPaymentHandler', () => {
 
   it('should execute', async () => {
     try {
-      await handler.execute({ paymentId: '00000000-0000-0000-0000-000000000001', action: 'approve' });
+      await handler.execute({ paymentId: '00000000-0000-0000-0000-000000000001', action: 'approve' } as any);
     } catch (e) {
       // Expected for incomplete mocks
     }

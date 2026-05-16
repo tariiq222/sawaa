@@ -28,7 +28,7 @@ describe('SetBusinessHoursHandler', () => {
 
   it('should execute', async () => {
     try {
-      await handler.execute({ branchId: '00000000-0000-0000-0000-000000000001', schedule: [] } as any);
+      await handler.execute({ branchId: '00000000-0000-0000-0000-000000000001', schedule: [{ dayOfWeek: 0, startTime: '09:00', endTime: '17:00', isOpen: true }] });
     } catch (e) {
       // Expected for incomplete mocks
     }

@@ -30,26 +30,12 @@ interface Tone {
   ring: string;
 }
 
-const TONES: Tone[] = [
-  {
-    accent: 'var(--sw-primary-600)',
-    soft: 'var(--sw-primary-50)',
-    softText: 'var(--sw-primary-700)',
-    ring: 'color-mix(in srgb, var(--primary) 20%, transparent)',
-  },
-  {
-    accent: 'var(--sw-secondary-700)',
-    soft: 'var(--sw-secondary-50)',
-    softText: 'var(--sw-secondary-700)',
-    ring: 'color-mix(in srgb, var(--sw-secondary-700) 20%, transparent)',
-  },
-  {
-    accent: 'var(--sw-tertiary-600)',
-    soft: 'var(--sw-tertiary-50)',
-    softText: 'var(--sw-tertiary-700)',
-    ring: 'color-mix(in srgb, var(--accent) 20%, transparent)',
-  },
-];
+const TONE: Tone = {
+  accent: 'var(--sw-primary-600)',
+  soft: 'var(--sw-primary-50)',
+  softText: 'var(--sw-primary-700)',
+  ring: 'color-mix(in srgb, var(--primary) 20%, transparent)',
+};
 
 function resolveIcon(name: string | null): LucideIcon {
   if (!name) return Sparkles;
@@ -152,7 +138,7 @@ export function Clinics({ clinics, intro }: Props) {
             className="sw-no-scrollbar flex gap-5 overflow-x-auto overflow-y-visible scroll-smooth pt-4 pb-12 px-6"
           >
             {clinics.map((c, i) => {
-              const t = TONES[i % TONES.length]!;
+              const t = TONE;
               const Icon = resolveIcon(c.icon);
               return (
                 <AnimatedSection key={c.id} delay={i * 40} className="flex-shrink-0">
@@ -224,7 +210,7 @@ export function Clinics({ clinics, intro }: Props) {
                       className="inline-flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider"
                       style={{ color: t.accent }}
                     >
-                      عيادة متخصصة
+                      اعرف أكثر
                       <span
                         className="w-6 h-6 rounded-full flex items-center justify-center"
                         style={{

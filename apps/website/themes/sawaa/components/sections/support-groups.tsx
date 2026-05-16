@@ -18,26 +18,12 @@ interface Tone {
   ring: string;
 }
 
-const TONES: Tone[] = [
-  {
-    accent: 'var(--sw-primary-600)',
-    soft: 'var(--sw-primary-50)',
-    softText: 'var(--sw-primary-700)',
-    ring: 'color-mix(in srgb, var(--primary) 20%, transparent)',
-  },
-  {
-    accent: 'var(--sw-secondary-700)',
-    soft: 'var(--sw-secondary-50)',
-    softText: 'var(--sw-secondary-700)',
-    ring: 'color-mix(in srgb, var(--sw-secondary-700) 20%, transparent)',
-  },
-  {
-    accent: 'var(--sw-tertiary-600)',
-    soft: 'var(--sw-tertiary-50)',
-    softText: 'var(--sw-tertiary-700)',
-    ring: 'color-mix(in srgb, var(--accent) 20%, transparent)',
-  },
-];
+const TONE: Tone = {
+  accent: 'var(--sw-primary-600)',
+  soft: 'var(--sw-primary-50)',
+  softText: 'var(--sw-primary-700)',
+  ring: 'color-mix(in srgb, var(--primary) 20%, transparent)',
+};
 
 export function SupportGroups({ intro }: Props) {
   return (
@@ -54,7 +40,7 @@ export function SupportGroups({ intro }: Props) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {SUPPORT_GROUPS.map((g, i) => {
-            const t = TONES[i % TONES.length]!;
+            const t = TONE;
             return (
               <AnimatedSection key={g.slug} delay={i * 40}>
                 <div

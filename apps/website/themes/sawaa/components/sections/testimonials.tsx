@@ -9,11 +9,7 @@ interface Props {
   intro: SectionIntro;
 }
 
-const AVATAR_TONES = [
-  { bg: 'var(--sw-primary-50)',   text: 'var(--sw-primary-700)' },
-  { bg: 'var(--sw-tertiary-50)',  text: 'var(--sw-tertiary-700)' },
-  { bg: 'var(--sw-secondary-50)', text: 'var(--sw-secondary-700)' },
-];
+const AVATAR_TONE = { bg: 'var(--sw-primary-50)', text: 'var(--sw-primary-700)' };
 
 export function Testimonials({ intro }: Props) {
   return (
@@ -30,7 +26,7 @@ export function Testimonials({ intro }: Props) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {TESTIMONIALS.map((t, i) => {
-            const tone = AVATAR_TONES[i % AVATAR_TONES.length]!;
+            const tone = AVATAR_TONE;
             return (
               <AnimatedSection key={t.name} delay={i * 80}>
                 <div

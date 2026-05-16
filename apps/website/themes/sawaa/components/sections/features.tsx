@@ -16,23 +16,11 @@ interface Tone {
   ring: string;
 }
 
-const TONES: readonly [Tone, Tone, Tone] = [
-  {
-    bg: 'var(--sw-primary-50)',
-    text: 'var(--sw-primary-600)',
-    ring: 'color-mix(in srgb, var(--primary) 15%, transparent)',
-  },
-  {
-    bg: 'var(--sw-secondary-50)',
-    text: 'var(--sw-secondary-700)',
-    ring: 'color-mix(in srgb, var(--sw-secondary-700) 15%, transparent)',
-  },
-  {
-    bg: 'var(--sw-tertiary-50)',
-    text: 'var(--sw-tertiary-600)',
-    ring: 'color-mix(in srgb, var(--accent) 15%, transparent)',
-  },
-];
+const TONE: Tone = {
+  bg: 'var(--sw-primary-50)',
+  text: 'var(--sw-primary-600)',
+  ring: 'color-mix(in srgb, var(--primary) 15%, transparent)',
+};
 
 function resolveIcon(name: string): LucideIcon {
   const iconMap = Icons as unknown as Record<string, LucideIcon>;
@@ -54,7 +42,7 @@ export function Features({ intro, cards }: Props) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {cards.map((card, i) => {
-            const tone = TONES[i] ?? TONES[0];
+            const tone = TONE;
             const Icon = resolveIcon(card.icon) ?? Sparkles;
             return (
               <AnimatedSection key={`${card.label}-${i}`} delay={i * 80}>
