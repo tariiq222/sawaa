@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { OtpPurpose, OtpChannel } from '@prisma/client';
-import { PrismaService } from '../../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { OtpSessionService } from '../../otp/otp-session.service';
 import { PasswordService } from '../../shared/password.service';
 import { PasswordHistoryService } from '../shared/password-history.service';
@@ -33,6 +33,7 @@ describe('ResetPasswordHandler', () => {
       providers: [
         ResetPasswordHandler,
         { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb(prisma)) } },
         { provide: OtpSessionService, useValue: otpSession },
         { provide: PasswordService, useValue: passwords },
         { provide: PasswordHistoryService, useValue: passwordHistory },

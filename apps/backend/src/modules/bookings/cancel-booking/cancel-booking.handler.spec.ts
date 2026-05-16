@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { BookingStatus, CancellationReason, RefundType } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { ZoomMeetingService } from '../zoom-meeting.service';
@@ -66,6 +66,7 @@ describe('CancelBookingHandler', () => {
       providers: [
         CancelBookingHandler,
         { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb(prisma)) } },
         { provide: EventBusService, useValue: eventBus },
         { provide: GetBookingSettingsHandler, useValue: settingsHandler },
         { provide: ZoomMeetingService, useValue: zoomMeetingService },

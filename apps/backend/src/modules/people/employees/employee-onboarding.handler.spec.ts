@@ -1,6 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
+import { RlsTransactionService } from '../../../infrastructure/database';
 import { EmployeeOnboardingHandler } from './employee-onboarding.handler';
 
 const OnboardingStatus = {
@@ -40,6 +41,7 @@ describe('EmployeeOnboardingHandler', () => {
       providers: [
         EmployeeOnboardingHandler,
         { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb(prisma)) } },
       ],
     }).compile();
 
@@ -106,7 +108,7 @@ describe('EmployeeOnboardingHandler', () => {
 
       await handler.execute({ employeeId: 'emp-1', step: 'branches', branchIds: ['br-1'] });
 
-      expect(prisma.$transaction).toHaveBeenCalled();
+      // Handler now uses rlsTransaction.withTransaction instead of prisma.$transaction
       expect(prisma.employeeBranch.deleteMany).toHaveBeenCalledWith({ where: { employeeId: 'emp-1' } });
       expect(prisma.employeeBranch.createMany).toHaveBeenCalledWith({
         data: [{ employeeId: 'emp-1', branchId: 'br-1' }],

@@ -48,7 +48,7 @@ describe('CreateCategoryHandler', () => {
 describe('ListCategoriesHandler', () => {
   it('returns categories scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new ListCategoriesHandler(prisma as never, prisma as never);
+    const handler = new ListCategoriesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
     const result = await handler.execute({ page: 1, limit: 10 });
     expect(prisma.serviceCategory.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.any(Object) }),
@@ -58,7 +58,7 @@ describe('ListCategoriesHandler', () => {
 
   it('passes search term to where clause', async () => {
     const prisma = buildPrisma();
-    const handler = new ListCategoriesHandler(prisma as never, prisma as never);
+    const handler = new ListCategoriesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
     await handler.execute({ page: 1, limit: 10, search: 'فحص' });
     const call = (prisma.serviceCategory.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where).toMatchObject({
@@ -70,7 +70,7 @@ describe('ListCategoriesHandler', () => {
 
   it('omits search clause when search is undefined', async () => {
     const prisma = buildPrisma();
-    const handler = new ListCategoriesHandler(prisma as never, prisma as never);
+    const handler = new ListCategoriesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
     await handler.execute({ page: 1, limit: 10 });
     const call = (prisma.serviceCategory.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where).not.toHaveProperty('OR');

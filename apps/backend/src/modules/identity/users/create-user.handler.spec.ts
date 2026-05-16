@@ -15,7 +15,8 @@ describe('CreateUserHandler', () => {
       $transaction: jest.fn((cb) => cb(prisma)),
     };
     password = { hash: jest.fn().mockResolvedValue('hashed') };
-    handler = new CreateUserHandler(prisma as any, prisma as any, password as any);
+    const rlsTransaction = { withTransaction: jest.fn((fn: any) => fn(prisma)) };
+    handler = new CreateUserHandler(prisma as any, rlsTransaction as any, password as any);
   });
 
   it('creates user when email is unique', async () => {

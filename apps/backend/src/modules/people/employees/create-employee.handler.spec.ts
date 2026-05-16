@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { ConflictException } from '@nestjs/common';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { CreateEmployeeHandler } from './create-employee.handler';
 
@@ -26,6 +26,7 @@ describe('CreateEmployeeHandler', () => {
       providers: [
         CreateEmployeeHandler,
         { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb(prisma)) } },
         { provide: EventBusService, useValue: eventBus },
       ],
     }).compile();

@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { BulkUpsertSiteSettingsHandler } from './bulk-upsert-site-settings.handler';
 
 describe('BulkUpsertSiteSettingsHandler', () => {
@@ -20,6 +20,7 @@ describe('BulkUpsertSiteSettingsHandler', () => {
       providers: [
         BulkUpsertSiteSettingsHandler,
         { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb(prisma)) } },
       ],
     }).compile();
 

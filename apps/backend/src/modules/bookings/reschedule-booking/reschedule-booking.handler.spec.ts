@@ -251,11 +251,11 @@ describe('RescheduleBookingHandler', () => {
     );
     (fetchBookingOrFail as jest.Mock).mockResolvedValue(makeBooking());
     const prisma = buildPrisma();
-    prisma.$transaction = jest.fn().mockRejectedValueOnce(exclusionError);
+    const rlsTx = { withTransaction: jest.fn().mockRejectedValueOnce(exclusionError) };
 
     const handler = new RescheduleBookingHandler(
       prisma as never,
-      buildRlsTransaction(prisma) as never,
+      rlsTx as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
     );
@@ -276,11 +276,11 @@ describe('RescheduleBookingHandler', () => {
     );
     (fetchBookingOrFail as jest.Mock).mockResolvedValue(makeBooking());
     const prisma = buildPrisma();
-    prisma.$transaction = jest.fn().mockRejectedValueOnce(otherError);
+    const rlsTx = { withTransaction: jest.fn().mockRejectedValueOnce(otherError) };
 
     const handler = new RescheduleBookingHandler(
       prisma as never,
-      buildRlsTransaction(prisma) as never,
+      rlsTx as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
     );

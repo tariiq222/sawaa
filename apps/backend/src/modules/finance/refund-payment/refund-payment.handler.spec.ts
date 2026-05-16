@@ -52,7 +52,7 @@ describe('RefundPaymentHandler', () => {
       providers: [
         RefundPaymentHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: RlsTransactionService, useValue: { withTransaction: (fn: (tx: unknown) => Promise<unknown>) => fn(prisma), withBypassTransaction: (fn: (tx: unknown) => Promise<unknown>) => fn(prisma) } },
+        { provide: RlsTransactionService, useValue: { withTransaction: (fn: (tx: unknown) => Promise<unknown>) => prisma.$transaction(fn), withBypassTransaction: (fn: (tx: unknown) => Promise<unknown>) => prisma.$transaction(fn) } },
         { provide: EventBusService, useValue: eventBus },
         { provide: MoyasarApiClient, useValue: moyasar },
       ],

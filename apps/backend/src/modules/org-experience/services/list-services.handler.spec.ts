@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { ListServicesHandler } from './list-services.handler';
 
 describe('ListServicesHandler', () => {
@@ -9,7 +9,8 @@ describe('ListServicesHandler', () => {
     const module = await Test.createTestingModule({
       providers: [
         ListServicesHandler,
-    { provide: PrismaService, useValue: { $transaction: jest.fn(), service: { findMany: jest.fn() } } }
+    { provide: PrismaService, useValue: { $transaction: jest.fn(), service: { findMany: jest.fn() } } },
+    { provide: RlsTransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb({ service: { findMany: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0) } })) } }
       ],
     }).compile();
 

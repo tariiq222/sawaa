@@ -18,6 +18,16 @@ const buildPrisma = (client: ReturnType<typeof makeClient> | null, tx?: Record<s
   };
 };
 
+const buildRlsTransaction = (prisma: ReturnType<typeof buildPrisma>) => {
+  // Extract the same tx object that $transaction would use
+  const $txMock = prisma.$transaction as jest.Mock;
+  return {
+    withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
+      // Invoke via $transaction to reuse the same tx object the test set up
+      return $txMock.getMockImplementation()!(fn);
+    }),
+  };
+};
 const buildEventBus = () => ({ publish: jest.fn().mockResolvedValue(undefined) });
 const buildLogActivity = () => ({ execute: jest.fn().mockResolvedValue(undefined) });
 
@@ -38,7 +48,7 @@ describe('SetClientActiveHandler', () => {
     const logActivity = buildLogActivity();
     const handler = new SetClientActiveHandler(
       prisma as never,
-      prisma as never,
+      buildRlsTransaction(prisma) as never,
       eventBus as never,
       logActivity as never,
     );
@@ -82,7 +92,7 @@ describe('SetClientActiveHandler', () => {
     const logActivity = buildLogActivity();
     const handler = new SetClientActiveHandler(
       prisma as never,
-      prisma as never,
+      buildRlsTransaction(prisma) as never,
       eventBus as never,
       logActivity as never,
     );
@@ -113,7 +123,7 @@ describe('SetClientActiveHandler', () => {
     const prisma = buildPrisma(null);
     const handler = new SetClientActiveHandler(
       prisma as never,
-      prisma as never,
+      buildRlsTransaction(prisma) as never,
       buildEventBus() as never,
       buildLogActivity() as never,
     );
@@ -131,7 +141,7 @@ describe('SetClientActiveHandler', () => {
     const logActivity = buildLogActivity();
     const handler = new SetClientActiveHandler(
       prisma as never,
-      prisma as never,
+      buildRlsTransaction(prisma) as never,
       eventBus as never,
       logActivity as never,
     );

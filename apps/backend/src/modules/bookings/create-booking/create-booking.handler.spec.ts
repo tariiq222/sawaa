@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { CreateBookingHandler } from './create-booking.handler';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { PriceResolverService } from '../../org-experience/services/price-resolver.service';
 import { GetBookingSettingsHandler, DEFAULT_BOOKING_SETTINGS } from '../get-booking-settings/get-booking-settings.handler';
 import { GroupSessionMinReachedHandler } from '../group-session-min-reached/group-session-min-reached.handler';
@@ -103,6 +103,7 @@ const baseDto = {
 describe('CreateBookingHandler', () => {
   let handler: CreateBookingHandler;
   let prisma: ReturnType<typeof buildPrisma>;
+  let rlsTransaction: { withTransaction: jest.Mock };
   let priceResolver: ReturnType<typeof buildPriceResolver>;
   let settingsHandler: ReturnType<typeof buildSettingsHandler>;
   let groupMinReachedHandler: ReturnType<typeof buildGroupMinReachedHandler>;
@@ -121,6 +122,7 @@ describe('CreateBookingHandler', () => {
       providers: [
         CreateBookingHandler,
         { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: rlsTransaction = { withTransaction: jest.fn((cb: any) => cb(prisma)) } },
         { provide: PriceResolverService, useValue: priceResolver },
         { provide: GetBookingSettingsHandler, useValue: settingsHandler },
         { provide: GroupSessionMinReachedHandler, useValue: groupMinReachedHandler },
@@ -483,14 +485,14 @@ describe('CreateBookingHandler', () => {
       'exclusion constraint violation',
       { code: 'P2010', clientVersion: '5.0.0', meta: { code: '23P01' } },
     );
-    prisma.$transaction = jest.fn().mockRejectedValueOnce(exclusionError);
+    rlsTransaction.withTransaction = jest.fn().mockRejectedValueOnce(exclusionError);
 
     await expect(handler.execute(baseDto)).rejects.toThrow(ConflictException);
   });
 
   it('re-throws non-23P01 errors from transaction', async () => {
     const otherError = new Error('some other error');
-    prisma.$transaction = jest.fn().mockRejectedValueOnce(otherError);
+    rlsTransaction.withTransaction = jest.fn().mockRejectedValueOnce(otherError);
 
     await expect(handler.execute(baseDto)).rejects.toThrow('some other error');
   });

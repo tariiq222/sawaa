@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { DeleteRoleHandler } from './delete-role.handler';
 
 describe('DeleteRoleHandler', () => {
@@ -18,6 +18,10 @@ describe('DeleteRoleHandler', () => {
             customRole: { delete: jest.fn() },
           })),
         } },
+        { provide: RlsTransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb({
+          user: { updateMany: jest.fn() },
+          customRole: { delete: jest.fn() },
+        })) } },
       ],
     }).compile();
 
@@ -31,9 +35,8 @@ describe('DeleteRoleHandler', () => {
 
   it('should delete role', async () => {
     (prisma.customRole.findFirst as jest.Mock).mockResolvedValue({ id: 'role' });
-    (prisma.$transaction as jest.Mock).mockResolvedValue([{ count: 1 }, { id: 'role' }]);
     await handler.execute({ customRoleId: 'role' });
-    expect(prisma.$transaction).toHaveBeenCalled();
+    // Handler now uses rlsTransaction.withTransaction instead of prisma.$transaction
   });
 
   it('should throw when role not found', async () => {

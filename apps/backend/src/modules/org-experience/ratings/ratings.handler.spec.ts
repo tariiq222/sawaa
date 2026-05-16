@@ -58,7 +58,7 @@ describe('SubmitRatingHandler', () => {
 describe('ListRatingsHandler', () => {
   it('returns paginated ratings', async () => {
     const prisma = buildPrisma();
-    const handler = new ListRatingsHandler(prisma as never, prisma as never);
+    const handler = new ListRatingsHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
     const result = await handler.execute({});
     expect(prisma.rating.findMany).toHaveBeenCalled();
     expect(result.items).toHaveLength(1);
@@ -67,7 +67,7 @@ describe('ListRatingsHandler', () => {
 
   it('filters by employeeId', async () => {
     const prisma = buildPrisma();
-    const handler = new ListRatingsHandler(prisma as never, prisma as never);
+    const handler = new ListRatingsHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
     await handler.execute({ employeeId: 'emp-1' });
     const call = (prisma.rating.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where.employeeId).toBe('emp-1');

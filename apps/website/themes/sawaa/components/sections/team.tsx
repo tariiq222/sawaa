@@ -109,14 +109,24 @@ export function Team({ therapists, intro, totalCount }: Props) {
             );
           })}
           {visible.length === 0 ? (
-            <div className="col-span-full text-center py-12">
-              <UserRound
-                className="w-12 h-12 mx-auto mb-3"
-                style={{ color: 'var(--sw-neutral-400)' }}
-              />
-              <p className="text-sm" style={{ color: 'var(--sw-neutral-500)' }}>
-                لم يُضَف أي معالج بعد.
-              </p>
+            <div className="col-span-full flex justify-center mt-2">
+              <div
+                className="text-center py-14 px-10 bg-white rounded-2xl max-w-md w-full"
+                style={{ border: '1px solid var(--sw-neutral-100)', boxShadow: 'var(--sw-shadow-xs)' }}
+              >
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5"
+                  style={{ background: 'var(--sw-primary-50)' }}
+                >
+                  <UserRound className="w-6 h-6" style={{ color: 'var(--sw-primary-600)' }} />
+                </div>
+                <h3 className="text-base font-extrabold mb-2" style={{ color: 'var(--sw-secondary-700)' }}>
+                  المعالجون قيد الإضافة
+                </h3>
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--sw-neutral-500)' }}>
+                  نعمل على إضافة فريقنا من المعالجين المعتمدين. تابعنا قريباً.
+                </p>
+              </div>
             </div>
           ) : null}
         </div>

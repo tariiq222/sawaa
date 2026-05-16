@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { PerformPasswordResetHandler } from './perform-password-reset.handler';
-import { PrismaService } from '../../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { PasswordService } from '../../shared/password.service';
 
 describe('PerformPasswordResetHandler', () => {
@@ -30,6 +30,7 @@ describe('PerformPasswordResetHandler', () => {
       providers: [
         PerformPasswordResetHandler,
         { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb(prisma)) } },
         { provide: PasswordService, useValue: passwords },
       ],
     }).compile();
