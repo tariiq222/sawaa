@@ -1,12 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-
-const { mockSubmitLogin, mockSwitchToOtp, mockBackToLogin } = vi.hoisted(() => ({
-  mockSubmitLogin: vi.fn(),
-  mockSwitchToOtp: vi.fn(),
-  mockBackToLogin: vi.fn(),
-}))
+import React from "react"
 
 const mockUseLoginFlow = vi.hoisted(() => vi.fn())
 
@@ -19,137 +14,122 @@ vi.mock("@/components/locale-provider", () => ({
   LocaleProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-// Mock step components — we test LoginForm orchestration, not step internals
+// Step components are covered by their own tests — here we verify that
+// LoginForm routes to the correct step and wires the flow callbacks.
+vi.mock("@/components/features/login/identifier-step", () => ({
+  IdentifierStep: ({ onSubmit }: { onSubmit: (id: string) => void }) => (
+    <div data-testid="identifier-step">
+      <button onClick={() => onSubmit("test@test.com")}>submit-identifier</button>
+    </div>
+  ),
+}))
+
+vi.mock("@/components/features/login/method-step", () => ({
+  MethodStep: () => <div data-testid="method-step">Method Step</div>,
+}))
+
 vi.mock("@/components/features/login/combined-step", () => ({
-  CombinedStep: ({
-    onSubmit,
-    onSwitchToOtp,
-  }: {
-    onSubmit: (id: string, password: string) => void
-    onSwitchToOtp: (id: string) => void
-  }) => (
-    <div>
-      <input data-testid="identifier-input" placeholder="email" />
-      <input data-testid="password-input" type="password" placeholder="••••••••" />
-      <button onClick={() => onSubmit("test@test.com", "password123")}>
-        login.password.submit
-      </button>
-      <button onClick={() => onSwitchToOtp("test@test.com")}>نسيت كلمة المرور؟</button>
+  CombinedStep: ({ onSubmit }: { onSubmit: (password: string) => void }) => (
+    <div data-testid="combined-step">
+      <button onClick={() => onSubmit("password123")}>submit-password</button>
     </div>
   ),
 }))
 
 vi.mock("@/components/features/login/otp-step", () => ({
   OtpStep: ({ onBack }: { onBack: () => void }) => (
-    <div>
+    <div data-testid="otp-step">
       OTP Step
-      <button onClick={onBack}>login.common.back</button>
+      <button onClick={onBack}>back</button>
     </div>
   ),
 }))
 
 import { LoginForm } from "@/components/features/login-form"
-import { LocaleProvider } from "@/components/locale-provider"
 
-function renderLoginForm() {
-  return render(
-    <LocaleProvider>
-      <LoginForm />
-    </LocaleProvider>
-  )
-}
-
-const defaultLoginFlow = {
-  mode: "login" as const,
+const baseFlow = {
+  step: "identifier" as const,
   identifier: "",
-  loading: false,
   error: null,
+  loading: false,
   otpSentAt: null,
-  submitLogin: mockSubmitLogin,
-  switchToOtp: mockSwitchToOtp,
+  lookupResult: null,
+  submitIdentifier: vi.fn(),
+  selectMethod: vi.fn(),
+  submitPassword: vi.fn(),
   submitOtp: vi.fn(),
   resendOtp: vi.fn(),
-  backToLogin: mockBackToLogin,
+  backToIdentifier: vi.fn(),
+  backToMethod: vi.fn(),
   clearError: vi.fn(),
 }
 
 describe("LoginForm", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseLoginFlow.mockReturnValue(defaultLoginFlow)
+    mockUseLoginFlow.mockReturnValue(baseFlow)
   })
 
-  it("renders combined step by default (login mode)", () => {
-    renderLoginForm()
-    expect(screen.getByTestId("identifier-input")).toBeInTheDocument()
-    expect(screen.getByTestId("password-input")).toBeInTheDocument()
+  it("renders the identifier step by default", () => {
+    render(<LoginForm />)
+    expect(screen.getByTestId("identifier-step")).toBeInTheDocument()
+    expect(screen.queryByTestId("method-step")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("combined-step")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("otp-step")).not.toBeInTheDocument()
   })
 
-  it("renders submit button", () => {
-    renderLoginForm()
-    expect(screen.getByRole("button", { name: /login\.password\.submit/i })).toBeInTheDocument()
+  it("calls submitIdentifier from the identifier step", async () => {
+    render(<LoginForm />)
+    await userEvent.click(screen.getByRole("button", { name: "submit-identifier" }))
+    expect(baseFlow.submitIdentifier).toHaveBeenCalledWith("test@test.com")
   })
 
-  it("calls submitLogin when submit button is clicked", async () => {
-    renderLoginForm()
-    await userEvent.click(screen.getByRole("button", { name: /login\.password\.submit/i }))
-    expect(mockSubmitLogin).toHaveBeenCalledWith("test@test.com", "password123")
+  it("renders the method step when step is 'method'", () => {
+    mockUseLoginFlow.mockReturnValue({ ...baseFlow, step: "method" })
+    render(<LoginForm />)
+    expect(screen.getByTestId("method-step")).toBeInTheDocument()
+    expect(screen.queryByTestId("identifier-step")).not.toBeInTheDocument()
   })
 
-  it("calls switchToOtp when forgot password link clicked", async () => {
-    renderLoginForm()
-    await userEvent.click(screen.getByRole("button", { name: /نسيت كلمة المرور/i }))
-    expect(mockSwitchToOtp).toHaveBeenCalledWith("test@test.com")
+  it("renders the combined (password) step when step is 'password'", () => {
+    mockUseLoginFlow.mockReturnValue({ ...baseFlow, step: "password" })
+    render(<LoginForm />)
+    expect(screen.getByTestId("combined-step")).toBeInTheDocument()
   })
 
-  it("renders otp step when mode is otp", () => {
-    mockUseLoginFlow.mockReturnValue({
-      ...defaultLoginFlow,
-      mode: "otp",
-      identifier: "test@test.com",
-    })
-    renderLoginForm()
-    expect(screen.getByText("OTP Step")).toBeInTheDocument()
+  it("calls submitPassword from the combined step", async () => {
+    mockUseLoginFlow.mockReturnValue({ ...baseFlow, step: "password" })
+    render(<LoginForm />)
+    await userEvent.click(screen.getByRole("button", { name: "submit-password" }))
+    expect(baseFlow.submitPassword).toHaveBeenCalledWith("password123")
   })
 
-  it("calls backToLogin when Back is clicked in otp step", async () => {
-    mockUseLoginFlow.mockReturnValue({
-      ...defaultLoginFlow,
-      mode: "otp",
-      identifier: "test@test.com",
-    })
-    renderLoginForm()
-    await userEvent.click(screen.getByRole("button", { name: /login\.common\.back/i }))
-    expect(mockBackToLogin).toHaveBeenCalled()
+  it("renders the otp step when step is 'otp'", () => {
+    mockUseLoginFlow.mockReturnValue({ ...baseFlow, step: "otp", identifier: "test@test.com" })
+    render(<LoginForm />)
+    expect(screen.getByTestId("otp-step")).toBeInTheDocument()
   })
 
-  it("shows login.welcome title in login mode", () => {
-    renderLoginForm()
+  it("calls backToMethod when Back is clicked in the otp step", async () => {
+    mockUseLoginFlow.mockReturnValue({ ...baseFlow, step: "otp", identifier: "test@test.com" })
+    render(<LoginForm />)
+    await userEvent.click(screen.getByRole("button", { name: "back" }))
+    expect(baseFlow.backToMethod).toHaveBeenCalled()
+  })
+
+  it("shows the welcome title on the identifier step", () => {
+    render(<LoginForm />)
     expect(screen.getByText("login.welcome")).toBeInTheDocument()
   })
 
-  it("shows login.otp.title in otp mode", () => {
-    mockUseLoginFlow.mockReturnValue({
-      ...defaultLoginFlow,
-      mode: "otp",
-      identifier: "test@test.com",
-    })
-    renderLoginForm()
+  it("shows the otp title on the otp step", () => {
+    mockUseLoginFlow.mockReturnValue({ ...baseFlow, step: "otp", identifier: "test@test.com" })
+    render(<LoginForm />)
     expect(screen.getByText("login.otp.title")).toBeInTheDocument()
   })
 
-  it("does not render otp step in login mode", () => {
-    renderLoginForm()
-    expect(screen.queryByText("OTP Step")).not.toBeInTheDocument()
-  })
-
-  it("does not render combined step in otp mode", () => {
-    mockUseLoginFlow.mockReturnValue({
-      ...defaultLoginFlow,
-      mode: "otp",
-      identifier: "test@test.com",
-    })
-    renderLoginForm()
-    expect(screen.queryByTestId("identifier-input")).not.toBeInTheDocument()
+  it("does not render the otp step on the identifier step", () => {
+    render(<LoginForm />)
+    expect(screen.queryByTestId("otp-step")).not.toBeInTheDocument()
   })
 })

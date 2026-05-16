@@ -60,9 +60,9 @@ describe('support-groups.api', () => {
       await expect(getPublicGroupSessions()).resolves.toEqual([sample]);
     });
 
-    it('throws on non-ok response with the status code', async () => {
+    it('falls back to an empty list on non-ok response', async () => {
       fetchMock.mockResolvedValue({ ok: false, status: 503 });
-      await expect(getPublicGroupSessions()).rejects.toThrow(/503/);
+      await expect(getPublicGroupSessions()).resolves.toEqual([]);
     });
   });
 

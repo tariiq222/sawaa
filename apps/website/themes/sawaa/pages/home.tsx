@@ -14,7 +14,6 @@ import type { PublicEmployee } from '@sawaa/api-client';
 import { Blog } from '../components/sections/blog';
 import { Clinics, type ClinicItem } from '../components/sections/clinics';
 import { CTA } from '../components/sections/cta';
-import { FAQ } from '../components/sections/faq';
 import { Features } from '../components/sections/features';
 import { Hero } from '../components/sections/hero';
 import { SupportGroups } from '../components/sections/support-groups';
@@ -58,7 +57,6 @@ export async function SawaaHomePage() {
       <Testimonials intro={intros.testimonials} />
       <Blog intro={intros.blog} />
       <CTA />
-      <FAQ intro={intros.faq} />
     </>
   );
 }

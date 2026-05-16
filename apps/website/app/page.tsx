@@ -1,8 +1,6 @@
-import { getPublicBrandingForSsr } from '@/features/branding/public';
 import { theme } from '@/themes/registry';
 
-export default async function HomePage() {
-  const branding = await getPublicBrandingForSsr();
+export default function HomePage() {
   const HomeComponent = theme.pages.home;
   const Layout = theme.Layout;
 

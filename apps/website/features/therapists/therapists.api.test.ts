@@ -36,9 +36,9 @@ describe('therapists.api', () => {
     expect(init).toMatchObject({ next: { revalidate: 60, tags: ['public-employees'] } });
   });
 
-  it('listPublicEmployees throws on non-ok response', async () => {
+  it('listPublicEmployees falls back to an empty list on non-ok response', async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 503, json: () => Promise.resolve({ error: 'service unavailable' }) });
-    await expect(listPublicEmployees()).rejects.toThrow('PublicFetchError: 503');
+    await expect(listPublicEmployees()).resolves.toEqual([]);
   });
 
   it('getPublicEmployee URL-encodes the slug and tags the slug', async () => {
