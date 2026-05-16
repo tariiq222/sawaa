@@ -109,15 +109,17 @@ export function LoginForm() {
       </div>
 
       {/* HERO image column (lg+) */}
-      <div className="relative hidden lg:block lg:w-5/12">
-        <Image
-          src="/login-hero.png"
-          alt=""
-          fill
-          priority
-          sizes="42vw"
-          className="object-cover"
-        />
+      <div className="hidden lg:block lg:w-5/12 p-6">
+        <div className="relative h-full w-full overflow-hidden rounded-2xl">
+          <Image
+            src="/login-hero.png"
+            alt=""
+            fill
+            priority
+            sizes="42vw"
+            className="object-cover"
+          />
+        </div>
       </div>
     </div>
   )
