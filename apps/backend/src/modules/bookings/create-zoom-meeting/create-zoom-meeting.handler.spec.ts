@@ -284,7 +284,7 @@ describe('CreateZoomMeetingHandler', () => {
     });
     txMock.organizationSettings.findFirst.mockResolvedValue(null);
 
-    zoomApi.createMeeting.mockRejectedValue('string-error');
+    zoomApi.createMeeting!.mockRejectedValue('string-error');
 
     const updated = { ...bookingBase, zoomMeetingStatus: ZoomMeetingStatus.FAILED };
     txMock.booking.update.mockResolvedValue(updated);
