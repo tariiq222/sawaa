@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useT } from '@/features/locale/locale-provider';
 import { validateEmail } from './auth.schema';
 import { clientLoginApi } from './auth.api';
 import { setClient } from './auth-store';
@@ -12,6 +13,7 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ onSuccess }: LoginFormProps) {
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect');
@@ -31,7 +33,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     }
 
     if (!password) {
-      setError('Password is required');
+      setError(t('auth.passwordRequired'));
       return;
     }
 
@@ -50,7 +52,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         router.push(target);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : t('auth.loginFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +76,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <label htmlFor="email" style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-          Email
+          {t('auth.email')}
         </label>
         <input
           id="email"
@@ -95,7 +97,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <label htmlFor="password" style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-          Password
+          {t('auth.password')}
         </label>
         <input
           id="password"
@@ -130,11 +132,11 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           transition: 'opacity 0.2s',
         }}
       >
-        {isLoading ? 'Signing in...' : 'Sign In'}
+        {isLoading ? t('auth.signingIn') : t('auth.signIn')}
       </button>
       <p style={{ textAlign: 'center', fontSize: '0.875rem', opacity: 0.8 }}>
         <a href="/forgot-password" style={{ color: 'var(--primary)' }}>
-          Forgot password?
+          {t('auth.forgotPassword')}
         </a>
       </p>
     </form>

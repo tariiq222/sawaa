@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import { useT } from '@/features/locale/locale-provider';
 import { SupportGroupsList } from '@/features/support-groups/support-groups-list';
 import { bookGroupSession } from '@/features/support-groups/support-groups.api';
 import type { SupportGroup, BookGroupSessionResponse } from '@/features/support-groups/support-groups.api';
 import { useCurrentClient } from '@/features/auth/public';
 
 function SupportGroupsContent() {
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const pendingGroupId = searchParams.get('groupId');
@@ -33,7 +35,7 @@ function SupportGroupsContent() {
         router.replace('/support-groups');
       })
       .catch((err) => {
-        setBookingError(err instanceof Error ? err.message : 'Booking failed');
+          setBookingError(err instanceof Error ? err.message : t('common.bookingFailed'));
       })
       .finally(() => setIsBooking(false));
   }, [pendingGroupId, client, isBooking, bookingResult, router]);
@@ -56,7 +58,7 @@ function SupportGroupsContent() {
           setBookingResult(result);
         })
         .catch((err) => {
-          setBookingError(err instanceof Error ? err.message : 'Booking failed');
+        setBookingError(err instanceof Error ? err.message : t('common.bookingFailed'));
         })
         .finally(() => setIsBooking(false));
     } else {
@@ -69,10 +71,10 @@ function SupportGroupsContent() {
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem 1rem' }}>
       <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
         <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-          Support Groups
+          {t('supportGroups.title')}
         </h1>
         <p style={{ opacity: 0.7 }}>
-          Join our group therapy sessions for shared healing and community support
+          {t('supportGroups.subtitle')}
         </p>
       </div>
 
@@ -90,8 +92,8 @@ function SupportGroupsContent() {
           }}
         >
           {bookingResult.type === 'BOOKED'
-            ? 'You have been booked successfully!'
-            : `You have been added to the waitlist (position ${bookingResult.waitlistPosition}).`}
+            ? t('supportGroups.booked')
+            : `${t('supportGroups.waitlisted')} (${bookingResult.waitlistPosition}).`}
         </div>
       )}
 
@@ -113,7 +115,7 @@ function SupportGroupsContent() {
 
       {isBooking && (
         <div style={{ textAlign: 'center', padding: '1rem', opacity: 0.7 }}>
-          Booking in progress...
+          {t('supportGroups.bookingInProgress')}
         </div>
       )}
 
@@ -141,8 +143,8 @@ function SupportGroupsContent() {
             }}
           >
             {selectedGroup.isFull && selectedGroup.isWaitlistOnly
-              ? `Join Waitlist for ${selectedGroup.title}`
-              : `Book ${selectedGroup.title}`}
+              ? `${t('supportGroups.joinWaitlist')} ${selectedGroup.title}`
+              : `${t('supportGroups.book')} ${selectedGroup.title}`}
           </button>
         </div>
       )}
@@ -152,7 +154,7 @@ function SupportGroupsContent() {
 
 export default function SupportGroupsPage() {
   return (
-    <Suspense fallback={<div style={{ textAlign: 'center', padding: '3rem' }}>Loading...</div>}>
+    <Suspense fallback={<div style={{ textAlign: 'center', padding: '3rem' }}>جارٍ التحميل...</div>}>
       <SupportGroupsContent />
     </Suspense>
   );

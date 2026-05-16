@@ -1,6 +1,7 @@
 'use client';
 
 import type { EmployeeWithUser } from '@sawaa/shared';
+import { useT } from '@/features/locale/locale-provider';
 
 interface TherapistPickerProps {
   therapists: EmployeeWithUser[];
@@ -9,9 +10,10 @@ interface TherapistPickerProps {
 }
 
 export function TherapistPicker({ therapists, selected, onSelect }: TherapistPickerProps) {
+  const t = useT();
   return (
     <div className="grid gap-4">
-      <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Select Therapist</h2>
+      <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{t('booking.selectTherapist')}</h2>
       {therapists.map((emp) => (
         <button
           key={emp.id}

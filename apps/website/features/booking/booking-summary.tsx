@@ -2,6 +2,7 @@
 
 import type { GuestClientInfo, Service, EmployeeWithUser, AvailableSlot } from '@sawaa/shared';
 import { halalasToSarNumber } from '@/lib/money';
+import { useT } from '@/features/locale/locale-provider';
 
 interface BookingSummaryProps {
   service: Service;
@@ -20,6 +21,7 @@ export function BookingSummary({
   onConfirm,
   isSubmitting,
 }: BookingSummaryProps) {
+  const t = useT();
   const start = new Date(slot.startTime);
   const dateStr = start.toLocaleDateString('ar-SA', {
     year: 'numeric',
@@ -30,23 +32,23 @@ export function BookingSummary({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Booking Summary</h2>
+      <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{t('booking.summary.title')}</h2>
       <div style={{ padding: '1rem', border: '1px solid color-mix(in srgb, var(--primary) 15%, transparent)', borderRadius: 'var(--radius)' }}>
         <div style={{ display: 'grid', gap: '0.75rem' }}>
           <div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>Service</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{t('booking.summary.service')}</div>
             <div style={{ fontWeight: 500 }}>{service.nameAr}</div>
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>Therapist</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{t('booking.summary.therapist')}</div>
             <div style={{ fontWeight: 500 }}>{employee.user.firstName} {employee.user.lastName}</div>
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>Date & Time</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{t('booking.summary.dateTime')}</div>
             <div style={{ fontWeight: 500 }}>{dateStr} · {timeStr}</div>
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>Total</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{t('booking.summary.total')}</div>
             <div style={{ fontWeight: 700, fontSize: '1.125rem' }}>
               {Intl.NumberFormat('ar-SA', { style: 'decimal' }).format(halalasToSarNumber(totalHalalat))} {'⃁'}
             </div>
@@ -67,7 +69,7 @@ export function BookingSummary({
           opacity: isSubmitting ? 0.6 : 1,
         }}
       >
-        {isSubmitting ? 'Processing...' : 'Confirm & Pay'}
+        {isSubmitting ? t('booking.processing') : t('booking.confirmAndPay')}
       </button>
     </div>
   );

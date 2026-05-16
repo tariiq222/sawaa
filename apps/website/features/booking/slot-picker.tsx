@@ -1,6 +1,7 @@
 'use client';
 
 import type { AvailableSlot } from '@sawaa/shared';
+import { useT } from '@/features/locale/locale-provider';
 
 interface SlotPickerProps {
   slots: AvailableSlot[];
@@ -10,15 +11,16 @@ interface SlotPickerProps {
 }
 
 export function SlotPicker({ slots, selected, onSelect, isLoading }: SlotPickerProps) {
+  const t = useT();
   if (isLoading) {
-    return <div style={{ textAlign: 'center', padding: '2rem' }}>Loading slots...</div>;
+    return <div style={{ textAlign: 'center', padding: '2rem' }}>{t('booking.loadingSlots')}</div>;
   }
   if (slots.length === 0) {
-    return <div style={{ textAlign: 'center', padding: '2rem' }}>No available slots for this date.</div>;
+    return <div style={{ textAlign: 'center', padding: '2rem' }}>{t('booking.noSlots')}</div>;
   }
   return (
     <div className="grid gap-3">
-      <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Select Time</h2>
+      <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{t('booking.selectTime')}</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '0.75rem' }}>
         {slots.map((slot) => {
           const start = new Date(slot.startTime);

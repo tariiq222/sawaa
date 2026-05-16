@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { BrandingProvider, BrandingStyle, getPublicBrandingForSsr } from '@/features/branding/public';
 import { QueryProvider } from '@/providers/query-provider';
 import { getLocale, localeDir } from '@/features/locale/locale';
+import { LocaleProvider } from '@/features/locale/locale-provider';
 import './globals.css';
 import { generateMedicalBusinessSchema } from '@/lib/seo/schema';
 
@@ -60,7 +61,9 @@ export default async function RootLayout({
       </head>
       <body>
         <QueryProvider>
-          <BrandingProvider branding={branding}>{children}</BrandingProvider>
+          <LocaleProvider locale={locale}>
+            <BrandingProvider branding={branding}>{children}</BrandingProvider>
+          </LocaleProvider>
         </QueryProvider>
       </body>
     </html>

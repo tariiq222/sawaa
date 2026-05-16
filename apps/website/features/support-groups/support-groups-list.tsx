@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/features/locale/locale-provider';
 import { usePublicGroupSessions } from './use-public-group-sessions';
 import { SupportGroupCard } from './support-group-card';
 import type { SupportGroup } from './support-groups.api';
@@ -15,6 +16,7 @@ export function SupportGroupsList({
   onSelectGroup,
   selectedGroupId,
 }: SupportGroupsListProps) {
+  const t = useT();
   const { sessions, isLoading, error } = usePublicGroupSessions(branchId);
 
   if (isLoading) {
@@ -46,7 +48,7 @@ export function SupportGroupsList({
   if (sessions.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
-        No support groups available at this time.
+        {t('supportGroups.noGroups')}
       </div>
     );
   }

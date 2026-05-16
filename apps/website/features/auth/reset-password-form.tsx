@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useT } from '@/features/locale/locale-provider';
 import { validatePassword } from './auth.schema';
 import { clientResetPasswordApi } from './auth.api';
 import { verifyOtp } from '@/features/otp/otp.api';
@@ -15,6 +16,7 @@ interface ResetPasswordFormProps {
 }
 
 export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordFormProps) {
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = initialEmail ?? (searchParams?.get('email') ?? '');
@@ -29,7 +31,7 @@ export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordForm
 
   async function handleOtpSubmit() {
     if (otpCode.length !== 6) {
-      setError('Please enter the 6-digit code');
+      setError(t('auth.enterSixDigitCode'));
       return;
     }
     setError(null);
@@ -39,7 +41,7 @@ export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordForm
       setOtpToken(result.sessionToken);
       setStep('password');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid verification code');
+      setError(err instanceof Error ? err.message : t('auth.invalidCode'));
     } finally {
       setIsLoading(false);
     }
@@ -56,7 +58,7 @@ export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordForm
     }
 
     if (!otpToken) {
-      setError('Session expired. Please request a new code.');
+      setError(t('auth.sessionExpired'));
       setStep('otp');
       return;
     }
@@ -64,14 +66,14 @@ export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordForm
     setIsLoading(true);
     try {
       await clientResetPasswordApi({ sessionToken: otpToken, newPassword });
-      setSuccessMsg('Password updated successfully.');
+      setSuccessMsg(t('auth.passwordUpdated'));
       if (onSuccess) {
         onSuccess();
       } else {
         setTimeout(() => router.push('/login'), 1500);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Password reset failed');
+      setError(err instanceof Error ? err.message : t('auth.resetFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -107,11 +109,11 @@ export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordForm
       {step === 'otp' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <p style={{ fontSize: '0.875rem', opacity: 0.8 }}>
-            We sent a verification code to {email}
+            {t('auth.codeSent')} {email}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <label htmlFor="rp-otp" style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-              Verification Code
+              {t('auth.verificationCode')}
             </label>
             <input
               id="rp-otp"
@@ -129,11 +131,11 @@ export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordForm
             disabled={isLoading || otpCode.length !== 6}
             style={primaryButtonStyle(isLoading || otpCode.length !== 6)}
           >
-            {isLoading ? 'Verifying...' : 'Verify'}
+            {isLoading ? t('auth.verifying') : t('auth.verify')}
           </button>
           <p style={{ textAlign: 'center', fontSize: '0.875rem', opacity: 0.8 }}>
             <a href="/forgot-password" style={{ color: 'var(--primary)' }}>
-              Request a new code
+              {t('auth.requestNewCode')}
             </a>
           </p>
         </div>
@@ -142,25 +144,25 @@ export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordForm
       {step === 'password' && (
         <form onSubmit={handlePasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <p style={{ fontSize: '0.875rem', opacity: 0.8 }}>
-            Email verified. Set your new password.
+            {t('auth.emailVerifiedSetPassword')}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <label htmlFor="rp-password" style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-              New Password
+              {t('auth.newPassword')}
             </label>
             <input
               id="rp-password"
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Min 8 chars, 1 upper, 1 digit"
+              placeholder={t('auth.passwordHint')}
               autoComplete="new-password"
               required
               style={inputStyle()}
             />
           </div>
           <button type="submit" disabled={isLoading} style={primaryButtonStyle(isLoading)}>
-            {isLoading ? 'Resetting...' : 'Reset Password'}
+            {isLoading ? t('auth.resetting') : t('auth.resetPassword')}
           </button>
         </form>
       )}

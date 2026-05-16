@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useT } from '@/features/locale/locale-provider';
 import type { GuestClientInfo } from '@sawaa/shared';
 import { OtpChannel, OtpPurpose } from '@sawaa/shared';
 
@@ -13,6 +14,7 @@ export function OtpRequestForm({
   client,
   onRequestSent,
 }: OtpRequestFormProps) {
+  const t = useT();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +30,7 @@ export function OtpRequestForm({
       });
       onRequestSent();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send OTP');
+      setError(err instanceof Error ? err.message : t('otp.failedToSend'));
     } finally {
       setIsLoading(false);
     }
@@ -37,7 +39,7 @@ export function OtpRequestForm({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <div style={{ fontSize: '0.875rem', opacity: 0.7 }}>
-        We will send a verification code to {client.email}
+        {t('otp.willSendTo')} {client.email}
       </div>
 
       {error && (
@@ -68,7 +70,7 @@ export function OtpRequestForm({
           opacity: isLoading ? 0.6 : 1,
         }}
       >
-        {isLoading ? 'Sending...' : 'Send Verification Code'}
+        {isLoading ? t('auth.sending') : t('otp.sendCode')}
       </button>
     </div>
   );

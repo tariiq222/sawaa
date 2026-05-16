@@ -2,6 +2,7 @@
 
 import type { Service } from '@sawaa/shared';
 import { halalasToSarNumber } from '@/lib/money';
+import { useT } from '@/features/locale/locale-provider';
 
 interface ServicePickerProps {
   services: Service[];
@@ -10,9 +11,10 @@ interface ServicePickerProps {
 }
 
 export function ServicePicker({ services, selected, onSelect }: ServicePickerProps) {
+  const t = useT();
   return (
     <div className="grid gap-4">
-      <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Select Service</h2>
+      <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{t('booking.selectService')}</h2>
       {services.map((service) => (
         <button
           key={service.id}

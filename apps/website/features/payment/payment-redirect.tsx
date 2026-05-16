@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useT } from '@/features/locale/locale-provider';
 
 interface PaymentRedirectProps {
   redirectUrl: string;
@@ -9,6 +10,7 @@ interface PaymentRedirectProps {
 }
 
 export function PaymentRedirect({ redirectUrl, bookingId }: PaymentRedirectProps) {
+  const t = useT();
   const router = useRouter();
 
   useEffect(() => {
@@ -21,7 +23,7 @@ export function PaymentRedirect({ redirectUrl, bookingId }: PaymentRedirectProps
 
   return (
     <div style={{ textAlign: 'center', padding: '3rem' }}>
-      <div style={{ marginBottom: '1rem' }}>Redirecting to payment...</div>
+      <div style={{ marginBottom: '1rem' }}>{t('payment.redirecting')}</div>
       <button
         onClick={() => window.location.reload()}
         style={{
@@ -33,7 +35,7 @@ export function PaymentRedirect({ redirectUrl, bookingId }: PaymentRedirectProps
           cursor: 'pointer',
         }}
       >
-        Click here if not redirected
+        {t('payment.clickIfNotRedirected')}
       </button>
     </div>
   );

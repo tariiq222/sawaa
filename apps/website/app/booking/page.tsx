@@ -21,6 +21,7 @@ import {
 } from '@/features/booking/booking.api';
 import { PaymentRedirect } from '@/features/payment/payment-redirect';
 import { BookingSkeleton } from '@/features/booking/booking-skeleton';
+import { useT } from '@/features/locale/locale-provider';
 
 function ProgressBar({ current, total }: { current: number; total: number }) {
   return (
@@ -44,6 +45,7 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
 }
 
 export default function BookingWizardPage() {
+  const t = useT();
   const [state, dispatch] = useReducer(reduce, INITIAL_WIZARD_STATE);
   // Whether we are on the intermediate branch-selection step (between THERAPIST and SLOT).
   const [awaitingBranch, setAwaitingBranch] = useState(false);
@@ -161,7 +163,7 @@ export default function BookingWizardPage() {
         alignSelf: 'start',
       }}
     >
-      Back
+      {t('booking.back')}
     </button>
   );
 
@@ -230,7 +232,7 @@ export default function BookingWizardPage() {
           })}
           <div>
             <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-              Date
+              {t('booking.selectDate')}
             </label>
             <input
               type="date"
@@ -277,7 +279,7 @@ export default function BookingWizardPage() {
               setBookingId(booking.bookingId);
               setRedirectUrl(payment.redirectUrl);
             } catch (err) {
-              setSubmitError(err instanceof Error ? err.message : 'Booking failed');
+              setSubmitError(err instanceof Error ? err.message : t('common.bookingFailed'));
             } finally {
               setIsSubmitting(false);
             }
@@ -306,20 +308,20 @@ export default function BookingWizardPage() {
             <>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>
-                Booking Confirmed!
+                {t('booking.confirmed')}
               </h2>
               <p style={{ opacity: 0.7, marginBottom: '2rem' }}>
-                You will receive a confirmation email shortly.
+                {t('booking.confirmedDesc')}
               </p>
             </>
           ) : (
             <>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>❌</div>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>
-                Payment Failed
+                {t('booking.paymentFailed')}
               </h2>
               <p style={{ opacity: 0.7, marginBottom: '2rem' }}>
-                Your booking was not confirmed. Please try again.
+                {t('booking.paymentFailedDesc')}
               </p>
             </>
           )}
@@ -335,7 +337,7 @@ export default function BookingWizardPage() {
               cursor: 'pointer',
             }}
           >
-            {state.status === 'success' ? 'Book Another' : 'Try Again'}
+            {state.status === 'success' ? t('booking.bookAnother') : t('booking.tryAgain')}
           </button>
         </div>
       )}

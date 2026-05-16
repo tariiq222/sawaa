@@ -1,6 +1,7 @@
 'use client';
 
 import type { PublicBranch } from './booking.api';
+import { useT } from '@/features/locale/locale-provider';
 
 interface BranchStepProps {
   branches: PublicBranch[];
@@ -9,6 +10,7 @@ interface BranchStepProps {
 }
 
 export function BranchStep({ branches, onSelect, onBack }: BranchStepProps) {
+  const t = useT();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <button
@@ -22,9 +24,9 @@ export function BranchStep({ branches, onSelect, onBack }: BranchStepProps) {
           alignSelf: 'start',
         }}
       >
-        Back
+        {t('booking.back')}
       </button>
-      <h2 style={{ fontSize: '1.125rem', fontWeight: 600 }}>اختر الفرع</h2>
+      <h2 style={{ fontSize: '1.125rem', fontWeight: 600 }}>{t('booking.selectBranch')}</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {branches.map((branch) => (
           <button

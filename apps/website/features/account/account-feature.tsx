@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Locale } from '@/features/locale/locale';
 import { t } from '@/features/locale/dictionary';
+import { useT } from '@/features/locale/locale-provider';
 import { useCurrentClient, clearAuth, clientLogoutApi } from '@/features/auth/public';
 import { ClientBookingsList } from '@/features/auth/client-bookings-list';
 
@@ -14,6 +15,7 @@ interface AccountFeatureProps {
 export function AccountFeature({ locale }: AccountFeatureProps) {
   const { client, isLoading, error } = useCurrentClient();
   const router = useRouter();
+  const tt = useT();
 
   async function handleLogout() {
     try {
@@ -27,7 +29,7 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
   if (isLoading) {
     return (
       <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.6 }}>
-        Loading...
+        {tt('common.loading')}
       </div>
     );
   }
@@ -60,7 +62,7 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
             {t(locale, 'account.bookings')}
           </h2>
           <Link href="/account/bookings" style={{ fontSize: '0.875rem', color: 'var(--primary)', fontWeight: 500 }}>
-            View all
+            {tt('account.viewAll')}
           </Link>
         </div>
         <ClientBookingsList locale={locale} />
@@ -86,13 +88,14 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
 }
 
 function ProfileSection({ client }: { client: { name: string; email: string | null; phone: string | null; emailVerified: boolean; phoneVerified: boolean } }) {
+  const tt = useT();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-      <ProfileRow label="Name" value={client.name} />
-      <ProfileRow label="Email" value={client.email ?? '—'} />
-      <ProfileRow label="Phone" value={client.phone ?? '—'} />
+      <ProfileRow label={tt('account.name')} value={client.name} />
+      <ProfileRow label={tt('account.email')} value={client.email ?? '—'} />
+      <ProfileRow label={tt('account.phone')} value={client.phone ?? '—'} />
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.5rem' }}>
-        {client.emailVerified && <VerificationBadge label="Email Verified" color="success" />}
+        {client.emailVerified && <VerificationBadge label={tt('account.emailVerified')} color="success" />}
       </div>
     </div>
   );

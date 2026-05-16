@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import type { Locale } from '@/features/locale/locale';
 import { t } from '@/features/locale/dictionary';
+import { useT } from '@/features/locale/locale-provider';
 import { useCurrentClient } from '@/features/auth/public';
 import type { ClientBookingItem } from '@sawaa/shared';
 import { getMyBookingApi, cancelMyBookingApi, rescheduleMyBookingApi } from '@/features/auth/auth.api';
@@ -17,6 +18,7 @@ interface BookingDetailFeatureProps {
 export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeatureProps) {
   const { client } = useCurrentClient();
   const router = useRouter();
+  const tt = useT();
   const [showCancel, setShowCancel] = useState(false);
   const [showReschedule, setShowReschedule] = useState(false);
 
@@ -29,8 +31,8 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
     enabled: !!client && !!bookingId,
   });
 
-  if (isLoading) return <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.6 }}>Loading...</div>;
-  if (!booking) return <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.6 }}>Booking not found.</div>;
+  if (isLoading) return <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.6 }}>{tt('common.loading')}</div>;
+  if (!booking) return <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.6 }}>{tt('booking.notFound')}</div>;
 
   const scheduledAt = new Date(booking.scheduledAt);
   const dateStr = scheduledAt.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -74,17 +76,18 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
 function DetailCard({ booking, dateStr, timeStr, statusKey, locale }: {
   booking: ClientBookingItem; dateStr: string; timeStr: string; statusKey: string; locale: Locale
 }) {
+  const tt = useT();
   return (
     <div style={{ padding: '1.5rem', borderRadius: '12px', background: 'color-mix(in srgb, var(--surface) 60%, transparent)', backdropFilter: 'blur(12px)', border: '1px solid color-mix(in srgb, var(--primary) 12%, transparent)' }}>
       <h2 style={{ fontWeight: 700, fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--primary-dark)' }}>{booking.serviceName}</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.9375rem' }}>
-        <DetailRow label="Date" value={dateStr} />
-        <DetailRow label="Time" value={`${timeStr} (${booking.durationMins} min)`} />
-        <DetailRow label="Therapist" value={booking.employeeName} />
-        <DetailRow label="Branch" value={booking.branchName} />
-        <DetailRow label="Price" value={`${booking.currency} ${booking.price}`} />
-        <DetailRow label="Status" value={t(locale, statusKey as never) ?? booking.status} />
-        <DetailRow label="Payment" value={booking.paymentStatus} />
+        <DetailRow label={tt('booking.detail.date')} value={dateStr} />
+        <DetailRow label={tt('booking.detail.time')} value={`${timeStr} (${booking.durationMins} min)`} />
+        <DetailRow label={tt('booking.detail.therapist')} value={booking.employeeName} />
+        <DetailRow label={tt('booking.detail.branch')} value={booking.branchName} />
+        <DetailRow label={tt('booking.detail.price')} value={`${booking.currency} ${booking.price}`} />
+        <DetailRow label={tt('booking.detail.status')} value={t(locale, statusKey as never) ?? booking.status} />
+        <DetailRow label={tt('booking.detail.payment')} value={booking.paymentStatus} />
       </div>
     </div>
   );
@@ -99,6 +102,7 @@ function CancelModal({ locale, onClose, onSuccess, cancelApi }: {
   onSuccess: (status: 'CANCELLED' | 'CANCEL_REQUESTED') => void;
   cancelApi: (reason?: string) => Promise<{ status: string; requiresApproval: boolean }>;
 }) {
+  const tt = useT();
   const [reason, setReason] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +113,7 @@ function CancelModal({ locale, onClose, onSuccess, cancelApi }: {
       const result = await cancelApi(reason || undefined);
       onSuccess(result.status === 'CANCELLED' ? 'CANCELLED' : 'CANCEL_REQUESTED');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Cancel failed');
+      setError(err instanceof Error ? err.message : tt('booking.cancelFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -122,9 +126,9 @@ function CancelModal({ locale, onClose, onSuccess, cancelApi }: {
         <p style={{ fontSize: '0.9375rem', opacity: 0.85 }}>{t(locale, 'booking.cancelConfirm')}</p>
         {error && <div style={errorStyle()}>{error}</div>}
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button onClick={onClose} style={secondaryButtonStyle()} disabled={isLoading}>Back</button>
+          <button onClick={onClose} style={secondaryButtonStyle()} disabled={isLoading}>{tt('booking.back')}</button>
           <button onClick={handleConfirm} style={destructiveButtonStyle()} disabled={isLoading}>
-            {isLoading ? 'Cancelling...' : t(locale, 'booking.cancel')}
+            {isLoading ? tt('booking.detail.cancelling') : tt('booking.cancel')}
           </button>
         </div>
       </div>
@@ -137,6 +141,7 @@ function RescheduleModal({ booking, locale, onClose, onSuccess, rescheduleApi }:
   onSuccess: () => void;
   rescheduleApi: (newScheduledAt: string) => Promise<{ booking: unknown }>;
 }) {
+  const tt = useT();
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -149,7 +154,7 @@ function RescheduleModal({ booking, locale, onClose, onSuccess, rescheduleApi }:
       await rescheduleApi(new Date(`${newDate}T${newTime}`).toISOString());
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Reschedule failed');
+      setError(err instanceof Error ? err.message : tt('booking.rescheduleFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -159,22 +164,22 @@ function RescheduleModal({ booking, locale, onClose, onSuccess, rescheduleApi }:
     <div style={overlayStyle()}>
       <div style={modalStyle()}>
         <h3 style={{ fontWeight: 700, fontSize: '1.125rem', color: 'var(--primary)' }}>{t(locale, 'booking.reschedule')}</h3>
-        <p style={{ fontSize: '0.9375rem', opacity: 0.85 }}>Select a new date and time for {booking.serviceName}.</p>
+        <p style={{ fontSize: '0.9375rem', opacity: 0.85 }}>{tt('booking.reschedulePrompt')} {booking.serviceName}.</p>
         {error && <div style={errorStyle()}>{error}</div>}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <div>
-            <label style={{ fontSize: '0.875rem', fontWeight: 500, display: 'block', marginBottom: '0.375rem' }}>New Date</label>
+            <label style={{ fontSize: '0.875rem', fontWeight: 500, display: 'block', marginBottom: '0.375rem' }}>{tt('booking.detail.newDate')}</label>
             <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} min={new Date().toISOString().split('T')[0]} style={inputStyle()} suppressHydrationWarning />
           </div>
           <div>
-            <label style={{ fontSize: '0.875rem', fontWeight: 500, display: 'block', marginBottom: '0.375rem' }}>New Time</label>
+            <label style={{ fontSize: '0.875rem', fontWeight: 500, display: 'block', marginBottom: '0.375rem' }}>{tt('booking.detail.newTime')}</label>
             <input type="time" value={newTime} onChange={(e) => setNewTime(e.target.value)} style={inputStyle()} />
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button onClick={onClose} style={secondaryButtonStyle()} disabled={isLoading}>Cancel</button>
+          <button onClick={onClose} style={secondaryButtonStyle()} disabled={isLoading}>{tt('booking.cancel')}</button>
           <button onClick={handleConfirm} style={primaryButtonStyle()} disabled={isLoading || !newDate || !newTime}>
-            {isLoading ? 'Rescheduling...' : 'Confirm'}
+            {isLoading ? tt('booking.detail.rescheduling') : tt('booking.detail.confirm')}
           </button>
         </div>
       </div>

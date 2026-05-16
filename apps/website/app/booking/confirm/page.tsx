@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { publicFetch } from '@/lib/public-fetch';
+import { useT } from '@/features/locale/locale-provider';
 
 interface BookingStatus {
   bookingId: string;
@@ -18,6 +19,7 @@ type ConfirmState =
   | { phase: 'pending'; bookingId: string };
 
 function ConfirmContent() {
+  const t = useT();
   const params = useSearchParams();
   const bookingId = params.get('bookingId');
   const [state, setState] = useState<ConfirmState>({ phase: 'loading' });
@@ -73,7 +75,7 @@ function ConfirmContent() {
   if (state.phase === 'loading') {
     return (
       <div style={{ textAlign: 'center', padding: '3rem' }}>
-        <div style={{ marginBottom: '1rem' }}>Checking payment status...</div>
+        <div style={{ marginBottom: '1rem' }}>{t('booking.checkingPayment')}</div>
       </div>
     );
   }
@@ -82,13 +84,13 @@ function ConfirmContent() {
     return (
       <div style={{ textAlign: 'center', padding: '3rem' }}>
         <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>&#x2705;</div>
-        <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>Booking Confirmed!</h1>
-        <p style={{ opacity: 0.7, marginBottom: '2rem' }}>A confirmation email has been sent to your inbox.</p>
+        <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>{t('booking.confirmed')}</h1>
+        <p style={{ opacity: 0.7, marginBottom: '2rem' }}>{t('booking.confirmedDesc')}</p>
         <a
           href="/booking"
           style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius)', fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
         >
-          Book Another Appointment
+          {t('booking.bookAnother')}
         </a>
       </div>
     );
@@ -98,15 +100,15 @@ function ConfirmContent() {
     return (
       <div style={{ textAlign: 'center', padding: '3rem' }}>
         <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>&#x23F3;</div>
-        <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>Payment Processing</h1>
+        <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>{t('booking.paymentProcessing')}</h1>
         <p style={{ opacity: 0.7, marginBottom: '2rem' }}>
-          Your payment is still being processed. You will receive a confirmation email once it is complete.
+          {t('booking.paymentProcessingDesc')}
         </p>
         <a
           href="/account/bookings"
           style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius)', fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
         >
-          View My Bookings
+          {t('booking.viewBookings')}
         </a>
       </div>
     );
@@ -115,13 +117,13 @@ function ConfirmContent() {
   return (
     <div style={{ textAlign: 'center', padding: '3rem' }}>
       <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>&#x274C;</div>
-      <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>Payment Failed</h1>
-      <p style={{ opacity: 0.7, marginBottom: '2rem' }}>Your booking could not be confirmed. Please try again.</p>
+      <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>{t('booking.paymentFailed')}</h1>
+      <p style={{ opacity: 0.7, marginBottom: '2rem' }}>{t('booking.paymentFailedDesc')}</p>
       <a
         href="/booking"
         style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius)', fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
       >
-        Try Again
+        {t('booking.tryAgain')}
       </a>
     </div>
   );
@@ -129,7 +131,7 @@ function ConfirmContent() {
 
 export default function BookingConfirmPage() {
   return (
-    <Suspense fallback={<div style={{ textAlign: 'center', padding: '3rem' }}>Loading...</div>}>
+    <Suspense fallback={<div style={{ textAlign: 'center', padding: '3rem' }}>جارٍ التحميل...</div>}>
       <ConfirmContent />
     </Suspense>
   );

@@ -1,5 +1,6 @@
 'use client';
 
+import { useLocale, useT } from '@/features/locale/locale-provider';
 import type { InvoiceDetail } from './invoice.api';
 
 interface InvoiceViewProps {
@@ -19,6 +20,8 @@ const PRINT_STYLES = `
 `;
 
 export function InvoiceView({ invoice }: InvoiceViewProps) {
+  const t = useT();
+  const locale = useLocale();
   const sellerName = invoice.sellerName?.trim() || 'مركز سواء';
 
   return (
@@ -42,7 +45,7 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
           }}
         >
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem' }}>
-            Invoice
+            {t('invoice.title')}
           </h1>
           <p style={{ opacity: 0.9, fontSize: '0.875rem', marginBottom: '0.25rem' }}>
             {sellerName}
@@ -53,11 +56,11 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
         <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.875rem' }}>
             <div>
-              <span style={{ opacity: 0.6, display: 'block' }}>Issue Date</span>
-              <span>{formatDate(invoice.issuedAt)}</span>
+              <span style={{ opacity: 0.6, display: 'block' }}>{t('invoice.issueDate')}</span>
+              <span>{formatDate(invoice.issuedAt, locale)}</span>
             </div>
             <div>
-              <span style={{ opacity: 0.6, display: 'block' }}>Status</span>
+              <span style={{ opacity: 0.6, display: 'block' }}>{t('invoice.status')}</span>
               <span style={{ color: statusColor(invoice.status) }}>{invoice.status}</span>
             </div>
           </div>
@@ -74,18 +77,18 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ opacity: 0.6 }}>Subtotal</span>
-              <span>{formatCurrency(invoice.subtotal, invoice.currency)}</span>
+              <span style={{ opacity: 0.6 }}>{t('invoice.subtotal')}</span>
+              <span>{formatCurrency(invoice.subtotal, invoice.currency, locale)}</span>
             </div>
             {invoice.discountAmt > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--success)' }}>
-                <span>Discount</span>
-                <span>-{formatCurrency(invoice.discountAmt, invoice.currency)}</span>
+                <span>{t('invoice.discount')}</span>
+                <span>-{formatCurrency(invoice.discountAmt, invoice.currency, locale)}</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ opacity: 0.6 }}>VAT ({(invoice.vatRate * 100).toFixed(0)}%)</span>
-              <span>{formatCurrency(invoice.vatAmt, invoice.currency)}</span>
+              <span style={{ opacity: 0.6 }}>{t('invoice.vat')} ({(invoice.vatRate * 100).toFixed(0)}%)</span>
+              <span>{formatCurrency(invoice.vatAmt, invoice.currency, locale)}</span>
             </div>
             <div
               style={{
@@ -96,8 +99,8 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
                 paddingTop: '0.5rem',
               }}
             >
-              <span>Total</span>
-              <span>{formatCurrency(invoice.total, invoice.currency)}</span>
+              <span>{t('invoice.total')}</span>
+              <span>{formatCurrency(invoice.total, invoice.currency, locale)}</span>
             </div>
           </div>
 
@@ -118,7 +121,7 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
                 fontSize: '0.875rem',
               }}
             >
-              Print Invoice
+              {t('invoice.print')}
             </button>
           </div>
         </div>
@@ -127,17 +130,17 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
   );
 }
 
-function formatDate(dateStr: string | null): string {
+function formatDate(dateStr: string | null, locale: string): string {
   if (!dateStr) return 'N/A';
-  return new Date(dateStr).toLocaleDateString('ar-SA', {
+  return new Date(dateStr).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
 }
 
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('ar-SA', {
+function formatCurrency(amount: number, currency: string, locale: string): string {
+  return new Intl.NumberFormat(locale === 'ar' ? 'ar-SA' : 'en-US', {
     style: 'currency',
     currency,
   }).format(amount);

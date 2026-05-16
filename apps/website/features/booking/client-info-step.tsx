@@ -5,6 +5,7 @@ import type { GuestClientInfo, AvailableSlot } from '@sawaa/shared';
 import { OtpRequestForm } from '@/features/otp/otp-request-form';
 import { OtpVerifyForm } from '@/features/otp/otp-verify-form';
 import { useOtpSession } from '@/features/otp/use-otp-session';
+import { useT } from '@/features/locale/locale-provider';
 
 interface ClientInfoStepProps {
   slot: AvailableSlot;
@@ -14,6 +15,7 @@ interface ClientInfoStepProps {
 }
 
 export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInfoStepProps) {
+  const t = useT();
   const [client, setClient] = useState<GuestClientInfo>({ name: '', phone: '', email: '' });
   const [otpStep, setOtpStep] = useState<'form' | 'request' | 'verify'>('form');
   const { token, storeToken } = useOtpSession();
@@ -31,12 +33,12 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
           alignSelf: 'start',
         }}
       >
-        Back
+        {t('booking.back')}
       </button>
 
       <div style={{ display: 'grid', gap: '0.75rem' }}>
         <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Full Name</label>
+          <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem' }}>{t('booking.fullName')}</label>
           <input
             type="text"
             value={client.name}
@@ -50,7 +52,7 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
           />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Phone</label>
+          <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem' }}>{t('booking.phone')}</label>
           <input
             type="tel"
             value={client.phone}
@@ -65,7 +67,7 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
           />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Email</label>
+          <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem' }}>{t('booking.email')}</label>
           <input
             type="email"
             value={client.email}
@@ -110,7 +112,7 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
             cursor: 'pointer',
           }}
         >
-          Verify Email to Continue
+          {t('booking.verifyEmail')}
         </button>
       )}
 
@@ -129,7 +131,7 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
             opacity: isSubmitting || !client.name || !client.phone || !client.email ? 0.6 : 1,
           }}
         >
-          {isSubmitting ? 'Processing...' : 'Continue to Payment'}
+          {isSubmitting ? t('booking.processing') : t('booking.continueToPayment')}
         </button>
       )}
     </div>

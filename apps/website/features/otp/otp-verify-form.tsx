@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useT } from '@/features/locale/locale-provider';
 import type { GuestClientInfo } from '@sawaa/shared';
 import { OtpChannel, OtpPurpose } from '@sawaa/shared';
 
@@ -10,13 +11,14 @@ interface OtpVerifyFormProps {
 }
 
 export function OtpVerifyForm({ client, onVerified }: OtpVerifyFormProps) {
+  const t = useT();
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleVerify = async () => {
     if (code.length !== 6) {
-      setError('Please enter the 6-digit code');
+      setError(t('auth.enterSixDigitCode'));
       return;
     }
     setIsLoading(true);
@@ -26,7 +28,7 @@ export function OtpVerifyForm({ client, onVerified }: OtpVerifyFormProps) {
       const result = await api.verifyOtp(client.email, code);
       onVerified(result.sessionToken);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Verification failed');
+      setError(err instanceof Error ? err.message : t('otp.verificationFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -36,7 +38,7 @@ export function OtpVerifyForm({ client, onVerified }: OtpVerifyFormProps) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <div>
         <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-          Verification Code
+          {t('auth.verificationCode')}
         </label>
         <input
           type="text"
@@ -74,7 +76,7 @@ export function OtpVerifyForm({ client, onVerified }: OtpVerifyFormProps) {
           opacity: isLoading || code.length !== 6 ? 0.6 : 1,
         }}
       >
-        {isLoading ? 'Verifying...' : 'Verify'}
+        {isLoading ? t('auth.verifying') : t('auth.verify')}
       </button>
     </div>
   );

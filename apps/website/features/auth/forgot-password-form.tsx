@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { useT } from '@/features/locale/locale-provider';
 import { validateEmail } from './auth.schema';
 import { requestOtp } from '@/features/otp/otp.api';
 import { OtpChannel, OtpPurpose } from '@sawaa/shared';
@@ -11,6 +12,7 @@ interface ForgotPasswordFormProps {
 }
 
 export function ForgotPasswordForm({ onSuccess }: ForgotPasswordFormProps) {
+  const t = useT();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export function ForgotPasswordForm({ onSuccess }: ForgotPasswordFormProps) {
         router.push(`/reset-password?email=${encodeURIComponent(email)}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send verification code');
+      setError(err instanceof Error ? err.message : t('auth.failedToSendCode'));
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +63,7 @@ export function ForgotPasswordForm({ onSuccess }: ForgotPasswordFormProps) {
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <label htmlFor="fp-email" style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-          Email
+          {t('auth.email')}
         </label>
         <input
           id="fp-email"
@@ -75,11 +77,11 @@ export function ForgotPasswordForm({ onSuccess }: ForgotPasswordFormProps) {
         />
       </div>
       <button type="submit" disabled={isLoading} style={primaryButtonStyle(isLoading)}>
-        {isLoading ? 'Sending...' : 'Send Code'}
+        {isLoading ? t('auth.sending') : t('auth.sendCode')}
       </button>
       <p style={{ textAlign: 'center', fontSize: '0.875rem', opacity: 0.8 }}>
         <a href="/login" style={{ color: 'var(--primary)' }}>
-          Back to Sign In
+          {t('auth.backToLogin')}
         </a>
       </p>
     </form>
