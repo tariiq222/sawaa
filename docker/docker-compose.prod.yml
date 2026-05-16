@@ -150,7 +150,6 @@ services:
       dockerfile: apps/dashboard/Dockerfile
       args:
         - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-        - NEXT_PUBLIC_MOYASAR_PLATFORM_PUBLISHABLE_KEY=${NEXT_PUBLIC_MOYASAR_PLATFORM_PUBLISHABLE_KEY}
     container_name: sawaa-dashboard
     stop_grace_period: 40s
     restart: unless-stopped
