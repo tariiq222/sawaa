@@ -104,6 +104,11 @@ export const buildPrisma = () => {
   return p;
 };
 
+export const buildRlsTransaction = (prisma?: ReturnType<typeof buildPrisma>) => ({
+  withTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(prisma ?? buildPrisma())),
+  withBypassTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(prisma ?? buildPrisma())),
+});
+
 export const buildEventBus = () => ({ publish: jest.fn().mockResolvedValue(undefined) });
 
 export const buildZoomHandler = () => ({

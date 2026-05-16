@@ -245,7 +245,7 @@ describe('UpdateServiceHandler', () => {
 describe('ListServicesHandler', () => {
   it('returns paginated services', async () => {
     const prisma = buildPrisma();
-    const handler = new ListServicesHandler(prisma as never);
+    const handler = new ListServicesHandler(prisma as never, prisma as never);
     const result = await handler.execute({});
     expect(prisma.service.findMany).toHaveBeenCalled();
     expect(result.items).toHaveLength(1);
@@ -254,7 +254,7 @@ describe('ListServicesHandler', () => {
 
   it('excludes hidden services by default', async () => {
     const prisma = buildPrisma();
-    const handler = new ListServicesHandler(prisma as never);
+    const handler = new ListServicesHandler(prisma as never, prisma as never);
     await handler.execute({});
     const callArgs = (prisma.service.findMany as jest.Mock).mock.calls[0][0] as { where: Record<string, unknown> };
     expect(callArgs.where.isHidden).toBe(false);
@@ -262,7 +262,7 @@ describe('ListServicesHandler', () => {
 
   it('includes hidden services when includeHidden = true', async () => {
     const prisma = buildPrisma();
-    const handler = new ListServicesHandler(prisma as never);
+    const handler = new ListServicesHandler(prisma as never, prisma as never);
     await handler.execute({ includeHidden: true });
     const callArgs = (prisma.service.findMany as jest.Mock).mock.calls[0][0] as { where: Record<string, unknown> };
     expect(callArgs.where.isHidden).toBeUndefined();
@@ -270,7 +270,7 @@ describe('ListServicesHandler', () => {
 
   it('adds search OR clause when search is provided', async () => {
     const prisma = buildPrisma();
-    const handler = new ListServicesHandler(prisma as never);
+    const handler = new ListServicesHandler(prisma as never, prisma as never);
     await handler.execute({ search: 'قص' });
     const callArgs = (prisma.service.findMany as jest.Mock).mock.calls[0][0] as { where: Record<string, unknown> };
     expect(callArgs.where.OR).toBeDefined();
@@ -336,7 +336,7 @@ describe('SetServiceBookingConfigsHandler', () => {
 
   it('upserts configs for service', async () => {
     const prisma = buildConfigPrisma();
-    const handler = new SetServiceBookingConfigsHandler(prisma as never);
+    const handler = new SetServiceBookingConfigsHandler(prisma as never, prisma as never);
     await handler.execute({ serviceId: 'svc-1', types: [{ bookingType: ServiceBookingMode.IN_PERSON, price: 100, durationMins: 30 }] });
     expect(prisma.service.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: 'svc-1' }) }),
@@ -346,7 +346,7 @@ describe('SetServiceBookingConfigsHandler', () => {
   it('throws NotFoundException when service not found', async () => {
     const prisma = buildConfigPrisma();
     prisma.service.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new SetServiceBookingConfigsHandler(prisma as never);
+    const handler = new SetServiceBookingConfigsHandler(prisma as never, prisma as never);
     await expect(handler.execute({ serviceId: 'bad', types: [] })).rejects.toThrow(NotFoundException);
   });
 });
@@ -368,7 +368,7 @@ describe('SetDurationOptionsHandler', () => {
 
   it('creates new duration option', async () => {
     const prisma = buildOptionsPrisma();
-    const handler = new SetDurationOptionsHandler(prisma as never);
+    const handler = new SetDurationOptionsHandler(prisma as never, prisma as never);
     await handler.execute({
       serviceId: 'svc-1',
       options: [{ durationMins: 60, price: 200, currency: 'SAR', label: '60 min', labelAr: '٦٠ دقيقة' }],
@@ -382,7 +382,7 @@ describe('SetDurationOptionsHandler', () => {
   it('throws NotFoundException when service not found', async () => {
     const prisma = buildOptionsPrisma();
     prisma.service.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new SetDurationOptionsHandler(prisma as never);
+    const handler = new SetDurationOptionsHandler(prisma as never, prisma as never);
     await expect(handler.execute({ serviceId: 'bad', options: [] })).rejects.toThrow('not found');
   });
 });
@@ -403,7 +403,7 @@ describe('SetEmployeeServiceOptionsHandler', () => {
 
   it('upserts employee service options', async () => {
     const prisma = buildEsoPrisma();
-    const handler = new SetEmployeeServiceOptionsHandler(prisma as never);
+    const handler = new SetEmployeeServiceOptionsHandler(prisma as never, prisma as never);
     await handler.execute({ employeeServiceId: 'es-1', options: [{ durationOptionId: 'opt-1', priceOverride: 300 }] });
     expect(prisma.$transaction).toHaveBeenCalled();
   });
@@ -411,7 +411,7 @@ describe('SetEmployeeServiceOptionsHandler', () => {
   it('throws NotFoundException when durationOptionId not found', async () => {
     const prisma = buildEsoPrisma();
     prisma.serviceDurationOption.findMany = jest.fn().mockResolvedValue([]);
-    const handler = new SetEmployeeServiceOptionsHandler(prisma as never);
+    const handler = new SetEmployeeServiceOptionsHandler(prisma as never, prisma as never);
     await expect(handler.execute({ employeeServiceId: 'es-1', options: [{ durationOptionId: 'bad-opt' }] })).rejects.toThrow('not found');
   });
 });

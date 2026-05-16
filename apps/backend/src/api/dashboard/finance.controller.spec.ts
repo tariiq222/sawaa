@@ -71,7 +71,7 @@ describe('DashboardFinanceController', () => {
   });
 
   it('processPaymentEndpoint should call processPayment.execute', async () => {
-    const body = { invoiceId: 'inv-1', method: 'card' as const, metadata: {} };
+    const body = { invoiceId: 'inv-1', amount: 100, method: 'card' as const } as any;
     await controller.processPaymentEndpoint(body);
     expect(handlers.processPayment).toHaveBeenCalledWith(body);
   });
@@ -116,7 +116,7 @@ describe('DashboardFinanceController', () => {
   });
 
   it('verifyPaymentEndpoint should call verifyPayment.execute', async () => {
-    const body = { status: 'COMPLETED' as const, notes: 'Verified' };
+    const body = { action: 'approve' as const, transferRef: 'TRF-001' };
     await controller.verifyPaymentEndpoint('pay-1', body);
     expect(handlers.verifyPayment).toHaveBeenCalledWith({ paymentId: 'pay-1', ...body });
   });
@@ -124,7 +124,7 @@ describe('DashboardFinanceController', () => {
   // ── Coupons ───────────────────────────────────────────────────────────────
 
   it('applyCouponEndpoint should call applyCoupon.execute', async () => {
-    const body = { invoiceId: 'inv-1', code: 'SAVE10' };
+    const body = { invoiceId: 'inv-1', clientId: 'c1', code: 'SAVE10' };
     await controller.applyCouponEndpoint(body);
     expect(handlers.applyCoupon).toHaveBeenCalledWith(body);
   });

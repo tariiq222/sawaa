@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { BookingStatus, Prisma } from '@prisma/client';
 import { RescheduleBookingHandler } from './reschedule-booking.handler';
-import { buildPrisma, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, buildRlsTransaction, mockBooking } from '../testing/booking-test-helpers';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 jest.mock('../booking-lifecycle.helper', () => ({
@@ -43,6 +43,7 @@ describe('RescheduleBookingHandler', () => {
     const prisma = buildPrisma();
     const handler = new RescheduleBookingHandler(
       prisma as never,
+      buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
     );
@@ -64,6 +65,7 @@ describe('RescheduleBookingHandler', () => {
     const prisma = buildPrisma();
     const handler = new RescheduleBookingHandler(
       prisma as never,
+      buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
     );
@@ -84,6 +86,7 @@ describe('RescheduleBookingHandler', () => {
     const prisma = buildPrisma();
     const handler = new RescheduleBookingHandler(
       prisma as never,
+      buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
     );
@@ -104,6 +107,7 @@ describe('RescheduleBookingHandler', () => {
 
     const handler = new RescheduleBookingHandler(
       prisma as never,
+      buildRlsTransaction(prisma) as never,
       buildSettingsHandler({ maxReschedulesPerBooking: 3 }) as never,
       buildZoomService() as never,
     );
@@ -126,6 +130,7 @@ describe('RescheduleBookingHandler', () => {
 
     const handler = new RescheduleBookingHandler(
       prisma as never,
+      buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
     );
@@ -156,6 +161,7 @@ describe('RescheduleBookingHandler', () => {
 
     const handler = new RescheduleBookingHandler(
       prisma as never,
+      buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
     );
@@ -183,6 +189,7 @@ describe('RescheduleBookingHandler', () => {
 
     const handler = new RescheduleBookingHandler(
       prisma as never,
+      buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
     );
@@ -204,6 +211,7 @@ describe('RescheduleBookingHandler', () => {
 
     const handler = new RescheduleBookingHandler(
       prisma as never,
+      buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
     );
@@ -247,6 +255,7 @@ describe('RescheduleBookingHandler', () => {
 
     const handler = new RescheduleBookingHandler(
       prisma as never,
+      buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
     );
@@ -271,6 +280,7 @@ describe('RescheduleBookingHandler', () => {
 
     const handler = new RescheduleBookingHandler(
       prisma as never,
+      buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       buildZoomService() as never,
     );
@@ -295,6 +305,7 @@ describe('RescheduleBookingHandler', () => {
 
     const handler = new RescheduleBookingHandler(
       prisma as never,
+      buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       zoomService as never,
     );
@@ -328,6 +339,7 @@ describe('RescheduleBookingHandler', () => {
 
     const handler = new RescheduleBookingHandler(
       prisma as never,
+      buildRlsTransaction(prisma) as never,
       buildSettingsHandler() as never,
       zoomService as never,
     );

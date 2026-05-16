@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { PaymentStatus, RefundStatus } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { RefundCompletedEvent } from '../events/refund-completed.event';
 import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
@@ -17,8 +17,8 @@ jest.mock('node:crypto', () => ({
 describe('RefundPaymentHandler', () => {
   let handler: RefundPaymentHandler;
 
-  const prisma = {
-    $transaction: jest.fn(async (cb) => await cb(prisma)),
+  const prisma: Record<string, any> = {
+    $transaction: jest.fn(),
     refundRequest: {
       findUnique: jest.fn(),
       findUniqueOrThrow: jest.fn(),
@@ -39,6 +39,7 @@ describe('RefundPaymentHandler', () => {
     },
     $queryRaw: jest.fn(),
   };
+  prisma.$transaction = jest.fn(async (cb: (tx: unknown) => Promise<unknown>) => await cb(prisma));
 
   const moyasar = { createRefund: jest.fn() };
   const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
@@ -51,6 +52,7 @@ describe('RefundPaymentHandler', () => {
       providers: [
         RefundPaymentHandler,
         { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: { withTransaction: (fn: (tx: unknown) => Promise<unknown>) => fn(prisma), withBypassTransaction: (fn: (tx: unknown) => Promise<unknown>) => fn(prisma) } },
         { provide: EventBusService, useValue: eventBus },
         { provide: MoyasarApiClient, useValue: moyasar },
       ],
@@ -327,7 +329,7 @@ describe('RefundPaymentHandler', () => {
 
   describe('execute', () => {
     it('throws NotFoundException when payment is not found', async () => {
-      prisma.$transaction.mockImplementation(async (cb) => {
+      prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
         prisma.$queryRaw.mockResolvedValueOnce([]);
         return cb(prisma);
       });
@@ -338,7 +340,7 @@ describe('RefundPaymentHandler', () => {
     });
 
     it('throws BadRequestException when payment is not COMPLETED', async () => {
-      prisma.$transaction.mockImplementation(async (cb) => {
+      prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
         prisma.$queryRaw.mockResolvedValueOnce(makePaymentRow({ status: PaymentStatus.PENDING }));
         return cb(prisma);
       });
@@ -349,7 +351,7 @@ describe('RefundPaymentHandler', () => {
     });
 
     it('throws BadRequestException when payment has no gatewayRef', async () => {
-      prisma.$transaction.mockImplementation(async (cb) => {
+      prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
         prisma.$queryRaw.mockResolvedValueOnce(makePaymentRow({ gatewayRef: null }));
         return cb(prisma);
       });
@@ -360,7 +362,7 @@ describe('RefundPaymentHandler', () => {
     });
 
     it('throws BadRequestException when an in-flight refund already exists', async () => {
-      prisma.$transaction.mockImplementation(async (cb) => {
+      prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
         prisma.$queryRaw.mockResolvedValueOnce(makePaymentRow());
         prisma.refundRequest.findFirst.mockResolvedValueOnce({ id: 'rr-existing' });
         return cb(prisma);
@@ -373,7 +375,7 @@ describe('RefundPaymentHandler', () => {
 
     it('full success path: creates refund request, calls moyasar, finalizes DB, publishes event', async () => {
       let txCallCount = 0;
-      prisma.$transaction.mockImplementation(async (cb) => {
+      prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
         txCallCount++;
         if (txCallCount === 1) {
           prisma.$queryRaw.mockResolvedValueOnce(makePaymentRow());
@@ -403,7 +405,7 @@ describe('RefundPaymentHandler', () => {
     });
 
     it('marks refund FAILED when Moyasar rejects the refund', async () => {
-      prisma.$transaction.mockImplementation(async (cb) => {
+      prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
         prisma.$queryRaw.mockResolvedValueOnce(makePaymentRow());
         prisma.invoice.findUniqueOrThrow.mockResolvedValueOnce(makeInvoice());
         prisma.refundRequest.findFirst.mockResolvedValueOnce(null);
@@ -423,7 +425,7 @@ describe('RefundPaymentHandler', () => {
     });
 
     it('still throws when marking FAILED after Moyasar rejection also fails', async () => {
-      prisma.$transaction.mockImplementation(async (cb) => {
+      prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
         prisma.$queryRaw.mockResolvedValueOnce(makePaymentRow());
         prisma.invoice.findUniqueOrThrow.mockResolvedValueOnce(makeInvoice());
         prisma.refundRequest.findFirst.mockResolvedValueOnce(null);
@@ -439,7 +441,7 @@ describe('RefundPaymentHandler', () => {
 
     it('persists gatewayRef and throws when DB finalize fails after Moyasar success', async () => {
       let txCallCount = 0;
-      prisma.$transaction.mockImplementation(async (cb) => {
+      prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
         txCallCount++;
         if (txCallCount === 1) {
           prisma.$queryRaw.mockResolvedValueOnce(makePaymentRow());
@@ -464,7 +466,7 @@ describe('RefundPaymentHandler', () => {
 
     it('throws when even persisting gatewayRef after finalize failure fails', async () => {
       let txCallCount = 0;
-      prisma.$transaction.mockImplementation(async (cb) => {
+      prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
         txCallCount++;
         if (txCallCount === 1) {
           prisma.$queryRaw.mockResolvedValueOnce(makePaymentRow());
@@ -484,7 +486,7 @@ describe('RefundPaymentHandler', () => {
 
     it('publishes event with catch when eventBus.publish rejects', async () => {
       let txCallCount = 0;
-      prisma.$transaction.mockImplementation(async (cb) => {
+      prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
         txCallCount++;
         if (txCallCount === 1) {
           prisma.$queryRaw.mockResolvedValueOnce(makePaymentRow());

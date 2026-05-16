@@ -68,7 +68,7 @@ describe('ReconcileRefundsCron', () => {
     const prisma = buildPrisma([row], tx);
     const moyasar = buildMoyasar({ moyasar_ref_1: 'paid' });
 
-    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never);
+    const cron = new ReconcileRefundsCron(prisma as never, prisma as never, moyasar as never);
     await cron.execute();
 
     expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORG_ID, 'moyasar_ref_1');
@@ -98,7 +98,7 @@ describe('ReconcileRefundsCron', () => {
     const prisma = buildPrisma([row], tx);
     const moyasar = buildMoyasar({ moyasar_ref_2: 'failed' });
 
-    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never);
+    const cron = new ReconcileRefundsCron(prisma as never, prisma as never, moyasar as never);
     await cron.execute();
 
     expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORG_ID, 'moyasar_ref_2');
@@ -121,7 +121,7 @@ describe('ReconcileRefundsCron', () => {
     const prisma = buildPrisma([row], tx);
     const moyasar = buildMoyasar({ moyasar_ref_3: 'pending' });
 
-    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never);
+    const cron = new ReconcileRefundsCron(prisma as never, prisma as never, moyasar as never);
     await cron.execute();
 
     expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORG_ID, 'moyasar_ref_3');
@@ -153,7 +153,7 @@ describe('ReconcileRefundsCron', () => {
     const prisma = buildPrisma([row], tx);
     const moyasar = buildMoyasar({ moyasar_ref_idem: 'paid' });
 
-    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never);
+    const cron = new ReconcileRefundsCron(prisma as never, prisma as never, moyasar as never);
 
     // Call execute twice — simulates the cron firing twice for the same stuck row
     await cron.execute();
@@ -173,7 +173,7 @@ describe('ReconcileRefundsCron', () => {
     const prisma = buildPrisma([], tx);
     const moyasar = buildMoyasar({});
 
-    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never);
+    const cron = new ReconcileRefundsCron(prisma as never, prisma as never, moyasar as never);
     await cron.execute();
 
     expect(moyasar.getRefundStatus).not.toHaveBeenCalled();
@@ -193,7 +193,7 @@ describe('ReconcileRefundsCron', () => {
         .mockResolvedValueOnce({ id: 'ref_ok', status: 'paid' }),
     };
 
-    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never);
+    const cron = new ReconcileRefundsCron(prisma as never, prisma as never, moyasar as never);
     await cron.execute(); // should not throw
 
     // Second row should still be processed despite the first throwing
@@ -209,7 +209,7 @@ describe('ReconcileRefundsCron', () => {
     const prisma = buildPrisma([], tx);
     const moyasar = buildMoyasar({});
 
-    const cron = new ReconcileRefundsCron(prisma as never, moyasar as never);
+    const cron = new ReconcileRefundsCron(prisma as never, prisma as never, moyasar as never);
     await cron.execute();
 
     expect(prisma.refundRequest.findMany).toHaveBeenCalledWith({

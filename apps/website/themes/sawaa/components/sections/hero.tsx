@@ -58,12 +58,12 @@ export function Hero({ content }: Props) {
               color: 'var(--sw-secondary-700)',
             }}
           >
-            {content.titlePrefix}{' '}
+            {content.titlePrefix.trim()}{' '}
             <span
               className="relative inline-block"
               style={{ color: 'var(--sw-primary-500)' }}
             >
-              {content.titleHighlight}
+              {content.titleHighlight.trim()}
               <svg
                 className="absolute -bottom-2 left-0 w-full h-3"
                 viewBox="0 0 200 12"
@@ -80,7 +80,7 @@ export function Hero({ content }: Props) {
               </svg>
             </span>
             <br />
-            {content.titleSuffix}
+            {content.titleSuffix.trim()}
           </h1>
 
           <p

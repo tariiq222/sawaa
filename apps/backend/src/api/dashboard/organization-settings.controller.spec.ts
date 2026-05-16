@@ -8,7 +8,6 @@ import { ListServicesHandler } from '../../modules/org-experience/services/list-
 import { GetServiceHandler } from '../../modules/org-experience/services/get-service.handler';
 import { ArchiveServiceHandler } from '../../modules/org-experience/services/archive-service.handler';
 import { SetDurationOptionsHandler } from '../../modules/org-experience/services/set-duration-options.handler';
-import { SetDurationOptionsHandler } from '../../modules/org-experience/services/set-duration-options.handler';
 import { SetServiceBookingConfigsHandler } from '../../modules/org-experience/services/set-service-booking-configs.handler';
 import { GetServiceBookingConfigsHandler } from '../../modules/org-experience/services/get-service-booking-configs.handler';
 import { ListServiceEmployeesHandler } from '../../modules/org-experience/services/list-service-employees.handler';

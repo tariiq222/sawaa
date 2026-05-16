@@ -23,7 +23,7 @@ describe('OtpRequestForm', () => {
         onRequestSent={vi.fn()}
       />,
     );
-    const btn = screen.getByRole('button', { name: /send verification code/i }) as HTMLButtonElement;
+    const btn = screen.getByRole('button', { name: /إرسال رمز التحقق/i }) as HTMLButtonElement;
     expect(btn.disabled).toBe(false);
   });
 
@@ -35,7 +35,7 @@ describe('OtpRequestForm', () => {
         onRequestSent={onRequestSent}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: /send verification code/i }));
+    fireEvent.click(screen.getByRole('button', { name: /إرسال رمز التحقق/i }));
     await waitFor(() => expect(onRequestSent).toHaveBeenCalled());
   });
 });

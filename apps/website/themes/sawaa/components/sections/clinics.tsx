@@ -88,7 +88,50 @@ export function Clinics({ clinics, intro }: Props) {
     });
   };
 
-  if (clinics.length === 0) return null;
+  if (clinics.length === 0) {
+    return (
+      <section id="clinics" className="py-20 md:py-24 relative sw-section-mint">
+        <div className="max-w-[1260px] mx-auto px-5 sm:px-6 md:px-8">
+          <AnimatedSection>
+            <SectionHeader
+              tag={intro.tag}
+              tagIcon={<Heart className="w-3.5 h-3.5" />}
+              title={<IntroTitle intro={intro} />}
+              subtitle={intro.subtitle}
+            />
+          </AnimatedSection>
+          <div className="flex justify-center mt-8">
+            <div
+              className="text-center py-14 px-10 bg-white rounded-2xl max-w-md w-full"
+              style={{
+                border: '1px solid var(--sw-neutral-100)',
+                boxShadow: 'var(--sw-shadow-xs)',
+              }}
+            >
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5"
+                style={{ background: 'var(--sw-primary-50)' }}
+              >
+                <Sparkles className="w-6 h-6" style={{ color: 'var(--sw-primary-600)' }} />
+              </div>
+              <h3
+                className="text-base font-extrabold mb-2"
+                style={{ color: 'var(--sw-secondary-700)' }}
+              >
+                العيادات قيد الإعداد
+              </h3>
+              <p
+                className="text-sm leading-relaxed"
+                style={{ color: 'var(--sw-neutral-500)' }}
+              >
+                نعمل على إضافة عياداتنا المتخصصة. تابعنا قريباً.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="clinics" className="py-20 md:py-24 relative sw-section-mint">

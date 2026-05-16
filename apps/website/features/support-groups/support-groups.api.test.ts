@@ -77,7 +77,7 @@ describe('support-groups.api', () => {
   });
 
   describe('bookGroupSession', () => {
-    it('POSTs with Bearer token and credentials:include', async () => {
+    it('POSTs with credentials:include', async () => {
       fetchMock.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ type: 'BOOKED', bookingId: 'bk1' }),
@@ -87,7 +87,6 @@ describe('support-groups.api', () => {
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toMatch(/\/public\/bookings\/group-sessions\/g1\/book$/);
       expect(init.method).toBe('POST');
-      expect(init.headers).toMatchObject({ Authorization: 'Bearer tok' });
       expect(init.credentials).toBe('include');
     });
 

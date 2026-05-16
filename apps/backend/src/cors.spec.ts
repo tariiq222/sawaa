@@ -26,7 +26,7 @@ describe('configureCors', () => {
     configureCors(app as INestApplication);
     expect(app.enableCors).toHaveBeenCalled();
     const originFn = corsConfig.origin;
-    expect(originFn('http://localhost:3000', (_err, allow) => expect(allow).toBe(true)));
+    expect(originFn('http://localhost:3000', (_err: any, allow: any) => expect(allow).toBe(true)));
   });
 
   it('should block unknown origin', () => {

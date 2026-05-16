@@ -40,7 +40,7 @@ describe('PaymentRedirect', () => {
 
   it('reloads the page when the retry button is clicked', () => {
     render(<PaymentRedirect redirectUrl="https://moyasar.test/pay/abc" bookingId="bk_42" />);
-    fireEvent.click(screen.getByRole('button', { name: /click here if not redirected/i }));
+    fireEvent.click(screen.getByRole('button', { name: /اضغط هنا إذا لم يتم التحويل/i }));
     expect(window.location.reload).toHaveBeenCalledTimes(1);
   });
 });

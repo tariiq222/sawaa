@@ -52,7 +52,7 @@ describe('ProcessPaymentHandler', () => {
     const tx = buildTx();
     const prisma = buildPrisma(tx);
     const eventBus = buildEventBus();
-    const handler = new ProcessPaymentHandler(prisma as never, eventBus as never);
+    const handler = new ProcessPaymentHandler(prisma as never, prisma as never, eventBus as never);
 
     const result = await handler.execute({
       invoiceId: 'inv-1',
@@ -86,7 +86,7 @@ describe('ProcessPaymentHandler', () => {
     });
     const prisma = buildPrisma(tx);
     const eventBus = buildEventBus();
-    const handler = new ProcessPaymentHandler(prisma as never, eventBus as never);
+    const handler = new ProcessPaymentHandler(prisma as never, prisma as never, eventBus as never);
 
     await handler.execute({
       invoiceId: 'inv-1',
@@ -119,7 +119,7 @@ describe('ProcessPaymentHandler', () => {
       },
     });
     const prisma = buildPrisma(tx);
-    const handler = new ProcessPaymentHandler(prisma as never, buildEventBus() as never);
+    const handler = new ProcessPaymentHandler(prisma as never, prisma as never, buildEventBus() as never);
 
     const result = await handler.execute({
       invoiceId: 'inv-1',
@@ -145,7 +145,7 @@ describe('ProcessPaymentHandler', () => {
       payment: { findFirst: jest.fn(), create: jest.fn(), aggregate: jest.fn() },
     });
     const prisma = buildPrisma(tx);
-    const handler = new ProcessPaymentHandler(prisma as never, buildEventBus() as never);
+    const handler = new ProcessPaymentHandler(prisma as never, prisma as never, buildEventBus() as never);
 
     await expect(
       handler.execute({
@@ -165,7 +165,7 @@ describe('ProcessPaymentHandler', () => {
       payment: { findFirst: jest.fn(), create: jest.fn(), aggregate: jest.fn() },
     });
     const prisma = buildPrisma(tx);
-    const handler = new ProcessPaymentHandler(prisma as never, buildEventBus() as never);
+    const handler = new ProcessPaymentHandler(prisma as never, prisma as never, buildEventBus() as never);
 
     await expect(
       handler.execute({

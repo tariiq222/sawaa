@@ -9,11 +9,11 @@ describe('NoOpAdapter (SMS)', () => {
   });
 
   it('should throw on send', async () => {
-    await expect(adapter.send('+966501234567', 'Hello', 'Sawaa')).rejects.toThrow(SmsProviderNotConfiguredError);
+    await expect(adapter.send()).rejects.toThrow(SmsProviderNotConfiguredError);
   });
 
   it('should throw on verifyDlrSignature', () => {
-    expect(() => adapter.verifyDlrSignature({ rawBody: 'test', signature: 'sig' }, 'secret')).toThrow(SmsProviderNotConfiguredError);
+    expect(() => adapter.verifyDlrSignature({ rawBody: 'test', signature: 'sig' } as any, 'secret')).toThrow(SmsProviderNotConfiguredError);
   });
 
   it('should throw on parseDlr', () => {

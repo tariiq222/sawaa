@@ -26,9 +26,9 @@ describe('UpdateCategoryHandler', () => {
 
   it('should execute', async () => {
     (prisma.serviceCategory.findFirst as jest.Mock).mockResolvedValue({ id: 'test' });
-    await handler.execute({categoryId:"00000000-0000-0000-0000-000000000001",nameAr:"Test",nameEn:"Test",departmentId:"00000000-0000-0000-0000-000000000001",sortOrder:"test",isActive:true});
+    await handler.execute({categoryId:"00000000-0000-0000-0000-000000000001",nameAr:"Test",nameEn:"Test",departmentId:"00000000-0000-0000-0000-000000000001",sortOrder:1,isActive:true});
     
     (prisma.serviceCategory.findFirst as jest.Mock).mockResolvedValue(null);
-    await expect(handler.execute({categoryId:"00000000-0000-0000-0000-000000000001",nameAr:"Test",nameEn:"Test",departmentId:"00000000-0000-0000-0000-000000000001",sortOrder:"test",isActive:true})).rejects.toThrow();
+    await expect(handler.execute({categoryId:"00000000-0000-0000-0000-000000000001",nameAr:"Test",nameEn:"Test",departmentId:"00000000-0000-0000-0000-000000000001",sortOrder:1,isActive:true})).rejects.toThrow();
   });
 });

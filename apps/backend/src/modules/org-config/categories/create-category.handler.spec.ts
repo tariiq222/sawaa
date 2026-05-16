@@ -26,7 +26,7 @@ describe('CreateCategoryHandler', () => {
 
   it('should execute successfully', async () => {
     (prisma.serviceCategory.create as jest.Mock).mockResolvedValue({ id: 'test-id' });
-    const result = await handler.execute({nameAr:"Test Name",nameEn:"Test Name",departmentId:"00000000-0000-0000-0000-000000000001",sortOrder:"test"});
+    const result = await handler.execute({nameAr:"Test Name",nameEn:"Test Name",departmentId:"00000000-0000-0000-0000-000000000001",sortOrder:1});
     expect(result).toBeDefined();
   });
 });

@@ -22,22 +22,22 @@ describe('GetStaffTargetsHandler', () => {
 
   it('filters out invalid roles and returns users', async () => {
     prisma.user.findMany.mockResolvedValue([
-      { id: 'u1', role: UserRole.OWNER },
+      { id: 'u1', role: UserRole.ADMIN },
     ]);
-    const result = await handler.execute({ organizationId: 'org-1', roles: [UserRole.OWNER, 'INVALID'] });
+    const result = await handler.execute({ organizationId: 'org-1', roles: [UserRole.ADMIN, 'INVALID'] });
     expect(prisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ role: { in: [UserRole.OWNER] } }),
+        where: expect.objectContaining({ role: { in: [UserRole.ADMIN] } }),
       }),
     );
-    expect(result).toEqual([{ userId: 'u1', role: UserRole.OWNER }]);
+    expect(result).toEqual([{ userId: 'u1', role: UserRole.ADMIN }]);
   });
 
   it('includes includeUserId when not already in list', async () => {
-    prisma.user.findMany.mockResolvedValue([{ id: 'u1', role: UserRole.OWNER }]);
+    prisma.user.findMany.mockResolvedValue([{ id: 'u1', role: UserRole.ADMIN }]);
     const result = await handler.execute({
       organizationId: 'org-1',
-      roles: [UserRole.OWNER],
+      roles: [UserRole.ADMIN],
       includeUserId: 'u2',
     });
     expect(result).toHaveLength(2);
@@ -45,10 +45,10 @@ describe('GetStaffTargetsHandler', () => {
   });
 
   it('does not duplicate includeUserId if already present', async () => {
-    prisma.user.findMany.mockResolvedValue([{ id: 'u1', role: UserRole.OWNER }]);
+    prisma.user.findMany.mockResolvedValue([{ id: 'u1', role: UserRole.ADMIN }]);
     const result = await handler.execute({
       organizationId: 'org-1',
-      roles: [UserRole.OWNER],
+      roles: [UserRole.ADMIN],
       includeUserId: 'u1',
     });
     expect(result).toHaveLength(1);

@@ -26,10 +26,10 @@ describe('GetFileHandler', () => {
 
   it('should execute successfully', async () => {
     (prisma.file.findFirst as jest.Mock).mockResolvedValue({ id: 'test-id' });
-    const result = await handler.execute({});
+    const result = await handler.execute('test' as any);
     expect(result).toBeDefined();
     
     (prisma.file.findFirst as jest.Mock).mockResolvedValue(null);
-    await expect(handler.execute({})).rejects.toThrow();
+    await expect(handler.execute('test' as any)).rejects.toThrow();
   });
 });

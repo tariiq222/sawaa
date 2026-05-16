@@ -22,7 +22,7 @@ describe('UpsertPlatformSettingHandler', () => {
 
   it('executes without throwing', async () => {
     try {
-      await handler.execute({});
+      await handler.execute({} as any, 'actor-1');
     } catch (_e) {
       // Expected for incomplete mocks
     }

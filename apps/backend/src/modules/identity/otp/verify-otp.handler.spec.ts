@@ -42,7 +42,7 @@ describe('VerifyOtpHandler', () => {
   const otpRecord = {
     id: 'otp-1',
     identifier: '+966500000001',
-    purpose: 'LOGIN',
+    purpose: 'CLIENT_LOGIN' as any,
     codeHash: 'hash',
     consumedAt: null,
     expiresAt: new Date(Date.now() + 60000),
@@ -54,17 +54,17 @@ describe('VerifyOtpHandler', () => {
 
   it('should throw BadRequestException when OTP not found', async () => {
     prisma.otpCode.findFirst.mockResolvedValue(null);
-    await expect(handler.execute({ identifier: '+966500000001', code: '123456', purpose: 'LOGIN' })).rejects.toThrow(BadRequestException);
+    await expect(handler.execute({ identifier: '+966500000001', code: '123456', purpose: 'CLIENT_LOGIN' } as any)).rejects.toThrow(BadRequestException);
   });
 
   it('should throw BadRequestException when OTP locked out', async () => {
     prisma.otpCode.findFirst.mockResolvedValue({ ...otpRecord, lockedUntil: new Date(Date.now() + 60000) });
-    await expect(handler.execute({ identifier: '+966500000001', code: '123456', purpose: 'LOGIN' })).rejects.toThrow('OTP_LOCKED_OUT');
+    await expect(handler.execute({ identifier: '+966500000001', code: '123456', purpose: 'CLIENT_LOGIN' } as any)).rejects.toThrow('OTP_LOCKED_OUT');
   });
 
   it('should throw BadRequestException when max attempts reached', async () => {
     prisma.otpCode.findFirst.mockResolvedValue({ ...otpRecord, attempts: 5 });
-    await expect(handler.execute({ identifier: '+966500000001', code: '123456', purpose: 'LOGIN' })).rejects.toThrow('Too many failed attempts');
+    await expect(handler.execute({ identifier: '+966500000001', code: '123456', purpose: 'CLIENT_LOGIN' } as any)).rejects.toThrow('Too many failed attempts');
   });
 
   it('should throw UnauthorizedException when code does not match', async () => {
@@ -72,7 +72,7 @@ describe('VerifyOtpHandler', () => {
     (bcrypt.compare as jest.Mock).mockResolvedValue(false);
     prisma.otpCode.update.mockResolvedValue({});
 
-    await expect(handler.execute({ identifier: '+966500000001', code: '123456', purpose: 'LOGIN' })).rejects.toThrow(UnauthorizedException);
+    await expect(handler.execute({ identifier: '+966500000001', code: '123456', purpose: 'CLIENT_LOGIN' } as any)).rejects.toThrow(UnauthorizedException);
     expect(prisma.otpCode.update).toHaveBeenCalledWith(expect.objectContaining({ data: { attempts: { increment: 1 } } }));
   });
 
@@ -81,7 +81,7 @@ describe('VerifyOtpHandler', () => {
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.otpCode.updateMany.mockResolvedValue({ count: 0 });
 
-    await expect(handler.execute({ identifier: '+966500000001', code: '123456', purpose: 'LOGIN' })).rejects.toThrow('OTP already used or expired');
+    await expect(handler.execute({ identifier: '+966500000001', code: '123456', purpose: 'CLIENT_LOGIN' } as any)).rejects.toThrow('OTP already used or expired');
   });
 
   it('should verify SMS OTP and return session token', async () => {
@@ -90,7 +90,7 @@ describe('VerifyOtpHandler', () => {
     prisma.otpCode.updateMany.mockResolvedValue({ count: 1 });
     prisma.client.updateMany.mockResolvedValue({});
 
-    const result = await handler.execute({ identifier: '+966500000001', code: '123456', purpose: 'LOGIN' });
+    const result = await handler.execute({ identifier: '+966500000001', code: '123456', purpose: 'CLIENT_LOGIN' } as any);
     expect(prisma.client.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { phone: '+966500000001' },
       data: { phoneVerified: expect.any(Date) },
@@ -105,7 +105,7 @@ describe('VerifyOtpHandler', () => {
     prisma.otpCode.updateMany.mockResolvedValue({ count: 1 });
     prisma.client.updateMany.mockResolvedValue({});
 
-    await handler.execute({ identifier: 'test@test.com', code: '123456', purpose: 'LOGIN' });
+    await handler.execute({ identifier: 'test@test.com', code: '123456', purpose: 'CLIENT_LOGIN' } as any);
     expect(prisma.client.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { email: 'test@test.com' },
       data: { emailVerified: expect.any(Date) },
@@ -117,7 +117,7 @@ describe('VerifyOtpHandler', () => {
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.otpCode.updateMany.mockResolvedValue({ count: 1 });
 
-    await handler.execute({ identifier: '+966500000001', code: '123456', purpose: 'LOGIN' });
+    await handler.execute({ identifier: '+966500000001', code: '123456', purpose: 'CLIENT_LOGIN' } as any);
     expect(prisma.client.updateMany).not.toHaveBeenCalled();
   });
 });

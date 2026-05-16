@@ -48,17 +48,17 @@ describe('TaqnyatAdapter', () => {
     const secret = 'webhook-secret';
     const { createHmac } = require('crypto');
     const signature = createHmac('sha256', secret).update(rawBody).digest('hex');
-    expect(() => adapter.verifyDlrSignature({ rawBody, signature }, secret)).not.toThrow();
+    expect(() => adapter.verifyDlrSignature({ rawBody, signature } as any, secret)).not.toThrow();
   });
 
   it('should throw on signature mismatch', () => {
     const { createHmac } = require('crypto');
     const signature = createHmac('sha256', 'wrong-secret').update('test').digest('hex');
-    expect(() => adapter.verifyDlrSignature({ rawBody: 'test', signature }, 'secret')).toThrow('mismatch');
+    expect(() => adapter.verifyDlrSignature({ rawBody: 'test', signature } as any, 'secret')).toThrow('mismatch');
   });
 
   it('should throw on empty signature', () => {
-    expect(() => adapter.verifyDlrSignature({ rawBody: 'test', signature: '' }, 'secret')).toThrow('mismatch');
+    expect(() => adapter.verifyDlrSignature({ rawBody: 'test', signature: '' } as any, 'secret')).toThrow('mismatch');
   });
 
   it('should parse DLR as delivered', () => {

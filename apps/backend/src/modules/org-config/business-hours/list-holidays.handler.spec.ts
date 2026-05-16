@@ -27,9 +27,9 @@ describe('ListHolidaysHandler', () => {
 
   it('should execute', async () => {
     (prisma.branch.findFirst as jest.Mock).mockResolvedValue({ id: 'test' });
-    await handler.execute({branchId:"00000000-0000-0000-0000-000000000001",year:"test"});
+    await handler.execute({branchId:"00000000-0000-0000-0000-000000000001",year:2024});
     
     (prisma.branch.findFirst as jest.Mock).mockResolvedValue(null);
-    await expect(handler.execute({branchId:"00000000-0000-0000-0000-000000000001",year:"test"})).rejects.toThrow();
+    await expect(handler.execute({branchId:"00000000-0000-0000-0000-000000000001",year:2024})).rejects.toThrow();
   });
 });

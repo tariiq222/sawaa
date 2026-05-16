@@ -26,6 +26,6 @@ describe('UpsertChatbotConfigHandler', () => {
 
   it('should execute', async () => {
     (prisma.chatbotConfig.findFirst as jest.Mock).mockResolvedValue({ id: 'test' });
-    await handler.execute({systemPromptAr:"test",systemPromptEn:"test",greetingAr:"test",greetingEn:"test",escalateToHumanAt:"test",settings:"test"});
+    await handler.execute({systemPromptAr:"test",systemPromptEn:"test",greetingAr:"test",greetingEn:"test",escalateToHumanAt:3,settings:{} as any});
   });
 });

@@ -22,7 +22,7 @@ describe('GetPlatformSettingHandler', () => {
 
   it('executes without throwing', async () => {
     try {
-      await handler.execute({});
+      await handler.execute('test' as any);
     } catch (e) {
       // Expected for incomplete mocks
     }

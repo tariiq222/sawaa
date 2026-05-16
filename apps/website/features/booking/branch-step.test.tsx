@@ -25,7 +25,7 @@ describe('BranchStep', () => {
   it('calls onBack when Back button is clicked', () => {
     const onBack = vi.fn();
     render(<BranchStep branches={branches} onSelect={vi.fn()} onBack={onBack} />);
-    fireEvent.click(screen.getByRole('button', { name: /back/i }));
+    fireEvent.click(screen.getByRole('button', { name: /رجوع/i }));
     expect(onBack).toHaveBeenCalled();
   });
 

@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { BookingStatus, ZoomMeetingStatus, Prisma } from '@prisma/client';
 import { CreateZoomMeetingHandler } from './create-zoom-meeting.handler';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { ZoomApiClient } from '../../../infrastructure/zoom/zoom-api.client';
 import { ZoomCredentialsService } from '../../../infrastructure/zoom/zoom-credentials.service';
 
@@ -23,7 +23,7 @@ const buildPrisma = () => ({
 describe('CreateZoomMeetingHandler', () => {
   let handler: CreateZoomMeetingHandler;
   let prisma: ReturnType<typeof buildPrisma>;
-  let zoomApi: jest.Mocked<Partial<ZoomApiClient>>;
+  let zoomApi: { getAccessToken: jest.Mock; createMeeting: jest.Mock };
   let zoomCredentials: jest.Mocked<Partial<ZoomCredentialsService>>;
   let txMock: ReturnType<typeof buildPrisma>;
 
@@ -31,9 +31,11 @@ describe('CreateZoomMeetingHandler', () => {
     prisma = buildPrisma();
     txMock = buildPrisma();
 
-    prisma.$transaction = jest
-      .fn()
-      .mockImplementation(async (fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock));
+    const rlsTransaction = {
+      withTransaction: jest
+        .fn()
+        .mockImplementation(async (fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock)),
+    };
 
     zoomApi = {
       getAccessToken: jest.fn().mockResolvedValue('token'),
@@ -56,6 +58,7 @@ describe('CreateZoomMeetingHandler', () => {
       providers: [
         CreateZoomMeetingHandler,
         { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: rlsTransaction },
         { provide: ZoomApiClient, useValue: zoomApi },
         { provide: ZoomCredentialsService, useValue: zoomCredentials },
       ],

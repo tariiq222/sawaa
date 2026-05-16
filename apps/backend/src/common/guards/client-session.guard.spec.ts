@@ -27,11 +27,11 @@ describe('ClientSessionGuard', () => {
     } as any);
 
   it('should throw on error', () => {
-    expect(() => guard.handleRequest(new Error('fail'), null, null, createContext())).toThrow(UnauthorizedException);
+    expect(() => guard.handleRequest(new Error('fail'), null as any, null, createContext())).toThrow(UnauthorizedException);
   });
 
   it('should throw on no client', () => {
-    expect(() => guard.handleRequest(null, null, null, createContext())).toThrow(UnauthorizedException);
+    expect(() => guard.handleRequest(null, null as any, null, createContext())).toThrow(UnauthorizedException);
   });
 
   it('should throw on client without id', () => {

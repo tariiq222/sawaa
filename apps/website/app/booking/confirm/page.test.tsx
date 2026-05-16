@@ -1,37 +1,50 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 
 let searchParams = new URLSearchParams();
 vi.mock('next/navigation', () => ({
   useSearchParams: () => searchParams,
 }));
 
+vi.mock('@/lib/public-fetch', () => ({
+  publicFetch: vi.fn(),
+}));
+
 import BookingConfirmPage from './page';
+import { publicFetch } from '@/lib/public-fetch';
+
+const publicFetchMock = publicFetch as ReturnType<typeof vi.fn>;
 
 describe('/booking/confirm page', () => {
   beforeEach(() => {
     searchParams = new URLSearchParams();
+    publicFetchMock.mockReset();
   });
 
-  it('renders success state with booking id', () => {
+  it('renders success state with booking id', async () => {
+    publicFetchMock.mockResolvedValue({ bookingId: 'bk_42', status: 'CONFIRMED', paymentStatus: 'COMPLETED' });
     searchParams = new URLSearchParams({ status: 'success', bookingId: 'bk_42' });
     render(<BookingConfirmPage />);
-    expect(screen.getByRole('heading', { name: /booking confirmed/i })).toBeTruthy();
-    expect(screen.getByText(/bk_42/)).toBeTruthy();
-    expect(screen.getByRole('link', { name: /book another appointment/i })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /تم تأكيد الحجز/i })).toBeTruthy();
+    });
+    expect(screen.getByRole('link', { name: /حجز موعد آخر/i })).toBeTruthy();
   });
 
-  it('renders failed state with retry CTA', () => {
+  it('renders failed state with retry CTA', async () => {
+    publicFetchMock.mockResolvedValue({ bookingId: 'bk_42', status: 'CANCELLED', paymentStatus: 'FAILED' });
     searchParams = new URLSearchParams({ status: 'failed', bookingId: 'bk_42' });
     render(<BookingConfirmPage />);
-    expect(screen.getByRole('heading', { name: /payment failed/i })).toBeTruthy();
-    expect(screen.getByRole('link', { name: /try again/i })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /فشل الدفع/i })).toBeTruthy();
+    });
+    expect(screen.getByRole('link', { name: /حاول مرة أخرى/i })).toBeTruthy();
   });
 
-  it('renders pending state when status is missing or unknown', () => {
+  it('renders failed state when bookingId is missing', () => {
     searchParams = new URLSearchParams();
     render(<BookingConfirmPage />);
-    expect(screen.getByText(/checking payment status/i)).toBeTruthy();
-    expect(screen.getByRole('link', { name: /go to booking/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /فشل الدفع/i })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /حاول مرة أخرى/i })).toBeTruthy();
   });
 });

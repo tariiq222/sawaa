@@ -95,12 +95,12 @@ describe('UnifonicAdapter', () => {
     const secret = 'webhook-secret';
     const signature = createHmac('sha256', secret).update(rawBody).digest('hex');
 
-    expect(() => adapter.verifyDlrSignature({ rawBody, signature }, secret)).not.toThrow();
+    expect(() => adapter.verifyDlrSignature({ rawBody, signature } as any, secret)).not.toThrow();
   });
 
   it('verifyDlrSignature throws on malformed signature (non-hex)', () => {
     expect(() =>
-      adapter.verifyDlrSignature({ rawBody: 'test', signature: 'not-hex!!!' }, 'secret'),
+      adapter.verifyDlrSignature({ rawBody: 'test', signature: 'not-hex!!!' } as any, 'secret'),
     ).toThrow('Unifonic DLR signature mismatch');
   });
 
@@ -108,14 +108,14 @@ describe('UnifonicAdapter', () => {
     const { createHmac } = require('crypto');
     const signature = createHmac('sha256', 'wrong-secret').update('test').digest('hex');
 
-    expect(() => adapter.verifyDlrSignature({ rawBody: 'test', signature }, 'secret')).toThrow(
+    expect(() => adapter.verifyDlrSignature({ rawBody: 'test', signature } as any, 'secret')).toThrow(
       'Unifonic DLR signature mismatch',
     );
   });
 
   it('verifyDlrSignature throws on length mismatch', () => {
     expect(() =>
-      adapter.verifyDlrSignature({ rawBody: 'test', signature: 'aa' }, 'secret'),
+      adapter.verifyDlrSignature({ rawBody: 'test', signature: 'aa' } as any, 'secret'),
     ).toThrow('Unifonic DLR signature mismatch');
   });
 

@@ -25,12 +25,12 @@ const paid: InvoiceDetail = {
 describe('InvoiceView', () => {
   it('renders the short invoice id, totals breakdown, and PAID status', () => {
     render(<InvoiceView invoice={paid} />);
-    expect(screen.getByRole('heading', { name: /invoice/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /فاتورة/i })).toBeTruthy();
     expect(screen.getByText('#abcdef12')).toBeTruthy();
     expect(screen.getByText('PAID')).toBeTruthy();
-    expect(screen.getByText(/VAT \(15%\)/)).toBeTruthy();
-    expect(screen.getByText('Subtotal')).toBeTruthy();
-    expect(screen.getByText('Discount')).toBeTruthy();
+    expect(screen.getByText(/ضريبة القيمة المضافة \(15%\)/)).toBeTruthy();
+    expect(screen.getByText('المجموع الفرعي')).toBeTruthy();
+    expect(screen.getByText('الخصم')).toBeTruthy();
   });
 
   it('renders the seller name from the invoice payload', () => {
@@ -40,13 +40,13 @@ describe('InvoiceView', () => {
 
   it('hides the discount row when discountAmt is zero', () => {
     render(<InvoiceView invoice={{ ...paid, discountAmt: 0 }} />);
-    expect(screen.queryByText('Discount')).toBeNull();
+    expect(screen.queryByText('الخصم')).toBeNull();
   });
 
   it('calls window.print when the Print button is clicked', () => {
     const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
     render(<InvoiceView invoice={paid} />);
-    fireEvent.click(screen.getByRole('button', { name: /print invoice/i }));
+    fireEvent.click(screen.getByRole('button', { name: /طباعة الفاتورة/i }));
     expect(printSpy).toHaveBeenCalledTimes(1);
     printSpy.mockRestore();
   });

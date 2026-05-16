@@ -26,7 +26,7 @@ describe('GetMeHandler', () => {
 
   it('should execute', async () => {
     try {
-      await handler.execute({ id: '00000000-0000-0000-0000-000000000001' });
+      await handler.execute('00000000-0000-0000-0000-000000000001');
     } catch (e) {
       // Expected for incomplete mocks
     }

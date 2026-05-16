@@ -6,110 +6,114 @@ import { jest } from '@jest/globals';
 // dependency (Redis, Sentry, e-mail/SMS providers, MinIO, Zoom, …) so that
 // the Nest application can bootstrap without real infrastructure.
 
+// Helper: jest.fn() from @jest/globals types mockResolvedValue as `never`
+// when the function signature is unknown. Cast once to avoid `as any` noise.
+const fn = jest.fn as (...args: any[]) => jest.Mock<any>;
+
 // Redis
 jest.mock('ioredis', () => {
-  return jest.fn().mockImplementation(() => ({
-    on: jest.fn(),
-    get: jest.fn().mockResolvedValue(null),
-    set: jest.fn().mockResolvedValue('OK'),
-    setex: jest.fn().mockResolvedValue('OK'),
-    del: jest.fn().mockResolvedValue(1),
-    incr: jest.fn().mockResolvedValue(1),
-    expire: jest.fn().mockResolvedValue(1),
-    multi: jest.fn().mockReturnValue({
-      incr: jest.fn().mockReturnThis(),
-      expire: jest.fn().mockReturnThis(),
-      exec: jest.fn().mockResolvedValue([[null, 1], [null, 1]]),
+  return fn().mockImplementation(() => ({
+    on: fn(),
+    get: fn().mockResolvedValue(null),
+    set: fn().mockResolvedValue('OK'),
+    setex: fn().mockResolvedValue('OK'),
+    del: fn().mockResolvedValue(1),
+    incr: fn().mockResolvedValue(1),
+    expire: fn().mockResolvedValue(1),
+    multi: fn().mockReturnValue({
+      incr: fn().mockReturnThis(),
+      expire: fn().mockReturnThis(),
+      exec: fn().mockResolvedValue([[null, 1], [null, 1]]),
     }),
-    flushdb: jest.fn().mockResolvedValue('OK'),
-    ping: jest.fn().mockResolvedValue('PONG'),
-    quit: jest.fn().mockResolvedValue('OK'),
-    disconnect: jest.fn().mockResolvedValue('OK'),
+    flushdb: fn().mockResolvedValue('OK'),
+    ping: fn().mockResolvedValue('PONG'),
+    quit: fn().mockResolvedValue('OK'),
+    disconnect: fn().mockResolvedValue('OK'),
   }));
 });
 
 // Throttler storage — must be before AppModule imports
 jest.mock('@nest-lab/throttler-storage-redis', () => ({
-  ThrottlerStorageRedisService: jest.fn().mockImplementation(() => ({
-    addRecord: jest.fn().mockResolvedValue(undefined),
-    getRecord: jest.fn().mockResolvedValue([]),
-    deleteRecord: jest.fn().mockResolvedValue(undefined),
-    clearExpiredRecords: jest.fn().mockResolvedValue(undefined),
-    close: jest.fn().mockResolvedValue(undefined),
-    on: jest.fn(),
+  ThrottlerStorageRedisService: fn().mockImplementation(() => ({
+    addRecord: fn().mockResolvedValue(undefined),
+    getRecord: fn().mockResolvedValue([]),
+    deleteRecord: fn().mockResolvedValue(undefined),
+    clearExpiredRecords: fn().mockResolvedValue(undefined),
+    close: fn().mockResolvedValue(undefined),
+    on: fn(),
     redis: {
-      on: jest.fn(),
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue('OK'),
-      del: jest.fn().mockResolvedValue(1),
-      ping: jest.fn().mockResolvedValue('PONG'),
+      on: fn(),
+      get: fn().mockResolvedValue(null),
+      set: fn().mockResolvedValue('OK'),
+      del: fn().mockResolvedValue(1),
+      ping: fn().mockResolvedValue('PONG'),
     },
   })),
 }));
 
 // Sentry
 jest.mock('@sentry/node', () => ({
-  init: jest.fn(),
-  withScope: jest.fn((cb) => cb({ setTag: jest.fn(), setUser: jest.fn() })),
-  captureException: jest.fn(),
+  init: fn(),
+  withScope: fn((cb: any) => cb({ setTag: fn(), setUser: fn() })),
+  captureException: fn(),
 }));
 
 // Shutdown state — never report shutting down in tests
 jest.mock('../src/common/shutdown.state', () => ({
-  setShuttingDown: jest.fn(),
-  isShuttingDown: jest.fn().mockReturnValue(false),
+  setShuttingDown: fn(),
+  isShuttingDown: fn().mockReturnValue(false),
 }));
 
 // MinIO
 jest.mock('minio', () => ({
-  Client: jest.fn().mockImplementation(() => ({
-    bucketExists: jest.fn().mockResolvedValue(true),
-    makeBucket: jest.fn().mockResolvedValue(undefined),
-    putObject: jest.fn().mockResolvedValue({ etag: 'etag' }),
-    presignedGetObject: jest.fn().mockResolvedValue('https://cdn.example.com/file'),
-    removeObject: jest.fn().mockResolvedValue(undefined),
-    listObjectsV2: jest.fn().mockReturnValue([]),
+  Client: fn().mockImplementation(() => ({
+    bucketExists: fn().mockResolvedValue(true),
+    makeBucket: fn().mockResolvedValue(undefined),
+    putObject: fn().mockResolvedValue({ etag: 'etag' }),
+    presignedGetObject: fn().mockResolvedValue('https://cdn.example.com/file'),
+    removeObject: fn().mockResolvedValue(undefined),
+    listObjectsV2: fn().mockReturnValue([]),
   })),
 }));
 
 // Nodemailer
 jest.mock('nodemailer', () => ({
-  createTransport: jest.fn().mockReturnValue({
-    sendMail: jest.fn().mockResolvedValue({ messageId: 'msg-1' }),
-    verify: jest.fn().mockResolvedValue(true),
+  createTransport: fn().mockReturnValue({
+    sendMail: fn().mockResolvedValue({ messageId: 'msg-1' }),
+    verify: fn().mockResolvedValue(true),
   }),
 }));
 
 // BullMQ
 jest.mock('bullmq', () => ({
-  Queue: jest.fn().mockImplementation(() => ({
-    add: jest.fn().mockResolvedValue({ id: 'job-1' }),
-    getJob: jest.fn().mockResolvedValue(null),
-    close: jest.fn().mockResolvedValue(undefined),
+  Queue: fn().mockImplementation(() => ({
+    add: fn().mockResolvedValue({ id: 'job-1' }),
+    getJob: fn().mockResolvedValue(null),
+    close: fn().mockResolvedValue(undefined),
   })),
-  Worker: jest.fn().mockImplementation(() => ({
-    on: jest.fn(),
-    close: jest.fn().mockResolvedValue(undefined),
+  Worker: fn().mockImplementation(() => ({
+    on: fn(),
+    close: fn().mockResolvedValue(undefined),
   })),
-  QueueEvents: jest.fn().mockImplementation(() => ({
-    on: jest.fn(),
-    close: jest.fn().mockResolvedValue(undefined),
+  QueueEvents: fn().mockImplementation(() => ({
+    on: fn(),
+    close: fn().mockResolvedValue(undefined),
   })),
 }));
 
 // OpenAI
 jest.mock('openai', () => ({
   __esModule: true,
-  default: jest.fn().mockImplementation(() => ({
+  default: fn().mockImplementation(() => ({
     chat: {
       completions: {
-        create: jest.fn().mockResolvedValue({
+        create: fn().mockResolvedValue({
           choices: [{ message: { content: 'Hello' } }],
         }),
       },
     },
     embeddings: {
-      create: jest.fn().mockResolvedValue({
+      create: fn().mockResolvedValue({
         data: [{ embedding: new Array(1536).fill(0) }],
       }),
     },
@@ -118,20 +122,20 @@ jest.mock('openai', () => ({
 
 // Zoom
 jest.mock('../src/infrastructure/zoom/zoom-api.client', () => ({
-  ZoomApiClient: jest.fn().mockImplementation(() => ({
-    createMeeting: jest.fn().mockResolvedValue({ id: 123, join_url: 'https://zoom.us/j/123' }),
-    deleteMeeting: jest.fn().mockResolvedValue(undefined),
+  ZoomApiClient: fn().mockImplementation(() => ({
+    createMeeting: fn().mockResolvedValue({ id: 123, join_url: 'https://zoom.us/j/123' }),
+    deleteMeeting: fn().mockResolvedValue(undefined),
   })),
 }));
 
 // Global fetch stub for external APIs (Moyasar, Authentica, etc.)
 const originalFetch = global.fetch;
 beforeAll(() => {
-  global.fetch = jest.fn().mockResolvedValue({
+  global.fetch = fn().mockResolvedValue({
     ok: true,
     status: 200,
-    json: jest.fn().mockResolvedValue({}),
-    text: jest.fn().mockResolvedValue(''),
+    json: fn().mockResolvedValue({}),
+    text: fn().mockResolvedValue(''),
   }) as any;
 });
 

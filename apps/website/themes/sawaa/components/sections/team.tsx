@@ -27,7 +27,6 @@ function firstLetter(name: string | null): string {
 }
 
 export function Team({ therapists, intro, totalCount }: Props) {
-  if (therapists.length === 0) return null;
   const visible = therapists.slice(0, VISIBLE_COUNT);
   const total = totalCount ?? therapists.length;
 

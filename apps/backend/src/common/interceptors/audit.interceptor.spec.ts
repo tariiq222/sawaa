@@ -59,7 +59,7 @@ describe('AuditInterceptor', () => {
   beforeEach(() => {
     mockPrisma = { activityLog: { create: jest.fn() } };
     interceptor = new AuditInterceptor(mockPrisma);
-    RequestContextStorage.run(new Map(), () => {});
+    RequestContextStorage.run({ requestId: '' }, () => {});
   });
 
   const createContext = (req: any, handlerName: string, controllerName: string): ExecutionContext =>

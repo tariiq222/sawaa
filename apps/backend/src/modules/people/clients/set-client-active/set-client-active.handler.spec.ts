@@ -38,6 +38,7 @@ describe('SetClientActiveHandler', () => {
     const logActivity = buildLogActivity();
     const handler = new SetClientActiveHandler(
       prisma as never,
+      prisma as never,
       eventBus as never,
       logActivity as never,
     );
@@ -80,6 +81,7 @@ describe('SetClientActiveHandler', () => {
     const eventBus = buildEventBus();
     const logActivity = buildLogActivity();
     const handler = new SetClientActiveHandler(
+      prisma as never,
       prisma as never,
       eventBus as never,
       logActivity as never,
@@ -127,6 +129,7 @@ describe('SetClientActiveHandler', () => {
     const eventBus = buildEventBus();
     const logActivity = buildLogActivity();
     const handler = new SetClientActiveHandler(
+      prisma as never,
       prisma as never,
       eventBus as never,
       logActivity as never,

@@ -40,7 +40,7 @@ const buildPrisma = () => {
 describe('SetBusinessHoursHandler', () => {
   it('upserts schedule and returns hours', async () => {
     const prisma = buildPrisma();
-    const handler = new SetBusinessHoursHandler(prisma as never);
+    const handler = new SetBusinessHoursHandler(prisma as never, prisma as never);
     const result = await handler.execute({ branchId: 'branch-1', schedule });
     expect(result).toEqual([mockHour]);
   });
@@ -48,13 +48,13 @@ describe('SetBusinessHoursHandler', () => {
   it('throws NotFoundException when branch not found', async () => {
     const prisma = buildPrisma();
     prisma.branch.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new SetBusinessHoursHandler(prisma as never);
+    const handler = new SetBusinessHoursHandler(prisma as never, prisma as never);
     await expect(handler.execute({ branchId: 'missing', schedule })).rejects.toThrow(NotFoundException);
   });
 
   it('throws BadRequestException for invalid dayOfWeek', async () => {
     const prisma = buildPrisma();
-    const handler = new SetBusinessHoursHandler(prisma as never);
+    const handler = new SetBusinessHoursHandler(prisma as never, prisma as never);
     await expect(
       handler.execute({ branchId: 'branch-1', schedule: [{ dayOfWeek: 9, startTime: '09:00', endTime: '17:00', isOpen: true }] }),
     ).rejects.toThrow(BadRequestException);

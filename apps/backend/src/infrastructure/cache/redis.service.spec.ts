@@ -54,7 +54,7 @@ describe('RedisService', () => {
   });
 
   it('should build options with password when set', () => {
-    config.get.mockImplementation((key) => {
+    config.get.mockImplementation((key: string) => {
       if (key === 'REDIS_PASSWORD') return 'secret';
       return undefined;
     });
@@ -77,7 +77,7 @@ describe('RedisService', () => {
   });
 
   it('should use custom db when set', () => {
-    config.get.mockImplementation((key) => {
+    config.get.mockImplementation((key: string) => {
       if (key === 'REDIS_DB') return 3;
       return key === 'REDIS_PASSWORD' ? null : undefined;
     });
