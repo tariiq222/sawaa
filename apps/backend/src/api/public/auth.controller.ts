@@ -27,6 +27,10 @@ import { GetCurrentUserHandler } from '../../modules/identity/get-current-user/g
 import { GetCurrentUserQuery } from '../../modules/identity/get-current-user/get-current-user.query';
 import { ChangePasswordHandler } from '../../modules/identity/users/change-password.handler';
 
+import { AuthResponseBuilder } from '../../modules/identity/shared/auth-response.builder';
+import { LookupUserHandler } from '../../modules/identity/lookup-user/lookup-user.handler';
+import { LookupUserDto } from '../../modules/identity/lookup-user/lookup-user.dto';
+
 import { RequestPasswordResetHandler } from '../../modules/identity/user-password-reset/request-password-reset/request-password-reset.handler';
 import { RequestPasswordResetDto } from '../../modules/identity/user-password-reset/request-password-reset/request-password-reset.dto';
 import { PerformPasswordResetHandler } from '../../modules/identity/user-password-reset/perform-password-reset/perform-password-reset.handler';
@@ -67,6 +71,8 @@ export class AuthController {
     private readonly requestDashboardOtp: RequestDashboardOtpHandler,
     private readonly verifyDashboardOtp: VerifyDashboardOtpHandler,
     private readonly settings: PlatformSettingsService,
+    private readonly authResponseBuilder: AuthResponseBuilder,
+    private readonly lookupUser: LookupUserHandler,
   ) {}
 
   @Post('login')
@@ -107,8 +113,7 @@ export class AuthController {
     @Ip() ip: string,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const tokens = await this.login.execute({ email: body.email, password: body.password, ip, rememberMe: body.rememberMe });
-    const user = tokens.user;
+    const { user, accessToken, refreshToken } = await this.login.execute({ email: body.email, password: body.password, ip, rememberMe: body.rememberMe });
 
     // If 2FA required and user is super-admin → require OTP step
     if (user?.isSuperAdmin) {
@@ -119,34 +124,17 @@ export class AuthController {
     }
 
     if (!user) {
-      this.setRefreshCookie(res, tokens.refreshToken, body.rememberMe);
+      this.setRefreshCookie(res, refreshToken, body.rememberMe);
       return {
-        accessToken: tokens.accessToken,
+        accessToken,
         user,
         expiresIn: this.parseTtlSeconds(this.config.get<string>('JWT_ACCESS_TTL') ?? '15m'),
       };
     }
 
-    // Match GetCurrentUserHandler: derive firstName/lastName from `name`
-    // by splitting on the first whitespace run.
-    const [firstName = '', ...rest] = (user.name ?? '').trim().split(/\s+/);
-
-    this.setRefreshCookie(res, tokens.refreshToken, body.rememberMe);
-    return {
-      accessToken: tokens.accessToken,
-      user: {
-        ...user,
-        firstName,
-        lastName: rest.join(' '),
-        isSuperAdmin: user.isSuperAdmin,
-        organizationId: DEFAULT_ORG_ID,
-        permissions: flattenPermissions({
-          role: user.role,
-          customRole: user.customRole,
-        }),
-      },
-      expiresIn: this.parseTtlSeconds(this.config.get<string>('JWT_ACCESS_TTL') ?? '15m'),
-    };
+    const response = this.authResponseBuilder.build({ accessToken, refreshToken }, user);
+    this.setRefreshCookie(res, refreshToken, body.rememberMe);
+    return response;
   }
 
   @Post('refresh')
@@ -336,6 +324,26 @@ export class AuthController {
     this.setRefreshCookie(res, result.refreshToken);
     const { refreshToken: _rt, ...safeResult } = result;
     return safeResult;
+  }
+
+  @Public()
+  @Post('lookup')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Check if a user exists and what auth methods are available' })
+  @ApiOkResponse({
+    description: 'User lookup result',
+    schema: {
+      type: 'object',
+      properties: {
+        exists: { type: 'boolean' },
+        hasPassword: { type: 'boolean' },
+        identifier: { type: 'string' },
+        channel: { type: 'string', enum: ['EMAIL', 'SMS'] },
+      },
+    },
+  })
+  async lookupEndpoint(@Body() dto: LookupUserDto) {
+    return this.lookupUser.execute({ identifier: dto.identifier });
   }
 
   private setRefreshCookie(res: Response, token: string, rememberMe?: boolean): void {

@@ -17,6 +17,8 @@ describe('AuthController (unit)', () => {
   let mockRequestDashboardOtp: any;
   let mockVerifyDashboardOtp: any;
   let mockSettings: any;
+  let mockAuthResponseBuilder: any;
+  let mockLookupUser: any;
 
   beforeEach(() => {
     mockLogin = { execute: jest.fn() };
@@ -34,6 +36,21 @@ describe('AuthController (unit)', () => {
     mockRequestDashboardOtp = { execute: jest.fn() };
     mockVerifyDashboardOtp = { execute: jest.fn() };
     mockSettings = { get: jest.fn() };
+    mockAuthResponseBuilder = {
+      build: jest.fn().mockImplementation((_tokens: any, user: any) => ({
+        accessToken: _tokens.accessToken,
+        refreshToken: _tokens.refreshToken,
+        expiresIn: 900,
+        user: {
+          ...user,
+          firstName: (user.name ?? '').trim().split(/\s+/)[0] ?? '',
+          lastName: (user.name ?? '').trim().split(/\s+/).slice(1).join(' '),
+          organizationId: null,
+          permissions: [],
+        },
+      })),
+    };
+    mockLookupUser = { execute: jest.fn() };
 
     controller = new AuthController(
       mockLogin,
@@ -48,6 +65,8 @@ describe('AuthController (unit)', () => {
       mockRequestDashboardOtp,
       mockVerifyDashboardOtp,
       mockSettings,
+      mockAuthResponseBuilder,
+      mockLookupUser,
     );
   });
 

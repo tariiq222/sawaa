@@ -111,6 +111,19 @@ export async function performStaffPasswordReset(
   await authApi.performStaffPasswordReset(token, newPassword)
 }
 
+export async function lookupUser(identifier: string): Promise<{ exists: boolean; hasPassword: boolean; identifier: string; channel: string }> {
+  const res = await fetch(`/api/proxy/auth/lookup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { message?: string }).message ?? 'Failed to lookup user')
+  }
+  return res.json()
+}
+
 export async function requestPasswordReset(email: string): Promise<void> {
   const res = await fetch('/api/proxy/auth/request-password-reset', {
     method: 'POST',
