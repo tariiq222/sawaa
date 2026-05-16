@@ -77,8 +77,17 @@ RUN ARCH=$(uname -m | sed 's/aarch64/arm64/;s/x86_64/x64/') \
 # WARNING: defaults are localhost/test placeholders — always pass real values in CI.
 ARG NEXT_PUBLIC_API_URL=http://localhost:5100/api/v1
 ARG NEXT_PUBLIC_MOYASAR_PLATFORM_PUBLISHABLE_KEY=pk_test_replace_me
+ARG NEXT_PUBLIC_SENTRY_DSN=""
+ARG SENTRY_DSN=""
+ARG SENTRY_RELEASE=""
+ARG SENTRY_AUTH_TOKEN=""
+
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_MOYASAR_PLATFORM_PUBLISHABLE_KEY=$NEXT_PUBLIC_MOYASAR_PLATFORM_PUBLISHABLE_KEY
+ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
+ENV SENTRY_DSN=$SENTRY_DSN
+ENV SENTRY_RELEASE=$SENTRY_RELEASE
+ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
 
 RUN if echo "$NEXT_PUBLIC_API_URL" | grep -q "localhost"; then \
       echo "⚠️ NEXT_PUBLIC_API_URL is localhost — this is fine for local docker-compose builds, but you should pass --build-arg NEXT_PUBLIC_API_URL=https://api.sawaa.sa/api/v1 for production"; \
