@@ -7,7 +7,9 @@
     "^.+\\.(t|j)s$": ["ts-jest", { "diagnostics": false }]
   },
   "moduleNameMapper": {
-    "^@/(.*)$": "<rootDir>/src/$1"
+    "^@/(.*)$": "<rootDir>/src/$1",
+    "^@sawaa/shared/(.*)$": "<rootDir>/../../packages/shared/$1",
+    "^@sawaa/shared$": "<rootDir>/../../packages/shared/index"
   },
   "transformIgnorePatterns": ["node_modules/(?!(uuid)/)"],
   "setupFilesAfterEnv": ["<rootDir>/test/setup-e2e.ts"]
