@@ -16,6 +16,8 @@ import { RequestDashboardOtpHandler } from '../../modules/identity/request-dashb
 import { VerifyDashboardOtpHandler } from '../../modules/identity/verify-dashboard-otp/verify-dashboard-otp.handler';
 import { PlatformSettingsService } from '../../modules/platform/settings/platform-settings.service';
 import { JwtGuard } from '../../common/guards/jwt.guard';
+import { AuthResponseBuilder } from '../../modules/identity/shared/auth-response.builder';
+import { LookupUserHandler } from '../../modules/identity/lookup-user/lookup-user.handler';
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
@@ -32,6 +34,29 @@ describe('AuthController (e2e)', () => {
   const mockRequestDashboardOtp = { execute: jest.fn() };
   const mockVerifyDashboardOtp = { execute: jest.fn() };
   const mockSettings = { get: jest.fn() };
+  const mockAuthResponseBuilder = {
+    build: jest.fn().mockImplementation((tokens, user) => ({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: 900,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name ?? '',
+        phone: user.phone ?? null,
+        gender: user.gender ?? null,
+        avatarUrl: user.avatarUrl ?? null,
+        isActive: user.isActive,
+        role: user.role,
+        isSuperAdmin: user.isSuperAdmin ?? false,
+        firstName: (user.name ?? '').trim().split(/\s+/)[0] ?? '',
+        lastName: (user.name ?? '').trim().split(/\s+/).slice(1).join(' ') ?? '',
+        organizationId: '00000000-0000-0000-0000-000000000001',
+        permissions: [],
+      },
+    })),
+  };
+  const mockLookupUser = { execute: jest.fn() };
 
   beforeAll(async () => {
     tokenHash = await bcrypt.hash('raw-token', 10);
@@ -63,6 +88,8 @@ describe('AuthController (e2e)', () => {
         { provide: RequestDashboardOtpHandler, useValue: mockRequestDashboardOtp },
         { provide: VerifyDashboardOtpHandler, useValue: mockVerifyDashboardOtp },
         { provide: PlatformSettingsService, useValue: mockSettings },
+        { provide: AuthResponseBuilder, useValue: mockAuthResponseBuilder },
+        { provide: LookupUserHandler, useValue: mockLookupUser },
       ],
     })
       .overrideGuard(JwtGuard)

@@ -8,14 +8,14 @@ pnpm workspaces + Turborepo. Node ≥ 20.
 
 ```
 apps/
-├── backend/      NestJS 11, Prisma 6, Postgres, Redis, MinIO, BullMQ — port 5100
-├── dashboard/    Next.js 15 (App Router), React 19, TanStack Query — port 5103
-├── website/      Next.js 15 public site — port 5105
+├── backend/      NestJS 11, Prisma 7, Postgres, Redis, MinIO, BullMQ — port 5200
+├── dashboard/    Next.js 15 (App Router), React 19, TanStack Query — port 5203
+├── website/      Next.js 15 public site — port 5205
 └── mobile/       Expo SDK 55, RN 0.83, Expo Router
 
 packages/
 ├── shared/       cross-app types + zod schemas
-├── api-client/   typed client generated from backend OpenAPI
+├── api-client/   hand-written typed API client (NOT generated — see packages/api-client/CLAUDE.md)
 └── ui/           shadcn primitives for dashboard + website (NOT mobile)
 ```
 
@@ -45,6 +45,8 @@ pnpm openapi:sync         # backend exports openapi.json + dashboard regenerates
 ## Single-tenant
 
 Sawa is a single-tenant deployment. The multi-tenant scaffolding from the original SaaS fork (TenantModule, CLS guard, scoped models, `$allTenants` bypass, subscription billing, verticals, memberships) has been fully removed. The codebase no longer carries `organizationId` filters in Prisma queries.
+
+Some multi-tenant stubs intentionally survive in the frontend as dead code: the dashboard's `useTerminology` hook (`hooks/use-terminology.ts`) and the mobile app's `memberships`/`tenant-switch` services. They are inert — the backend endpoints they target do not exist, the membership query is `enabled: false`, and `switchOrganization()` throws by design. Do not wire them up; treat them as removed.
 
 Provider credentials (Zoom, SMS, Email, Moyasar) are encrypted with AES-256-GCM using a static `DEFAULT_ORG_ID` constant as AAD — see [apps/backend/src/common/constants.ts](apps/backend/src/common/constants.ts).
 

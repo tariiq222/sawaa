@@ -1,6 +1,6 @@
 # @sawaa/ui — Shared UI Primitives
 
-This package holds **presentation-only** UI primitives (shadcn/ui derivatives) reused across `apps/dashboard` and `apps/website`. Mobile (`apps/mobile`) does not consume this package — it has its own React Native primitives.
+This package holds **presentation-only** UI primitives (shadcn/ui derivatives). **Only `apps/dashboard` consumes it today.** `apps/website` was originally intended to share it but never was — the website builds its own bespoke themed components (`apps/website/themes/`) and has no `@sawaa/ui` dependency, tsconfig path, or import. `apps/mobile` does not consume it either — it has its own React Native primitives.
 
 ## What belongs here
 

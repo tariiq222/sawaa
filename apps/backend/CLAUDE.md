@@ -76,7 +76,7 @@ When adding an endpoint: add or extend the slice in `src/modules/<cluster>/<use-
 
 ### Prisma schema is split per cluster
 
-[prisma/schema/](prisma/schema/) has one `.prisma` file per cluster (`bookings.prisma`, `finance.prisma`, etc.) plus `main.prisma` for generator/datasource. Keep model ownership aligned with cluster boundaries.
+[prisma/schema/](prisma/schema/) has roughly one `.prisma` file per cluster (`bookings.prisma`, `finance.prisma`, etc.) plus `main.prisma` for generator/datasource. Two deviations: the `org-config` and `org-experience` clusters share a single `organization.prisma`, and the `integrations` cluster has no schema file (it owns no tables). Keep model ownership aligned with cluster boundaries.
 
 ## Adding work — decision tree
 
@@ -88,10 +88,10 @@ When adding an endpoint: add or extend the slice in `src/modules/<cluster>/<use-
 ## Commands (from `apps/backend/`)
 
 ```bash
-npm run dev                          # Watch mode, :5100
+npm run dev                          # Watch mode, :5200
 npm run typecheck                    # tsc --noEmit
 npm run test                         # Jest unit tests
-npm run test:cov                     # Coverage (thresholds: 40% branch, 50% fn/line)
+npm run test:cov                     # Coverage (thresholds: 65% branch, 70% fn, 85% line/stmt)
 npm run test:e2e                     # E2E (test/jest-e2e.json)
 npx jest path/to/file.spec.ts        # Single test file
 npx jest -t "partial test name"      # By test name

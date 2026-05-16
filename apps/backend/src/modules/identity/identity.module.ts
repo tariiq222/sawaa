@@ -55,6 +55,8 @@ import { VerifyEmailHandler } from './verify-email/verify-email.handler';
 import { OwnerProvisioningService } from './owner-provisioning/owner-provisioning.service';
 import { RequestDashboardOtpHandler } from './request-dashboard-otp/request-dashboard-otp.handler';
 import { VerifyDashboardOtpHandler } from './verify-dashboard-otp/verify-dashboard-otp.handler';
+import { AuthResponseBuilder } from './shared/auth-response.builder';
+import { LookupUserHandler } from './lookup-user/lookup-user.handler';
 
 const handlers = [
   LoginHandler, RefreshTokenHandler, LogoutHandler,
@@ -80,6 +82,7 @@ const handlers = [
   VerifyEmailHandler,
   RequestDashboardOtpHandler,
   VerifyDashboardOtpHandler,
+  LookupUserHandler,
 ];
 
 @Module({
@@ -114,6 +117,7 @@ const handlers = [
     OtpSessionService,
     OtpSessionGuard,
     OwnerProvisioningService,
+    AuthResponseBuilder,
   ],
   exports: [
     CaslAbilityFactory,
@@ -128,6 +132,7 @@ const handlers = [
     OtpSessionGuard,
     RegisterHandler,
     OwnerProvisioningService,
+    AuthResponseBuilder,
     ...handlers,
   ],
 })
