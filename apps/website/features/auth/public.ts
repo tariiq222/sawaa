@@ -5,7 +5,6 @@ export { LoginForm } from './login-form';
 export { RegisterForm } from './register-form';
 export { ForgotPasswordForm } from './forgot-password-form';
 export { ResetPasswordForm } from './reset-password-form';
-export { AuthGuard } from './auth-guard';
 export { useCurrentClient } from './use-current-client';
 export { ClientBookingsList } from './client-bookings-list';
 export { setClient, getClient, clearAuth, isAuthenticated } from './auth-store';

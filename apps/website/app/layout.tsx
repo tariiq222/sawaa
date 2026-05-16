@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { BrandingProvider, BrandingStyle, getPublicBrandingForSsr } from '@/features/branding/public';
 import { QueryProvider } from '@/providers/query-provider';
+import { getLocale, localeDir } from '@/features/locale/locale';
 import './globals.css';
 import { generateMedicalBusinessSchema } from '@/lib/seo/schema';
 
@@ -28,6 +29,8 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const branding = await getPublicBrandingForSsr();
+  const locale = await getLocale();
+  const dir = localeDir(locale);
 
   const medicalBusinessSchema = generateMedicalBusinessSchema({
     '@context': 'https://schema.org',
@@ -39,7 +42,7 @@ export default async function RootLayout({
   });
 
   return (
-    <html lang="ar" dir="rtl">
+    <html lang={locale} dir={dir}>
       <head>
         <BrandingStyle branding={branding} />
         {branding.fontUrl ? (

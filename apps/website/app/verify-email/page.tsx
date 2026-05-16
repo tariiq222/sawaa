@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
+import { Suspense } from "react"
+import { getApiBase } from "@/lib/api-base"
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const params = useSearchParams()
   const token = params.get("token")
 
@@ -23,7 +25,7 @@ export default function VerifyEmailPage() {
     if (!token) return
 
     fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/public/verify-email?token=${encodeURIComponent(token)}`,
+      `${getApiBase()}/public/verify-email?token=${encodeURIComponent(token)}`,
     )
       .then(async (r) => {
         const j = await r.json().catch(() => ({}))
@@ -40,36 +42,31 @@ export default function VerifyEmailPage() {
 
   if (result.status === "verifying") {
     return (
-      <main className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-teal-600 border-t-transparent" />
-        <p className="text-gray-600">جارِ التحقق من بريدك الإلكتروني…</p>
+      <main style={{ display: 'flex', minHeight: '50vh', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', padding: '1rem' }}>
+        <div style={{ width: '2rem', height: '2rem', border: '2px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <p style={{ opacity: 0.6 }}>جارِ التحقق من بريدك الإلكتروني…</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </main>
     )
   }
 
   if (result.status === "ok") {
     return (
-      <main className="flex min-h-[50vh] flex-col items-center justify-center gap-6 px-4">
-        <div className="flex size-16 items-center justify-center rounded-full bg-green-100">
-          <svg className="size-8 text-green-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+      <main style={{ display: 'flex', minHeight: '50vh', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '1rem' }}>
+        <div style={{ width: '4rem', height: '4rem', borderRadius: '50%', background: 'color-mix(in srgb, var(--success, #22c55e) 15%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="32" height="32" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="var(--success, #22c55e)">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
           </svg>
         </div>
-        <div className="text-center">
-          <h1 className="text-xl font-semibold text-gray-900">تم تأكيد بريدك الإلكتروني</h1>
-          <p className="mt-2 text-sm text-gray-500">يمكنك الآن تسجيل الدخول والاستفادة من جميع الخدمات.</p>
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 600 }}>تم تأكيد بريدك الإلكتروني</h1>
+          <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', opacity: 0.6 }}>يمكنك الآن تسجيل الدخول والاستفادة من جميع الخدمات.</p>
         </div>
-        <div className="flex gap-3">
-          <Link
-            href="/login"
-            className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700"
-          >
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <Link href="/login" style={{ padding: '0.625rem 1.25rem', borderRadius: '0.5rem', background: 'var(--primary)', color: 'var(--on-primary, #fff)', fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none' }}>
             تسجيل الدخول
           </Link>
-          <Link
-            href="/"
-            className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
+          <Link href="/" style={{ padding: '0.625rem 1.25rem', borderRadius: '0.5rem', border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)', fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none', color: 'inherit' }}>
             العودة للرئيسية
           </Link>
         </div>
@@ -78,22 +75,27 @@ export default function VerifyEmailPage() {
   }
 
   return (
-    <main className="flex min-h-[50vh] flex-col items-center justify-center gap-6 px-4">
-      <div className="flex size-16 items-center justify-center rounded-full bg-red-100">
-        <svg className="size-8 text-red-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+    <main style={{ display: 'flex', minHeight: '50vh', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '1rem' }}>
+      <div style={{ width: '4rem', height: '4rem', borderRadius: '50%', background: 'color-mix(in srgb, var(--destructive, #ef4444) 10%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="32" height="32" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="var(--destructive, #ef4444)">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
         </svg>
       </div>
-      <div className="text-center">
-        <h1 className="text-xl font-semibold text-gray-900">تعذر التحقق</h1>
-        <p className="mt-2 text-sm text-gray-500">{result.error}</p>
+      <div style={{ textAlign: 'center' }}>
+        <h1 style={{ fontSize: '1.25rem', fontWeight: 600 }}>تعذر التحقق</h1>
+        <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', opacity: 0.6 }}>{result.error}</p>
       </div>
-      <Link
-        href="/"
-        className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700"
-      >
+      <Link href="/" style={{ padding: '0.625rem 1.25rem', borderRadius: '0.5rem', background: 'var(--primary)', color: 'var(--on-primary, #fff)', fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none' }}>
         العودة للرئيسية
       </Link>
     </main>
+  )
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div style={{ textAlign: 'center', padding: '3rem' }}>جارٍ التحميل...</div>}>
+      <VerifyEmailContent />
+    </Suspense>
   )
 }

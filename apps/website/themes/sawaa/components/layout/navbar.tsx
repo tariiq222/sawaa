@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Calendar, Menu, X } from 'lucide-react';
+import { Calendar, Menu, X, User } from 'lucide-react';
 import { useBranding } from '@/features/branding/public';
+import { isAuthenticated } from '@/features/auth/public';
 import { NAV_LINKS, SITE } from '../../lib/constants';
 
 export function Navbar() {
@@ -73,6 +74,16 @@ export function Navbar() {
 
         <div className="hidden md:flex items-center gap-2">
           <Link
+            href={isAuthenticated() ? '/account' : '/login'}
+            className="inline-flex items-center gap-2 text-[0.813rem] font-semibold px-4 py-2.5 rounded-full transition-all"
+            style={{ color: 'var(--sw-neutral-700)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--sw-primary-700)'; e.currentTarget.style.background = 'var(--sw-primary-50)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--sw-neutral-700)'; e.currentTarget.style.background = 'transparent'; }}
+          >
+            <User className="w-4 h-4" aria-hidden="true" />
+            {isAuthenticated() ? 'حسابي' : 'تسجيل الدخول'}
+          </Link>
+          <Link
             href="/booking"
             className="inline-flex items-center gap-2 text-[0.813rem] font-bold px-5 py-2.5 rounded-full transition-all hover:-translate-y-0.5"
             style={{
@@ -126,6 +137,14 @@ export function Navbar() {
               {l.label}
             </a>
           ))}
+          <Link
+            href={isAuthenticated() ? '/account' : '/login'}
+            onClick={() => setMobileOpen(false)}
+            className="text-xl font-semibold px-9 py-3.5 rounded-full transition"
+            style={{ color: 'var(--sw-primary-700)', background: 'var(--sw-primary-50)' }}
+          >
+            {isAuthenticated() ? 'حسابي' : 'تسجيل الدخول'}
+          </Link>
           <Link
             href="/booking"
             onClick={() => setMobileOpen(false)}

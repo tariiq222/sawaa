@@ -2,19 +2,27 @@ import Link from 'next/link';
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-6 px-4 py-24">
-      <div className="flex flex-col items-center gap-3 text-center">
-        <h1 className="text-7xl font-bold text-teal-600">404</h1>
-        <h2 className="text-xl font-semibold text-gray-900">
+    <div style={{ display: 'flex', minHeight: '50vh', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '6rem 1rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', textAlign: 'center' }}>
+        <h1 style={{ fontSize: '4.5rem', fontWeight: 700, color: 'var(--primary)' }}>404</h1>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>
           الصفحة غير موجودة
         </h2>
-        <p className="max-w-sm text-sm text-gray-500">
+        <p style={{ maxWidth: '24rem', fontSize: '0.875rem', opacity: 0.6 }}>
           الصفحة التي تبحث عنها غير موجودة أو تم نقلها.
         </p>
       </div>
       <Link
         href="/"
-        className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700"
+        style={{
+          padding: '0.625rem 1.25rem',
+          borderRadius: '0.5rem',
+          background: 'var(--primary)',
+          color: 'var(--on-primary, #fff)',
+          fontSize: '0.875rem',
+          fontWeight: 500,
+          textDecoration: 'none',
+        }}
       >
         العودة للرئيسية
       </Link>

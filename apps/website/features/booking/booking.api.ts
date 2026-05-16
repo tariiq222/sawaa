@@ -1,5 +1,4 @@
 import type { AvailableSlot, GuestBookingPayload, GuestBookingResponse } from '@sawaa/shared';
-import type { PublicEmployee } from '@sawaa/api-client';
 import { publicFetch } from '@/lib/public-fetch';
 
 export interface PublicBranch {
@@ -37,13 +36,6 @@ export async function getPublicAvailability(
     { cache: 'no-store' },
   );
   return unwrap<AvailableSlot[]>(json);
-}
-
-export async function listPublicEmployees(): Promise<PublicEmployee[]> {
-  const json = await publicFetch<unknown>('/public/employees', {
-    next: { revalidate: 60, tags: ['public-employees'] },
-  });
-  return unwrap<PublicEmployee[]>(json);
 }
 
 export async function createGuestBooking(
