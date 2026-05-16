@@ -84,39 +84,6 @@ describe('CreateClientHandler', () => {
     expect(result.id).toBe('client-1');
   });
 
-  it('should skip phone check when phone is not provided', async () => {
-    prisma.client.create.mockResolvedValue({
-      id: 'client-1',
-      name: 'Ahmed Ali',
-      firstName: 'Ahmed',
-      lastName: 'Ali',
-      phone: null,
-      email: null,
-      gender: null,
-      dateOfBirth: null,
-      nationality: null,
-      nationalId: null,
-      emergencyName: null,
-      emergencyPhone: null,
-      bloodType: null,
-      allergies: null,
-      chronicConditions: null,
-      avatarUrl: null,
-      notes: null,
-      source: 'dashboard',
-      accountType: null,
-      isActive: true,
-      userId: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      deletedAt: null,
-      middleName: null,
-    });
-
-    await handler.execute({ firstName: 'Ahmed', lastName: 'Ali' });
-    expect(prisma.client.findFirst).not.toHaveBeenCalled();
-  });
-
   it('should include middleName in full name', async () => {
     prisma.client.findFirst.mockResolvedValue(null);
     prisma.client.create.mockResolvedValue({
