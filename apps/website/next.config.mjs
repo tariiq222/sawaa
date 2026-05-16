@@ -3,7 +3,7 @@ import { withSentryConfig } from '@sentry/nextjs';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  outputFileTracingRoot: new URL('../', import.meta.url).pathname,
+  outputFileTracingRoot: new URL('../../', import.meta.url).pathname,
   transpilePackages: ['@sawaa/api-client', '@sawaa/shared'],
   typedRoutes: false,
   eslint: { ignoreDuringBuilds: process.env.NODE_ENV !== 'production' },

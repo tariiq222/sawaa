@@ -93,6 +93,7 @@ RUN groupadd -g 1001 app && useradd -u 1001 -g app -s /bin/sh -d /app app
 # so the standalone dir mirrors the monorepo layout. We copy it to /app.
 COPY --from=app-build --chown=app:app /app/apps/website/.next/standalone ./
 COPY --from=app-build --chown=app:app /app/apps/website/.next/static     ./apps/website/.next/static
+COPY --from=app-build --chown=app:app /app/apps/website/public           ./apps/website/public
 
 USER app
 EXPOSE 5105
