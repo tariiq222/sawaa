@@ -24,7 +24,6 @@ import {
   FEATURE_CARD_FIELDS,
   FEATURE_CARD_ICON_OPTIONS,
   featureCardKey,
-  type FeatureCardField,
   type FeatureCardIcon,
   type FeatureCardIndex,
   type FeatureCardsFormValues,

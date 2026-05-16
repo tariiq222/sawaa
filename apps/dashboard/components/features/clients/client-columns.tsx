@@ -35,7 +35,7 @@ export function getClientColumns({
   onToggleActive,
   onDeleteClick,
   t,
-  locale = "ar",
+  locale: _locale = "ar",
   dateFormat = "Y-m-d",
 }: ClientColumnOptions): ColumnDef<Client>[] {
   return [

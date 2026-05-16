@@ -50,16 +50,15 @@ export function EmailConfigForm() {
 
   const [statusMessage, setStatusMessage] = useState<{ text: string; ok: boolean } | null>(null)
 
+  // Seed local form state when server config arrives/changes.
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional sync from server → local form state */
   useEffect(() => {
     if (!config) return
-    // Seed editable form fields from server config; user edits locally and saves explicitly.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProvider(config.provider ?? "NONE")
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSenderName(config.senderName ?? "")
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSenderEmail(config.senderEmail ?? "")
   }, [config])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const buildInput = (): UpsertEmailConfigInput => {
     const base: UpsertEmailConfigInput = {

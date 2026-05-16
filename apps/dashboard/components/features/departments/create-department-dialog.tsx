@@ -32,23 +32,23 @@ interface CreateDepartmentDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+const defaultValues: DepartmentFormData = {
+  nameAr: "",
+  nameEn: "",
+  descriptionAr: "",
+  descriptionEn: "",
+  icon: "",
+  sortOrder: 0,
+  isActive: true,
+  isVisible: true,
+}
+
 export function CreateDepartmentDialog({
   open,
   onOpenChange,
 }: CreateDepartmentDialogProps) {
   const { t } = useLocale()
   const { createMut } = useDepartmentMutations()
-
-  const defaultValues = {
-    nameAr: "",
-    nameEn: "",
-    descriptionAr: "",
-    descriptionEn: "",
-    icon: "",
-    sortOrder: 0,
-    isActive: true,
-    isVisible: true,
-  }
 
   const form = useForm<DepartmentFormData>({
     resolver: zodResolver(departmentSchema),

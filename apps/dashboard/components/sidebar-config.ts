@@ -5,7 +5,6 @@ import {
   Stethoscope02Icon,
   Settings02Icon,
   MoneyBag02Icon,
-  Invoice02Icon,
   ShieldKeyIcon,
   AnalyticsUpIcon,
   AiChat02Icon,
@@ -20,7 +19,6 @@ import {
   Location01Icon,
   Briefcase01Icon,
   InboxIcon,
-  CreditCardIcon,
 } from "@hugeicons/core-free-icons"
 export interface NavItem {
   titleKey: string

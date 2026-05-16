@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
-import { cn, formatName } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import { formatPrice } from "@/lib/money"
 import { Card } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"

@@ -36,7 +36,7 @@ function RatingDisplay({ value }: { value: number | null | undefined }) {
 
 export function getEmployeeColumns(
   onRowClick: (p: Employee) => void,
-  locale: "en" | "ar" = "en",
+  _locale: "en" | "ar" = "en",
   onEdit?: (p: Employee) => void,
   onDelete?: (p: Employee) => void,
   t?: (key: string) => string,

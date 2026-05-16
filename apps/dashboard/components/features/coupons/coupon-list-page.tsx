@@ -26,7 +26,7 @@ export function CouponListPage() {
   const router = useRouter()
   const { t, locale } = useLocale()
   const { canDo } = useAuth()
-  const { coupons, meta, isLoading, error, search, setSearch, status, setStatus, page, setPage } = useCoupons()
+  const { coupons, meta, isLoading, error, search, setSearch, status, setStatus, setPage } = useCoupons()
 
   const { updateMut } = useCouponMutations()
 

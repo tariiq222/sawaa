@@ -20,7 +20,6 @@ import {
   Settings02Icon,
   UserCircle02Icon,
   Logout03Icon,
-  CreditCardIcon,
 } from "@hugeicons/core-free-icons"
 import Link from "next/link"
 import { useTheme } from "next-themes"
@@ -39,7 +38,7 @@ const fontSizeConfig: Record<FontSize, string> = {
 
 export function Header() {
   const { resolvedTheme, setTheme } = useTheme()
-  const { locale, dir, toggleLocale, t } = useLocale()
+  const { dir, toggleLocale, t } = useLocale()
   const { user, logout } = useAuth()
   const [fontSize, setFontSize] = useState<FontSize>("S")
 

@@ -8,7 +8,7 @@
 
 import { authApi } from "@sawaa/api-client"
 import type { AuthResponse, UserPayload } from "@sawaa/api-client"
-import { setAccessToken, getAccessToken } from "@/lib/api"
+import { setAccessToken } from "@/lib/api"
 
 export type AuthUser = UserPayload
 export type { AuthResponse }

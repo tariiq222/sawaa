@@ -3,7 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import { Avatar, AvatarFallback } from "@sawaa/ui"
 import { cn, formatClinicDate, formatClinicTime } from "@/lib/utils"
-import type { DateFormat, TimeFormat } from "@/lib/utils"
+import type { DateFormat } from "@/lib/utils"
 import type { Booking } from "@/lib/types/booking"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { ActionsCell, StatusCell } from "@/components/features/bookings/booking-column-cells"

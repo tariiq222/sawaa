@@ -35,8 +35,7 @@ interface BasicInfoTabProps {
 /* ─── Component ─── */
 
 export function BasicInfoTab({ form, showEmail = false, employeeName, readOnlyEmail }: BasicInfoTabProps) {
-  const { t, locale } = useLocale()
-  const isAr = locale === "ar"
+  const { t } = useLocale()
   const [pendingValue, setPendingValue] = useState<boolean | null>(null)
 
   const displayName = employeeName ?? form.watch("nameEn") ?? ""

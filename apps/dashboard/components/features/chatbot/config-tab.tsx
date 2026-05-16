@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useLayoutEffect } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@sawaa/ui"
@@ -26,7 +26,9 @@ export function ConfigTab() {
   const [greetingEn, setGreetingEn] = useState("")
   const [escalateToHumanAt, setEscalateToHumanAt] = useState("")
 
-  useLayoutEffect(() => {
+  // Seed local form state when server config arrives/changes.
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional sync from server → local form state */
+  useEffect(() => {
     if (!config) return
     setSystemPromptAr(config.systemPromptAr ?? "")
     setSystemPromptEn(config.systemPromptEn ?? "")
@@ -34,6 +36,7 @@ export function ConfigTab() {
     setGreetingEn(config.greetingEn ?? "")
     setEscalateToHumanAt(config.escalateToHumanAt?.toString() ?? "")
   }, [config])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSave = async () => {
     const payload: UpsertChatbotConfigPayload = {

@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import {
   DocumentAttachmentIcon,
   CheckmarkCircle02Icon,
@@ -22,7 +21,7 @@ import { useLocale } from "@/components/locale-provider"
 
 export function InvoiceListPage() {
   const { t } = useLocale()
-  const { payments, isLoading, error, search, setSearch } = useInvoices()
+  const { payments, isLoading, error: _error, search, setSearch } = useInvoices()
 
   const hasFilters = search !== ""
   const resetFilters = () => {

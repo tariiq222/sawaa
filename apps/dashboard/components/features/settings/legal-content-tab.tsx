@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
-import { Card, CardContent } from "@sawaa/ui"
+import { Card } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { Textarea } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"

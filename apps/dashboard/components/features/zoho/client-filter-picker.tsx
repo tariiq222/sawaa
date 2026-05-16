@@ -106,6 +106,7 @@ export function ClientFilterPicker({ value, onChange, selectedLabel }: Props) {
                   <li
                     key={c.id}
                     role="option"
+                    aria-selected={value === c.id}
                     onMouseDown={(e) => {
                       // mousedown fires before blur — keeps selection working
                       e.preventDefault()
