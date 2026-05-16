@@ -146,6 +146,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build shared packages
+        run: |
+          pnpm --filter=backend prisma:generate
+          cd packages/shared && node ../../node_modules/typescript/bin/tsc -p tsconfig.json
+
       - name: Generate API client
         run: pnpm openapi:sync || true
 
