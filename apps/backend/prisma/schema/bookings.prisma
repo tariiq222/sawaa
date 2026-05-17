@@ -78,6 +78,8 @@ model Booking {
   groupSession         GroupSession?       @relation(fields: [groupSessionId], references: [id], onDelete: SetNull)
   recurringGroupId     String?
   recurringPattern     RecurringFrequency?
+  bundleId             String?
+  bundleGroupId        String?
   payAtClinic          Boolean             @default(false)
   couponCode           String?
   discountedPrice      Decimal?            @db.Decimal(12, 2)
@@ -101,6 +103,7 @@ model Booking {
   @@index([employeeId, scheduledAt])
   @@index([employeeId, endsAt])
   @@index([recurringGroupId])
+  @@index([bundleGroupId])
 }
 
 // ─── Waitlist ─────────────────────────────────────────────────────────────────
