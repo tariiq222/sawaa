@@ -85,7 +85,8 @@ export class InitClientPaymentHandler {
       }
     }
 
-    const amountHalalas = Math.round(Number(invoice.total) * 100);
+    // invoice.total is already stored in halalas — send it to Moyasar verbatim.
+    const amountHalalas = Math.round(Number(invoice.total));
     const payment = await this.prisma.payment.create({
       data: {
         invoiceId: invoice.id,
