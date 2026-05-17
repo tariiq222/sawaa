@@ -248,7 +248,8 @@ export class CreateGuestBookingHandler {
         },
       });
 
-      return { bookingId: booking.id, invoiceId: invoice.id, totalHalalat: Math.round(total.toNumber() * 100) };
+      // total is already in halalas
+      return { bookingId: booking.id, invoiceId: invoice.id, totalHalalat: Math.round(total.toNumber()) };
     });
 
     return result;
