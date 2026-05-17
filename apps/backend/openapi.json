@@ -27802,7 +27802,7 @@
           }
         }
       },
-      "MoyasarWebhookDto": {
+      "MoyasarWebhookDataDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -27845,42 +27845,86 @@
             "type": "string",
             "description": "Human-readable message from Moyasar (e.g. failure reason)",
             "example": "Insufficient funds"
+          }
+        }
+      },
+      "MoyasarWebhookDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Payment ID (flat shape) OR event ID (nested shape)",
+            "example": "pay_abc123"
+          },
+          "status": {
+            "type": "string",
+            "description": "Payment status reported by Moyasar (flat shape only)",
+            "enum": [
+              "paid",
+              "failed",
+              "refunded",
+              "authorized",
+              "captured",
+              "voided"
+            ],
+            "example": "paid"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Amount in the smallest currency unit (halalas) — flat shape only",
+            "example": 10000
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 currency code (flat shape only)",
+            "example": "SAR"
+          },
+          "metadata": {
+            "description": "Metadata attached when the payment was initiated (flat shape only)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoyasarWebhookMetadataDto"
+              }
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable message from Moyasar (flat shape only)",
+            "example": "Insufficient funds"
+          },
+          "data": {
+            "description": "Nested payment object — the documented Moyasar webhook delivery shape",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoyasarWebhookDataDto"
+              }
+            ]
           },
           "live": {
             "type": "object",
             "description": "Indicates if the payment was made in live mode",
             "example": true
           },
-          "data": {
-            "type": "object",
-            "description": "Additional payment data"
-          },
           "type": {
             "type": "string",
-            "description": "Payment type",
-            "example": "payment"
+            "description": "Webhook event type (nested shape)",
+            "example": "payment_paid"
           },
           "created_at": {
             "type": "string",
-            "description": "ISO 8601 timestamp when the payment was created",
+            "description": "ISO 8601 timestamp when the event was created",
             "example": "2024-01-15T10:30:00Z"
           },
           "secret_token": {
             "type": "string",
-            "description": "Secret token for payment verification"
+            "description": "Shared secret token — present when the merchant configures body-token verification instead of an HMAC header"
           },
           "account_name": {
             "type": "string",
             "description": "Name of the account associated with the payment",
             "example": "My Account"
           }
-        },
-        "required": [
-          "id",
-          "status",
-          "amount",
-          "currency"
-        ]
+        }
       }
     }
   }

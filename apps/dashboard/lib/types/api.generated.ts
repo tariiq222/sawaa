@@ -7334,28 +7334,28 @@ export interface components {
              */
             invoiceId?: string;
         };
-        MoyasarWebhookDto: {
+        MoyasarWebhookDataDto: {
             /**
              * @description Moyasar payment ID
              * @example pay_abc123
              */
-            id: string;
+            id?: string;
             /**
              * @description Payment status reported by Moyasar
              * @example paid
              * @enum {string}
              */
-            status: "paid" | "failed" | "refunded" | "authorized" | "captured" | "voided";
+            status?: "paid" | "failed" | "refunded" | "authorized" | "captured" | "voided";
             /**
              * @description Amount in the smallest currency unit (halalas)
              * @example 10000
              */
-            amount: number;
+            amount?: number;
             /**
              * @description ISO 4217 currency code
              * @example SAR
              */
-            currency: string;
+            currency?: string;
             /** @description Metadata attached when the payment was initiated */
             metadata?: components["schemas"]["MoyasarWebhookMetadataDto"];
             /**
@@ -7363,24 +7363,54 @@ export interface components {
              * @example Insufficient funds
              */
             message?: string;
+        };
+        MoyasarWebhookDto: {
+            /**
+             * @description Payment ID (flat shape) OR event ID (nested shape)
+             * @example pay_abc123
+             */
+            id?: string;
+            /**
+             * @description Payment status reported by Moyasar (flat shape only)
+             * @example paid
+             * @enum {string}
+             */
+            status?: "paid" | "failed" | "refunded" | "authorized" | "captured" | "voided";
+            /**
+             * @description Amount in the smallest currency unit (halalas) — flat shape only
+             * @example 10000
+             */
+            amount?: number;
+            /**
+             * @description ISO 4217 currency code (flat shape only)
+             * @example SAR
+             */
+            currency?: string;
+            /** @description Metadata attached when the payment was initiated (flat shape only) */
+            metadata?: components["schemas"]["MoyasarWebhookMetadataDto"];
+            /**
+             * @description Human-readable message from Moyasar (flat shape only)
+             * @example Insufficient funds
+             */
+            message?: string;
+            /** @description Nested payment object — the documented Moyasar webhook delivery shape */
+            data?: components["schemas"]["MoyasarWebhookDataDto"];
             /**
              * @description Indicates if the payment was made in live mode
              * @example true
              */
             live?: Record<string, never>;
-            /** @description Additional payment data */
-            data?: Record<string, never>;
             /**
-             * @description Payment type
-             * @example payment
+             * @description Webhook event type (nested shape)
+             * @example payment_paid
              */
             type?: string;
             /**
-             * @description ISO 8601 timestamp when the payment was created
+             * @description ISO 8601 timestamp when the event was created
              * @example 2024-01-15T10:30:00Z
              */
             created_at?: string;
-            /** @description Secret token for payment verification */
+            /** @description Shared secret token — present when the merchant configures body-token verification instead of an HMAC header */
             secret_token?: string;
             /**
              * @description Name of the account associated with the payment
