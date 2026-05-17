@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { BookingWizard } from "./booking-wizard"
+import { BookingPos } from "./booking-pos"
 
 interface BookingCreateViewProps {
   onSuccess: () => void
@@ -21,7 +21,7 @@ export function BookingCreateView({
         className,
       )}
     >
-      <BookingWizard onSuccess={onSuccess} onClose={onCancel} />
+      <BookingPos onSuccess={onSuccess} onCancel={onCancel} />
     </div>
   )
 }
