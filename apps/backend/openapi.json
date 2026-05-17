@@ -25204,7 +25204,8 @@
           },
           "price": {
             "type": "number",
-            "example": 50
+            "example": 5000,
+            "description": "Price in integer halalas (1 SAR = 100)"
           },
           "currency": {
             "type": "string",
@@ -25278,7 +25279,7 @@
           },
           "depositAmount": {
             "type": "number",
-            "description": "Fixed deposit amount — must not exceed price"
+            "description": "Fixed deposit amount in integer halalas — must not exceed price"
           },
           "allowRecurring": {
             "type": "boolean",

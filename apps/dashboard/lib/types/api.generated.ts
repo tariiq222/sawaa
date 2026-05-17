@@ -5443,7 +5443,10 @@ export interface components {
              * @example 30
              */
             durationMins: number;
-            /** @example 50 */
+            /**
+             * @description Price in integer halalas (1 SAR = 100)
+             * @example 5000
+             */
             price: number;
             /**
              * @default SAR
@@ -5511,7 +5514,7 @@ export interface components {
              * @example false
              */
             depositEnabled: boolean;
-            /** @description Fixed deposit amount — must not exceed price */
+            /** @description Fixed deposit amount in integer halalas — must not exceed price */
             depositAmount?: number;
             /**
              * @description Whether recurring bookings are allowed for this service
