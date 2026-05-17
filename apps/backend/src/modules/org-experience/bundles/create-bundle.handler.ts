@@ -1,5 +1,5 @@
 import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { DiscountType } from '@prisma/client';
 import { BundlePriceService } from './bundle-price.service';
 import { CreateBundleDto } from './create-bundle.dto';
@@ -10,6 +10,7 @@ export type CreateBundleCommand = CreateBundleDto;
 export class CreateBundleHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly bundlePrice: BundlePriceService,
   ) {}
 
@@ -60,7 +61,7 @@ export class CreateBundleHandler {
     const bundleCurrency = dto.currency ?? services[0].currency ?? 'SAR';
 
     // 4. Create bundle and items in a transaction
-    const bundle = await this.prisma.$transaction(async (tx) => {
+    const bundle = await this.rlsTransaction.withTransaction(async (tx) => {
       const created = await tx.serviceBundle.create({
         data: {
           nameAr: dto.nameAr,

@@ -10,6 +10,7 @@ import { Checkbox } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { useServices } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
+import { formatPrice } from "@/lib/money"
 
 interface Props {
   value: string[]
@@ -86,7 +87,7 @@ export function BundleServicesPicker({ value, onChange }: Props) {
                 {name}
               </Label>
               <span className="tabular-nums text-xs text-muted-foreground">
-                {s.price} {s.currency}
+                {formatPrice(Number(s.price))} {s.currency}
               </span>
             </div>
           )

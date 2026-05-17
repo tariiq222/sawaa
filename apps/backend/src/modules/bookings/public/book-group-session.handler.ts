@@ -5,7 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { BookingStatus, GroupSessionStatus, Prisma } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 
 // Money is integer halalas — round to whole halalas (0 decimal places).
 const roundMoney = (amount: Prisma.Decimal | number): Prisma.Decimal =>
@@ -26,6 +26,7 @@ export interface BookGroupSessionResult {
 export class BookGroupSessionHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   async execute(cmd: BookGroupSessionCommand): Promise<BookGroupSessionResult> {
@@ -91,7 +92,7 @@ export class BookGroupSessionHandler {
     // Wrap booking + invoice + enrollment + capacity increment in one
     // transaction so a paid group booking never exists without its Invoice
     // (the payment-init handlers require an Invoice to start a Moyasar payment).
-    const booking = await this.prisma.$transaction(async (tx) => {
+    const booking = await this.rlsTransaction.withTransaction(async (tx) => {
       const lastBooking = await tx.booking.findFirst({
         where: {},
         orderBy: { bookingNumber: 'desc' },
