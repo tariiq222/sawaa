@@ -90,4 +90,7 @@ export const enDashboard: Record<string, string> = {
   "dashboard.pendingSuffix": "pending",
   "dashboard.section.today": "Today",
   "dashboard.section.operations": "Operations",
+  "dashboard.range.today": "Today",
+  "dashboard.range.week": "This week",
+  "dashboard.range.month": "This month",
 }

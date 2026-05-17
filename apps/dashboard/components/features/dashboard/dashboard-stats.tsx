@@ -17,6 +17,7 @@ interface DashboardStatsApi {
   todayBookings: number
   confirmedToday: number
   pendingToday: number
+  newClientsToday: number
   pendingPayments: number
   cancelRequests: number
   todayRevenue: number
@@ -34,7 +35,6 @@ type StatCardConfig = {
   icon: IconSvgElement
   iconColor: "primary" | "success" | "warning" | "accent"
   description?: string
-  size?: "default" | "lead"
 }
 
 export function DashboardStats({ stats, visibleStats }: DashboardStatsProps) {
@@ -43,6 +43,8 @@ export function DashboardStats({ stats, visibleStats }: DashboardStatsProps) {
   const todayBookings = stats?.todayBookings ?? 0
   const confirmedToday = stats?.confirmedToday ?? 0
   const pendingToday = stats?.pendingToday ?? 0
+  const newClientsToday = stats?.newClientsToday ?? 0
+  const pendingPayments = stats?.pendingPayments ?? 0
   const todayRevenue = stats?.todayRevenue ?? 0
 
   const cards = [
@@ -60,14 +62,14 @@ export function DashboardStats({ stats, visibleStats }: DashboardStatsProps) {
     visibleStats.clients && {
       key: "clients" as const,
       title: t("dashboard.newClients"),
-      value: confirmedToday,
+      value: newClientsToday,
       icon: UserMultiple02Icon,
       iconColor: "success" as const,
     },
     visibleStats.pendingPayments && {
       key: "pending" as const,
       title: t("dashboard.awaitingApproval"),
-      value: pendingToday,
+      value: pendingPayments,
       icon: Clock01Icon,
       iconColor: "warning" as const,
     },
@@ -94,7 +96,6 @@ export function DashboardStats({ stats, visibleStats }: DashboardStatsProps) {
               icon={card.icon}
               iconColor={card.iconColor}
               description={card.description}
-              size={card.size}
             />
           </div>
         ))}

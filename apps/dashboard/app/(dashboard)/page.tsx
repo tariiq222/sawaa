@@ -1,27 +1,20 @@
+// EXCEPTION: dashboard range filter state, approved 2026-05-17
 "use client"
 
-import { Suspense, useMemo } from "react"
-import { format } from "date-fns"
+import { Suspense, useMemo, useState } from "react"
+import { format, startOfWeek, startOfMonth } from "date-fns"
 import { ar } from "date-fns/locale"
-import { FlashIcon, Analytics01Icon } from "@hugeicons/core-free-icons"
+import { FlashIcon } from "@hugeicons/core-free-icons"
 import { GreetingHeader } from "@/components/features/dashboard/greeting-header"
 import { DashboardStats } from "@/components/features/dashboard/dashboard-stats"
 import { AttentionAlerts } from "@/components/features/dashboard/attention-alerts"
 import { QuickActions } from "@/components/features/dashboard/quick-actions"
-import { TodayTimeline } from "@/components/features/dashboard/today-timeline"
-import { ActivityFeed } from "@/components/features/dashboard/activity-feed"
-import { RevenueChart } from "@/components/features/dashboard/revenue-chart"
-import { RecentPayments } from "@/components/features/dashboard/recent-payments"
-import { TopPerformersChart } from "@/components/features/dashboard/top-performers-chart"
-import { ErrorBanner } from "@/components/features/error-banner"
 import { SectionHeader } from "@/components/features/section-header"
-import { Skeleton } from "@sawaa/ui"
-import { useTodayBookings } from "@/hooks/use-bookings"
-import { useDashboardNotifications } from "@/hooks/use-notifications"
 import { useDashboardStats } from "@/hooks/use-dashboard-stats"
 import { useAuth } from "@/components/providers/auth-provider"
 import { useLocale } from "@/components/locale-provider"
 import { getVisibleWidgets } from "@/lib/dashboard-widgets"
+import { StatsRangeFilter, type StatsRangePreset } from "@/components/features/dashboard/stats-range-filter"
 
 export default function DashboardPage() {
   const today = format(new Date(), "yyyy-MM-dd")
@@ -42,31 +35,28 @@ export default function DashboardPage() {
     locale === "ar" ? { locale: ar } : undefined,
   )
 
-  const {
-    data: todayBookings,
-    isLoading: bookingsLoading,
-    error: bookingsError,
-    refetch: refetchBookings,
-  } = useTodayBookings(today)
+  const [preset, setPreset] = useState<StatsRangePreset>("today")
+  const [customFrom, setCustomFrom] = useState("")
+  const [customTo, setCustomTo] = useState("")
 
-  const {
-    data: notifData,
-    isLoading: notifLoading,
-    error: notifError,
-    refetch: refetchNotifs,
-  } = useDashboardNotifications()
+  const range = useMemo(() => {
+    const now = new Date()
+    if (preset === "today") return { from: today, to: today }
+    if (preset === "week")
+      return { from: format(startOfWeek(now, { weekStartsOn: 6 }), "yyyy-MM-dd"), to: today }
+    if (preset === "month")
+      return { from: format(startOfMonth(now), "yyyy-MM-dd"), to: today }
+    return { from: customFrom || today, to: customTo || today }
+  }, [preset, customFrom, customTo, today])
 
-  const { data: dashboardStats } = useDashboardStats()
+  const handleFromChange = (v: string) => { setCustomFrom(v); setPreset("custom") }
+  const handleToChange = (v: string) => { setCustomTo(v); setPreset("custom") }
+  const handleReset = () => { setPreset("today"); setCustomFrom(""); setCustomTo("") }
+
+  const { data: dashboardStats } = useDashboardStats(range)
 
   const userName =
     user?.activeMembership?.displayName || user?.name || user?.email || "—"
-
-  const operationalSectionVisible =
-    visible.todayTimeline ||
-    visible.activityFeed ||
-    visible.revenueChart ||
-    visible.recentPayments ||
-    visible.topPerformers
 
   return (
     <div className="flex flex-col">
@@ -76,6 +66,15 @@ export default function DashboardPage() {
             userName={userName}
             dateLabel={dateLabel}
             bookingsCount={dashboardStats?.todayBookings ?? 0}
+          />
+          <StatsRangeFilter
+            preset={preset}
+            from={range.from}
+            to={range.to}
+            onPresetChange={setPreset}
+            onFromChange={handleFromChange}
+            onToChange={handleToChange}
+            onReset={handleReset}
           />
           <DashboardStats stats={dashboardStats} visibleStats={visible.stats} />
           <AttentionAlerts
@@ -94,55 +93,6 @@ export default function DashboardPage() {
             eyebrow={t("dashboard.section.today")}
           />
           <QuickActions actions={visible.quickActions} />
-        </section>
-      )}
-
-      {operationalSectionVisible && (
-        <section className="mt-12 flex flex-col gap-6">
-          <SectionHeader
-            icon={Analytics01Icon}
-            title={t("dashboard.operations")}
-            variant="accent"
-            eyebrow={t("dashboard.section.operations")}
-          />
-          {(visible.todayTimeline || visible.activityFeed) && (
-            <div className="grid gap-5 lg:grid-cols-[1fr_380px]">
-              {visible.todayTimeline &&
-                (bookingsLoading ? (
-                  <Skeleton className="h-[400px] rounded-xl" />
-                ) : bookingsError ? (
-                  <ErrorBanner
-                    message={t("dashboard.error.schedule")}
-                    onRetry={() => refetchBookings()}
-                  />
-                ) : (
-                  <TodayTimeline
-                    bookings={todayBookings?.items ?? []}
-                    membershipRole={membershipRole}
-                  />
-                ))}
-              {visible.activityFeed &&
-                (notifLoading ? (
-                  <Skeleton className="h-[400px] rounded-xl" />
-                ) : notifError ? (
-                  <ErrorBanner
-                    message={t("dashboard.error.activity")}
-                    onRetry={() => refetchNotifs()}
-                  />
-                ) : (
-                  <ActivityFeed notifications={notifData?.items ?? []} />
-                ))}
-            </div>
-          )}
-
-          {(visible.revenueChart || visible.recentPayments) && (
-            <div className="grid gap-5 lg:grid-cols-2">
-              {visible.revenueChart && <RevenueChart />}
-              {visible.recentPayments && <RecentPayments />}
-            </div>
-          )}
-
-          {visible.topPerformers && <TopPerformersChart />}
         </section>
       )}
     </div>
