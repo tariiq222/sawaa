@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsInt, IsOptional, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class RefundPaymentDto {
@@ -7,8 +7,8 @@ export class RefundPaymentDto {
   @IsNotEmpty()
   reason!: string;
 
-  @ApiPropertyOptional({ description: 'Partial refund amount; omit to refund the full amount', example: 50.00 })
-  @IsNumber()
+  @ApiPropertyOptional({ description: 'Partial refund amount in integer halalas (1 SAR = 100); omit to refund the full amount', example: 5000 })
+  @IsInt()
   @IsOptional()
   @Min(0)
   amount?: number;

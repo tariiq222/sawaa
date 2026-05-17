@@ -39,7 +39,7 @@ e2e/
 ## Running Tests
 
 ```bash
-# Prerequisite: backend on :5100, docker stack up
+# Prerequisite: backend on :5200, docker stack up
 npm run docker:up
 npm run dev:backend   # in a separate terminal
 

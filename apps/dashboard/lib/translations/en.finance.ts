@@ -50,9 +50,9 @@ export const enFinance: Record<string, string> = {
   "refund.description": "Process a refund for this payment. Leave amount empty for full refund.",
   "refund.reasonLabel": "Reason",
   "refund.reasonPlaceholder": "Reason for refund...",
-  "refund.amountLabel": "Amount in halalat (optional, for partial refund)",
-  "refund.amountMax": "(max: {max})",
-  "refund.amountPlaceholder": "e.g. 15000",
+  "refund.amountLabel": "Amount in SAR (optional, for partial refund)",
+  "refund.amountMax": "(max: {max} SAR)",
+  "refund.amountPlaceholder": "e.g. 150",
   "refund.cancel": "Cancel",
   "refund.submit": "Refund",
   "refund.submitting": "Processing...",
@@ -60,7 +60,7 @@ export const enFinance: Record<string, string> = {
   "refund.errorToast": "Failed to process refund",
   "refund.validation.reasonRequired": "Reason is required",
   "refund.validation.invalidAmount": "Enter a valid amount",
-  "refund.validation.maxAmount": "Amount cannot exceed {max} halalat",
+  "refund.validation.maxAmount": "Amount cannot exceed {max} SAR",
 
   // — Invoices —
   "invoices.title": "Invoices",

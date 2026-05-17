@@ -53,6 +53,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: user.email,
       role: user.role,
       customRoleId: user.customRoleId,
+      customRole: user.customRole,
       permissions: ability.rules.flatMap((r) => {
         const actions = Array.isArray(r.action) ? r.action : [r.action];
         return actions.map((a) => ({ action: String(a), subject: String(r.subject) }));

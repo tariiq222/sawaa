@@ -51,16 +51,11 @@ export class InitGuestPaymentHandler {
       if (existingPayment.status === 'COMPLETED') {
         throw new ConflictException('Payment for this booking has already been completed');
       }
-      if (!existingPayment.gatewayRef) {
-        await this.rlsTransaction.withTransaction(async (tx) => {
-          await tx.payment.delete({ where: { id: existingPayment.id } });
-        });
-      } else {
-        return {
-          paymentId: existingPayment.id,
-          redirectUrl: '',
-        };
-      }
+      // P1-7 mitigation: delete any non-completed payment (with or without gatewayRef)
+      // and create a fresh one so the user always receives a valid redirectUrl.
+      await this.rlsTransaction.withTransaction(async (tx) => {
+        await tx.payment.delete({ where: { id: existingPayment.id } });
+      });
     }
 
     // invoice.total is already stored in halalas — send it to Moyasar verbatim.

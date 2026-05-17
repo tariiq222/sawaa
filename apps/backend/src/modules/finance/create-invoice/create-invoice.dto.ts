@@ -1,4 +1,4 @@
-import { IsDateString, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsDateString, IsInt, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateInvoiceDto {
@@ -14,11 +14,11 @@ export class CreateInvoiceDto {
   @ApiProperty({ description: 'Employee who delivered the service', example: '00000000-0000-0000-0000-000000000000' })
   @IsUUID() employeeId!: string;
 
-  @ApiProperty({ description: 'Subtotal before discount and tax', example: 100.00 })
-  @IsNumber() @Min(0) subtotal!: number;
+  @ApiProperty({ description: 'Subtotal before discount and tax in integer halalas (1 SAR = 100)', example: 10000 })
+  @IsInt() @Min(0) subtotal!: number;
 
-  @ApiPropertyOptional({ description: 'Flat discount amount', example: 10.00 })
-  @IsOptional() @IsNumber() @Min(0) discountAmt?: number;
+  @ApiPropertyOptional({ description: 'Flat discount amount in integer halalas (1 SAR = 100)', example: 1000 })
+  @IsOptional() @IsInt() @Min(0) discountAmt?: number;
 
   @ApiPropertyOptional({ description: 'VAT rate as fraction (0..1). Defaults to OrganizationSettings.vatRate.', example: 0.15 })
   @IsOptional() @IsNumber() @Min(0) @Max(1) vatRate?: number;
