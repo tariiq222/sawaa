@@ -17,8 +17,7 @@ import { StepService } from "./wizard-steps/step-service"
 import { StepEmployee } from "./wizard-steps/step-employee"
 import { StepChoosePath } from "./wizard-steps/step-choose-path"
 import type { BookingPath } from "./wizard-steps/step-choose-path"
-import { StepTypeDuration } from "./wizard-steps/step-type-duration"
-import { StepDatetime } from "./wizard-steps/step-datetime"
+import { StepScheduling } from "./wizard-steps/step-scheduling"
 import { StepConfirm } from "./wizard-steps/step-confirm"
 import { useBookingMutations } from "@/hooks/use-bookings"
 import { useBranches } from "@/hooks/use-branches"
@@ -32,65 +31,75 @@ interface BookingWizardProps {
   onClose: () => void
 }
 
-/* ─── Step dots indicator ─── */
+/* ─── Step rail ─── */
 
-function StepDots({ current, total }: { current: number; total: number }) {
+function StepRail({
+  current,
+  labels,
+}: {
+  current: number
+  labels: string[]
+}) {
   return (
-    <div className="flex items-center justify-center gap-1.5">
-      {Array.from({ length: total }, (_, i) => (
-        <span
-          key={`dot-${i}`}
-          className={cn(
-            "block rounded-full transition-all duration-200",
-            i + 1 === current
-              ? "h-2.5 w-8 bg-primary"
-              : i + 1 < current
-              ? "h-2.5 w-2.5 bg-primary/50"
-              : "h-2.5 w-2.5 bg-border",
-          )}
-        />
-      ))}
-    </div>
+    <ol className="flex flex-row gap-2 overflow-x-auto md:flex-col md:gap-1">
+      {labels.map((label, i) => {
+        const stepNo = i + 1
+        const isCurrent = stepNo === current
+        const isDone = stepNo < current
+        return (
+          <li key={label + i} className="flex items-center gap-3 rounded-xl px-3 py-2.5">
+            <span
+              className={cn(
+                "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors",
+                isCurrent && "bg-primary text-primary-foreground",
+                isDone && "bg-primary/15 text-primary",
+                !isCurrent && !isDone && "bg-muted text-muted-foreground",
+              )}
+            >
+              {isDone ? "✓" : stepNo}
+            </span>
+            <span
+              className={cn(
+                "text-sm transition-colors whitespace-nowrap",
+                isCurrent ? "font-semibold text-foreground" : "text-muted-foreground",
+              )}
+            >
+              {label}
+            </span>
+          </li>
+        )
+      })}
+    </ol>
   )
 }
 
-/* ─── Step title map ─── */
+/* ─── Step labels helper ─── */
 
-function useStepTitle(
-  step: WizardStep,
+function useStepLabels(
   flowOrder: BookingFlowOrder,
   chosenPath: BookingPath | null,
   t: (k: string) => string,
-): string {
-  // In "both" mode with no path chosen yet → show chooser title
-  if (flowOrder === "both" && chosenPath === null) {
-    const map: Record<WizardStep, string> = {
-      1: t("bookings.wizard.stepLabel.client"),
-      2: t("bookings.wizard.stepLabel.choosePath"),
-      3: "",
-      4: t("bookings.wizard.stepLabel.typeDuration"),
-      5: t("bookings.wizard.stepLabel.datetime"),
-      6: t("bookings.wizard.stepLabel.confirm"),
-    }
-    return map[step]
-  }
+): string[] {
+  const effective =
+    flowOrder === "both" && chosenPath
+      ? chosenPath
+      : flowOrder === "both"
+      ? "service_first"
+      : flowOrder
 
-  // Resolve effective flow for title purposes
-  const effective = flowOrder === "both" && chosenPath ? chosenPath : flowOrder === "both" ? "service_first" : flowOrder
-
-  const map: Record<WizardStep, string> = {
-    1: t("bookings.wizard.stepLabel.client"),
-    2: effective === "service_first"
+  const step2 =
+    flowOrder === "both" && chosenPath === null
+      ? t("bookings.wizard.stepLabel.choosePath")
+      : effective === "service_first"
       ? t("bookings.wizard.stepLabel.service")
-      : t("bookings.wizard.stepLabel.employee"),
-    3: effective === "service_first"
-      ? t("bookings.wizard.stepLabel.employee")
-      : t("bookings.wizard.stepLabel.service"),
-    4: t("bookings.wizard.stepLabel.typeDuration"),
-    5: t("bookings.wizard.stepLabel.datetime"),
-    6: t("bookings.wizard.stepLabel.confirm"),
-  }
-  return map[step]
+      : t("bookings.wizard.stepLabel.employee")
+
+  return [
+    t("bookings.wizard.stepLabel.client"),
+    step2,
+    t("bookings.wizard.stepLabel.scheduling"),
+    t("bookings.wizard.stepLabel.confirm"),
+  ]
 }
 
 /* ─── Inner wizard (receives resolved flowOrder) ─── */
@@ -114,7 +123,7 @@ function WizardInner({
   const { data: bookingSettings } = useBookingSettings()
   const maxAdvanceDays = bookingSettings?.maxAdvanceBookingDays ?? 90
 
-  const stepTitle = useStepTitle(state.step, flowOrder, state.chosenPath, t)
+  const stepLabels = useStepLabels(flowOrder, state.chosenPath, t)
 
   const handleSubmit = async () => {
     if (
@@ -153,8 +162,8 @@ function WizardInner({
 
   return (
     <div className="flex flex-col">
-      {/* ── Sticky header ── */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
+      {/* ── Top bar ── */}
+      <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-border">
         {/* Left: back button or close */}
         {state.step > 1 ? (
           <Button variant="ghost" size="icon-sm" type="button" onClick={wizard.goBack} className="shrink-0">
@@ -168,12 +177,7 @@ function WizardInner({
           </Button>
         )}
 
-        {/* Center: step title */}
-        <p className="flex-1 text-center text-base font-bold text-foreground">
-          {stepTitle}
-        </p>
-
-        {/* Right: change client or spacer */}
+        {/* Right: change client button or empty */}
         {state.step > 1 ? (
           <Button
             variant="ghost"
@@ -190,82 +194,60 @@ function WizardInner({
         )}
       </div>
 
-      {/* ── Step dots ── */}
-      <div className="px-5 pt-5 pb-1">
-        <StepDots current={state.step} total={6} />
-      </div>
+      {/* ── Body: two columns ── */}
+      <div className="flex flex-col gap-0 md:flex-row">
+        {/* Step rail */}
+        <aside className="shrink-0 border-b border-border md:w-64 md:border-b-0 md:border-e md:border-border bg-surface/50 px-6 py-6">
+          <StepRail current={state.step} labels={stepLabels} />
+        </aside>
 
-      {/* ── Step content ── */}
-      <div className="px-5 pt-4 pb-6 min-h-[280px] overflow-y-auto max-h-[calc(90vh-140px)]">
-        {state.step === 1 && (
-          <ClientStep onSelect={wizard.selectClient} />
-        )}
+        {/* Content area */}
+        <div className="flex-1 px-6 py-6 md:px-8 md:py-8 min-h-[420px] overflow-y-auto">
+          {state.step === 1 && (
+            <ClientStep onSelect={wizard.selectClient} />
+          )}
 
-        {/* Step 2: path chooser (both mode) OR first selection step */}
-        {state.step === 2 && showPathChooser && (
-          <StepChoosePath onSelect={(path: BookingPath) => wizard.choosePath(path)} />
-        )}
+          {/* Step 2: path chooser (both mode) OR first selection step */}
+          {state.step === 2 && showPathChooser && (
+            <StepChoosePath onSelect={(path: BookingPath) => wizard.choosePath(path)} />
+          )}
 
-        {state.step === 2 && !showPathChooser && effectiveFlow === "service_first" && (
-          <StepService onSelect={wizard.selectService} />
-        )}
+          {state.step === 2 && !showPathChooser && effectiveFlow === "service_first" && (
+            <StepService onSelect={wizard.selectService} />
+          )}
 
-        {state.step === 2 && !showPathChooser && effectiveFlow === "employee_first" && (
-          <StepEmployee
-            serviceId={state.serviceId ?? ""}
-            onSelect={wizard.selectEmployee}
-          />
-        )}
+          {state.step === 2 && !showPathChooser && effectiveFlow === "employee_first" && (
+            <StepEmployee
+              serviceId={state.serviceId ?? ""}
+              onSelect={wizard.selectEmployee}
+            />
+          )}
 
-        {state.step === 3 && effectiveFlow === "service_first" && (
-          <StepEmployee
-            serviceId={state.serviceId!}
-            onSelect={wizard.selectEmployee}
-          />
-        )}
+          {state.step === 3 && (
+            <StepScheduling
+              serviceId={state.serviceId ?? ""}
+              state={state}
+              onSelectEmployee={wizard.selectEmployee}
+              onSelectType={(type: string) => wizard.selectType(type as "in_person" | "online" | "walk_in")}
+              onSelectDuration={wizard.selectDuration}
+              onSkipDuration={wizard.skipDuration}
+              onSelectDate={wizard.selectDate}
+              onSelectTime={wizard.selectTime}
+              maxAdvanceDays={maxAdvanceDays}
+            />
+          )}
 
-        {state.step === 3 && effectiveFlow === "employee_first" && (
-          <StepService onSelect={wizard.selectService} />
-        )}
-
-        {state.step === 4 && (
-          <StepTypeDuration
-            employeeId={state.employeeId!}
-            serviceId={state.serviceId!}
-            selectedType={state.type}
-            selectedDurationOptionId={state.durationOptionId}
-            onSelectType={(type: string) =>
-              wizard.selectType(type as "in_person" | "online" | "walk_in")
-            }
-            onSelectDuration={wizard.selectDuration}
-            onSkipDuration={wizard.skipDuration}
-          />
-        )}
-
-        {state.step === 5 && (
-          <StepDatetime
-            employeeId={state.employeeId!}
-            serviceId={state.serviceId!}
-            bookingType={state.type ?? "in_person"}
-            durationOptionId={state.durationOptionId}
-            selectedDate={state.date}
-            selectedTime={state.startTime}
-            onSelectDate={wizard.selectDate}
-            onSelectTime={wizard.selectTime}
-            maxAdvanceDays={maxAdvanceDays}
-          />
-        )}
-
-        {state.step === 6 && (
-          <StepConfirm
-            state={state}
-            submitting={createMut.isPending}
-            onJump={(step: WizardStep) => wizard.jumpToStep(step)}
-            onSubmit={handleSubmit}
-            onTogglePayAtClinic={wizard.setPayAtClinic}
-            onCouponChange={wizard.setCouponCode}
-          />
-        )}
+          {state.step === 4 && (
+            <StepConfirm
+              state={state}
+              submitting={createMut.isPending}
+              onJump={(step: WizardStep) => wizard.jumpToStep(step)}
+              onSubmit={handleSubmit}
+              onTogglePayAtClinic={wizard.setPayAtClinic}
+              onCouponChange={wizard.setCouponCode}
+            />
+          )}
+        </div>
       </div>
     </div>
   )
@@ -282,16 +264,24 @@ export function BookingWizard({ onSuccess, onClose }: BookingWizardProps) {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-3">
-        <div className="h-6 w-48 animate-pulse rounded bg-muted mx-auto" />
-        <div className="flex justify-center gap-1.5">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={`dot-${i}`} className="h-2 w-2 animate-pulse rounded-full bg-muted" />
-          ))}
+      <div className="flex flex-col">
+        <div className="h-14 border-b border-border animate-pulse bg-muted/30" />
+        <div className="flex flex-col gap-0 md:flex-row">
+          <div className="shrink-0 border-b border-border md:w-64 md:border-b-0 md:border-e md:border-border bg-surface/50 px-6 py-6">
+            <div className="flex flex-col gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={`rail-skel-${i}`} className="h-10 animate-pulse rounded-xl bg-muted" />
+              ))}
+            </div>
+          </div>
+          <div className="flex-1 px-6 py-6 md:px-8 md:py-8">
+            <div className="flex flex-col gap-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={`content-skel-${i}`} className="h-16 animate-pulse rounded-xl bg-muted" />
+              ))}
+            </div>
+          </div>
         </div>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={`skeleton-${i}`} className="h-16 animate-pulse rounded-xl bg-muted" />
-        ))}
       </div>
     )
   }

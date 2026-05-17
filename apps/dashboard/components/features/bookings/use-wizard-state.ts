@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import type { BookingFlowOrder } from '@/lib/api/organization-settings'
 
-export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6
+export type WizardStep = 1 | 2 | 3 | 4
 
 export interface WizardState {
   step: WizardStep
@@ -117,7 +117,7 @@ export function useWizardState(flowOrder: BookingFlowOrder = 'service_first') {
         durationLabel: null,
         date: null,
         startTime: null,
-        step: (prev.step + 1) as WizardStep,
+        step: (prev.step < 3 ? prev.step + 1 : prev.step) as WizardStep,
       }))
     },
     [],
@@ -145,7 +145,6 @@ export function useWizardState(flowOrder: BookingFlowOrder = 'service_first') {
         durationLabel,
         date: null,
         startTime: null,
-        step: 5,
       }))
     },
     [],
@@ -156,7 +155,6 @@ export function useWizardState(flowOrder: BookingFlowOrder = 'service_first') {
       ...prev,
       durationOptionId: null,
       durationLabel: null,
-      step: 5,
     }))
   }, [])
 
@@ -169,7 +167,7 @@ export function useWizardState(flowOrder: BookingFlowOrder = 'service_first') {
   }, [])
 
   const selectTime = useCallback((startTime: string) => {
-    setState((prev) => ({ ...prev, startTime, step: 6 }))
+    setState((prev) => ({ ...prev, startTime, step: 4 }))
   }, [])
 
   const setPayAtClinic = useCallback((payAtClinic: boolean) => {
@@ -234,13 +232,10 @@ export function useWizardState(flowOrder: BookingFlowOrder = 'service_first') {
           next.durationLabel = null
           next.date = null
           next.startTime = null
-        } else if (targetStep === 4) {
+        } else if (targetStep === 3) {
           next.type = null
           next.durationOptionId = null
           next.durationLabel = null
-          next.date = null
-          next.startTime = null
-        } else if (targetStep === 5) {
           next.date = null
           next.startTime = null
         }

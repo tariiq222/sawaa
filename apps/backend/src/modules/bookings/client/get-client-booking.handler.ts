@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { mapBookingRow, type BookingRelations } from '../booking-row.mapper';
 
 @Injectable()
 export class GetClientBookingHandler {
@@ -25,12 +24,6 @@ export class GetClientBookingHandler {
       this.prisma.service.findFirst({ where: { id: booking.serviceId } }),
       this.prisma.branch.findFirst({ where: { id: booking.branchId } }),
     ]);
-
-    const relations: BookingRelations = {
-      clientsById: new Map(client ? [[client.id, client]] : []),
-      employeesById: new Map(employee ? [[employee.id, employee]] : []),
-      servicesById: new Map(service ? [[service.id, service]] : []),
-    };
 
     const invoice = await this.prisma.invoice.findFirst({
       where: { bookingId: booking.id },

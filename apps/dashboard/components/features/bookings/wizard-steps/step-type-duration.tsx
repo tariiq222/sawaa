@@ -202,17 +202,25 @@ export function StepTypeDuration({
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
           {t("bookings.wizard.step.typeDuration.typeTitle")}
         </p>
-        <div className="grid grid-cols-3 gap-2">
-          {activeTypes.map((st) => (
-            <TypeCard
-              key={st.id}
-              serviceType={st}
-              selected={selectedType === st.bookingType}
-              onSelect={() => onSelectType(st.bookingType)}
-              t={t}
-            />
-          ))}
-        </div>
+        {activeTypes.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-10 text-center">
+            <p className="text-sm text-muted-foreground">
+              {t("bookings.wizard.step.typeDuration.noTypes")}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {activeTypes.map((st) => (
+              <TypeCard
+                key={st.id}
+                serviceType={st}
+                selected={selectedType === st.bookingType}
+                onSelect={() => onSelectType(st.bookingType)}
+                t={t}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Duration section — only after type selected and options exist */}

@@ -24,9 +24,9 @@ function getEmployeeNameFromFull(p: Employee, locale: string): string {
 
 function StepEmployeeSkeleton() {
   return (
-    <div className="flex flex-col gap-2">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div key={`skeleton-${i}`} className="h-16 animate-pulse rounded-xl bg-muted" />
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={`skeleton-${i}`} className="h-28 animate-pulse rounded-2xl bg-muted" />
       ))}
     </div>
   )
@@ -101,7 +101,7 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
     : (allEmployees?.items ?? []).filter((p) => p.isActive)
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {employees.map((p) => {
         const name = getEmployeeNameFromFull(p, locale)
         const title = p.title ?? ""
@@ -110,11 +110,10 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
           <WizardCard
             key={p.id}
             onClick={() => onSelect(p.id, name)}
-            className="py-3 px-5"
           >
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col items-end gap-2 text-end">
               <EmployeeAvatar avatarUrl={p.avatarUrl} name={name} />
-              <div className="flex flex-col items-start gap-0.5 min-w-0">
+              <div className="flex w-full flex-col items-end gap-0.5 min-w-0">
                 <span className="text-base font-semibold text-foreground leading-tight truncate w-full">
                   {name}
                 </span>
@@ -130,7 +129,7 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
       })}
 
       {employees.length === 0 && (
-        <p className="py-6 text-center text-sm text-muted-foreground">
+        <p className="col-span-full py-6 text-center text-sm text-muted-foreground">
           {t("bookings.wizard.noEmployees")}
         </p>
       )}

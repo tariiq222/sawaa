@@ -20,7 +20,7 @@ export class BookingsStatsHandler {
 
     const [todayCount, pendingCount, completedToday, revenueAgg] = await Promise.all([
       this.prisma.booking.count({ where: { scheduledAt: todayRange } }),
-      this.prisma.booking.count({ where: { status: { in: ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED'] } } }),
+      this.prisma.booking.count({ where: { status: { in: ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED'] }, scheduledAt: todayRange } }),
       this.prisma.booking.count({ where: { status: 'COMPLETED', scheduledAt: todayRange } }),
       this.prisma.booking.aggregate({
         where: { status: 'COMPLETED', scheduledAt: todayRange },

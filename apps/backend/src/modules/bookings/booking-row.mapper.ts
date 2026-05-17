@@ -1,9 +1,20 @@
 import type { Booking, Client, Employee, Service } from '@prisma/client';
 
+/** One representative payment per booking (latest). Amounts in halalat. */
+export interface BookingPaymentRelation {
+  id: string;
+  amount: number;       // halalat (SAR Decimal × 100)
+  refundedAmount: number; // halalat
+  method: string;       // Prisma PaymentMethod enum string
+  status: string;       // Prisma PaymentStatus enum string
+}
+
 export interface BookingRelations {
   clientsById: Map<string, Client>;
   employeesById: Map<string, Employee>;
   servicesById: Map<string, Service>;
+  /** bookingId → latest payment (in halalat). Absent key means no payment. */
+  paymentsByBookingId: Map<string, BookingPaymentRelation>;
 }
 
 /**
@@ -31,9 +42,7 @@ export function mapBookingRow(b: Booking, relations: BookingRelations) {
   const clientNames = splitName(client?.name ?? null, client?.firstName ?? null, client?.lastName ?? null);
   const employeeNames = splitName(employee?.name ?? null, null, null);
 
-  const price = Number(b.price);
-  // Dashboard's FormattedCurrency expects amount in halalat (1 SAR = 100 halalat).
-  const priceInHalalat = Math.round(price * 100);
+  const pay = relations.paymentsByBookingId.get(b.id) ?? null;
 
   return {
     id: b.id,
@@ -92,13 +101,15 @@ export function mapBookingRow(b: Booking, relations: BookingRelations) {
       : null,
     employeeService: null,
     rescheduledFrom: null,
-    payment: {
-      id: b.id,
-      amount: priceInHalalat,
-      method: 'cash' as const,
-      status: 'pending' as const,
-      totalAmount: priceInHalalat,
-    },
+    payment: pay
+      ? {
+          id: pay.id,
+          amount: pay.amount,
+          method: mapPaymentMethodForUi(pay.method),
+          status: mapPaymentStatusForUi(pay.status),
+          totalAmount: pay.amount,
+        }
+      : null,
     intakeFormId: null,
     intakeFormAlreadySubmitted: false,
   };
@@ -122,6 +133,40 @@ function mapStatusForUi(s: string): string {
   const lower = s.toLowerCase();
   if (lower === 'awaiting_payment' || lower === 'pending_group_fill') return 'pending';
   return lower;
+}
+
+type PaymentStatusUi = 'pending' | 'awaiting' | 'paid' | 'failed' | 'refunded' | 'rejected';
+
+/**
+ * Maps Prisma PaymentStatus enum → dashboard BookingPayment.status union.
+ * Dashboard union: "pending" | "awaiting" | "paid" | "failed" | "refunded" | "rejected"
+ */
+export function mapPaymentStatusForUi(s: string): PaymentStatusUi {
+  switch (s.toUpperCase()) {
+    case 'PENDING': return 'pending';
+    case 'PENDING_VERIFICATION': return 'awaiting';
+    case 'COMPLETED': return 'paid';
+    case 'FAILED': return 'failed';
+    case 'REFUNDED': return 'refunded';
+    default: return 'pending';
+  }
+}
+
+type PaymentMethodUi = 'moyasar' | 'bank_transfer' | 'cash';
+
+/**
+ * Maps Prisma PaymentMethod enum → dashboard BookingPayment.method union.
+ * Prisma enum members: ONLINE_CARD, BANK_TRANSFER, CASH, COUPON
+ * Dashboard union: "moyasar" | "bank_transfer" | "cash"
+ */
+export function mapPaymentMethodForUi(m: string): PaymentMethodUi {
+  switch (m.toUpperCase()) {
+    case 'ONLINE_CARD': return 'moyasar';
+    case 'BANK_TRANSFER': return 'bank_transfer';
+    case 'CASH': return 'cash';
+    case 'COUPON': return 'cash'; // coupon-paid bookings treat method as cash for display
+    default: return 'cash';
+  }
 }
 
 function splitName(full: string | null, first: string | null, last: string | null) {

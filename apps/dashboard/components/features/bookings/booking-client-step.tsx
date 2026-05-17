@@ -29,7 +29,7 @@ function ClientRow({ client, onSelect }: { client: Client; onSelect: () => void 
       className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-start transition-colors hover:bg-primary/5 group"
     >
       <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold">
-        {client.firstName.charAt(0)}{client.lastName.charAt(0)}
+        {(client.firstName ?? "").charAt(0)}{(client.lastName ?? "").charAt(0)}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-foreground truncate">
@@ -106,7 +106,7 @@ export function ClientStep({ onSelect }: ClientStepProps) {
                   </button>
                 </p>
               )}
-              {clients.map((p) => (
+              {clients.filter(Boolean).map((p) => (
                 <ClientRow
                   key={p.id}
                   client={p}

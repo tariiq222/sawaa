@@ -75,13 +75,14 @@ export class ListBookingsHandler {
 
 async function loadRelations(
   prisma: PrismaService,
-  rows: { clientId: string; employeeId: string; serviceId: string }[],
+  rows: { id: string; clientId: string; employeeId: string; serviceId: string }[],
 ): Promise<BookingRelations> {
+  const bookingIds = rows.map((r) => r.id);
   const clientIds = [...new Set(rows.map((r) => r.clientId))];
   const employeeIds = [...new Set(rows.map((r) => r.employeeId))];
   const serviceIds = [...new Set(rows.map((r) => r.serviceId))];
 
-  const [clients, employees, services] = await Promise.all([
+  const [clients, employees, services, invoices] = await Promise.all([
     clientIds.length
       ? prisma.client.findMany({ where: { id: { in: clientIds } } })
       : Promise.resolve([]),
@@ -91,11 +92,52 @@ async function loadRelations(
     serviceIds.length
       ? prisma.service.findMany({ where: { id: { in: serviceIds } } })
       : Promise.resolve([]),
+    bookingIds.length
+      ? prisma.invoice.findMany({
+          where: { bookingId: { in: bookingIds } },
+          select: {
+            bookingId: true,
+            payments: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: {
+                id: true,
+                amount: true,
+                refundedAmount: true,
+                method: true,
+                status: true,
+              },
+            },
+          },
+        })
+      : Promise.resolve([]),
   ]);
+
+  // Build paymentsByBookingId: bookingId → latest payment (amounts in halalat)
+  // Payment.amount is stored as Decimal(12,2) SAR in Prisma.
+  // FormattedCurrency on the dashboard expects halalat (SAR × 100).
+  const paymentsByBookingId = new Map(
+    invoices
+      .filter((inv) => inv.payments.length > 0)
+      .map((inv) => {
+        const p = inv.payments[0];
+        return [
+          inv.bookingId,
+          {
+            id: p.id,
+            amount: Math.round(Number(p.amount) * 100),         // SAR → halalat
+            refundedAmount: Math.round(Number(p.refundedAmount) * 100), // SAR → halalat
+            method: p.method as string,
+            status: p.status as string,
+          },
+        ] as const;
+      }),
+  );
 
   return {
     clientsById: new Map(clients.map((c) => [c.id, c])),
     employeesById: new Map(employees.map((e) => [e.id, e])),
     servicesById: new Map(services.map((s) => [s.id, s])),
+    paymentsByBookingId,
   };
 }

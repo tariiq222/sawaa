@@ -111,17 +111,15 @@ test.describe('Booking Create Wizard — user flow', () => {
     await serviceBtn.click();
     await page.waitForTimeout(1_000);
 
-    // 6. Step 3 — Employee selection
+    // 6. Step 3 — Combined scheduling step: employee list + type/duration + datetime
+    // The employee list should be visible on the left panel
     const employeeBtn = page.locator('button', { hasText: /موظف حجز/ }).first();
     await expect(employeeBtn).toBeVisible({ timeout: 10_000 });
     await employeeBtn.click();
     await page.waitForTimeout(1_000);
 
-    // 7. Step 4 — Type & Duration (may be empty if no serviceBookingConfig seeded)
-    // Verify the step title is visible
-    await expect(page.getByText('النوع والمدة')).toBeVisible({ timeout: 5_000 });
-
-    // Try to select a type if options are available
+    // After selecting an employee, the type/duration panel appears on the right
+    // Try to select a type if options are available (still on step 3)
     const typeBtn = page.locator('button', { hasText: /حضوري/ }).first();
     if (await typeBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await typeBtn.click();

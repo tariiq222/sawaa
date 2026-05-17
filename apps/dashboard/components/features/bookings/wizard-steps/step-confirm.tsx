@@ -158,13 +158,13 @@ export function StepConfirm({
         <SummaryRow
           label={t("bookings.wizard.step.confirm.type")}
           value={typeValue || "—"}
-          onEdit={() => onJump(4)}
+          onEdit={() => onJump(3)}
         />
         <div className="border-t border-border/60" />
         <SummaryRow
           label={t("bookings.wizard.step.confirm.datetime")}
           value={datetimeValue}
-          onEdit={() => onJump(5)}
+          onEdit={() => onJump(3)}
         />
       </div>
 

@@ -44,9 +44,11 @@ function StepServiceSkeleton() {
   return (
     <div className="flex flex-col gap-3">
       <div className="h-12 animate-pulse rounded-2xl bg-muted" />
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={`skeleton-${i}`} className="h-20 animate-pulse rounded-2xl bg-muted" />
-      ))}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={`skeleton-${i}`} className="h-32 animate-pulse rounded-2xl bg-muted" />
+        ))}
+      </div>
     </div>
   )
 }
@@ -108,7 +110,7 @@ export function StepService({ onSelect }: StepServiceProps) {
       </div>
 
       {/* Service list */}
-      <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {services.map((service) => {
           const name =
             locale === "ar"
@@ -121,7 +123,7 @@ export function StepService({ onSelect }: StepServiceProps) {
               key={service.id}
               onClick={() => onSelect(service.id, name)}
             >
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col items-end gap-3 text-end">
                 {/* Icon — RTL: shown on the right */}
                 <div
                   className="flex size-14 shrink-0 items-center justify-center rounded-2xl"
@@ -141,7 +143,7 @@ export function StepService({ onSelect }: StepServiceProps) {
                 </div>
 
                 {/* Name + meta */}
-                <div className="flex min-w-0 flex-1 flex-col gap-1 text-end">
+                <div className="flex w-full min-w-0 flex-col gap-1 text-end">
                   <span className="text-base leading-snug font-bold text-foreground">
                     {name}
                   </span>
