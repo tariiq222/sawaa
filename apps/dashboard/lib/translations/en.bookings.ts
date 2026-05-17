@@ -266,6 +266,7 @@ export const enBookings: Record<string, string> = {
   "bookings.pos.hint.needService": "Select a service first",
   "bookings.pos.hint.needEmployee": "Select service and practitioner to view times",
   "bookings.pos.summary.title": "Booking Summary",
+  "bookings.pos.summary.servicePrice": "Service Price",
   "bookings.pos.confirm": "Confirm Booking",
 
   // booking-columns (list table)

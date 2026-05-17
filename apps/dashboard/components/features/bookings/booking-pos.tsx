@@ -1,14 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Cancel01Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
+import { useQuery } from "@tanstack/react-query"
 
 import { useLocale } from "@/components/locale-provider"
 import { useBranches } from "@/hooks/use-branches"
 import { useBookingSettings } from "@/hooks/use-organization-settings"
 import { useBookingMutations } from "@/hooks/use-bookings"
+import { queryKeys } from "@/lib/query-keys"
+import { fetchServices } from "@/lib/api/services"
 
 import { ClientStep } from "./booking-client-step"
 import { StepService } from "./wizard-steps/step-service"
@@ -85,6 +88,19 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
 
   const canShowTypeDuration = Boolean(state.serviceId && state.employeeId)
   const canShowDatetime = Boolean(state.serviceId && state.employeeId && state.type)
+
+  // Selected service price (halalas) for the summary. Reuses the same query
+  // StepService issues, so TanStack Query serves it from cache — no extra fetch.
+  const { data: servicesData } = useQuery({
+    queryKey: queryKeys.services.list({ isActive: true, perPage: 100 }),
+    queryFn: () => fetchServices({ isActive: true, perPage: 100 }),
+    staleTime: 5 * 60 * 1000,
+  })
+  const servicePriceHalalas = useMemo(() => {
+    if (!state.serviceId) return null
+    const svc = servicesData?.items.find((s) => s.id === state.serviceId)
+    return svc ? Number(svc.price) : null
+  }, [servicesData, state.serviceId])
 
   const handleSubmit = async () => {
     if (!state.clientId || !state.serviceId || !state.employeeId || !state.type || !state.date || !state.startTime)
@@ -225,6 +241,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
             durationLabel={state.durationLabel}
             date={state.date}
             startTime={state.startTime}
+            servicePriceHalalas={servicePriceHalalas}
             payAtClinic={state.payAtClinic}
             couponCode={state.couponCode}
             submitting={createMut.isPending}
