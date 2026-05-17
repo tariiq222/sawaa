@@ -105,6 +105,19 @@ const paidPayload: MoyasarWebhookDto = {
   metadata: { invoiceId: 'inv-1' },
 } as MoyasarWebhookDto;
 
+// Moyasar's documented NESTED webhook shape: event envelope at the root with
+// the payment object under `data`. The payment id here is the SAME as the
+// flat `paidPayload` so the re-fetch mock resolves identically.
+const nestedPaidPayload: MoyasarWebhookDto = {
+  id: 'evt_nested_1',
+  type: 'payment_paid',
+  created_at: '2024-01-15T10:30:00Z',
+  data: {
+    id: 'moyasar-pay-1', status: 'paid', amount: 230, currency: 'SAR',
+    metadata: { invoiceId: 'inv-1' },
+  },
+} as MoyasarWebhookDto;
+
 const sign = (rawBody: string, secret: string = TEST_SECRET) =>
   createHmac('sha256', secret).update(rawBody).digest('hex');
 
@@ -218,6 +231,108 @@ describe('MoyasarWebhookHandler', () => {
         create: expect.objectContaining({ status: 'FAILED', failureReason: 'Declined' }),
       }));
       expect(prisma.invoice.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('execute — payload shape tolerance (nested vs flat)', () => {
+    it('processes a NESTED-shape webhook ({ id, type, data: {...} })', async () => {
+      const { handler, prisma, eventBus, moyasarApi } = makeHandler();
+      const result = await handler.execute(makeReq(nestedPaidPayload));
+      // re-fetch keyed on the PAYMENT id (data.id), not the event id
+      expect(moyasarApi.getPaymentStatus).toHaveBeenCalledWith(DEFAULT_ORG_ID, 'moyasar-pay-1');
+      expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
+        where: { idempotencyKey: 'moyasar:moyasar-pay-1' },
+        create: expect.objectContaining({ invoiceId: 'inv-1', amount: 230, status: 'COMPLETED' }),
+      }));
+      expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: 'PAID' }),
+      }));
+      expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.completed', expect.anything());
+      expect(result.skipped).toBeUndefined();
+    });
+
+    it('still processes a FLAT-shape webhook (existing behavior preserved)', async () => {
+      const { handler, prisma, eventBus } = makeHandler();
+      const result = await handler.execute(makeReq());
+      expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
+        create: expect.objectContaining({ amount: 230, status: 'COMPLETED' }),
+      }));
+      expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.completed', expect.anything());
+      expect(result.skipped).toBeUndefined();
+    });
+
+    it('keys the WebhookEvent dedup on the PAYMENT id + status, not the root event id', async () => {
+      const { handler, prisma } = makeHandler();
+      await handler.execute(makeReq(nestedPaidPayload));
+      expect(prisma.webhookEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ eventId: 'moyasar-pay-1:paid' }),
+      }));
+    });
+
+    it('skips (missing_metadata) when a nested shape has no data.metadata', async () => {
+      const { handler, prisma } = makeHandler();
+      const noMetadata = {
+        id: 'evt_nested_2',
+        type: 'payment_paid',
+        data: { id: 'moyasar-pay-1', status: 'paid', amount: 230, currency: 'SAR' },
+      } as MoyasarWebhookDto;
+      const result = await handler.execute(makeReq(noMetadata));
+      expect(result.skipped).toBe(true);
+      expect(result.reason).toBe('missing_metadata');
+      expect(prisma.payment.upsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('execute — shared-secret verification (HMAC header vs body secret_token)', () => {
+    it('verifies and processes a webhook with NO HMAC header but a valid body secret_token', async () => {
+      const { handler, prisma, eventBus } = makeHandler();
+      const tokenPayload = { ...nestedPaidPayload, secret_token: TEST_SECRET } as MoyasarWebhookDto;
+      const rawBody = JSON.stringify(tokenPayload);
+      const result = await handler.execute({ payload: tokenPayload, rawBody, signature: '' });
+      expect(result.skipped).toBeUndefined();
+      expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
+        create: expect.objectContaining({ status: 'COMPLETED' }),
+      }));
+      expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.completed', expect.anything());
+    });
+
+    it('drops-and-acks (missing_signature) when there is NO HMAC header and NO secret_token', async () => {
+      const { handler, prisma, moyasarApi } = makeHandler();
+      const rawBody = JSON.stringify(paidPayload);
+      const result = await handler.execute({ payload: paidPayload, rawBody, signature: '' });
+      expect(result.skipped).toBe(true);
+      expect(result.reason).toBe('missing_signature');
+      expect(moyasarApi.getPaymentStatus).not.toHaveBeenCalled();
+      expect(prisma.payment.upsert).not.toHaveBeenCalled();
+      expect(prisma.webhookEvent.create).not.toHaveBeenCalled();
+    });
+
+    it('drops-and-acks (invalid_signature) for a wrong body secret_token', async () => {
+      const { handler, prisma, moyasarApi } = makeHandler();
+      const tokenPayload = { ...paidPayload, secret_token: 'wrong-secret-token' } as MoyasarWebhookDto;
+      const rawBody = JSON.stringify(tokenPayload);
+      const result = await handler.execute({ payload: tokenPayload, rawBody, signature: '' });
+      expect(result.skipped).toBe(true);
+      expect(result.reason).toBe('invalid_signature');
+      expect(moyasarApi.getPaymentStatus).not.toHaveBeenCalled();
+      expect(prisma.payment.upsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('verifySecretToken', () => {
+    it('returns true for an exact match', () => {
+      const { handler } = makeHandler();
+      expect(handler.verifySecretToken(TEST_SECRET, TEST_SECRET)).toBe(true);
+    });
+
+    it('returns false for a mismatch (does not throw)', () => {
+      const { handler } = makeHandler();
+      expect(handler.verifySecretToken('wrong', TEST_SECRET)).toBe(false);
+    });
+
+    it('returns false when lengths differ (not timing-attackable)', () => {
+      const { handler } = makeHandler();
+      expect(handler.verifySecretToken('short', `${TEST_SECRET}-longer`)).toBe(false);
     });
   });
 
