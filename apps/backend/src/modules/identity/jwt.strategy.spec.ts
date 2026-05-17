@@ -137,6 +137,7 @@ describe('JwtStrategy', () => {
       { action: 'read', subject: 'Booking' },
       { action: 'update', subject: 'Booking' },
     ]);
+    expect(result.customRole).toEqual(user.customRole);
   });
 
   it('validate defaults features to empty array', async () => {

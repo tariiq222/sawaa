@@ -57,6 +57,9 @@ import { RequestDashboardOtpHandler } from './request-dashboard-otp/request-dash
 import { VerifyDashboardOtpHandler } from './verify-dashboard-otp/verify-dashboard-otp.handler';
 import { AuthResponseBuilder } from './shared/auth-response.builder';
 import { LookupUserHandler } from './lookup-user/lookup-user.handler';
+import { GetEmployeeAccountHandler } from './employee-account/get-employee-account.handler';
+import { CreateEmployeeAccountHandler } from './employee-account/create-employee-account.handler';
+import { UpdateEmployeeAccountHandler } from './employee-account/update-employee-account.handler';
 
 const handlers = [
   LoginHandler, RefreshTokenHandler, LogoutHandler,
@@ -83,6 +86,9 @@ const handlers = [
   RequestDashboardOtpHandler,
   VerifyDashboardOtpHandler,
   LookupUserHandler,
+  GetEmployeeAccountHandler,
+  CreateEmployeeAccountHandler,
+  UpdateEmployeeAccountHandler,
 ];
 
 @Module({

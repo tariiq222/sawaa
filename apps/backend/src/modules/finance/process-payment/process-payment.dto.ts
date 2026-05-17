@@ -1,4 +1,4 @@
-import { IsEnum, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { PaymentMethod } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -6,8 +6,8 @@ export class ProcessPaymentDto {
   @ApiProperty({ description: 'Invoice to be paid', example: '00000000-0000-0000-0000-000000000000' })
   @IsUUID() invoiceId!: string;
 
-  @ApiProperty({ description: 'Amount to charge', example: 100.00 })
-  @IsNumber() @Min(0.01) amount!: number;
+  @ApiProperty({ description: 'Amount to charge in integer halalas (1 SAR = 100)', example: 10000 })
+  @IsInt() @Min(1) amount!: number;
 
   @ApiProperty({ description: 'Payment method used', enum: PaymentMethod, enumName: 'PaymentMethod' })
   @IsEnum(PaymentMethod) method!: PaymentMethod;

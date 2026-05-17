@@ -13,12 +13,20 @@ import {
   assignService,
   updateEmployeeService,
   removeEmployeeService,
+  createEmployeeAccount,
+  updateEmployeeAccount,
+} from "@/lib/api/employees"
+import type {
+  EmployeeAccountRole,
 } from "@/lib/api/employees"
 import type {
   AssignServicePayload,
   UpdateServicePayload,
   OnboardEmployeePayload,
 } from "@/lib/types/employee"
+
+// EmployeeAccountRole re-exported for convenience
+export type { EmployeeAccountRole }
 
 /* ─── Core CRUD Mutations ─── */
 
@@ -136,4 +144,32 @@ export function useEmployeeServiceMutations(employeeId: string) {
   })
 
   return { assignMut, updateMut, removeMut }
+}
+
+/* ─── Employee Account Mutations ─── */
+
+export function useEmployeeAccountMutations(employeeId: string) {
+  const queryClient = useQueryClient()
+  const invalidate = () => {
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.employees.account(employeeId),
+    })
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.employees.detail(employeeId),
+    })
+  }
+
+  const createMut = useMutation({
+    mutationFn: (payload: { role: EmployeeAccountRole; password?: string }) =>
+      createEmployeeAccount(employeeId, payload),
+    onSuccess: invalidate,
+  })
+
+  const updateMut = useMutation({
+    mutationFn: (payload: { role?: EmployeeAccountRole; isActive?: boolean }) =>
+      updateEmployeeAccount(employeeId, payload),
+    onSuccess: invalidate,
+  })
+
+  return { createMut, updateMut }
 }

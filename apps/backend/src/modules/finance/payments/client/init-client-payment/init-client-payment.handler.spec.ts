@@ -108,7 +108,7 @@ describe('InitClientPaymentHandler', () => {
     expect(prisma.payment.create).not.toHaveBeenCalled();
   });
 
-  it('returns the same paymentId on an idempotent re-call', async () => {
+  it('deletes existing pending payment with gatewayRef and creates a fresh one', async () => {
     const { handler, prisma, moyasar } = buildHandler();
     prisma.payment.findFirst.mockResolvedValue({
       id: 'payment-existing',
@@ -118,10 +118,13 @@ describe('InitClientPaymentHandler', () => {
 
     const result = await handler.execute({ invoiceId, clientId });
 
-    expect(result).toEqual({ paymentId: 'payment-existing', redirectUrl: '', status: PaymentStatus.PENDING });
-    expect(prisma.payment.delete).not.toHaveBeenCalled();
-    expect(prisma.payment.create).not.toHaveBeenCalled();
-    expect(moyasar.createPayment).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      paymentId: 'payment-1',
+      redirectUrl: 'https://checkout.moyasar.com/pay/moyasar-payment-1',
+    });
+    expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'payment-existing' } });
+    expect(prisma.payment.create).toHaveBeenCalled();
+    expect(moyasar.createPayment).toHaveBeenCalled();
   });
 
   it('deletes the pending row when Moyasar throws so the idempotency key is not claimed', async () => {

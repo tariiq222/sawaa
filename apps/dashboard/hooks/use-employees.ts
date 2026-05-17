@@ -13,6 +13,7 @@ import {
   fetchEmployeeServices,
   fetchEmployeeServiceTypes,
   fetchEmployeeStats,
+  fetchEmployeeAccount,
 } from "@/lib/api/employees"
 import type { EmployeeListQuery, EmployeeSortField } from "@/lib/types/employee"
 
@@ -23,6 +24,7 @@ export {
   useSetBreaks,
   useVacationMutations,
   useEmployeeServiceMutations,
+  useEmployeeAccountMutations,
 } from "./use-employee-mutations"
 
 /* ─── List Hook ─── */
@@ -222,5 +224,15 @@ export function useEmployeeServiceTypes(
     queryKey: queryKeys.employees.serviceTypes(employeeId ?? "", serviceId ?? ""),
     queryFn: () => fetchEmployeeServiceTypes(employeeId!, serviceId!),
     enabled,
+  })
+}
+
+/* ─── Employee Account Query ─── */
+
+export function useEmployeeAccount(employeeId: string) {
+  return useQuery({
+    queryKey: queryKeys.employees.account(employeeId),
+    queryFn: () => fetchEmployeeAccount(employeeId),
+    staleTime: 5 * 60 * 1000,
   })
 }

@@ -64,6 +64,11 @@ import { GetEmployeeBreaksHandler } from '../../modules/people/employees/get-emp
 import { SetEmployeeBreaksHandler } from '../../modules/people/employees/set-employee-breaks/set-employee-breaks.handler';
 import { SetEmployeeBreaksDto } from '../../modules/people/employees/set-employee-breaks/set-employee-breaks.dto';
 import { UploadAvatarHandler } from '../../modules/people/employees/upload-avatar/upload-avatar.handler';
+import { GetEmployeeAccountHandler } from '../../modules/identity/employee-account/get-employee-account.handler';
+import { CreateEmployeeAccountHandler } from '../../modules/identity/employee-account/create-employee-account.handler';
+import { UpdateEmployeeAccountHandler } from '../../modules/identity/employee-account/update-employee-account.handler';
+import { CreateEmployeeAccountDto } from '../../modules/identity/employee-account/create-employee-account.dto';
+import { UpdateEmployeeAccountDto } from '../../modules/identity/employee-account/update-employee-account.dto';
 
 import { PaginationDto } from '../../common/dto';
 
@@ -124,6 +129,9 @@ export class DashboardPeopleController {
     private readonly uploadAvatar: UploadAvatarHandler,
     private readonly getEmployeeBreaks: GetEmployeeBreaksHandler,
     private readonly setEmployeeBreaks: SetEmployeeBreaksHandler,
+    private readonly getEmployeeAccount: GetEmployeeAccountHandler,
+    private readonly createEmployeeAccount: CreateEmployeeAccountHandler,
+    private readonly updateEmployeeAccount: UpdateEmployeeAccountHandler,
   ) {}
   // ── Clients ────────────────────────────────────────────────────────────────
   @Post('clients')
@@ -878,5 +886,86 @@ export class DashboardPeopleController {
       employeeId,
       filename: file.originalname, mimetype: file.mimetype, size: file.size,
     }, file.buffer);
+  }
+
+  // ── Employee Account (System Login) ────────────────────────────────────────
+  @Get('employees/:id/account')
+  @CheckPermissions({ action: 'read', subject: 'User' })
+  @ApiOperation({ summary: 'Get the login account linked to an employee' })
+  @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({
+    description: 'Employee account status',
+    schema: {
+      type: 'object',
+      properties: {
+        hasAccount: { type: 'boolean', example: true },
+        employeeEmail: { type: 'string', nullable: true, example: 'practitioner@example.com' },
+        account: {
+          nullable: true,
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            email: { type: 'string', example: 'practitioner@example.com' },
+            role: { type: 'string', example: 'RECEPTIONIST' },
+            isActive: { type: 'boolean', example: true },
+          },
+        },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'Employee not found' })
+  getEmployeeAccountEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+    return this.getEmployeeAccount.execute({ employeeId: id });
+  }
+
+  @Post('employees/:id/account')
+  @CheckPermissions({ action: 'manage', subject: 'User' })
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create or link a login account for an employee' })
+  @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiBody({ type: CreateEmployeeAccountDto })
+  @ApiOkResponse({
+    description: 'Linked or created user account',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        email: { type: 'string', example: 'practitioner@example.com' },
+        role: { type: 'string', example: 'RECEPTIONIST' },
+        isActive: { type: 'boolean', example: true },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'Employee not found' })
+  createEmployeeAccountEndpoint(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: CreateEmployeeAccountDto,
+  ) {
+    return this.createEmployeeAccount.execute({ employeeId: id, ...body });
+  }
+
+  @Patch('employees/:id/account')
+  @CheckPermissions({ action: 'manage', subject: 'User' })
+  @ApiOperation({ summary: 'Update an employee login account role or status' })
+  @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiBody({ type: UpdateEmployeeAccountDto })
+  @ApiOkResponse({
+    description: 'Updated user account',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        email: { type: 'string', example: 'practitioner@example.com' },
+        role: { type: 'string', example: 'ADMIN' },
+        isActive: { type: 'boolean', example: true },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'Employee not found or has no linked account' })
+  updateEmployeeAccountEndpoint(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateEmployeeAccountDto,
+  ) {
+    return this.updateEmployeeAccount.execute({ employeeId: id, ...body });
   }
 }

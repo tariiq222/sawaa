@@ -21,6 +21,7 @@ import { Label } from "@sawaa/ui"
 import { Textarea } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { usePaymentMutations } from "@/hooks/use-payments"
+import { sarToHalalas, halalasToSar } from "@/lib/money"
 
 /* ─── Types ─── */
 
@@ -49,6 +50,11 @@ export function RefundDialog({
   const { t } = useLocale()
   const { refundMut } = usePaymentMutations()
 
+  const maxAmountSar = useMemo(
+    () => (maxAmount != null ? halalasToSar(maxAmount) : undefined),
+    [maxAmount],
+  )
+
   const refundSchema = useMemo(
     () =>
       z.object({
@@ -61,11 +67,11 @@ export function RefundDialog({
             t("refund.validation.invalidAmount"),
           )
           .refine(
-            (v) => !v || !maxAmount || Number(v) <= maxAmount,
-            t("refund.validation.maxAmount").replace("{max}", String(maxAmount ?? "")),
+            (v) => !v || !maxAmountSar || Number(v) <= maxAmountSar,
+            t("refund.validation.maxAmount").replace("{max}", String(maxAmountSar ?? "")),
           ),
       }),
-    [t, maxAmount],
+    [t, maxAmountSar],
   )
 
   const form = useForm<RefundForm>({
@@ -75,7 +81,7 @@ export function RefundDialog({
 
   const onSubmit = form.handleSubmit(async (data) => {
     try {
-      const parsedAmount = data.amount ? Number(data.amount) : undefined
+      const parsedAmount = data.amount ? sarToHalalas(Number(data.amount)) : undefined
       await refundMut.mutateAsync({
         id: paymentId,
         reason: data.reason,
@@ -122,17 +128,18 @@ export function RefundDialog({
             <div className="flex flex-col gap-2">
               <Label htmlFor="refund-amount">
                 {t("refund.amountLabel")}
-                {maxAmount && (
+                {maxAmountSar != null && (
                   <span className="ms-1 font-numeric text-muted-foreground">
-                    {t("refund.amountMax").replace("{max}", String(maxAmount))}
+                    {t("refund.amountMax").replace("{max}", String(maxAmountSar))}
                   </span>
                 )}
               </Label>
               <Input
                 id="refund-amount"
                 type="number"
-                min={1}
-                max={maxAmount}
+                min={0.01}
+                step={0.01}
+                max={maxAmountSar}
                 placeholder={t("refund.amountPlaceholder")}
                 {...form.register("amount")}
               />

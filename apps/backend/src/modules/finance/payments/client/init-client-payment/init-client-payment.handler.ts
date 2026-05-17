@@ -72,17 +72,9 @@ export class InitClientPaymentHandler {
       if (existingPayment.status === PaymentStatus.COMPLETED) {
         throw new ConflictException('Payment for this invoice has already been completed');
       }
-      if (!existingPayment.gatewayRef) {
-        await this.prisma.payment.delete({ where: { id: existingPayment.id } });
-      } else {
-        // P1-7: return the existing payment with its status so the client
-        // knows it is already pending instead of receiving a blank redirectUrl.
-        return {
-          paymentId: existingPayment.id,
-          redirectUrl: '',
-          status: existingPayment.status,
-        };
-      }
+      // P1-7 mitigation: delete any non-completed payment (with or without gatewayRef)
+      // and create a fresh one so the client always receives a valid redirectUrl.
+      await this.prisma.payment.delete({ where: { id: existingPayment.id } });
     }
 
     // invoice.total is already stored in halalas — send it to Moyasar verbatim.

@@ -50,9 +50,9 @@ export const arFinance: Record<string, string> = {
   "refund.description": "معالجة استرجاع لهذه الدفعة. اترك المبلغ فارغاً لاسترجاع كامل.",
   "refund.reasonLabel": "السبب",
   "refund.reasonPlaceholder": "سبب الاسترجاع...",
-  "refund.amountLabel": "المبلغ بالهللة (اختياري، للاسترجاع الجزئي)",
-  "refund.amountMax": "(الحد الأقصى: {max})",
-  "refund.amountPlaceholder": "مثال: 15000",
+  "refund.amountLabel": "المبلغ بالريال (اختياري، للاسترجاع الجزئي)",
+  "refund.amountMax": "(الحد الأقصى: {max} ريال)",
+  "refund.amountPlaceholder": "مثال: 150",
   "refund.cancel": "إلغاء",
   "refund.submit": "استرجاع",
   "refund.submitting": "جاري المعالجة...",
@@ -60,7 +60,7 @@ export const arFinance: Record<string, string> = {
   "refund.errorToast": "فشل معالجة الاسترجاع",
   "refund.validation.reasonRequired": "السبب مطلوب",
   "refund.validation.invalidAmount": "أدخل مبلغاً صحيحاً",
-  "refund.validation.maxAmount": "لا يمكن أن يتجاوز المبلغ {max} هللة",
+  "refund.validation.maxAmount": "لا يمكن أن يتجاوز المبلغ {max} ريال",
 
   // — Invoices —
   "invoices.title": "الفواتير",

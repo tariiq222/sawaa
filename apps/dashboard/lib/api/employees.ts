@@ -160,3 +160,38 @@ export async function uploadEmployeeAvatar(
 }
 
 
+
+/* ─── Employee Account ─── */
+
+export type EmployeeAccountRole = 'SUPER_ADMIN' | 'ADMIN' | 'RECEPTIONIST' | 'ACCOUNTANT' | 'EMPLOYEE' | 'CLIENT'
+
+export interface EmployeeAccount {
+  id: string
+  email: string
+  role: EmployeeAccountRole
+  isActive: boolean
+}
+
+export interface EmployeeAccountStatus {
+  hasAccount: boolean
+  employeeEmail: string | null
+  account: EmployeeAccount | null
+}
+
+export async function fetchEmployeeAccount(id: string): Promise<EmployeeAccountStatus> {
+  return api.get<EmployeeAccountStatus>(`/dashboard/people/employees/${id}/account`)
+}
+
+export async function createEmployeeAccount(
+  id: string,
+  payload: { role: EmployeeAccountRole; password?: string },
+): Promise<EmployeeAccount> {
+  return api.post<EmployeeAccount>(`/dashboard/people/employees/${id}/account`, payload)
+}
+
+export async function updateEmployeeAccount(
+  id: string,
+  payload: { role?: EmployeeAccountRole; isActive?: boolean },
+): Promise<EmployeeAccount> {
+  return api.patch<EmployeeAccount>(`/dashboard/people/employees/${id}/account`, payload)
+}

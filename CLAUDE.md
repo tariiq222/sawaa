@@ -40,6 +40,28 @@ pnpm db:seed              # backend seed
 pnpm db:reset             # migrate + seed
 
 pnpm openapi:sync         # backend exports openapi.json + dashboard regenerates client
+
+pnpm e2e:dashboard        # dashboard Playwright flows
+```
+
+### Running a single test
+
+Backend uses Jest, dashboard + website use Vitest. Run from inside the app dir:
+
+```bash
+# backend (Jest)
+pnpm --filter=backend test -- path/to/file.spec.ts          # one file
+pnpm --filter=backend test -- -t "name of the test case"    # by name
+pnpm --filter=backend run test:e2e                          # e2e suite
+pnpm --filter=backend run test:smoke                        # smoke suite
+
+# dashboard / website (Vitest)
+pnpm --filter=dashboard test -- path/to/file.test.ts
+pnpm --filter=dashboard test -- -t "name of the test case"
+
+# dashboard e2e (Playwright) — needs `pnpm --filter=dashboard run e2e:install` once
+pnpm --filter=dashboard run e2e:smoke
+pnpm --filter=dashboard run e2e -- path/to/spec.ts
 ```
 
 ## Single-tenant

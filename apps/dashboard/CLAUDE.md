@@ -165,7 +165,7 @@ Specs live under `apps/dashboard/e2e/` with two project tiers:
 CI: the `.github/workflows/ci.yml` dashboard job runs lint + typecheck + unit tests. Playwright smoke is run locally pre-merge (no dedicated e2e CI workflow exists yet).
 
 ```bash
-# Local smoke run (requires backend on :5100 + docker stack)
+# Local smoke run (requires backend on :5200 + docker stack)
 cd apps/dashboard
 npm run e2e:smoke
 
