@@ -1,48 +1,39 @@
-/**
- * Money helpers — single source of truth for halalas ↔ SAR conversion.
- *
- * Backend convention: monetary amounts are stored as integers in halalas
- * (1 SAR = 100 halalas). Use these helpers everywhere instead of ad-hoc
- * `/100` divisions so the eventual halalas↔SAR unification migration only
- * has to update one file.
- */
+// Dashboard money helpers — thin re-export of the canonical shared module.
+// Do not add logic here; the source of truth is @sawaa/shared/money.
+//
+// The only dashboard-specific behavior preserved on top of the shared module
+// is null/undefined tolerance: existing call-sites and tests pass nullish
+// values and expect 0 (conversion) or "—" (display) instead of NaN.
+import {
+  HALALAS_PER_SAR,
+  sarToHalalas as sharedSarToHalalas,
+  halalasToSar as sharedHalalasToSar,
+  formatHalalas,
+  type FormatHalalasOptions,
+} from "@sawaa/shared/money"
 
-const HALALAS_PER_SAR = 100
+export { HALALAS_PER_SAR }
 
-/** Convert halalas (integer) to SAR as a number. */
-export function halalasToSar(halalas: number | null | undefined): number {
-  if (halalas == null || Number.isNaN(halalas)) return 0
-  return halalas / HALALAS_PER_SAR
-}
-
-/** Alias for halalasToSar — explicitly returns a number. */
-export const halalasToSarNumber = halalasToSar
-
-/** Convert SAR to halalas (integer). Rounds to nearest halala. */
+/** Convert SAR to integer halalas. Nullish input yields 0. */
 export function sarToHalalas(sar: number | null | undefined): number {
   if (sar == null || Number.isNaN(sar)) return 0
-  return Math.round(sar * HALALAS_PER_SAR)
+  return sharedSarToHalalas(sar)
 }
 
-/**
- * Format an amount stored in halalas as a SAR-denominated numeric string.
- * Does NOT prepend the SAR symbol — pair with `<SarSymbol />` or
- * `<FormattedCurrency />` for full display.
- *
- * @param halalas - amount in halalas (backend convention)
- * @param options.decimals - default 2
- * @param options.locale - "ar" | "en" (numeric formatting locale)
- */
+/** Convert integer halalas to a SAR-major number. Nullish input yields 0. */
+export function halalasToSar(halalas: number | null | undefined): number {
+  if (halalas == null || Number.isNaN(halalas)) return 0
+  return sharedHalalasToSar(halalas)
+}
+
+/** Back-compat alias — halalasToSar returns a number. */
+export const halalasToSarNumber = halalasToSar
+
+/** Back-compat alias — formatPrice(halalas, opts) renders a SAR display string. */
 export function formatPrice(
   halalas: number | null | undefined,
-  options: { decimals?: number; locale?: "ar" | "en" } = {},
+  opts?: FormatHalalasOptions,
 ): string {
-  const { decimals = 2, locale = "en" } = options
-  if (halalas == null) return "—"
-  const sar = halalasToSar(halalas)
-  const fmtLocale = locale === "ar" ? "ar-SA-u-nu-latn" : "en-US"
-  return sar.toLocaleString(fmtLocale, {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  })
+  if (halalas == null || Number.isNaN(halalas)) return "—"
+  return formatHalalas(halalas, opts)
 }
