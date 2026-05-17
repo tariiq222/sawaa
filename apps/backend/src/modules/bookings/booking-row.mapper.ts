@@ -3,7 +3,7 @@ import type { Booking, Client, Employee, Service } from '@prisma/client';
 /** One representative payment per booking (latest). Amounts in halalat. */
 export interface BookingPaymentRelation {
   id: string;
-  amount: number;       // halalat (SAR Decimal × 100)
+  amount: number;       // halalas (Payment.amount is stored in halalas)
   refundedAmount: number; // halalat
   method: string;       // Prisma PaymentMethod enum string
   status: string;       // Prisma PaymentStatus enum string

@@ -58,8 +58,8 @@ export class GetBookingHandler {
       const p = invoice.payments[0];
       paymentsByBookingId.set(booking.id, {
         id: p.id,
-        amount: Math.round(Number(p.amount) * 100),
-        refundedAmount: Math.round(Number(p.refundedAmount) * 100),
+        amount: Math.round(Number(p.amount)),
+        refundedAmount: Math.round(Number(p.refundedAmount)),
         method: p.method as string,
         status: p.status as string,
       });
