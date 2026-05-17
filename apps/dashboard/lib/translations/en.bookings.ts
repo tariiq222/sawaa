@@ -257,6 +257,17 @@ export const enBookings: Record<string, string> = {
   "bookings.wizard.changeClient": "Change Client",
   "bookings.wizard.noEmployees": "No employees available",
 
+  // booking POS
+  "bookings.pos.section.client": "Client",
+  "bookings.pos.section.service": "Service",
+  "bookings.pos.section.employee": "Practitioner",
+  "bookings.pos.section.typeDuration": "Type & Duration",
+  "bookings.pos.section.datetime": "Appointment",
+  "bookings.pos.hint.needService": "Select a service first",
+  "bookings.pos.hint.needEmployee": "Select service and practitioner to view times",
+  "bookings.pos.summary.title": "Booking Summary",
+  "bookings.pos.confirm": "Confirm Booking",
+
   // booking-columns (list table)
   "bookings.col.header.client": "Client",
   "bookings.col.header.employee": "Employee",

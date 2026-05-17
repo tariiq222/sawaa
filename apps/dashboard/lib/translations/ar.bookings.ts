@@ -257,6 +257,17 @@ export const arBookings: Record<string, string> = {
   "bookings.wizard.changeClient": "تغيير المستفيد",
   "bookings.wizard.noEmployees": "لا يوجد ممارسون متاحون",
 
+  // booking POS
+  "bookings.pos.section.client": "المستفيد",
+  "bookings.pos.section.service": "الخدمة",
+  "bookings.pos.section.employee": "الممارس",
+  "bookings.pos.section.typeDuration": "النوع والمدة",
+  "bookings.pos.section.datetime": "الموعد",
+  "bookings.pos.hint.needService": "اختر خدمة أولاً",
+  "bookings.pos.hint.needEmployee": "اختر الخدمة والممارس لعرض الأوقات",
+  "bookings.pos.summary.title": "ملخص الحجز",
+  "bookings.pos.confirm": "تأكيد الحجز",
+
   // booking-columns (list table)
   "bookings.col.header.client": "المريض",
   "bookings.col.header.employee": "الممارس",
