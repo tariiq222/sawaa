@@ -1,9 +1,9 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Headers,
   HttpCode,
+  Logger,
   Post,
   RawBodyRequest,
   Req,
@@ -18,6 +18,8 @@ import { MoyasarWebhookDto } from '../../modules/finance/moyasar-webhook/moyasar
 @ApiTags('Public / Payments')
 @Controller('public/payments/webhook')
 export class PublicPaymentWebhookController {
+  private readonly logger = new Logger(PublicPaymentWebhookController.name);
+
   constructor(private readonly handler: MoyasarWebhookHandler) {}
 
   @Public()
@@ -32,12 +34,19 @@ export class PublicPaymentWebhookController {
     @Body() payload: MoyasarWebhookDto,
   ) {
     const rawBody = req.rawBody?.toString('utf8');
+    // A missing body is malformed input — it will never succeed on retry.
+    // Drop-and-ack with HTTP 200 (and a log) so Moyasar stops retrying,
+    // rather than 400 which triggers an infinite retry storm.
     if (!rawBody) {
-      throw new BadRequestException('Missing request body');
+      this.logger.warn('Moyasar webhook rejected: missing request body');
+      return { skipped: true, reason: 'missing_body' };
     }
-    if (!signature) {
-      throw new BadRequestException('Missing X-Moyasar-Signature header');
-    }
-    return this.handler.execute({ payload, rawBody, signature });
+    // A missing `X-Moyasar-Signature` header is NOT fatal: the merchant may
+    // be configured to carry the shared secret in the body `secret_token`
+    // field instead. Pass the signature through as an empty string and let
+    // the handler decide which verification channel applies (and 200-ack
+    // skip if neither is present). The controller never returns 4xx for a
+    // malformed webhook — only genuine 5xx infrastructure errors propagate.
+    return this.handler.execute({ payload, rawBody, signature: signature ?? '' });
   }
 }

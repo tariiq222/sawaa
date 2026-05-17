@@ -123,10 +123,10 @@ describe('RefundPaymentHandler', () => {
   // ── callMoyasarAndFinalize ────────────────────────────────────────────────
 
   describe('callMoyasarAndFinalize', () => {
-    it('delegates to moyasar.createRefund with amount in halala', async () => {
+    it('delegates to moyasar.createRefund with the amount verbatim (already halalas)', async () => {
       moyasar.createRefund.mockResolvedValue({ id: 'moy-ref-1' });
 
-      const result = await handler.callMoyasarAndFinalize('gateway-ref-1', 150.55, 'idemp-1', 'org-1');
+      const result = await handler.callMoyasarAndFinalize('gateway-ref-1', 15055, 'idemp-1', 'org-1');
 
       expect(result).toEqual({ id: 'moy-ref-1' });
       expect(moyasar.createRefund).toHaveBeenCalledWith('org-1', {
@@ -134,6 +134,16 @@ describe('RefundPaymentHandler', () => {
         amount: 15055,
         idempotencyKey: 'idemp-1',
       });
+    });
+
+    it('refunds a 12000-halala payment in full without multiplying by 100', async () => {
+      moyasar.createRefund.mockResolvedValue({ id: 'moy-ref-2' });
+
+      await handler.callMoyasarAndFinalize('gateway-ref-1', 12000, 'idemp-2', 'org-1');
+
+      const params = moyasar.createRefund.mock.calls[0][1];
+      expect(params.amount).toBe(12000);
+      expect(params.amount).not.toBe(1200000);
     });
   });
 
@@ -281,7 +291,7 @@ describe('RefundPaymentHandler', () => {
 
       expect(moyasar.createRefund).toHaveBeenCalledWith(DEFAULT_ORG_ID, {
         paymentId: 'gateway-ref-1',
-        amount: 10000,
+        amount: 100,
         idempotencyKey: 'idemp-1',
       });
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);

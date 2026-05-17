@@ -1,19 +1,29 @@
 import type { BundleDiscountType, BundlePriceBreakdown } from "./types/bundle"
 
-const round2 = (n: number) => Math.round(n * 100) / 100
+// Money is integer halalas — round to whole halalas (mirrors the backend
+// BundlePriceService.roundHalalas).
+const roundHalalas = (n: number) => Math.round(n)
 
+/**
+ * Compute a bundle's price breakdown. Operates entirely in integer halalas.
+ *
+ * - `servicePrices` are halalas, so `subtotal` is halalas.
+ * - For `FIXED`, `discountValue` is a money amount in halalas.
+ * - For `PERCENTAGE`, `discountValue` is a raw 0-100 percent; the `/ 100`
+ *   below is the percentage divisor, not a unit conversion.
+ */
 export function computeBundlePrice(
   servicePrices: number[],
   discountType: BundleDiscountType,
   discountValue: number,
 ): BundlePriceBreakdown {
-  const subtotal = round2(servicePrices.reduce((a, b) => a + b, 0))
+  const subtotal = roundHalalas(servicePrices.reduce((a, b) => a + b, 0))
   let discountAmount = 0
   if (discountType === 'PERCENTAGE') {
-    discountAmount = round2(subtotal * Math.min(discountValue, 100) / 100)
+    discountAmount = roundHalalas(subtotal * Math.min(discountValue, 100) / 100)
   } else {
-    discountAmount = round2(Math.min(discountValue, subtotal))
+    discountAmount = roundHalalas(Math.min(discountValue, subtotal))
   }
-  const finalPrice = round2(Math.max(0, subtotal - discountAmount))
+  const finalPrice = roundHalalas(Math.max(0, subtotal - discountAmount))
   return { subtotal, discountAmount, finalPrice }
 }

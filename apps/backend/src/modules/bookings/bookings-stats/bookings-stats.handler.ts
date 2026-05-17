@@ -28,19 +28,18 @@ export class BookingsStatsHandler {
       }),
     ]);
 
-    // price is Decimal — convert to number. Runtime convention is halalas-as-
-    // Decimal (see docs/superpowers/tech-debt/price-units-*), so divide by 100
-    // before returning SAR. TODO(price-units): remove /100 after unification.
+    // Booking.price is stored in halalas; revenueToday is returned in halalas.
+    // The dashboard converts to a SAR display string at render time.
     const rawRevenue = revenueAgg._sum.price;
-    const revenueSarMajor = rawRevenue instanceof Prisma.Decimal
-      ? rawRevenue.toNumber() / 100
-      : Number(rawRevenue ?? 0) / 100;
+    const revenueHalalas = rawRevenue instanceof Prisma.Decimal
+      ? rawRevenue.toNumber()
+      : Number(rawRevenue ?? 0);
 
     return {
       todayCount,
       pendingCount,
       completedToday,
-      revenueToday: Math.round(revenueSarMajor * 100) / 100,
+      revenueToday: Math.round(revenueHalalas),
     };
   }
 }

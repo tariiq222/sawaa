@@ -15,6 +15,7 @@ import { getFontName } from '@/theme/fonts';
 import { APP_SCHEME } from '@/constants/config';
 import { clientBookingsService } from '@/services/client/bookings';
 import { clientPaymentsService } from '@/services/client/payments';
+import { formatHalalas } from '@/lib/money';
 
 type Method = 'card' | 'apple_pay' | 'bank_transfer';
 
@@ -40,9 +41,10 @@ export default function BookingPaymentScreen() {
   const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const GoIcon = dir.isRTL ? ChevronLeft : ChevronRight;
 
+  // params.amount is integer halalas (set by confirm.tsx from service.price).
   const total = params.amount ? Number(params.amount) : 0;
-  const formatMoney = (n: number) =>
-    `${n.toLocaleString(dir.isRTL ? 'ar-SA' : 'en-US')} ⃁`;
+  const formatMoney = (halalas: number) =>
+    `${formatHalalas(halalas, { locale: dir.isRTL ? 'ar-SA' : 'en-US' })} ⃁`;
 
   const methods: Array<{ key: Method; icon: React.ReactNode; labelAr: string; labelEn: string; subAr: string; subEn: string; color: string }> = [
     { key: 'card', icon: <CreditCard size={20} color={sawaaColors.teal[600]} strokeWidth={1.75} />, labelAr: 'بطاقة ائتمانية', labelEn: 'Credit card', subAr: 'Visa · Mada · Mastercard', subEn: 'Visa · Mada · Mastercard', color: sawaaColors.teal[600] },

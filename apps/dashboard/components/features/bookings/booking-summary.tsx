@@ -3,6 +3,7 @@
 import { Button, Input } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
+import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { cn } from "@/lib/utils"
 
 /* ─── Props ─── */
@@ -15,6 +16,8 @@ interface BookingSummaryProps {
   durationLabel: string | null
   date: string | null
   startTime: string | null
+  /** Selected service price in halalas (1 SAR = 100). */
+  servicePriceHalalas: number | null
   payAtClinic: boolean
   couponCode: string | null
   submitting: boolean
@@ -110,6 +113,7 @@ export function BookingSummary({
   durationLabel,
   date,
   startTime,
+  servicePriceHalalas,
   payAtClinic,
   couponCode,
   submitting,
@@ -118,7 +122,7 @@ export function BookingSummary({
   onCouponChange,
   onSubmit,
 }: BookingSummaryProps) {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const { formatDate, formatTime } = useOrganizationConfig()
 
   // Type + duration combined value
@@ -168,6 +172,25 @@ export function BookingSummary({
           value={datetimeValue}
         />
       </dl>
+
+      <hr className="border-border" />
+
+      {/* Service price */}
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-sm font-medium text-foreground">
+          {t("bookings.pos.summary.servicePrice")}
+        </span>
+        {servicePriceHalalas != null ? (
+          <FormattedCurrency
+            amount={servicePriceHalalas}
+            locale={locale}
+            decimals={2}
+            className="text-base font-semibold tabular-nums text-foreground"
+          />
+        ) : (
+          <span className="text-sm text-muted-foreground opacity-50">—</span>
+        )}
+      </div>
 
       <hr className="border-border" />
 

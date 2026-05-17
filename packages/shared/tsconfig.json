@@ -23,7 +23,8 @@
     "tokens/**/*.ts",
     "theme/**/*.ts",
     "state-machines/**/*.ts",
-    "terminology/**/*.ts"
+    "terminology/**/*.ts",
+    "money/**/*.ts"
   ],
   "exclude": ["**/*.test.ts", "**/*.spec.ts", "node_modules", "dist"]
 }

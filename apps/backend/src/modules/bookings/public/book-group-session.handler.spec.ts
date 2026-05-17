@@ -15,6 +15,9 @@ function createSession(overrides?: Partial<any>) {
     waitlistEnabled: true,
     price: 100,
     currency: 'SAR',
+    employeeId: 'emp1',
+    serviceId: 'svc1',
+    branchId: 'branch1',
     ...overrides,
   };
 }
@@ -29,7 +32,14 @@ describe('BookGroupSessionHandler', () => {
       groupEnrollment: { findUnique: jest.fn(), create: jest.fn() },
       groupSessionWaitlist: { findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn() },
       booking: { findFirst: jest.fn(), create: jest.fn() },
+      invoice: { create: jest.fn() },
+      organizationSettings: { findFirst: jest.fn() },
+      $transaction: jest.fn(),
     };
+    // Run the transaction callback with prisma itself as the tx client.
+    prisma.$transaction = jest.fn((cb: (tx: unknown) => Promise<unknown>) =>
+      Promise.resolve(cb(prisma)),
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -72,6 +82,8 @@ describe('BookGroupSessionHandler', () => {
     prisma.groupSessionWaitlist.findUnique.mockResolvedValue(null);
     prisma.booking.findFirst.mockResolvedValue({ bookingNumber: 'BK-099' });
     prisma.booking.create.mockResolvedValue({ id: 'b1', bookingNumber: 'BK-001' });
+    prisma.invoice.create.mockResolvedValue({ id: 'inv1' });
+    prisma.organizationSettings.findFirst.mockResolvedValue({ vatRate: '0.15' });
     prisma.groupEnrollment.create.mockResolvedValue({});
     prisma.groupSession.update.mockResolvedValue({});
 
@@ -92,7 +104,7 @@ describe('BookGroupSessionHandler', () => {
     prisma.groupEnrollment.create.mockResolvedValue({});
     prisma.groupSession.update.mockResolvedValue({});
 
-    const result = await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
+    await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
     expect(prisma.booking.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ expiresAt: null }),
     }));
@@ -128,5 +140,166 @@ describe('BookGroupSessionHandler', () => {
     prisma.groupEnrollment.findUnique.mockResolvedValue(null);
     prisma.groupSessionWaitlist.findUnique.mockResolvedValue(null);
     await expect(handler.execute({ groupSessionId: 'gs1', clientId: 'c1' })).rejects.toThrow(BadRequestException);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Invoice creation for paid group-session bookings
+  // ──────────────────────────────────────────────────────────────────────────
+
+  it('creates a Booking AND an Invoice for a paid group session', async () => {
+    prisma.groupSession.findFirst.mockResolvedValue(
+      createSession({ price: 12000, enrolledCount: 5, maxCapacity: 10 }),
+    );
+    prisma.groupEnrollment.findUnique.mockResolvedValue(null);
+    prisma.groupSessionWaitlist.findUnique.mockResolvedValue(null);
+    prisma.booking.findFirst.mockResolvedValue(null);
+    prisma.booking.create.mockResolvedValue({
+      id: 'b1',
+      branchId: 'branch1',
+      clientId: 'c1',
+      employeeId: 'emp1',
+      currency: 'SAR',
+      status: 'AWAITING_PAYMENT',
+    });
+    prisma.invoice.create.mockResolvedValue({ id: 'inv1' });
+    prisma.organizationSettings.findFirst.mockResolvedValue({ vatRate: '0.15' });
+    prisma.groupEnrollment.create.mockResolvedValue({});
+    prisma.groupSession.update.mockResolvedValue({});
+
+    const result = await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
+
+    expect(result.type).toBe('BOOKED');
+    expect(result.bookingId).toBe('b1');
+
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'AWAITING_PAYMENT', price: 12000 }),
+      }),
+    );
+
+    expect(prisma.invoice.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          bookingId: 'b1',
+          subtotal: 12000,
+          discountAmt: 0,
+          vatRate: 0.15,
+          vatAmt: 1800,
+          total: 13800,
+          status: 'ISSUED',
+        }),
+      }),
+    );
+  });
+
+  it('defaults VAT to 0.15 when organizationSettings is absent', async () => {
+    prisma.groupSession.findFirst.mockResolvedValue(
+      createSession({ price: 12000, enrolledCount: 5, maxCapacity: 10 }),
+    );
+    prisma.groupEnrollment.findUnique.mockResolvedValue(null);
+    prisma.groupSessionWaitlist.findUnique.mockResolvedValue(null);
+    prisma.booking.findFirst.mockResolvedValue(null);
+    prisma.booking.create.mockResolvedValue({
+      id: 'b1',
+      branchId: 'branch1',
+      clientId: 'c1',
+      employeeId: 'emp1',
+      currency: 'SAR',
+      status: 'AWAITING_PAYMENT',
+    });
+    prisma.invoice.create.mockResolvedValue({ id: 'inv1' });
+    prisma.organizationSettings.findFirst.mockResolvedValue(null);
+    prisma.groupEnrollment.create.mockResolvedValue({});
+    prisma.groupSession.update.mockResolvedValue({});
+
+    await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
+
+    expect(prisma.invoice.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ vatRate: 0.15, vatAmt: 1800, total: 13800 }),
+      }),
+    );
+  });
+
+  it('does NOT create an Invoice for a free group session', async () => {
+    prisma.groupSession.findFirst.mockResolvedValue(
+      createSession({ price: 0, enrolledCount: 5, maxCapacity: 10 }),
+    );
+    prisma.groupEnrollment.findUnique.mockResolvedValue(null);
+    prisma.groupSessionWaitlist.findUnique.mockResolvedValue(null);
+    prisma.booking.findFirst.mockResolvedValue(null);
+    prisma.booking.create.mockResolvedValue({
+      id: 'b1',
+      branchId: 'branch1',
+      clientId: 'c1',
+      employeeId: 'emp1',
+      currency: 'SAR',
+      status: 'CONFIRMED',
+    });
+    prisma.groupEnrollment.create.mockResolvedValue({});
+    prisma.groupSession.update.mockResolvedValue({});
+
+    await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
+
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'CONFIRMED', expiresAt: null }),
+      }),
+    );
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
+  });
+
+  it('rounds VAT to whole halalas for paid group bookings', async () => {
+    // 9990 halalas * 0.15 = 1498.5 → must round to a whole halala.
+    prisma.groupSession.findFirst.mockResolvedValue(
+      createSession({ price: 9990, enrolledCount: 5, maxCapacity: 10 }),
+    );
+    prisma.groupEnrollment.findUnique.mockResolvedValue(null);
+    prisma.groupSessionWaitlist.findUnique.mockResolvedValue(null);
+    prisma.booking.findFirst.mockResolvedValue(null);
+    prisma.booking.create.mockResolvedValue({
+      id: 'b1',
+      branchId: 'branch1',
+      clientId: 'c1',
+      employeeId: 'emp1',
+      currency: 'SAR',
+      status: 'AWAITING_PAYMENT',
+    });
+    prisma.invoice.create.mockResolvedValue({ id: 'inv1' });
+    prisma.organizationSettings.findFirst.mockResolvedValue(null);
+    prisma.groupEnrollment.create.mockResolvedValue({});
+    prisma.groupSession.update.mockResolvedValue({});
+
+    await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
+
+    const invoiceData = prisma.invoice.create.mock.calls[0][0].data;
+    expect(Number.isInteger(invoiceData.vatAmt)).toBe(true);
+    expect(invoiceData.vatAmt).toBe(1499);
+    expect(invoiceData.total).toBe(11489);
+  });
+
+  it('wraps booking + invoice + enrollment in a single transaction', async () => {
+    prisma.groupSession.findFirst.mockResolvedValue(
+      createSession({ price: 12000, enrolledCount: 5, maxCapacity: 10 }),
+    );
+    prisma.groupEnrollment.findUnique.mockResolvedValue(null);
+    prisma.groupSessionWaitlist.findUnique.mockResolvedValue(null);
+    prisma.booking.findFirst.mockResolvedValue(null);
+    prisma.booking.create.mockResolvedValue({
+      id: 'b1',
+      branchId: 'branch1',
+      clientId: 'c1',
+      employeeId: 'emp1',
+      currency: 'SAR',
+      status: 'AWAITING_PAYMENT',
+    });
+    prisma.invoice.create.mockResolvedValue({ id: 'inv1' });
+    prisma.organizationSettings.findFirst.mockResolvedValue({ vatRate: '0.15' });
+    prisma.groupEnrollment.create.mockResolvedValue({});
+    prisma.groupSession.update.mockResolvedValue({});
+
+    await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
   });
 });

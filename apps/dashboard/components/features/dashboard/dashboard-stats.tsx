@@ -11,6 +11,7 @@ import type { IconSvgElement } from "@hugeicons/react"
 import { StatsGrid } from "@/components/features/stats-grid"
 import { StatCard } from "@/components/features/stat-card"
 import { useLocale } from "@/components/locale-provider"
+import { formatPrice } from "@/lib/money"
 import type { VisibleWidgets } from "@/lib/dashboard-widgets"
 
 interface DashboardStatsApi {
@@ -31,7 +32,7 @@ interface DashboardStatsProps {
 type StatCardConfig = {
   key: "bookings" | "clients" | "pending" | "revenue"
   title: string
-  value: number
+  value: string | number
   icon: IconSvgElement
   iconColor: "primary" | "success" | "warning" | "accent"
   description?: string
@@ -76,7 +77,8 @@ export function DashboardStats({ stats, visibleStats }: DashboardStatsProps) {
     visibleStats.revenue && {
       key: "revenue" as const,
       title: t("dashboard.todayRevenue"),
-      value: todayRevenue,
+      // todayRevenue arrives in halalas — render as a SAR-major string.
+      value: formatPrice(todayRevenue),
       icon: MoneyReceiveSquareIcon,
       iconColor: "accent" as const,
       description: t("dashboard.currency"),

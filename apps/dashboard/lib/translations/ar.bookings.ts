@@ -266,6 +266,7 @@ export const arBookings: Record<string, string> = {
   "bookings.pos.hint.needService": "اختر خدمة أولاً",
   "bookings.pos.hint.needEmployee": "اختر الخدمة والممارس لعرض الأوقات",
   "bookings.pos.summary.title": "ملخص الحجز",
+  "bookings.pos.summary.servicePrice": "سعر الخدمة",
   "bookings.pos.confirm": "تأكيد الحجز",
 
   // booking-columns (list table)

@@ -15,8 +15,7 @@ import {
   publicCatalogService,
   type PublicService,
 } from '@/services/client/catalog';
-
-const VAT_RATE = 0.15;
+import { formatHalalas } from '@/lib/money';
 
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -92,11 +91,12 @@ export default function BookingConfirmScreen() {
   const kindAr = isOnline ? 'استشارة عن بُعد' : 'موعد عيادة';
   const kindEn = isOnline ? 'Remote consultation' : 'In-clinic visit';
 
+  // service.price is integer halalas (API). VAT/total are computed
+  // server-side on the invoice — not derived client-side here.
   const subtotal = service ? Number(service.price) : 0;
-  const vat = Math.round(subtotal * VAT_RATE * 100) / 100;
-  const total = subtotal + vat;
-  const formatMoney = (n: number) =>
-    `${n.toLocaleString(dir.isRTL ? 'ar-SA' : 'en-US')} ⃁`;
+  const total = subtotal;
+  const formatMoney = (halalas: number) =>
+    `${formatHalalas(halalas, { locale: dir.isRTL ? 'ar-SA' : 'en-US' })} ⃁`;
 
   const rows = [
     {
@@ -217,12 +217,7 @@ export default function BookingConfirmScreen() {
                   </Text>
                   <Text style={[styles.priceValue, { fontFamily: f600 }]}>{formatMoney(subtotal)}</Text>
                 </View>
-                <View style={[styles.priceRow, { flexDirection: dir.row }]}>
-                  <Text style={[styles.priceLabel, { fontFamily: f500 }]}>
-                    {dir.isRTL ? 'ضريبة القيمة المضافة (١٥٪)' : 'VAT (15%)'}
-                  </Text>
-                  <Text style={[styles.priceValue, { fontFamily: f600 }]}>{formatMoney(vat)}</Text>
-                </View>
+                {/* TODO(price-units): VAT/total must come from server invoice */}
                 <View style={styles.priceDivider} />
                 <View style={[styles.priceRow, { flexDirection: dir.row }]}>
                   <Text style={[styles.priceLabelBold, { fontFamily: f700 }]}>

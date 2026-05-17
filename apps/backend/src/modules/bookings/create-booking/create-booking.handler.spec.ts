@@ -308,6 +308,25 @@ describe('CreateBookingHandler', () => {
     );
   });
 
+  it('rounds VAT to whole halalas (no fractional halala on the invoice)', async () => {
+    // 9990 halalas * 0.15 = 1498.5 → must round to a whole halala (1499).
+    priceResolver.resolve = jest.fn().mockResolvedValue({
+      price: 9990,
+      durationMins: 60,
+      durationOptionId: '',
+      currency: 'SAR',
+      isEmployeeOverride: false,
+    });
+    prisma.organizationSettings.findFirst = jest.fn().mockResolvedValue(null);
+
+    await handler.execute(baseDto);
+
+    const invoiceData = prisma.invoice.create.mock.calls[0][0].data;
+    expect(Number.isInteger(invoiceData.vatAmt)).toBe(true);
+    expect(invoiceData.vatAmt).toBe(1499);
+    expect(invoiceData.total).toBe(11489);
+  });
+
   it('does not create invoice when payAtClinic=true', async () => {
     settingsHandler.execute = jest.fn().mockResolvedValue({ payAtClinicEnabled: true });
     await handler.execute({ ...baseDto, payAtClinic: true });

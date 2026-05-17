@@ -70,15 +70,17 @@ describe('BundlePriceService', () => {
       expect(result.finalPrice).toBe(0);
     });
 
-    it('handles decimal precision for FIXED discount', () => {
+    it('rounds money to whole halalas for FIXED discount', () => {
+      // Inputs that aren't whole halalas must be rounded to integers — money
+      // is integer halalas, never fractional.
       const result = service.computeBundlePrice({
         servicePrices: [10.5, 20.75],
         discountType: DiscountType.FIXED,
         discountValue: 5.333,
       });
-      expect(result.subtotal).toBe(31.25);
-      expect(result.discountAmount).toBe(5.33);
-      expect(result.finalPrice).toBe(25.92);
+      expect(result.subtotal).toBe(31);
+      expect(result.discountAmount).toBe(5);
+      expect(result.finalPrice).toBe(26);
     });
   });
 });

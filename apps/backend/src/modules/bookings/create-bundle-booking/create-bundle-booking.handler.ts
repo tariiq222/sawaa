@@ -34,8 +34,9 @@ function mapDbConflict(err: unknown): never {
   throw err;
 }
 
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
+// Money is integer halalas — round to whole halalas.
+function roundHalalas(n: number): number {
+  return Math.round(n);
 }
 
 export type CreateBundleBookingCommand = Omit<CreateBundleBookingDto, 'scheduledAt'> & {
@@ -138,12 +139,12 @@ export class CreateBundleBookingHandler {
     } else {
       let sharesSum = 0;
       for (let i = 0; i < slots.length - 1; i++) {
-        const share = round2(servicePrices[i] * finalPrice / subtotal);
+        const share = roundHalalas(servicePrices[i] * finalPrice / subtotal);
         shares.push(share);
         sharesSum += share;
       }
       // Last service absorbs rounding difference
-      shares.push(round2(finalPrice - sharesSum));
+      shares.push(roundHalalas(finalPrice - sharesSum));
     }
 
     // 8. Execute everything in a serializable transaction
@@ -220,13 +221,13 @@ export class CreateBundleBookingHandler {
           const vatRate = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
           const vatBase = new Prisma.Decimal(finalPrice.toString());
           const vatAmt = new Prisma.Decimal(
-            (Math.round(vatBase.toNumber() * vatRate.toNumber() * 100) / 100).toString(),
+            Math.round(vatBase.toNumber() * vatRate.toNumber()).toString(),
           );
           const total = new Prisma.Decimal(
-            (Math.round((vatBase.toNumber() + vatAmt.toNumber()) * 100) / 100).toString(),
+            Math.round(vatBase.toNumber() + vatAmt.toNumber()).toString(),
           );
           const discountAmt = new Prisma.Decimal(
-            (Math.round((subtotal - finalPrice) * 100) / 100).toString(),
+            Math.round(subtotal - finalPrice).toString(),
           );
 
           invoice = await tx.invoice.create({

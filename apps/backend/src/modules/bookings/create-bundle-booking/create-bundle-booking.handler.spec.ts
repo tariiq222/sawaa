@@ -236,7 +236,7 @@ describe('CreateBundleBookingHandler', () => {
 
   it('distributes discounted prices so they sum to finalPrice exactly', async () => {
     // bundlePriceService returns finalPrice=270, subtotal=300
-    // servicePrices=[200,100]: share0=round2(200*270/300)=180, share1=270-180=90
+    // servicePrices=[200,100]: share0=roundHalalas(200*270/300)=180, share1=270-180=90
     await handler.execute(baseDto);
 
     const calls = (tx.booking.create as jest.Mock).mock.calls;

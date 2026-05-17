@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Logger, Optional } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { createHmac, createHash, timingSafeEqual } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
@@ -12,6 +12,7 @@ import { PaymentFailedEvent } from '../events/payment-failed.event';
 import { MoyasarWebhookDto } from './moyasar-webhook.dto';
 import { AppMetricsService } from '../../../infrastructure/telemetry/app-metrics.service';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { MoyasarApiClient, MoyasarPaymentStatus } from '../moyasar-api/moyasar-api.client';
 
 export interface MoyasarWebhookRequest {
   payload: MoyasarWebhookDto;
@@ -19,23 +20,52 @@ export interface MoyasarWebhookRequest {
   signature: string;
 }
 
+export interface MoyasarWebhookResult {
+  skipped?: boolean;
+  /** Why a webhook was dropped-and-acked. Present only when `skipped` is true. */
+  reason?: string;
+}
+
 /**
  * Processes Moyasar webhook events with PER-TENANT signature verification.
  *
- * Stage order (changed 2026-05-05):
- *   1. Parse payload — read invoiceId from metadata.
+ * Moyasar delivers webhooks in a NESTED shape — an event envelope at the root
+ * ({ id, type, secret_token }) wrapping the payment object under `data`. Some
+ * merchant configs / legacy callers send a FLAT shape with the payment fields
+ * at the root. Stage 1 normalizes both into one internal object.
+ *
+ * Stage order:
+ *   1. Parse + normalize payload — resolve paymentId/invoiceId/status from
+ *      either the nested `data` object or the flat root.
  *   2. System-context lookup of Invoice → resolves the tenant.
  *   3. System-context lookup of OrganizationPaymentConfig for that tenant.
  *   4. Decrypt the tenant's webhook secret (AAD = organizationId).
- *   5. Verify HMAC signature with the tenant's secret.
- *   6. Idempotency check.
- *   7. Validate payload amount + currency match the invoice (anti-spoof).
+ *   5. Verify the shared secret with the tenant's secret — via the HMAC
+ *      `X-Moyasar-Signature` header when present, else the body `secret_token`.
+ *   6. Idempotency check (keyed on paymentId:status, not the root event id).
+ *   7. Re-fetch the payment from the Moyasar API (authoritative source of truth)
+ *      and validate its amount/currency against the invoice (anti-spoof).
  *   8. Mutations under the resolved tenant CLS context.
+ *
+ * ── Error classification ──────────────────────────────────────────────────
+ * Moyasar RETRIES any non-2xx response with backoff. A malformed or
+ * maliciously-crafted webhook would otherwise be retried forever.
+ *
+ *   PERMANENT (drop + 200 ack):   never throws — logs and returns
+ *   `{ skipped: true, reason }`. Covers: missing metadata/invoice, missing
+ *   payment config, webhook-secret decrypt failure, missing/invalid signature
+ *   (no HMAC header AND no body secret_token, or a bad one),
+ *   amount/currency mismatch, Moyasar 404 (payment does not exist), and a
+ *   non-terminal fetched status (a later webhook carries the terminal one).
+ *
+ *   TRANSIENT (propagate → 5xx):  genuine infrastructure failures (DB errors,
+ *   transaction deadlocks, a Moyasar re-fetch failing with a network/5xx
+ *   error) propagate so Moyasar retries — a retry can legitimately succeed.
  *
  * Why DB before signature: the tenant secret is per-org, so we cannot verify
  * a signature without first resolving which tenant the payload belongs to.
- * The endpoint is rate-limited (Throttle 120/min) and lookup failures return
- * the same generic responses to avoid acting as an oracle.
+ * The endpoint is rate-limited (Throttle 120/min) and rejections return the
+ * same generic 200 ack to avoid acting as an oracle.
  */
 @Injectable()
 export class MoyasarWebhookHandler {
@@ -47,46 +77,89 @@ export class MoyasarWebhookHandler {
     private readonly eventBus: EventBusService,
     private readonly cls: ClsService,
     private readonly creds: MoyasarCredentialsService,
+    private readonly moyasarApi: MoyasarApiClient,
     @Optional() private readonly appMetrics: AppMetricsService | null = null,
   ) {}
 
-  verifySignature(rawBody: string, signature: string, secret: string): void {
+  /**
+   * Constant-time HMAC-SHA256 verification of the raw webhook body.
+   * Returns `true` when the signature matches, `false` otherwise — never
+   * throws, so the caller can drop-and-ack an invalid signature with a 200.
+   */
+  verifySignature(rawBody: string, signature: string, secret: string): boolean {
     const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
     const expectedBuf = Buffer.from(expected, 'hex');
     const signatureBuf = Buffer.from(signature, 'hex');
-    if (
-      expectedBuf.length !== signatureBuf.length ||
-      !timingSafeEqual(expectedBuf, signatureBuf)
-    ) {
-      throw new BadRequestException('Invalid Moyasar webhook signature');
+    if (expectedBuf.length !== signatureBuf.length) {
+      return false;
     }
+    return timingSafeEqual(expectedBuf, signatureBuf);
   }
 
-  async execute(req: MoyasarWebhookRequest): Promise<{ skipped?: boolean }> {
-    // STAGE 1 — parse payload.
+  /**
+   * Constant-time comparison of a body-supplied `secret_token` against the
+   * tenant's stored webhook secret. Some merchant webhook configs put the
+   * shared secret in the body instead of an `X-Moyasar-Signature` HMAC header
+   * (see the Moyasar security reference §6.4). Returns `true` on an exact
+   * match, `false` otherwise — never throws.
+   */
+  verifySecretToken(bodySecret: string, secret: string): boolean {
+    const bodyBuf = Buffer.from(bodySecret, 'utf8');
+    const secretBuf = Buffer.from(secret, 'utf8');
+    if (bodyBuf.length !== secretBuf.length) {
+      return false;
+    }
+    return timingSafeEqual(bodyBuf, secretBuf);
+  }
+
+  async execute(req: MoyasarWebhookRequest): Promise<MoyasarWebhookResult> {
+    // STAGE 1 — parse + NORMALIZE the payload.
+    //
+    // Moyasar's documented webhook shape is NESTED — an event envelope at the
+    // root (`id` = event id, `type`, `secret_token`) wrapping the payment
+    // object under `data`. Some merchant configs / legacy callers deliver the
+    // FLAT shape with the payment fields at the root. Normalize both into one
+    // internal object so the rest of the handler is shape-agnostic.
     const payload = req.payload;
-    const { invoiceId } = payload.metadata ?? {};
-    if (!invoiceId) {
-      this.logger.warn(`Moyasar webhook missing metadata: ${payload.id}`);
-      return { skipped: true };
+    const paymentId = payload.data?.id ?? payload.id;
+    const normalizedStatus = payload.data?.status ?? payload.status;
+    const invoiceId = payload.data?.metadata?.invoiceId ?? payload.metadata?.invoiceId;
+    const message = payload.data?.message ?? payload.message;
+    const bodySecret = payload.secret_token;
+
+    if (!paymentId || !invoiceId) {
+      // Permanent: a payload that resolves to neither a payment id nor an
+      // invoice id can never be acted on — drop-and-ack.
+      this.logger.warn(
+        `Moyasar webhook missing metadata (payment=${paymentId ?? 'none'} invoice=${invoiceId ?? 'none'})`,
+      );
+      return { skipped: true, reason: 'missing_metadata' };
     }
 
     // STAGE 2 — resolve tenant from invoice (system context bypasses Proxy).
     const invoice = await this.cls.run(async () => {
-      this.logger.warn('systemContext bypass activated', { context: 'MoyasarWebhookHandler' });
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
       return this.prisma.invoice.findFirst({ where: { id: invoiceId } });
     });
-    if (!invoice) return { skipped: true };
+    if (!invoice) {
+      this.logger.warn(
+        `Moyasar webhook references unknown invoice ${invoiceId} (payment ${paymentId})`,
+      );
+      return { skipped: true, reason: 'invoice_not_found' };
+    }
 
     // STAGE 3 — fetch tenant's payment config (system context).
     const cfg = await this.cls.run(async () => {
-      this.logger.warn('systemContext bypass activated', { context: 'MoyasarWebhookHandler' });
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
       return this.prisma.organizationPaymentConfig.findFirst();
     });
     if (!cfg) {
-      throw new BadRequestException('Invalid webhook request');
+      // Permanent: no Moyasar config means this deployment cannot ever verify
+      // the webhook. Drop-and-ack so Moyasar stops retrying.
+      this.logger.error(
+        `Moyasar webhook rejected: no OrganizationPaymentConfig (payment ${paymentId})`,
+      );
+      return { skipped: true, reason: 'missing_payment_config' };
     }
 
     // STAGE 4 — decrypt the tenant's webhook secret (AAD = organizationId).
@@ -98,14 +171,48 @@ export class MoyasarWebhookHandler {
       );
       webhookSecret = decoded.webhookSecret;
     } catch (err) {
+      // Permanent: a corrupt/unreadable secret will never decrypt on retry.
       this.logger.error(
-        `Failed to decrypt webhook secret for org ${DEFAULT_ORG_ID}: ${err instanceof Error ? err.message : 'unknown'}`,
+        `Moyasar webhook rejected: failed to decrypt webhook secret for org ${DEFAULT_ORG_ID} ` +
+          `(payment ${paymentId}): ${err instanceof Error ? err.message : 'unknown'}`,
       );
-      throw new BadRequestException('Invalid webhook request');
+      return { skipped: true, reason: 'webhook_secret_decrypt_failed' };
     }
 
-    // STAGE 5 — verify signature with tenant's own secret.
-    this.verifySignature(req.rawBody, req.signature, webhookSecret);
+    // STAGE 5 — verify the shared secret with the tenant's own secret.
+    //
+    // Moyasar webhook configs verify via ONE of two channels (security ref §6.4):
+    //   - an `X-Moyasar-Signature` HMAC header over the raw body, OR
+    //   - a `secret_token` field carried in the body itself.
+    // We support both: prefer the HMAC header when present, otherwise fall
+    // back to the body token. If NEITHER is present, the webhook is
+    // unverifiable — drop-and-ack so Moyasar stops retrying.
+    if (req.signature) {
+      if (!this.verifySignature(req.rawBody, req.signature, webhookSecret)) {
+        // Permanent: a forged/invalid signature will never become valid on retry.
+        // Returning 200 stops the retry storm and avoids acting as an oracle.
+        this.logger.warn(
+          `Moyasar webhook rejected: invalid signature for payment ${paymentId} (invoice ${invoiceId})`,
+        );
+        return { skipped: true, reason: 'invalid_signature' };
+      }
+    } else if (bodySecret) {
+      if (!this.verifySecretToken(bodySecret, webhookSecret)) {
+        // Permanent: a wrong body secret_token will never become valid on retry.
+        this.logger.warn(
+          `Moyasar webhook rejected: invalid secret_token for payment ${paymentId} (invoice ${invoiceId})`,
+        );
+        return { skipped: true, reason: 'invalid_signature' };
+      }
+    } else {
+      // Permanent: no HMAC header and no body secret_token — the webhook
+      // cannot be authenticated. Drop-and-ack with HTTP 200.
+      this.logger.warn(
+        `Moyasar webhook rejected: no signature header and no secret_token ` +
+          `for payment ${paymentId} (invoice ${invoiceId})`,
+      );
+      return { skipped: true, reason: 'missing_signature' };
+    }
 
     // STAGE 6 — idempotency dedup via WebhookEvent (covers ALL statuses, not
     // just COMPLETED). Moyasar retries failed-payment webhooks — without this
@@ -114,7 +221,14 @@ export class MoyasarWebhookHandler {
     // is atomic under concurrent retries.  WebhookEvent is a platform-level
     // table (no tenant scope), so plain this.prisma.webhookEvent works without
     // a CLS bypass.
-    const webhookEventId = `${payload.id}:${payload.status}`;
+    // The dedup key is keyed on the PAYMENT id + status, NOT the root event
+    // id. In the nested shape `payload.id` is the EVENT id — unique per
+    // delivery — so keying on it would let every retry through and defeat
+    // dedup. `${paymentId}:${status}` is stable across retries of the same
+    // event (so retries dedup) yet distinct per status transition of the same
+    // payment (so a paid→refunded sequence still processes), and is identical
+    // for both the flat and nested shapes.
+    const webhookEventId = `${paymentId}:${normalizedStatus ?? 'unknown'}`;
     const payloadHash = createHash('sha256').update(req.rawBody).digest('hex');
 
     let webhookEventRowId: string;
@@ -123,7 +237,7 @@ export class MoyasarWebhookHandler {
         data: {
           provider: 'MOYASAR_TENANT',
           eventId: webhookEventId,
-          eventType: payload.status,
+          eventType: normalizedStatus ?? 'unknown',
           payloadHash,
         },
         select: { id: true },
@@ -134,30 +248,74 @@ export class MoyasarWebhookHandler {
         this.logger.log(
           `Tenant webhook: skipped_duplicate provider=MOYASAR_TENANT eventId=${webhookEventId}`,
         );
-        return { skipped: true };
+        return { skipped: true, reason: 'duplicate' };
       }
+      // A non-P2002 DB error here is transient — let it propagate as a 5xx.
       throw err;
     }
 
     try {
-      // STAGE 7 — verify webhook payload matches the invoice it claims to pay.
-      // Without this check, a 1 SAR Moyasar payment with metadata.invoiceId pointing
-      // at a 1000 SAR invoice would mark the larger invoice PAID.
-      const expectedHalalas = Math.round(Number(invoice.total) * 100);
-      if (payload.amount !== expectedHalalas) {
-        this.logger.error(
-          `Webhook amount mismatch for invoice ${invoice.id}: expected=${expectedHalalas} got=${payload.amount}`,
-        );
-        throw new BadRequestException('Payment amount does not match invoice total');
+      // STAGE 7 — re-fetch the AUTHORITATIVE payment from the Moyasar API.
+      // A signed webhook only proves the message came from Moyasar; the body
+      // could be a stale/replayed (but validly-signed) payload. We trust the
+      // re-fetched status/amount/currency, NOT the request body.
+      let fetched: { id: string; status: MoyasarPaymentStatus; amount: number; currency: string };
+      try {
+        fetched = await this.moyasarApi.getPaymentStatus(DEFAULT_ORG_ID, paymentId);
+      } catch (err) {
+        if (err instanceof NotFoundException) {
+          // Permanent: Moyasar says this payment does not exist. Drop-and-ack.
+          this.logger.error(
+            `Moyasar webhook rejected: payment ${paymentId} not found on re-fetch (invoice ${invoiceId})`,
+          );
+          await this.markWebhookEvent(webhookEventRowId, 'error');
+          return { skipped: true, reason: 'payment_not_found' };
+        }
+        // Transient: network error / 5xx / timeout — propagate so Moyasar retries.
+        throw err;
       }
-      if (payload.currency.toUpperCase() !== invoice.currency.toUpperCase()) {
+
+      // Verify the re-fetched payment matches the invoice it claims to pay.
+      // invoice.total is already in halalas; Moyasar amount is in halalas.
+      const expectedHalalas = Math.round(Number(invoice.total));
+      if (fetched.amount !== expectedHalalas) {
+        // Permanent: a spoofed/mismatched amount will never match on retry.
         this.logger.error(
-          `Webhook currency mismatch for invoice ${invoice.id}: expected=${invoice.currency} got=${payload.currency}`,
+          `Moyasar webhook rejected: amount mismatch for invoice ${invoice.id} ` +
+            `(expected=${expectedHalalas} fetched=${fetched.amount} payment=${paymentId})`,
         );
-        throw new BadRequestException('Payment currency does not match invoice');
+        await this.markWebhookEvent(webhookEventRowId, 'error');
+        return { skipped: true, reason: 'amount_mismatch' };
+      }
+      if (fetched.currency.toUpperCase() !== invoice.currency.toUpperCase()) {
+        // Permanent: currency mismatch will never match on retry.
+        this.logger.error(
+          `Moyasar webhook rejected: currency mismatch for invoice ${invoice.id} ` +
+            `(expected=${invoice.currency} fetched=${fetched.currency} payment=${paymentId})`,
+        );
+        await this.markWebhookEvent(webhookEventRowId, 'error');
+        return { skipped: true, reason: 'currency_mismatch' };
+      }
+
+      // Map the AUTHORITATIVE Moyasar status to the internal PaymentStatus.
+      //   paid / captured  → COMPLETED
+      //   failed / voided  → FAILED
+      //   anything else (authorized, initiated, pending-like) → not terminal
+      const status = this.toTerminalStatus(fetched.status);
+      if (status === null) {
+        // Permanent for THIS delivery: the payment is not in a terminal state
+        // yet. A later webhook will carry the terminal status — ack this one.
+        this.logger.log(
+          `Moyasar webhook: payment ${paymentId} not yet terminal ` +
+            `(status=${fetched.status}, invoice ${invoice.id}) — skipping`,
+        );
+        await this.markWebhookEvent(webhookEventRowId, 'processed');
+        return { skipped: true, reason: `non_terminal_status:${fetched.status}` };
       }
 
       // STAGE 8 — run mutations inside the resolved tenant's CLS context.
+      // Payment.amount is stored in halalas — fetched.amount is already halalas.
+      const amountHalalas = fetched.amount;
       const result = await this.cls.run(async () => {
         this.cls.set(TENANT_CLS_KEY, {
           organizationId: DEFAULT_ORG_ID,
@@ -166,38 +324,36 @@ export class MoyasarWebhookHandler {
           isSuperAdmin: false,
         });
 
-        const amountSar = payload.amount / 100;
-        const status: PaymentStatus =
-          payload.status === 'paid' ? PaymentStatus.COMPLETED : PaymentStatus.FAILED;
-
         // Guard: never overwrite a terminal (REFUNDED) payment back to COMPLETED/FAILED.
         const existingPayment = await this.prisma.payment.findUnique({
-          where: { idempotencyKey: `moyasar:${payload.id}` },
+          where: { idempotencyKey: `moyasar:${paymentId}` },
           select: { status: true },
         });
         if (existingPayment?.status === PaymentStatus.REFUNDED) {
           this.logger.warn(
-            `Webhook: skipping update for REFUNDED payment (gatewayRef=${payload.id})`,
+            `Webhook: skipping update for REFUNDED payment (gatewayRef=${paymentId})`,
           );
-          return {};
+          return { skipped: true, reason: 'already_refunded' } as MoyasarWebhookResult;
         }
 
         // Wrap payment upsert + invoice update in a single transaction to ensure
         // atomicity — if either fails, both roll back and no inconsistent state is stored.
-        const paymentId = await this.rlsTransaction.withTransaction(async (tx) => {
+        // `dbPaymentId` is the internal Payment ROW id; `paymentId` (above) is the
+        // Moyasar gateway payment id — they are distinct values.
+        const dbPaymentId = await this.rlsTransaction.withTransaction(async (tx) => {
           const payment = await tx.payment.upsert({
-            where: { idempotencyKey: `moyasar:${payload.id}` },
-            update: { status, processedAt: new Date(), failureReason: payload.message },
+            where: { idempotencyKey: `moyasar:${paymentId}` },
+            update: { status, processedAt: new Date(), failureReason: message },
             create: {
               invoiceId,
-              amount: amountSar,
-              currency: payload.currency,
+              amount: amountHalalas,
+              currency: fetched.currency,
               method: PaymentMethod.ONLINE_CARD,
               status,
-              gatewayRef: payload.id,
-              idempotencyKey: `moyasar:${payload.id}`,
+              gatewayRef: paymentId,
+              idempotencyKey: `moyasar:${paymentId}`,
               processedAt: status === PaymentStatus.COMPLETED ? new Date() : undefined,
-              failureReason: payload.message,
+              failureReason: message,
             },
           });
 
@@ -218,47 +374,72 @@ export class MoyasarWebhookHandler {
         if (status === PaymentStatus.COMPLETED) {
           this.appMetrics?.paymentAttempts.labels({ result: 'succeeded' }).inc();
           const event = new PaymentCompletedEvent({
-            paymentId,
+            paymentId: dbPaymentId,
             invoiceId: invoice.id,
             bookingId: invoice.bookingId,
-            amount: amountSar,
+            amount: amountHalalas,
             currency: invoice.currency,
           });
           await this.eventBus.publish(event.eventName, event.toEnvelope());
         } else if (status === PaymentStatus.FAILED) {
           this.appMetrics?.paymentAttempts.labels({ result: 'failed' }).inc();
           const failedEvent = new PaymentFailedEvent({
-            paymentId,
+            paymentId: dbPaymentId,
             invoiceId: invoice.id,
             clientId: invoice.clientId,
-            amount: amountSar,
+            amount: amountHalalas,
             currency: invoice.currency,
-            reason: payload.message,
+            reason: message,
           });
           await this.eventBus.publish(failedEvent.eventName, failedEvent.toEnvelope());
         }
 
-        return {};
+        return {} as MoyasarWebhookResult;
       });
 
-      await this.prisma.webhookEvent.update({
-        where: { id: webhookEventRowId },
-        data: { processedAt: new Date(), result: 'processed' },
-      });
+      await this.markWebhookEvent(webhookEventRowId, 'processed');
 
       return result;
     } catch (err) {
-      await this.prisma.webhookEvent
-        .update({
-          where: { id: webhookEventRowId },
-          data: { processedAt: new Date(), result: 'error' },
-        })
-        .catch((updateErr) => {
-          this.logger.error(
-            `Failed to mark webhook event as error (${webhookEventRowId}): ${String(updateErr)}`,
-          );
-        });
+      // Genuine infrastructure failure — mark the event row and re-throw so the
+      // controller responds 5xx and Moyasar retries (a retry may succeed).
+      await this.markWebhookEvent(webhookEventRowId, 'error');
       throw err;
     }
+  }
+
+  /**
+   * Maps an authoritative Moyasar status to the internal terminal PaymentStatus.
+   * Returns `null` when the payment is not yet in a terminal state — the caller
+   * should ack without mutating and wait for a later webhook.
+   */
+  private toTerminalStatus(status: MoyasarPaymentStatus): PaymentStatus | null {
+    switch (status) {
+      case 'paid':
+      case 'captured':
+        return PaymentStatus.COMPLETED;
+      case 'failed':
+      case 'voided':
+        return PaymentStatus.FAILED;
+      default:
+        // authorized, initiated, refunded (handled by the REFUNDED guard), …
+        return null;
+    }
+  }
+
+  private async markWebhookEvent(
+    webhookEventRowId: string,
+    result: 'processed' | 'error',
+  ): Promise<void> {
+    await this.prisma.webhookEvent
+      .update({
+        where: { id: webhookEventRowId },
+        data: { processedAt: new Date(), result },
+      })
+      .catch((updateErr) => {
+        this.logger.error(
+          `Failed to mark webhook event as ${result} (${webhookEventRowId}): ${String(updateErr)}`,
+        );
+      });
   }
 }

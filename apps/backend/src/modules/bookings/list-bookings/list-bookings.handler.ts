@@ -125,8 +125,8 @@ async function loadRelations(
           inv.bookingId,
           {
             id: p.id,
-            amount: Math.round(Number(p.amount) * 100),         // SAR → halalat
-            refundedAmount: Math.round(Number(p.refundedAmount) * 100), // SAR → halalat
+            amount: Math.round(Number(p.amount)),         // already halalas
+            refundedAmount: Math.round(Number(p.refundedAmount)), // already halalas
             method: p.method as string,
             status: p.status as string,
           },

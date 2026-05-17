@@ -28,8 +28,22 @@ describe('BookingsStatsHandler', () => {
       todayCount: 5,
       pendingCount: 7,
       completedToday: 3,
-      revenueToday: 450, // 45000 halalas / 100 = 450 SAR
+      revenueToday: 45000, // Booking.price is halalas; revenueToday is halalas
     });
+  });
+
+  it('returns revenueToday in halalas — no /100 conversion', async () => {
+    // Two completed bookings of 12000 + 8000 halalas → aggregate _sum.price 20000.
+    const prisma = buildPrisma();
+    prisma.booking.aggregate = jest
+      .fn()
+      .mockResolvedValue({ _sum: { price: new Prisma.Decimal(20000) } });
+    const handler = new BookingsStatsHandler(prisma as never);
+
+    const result = await handler.execute();
+
+    expect(result.revenueToday).toBe(20000);
+    expect(result.revenueToday).not.toBe(200);
   });
 
   it('handles null revenue (no completed bookings yet)', async () => {

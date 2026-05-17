@@ -279,7 +279,7 @@ describe('CreateGuestBookingHandler', () => {
 
       const result = await handler.execute(baseCmd());
 
-      expect(result).toEqual({ bookingId: 'booking-1', invoiceId: 'invoice-1', totalHalalat: 11500 });
+      expect(result).toEqual({ bookingId: 'booking-1', invoiceId: 'invoice-1', totalHalalat: 115 });
     });
 
     it('should update existing client instead of creating', async () => {
@@ -305,7 +305,7 @@ describe('CreateGuestBookingHandler', () => {
       const cmd = { ...baseCmd(), client: { ...baseCmd().client, gender: undefined as any } };
       const result = await handler.execute(cmd);
 
-      expect(result).toEqual({ bookingId: 'booking-1', invoiceId: 'invoice-1', totalHalalat: 11500 });
+      expect(result).toEqual({ bookingId: 'booking-1', invoiceId: 'invoice-1', totalHalalat: 115 });
     });
 
     it('should generate sequential booking numbers', async () => {
@@ -386,8 +386,37 @@ describe('CreateGuestBookingHandler', () => {
 
       const result = await handler.execute(baseCmd());
 
-      // 200 + 5% VAT = 210 → 21000 halalat
-      expect(result).toEqual({ bookingId: 'booking-2', invoiceId: 'invoice-2', totalHalalat: 21000 });
+      // 200 + 5% VAT = 210 halalas (already halalas)
+      expect(result).toEqual({ bookingId: 'booking-2', invoiceId: 'invoice-2', totalHalalat: 210 });
+    });
+
+    it('returns totalHalalat verbatim — price is already in halalas', async () => {
+      mockPriceResolver.resolve.mockResolvedValueOnce({ price: 12000, durationMins: 60, currency: 'SAR', durationOptionId: 'do-9' });
+
+      mockPrisma.$transaction.mockImplementation(async (fn) => {
+        const txMock = {
+          $executeRaw: jest.fn().mockResolvedValue(undefined),
+          usedOtpSession: { create: jest.fn().mockResolvedValue({}) },
+          booking: {
+            findFirst: jest.fn().mockResolvedValue(null),
+            create: jest.fn().mockResolvedValue({ id: 'booking-9', bookingNumber: 9 }),
+          },
+          client: {
+            findFirst: jest.fn().mockResolvedValue(null),
+            create: jest.fn().mockResolvedValue({ id: 'client-9' }),
+            update: jest.fn(),
+          },
+          invoice: { create: jest.fn().mockResolvedValue({ id: 'invoice-9' }) },
+          organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0.15 }) },
+        };
+        return fn(txMock);
+      });
+
+      const result = await handler.execute(baseCmd());
+
+      // 12000 halalas + 15% VAT = 13800 halalas; no extra x100.
+      expect(result.totalHalalat).toBe(13800);
+      expect(result.totalHalalat).not.toBe(1380000);
     });
 
     it('should use default VAT rate of 0.15 when org settings are missing', async () => {
@@ -412,8 +441,8 @@ describe('CreateGuestBookingHandler', () => {
 
       const result = await handler.execute(baseCmd());
 
-      // 100 + 15% VAT = 115 → 11500 halalat
-      expect(result).toEqual({ bookingId: 'booking-3', invoiceId: 'invoice-3', totalHalalat: 11500 });
+      // 100 + 15% VAT = 115 halalas (already halalas)
+      expect(result).toEqual({ bookingId: 'booking-3', invoiceId: 'invoice-3', totalHalalat: 115 });
     });
 
     it('should create guest booking successfully with all fields', async () => {
@@ -445,7 +474,7 @@ describe('CreateGuestBookingHandler', () => {
       };
       const result = await handler.execute(cmd);
 
-      expect(result).toEqual({ bookingId: 'booking-4', invoiceId: 'invoice-4', totalHalalat: 17250 });
+      expect(result).toEqual({ bookingId: 'booking-4', invoiceId: 'invoice-4', totalHalalat: 173 });
     });
 
     it('should update existing client preserving gender when cmd.gender is undefined', async () => {

@@ -25,6 +25,7 @@ import {
   useEmployeeServiceTypes,
 } from "@/hooks/use-employees"
 import { EmployeeServiceTypesEditor } from "./employee-service-types-editor"
+import { sarToHalalas, halalasToSarNumber } from "@/lib/money"
 import type { EmployeeService, EmployeeTypeConfigPayload } from "@/lib/types/employee"
 import {
   editEmployeeServiceSchema,
@@ -85,7 +86,8 @@ export function EditEmployeeServiceSheet({
     setTypeConfigs(
       existingTypes.map((et) => ({
         bookingType: et.bookingType,
-        price: et.price,
+        // Server stores price in halalas; the editor inputs collect SAR.
+        price: et.price != null ? halalasToSarNumber(et.price) : null,
         duration: et.duration,
         useCustomOptions: et.useCustomOptions,
         isActive: et.isActive,
@@ -93,7 +95,7 @@ export function EditEmployeeServiceSheet({
           label: o.label,
           labelAr: o.labelAr ?? undefined,
           durationMinutes: o.durationMinutes,
-          price: o.price,
+          price: o.price != null ? halalasToSarNumber(o.price) : 0,
           isDefault: o.isDefault,
           sortOrder: o.sortOrder,
         })),
@@ -127,13 +129,23 @@ export function EditEmployeeServiceSheet({
   const onSubmit = form.handleSubmit(async (data: EditEmployeeServiceFormData) => {
     if (!ps) return
     try {
+      // The editor inputs collect SAR-major prices; convert back to halalas
+      // (the API/DB convention) before submitting.
+      const typesPayload: EmployeeTypeConfigPayload[] = typeConfigs.map((tc) => ({
+        ...tc,
+        price: tc.price != null ? sarToHalalas(tc.price) : tc.price,
+        durationOptions: (tc.durationOptions ?? []).map((o) => ({
+          ...o,
+          price: sarToHalalas(o.price),
+        })),
+      }))
       await updateMut.mutateAsync({
         serviceId: ps.serviceId,
         payload: {
           availableTypes: typeConfigs.map((tc) => tc.bookingType),
           bufferMinutes: data.bufferMinutes,
           isActive: data.isActive,
-          types: typeConfigs,
+          types: typesPayload,
         },
       })
       toast.success(t("employees.services.updateSuccess"))

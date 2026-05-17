@@ -18,6 +18,7 @@ import { fetchCoupon } from "@/lib/api/coupons"
 import { queryKeys } from "@/lib/query-keys"
 import { formatDateTimeLocalValue } from "@/lib/date"
 import { CouponFormFields } from "./coupon-form-fields"
+import { sarToHalalas, halalasToSarNumber } from "@/lib/money"
 import { couponSchema, type CouponFormData } from "@/lib/schemas/coupon.schema"
 
 /* ─── Types ─── */
@@ -34,12 +35,14 @@ const DEFAULT_VALUES: CouponFormData = {
 
 /* ─── Helpers ─── */
 
+// FIXED coupons store discountValue in halalas; PERCENTAGE stores a raw
+// percent (0-100) and must never be converted.
 function toDisplayValue(value: number, type: "PERCENTAGE" | "FIXED") {
-  return type === "FIXED" ? value / 100 : value
+  return type === "FIXED" ? halalasToSarNumber(value) : value
 }
 
 function toStorageValue(value: number, type: "PERCENTAGE" | "FIXED") {
-  return type === "FIXED" ? Math.round(value * 100) : value
+  return type === "FIXED" ? sarToHalalas(value) : value
 }
 
 /* ─── Coupon Form Page ─── */

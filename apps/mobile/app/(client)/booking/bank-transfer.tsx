@@ -13,6 +13,7 @@ import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { clientPaymentsService } from '@/services/client';
+import { formatHalalas } from '@/lib/money';
 
 export default function BankTransferScreen() {
   const router = useRouter();
@@ -31,8 +32,9 @@ export default function BankTransferScreen() {
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const uploaded = !!receiptUri;
+  // amount is integer halalas (forwarded from payment.tsx).
   const numericAmount = amount ? Number(amount) : 0;
-  const amountLabel = `${numericAmount.toLocaleString(dir.isRTL ? 'ar-SA' : 'en-US')} ⃁`;
+  const amountLabel = `${formatHalalas(numericAmount, { locale: dir.isRTL ? 'ar-SA' : 'en-US' })} ⃁`;
 
   const pickReceipt = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
