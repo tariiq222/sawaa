@@ -4,8 +4,12 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
-import { BookingStatus, GroupSessionStatus } from '@prisma/client';
+import { BookingStatus, GroupSessionStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
+
+// Money is integer halalas — round to whole halalas (0 decimal places).
+const roundMoney = (amount: Prisma.Decimal | number): Prisma.Decimal =>
+  new Prisma.Decimal(amount.toString()).toDecimalPlaces(0);
 
 interface BookGroupSessionCommand {
   groupSessionId: string;
@@ -84,43 +88,84 @@ export class BookGroupSessionHandler {
   ): Promise<BookGroupSessionResult> {
     const price = Number(session.price);
 
-    const lastBooking = await this.prisma.booking.findFirst({
-      where: {},
-      orderBy: { bookingNumber: 'desc' },
-      select: { bookingNumber: true },
-    });
-    const nextBookingNumber = (lastBooking?.bookingNumber ?? 0) + 1;
+    // Wrap booking + invoice + enrollment + capacity increment in one
+    // transaction so a paid group booking never exists without its Invoice
+    // (the payment-init handlers require an Invoice to start a Moyasar payment).
+    const booking = await this.prisma.$transaction(async (tx) => {
+      const lastBooking = await tx.booking.findFirst({
+        where: {},
+        orderBy: { bookingNumber: 'desc' },
+        select: { bookingNumber: true },
+      });
+      const nextBookingNumber = (lastBooking?.bookingNumber ?? 0) + 1;
 
-    const booking = await this.prisma.booking.create({
-      data: {
-        branchId: session.branchId,
-        clientId,
-        employeeId: session.employeeId,
-        serviceId: session.serviceId,
-        bookingType: 'GROUP',
-        status: price > 0 ? BookingStatus.AWAITING_PAYMENT : BookingStatus.CONFIRMED,
-        scheduledAt: session.scheduledAt,
-        endsAt: new Date(session.scheduledAt.getTime() + 60 * 60 * 1000),
-        durationMins: 60,
-        price: price,
-        currency: session.currency,
-        groupSessionId: session.id,
-        expiresAt: price > 0 ? new Date(Date.now() + 30 * 60 * 1000) : null,
-        bookingNumber: nextBookingNumber,
-      },
-    });
+      const booking = await tx.booking.create({
+        data: {
+          branchId: session.branchId,
+          clientId,
+          employeeId: session.employeeId,
+          serviceId: session.serviceId,
+          bookingType: 'GROUP',
+          status: price > 0 ? BookingStatus.AWAITING_PAYMENT : BookingStatus.CONFIRMED,
+          scheduledAt: session.scheduledAt,
+          endsAt: new Date(session.scheduledAt.getTime() + 60 * 60 * 1000),
+          durationMins: 60,
+          price: price,
+          currency: session.currency,
+          groupSessionId: session.id,
+          expiresAt: price > 0 ? new Date(Date.now() + 30 * 60 * 1000) : null,
+          bookingNumber: nextBookingNumber,
+        },
+      });
 
-    await this.prisma.groupEnrollment.create({
-      data: {
-        groupSessionId: session.id,
-        clientId,
-        bookingId: booking.id,
-      },
-    });
+      // Paid group bookings need an Invoice for the payment-init flow.
+      // Group sessions have no coupon/discount: discountAmt = 0, subtotal = price.
+      if (price > 0) {
+        const orgSettings = await tx.organizationSettings.findFirst({
+          where: {},
+          select: { vatRate: true },
+        });
+        const vatRate = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
 
-    await this.prisma.groupSession.update({
-      where: { id: session.id },
-      data: { enrolledCount: { increment: 1 } },
+        const subtotalDec = new Prisma.Decimal(price.toString());
+        const discountAmtDec = new Prisma.Decimal(0);
+        const vatBaseDec = subtotalDec.sub(discountAmtDec);
+        const vatAmt = roundMoney(vatBaseDec.mul(vatRate));
+        const total = roundMoney(vatBaseDec.add(vatAmt));
+
+        await tx.invoice.create({
+          data: {
+            branchId: booking.branchId,
+            clientId: booking.clientId,
+            employeeId: booking.employeeId,
+            bookingId: booking.id,
+            subtotal: subtotalDec.toDecimalPlaces(0).toNumber(),
+            discountAmt: discountAmtDec.toDecimalPlaces(0).toNumber(),
+            vatRate: vatRate.toNumber(),
+            vatAmt: vatAmt.toNumber(),
+            total: total.toNumber(),
+            currency: booking.currency,
+            status: 'ISSUED',
+            issuedAt: new Date(),
+          },
+          select: { id: true },
+        });
+      }
+
+      await tx.groupEnrollment.create({
+        data: {
+          groupSessionId: session.id,
+          clientId,
+          bookingId: booking.id,
+        },
+      });
+
+      await tx.groupSession.update({
+        where: { id: session.id },
+        data: { enrolledCount: { increment: 1 } },
+      });
+
+      return booking;
     });
 
     return {
