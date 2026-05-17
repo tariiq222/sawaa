@@ -86,7 +86,7 @@ export class RefundPaymentHandler {
   ): Promise<{ id: string }> {
     return this.moyasar.createRefund(organizationId, {
       paymentId: gatewayRef,
-      amount: Math.round(amount * 100),
+      amount: Math.round(amount), // already halalas
       idempotencyKey,
     });
   }
@@ -251,7 +251,7 @@ export class RefundPaymentHandler {
 
     const moyasarRefund = await this.moyasar.createRefund(DEFAULT_ORG_ID, {
       paymentId: payment.gatewayRef ?? '',
-      amount: Math.round(Number(refundReq.amount) * 100),
+      amount: Math.round(Number(refundReq.amount)), // already halalas
       idempotencyKey: cmd.idempotencyKey,
     });
 
@@ -396,7 +396,7 @@ export class RefundPaymentHandler {
     try {
       const moyasarRefund = await this.moyasar.createRefund(DEFAULT_ORG_ID, {
         paymentId: payment.gatewayRef,
-        amount: Math.round(refundAmount * 100),
+        amount: Math.round(refundAmount), // already halalas
         idempotencyKey,
       });
       moyasarRefundId = moyasarRefund.id;

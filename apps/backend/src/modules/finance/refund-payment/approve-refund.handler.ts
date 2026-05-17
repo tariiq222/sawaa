@@ -73,7 +73,7 @@ export class ApproveRefundHandler {
         DEFAULT_ORG_ID,
         {
           paymentId: payment.gatewayRef,
-          amount: Math.round(Number(refundRequest.amount) * 100),
+          amount: Math.round(Number(refundRequest.amount)), // already halalas
           idempotencyKey: `refund:${refundRequest.id}`,
         },
       );
