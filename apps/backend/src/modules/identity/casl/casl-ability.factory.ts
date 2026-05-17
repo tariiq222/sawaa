@@ -21,7 +21,10 @@ export type AppAbility = MongoAbility;
  * NOT by this map. The `SUPER_ADMIN` row here is a transitional fallback
  * for in-flight tokens that still carry the legacy `role` claim.
  */
-type Rule = { action: PermissionAction | 'manage'; subject: PermissionSubject | 'all' };
+type Rule = {
+  action: PermissionAction | 'manage' | Array<PermissionAction | 'manage'>;
+  subject: PermissionSubject | 'all';
+};
 
 const ADMIN_RULES: readonly Rule[] = [
   { action: 'manage', subject: 'User' },
@@ -50,10 +53,12 @@ const BUILT_IN: Record<string, readonly Rule[]> = {
   ],
   ADMIN: ADMIN_RULES,
   RECEPTIONIST: [
-    { action: 'manage', subject: 'Booking' },
-    { action: 'manage', subject: 'Client' },
+    { action: ['create', 'read', 'update'], subject: 'Booking' },
+    { action: ['create', 'read', 'update'], subject: 'Client' },
     { action: 'read', subject: 'Employee' },
     { action: 'read', subject: 'Invoice' },
+    { action: 'read', subject: 'Service' },
+    { action: 'read', subject: 'Category' },
   ],
   ACCOUNTANT: [
     { action: 'manage', subject: 'Invoice' },

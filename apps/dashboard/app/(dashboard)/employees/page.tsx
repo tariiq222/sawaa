@@ -10,13 +10,18 @@ import { Button } from "@sawaa/ui"
 import { EmployeesListContent } from "@/components/features/employees/employees-list-content"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { PageHeader } from "@/components/features/page-header"
+import { PermissionGuard } from "@/components/features/permission-guard"
 import { useEmployees } from "@/hooks/use-employees"
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
 import { useTerminology } from "@/hooks/use-terminology"
 
 export default function EmployeesPage() {
-  return <Suspense><EmployeesPageInner /></Suspense>
+  return (
+    <PermissionGuard module="employee" action="read">
+      <Suspense><EmployeesPageInner /></Suspense>
+    </PermissionGuard>
+  )
 }
 
 function EmployeesPageInner() {

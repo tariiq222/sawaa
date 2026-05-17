@@ -17,25 +17,25 @@ export function useSidebarNav() {
   const pathname = usePathname()
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { user } = useAuth()
+  const { user, canDo } = useAuth()
 
   /* ── permission filtered nav groups (feature flags removed in single-tenant) ── */
   const filteredGroups = useMemo<NavGroupFiltered[]>(
     () =>
-      navGroups.map((group) => ({
-        labelKey: group.labelKey,
-        items: group.items.filter((item) => {
-          // Permission gate only — all features are enabled in single-tenant mode
-          if (
-            item.permission &&
-            !user?.permissions?.includes(item.permission)
-          ) {
-            return false
-          }
-          return true
-        }),
-      })),
-    [user?.permissions]
+      navGroups
+        .map((group) => ({
+          labelKey: group.labelKey,
+          items: group.items.filter((item) => {
+            // Permission gate — canDo handles wildcard perms ("booking:*").
+            if (item.permission) {
+              const [module, action] = item.permission.split(":")
+              if (!canDo(module, action)) return false
+            }
+            return true
+          }),
+        }))
+        .filter((group) => group.items.length > 0),
+    [canDo]
   )
 
   /* ── user display info ── */

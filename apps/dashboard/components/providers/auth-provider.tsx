@@ -104,9 +104,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const canDo = useCallback(
     (module: string, action: string): boolean => {
+      const m = module.toLowerCase()
+      const a = action.toLowerCase()
       return (
-        permissions.includes(`${module}:${action}`) ||
-        permissions.includes(`${module}:*`) ||
+        permissions.includes(`${m}:${a}`) ||
+        permissions.includes(`${m}:*`) ||
         permissions.includes("*")
       )
     },
