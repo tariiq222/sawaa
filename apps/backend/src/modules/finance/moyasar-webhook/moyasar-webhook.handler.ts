@@ -143,7 +143,8 @@ export class MoyasarWebhookHandler {
       // STAGE 7 — verify webhook payload matches the invoice it claims to pay.
       // Without this check, a 1 SAR Moyasar payment with metadata.invoiceId pointing
       // at a 1000 SAR invoice would mark the larger invoice PAID.
-      const expectedHalalas = Math.round(Number(invoice.total) * 100);
+      // invoice.total is already in halalas; Moyasar payload.amount is in halalas.
+      const expectedHalalas = Math.round(Number(invoice.total));
       if (payload.amount !== expectedHalalas) {
         this.logger.error(
           `Webhook amount mismatch for invoice ${invoice.id}: expected=${expectedHalalas} got=${payload.amount}`,
@@ -166,7 +167,8 @@ export class MoyasarWebhookHandler {
           isSuperAdmin: false,
         });
 
-        const amountSar = payload.amount / 100;
+        // Payment.amount is stored in halalas — payload.amount is already halalas.
+        const amountHalalas = payload.amount;
         const status: PaymentStatus =
           payload.status === 'paid' ? PaymentStatus.COMPLETED : PaymentStatus.FAILED;
 
@@ -190,7 +192,7 @@ export class MoyasarWebhookHandler {
             update: { status, processedAt: new Date(), failureReason: payload.message },
             create: {
               invoiceId,
-              amount: amountSar,
+              amount: amountHalalas,
               currency: payload.currency,
               method: PaymentMethod.ONLINE_CARD,
               status,
@@ -221,7 +223,7 @@ export class MoyasarWebhookHandler {
             paymentId,
             invoiceId: invoice.id,
             bookingId: invoice.bookingId,
-            amount: amountSar,
+            amount: amountHalalas,
             currency: invoice.currency,
           });
           await this.eventBus.publish(event.eventName, event.toEnvelope());
@@ -231,7 +233,7 @@ export class MoyasarWebhookHandler {
             paymentId,
             invoiceId: invoice.id,
             clientId: invoice.clientId,
-            amount: amountSar,
+            amount: amountHalalas,
             currency: invoice.currency,
             reason: payload.message,
           });

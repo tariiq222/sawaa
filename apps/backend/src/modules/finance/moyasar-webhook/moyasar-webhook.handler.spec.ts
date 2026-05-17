@@ -99,8 +99,10 @@ function buildCls() {
   };
 }
 
+// invoice.total is 230 halalas; Moyasar payload.amount is also in halalas,
+// so a matching payload carries amount: 230.
 const paidPayload: MoyasarWebhookDto = {
-  id: 'moyasar-pay-1', status: 'paid', amount: 23000, currency: 'SAR',
+  id: 'moyasar-pay-1', status: 'paid', amount: 230, currency: 'SAR',
   metadata: { invoiceId: 'inv-1' },
 } as MoyasarWebhookDto;
 
@@ -271,11 +273,11 @@ describe('MoyasarWebhookHandler', () => {
       expect(cls.set).toHaveBeenCalledWith(TENANT_CLS_KEY, expect.objectContaining({ organizationId: DEFAULT_ORG_ID }));
     });
 
-    it('rejects payload when amount does not match invoice.total * 100', async () => {
-      // Invoice total=230 SAR → expected halalas=23000; send 100 halalas (1 SAR) instead.
+    it('rejects payload when amount does not match invoice.total (both halalas)', async () => {
+      // Invoice total=230 halalas; sending 1200000 halalas must be rejected.
       const mismatchPayload: MoyasarWebhookDto = {
         ...paidPayload,
-        amount: 100, // 1 SAR instead of 230 SAR
+        amount: 1200000,
       } as MoyasarWebhookDto;
       const { handler, prisma } = makeHandler();
       await expect(handler.execute(makeReq(mismatchPayload))).rejects.toThrow(BadRequestException);
@@ -288,12 +290,34 @@ describe('MoyasarWebhookHandler', () => {
       // Invoice currency=SAR (from buildInvoice), payload currency=KWD, amount matches.
       const wrongCurrencyPayload: MoyasarWebhookDto = {
         ...paidPayload,
-        amount: 23000, // correct halala amount for 230 SAR invoice
+        amount: 230, // correct halala amount for the 230-halala invoice
         currency: 'KWD',
       } as MoyasarWebhookDto;
       const { handler } = makeHandler();
       await expect(handler.execute(makeReq(wrongCurrencyPayload))).rejects.toThrow(BadRequestException);
       await expect(handler.execute(makeReq(wrongCurrencyPayload))).rejects.toThrow(/currency does not match/i);
+    });
+
+    it('accepts a halalas-matching payload and persists Payment.amount in halalas', async () => {
+      const invoice = { ...buildInvoice(ORG_A), total: 12000 };
+      const { handler, prisma } = makeHandler({ prisma: buildPrisma(invoice) });
+      const payload = { ...paidPayload, amount: 12000 } as MoyasarWebhookDto;
+
+      const result = await handler.execute(makeReq(payload));
+
+      expect(result.skipped).toBeUndefined();
+      expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
+        create: expect.objectContaining({ amount: 12000 }),
+      }));
+    });
+
+    it('rejects a payload whose amount is 100x the invoice total (double-x100 spoof)', async () => {
+      const invoice = { ...buildInvoice(ORG_A), total: 12000 };
+      const { handler, prisma } = makeHandler({ prisma: buildPrisma(invoice) });
+      const payload = { ...paidPayload, amount: 1200000 } as MoyasarWebhookDto;
+
+      await expect(handler.execute(makeReq(payload))).rejects.toThrow(BadRequestException);
+      expect(prisma.invoice.update).not.toHaveBeenCalled();
     });
 
     it('rejects payload when amount is zero (DTO validation)', async () => {
