@@ -100,6 +100,8 @@ __pycache__/
 docs/*
 !docs/operations/
 !docs/operations/**
+!docs/superpowers/
+!docs/superpowers/**
 .superpowers/
 _archived_dashboard/
 
