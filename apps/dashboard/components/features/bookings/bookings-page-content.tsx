@@ -20,7 +20,7 @@ import { PageHeader } from "@/components/features/page-header"
 import { StatsGrid } from "@/components/features/stats-grid"
 import { StatCard } from "@/components/features/stat-card"
 import { BookingDetailSheet } from "@/components/features/bookings/booking-detail-sheet"
-import { BookingCreateDialog } from "@/components/features/bookings/booking-create-dialog"
+import { BookingCreateView } from "@/components/features/bookings/booking-create-view"
 import { WaitlistTab } from "@/components/features/bookings/waitlist-tab"
 import { BookingsTabContent } from "@/components/features/bookings/bookings-tab-content"
 import { useQueryClient } from "@tanstack/react-query"
@@ -53,7 +53,7 @@ export function BookingsPageContent({
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
 
-  const [createOpen, setCreateOpen] = useState(false)
+  const [creating, setCreating] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailDefaultTab, setDetailDefaultTab] = useState<
@@ -78,87 +78,91 @@ export function BookingsPageContent({
         <Breadcrumbs />
         <PageHeader
           title={titleLabel}
-          description={t("bookings.description")}
+          description={creating ? t("bookings.create.pageTitle") : t("bookings.description")}
         >
-          <Button
-            className="gap-2 rounded-full px-5"
-            onClick={() => setCreateOpen(true)}
-          >
-            <HugeiconsIcon icon={Add01Icon} size={16} />
-            {t("bookings.newBooking")}
-          </Button>
+          {!creating && (
+            <Button
+              className="gap-2 rounded-full px-5"
+              onClick={() => setCreating(true)}
+            >
+              <HugeiconsIcon icon={Add01Icon} size={16} />
+              {t("bookings.newBooking")}
+            </Button>
+          )}
         </PageHeader>
       </div>
 
-      {statsLoading ? (
-        <StatsGrid>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={`skeleton-${i}`} className="h-[100px] w-full rounded-xl" />
-          ))}
-        </StatsGrid>
+      {creating ? (
+        <BookingCreateView
+          onSuccess={() => { setCreating(false); refresh() }}
+          onCancel={() => setCreating(false)}
+        />
       ) : (
-        <StatsGrid>
-          <StatCard
-            title={t("bookings.stats.today")}
-            value={stats?.todayCount ?? 0}
-            description={t("bookings.stats.todayDesc")}
-            icon={Calendar03Icon}
-            iconColor="primary"
-            size="lead"
-          />
-          <StatCard
-            title={t("bookings.stats.pending")}
-            value={stats?.pendingCount ?? 0}
-            description={t("bookings.stats.pendingDesc")}
-            icon={Clock01Icon}
-            iconColor="warning"
-          />
-          <StatCard
-            title={t("bookings.stats.completedToday")}
-            value={stats?.completedToday ?? 0}
-            description={t("bookings.stats.completedTodayDesc")}
-            icon={CheckmarkCircle02Icon}
-            iconColor="success"
-          />
-          <StatCard
-            title={t("bookings.stats.revenueToday")}
-            value={`${(stats?.revenueToday ?? 0).toFixed(2)} ${t("bookings.wizard.step.service.currency")}`}
-            description={t("bookings.stats.revenueTodayDesc")}
-            icon={Money02Icon}
-            iconColor="accent"
-          />
-        </StatsGrid>
-      )}
-
-      <Tabs defaultValue={defaultTab}>
-        <TabsList>
-          <TabsTrigger value="bookings">{t("bookings.tabs.list")}</TabsTrigger>
-          {bookingSettings?.waitlistEnabled && (
-            <TabsTrigger value="waitlist">
-              {t("bookings.tabs.waitlist")}
-            </TabsTrigger>
+        <>
+          {statsLoading ? (
+            <StatsGrid>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={`skeleton-${i}`} className="h-[88px] w-full rounded-xl" />
+              ))}
+            </StatsGrid>
+          ) : (
+            <StatsGrid>
+              <StatCard
+                title={t("bookings.stats.today")}
+                value={stats?.todayCount ?? 0}
+                description={t("bookings.stats.todayDesc")}
+                icon={Calendar03Icon}
+                iconColor="primary"
+              />
+              <StatCard
+                title={t("bookings.stats.pending")}
+                value={stats?.pendingCount ?? 0}
+                description={t("bookings.stats.pendingDesc")}
+                icon={Clock01Icon}
+                iconColor="warning"
+              />
+              <StatCard
+                title={t("bookings.stats.completedToday")}
+                value={stats?.completedToday ?? 0}
+                description={t("bookings.stats.completedTodayDesc")}
+                icon={CheckmarkCircle02Icon}
+                iconColor="success"
+              />
+              <StatCard
+                title={t("bookings.stats.revenueToday")}
+                value={`${(stats?.revenueToday ?? 0).toFixed(2)} ${t("bookings.wizard.step.service.currency")}`}
+                description={t("bookings.stats.revenueTodayDesc")}
+                icon={Money02Icon}
+                iconColor="accent"
+              />
+            </StatsGrid>
           )}
-        </TabsList>
 
-        <TabsContent value="bookings" className="mt-4">
-          <BookingsTabContent
-            onRowClick={handleRowClick}
-            onEditClick={handleEditClick}
-          />
-        </TabsContent>
+          <Tabs defaultValue={defaultTab}>
+            <TabsList>
+              <TabsTrigger value="bookings">{t("bookings.tabs.list")}</TabsTrigger>
+              {bookingSettings?.waitlistEnabled && (
+                <TabsTrigger value="waitlist">
+                  {t("bookings.tabs.waitlist")}
+                </TabsTrigger>
+              )}
+            </TabsList>
 
-        {bookingSettings?.waitlistEnabled && (
-          <TabsContent value="waitlist" className="mt-4">
-            <WaitlistTab />
-          </TabsContent>
-        )}
-      </Tabs>
+            <TabsContent value="bookings" className="mt-4">
+              <BookingsTabContent
+                onRowClick={handleRowClick}
+                onEditClick={handleEditClick}
+              />
+            </TabsContent>
 
-      <BookingCreateDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onSuccess={refresh}
-      />
+            {bookingSettings?.waitlistEnabled && (
+              <TabsContent value="waitlist" className="mt-4">
+                <WaitlistTab />
+              </TabsContent>
+            )}
+          </Tabs>
+        </>
+      )}
 
       <BookingDetailSheet
         booking={selectedBooking}

@@ -19,6 +19,15 @@ import {
 
 import { Button } from "@sawaa/ui"
 import { Input } from "@sawaa/ui"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogBody,
+} from "@sawaa/ui"
 import { NationalitySelect } from "@/components/ui/nationality-select"
 import { Label } from "@sawaa/ui"
 import { PhoneInput } from "@sawaa/ui"
@@ -26,6 +35,7 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { Textarea } from "@sawaa/ui"
 
 import { createWalkInClient } from "@/lib/api/clients"
+import type { CreateClientResponse } from "@/lib/api/clients"
 import { useLocale } from "@/components/locale-provider"
 import { COUNTRIES } from "@/lib/countries-data"
 import { cn } from "@/lib/utils"
@@ -125,6 +135,7 @@ export function BookingWalkInForm({ onSelect }: BookingWalkInFormProps) {
   const form = useForm<WalkInClientFormData>({ resolver: zodResolver(walkInClientSchema) })
   const [step, setStep] = useState<1 | 2>(1)
   const [creating, setCreating] = useState(false)
+  const [duplicate, setDuplicate] = useState<CreateClientResponse | null>(null)
 
   const bloodType = form.watch("bloodType")
 
@@ -137,8 +148,12 @@ export function BookingWalkInForm({ onSelect }: BookingWalkInFormProps) {
     setCreating(true)
     try {
       const res = await createWalkInClient(data)
-      toast.success(res.isExisting ? t("bookings.walkin.toast.existing") : t("bookings.walkin.toast.created"))
-      onSelect(res.id, `${data.firstName} ${data.lastName}`)
+      if (res.isExisting) {
+        setDuplicate(res)
+      } else {
+        toast.success(t("bookings.walkin.toast.created"))
+        onSelect(res.id, `${data.firstName} ${data.lastName}`)
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("bookings.walkin.toast.error"))
     } finally {
@@ -287,6 +302,49 @@ export function BookingWalkInForm({ onSelect }: BookingWalkInFormProps) {
         </>
       )}
 
+      {/* Duplicate client confirmation dialog */}
+      <Dialog open={!!duplicate} onOpenChange={(open) => { if (!open) setDuplicate(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("bookings.walkin.duplicate.title")}</DialogTitle>
+            <DialogDescription>{t("bookings.walkin.duplicate.description")}</DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            {duplicate && (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-surface-muted px-4 py-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold">
+                  {[duplicate.firstName?.[0], duplicate.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "؟"}
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium text-foreground">
+                    {[duplicate.firstName, duplicate.middleName, duplicate.lastName].filter(Boolean).join(" ")}
+                  </span>
+                  {duplicate.phone && (
+                    <span className="text-xs text-muted-foreground font-numeric" dir="ltr">{duplicate.phone}</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogBody>
+          <DialogFooter>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setDuplicate(null)}>
+              {t("bookings.walkin.duplicate.cancel")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                if (!duplicate) return
+                const name = [duplicate.firstName, duplicate.middleName, duplicate.lastName].filter(Boolean).join(" ")
+                onSelect(duplicate.id, name)
+                setDuplicate(null)
+              }}
+            >
+              {t("bookings.walkin.duplicate.select")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   )
 }

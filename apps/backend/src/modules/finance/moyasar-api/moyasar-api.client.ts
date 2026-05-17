@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PaymentMethod, PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { fetchWithTimeout } from '../../../infrastructure/http';
@@ -27,6 +32,27 @@ export interface MoyasarPayment {
 }
 
 export type MoyasarRefundStatus = 'paid' | 'failed' | 'pending';
+
+/**
+ * Moyasar payment lifecycle statuses as reported by `GET /v1/payments/:id`.
+ * `initiated` covers pending-like states; the terminal states are
+ * `paid`/`captured` (success), `failed`/`voided` (failure) and `refunded`.
+ */
+export type MoyasarPaymentStatus =
+  | 'initiated'
+  | 'paid'
+  | 'failed'
+  | 'authorized'
+  | 'captured'
+  | 'voided'
+  | 'refunded';
+
+export interface MoyasarPaymentStatusResult {
+  id: string;
+  status: MoyasarPaymentStatus;
+  amount: number;
+  currency: string;
+}
 
 export interface MoyasarRefund {
   id: string;
@@ -136,6 +162,13 @@ export class MoyasarApiClient {
 
     if (!response.ok) {
       const error = (await response.json().catch(() => ({ message: response.statusText }))) as MoyasarErrorResponse;
+      // A 404 is a permanent "this resource does not exist" — distinguish it so
+      // callers (e.g. the webhook handler) can drop-and-ack instead of retrying.
+      if (response.status === 404) {
+        throw new NotFoundException(
+          `Moyasar API error: ${error.message} (status: 404)`,
+        );
+      }
       throw new InternalServerErrorException(
         `Moyasar API error: ${error.message} (status: ${response.status})`,
       );
@@ -246,5 +279,35 @@ export class MoyasarApiClient {
     const status: MoyasarRefundStatus =
       raw === 'paid' || raw === 'failed' || raw === 'pending' ? raw : 'pending';
     return { id: data.id, status };
+  }
+
+  /**
+   * Fetches the authoritative state of a payment from Moyasar.
+   * Used by the webhook handler to re-verify a (signed but possibly stale or
+   * replayed) webhook body against the source of truth — never trust the body.
+   *
+   * GET /v1/payments/:id → { id, status, amount, currency }
+   *
+   * A transient/network failure or 5xx propagates as InternalServerErrorException
+   * (caller should let it bubble so Moyasar retries). A 404 surfaces as a
+   * BadRequestException — the payment does not exist, retrying will not help.
+   */
+  async getPaymentStatus(
+    organizationId: string,
+    paymentId: string,
+  ): Promise<MoyasarPaymentStatusResult> {
+    const data = await this.request<{
+      id: string;
+      status: string;
+      amount: number;
+      currency: string;
+    }>(organizationId, `/payments/${paymentId}`, { method: 'GET' });
+
+    return {
+      id: data.id,
+      status: data.status as MoyasarPaymentStatus,
+      amount: data.amount,
+      currency: data.currency,
+    };
   }
 }

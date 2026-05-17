@@ -3,7 +3,6 @@ import {
   IsBoolean,
   IsEnum,
   IsInt,
-  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -34,8 +33,8 @@ export class CreateServiceDto {
   @ApiProperty({ example: 30, description: 'Duration in minutes' })
   @IsInt() @Min(1) durationMins!: number;
 
-  @ApiProperty({ example: 50 })
-  @IsNumber() @Min(0) price!: number;
+  @ApiProperty({ example: 5000, description: 'Price in integer halalas (1 SAR = 100)' })
+  @IsInt() @Min(0) price!: number;
 
   @ApiPropertyOptional({ example: 'SAR', default: 'SAR' })
   @IsOptional() @IsString() @MaxLength(8) currency?: string;
@@ -61,9 +60,9 @@ export class CreateServiceDto {
   // ─── العربون ─────────────────────────────────────────────────────────────
   @ApiPropertyOptional({ description: 'Whether a deposit is required at booking time', example: false, default: false }) @IsOptional() @IsBoolean() depositEnabled?: boolean;
 
-  @ApiPropertyOptional({ description: 'Fixed deposit amount — must not exceed price' })
+  @ApiPropertyOptional({ description: 'Fixed deposit amount in integer halalas — must not exceed price' })
   @ValidateIf((o: CreateServiceDto) => o.depositEnabled === true)
-  @IsNumber() @Min(0) depositAmount?: number;
+  @IsInt() @Min(0) depositAmount?: number;
 
   // ─── التكرار ─────────────────────────────────────────────────────────────
   @ApiPropertyOptional({ description: 'Whether recurring bookings are allowed for this service', example: false, default: false }) @IsOptional() @IsBoolean() allowRecurring?: boolean;

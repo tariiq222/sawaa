@@ -48,27 +48,23 @@ async function loginAs(page: Page, email: string, password: string): Promise<voi
 }
 
 test.describe('Dashboard home — role-based widgets', () => {
-  test('OWNER sees TopPerformers + RevenueChart + QuickActions', async ({ page }) => {
+  test('OWNER sees QuickActions', async ({ page }) => {
     await loginAs(page, OWNER_EMAIL, OWNER_PASSWORD);
     await page.waitForURL('/', { timeout: 10_000 }).catch(() => {});
-    await expect(page.getByTestId('top-performers')).toBeVisible();
-    await expect(page.getByTestId('revenue-chart')).toBeVisible();
     await expect(page.getByTestId('quick-actions')).toBeVisible();
   });
 
-  test('RECEPTIONIST does not see RevenueChart or TopPerformers', async ({ page }) => {
+  test('RECEPTIONIST sees QuickActions', async ({ page }) => {
     test.skip(
       !RECEPTIONIST_EMAIL || !RECEPTIONIST_PASSWORD,
       'No receptionist seed user — set SEED_RECEPTIONIST_EMAIL/SEED_RECEPTIONIST_PASSWORD or seed a RECEPTIONIST membership in apps/backend/prisma/seed.ts.',
     );
     await loginAs(page, RECEPTIONIST_EMAIL!, RECEPTIONIST_PASSWORD!);
     await page.goto('/');
-    await expect(page.getByTestId('revenue-chart')).toHaveCount(0);
-    await expect(page.getByTestId('top-performers')).toHaveCount(0);
     await expect(page.getByTestId('quick-actions')).toBeVisible();
   });
 
-  test('EMPLOYEE sees no QuickActions and no TopPerformers', async ({ page }) => {
+  test('EMPLOYEE sees no QuickActions', async ({ page }) => {
     test.skip(
       !EMPLOYEE_EMAIL || !EMPLOYEE_PASSWORD,
       'No employee seed user — set SEED_EMPLOYEE_EMAIL/SEED_EMPLOYEE_PASSWORD or seed an EMPLOYEE membership in apps/backend/prisma/seed.ts.',
@@ -76,6 +72,5 @@ test.describe('Dashboard home — role-based widgets', () => {
     await loginAs(page, EMPLOYEE_EMAIL!, EMPLOYEE_PASSWORD!);
     await page.goto('/');
     await expect(page.getByTestId('quick-actions')).toHaveCount(0);
-    await expect(page.getByTestId('top-performers')).toHaveCount(0);
   });
 });

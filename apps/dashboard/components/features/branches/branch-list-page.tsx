@@ -58,11 +58,11 @@ export function BranchListPage() {
 
   const columns = getBranchColumns(
     locale,
-    (b) => router.push(`/branches/${b.id}/edit`),
-    (b) => setDeleteTarget(b),
+    canDo("branch", "update") ? (b) => router.push(`/branches/${b.id}/edit`) : undefined,
+    canDo("branch", "delete") ? (b) => setDeleteTarget(b) : undefined,
     t,
     (b) => setEmployeesTarget(b),
-    handleToggleActive,
+    canDo("branch", "update") ? handleToggleActive : undefined,
     handleSetPrimary,
   )
 

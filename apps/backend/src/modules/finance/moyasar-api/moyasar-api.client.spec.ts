@@ -1,4 +1,8 @@
-import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PaymentMethod, PaymentStatus } from '@prisma/client';
 import { MoyasarApiClient, MoyasarCreatePaymentParams, MoyasarRefundStatus } from './moyasar-api.client';
@@ -303,6 +307,82 @@ describe('MoyasarApiClient', () => {
 
       const result = await client.getRefundStatus(ORG_ID, 'ref_123');
       expect(result).toEqual({ id: 'ref_123', status: expected });
+    });
+  });
+
+  describe('getPaymentStatus', () => {
+    it('fetches GET /payments/:id and maps id, status, amount, currency', async () => {
+      (fetchWithTimeout as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          id: 'pay_123',
+          status: 'paid',
+          amount: 12000,
+          currency: 'SAR',
+        }),
+      });
+
+      const result = await client.getPaymentStatus(ORG_ID, 'pay_123');
+
+      expect(result).toEqual({
+        id: 'pay_123',
+        status: 'paid',
+        amount: 12000,
+        currency: 'SAR',
+      });
+
+      expect(fetchWithTimeout).toHaveBeenCalledWith(
+        'https://api.moyasar.com/v1/payments/pay_123',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer sk_live_abc',
+            'Content-Type': 'application/json',
+          }),
+        }),
+        15_000,
+      );
+    });
+
+    it('returns the Moyasar status verbatim (e.g. authorized)', async () => {
+      (fetchWithTimeout as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          id: 'pay_a',
+          status: 'authorized',
+          amount: 500,
+          currency: 'SAR',
+        }),
+      });
+
+      const result = await client.getPaymentStatus(ORG_ID, 'pay_a');
+      expect(result.status).toBe('authorized');
+    });
+
+    it('throws NotFoundException when Moyasar returns 404 (payment does not exist)', async () => {
+      (fetchWithTimeout as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        json: async () => ({ message: 'Payment not found', type: 'error', status: 404 }),
+      });
+
+      await expect(client.getPaymentStatus(ORG_ID, 'pay_missing')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('throws InternalServerErrorException on a 5xx (transient — caller should retry)', async () => {
+      (fetchWithTimeout as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 502,
+        statusText: 'Bad Gateway',
+        json: async () => ({ message: 'upstream error', type: 'error', status: 502 }),
+      });
+
+      await expect(client.getPaymentStatus(ORG_ID, 'pay_x')).rejects.toBeInstanceOf(
+        InternalServerErrorException,
+      );
     });
   });
 

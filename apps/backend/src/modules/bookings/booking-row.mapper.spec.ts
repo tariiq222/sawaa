@@ -1,5 +1,5 @@
 import type { Booking, Client, Employee, Service } from '@prisma/client';
-import { mapBookingRow, type BookingRelations } from './booking-row.mapper';
+import { mapBookingRow, mapPaymentStatusForUi, mapPaymentMethodForUi, type BookingRelations } from './booking-row.mapper';
 
 describe('mapBookingRow', () => {
   const mockBooking: Booking = {
@@ -12,7 +12,7 @@ describe('mapBookingRow', () => {
     status: 'PENDING',
     scheduledAt: new Date('2026-05-04T10:00:00Z'),
     endsAt: new Date('2026-05-04T11:00:00Z'),
-    price: new (require('decimal.js').Decimal)(100),
+    price: new (require('decimal.js').Decimal)(10000),
     notes: null,
     cancelReason: null,
     cancelledAt: null,
@@ -70,6 +70,7 @@ describe('mapBookingRow', () => {
     clientsById: new Map([['client-1', mockClient]]),
     employeesById: new Map([['emp-1', mockEmployee]]),
     servicesById: new Map([['svc-1', mockService]]),
+    paymentsByBookingId: new Map(),
   };
 
   it('maps basic booking fields', () => {
@@ -139,6 +140,7 @@ describe('mapBookingRow', () => {
       clientsById: new Map(),
       employeesById: new Map([['emp-1', mockEmployee]]),
       servicesById: new Map([['svc-1', mockService]]),
+      paymentsByBookingId: new Map(),
     };
 
     const result = mapBookingRow(mockBooking, emptyRelations);
@@ -151,6 +153,7 @@ describe('mapBookingRow', () => {
       clientsById: new Map([['client-1', mockClient]]),
       employeesById: new Map(),
       servicesById: new Map([['svc-1', mockService]]),
+      paymentsByBookingId: new Map(),
     };
 
     const result = mapBookingRow(mockBooking, emptyRelations);
@@ -163,6 +166,7 @@ describe('mapBookingRow', () => {
       clientsById: new Map([['client-1', mockClient]]),
       employeesById: new Map([['emp-1', mockEmployee]]),
       servicesById: new Map(),
+      paymentsByBookingId: new Map(),
     };
 
     const result = mapBookingRow(mockBooking, emptyRelations);
@@ -192,6 +196,7 @@ describe('mapBookingRow', () => {
       clientsById: new Map([['client-1', clientWithOnlyName]]),
       employeesById: new Map([['emp-1', mockEmployee]]),
       servicesById: new Map([['svc-1', mockService]]),
+      paymentsByBookingId: new Map(),
     };
 
     const result = mapBookingRow(mockBooking, clientRelations);
@@ -211,6 +216,7 @@ describe('mapBookingRow', () => {
       clientsById: new Map([['client-1', clientWithAll]]),
       employeesById: new Map([['emp-1', mockEmployee]]),
       servicesById: new Map([['svc-1', mockService]]),
+      paymentsByBookingId: new Map(),
     };
 
     const result = mapBookingRow(mockBooking, clientRelations);
@@ -237,6 +243,7 @@ describe('mapBookingRow', () => {
       clientsById: new Map([['client-1', mockClient]]),
       employeesById: new Map([['emp-1', empNoUser]]),
       servicesById: new Map([['svc-1', mockService]]),
+      paymentsByBookingId: new Map(),
     };
 
     const result = mapBookingRow(mockBooking, empRelations);
@@ -256,21 +263,48 @@ describe('mapBookingRow', () => {
     });
   });
 
-  it('converts price to halalat (multiplies by 100)', () => {
-    const result = mapBookingRow(mockBooking, relations);
-
-    expect(result.payment.amount).toBe(10000);
-    expect(result.payment.totalAmount).toBe(10000);
+  it('returns null payment when no payment entry in map', () => {
+    const result = mapBookingRow(mockBooking, relations); // relations.paymentsByBookingId is empty Map
+    expect(result.payment).toBeNull();
   });
 
-  it('handles decimal price correctly', () => {
-    const bookingWithDecimal = {
-      ...mockBooking,
-      price: new (require('decimal.js').Decimal)(99.5),
+  it('returns real payment when entry exists in paymentsByBookingId', () => {
+    const relationsWithPayment: BookingRelations = {
+      ...relations,
+      paymentsByBookingId: new Map([
+        ['book-1', { id: 'pay-1', amount: 15000, refundedAmount: 0, method: 'BANK_TRANSFER', status: 'COMPLETED' }],
+      ]),
     };
-    const result = mapBookingRow(bookingWithDecimal, relations);
+    const result = mapBookingRow(mockBooking, relationsWithPayment);
 
-    expect(result.payment.amount).toBe(9950);
+    expect(result.payment).not.toBeNull();
+    expect(result.payment?.id).toBe('pay-1');
+    expect(result.payment?.amount).toBe(15000);
+    expect(result.payment?.totalAmount).toBe(15000);
+    expect(result.payment?.method).toBe('bank_transfer');
+    expect(result.payment?.status).toBe('paid');
+  });
+
+  it('maps payment status PENDING_VERIFICATION to awaiting', () => {
+    const relationsWithPayment: BookingRelations = {
+      ...relations,
+      paymentsByBookingId: new Map([
+        ['book-1', { id: 'pay-2', amount: 5000, refundedAmount: 0, method: 'BANK_TRANSFER', status: 'PENDING_VERIFICATION' }],
+      ]),
+    };
+    const result = mapBookingRow(mockBooking, relationsWithPayment);
+    expect(result.payment?.status).toBe('awaiting');
+  });
+
+  it('maps payment method ONLINE_CARD to moyasar', () => {
+    const relationsWithPayment: BookingRelations = {
+      ...relations,
+      paymentsByBookingId: new Map([
+        ['book-1', { id: 'pay-3', amount: 5000, refundedAmount: 0, method: 'ONLINE_CARD', status: 'COMPLETED' }],
+      ]),
+    };
+    const result = mapBookingRow(mockBooking, relationsWithPayment);
+    expect(result.payment?.method).toBe('moyasar');
   });
 
   it('handles checkedInAt when present', () => {
@@ -362,6 +396,7 @@ describe('mapBookingRow', () => {
       clientsById: new Map([['client-1', mockClient]]),
       employeesById: new Map([['emp-1', empNoSpecialty]]),
       servicesById: new Map([['svc-1', mockService]]),
+      paymentsByBookingId: new Map(),
     };
 
     const result = mapBookingRow(mockBooking, empRelations);
@@ -380,6 +415,7 @@ describe('mapBookingRow', () => {
       clientsById: new Map([['client-1', clientNoContact]]),
       employeesById: new Map([['emp-1', mockEmployee]]),
       servicesById: new Map([['svc-1', mockService]]),
+      paymentsByBookingId: new Map(),
     };
 
     const result = mapBookingRow(mockBooking, clientRelations);
@@ -394,6 +430,7 @@ describe('mapBookingRow', () => {
       clientsById: new Map([['client-1', mockClient]]),
       employeesById: new Map([['emp-1', mockEmployee]]),
       servicesById: new Map([['svc-1', serviceNoNameEn]]),
+      paymentsByBookingId: new Map(),
     };
 
     const result = mapBookingRow(mockBooking, svcRelations);
@@ -419,6 +456,7 @@ describe('mapBookingRow', () => {
       clientsById: new Map([['client-1', clientMultipleSpaces]]),
       employeesById: new Map([['emp-1', mockEmployee]]),
       servicesById: new Map([['svc-1', mockService]]),
+      paymentsByBookingId: new Map(),
     };
 
     const result = mapBookingRow(mockBooking, clientRelations);
@@ -438,6 +476,7 @@ describe('mapBookingRow', () => {
       clientsById: new Map([['client-1', clientSingleWord]]),
       employeesById: new Map([['emp-1', mockEmployee]]),
       servicesById: new Map([['svc-1', mockService]]),
+      paymentsByBookingId: new Map(),
     };
 
     const result = mapBookingRow(mockBooking, clientRelations);
@@ -445,4 +484,22 @@ describe('mapBookingRow', () => {
     expect(result.client?.firstName).toBe('Madonna');
     expect(result.client?.lastName).toBe('');
   });
+});
+
+describe('mapPaymentStatusForUi', () => {
+  it('maps PENDING → pending', () => expect(mapPaymentStatusForUi('PENDING')).toBe('pending'));
+  it('maps PENDING_VERIFICATION → awaiting', () => expect(mapPaymentStatusForUi('PENDING_VERIFICATION')).toBe('awaiting'));
+  it('maps COMPLETED → paid', () => expect(mapPaymentStatusForUi('COMPLETED')).toBe('paid'));
+  it('maps FAILED → failed', () => expect(mapPaymentStatusForUi('FAILED')).toBe('failed'));
+  it('maps REFUNDED → refunded', () => expect(mapPaymentStatusForUi('REFUNDED')).toBe('refunded'));
+  it('maps unknown → pending (fallback)', () => expect(mapPaymentStatusForUi('UNKNOWN')).toBe('pending'));
+  it('is case-insensitive', () => expect(mapPaymentStatusForUi('completed')).toBe('paid'));
+});
+
+describe('mapPaymentMethodForUi', () => {
+  it('maps ONLINE_CARD → moyasar', () => expect(mapPaymentMethodForUi('ONLINE_CARD')).toBe('moyasar'));
+  it('maps BANK_TRANSFER → bank_transfer', () => expect(mapPaymentMethodForUi('BANK_TRANSFER')).toBe('bank_transfer'));
+  it('maps CASH → cash', () => expect(mapPaymentMethodForUi('CASH')).toBe('cash'));
+  it('maps COUPON → cash (fallback display)', () => expect(mapPaymentMethodForUi('COUPON')).toBe('cash'));
+  it('maps unknown → cash (fallback)', () => expect(mapPaymentMethodForUi('UNKNOWN')).toBe('cash'));
 });

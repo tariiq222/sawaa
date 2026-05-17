@@ -11,12 +11,14 @@ import type { IconSvgElement } from "@hugeicons/react"
 import { StatsGrid } from "@/components/features/stats-grid"
 import { StatCard } from "@/components/features/stat-card"
 import { useLocale } from "@/components/locale-provider"
+import { formatPrice } from "@/lib/money"
 import type { VisibleWidgets } from "@/lib/dashboard-widgets"
 
 interface DashboardStatsApi {
   todayBookings: number
   confirmedToday: number
   pendingToday: number
+  newClientsToday: number
   pendingPayments: number
   cancelRequests: number
   todayRevenue: number
@@ -30,11 +32,10 @@ interface DashboardStatsProps {
 type StatCardConfig = {
   key: "bookings" | "clients" | "pending" | "revenue"
   title: string
-  value: number
+  value: string | number
   icon: IconSvgElement
   iconColor: "primary" | "success" | "warning" | "accent"
   description?: string
-  size?: "default" | "lead"
 }
 
 export function DashboardStats({ stats, visibleStats }: DashboardStatsProps) {
@@ -43,6 +44,8 @@ export function DashboardStats({ stats, visibleStats }: DashboardStatsProps) {
   const todayBookings = stats?.todayBookings ?? 0
   const confirmedToday = stats?.confirmedToday ?? 0
   const pendingToday = stats?.pendingToday ?? 0
+  const newClientsToday = stats?.newClientsToday ?? 0
+  const pendingPayments = stats?.pendingPayments ?? 0
   const todayRevenue = stats?.todayRevenue ?? 0
 
   const cards = [
@@ -60,21 +63,22 @@ export function DashboardStats({ stats, visibleStats }: DashboardStatsProps) {
     visibleStats.clients && {
       key: "clients" as const,
       title: t("dashboard.newClients"),
-      value: confirmedToday,
+      value: newClientsToday,
       icon: UserMultiple02Icon,
       iconColor: "success" as const,
     },
     visibleStats.pendingPayments && {
       key: "pending" as const,
       title: t("dashboard.awaitingApproval"),
-      value: pendingToday,
+      value: pendingPayments,
       icon: Clock01Icon,
       iconColor: "warning" as const,
     },
     visibleStats.revenue && {
       key: "revenue" as const,
       title: t("dashboard.todayRevenue"),
-      value: todayRevenue,
+      // todayRevenue arrives in halalas — render as a SAR-major string.
+      value: formatPrice(todayRevenue),
       icon: MoneyReceiveSquareIcon,
       iconColor: "accent" as const,
       description: t("dashboard.currency"),
@@ -94,7 +98,6 @@ export function DashboardStats({ stats, visibleStats }: DashboardStatsProps) {
               icon={card.icon}
               iconColor={card.iconColor}
               description={card.description}
-              size={card.size}
             />
           </div>
         ))}

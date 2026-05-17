@@ -1,22 +1,20 @@
-/**
- * Money helpers — single source of truth for halalas ↔ SAR conversion.
- *
- * Backend convention: monetary amounts are stored as integers in halalas
- * (1 SAR = 100 halalas). Use these helpers everywhere instead of ad-hoc
- * `/100` divisions.
- */
+// Mobile money helpers — thin re-export of the canonical shared module.
+// Do not add logic here; the source of truth is @sawaa/shared/money.
+import {
+  HALALAS_PER_SAR,
+  sarToHalalas,
+  halalasToSar as halalasToSarNumberShared,
+  formatHalalas,
+} from "@sawaa/shared/money";
 
-/** Convert SAR (decimal) to halalas (integer). 99.5 SAR → 9950 */
-export function sarToHalalas(sar: number): number {
-  return Math.round(sar * 100)
-}
+export { HALALAS_PER_SAR, sarToHalalas };
 
-/** Convert halalas (integer) to SAR formatted string (2 decimal places). 9950 → "99.50" */
+/** halalas -> SAR-major number. */
+export const halalasToSarNumber = halalasToSarNumberShared;
+
+/** halalas -> SAR string with 2 decimals (back-compat with old mobile API). */
 export function halalasToSar(halalas: number): string {
-  return (halalas / 100).toFixed(2)
+  return formatHalalas(halalas, { locale: "en" });
 }
 
-/** Convert halalas (integer) to SAR as a number. 9950 → 99.5 */
-export function halalasToSarNumber(halalas: number): number {
-  return halalas / 100
-}
+export { formatHalalas };

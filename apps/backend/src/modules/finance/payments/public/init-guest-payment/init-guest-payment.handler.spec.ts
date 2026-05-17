@@ -113,7 +113,7 @@ describe('InitGuestPaymentHandler', () => {
       expect(moyasar.createPayment).toHaveBeenCalledWith(
         '00000000-0000-0000-0000-000000000001',
         {
-          amountHalalas: 11500,
+          amountHalalas: 115,
           currency: 'SAR',
           description: 'Booking payment - booking-1',
           callbackUrl: 'https://clinic.example.com/booking/confirm?bookingId=booking-1',
@@ -211,6 +211,19 @@ describe('InitGuestPaymentHandler', () => {
       expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'pay-1' } });
       expect(prisma.payment.create).toHaveBeenCalled();
       expect(moyasar.createPayment).toHaveBeenCalled();
+    });
+
+    it('sends invoice.total to Moyasar verbatim — total is already in halalas', async () => {
+      const prisma = buildPrisma();
+      prisma.invoice.findFirst = jest.fn().mockResolvedValue({ ...mockInvoice, total: 12000 });
+      const moyasar = buildMoyasar();
+      const handler = new InitGuestPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, moyasar as never);
+
+      await handler.execute({ bookingId: 'booking-1' });
+
+      const params = moyasar.createPayment.mock.calls[0][1];
+      expect(params.amountHalalas).toBe(12000);
+      expect(params.amountHalalas).not.toBe(1200000);
     });
 
     it('uses default callback URL when PUBLIC_WEBSITE_URL is not set', async () => {

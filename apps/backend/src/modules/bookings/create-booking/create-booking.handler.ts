@@ -37,8 +37,9 @@ function mapDbConflict(err: unknown): never {
   throw err;
 }
 
+// Money is integer halalas — round to whole halalas (0 decimal places).
 const roundMoney = (amount: Prisma.Decimal | number): Prisma.Decimal =>
-  new Prisma.Decimal(amount.toString()).toDecimalPlaces(2);
+  new Prisma.Decimal(amount.toString()).toDecimalPlaces(0);
 
 export type CreateBookingCommand = Omit<CreateBookingDto, 'scheduledAt' | 'expiresAt'> & {
   scheduledAt: Date;

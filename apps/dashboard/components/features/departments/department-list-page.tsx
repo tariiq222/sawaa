@@ -26,10 +26,12 @@ import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 import { useDepartments, useDepartmentStats, useDepartmentMutations } from "@/hooks/use-departments"
 import { useLocale } from "@/components/locale-provider"
+import { useAuth } from "@/components/providers/auth-provider"
 import type { Department } from "@/lib/types/department"
 
 export function DepartmentListPage() {
   const { t, locale } = useLocale()
+  const { canDo } = useAuth()
   const {
     departments, meta, isLoading, error,
     search, setSearch, isActive, setIsActive,
@@ -48,9 +50,9 @@ export function DepartmentListPage() {
   const columns = getDepartmentColumns(
     locale,
     t,
-    (d) => setEditTarget(d),
-    (d) => setDeleteTarget(d),
-    (d) => updateMut.mutate({ id: d.id, isActive: !d.isActive }),
+    canDo("department", "update") ? (d) => setEditTarget(d) : undefined,
+    canDo("department", "delete") ? (d) => setDeleteTarget(d) : undefined,
+    canDo("department", "update") ? (d) => updateMut.mutate({ id: d.id, isActive: !d.isActive }) : undefined,
   )
 
   return (

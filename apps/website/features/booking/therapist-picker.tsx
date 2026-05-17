@@ -14,7 +14,7 @@ export function TherapistPicker({ therapists, selected, onSelect }: TherapistPic
   return (
     <div className="grid gap-4">
       <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{t('booking.selectTherapist')}</h2>
-      {therapists.map((emp) => (
+      {therapists.filter((emp) => emp.user).map((emp) => (
         <button
           key={emp.id}
           onClick={() => onSelect(emp)}

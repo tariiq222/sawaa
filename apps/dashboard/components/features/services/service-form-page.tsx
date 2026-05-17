@@ -42,6 +42,7 @@ import {
   saveBookingTypesMutation,
 } from "@/components/features/services/service-form-helpers"
 import { uploadServiceImage } from "@/lib/api/services"
+import { sarToHalalas, halalasToSar } from "@/lib/money"
 
 /* ─── Constants ─── */
 
@@ -114,7 +115,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
       imageUrl: service.imageUrl ?? null,
       bufferMinutes: service.bufferMinutes ?? undefined,
       depositEnabled: service.depositEnabled,
-      depositAmount: service.depositAmount ?? null,
+      depositAmount: service.depositAmount != null ? halalasToSar(service.depositAmount) : null,
       allowRecurring: service.allowRecurring,
       allowedRecurringPatterns: service.allowedRecurringPatterns ?? [],
       maxRecurrences: service.maxRecurrences ?? 12,
@@ -144,7 +145,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
         await updateMut.mutateAsync({
           id: serviceId,
           ...buildPayload(data),
-          price: firstEnabled ? firstEnabled.price : undefined,
+          price: firstEnabled ? sarToHalalas(firstEnabled.price) : undefined,
           durationMins: firstEnabled ? firstEnabled.durationMins : undefined,
         })
 
@@ -163,7 +164,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
         const created = await createMut.mutateAsync({
           ...buildPayload(data),
           categoryId: data.categoryId ?? "",
-          price: firstEnabled ? firstEnabled.price : 0,
+          price: firstEnabled ? sarToHalalas(firstEnabled.price) : 0,
           durationMins: firstEnabled ? firstEnabled.durationMins : 30,
         })
 

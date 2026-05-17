@@ -6,7 +6,7 @@ import { cn, formatClinicDate, formatClinicTime } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"
 import type { Booking } from "@/lib/types/booking"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
-import { ActionsCell, StatusCell } from "@/components/features/bookings/booking-column-cells"
+import { ActionsCell, PaymentStatusCell, StatusCell } from "@/components/features/bookings/booking-column-cells"
 
 function getInitials(first: string, last: string): string {
   return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase()
@@ -139,6 +139,11 @@ export function getBookingColumns(
         if (!payment) return <span className="text-muted-foreground">—</span>
         return <FormattedCurrency amount={payment.totalAmount} locale="ar" decimals={2} />
       },
+    },
+    {
+      id: "paymentStatus",
+      header: t("bookings.col.header.paymentStatus"),
+      cell: ({ row }) => <PaymentStatusCell payment={row.original.payment} />,
     },
     {
       accessorKey: "status",

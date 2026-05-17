@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { BookingStatus, PaymentStatus, PaymentMethod } from '@prisma/client';
-import { todayRangeInTz } from '../../../common/helpers/date-tz.helper';
+import { dateRangeInTz } from '../../../common/helpers/date-tz.helper';
 
 export interface DashboardStatsCommand {
   userId: string;
   role?: string | null;
+  from?: string;
+  to?: string;
 }
 
 export interface DashboardStats {
@@ -13,6 +15,7 @@ export interface DashboardStats {
   confirmedToday: number;
   pendingToday: number;
   cancelRequests: number;
+  newClientsToday: number;
   pendingPayments?: number;
   todayRevenue?: number;
 }
@@ -26,7 +29,7 @@ export class GetDashboardStatsHandler {
   ) {}
 
   async execute(cmd: DashboardStatsCommand): Promise<DashboardStats> {
-    const { start: today, end: tomorrow } = todayRangeInTz();
+    const { start: rangeStart, end: rangeEnd } = dateRangeInTz(cmd.from, cmd.to);
 
     let employeeFilter: { employeeId: string } | object = {};
     if (cmd.role === 'EMPLOYEE') {
@@ -41,6 +44,7 @@ export class GetDashboardStatsHandler {
           confirmedToday: 0,
           pendingToday: 0,
           cancelRequests: 0,
+          newClientsToday: 0,
         };
       }
       employeeFilter = { employeeId: emp.id };
@@ -49,27 +53,30 @@ export class GetDashboardStatsHandler {
     const baseWhere = { ...employeeFilter };
     const includePayments = PAYMENT_READ_ROLES.has(cmd.role ?? '');
 
-    const [todayBookingsCount, confirmedCount, pendingCount, cancelRequestedCount] =
+    const [todayBookingsCount, confirmedCount, pendingCount, cancelRequestedCount, newClientsTodayCount] =
       await Promise.all([
         this.prisma.booking.count({
-          where: { ...baseWhere, scheduledAt: { gte: today, lt: tomorrow } },
+          where: { ...baseWhere, scheduledAt: { gte: rangeStart, lt: rangeEnd } },
         }),
         this.prisma.booking.count({
           where: {
             ...baseWhere,
-            scheduledAt: { gte: today, lt: tomorrow },
+            scheduledAt: { gte: rangeStart, lt: rangeEnd },
             status: BookingStatus.CONFIRMED,
           },
         }),
         this.prisma.booking.count({
           where: {
             ...baseWhere,
-            scheduledAt: { gte: today, lt: tomorrow },
+            scheduledAt: { gte: rangeStart, lt: rangeEnd },
             status: BookingStatus.PENDING,
           },
         }),
         this.prisma.booking.count({
           where: { ...baseWhere, status: BookingStatus.CANCEL_REQUESTED },
+        }),
+        this.prisma.client.count({
+          where: { createdAt: { gte: rangeStart, lt: rangeEnd } },
         }),
       ]);
 
@@ -78,6 +85,7 @@ export class GetDashboardStatsHandler {
       confirmedToday: confirmedCount,
       pendingToday: pendingCount,
       cancelRequests: cancelRequestedCount,
+      newClientsToday: newClientsTodayCount,
     };
 
     if (includePayments) {
@@ -93,7 +101,7 @@ export class GetDashboardStatsHandler {
           where: {
             invoice: {},
             status: PaymentStatus.COMPLETED,
-            processedAt: { gte: today, lt: tomorrow },
+            processedAt: { gte: rangeStart, lt: rangeEnd },
           },
           _sum: { amount: true },
         }),

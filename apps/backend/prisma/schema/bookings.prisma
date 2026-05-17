@@ -62,6 +62,7 @@ model Booking {
   scheduledAt          DateTime
   endsAt               DateTime // scheduledAt + durationMins — stored for overlap index queries
   durationMins         Int
+  /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
   price                Decimal             @db.Decimal(12, 2)
   currency             String              @default("SAR")
   notes                String?
@@ -78,8 +79,11 @@ model Booking {
   groupSession         GroupSession?       @relation(fields: [groupSessionId], references: [id], onDelete: SetNull)
   recurringGroupId     String?
   recurringPattern     RecurringFrequency?
+  bundleId             String?
+  bundleGroupId        String?
   payAtClinic          Boolean             @default(false)
   couponCode           String?
+  /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
   discountedPrice      Decimal?            @db.Decimal(12, 2)
   zoomMeetingId        String?
   zoomJoinUrl          String?
@@ -101,6 +105,7 @@ model Booking {
   @@index([employeeId, scheduledAt])
   @@index([employeeId, endsAt])
   @@index([recurringGroupId])
+  @@index([bundleGroupId])
 }
 
 // ─── Waitlist ─────────────────────────────────────────────────────────────────
@@ -147,6 +152,7 @@ model GroupSession {
   durationMins        Int
   maxCapacity         Int
   enrolledCount       Int                @default(0)
+  /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
   price               Decimal            @db.Decimal(12, 2)
   currency            String             @default("SAR")
   status              GroupSessionStatus @default(OPEN)

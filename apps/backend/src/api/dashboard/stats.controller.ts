@@ -11,6 +11,7 @@ import { CurrentUser, JwtUser } from '../../common/auth/current-user.decorator';
 import { GetDashboardStatsHandler } from '../../modules/dashboard/get-dashboard-stats/get-dashboard-stats.handler';
 import { GetTopPerformersHandler } from '../../modules/dashboard/get-top-performers/get-top-performers.handler';
 import { GetTopPerformersDto } from '../../modules/dashboard/get-top-performers/get-top-performers.dto';
+import { GetDashboardStatsDto } from '../../modules/dashboard/get-dashboard-stats/get-dashboard-stats.dto';
 
 @ApiTags('Dashboard / Stats')
 @ApiBearerAuth()
@@ -25,25 +26,31 @@ export class DashboardStatsController {
 
   @Get('stats')
   @CheckPermissions({ action: 'read', subject: 'Report' })
-  @ApiOperation({ summary: 'Get dashboard home page statistics for today' })
+  @ApiOperation({ summary: 'Get dashboard home page statistics for a date range (defaults to today)' })
   @ApiOkResponse({
-    description: 'Dashboard statistics aggregated for today',
+    description: 'Dashboard statistics aggregated for the requested date range',
     schema: {
       type: 'object',
       properties: {
         todayBookings: { type: 'number' },
-        pendingBookings: { type: 'number' },
-        completedToday: { type: 'number' },
-        revenueToday: { type: 'number' },
-        activeClients: { type: 'number' },
-        newClientsThisMonth: { type: 'number' },
+        confirmedToday: { type: 'number' },
+        pendingToday: { type: 'number' },
+        newClientsToday: { type: 'number' },
+        cancelRequests: { type: 'number' },
+        pendingPayments: { type: 'number' },
+        todayRevenue: { type: 'number' },
       },
     },
   })
-  getStatsEndpoint(@CurrentUser() user: JwtUser) {
+  getStatsEndpoint(
+    @CurrentUser() user: JwtUser,
+    @Query() dto: GetDashboardStatsDto,
+  ) {
     return this.getStats.execute({
       userId: user.sub,
       role: user.membershipRole ?? null,
+      from: dto.from,
+      to: dto.to,
     });
   }
 

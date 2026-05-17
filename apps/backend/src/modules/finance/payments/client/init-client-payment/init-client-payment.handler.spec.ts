@@ -78,7 +78,7 @@ describe('InitClientPaymentHandler', () => {
       select: { id: true },
     });
     expect(moyasar.createPayment).toHaveBeenCalledWith(organizationId, {
-      amountHalalas: 23000,
+      amountHalalas: 230,
       currency: 'SAR',
       description: `Invoice payment - ${invoiceId}`,
       callbackUrl: `http://localhost:3000/booking/payment-callback?bookingId=${bookingId}&invoiceId=${invoiceId}`,
@@ -175,7 +175,7 @@ describe('InitClientPaymentHandler', () => {
       select: { id: true },
     });
     expect(moyasar.createPayment).toHaveBeenCalledWith(organizationId, {
-      amountHalalas: 23000,
+      amountHalalas: 230,
       currency: 'SAR',
       description: `Invoice payment - ${invoiceId}`,
       callbackUrl: `http://localhost:3000/booking/payment-callback?bookingId=${bookingId}&invoiceId=${invoiceId}`,
@@ -198,5 +198,16 @@ describe('InitClientPaymentHandler', () => {
 
     await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(ConflictException);
     expect(prisma.payment.create).not.toHaveBeenCalled();
+  });
+
+  it('sends invoice.total to Moyasar verbatim — total is already in halalas', async () => {
+    const { handler, prisma, moyasar } = buildHandler();
+    prisma.invoice.findFirst.mockResolvedValue({ ...mockInvoice, total: 12000 });
+
+    await handler.execute({ invoiceId, clientId });
+
+    const params = moyasar.createPayment.mock.calls[0][1];
+    expect(params.amountHalalas).toBe(12000);
+    expect(params.amountHalalas).not.toBe(1200000);
   });
 });

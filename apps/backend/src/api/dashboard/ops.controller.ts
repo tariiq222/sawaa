@@ -15,7 +15,6 @@ import { GenerateReportHandler } from '../../modules/ops/generate-report/generat
 import { GenerateReportDto } from '../../modules/ops/generate-report/generate-report.dto';
 import { ListActivityHandler } from '../../modules/ops/log-activity/list-activity.handler';
 import { ListActivityDto } from '../../modules/ops/log-activity/list-activity.dto';
-import { DEFAULT_ORG_ID } from '../../common/constants';
 
 @ApiTags('Dashboard / Ops')
 @ApiBearerAuth()
@@ -81,9 +80,6 @@ export class DashboardOpsController {
   @ApiQuery({ name: 'from', required: false, description: 'Start of date range (ISO 8601)' })
   @ApiQuery({ name: 'to', required: false, description: 'End of date range (ISO 8601)' })
   listActivityEndpoint(@Query() query: ListActivityDto) {
-    return this.listActivity.execute({
-      ...query,
-      organizationId: DEFAULT_ORG_ID,
-    });
+    return this.listActivity.execute({ ...query });
   }
 }

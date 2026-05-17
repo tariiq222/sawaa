@@ -29,6 +29,11 @@ export interface CreateClientPayload {
 
 export interface CreateClientResponse {
   id: string
+  firstName?: string
+  middleName?: string
+  lastName?: string
+  phone?: string
+  email?: string
   isExisting?: boolean
 }
 

@@ -8,6 +8,7 @@ import { Input } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { Switch } from "@sawaa/ui"
 
+import { formatPrice } from "@/lib/money"
 import type { ServiceBookingType } from "@/lib/types/service"
 import type { EmployeeTypeConfigPayload } from "@/lib/types/employee"
 
@@ -34,7 +35,8 @@ export function EmployeeTypeRow({
   onUpdate,
   onRemove,
 }: EmployeeTypeRowProps) {
-  const defaultPrice = serviceDefault ? Number(serviceDefault.price).toFixed(2) : ""
+  // serviceDefault.price is in halalas; render as a SAR-major string.
+  const defaultPrice = serviceDefault ? formatPrice(serviceDefault.price) : ""
   const defaultDuration = serviceDefault ? String(serviceDefault.durationMins) : ""
   const hasDefault = !!serviceDefault
 

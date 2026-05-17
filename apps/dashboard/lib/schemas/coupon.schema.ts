@@ -7,7 +7,10 @@ export const couponSchema = z.object({
   descriptionEn: z.string().optional(),
   descriptionAr: z.string().optional(),
   discountType: z.enum(["PERCENTAGE", "FIXED"]),
-  discountValue: z.coerce.number().int().min(1),
+  // FIXED coupons accept fractional SAR (e.g. 49.50); the form's
+  // toStorageValue converts to integer halalas on submit. PERCENTAGE is a
+  // raw 0-100 percent. Either way, fractional input must be allowed here.
+  discountValue: z.coerce.number().min(0.01),
   minOrderAmt: z.union([z.coerce.number().min(0), z.literal("")]).optional(),
   maxUses: z.coerce.number().int().min(1).optional().or(z.literal("")),
   maxUsesPerUser: z.coerce.number().int().min(1).optional().or(z.literal("")),

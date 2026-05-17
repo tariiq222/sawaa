@@ -29,7 +29,7 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
       {breadcrumbs.map((item, i) => {
         const isLast = i === breadcrumbs.length - 1
         return (
-          <div key={item.href} className="flex items-center gap-2">
+          <div key={item.href ?? `${item.label}-${i}`} className="flex items-center gap-2">
             {i > 0 && (
               <HugeiconsIcon
                 icon={ArrowRight01Icon}

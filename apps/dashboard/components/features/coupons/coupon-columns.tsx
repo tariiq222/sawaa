@@ -15,6 +15,7 @@ import {
 } from "@sawaa/ui"
 import { ar } from "date-fns/locale"
 import { formatDatePattern } from "@/lib/date"
+import { formatPrice } from "@/lib/money"
 import type { Coupon } from "@/lib/types/coupon"
 
 type TFn = (key: string) => string
@@ -47,7 +48,7 @@ export function getCouponColumns(
           <span className="tabular-nums text-sm font-medium">
             {c.discountType === "PERCENTAGE"
               ? `${c.discountValue}%`
-              : `${(c.discountValue / 100).toFixed(2)} SAR`}
+              : `${formatPrice(c.discountValue)} SAR`}
           </span>
         )
       },
@@ -128,24 +129,30 @@ export function getCouponColumns(
               <TooltipContent side="top">{label("common.actions", "Actions")}</TooltipContent>
             </Tooltip>
             <DropdownMenuContent align="end" className="glass-solid">
-              <DropdownMenuItem onClick={() => onEdit?.(c)}>
-                <HugeiconsIcon icon={PencilEdit01Icon} size={14} />
-                {label("coupons.action.edit", "Edit")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onToggleActive?.(c)}>
-                <HugeiconsIcon icon={c.isActive ? Cancel01Icon : CheckmarkCircle02Icon} size={14} />
-                {label(
-                  c.isActive ? "coupons.action.deactivate" : "coupons.action.activate",
-                  c.isActive ? "Deactivate" : "Activate",
-                )}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onDelete?.(c)}
-                className="text-destructive focus:text-destructive"
-              >
-                <HugeiconsIcon icon={Delete02Icon} size={14} />
-                {label("coupons.action.delete", "Delete")}
-              </DropdownMenuItem>
+              {onEdit && (
+                <DropdownMenuItem onClick={() => onEdit(c)}>
+                  <HugeiconsIcon icon={PencilEdit01Icon} size={14} />
+                  {label("coupons.action.edit", "Edit")}
+                </DropdownMenuItem>
+              )}
+              {onToggleActive && (
+                <DropdownMenuItem onClick={() => onToggleActive(c)}>
+                  <HugeiconsIcon icon={c.isActive ? Cancel01Icon : CheckmarkCircle02Icon} size={14} />
+                  {label(
+                    c.isActive ? "coupons.action.deactivate" : "coupons.action.activate",
+                    c.isActive ? "Deactivate" : "Activate",
+                  )}
+                </DropdownMenuItem>
+              )}
+              {onDelete && (
+                <DropdownMenuItem
+                  onClick={() => onDelete(c)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <HugeiconsIcon icon={Delete02Icon} size={14} />
+                  {label("coupons.action.delete", "Delete")}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )

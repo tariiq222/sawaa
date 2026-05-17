@@ -17,8 +17,9 @@ import {
 } from "@/hooks/use-notifications"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { useLocale } from "@/components/locale-provider"
+import { PermissionGuard } from "@/components/features/permission-guard"
 
-export default function NotificationsPage() {
+function NotificationsContent() {
   const { t } = useLocale()
   const { notifications, meta, isLoading, error, page, setPage } = useNotifications()
   const { data: unreadCount, isLoading: unreadLoading } = useUnreadCount()
@@ -127,5 +128,13 @@ export default function NotificationsPage() {
         </div>
       )}
     </ListPageShell>
+  )
+}
+
+export default function NotificationsPage() {
+  return (
+    <PermissionGuard module="setting" action="read">
+      <NotificationsContent />
+    </PermissionGuard>
   )
 }

@@ -116,7 +116,7 @@ describe('ApproveRefundHandler', () => {
     });
     expect(moyasarClient.createRefund).toHaveBeenCalledWith(expect.any(String), {
       paymentId: 'moyasar-pay-1',
-      amount: 10000,
+      amount: 100,
       idempotencyKey: 'refund:rr-1',
     });
     expect(txMock.refundRequest.update).toHaveBeenCalledWith({

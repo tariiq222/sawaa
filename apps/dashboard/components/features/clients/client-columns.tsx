@@ -20,9 +20,9 @@ import type { Client } from "@/lib/types/client"
 interface ClientColumnOptions {
   onRowClick: (client: Client) => void
   onViewClick: (client: Client) => void
-  onEditClick: (client: Client) => void
-  onToggleActive: (client: Client) => void
-  onDeleteClick: (client: Client) => void
+  onEditClick?: (client: Client) => void
+  onToggleActive?: (client: Client) => void
+  onDeleteClick?: (client: Client) => void
   t: (key: string) => string
   locale?: "ar" | "en"
   dateFormat?: DateFormat
@@ -188,54 +188,60 @@ export function getClientColumns({
             <TooltipContent side="top">{t("clients.col.view")}</TooltipContent>
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => onEditClick(row.original)}
-                aria-label={t("clients.col.edit")}
-                className="flex size-9 items-center justify-center rounded-sm border border-transparent text-muted-foreground transition-all duration-200 hover:border-border hover:bg-muted hover:text-foreground"
-              >
-                <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top">{t("clients.col.edit")}</TooltipContent>
-          </Tooltip>
+          {onEditClick && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => onEditClick(row.original)}
+                  aria-label={t("clients.col.edit")}
+                  className="flex size-9 items-center justify-center rounded-sm border border-transparent text-muted-foreground transition-all duration-200 hover:border-border hover:bg-muted hover:text-foreground"
+                >
+                  <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">{t("clients.col.edit")}</TooltipContent>
+            </Tooltip>
+          )}
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => onToggleActive(row.original)}
-                aria-label={row.original.isActive ? t("clients.actions.deactivate") : t("clients.actions.activate")}
-                className={`flex size-9 items-center justify-center rounded-sm border border-transparent transition-all duration-200 hover:border-border hover:bg-muted ${
-                  row.original.isActive
-                    ? "text-destructive hover:text-destructive"
-                    : "text-success hover:text-success"
-                }`}
-              >
-                <HugeiconsIcon
-                  icon={row.original.isActive ? UserBlock01Icon : UserCheck01Icon}
-                  size={16}
-                />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              {row.original.isActive ? t("clients.actions.deactivate") : t("clients.actions.activate")}
-            </TooltipContent>
-          </Tooltip>
+          {onToggleActive && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => onToggleActive(row.original)}
+                  aria-label={row.original.isActive ? t("clients.actions.deactivate") : t("clients.actions.activate")}
+                  className={`flex size-9 items-center justify-center rounded-sm border border-transparent transition-all duration-200 hover:border-border hover:bg-muted ${
+                    row.original.isActive
+                      ? "text-destructive hover:text-destructive"
+                      : "text-success hover:text-success"
+                  }`}
+                >
+                  <HugeiconsIcon
+                    icon={row.original.isActive ? UserBlock01Icon : UserCheck01Icon}
+                    size={16}
+                  />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                {row.original.isActive ? t("clients.actions.deactivate") : t("clients.actions.activate")}
+              </TooltipContent>
+            </Tooltip>
+          )}
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => onDeleteClick(row.original)}
-                aria-label={t("clients.actions.delete")}
-                data-testid={`delete-client-${row.original.id}`}
-                className="flex size-9 items-center justify-center rounded-sm border border-transparent text-destructive transition-all duration-200 hover:border-destructive/30 hover:bg-destructive/10"
-              >
-                <HugeiconsIcon icon={Delete02Icon} size={16} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top">{t("clients.actions.delete")}</TooltipContent>
-          </Tooltip>
+          {onDeleteClick && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => onDeleteClick(row.original)}
+                  aria-label={t("clients.actions.delete")}
+                  data-testid={`delete-client-${row.original.id}`}
+                  className="flex size-9 items-center justify-center rounded-sm border border-transparent text-destructive transition-all duration-200 hover:border-destructive/30 hover:bg-destructive/10"
+                >
+                  <HugeiconsIcon icon={Delete02Icon} size={16} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">{t("clients.actions.delete")}</TooltipContent>
+            </Tooltip>
+          )}
         </div>
       ),
     },

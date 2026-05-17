@@ -6,50 +6,52 @@ import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 
-
 import { SessionsTab } from "@/components/features/chatbot/sessions-tab"
 import { KnowledgeBaseTab } from "@/components/features/chatbot/knowledge-base-tab"
 import { ConfigTab } from "@/components/features/chatbot/config-tab"
+import { PermissionGuard } from "@/components/features/permission-guard"
 
 export default function ChatbotPage() {
   const { t } = useLocale()
 
   return (
-    <ListPageShell>
-      <Breadcrumbs />
+    <PermissionGuard module="setting" action="read">
+      <ListPageShell>
+        <Breadcrumbs />
 
-      <PageHeader
-        title={t("chatbot.title")}
-        description={t("chatbot.description")}
-      />
+        <PageHeader
+          title={t("chatbot.title")}
+          description={t("chatbot.description")}
+        />
 
-      <Tabs defaultValue="sessions">
-        <div className="overflow-x-auto">
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="sessions">
-              {t("chatbot.tabs.sessions")}
-            </TabsTrigger>
-            <TabsTrigger value="knowledgeBase">
-              {t("chatbot.tabs.knowledgeBase")}
-            </TabsTrigger>
-            <TabsTrigger value="config">
-              {t("chatbot.tabs.config")}
-            </TabsTrigger>
-          </TabsList>
-        </div>
+        <Tabs defaultValue="sessions">
+          <div className="overflow-x-auto">
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="sessions">
+                {t("chatbot.tabs.sessions")}
+              </TabsTrigger>
+              <TabsTrigger value="knowledgeBase">
+                {t("chatbot.tabs.knowledgeBase")}
+              </TabsTrigger>
+              <TabsTrigger value="config">
+                {t("chatbot.tabs.config")}
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-        <TabsContent value="sessions">
-          <SessionsTab />
-        </TabsContent>
+          <TabsContent value="sessions">
+            <SessionsTab />
+          </TabsContent>
 
-        <TabsContent value="knowledgeBase">
-          <KnowledgeBaseTab />
-        </TabsContent>
+          <TabsContent value="knowledgeBase">
+            <KnowledgeBaseTab />
+          </TabsContent>
 
-        <TabsContent value="config">
-          <ConfigTab />
-        </TabsContent>
-      </Tabs>
-    </ListPageShell>
+          <TabsContent value="config">
+            <ConfigTab />
+          </TabsContent>
+        </Tabs>
+      </ListPageShell>
+    </PermissionGuard>
   )
 }

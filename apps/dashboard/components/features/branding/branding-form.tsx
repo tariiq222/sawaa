@@ -6,13 +6,6 @@ import { Label } from "@sawaa/ui"
 import { Input } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
 import { Separator } from "@sawaa/ui"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@sawaa/ui"
 import { useBranding } from "@/components/providers/branding-provider"
 import { isValidHex } from "@/lib/color-utils"
 import { useLocale } from "@/components/locale-provider"
@@ -20,7 +13,6 @@ import { BrandingColorsSection } from "./branding-colors-section"
 import type {
   BrandingConfig,
   UpdateBrandingPayload,
-  WebsiteTheme,
 } from "@/lib/types/branding"
 
 interface Props {
@@ -40,12 +32,6 @@ export function BrandingForm({ branding, onSave, isPending }: Props) {
   const [colorAccent, setColorAccent] = useState("")
   const [colorAccentDark, setColorAccentDark] = useState("")
   const [colorBackground, setColorBackground] = useState("")
-  const [fontFamily, setFontFamily] = useState("")
-  const [fontUrl, setFontUrl] = useState("")
-  const [logoUrl, setLogoUrl] = useState("")
-  const [faviconUrl, setFaviconUrl] = useState("")
-  const [websiteDomain, setWebsiteDomain] = useState("")
-  const [activeWebsiteTheme, setActiveWebsiteTheme] = useState<WebsiteTheme>("SAWAA")
 
   const { preview, clearPreview, apply } = useBranding()
 
@@ -62,12 +48,6 @@ export function BrandingForm({ branding, onSave, isPending }: Props) {
     setColorAccent(branding.colorAccent ?? "")
     setColorAccentDark(branding.colorAccentDark ?? "")
     setColorBackground(branding.colorBackground ?? "")
-    setFontFamily(branding.fontFamily ?? "")
-    setFontUrl(branding.fontUrl ?? "")
-    setLogoUrl(branding.logoUrl ?? "")
-    setFaviconUrl(branding.faviconUrl ?? "")
-    setWebsiteDomain(branding.websiteDomain ?? "")
-    setActiveWebsiteTheme(branding.activeWebsiteTheme ?? "SAWAA")
   }, [branding])
 
   const updatePreview = useCallback(
@@ -102,12 +82,6 @@ export function BrandingForm({ branding, onSave, isPending }: Props) {
       colorAccent: colorAccent || null,
       colorAccentDark: colorAccentDark || null,
       colorBackground: colorBackground || null,
-      fontFamily: fontFamily || null,
-      fontUrl: fontUrl || null,
-      logoUrl: logoUrl || null,
-      faviconUrl: faviconUrl || null,
-      websiteDomain: websiteDomain || null,
-      activeWebsiteTheme,
     })
     if (isValidHex(colorPrimary)) {
       apply({ primary: colorPrimary, accent: isValidHex(colorAccent) ? colorAccent : colorPrimary })
@@ -153,52 +127,6 @@ export function BrandingForm({ branding, onSave, isPending }: Props) {
           onAccentDarkChange={setColorAccentDark}
           onBackgroundChange={setColorBackground}
         />
-
-        <Separator />
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>{t("settings.fontFamily")}</Label>
-            <Input value={fontFamily} onChange={(e) => setFontFamily(e.target.value)} placeholder="IBM Plex Sans Arabic" />
-          </div>
-          <div className="space-y-2">
-            <Label>{t("branding.fontUrl")}</Label>
-            <Input value={fontUrl} onChange={(e) => setFontUrl(e.target.value)} placeholder="https://fonts.googleapis.com/..." dir="ltr" />
-          </div>
-          <div className="space-y-2">
-            <Label>{t("settings.logoUrl")}</Label>
-            <Input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://..." dir="ltr" />
-          </div>
-          <div className="space-y-2">
-            <Label>{t("settings.faviconUrl")}</Label>
-            <Input value={faviconUrl} onChange={(e) => setFaviconUrl(e.target.value)} placeholder="https://..." dir="ltr" />
-          </div>
-        </div>
-
-        <Separator />
-
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-base font-semibold">{t("branding.website.title")}</h3>
-            <p className="text-sm text-muted-foreground">{t("branding.website.description")}</p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="website-domain">{t("branding.website.domain")}</Label>
-              <Input id="website-domain" value={websiteDomain} onChange={(e) => setWebsiteDomain(e.target.value)} placeholder="clinic.example.com" dir="ltr" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="website-theme">{t("branding.website.theme")}</Label>
-              <Select value={activeWebsiteTheme} onValueChange={(v) => setActiveWebsiteTheme(v as WebsiteTheme)}>
-                <SelectTrigger id="website-theme"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="SAWAA">{t("branding.website.themes.sawaa")}</SelectItem>
-                  <SelectItem value="PREMIUM">{t("branding.website.themes.premium")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
 
         <Separator />
         <div className="flex justify-end">

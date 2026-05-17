@@ -100,6 +100,8 @@ __pycache__/
 docs/*
 !docs/operations/
 !docs/operations/**
+!docs/superpowers/
+!docs/superpowers/**
 .superpowers/
 _archived_dashboard/
 
@@ -141,3 +143,6 @@ sawaa-prod-secrets.md
 # Tariq AI Orchestration
 .tariq/memory/
 .tariq/memory/store.db
+
+# Local data ops — backups, comparison reports, backfill scripts (contains real client data)
+.sawaa-data/

@@ -26,9 +26,9 @@ import type { Locale } from "@/lib/translations"
 import type { UserRole } from "@/lib/types/user"
 
 interface UserColumnCallbacks {
-  onEdit: (user: User) => void
-  onDelete: (user: User) => void
-  onToggleActive: (user: User) => void
+  onEdit?: (user: User) => void
+  onDelete?: (user: User) => void
+  onToggleActive?: (user: User) => void
 }
 
 export function getUserColumns(
@@ -120,27 +120,33 @@ export function getUserColumns(
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => callbacks.onEdit(user)}>
-                <HugeiconsIcon icon={PencilEdit02Icon} size={14} />
-                {t("users.col.edit")}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => callbacks.onToggleActive(user)}
-              >
-                <HugeiconsIcon
-                  icon={user.isActive ? UserBlock01Icon : UserCheck01Icon}
-                  size={14}
-                />
-                {user.isActive ? t("users.col.deactivate") : t("users.col.activate")}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => callbacks.onDelete(user)}
-              >
-                <HugeiconsIcon icon={Delete02Icon} size={14} />
-                {t("users.col.delete")}
-              </DropdownMenuItem>
+              {callbacks.onEdit && (
+                <DropdownMenuItem onClick={() => callbacks.onEdit!(user)}>
+                  <HugeiconsIcon icon={PencilEdit02Icon} size={14} />
+                  {t("users.col.edit")}
+                </DropdownMenuItem>
+              )}
+              {callbacks.onToggleActive && (
+                <DropdownMenuItem
+                  onClick={() => callbacks.onToggleActive!(user)}
+                >
+                  <HugeiconsIcon
+                    icon={user.isActive ? UserBlock01Icon : UserCheck01Icon}
+                    size={14}
+                  />
+                  {user.isActive ? t("users.col.deactivate") : t("users.col.activate")}
+                </DropdownMenuItem>
+              )}
+              {(callbacks.onEdit || callbacks.onToggleActive) && callbacks.onDelete && <DropdownMenuSeparator />}
+              {callbacks.onDelete && (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => callbacks.onDelete!(user)}
+                >
+                  <HugeiconsIcon icon={Delete02Icon} size={14} />
+                  {t("users.col.delete")}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )

@@ -79,7 +79,7 @@ export const arDashboard: Record<string, string> = {
   "dashboard.noRevenueData": "لا توجد بيانات إيرادات بعد",
   "dashboard.greeting.hello": "{greeting}، {name} 👋",
   "actions.newBooking.hint": "حجز جديد بخطوات سريعة",
-  "actions.addClient.hint": "إضافة كلاينت جديد للسجل",
+  "actions.addClient.hint": "إضافة مستفيد جديد للسجل",
   "actions.recordPayment": "تسجيل دفعة",
   "actions.recordPayment.hint": "تسجيل دفعة يدوية",
   "dashboard.topPerformers.title": "أفضل المعالجين هذا الشهر",
@@ -90,4 +90,7 @@ export const arDashboard: Record<string, string> = {
   "dashboard.pendingSuffix": "بانتظار",
   "dashboard.section.today": "اليوم",
   "dashboard.section.operations": "العمليات",
+  "dashboard.range.today": "اليوم",
+  "dashboard.range.week": "هذا الأسبوع",
+  "dashboard.range.month": "هذا الشهر",
 }

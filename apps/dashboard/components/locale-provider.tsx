@@ -22,13 +22,6 @@ const LocaleContext = createContext<LocaleContextValue | null>(null)
 
 const STORAGE_KEY = "sawaa-locale"
 
-function getInitialLocale(): Locale {
-  if (typeof window === "undefined") return "ar"
-  const saved = localStorage.getItem(STORAGE_KEY)
-  if (saved === "en" || saved === "ar") return saved
-  return "ar"
-}
-
 function applyLocaleToDOM(locale: Locale) {
   const dir = locale === "ar" ? "rtl" : "ltr"
   document.documentElement.lang = locale
@@ -42,7 +35,13 @@ export function useLocale() {
 }
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocale] = useState<Locale>(getInitialLocale)
+  const [locale, setLocale] = useState<Locale>("ar")
+
+  // Read persisted locale after mount (avoids SSR/client hydration mismatch)
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved === "en" || saved === "ar") queueMicrotask(() => setLocale(saved))
+  }, [])
 
   // Sync DOM on mount and whenever locale changes
   useEffect(() => {

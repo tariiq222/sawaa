@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException } from '@nestjs/common';
 import { ClientSource } from '@prisma/client';
 import { CreateClientHandler } from './create-client.handler';
 import { PrismaService } from '../../../infrastructure/database';
@@ -41,9 +40,11 @@ describe('CreateClientHandler', () => {
     source: ClientSource.ONLINE,
   };
 
-  it('should throw ConflictException when phone exists', async () => {
-    prisma.client.findFirst.mockResolvedValue({ id: 'existing', phone: dtoBase.phone });
-    await expect(handler.execute(dtoBase)).rejects.toThrow(ConflictException);
+  it('should return existing client with isExisting=true when phone exists', async () => {
+    prisma.client.findFirst.mockResolvedValue({ id: 'existing', name: 'Existing', phone: dtoBase.phone });
+    const result = await handler.execute(dtoBase);
+    expect(result).toMatchObject({ id: 'existing', isExisting: true });
+    expect(prisma.client.create).not.toHaveBeenCalled();
   });
 
   it('should create client and publish event', async () => {

@@ -18,7 +18,6 @@ interface StatCardProps {
   icon?: IconSvgElement
   trend?: { value: string; positive: boolean }
   iconColor?: "primary" | "accent" | "warning" | "success"
-  size?: "default" | "lead"
   className?: string
 }
 
@@ -36,60 +35,42 @@ export function StatCard({
   icon,
   trend,
   iconColor = "primary",
-  size = "default",
   className,
 }: StatCardProps) {
   const tone = iconColorMap[iconColor]
-  const isLead = size === "lead"
 
   return (
-    <Card
-      className={cn(
-        "card-lift relative h-full",
-        isLead ? "px-5 py-5" : "px-4 py-3.5",
-        className,
-      )}
-    >
-      <div className={cn("flex h-full", isLead ? "flex-col gap-3" : "items-center gap-3")}>
+    <Card className={cn("card-lift relative h-full px-4 py-4", className)}>
+      <div className="flex h-full items-center gap-3">
         {icon && (
           <div
             className={cn(
-              "flex shrink-0 items-center justify-center rounded-xl",
+              "flex size-10 shrink-0 items-center justify-center rounded-xl",
               tone,
-              isLead ? "size-10" : "size-8 rounded-lg",
             )}
             aria-hidden
           >
-            <HugeiconsIcon icon={icon} size={isLead ? 20 : 16} />
+            <HugeiconsIcon icon={icon} size={20} />
           </div>
         )}
 
         <div className="min-w-0 flex-1">
-          <p
-            className={cn(
-              "font-semibold leading-none tabular-nums text-foreground",
-              isLead ? "text-[34px] tracking-tight" : "text-[22px]",
-            )}
-          >
+          <p className="text-[26px] font-semibold leading-none tabular-nums text-foreground">
             <StatValue value={value} />
           </p>
-          <p
-            className={cn(
-              "truncate text-muted-foreground",
-              isLead ? "mt-2 text-sm" : "mt-1 text-xs",
-            )}
-          >
+          <p className="mt-1.5 truncate text-xs text-muted-foreground">
             {title}
-            {description && <span className="ms-1 text-muted-foreground/80">· {description}</span>}
+            {description && (
+              <span className="ms-1 text-muted-foreground/80">· {description}</span>
+            )}
           </p>
         </div>
 
         {trend && (
           <span
             className={cn(
-              "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums",
+              "inline-flex shrink-0 items-center gap-1 self-start rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums",
               trend.positive ? "bg-success/10 text-success" : "bg-error/10 text-error",
-              isLead && "self-start",
             )}
           >
             {trend.positive ? "↑" : "↓"}

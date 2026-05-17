@@ -7,6 +7,7 @@ import { ThemedText } from '@/theme/components/ThemedText';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { Avatar } from '@/components/ui/Avatar';
 import { useTheme } from '@/theme/useTheme';
+import { formatHalalas } from '@/lib/money';
 import type { Booking, BookingType } from '@/types/models';
 
 const TYPE_ICON = {
@@ -85,7 +86,7 @@ export function AppointmentCard({ booking, onPress }: AppointmentCardProps) {
           {formattedDate} • {booking.startTime}
         </ThemedText>
         <ThemedText variant="caption" color="#1D4ED8" style={{ fontWeight: '600' }}>
-          {booking.totalAmount} {t('home.sar')}
+          {formatHalalas(booking.totalAmount, { locale: isRTL ? 'ar-SA' : 'en-US' })} {t('home.sar')}
         </ThemedText>
       </View>
     </Pressable>

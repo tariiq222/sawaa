@@ -11,6 +11,7 @@ import { Button } from "@sawaa/ui"
 import { ServicesTabContent } from "@/components/features/services/services-tab-content"
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
+import { PermissionGuard } from "@/components/features/permission-guard"
 
 export default function ServicesPage() {
   const { t } = useLocale()
@@ -18,22 +19,24 @@ export default function ServicesPage() {
   const { canDo } = useAuth()
 
   return (
-    <ListPageShell>
-      <Breadcrumbs />
+    <PermissionGuard module="service" action="read">
+      <ListPageShell>
+        <Breadcrumbs />
 
-      <PageHeader
-        title={t("services.title")}
-        description={t("services.description")}
-      >
-        {canDo("Service", "create") && (
-          <Button className="gap-2 rounded-full px-5" onClick={() => router.push("/services/create")}>
-            <HugeiconsIcon icon={Add01Icon} size={16} />
-            {t("services.addService")}
-          </Button>
-        )}
-      </PageHeader>
+        <PageHeader
+          title={t("services.title")}
+          description={t("services.description")}
+        >
+          {canDo("Service", "create") && (
+            <Button className="gap-2 rounded-full px-5" onClick={() => router.push("/services/create")}>
+              <HugeiconsIcon icon={Add01Icon} size={16} />
+              {t("services.addService")}
+            </Button>
+          )}
+        </PageHeader>
 
-      <ServicesTabContent />
-    </ListPageShell>
+        <ServicesTabContent />
+      </ListPageShell>
+    </PermissionGuard>
   )
 }

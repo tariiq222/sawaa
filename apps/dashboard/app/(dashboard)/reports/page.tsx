@@ -17,11 +17,12 @@ import { BookingsTab } from "@/components/features/reports/bookings-tab"
 import { EmployeesTab } from "@/components/features/reports/employees-tab"
 import { exportReportExcel } from "@/lib/api/reports"
 import { toast } from "sonner"
+import { PermissionGuard } from "@/components/features/permission-guard"
 
 const today = format(new Date(), "yyyy-MM-dd")
 const thirtyDaysAgo = format(subDays(new Date(), 30), "yyyy-MM-dd")
 
-export default function ReportsPage() {
+function ReportsContent() {
   const { t } = useLocale()
   const [activeTab, setActiveTab] = useState("revenue")
   const [dateFrom, setDateFrom] = useState(thirtyDaysAgo)
@@ -113,5 +114,13 @@ export default function ReportsPage() {
         </TabsContent>
       </Tabs>
     </ListPageShell>
+  )
+}
+
+export default function ReportsPage() {
+  return (
+    <PermissionGuard module="report" action="read">
+      <ReportsContent />
+    </PermissionGuard>
   )
 }

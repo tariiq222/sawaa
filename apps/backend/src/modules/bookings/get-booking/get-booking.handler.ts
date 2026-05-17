@@ -22,16 +22,54 @@ export class GetBookingHandler {
       throw new ForbiddenException('Not your booking');
     }
 
-    const [client, employee, service] = await Promise.all([
+    const [client, employee, service, invoice] = await Promise.all([
       this.prisma.client.findFirst({ where: { id: booking.clientId } }),
       this.prisma.employee.findFirst({ where: { id: booking.employeeId } }),
       this.prisma.service.findFirst({ where: { id: booking.serviceId } }),
+      this.prisma.invoice.findFirst({
+        where: { bookingId: booking.id },
+        select: {
+          bookingId: true,
+          payments: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: {
+              id: true,
+              amount: true,
+              refundedAmount: true,
+              method: true,
+              status: true,
+            },
+          },
+        },
+      }),
     ]);
+
+    // Build paymentsByBookingId for this single booking
+    // Payment.amount is Decimal(12,2) SAR → convert to halalat (× 100)
+    const paymentsByBookingId = new Map<string, {
+      id: string;
+      amount: number;
+      refundedAmount: number;
+      method: string;
+      status: string;
+    }>();
+    if (invoice && invoice.payments.length > 0) {
+      const p = invoice.payments[0];
+      paymentsByBookingId.set(booking.id, {
+        id: p.id,
+        amount: Math.round(Number(p.amount)),
+        refundedAmount: Math.round(Number(p.refundedAmount)),
+        method: p.method as string,
+        status: p.status as string,
+      });
+    }
 
     const relations: BookingRelations = {
       clientsById: new Map(client ? [[client.id, client]] : []),
       employeesById: new Map(employee ? [[employee.id, employee]] : []),
       servicesById: new Map(service ? [[service.id, service]] : []),
+      paymentsByBookingId,
     };
 
     return mapBookingRow(booking, relations);
