@@ -1,4 +1,5 @@
 import { setServiceBookingTypes } from "@/lib/api/services"
+import { sarToHalalas } from "@/lib/money"
 import type { CreateServiceFormData } from "@/components/features/services/create/form-schema"
 import type { DraftBookingType } from "@/components/features/services/booking-types-editor"
 
@@ -18,7 +19,7 @@ export function buildPayload(data: CreateServiceFormData) {
     imageUrl: data.imageUrl?.startsWith("blob:") ? undefined : (data.imageUrl ?? null),
     bufferMinutes: data.bufferMinutes,
     depositEnabled: data.depositEnabled,
-    depositAmount: data.depositEnabled ? (data.depositAmount ?? undefined) : undefined,
+    depositAmount: data.depositEnabled && data.depositAmount != null ? sarToHalalas(data.depositAmount) : undefined,
     allowRecurring: data.allowRecurring,
     allowedRecurringPatterns: data.allowedRecurringPatterns as import("@/lib/types/service").RecurringPattern[] | undefined,
     maxRecurrences: data.maxRecurrences,
@@ -31,7 +32,7 @@ export function buildPayload(data: CreateServiceFormData) {
 export function buildBookingTypesPayload(bookingTypes: DraftBookingType[]) {
   return bookingTypes.filter((bt) => bt.enabled).map((d) => ({
     bookingType: d.bookingType,
-    price: d.price,
+    price: sarToHalalas(d.price),
     durationMins: d.durationMins,
     isActive: true,
   }))

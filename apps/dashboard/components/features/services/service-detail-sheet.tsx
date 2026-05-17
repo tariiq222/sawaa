@@ -18,6 +18,7 @@ import { useLocale } from "@/components/locale-provider"
 import { ar } from "date-fns/locale"
 import { formatDatePattern } from "@/lib/date"
 import { cn } from "@/lib/utils"
+import { formatPrice } from "@/lib/money"
 import type { Service } from "@/lib/types/service"
 import { ServiceAvatar } from "./service-avatar"
 
@@ -169,7 +170,7 @@ export function ServiceDetailSheet({
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
               <Field
                 label={t("services.detail.price")}
-                value={<span className="tabular-nums">{Number(service.price).toFixed(2)} {t("services.bookingTypes.priceCurrency")}</span>}
+                value={<span className="tabular-nums">{formatPrice(Number(service.price))} {t("services.bookingTypes.priceCurrency")}</span>}
               />
               <Field
                 label={t("services.detail.duration")}
@@ -188,7 +189,7 @@ export function ServiceDetailSheet({
                 label={t("services.detail.deposit")}
                 value={
                   service.depositEnabled
-                    ? <span className="tabular-nums">{service.depositAmount != null ? Number(service.depositAmount).toFixed(2) : "—"}</span>
+                    ? <span className="tabular-nums">{service.depositAmount != null ? formatPrice(Number(service.depositAmount)) : "—"}</span>
                     : <StatusPill active={false} yes="" no={t("common.disabled")} />
                 }
               />
