@@ -52,10 +52,12 @@ describe('CompleteBookingHandler — status log', () => {
 describe('payAtClinic invoice creation', () => {
   function buildPrismaWithInvoice() {
     const prisma = buildPrisma() as ReturnType<typeof buildPrisma> & {
-      invoice: { findUnique: jest.Mock; create: jest.Mock };
+      invoice: { findMany: jest.Mock; findFirst: jest.Mock; findUnique: jest.Mock; create: jest.Mock };
       organizationSettings: { findFirst: jest.Mock };
     };
     prisma.invoice = {
+      findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue(null),
       findUnique: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue({ id: 'inv-1' }),
     };
