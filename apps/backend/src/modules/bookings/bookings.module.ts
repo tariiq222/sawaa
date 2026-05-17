@@ -46,6 +46,7 @@ import { GetBookingStatusHandler } from './public/get-booking-status.handler';
 import { CreateEmployeeBookingHandler } from './create-employee-booking/create-employee-booking.handler';
 import { ValidateCouponService } from './coupons/validate-coupon.service';
 import { CancelRecurringSeriesHandler } from './cancel-recurring-series/cancel-recurring-series.handler';
+import { CreateBundleBookingHandler } from './create-bundle-booking/create-bundle-booking.handler';
 
 const handlers = [
   CreateBookingHandler,
@@ -87,6 +88,7 @@ const handlers = [
   GetBookingStatusHandler,
   ValidateCouponService,
   CancelRecurringSeriesHandler,
+  CreateBundleBookingHandler,
 ];
 
 @Module({

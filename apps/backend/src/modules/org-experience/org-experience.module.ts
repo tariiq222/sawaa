@@ -31,6 +31,12 @@ import { UpsertOrgSettingsHandler } from './org-settings/upsert-org-settings.han
 import { GetBookingSettingsHandler } from '../bookings/get-booking-settings/get-booking-settings.handler';
 import { UpsertBookingSettingsHandler } from '../bookings/upsert-booking-settings/upsert-booking-settings.handler';
 import { MAX_FILE_SIZE_BYTES } from '../media/files/upload-file.handler';
+import { BundlePriceService } from './bundles/bundle-price.service';
+import { CreateBundleHandler } from './bundles/create-bundle.handler';
+import { UpdateBundleHandler } from './bundles/update-bundle.handler';
+import { ListBundlesHandler } from './bundles/list-bundles.handler';
+import { GetBundleHandler } from './bundles/get-bundle.handler';
+import { ArchiveBundleHandler } from './bundles/archive-bundle.handler';
 
 const serviceHandlers = [
   CreateServiceHandler, UpdateServiceHandler, ListServicesHandler, GetServiceHandler, ArchiveServiceHandler,
@@ -39,11 +45,17 @@ const serviceHandlers = [
   ListServiceEmployeesHandler,
 ];
 
+const bundleHandlers = [
+  CreateBundleHandler, UpdateBundleHandler, ListBundlesHandler, GetBundleHandler, ArchiveBundleHandler,
+  BundlePriceService,
+];
+
 @Module({
   imports: [DatabaseModule, MediaModule, MessagingModule, MulterModule.register({ storage: memoryStorage(), limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 } })],
   controllers: [DashboardOrganizationSettingsController],
   providers: [
     ...serviceHandlers,
+    ...bundleHandlers,
     UpsertBrandingHandler, GetBrandingHandler, GetPublicBrandingHandler, UploadLogoHandler,
     CreateIntakeFormHandler, GetIntakeFormHandler, ListIntakeFormsHandler, DeleteIntakeFormHandler,
     SubmitRatingHandler, ListRatingsHandler,
@@ -52,6 +64,7 @@ const serviceHandlers = [
   ],
   exports: [
     ...serviceHandlers,
+    ...bundleHandlers,
     UpsertBrandingHandler, GetBrandingHandler, GetPublicBrandingHandler, UploadLogoHandler,
     CreateIntakeFormHandler, GetIntakeFormHandler, ListIntakeFormsHandler, DeleteIntakeFormHandler,
     SubmitRatingHandler, ListRatingsHandler,

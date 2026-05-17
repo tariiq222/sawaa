@@ -1241,6 +1241,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/bookings/bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a booking for a service bundle */
+        post: operations["DashboardBookingsController_createBundleBooking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/bookings/recurring": {
         parameters: {
             query?: never;
@@ -1568,6 +1585,43 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/bundles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List service bundles */
+        get: operations["DashboardOrganizationSettingsController_listBundlesEndpoint"];
+        put?: never;
+        /** Create a service bundle */
+        post: operations["DashboardOrganizationSettingsController_createBundleEndpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/bundles/{bundleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a service bundle by id */
+        get: operations["DashboardOrganizationSettingsController_getBundleEndpoint"];
+        put?: never;
+        post?: never;
+        /** Archive a service bundle */
+        delete: operations["DashboardOrganizationSettingsController_archiveBundleEndpoint"];
+        options?: never;
+        head?: never;
+        /** Update a service bundle */
+        patch: operations["DashboardOrganizationSettingsController_updateBundleEndpoint"];
         trace?: never;
     };
     "/api/v1/dashboard/organization/branding": {
@@ -5165,6 +5219,43 @@ export interface components {
              */
             couponCode?: string;
         };
+        CreateBundleBookingDto: {
+            /**
+             * @description Branch where the bundle booking takes place
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            branchId: string;
+            /**
+             * @description Client being booked
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            clientId: string;
+            /**
+             * @description Employee performing all bundle services
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            employeeId: string;
+            /**
+             * @description Service bundle to book
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            bundleId: string;
+            /**
+             * @description ISO 8601 start datetime for the first service in the bundle
+             * @example 2026-05-01T09:00:00.000Z
+             */
+            scheduledAt: string;
+            /**
+             * @description Free-text notes for the bookings
+             * @example Client prefers quiet room
+             */
+            notes?: string;
+            /**
+             * @description Payment collected at the clinic instead of online
+             * @example false
+             */
+            payAtClinic?: boolean;
+        };
         /**
          * @description Recurrence frequency
          * @enum {string}
@@ -5663,6 +5754,90 @@ export interface components {
         SetDurationOptionsDto: {
             /** @description Duration options to set (at least one required) */
             options: components["schemas"]["DurationOptionInputDto"][];
+        };
+        CreateBundleDto: {
+            /** @example باقة العناية الشاملة */
+            nameAr: string;
+            /** @example Full Care Bundle */
+            nameEn?: string;
+            /** @description Bundle description in Arabic */
+            descriptionAr?: string;
+            /** @description Bundle description in English */
+            descriptionEn?: string;
+            /** @description Bundle image URL */
+            imageUrl?: string;
+            /** @example bundle-01 */
+            iconName?: string;
+            /** @example #F0F4FF */
+            iconBgColor?: string;
+            /**
+             * @example PERCENTAGE
+             * @enum {string}
+             */
+            discountType: "PERCENTAGE" | "FIXED";
+            /**
+             * @description Discount value (percentage or fixed amount)
+             * @example 10
+             */
+            discountValue: number;
+            /**
+             * @default SAR
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @default true
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @default false
+             * @example false
+             */
+            isHidden: boolean;
+            /**
+             * @default 0
+             * @example 0
+             */
+            sortOrder: number;
+            /** @description Array of service UUIDs to include in the bundle. Order defines execution order. */
+            serviceIds: string[];
+        };
+        UpdateBundleDto: {
+            /** @example باقة العناية الشاملة */
+            nameAr?: string;
+            /** @example Full Care Bundle */
+            nameEn?: string;
+            /** @description Bundle description in Arabic */
+            descriptionAr?: string;
+            /** @description Bundle description in English */
+            descriptionEn?: string;
+            /** @description Bundle image URL */
+            imageUrl?: string;
+            /** @example bundle-01 */
+            iconName?: string;
+            /** @example #F0F4FF */
+            iconBgColor?: string;
+            /**
+             * @example PERCENTAGE
+             * @enum {string}
+             */
+            discountType?: "PERCENTAGE" | "FIXED";
+            /**
+             * @description Discount value (percentage or fixed amount)
+             * @example 10
+             */
+            discountValue?: number;
+            /** @example SAR */
+            currency?: string;
+            /** @example true */
+            isActive?: boolean;
+            /** @example false */
+            isHidden?: boolean;
+            /** @example 0 */
+            sortOrder?: number;
+            /** @description Replace bundle services. Must include at least 2 services. Order defines execution order. */
+            serviceIds?: string[];
         };
         UpsertBrandingDto: {
             /**
@@ -13836,6 +14011,64 @@ export interface operations {
             };
         };
     };
+    DashboardBookingsController_createBundleBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBundleBookingDto"];
+            };
+        };
+        responses: {
+            /** @description Bundle booking created — multiple consecutive bookings */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     DashboardBookingsController_createRecurringBooking: {
         parameters: {
             query?: never;
@@ -15552,6 +15785,321 @@ export interface operations {
                 };
             };
             /** @description Service not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_listBundlesEndpoint: {
+        parameters: {
+            query?: {
+                /** @description Filter by active status */
+                isActive?: boolean;
+                /** @description Include hidden bundles */
+                includeHidden?: boolean;
+                /** @description Search by name */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated list of bundles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_createBundleEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBundleDto"];
+            };
+        };
+        responses: {
+            /** @description Bundle created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_getBundleEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Bundle UUID */
+                bundleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bundle details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Bundle not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_archiveBundleEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Bundle UUID */
+                bundleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bundle archived */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Bundle not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_updateBundleEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Bundle UUID */
+                bundleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBundleDto"];
+            };
+        };
+        responses: {
+            /** @description Bundle updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Bundle not found */
             404: {
                 headers: {
                     [name: string]: unknown;

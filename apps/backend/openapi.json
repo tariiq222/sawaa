@@ -8952,6 +8952,76 @@
         ]
       }
     },
+    "/api/v1/dashboard/bookings/bundle": {
+      "post": {
+        "operationId": "DashboardBookingsController_createBundleBooking",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBundleBookingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Bundle booking created — multiple consecutive bookings"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Action denied by permission policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a booking for a service bundle",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
     "/api/v1/dashboard/bookings/recurring": {
       "post": {
         "operationId": "DashboardBookingsController_createRecurringBooking",
@@ -11323,6 +11393,393 @@
           }
         ],
         "summary": "Set duration options for a service",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      }
+    },
+    "/api/v1/dashboard/organization/bundles": {
+      "post": {
+        "operationId": "DashboardOrganizationSettingsController_createBundleEndpoint",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBundleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Bundle created"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Action denied by permission policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a service bundle",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      },
+      "get": {
+        "operationId": "DashboardOrganizationSettingsController_listBundlesEndpoint",
+        "parameters": [
+          {
+            "name": "isActive",
+            "required": false,
+            "in": "query",
+            "description": "Filter by active status",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "includeHidden",
+            "required": false,
+            "in": "query",
+            "description": "Include hidden bundles",
+            "schema": {
+              "example": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search by name",
+            "schema": {
+              "example": "عناية",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of bundles"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Action denied by permission policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List service bundles",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      }
+    },
+    "/api/v1/dashboard/organization/bundles/{bundleId}": {
+      "get": {
+        "operationId": "DashboardOrganizationSettingsController_getBundleEndpoint",
+        "parameters": [
+          {
+            "name": "bundleId",
+            "required": true,
+            "in": "path",
+            "description": "Bundle UUID",
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bundle details"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Action denied by permission policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Bundle not found"
+          },
+          "500": {
+            "description": "Unhandled server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a service bundle by id",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      },
+      "patch": {
+        "operationId": "DashboardOrganizationSettingsController_updateBundleEndpoint",
+        "parameters": [
+          {
+            "name": "bundleId",
+            "required": true,
+            "in": "path",
+            "description": "Bundle UUID",
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBundleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bundle updated"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Action denied by permission policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Bundle not found"
+          },
+          "500": {
+            "description": "Unhandled server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a service bundle",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      },
+      "delete": {
+        "operationId": "DashboardOrganizationSettingsController_archiveBundleEndpoint",
+        "parameters": [
+          {
+            "name": "bundleId",
+            "required": true,
+            "in": "path",
+            "description": "Bundle UUID",
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Bundle archived"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Action denied by permission policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Bundle not found"
+          },
+          "500": {
+            "description": "Unhandled server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archive a service bundle",
         "tags": [
           "Dashboard / Org Experience"
         ]
@@ -24415,6 +24872,53 @@
           "scheduledAt"
         ]
       },
+      "CreateBundleBookingDto": {
+        "type": "object",
+        "properties": {
+          "branchId": {
+            "type": "string",
+            "description": "Branch where the bundle booking takes place",
+            "example": "00000000-0000-0000-0000-000000000000"
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Client being booked",
+            "example": "00000000-0000-0000-0000-000000000000"
+          },
+          "employeeId": {
+            "type": "string",
+            "description": "Employee performing all bundle services",
+            "example": "00000000-0000-0000-0000-000000000000"
+          },
+          "bundleId": {
+            "type": "string",
+            "description": "Service bundle to book",
+            "example": "00000000-0000-0000-0000-000000000000"
+          },
+          "scheduledAt": {
+            "type": "string",
+            "description": "ISO 8601 start datetime for the first service in the bundle",
+            "example": "2026-05-01T09:00:00.000Z"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Free-text notes for the bookings",
+            "example": "Client prefers quiet room"
+          },
+          "payAtClinic": {
+            "type": "boolean",
+            "description": "Payment collected at the clinic instead of online",
+            "example": false
+          }
+        },
+        "required": [
+          "branchId",
+          "clientId",
+          "employeeId",
+          "bundleId",
+          "scheduledAt"
+        ]
+      },
       "RecurringFrequency": {
         "type": "string",
         "enum": [
@@ -25100,6 +25604,158 @@
         "required": [
           "options"
         ]
+      },
+      "CreateBundleDto": {
+        "type": "object",
+        "properties": {
+          "nameAr": {
+            "type": "string",
+            "example": "باقة العناية الشاملة"
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "Full Care Bundle"
+          },
+          "descriptionAr": {
+            "type": "string",
+            "description": "Bundle description in Arabic"
+          },
+          "descriptionEn": {
+            "type": "string",
+            "description": "Bundle description in English"
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "Bundle image URL"
+          },
+          "iconName": {
+            "type": "string",
+            "example": "bundle-01"
+          },
+          "iconBgColor": {
+            "type": "string",
+            "example": "#F0F4FF"
+          },
+          "discountType": {
+            "type": "string",
+            "enum": [
+              "PERCENTAGE",
+              "FIXED"
+            ],
+            "example": "PERCENTAGE"
+          },
+          "discountValue": {
+            "type": "number",
+            "example": 10,
+            "description": "Discount value (percentage or fixed amount)"
+          },
+          "currency": {
+            "type": "string",
+            "example": "SAR",
+            "default": "SAR"
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true,
+            "default": true
+          },
+          "isHidden": {
+            "type": "boolean",
+            "example": false,
+            "default": false
+          },
+          "sortOrder": {
+            "type": "number",
+            "example": 0,
+            "default": 0
+          },
+          "serviceIds": {
+            "description": "Array of service UUIDs to include in the bundle. Order defines execution order.",
+            "minItems": 2,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "nameAr",
+          "discountType",
+          "discountValue",
+          "serviceIds"
+        ]
+      },
+      "UpdateBundleDto": {
+        "type": "object",
+        "properties": {
+          "nameAr": {
+            "type": "string",
+            "example": "باقة العناية الشاملة"
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "Full Care Bundle"
+          },
+          "descriptionAr": {
+            "type": "string",
+            "description": "Bundle description in Arabic"
+          },
+          "descriptionEn": {
+            "type": "string",
+            "description": "Bundle description in English"
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "Bundle image URL"
+          },
+          "iconName": {
+            "type": "string",
+            "example": "bundle-01"
+          },
+          "iconBgColor": {
+            "type": "string",
+            "example": "#F0F4FF"
+          },
+          "discountType": {
+            "type": "string",
+            "enum": [
+              "PERCENTAGE",
+              "FIXED"
+            ],
+            "example": "PERCENTAGE"
+          },
+          "discountValue": {
+            "type": "number",
+            "example": 10,
+            "description": "Discount value (percentage or fixed amount)"
+          },
+          "currency": {
+            "type": "string",
+            "example": "SAR"
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true
+          },
+          "isHidden": {
+            "type": "boolean",
+            "example": false
+          },
+          "sortOrder": {
+            "type": "number",
+            "example": 0
+          },
+          "serviceIds": {
+            "description": "Replace bundle services. Must include at least 2 services. Order defines execution order.",
+            "minItems": 2,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
       },
       "UpsertBrandingDto": {
         "type": "object",

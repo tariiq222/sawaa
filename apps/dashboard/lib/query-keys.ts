@@ -248,6 +248,13 @@ export const queryKeys = {
     topPerformers: () => ["dashboard", "top-performers"] as const,
   },
 
+  /* ─── Bundles ─── */
+  bundles: {
+    all: ["bundles"] as const,
+    list: (filters?: object) => ["bundles", "list", filters ?? {}] as const,
+    detail: (id: string) => ["bundles", "detail", id] as const,
+  },
+
   /* ─── Delivery Logs ─── */
   deliveryLogs: {
     all: ["delivery-logs"] as const,

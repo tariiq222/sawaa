@@ -36,6 +36,7 @@ export const arNav: Record<string, string> = {
   "nav.branding": "إعداد النظام",
   "nav.content": "المحتوى",
   "nav.intakeForms": "نماذج المعلومات",
+  "nav.bundles": "الباقات",
   "nav.groups": "المجموعات",
   "nav.create": "إنشاء",
   "nav.edit": "تعديل",

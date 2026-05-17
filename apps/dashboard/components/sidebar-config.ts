@@ -19,6 +19,7 @@ import {
   Location01Icon,
   Briefcase01Icon,
   InboxIcon,
+  Package01Icon,
 } from "@hugeicons/core-free-icons"
 export interface NavItem {
   titleKey: string
@@ -59,6 +60,7 @@ export const financeNav: NavItem[] = [
 
 export const catalogNav: NavItem[] = [
   { titleKey: "nav.services", href: "/services", icon: Briefcase01Icon, permission: "service:read" },
+  { titleKey: "nav.bundles", href: "/bundles", icon: Package01Icon, permission: "service:read" },
   { titleKey: "nav.categories", href: "/categories", icon: Layers01Icon, permission: "category:read" },
   { titleKey: "nav.departments", href: "/departments", icon: Building06Icon, permission: "department:read" },
   { titleKey: "nav.branches", href: "/branches", icon: Location01Icon, permission: "branch:read" },

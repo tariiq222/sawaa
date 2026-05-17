@@ -39,6 +39,8 @@ import { RemoveWaitlistEntryHandler } from '../../modules/bookings/remove-waitli
 import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
 import { CheckAvailabilityDto } from '../../modules/bookings/check-availability/check-availability.dto';
 import { ListBookingStatusLogHandler } from '../../modules/bookings/list-booking-status-log/list-booking-status-log.handler';
+import { CreateBundleBookingHandler } from '../../modules/bookings/create-bundle-booking/create-bundle-booking.handler';
+import { CreateBundleBookingDto } from '../../modules/bookings/create-bundle-booking/create-bundle-booking.dto';
 
 @ApiTags('Dashboard / Bookings')
 @ApiBearerAuth()
@@ -64,6 +66,7 @@ export class DashboardBookingsController {
     private readonly removeWaitlistHandler: RemoveWaitlistEntryHandler,
     private readonly availabilityHandler: CheckAvailabilityHandler,
     private readonly statusLogHandler: ListBookingStatusLogHandler,
+    private readonly createBundleHandler: CreateBundleBookingHandler,
   ) {}
 
   @Post()
@@ -90,6 +93,15 @@ export class DashboardBookingsController {
       scheduledAt: new Date(scheduledAt),
       expiresAt: expiresAt ? new Date(expiresAt) : undefined,
     });
+  }
+
+  @Post('bundle')
+  @CheckPermissions({ action: 'manage', subject: 'Booking' })
+  @ApiOperation({ summary: 'Create a booking for a service bundle' })
+  @ApiCreatedResponse({ description: 'Bundle booking created — multiple consecutive bookings' })
+  createBundleBooking(@Body() body: CreateBundleBookingDto) {
+    const { scheduledAt, ...rest } = body;
+    return this.createBundleHandler.execute({ ...rest, scheduledAt: new Date(scheduledAt) });
   }
 
   @Post('recurring')
