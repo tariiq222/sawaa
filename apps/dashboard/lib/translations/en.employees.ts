@@ -304,6 +304,26 @@ export const enEmployees: Record<string, string> = {
   "employees.detail.inactive": "Inactive",
   "employees.detail.home": "Home",
 
+  // — Account & Role Tab —
+  "employees.detail.account.tab": "Account & Role",
+  "employees.detail.account.title": "Login Account",
+  "employees.detail.account.currentRole": "Current role",
+  "employees.detail.account.accountActive": "Account active",
+  "employees.detail.account.noAccountTitle": "No login account",
+  "employees.detail.account.noAccountDesc": "Grant this practitioner access to the dashboard by creating a login account.",
+  "employees.detail.account.needEmail": "Add an email to this employee first, then you can create a login account.",
+  "employees.detail.account.password": "Password",
+  "employees.detail.account.passwordHint": "Min 8 characters. Required only if this email has no account yet.",
+  "employees.detail.account.create": "Create Account",
+  "employees.detail.account.created": "Login account created",
+  "employees.detail.account.updated": "Account updated",
+  "employees.detail.account.roleLabel": "Role",
+  "employees.detail.account.role.SUPER_ADMIN": "Super Admin",
+  "employees.detail.account.role.ADMIN": "Admin",
+  "employees.detail.account.role.RECEPTIONIST": "Receptionist",
+  "employees.detail.account.role.ACCOUNTANT": "Accountant",
+  "employees.detail.account.role.EMPLOYEE": "Employee",
+
   // — Public Profile Tab —
   "employees.public.showInDirectory": "Show in public directory",
   "employees.public.showDirectoryDesc": "Make this therapist visible on the public site",

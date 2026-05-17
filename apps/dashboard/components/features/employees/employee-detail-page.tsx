@@ -37,6 +37,7 @@ import {
 } from "@/components/features/employees/employee-profile-helpers"
 import { EmployeeBookingsChart } from "@/components/features/employees/employee-bookings-chart"
 import { PublicProfileTab } from "@/components/features/employees/public-profile-tab"
+import { EmployeeAccountTab } from "@/components/features/employees/employee-account-tab"
 
 interface Props {
   employeeId: string
@@ -193,6 +194,7 @@ export function EmployeeDetailPage({ employeeId }: Props) {
           <TabsTrigger value="schedule">{t("employees.detail.schedule")}</TabsTrigger>
           <TabsTrigger value="ratings">{t("employees.detail.ratingsTab")}</TabsTrigger>
           <TabsTrigger value="public">{t("employees.detail.public")}</TabsTrigger>
+          <TabsTrigger value="account">{t("employees.detail.account.tab")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4 pt-4">
@@ -229,6 +231,10 @@ export function EmployeeDetailPage({ employeeId }: Props) {
 
         <TabsContent value="public" className="pt-4">
           <PublicProfileTab employee={p} />
+        </TabsContent>
+
+        <TabsContent value="account" className="pt-4">
+          <EmployeeAccountTab employeeId={employeeId} />
         </TabsContent>
       </Tabs>
     </ListPageShell>

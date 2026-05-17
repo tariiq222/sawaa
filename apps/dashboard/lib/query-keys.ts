@@ -45,6 +45,7 @@ export const queryKeys = {
       ] as const,
     ratings: (id: string) => ["employees", "ratings", id] as const,
     stats: () => ["employees", "stats"] as const,
+    account: (id: string) => ["employees", "account", id] as const,
   },
 
   /* ─── Services ─── */

@@ -32,6 +32,9 @@ import { GetEmployeeBreaksHandler } from '../../modules/people/employees/get-emp
 import { SetEmployeeBreaksHandler } from '../../modules/people/employees/set-employee-breaks/set-employee-breaks.handler';
 import { UpdateEmployeeServiceHandler } from '../../modules/people/employees/update-employee-service.handler';
 import { SetEmployeeServiceOptionsHandler } from '../../modules/org-experience/services/set-employee-service-options.handler';
+import { GetEmployeeAccountHandler } from '../../modules/identity/employee-account/get-employee-account.handler';
+import { CreateEmployeeAccountHandler } from '../../modules/identity/employee-account/create-employee-account.handler';
+import { UpdateEmployeeAccountHandler } from '../../modules/identity/employee-account/update-employee-account.handler';
 import { PrismaService } from '../../infrastructure/database';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
@@ -69,6 +72,9 @@ describe('DashboardPeopleController (e2e)', () => {
   const mockSetEmployeeBreaks = { execute: jest.fn() };
   const mockUpdateEmployeeService = { execute: jest.fn() };
   const mockSetEmployeeServiceOptions = { execute: jest.fn() };
+  const mockGetEmployeeAccount = { execute: jest.fn() };
+  const mockCreateEmployeeAccount = { execute: jest.fn() };
+  const mockUpdateEmployeeAccount = { execute: jest.fn() };
   const mockPrisma = {
     branch: { findFirst: jest.fn() },
     employeeService: { findUnique: jest.fn() },
@@ -120,6 +126,9 @@ describe('DashboardPeopleController (e2e)', () => {
         { provide: SetEmployeeBreaksHandler, useValue: mockSetEmployeeBreaks },
         { provide: UpdateEmployeeServiceHandler, useValue: mockUpdateEmployeeService },
         { provide: SetEmployeeServiceOptionsHandler, useValue: mockSetEmployeeServiceOptions },
+        { provide: GetEmployeeAccountHandler, useValue: mockGetEmployeeAccount },
+        { provide: CreateEmployeeAccountHandler, useValue: mockCreateEmployeeAccount },
+        { provide: UpdateEmployeeAccountHandler, useValue: mockUpdateEmployeeAccount },
         { provide: PrismaService, useValue: mockPrisma },
       ],
     })

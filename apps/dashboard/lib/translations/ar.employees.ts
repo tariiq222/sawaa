@@ -304,6 +304,26 @@ export const arEmployees: Record<string, string> = {
   "employees.detail.inactive": "غير نشط",
   "employees.detail.home": "الرئيسية",
 
+  // — Account & Role Tab —
+  "employees.detail.account.tab": "الحساب والصلاحية",
+  "employees.detail.account.title": "حساب الدخول",
+  "employees.detail.account.currentRole": "الدور الحالي",
+  "employees.detail.account.accountActive": "الحساب نشط",
+  "employees.detail.account.noAccountTitle": "لا يوجد حساب دخول",
+  "employees.detail.account.noAccountDesc": "امنح الممارس صلاحية الدخول للوحة التحكم بإنشاء حساب.",
+  "employees.detail.account.needEmail": "أضف بريداً إلكترونياً للممارس أولاً، ثم يمكنك إنشاء حساب دخول.",
+  "employees.detail.account.password": "كلمة المرور",
+  "employees.detail.account.passwordHint": "8 أحرف على الأقل. مطلوبة فقط إذا لم يكن للبريد حساب مسبقاً.",
+  "employees.detail.account.create": "إنشاء حساب",
+  "employees.detail.account.created": "تم إنشاء حساب الدخول",
+  "employees.detail.account.updated": "تم تحديث الحساب",
+  "employees.detail.account.roleLabel": "الدور",
+  "employees.detail.account.role.SUPER_ADMIN": "مدير عام",
+  "employees.detail.account.role.ADMIN": "مدير",
+  "employees.detail.account.role.RECEPTIONIST": "موظف استقبال",
+  "employees.detail.account.role.ACCOUNTANT": "محاسب",
+  "employees.detail.account.role.EMPLOYEE": "موظف",
+
   // — Public Profile Tab —
   "employees.public.showInDirectory": "عرض في الموقع العام",
   "employees.public.showDirectoryDesc": "اجعل هذا المعالج مرئياً في صفحات الموقع",
