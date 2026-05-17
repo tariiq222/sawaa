@@ -23,7 +23,7 @@ export const arContent: Record<string, string> = {
   "content.home.title": "الصفحة الرئيسية",
   "content.home.description": "محرّر محتوى الصفحة الرئيسية — التعديلات تنعكس على الموقع خلال 60 ثانية",
   "content.home.tab.hero": "Hero",
-  "content.home.tab.intros": "عناوين الأقسام",
+  "content.home.tab.intros": "عناوين العيادات",
   "content.home.tab.features": "بطاقات المميزات",
 
   // — Shared buttons —

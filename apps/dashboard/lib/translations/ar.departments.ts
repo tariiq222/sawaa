@@ -4,7 +4,7 @@
 
 export const arDepartments: Record<string, string> = {
   "departments.title": "الأقسام",
-  "departments.description": "إدارة أقسام العيادة وتنظيم الخدمات",
+  "departments.description": "إدارة أقسام المركز وتنظيم الخدمات",
   "departments.addDepartment": "إضافة قسم",
   "departments.searchPlaceholder": "ابحث عن قسم...",
   "services.tabs.departments": "الأقسام",
@@ -43,7 +43,7 @@ export const arDepartments: Record<string, string> = {
 
   // Empty state
   "departments.empty.title": "لا توجد أقسام",
-  "departments.empty.description": "أضف أول قسم لتنظيم خدمات العيادة",
+  "departments.empty.description": "أضف أول قسم لتنظيم خدمات المركز",
 
   // Create
   "departments.create.title": "إضافة قسم جديد",
@@ -65,12 +65,12 @@ export const arDepartments: Record<string, string> = {
   "departments.edit.submitting": "جاري الحفظ...",
 
   // Delete
-  "departments.delete.title": "حذف القسم",
-  "departments.delete.description": "هل أنت متأكد من حذف القسم {name}؟ لا يمكن التراجع عن هذا الإجراء.",
+  "departments.delete.title": "حذف العيادة",
+  "departments.delete.description": "هل أنت متأكد من حذف العيادة {name}؟ لا يمكن التراجع عن هذا الإجراء.",
   "departments.delete.descriptionNoCategories": "هل أنت متأكد من حذف «{name}»؟ لا يمكن التراجع عن هذا الإجراء.",
-  "departments.delete.descriptionWithCategories": "هل أنت متأكد من حذف «{name}»؟ سيتم فصل {count} تصنيفاً عن هذا القسم.",
-  "departments.delete.success": "تم حذف القسم بنجاح",
-  "departments.delete.error": "فشل حذف القسم",
+  "departments.delete.descriptionWithCategories": "هل أنت متأكد من حذف «{name}»؟ سيتم فصل {count} تصنيفاً عن هذه العيادة.",
+  "departments.delete.success": "تم حذف العيادة بنجاح",
+  "departments.delete.error": "فشل حذف العيادة",
   "departments.delete.cancel": "إلغاء",
   "departments.delete.submit": "حذف",
   "departments.delete.submitting": "جاري الحذف...",
