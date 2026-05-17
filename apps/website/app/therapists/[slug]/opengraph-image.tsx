@@ -9,13 +9,14 @@ export async function generateImageMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  return {
-    openGraph: {
-      title: `Therapist: ${slug}`,
-      description: 'Book an appointment with our professional therapist',
-      images: [{ url: `/therapists/${slug}/opengraph-image`, width: 1200, height: 630 }],
+  return [
+    {
+      id: slug,
+      alt: `Therapist: ${slug}`,
+      size: { width: 1200, height: 630 },
+      contentType: 'image/png',
     },
-  };
+  ];
 }
 
 export default async function OpenGraphImage({
