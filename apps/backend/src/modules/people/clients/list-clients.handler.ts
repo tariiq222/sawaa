@@ -4,6 +4,22 @@ import { toListResponse } from '../../../common/dto';
 import { ListClientsDto } from './list-clients.dto';
 import { serializeClient } from './client.serializer';
 
+/**
+ * Normalizes a search term to the canonical Saudi local mobile suffix so a
+ * phone search matches regardless of how the user typed the number.
+ * "056", "0560566676", "+966560566676", "966560566676", "560566676" all
+ * collapse to a digit string starting at the leading 5 (or the raw digits
+ * if no normalization applies). Returns null when the term has no digits.
+ */
+function toPhoneSearch(term: string): string | null {
+  const digits = term.replace(/\D/g, '');
+  if (!digits) return null;
+  let local = digits;
+  if (local.startsWith('966')) local = local.slice(3);
+  if (local.startsWith('0')) local = local.replace(/^0+/, '');
+  return local || null;
+}
+
 export type ListClientsQuery = ListClientsDto & {
   page: number;
   limit: number;
@@ -22,15 +38,20 @@ export class ListClientsHandler {
       gender: query.gender,
       source: query.source,
       ...(query.search
-        ? {
-            OR: [
-              { name: { contains: query.search, mode: 'insensitive' as const } },
-              { firstName: { contains: query.search, mode: 'insensitive' as const } },
-              { lastName: { contains: query.search, mode: 'insensitive' as const } },
-              { phone: { contains: query.search, mode: 'insensitive' as const } },
-              { email: { contains: query.search, mode: 'insensitive' as const } },
-            ],
-          }
+        ? (() => {
+            const term = query.search;
+            const phoneSearch = toPhoneSearch(term);
+            const or: Array<Record<string, unknown>> = [
+              { name: { contains: term, mode: 'insensitive' as const } },
+              { firstName: { contains: term, mode: 'insensitive' as const } },
+              { lastName: { contains: term, mode: 'insensitive' as const } },
+              // Phone: match on the normalized local suffix so the +966 prefix
+              // and any leading zero the user typed are ignored.
+              { phone: { contains: phoneSearch ?? term, mode: 'insensitive' as const } },
+              { email: { contains: term, mode: 'insensitive' as const } },
+            ];
+            return { OR: or };
+          })()
         : {}),
     };
 

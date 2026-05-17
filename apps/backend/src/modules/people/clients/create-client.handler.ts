@@ -1,4 +1,4 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { ClientEnrolledEvent } from '../events/client-enrolled.event';
@@ -20,15 +20,16 @@ export class CreateClientHandler {
   ) {}
 
   async execute(dto: CreateClientCommand) {
-    if (dto.phone) {
+    const orClauses: Array<{ phone?: string; email?: string }> = [];
+    if (dto.phone) orClauses.push({ phone: dto.phone });
+    if (dto.email) orClauses.push({ email: dto.email });
+
+    if (orClauses.length > 0) {
       const existing = await this.prisma.client.findFirst({
-        where: { phone: dto.phone, deletedAt: null },
+        where: { OR: orClauses, deletedAt: null },
       });
       if (existing) {
-        throw new ConflictException({
-          error: 'CLIENT_PHONE_EXISTS',
-          message: 'Phone number already registered for this client',
-        });
+        return { ...serializeClient(existing), isExisting: true };
       }
     }
 
@@ -69,6 +70,6 @@ export class CreateClientHandler {
     });
     await this.eventBus.publish(event.eventName, event.toEnvelope());
 
-    return serializeClient(client);
+    return { ...serializeClient(client), isExisting: false };
   }
 }
