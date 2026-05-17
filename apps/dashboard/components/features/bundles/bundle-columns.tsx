@@ -10,6 +10,7 @@ import {
 import { Badge } from "@sawaa/ui"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
+import { formatPrice } from "@/lib/money"
 import type { ServiceBundle } from "@/lib/types/bundle"
 
 const iconBtnBase =
@@ -70,7 +71,7 @@ export function getBundleColumns(
         const display =
           b.discountType === "PERCENTAGE"
             ? `${b.discountValue}%`
-            : `${b.discountValue} ${b.currency}`
+            : `${formatPrice(b.discountValue)} ${b.currency}`
         return (
           <span className="tabular-nums text-sm text-muted-foreground">{display}</span>
         )

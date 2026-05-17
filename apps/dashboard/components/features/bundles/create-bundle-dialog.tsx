@@ -27,6 +27,7 @@ import {
 import { useBundleMutations } from "@/hooks/use-bundles"
 import { useServices } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
+import { sarToHalalas } from "@/lib/money"
 import {
   createBundleSchema,
   type CreateBundleFormData,
@@ -37,6 +38,12 @@ import { BundlePriceSummary } from "./bundle-price-summary"
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
+}
+
+// FIXED bundles store discountValue in halalas; the form input is SAR-major.
+// PERCENTAGE stores a raw percent (0-100) and must never be converted.
+function toStorageValue(value: number, type: "PERCENTAGE" | "FIXED") {
+  return type === "FIXED" ? sarToHalalas(value) : value
 }
 
 export function CreateBundleDialog({ open, onOpenChange }: Props) {
@@ -80,7 +87,7 @@ export function CreateBundleDialog({ open, onOpenChange }: Props) {
         descriptionAr: data.descriptionAr || undefined,
         descriptionEn: data.descriptionEn || undefined,
         discountType: data.discountType,
-        discountValue: data.discountValue,
+        discountValue: toStorageValue(data.discountValue, data.discountType),
         sortOrder: data.sortOrder,
         serviceIds: data.serviceIds,
       })
@@ -198,7 +205,7 @@ export function CreateBundleDialog({ open, onOpenChange }: Props) {
             <BundlePriceSummary
               servicePrices={selectedPrices}
               discountType={watchedDiscountType}
-              discountValue={watchedDiscountValue ?? 0}
+              discountValue={toStorageValue(watchedDiscountValue ?? 0, watchedDiscountType)}
             />
           </form>
         </DialogBody>

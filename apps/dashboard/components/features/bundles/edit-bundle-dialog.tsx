@@ -28,6 +28,7 @@ import {
 import { useBundleMutations } from "@/hooks/use-bundles"
 import { useServices } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
+import { sarToHalalas, halalasToSarNumber } from "@/lib/money"
 import {
   editBundleSchema,
   type EditBundleFormData,
@@ -40,6 +41,16 @@ interface Props {
   bundle: ServiceBundle | null
   open: boolean
   onOpenChange: (open: boolean) => void
+}
+
+// FIXED bundles store discountValue in halalas; the form input is SAR-major.
+// PERCENTAGE stores a raw percent (0-100) and must never be converted.
+function toDisplayValue(value: number, type: "PERCENTAGE" | "FIXED") {
+  return type === "FIXED" ? halalasToSarNumber(value) : value
+}
+
+function toStorageValue(value: number, type: "PERCENTAGE" | "FIXED") {
+  return type === "FIXED" ? sarToHalalas(value) : value
 }
 
 export function EditBundleDialog({ bundle, open, onOpenChange }: Props) {
@@ -59,7 +70,7 @@ export function EditBundleDialog({ bundle, open, onOpenChange }: Props) {
         descriptionAr: bundle.descriptionAr ?? "",
         descriptionEn: bundle.descriptionEn ?? "",
         discountType: bundle.discountType,
-        discountValue: bundle.discountValue,
+        discountValue: toDisplayValue(bundle.discountValue, bundle.discountType),
         sortOrder: bundle.sortOrder,
         isActive: bundle.isActive,
         isHidden: bundle.isHidden,
@@ -92,7 +103,10 @@ export function EditBundleDialog({ bundle, open, onOpenChange }: Props) {
         descriptionAr: data.descriptionAr || undefined,
         descriptionEn: data.descriptionEn || undefined,
         discountType: data.discountType,
-        discountValue: data.discountValue,
+        discountValue:
+          data.discountValue != null && data.discountType != null
+            ? toStorageValue(data.discountValue, data.discountType)
+            : data.discountValue,
         sortOrder: data.sortOrder,
         isActive: data.isActive,
         isHidden: data.isHidden,
@@ -225,7 +239,7 @@ export function EditBundleDialog({ bundle, open, onOpenChange }: Props) {
             <BundlePriceSummary
               servicePrices={selectedPrices}
               discountType={watchedDiscountType}
-              discountValue={watchedDiscountValue}
+              discountValue={toStorageValue(watchedDiscountValue, watchedDiscountType)}
             />
           </form>
         </DialogBody>
