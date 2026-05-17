@@ -8,6 +8,7 @@ import { ThemedButton } from '@/theme/components/ThemedButton';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { Avatar } from '@/components/ui/Avatar';
 import { useTheme } from '@/theme/useTheme';
+import { formatHalalas } from '@/lib/money';
 import type { Employee } from '@/types/models';
 
 interface EmployeeCardProps {
@@ -62,7 +63,7 @@ export function EmployeeCard({
             <ThemedText variant="caption">{employee.averageRating}</ThemedText>
           </View>
           <ThemedText variant="caption" color="#1D4ED8" style={{ fontWeight: '700' }}>
-            {t('home.from')} {employee.clinicPrice} {t('home.sar')}
+            {t('home.from')} {formatHalalas(employee.clinicPrice ?? 0, { locale: isRTL ? 'ar-SA' : 'en-US' })} {t('home.sar')}
           </ThemedText>
         </View>
       </Pressable>
@@ -107,7 +108,7 @@ export function EmployeeCard({
 
       <View style={styles.priceRow}>
         <ThemedText variant="subheading" color="#1D4ED8">
-          {employee.clinicPrice} {t('home.sar')}
+          {formatHalalas(employee.clinicPrice ?? 0, { locale: isRTL ? 'ar-SA' : 'en-US' })} {t('home.sar')}
         </ThemedText>
         <StatusPill
           status={employee.isAvailableToday ? 'available' : 'pending'}
