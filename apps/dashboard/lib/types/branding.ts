@@ -2,8 +2,6 @@
  * Branding Types — Sawaa Dashboard
  */
 
-export type WebsiteTheme = "SAWAA" | "PREMIUM"
-
 export interface BrandingConfig {
   organizationNameAr: string
   organizationNameEn: string | null
@@ -20,7 +18,6 @@ export interface BrandingConfig {
   fontUrl: string | null
   customCss: string | null
   websiteDomain: string | null
-  activeWebsiteTheme: WebsiteTheme
   createdAt: string
   updatedAt: string
 }

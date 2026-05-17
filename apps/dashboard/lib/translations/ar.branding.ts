@@ -57,9 +57,6 @@ export const arBranding: Record<string, string> = {
   "branding.website.title": "الموقع الإلكتروني",
   "branding.website.description": "إعدادات الموقع العام للعيادة",
   "branding.website.domain": "النطاق",
-  "branding.website.theme": "التصميم",
-  "branding.website.themes.sawaa": "ساوا",
-  "branding.website.themes.premium": "بريميوم",
   // Organization name + tagline placeholders
   "branding.organizationNamePlaceholderAr": "عيادة دِقة",
   "branding.productTaglinePlaceholder": "نحو رعاية أفضل",
