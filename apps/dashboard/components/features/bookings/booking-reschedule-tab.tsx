@@ -24,6 +24,7 @@ import {
   type RescheduleBookingFormData,
 } from "@/lib/schemas/booking.schema"
 import { useLocale } from "@/components/locale-provider"
+import { ApiError } from "@/lib/api"
 
 interface BookingRescheduleTabProps {
   booking: Booking
@@ -56,7 +57,13 @@ export function BookingRescheduleTab({ booking, onSuccess }: BookingRescheduleTa
       toast.success(t("bookings.reschedule.toast.success"))
       onSuccess()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("bookings.reschedule.toast.error"))
+      if (err instanceof ApiError && err.status >= 500) {
+        const requestId = (err.body as Record<string, unknown> | undefined)?.requestId as string | undefined
+        const base = t("bookings.actions.toast.serverError")
+        toast.error(requestId ? `${base} (رقم الطلب: ${requestId})` : base)
+      } else {
+        toast.error(err instanceof Error ? err.message : t("bookings.reschedule.toast.error"))
+      }
     }
   })
 

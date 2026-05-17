@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { BookingStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { InitClientPaymentHandler } from './init-client-payment.handler';
 
@@ -146,6 +146,16 @@ describe('InitClientPaymentHandler', () => {
       },
       select: { id: true },
     });
+    expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'payment-1' } });
+    expect(prisma.payment.update).not.toHaveBeenCalled();
+  });
+
+  it('throws BadRequestException when Moyasar returns an empty redirectUrl', async () => {
+    const { handler, prisma, moyasar } = buildHandler();
+    moyasar.createPayment.mockResolvedValue({ id: 'moyasar-empty', redirectUrl: null });
+
+    await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(BadRequestException);
+
     expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'payment-1' } });
     expect(prisma.payment.update).not.toHaveBeenCalled();
   });

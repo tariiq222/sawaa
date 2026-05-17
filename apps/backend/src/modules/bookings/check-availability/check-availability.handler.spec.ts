@@ -752,6 +752,81 @@ describe('CheckAvailabilityHandler', () => {
       expect(nineAMSlots.length).toBeGreaterThan(0);
     });
 
+    it('counts PENDING_GROUP_FILL bookings as conflicts', async () => {
+      const prisma = makePrisma();
+      const slotStart = new Date(tomorrowMidnight.getTime() + 10 * 3600_000);
+      prisma.booking.findMany = jest.fn().mockResolvedValue([
+        {
+          id: 'book-1',
+          employeeId: 'emp-1',
+          status: 'PENDING_GROUP_FILL',
+          scheduledAt: slotStart,
+          durationMins: 60,
+        },
+      ]);
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+      });
+      const tenAMSlots = result.filter(
+        (s) => s.startTime.getHours() === 10,
+      );
+      expect(tenAMSlots.length).toBe(0);
+    });
+
+    it('counts overlapping bookings that started before the search window', async () => {
+      // Booking 8:30-9:30 should block the 9:00-10:00 slot but NOT the 9:30-10:30 slot.
+      const prisma = makePrisma();
+      const bookingStart = new Date(tomorrowMidnight.getTime() + 8 * 3600_000 + 30 * 60_000);
+      prisma.booking.findMany = jest.fn().mockResolvedValue([
+        {
+          id: 'book-1',
+          employeeId: 'emp-1',
+          status: 'CONFIRMED',
+          scheduledAt: bookingStart,
+          durationMins: 60,
+        },
+      ]);
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+      });
+      // 9:00 slot conflicts with booking 8:30-9:30 — must NOT appear
+      const nineOclockSlots = result.filter(
+        (s) => s.startTime.getHours() === 9 && s.startTime.getMinutes() === 0,
+      );
+      expect(nineOclockSlots.length).toBe(0);
+      // 9:30 slot starts exactly when booking ends — allowed
+      const nineThirtySlots = result.filter(
+        (s) => s.startTime.getHours() === 9 && s.startTime.getMinutes() === 30,
+      );
+      expect(nineThirtySlots.length).toBe(1);
+    });
+
     it('filters out slots before earliestAllowed due to minBookingLeadMinutes', async () => {
       const prisma = makePrisma();
       const settingsHandler = makeSettingsHandler({

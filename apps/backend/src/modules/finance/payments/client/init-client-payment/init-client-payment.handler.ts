@@ -113,6 +113,12 @@ export class InitClientPaymentHandler {
       throw error;
     }
 
+    const redirectUrl = moyasarPayment.redirectUrl;
+    if (!redirectUrl) {
+      await this.deleteFailedPaymentInit(payment.id);
+      throw new BadRequestException('Payment gateway did not return a redirect URL');
+    }
+
     const updatedPayment = await this.prisma.payment.update({
       where: { id: payment.id },
       data: { gatewayRef: moyasarPayment.id },
@@ -121,7 +127,7 @@ export class InitClientPaymentHandler {
 
     return {
       paymentId: updatedPayment.id,
-      redirectUrl: moyasarPayment.redirectUrl ?? '',
+      redirectUrl,
     };
   }
 

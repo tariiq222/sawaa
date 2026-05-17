@@ -182,6 +182,7 @@ export const arBookings: Record<string, string> = {
   "bookings.actions.toast.cancelRejected": "تم رفض طلب الإلغاء",
   "bookings.actions.toast.cancelled": "تم إلغاء الحجز",
   "bookings.actions.toast.genericError": "حدث خطأ",
+  "bookings.actions.toast.serverError": "حدث خطأ في النظام. يرجى المحاولة مرة أخرى.",
   "bookings.actions.validation.reasonRequired": "السبب مطلوب",
   "bookings.actions.validation.refundAmountRequired": "مبلغ الاسترداد مطلوب ويجب أن يكون أكبر من صفر",
 

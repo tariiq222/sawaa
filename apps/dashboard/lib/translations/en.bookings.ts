@@ -182,6 +182,7 @@ export const enBookings: Record<string, string> = {
   "bookings.actions.toast.cancelRejected": "Cancellation rejected",
   "bookings.actions.toast.cancelled": "Booking cancelled",
   "bookings.actions.toast.genericError": "An error occurred",
+  "bookings.actions.toast.serverError": "A system error occurred. Please try again.",
   "bookings.actions.validation.reasonRequired": "Reason is required",
   "bookings.actions.validation.refundAmountRequired": "Refund amount is required and must be greater than zero",
 

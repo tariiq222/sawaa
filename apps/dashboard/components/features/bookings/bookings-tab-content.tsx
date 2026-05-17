@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { toast } from "sonner"
 import { Skeleton } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
 import { DataTable } from "@/components/features/data-table"
@@ -14,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
+import { ApiError } from "@/lib/api"
 import type { Booking, RefundType } from "@/lib/types/booking"
 
 interface BookingsTabContentProps {
@@ -82,8 +84,14 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
       if (action === "confirm") await confirmMut.mutateAsync(booking.id)
       else await noShowMut.mutateAsync(booking.id)
       refresh()
-    } catch {
-      // surfaced via mutation toast
+    } catch (err) {
+      if (err instanceof ApiError && err.status >= 500) {
+        const requestId = (err.body as Record<string, unknown> | undefined)?.requestId as string | undefined
+        const base = t("bookings.actions.toast.serverError")
+        toast.error(requestId ? `${base} (رقم الطلب: ${requestId})` : base)
+      } else {
+        toast.error(err instanceof Error ? err.message : t("bookings.actions.toast.genericError"))
+      }
     }
   }
 
@@ -244,8 +252,14 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
             })
             refresh()
             resetDelete()
-          } catch {
-            // surfaced via mutation toast
+          } catch (err) {
+            if (err instanceof ApiError && err.status >= 500) {
+              const requestId = (err.body as Record<string, unknown> | undefined)?.requestId as string | undefined
+              const base = t("bookings.actions.toast.serverError")
+              toast.error(requestId ? `${base} (رقم الطلب: ${requestId})` : base)
+            } else {
+              toast.error(err instanceof Error ? err.message : t("bookings.actions.toast.genericError"))
+            }
           }
         }}
       />
