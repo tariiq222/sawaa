@@ -24,7 +24,6 @@ describe('buildTheme', () => {
       fontFamily: null,
       fontUrl: null,
       websiteDomain: null,
-      activeWebsiteTheme: 'SAWAA',
     });
     expect(t.colors.primary).toBe('#aabbcc');
     expect(t.colors.accent).toBe('#112233');
@@ -48,7 +47,6 @@ describe('buildTheme', () => {
       fontFamily: null,
       fontUrl: null,
       websiteDomain: null,
-      activeWebsiteTheme: 'SAWAA',
     });
     expect(t.colors.primary).toBe(fallback.colors.primary);
     expect(t.colors.accent).toBe(fallback.colors.accent);

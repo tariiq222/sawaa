@@ -27,7 +27,6 @@ describe('getPublicBranding', () => {
       fontFamily: null,
       fontUrl: null,
       websiteDomain: null,
-      activeWebsiteTheme: 'SAWAA',
     };
 
     mockApiRequest.mockResolvedValue(mockResponse);

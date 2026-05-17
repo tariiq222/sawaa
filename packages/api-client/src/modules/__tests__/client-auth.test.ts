@@ -93,8 +93,7 @@ describe('clientRegister', () => {
 })
 
 describe('clientRefresh', () => {
-  it('POSTs /public/auth/refresh with refresh token from initClientAuth getter', async () => {
-    storedRefresh = 'stored.rt'
+  it('POSTs /public/auth/refresh with credentials included (cookie-based refresh)', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       jsonResponse({
         success: true,
@@ -107,20 +106,21 @@ describe('clientRefresh', () => {
     expect(result).toEqual({ accessToken: 'new.a', refreshToken: 'new.r' })
     const [url, init] = vi.mocked(fetch).mock.calls[0]!
     expect(url).toBe('http://api.test/public/auth/refresh')
-    expect(JSON.parse(init?.body as string)).toEqual({ refreshToken: 'stored.rt' })
+    expect(JSON.parse(init?.body as string)).toEqual({})
+    expect((init as RequestInit).credentials).toBe('include')
   })
 })
 
 describe('clientLogout', () => {
-  it('POSTs /public/auth/logout with refresh token', async () => {
-    storedRefresh = 'stored.rt'
+  it('POSTs /public/auth/logout with credentials included (cookie-based refresh)', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }))
 
     await clientLogout()
 
     const [url, init] = vi.mocked(fetch).mock.calls[0]!
     expect(url).toBe('http://api.test/public/auth/logout')
-    expect(JSON.parse(init?.body as string)).toEqual({ refreshToken: 'stored.rt' })
+    expect(JSON.parse(init?.body as string)).toEqual({})
+    expect((init as RequestInit).credentials).toBe('include')
   })
 })
 
