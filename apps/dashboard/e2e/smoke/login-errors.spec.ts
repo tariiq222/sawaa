@@ -11,8 +11,10 @@ test.describe("[D1b] Login error alert", () => {
   test("wrong password shows Arabic alert with forgot-password link", async ({ page }) => {
     await page.goto("/login")
     await page.locator("#identifier").fill("admin@sawaa-test.com")
+    await page.getByRole('button', { name: 'متابعة' }).click()
+    await page.getByRole('button', { name: 'باستخدام كلمة المرور' }).click()
     await page.locator("#password").fill("wrong-password-123")
-    await page.locator('button[type="submit"]').click()
+    await page.getByRole('button', { name: 'تسجيل الدخول' }).click()
 
     const alert = page.getByTestId("login-error-alert")
     await expect(alert).toBeVisible({ timeout: 10_000 })
@@ -26,8 +28,10 @@ test.describe("[D1b] Login error alert", () => {
   test("alert clears when user edits the password", async ({ page }) => {
     await page.goto("/login")
     await page.locator("#identifier").fill("admin@sawaa-test.com")
+    await page.getByRole('button', { name: 'متابعة' }).click()
+    await page.getByRole('button', { name: 'باستخدام كلمة المرور' }).click()
     await page.locator("#password").fill("wrong-password-123")
-    await page.locator('button[type="submit"]').click()
+    await page.getByRole('button', { name: 'تسجيل الدخول' }).click()
 
     const alert = page.getByTestId("login-error-alert")
     await expect(alert).toBeVisible({ timeout: 10_000 })

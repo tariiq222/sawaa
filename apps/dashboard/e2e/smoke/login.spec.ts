@@ -19,10 +19,12 @@ test.describe('[D1] Dashboard login flow', () => {
     await expect(page).toHaveURL(/\/login/);
     await page.waitForLoadState('domcontentloaded');
 
-    // 2. Fill identifier and password
+    // 2. Multi-step login wizard
     await page.locator('#identifier').fill('admin@sawaa-test.com');
+    await page.getByRole('button', { name: 'متابعة' }).click();
+    await page.getByRole('button', { name: 'باستخدام كلمة المرور' }).click();
     await page.locator('#password').fill('Admin@1234');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
 
     // 3. Wait for redirect away from /login
     await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 });

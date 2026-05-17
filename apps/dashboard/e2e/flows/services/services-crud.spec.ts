@@ -29,8 +29,9 @@ test.describe('Services CRUD Operations', () => {
   })
 
   test('should navigate to create service page', async ({ page }) => {
-    const createButton = page.locator('a[href="/services/create"], button:has-text("create"), button:has-text("إضافة")')
-    if (await createButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    // The create button may be behind a PermissionGuard — use a longer timeout
+    const createButton = page.locator('a[href="/services/create"], button:has-text("إضافة خدمة"), button:has-text("خدمة جديدة"), button:has-text("Add Service")')
+    if (await createButton.isVisible({ timeout: 8000 }).catch(() => false)) {
       await createButton.click()
       await page.waitForURL('/services/create', { timeout: 10000 })
       await expect(page.locator('body')).toBeVisible()
@@ -88,26 +89,21 @@ test.describe('Services CRUD Operations', () => {
     await page.goto('/services/create')
     await page.waitForLoadState('networkidle')
 
-    const nameInput = page.locator('input[id*="name"], input[placeholder*="name"], input[placeholder*="الاسم"]')
-    const descriptionInput = page.locator('textarea[id*="description"], textarea[placeholder*="description"]')
-    const priceInput = page.locator('input[id*="price"], input[placeholder*="price"], input[placeholder*="السعر"]')
-    const durationInput = page.locator('input[id*="duration"], input[placeholder*="duration"]')
-    const saveButton = page.locator('button[type="submit"], button:has-text("Save"), button:has-text("حفظ")')
+    // Form uses react-hook-form register() — inputs have name attributes, not id or placeholder
+    // The locale determines which field is primary (nameAr vs nameEn)
+    const nameArInput = page.locator('input[name="nameAr"]')
+    const nameEnInput = page.locator('input[name="nameEn"]')
+    // Submit button text is "إنشاء خدمة" (ar) / "Create Service" (en)
+    const saveButton = page.locator('button[type="submit"], button:has-text("إنشاء خدمة"), button:has-text("Create Service")')
 
-    if (await nameInput.isVisible()) {
-      await nameInput.fill(`Test Service ${Date.now()}`)
+    if (await nameArInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await nameArInput.fill(`خدمة اختبار ${Date.now()}`)
     }
-    if (await descriptionInput.isVisible()) {
-      await descriptionInput.fill('Test service description')
-    }
-    if (await priceInput.isVisible()) {
-      await priceInput.fill('100')
-    }
-    if (await durationInput.isVisible()) {
-      await durationInput.fill('60')
+    if (await nameEnInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await nameEnInput.fill(`Test Service ${Date.now()}`)
     }
 
-    if (await saveButton.isVisible()) {
+    if (await saveButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       await saveButton.click()
       await page.waitForTimeout(2000)
     }

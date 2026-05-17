@@ -65,8 +65,10 @@ test.describe('Dashboard Pages Navigation', () => {
     } else {
       // Fall back to email + password flow
       await page.locator('#identifier').fill('admin@sawaa-test.com');
+      await page.getByRole('button', { name: 'متابعة' }).click();
+      await page.getByRole('button', { name: 'باستخدام كلمة المرور' }).click();
       await page.locator('#password').fill('Admin@1234');
-      await page.locator('button[type="submit"]').click();
+      await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
       await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 });
     }
 

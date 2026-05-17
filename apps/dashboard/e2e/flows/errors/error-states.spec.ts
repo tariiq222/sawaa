@@ -83,13 +83,25 @@ test.describe('Error States', () => {
     await page.waitForLoadState('networkidle')
     await page.waitForTimeout(500)
 
-    const submitButton = page.locator('button[type="submit"]')
-    if (await submitButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-      // Fill invalid/short values to enable the button and trigger validation
-      await page.locator('#identifier').fill('bad')
-      await page.locator('#password').fill('short')
-      await submitButton.click()
-      await page.waitForTimeout(1500)
+    const identifierInput = page.locator('#identifier')
+    if (await identifierInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      // Multi-step login: fill identifier → continue → choose password → fill → submit
+      await identifierInput.fill('bad@example.com')
+      await page.getByRole('button', { name: 'متابعة' }).click()
+      await page.waitForTimeout(800)
+
+      const passwordMethodBtn = page.getByRole('button', { name: 'باستخدام كلمة المرور' })
+      if (await passwordMethodBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await passwordMethodBtn.click()
+        await page.waitForTimeout(500)
+      }
+
+      const passwordInput = page.locator('#password')
+      if (await passwordInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await passwordInput.fill('short')
+        await page.getByRole('button', { name: 'تسجيل الدخول' }).click()
+        await page.waitForTimeout(1500)
+      }
 
       const errorMessages = page.locator('[class*="error"], [class*="Error"], [role="alert"]')
       const errorCount = await errorMessages.count()

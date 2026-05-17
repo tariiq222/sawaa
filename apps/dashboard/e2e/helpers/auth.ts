@@ -28,10 +28,11 @@ export async function loginWithCredentials(
 ): Promise<void> {
   await page.goto('/login')
 
-  await page.fill('#identifier', email)
-  await page.fill('#password', password)
-
-  await page.click('button[type="submit"]')
+  await page.locator('#identifier').fill(email)
+  await page.getByRole('button', { name: 'متابعة' }).click()
+  await page.getByRole('button', { name: 'باستخدام كلمة المرور' }).click()
+  await page.locator('#password').fill(password)
+  await page.getByRole('button', { name: 'تسجيل الدخول' }).click()
 
   await page.waitForTimeout(2000)
 }

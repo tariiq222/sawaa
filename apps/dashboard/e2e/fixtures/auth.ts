@@ -64,10 +64,12 @@ export async function loginAs(page: Page, persona: Persona = 'admin'): Promise<v
     return;
   }
 
-  // Traditional email + password login flow
+  // Multi-step login wizard
   await page.locator('#identifier').fill(email);
+  await page.getByRole('button', { name: 'متابعة' }).click();
+  await page.getByRole('button', { name: 'باستخدام كلمة المرور' }).click();
   await page.locator('#password').fill(password);
-  await page.locator('button[type="submit"]').click();
+  await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
 
   // Wait for login to complete (header becomes visible, login form disappears)
   await expect(page.locator('header').first()).toBeVisible({ timeout: 15_000 });
