@@ -1,9 +1,11 @@
 "use client"
 
+import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Cancel01Icon } from "@hugeicons/core-free-icons"
+import { Cancel01Icon, PencilEdit02Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 
+import { cn } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
 import { useBranches } from "@/hooks/use-branches"
 import { useBookingSettings } from "@/hooks/use-organization-settings"
@@ -17,6 +19,10 @@ import { StepDatetime } from "./wizard-steps/step-datetime"
 import { BookingSummary } from "./booking-summary"
 import { useBookingFormState } from "./use-booking-form-state"
 
+/* ─── Types ─── */
+
+type SectionId = "client" | "service" | "employee" | "typeDuration" | "datetime"
+
 /* ─── Props ─── */
 
 interface BookingPosProps {
@@ -24,21 +30,54 @@ interface BookingPosProps {
   onCancel: () => void
 }
 
-/* ─── Section card ─── */
+/* ─── Collapsible section ─── */
 
-function PosSection({
+function CollapsibleSection({
+  id,
   label,
+  summary,
+  isOpen,
+  isFilled,
+  onToggle,
   children,
 }: {
+  id: SectionId
   label: string
+  summary: string | null
+  isOpen: boolean
+  isFilled: boolean
+  onToggle: () => void
   children: React.ReactNode
 }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        {label}
-      </p>
-      {children}
+    <div data-section={id} className="rounded-xl border border-border bg-surface">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-start"
+      >
+        <div className="flex min-w-0 flex-col">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {label}
+          </span>
+          {!isOpen && isFilled && summary && (
+            <span className="truncate text-sm font-semibold text-foreground">{summary}</span>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {isFilled && (
+            <HugeiconsIcon icon={PencilEdit02Icon} size={15} className="text-muted-foreground" />
+          )}
+          <HugeiconsIcon
+            icon={ArrowDown01Icon}
+            size={16}
+            className={cn("text-muted-foreground transition-transform", isOpen && "rotate-180")}
+          />
+        </div>
+      </button>
+      {isOpen && (
+        <div className="border-t border-border px-4 pb-4 pt-3">{children}</div>
+      )}
     </div>
   )
 }
@@ -47,9 +86,7 @@ function PosSection({
 
 function PosSectionHint({ hint }: { hint: string }) {
   return (
-    <p className="py-4 text-center text-sm text-muted-foreground">
-      {hint}
-    </p>
+    <p className="py-4 text-center text-sm text-muted-foreground">{hint}</p>
   )
 }
 
@@ -57,17 +94,14 @@ function PosSectionHint({ hint }: { hint: string }) {
 
 export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   const { t } = useLocale()
+  const [openSection, setOpenSection] = useState<SectionId>("client")
 
-  // Data hooks
   const { branches } = useBranches()
   const mainBranch = branches.find((b) => b.isMain) ?? branches[0]
-
   const { data: bookingSettings } = useBookingSettings()
   const maxAdvanceDays = bookingSettings?.maxAdvanceBookingDays ?? 90
-
   const { createMut } = useBookingMutations()
 
-  // Form state
   const {
     state,
     isComplete,
@@ -84,27 +118,41 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     setCouponCode,
   } = useBookingFormState()
 
-  // StepTypeDuration.onSelectType passes a plain string — cast to the hook's narrow type
   const handleSelectType = (type: string) => {
     selectType(type as "in_person" | "online" | "walk_in")
   }
 
-  // Visibility guards
+  // Auto-advance wrapped handlers
+  const handleClientSelect = (id: string, name: string) => { selectClient(id, name); setOpenSection("service") }
+  const handleServiceSelect = (id: string, name: string) => { selectService(id, name); setOpenSection("employee") }
+  const handleEmployeeSelect = (id: string, name: string) => { selectEmployee(id, name); setOpenSection("typeDuration") }
+  const handleDurationSelect = (optId: string, label: string) => { selectDuration(optId, label); setOpenSection("datetime") }
+  const handleSkipDuration = () => { skipDuration(); setOpenSection("datetime") }
+
+  // Summary strings for collapsed chips
+  const typeLabels: Record<string, string> = {
+    in_person: t("bookings.wizard.step.typeDuration.inPerson"),
+    online: t("bookings.wizard.step.typeDuration.online"),
+    walk_in: t("bookings.wizard.step.typeDuration.walkIn"),
+  }
+  const summaries: Record<SectionId, string | null> = {
+    client: state.clientName,
+    service: state.serviceName,
+    employee: state.employeeName,
+    typeDuration: state.type
+      ? [typeLabels[state.type], state.durationLabel].filter(Boolean).join(" · ")
+      : null,
+    datetime: state.date
+      ? state.date + (state.startTime ? ` · ${state.startTime}` : "")
+      : null,
+  }
+
   const canShowTypeDuration = Boolean(state.serviceId && state.employeeId)
   const canShowDatetime = Boolean(state.serviceId && state.employeeId && state.type)
 
-  // Submit
   const handleSubmit = async () => {
-    if (
-      !state.clientId ||
-      !state.serviceId ||
-      !state.employeeId ||
-      !state.type ||
-      !state.date ||
-      !state.startTime
-    )
+    if (!state.clientId || !state.serviceId || !state.employeeId || !state.type || !state.date || !state.startTime)
       return
-
     try {
       await createMut.mutateAsync({
         clientId: state.clientId,
@@ -129,9 +177,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     <div className="flex flex-col gap-4">
       {/* ── Top bar ── */}
       <div className="flex items-center justify-between">
-        <h1 className="text-base font-semibold text-foreground">
-          {t("bookings.newBooking")}
-        </h1>
+        <h1 className="text-base font-semibold text-foreground">{t("bookings.newBooking")}</h1>
         <button
           type="button"
           aria-label={t("common.close")}
@@ -147,25 +193,50 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
         {/* Form column */}
         <div className="flex flex-1 flex-col gap-4">
           {/* 1. Client */}
-          <PosSection label={t("bookings.pos.section.client")}>
-            <ClientStep onSelect={selectClient} />
-          </PosSection>
+          <CollapsibleSection
+            id="client"
+            label={t("bookings.pos.section.client")}
+            summary={summaries.client}
+            isOpen={openSection === "client"}
+            isFilled={summaries.client !== null}
+            onToggle={() => setOpenSection("client")}
+          >
+            <ClientStep onSelect={handleClientSelect} />
+          </CollapsibleSection>
 
           {/* 2. Service */}
-          <PosSection label={t("bookings.pos.section.service")}>
-            <StepService onSelect={selectService} />
-          </PosSection>
+          <CollapsibleSection
+            id="service"
+            label={t("bookings.pos.section.service")}
+            summary={summaries.service}
+            isOpen={openSection === "service"}
+            isFilled={summaries.service !== null}
+            onToggle={() => setOpenSection("service")}
+          >
+            <StepService onSelect={handleServiceSelect} />
+          </CollapsibleSection>
 
           {/* 3. Employee */}
-          <PosSection label={t("bookings.pos.section.employee")}>
-            <StepEmployee
-              serviceId={state.serviceId ?? ""}
-              onSelect={selectEmployee}
-            />
-          </PosSection>
+          <CollapsibleSection
+            id="employee"
+            label={t("bookings.pos.section.employee")}
+            summary={summaries.employee}
+            isOpen={openSection === "employee"}
+            isFilled={summaries.employee !== null}
+            onToggle={() => setOpenSection("employee")}
+          >
+            <StepEmployee serviceId={state.serviceId ?? ""} onSelect={handleEmployeeSelect} />
+          </CollapsibleSection>
 
           {/* 4. Type & Duration */}
-          <PosSection label={t("bookings.pos.section.typeDuration")}>
+          <CollapsibleSection
+            id="typeDuration"
+            label={t("bookings.pos.section.typeDuration")}
+            summary={summaries.typeDuration}
+            isOpen={openSection === "typeDuration"}
+            isFilled={summaries.typeDuration !== null}
+            onToggle={() => setOpenSection("typeDuration")}
+          >
             {canShowTypeDuration ? (
               <StepTypeDuration
                 employeeId={state.employeeId!}
@@ -173,16 +244,23 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
                 selectedType={state.type}
                 selectedDurationOptionId={state.durationOptionId}
                 onSelectType={handleSelectType}
-                onSelectDuration={selectDuration}
-                onSkipDuration={skipDuration}
+                onSelectDuration={handleDurationSelect}
+                onSkipDuration={handleSkipDuration}
               />
             ) : (
               <PosSectionHint hint={t("bookings.pos.hint.needService")} />
             )}
-          </PosSection>
+          </CollapsibleSection>
 
           {/* 5. Date & Time */}
-          <PosSection label={t("bookings.pos.section.datetime")}>
+          <CollapsibleSection
+            id="datetime"
+            label={t("bookings.pos.section.datetime")}
+            summary={summaries.datetime}
+            isOpen={openSection === "datetime"}
+            isFilled={summaries.datetime !== null}
+            onToggle={() => setOpenSection("datetime")}
+          >
             {canShowDatetime ? (
               <StepDatetime
                 employeeId={state.employeeId!}
@@ -198,7 +276,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
             ) : (
               <PosSectionHint hint={t("bookings.pos.hint.needEmployee")} />
             )}
-          </PosSection>
+          </CollapsibleSection>
         </div>
 
         {/* Summary column */}
