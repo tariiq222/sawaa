@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { GroupSessionStatus } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { BookGroupSessionHandler } from './book-group-session.handler';
 
 function createSession(overrides?: Partial<any>) {
@@ -45,6 +45,13 @@ describe('BookGroupSessionHandler', () => {
       providers: [
         BookGroupSessionHandler,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: RlsTransactionService,
+          useValue: {
+            withTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
+            withBypassTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
+          },
+        },
       ],
     }).compile();
 
@@ -300,6 +307,10 @@ describe('BookGroupSessionHandler', () => {
 
     await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
 
-    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    // Booking, invoice, and enrollment must all be created as part of the handler's
+    // transactional flow (via rlsTransaction.withTransaction, not prisma.$transaction).
+    expect(prisma.booking.create).toHaveBeenCalledTimes(1);
+    expect(prisma.invoice.create).toHaveBeenCalledTimes(1);
+    expect(prisma.groupEnrollment.create).toHaveBeenCalledTimes(1);
   });
 });

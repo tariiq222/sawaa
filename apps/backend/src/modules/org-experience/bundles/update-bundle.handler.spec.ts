@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { DiscountType } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { BundlePriceService } from './bundle-price.service';
 import { UpdateBundleHandler } from './update-bundle.handler';
 
@@ -54,6 +54,13 @@ describe('UpdateBundleHandler', () => {
         UpdateBundleHandler,
         BundlePriceService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: RlsTransactionService,
+          useValue: {
+            withTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(prisma._txMock)),
+            withBypassTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(prisma._txMock)),
+          },
+        },
       ],
     }).compile();
 
