@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 import { computeBundlePrice } from "@/lib/bundle-price"
+import { formatPrice } from "@/lib/money"
 import { useLocale } from "@/components/locale-provider"
 import type { BundleDiscountType } from "@/lib/types/bundle"
 
@@ -29,15 +30,15 @@ export function BundlePriceSummary({
     <div className="rounded-lg border p-4 flex flex-col gap-2 bg-muted/30">
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">{t("bundles.summary.subtotal")}</span>
-        <span className="tabular-nums">{subtotal} {currency}</span>
+        <span className="tabular-nums">{formatPrice(subtotal)} {currency}</span>
       </div>
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">{t("bundles.summary.discount")}</span>
-        <span className="tabular-nums text-success">-{discountAmount} {currency}</span>
+        <span className="tabular-nums text-success">-{formatPrice(discountAmount)} {currency}</span>
       </div>
       <div className="flex items-center justify-between border-t pt-2 mt-1">
         <span className="font-medium">{t("bundles.summary.finalPrice")}</span>
-        <span className="tabular-nums font-semibold text-foreground">{finalPrice} {currency}</span>
+        <span className="tabular-nums font-semibold text-foreground">{formatPrice(finalPrice)} {currency}</span>
       </div>
     </div>
   )
