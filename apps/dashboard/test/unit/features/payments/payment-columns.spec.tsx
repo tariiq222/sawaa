@@ -86,7 +86,7 @@ describe("column cells render correctly", () => {
 
   it("amount cell shows amount with 2 decimals", () => {
     const col = cols.find((c) => (c as { accessorKey?: string }).accessorKey === "amount")!
-    expect(cellContainer(col, makePayment({ amount: 123.45 })).textContent).toBe("123.45")
+    expect(cellContainer(col, makePayment({ amount: 12345 })).textContent).toBe("123.45")
   })
 
   it("method cell passes known methods through the i18n map", () => {

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { DiscountType } from '@prisma/client';
 import { BundlePriceService } from './bundle-price.service';
 import { UpdateBundleDto } from './update-bundle.dto';
@@ -10,6 +10,7 @@ export type UpdateBundleCommand = { bundleId: string } & UpdateBundleDto;
 export class UpdateBundleHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly bundlePrice: BundlePriceService,
   ) {}
 
@@ -46,7 +47,7 @@ export class UpdateBundleHandler {
 
     let priceResult: { subtotal: number; discountAmount: number; finalPrice: number } | undefined;
 
-    const updatedBundle = await this.prisma.$transaction(async (tx) => {
+    const updatedBundle = await this.rlsTransaction.withTransaction(async (tx) => {
       // 3. If serviceIds provided, re-validate services
       let serviceIds: string[] | undefined = updateData.serviceIds;
       if (serviceIds) {

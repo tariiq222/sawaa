@@ -9,14 +9,18 @@ const { usePathname, useRouter } = vi.hoisted(() => ({
 }))
 
 const { useAuth } = vi.hoisted(() => ({
-  useAuth: vi.fn<() => { user: { name: string; email: string; role: string; permissions: string[] } | null }>(() => ({
-    user: {
-      name: "Ali Hassan",
-      email: "ali@clinic.com",
-      role: "ADMIN",
-      permissions: [] as string[],
-    },
-  })),
+  useAuth: vi.fn<() => { user: { name: string; email: string; role: string; permissions: string[] } | null; canDo: (module: string, action: string) => boolean }>(() => {
+    const permissions: string[] = []
+    return {
+      user: {
+        name: "Ali Hassan",
+        email: "ali@clinic.com",
+        role: "ADMIN",
+        permissions,
+      },
+      canDo: (module: string, action: string) => permissions.includes(`${module}:${action}`),
+    }
+  }),
 }))
 
 const { navGroups } = vi.hoisted(() => ({
@@ -56,13 +60,15 @@ describe("useSidebarNav", () => {
     vi.clearAllMocks()
     usePathname.mockReturnValue("/")
     useRouter.mockReturnValue({ prefetch: vi.fn(), push: vi.fn() })
+    const _beforeEachPermissions: string[] = []
     useAuth.mockReturnValue({
       user: {
         name: "Ali Hassan",
         email: "ali@clinic.com",
         role: "ADMIN",
-        permissions: [] as string[],
+        permissions: _beforeEachPermissions,
       },
+      canDo: (module: string, action: string) => _beforeEachPermissions.includes(`${module}:${action}`),
     })
   })
 
@@ -77,13 +83,15 @@ describe("useSidebarNav", () => {
   })
 
   it("includes permission-gated items when user has the permission", async () => {
+    const _gatedPermissions = ["clients:read"] as string[]
     useAuth.mockReturnValue({
       user: {
         name: "Ali Hassan",
         email: "ali@clinic.com",
         role: "ADMIN",
-        permissions: ["clients:read"] as string[],
+        permissions: _gatedPermissions,
       },
+      canDo: (module: string, action: string) => _gatedPermissions.includes(`${module}:${action}`),
     })
 
     const { result } = renderHook(() => useSidebarNav(), { wrapper: makeWrapper() })
@@ -141,7 +149,7 @@ describe("useSidebarNav", () => {
   })
 
   it("returns ?? for userInitials when user is null", async () => {
-    useAuth.mockReturnValue({ user: null })
+    useAuth.mockReturnValue({ user: null, canDo: () => false })
 
     const { result } = renderHook(() => useSidebarNav(), { wrapper: makeWrapper() })
 
