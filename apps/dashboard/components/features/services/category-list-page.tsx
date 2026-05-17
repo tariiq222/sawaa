@@ -28,10 +28,12 @@ import { DeleteCategoryDialog } from "./delete-category-dialog"
 
 import { useCategoriesList } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
+import { useAuth } from "@/components/providers/auth-provider"
 import type { ServiceCategory } from "@/lib/types/service"
 
 export function CategoryListPage() {
   const { t, locale } = useLocale()
+  const { canDo } = useAuth()
   const {
     categories, meta, isLoading, error,
     search, setSearch, isActive, setIsActive,
@@ -53,8 +55,8 @@ export function CategoryListPage() {
   const columns = getCategoryColumns(
     locale,
     t,
-    (c) => setEditTarget(c),
-    (c) => setDeleteTarget(c),
+    canDo("category", "update") ? (c) => setEditTarget(c) : undefined,
+    canDo("category", "delete") ? (c) => setDeleteTarget(c) : undefined,
   )
 
   const hasFilters = search.length > 0 || isActive !== undefined

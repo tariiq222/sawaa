@@ -144,40 +144,46 @@ export function getEmployeeColumns(
               </TooltipTrigger>
               <TooltipContent side="top">{t?.("common.preview") ?? "Preview"}</TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button className={btn} onClick={() => onEdit?.(p)} aria-label={t?.("common.edit") ?? "Edit"}>
-                  <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">{t?.("common.edit") ?? "Edit"}</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  className={cn(btn, p.isActive ? "hover:text-warning hover:bg-warning/10 hover:border-warning/20" : "hover:text-success hover:bg-success/10 hover:border-success/20")}
-                  onClick={() => onToggleActive?.(p)}
-                  aria-label={p.isActive ? (t?.("employees.action.deactivate") ?? "Deactivate") : (t?.("employees.action.activate") ?? "Activate")}
-                >
-                  <HugeiconsIcon icon={p.isActive ? Cancel01Icon : CheckmarkCircle02Icon} size={16} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                {p.isActive ? (t?.("employees.action.deactivate") ?? "Deactivate") : (t?.("employees.action.activate") ?? "Activate")}
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  className={cn(btn, "hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20")}
-                  onClick={() => onDelete?.(p)}
-                  aria-label={t?.("common.delete") ?? "Delete"}
-                >
-                  <HugeiconsIcon icon={Delete02Icon} size={16} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">{t?.("common.delete") ?? "Delete"}</TooltipContent>
-            </Tooltip>
+            {onEdit && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className={btn} onClick={() => onEdit(p)} aria-label={t?.("common.edit") ?? "Edit"}>
+                    <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">{t?.("common.edit") ?? "Edit"}</TooltipContent>
+              </Tooltip>
+            )}
+            {onToggleActive && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className={cn(btn, p.isActive ? "hover:text-warning hover:bg-warning/10 hover:border-warning/20" : "hover:text-success hover:bg-success/10 hover:border-success/20")}
+                    onClick={() => onToggleActive(p)}
+                    aria-label={p.isActive ? (t?.("employees.action.deactivate") ?? "Deactivate") : (t?.("employees.action.activate") ?? "Activate")}
+                  >
+                    <HugeiconsIcon icon={p.isActive ? Cancel01Icon : CheckmarkCircle02Icon} size={16} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  {p.isActive ? (t?.("employees.action.deactivate") ?? "Deactivate") : (t?.("employees.action.activate") ?? "Activate")}
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {onDelete && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className={cn(btn, "hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20")}
+                    onClick={() => onDelete(p)}
+                    aria-label={t?.("common.delete") ?? "Delete"}
+                  >
+                    <HugeiconsIcon icon={Delete02Icon} size={16} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">{t?.("common.delete") ?? "Delete"}</TooltipContent>
+              </Tooltip>
+            )}
           </div>
         )
       },

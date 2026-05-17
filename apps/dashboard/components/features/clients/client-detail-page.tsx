@@ -27,8 +27,6 @@ import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import { useClient } from "@/hooks/use-clients"
 import { ClientAccountToggle } from "@/components/features/clients/client-account-toggle"
 import { BLOOD_LABELS, type BloodType } from "@/lib/schemas/client.schema"
-import { ZohoPaymentMirrorTable } from "@/components/features/zoho/zoho-payment-mirror-table"
-import { useZohoStatus } from "@/hooks/use-zoho-invoice"
 import { useQuery } from "@tanstack/react-query"
 import { fetchBookings } from "@/lib/api/bookings"
 import { queryKeys } from "@/lib/query-keys"
@@ -236,7 +234,7 @@ export function ClientDetailPage({ clientId }: Props) {
 
         {/* ── Tab 3: الفواتير ── */}
         <TabsContent value="invoices" className="pt-4">
-          <ClientInvoicesPanel clientId={clientId} t={t} />
+          <ClientInvoicesPanel t={t} />
         </TabsContent>
 
         {/* ── Tab 4: الإحصائيات ── */}
@@ -321,36 +319,21 @@ function ClientBookingsPanel({
 }
 
 /**
- * Renders the per-client invoices section. When the organization has Zoho Invoice
- * configured, it shows the Zoho-mirror table locked to this client. When not
- * configured, it falls back to the existing empty-state copy so non-Zoho
- * organizations don't see a Zoho-branded surface they have nothing to interact with.
+ * Renders the per-client invoices section. Invoicing has no integration wired
+ * in this single-tenant deployment, so this always shows the empty-state copy.
  */
 function ClientInvoicesPanel({
-  clientId,
   t,
 }: {
-  clientId: string
   t: (key: string) => string
 }) {
-  const { data: zohoStatus, isLoading } = useZohoStatus()
-  const showZoho = zohoStatus?.isConfigured && zohoStatus.isActive
-
-  if (isLoading) {
-    return <Skeleton className="h-32 w-full" />
-  }
-
-  if (!showZoho) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <p className="text-sm text-muted-foreground text-center py-8">
-            {t("clients.dialog.noInvoices")}
-          </p>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  return <ZohoPaymentMirrorTable lockedClientId={clientId} />
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <p className="text-sm text-muted-foreground text-center py-8">
+          {t("clients.dialog.noInvoices")}
+        </p>
+      </CardContent>
+    </Card>
+  )
 }

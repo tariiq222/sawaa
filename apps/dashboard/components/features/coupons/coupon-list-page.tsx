@@ -39,10 +39,10 @@ export function CouponListPage() {
 
   const columns = getCouponColumns(
     locale,
-    (c) => router.push(`/coupons/${c.id}/edit`),
-    (c) => setDeleteTarget(c),
+    canDo("coupon", "update") ? (c) => router.push(`/coupons/${c.id}/edit`) : undefined,
+    canDo("coupon", "delete") ? (c) => setDeleteTarget(c) : undefined,
     t,
-    (c) => updateMut.mutate({ id: c.id, isActive: !c.isActive }),
+    canDo("coupon", "update") ? (c) => updateMut.mutate({ id: c.id, isActive: !c.isActive }) : undefined,
   )
 
   return (

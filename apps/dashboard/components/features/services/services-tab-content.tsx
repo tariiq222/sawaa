@@ -24,11 +24,13 @@ import { ServiceDetailSheet } from "./service-detail-sheet"
 import { useServices, useServicesListStats, useCategories, useServiceMutations } from "@/hooks/use-services"
 import { useBranches } from "@/hooks/use-branches"
 import { useLocale } from "@/components/locale-provider"
+import { useAuth } from "@/components/providers/auth-provider"
 import type { Service } from "@/lib/types/service"
 
 export function ServicesTabContent() {
   const router = useRouter()
   const { t, locale } = useLocale()
+  const { canDo } = useAuth()
   const {
     services, meta, isLoading, error,
     search, setSearch,
@@ -58,7 +60,7 @@ export function ServicesTabContent() {
   }
   const handleRowClick = (s: Service) => setDetailTarget(s)
 
-  const columns = getServiceColumns(locale, handleEdit, handleDelete, handleRowClick, t)
+  const columns = getServiceColumns(locale, canDo("service", "update") ? handleEdit : undefined, canDo("service", "delete") ? handleDelete : undefined, handleRowClick, t)
 
   const hasFilters = search.length > 0 || !!categoryId || isActive !== undefined || !!branchId
 

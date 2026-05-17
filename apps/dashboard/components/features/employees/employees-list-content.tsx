@@ -19,6 +19,7 @@ import { getEmployeeColumns } from "@/components/features/employees/employee-col
 import { DeleteEmployeeDialog } from "@/components/features/employees/delete-employee-dialog"
 import { EmployeeStatusDialog } from "@/components/features/employees/employee-status-dialog"
 import { useLocale } from "@/components/locale-provider"
+import { useAuth } from "@/components/providers/auth-provider"
 import { useEmployeeStats } from "@/hooks/use-employees"
 import { useEmployeeMutations } from "@/hooks/use-employee-mutations"
 import type { Employee, EmployeeSortField } from "@/lib/types/employee"
@@ -59,6 +60,7 @@ export function EmployeesListContent({
 }: EmployeesListContentProps) {
   const router = useRouter()
   const { t, locale } = useLocale()
+  const { canDo } = useAuth()
   const { data: stats } = useEmployeeStats()
 
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null)
@@ -91,7 +93,7 @@ export function EmployeesListContent({
   const hasActiveFilters = hasFilters || search.length > 0
   const handleReset = () => { resetFilters(); setSearch("") }
 
-  const columns = getEmployeeColumns(handleEdit, locale, handleEdit, handleDelete, t, handlePreview, handleToggleActive)
+  const columns = getEmployeeColumns(handleEdit, locale, canDo("employee", "update") ? handleEdit : undefined, canDo("employee", "delete") ? handleDelete : undefined, t, handlePreview, canDo("employee", "update") ? handleToggleActive : undefined)
 
   return (
     <div className="flex flex-col gap-6">

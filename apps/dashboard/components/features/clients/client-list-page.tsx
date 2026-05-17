@@ -49,8 +49,8 @@ export function ClientListPage() {
   const columns = getClientColumns({
     onRowClick: (p) => router.push(`/clients/${p.id}`),
     onViewClick: (p) => router.push(`/clients/${p.id}`),
-    onEditClick: (p) => router.push(`/clients/${p.id}/edit`),
-    onToggleActive: (p) => {
+    onEditClick: canDo("client", "update") ? (p) => router.push(`/clients/${p.id}/edit`) : undefined,
+    onToggleActive: canDo("client", "update") ? (p) => {
       toggleActiveMut.mutate(
         { id: p.id, isActive: !p.isActive },
         {
@@ -60,8 +60,8 @@ export function ClientListPage() {
             toast.error(p.isActive ? t("clients.deactivateError") : t("clients.activateError")),
         },
       )
-    },
-    onDeleteClick: (p) => setPendingDelete(p),
+    } : undefined,
+    onDeleteClick: canDo("client", "delete") ? (p) => setPendingDelete(p) : undefined,
     t,
     locale,
   })

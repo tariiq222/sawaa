@@ -54,7 +54,17 @@ export function UserListPage() {
     }
   }, [activateMut, deactivateMut, t])
 
-  const columns = getUserColumns({ onEdit: (u) => router.push(`/users/${u.id}/edit`), onDelete: setDeleteUser, onToggleActive: handleToggleActive }, t, locale)
+  const canEditUser = canDo("user", "update")
+  const canDeleteUser = canDo("user", "delete")
+  const columns = getUserColumns(
+    (canEditUser || canDeleteUser) ? {
+      onEdit: canEditUser ? (u) => router.push(`/users/${u.id}/edit`) : undefined,
+      onDelete: canDeleteUser ? setDeleteUser : undefined,
+      onToggleActive: canEditUser ? handleToggleActive : undefined,
+    } : undefined,
+    t,
+    locale,
+  )
   const isUsersTab = activeTab === "users"
   const isRolesTab = activeTab === "roles"
 

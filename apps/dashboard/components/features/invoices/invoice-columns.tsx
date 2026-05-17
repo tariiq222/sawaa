@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@sawaa/ui"
 import type { Invoice } from "@/lib/types/invoice"
+import { formatPrice } from "@/lib/money"
 import { formatClinicDate } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"
 
@@ -66,7 +67,7 @@ export function getInvoiceColumns(
       header: t("invoices.col.total"),
       cell: ({ row }) => (
         <span className="tabular-nums text-sm font-medium">
-          {Number(row.original.totalAmount).toFixed(2)}
+          {formatPrice(Number(row.original.totalAmount))}
         </span>
       ),
     },
@@ -75,7 +76,7 @@ export function getInvoiceColumns(
       header: t("invoices.col.vat"),
       cell: ({ row }) => (
         <span className="tabular-nums text-sm text-muted-foreground">
-          {Number(row.original.taxAmount).toFixed(2)}
+          {formatPrice(Number(row.original.taxAmount))}
         </span>
       ),
     },

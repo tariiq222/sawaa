@@ -86,30 +86,34 @@ export function getCategoryColumns(
         const c = row.original
         return (
           <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  className={iconBtnBase}
-                  aria-label={label("services.categories.action.edit", "Edit")}
-                  onClick={() => onEdit?.(c)}
-                >
-                  <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">{label("services.categories.action.edit", "Edit")}</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  className={cn(iconBtnBase, "hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20")}
-                  aria-label={label("services.categories.action.delete", "Delete")}
-                  onClick={() => onDelete?.(c)}
-                >
-                  <HugeiconsIcon icon={Delete02Icon} size={16} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">{label("services.categories.action.delete", "Delete")}</TooltipContent>
-            </Tooltip>
+            {onEdit && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className={iconBtnBase}
+                    aria-label={label("services.categories.action.edit", "Edit")}
+                    onClick={() => onEdit(c)}
+                  >
+                    <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">{label("services.categories.action.edit", "Edit")}</TooltipContent>
+              </Tooltip>
+            )}
+            {onDelete && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className={cn(iconBtnBase, "hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20")}
+                    aria-label={label("services.categories.action.delete", "Delete")}
+                    onClick={() => onDelete(c)}
+                  >
+                    <HugeiconsIcon icon={Delete02Icon} size={16} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">{label("services.categories.action.delete", "Delete")}</TooltipContent>
+              </Tooltip>
+            )}
           </div>
         )
       },

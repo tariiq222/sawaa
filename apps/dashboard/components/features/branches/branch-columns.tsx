@@ -129,30 +129,36 @@ export function getBranchColumns(
                 <HugeiconsIcon icon={UserGroupIcon} size={14} />
                 {label("branches.action.employees", "Employees")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit?.(b)}>
-                <HugeiconsIcon icon={PencilEdit01Icon} size={14} />
-                {label("branches.action.edit", "Edit")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onToggleActive?.(b)}>
-                <HugeiconsIcon icon={b.isActive ? Cancel01Icon : CheckmarkCircle02Icon} size={14} />
-                {label(
-                  b.isActive ? "branches.action.deactivate" : "branches.action.activate",
-                  b.isActive ? "Deactivate" : "Activate",
-                )}
-              </DropdownMenuItem>
+              {onEdit && (
+                <DropdownMenuItem onClick={() => onEdit(b)}>
+                  <HugeiconsIcon icon={PencilEdit01Icon} size={14} />
+                  {label("branches.action.edit", "Edit")}
+                </DropdownMenuItem>
+              )}
+              {onToggleActive && (
+                <DropdownMenuItem onClick={() => onToggleActive(b)}>
+                  <HugeiconsIcon icon={b.isActive ? Cancel01Icon : CheckmarkCircle02Icon} size={14} />
+                  {label(
+                    b.isActive ? "branches.action.deactivate" : "branches.action.activate",
+                    b.isActive ? "Deactivate" : "Activate",
+                  )}
+                </DropdownMenuItem>
+              )}
               {!b.isMain && (
                 <DropdownMenuItem onClick={() => onSetPrimary?.(b)}>
                   <HugeiconsIcon icon={StarIcon} size={14} />
                   {label("branches.action.setPrimary", "Set as Primary")}
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem
-                onClick={() => onDelete?.(b)}
-                className="text-destructive focus:text-destructive"
-              >
-                <HugeiconsIcon icon={Delete02Icon} size={14} />
-                {label("branches.action.delete", "Delete")}
-              </DropdownMenuItem>
+              {onDelete && (
+                <DropdownMenuItem
+                  onClick={() => onDelete(b)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <HugeiconsIcon icon={Delete02Icon} size={14} />
+                  {label("branches.action.delete", "Delete")}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )

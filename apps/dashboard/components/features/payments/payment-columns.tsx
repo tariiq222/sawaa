@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@sawaa/ui"
 import type { Payment } from "@/lib/types/payment"
+import { formatPrice } from "@/lib/money"
 import { formatClinicDate } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"
 
@@ -79,7 +80,7 @@ export function getPaymentColumns(
       header: t("payments.col.amount"),
       cell: ({ row }) => (
         <span className="tabular-nums text-sm font-medium">
-          {Number(row.original.amount).toFixed(2)}
+          {formatPrice(Number(row.original.amount))}
         </span>
       ),
     },

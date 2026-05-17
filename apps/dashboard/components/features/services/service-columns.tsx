@@ -18,6 +18,7 @@ import {
 import { Badge } from "@sawaa/ui"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
+import { formatPrice } from "@/lib/money"
 import type { Service } from "@/lib/types/service"
 import { ServiceAvatar } from "./service-avatar"
 
@@ -35,8 +36,8 @@ function ServiceActionsCell({
   service: Service
   locale: "en" | "ar"
   onView: () => void
-  onEdit: () => void
-  onDelete: () => void
+  onEdit?: () => void
+  onDelete?: () => void
   t?: TFn
 }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -57,29 +58,33 @@ function ServiceActionsCell({
           </TooltipTrigger>
           <TooltipContent side="top">{label("services.action.view", "View")}</TooltipContent>
         </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button className={btnBase} aria-label={label("services.action.edit", "Edit")} onClick={onEdit}>
-              <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">{label("services.action.edit", "Edit")}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              className={cn(btnBase, "hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20")}
-              aria-label={label("services.action.delete", "Delete")}
-              onClick={() => setDeleteOpen(true)}
-            >
-              <HugeiconsIcon icon={Delete02Icon} size={16} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">{label("services.action.delete", "Delete")}</TooltipContent>
-        </Tooltip>
+        {onEdit && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button className={btnBase} aria-label={label("services.action.edit", "Edit")} onClick={onEdit}>
+                <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">{label("services.action.edit", "Edit")}</TooltipContent>
+          </Tooltip>
+        )}
+        {onDelete && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className={cn(btnBase, "hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20")}
+                aria-label={label("services.action.delete", "Delete")}
+                onClick={() => setDeleteOpen(true)}
+              >
+                <HugeiconsIcon icon={Delete02Icon} size={16} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">{label("services.action.delete", "Delete")}</TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      {onDelete && <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{label("services.delete.title", "Delete Service")}</AlertDialogTitle>
@@ -99,7 +104,7 @@ function ServiceActionsCell({
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog>}
     </>
   )
 }
@@ -176,7 +181,7 @@ export function getServiceColumns(
       enableSorting: true,
       cell: ({ row }) => (
         <span className="tabular-nums text-sm font-medium">
-          {Number(row.original.price).toFixed(2)}
+          {formatPrice(Number(row.original.price))}
         </span>
       ),
     },
