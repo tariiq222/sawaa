@@ -110,7 +110,7 @@ export function StepService({ onSelect }: StepServiceProps) {
       </div>
 
       {/* Service list */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {services.map((service) => {
           const name =
             locale === "ar"
@@ -122,11 +122,11 @@ export function StepService({ onSelect }: StepServiceProps) {
             <WizardCard
               key={service.id}
               onClick={() => onSelect(service.id, name)}
+              className="px-3 py-2.5"
             >
-              <div className="flex flex-col items-end gap-3 text-end">
-                {/* Icon — RTL: shown on the right */}
+              <div className="flex items-center gap-3 text-start">
                 <div
-                  className="flex size-14 shrink-0 items-center justify-center rounded-2xl"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-xl"
                   style={{
                     backgroundColor: service.iconBgColor
                       ? `${service.iconBgColor}20`
@@ -135,20 +135,16 @@ export function StepService({ onSelect }: StepServiceProps) {
                 >
                   <HugeiconsIcon
                     icon={Stethoscope02Icon}
-                    size={26}
-                    style={{
-                      color: service.iconBgColor ?? "hsl(var(--primary))",
-                    }}
+                    size={18}
+                    style={{ color: service.iconBgColor ?? "hsl(var(--primary))" }}
                   />
                 </div>
-
-                {/* Name + meta */}
-                <div className="flex w-full min-w-0 flex-col gap-1 text-end">
-                  <span className="text-base leading-snug font-bold text-foreground">
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="truncate text-sm font-semibold leading-snug text-foreground">
                     {name}
                   </span>
                   {meta && (
-                    <span className="text-sm font-normal text-muted-foreground">
+                    <span className="truncate text-xs font-normal text-muted-foreground">
                       {meta}
                     </span>
                   )}

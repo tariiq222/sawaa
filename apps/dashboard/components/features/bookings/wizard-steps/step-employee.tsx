@@ -42,21 +42,21 @@ interface EmployeeAvatarProps {
 function EmployeeAvatar({ avatarUrl, name }: EmployeeAvatarProps) {
   if (avatarUrl) {
     return (
-      <div className="relative size-12 shrink-0 overflow-hidden rounded-full">
+      <div className="relative size-9 shrink-0 overflow-hidden rounded-full">
         <Image
           src={avatarUrl}
           alt={name}
           fill
           className="object-cover"
-          sizes="48px"
+          sizes="36px"
         />
       </div>
     )
   }
 
   return (
-    <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
-      <HugeiconsIcon icon={UserIcon} size={22} className="text-primary" />
+    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
+      <HugeiconsIcon icon={UserIcon} size={18} className="text-primary" />
     </div>
   )
 }
@@ -101,7 +101,7 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
     : (allEmployees?.items ?? []).filter((p) => p.isActive)
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {employees.map((p) => {
         const name = getEmployeeNameFromFull(p, locale)
         const title = p.title ?? ""
@@ -110,15 +110,16 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
           <WizardCard
             key={p.id}
             onClick={() => onSelect(p.id, name)}
+            className="px-3 py-2.5"
           >
-            <div className="flex flex-col items-end gap-2 text-end">
+            <div className="flex items-center gap-3 text-start">
               <EmployeeAvatar avatarUrl={p.avatarUrl} name={name} />
-              <div className="flex w-full flex-col items-end gap-0.5 min-w-0">
-                <span className="text-base font-semibold text-foreground leading-tight truncate w-full">
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="truncate text-sm font-semibold leading-tight text-foreground">
                   {name}
                 </span>
                 {title && (
-                  <span className="text-sm text-muted-foreground truncate w-full">
+                  <span className="truncate text-xs text-muted-foreground">
                     {title}
                   </span>
                 )}
