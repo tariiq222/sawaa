@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { DiscountType } from '@prisma/client';
 
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
+// Money is integer halalas — round to whole halalas.
+function roundHalalas(n: number): number {
+  return Math.round(n);
 }
 
 export interface ComputeBundlePriceParams {
@@ -22,18 +23,19 @@ export class BundlePriceService {
   computeBundlePrice(params: ComputeBundlePriceParams): BundlePriceResult {
     const { servicePrices, discountType, discountValue } = params;
 
-    const subtotal = round2(servicePrices.reduce((sum, p) => sum + p, 0));
+    const subtotal = roundHalalas(servicePrices.reduce((sum, p) => sum + p, 0));
 
     let discountAmount: number;
     if (discountType === DiscountType.PERCENTAGE) {
       const cappedPct = Math.min(discountValue, 100);
-      discountAmount = round2(subtotal * cappedPct / 100);
+      // cappedPct is a 0-100 percentage — the / 100 here is the percentage divisor.
+      discountAmount = roundHalalas(subtotal * cappedPct / 100);
     } else {
       // FIXED
-      discountAmount = round2(Math.min(discountValue, subtotal));
+      discountAmount = roundHalalas(Math.min(discountValue, subtotal));
     }
 
-    const finalPrice = round2(Math.max(0, subtotal - discountAmount));
+    const finalPrice = roundHalalas(Math.max(0, subtotal - discountAmount));
 
     return { subtotal, discountAmount, finalPrice };
   }
