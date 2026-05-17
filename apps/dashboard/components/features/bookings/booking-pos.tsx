@@ -2,10 +2,9 @@
 
 import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Cancel01Icon, PencilEdit02Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import { Cancel01Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 
-import { cn } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
 import { useBranches } from "@/hooks/use-branches"
 import { useBookingSettings } from "@/hooks/use-organization-settings"
@@ -18,76 +17,13 @@ import { StepTypeDuration } from "./wizard-steps/step-type-duration"
 import { StepDatetime } from "./wizard-steps/step-datetime"
 import { BookingSummary } from "./booking-summary"
 import { useBookingFormState } from "./use-booking-form-state"
-
-/* ─── Types ─── */
-
-type SectionId = "client" | "service" | "employee" | "typeDuration" | "datetime"
+import { CollapsibleSection, PosSectionHint, type SectionId } from "./pos-collapsible-section"
 
 /* ─── Props ─── */
 
 interface BookingPosProps {
   onSuccess: () => void
   onCancel: () => void
-}
-
-/* ─── Collapsible section ─── */
-
-function CollapsibleSection({
-  id,
-  label,
-  summary,
-  isOpen,
-  isFilled,
-  onToggle,
-  children,
-}: {
-  id: SectionId
-  label: string
-  summary: string | null
-  isOpen: boolean
-  isFilled: boolean
-  onToggle: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <div data-section={id} className="rounded-xl border border-border bg-surface">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-start"
-      >
-        <div className="flex min-w-0 flex-col">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {label}
-          </span>
-          {!isOpen && isFilled && summary && (
-            <span className="truncate text-sm font-semibold text-foreground">{summary}</span>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          {isFilled && (
-            <HugeiconsIcon icon={PencilEdit02Icon} size={15} className="text-muted-foreground" />
-          )}
-          <HugeiconsIcon
-            icon={ArrowDown01Icon}
-            size={16}
-            className={cn("text-muted-foreground transition-transform", isOpen && "rotate-180")}
-          />
-        </div>
-      </button>
-      {isOpen && (
-        <div className="border-t border-border px-4 pb-4 pt-3">{children}</div>
-      )}
-    </div>
-  )
-}
-
-/* ─── Dependency hint ─── */
-
-function PosSectionHint({ hint }: { hint: string }) {
-  return (
-    <p className="py-4 text-center text-sm text-muted-foreground">{hint}</p>
-  )
 }
 
 /* ─── Main component ─── */
