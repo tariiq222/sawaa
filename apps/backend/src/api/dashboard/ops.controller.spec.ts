@@ -51,11 +51,11 @@ describe('DashboardOpsController', () => {
     expect(resMock.send).not.toHaveBeenCalled();
   });
 
-  it('listActivityEndpoint should call listActivity.execute with orgId', async () => {
+  it('listActivityEndpoint should call listActivity.execute with query params', async () => {
     const query = { page: 1, limit: 10 };
     listActivity.mockResolvedValue({ data: [], total: 0 });
 
     await controller.listActivityEndpoint(query as any);
-    expect(listActivity).toHaveBeenCalledWith(expect.objectContaining({ organizationId: expect.any(String), ...query }));
+    expect(listActivity).toHaveBeenCalledWith(expect.objectContaining({ ...query }));
   });
 });

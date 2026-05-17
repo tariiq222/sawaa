@@ -3,7 +3,7 @@ import { PrismaService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListActivityDto } from './list-activity.dto';
 
-export type ListActivityCommand = ListActivityDto & { organizationId: string };
+export type ListActivityCommand = ListActivityDto;
 
 @Injectable()
 export class ListActivityHandler {
@@ -18,7 +18,6 @@ export class ListActivityHandler {
     const to = cmd.to ? new Date(cmd.to) : undefined;
 
     const where = {
-      organizationId: cmd.organizationId, // tenant-scoping: always required
       ...(cmd.userId ? { userId: cmd.userId } : {}),
       ...(cmd.entity ? { entity: cmd.entity } : {}),
       ...(cmd.entityId ? { entityId: cmd.entityId } : {}),

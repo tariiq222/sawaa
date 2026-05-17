@@ -23,7 +23,7 @@ describe('ListActivityHandler', () => {
     prisma.activityLog.findMany.mockResolvedValue([]);
     prisma.activityLog.count.mockResolvedValue(0);
 
-    const result = await handler.execute({ organizationId: 'org-1' });
+    const result = await handler.execute({});
     expect(result.meta.page).toBe(1);
     expect(result.meta.perPage).toBe(50);
     expect(prisma.activityLog.findMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 0, take: 50 }));
@@ -34,7 +34,6 @@ describe('ListActivityHandler', () => {
     prisma.activityLog.count.mockResolvedValue(0);
 
     await handler.execute({
-      organizationId: 'org-1',
       userId: 'u1',
       entity: 'Booking',
       entityId: 'book-1',
@@ -47,7 +46,6 @@ describe('ListActivityHandler', () => {
 
     expect(prisma.activityLog.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({
-        organizationId: 'org-1',
         userId: 'u1',
         entity: 'Booking',
         entityId: 'book-1',
@@ -63,7 +61,7 @@ describe('ListActivityHandler', () => {
     prisma.activityLog.findMany.mockResolvedValue([]);
     prisma.activityLog.count.mockResolvedValue(0);
 
-    await handler.execute({ organizationId: 'org-1', limit: 200 });
+    await handler.execute({ limit: 200 });
     expect(prisma.activityLog.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 100 }));
   });
 
@@ -75,7 +73,7 @@ describe('ListActivityHandler', () => {
     prisma.activityLog.count.mockResolvedValue(2);
     prisma.user.findMany.mockResolvedValue([{ id: 'u1', firstName: 'Admin', lastName: 'User', email: 'admin@test.com' }]);
 
-    const result = await handler.execute({ organizationId: 'org-1' });
+    const result = await handler.execute({});
     expect(result.items[0].user).toEqual(expect.objectContaining({ id: 'u1', firstName: 'Admin' }));
     expect(result.items[1].user).toBeNull();
   });
