@@ -22,7 +22,6 @@ import { enContent } from "./en.content"
 import { enSms } from "./en.sms"
 import { enOps } from "./en.ops"
 import { enZoom } from "./en.zoom"
-import { enZoho } from "./en.zoho"
 import { enRegister } from "./en.register"
 
 export const en: Record<string, string> = {
@@ -43,6 +42,5 @@ export const en: Record<string, string> = {
   ...enSms,
   ...enOps,
   ...enZoom,
-  ...enZoho,
   ...enRegister,
 }
