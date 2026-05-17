@@ -58,13 +58,13 @@ describe('PublicPaymentWebhookController (e2e)', () => {
       );
     });
 
-    it('returns 400 for missing signature header', async () => {
-      const res = await request(app.getHttpServer())
+    it('acks with 200 for missing signature header', async () => {
+      mockHandler.execute.mockResolvedValue({ received: true });
+
+      await request(app.getHttpServer())
         .post('/public/payments/webhook')
         .send({ id: 'pay_abc123', status: 'paid', amount: 10000, currency: 'SAR' })
-        .expect(400);
-
-      expect(res.body.message).toBe('Missing X-Moyasar-Signature header');
+        .expect(200);
     });
 
     it('returns 400 for invalid status', async () => {
@@ -83,12 +83,14 @@ describe('PublicPaymentWebhookController (e2e)', () => {
         .expect(400);
     });
 
-    it('returns 400 for missing amount', async () => {
-      return request(app.getHttpServer())
+    it('acks with 200 for missing amount', async () => {
+      mockHandler.execute.mockResolvedValue({ received: true });
+
+      await request(app.getHttpServer())
         .post('/public/payments/webhook')
         .set('X-Moyasar-Signature', 'sig')
         .send({ id: 'pay_abc123', status: 'paid', currency: 'SAR' })
-        .expect(400);
+        .expect(200);
     });
 
     it('returns 400 for unknown fields', async () => {

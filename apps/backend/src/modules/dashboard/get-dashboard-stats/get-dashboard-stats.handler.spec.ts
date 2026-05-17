@@ -3,6 +3,7 @@ import { GetDashboardStatsHandler } from './get-dashboard-stats.handler';
 import { PrismaService } from '../../../infrastructure/database';
 
 jest.mock('../../../common/helpers/date-tz.helper', () => ({
+  dateRangeInTz: jest.fn().mockReturnValue({ start: new Date('2026-01-01'), end: new Date('2026-01-02') }),
   todayRangeInTz: jest.fn().mockReturnValue({ start: new Date('2026-01-01'), end: new Date('2026-01-02') }),
 }));
 
@@ -12,6 +13,7 @@ describe('GetDashboardStatsHandler', () => {
     employee: { findFirst: jest.Mock };
     booking: { count: jest.Mock };
     payment: { count: jest.Mock; aggregate: jest.Mock };
+    client: { count: jest.Mock };
   };
 
   beforeEach(async () => {
@@ -19,6 +21,7 @@ describe('GetDashboardStatsHandler', () => {
       employee: { findFirst: jest.fn() },
       booking: { count: jest.fn().mockResolvedValue(0) },
       payment: { count: jest.fn().mockResolvedValue(0), aggregate: jest.fn().mockResolvedValue({ _sum: { amount: null } }) },
+      client: { count: jest.fn().mockResolvedValue(0) },
     };
 
     const module = await Test.createTestingModule({
@@ -34,7 +37,7 @@ describe('GetDashboardStatsHandler', () => {
   it('returns zero stats for employee without linked row', async () => {
     prisma.employee.findFirst.mockResolvedValue(null);
     const result = await handler.execute({ userId: 'u1', role: 'EMPLOYEE' });
-    expect(result).toEqual({ todayBookings: 0, confirmedToday: 0, pendingToday: 0, cancelRequests: 0 });
+    expect(result).toEqual({ todayBookings: 0, confirmedToday: 0, pendingToday: 0, cancelRequests: 0, newClientsToday: 0 });
   });
 
   it('returns booking stats for employee with linked row', async () => {

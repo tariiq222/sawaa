@@ -77,6 +77,13 @@ const buildPrismaRaw = () => ({
   client: {
     findFirst: jest.fn().mockResolvedValue({ id: 'client-1' }),
     findMany: jest.fn().mockResolvedValue([{ id: 'client-1', source: 'ONLINE' }]),
+    count: jest.fn().mockResolvedValue(0),
+  },
+  invoice: {
+    findMany: jest.fn().mockResolvedValue([]),
+    findFirst: jest.fn().mockResolvedValue(null),
+    findUnique: jest.fn().mockResolvedValue(null),
+    create: jest.fn().mockResolvedValue({ id: 'inv-1' }),
   },
 });
 

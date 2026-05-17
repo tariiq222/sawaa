@@ -24,6 +24,11 @@ import { GetOrgSettingsHandler } from '../../modules/org-experience/org-settings
 import { UpsertOrgSettingsHandler } from '../../modules/org-experience/org-settings/upsert-org-settings.handler';
 import { GetBookingSettingsHandler } from '../../modules/bookings/get-booking-settings/get-booking-settings.handler';
 import { UpsertBookingSettingsHandler } from '../../modules/bookings/upsert-booking-settings/upsert-booking-settings.handler';
+import { CreateBundleHandler } from '../../modules/org-experience/bundles/create-bundle.handler';
+import { UpdateBundleHandler } from '../../modules/org-experience/bundles/update-bundle.handler';
+import { ListBundlesHandler } from '../../modules/org-experience/bundles/list-bundles.handler';
+import { GetBundleHandler } from '../../modules/org-experience/bundles/get-bundle.handler';
+import { ArchiveBundleHandler } from '../../modules/org-experience/bundles/archive-bundle.handler';
 import { PrismaService } from '../../infrastructure/database';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
@@ -53,6 +58,11 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
   const mockGetBookingSettings = { execute: jest.fn() };
   const mockUpsertBookingSettings = { execute: jest.fn() };
   const mockSetDurationOptions = { execute: jest.fn() };
+  const mockCreateBundle = { execute: jest.fn() };
+  const mockUpdateBundle = { execute: jest.fn() };
+  const mockListBundles = { execute: jest.fn() };
+  const mockGetBundle = { execute: jest.fn() };
+  const mockArchiveBundle = { execute: jest.fn() };
   const mockPrisma = { serviceDurationOption: { findMany: jest.fn() } };
 
   beforeAll(async () => {
@@ -81,6 +91,11 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
         { provide: GetBookingSettingsHandler, useValue: mockGetBookingSettings },
         { provide: UpsertBookingSettingsHandler, useValue: mockUpsertBookingSettings },
         { provide: SetDurationOptionsHandler, useValue: mockSetDurationOptions },
+        { provide: CreateBundleHandler, useValue: mockCreateBundle },
+        { provide: UpdateBundleHandler, useValue: mockUpdateBundle },
+        { provide: ListBundlesHandler, useValue: mockListBundles },
+        { provide: GetBundleHandler, useValue: mockGetBundle },
+        { provide: ArchiveBundleHandler, useValue: mockArchiveBundle },
         { provide: PrismaService, useValue: mockPrisma },
       ],
     })
