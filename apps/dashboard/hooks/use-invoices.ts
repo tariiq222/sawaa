@@ -4,6 +4,21 @@ import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchInvoicePayments } from "@/lib/api/invoices"
+import type { InvoiceListItem } from "@/lib/types/invoice"
+import type { Payment } from "@/lib/types/payment"
+
+export function toInvoiceListItem(payment: Payment): InvoiceListItem {
+  return {
+    id: payment.id,
+    invoiceNumber: payment.invoiceId || payment.id.slice(0, 8).toUpperCase(),
+    clientName: null, // client names are not exposed in payment list
+    totalAmount: payment.amount,
+    taxAmount: 0, // tax not exposed in payment list
+    createdAt: payment.createdAt,
+    status: payment.status,
+    sentAt: null,
+  }
+}
 
 export function useInvoices() {
   const [page, setPage] = useState(1)
@@ -15,8 +30,10 @@ export function useInvoices() {
     staleTime: 5 * 60 * 1000,
   })
 
+  const invoices: InvoiceListItem[] = (data?.items ?? []).map(toInvoiceListItem)
+
   return {
-    payments: data?.items ?? [],
+    invoices,
     meta: data?.meta ?? null,
     isLoading,
     error: error?.message ?? null,

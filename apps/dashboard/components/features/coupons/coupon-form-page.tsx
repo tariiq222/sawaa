@@ -45,6 +45,17 @@ function toStorageValue(value: number, type: "PERCENTAGE" | "FIXED") {
   return type === "FIXED" ? sarToHalalas(value) : value
 }
 
+// minOrderAmt is stored in halalas; the form collects SAR.
+export function toDisplayMinOrderAmt(value: number | null | undefined): number | "" {
+  if (value == null) return ""
+  return halalasToSarNumber(value)
+}
+
+export function toStorageMinOrderAmt(value: number | "" | undefined): number | undefined {
+  if (value === "" || value == null) return undefined
+  return sarToHalalas(value)
+}
+
 /* ─── Coupon Form Page ─── */
 
 export function CouponFormPage(props: Props) {
@@ -75,7 +86,7 @@ export function CouponFormPage(props: Props) {
       descriptionAr: coupon.descriptionAr ?? "",
       discountType: coupon.discountType as "PERCENTAGE" | "FIXED",
       discountValue: toDisplayValue(coupon.discountValue, coupon.discountType as "PERCENTAGE" | "FIXED"),
-      minOrderAmt: coupon.minOrderAmt != null ? coupon.minOrderAmt / 100 : "",
+      minOrderAmt: toDisplayMinOrderAmt(coupon.minOrderAmt),
       maxUses: coupon.maxUses ?? "",
       maxUsesPerUser: coupon.maxUsesPerUser ?? "",
       expiresAt: formatDateTimeLocalValue(coupon.expiresAt),
@@ -90,7 +101,7 @@ export function CouponFormPage(props: Props) {
       descriptionAr: data.descriptionAr || undefined,
       discountType: data.discountType,
       discountValue: toStorageValue(data.discountValue, data.discountType),
-      minOrderAmt: data.minOrderAmt !== "" && data.minOrderAmt !== undefined ? Math.round(Number(data.minOrderAmt) * 100) : undefined,
+      minOrderAmt: toStorageMinOrderAmt(data.minOrderAmt),
       maxUses: data.maxUses !== "" && data.maxUses !== undefined ? Number(data.maxUses) : undefined,
       maxUsesPerUser: data.maxUsesPerUser !== "" && data.maxUsesPerUser !== undefined ? Number(data.maxUsesPerUser) : undefined,
       expiresAt: data.expiresAt || undefined,

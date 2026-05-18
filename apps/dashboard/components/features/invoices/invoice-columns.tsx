@@ -14,23 +14,23 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@sawaa/ui"
-import type { Invoice } from "@/lib/types/invoice"
+import type { InvoiceListItem } from "@/lib/types/invoice"
 import { formatPrice } from "@/lib/money"
 import { formatClinicDate } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"
 
 interface InvoiceColumnCallbacks {
-  onView: (invoice: Invoice) => void
-  onSend: (invoice: Invoice) => void
+  onView: (invoice: InvoiceListItem) => void
+  onSend: (invoice: InvoiceListItem) => void
 }
 
 export function getInvoiceColumns(
   callbacks?: InvoiceColumnCallbacks,
   t: (key: string) => string = (k) => k,
   config?: { dateFormat?: DateFormat },
-): ColumnDef<Invoice>[] {
+): ColumnDef<InvoiceListItem>[] {
   const dateFormat = config?.dateFormat ?? "Y-m-d"
-  const columns: ColumnDef<Invoice>[] = [
+  const columns: ColumnDef<InvoiceListItem>[] = [
     {
       accessorKey: "invoiceNumber",
       header: t("invoices.col.invoiceNo"),
@@ -53,14 +53,11 @@ export function getInvoiceColumns(
     {
       id: "client",
       header: t("invoices.col.client"),
-      cell: ({ row }) => {
-        const p = row.original.payment?.booking?.client
-        return (
-          <span className="text-sm text-foreground">
-            {p ? `${p.firstName} ${p.lastName}` : "\u2014"}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <span className="text-sm text-foreground">
+          {row.original.clientName ?? "\u2014"}
+        </span>
+      ),
     },
     {
       accessorKey: "totalAmount",

@@ -13,7 +13,7 @@ vi.mock("@/components/features/breadcrumbs", () => ({
 
 vi.mock("@/hooks/use-invoices", () => ({
   useInvoices: () => ({
-    payments: [],
+    invoices: [],
     isLoading: false,
     error: null,
     search: "",

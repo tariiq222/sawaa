@@ -52,6 +52,21 @@ export interface InvoiceListQuery extends PaginatedQuery {
 
 /* ─── DTOs ─── */
 
+/**
+ * Flat list-row type used when we render payment data as invoice rows
+ * (no dedicated list-invoices endpoint yet, so we adapt Payment fields).
+ */
+export interface InvoiceListItem {
+  id: string
+  invoiceNumber: string
+  clientName: string | null
+  totalAmount: number
+  taxAmount: number
+  createdAt: string
+  status: string
+  sentAt: string | null
+}
+
 export interface CreateInvoicePayload {
   paymentId: string
 }

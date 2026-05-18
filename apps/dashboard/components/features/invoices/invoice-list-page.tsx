@@ -21,7 +21,7 @@ import { useLocale } from "@/components/locale-provider"
 
 export function InvoiceListPage() {
   const { t } = useLocale()
-  const { payments, isLoading, error: _error, search, setSearch } = useInvoices()
+  const { invoices, isLoading, error: _error, search, setSearch } = useInvoices()
 
   const hasFilters = search !== ""
   const resetFilters = () => {
@@ -30,9 +30,9 @@ export function InvoiceListPage() {
 
   const columns = getInvoiceColumns(undefined, t)
 
-  const completed = payments.filter((p) => p.status === "COMPLETED").length
-  const pending = payments.filter((p) => p.status === "PENDING" || p.status === "PENDING_VERIFICATION").length
-  const failed = payments.filter((p) => p.status === "FAILED").length
+  const completed = invoices.filter((p) => p.status === "COMPLETED").length
+  const pending = invoices.filter((p) => p.status === "PENDING" || p.status === "PENDING_VERIFICATION").length
+  const failed = invoices.filter((p) => p.status === "FAILED").length
 
   return (
     <ListPageShell>
@@ -51,7 +51,7 @@ export function InvoiceListPage() {
         <StatsGrid>
           <StatCard
             title={t("invoices.stats.total")}
-            value={payments.length}
+            value={invoices.length}
             icon={DocumentAttachmentIcon}
             iconColor="primary"
           />
@@ -93,7 +93,7 @@ export function InvoiceListPage() {
       ) : (
         <DataTable
           columns={columns}
-          data={payments as never[]}
+          data={invoices}
           emptyTitle={t("invoices.empty.title")}
           emptyDescription={t("invoices.empty.description")}
         />
