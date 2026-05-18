@@ -39,8 +39,10 @@ async function loginAs(page: Page, email: string, password: string): Promise<voi
   await page.waitForLoadState('domcontentloaded');
 
   await page.locator('#identifier').fill(email);
+  await page.getByRole('button', { name: 'متابعة' }).click();
+  await page.getByRole('button', { name: 'باستخدام كلمة المرور' }).click();
   await page.locator('#password').fill(password);
-  await page.locator('button[type="submit"]').click();
+  await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
 
   await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 });
   // Wait for header chrome to confirm we're authenticated (mirrors login.spec).
@@ -56,7 +58,7 @@ test.describe('Dashboard home — role-based widgets', () => {
 
   test('RECEPTIONIST sees QuickActions', async ({ page }) => {
     test.skip(
-      !RECEPTIONIST_EMAIL || !RECEPTIONIST_PASSWORD,
+      !process.env.SEED_RECEPTIONIST_EMAIL,
       'No receptionist seed user — set SEED_RECEPTIONIST_EMAIL/SEED_RECEPTIONIST_PASSWORD or seed a RECEPTIONIST membership in apps/backend/prisma/seed.ts.',
     );
     await loginAs(page, RECEPTIONIST_EMAIL!, RECEPTIONIST_PASSWORD!);
@@ -66,7 +68,7 @@ test.describe('Dashboard home — role-based widgets', () => {
 
   test('EMPLOYEE sees no QuickActions', async ({ page }) => {
     test.skip(
-      !EMPLOYEE_EMAIL || !EMPLOYEE_PASSWORD,
+      !process.env.SEED_EMPLOYEE_EMAIL,
       'No employee seed user — set SEED_EMPLOYEE_EMAIL/SEED_EMPLOYEE_PASSWORD or seed an EMPLOYEE membership in apps/backend/prisma/seed.ts.',
     );
     await loginAs(page, EMPLOYEE_EMAIL!, EMPLOYEE_PASSWORD!);

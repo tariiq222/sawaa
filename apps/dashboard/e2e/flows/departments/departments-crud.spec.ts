@@ -28,11 +28,15 @@ test.describe('Departments CRUD Operations', () => {
     expect(bodyVisible && (hasList || hasEmpty || true)).toBeTruthy()
   })
 
-  test('should navigate to create department page', async ({ page }) => {
-    const createButton = page.locator('a[href="/departments/create"], button:has-text("create"), button:has-text("إضافة")')
-    if (await createButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+  test('should open create department dialog', async ({ page }) => {
+    // Departments use a dialog for creation — there is no /departments/create route.
+    // The "إضافة قسم" button opens a Dialog (not a page navigation).
+    const createButton = page.locator('button:has-text("إضافة قسم"), button:has-text("Add Department")')
+    if (await createButton.isVisible({ timeout: 5000 }).catch(() => false)) {
       await createButton.click()
-      await page.waitForURL('/departments/create', { timeout: 10000 })
+      // Dialog should appear
+      const dialog = page.locator('[role="dialog"]')
+      await expect(dialog).toBeVisible({ timeout: 10_000 })
       await expect(page.locator('body')).toBeVisible()
     }
   })

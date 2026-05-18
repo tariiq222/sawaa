@@ -95,6 +95,14 @@ export class InitGuestPaymentHandler {
       throw moyasarError;
     }
 
+    const redirectUrl = moyasarPayment.redirectUrl;
+    if (!redirectUrl) {
+      await this.rlsTransaction.withTransaction(async (tx) => {
+        await tx.payment.delete({ where: { id: payment.id } });
+      });
+      throw new BadRequestException('Payment gateway did not return a redirect URL');
+    }
+
     const updatedPayment = await this.rlsTransaction.withTransaction(async (tx) => {
       return tx.payment.update({
         where: { id: payment.id },
@@ -107,7 +115,7 @@ export class InitGuestPaymentHandler {
 
     return {
       paymentId: updatedPayment.id,
-      redirectUrl: moyasarPayment.redirectUrl ?? '',
+      redirectUrl,
     };
   }
 

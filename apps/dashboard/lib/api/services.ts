@@ -2,7 +2,7 @@
  * Services API — Sawaa Dashboard
  */
 
-import { api, getAccessToken } from "@/lib/api"
+import { api } from "@/lib/api"
 import type { PaginatedResponse } from "@/lib/types/common"
 import type {
   Service,
@@ -21,8 +21,6 @@ import type {
   SetDurationOptionsPayload,
   SetServiceBookingTypesPayload,
 } from "@/lib/types/service-payloads"
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5200/api/v1"
 
 /* ─── Categories ─── */
 
@@ -141,46 +139,17 @@ export async function setServiceBookingTypes(
 /* ─── Service Avatar ─── */
 
 export async function uploadServiceImage(serviceId: string, file: File): Promise<Service> {
-  const token = getAccessToken()
   const formData = new FormData()
   formData.append("file", file)
 
-  // Step 1: upload file to media storage
-  const uploadRes = await fetch(`${API_BASE}/dashboard/media/upload`, {
-    method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: formData,
-  })
+  // Step 1: upload file to media storage (via api client for refresh handling)
+  const uploaded = await api.postForm<{ id: string; storageKey: string }>("/dashboard/media/upload", formData)
 
-  if (!uploadRes.ok) {
-    const body = await uploadRes.json().catch(() => ({})) as { message?: string }
-    console.error("[services] uploadServiceImage upload failed", {
-      status: uploadRes.status,
-      body,
-    })
-    throw new Error(body?.message ?? uploadRes.statusText)
-  }
-
-  const uploaded = await uploadRes.json() as { id: string; storageKey: string }
-
-  // Step 2: get long-lived presigned URL (1 year) for the uploaded file
-  const presignedRes = await fetch(
-    `${API_BASE}/dashboard/media/${uploaded.id}/presigned-url?expirySeconds=31536000`,
-    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+  // Step 2: get presigned URL — backend max expiry is 900s (15 min)
+  const presignedData = await api.get<{ url: string }>(
+    `/dashboard/media/${uploaded.id}/presigned-url`,
+    { expirySeconds: 900 },
   )
-
-  if (!presignedRes.ok) {
-    const body = await presignedRes.json().catch(() => ({})) as { message?: string }
-    console.error("[services] uploadServiceImage presigned-url failed", {
-      status: presignedRes.status,
-      mediaId: uploaded.id,
-      body,
-    })
-    throw new Error(body?.message ?? presignedRes.statusText)
-  }
-
-  // Use a long-lived presigned URL (1 year) suitable for service image storage
-  const presignedData = await presignedRes.json() as { url: string }
 
   // Step 3: attach the image URL to the service
   return api.patch<Service>(`/dashboard/organization/services/${serviceId}`, { imageUrl: presignedData.url })

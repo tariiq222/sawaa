@@ -26,6 +26,7 @@ import { BookingsTabContent } from "@/components/features/bookings/bookings-tab-
 import { useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import { useLocale } from "@/components/locale-provider"
+import { formatPrice } from "@/lib/money"
 import { useBookingsStats } from "@/hooks/use-bookings"
 import { useAuth } from "@/components/providers/auth-provider"
 import { useTerminology } from "@/hooks/use-terminology"
@@ -130,7 +131,7 @@ export function BookingsPageContent({
               />
               <StatCard
                 title={t("bookings.stats.revenueToday")}
-                value={`${(stats?.revenueToday ?? 0).toFixed(2)} ${t("bookings.wizard.step.service.currency")}`}
+                value={`${formatPrice(stats?.revenueToday ?? 0)} ${t("bookings.wizard.step.service.currency")}`}
                 description={t("bookings.stats.revenueTodayDesc")}
                 icon={Money02Icon}
                 iconColor="accent"

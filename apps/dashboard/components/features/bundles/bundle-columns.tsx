@@ -59,7 +59,7 @@ export function getBundleColumns(
       header: label("bundles.col.subtotal", "Subtotal"),
       cell: ({ row }) => (
         <span className="tabular-nums text-sm text-muted-foreground">
-          {row.original.subtotal} {row.original.currency}
+          {formatPrice(row.original.subtotal)} {row.original.currency}
         </span>
       ),
     },
@@ -82,7 +82,7 @@ export function getBundleColumns(
       header: label("bundles.col.finalPrice", "Final Price"),
       cell: ({ row }) => (
         <span className="tabular-nums text-sm font-semibold text-foreground">
-          {row.original.finalPrice} {row.original.currency}
+          {formatPrice(row.original.finalPrice)} {row.original.currency}
         </span>
       ),
     },

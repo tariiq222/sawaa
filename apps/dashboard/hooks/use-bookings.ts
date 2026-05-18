@@ -78,6 +78,9 @@ export function useBookings() {
     queryKey: queryKeys.bookings.list(query),
     queryFn: () => fetchBookings(query),
     placeholderData: keepPreviousData,
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   })
 
   const setFilters = useCallback((partial: Partial<BookingFilters>) => {
@@ -110,6 +113,7 @@ export function useBookingsStats() {
     queryKey: queryKeys.bookings.stats(),
     queryFn: fetchBookingsStats,
     staleTime: 30_000,
+    refetchInterval: 30_000,
   })
 }
 
@@ -119,6 +123,7 @@ export function useTodayBookings(date: string) {
     queryKey: queryKeys.bookings.list(query),
     queryFn: () => fetchBookings(query),
     staleTime: 30_000,
+    refetchInterval: 30_000,
   })
 }
 

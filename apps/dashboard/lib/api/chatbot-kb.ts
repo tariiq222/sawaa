@@ -2,7 +2,7 @@
  * Chatbot Knowledge Base API — Sawaa Dashboard
  */
 
-import { api, getAccessToken } from "@/lib/api"
+import { api } from "@/lib/api"
 import type { PaginatedResponse } from "@/lib/api"
 import type {
   KnowledgeBaseEntry,
@@ -11,9 +11,6 @@ import type {
   CreateKbEntryPayload,
   UpdateKbEntryPayload,
 } from "@/lib/types/chatbot"
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5200/api/v1"
 
 /* ═══════════════════════════════════════════════════════════
  *  KNOWLEDGE BASE
@@ -74,7 +71,6 @@ export async function fetchKnowledgeFiles(
 
 /**
  * Upload a file to the knowledge base.
- * Uses native fetch with FormData (not the JSON api client).
  */
 export async function uploadKnowledgeFile(
   file: File,
@@ -82,23 +78,10 @@ export async function uploadKnowledgeFile(
   const formData = new FormData()
   formData.append("file", file)
 
-  const token = getAccessToken()
-  const res = await fetch(`${API_BASE_URL}/dashboard/ai/knowledge-base/files`, {
-    method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: formData,
-  })
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    console.error("[chatbot-kb] uploadKnowledgeFile failed", {
-      status: res.status,
-      body,
-    })
-    throw new Error(body?.message ?? body?.error?.message ?? res.statusText)
-  }
-
-  return res.json()
+  return api.postForm<KnowledgeBaseFile>(
+    "/dashboard/ai/knowledge-base/files",
+    formData,
+  )
 }
 
 export async function processKnowledgeFile(

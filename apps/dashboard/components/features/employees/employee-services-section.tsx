@@ -14,6 +14,7 @@ import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 import { useEmployeeServices } from "@/hooks/use-employees"
 import { useLocale } from "@/components/locale-provider"
+import { formatPrice } from "@/lib/money"
 import { AssignServiceSheet } from "./assign-service-sheet"
 import { EditEmployeeServiceSheet } from "./edit-employee-service-sheet"
 import { RemoveServiceDialog } from "./remove-service-dialog"
@@ -230,7 +231,7 @@ function buildTypeBadges(
         const key = TYPE_LABEL_MAP[st.bookingType]
         const typeLabel = key ? t(`employees.services.${key}`) : st.bookingType
         const price = st.price != null
-          ? Number(st.price).toFixed(0)
+          ? formatPrice(Number(st.price))
           : t("employees.services.defaultPrice")
         const duration = st.duration != null
           ? String(st.duration)
@@ -250,11 +251,11 @@ function buildTypeBadges(
     const duration = ps.customDuration ?? ps.service.duration
     const priceVal =
       type === "clinic_visit" && ps.priceClinic != null
-        ? Number(ps.priceClinic).toFixed(0)
+        ? formatPrice(Number(ps.priceClinic))
         : type === "phone_consultation" && ps.pricePhone != null
-          ? Number(ps.pricePhone).toFixed(0)
+          ? formatPrice(Number(ps.pricePhone))
           : type === "video_consultation" && ps.priceVideo != null
-            ? Number(ps.priceVideo).toFixed(0)
+            ? formatPrice(Number(ps.priceVideo))
             : t("employees.services.defaultPrice")
 
     return {
