@@ -4,7 +4,7 @@
  */
 
 import { api, getAccessToken } from "@/lib/api"
-import type { RevenueReport, BookingReport, EmployeeReport } from "@/lib/types/report"
+import type { RevenueReport, BookingReport, EmployeeReport, TopPractitionersReport } from "@/lib/types/report"
 
 export async function fetchRevenueReport(params: {
   dateFrom: string
@@ -32,16 +32,28 @@ export async function fetchBookingReport(params: {
   })
 }
 
+/**
+ * Fetch EMPLOYEES report. Pass employeeId to get per-employee data,
+ * or omit it to get the top-5 practitioners list.
+ */
 export async function fetchEmployeeReport(params: {
   dateFrom: string
   dateTo: string
   employeeId?: string
-}): Promise<EmployeeReport> {
-  return api.post<EmployeeReport>("/dashboard/ops/reports", {
+}): Promise<EmployeeReport | TopPractitionersReport[]> {
+  if (params.employeeId) {
+    return api.post<EmployeeReport>("/dashboard/ops/reports", {
+      type: "EMPLOYEES",
+      from: params.dateFrom,
+      to: params.dateTo,
+      employeeId: params.employeeId,
+    })
+  }
+  // No employeeId → returns top-5 practitioners list
+  return api.post<TopPractitionersReport[]>("/dashboard/ops/reports", {
     type: "EMPLOYEES",
     from: params.dateFrom,
     to: params.dateTo,
-    employeeId: params.employeeId,
   })
 }
 

@@ -9,6 +9,7 @@ import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { StatsGrid } from "@/components/features/stats-grid"
 import { StatCard } from "@/components/features/stat-card"
 import { Skeleton } from "@sawaa/ui"
+import type { EmployeeReport } from "@/lib/types/report"
 import {
   Calendar03Icon,
   CheckmarkCircle02Icon,
@@ -41,6 +42,8 @@ export function EmployeesTab({ dateFrom, dateTo, employeeId }: EmployeesTabProps
     )
   }
 
+  const report = data as EmployeeReport | undefined
+
   return (
     <div className="flex flex-col gap-4">
       {error && <ErrorBanner message={error.message} />}
@@ -51,29 +54,29 @@ export function EmployeesTab({ dateFrom, dateTo, employeeId }: EmployeesTabProps
             <Skeleton key={`skeleton-${i}`} className="h-24 rounded-lg" />
           ))}
         </div>
-      ) : data ? (
+      ) : report ? (
         <StatsGrid>
           <StatCard
             title={t("reports.revenue.bookings")}
-            value={data.totalBookings}
+            value={report.totalBookings}
             icon={Calendar03Icon}
             iconColor="primary"
           />
           <StatCard
             title={t("bookings.stats.completed")}
-            value={data.completedBookings}
+            value={report.completedBookings}
             icon={CheckmarkCircle02Icon}
             iconColor="success"
           />
           <StatCard
             title={t("reports.revenue.total")}
-            value={<FormattedCurrency amount={data.totalRevenue} locale={locale} />}
+            value={<FormattedCurrency amount={report.totalRevenue} locale={locale} />}
             icon={MoneyBag02Icon}
             iconColor="success"
           />
           <StatCard
             title={t("employees.stats.avgRating")}
-            value={data.averageRating.toFixed(1)}
+            value={report.averageRating.toFixed(1)}
             icon={StarIcon}
             iconColor="warning"
           />

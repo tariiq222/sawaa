@@ -12,6 +12,8 @@ import { FilterBar } from "@/components/features/filter-bar"
 import { EmployeeCombobox } from "@/components/features/reports/employee-combobox"
 
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
+import { ExecutiveSummary } from "@/components/features/reports/executive-summary"
+import { TopPractitioners } from "@/components/features/reports/top-practitioners"
 import { RevenueTab } from "@/components/features/reports/revenue-tab"
 import { BookingsTab } from "@/components/features/reports/bookings-tab"
 import { EmployeesTab } from "@/components/features/reports/employees-tab"
@@ -71,6 +73,18 @@ function ReportsContent() {
           </Button>
         )}
       </PageHeader>
+
+      {/* Executive Summary — always visible above tabs */}
+      <ExecutiveSummary
+        dateFrom={normalizedFrom}
+        dateTo={normalizedTo}
+      />
+
+      {/* Top 5 Practitioners — always visible above tabs */}
+      <TopPractitioners
+        dateFrom={normalizedFrom}
+        dateTo={normalizedTo}
+      />
 
       {/* Date Filter — shared across all tabs */}
       <FilterBar

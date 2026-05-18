@@ -38,3 +38,13 @@ export interface EmployeeReport {
   averageRating: number
   byDay: { date: string; bookings: number; revenue: number }[]
 }
+
+/** Top-5 practitioners returned when employeeId is omitted */
+export interface TopPractitionersReport {
+  employeeId: string
+  displayName: string
+  totalBookings: number
+  completedBookings: number
+  totalRevenue: number
+  averageRating: number
+}

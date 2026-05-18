@@ -22,6 +22,16 @@ export const enMisc: Record<string, string> = {
   "reports.exportError": "Failed to export report",
   "reports.employeeSearch": "Search employee by name or ID...",
   "reports.employeeSearchHint": "Search for an employee to view their report",
+  // — Executive Summary —
+  "reports.summary.financial": "Financial",
+  "reports.summary.operational": "Operational",
+  "reports.summary.totalRevenue": "Total Revenue",
+  "reports.summary.completedBookings": "Completed",
+  "reports.summary.confirmedBookings": "Confirmed",
+  "reports.summary.pendingBookings": "Pending",
+  "reports.summary.totalPractitioners": "Practitioners",
+  "reports.summary.bookings": "bookings",
+  "reports.summary.noPractitioners": "No practitioner data available",
 
   // — Notifications —
   "notifications.title": "Notifications",

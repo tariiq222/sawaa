@@ -22,6 +22,16 @@ export const arMisc: Record<string, string> = {
   "reports.exportError": "فشل تصدير التقرير",
   "reports.employeeSearch": "ابحث عن ممارس بالاسم أو ID...",
   "reports.employeeSearchHint": "ابحث عن ممارس لعرض تقريره",
+  // — Executive Summary —
+  "reports.summary.financial": "المالية",
+  "reports.summary.operational": "التشغيلية",
+  "reports.summary.totalRevenue": "إجمالي الإيرادات",
+  "reports.summary.completedBookings": "مكتملة",
+  "reports.summary.confirmedBookings": "مؤكدة",
+  "reports.summary.pendingBookings": "بانتظار",
+  "reports.summary.totalPractitioners": "الممارسون",
+  "reports.summary.bookings": "حجز",
+  "reports.summary.noPractitioners": "لا توجد بيانات ممارسين",
 
   // — Notifications —
   "notifications.title": "الإشعارات",
