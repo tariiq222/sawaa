@@ -126,14 +126,14 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 p-4 md:p-5">
       {/* ── Top bar ── */}
       <div className="flex items-center justify-between">
         <h1 className="text-base font-semibold text-foreground">{t("bookings.newBooking")}</h1>
         <button
           type="button"
           aria-label={t("common.close")}
-          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="rounded-lg p-2.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           onClick={onCancel}
         >
           <HugeiconsIcon icon={Cancel01Icon} size={16} />

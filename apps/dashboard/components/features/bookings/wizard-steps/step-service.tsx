@@ -44,9 +44,9 @@ function StepServiceSkeleton() {
   return (
     <div className="flex flex-col gap-3">
       <div className="h-12 animate-pulse rounded-2xl bg-muted" />
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={`skeleton-${i}`} className="h-32 animate-pulse rounded-2xl bg-muted" />
+          <div key={`skeleton-${i}`} className="h-20 animate-pulse rounded-2xl bg-muted" />
         ))}
       </div>
     </div>
@@ -110,7 +110,7 @@ export function StepService({ onSelect }: StepServiceProps) {
       </div>
 
       {/* Service list */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {services.map((service) => {
           const name =
             locale === "ar"
@@ -122,7 +122,7 @@ export function StepService({ onSelect }: StepServiceProps) {
             <WizardCard
               key={service.id}
               onClick={() => onSelect(service.id, name)}
-              className="px-3 py-2.5"
+              className="px-4 py-3.5"
             >
               <div className="flex items-center gap-3 text-start">
                 <div
@@ -140,7 +140,7 @@ export function StepService({ onSelect }: StepServiceProps) {
                   />
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="truncate text-sm font-semibold leading-snug text-foreground">
+                  <span className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
                     {name}
                   </span>
                   {meta && (

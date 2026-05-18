@@ -24,7 +24,7 @@ function getEmployeeNameFromFull(p: Employee, locale: string): string {
 
 function StepEmployeeSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={`skeleton-${i}`} className="h-28 animate-pulse rounded-2xl bg-muted" />
       ))}
@@ -101,7 +101,7 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
     : (allEmployees?.items ?? []).filter((p) => p.isActive)
 
   return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {employees.map((p) => {
         const name = getEmployeeNameFromFull(p, locale)
         const title = p.title ?? ""
@@ -110,12 +110,12 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
           <WizardCard
             key={p.id}
             onClick={() => onSelect(p.id, name)}
-            className="px-3 py-2.5"
+            className="px-4 py-3.5"
           >
             <div className="flex items-center gap-3 text-start">
               <EmployeeAvatar avatarUrl={p.avatarUrl} name={name} />
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="truncate text-sm font-semibold leading-tight text-foreground">
+                <span className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
                   {name}
                 </span>
                 {title && (

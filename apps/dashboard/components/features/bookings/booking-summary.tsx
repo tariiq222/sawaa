@@ -139,7 +139,7 @@ export function BookingSummary({
       : dateLabel ?? null
 
   return (
-    <div className="sticky top-6 flex flex-col gap-4 rounded-xl border border-border bg-surface p-4">
+    <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4 md:sticky md:top-6">
       {/* Title */}
       <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
         {t("bookings.pos.summary.title")}
