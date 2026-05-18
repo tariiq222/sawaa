@@ -1,14 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { subDays, format } from "date-fns"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
-import { FilterBar } from "@/components/features/filter-bar"
 import { EmployeeCombobox } from "@/components/features/reports/employee-combobox"
 
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
@@ -20,23 +18,54 @@ import { EmployeesTab } from "@/components/features/reports/employees-tab"
 import { exportReportExcel } from "@/lib/api/reports"
 import { toast } from "sonner"
 import { PermissionGuard } from "@/components/features/permission-guard"
-
-const today = format(new Date(), "yyyy-MM-dd")
-const thirtyDaysAgo = format(subDays(new Date(), 30), "yyyy-MM-dd")
+import {
+  ReportsPeriodFilter,
+  type ReportsPeriodPreset,
+} from "@/components/features/reports/period-filter"
+import { useReportsPeriod } from "@/hooks/use-reports-period"
 
 function ReportsContent() {
   const { t } = useLocale()
   const [activeTab, setActiveTab] = useState("revenue")
-  const [dateFrom, setDateFrom] = useState(thirtyDaysAgo)
-  const [dateTo, setDateTo] = useState(today)
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("")
   const [exporting, setExporting] = useState(false)
 
-  // Normalize: ensure from <= to for API calls (prevents RTL date confusion)
-  const normalizedFrom = dateFrom <= dateTo ? dateFrom : dateTo
-  const normalizedTo = dateFrom <= dateTo ? dateTo : dateFrom
+  const {
+    period,
+    setPeriod,
+    setCustomFrom,
+    setCustomTo,
+    normalizedFrom,
+    normalizedTo,
+    apiDateTo,
+    filenameDateTo,
+  } = useReportsPeriod()
 
   const canExportExcel = activeTab === "revenue"
+
+  const handlePeriodChange = (newPeriod: ReportsPeriodPreset) => {
+    setPeriod(newPeriod)
+    if (newPeriod !== "custom") {
+      setCustomFrom("")
+      setCustomTo("")
+    }
+  }
+
+  const handleCustomFromChange = (v: string) => {
+    setCustomFrom(v)
+    setPeriod("custom")
+  }
+
+  const handleCustomToChange = (v: string) => {
+    setCustomTo(v)
+    setPeriod("custom")
+  }
+
+  const handleReset = () => {
+    setPeriod("monthly")
+    setCustomFrom("")
+    setCustomTo("")
+  }
 
   const handleExport = async () => {
     if (!canExportExcel) return
@@ -45,7 +74,7 @@ function ReportsContent() {
       await exportReportExcel({
         type: "REVENUE",
         dateFrom: normalizedFrom,
-        dateTo: normalizedTo,
+        dateTo: apiDateTo,
       })
     } catch {
       toast.error(t("reports.exportError"))
@@ -74,30 +103,24 @@ function ReportsContent() {
         )}
       </PageHeader>
 
-      {/* Executive Summary — always visible above tabs */}
       <ExecutiveSummary
         dateFrom={normalizedFrom}
-        dateTo={normalizedTo}
+        dateTo={apiDateTo}
       />
 
-      {/* Top 5 Practitioners — always visible above tabs */}
       <TopPractitioners
         dateFrom={normalizedFrom}
-        dateTo={normalizedTo}
+        dateTo={apiDateTo}
       />
 
-      {/* Date Filter — shared across all tabs */}
-      <FilterBar
-        dateRange={{
-          dateFrom,
-          dateTo,
-          onDateFromChange: setDateFrom,
-          onDateToChange: setDateTo,
-          placeholderFrom: t("reports.dateFrom"),
-          placeholderTo: t("reports.dateTo"),
-        }}
-        hasFilters={dateFrom !== thirtyDaysAgo || dateTo !== today}
-        onReset={() => { setDateFrom(thirtyDaysAgo); setDateTo(today) }}
+      <ReportsPeriodFilter
+        period={period}
+        dateFrom={normalizedFrom}
+        dateTo={normalizedTo}
+        onPeriodChange={handlePeriodChange}
+        onDateFromChange={handleCustomFromChange}
+        onDateToChange={handleCustomToChange}
+        onReset={handleReset}
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -110,11 +133,11 @@ function ReportsContent() {
         </div>
 
         <TabsContent value="revenue">
-          <RevenueTab dateFrom={normalizedFrom} dateTo={normalizedTo} />
+          <RevenueTab dateFrom={normalizedFrom} dateTo={apiDateTo} />
         </TabsContent>
 
         <TabsContent value="bookings">
-          <BookingsTab dateFrom={normalizedFrom} dateTo={normalizedTo} />
+          <BookingsTab dateFrom={normalizedFrom} dateTo={apiDateTo} />
         </TabsContent>
 
         <TabsContent value="employees">
@@ -125,7 +148,7 @@ function ReportsContent() {
             />
             <EmployeesTab
               dateFrom={normalizedFrom}
-              dateTo={normalizedTo}
+              dateTo={apiDateTo}
               employeeId={selectedEmployeeId}
             />
           </div>

@@ -97,7 +97,7 @@ export async function exportReportExcel(params: {
   const url = URL.createObjectURL(blob)
   const a = document.createElement("a")
   a.href = url
-  a.download = `report-${params.type.toLowerCase()}-${params.dateFrom}-${params.dateTo}.xlsx`
+  a.download = `report-${params.type.toLowerCase()}-${params.dateFrom}-${params.dateTo.split("T")[0]}.xlsx`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
