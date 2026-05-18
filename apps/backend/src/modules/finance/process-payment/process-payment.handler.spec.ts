@@ -175,4 +175,24 @@ describe('ProcessPaymentHandler', () => {
       }),
     ).rejects.toThrow(BadRequestException);
   });
+
+  it('throws BadRequestException when amount appears to be in SAR instead of halalas', async () => {
+    const tx = buildTx({
+      invoice: {
+        findFirst: jest.fn().mockResolvedValue({ ...mockInvoice, total: 15000 }),
+        update: jest.fn(),
+      },
+      payment: { findFirst: jest.fn(), create: jest.fn(), aggregate: jest.fn() },
+    });
+    const prisma = buildPrisma(tx);
+    const handler = new ProcessPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(tx)) } as never, buildEventBus() as never);
+
+    await expect(
+      handler.execute({
+        invoiceId: 'inv-1',
+        amount: 150, // 150 SAR = 15000 halalas, but sent as 150 halalas
+        method: PaymentMethod.CASH,
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
 });

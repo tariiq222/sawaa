@@ -32,6 +32,12 @@ export interface Payment {
     bookingId: string
     clientId: string
     total: number
+    client?: {
+      name: string
+      firstName: string | null
+      lastName: string | null
+      phone: string | null
+    }
   }
   receipts?: BankTransferReceipt[]
 }

@@ -69,11 +69,17 @@ export function getPaymentColumns(
     {
       id: "client",
       header: t("payments.col.client"),
-      cell: ({ row }) => (
-        <span className="text-sm text-foreground">
-          {row.original.invoice?.clientId?.slice(0, 8) ?? "\u2014"}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const inv = row.original.invoice
+        const client = inv?.client
+        const displayName =
+          client?.firstName && client?.lastName
+            ? `${client.firstName} ${client.lastName}`
+            : client?.name ?? "\u2014"
+        return (
+          <span className="text-sm text-foreground">{displayName}</span>
+        )
+      },
     },
     {
       accessorKey: "amount",

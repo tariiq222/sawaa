@@ -38,6 +38,26 @@ export class ListPaymentsHandler {
       this.prisma.payment.count({ where }),
     ]);
 
-    return toListResponse(items, total, page, limit);
+    const clientIds = Array.from(new Set(items.map((p) => p.invoice?.clientId).filter(Boolean)));
+    const clients =
+      clientIds.length > 0
+        ? await this.prisma.client.findMany({
+            where: { id: { in: clientIds as string[] } },
+            select: { id: true, name: true, firstName: true, lastName: true, phone: true },
+          })
+        : [];
+
+    const clientById = new Map(clients.map((c) => [c.id, c]));
+    const enrichedItems = items.map((p) => ({
+      ...p,
+      invoice: p.invoice
+        ? {
+            ...p.invoice,
+            client: clientById.get(p.invoice.clientId) ?? null,
+          }
+        : null,
+    }));
+
+    return toListResponse(enrichedItems, total, page, limit);
   }
 }

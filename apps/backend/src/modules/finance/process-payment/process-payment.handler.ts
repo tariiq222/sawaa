@@ -34,6 +34,19 @@ export class ProcessPaymentHandler {
         );
       }
 
+      const invoiceTotal = Number(invoice.total);
+      // Detect if amount was sent in SAR instead of halalas.
+      // Example: invoice total = 15000 halalas (150 SAR). If caller sends amount = 150,
+      // then 150 * 100 = 15000 which matches the invoice total — clear indicator of SAR unit.
+      if (
+        invoiceTotal > 0 &&
+        Math.abs(dto.amount * 100 - invoiceTotal) / invoiceTotal < 0.01
+      ) {
+        throw new BadRequestException(
+          'Payment amount appears to be in SAR. Send amount in integer halalas (1 SAR = 100 halalas). For SAR 150, send amount: 15000',
+        );
+      }
+
       let createdPayment;
       try {
         createdPayment = await tx.payment.create({
