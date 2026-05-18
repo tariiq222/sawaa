@@ -61,7 +61,7 @@ export interface InvoiceListItem {
   invoiceNumber: string
   clientName: string | null
   totalAmount: number
-  taxAmount: number
+  taxAmount: number | null
   createdAt: string
   status: string
   sentAt: string | null

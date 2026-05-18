@@ -13,7 +13,7 @@ export function toInvoiceListItem(payment: Payment): InvoiceListItem {
     invoiceNumber: payment.invoiceId || payment.id.slice(0, 8).toUpperCase(),
     clientName: null, // client names are not exposed in payment list
     totalAmount: payment.amount,
-    taxAmount: 0, // tax not exposed in payment list
+    taxAmount: null, // tax not exposed in payment list
     createdAt: payment.createdAt,
     status: payment.status,
     sentAt: null,

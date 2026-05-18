@@ -71,11 +71,14 @@ export function getInvoiceColumns(
     {
       accessorKey: "taxAmount",
       header: t("invoices.col.vat"),
-      cell: ({ row }) => (
-        <span className="tabular-nums text-sm text-muted-foreground">
-          {formatPrice(Number(row.original.taxAmount))}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const tax = row.original.taxAmount
+        return (
+          <span className="tabular-nums text-sm text-muted-foreground">
+            {tax == null ? "\u2014" : formatPrice(Number(tax))}
+          </span>
+        )
+      },
     },
     {
       accessorKey: "createdAt",
