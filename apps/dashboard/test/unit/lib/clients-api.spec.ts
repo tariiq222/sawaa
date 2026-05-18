@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { getMock, postMock, patchMock } = vi.hoisted(() => ({
+const { getMock, postMock, patchMock, deleteMock } = vi.hoisted(() => ({
   getMock: vi.fn(),
   postMock: vi.fn(),
   patchMock: vi.fn(),
+  deleteMock: vi.fn(),
 }))
 
 vi.mock("@/lib/api", () => ({
@@ -11,13 +12,16 @@ vi.mock("@/lib/api", () => ({
     get: getMock,
     post: postMock,
     patch: patchMock,
+    delete: deleteMock,
   },
 }))
 
 import {
   createWalkInClient,
+  deleteClient,
   fetchClient,
   fetchClients,
+  setClientActive,
   updateClient,
 } from "@/lib/api/clients"
 
@@ -80,6 +84,18 @@ describe("clients api", () => {
       phone: "+966500000222",
       allergies: "Dust",
     })
+  })
+
+  it("deleteClient calls DELETE /dashboard/people/clients/:id", async () => {
+    deleteMock.mockResolvedValueOnce(undefined)
+    await deleteClient("client-1")
+    expect(deleteMock).toHaveBeenCalledWith("/dashboard/people/clients/client-1")
+  })
+
+  it("setClientActive patches /clients/:id/active endpoint", async () => {
+    patchMock.mockResolvedValueOnce({ id: "client-1", isActive: true })
+    await setClientActive("client-1", { isActive: true })
+    expect(patchMock).toHaveBeenCalledWith("/dashboard/people/clients/client-1/active", { isActive: true })
   })
 
 })

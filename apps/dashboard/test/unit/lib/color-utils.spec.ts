@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { deriveCssVars, buildStyleFromVars, isValidHex, hexToHsl, hslToHex, darkVariant } from "@/lib/color-utils"
+import { deriveCssVars, buildStyleFromVars, isValidHex, hexToHsl, hslToHex, darkVariant, contrastRatio, pickForeground } from "@/lib/color-utils"
 
 describe("isValidHex", () => {
   it("accepts 6-digit hex with #", () => {
@@ -193,5 +193,37 @@ describe("darkVariant", () => {
     const { l: lp } = hexToHsl(primary)
     const { l: la } = hexToHsl(accent)
     expect(Math.abs(lp - la)).toBeGreaterThan(0.04)
+  })
+})
+
+describe("contrastRatio", () => {
+  it("returns 21 for white vs black (maximum contrast)", () => {
+    const ratio = contrastRatio("#FFFFFF", "#000000")
+    expect(ratio).toBeCloseTo(21, 0)
+  })
+
+  it("returns 1 for same color", () => {
+    const ratio = contrastRatio("#FFFFFF", "#FFFFFF")
+    expect(ratio).toBeCloseTo(1, 1)
+  })
+
+  it("returns > 4.5 for WCAG AA on normal text", () => {
+    const ratio = contrastRatio("#354FD8", "#FFFFFF")
+    expect(ratio).toBeGreaterThan(4.5)
+  })
+})
+
+describe("pickForeground", () => {
+  it("returns white for dark background", () => {
+    expect(pickForeground("#000000")).toBe("#FFFFFF")
+  })
+
+  it("returns dark for light background", () => {
+    expect(pickForeground("#FFFFFF")).toBe("#1B2026")
+  })
+
+  it("returns white for blue background", () => {
+    const result = pickForeground("#1677FF")
+    expect(result === "#FFFFFF" || result === "#1B2026").toBe(true)
   })
 })

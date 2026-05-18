@@ -1,9 +1,6 @@
 /**
- * booking-actions.spec.tsx
- *
- * Tests BookingActions component behavior: status→actions mapping,
- * mutation calls per action, loading-disabled state, error toasts,
- * and cancel-dialog opening.
+ * booking-actions.spec.tsx — BookingActions: status→actions, mutations, loading, error toasts.
+ * Dialog tests are in booking-actions-dialogs.spec.tsx.
  */
 
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
@@ -60,9 +57,13 @@ vi.mock("@sawaa/ui", () => {
     SheetTitle: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet-title">{children}</div>,
     SheetDescription: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet-desc">{children}</div>,
     SheetFooter: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet-footer">{children}</div>,
-    Select: ({ children }: { children: React.ReactNode }) => <div data-testid="select">{children}</div>,
+    Select: ({ children, onValueChange }: { children: React.ReactNode; onValueChange?: (v: string) => void }) => (
+      <div data-testid="select" onClick={() => onValueChange?.("partial")}>{children}</div>
+    ),
     SelectContent: ({ children }: { children: React.ReactNode }) => <div data-testid="select-content">{children}</div>,
-    SelectItem: ({ children }: { children: React.ReactNode }) => <div data-testid="select-item">{children}</div>,
+    SelectItem: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
+      <div data-testid="select-item" onClick={onClick}>{children}</div>
+    ),
     SelectTrigger: ({ children }: { children: React.ReactNode }) => <div data-testid="select-trigger">{children}</div>,
     SelectValue: () => null,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -121,47 +122,25 @@ describe("BookingActions", () => {
 
   // ─── Null when no actions available ─────────────────────────────────────────
 
-  it("returns null for completed status (no actions)", () => {
+  it.each([
+    { status: "completed" as const },
+    { status: "cancelled" as const },
+    { status: "no_show" as const },
+  ])("returns null for $status (no actions)", ({ status }) => {
     mockMutations()
-    const { container } = render(
-      <BookingActions booking={makeBooking("completed")} onAction={vi.fn()} />,
-    )
-    expect(container.firstChild).toBeNull()
-  })
-
-  it("returns null for cancelled status (no actions)", () => {
-    mockMutations()
-    const { container } = render(
-      <BookingActions booking={makeBooking("cancelled")} onAction={vi.fn()} />,
-    )
-    expect(container.firstChild).toBeNull()
-  })
-
-  it("returns null for no_show status (no actions)", () => {
-    mockMutations()
-    const { container } = render(
-      <BookingActions booking={makeBooking("no_show")} onAction={vi.fn()} />,
-    )
+    const { container } = render(<BookingActions booking={makeBooking(status)} onAction={vi.fn()} />)
     expect(container.firstChild).toBeNull()
   })
 
   // ─── Dropdown renders for actionable statuses ─────────────────────────────────
 
-  it("renders dropdown for pending status", () => {
+  it.each([
+    { status: "pending" as const },
+    { status: "confirmed" as const },
+    { status: "cancel_requested" as const },
+  ])("renders dropdown for $status", ({ status }) => {
     mockMutations()
-    render(<BookingActions booking={makeBooking("pending")} onAction={vi.fn()} />)
-    expect(screen.getByTestId("dropdown")).toBeTruthy()
-  })
-
-  it("renders dropdown for confirmed status", () => {
-    mockMutations()
-    render(<BookingActions booking={makeBooking("confirmed")} onAction={vi.fn()} />)
-    expect(screen.getByTestId("dropdown")).toBeTruthy()
-  })
-
-  it("renders dropdown for cancel_requested status", () => {
-    mockMutations()
-    render(<BookingActions booking={makeBooking("cancel_requested")} onAction={vi.fn()} />)
+    render(<BookingActions booking={makeBooking(status)} onAction={vi.fn()} />)
     expect(screen.getByTestId("dropdown")).toBeTruthy()
   })
 
@@ -225,6 +204,31 @@ describe("BookingActions", () => {
     expect(screen.getByTestId("sheet")).toBeTruthy()
   })
 
+  it('"reject_cancel" fires genericError toast and resets dialog', async () => {
+    const toastModule = await import("sonner")
+    const toastErrorSpy = vi.spyOn(toastModule.toast, "error")
+    mockMutations()
+    render(
+      <BookingActions
+        booking={makeBooking("cancel_requested")}
+        onAction={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId("dropdown-trigger"))
+    fireEvent.click(findDropdownItem("reject")!)
+    expect(screen.getByTestId("sheet")).toBeTruthy()
+
+    // Click the Reject button inside the dialog sheet-footer
+    const sheetFooter = screen.getByTestId("sheet-footer")
+    const rejectBtn = sheetFooter.querySelector("button:last-child") as HTMLButtonElement
+    fireEvent.click(rejectBtn)
+
+    await waitFor(() => {
+      expect(toastErrorSpy).toHaveBeenCalledWith("bookings.actions.toast.genericError")
+    })
+  })
+
   // ─── Loading state ───────────────────────────────────────────────────────────
 
   it("DropdownMenuTrigger inherits disabled when a mutation is pending", () => {
@@ -286,18 +290,14 @@ describe("BookingActions", () => {
 
   // ─── Status label rendering ─────────────────────────────────────────────────
 
-  it('shows correct status label in dropdown header for "pending"', () => {
+  it.each([
+    { status: "pending" as const, pattern: /pending/i },
+    { status: "confirmed" as const, pattern: /confirmed/i },
+  ])('shows correct status label for "$status"', ({ status, pattern }) => {
     mockMutations()
-    render(<BookingActions booking={makeBooking("pending")} onAction={vi.fn()} />)
+    render(<BookingActions booking={makeBooking(status)} onAction={vi.fn()} />)
     fireEvent.click(screen.getByTestId("dropdown-trigger"))
-    expect(screen.getByTestId("dropdown-label")).toHaveTextContent(/pending/i)
-  })
-
-  it('shows correct status label in dropdown header for "confirmed"', () => {
-    mockMutations()
-    render(<BookingActions booking={makeBooking("confirmed")} onAction={vi.fn()} />)
-    fireEvent.click(screen.getByTestId("dropdown-trigger"))
-    expect(screen.getByTestId("dropdown-label")).toHaveTextContent(/confirmed/i)
+    expect(screen.getByTestId("dropdown-label")).toHaveTextContent(pattern)
   })
 
   // ─── Error path: ApiError < 500 uses generic message ───────────────────────
@@ -319,76 +319,30 @@ describe("BookingActions", () => {
     })
   })
 
-  // ─── AdminCancelDialog validation: reason required ────────────────────────
+  // ─── pending_group_fill and awaiting_payment share pending actions ───────────
 
-  it("admin cancel shows validation error when reason is empty", async () => {
+  it.each([
+    { status: "pending_group_fill" as const },
+    { status: "awaiting_payment" as const },
+  ])("renders dropdown for $status status", ({ status }) => {
     mockMutations()
-    const toastModule = await import("sonner")
-    const toastErrorSpy = vi.spyOn(toastModule.toast, "error")
-    render(<BookingActions booking={makeBooking("confirmed")} onAction={vi.fn()} />)
-
-    fireEvent.click(screen.getByTestId("dropdown-trigger"))
-    fireEvent.click(findDropdownItem("cancel")!)
-
-    expect(screen.getByTestId("sheet")).toBeTruthy()
-
-    fireEvent.click(screen.getByText("bookings.actions.cancel.confirm"))
-
-    await waitFor(() => {
-      expect(toastErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining("reason"),
-      )
-    })
+    render(<BookingActions booking={makeBooking(status)} onAction={vi.fn()} />)
+    expect(screen.getByTestId("dropdown")).toBeTruthy()
   })
 
-  // ─── AdminCancelDialog validation: partial refund needs amount ───────────────
-
-  it("admin cancel shows validation error when partial refund has no amount", async () => {
+  it("cancel_requested status shows cancel_requested label and two action items", () => {
     mockMutations()
-    const toastModule = await import("sonner")
-    const toastErrorSpy = vi.spyOn(toastModule.toast, "error")
-    render(
-      <BookingActions
-        booking={makeBooking("confirmed")}
-        onAction={vi.fn()}
-      />,
-    )
-
+    render(<BookingActions booking={makeBooking("cancel_requested")} onAction={vi.fn()} />)
     fireEvent.click(screen.getByTestId("dropdown-trigger"))
-    fireEvent.click(findDropdownItem("cancel")!)
-
-    expect(screen.getByTestId("sheet")).toBeTruthy()
-
-    const refundTypeSelect = screen.getByTestId("sheet-content").querySelector("[data-testid*='select']")
-    fireEvent.click(screen.getByText("bookings.actions.cancel.confirm"))
-
-    await waitFor(() => {
-      expect(toastErrorSpy).toHaveBeenCalled()
-    })
+    const label = screen.getByTestId("dropdown-label")
+    expect(label).toHaveTextContent(/cancel_requested/i)
+    const items = screen.getByTestId("dropdown-content").querySelectorAll("[data-testid='dropdown-item']")
+    expect(items).toHaveLength(2)
   })
 
-  // ─── RejectCancelDialog calls toast error then resets ─────────────────────
-
-  it("reject cancel dialog shows generic error and resets", async () => {
+  it("expired status returns null (no actions)", () => {
     mockMutations()
-    const toastModule = await import("sonner")
-    const toastErrorSpy = vi.spyOn(toastModule.toast, "error")
-    render(
-      <BookingActions
-        booking={makeBooking("cancel_requested")}
-        onAction={vi.fn()}
-      />,
-    )
-
-    fireEvent.click(screen.getByTestId("dropdown-trigger"))
-    fireEvent.click(findDropdownItem("reject")!)
-
-    expect(screen.getByTestId("sheet")).toBeTruthy()
-
-    fireEvent.click(screen.getByText("bookings.actions.cancel.reject"))
-
-    await waitFor(() => {
-      expect(toastErrorSpy).toHaveBeenCalled()
-    })
+    const { container } = render(<BookingActions booking={makeBooking("expired")} onAction={vi.fn()} />)
+    expect(container.firstChild).toBeNull()
   })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { classifyLoginError } from "@/lib/api/auth-errors"
+import { classifyLoginError, loginErrorMessage } from "@/lib/api/auth-errors"
 
 describe("classifyLoginError", () => {
   it("classifies 401 + 'Invalid credentials' as invalid_credentials", () => {
@@ -40,5 +40,27 @@ describe("classifyLoginError", () => {
   it("falls back to invalid_credentials for null/undefined error", () => {
     expect(classifyLoginError(null)).toBe("invalid_credentials")
     expect(classifyLoginError(undefined)).toBe("invalid_credentials")
+  })
+})
+
+describe("loginErrorMessage", () => {
+  it("returns Error message when error is an Error instance", () => {
+    expect(loginErrorMessage(new Error("Wrong password"))).toBe("Wrong password")
+  })
+
+  it("returns message property when error is an object with message", () => {
+    expect(loginErrorMessage({ message: "Token expired" })).toBe("Token expired")
+  })
+
+  it("returns 'LOGIN_FAILED' when error has no message", () => {
+    expect(loginErrorMessage({})).toBe("LOGIN_FAILED")
+  })
+
+  it("returns 'LOGIN_FAILED' for null input", () => {
+    expect(loginErrorMessage(null)).toBe("LOGIN_FAILED")
+  })
+
+  it("returns 'LOGIN_FAILED' for undefined input", () => {
+    expect(loginErrorMessage(undefined)).toBe("LOGIN_FAILED")
   })
 })
