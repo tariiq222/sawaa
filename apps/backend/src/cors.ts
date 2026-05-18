@@ -22,7 +22,7 @@ export function configureCors(app: INestApplication): void {
         return cb(null, true);
       }
       if (allowed.has(requestOrigin)) return cb(null, true);
-      return cb(null, false);
+      return cb(new Error('origin not allowed'), false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

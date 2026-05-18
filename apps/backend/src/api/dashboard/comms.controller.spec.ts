@@ -24,6 +24,7 @@ import { GetOrgEmailConfigHandler } from '../../modules/comms/org-email-config/g
 import { UpsertOrgEmailConfigHandler } from '../../modules/comms/org-email-config/upsert-org-email-config.handler';
 import { TestEmailConfigHandler } from '../../modules/comms/org-email-config/test-email-config.handler';
 import { PrismaService } from '../../infrastructure/database';
+import { GetEmailFallbackQuotaHandler } from '../../modules/comms/get-email-fallback-quota/get-email-fallback-quota.handler';
 import { ListTenantDeliveryLogsHandler } from '../../modules/comms/list-tenant-delivery-logs/list-tenant-delivery-logs.handler';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
@@ -54,6 +55,7 @@ describe('DashboardCommsController (e2e)', () => {
   const mockTestEmailConfig = { execute: jest.fn() };
   const mockPrisma = { smsDelivery: { findMany: jest.fn() } };
   const mockListTenantDeliveryLogs = { execute: jest.fn() };
+  const mockGetEmailFallbackQuota = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -82,6 +84,7 @@ describe('DashboardCommsController (e2e)', () => {
         { provide: TestEmailConfigHandler, useValue: mockTestEmailConfig },
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ListTenantDeliveryLogsHandler, useValue: mockListTenantDeliveryLogs },
+        { provide: GetEmailFallbackQuotaHandler, useValue: mockGetEmailFallbackQuota },
       ],
     })
       .overrideGuard(JwtGuard)
