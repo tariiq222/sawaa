@@ -29,6 +29,7 @@ import {
   fetchServiceBookingTypes,
   setServiceBookingTypes,
   fetchServiceEmployees,
+  fetchServicesListStats,
 } from "@/lib/api/services"
 import {
   fetchIntakeForms,
@@ -191,6 +192,30 @@ describe("services api", () => {
       getMock.mockResolvedValueOnce([{ id: "p-1", name: "Dr. Ali" }])
       await fetchServiceEmployees("svc-1")
       expect(getMock).toHaveBeenCalledWith("/dashboard/organization/services/svc-1/employees")
+    })
+  })
+
+  describe("fetchServicesListStats", () => {
+    it("fetches total and active counts via Promise.all", async () => {
+      getMock
+        .mockResolvedValueOnce({ meta: { total: 25 } })
+        .mockResolvedValueOnce({ meta: { total: 18 } })
+
+      const stats = await fetchServicesListStats()
+
+      expect(stats.total).toBe(25)
+      expect(stats.active).toBe(18)
+      expect(stats.inactive).toBe(7)
+    })
+
+    it("handles missing meta gracefully", async () => {
+      getMock.mockResolvedValueOnce({}).mockResolvedValueOnce({})
+
+      const stats = await fetchServicesListStats()
+
+      expect(stats.total).toBe(0)
+      expect(stats.active).toBe(0)
+      expect(stats.inactive).toBe(0)
     })
   })
 })

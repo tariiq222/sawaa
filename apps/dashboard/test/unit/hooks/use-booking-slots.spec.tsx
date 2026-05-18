@@ -255,4 +255,37 @@ describe("useCreateBookingSlots", () => {
 
     expect(result.current.slots).toEqual([])
   })
+
+  it("slots are empty while slotsLoading is true", async () => {
+    fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
+    fetchEmployeeServiceTypes.mockResolvedValue([])
+    fetchSlots.mockImplementation(
+      () =>
+        new Promise((r) =>
+          setTimeout(() => r([{ startTime: "09:00", endTime: "09:30" }]), 200),
+        ),
+    )
+
+    const { result } = renderHook(() => useCreateBookingSlots(baseOpts), {
+      wrapper: makeWrapper(),
+    })
+
+    expect(result.current.slotsLoading).toBe(true)
+    expect(result.current.slots).toEqual([])
+
+    await waitFor(() => expect(result.current.slotsLoading).toBe(false))
+  })
+
+  it("gracefully returns empty slots when fetchSlots throws", async () => {
+    fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
+    fetchEmployeeServiceTypes.mockResolvedValue([])
+    fetchSlots.mockRejectedValue(new Error("Network error"))
+
+    const { result } = renderHook(() => useCreateBookingSlots(baseOpts), {
+      wrapper: makeWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.slotsLoading).toBe(false))
+    expect(result.current.slots).toEqual([])
+  })
 })
