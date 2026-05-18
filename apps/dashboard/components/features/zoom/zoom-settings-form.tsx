@@ -86,6 +86,7 @@ export function ZoomSettingsForm() {
               </Label>
               <Input
                 id="zoom-account-id"
+                autoComplete="off"
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
                 placeholder={config?.configured ? "•••••••• (already connected)" : "abcDEF1234..."}
@@ -96,6 +97,7 @@ export function ZoomSettingsForm() {
               <Label htmlFor="zoom-client-id">{t("zoom.form.clientId")}</Label>
               <Input
                 id="zoom-client-id"
+                autoComplete="off"
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
                 placeholder={config?.configured ? "•••••••• (already connected)" : ""}
@@ -109,6 +111,7 @@ export function ZoomSettingsForm() {
               <Input
                 id="zoom-client-secret"
                 type="password"
+                autoComplete="new-password"
                 value={clientSecret}
                 onChange={(e) => setClientSecret(e.target.value)}
                 placeholder={config?.configured ? "•••••••• (already connected)" : ""}

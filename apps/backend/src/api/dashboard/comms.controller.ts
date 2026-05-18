@@ -49,6 +49,7 @@ import { TestEmailConfigDto } from '../../modules/comms/org-email-config/test-em
 import { PrismaService } from '../../infrastructure/database';
 import { ListTenantDeliveryLogsHandler } from '../../modules/comms/list-tenant-delivery-logs/list-tenant-delivery-logs.handler';
 import { ListTenantDeliveryLogsDto } from '../../modules/comms/list-tenant-delivery-logs/list-tenant-delivery-logs.dto';
+import { GetEmailFallbackQuotaHandler } from '../../modules/comms/get-email-fallback-quota/get-email-fallback-quota.handler';
 
 @ApiTags('Dashboard / Comms')
 @ApiBearerAuth()
@@ -80,6 +81,7 @@ export class DashboardCommsController {
     private readonly testEmailConfig: TestEmailConfigHandler,
     private readonly prisma: PrismaService,
     private readonly listTenantDeliveryLogs: ListTenantDeliveryLogsHandler,
+    private readonly getEmailFallbackQuota: GetEmailFallbackQuotaHandler,
   ) {}
 
   // ── SMS Settings (SaaS-02g-sms) ────────────────────────────────────────────
@@ -377,6 +379,14 @@ export class DashboardCommsController {
     @Query() dto: ListTenantDeliveryLogsDto,
   ): Promise<unknown> {
     return this.listTenantDeliveryLogs.execute(dto);
+  }
+
+  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @Get('email-fallback-quota')
+  @ApiOperation({ summary: 'Get email fallback quota usage for the current month' })
+  @ApiOkResponse({ description: 'Email fallback quota' })
+  async getEmailFallbackQuotaEndpoint(): Promise<unknown> {
+    return this.getEmailFallbackQuota.execute();
   }
 
 }
