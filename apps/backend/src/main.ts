@@ -30,13 +30,6 @@ async function bootstrap(): Promise<void> {
   app.use(express.json({ limit: '100kb' }));
   app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
-  app.use('/api/v1/dashboard', rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 600,
-    message: { statusCode: 429, message: 'Too many requests, please try again later', error: 'Too Many Requests' },
-    skip: () => process.env.THROTTLER_DISABLED === 'true',
-  }));
-
   if (process.env.THROTTLER_DISABLED !== 'true') {
     app.use('/api/v1/auth', rateLimit({
       windowMs: 15 * 60 * 1000,
