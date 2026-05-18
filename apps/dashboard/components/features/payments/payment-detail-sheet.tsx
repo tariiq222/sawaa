@@ -84,7 +84,7 @@ export function PaymentDetailSheet({
                 {payment.status}
               </Badge>
             ) : (
-              "Loading..."
+              t("common.loading")
             )}
           </SheetDescription>
         </SheetHeader>
