@@ -7,6 +7,7 @@ export interface JwtUser {
   roles: string[];
   permissions: Array<{ action: string; subject: string }>;
   membershipRole?: string | null;
+  customRole?: { permissions: Array<{ action: string; subject: string }> } | null;
 }
 
 export const CurrentUser = createParamDecorator(

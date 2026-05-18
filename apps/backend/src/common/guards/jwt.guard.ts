@@ -22,6 +22,7 @@ interface AuthenticatedReqUser {
   role?: string;
   isSuperAdmin?: boolean;
   scope?: string;
+  customRole?: { permissions: Array<{ action: string; subject: string }> } | null;
 }
 
 /**
@@ -105,6 +106,7 @@ export class JwtGuard extends AuthGuard('jwt') {
       id: user.id ?? user.sub ?? '',
       role: user.role ?? '',
       isSuperAdmin: user.isSuperAdmin === true,
+      customRole: user.customRole ?? null,
     });
   }
 }

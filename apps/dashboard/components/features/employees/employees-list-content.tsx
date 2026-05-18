@@ -93,7 +93,7 @@ export function EmployeesListContent({
   const hasActiveFilters = hasFilters || search.length > 0
   const handleReset = () => { resetFilters(); setSearch("") }
 
-  const columns = getEmployeeColumns(handleEdit, locale, canDo("employee", "update") ? handleEdit : undefined, canDo("employee", "delete") ? handleDelete : undefined, t, handlePreview, canDo("employee", "update") ? handleToggleActive : undefined)
+  const columns = getEmployeeColumns(handlePreview, locale, canDo("employee", "update") ? handleEdit : undefined, canDo("employee", "delete") ? handleDelete : undefined, t, handlePreview, canDo("employee", "update") ? handleToggleActive : undefined)
 
   return (
     <div className="flex flex-col gap-6">

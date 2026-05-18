@@ -179,8 +179,9 @@ export class CheckAvailabilityHandler {
     const existingBookings = await this.prisma.booking.findMany({
       where: {
         employeeId: query.employeeId,
-        status: { in: ['PENDING', 'CONFIRMED', 'AWAITING_PAYMENT'] },
-        scheduledAt: { gte: earliestStart, lt: latestEnd },
+        status: { in: ['PENDING', 'PENDING_GROUP_FILL', 'CONFIRMED', 'AWAITING_PAYMENT'] },
+        scheduledAt: { lt: latestEnd },
+        durationMins: { gt: 0 },
       },
       orderBy: { scheduledAt: 'asc' },
     });

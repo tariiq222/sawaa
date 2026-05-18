@@ -69,6 +69,7 @@ describe('HttpExceptionFilter', () => {
     expect(mockResponse.status).toHaveBeenCalledWith(500);
     const body = mockResponse.json.mock.calls[0][0];
     expect(body.statusCode).toBe(500);
+    expect(body.message).toBe('An unexpected error occurred');
   });
 
   it('should handle primitive exception', () => {

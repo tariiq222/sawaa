@@ -227,6 +227,18 @@ describe('InitGuestPaymentHandler', () => {
       expect(params.amountHalalas).not.toBe(1200000);
     });
 
+    it('throws BadRequestException when Moyasar returns an empty redirectUrl', async () => {
+      const prisma = buildPrisma();
+      const moyasar = buildMoyasar();
+      moyasar.createPayment.mockResolvedValue({ ...mockMoyasarPayment, redirectUrl: null });
+      const handler = new InitGuestPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, moyasar as never);
+
+      await expect(handler.execute({ bookingId: 'booking-1' })).rejects.toThrow(BadRequestException);
+
+      expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'pay-1' } });
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+
     it('uses default callback URL when PUBLIC_WEBSITE_URL is not set', async () => {
       process.env.PUBLIC_WEBSITE_URL = '';
       const prisma = buildPrisma();
