@@ -24,7 +24,7 @@ function getEmployeeNameFromFull(p: Employee, locale: string): string {
 
 function StepEmployeeSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={`skeleton-${i}`} className="h-28 animate-pulse rounded-2xl bg-muted" />
       ))}
@@ -101,7 +101,7 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
     : (allEmployees?.items ?? []).filter((p) => p.isActive)
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {employees.map((p) => {
         const name = getEmployeeNameFromFull(p, locale)
         const title = p.title ?? ""

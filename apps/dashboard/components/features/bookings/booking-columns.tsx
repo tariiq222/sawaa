@@ -49,9 +49,10 @@ export function getBookingColumns(
   onStatusAction: (booking: Booking, action: "confirm" | "noshow") => void,
   onDelete: (booking: Booking) => void,
   t: (key: string) => string,
-  config?: { dateFormat?: DateFormat },
+  config?: { dateFormat?: DateFormat; locale?: "ar" | "en" },
 ): ColumnDef<Booking>[] {
   const dateFormat = config?.dateFormat ?? "Y-m-d"
+  const locale = config?.locale ?? "ar"
   return [
     {
       accessorKey: "id",
@@ -137,7 +138,7 @@ export function getBookingColumns(
       cell: ({ row }) => {
         const payment = row.original.payment
         if (!payment) return <span className="text-muted-foreground">—</span>
-        return <FormattedCurrency amount={payment.totalAmount} locale="ar" decimals={2} />
+        return <FormattedCurrency amount={payment.totalAmount} locale={locale} decimals={2} />
       },
     },
     {

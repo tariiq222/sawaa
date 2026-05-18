@@ -9,6 +9,7 @@ import {
   CheckmarkCircle02Icon,
   CancelCircleIcon,
   ArrowReloadHorizontalIcon,
+  MoreVerticalIcon,
 } from "@hugeicons/core-free-icons"
 import {
   DropdownMenu,
@@ -51,23 +52,36 @@ export function ActionsCell({
   onDelete: () => void
   t: (key: string) => string
 }) {
-  const btnBase = "flex size-9 items-center justify-center rounded-sm border border-transparent text-muted-foreground transition-all duration-200 hover:bg-muted hover:border-border hover:text-foreground"
+  const viewBtn = "flex size-9 items-center justify-center rounded-sm border border-transparent text-muted-foreground transition-all duration-200 hover:bg-muted hover:border-border hover:text-foreground"
 
   return (
     <div className="flex items-center gap-1">
-      <button className={btnBase} aria-label={t("bookings.col.view")} onClick={onView}>
+      <button className={viewBtn} aria-label={t("bookings.col.view")} onClick={onView}>
         <HugeiconsIcon icon={ViewIcon} size={16} />
       </button>
-      <button className={btnBase} aria-label={t("bookings.col.edit")} onClick={onEdit}>
-        <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
-      </button>
-      <button
-        className={cn(btnBase, "hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20")}
-        aria-label={t("bookings.col.delete")}
-        onClick={onDelete}
-      >
-        <HugeiconsIcon icon={Delete02Icon} size={16} />
-      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className={cn(viewBtn, "text-muted-foreground")}
+            aria-label={t("bookings.col.actions")}
+          >
+            <HugeiconsIcon icon={MoreVerticalIcon} size={16} />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-44">
+          <DropdownMenuItem onSelect={onEdit}>
+            <HugeiconsIcon icon={PencilEdit01Icon} size={15} className="me-2 shrink-0" />
+            {t("bookings.col.edit")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={onDelete}
+            className="text-destructive focus:text-destructive focus:bg-destructive/10"
+          >
+            <HugeiconsIcon icon={Delete02Icon} size={15} className="me-2 shrink-0" />
+            {t("bookings.col.delete")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }

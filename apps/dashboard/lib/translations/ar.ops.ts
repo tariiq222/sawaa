@@ -204,7 +204,7 @@ export const arOps: Record<string, string> = {
   "waitlist.removed": "تمت الإزالة من قائمة الانتظار",
   "waitlist.removeError": "فشل في الإزالة من قائمة الانتظار",
   "waitlist.empty.title": "لا يوجد في قائمة الانتظار",
-  "waitlist.empty.description": "لا يوجد مستفيدون حالياً في قائمة الانتظار.",
+  "waitlist.empty.description": "قائمة الانتظار فارغة. يُضاف المستفيدون هنا عند اكتمال الحجوزات على الموعد الذي يفضلونه.",
 
   // ─── Settings — Notifications ───
   "settings.notificationsHint": "تحكم في أنواع الإشعارات المرسلة للموظفين والمستفيدين",

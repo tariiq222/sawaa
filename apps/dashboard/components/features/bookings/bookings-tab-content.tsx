@@ -24,8 +24,8 @@ interface BookingsTabContentProps {
 }
 
 export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabContentProps) {
-  const { t } = useLocale()
-  const { weekStartDayNumber } = useOrganizationConfig()
+  const { t, locale } = useLocale()
+  const { weekStartDayNumber, dateFormat } = useOrganizationConfig()
   const queryClient = useQueryClient()
   const { bookings, meta, loading, error, filters, setFilters, resetFilters, hasFilters, setPage } = useBookings()
   const { confirmMut, noShowMut, adminCancelMut } = useBookingMutations()
@@ -99,7 +99,7 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
     setDeleteTarget(booking)
   }
 
-  const columns = getBookingColumns(onRowClick, onEditClick, handleStatusAction, handleDelete, t)
+  const columns = getBookingColumns(onRowClick, onEditClick, handleStatusAction, handleDelete, t, { dateFormat, locale })
 
   return (
     <div className="flex flex-col gap-5">

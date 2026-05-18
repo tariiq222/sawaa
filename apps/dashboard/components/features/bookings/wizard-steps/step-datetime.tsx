@@ -60,7 +60,7 @@ export function StepDatetime({
         <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           {t('bookings.wizard.step.datetime.dayTitle')}
         </p>
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <div className="flex w-full max-w-full min-w-0 gap-2 overflow-x-auto pb-2 scrollbar-none">
           {days.map((day) => {
             const iso = toISODate(day)
             const isSelected = iso === selectedDate

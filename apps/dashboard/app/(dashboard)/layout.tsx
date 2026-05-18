@@ -17,9 +17,9 @@ export default function DashboardLayout({
     <AuthGate>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset className="min-h-0 relative z-[1]">
+        <SidebarInset className="min-h-0 min-w-0 relative z-[1]">
           <Header />
-          <div className="flex-1 overflow-y-auto p-4 md:px-8 md:py-7">
+          <div className="flex-1 min-w-0 overflow-x-hidden overflow-y-auto p-4 md:px-8 md:py-7">
             {children}
           </div>
           <CommandPalette />

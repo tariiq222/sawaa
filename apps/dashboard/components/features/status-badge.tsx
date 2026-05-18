@@ -1,5 +1,13 @@
 "use client"
 
+import { HugeiconsIcon } from "@hugeicons/react"
+import {
+  Tick01Icon,
+  CancelCircleIcon,
+  Clock02Icon,
+  CheckmarkCircle02Icon,
+  ArrowReloadHorizontalIcon,
+} from "@hugeicons/core-free-icons"
 import { Badge } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { bookingStatusStyles, bookingTypeStyles } from "@/lib/ds"
@@ -18,6 +26,18 @@ const statusTranslationKeys: Record<BookingStatus, string> = {
   expired: "bookings.status.expired",
 }
 
+const statusIconMap: Record<BookingStatus, { icon: typeof Tick01Icon; iconClass: string }> = {
+  pending:          { icon: Clock02Icon,            iconClass: "text-warning" },
+  pending_group_fill:{ icon: Clock02Icon,            iconClass: "text-warning" },
+  awaiting_payment:  { icon: Clock02Icon,            iconClass: "text-warning" },
+  confirmed:        { icon: Tick01Icon,             iconClass: "text-success" },
+  completed:        { icon: CheckmarkCircle02Icon,  iconClass: "text-accent" },
+  cancelled:        { icon: CancelCircleIcon,       iconClass: "text-destructive" },
+  cancel_requested:  { icon: ArrowReloadHorizontalIcon, iconClass: "text-warning" },
+  no_show:          { icon: CancelCircleIcon,       iconClass: "text-destructive" },
+  expired:          { icon: Clock02Icon,            iconClass: "text-muted-foreground" },
+}
+
 const typeTranslationKeys: Record<BookingType, string> = {
   in_person: "bookings.type.inPerson",
   online: "bookings.type.online",
@@ -34,6 +54,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   const { t } = useLocale()
   const translationKey = statusTranslationKeys[status]
   const styles = bookingStatusStyles[status as keyof typeof bookingStatusStyles]
+  const iconEntry = statusIconMap[status]
   if (!translationKey || !styles) {
     return (
       <Badge variant="outline" className={cn("font-medium", className)}>
@@ -44,8 +65,11 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   return (
     <Badge
       variant="outline"
-      className={cn("font-medium", styles.bg, styles.text, styles.border, className)}
+      className={cn("font-medium gap-1.5", styles.bg, styles.text, styles.border, className)}
     >
+      {iconEntry && (
+        <HugeiconsIcon icon={iconEntry.icon} size={11} className={iconEntry.iconClass} />
+      )}
       {t(translationKey)}
     </Badge>
   )

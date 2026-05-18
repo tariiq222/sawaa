@@ -204,7 +204,7 @@ export const enOps: Record<string, string> = {
   "waitlist.removed": "Removed from waitlist",
   "waitlist.removeError": "Failed to remove from waitlist",
   "waitlist.empty.title": "No Waitlist Entries",
-  "waitlist.empty.description": "No clients are currently on the waitlist.",
+  "waitlist.empty.description": "The waitlist is empty. Clients are added here when a slot they'd like is fully booked.",
 
   // ─── Settings — Notifications ───
   "settings.notificationsHint": "Control which notification types are sent to staff and clients",
