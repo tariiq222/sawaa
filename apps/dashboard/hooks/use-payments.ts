@@ -67,6 +67,8 @@ export function usePayments() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.payments.list(query),
     queryFn: () => fetchPayments(query),
+    staleTime: 30_000,
+    retry: 1,
   })
 
   const hasFilters = !!search || status !== "all" || method !== "all" || !!dateFrom || !!dateTo

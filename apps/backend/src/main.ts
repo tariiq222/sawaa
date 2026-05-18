@@ -32,8 +32,8 @@ async function bootstrap(): Promise<void> {
 
   app.use('/api/v1/dashboard', rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 200,
-    message: 'Too many requests, please try again later',
+    max: 600,
+    message: { statusCode: 429, message: 'Too many requests, please try again later', error: 'Too Many Requests' },
     skip: () => process.env.THROTTLER_DISABLED === 'true',
   }));
 
