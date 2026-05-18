@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ReportType, ReportFormat, ReportStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { GenerateReportDto } from './generate-report.dto';
@@ -22,11 +22,12 @@ export class GenerateReportHandler {
     data?: unknown;
     excelBuffer?: Buffer;
   }> {
-    const from = new Date(dto.from);
-    const to = new Date(dto.to);
+    let from = new Date(dto.from);
+    let to = new Date(dto.to);
 
-    if (from >= to) {
-      throw new BadRequestException('from must be before to');
+    // Auto-swap if dates are reversed (common in RTL date pickers)
+    if (from > to) {
+      [from, to] = [to, from];
     }
 
     const format = dto.format ?? ReportFormat.JSON;

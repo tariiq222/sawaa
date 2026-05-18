@@ -30,6 +30,10 @@ function ReportsContent() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("")
   const [exporting, setExporting] = useState(false)
 
+  // Normalize: ensure from <= to for API calls (prevents RTL date confusion)
+  const normalizedFrom = dateFrom <= dateTo ? dateFrom : dateTo
+  const normalizedTo = dateFrom <= dateTo ? dateTo : dateFrom
+
   const canExportExcel = activeTab === "revenue"
 
   const handleExport = async () => {
@@ -38,8 +42,8 @@ function ReportsContent() {
     try {
       await exportReportExcel({
         type: "REVENUE",
-        dateFrom,
-        dateTo,
+        dateFrom: normalizedFrom,
+        dateTo: normalizedTo,
       })
     } catch {
       toast.error(t("reports.exportError"))
@@ -92,11 +96,11 @@ function ReportsContent() {
         </div>
 
         <TabsContent value="revenue">
-          <RevenueTab dateFrom={dateFrom} dateTo={dateTo} />
+          <RevenueTab dateFrom={normalizedFrom} dateTo={normalizedTo} />
         </TabsContent>
 
         <TabsContent value="bookings">
-          <BookingsTab dateFrom={dateFrom} dateTo={dateTo} />
+          <BookingsTab dateFrom={normalizedFrom} dateTo={normalizedTo} />
         </TabsContent>
 
         <TabsContent value="employees">
@@ -106,8 +110,8 @@ function ReportsContent() {
               onChange={setSelectedEmployeeId}
             />
             <EmployeesTab
-              dateFrom={dateFrom}
-              dateTo={dateTo}
+              dateFrom={normalizedFrom}
+              dateTo={normalizedTo}
               employeeId={selectedEmployeeId}
             />
           </div>

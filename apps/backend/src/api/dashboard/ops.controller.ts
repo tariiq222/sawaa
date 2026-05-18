@@ -55,7 +55,7 @@ export class DashboardOpsController {
       return;
     }
 
-    return result;
+    return result.data;
   }
 
   @Get('activity')

@@ -10,7 +10,9 @@ import type { Payment } from "@/lib/types/payment"
 export function toInvoiceListItem(payment: Payment): InvoiceListItem {
   return {
     id: payment.id,
-    invoiceNumber: payment.invoiceId || payment.id.slice(0, 8).toUpperCase(),
+    invoiceNumber: payment.number
+      ? `INV-${String(payment.number).padStart(4, "0")}`
+      : payment.id.slice(0, 8).toUpperCase(),
     clientName: null, // client names are not exposed in payment list
     totalAmount: payment.amount,
     taxAmount: null, // tax not exposed in payment list

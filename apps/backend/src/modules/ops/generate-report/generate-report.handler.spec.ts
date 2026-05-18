@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import { ReportType, ReportFormat } from '@prisma/client';
 import { GenerateReportHandler } from './generate-report.handler';
 
@@ -29,17 +28,30 @@ jest.mock('./excel-export.builder', () => ({
 }));
 
 describe('GenerateReportHandler', () => {
-  it('throws BadRequestException when from >= to', async () => {
+  it('auto-swaps dates when from > to', async () => {
     const prisma = buildPrisma();
     const handler = new GenerateReportHandler(prisma as never);
 
-    await expect(
-      handler.execute({
-        type: ReportType.REVENUE,
-        from: '2026-01-10', to: '2026-01-01',
-        requestedBy: 'user-1',
-      }),
-    ).rejects.toThrow(BadRequestException);
+    const result = await handler.execute({
+      type: ReportType.REVENUE,
+      from: '2026-01-10', to: '2026-01-01',
+      requestedBy: 'user-1',
+    });
+
+    expect(result.status).toBe('COMPLETED');
+  });
+
+  it('allows from === to as a single-day report', async () => {
+    const prisma = buildPrisma();
+    const handler = new GenerateReportHandler(prisma as never);
+
+    const result = await handler.execute({
+      type: ReportType.REVENUE,
+      from: '2026-01-15', to: '2026-01-15',
+      requestedBy: 'user-1',
+    });
+
+    expect(result.status).toBe('COMPLETED');
   });
 
   it('creates a report record with PENDING status initially', async () => {

@@ -27,7 +27,7 @@ describe('DashboardOpsController', () => {
     generateReport.mockResolvedValue(result);
 
     const response = await controller.generateReportEndpoint({ format: ReportFormat.JSON, reportType: 'bookings' } as any, resMock);
-    expect(response).toEqual(result);
+    expect(response).toEqual(result.data);
     expect(resMock.send).not.toHaveBeenCalled();
   });
 
@@ -42,12 +42,12 @@ describe('DashboardOpsController', () => {
     expect(response).toBeUndefined();
   });
 
-  it('generateReportEndpoint should return result when EXCEL but no buffer', async () => {
+  it('generateReportEndpoint should return undefined when EXCEL but no buffer', async () => {
     const result = { format: ReportFormat.EXCEL, reportId: 'r1' };
     generateReport.mockResolvedValue(result);
 
     const response = await controller.generateReportEndpoint({ format: ReportFormat.EXCEL, reportType: 'revenue' } as any, resMock);
-    expect(response).toEqual(result);
+    expect(response).toBeUndefined();
     expect(resMock.send).not.toHaveBeenCalled();
   });
 

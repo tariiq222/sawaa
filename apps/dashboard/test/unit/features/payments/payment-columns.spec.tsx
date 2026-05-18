@@ -44,11 +44,11 @@ describe("getPaymentColumns — without callbacks", () => {
   it("returns 6 columns when no callbacks are provided (no actions column)", () => {
     expect(cols).toHaveLength(6)
     expect(cols.map((c) => c.id ?? (c as { accessorKey?: string }).accessorKey)).toEqual([
-      "id", "client", "amount", "method", "status", "createdAt",
+      "number", "client", "amount", "method", "status", "createdAt",
     ])
   })
 
-  it("id cell renders a plain span (not a button) when callbacks missing", () => {
+  it("number cell falls back to UUID slice when number is missing", () => {
     const html = cellContainer(cols[0], makePayment()).innerHTML
     expect(html).not.toContain("<button")
     expect(html).toContain("abcdef12")
@@ -65,7 +65,7 @@ describe("getPaymentColumns — with callbacks", () => {
     expect(cols[cols.length - 1].id).toBe("actions")
   })
 
-  it("id cell renders a clickable button that fires onView", () => {
+  it("number cell renders a clickable button that fires onView", () => {
     onView.mockReset()
     const p = makePayment()
     const container = cellContainer(cols[0], p)
@@ -73,6 +73,12 @@ describe("getPaymentColumns — with callbacks", () => {
     expect(btn.textContent).toBe("abcdef12")
     fireEvent.click(btn)
     expect(onView).toHaveBeenCalledWith(p)
+  })
+
+  it("number cell shows PAY- prefix when number is present", () => {
+    const p = makePayment({ number: 1 })
+    const container = cellContainer(cols[0], p)
+    expect(container.textContent).toBe("PAY-0001")
   })
 })
 

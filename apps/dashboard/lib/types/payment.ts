@@ -15,6 +15,7 @@ import type {
 
 export interface Payment {
   id: string
+  number?: number
   invoiceId: string
   amount: number
   refundedAmount: number

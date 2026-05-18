@@ -149,19 +149,25 @@ export function FilterBar({
                 {(selects?.length ?? 0) > 0 && (
                   <div className="hidden sm:block mx-1 h-5 w-px bg-border/60" />
                 )}
-                <DatePicker
-                  value={dateRange.dateFrom}
-                  onChange={dateRange.onDateFromChange}
-                  placeholder={dateRange.placeholderFrom ?? t("common.from")}
-                  className="w-auto"
-                />
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">{dateRange.placeholderFrom ?? t("common.from")}</span>
+                  <DatePicker
+                    value={dateRange.dateFrom}
+                    onChange={dateRange.onDateFromChange}
+                    placeholder={dateRange.placeholderFrom ?? t("common.from")}
+                    className="w-auto"
+                  />
+                </div>
                 <span className="text-xs text-muted-foreground px-0.5">—</span>
-                <DatePicker
-                  value={dateRange.dateTo}
-                  onChange={dateRange.onDateToChange}
-                  placeholder={dateRange.placeholderTo ?? t("common.to")}
-                  className="w-auto"
-                />
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">{dateRange.placeholderTo ?? t("common.to")}</span>
+                  <DatePicker
+                    value={dateRange.dateTo}
+                    onChange={dateRange.onDateToChange}
+                    placeholder={dateRange.placeholderTo ?? t("common.to")}
+                    className="w-auto"
+                  />
+                </div>
               </>
             )}
 

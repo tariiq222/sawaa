@@ -6,6 +6,7 @@ describe("toInvoiceListItem", () => {
   it("maps payment fields to invoice list row shape", () => {
     const payment: Payment = {
       id: "pay-1",
+      number: 1,
       invoiceId: "inv-123",
       amount: 12500,
       refundedAmount: 0,
@@ -24,7 +25,7 @@ describe("toInvoiceListItem", () => {
     const row = toInvoiceListItem(payment)
 
     expect(row.id).toBe("pay-1")
-    expect(row.invoiceNumber).toBe("inv-123")
+    expect(row.invoiceNumber).toBe("INV-0001")
     expect(row.totalAmount).toBe(12500)
     expect(row.taxAmount).toBeNull()
     expect(row.status).toBe("COMPLETED")
@@ -34,6 +35,7 @@ describe("toInvoiceListItem", () => {
   it("does not fabricate taxAmount as 0 when VAT is unavailable", () => {
     const payment: Payment = {
       id: "pay-1",
+      number: 1,
       invoiceId: "inv-123",
       amount: 12500,
       refundedAmount: 0,
@@ -55,7 +57,7 @@ describe("toInvoiceListItem", () => {
     expect(row.taxAmount).not.toBe(0)
   })
 
-  it("falls back to truncated id when invoiceId is missing", () => {
+  it("falls back to truncated id when number is missing", () => {
     const payment: Payment = {
       id: "pay-abc-def",
       invoiceId: "",

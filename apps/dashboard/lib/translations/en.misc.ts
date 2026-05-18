@@ -205,6 +205,8 @@ export const enMisc: Record<string, string> = {
 
   // — Common: Date Picker —
   "common.datePicker.placeholder": "Select date",
+  "common.from": "From",
+  "common.to": "To",
 
   // — Common: Permissions —
   "common.noPermission": "You don't have permission to access this page",

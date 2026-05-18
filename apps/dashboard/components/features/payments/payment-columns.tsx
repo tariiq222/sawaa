@@ -48,20 +48,23 @@ export function getPaymentColumns(
   const dateFormat = config?.dateFormat ?? "Y-m-d"
   const columns: ColumnDef<Payment>[] = [
     {
-      accessorKey: "id",
+      accessorKey: "number",
       header: "#",
       cell: ({ row }) => {
         const payment = row.original
+        const displayNumber = payment.number
+          ? `PAY-${String(payment.number).padStart(4, "0")}`
+          : payment.id.slice(0, 8)
         return callbacks ? (
           <button
             className="text-sm font-medium text-primary underline-offset-2 hover:underline tabular-nums"
             onClick={() => callbacks.onView(payment)}
           >
-            {payment.id.slice(0, 8)}
+            {displayNumber}
           </button>
         ) : (
           <span className="tabular-nums text-sm text-muted-foreground">
-            {payment.id.slice(0, 8)}
+            {displayNumber}
           </span>
         )
       },

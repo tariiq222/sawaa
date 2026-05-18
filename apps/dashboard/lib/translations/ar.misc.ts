@@ -205,6 +205,8 @@ export const arMisc: Record<string, string> = {
 
   // — Common: Date Picker —
   "common.datePicker.placeholder": "اختر التاريخ",
+  "common.from": "من",
+  "common.to": "إلى",
 
   // — Common: Permissions —
   "common.noPermission": "ليس لديك صلاحية للوصول لهذه الصفحة",

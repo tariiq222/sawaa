@@ -37,6 +37,7 @@ enum DiscountType {
 
 model Invoice {
   id             String        @id @default(uuid())
+  number         Int           @unique @default(autoincrement())
   branchId       String
   clientId       String
   employeeId     String
@@ -75,6 +76,7 @@ model Invoice {
 
 model Payment {
   id             String        @id @default(uuid())
+  number         Int           @unique @default(autoincrement())
   invoiceId      String
   invoice        Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
