@@ -147,4 +147,4 @@ EXPOSE 5100
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:5100/api/v1/health || exit 1
 
-CMD ["sh", "-c", "if [ -n \"${DATABASE_URL:-}\" ]; then echo '[boot] DATABASE_URL: set'; else echo '[boot] DATABASE_URL: MISSING'; fi && node dist/main.js"]
+CMD ["sh", "-c", "if [ -n \"${DATABASE_URL:-}\" ]; then echo '[boot] DATABASE_URL: set'; else echo '[boot] DATABASE_URL: MISSING'; fi && npx prisma migrate deploy --schema=prisma/schema && node dist/main.js"]
