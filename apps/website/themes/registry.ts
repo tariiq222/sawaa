@@ -32,3 +32,7 @@ export const theme: Theme = {
     supportGroups: SawaaSupportGroupsPage,
   },
 };
+
+if (!theme?.pages) {
+  console.error('[FATAL] theme.pages is undefined — theme registry failed to initialize');
+}

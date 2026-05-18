@@ -192,6 +192,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: "5205"
+      INTERNAL_API_URL: http://backend:5200/api/v1
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     depends_on:
       backend:
         condition: service_healthy

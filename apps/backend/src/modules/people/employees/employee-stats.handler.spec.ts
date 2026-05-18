@@ -17,7 +17,7 @@ describe('EmployeeStatsHandler', () => {
     expect(result.inactive).toBe(2);
     expect(result.avgRating).toBe(4.5);
     expect(prisma.rating.aggregate).toHaveBeenCalledWith({
-      where: { employeeId: { not: { equals: null } } },
+      where: {},
       _avg: { score: true },
     });
   });
