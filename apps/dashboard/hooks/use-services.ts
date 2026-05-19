@@ -172,7 +172,7 @@ export function useCategoriesList() {
 export function useServiceMutations() {
   const queryClient = useQueryClient()
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: queryKeys.services.all, refetchType: "all" })
+    queryClient.invalidateQueries({ queryKey: queryKeys.services.all })
 
   const createMut = useMutation({
     mutationFn: createService,
@@ -339,4 +339,3 @@ export function useAssignEmployeesToService(serviceId: string) {
     },
   })
 }
-

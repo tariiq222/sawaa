@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { TenantAwareThrottlerGuard } from "./common/throttler/tenant-aware-throttler.guard";
-import { PerOrgThrottlerGuard } from "./common/throttler/per-org-throttler.guard";
 import { ThrottlerStorageRedisService } from "@nest-lab/throttler-storage-redis";
 import { APP_FILTER, APP_GUARD } from "@nestjs/core";
 import { HttpExceptionFilter } from "./common/filters";
@@ -57,9 +56,6 @@ import { AppMetricsService } from "./infrastructure/telemetry/app-metrics.servic
         skipIf: () => config.get('THROTTLER_DISABLED') === 'true',
         throttlers: [
           { name: 'default', ttl: 60_000, limit: 300 },
-          { name: 'per-org', ttl: 60_000, limit: 300 },
-          { name: 'admin-mutation', ttl: 60_000, limit: 30 },
-          { name: 'admin-mutation-slow', ttl: 60_000, limit: 5 },
         ],
         storage: new ThrottlerStorageRedisService({
           host: config.getOrThrow<string>('REDIS_HOST'),
@@ -97,7 +93,6 @@ import { AppMetricsService } from "./infrastructure/telemetry/app-metrics.servic
     AppMetricsService,
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_GUARD, useClass: TenantAwareThrottlerGuard },
-    { provide: APP_GUARD, useClass: PerOrgThrottlerGuard },
   ],
 })
 export class AppModule {}
