@@ -39,7 +39,7 @@ export function ExecutiveSummary({ dateFrom, dateTo }: ExecutiveSummaryProps) {
   const isLoading = revenueLoading || bookingLoading
   const hasData = revenueData || bookingData
 
-  // Derive marketing/operational summary from booking data
+  // Derive operational summary from booking data
   const totalBookings = revenueData?.totalBookings ?? 0
   const completedBookings =
     bookingData?.byStatus?.find((s) => s.status === "COMPLETED")?.count ?? 0
@@ -53,77 +53,60 @@ export function ExecutiveSummary({ dateFrom, dateTo }: ExecutiveSummaryProps) {
   return (
     <section className="flex flex-col gap-4">
       {isLoading ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={`exec-skeleton-${i}`} className="h-24 rounded-xl" />
           ))}
         </div>
       ) : (
-        <>
-          {/* Financial Summary */}
-          <div>
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {t("reports.summary.financial")}
-            </p>
-            <StatsGrid>
-              <StatCard
-                title={t("reports.revenue.total")}
-                value={
-                  <FormattedCurrency
-                    amount={revenueData?.totalRevenue ?? 0}
-                    locale={locale}
-                  />
-                }
-                icon={MoneyBag02Icon}
-                iconColor="success"
+        <StatsGrid className="lg:grid-cols-3">
+          <StatCard
+            title={t("reports.revenue.total")}
+            value={
+              <FormattedCurrency
+                amount={revenueData?.totalRevenue ?? 0}
+                locale={locale}
               />
-              <StatCard
-                title={t("reports.revenue.avg")}
-                value={
-                  <FormattedCurrency
-                    amount={revenueData?.averagePerBooking ?? 0}
-                    locale={locale}
-                  />
-                }
-                icon={ArrowUp01Icon}
-                iconColor="primary"
+            }
+            icon={MoneyBag02Icon}
+            iconColor="success"
+          />
+          <StatCard
+            title={t("reports.revenue.avg")}
+            value={
+              <FormattedCurrency
+                amount={revenueData?.averagePerBooking ?? 0}
+                locale={locale}
               />
-              <StatCard
-                title={t("reports.revenue.bookings")}
-                value={totalBookings}
-                icon={Calendar03Icon}
-                iconColor="warning"
-              />
-            </StatsGrid>
-          </div>
-
-          {/* Marketing / Operational Summary */}
-          <div>
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {t("reports.summary.operational")}
-            </p>
-            <StatsGrid>
-              <StatCard
-                title={t("reports.summary.completedBookings")}
-                value={completedBookings}
-                icon={CheckmarkCircle02Icon}
-                iconColor="success"
-              />
-              <StatCard
-                title={t("reports.summary.confirmedBookings")}
-                value={confirmedBookings}
-                icon={CheckmarkCircle02Icon}
-                iconColor="primary"
-              />
-              <StatCard
-                title={t("reports.summary.pendingBookings")}
-                value={pendingBookings}
-                icon={Calendar03Icon}
-                iconColor="warning"
-              />
-            </StatsGrid>
-          </div>
-        </>
+            }
+            icon={ArrowUp01Icon}
+            iconColor="primary"
+          />
+          <StatCard
+            title={t("reports.revenue.bookings")}
+            value={totalBookings}
+            icon={Calendar03Icon}
+            iconColor="warning"
+          />
+          <StatCard
+            title={t("reports.summary.completedBookings")}
+            value={completedBookings}
+            icon={CheckmarkCircle02Icon}
+            iconColor="success"
+          />
+          <StatCard
+            title={t("reports.summary.confirmedBookings")}
+            value={confirmedBookings}
+            icon={CheckmarkCircle02Icon}
+            iconColor="primary"
+          />
+          <StatCard
+            title={t("reports.summary.pendingBookings")}
+            value={pendingBookings}
+            icon={Calendar03Icon}
+            iconColor="warning"
+          />
+        </StatsGrid>
       )}
     </section>
   )

@@ -5,8 +5,10 @@ import { ErrorBanner } from "@/components/features/error-banner"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchBookingReport } from "@/lib/api/reports"
 import { useLocale } from "@/components/locale-provider"
+import { bookingStatusStyles, bookingTypeStyles } from "@/lib/ds"
 import { Card, CardContent, CardHeader, CardTitle } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
+import { cn } from "@/lib/utils"
 
 interface BookingsTabProps {
   dateFrom: string
@@ -42,14 +44,32 @@ export function BookingsTab({ dateFrom, dateTo }: BookingsTabProps) {
             <CardContent>
               <div className="flex flex-col gap-2">
                 {Array.isArray(data.byStatus) && data.byStatus.length > 0 ? (
-                  data.byStatus.map((item) => (
-                    <div key={item.status} className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground capitalize">
-                        {item.status.replace(/_/g, " ")}
-                      </span>
-                      <span className="text-sm font-medium tabular-nums">{item.count}</span>
-                    </div>
-                  ))
+                  data.byStatus.map((item) => {
+                    const styleKey = item.status.toLowerCase() as keyof typeof bookingStatusStyles
+                    const style = bookingStatusStyles[styleKey] ?? {
+                      bg: "bg-muted",
+                      text: "text-muted-foreground",
+                      border: "border-border",
+                    }
+                    return (
+                      <div key={item.status} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                              style.bg,
+                              style.text,
+                            )}
+                          >
+                            {t(`reports.bookingStatus.${item.status}`)}
+                          </span>
+                        </div>
+                        <span className="text-sm font-medium tabular-nums text-foreground">
+                          {item.count}
+                        </span>
+                      </div>
+                    )
+                  })
                 ) : (
                   <p className="text-sm text-muted-foreground">—</p>
                 )}
@@ -65,14 +85,30 @@ export function BookingsTab({ dateFrom, dateTo }: BookingsTabProps) {
             <CardContent>
               <div className="flex flex-col gap-2">
                 {Array.isArray(data.byType) && data.byType.length > 0 ? (
-                  data.byType.map((item) => (
-                    <div key={item.type} className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground capitalize">
-                        {item.type.replace(/_/g, " ")}
-                      </span>
-                      <span className="text-sm font-medium tabular-nums">{item.count}</span>
-                    </div>
-                  ))
+                  data.byType.map((item) => {
+                    const styleKey = item.type.toLowerCase() as keyof typeof bookingTypeStyles
+                    const style = bookingTypeStyles[styleKey] ?? {
+                      bg: "bg-muted",
+                      text: "text-muted-foreground",
+                      border: "border-border",
+                    }
+                    return (
+                      <div key={item.type} className="flex items-center justify-between">
+                        <span
+                          className={cn(
+                            "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                            style.bg,
+                            style.text,
+                          )}
+                        >
+                          {t(`reports.bookingType.${item.type}`)}
+                        </span>
+                        <span className="text-sm font-medium tabular-nums text-foreground">
+                          {item.count}
+                        </span>
+                      </div>
+                    )
+                  })
                 ) : (
                   <p className="text-sm text-muted-foreground">—</p>
                 )}
