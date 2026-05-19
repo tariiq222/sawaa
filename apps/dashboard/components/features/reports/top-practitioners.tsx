@@ -30,34 +30,37 @@ export function TopPractitioners({ dateFrom, dateTo }: TopPractitionersProps) {
     ? (data as TopPractitionersReport[])
     : []
 
-  // Sort by totalRevenue desc, then completedBookings desc, take top 5
-  const top5 = [...practitioners]
+  // Sort by totalRevenue desc, then completedBookings desc, take top 3
+  const top3 = [...practitioners]
     .sort((a, b) => {
       if (b.totalRevenue !== a.totalRevenue) return b.totalRevenue - a.totalRevenue
       return b.completedBookings - a.completedBookings
     })
-    .slice(0, 5)
+    .slice(0, 3)
 
   return (
     <div className="flex flex-col gap-4">
       {error && <ErrorBanner message={error.message} />}
 
       {isLoading ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, i) => (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={`tp-skeleton-${i}`} className="h-32 rounded-xl" />
           ))}
         </div>
-      ) : top5.length > 0 ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {top5.map((p, i) => (
+      ) : top3.length > 0 ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {top3.map((p, i) => (
             <Card key={p.employeeId} className="card-lift relative h-full px-4 py-4">
               <div className="flex h-full flex-col gap-2">
                 <div className="flex items-start justify-between">
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <HugeiconsIcon icon={UserGroupIcon} size={18} />
                   </div>
-                  <span className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold tabular-nums text-warning">
+                  <span
+                    className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold tabular-nums text-warning"
+                    aria-label={`${t("reports.summary.rank")}${i + 1}`}
+                  >
                     #{i + 1}
                   </span>
                 </div>

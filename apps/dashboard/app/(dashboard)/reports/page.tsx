@@ -4,17 +4,12 @@ import { useState } from "react"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
-import { EmployeeCombobox } from "@/components/features/reports/employee-combobox"
-
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { ExecutiveSummary } from "@/components/features/reports/executive-summary"
 import { TopPractitioners } from "@/components/features/reports/top-practitioners"
-import { RevenueTab } from "@/components/features/reports/revenue-tab"
-import { BookingsTab } from "@/components/features/reports/bookings-tab"
-import { EmployeesTab } from "@/components/features/reports/employees-tab"
+import { ReportsTabs } from "@/components/features/reports/reports-tabs"
 import { exportReportExcel } from "@/lib/api/reports"
 import { toast } from "sonner"
 import { PermissionGuard } from "@/components/features/permission-guard"
@@ -26,8 +21,8 @@ import { useReportsPeriod } from "@/hooks/use-reports-period"
 
 function ReportsContent() {
   const { t } = useLocale()
+  const [employeeId, setEmployeeId] = useState("")
   const [activeTab, setActiveTab] = useState("revenue")
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState("")
   const [exporting, setExporting] = useState(false)
 
   const {
@@ -38,10 +33,7 @@ function ReportsContent() {
     normalizedFrom,
     normalizedTo,
     apiDateTo,
-    filenameDateTo,
   } = useReportsPeriod()
-
-  const canExportExcel = activeTab === "revenue"
 
   const handlePeriodChange = (newPeriod: ReportsPeriodPreset) => {
     setPeriod(newPeriod)
@@ -68,14 +60,9 @@ function ReportsContent() {
   }
 
   const handleExport = async () => {
-    if (!canExportExcel) return
     setExporting(true)
     try {
-      await exportReportExcel({
-        type: "REVENUE",
-        dateFrom: normalizedFrom,
-        dateTo: apiDateTo,
-      })
+      await exportReportExcel({ type: "REVENUE", dateFrom: normalizedFrom, dateTo: apiDateTo })
     } catch {
       toast.error(t("reports.exportError"))
     } finally {
@@ -91,27 +78,12 @@ function ReportsContent() {
         title={t("reports.title")}
         description={t("reports.description")}
       >
-        {canExportExcel && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            disabled={exporting}
-          >
+        {activeTab === "revenue" && (
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>
             {exporting ? t("reports.exporting") : t("reports.exportCsv")}
           </Button>
         )}
       </PageHeader>
-
-      <ExecutiveSummary
-        dateFrom={normalizedFrom}
-        dateTo={apiDateTo}
-      />
-
-      <TopPractitioners
-        dateFrom={normalizedFrom}
-        dateTo={apiDateTo}
-      />
 
       <ReportsPeriodFilter
         period={period}
@@ -123,37 +95,21 @@ function ReportsContent() {
         onReset={handleReset}
       />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="overflow-x-auto">
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="revenue">{t("reports.tabs.revenue")}</TabsTrigger>
-            <TabsTrigger value="bookings">{t("reports.tabs.bookings")}</TabsTrigger>
-            <TabsTrigger value="employees">{t("reports.tabs.employees")}</TabsTrigger>
-          </TabsList>
-        </div>
+      <ExecutiveSummary dateFrom={normalizedFrom} dateTo={apiDateTo} />
 
-        <TabsContent value="revenue">
-          <RevenueTab dateFrom={normalizedFrom} dateTo={apiDateTo} />
-        </TabsContent>
+      <div className="flex flex-col gap-3">
+        <p className="text-xs font-medium text-muted-foreground">{t("reports.summary.label")}</p>
+        <TopPractitioners dateFrom={normalizedFrom} dateTo={apiDateTo} />
+      </div>
 
-        <TabsContent value="bookings">
-          <BookingsTab dateFrom={normalizedFrom} dateTo={apiDateTo} />
-        </TabsContent>
-
-        <TabsContent value="employees">
-          <div className="flex flex-col gap-4 pt-2">
-            <EmployeeCombobox
-              value={selectedEmployeeId}
-              onChange={setSelectedEmployeeId}
-            />
-            <EmployeesTab
-              dateFrom={normalizedFrom}
-              dateTo={apiDateTo}
-              employeeId={selectedEmployeeId}
-            />
-          </div>
-        </TabsContent>
-      </Tabs>
+      <ReportsTabs
+        dateFrom={normalizedFrom}
+        dateTo={apiDateTo}
+        employeeId={employeeId}
+        onEmployeeIdChange={setEmployeeId}
+        activeTab={activeTab}
+        onActiveTabChange={setActiveTab}
+      />
     </ListPageShell>
   )
 }
