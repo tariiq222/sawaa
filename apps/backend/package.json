@@ -8,7 +8,7 @@
     "build": "nest build",
     "start": "node dist/main.js",
     "lint": "eslint \"src/**/*.ts\"",
-    "test": "jest",
+    "test": "pnpm run prisma:generate && jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:e2e": "NODE_OPTIONS=\"--max-old-space-size=4096\" jest --config test/jest-e2e.json --json --outputFile=test-results-clients.json",
