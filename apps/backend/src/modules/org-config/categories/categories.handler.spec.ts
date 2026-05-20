@@ -26,6 +26,9 @@ const buildPrisma = () => {
       update: jest.fn().mockResolvedValue(mockCategory),
       delete: jest.fn().mockResolvedValue(mockCategory),
     },
+    service: {
+      count: jest.fn().mockResolvedValue(0),
+    },
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(prisma));
@@ -97,13 +100,16 @@ describe('UpdateCategoryHandler', () => {
 });
 
 describe('DeleteCategoryHandler', () => {
-  it('deletes category scoped by org', async () => {
+  it('deletes category when it has no active services', async () => {
     const prisma = buildPrisma();
     const handler = new DeleteCategoryHandler(prisma as never);
     await handler.execute({ categoryId: 'cat-1' });
     expect(prisma.serviceCategory.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'cat-1' } }),
     );
+    expect(prisma.service.count).toHaveBeenCalledWith({
+      where: { categoryId: 'cat-1', archivedAt: null },
+    });
     expect(prisma.serviceCategory.delete).toHaveBeenCalledWith({ where: { id: 'cat-1' } });
   });
 
@@ -112,12 +118,18 @@ describe('DeleteCategoryHandler', () => {
     prisma.serviceCategory.findFirst = jest.fn().mockResolvedValue(null);
     const handler = new DeleteCategoryHandler(prisma as never);
     await expect(handler.execute({ categoryId: 'bad' })).rejects.toThrow(NotFoundException);
+    expect(prisma.service.count).not.toHaveBeenCalled();
+    expect(prisma.serviceCategory.delete).not.toHaveBeenCalled();
   });
 
-  it('throws BadRequestException when category has services', async () => {
+  it('throws BadRequestException when category has active services', async () => {
     const prisma = buildPrisma();
-    prisma.serviceCategory.findFirst = jest.fn().mockResolvedValue({ ...mockCategory, _count: { services: 2 } });
+    prisma.service.count = jest.fn().mockResolvedValue(2);
     const handler = new DeleteCategoryHandler(prisma as never);
     await expect(handler.execute({ categoryId: 'cat-1' })).rejects.toThrow(BadRequestException);
+    expect(prisma.service.count).toHaveBeenCalledWith({
+      where: { categoryId: 'cat-1', archivedAt: null },
+    });
+    expect(prisma.serviceCategory.delete).not.toHaveBeenCalled();
   });
 });
