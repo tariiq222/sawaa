@@ -5,6 +5,7 @@ import { DatabaseModule } from '../../infrastructure/database';
 import { MessagingModule } from '../../infrastructure/messaging.module';
 import { PaymentsInfraModule } from '../../infrastructure/payments/payments.module';
 import { StorageModule } from '../../infrastructure/storage';
+import { OrgExperienceModule } from '../org-experience/org-experience.module';
 import { CreateInvoiceHandler } from './create-invoice/create-invoice.handler';
 import { BookingConfirmedHandler } from './create-invoice/booking-confirmed.handler';
 import { ProcessPaymentHandler } from './process-payment/process-payment.handler';
@@ -36,6 +37,9 @@ import { GetMoyasarConfigHandler } from './moyasar-config/get-moyasar-config.han
 import { UpsertMoyasarConfigHandler } from './moyasar-config/upsert-moyasar-config.handler';
 import { TestMoyasarConfigHandler } from './moyasar-config/test-moyasar-config.handler';
 import { OnBookingCancelledRefundHandler } from './events/on-booking-cancelled.handler';
+import { CreateBundlePurchaseHandler } from './bundle-purchases/create-bundle-purchase.handler';
+import { UseBundleHandler } from './bundle-purchases/use-bundle.handler';
+import { ListClientBundlePurchasesHandler } from './bundle-purchases/list-client-bundle-purchases.handler';
 
 const handlers = [
   CreateInvoiceHandler,
@@ -65,10 +69,13 @@ const handlers = [
   GetMoyasarConfigHandler,
   UpsertMoyasarConfigHandler,
   TestMoyasarConfigHandler,
+  CreateBundlePurchaseHandler,
+  UseBundleHandler,
+  ListClientBundlePurchasesHandler,
 ];
 
 @Module({
-  imports: [DatabaseModule, MessagingModule, PaymentsInfraModule, StorageModule, ],
+  imports: [DatabaseModule, MessagingModule, PaymentsInfraModule, StorageModule, OrgExperienceModule],
   controllers: [DashboardFinanceController, RefundsController],
   providers: [
     ...handlers,

@@ -30,6 +30,11 @@ const buildPrisma = (overrides?: Partial<{ findFirst: jest.Mock; create: jest.Mo
         Promise.resolve(mockBooking(data.scheduledAt, `book-${Math.random()}`)),
       ),
     },
+    service: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Service', categoryId: null, currency: 'SAR' }) },
+    employee: { findFirst: jest.fn().mockResolvedValue({ name: 'Employee' }) },
+    branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
+    serviceCategory: { findFirst: jest.fn() },
+    department: { findFirst: jest.fn() },
     // Simulate $transaction by calling the callback with the prisma itself (unit test context)
     $transaction: jest.fn().mockImplementation((cb: (tx: unknown) => Promise<unknown>) => cb(prisma)),
   };

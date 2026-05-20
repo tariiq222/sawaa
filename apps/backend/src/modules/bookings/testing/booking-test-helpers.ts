@@ -1,6 +1,4 @@
-import { BookingStatus } from '@prisma/client';
-import { RlsTransactionService } from '../../../infrastructure/database';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { BookingStatus, DeliveryType } from '@prisma/client';
 
 const future = new Date(Date.now() + 86400_000);
 
@@ -9,7 +7,7 @@ export const mockBooking = {
   clientId: 'client-1', employeeId: 'emp-1', serviceId: 'svc-1',
   scheduledAt: future, endsAt: new Date(future.getTime() + 3600_000),
   durationMins: 60, price: 200, currency: 'SAR',
-  status: BookingStatus.PENDING, bookingType: 'INDIVIDUAL',
+  status: BookingStatus.PENDING, bookingType: 'INDIVIDUAL', deliveryType: DeliveryType.IN_PERSON,
   bookingNumber: 1,
   createdAt: new Date(), updatedAt: new Date(),
 };

@@ -282,7 +282,7 @@ describe("useServiceBookingTypes", () => {
   beforeEach(() => { vi.clearAllMocks() })
 
   it("fetches booking types when serviceId provided", async () => {
-    const types = [{ id: "bt-1", bookingType: "IN_PERSON" }]
+    const types = [{ id: "bt-1", deliveryType: "IN_PERSON" }]
     fetchServiceBookingTypes.mockResolvedValueOnce(types)
 
     const { result } = renderHook(

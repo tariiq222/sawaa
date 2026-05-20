@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import type { BookingType } from '@prisma/client';
+import type { BookingType, DeliveryType } from '@prisma/client';
 
 export interface ResolvedPrice {
   price: number;
@@ -19,38 +19,58 @@ export class PriceResolverService {
    * Resolves final price + duration for a booking, following priority order:
    *
    * 1. EmployeeServiceOption.priceOverride / durationOverride (per-employee override)
+   *    scoped by employeeServiceId + deliveryType + durationOptionId
    * 2. ServiceDurationOption.price / durationMins (catalog option)
+   *    scoped by deliveryType
    * 3. Service.price / durationMins (service-level fallback)
    *
    * @param serviceId   - the service being booked
    * @param employeeServiceId - EmployeeService join-table id (null for unassigned)
    * @param durationOptionId  - chosen ServiceDurationOption; null = use isDefault
-   * @param bookingType - booking type for option lookup when durationOptionId is null
+   * @param bookingType - appointment shape retained for callers; deliveryType scopes options
+   * @param deliveryType - delivery channel for price scoping
    */
   async resolve(params: {
     serviceId: string;
     employeeServiceId: string | null;
     durationOptionId: string | null;
     bookingType?: BookingType | null;
+    deliveryType?: DeliveryType | null;
   }): Promise<ResolvedPrice> {
-    const { serviceId, employeeServiceId, durationOptionId, bookingType } = params;
+    const { serviceId, employeeServiceId, durationOptionId, deliveryType } = params;
 
     // --- Step 1: resolve the ServiceDurationOption ---
     const durationOption = await this.resolveDurationOption({
       serviceId,
       durationOptionId,
-      bookingType,
+      deliveryType,
     });
 
-    // --- Step 2: check for employee-level override ---
+    // Validate that the explicitly-provided duration option matches the service and delivery type
+    if (durationOptionId && durationOption) {
+      if (durationOption.serviceId !== serviceId) {
+        throw new BadRequestException('Duration option does not belong to the selected service');
+      }
+      if (deliveryType && durationOption.deliveryType && durationOption.deliveryType !== deliveryType) {
+        throw new BadRequestException(
+          `Duration option delivery type (${durationOption.deliveryType}) does not match requested delivery type (${deliveryType})`,
+        );
+      }
+    }
+
+    // --- Step 2: check for employee-level override scoped by deliveryType ---
     let employeeOverride: { priceOverride: unknown; durationOverride: unknown } | null = null;
     if (employeeServiceId && durationOption) {
+      const where: Record<string, unknown> = {
+        employeeServiceId,
+        durationOptionId: durationOption.id,
+        isActive: true,
+      };
+      if (deliveryType) {
+        where.deliveryType = deliveryType;
+      }
       employeeOverride = await this.prisma.employeeServiceOption.findFirst({
-        where: {
-          employeeServiceId,
-          durationOptionId: durationOption.id,
-          isActive: true,
-        },
+        where,
         select: { priceOverride: true, durationOverride: true },
       });
     }
@@ -94,37 +114,38 @@ export class PriceResolverService {
     serviceId: string;
     durationOptionId: string | null;
     bookingType?: BookingType | null;
+    deliveryType?: DeliveryType | null;
   }) {
-    const { serviceId, durationOptionId, bookingType } = params;
+    const { serviceId, durationOptionId, deliveryType } = params;
 
     if (durationOptionId) {
       return this.prisma.serviceDurationOption.findFirst({
         where: { id: durationOptionId, serviceId, isActive: true },
-        select: { id: true, price: true, durationMins: true, currency: true },
+        select: { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true },
       });
     }
 
-    // Try: default option scoped to this bookingType
-    if (bookingType) {
+    // Try: default option scoped to this deliveryType.
+    if (deliveryType) {
       const scoped = await this.prisma.serviceDurationOption.findFirst({
-        where: { serviceId, bookingType, isDefault: true, isActive: true },
-        select: { id: true, price: true, durationMins: true, currency: true },
+        where: { serviceId, deliveryType, isDefault: true, isActive: true },
+        select: { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true },
       });
       if (scoped) return scoped;
     }
 
-    // Try: default option with no bookingType restriction (applies to all)
+    // Try: any default option for the service.
     const global = await this.prisma.serviceDurationOption.findFirst({
-      where: { serviceId, bookingType: null, isDefault: true, isActive: true },
-      select: { id: true, price: true, durationMins: true, currency: true },
+      where: { serviceId, isDefault: true, isActive: true },
+      select: { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true },
     });
     if (global) return global;
 
     // Last resort: first active option regardless of defaults
     return this.prisma.serviceDurationOption.findFirst({
       where: { serviceId, isActive: true },
-      orderBy: [{ bookingType: 'asc' }, { sortOrder: 'asc' }],
-      select: { id: true, price: true, durationMins: true, currency: true },
+      orderBy: [{ deliveryType: 'asc' }, { sortOrder: 'asc' }],
+      select: { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true },
     });
   }
 }

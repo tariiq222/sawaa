@@ -27,6 +27,7 @@ import {
   clientBookingsService,
   type ClientBookingRow,
 } from '@/services/client';
+import { resolveDeliveryType } from '@/types/booking-enums';
 
 const GRADIENTS: Array<readonly [string, string]> = [
   ['#f7cbb7', '#e88f6c'],
@@ -172,7 +173,7 @@ export default function RecordsScreen() {
               ? b.service?.nameAr ?? b.service?.nameEn
               : b.service?.nameEn ?? b.service?.nameAr) ?? '';
             const initial = therapistName.charAt(0);
-            const isVideo = b.bookingType === 'online';
+            const isVideo = resolveDeliveryType(b.deliveryType) === 'online';
 
             return (
               <Animated.View

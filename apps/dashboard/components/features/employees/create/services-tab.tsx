@@ -70,8 +70,8 @@ export function ServicesTab({
       return
     }
     setTypeConfigs([
-      { bookingType: "in_person", price: null, duration: null, useCustomOptions: false, isActive: true, durationOptions: [] },
-      { bookingType: "online", price: null, duration: null, useCustomOptions: false, isActive: true, durationOptions: [] },
+      { deliveryType: "in_person", price: null, duration: null, useCustomOptions: false, isActive: true, durationOptions: [] },
+      { deliveryType: "online", price: null, duration: null, useCustomOptions: false, isActive: true, durationOptions: [] },
     ])
   }, [selectedServiceId])
 
@@ -87,7 +87,7 @@ export function ServicesTab({
         serviceName: isAr ? svc.nameAr : (svc.nameEn ?? svc.nameAr),
         bufferMinutes: data.bufferMinutes,
         isActive: data.isActive,
-        availableTypes: typeConfigs.map((tc) => tc.bookingType),
+        availableTypes: typeConfigs.map((tc) => tc.deliveryType),
         types: typeConfigs,
       },
     ])

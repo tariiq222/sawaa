@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, DeliveryType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingConfirmedEvent } from '../events/booking-confirmed.event';
@@ -55,7 +55,7 @@ export class ConfirmBookingHandler {
     });
     await this.eventBus.publish(event.eventName, event.toEnvelope());
 
-    if ((booking.bookingType as string) === 'ONLINE') {
+    if (booking.deliveryType === DeliveryType.ONLINE) {
       try {
         await this.createZoomMeeting.execute({
           bookingId: cmd.bookingId,

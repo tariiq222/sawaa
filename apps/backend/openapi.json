@@ -250,14 +250,14 @@
       },
       "BookingConfigInputDto": {
         "properties": {
-          "bookingType": {
-            "description": "Booking delivery mode for this service",
-            "enum": [
-              "IN_PERSON",
-              "ONLINE"
+          "deliveryType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryType"
+              }
             ],
-            "example": "IN_PERSON",
-            "type": "string"
+            "description": "Delivery channel for this service",
+            "example": "IN_PERSON"
           },
           "durationMins": {
             "description": "Duration in minutes for this booking type",
@@ -276,7 +276,7 @@
           }
         },
         "required": [
-          "bookingType",
+          "deliveryType",
           "price",
           "durationMins"
         ],
@@ -301,8 +301,7 @@
         "enum": [
           "INDIVIDUAL",
           "WALK_IN",
-          "GROUP",
-          "ONLINE"
+          "GROUP"
         ],
         "type": "string"
       },
@@ -685,6 +684,15 @@
             "example": "SAR",
             "type": "string"
           },
+          "deliveryType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryType"
+              }
+            ],
+            "description": "Delivery channel (IN_PERSON or ONLINE)",
+            "example": "IN_PERSON"
+          },
           "durationOptionId": {
             "description": "Specific duration option to resolve price and duration",
             "example": "00000000-0000-0000-0000-000000000000",
@@ -819,6 +827,15 @@
             "description": "Client being booked",
             "example": "00000000-0000-0000-0000-000000000000",
             "type": "string"
+          },
+          "deliveryType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryType"
+              }
+            ],
+            "description": "Delivery channel for all bundle bookings (IN_PERSON or ONLINE)",
+            "example": "IN_PERSON"
           },
           "employeeId": {
             "description": "Employee performing all bundle services",
@@ -1323,6 +1340,15 @@
             "example": "00000000-0000-0000-0000-000000000000",
             "type": "string"
           },
+          "deliveryType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryType"
+              }
+            ],
+            "description": "Delivery channel (IN_PERSON or ONLINE)",
+            "example": "IN_PERSON"
+          },
           "durationOptionId": {
             "description": "Specific duration option to resolve price and duration",
             "example": "00000000-0000-0000-0000-000000000000",
@@ -1464,6 +1490,15 @@
       },
       "CreateGuestBookingDto": {
         "properties": {
+          "bookingType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingType"
+              }
+            ],
+            "description": "Booking type (legacy — prefer deliveryType)",
+            "example": "INDIVIDUAL"
+          },
           "branchId": {
             "description": "Branch ID",
             "example": "00000000-0000-0000-0000-000000000003",
@@ -1476,6 +1511,15 @@
               }
             ],
             "description": "Client information"
+          },
+          "deliveryType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryType"
+              }
+            ],
+            "description": "Delivery channel (IN_PERSON or ONLINE)",
+            "example": "IN_PERSON"
           },
           "employeeId": {
             "description": "Employee ID",
@@ -1564,14 +1608,19 @@
       "CreateInvoiceDto": {
         "properties": {
           "bookingId": {
-            "description": "Booking this invoice is for",
+            "description": "Booking this invoice is for (XOR with bundlePurchaseId)",
             "example": "00000000-0000-0000-0000-000000000000",
-            "type": "string"
+            "type": "object"
           },
           "branchId": {
             "description": "Branch where the service was delivered",
             "example": "00000000-0000-0000-0000-000000000000",
             "type": "string"
+          },
+          "bundlePurchaseId": {
+            "description": "Bundle purchase this invoice is for (XOR with bookingId)",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "object"
           },
           "clientId": {
             "description": "Client being invoiced",
@@ -1610,7 +1659,6 @@
           }
         },
         "required": [
-          "bookingId",
           "branchId",
           "clientId",
           "employeeId",
@@ -1690,6 +1738,15 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "deliveryType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryType"
+              }
+            ],
+            "description": "Delivery channel (IN_PERSON or ONLINE)",
+            "example": "IN_PERSON"
           },
           "durationMins": {
             "description": "Duration of each session in minutes",
@@ -1989,27 +2046,33 @@
         ],
         "type": "object"
       },
+      "DeliveryType": {
+        "description": "Delivery channel for this service",
+        "enum": [
+          "IN_PERSON",
+          "ONLINE"
+        ],
+        "type": "string"
+      },
       "DenyRefundDto": {
         "properties": {},
         "type": "object"
       },
       "DurationOptionInputDto": {
         "properties": {
-          "bookingType": {
-            "description": "Booking type this option applies to",
-            "enum": [
-              "INDIVIDUAL",
-              "WALK_IN",
-              "GROUP",
-              "ONLINE"
-            ],
-            "example": "INDIVIDUAL",
-            "nullable": true,
-            "type": "string"
-          },
           "currency": {
             "description": "Currency code",
             "example": "SAR",
+            "type": "string"
+          },
+          "deliveryType": {
+            "description": "Delivery channel this option applies to",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "example": "IN_PERSON",
+            "nullable": true,
             "type": "string"
           },
           "durationMins": {
@@ -2330,6 +2393,16 @@
       },
       "EmployeeServiceOptionInputDto": {
         "properties": {
+          "deliveryType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryType"
+              }
+            ],
+            "description": "Delivery channel for this override",
+            "example": "IN_PERSON",
+            "nullable": true
+          },
           "durationOptionId": {
             "description": "Duration option UUID to configure for this employee",
             "example": "550e8400-e29b-41d4-a716-446655440000",
@@ -7301,6 +7374,15 @@
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/BookingType"
+            }
+          },
+          {
+            "description": "Delivery channel context for availability check",
+            "in": "query",
+            "name": "deliveryType",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DeliveryType"
             }
           }
         ],
@@ -26921,8 +27003,7 @@
               "enum": [
                 "INDIVIDUAL",
                 "WALK_IN",
-                "GROUP",
-                "ONLINE"
+                "GROUP"
               ],
               "example": "INDIVIDUAL",
               "type": "string"

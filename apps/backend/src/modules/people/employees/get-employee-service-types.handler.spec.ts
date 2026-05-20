@@ -38,11 +38,11 @@ describe('GetEmployeeServiceTypesHandler', () => {
   it('returns mapped configs with duration options', async () => {
     prisma.employeeService.findFirst.mockResolvedValue({ id: 'link-1' });
     prisma.serviceBookingConfig.findMany.mockResolvedValue([
-      { id: 'c1', serviceId: 's1', bookingType: 'APPOINTMENT', price: 100, durationMins: 30, isActive: true },
+      { id: 'c1', serviceId: 's1', deliveryType: 'IN_PERSON', price: 100, durationMins: 30, isActive: true },
     ]);
     prisma.serviceDurationOption.findMany.mockResolvedValue([
-      { id: 'd1', serviceId: 's1', bookingType: null, durationMins: 30, price: 100, label: '30 min', labelAr: '٣٠ دقيقة', isDefault: true, sortOrder: 1, isActive: true },
-      { id: 'd2', serviceId: 's1', bookingType: 'APPOINTMENT', durationMins: 60, price: 150, label: '60 min', labelAr: '٦٠ دقيقة', isDefault: false, sortOrder: 2, isActive: true },
+      { id: 'd1', serviceId: 's1', deliveryType: 'IN_PERSON', durationMins: 30, price: 100, label: '30 min', labelAr: '٣٠ دقيقة', isDefault: true, sortOrder: 1, isActive: true },
+      { id: 'd2', serviceId: 's1', deliveryType: 'IN_PERSON', durationMins: 60, price: 150, label: '60 min', labelAr: '٦٠ دقيقة', isDefault: false, sortOrder: 2, isActive: true },
     ]);
     prisma.employeeServiceOption.findMany.mockResolvedValue([
       { durationOptionId: 'd1', durationOverride: 35, priceOverride: 110 },
@@ -50,7 +50,7 @@ describe('GetEmployeeServiceTypesHandler', () => {
 
     const result = await handler.execute({ employeeId: 'e1', serviceId: 's1' });
     expect(result).toHaveLength(1);
-    expect(result[0].bookingType).toBe('appointment');
+    expect(result[0].deliveryType).toBe('IN_PERSON');
     expect(result[0].durationOptions).toHaveLength(2);
     expect(result[0].durationOptions[0].durationMinutes).toBe(35); // overridden
     expect(result[0].durationOptions[0].price).toBe(110);
@@ -58,20 +58,20 @@ describe('GetEmployeeServiceTypesHandler', () => {
     expect(result[0].durationOptions[1].price).toBe(150);
   });
 
-  it('filters duration options by booking type', async () => {
+  it('filters duration options by delivery type', async () => {
     prisma.employeeService.findFirst.mockResolvedValue({ id: 'link-1' });
     prisma.serviceBookingConfig.findMany.mockResolvedValue([
-      { id: 'c1', serviceId: 's1', bookingType: 'APPOINTMENT', price: 100, durationMins: 30, isActive: true },
-      { id: 'c2', serviceId: 's1', bookingType: 'CONSULTATION', price: 50, durationMins: 15, isActive: true },
+      { id: 'c1', serviceId: 's1', deliveryType: 'IN_PERSON', price: 100, durationMins: 30, isActive: true },
+      { id: 'c2', serviceId: 's1', deliveryType: 'ONLINE', price: 50, durationMins: 15, isActive: true },
     ]);
     prisma.serviceDurationOption.findMany.mockResolvedValue([
-      { id: 'd1', serviceId: 's1', bookingType: 'APPOINTMENT', durationMins: 30, price: 100, label: '30 min', labelAr: null, isDefault: true, sortOrder: 1, isActive: true },
+      { id: 'd1', serviceId: 's1', deliveryType: 'IN_PERSON', durationMins: 30, price: 100, label: '30 min', labelAr: null, isDefault: true, sortOrder: 1, isActive: true },
     ]);
     prisma.employeeServiceOption.findMany.mockResolvedValue([]);
 
     const result = await handler.execute({ employeeId: 'e1', serviceId: 's1' });
     expect(result).toHaveLength(2);
     expect(result[0].durationOptions).toHaveLength(1);
-    expect(result[1].durationOptions).toHaveLength(0); // CONSULTATION has no matching duration option
+    expect(result[1].durationOptions).toHaveLength(0); // ONLINE has no matching duration option
   });
 });

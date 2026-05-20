@@ -26,7 +26,7 @@ import { BookingTypeRow } from "@/components/features/services/booking-type-row"
 
 function makeDraft(option: DraftDurationOption): DraftBookingType {
   return {
-    bookingType: "IN_PERSON", // DB-10: enum value is now uppercase
+    deliveryType: "IN_PERSON", // DB-10: enum value is now uppercase
     enabled: true,
     price: 100,
     durationMins: 30,

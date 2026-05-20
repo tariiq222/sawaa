@@ -21,6 +21,7 @@ import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { useBooking, useCancelBooking } from '@/hooks/queries';
 import { JoinVideoCallButton } from '@/components/features/JoinVideoCallButton';
+import { hasZoomMeetingAccess, resolveDeliveryType } from '@/types/booking-enums';
 
 export default function AppointmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -41,7 +42,11 @@ export default function AppointmentDetailScreen() {
         ? booking.employee?.nameAr ?? booking.employee?.nameEn
         : booking.employee?.nameEn ?? booking.employee?.nameAr) ?? '—'
     : '—';
-  const isOnline = booking?.bookingType === 'online';
+  const deliveryType = booking
+    ? resolveDeliveryType(booking.deliveryType)
+    : 'in_person';
+  const isOnline = deliveryType === 'online';
+  const canShowZoom = booking ? hasZoomMeetingAccess(booking) : false;
   const scheduledDate = booking
     ? new Date(booking.scheduledAt).toLocaleDateString(dir.isRTL ? 'ar-SA' : 'en-US', {
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
@@ -61,8 +66,8 @@ export default function AppointmentDetailScreen() {
   const rows = [
     { icon: <Calendar size={18} color={sawaaColors.teal[600]} strokeWidth={1.75} />, color: sawaaColors.teal[600], labelAr: 'التاريخ', labelEn: 'Date', value: scheduledDate },
     { icon: <Clock size={18} color={sawaaColors.accent.amber} strokeWidth={1.75} />, color: sawaaColors.accent.amber, labelAr: 'الوقت', labelEn: 'Time', value: scheduledTime },
-    { icon: <Video size={18} color={sawaaColors.accent.violet} strokeWidth={1.75} />, color: sawaaColors.accent.violet, labelAr: 'نوع الجلسة', labelEn: 'Session type', value: isOnline ? (dir.isRTL ? 'جلسة فيديو' : 'Video call') : (dir.isRTL ? 'حضوري' : 'In person') },
-    { icon: <MapPin size={18} color={sawaaColors.accent.rose} strokeWidth={1.75} />, color: sawaaColors.accent.rose, labelAr: 'الموقع', labelEn: 'Location', value: isOnline ? (dir.isRTL ? 'رابط سيُرسل قبل الموعد' : 'Link sent before session') : branchLocation },
+    { icon: <Video size={18} color={sawaaColors.accent.violet} strokeWidth={1.75} />, color: sawaaColors.accent.violet, labelAr: 'نوع الجلسة', labelEn: 'Session type', value: isOnline ? (dir.isRTL ? 'جلسة عن بُعد' : 'Remote session') : (dir.isRTL ? 'حضوري' : 'In person') },
+    { icon: <MapPin size={18} color={sawaaColors.accent.rose} strokeWidth={1.75} />, color: sawaaColors.accent.rose, labelAr: 'الموقع', labelEn: 'Location', value: isOnline ? (dir.isRTL ? 'تُحدد طريقة الاتصال قبل الموعد' : 'Connection method confirmed before session') : branchLocation },
   ];
 
   const askCancel = () => {
@@ -191,35 +196,16 @@ export default function AppointmentDetailScreen() {
             </Text>
           </Glass>
         </Pressable>
-        {isOnline && booking ? (
+        {canShowZoom && booking ? (
           <JoinVideoCallButton
-            url={booking.zoomJoinUrl}
+            url={booking.zoomJoinUrl ?? booking.zoomLink ?? null}
             scheduledAt={booking.scheduledAt}
             durationMins={booking.durationMins}
             status={booking.zoomMeetingStatus}
             isRTL={dir.isRTL}
             variant="join"
           />
-        ) : (
-          <Pressable
-            onPress={() =>
-              router.push({ pathname: '/(client)/video-call', params: id ? { bookingId: id } : {} })
-            }
-            style={styles.primaryBtn}
-          >
-            <LinearGradient
-              colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.primaryGradient}
-            >
-              <Video size={18} color="#fff" strokeWidth={1.75} />
-              <Text style={[styles.primaryText, { fontFamily: f700 }]}>
-                {dir.isRTL ? 'ابدأ الجلسة' : 'Start session'}
-              </Text>
-            </LinearGradient>
-          </Pressable>
-        )}
+        ) : null}
       </Animated.View>
 
       {/* Cancel link */}

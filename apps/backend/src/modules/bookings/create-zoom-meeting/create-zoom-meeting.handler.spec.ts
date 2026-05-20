@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { BookingStatus, ZoomMeetingStatus, Prisma } from '@prisma/client';
+import { BookingStatus, ZoomMeetingStatus } from '@prisma/client';
 import { CreateZoomMeetingHandler } from './create-zoom-meeting.handler';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { ZoomApiClient } from '../../../infrastructure/zoom/zoom-api.client';
@@ -70,6 +70,7 @@ describe('CreateZoomMeetingHandler', () => {
   const bookingBase = {
     id: 'booking-1',
     bookingType: 'ONLINE' as const,
+    deliveryType: 'ONLINE' as const,
     scheduledAt: new Date('2026-06-01T10:00:00Z'),
     durationMins: 60,
     zoomMeetingId: null,
@@ -107,8 +108,8 @@ describe('CreateZoomMeetingHandler', () => {
     await expect(handler.execute({ bookingId: 'missing' })).rejects.toThrow(NotFoundException);
   });
 
-  it('should throw BadRequestException when booking type is not ONLINE', async () => {
-    prisma.booking.findFirst.mockResolvedValue({ ...bookingBase, bookingType: 'IN_PERSON' });
+  it('should throw BadRequestException when delivery type is not ONLINE', async () => {
+    prisma.booking.findFirst.mockResolvedValue({ ...bookingBase, deliveryType: 'IN_PERSON' });
     await expect(handler.execute({ bookingId: bookingBase.id })).rejects.toThrow(BadRequestException);
   });
 
@@ -160,7 +161,7 @@ describe('CreateZoomMeetingHandler', () => {
     const updated = { ...bookingBase, zoomMeetingStatus: ZoomMeetingStatus.FAILED };
     txMock.booking.update.mockResolvedValue(updated);
 
-    const result = await handler.execute({ bookingId: bookingBase.id });
+    await handler.execute({ bookingId: bookingBase.id });
     expect(txMock.booking.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ zoomMeetingStatus: ZoomMeetingStatus.FAILED }),
     }));
@@ -174,7 +175,7 @@ describe('CreateZoomMeetingHandler', () => {
     const updated = { ...bookingBase, zoomMeetingStatus: ZoomMeetingStatus.FAILED };
     txMock.booking.update.mockResolvedValue(updated);
 
-    const result = await handler.execute({ bookingId: bookingBase.id });
+    await handler.execute({ bookingId: bookingBase.id });
     expect(txMock.booking.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         zoomMeetingStatus: ZoomMeetingStatus.FAILED,

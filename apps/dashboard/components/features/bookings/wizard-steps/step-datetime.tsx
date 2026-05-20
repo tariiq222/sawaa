@@ -22,7 +22,7 @@ function generateDays(count: number): Date[] {
 interface StepDatetimeProps {
   employeeId: string
   serviceId: string
-  bookingType: string
+  deliveryType: string
   durationOptionId: string | null
   selectedDate: string | null
   selectedTime: string | null
@@ -34,7 +34,7 @@ interface StepDatetimeProps {
 export function StepDatetime({
   employeeId,
   serviceId,
-  bookingType,
+  deliveryType,
   durationOptionId,
   selectedDate,
   selectedTime,
@@ -49,7 +49,7 @@ export function StepDatetime({
   const { slots = [], slotsLoading } = useCreateBookingSlots({
     employeeId,
     serviceId,
-    bookingType,
+    deliveryType,
     date: selectedDate ?? '',
     durationOptionId: durationOptionId ?? '',
   })

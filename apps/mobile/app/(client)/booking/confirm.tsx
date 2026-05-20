@@ -16,6 +16,7 @@ import {
   type PublicService,
 } from '@/services/client/catalog';
 import { formatHalalas } from '@/lib/money';
+import type { DeliveryType } from '@/types/booking-enums';
 
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -36,11 +37,11 @@ function formatDate(d: Date, isRTL: boolean): string {
 }
 
 export default function BookingConfirmScreen() {
-  const { serviceId, employeeId, branchId, type, scheduledAt, durationOptionId } = useLocalSearchParams<{
+  const { serviceId, employeeId, branchId, deliveryType, scheduledAt, durationOptionId } = useLocalSearchParams<{
     serviceId?: string;
     employeeId?: string;
     branchId?: string;
-    type?: string;
+    deliveryType?: DeliveryType;
     scheduledAt?: string;
     durationOptionId?: string;
   }>();
@@ -87,7 +88,8 @@ export default function BookingConfirmScreen() {
     [scheduledAt],
   );
 
-  const isOnline = type === 'online';
+  const selectedDeliveryType = deliveryType ?? 'in_person';
+  const isOnline = selectedDeliveryType === 'online';
   const kindAr = isOnline ? 'استشارة عن بُعد' : 'موعد عيادة';
   const kindEn = isOnline ? 'Remote consultation' : 'In-clinic visit';
 
@@ -134,7 +136,7 @@ export default function BookingConfirmScreen() {
         serviceId,
         employeeId,
         branchId,
-        type,
+        deliveryType: selectedDeliveryType,
         scheduledAt,
         durationOptionId,
         amount: String(total),

@@ -8,7 +8,7 @@ import type { EmployeeDurationOption, EmployeeService } from "@/lib/types/employ
 interface UseBookingSlotsOptions {
   employeeId: string
   serviceId: string
-  bookingType: string
+  deliveryType?: string
   date: string
   durationOptionId: string
 }
@@ -16,7 +16,7 @@ interface UseBookingSlotsOptions {
 export function useCreateBookingSlots({
   employeeId,
   serviceId,
-  bookingType,
+  deliveryType,
   date,
   durationOptionId,
 }: UseBookingSlotsOptions) {
@@ -36,11 +36,13 @@ export function useCreateBookingSlots({
   })
 
   const durationOptions = React.useMemo((): EmployeeDurationOption[] => {
-    if (!serviceTypes.length || !bookingType) return []
-    const pst = serviceTypes.find((st) => st.bookingType === bookingType)
+    if (!serviceTypes.length || !deliveryType) return []
+    const pst = serviceTypes.find(
+      (st) => st.deliveryType === deliveryType,
+    )
     if (!pst || !pst.isActive) return []
     return pst.durationOptions ?? []
-  }, [serviceTypes, bookingType])
+  }, [serviceTypes, deliveryType])
 
   const hasDurationOptions = durationOptions.length > 0
 

@@ -11,6 +11,7 @@ import { BundlePriceService } from '../../org-experience/bundles/bundle-price.se
 import { BookingCreatedEvent } from '../events/booking-created.event';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { CreateBundleBookingDto } from './create-bundle-booking.dto';
+import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 
 /** FNV-1a 32-bit hash → signed int32 (Postgres int4 range). */
 function hashToInt32(s: string): number {
@@ -39,8 +40,9 @@ function roundHalalas(n: number): number {
   return Math.round(n);
 }
 
-export type CreateBundleBookingCommand = Omit<CreateBundleBookingDto, 'scheduledAt'> & {
+export type CreateBundleBookingCommand = Omit<CreateBundleBookingDto, 'scheduledAt' | 'deliveryType'> & {
   scheduledAt: Date;
+  deliveryType?: string;
 };
 
 @Injectable()
@@ -81,7 +83,7 @@ export class CreateBundleBookingHandler {
     // 3. Verify branch, client, employee exist
     const branch = await this.prisma.branch.findFirst({
       where: { id: dto.branchId },
-      select: { id: true },
+      select: { id: true, nameAr: true },
     });
     if (!branch) throw new NotFoundException('Branch not found');
 
@@ -93,7 +95,7 @@ export class CreateBundleBookingHandler {
 
     const employee = await this.prisma.employee.findFirst({
       where: { id: dto.employeeId },
-      select: { id: true },
+      select: { id: true, name: true },
     });
     if (!employee) throw new NotFoundException('Employee not found');
 
@@ -106,6 +108,32 @@ export class CreateBundleBookingHandler {
     if (empServices.length !== serviceIds.length) {
       throw new BadRequestException('Employee does not provide all bundle services');
     }
+
+    // Resolve snapshot data from already-loaded bundle items
+    const firstService = bundle.items[0]?.service;
+    let categoryName: string | null = null;
+    let departmentName: string | null = null;
+    if (firstService?.categoryId) {
+      const cat = await this.prisma.serviceCategory.findFirst({
+        where: { id: firstService.categoryId },
+        select: { nameAr: true, departmentId: true },
+      });
+      if (cat) {
+        categoryName = cat.nameAr;
+        if (cat.departmentId) {
+          const dept = await this.prisma.department.findFirst({
+            where: { id: cat.departmentId },
+            select: { nameAr: true },
+          });
+          if (dept) departmentName = dept.nameAr;
+        }
+      }
+    }
+
+    const { deliveryType } = normalizeBookingTypes({
+      bookingType: 'INDIVIDUAL',
+      deliveryType: dto.deliveryType,
+    });
 
     // 5. Calculate consecutive time slots
     interface SlotInfo {
@@ -126,7 +154,7 @@ export class CreateBundleBookingHandler {
 
     // 6. Compute bundle price
     const servicePrices = bundle.items.map((i) => Number(i.service.price));
-    const { subtotal, discountAmount, finalPrice } = this.bundlePriceService.computeBundlePrice({
+    const { subtotal, finalPrice } = this.bundlePriceService.computeBundlePrice({
       servicePrices,
       discountType: bundle.discountType,
       discountValue: Number(bundle.discountValue),
@@ -200,18 +228,67 @@ export class CreateBundleBookingHandler {
               currency: slot.service.currency,
               discountedPrice: shares[i],
               bookingType: 'INDIVIDUAL',
+              deliveryType,
               notes: dto.notes,
               payAtClinic: dto.payAtClinic ?? false,
               status: 'PENDING',
               bundleId: dto.bundleId,
               bundleGroupId,
               bookingNumber: nextBase + i + 1,
+              // Snapshots
+              priceSnapshot: new Prisma.Decimal(Number(slot.service.price).toString()),
+              durationMinutesSnapshot: slot.durationMins,
+              branchNameSnapshot: branch.nameAr,
+              employeeNameSnapshot: employee.name,
+              serviceNameSnapshot: slot.service.nameAr,
+              categoryNameSnapshot: categoryName,
+              departmentNameSnapshot: departmentName,
             },
           });
           createdBookings.push(booking);
         }
 
-        // Create unified invoice linked to first booking (skip if payAtClinic)
+        // Create BundlePurchase for the bundle booking
+        const bundlePurchase = await tx.bundlePurchase.create({
+          data: {
+            bundleId: dto.bundleId,
+            clientId: dto.clientId,
+            branchId: dto.branchId,
+            amountPaid: finalPrice,
+            paidAt: new Date(),
+            status: 'ACTIVE',
+            quantityTotal: bundle.items.length,
+            quantityUsed: 0,
+          },
+        });
+
+        // Validate enough sessions remain before creating usages
+        if (bundlePurchase.quantityTotal < slots.length) {
+          throw new BadRequestException('Bundle has no remaining sessions');
+        }
+
+        // Create BundleUsage for each booking
+        for (let i = 0; i < createdBookings.length; i++) {
+          const booking = createdBookings[i];
+          const slot = slots[i];
+          await tx.bundleUsage.create({
+            data: {
+              purchaseId: bundlePurchase.id,
+              bookingId: booking.id,
+              serviceId: slot.service.id,
+              deliveryType,
+              quantityUsed: 1,
+            },
+          });
+        }
+
+        // Update quantityUsed on BundlePurchase
+        await tx.bundlePurchase.update({
+          where: { id: bundlePurchase.id },
+          data: { quantityUsed: slots.length },
+        });
+
+        // Create unified invoice linked to BundlePurchase (skip if payAtClinic)
         let invoice: { id: string } | null = null;
         if (!(dto.payAtClinic ?? false)) {
           const orgSettings = await tx.organizationSettings.findFirst({
@@ -235,7 +312,8 @@ export class CreateBundleBookingHandler {
               branchId: dto.branchId,
               clientId: dto.clientId,
               employeeId: dto.employeeId,
-              bookingId: createdBookings[0].id,
+              bundlePurchaseId: bundlePurchase.id,
+              bookingId: null,
               subtotal,
               discountAmt: discountAmt.toNumber(),
               vatRate: vatRate.toNumber(),

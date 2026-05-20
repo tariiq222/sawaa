@@ -13,7 +13,7 @@ import {
   ApiTags, ApiBearerAuth, ApiOperation,
   ApiCreatedResponse, ApiOkResponse, ApiParam, ApiResponse,
 } from '@nestjs/swagger';
-import { BookingStatus, CancellationReason } from '@prisma/client';
+import { BookingStatus, CancellationReason, DeliveryType } from '@prisma/client';
 import { IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -183,11 +183,11 @@ export class MobileClientBookingsController {
   ) {
     const booking = await this.prisma.booking.findFirst({
       where: { id },
-      select: { id: true, clientId: true, bookingType: true, zoomJoinUrl: true, scheduledAt: true },
+      select: { id: true, clientId: true, deliveryType: true, zoomJoinUrl: true, scheduledAt: true },
     });
     if (!booking) throw new NotFoundException('Booking not found');
     if (booking.clientId !== user.id) throw new ForbiddenException('Not your booking');
-    if (booking.bookingType !== 'ONLINE') {
+    if (booking.deliveryType !== DeliveryType.ONLINE && !booking.zoomJoinUrl) {
       throw new ForbiddenException('Join is only available for online bookings');
     }
     if (booking.zoomJoinUrl) {

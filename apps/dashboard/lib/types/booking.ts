@@ -12,11 +12,9 @@
 
 /* ─── Enums ─── */
 
-export type BookingType =
-  | "in_person"
-  | "online"
-  | "walk_in"
-  | "group"
+export type DeliveryType = "in_person" | "online"
+
+export type BookingType = "individual" | "group" | "walk_in"
 
 export type BookingStatus =
   | "pending"
@@ -83,6 +81,7 @@ export interface Booking {
   serviceId: string
   employeeServiceId: string
   type: BookingType
+  deliveryType: DeliveryType | null
   date: string
   startTime: string
   endTime: string
@@ -110,6 +109,14 @@ export interface Booking {
   payment: BookingPayment | null
   intakeFormId: string | null
   intakeFormAlreadySubmitted: boolean
+  // ─── Snapshot fields (denormalized at booking creation) ───
+  priceSnapshot: number | null
+  durationMinutesSnapshot: number | null
+  branchNameSnapshot: string | null
+  employeeNameSnapshot: string | null
+  serviceNameSnapshot: string | null
+  categoryNameSnapshot: string | null
+  departmentNameSnapshot: string | null
 }
 
 /* ─── Query / Request DTOs ─── */
@@ -132,6 +139,7 @@ export interface CreateBookingPayload {
   employeeId: string
   serviceId: string
   type: BookingType
+  deliveryType: DeliveryType
   durationOptionId?: string
   date: string
   startTime: string

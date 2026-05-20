@@ -57,7 +57,7 @@ describe('SetDurationOptionsHandler', () => {
       options: [{ label: 'New', labelAr: 'جديد', durationMins: 60, price: 200, currency: 'USD', isDefault: true, sortOrder: 1 }],
     });
     expect(txMock.serviceDurationOption.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ currency: 'USD', isDefault: true, sortOrder: 1, bookingType: null }),
+      data: expect.objectContaining({ currency: 'USD', isDefault: true, sortOrder: 1, deliveryType: 'IN_PERSON' }),
     }));
   });
 

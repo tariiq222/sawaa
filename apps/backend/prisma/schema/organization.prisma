@@ -136,25 +136,15 @@ model Service {
   @@index([categoryId])
 }
 
-// ─── Service Booking Mode ────────────────────────────────────────────────────
-
-// DB-10: dedicated enum for ServiceBookingConfig.bookingType.
-// Replaces the old plain String ('in_person' | 'online') with typed enum values.
-enum ServiceBookingMode {
-  IN_PERSON
-  ONLINE
-}
-
 // ─── Service Booking Config ──────────────────────────────────────────────────
 
-// Per-service booking type configuration (IN_PERSON / ONLINE).
-// Each (serviceId, bookingType) pair is unique.
+// Per-service delivery channel configuration (IN_PERSON / ONLINE).
+// Each (serviceId, deliveryType) pair is unique.
 model ServiceBookingConfig {
   id           String             @id @default(uuid())
   serviceId    String
   service      Service            @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  // DB-10: was String ('in_person' | 'online') — now typed enum
-  bookingType  ServiceBookingMode
+  deliveryType DeliveryType
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
   price        Decimal            @default(0) @db.Decimal(12, 2)
   durationMins Int                @default(30)
@@ -162,21 +152,20 @@ model ServiceBookingConfig {
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
-  @@unique([serviceId, bookingType])
+  @@unique([serviceId, deliveryType])
   @@index([serviceId])
 }
 
 // ─── Service Duration Options ────────────────────────────────────────────────
 
-// Per-service duration/price variants. bookingType nullable = applies to all
-// booking types; set to a specific BookingType to scope the option to that
-// flow (e.g. different durations for GROUP vs INDIVIDUAL of the same service).
-// BookingType enum is defined in bookings.prisma — shared across BCs.
+// Per-service duration/price variants scoped by delivery channel.
+// Multiple duration rows may exist for the same (serviceId, deliveryType),
+// so this model intentionally has an index, not a unique constraint.
 model ServiceDurationOption {
   id           String       @id @default(uuid())
   serviceId    String
   service      Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  bookingType  BookingType?
+  deliveryType DeliveryType
   label        String
   labelAr      String
   durationMins Int
@@ -192,7 +181,7 @@ model ServiceDurationOption {
   employeeOptions EmployeeServiceOption[]
 
   @@index([serviceId])
-  @@index([serviceId, bookingType])
+  @@index([serviceId, deliveryType])
 }
 
 // ─── Employee Service Options ────────────────────────────────────────────────
@@ -210,11 +199,13 @@ model EmployeeServiceOption {
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
   priceOverride     Decimal?              @db.Decimal(12, 2)
   durationOverride  Int?
+  // DB-???: deliveryType — copied from linked ServiceDurationOption.deliveryType.
+  deliveryType      DeliveryType
   isActive          Boolean               @default(true)
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
 
-  @@unique([employeeServiceId, durationOptionId])
+  @@unique([employeeServiceId, durationOptionId, deliveryType], map: "EmployeeServiceOption_employee_duration_delivery_key")
   @@index([employeeServiceId])
   @@index([durationOptionId])
 }

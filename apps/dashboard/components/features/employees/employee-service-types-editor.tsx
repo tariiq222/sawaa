@@ -21,7 +21,7 @@ interface EmployeeServiceTypesEditorProps {
 
 /* ─── Constants ─── */
 
-const ALL_BOOKING_TYPES = [
+const ALL_DELIVERY_TYPES = [
   { value: "in_person", labelKey: "employees.services.inPerson" },
   { value: "online", labelKey: "employees.services.online" },
 ] as const
@@ -36,36 +36,36 @@ export function EmployeeServiceTypesEditor({
   // locale,
 }: EmployeeServiceTypesEditorProps) {
   const serviceTypeMap = new Map<string, ServiceBookingType>(
-    serviceBookingTypes.map((st) => [st.bookingType, st]),
+    serviceBookingTypes.map((st) => [st.deliveryType.toLowerCase(), st]),
   )
-  const enabledTypeValues = new Set(value.map((v) => v.bookingType))
+  const enabledTypeValues = new Set(value.map((v) => v.deliveryType))
 
   /* Types available in the service but not yet added to employee */
-  const additionalTypes = ALL_BOOKING_TYPES.filter(
+  const additionalTypes = ALL_DELIVERY_TYPES.filter(
     (bt) => !enabledTypeValues.has(bt.value),
   )
 
   const updateType = (
-    bookingType: string,
+    deliveryType: string,
     updates: Partial<EmployeeTypeConfigPayload>,
   ) => {
     onChange(
       value.map((v) =>
-        v.bookingType === bookingType ? { ...v, ...updates } : v,
+        v.deliveryType === deliveryType ? { ...v, ...updates } : v,
       ),
     )
   }
 
-  const removeType = (bookingType: string) => {
-    onChange(value.filter((v) => v.bookingType !== bookingType))
+  const removeType = (deliveryType: string) => {
+    onChange(value.filter((v) => v.deliveryType !== deliveryType))
   }
 
-  const addType = (bookingType: string) => {
-    const serviceDef = serviceTypeMap.get(bookingType)
+  const addType = (deliveryType: string) => {
+    const serviceDef = serviceTypeMap.get(deliveryType)
     onChange([
       ...value,
       {
-        bookingType,
+        deliveryType,
         price: serviceDef ? null : undefined,
         duration: serviceDef ? null : undefined,
         useCustomOptions: false,
@@ -88,21 +88,21 @@ export function EmployeeServiceTypesEditor({
       )}
 
       {value.map((typeConfig) => {
-        const serviceDef = serviceTypeMap.get(typeConfig.bookingType)
-        const typeLabel = ALL_BOOKING_TYPES.find(
-          (bt) => bt.value === typeConfig.bookingType,
+        const serviceDef = serviceTypeMap.get(typeConfig.deliveryType)
+        const typeLabel = ALL_DELIVERY_TYPES.find(
+          (bt) => bt.value === typeConfig.deliveryType,
         )
         return (
           <EmployeeTypeRow
-            key={typeConfig.bookingType}
+            key={typeConfig.deliveryType}
             config={typeConfig}
             serviceDefault={serviceDef ?? null}
-            label={typeLabel ? t(typeLabel.labelKey) : typeConfig.bookingType}
+            label={typeLabel ? t(typeLabel.labelKey) : typeConfig.deliveryType}
             t={t}
             onUpdate={(updates) =>
-              updateType(typeConfig.bookingType, updates)
+              updateType(typeConfig.deliveryType, updates)
             }
-            onRemove={() => removeType(typeConfig.bookingType)}
+            onRemove={() => removeType(typeConfig.deliveryType)}
           />
         )
       })}

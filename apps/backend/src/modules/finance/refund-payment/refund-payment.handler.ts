@@ -18,7 +18,7 @@ interface CreateRefundRequestInTxResult {
     amount: unknown;
     invoice: {
       id: string;
-      bookingId: string;
+      bookingId: string | null;
       clientId: string;
       currency: string;
     };

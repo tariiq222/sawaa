@@ -24,6 +24,7 @@ import { getFontName } from '@/theme/fonts';
 import { useClientBookings, clientBookingsKeys } from '@/hooks/queries';
 import { type ClientBookingStatus } from '@/services/client';
 import { useReduceMotion } from '@/hooks/useA11y';
+import { resolveDeliveryType } from '@/types/booking-enums';
 
 type TabKey = 'upcoming' | 'past' | 'cancelled';
 
@@ -107,9 +108,9 @@ export default function AppointmentsScreen() {
       ? b.employee?.nameAr ?? b.employee?.nameEn
       : b.employee?.nameEn ?? b.employee?.nameAr) ?? '—';
     const initial = therapistName.charAt(0);
-    const isVideo = b.bookingType === 'online';
+    const isVideo = resolveDeliveryType(b.deliveryType) === 'online';
     const location = isVideo
-      ? (dir.isRTL ? 'جلسة فيديو' : 'Video call')
+      ? (dir.isRTL ? 'جلسة عن بُعد' : 'Remote session')
       : (dir.isRTL ? b.branch?.nameAr ?? b.branch?.nameEn ?? '' : b.branch?.nameEn ?? b.branch?.nameAr ?? '');
 
     return (

@@ -120,7 +120,7 @@ export const arEmployees: Record<string, string> = {
   "employees.create.qualificationsDesc": "الخبرة والتعليم",
   "employees.create.bioSection": "النبذة التعريفية",
   "employees.create.bioDescription": "وصف مختصر عن الممارس",
-  "employees.create.servicesDescription": "اربط الخدمات بالممارس مع تسعير مخصص لكل نوع حجز",
+  "employees.create.servicesDescription": "اربط الخدمات بالممارس مع تسعير مخصص لكل طريقة تقديم",
 
   // — Type Row / Services —
   "employees.services.sar": "ر.س",
@@ -177,7 +177,7 @@ export const arEmployees: Record<string, string> = {
   "breaks.sectionTitle": "الاستراحات",
 
   // — Services (extended) —
-  "employees.services.availableTypes": "أنواع الحجز المتاحة",
+  "employees.services.availableTypes": "طرق التقديم المتاحة",
   "employees.services.bufferMinutes": "الفاصل الزمني (دقيقة)",
   "employees.services.customDuration": "مدة مخصصة",
   "employees.services.defaultPrice": "السعر الافتراضي (ر.س)",
@@ -191,8 +191,8 @@ export const arEmployees: Record<string, string> = {
   "employees.services.removeWarning": "فصل الخدمة لن يؤثر على الحجوزات الحالية.",
   "employees.services.saving": "جارٍ الإزالة...",
   "employees.services.selectService": "اختر خدمة",
-  "employees.services.types": "أنواع الحجز",
-  "employees.services.typesRequired": "اختر نوع حجز واحداً على الأقل",
+  "employees.services.types": "طرق التقديم",
+  "employees.services.typesRequired": "اختر طريقة تقديم واحدة على الأقل",
   "employees.services.useCustomOptions": "استخدام خيارات مخصصة",
 
   // — Status Dialog —
@@ -287,6 +287,7 @@ export const arEmployees: Record<string, string> = {
   "employees.chart.status.expired": "منتهية",
 
   // — Chart: Booking Type Labels —
+  "employees.chart.type.individual": "فردي",
   "employees.chart.type.inPerson": "عيادة",
   "employees.chart.type.online": "عن بُعد",
   "employees.chart.type.walkIn": "مباشر",

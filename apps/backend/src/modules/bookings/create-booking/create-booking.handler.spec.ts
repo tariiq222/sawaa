@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { ConflictException, BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { CreateBookingHandler } from './create-booking.handler';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
@@ -37,13 +37,15 @@ const mockService = {
 
 const buildPrisma = () => {
   const prisma = {
-    branch: { findFirst: jest.fn().mockResolvedValue({ id: 'branch-1' }) },
+    branch: { findFirst: jest.fn().mockResolvedValue({ id: 'branch-1', nameAr: 'الفرع الرئيسي' }) },
     client: { findFirst: jest.fn().mockResolvedValue({ id: 'client-1' }) },
-    employee: { findFirst: jest.fn().mockResolvedValue({ id: 'emp-1' }) },
+    employee: { findFirst: jest.fn().mockResolvedValue({ id: 'emp-1', name: 'Dr. Sara' }) },
     service: { findFirst: jest.fn().mockResolvedValue(mockService) },
     employeeService: { findUnique: jest.fn().mockResolvedValue({ id: 'es-1', employeeId: 'emp-1', serviceId: 'svc-1' }) },
     integration: { findFirst: jest.fn().mockResolvedValue(null) },
     serviceBookingConfig: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]) },
+    serviceCategory: { findFirst: jest.fn().mockResolvedValue(null) },
+    department: { findFirst: jest.fn().mockResolvedValue(null) },
     booking: {
       findFirst: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue(mockBooking),
@@ -165,26 +167,6 @@ describe('CreateBookingHandler', () => {
   it('passes when payAtClinic=true and payAtClinicEnabled=true', async () => {
     settingsHandler.execute = jest.fn().mockResolvedValue({ payAtClinicEnabled: true });
     await handler.execute({ ...baseDto, payAtClinic: true });
-    expect(prisma.booking.create).toHaveBeenCalled();
-  });
-
-  it('throws BadRequestException when bookingType=ONLINE and zoom integration is not found', async () => {
-    prisma.integration.findFirst = jest.fn().mockResolvedValue(null);
-    await expect(
-      handler.execute({ ...baseDto, bookingType: 'ONLINE' as any }),
-    ).rejects.toThrow('Zoom integration must be configured for online bookings');
-  });
-
-  it('throws BadRequestException when bookingType=ONLINE and zoom integration is inactive', async () => {
-    prisma.integration.findFirst = jest.fn().mockResolvedValue({ id: 'zoom-1', isActive: false });
-    await expect(
-      handler.execute({ ...baseDto, bookingType: 'ONLINE' as any }),
-    ).rejects.toThrow('Zoom integration must be configured for online bookings');
-  });
-
-  it('passes when bookingType=ONLINE and zoom integration is active', async () => {
-    prisma.integration.findFirst = jest.fn().mockResolvedValue({ id: 'zoom-1', isActive: true });
-    await handler.execute({ ...baseDto, bookingType: 'ONLINE' as any });
     expect(prisma.booking.create).toHaveBeenCalled();
   });
 
@@ -649,5 +631,158 @@ describe('CreateBookingHandler', () => {
     });
     await handler.execute(baseDto);
     expect(prisma.outboxEvent.create).toHaveBeenCalled();
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 10. DeliveryType + Snapshots (TDD — refactor-booking-delivery-type)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  it('persists deliveryType correctly when provided', async () => {
+    await handler.execute({ ...baseDto, deliveryType: 'ONLINE' as any });
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ deliveryType: 'ONLINE' }),
+      }),
+    );
+  });
+
+  it('persists snapshot fields at booking creation', async () => {
+    prisma.service.findFirst = jest.fn().mockResolvedValue({
+      id: 'svc-1',
+      nameAr: 'استشارة',
+      categoryId: 'cat-1',
+      durationMins: 60,
+      price: 200,
+      currency: 'SAR',
+    });
+    prisma.serviceCategory.findFirst = jest.fn().mockResolvedValue({
+      id: 'cat-1',
+      nameAr: 'الاستشارات',
+      departmentId: 'dept-1',
+    });
+    prisma.department.findFirst = jest.fn().mockResolvedValue({
+      id: 'dept-1',
+      nameAr: 'الأقسام الطبية',
+    });
+
+    await handler.execute(baseDto);
+
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          priceSnapshot: expect.any(Prisma.Decimal),
+          durationMinutesSnapshot: 60,
+          branchNameSnapshot: 'الفرع الرئيسي',
+          employeeNameSnapshot: 'Dr. Sara',
+          serviceNameSnapshot: 'استشارة',
+          categoryNameSnapshot: 'الاستشارات',
+          departmentNameSnapshot: 'الأقسام الطبية',
+        }),
+      }),
+    );
+  });
+
+  it('does NOT auto-create Zoom for ONLINE booking (Zoom is opt-in only)', async () => {
+    prisma.integration.findFirst = jest.fn().mockResolvedValue({ id: 'zoom-1', isActive: true });
+    await handler.execute({ ...baseDto, deliveryType: 'ONLINE' as any });
+    // Zoom fields should NOT be populated automatically
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.not.objectContaining({
+          zoomMeetingId: expect.anything(),
+          zoomJoinUrl: expect.anything(),
+        }),
+      }),
+    );
+  });
+
+  it('maps legacy bookingType=ONLINE to individual online booking without requiring Zoom', async () => {
+    prisma.integration.findFirst = jest.fn().mockResolvedValue(null);
+
+    await handler.execute({ ...baseDto, bookingType: 'ONLINE' as any });
+
+    expect(prisma.integration.findFirst).not.toHaveBeenCalled();
+    expect(priceResolver.resolve).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bookingType: 'INDIVIDUAL',
+        deliveryType: 'ONLINE',
+      }),
+    );
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          bookingType: 'INDIVIDUAL',
+          deliveryType: 'ONLINE',
+        }),
+      }),
+    );
+  });
+
+  it('never creates Zoom for IN_PERSON booking', async () => {
+    await handler.execute({ ...baseDto, deliveryType: 'IN_PERSON' as any });
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.not.objectContaining({
+          zoomMeetingId: expect.anything(),
+          zoomJoinUrl: expect.anything(),
+        }),
+      }),
+    );
+  });
+
+  it('rejects duration option mismatch with deliveryType', async () => {
+    priceResolver.resolve = jest.fn().mockRejectedValue(
+      new BadRequestException('Duration option delivery type (IN_PERSON) does not match requested delivery type (ONLINE)'),
+    );
+
+    await expect(
+      handler.execute({ ...baseDto, deliveryType: 'ONLINE' as any, durationOptionId: 'opt-inperson' }),
+    ).rejects.toThrow(/does not match requested delivery type/);
+  });
+
+  it('allows GROUP + ONLINE combination', async () => {
+    setupGroupService();
+    prisma.booking.count = jest.fn().mockResolvedValue(0);
+
+    const result = await handler.execute({
+      ...baseDto,
+      bookingType: 'GROUP' as any,
+      deliveryType: 'ONLINE' as any,
+    });
+
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          bookingType: 'GROUP',
+          deliveryType: 'ONLINE',
+        }),
+      }),
+    );
+    expect(result.status).toBe('PENDING_GROUP_FILL');
+  });
+
+  it('defaults WALK_IN bookingType to IN_PERSON deliveryType', async () => {
+    await handler.execute({ ...baseDto, bookingType: 'WALK_IN' as any });
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          bookingType: 'WALK_IN',
+          deliveryType: 'IN_PERSON',
+        }),
+      }),
+    );
+  });
+
+  it('passes deliveryType to PriceResolverService', async () => {
+    await handler.execute({ ...baseDto, deliveryType: 'ONLINE' as any });
+    expect(priceResolver.resolve).toHaveBeenCalledWith(
+      expect.objectContaining({
+        serviceId: 'svc-1',
+        employeeServiceId: 'es-1',
+        durationOptionId: null,
+        bookingType: 'INDIVIDUAL',
+        deliveryType: 'ONLINE',
+      }),
+    );
   });
 });

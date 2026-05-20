@@ -177,7 +177,7 @@ export const enEmployees: Record<string, string> = {
   "breaks.sectionTitle": "Breaks",
 
   // — Services (extended) —
-  "employees.services.availableTypes": "Available Booking Types",
+  "employees.services.availableTypes": "Available Delivery Methods",
   "employees.services.bufferMinutes": "Buffer (min)",
   "employees.services.customDuration": "Custom Duration",
   "employees.services.defaultPrice": "Default Price (SAR)",
@@ -191,8 +191,8 @@ export const enEmployees: Record<string, string> = {
   "employees.services.removeWarning": "Unlinking this service won't affect existing bookings.",
   "employees.services.saving": "Removing...",
   "employees.services.selectService": "Select a service",
-  "employees.services.types": "Booking Types",
-  "employees.services.typesRequired": "Select at least one booking type",
+  "employees.services.types": "Delivery Methods",
+  "employees.services.typesRequired": "Select at least one delivery method",
   "employees.services.useCustomOptions": "Use custom options",
 
   // — Status Dialog —
@@ -287,6 +287,7 @@ export const enEmployees: Record<string, string> = {
   "employees.chart.status.expired": "Expired",
 
   // — Chart: Booking Type Labels —
+  "employees.chart.type.individual": "Individual",
   "employees.chart.type.inPerson": "In-Person",
   "employees.chart.type.online": "Online",
   "employees.chart.type.walkIn": "Walk-in",

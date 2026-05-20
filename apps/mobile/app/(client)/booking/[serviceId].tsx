@@ -10,8 +10,7 @@ import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
-
-type BookingType = 'in_person' | 'online';
+import type { DeliveryType } from '@/types/booking-enums';
 
 export default function BookingTypeScreen() {
   const { serviceId, employeeId } = useLocalSearchParams<{ serviceId: string; employeeId?: string }>();
@@ -25,7 +24,7 @@ export default function BookingTypeScreen() {
 
   const types = [
     {
-      type: 'in_person' as BookingType,
+      deliveryType: 'in_person' as DeliveryType,
       icon: Building2,
       color: sawaaColors.teal[600],
       labelAr: 'موعد عيادة',
@@ -34,7 +33,7 @@ export default function BookingTypeScreen() {
       descEn: 'In-person at the clinic',
     },
     {
-      type: 'online' as BookingType,
+      deliveryType: 'online' as DeliveryType,
       icon: Video,
       color: sawaaColors.accent.violet,
       labelAr: 'استشارة عن بُعد',
@@ -44,11 +43,11 @@ export default function BookingTypeScreen() {
     },
   ];
 
-  const handleSelect = (type: BookingType) => {
+  const handleSelect = (type: DeliveryType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({
       pathname: '/(client)/booking/schedule',
-      params: { serviceId, employeeId: employeeId ?? '', type },
+      params: { serviceId, employeeId: employeeId ?? '', deliveryType: type },
     });
   };
 
@@ -83,13 +82,13 @@ export default function BookingTypeScreen() {
         {/* Type cards — tap to select + advance */}
         {types.map((item, i) => (
           <Animated.View
-            key={item.type}
+            key={item.deliveryType}
             entering={FadeInDown.delay(160 + i * 80).duration(700).easing(Easing.out(Easing.cubic))}
           >
             <Glass
               variant="strong"
               radius={sawaaRadius.xl}
-              onPress={() => handleSelect(item.type)}
+              onPress={() => handleSelect(item.deliveryType)}
               interactive
               style={styles.typeCard}
             >

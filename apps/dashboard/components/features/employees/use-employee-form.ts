@@ -157,7 +157,7 @@ export function useEmployeeForm({
         isActive: ps.isActive,
         availableTypes: ps.availableTypes ?? [],
         types: (ps.serviceTypes ?? []).map((st) => ({
-          bookingType: st.bookingType,
+          deliveryType: st.deliveryType,
           price: st.price ?? undefined,
           duration: st.duration ?? undefined,
           isActive: st.isActive,

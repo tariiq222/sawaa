@@ -160,7 +160,7 @@ export const arOps: Record<string, string> = {
   "employees.services.priceOnline": "سعر عن بُعد",
   "employees.services.customDuration": "مدة مخصصة",
   "employees.services.defaultPrice": "افتراضي",
-  "employees.services.availableTypes": "أنواع الحجز المتاحة",
+  "employees.services.availableTypes": "طرق التقديم المتاحة",
   "employees.services.bufferMinutes": "فترة الانتظار بين المواعيد (دقيقة)",
   "employees.services.pricingHint": "اتركه فارغاً لاستخدام السعر الافتراضي",
   "employees.services.durationHint": "اتركه فارغاً لاستخدام مدة الخدمة",
@@ -176,8 +176,8 @@ export const arOps: Record<string, string> = {
   "employees.services.sar": "ر.س",
   "employees.services.saving": "جاري الحفظ...",
   "employees.services.assignDesc": "ربط خدمة بهذا المعالج مع تخصيص السعر والمدة.",
-  "employees.services.editDesc": "تحديث السعر والمدة وأنواع الحجز لهذه الخدمة.",
-  "employees.services.types": "أنواع الحجز",
+  "employees.services.editDesc": "تحديث السعر والمدة وطرق التقديم لهذه الخدمة.",
+  "employees.services.types": "طرق التقديم",
   "employees.services.useCustomOptions": "استخدام خيارات مدة مخصصة",
   "employees.services.overridePrice": "تعديل السعر",
   "employees.services.overrideDuration": "تعديل المدة",
@@ -250,7 +250,7 @@ export const arOps: Record<string, string> = {
   "settings.emailLayout.description": "تخصيص شكل البريد الإلكتروني (الهيدر والفوتر)",
 
   // ─── Service Booking Types ───
-  "services.bookingTypes": "أنواع الحجز والتسعير",
+  "services.bookingTypes": "طرق التقديم والتسعير",
   "services.bookingTypes.clinic": "في العيادة",
   "services.bookingTypes.inPerson": "حضوري",
   "services.bookingTypes.online": "عن بُعد",
@@ -264,7 +264,7 @@ export const arOps: Record<string, string> = {
   "services.bookingTypes.label": "الاسم",
   "services.bookingTypes.save": "حفظ التسعير",
   "services.bookingTypes.saved": "تم حفظ التسعير بنجاح",
-  "services.bookingTypes.noTypes": "لا توجد أنواع حجز مُعدّة",
+  "services.bookingTypes.noTypes": "لا توجد طرق تقديم مُعدّة",
 
   // ─── Employee Create Page ───
   "employees.create.pageTitle": "إضافة ممارس جديد",

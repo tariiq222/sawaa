@@ -85,7 +85,7 @@ export function EditEmployeeServiceSheet({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTypeConfigs(
       existingTypes.map((et) => ({
-        bookingType: et.bookingType,
+        deliveryType: et.deliveryType,
         // Server stores price in halalas; the editor inputs collect SAR.
         price: et.price != null ? halalasToSarNumber(et.price) : null,
         duration: et.duration,
@@ -110,7 +110,7 @@ export function EditEmployeeServiceSheet({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTypeConfigs(
       (ps.availableTypes ?? []).map((bt) => ({
-        bookingType: bt,
+        deliveryType: bt,
         price: null,
         duration: null,
         useCustomOptions: false,
@@ -145,7 +145,7 @@ export function EditEmployeeServiceSheet({
         await updateMut.mutateAsync({
           serviceId: ps.serviceId,
           payload: {
-            availableTypes: typeConfigs.map((tc) => tc.bookingType),
+            availableTypes: typeConfigs.map((tc) => tc.deliveryType),
             bufferMinutes: data.bufferMinutes,
             isActive: data.isActive,
             types: typesPayload,

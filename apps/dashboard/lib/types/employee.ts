@@ -87,7 +87,7 @@ export interface EmployeeService {
 export interface EmployeeServiceType {
   id: string
   employeeServiceId: string
-  bookingType: string
+  deliveryType: string
   price: number | null
   duration: number | null
   useCustomOptions: boolean
@@ -107,7 +107,7 @@ export interface EmployeeDurationOption {
 }
 
 export interface EmployeeTypeConfigPayload {
-  bookingType: string
+  deliveryType: string
   price?: number | null
   duration?: number | null
   useCustomOptions?: boolean

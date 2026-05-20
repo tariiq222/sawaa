@@ -7,7 +7,9 @@ export interface BookingFormState {
   serviceName: string | null
   employeeId: string | null
   employeeName: string | null
-  type: 'in_person' | 'online' | 'walk_in' | null
+  deliveryType: 'in_person' | 'online' | null
+  /** @deprecated Use deliveryType. Kept as a read-compatible alias during the refactor. */
+  type: 'in_person' | 'online' | null
   durationOptionId: string | null
   durationLabel: string | null
   date: string | null      // ISO date YYYY-MM-DD
@@ -23,6 +25,7 @@ const INITIAL_STATE: BookingFormState = {
   serviceName: null,
   employeeId: null,
   employeeName: null,
+  deliveryType: null,
   type: null,
   durationOptionId: null,
   durationLabel: null,
@@ -39,7 +42,7 @@ export function useBookingFormState() {
     state.clientId &&
       state.serviceId &&
       state.employeeId &&
-      state.type &&
+      state.deliveryType &&
       state.date &&
       state.startTime,
   )
@@ -56,6 +59,7 @@ export function useBookingFormState() {
       serviceName: null,
       employeeId: null,
       employeeName: null,
+      deliveryType: null,
       type: null,
       durationOptionId: null,
       durationLabel: null,
@@ -72,6 +76,7 @@ export function useBookingFormState() {
       serviceName,
       employeeId: null,
       employeeName: null,
+      deliveryType: null,
       type: null,
       durationOptionId: null,
       durationLabel: null,
@@ -86,6 +91,7 @@ export function useBookingFormState() {
       ...prev,
       employeeId,
       employeeName,
+      deliveryType: null,
       type: null,
       durationOptionId: null,
       durationLabel: null,
@@ -94,11 +100,12 @@ export function useBookingFormState() {
     }))
   }, [])
 
-  /** Selecting a type resets duration/datetime */
-  const selectType = useCallback((type: 'in_person' | 'online' | 'walk_in') => {
+  /** Selecting a delivery type resets duration/datetime */
+  const selectDeliveryType = useCallback((deliveryType: 'in_person' | 'online') => {
     setState((prev) => ({
       ...prev,
-      type,
+      deliveryType,
+      type: deliveryType,
       durationOptionId: null,
       durationLabel: null,
       date: null,
@@ -151,7 +158,9 @@ export function useBookingFormState() {
     selectClient,
     selectService,
     selectEmployee,
-    selectType,
+    selectDeliveryType,
+    /** @deprecated Use selectDeliveryType. */
+    selectType: selectDeliveryType,
     selectDuration,
     skipDuration,
     selectDate,

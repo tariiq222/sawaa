@@ -162,7 +162,7 @@ function DurationOptionMiniRow({
             onCheckedChange={(v) => onUpdate("isDefault", v)}
           />
           <Label htmlFor={`opt-default-${option.key}`} className="text-xs cursor-pointer">
-            {t("services.bookingTypes.default")}
+            {t("services.deliveryTypes.default")}
           </Label>
         </div>
         <Button
@@ -171,7 +171,7 @@ function DurationOptionMiniRow({
           size="icon"
           className="size-8 text-destructive hover:text-destructive"
           onClick={onRemove}
-          aria-label={t("services.bookingTypes.removeOption")}
+          aria-label={t("services.deliveryTypes.removeOption")}
         >
           <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-3.5" />
         </Button>

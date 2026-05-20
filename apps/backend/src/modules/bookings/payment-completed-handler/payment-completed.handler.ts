@@ -8,7 +8,8 @@ import { DEFAULT_ORG_ID } from '../../../common/constants';
 interface PaymentCompletedPayload {
   paymentId: string;
   invoiceId: string;
-  bookingId: string;
+  bookingId: string | null;
+  bundlePurchaseId?: string | null;
 }
 
 /**
@@ -35,6 +36,11 @@ export class PaymentCompletedEventHandler {
       'finance.payment.completed',
       async (envelope) => {
         const { bookingId, paymentId } = envelope.payload;
+        // Bundle-purchase invoices have no bookingId — skip booking confirmation.
+        if (!bookingId) {
+          this.logger.log(`Payment ${paymentId} completed for bundle purchase — no booking to confirm`);
+          return;
+        }
         try {
           const booking = await this.cls.run(async () => {
             this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);

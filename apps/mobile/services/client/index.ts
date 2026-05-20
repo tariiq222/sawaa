@@ -13,6 +13,7 @@ export type {
   ClientBookingRow,
   BookingStatus as ClientBookingStatus,
   BookingType as ClientBookingType,
+  DeliveryType as ClientDeliveryType,
 } from './bookings';
 export type { PaymentsListResponse } from './payments';
 export type {

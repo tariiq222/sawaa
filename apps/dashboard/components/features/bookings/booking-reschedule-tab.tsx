@@ -46,7 +46,7 @@ export function BookingRescheduleTab({ booking, onSuccess }: BookingRescheduleTa
   const { slots, slotsLoading, canFetchSlots } = useCreateBookingSlots({
     employeeId:   booking.employeeId,
     serviceId:        booking.serviceId,
-    bookingType:      booking.type,
+    deliveryType:     booking.deliveryType ?? "",
     date:             watchedDate,
     durationOptionId: ((booking as unknown as Record<string, unknown>).durationOptionId as string) ?? "",
   })

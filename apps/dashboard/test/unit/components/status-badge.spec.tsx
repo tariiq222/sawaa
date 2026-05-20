@@ -13,9 +13,9 @@ vi.mock("@/lib/ds", () => ({
     cancelled: { bg: "bg-destructive/10", text: "text-destructive", border: "border-destructive/20" },
   },
   bookingTypeStyles: {
-    in_person: { bg: "bg-primary/10", text: "text-primary", border: "border-primary/20" },
-    online: { bg: "bg-info/10", text: "text-info", border: "border-info/20" },
+    individual: { bg: "bg-primary/10", text: "text-primary", border: "border-primary/20" },
     walk_in: { bg: "bg-success/10", text: "text-success", border: "border-success/20" },
+    group: { bg: "bg-accent/10", text: "text-accent", border: "border-accent/20" },
   },
 }))
 
@@ -49,8 +49,8 @@ describe("StatusBadge", () => {
 
 describe("BookingTypeBadge", () => {
   it("renders translated type for known type", () => {
-    render(<BookingTypeBadge type="in_person" />)
-    expect(screen.getByText("bookings.type.inPerson")).toBeInTheDocument()
+    render(<BookingTypeBadge type="individual" />)
+    expect(screen.getByText("bookings.type.individual")).toBeInTheDocument()
   })
 
   it("renders raw type for unknown type", () => {
