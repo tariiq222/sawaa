@@ -4,7 +4,7 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
-import { BookingStatus, GroupSessionStatus, Prisma } from '@prisma/client';
+import { BookingStatus, DeliveryType, GroupSessionStatus, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 
 // Money is integer halalas — round to whole halalas (0 decimal places).
@@ -85,7 +85,7 @@ export class BookGroupSessionHandler {
 
   private async createBooking(
     clientId: string,
-    session: { id: string; price: unknown; currency: string; employeeId: string; serviceId: string; branchId: string; scheduledAt: Date },
+    session: { id: string; price: unknown; currency: string; employeeId: string; serviceId: string; branchId: string; scheduledAt: Date; deliveryType: DeliveryType },
   ): Promise<BookGroupSessionResult> {
     const price = Number(session.price);
 
@@ -107,6 +107,7 @@ export class BookGroupSessionHandler {
           employeeId: session.employeeId,
           serviceId: session.serviceId,
           bookingType: 'GROUP',
+          deliveryType: session.deliveryType,
           status: price > 0 ? BookingStatus.AWAITING_PAYMENT : BookingStatus.CONFIRMED,
           scheduledAt: session.scheduledAt,
           endsAt: new Date(session.scheduledAt.getTime() + 60 * 60 * 1000),

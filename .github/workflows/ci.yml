@@ -163,6 +163,161 @@ jobs:
       - name: Unit tests
         run: pnpm --filter=dashboard test
 
+      - name: Build
+        run: pnpm --filter=dashboard build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:5200/api/v1
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Dashboard smoke (Playwright)
+  # ───────────────────────────────────────────────────────────────────────────
+  dashboard-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [backend, dashboard]
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sawaa_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin123 \
+            quay.io/minio/minio:latest server /data
+          minio_ready=false
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:9000/minio/health/live; then
+              minio_ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$minio_ready" != "true" ]; then
+            echo "MinIO did not become healthy after 30 seconds" >&2
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter=backend prisma:generate
+
+      - name: Build shared packages
+        run: pnpm --filter=@sawaa/shared build
+
+      - name: Run migrations
+        run: pnpm --filter=backend prisma:migrate:deploy
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+
+      - name: Seed database
+        run: pnpm --filter=backend seed
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          MOYASAR_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          SUPER_ADMIN_EMAIL: super-admin@sawaa-test.com
+          SUPER_ADMIN_PASSWORD: SuperAdmin@123456
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter=dashboard exec playwright install --with-deps chromium
+
+      - name: Start backend and wait for health
+        run: |
+          pnpm --filter=backend exec nest start > apps/backend/backend-smoke.log 2>&1 &
+          echo $! > apps/backend/backend-smoke.pid
+
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:5200/api/v1/health >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          cat apps/backend/backend-smoke.log
+          exit 1
+        env:
+          NODE_ENV: test
+          PORT: 5200
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_ACCESS_SECRET: ci-jwt-access-secret-32chars-long
+          JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
+          JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
+          JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
+          MOYASAR_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          SMS_PROVIDER_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          ZOOM_PROVIDER_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          EMAIL_PROVIDER_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          AUTHENTICA_API_KEY: ci-authentica-key
+          MINIO_ENDPOINT: localhost
+          MINIO_PORT: 9000
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin123
+          MINIO_BUCKET: sawaa-test
+          MINIO_USE_SSL: false
+          SUPER_ADMIN_EMAIL: super-admin@sawaa-test.com
+          SUPER_ADMIN_PASSWORD: SuperAdmin@123456
+          CORS_ORIGINS: http://localhost:5203
+          DASHBOARD_PUBLIC_URL: http://localhost:5203
+          API_PUBLIC_URL: http://localhost:5200
+          PUBLIC_WEBSITE_URL: http://localhost:5205
+          THROTTLER_DISABLED: true
+
+      - name: Run dashboard smoke tests
+        run: pnpm --filter=dashboard e2e:smoke
+        env:
+          PW_API_URL: http://localhost:5200
+          PW_DASHBOARD_URL: http://localhost:5203
+          NEXT_PUBLIC_API_URL: http://localhost:5200/api/v1
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-smoke-playwright-artifacts
+          path: |
+            apps/dashboard/playwright-report/
+            apps/dashboard/test-results/
+            apps/backend/backend-smoke.log
+          if-no-files-found: ignore
+
   # ───────────────────────────────────────────────────────────────────────────
   # Website
   # ───────────────────────────────────────────────────────────────────────────

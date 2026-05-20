@@ -7,6 +7,12 @@ import { describe, expect, it, vi, beforeEach } from "vitest"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { ReactNode } from "react"
 
+const { useQueryClient } = vi.hoisted(() => ({
+  useQueryClient: vi.fn(() => ({
+    invalidateQueries: vi.fn(),
+  })),
+}))
+
 // ── Mock all dependencies ─────────────────────────────────────────────────────
 
 const { useBookings, useBookingMutations } = vi.hoisted(() => ({
@@ -38,19 +44,15 @@ const { useOrganizationConfig } = vi.hoisted(() => ({
   useOrganizationConfig: vi.fn(() => ({ weekStartDayNumber: 0 })),
 }))
 
-const { useQueryClient } = vi.hoisted(() => ({
-  useQueryClient: vi.fn(() => ({
-    invalidateQueries: vi.fn(),
-  })),
-}))
-
-vi.mock("@tanstack/react-query", () => ({
-  QueryClient: class MockQueryClient {
-    constructor() {}
-  },
-  QueryClientProvider: ({ children }: { children: ReactNode }) => children,
-  useQueryClient,
-}))
+vi.mock("@tanstack/react-query", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-query")>()
+  return {
+    ...actual,
+    QueryClient: actual.QueryClient,
+    QueryClientProvider: actual.QueryClientProvider,
+    useQueryClient,
+  }
+})
 
 const { useLocale } = vi.hoisted(() => ({
   useLocale: vi.fn(() => ({ t: (k: string) => k, locale: "ar" })),
@@ -61,19 +63,29 @@ vi.mock("@/hooks/use-employees", () => ({ useEmployees }))
 vi.mock("@/hooks/use-organization-config", () => ({ useOrganizationConfig }))
 vi.mock("@/lib/api/bookings", () => ({}))
 vi.mock("@/components/features/data-table", () => ({
-  DataTable: ({ emptyTitle }: { emptyTitle: string }) => <div data-testid="data-table">{emptyTitle}</div>,
+  DataTable: ({ emptyTitle }: { emptyTitle: string }) => (
+    <div data-testid="data-table">{emptyTitle}</div>
+  ),
 }))
 vi.mock("@/components/features/stats-grid", () => ({
-  StatsGrid: ({ children }: { children: ReactNode }) => <div data-testid="stats-grid">{children}</div>,
+  StatsGrid: ({ children }: { children: ReactNode }) => (
+    <div data-testid="stats-grid">{children}</div>
+  ),
 }))
 vi.mock("@/components/features/stat-card", () => ({
   StatCard: () => <div data-testid="stat-card" />,
 }))
 vi.mock("@/components/features/filter-bar", () => ({
-  FilterBar: ({ selects }: { selects: Array<{ options: Array<{ value: string }> }> }) => (
+  FilterBar: ({
+    selects,
+  }: {
+    selects: Array<{ options: Array<{ value: string }> }>
+  }) => (
     <div data-testid="filter-bar">
       {selects?.map((s, i) =>
-        s.options.map((o) => <span key={`${i}-${o.value}`} data-testid={`option-${o.value}`} />),
+        s.options.map((o) => (
+          <span key={`${i}-${o.value}`} data-testid={`option-${o.value}`} />
+        ))
       )}
     </div>
   ),
@@ -95,9 +107,13 @@ vi.mock("@/components/locale-provider", () => ({ useLocale }))
 import { BookingsTabContent } from "@/components/features/bookings/bookings-tab-content"
 
 function makeWrapper() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    return (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
   }
   return Wrapper
 }

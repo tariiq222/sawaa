@@ -13,7 +13,7 @@ import {
   AlertDialogTitle,
 } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
-import { useEmployeeServiceMutations } from "@/hooks/use-employees"
+import { useEmployeeServiceMutations } from "@/hooks/use-employee-mutations"
 import type { EmployeeService } from "@/lib/types/employee"
 
 /* ─── Props ─── */
@@ -50,7 +50,7 @@ export function RemoveServiceDialog({
       onOpenChange(false)
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to remove service",
+        err instanceof Error ? err.message : "Failed to remove service"
       )
     }
   }
@@ -76,7 +76,7 @@ export function RemoveServiceDialog({
           <AlertDialogAction
             onClick={handleRemove}
             disabled={removeMut.isPending}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
           >
             {removeMut.isPending
               ? t("employees.services.saving")

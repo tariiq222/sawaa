@@ -81,15 +81,10 @@ export const bookingStatusStyles = {
 
 /* ─── Booking Type Styles ─── */
 export const bookingTypeStyles = {
-  in_person: {
+  individual: {
     bg: "bg-primary/10",
     text: "text-primary",
     border: "border-primary/20",
-  },
-  online: {
-    bg: "bg-info/10",
-    text: "text-info",
-    border: "border-info/20",
   },
   walk_in: {
     bg: "bg-success/10",

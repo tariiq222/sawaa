@@ -39,8 +39,7 @@ const statusIconMap: Record<BookingStatus, { icon: typeof Tick01Icon; iconClass:
 }
 
 const typeTranslationKeys: Record<BookingType, string> = {
-  in_person: "bookings.type.inPerson",
-  online: "bookings.type.online",
+  individual: "bookings.type.individual",
   walk_in: "bookings.type.walkIn",
   group: "bookings.type.group",
 }

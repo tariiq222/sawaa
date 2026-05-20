@@ -5,20 +5,23 @@ import {
   Logger,
 } from '@nestjs/common';
 import { RecurringFrequency } from '@prisma/client';
-import type { Booking } from '@prisma/client';
+import type { Booking, BookingType, DeliveryType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 
 import { randomUUID } from 'crypto';
 import { CreateRecurringBookingDto } from './create-recurring-booking.dto';
+import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 
 export type CreateRecurringBookingCommand = Omit<
   CreateRecurringBookingDto,
-  'scheduledAt' | 'expiresAt' | 'until' | 'customDates'
+  'scheduledAt' | 'expiresAt' | 'until' | 'customDates' | 'bookingType' | 'deliveryType'
 > & {
   scheduledAt: Date;
   expiresAt?: Date;
   until?: Date;
   customDates?: Date[];
+  bookingType?: string;
+  deliveryType?: string;
 };
 
 @Injectable()
@@ -33,17 +36,64 @@ export class CreateRecurringBookingHandler {
   async execute(dto: CreateRecurringBookingCommand) {
     this.validate(dto);
 
+    const { bookingType, deliveryType } = normalizeBookingTypes({
+      bookingType: dto.bookingType,
+      deliveryType: dto.deliveryType,
+    });
+
     const dates = this.resolveDates(dto);
     const recurringGroupId = randomUUID();
+
+    // Resolve snapshot data once for the series
+    const service = await this.prisma.service.findFirst({
+      where: { id: dto.serviceId },
+      select: { nameAr: true, categoryId: true, currency: true },
+    });
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: dto.employeeId },
+      select: { name: true },
+    });
+    const branch = await this.prisma.branch.findFirst({
+      where: { id: dto.branchId },
+      select: { nameAr: true },
+    });
+    let categoryName: string | null = null;
+    let departmentName: string | null = null;
+    if (service?.categoryId) {
+      const cat = await this.prisma.serviceCategory.findFirst({
+        where: { id: service.categoryId },
+        select: { nameAr: true, departmentId: true },
+      });
+      if (cat) {
+        categoryName = cat.nameAr;
+        if (cat.departmentId) {
+          const dept = await this.prisma.department.findFirst({
+            where: { id: cat.departmentId },
+            select: { nameAr: true },
+          });
+          if (dept) departmentName = dept.nameAr;
+        }
+      }
+    }
+
+    const snapshots = {
+      priceSnapshot: dto.price,
+      durationMinutesSnapshot: dto.durationMins,
+      branchNameSnapshot: branch?.nameAr ?? null,
+      employeeNameSnapshot: employee?.name ?? null,
+      serviceNameSnapshot: service?.nameAr ?? null,
+      categoryNameSnapshot: categoryName,
+      departmentNameSnapshot: departmentName,
+    };
 
     // skipConflicts=true: best-effort — no transaction needed, partial series is intentional.
     // skipConflicts=false (default): all-or-nothing — wrap in transaction so a mid-series
     // conflict rolls back already-created bookings.
     if (dto.skipConflicts) {
-      return this.createBookings(this.prisma, dto, dates, recurringGroupId);
+      return this.createBookings(this.prisma, dto, dates, recurringGroupId, bookingType, deliveryType, snapshots);
     }
     return this.rlsTransaction.withTransaction((tx) =>
-      this.createBookings(tx as unknown as PrismaService, dto, dates, recurringGroupId),
+      this.createBookings(tx as unknown as PrismaService, dto, dates, recurringGroupId, bookingType, deliveryType, snapshots),
     );
   }
 
@@ -52,6 +102,9 @@ export class CreateRecurringBookingHandler {
     dto: CreateRecurringBookingCommand,
     dates: Date[],
     recurringGroupId: string,
+    bookingType: BookingType,
+    deliveryType: DeliveryType,
+    snapshots: Record<string, unknown>,
   ): Promise<Booking[]> {
     const created: Booking[] = [];
 
@@ -94,13 +147,15 @@ export class CreateRecurringBookingHandler {
           durationMins: dto.durationMins,
           price: dto.price,
           currency: dto.currency ?? 'SAR',
-          bookingType: dto.bookingType ?? 'INDIVIDUAL',
+          bookingType,
+          deliveryType,
           notes: dto.notes,
           expiresAt: dto.expiresAt,
           recurringGroupId,
           recurringPattern: dto.frequency,
           status: 'PENDING',
           bookingNumber: currentBookingNumber,
+          ...snapshots,
         },
       });
 

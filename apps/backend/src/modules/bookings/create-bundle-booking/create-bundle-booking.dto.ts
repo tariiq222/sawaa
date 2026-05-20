@@ -1,10 +1,12 @@
 import {
   IsBoolean,
   IsDateString,
+  IsEnum,
   IsOptional,
   IsString,
   IsUUID,
 } from 'class-validator';
+import { DeliveryType } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateBundleBookingDto {
@@ -28,4 +30,7 @@ export class CreateBundleBookingDto {
 
   @ApiPropertyOptional({ description: 'Payment collected at the clinic instead of online', example: false })
   @IsOptional() @IsBoolean() payAtClinic?: boolean;
+
+  @ApiPropertyOptional({ description: 'Delivery channel for all bundle bookings (IN_PERSON or ONLINE)', enum: DeliveryType, enumName: 'DeliveryType', example: DeliveryType.IN_PERSON })
+  @IsOptional() @IsEnum(DeliveryType) deliveryType?: DeliveryType;
 }

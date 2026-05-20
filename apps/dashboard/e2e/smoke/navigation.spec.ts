@@ -1,164 +1,118 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test"
+import {
+  expectAuthenticatedShell,
+  expectCurrentPath,
+  expectNoAppCrash,
+  getUserMenuTrigger,
+} from "../fixtures/assertions"
+import { loginAs } from "../fixtures/auth"
 
 const DASHBOARD_PAGES = [
-  { path: '/', name: 'Dashboard Home' },
-  { path: '/bookings', name: 'Bookings' },
-  { path: '/clients', name: 'Clients' },
-  { path: '/employees', name: 'Employees' },
-  { path: '/users', name: 'Users' },
-  { path: '/services', name: 'Services' },
-  { path: '/categories', name: 'Categories' },
-  { path: '/departments', name: 'Departments' },
-  { path: '/payments', name: 'Payments' },
-  { path: '/invoices', name: 'Invoices' },
-  { path: '/ratings', name: 'Ratings' },
-  { path: '/contact-messages', name: 'Contact Messages' },
-  { path: '/notifications', name: 'Notifications' },
-  { path: '/branding', name: 'Branding' },
-];
+  {
+    path: "/",
+    name: "Dashboard Home",
+    heading: /صباح الخير|مساء الخير|مساء النور|مرحباً|Good/i,
+  },
+  { path: "/bookings", name: "Bookings", heading: /الحجوزات|Bookings/i },
+  { path: "/clients", name: "Clients", heading: /المستفيدين|Clients/i },
+  { path: "/employees", name: "Employees", heading: /الممارسون|Employees/i },
+  { path: "/users", name: "Users", heading: /المستخدمون|Users/i },
+  { path: "/services", name: "Services", heading: /الخدمات|Services/i },
+  { path: "/categories", name: "Categories", heading: /العيادات|Categories/i },
+  {
+    path: "/departments",
+    name: "Departments",
+    heading: /الأقسام|العيادات|Departments/i,
+  },
+  { path: "/payments", name: "Payments", heading: /المدفوعات|Payments/i },
+  { path: "/invoices", name: "Invoices", heading: /الفواتير|Invoices/i },
+  {
+    path: "/ratings",
+    name: "Ratings",
+    heading: /تقييمات الممارسين|تقييمات|Ratings/i,
+  },
+  {
+    path: "/contact-messages",
+    name: "Contact Messages",
+    heading: /رسائل التواصل|Contact Messages/i,
+  },
+  {
+    path: "/notifications",
+    name: "Notifications",
+    heading: /الإشعارات|Notifications/i,
+  },
+  { path: "/branding", name: "Branding", heading: /إعداد النظام|Branding/i },
+]
 
-test.describe('Dashboard Pages Navigation', () => {
+test.describe("Dashboard Pages Navigation", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-
-    const isDev = process.env.NODE_ENV === 'development';
-    if (isDev) {
-      const devEmail = process.env.NEXT_PUBLIC_DEV_EMAIL;
-      const devPassword = process.env.NEXT_PUBLIC_DEV_PASSWORD;
-
-      if (devEmail && devPassword) {
-        const devLoginButton = page.locator('button:has-text("Dev Admin Login")');
-        if (await devLoginButton.isVisible()) {
-          await devLoginButton.click();
-          await page.waitForURL('/', { timeout: 10000 });
-        }
-      }
-    }
-
-    await page.waitForTimeout(500);
-  });
+    await loginAs(page, "admin")
+  })
 
   for (const pageInfo of DASHBOARD_PAGES) {
-    test(`should load ${pageInfo.name} (${pageInfo.path}) without crash`, async ({ page }) => {
-      try {
-        await page.goto(pageInfo.path, { timeout: 30000 });
-        await page.waitForLoadState('domcontentloaded');
-        await page.waitForTimeout(500);
-        const bodyVisible = await page.locator('body').isVisible();
-        if (!bodyVisible) {
-          throw new Error('Body not visible')
-        }
-      } catch (_e) {
-        const bodyVisible = await page.locator('body').isVisible().catch(() => false);
-        expect(bodyVisible).toBe(true);
-      }
-    });
+    test(`should load ${pageInfo.name} (${pageInfo.path}) without crash`, async ({
+      page,
+    }) => {
+      await page.goto(pageInfo.path, {
+        waitUntil: "domcontentloaded",
+        timeout: 30_000,
+      })
+      await expectCurrentPath(page, pageInfo.path)
+      await expectAuthenticatedShell(page)
+      await expectNoAppCrash(page)
+      await expect(
+        page.getByRole("heading", { name: pageInfo.heading }).first()
+      ).toBeVisible()
+    })
   }
 
-  test('should display header with user menu', async ({ page }) => {
-    // Login via dev button if available (avoids rate-limiting the auth endpoint)
-    await page.goto('/login');
-    const devLoginButton = page.locator('button:has-text("Dev Admin Login")');
-    if (await devLoginButton.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await devLoginButton.click();
-      await page.waitForURL('/', { timeout: 10000 });
-    } else {
-      // Fall back to email + password flow
-      await page.locator('#identifier').fill('admin@sawaa-test.com');
-      await page.getByRole('button', { name: 'متابعة' }).click();
-      await page.getByRole('button', { name: 'باستخدام كلمة المرور' }).click();
-      await page.locator('#password').fill('Admin@1234');
-      await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
-      await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 });
-    }
+  test("should display authenticated shell with user menu", async ({
+    page,
+  }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" })
+    await expectAuthenticatedShell(page)
+    await expectNoAppCrash(page)
 
-    // Header should be visible with user menu trigger
-    const header = page.locator('header').first();
-    await expect(header).toBeVisible({ timeout: 10000 });
+    const userMenuTrigger = getUserMenuTrigger(page)
+    await expect(userMenuTrigger).toBeVisible({ timeout: 5000 })
+    await userMenuTrigger.click()
 
-    const userMenuTrigger = header.locator('button').last();
-    await expect(userMenuTrigger).toBeVisible({ timeout: 5000 });
-  });
-
-  test('should collapse sidebar when toggle is clicked', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-    await page.waitForTimeout(500)
-
-    const sidebar = page.locator('[class*="sidebar"]').first()
-    const sidebarTrigger = page.locator('button[aria-label*="menu" i], button[aria-label*="القائمة"]').first()
-
-    if (await sidebar.isVisible({ timeout: 3000 }).catch(() => false) &&
-        await sidebarTrigger.isVisible({ timeout: 3000 }).catch(() => false)) {
-      const initialWidth = await sidebar.evaluate((el) => el.getBoundingClientRect().width)
-
-      await sidebarTrigger.click()
-      await page.waitForTimeout(500)
-
-      const collapsedWidth = await sidebar.evaluate((el) => el.getBoundingClientRect().width)
-      expect(collapsedWidth).toBeLessThan(initialWidth)
-    }
+    await expect(
+      page.getByRole("link", { name: /ملفي|My Profile/i })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: /تسجيل الخروج|Sign Out/i })
+    ).toBeVisible()
   })
 
-  test('should expand collapsed sidebar', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-    await page.waitForTimeout(500)
+  test("should highlight active sidebar item", async ({ page }) => {
+    await page.goto("/bookings", { waitUntil: "domcontentloaded" })
+    await expectCurrentPath(page, "/bookings")
+    await expectAuthenticatedShell(page)
+    await expectNoAppCrash(page)
 
-    const sidebarTrigger = page.locator('button[aria-label*="menu" i], button[aria-label*="القائمة"]').first()
-
-    if (await sidebarTrigger.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await sidebarTrigger.click()
-      await page.waitForTimeout(500)
-
-      await sidebarTrigger.click()
-      await page.waitForTimeout(500)
-
-      const sidebar = page.locator('[class*="sidebar"]').first()
-      const expandedWidth = await sidebar.evaluate((el) => el.getBoundingClientRect().width)
-      expect(expandedWidth).toBeGreaterThan(50)
-    }
+    const bookingsNavItem = page
+      .getByRole("button", { name: /الحجوزات|Bookings/i })
+      .first()
+    await expect(bookingsNavItem).toBeVisible()
+    await expect(bookingsNavItem).toHaveClass(/sidebar-active/)
   })
 
-  test('should highlight active sidebar item', async ({ page }) => {
-    await page.goto('/bookings')
-    await page.waitForLoadState('domcontentloaded')
-    await page.waitForTimeout(500)
+  test("should navigate via sidebar links", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" })
+    await expectAuthenticatedShell(page)
+    await expectNoAppCrash(page)
 
-    const activeItem = page.locator('[class*="sidebar"] a[class*="active"], [class*="sidebar"] button[class*="active"]')
-    if (await activeItem.count() > 0) {
-      await expect(activeItem.first()).toBeVisible()
-    }
+    const bookingsNavItem = page
+      .getByRole("button", { name: /الحجوزات|Bookings/i })
+      .first()
+    await expect(bookingsNavItem).toBeVisible()
+    await bookingsNavItem.click()
+
+    await expectCurrentPath(page, "/bookings")
+    await expect(
+      page.getByRole("heading", { name: /الحجوزات|Bookings/i }).first()
+    ).toBeVisible()
+    await expectNoAppCrash(page)
   })
-
-  test('should navigate via sidebar links', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-
-    const sidebarLinks = page.locator('[class*="sidebar"] a[href^="/"]')
-    const linkCount = await sidebarLinks.count()
-
-    if (linkCount > 0) {
-      const bookingsLink = page.locator('[class*="sidebar"] a[href="/bookings"]')
-      if (await bookingsLink.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await bookingsLink.click()
-        await page.waitForURL('/bookings', { timeout: 10000 })
-        await expect(page.locator('body')).toBeVisible()
-      }
-    }
-  })
-
-  test('should expand sidebar group on click', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-
-    const groupLabels = page.locator('[class*="sidebar"] [class*="group-label"], [class*="sidebar"] [class*="SidebarGroupLabel"]')
-    const count = await groupLabels.count()
-
-    if (count > 0) {
-      const firstGroup = groupLabels.first()
-      await firstGroup.click()
-      await page.waitForTimeout(300)
-    }
-  })
-});
+})

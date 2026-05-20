@@ -65,4 +65,45 @@ export interface UpdateServicePayload {
   iconBgColor?: string | null
 }
 
+// ─── Service Booking Config ──────────────────────────────────────────────────
+
+export interface ServiceBookingConfig {
+  id: string
+  serviceId: string
+  /** Delivery channel (IN_PERSON or ONLINE) */
+  deliveryType: 'IN_PERSON' | 'ONLINE'
+  price: number
+  durationMins: number
+  isActive: boolean
+}
+
+// ─── Service Duration Options ────────────────────────────────────────────────
+
+export interface ServiceDurationOption {
+  id: string
+  serviceId: string
+  /** Delivery channel (IN_PERSON or ONLINE) */
+  deliveryType: 'IN_PERSON' | 'ONLINE'
+  label: string
+  labelAr: string | null
+  durationMins: number
+  price: number
+  isDefault: boolean
+  sortOrder: number
+  isActive: boolean
+}
+
+// ─── Employee Service Options ────────────────────────────────────────────────
+
+export interface EmployeeServiceOption {
+  id: string
+  employeeServiceId: string
+  durationOptionId: string
+  priceOverride: number | null
+  durationOverride: number | null
+  /** Delivery channel (IN_PERSON or ONLINE) */
+  deliveryType: 'IN_PERSON' | 'ONLINE'
+  isActive: boolean
+}
+
 export type ServiceListResponse = PaginatedResponse<ServiceListItem>

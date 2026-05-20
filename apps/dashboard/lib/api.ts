@@ -29,15 +29,9 @@ const PROXY_BASE_URL = "/api/proxy"
 /* ─── Token Management ─── */
 
 const ACCESS_TOKEN_KEY = "sawaa_access_token"
-const TOKEN_STORAGE_KEY = "sawaa_token_storage" // "local" | "session"
+const TOKEN_STORAGE_KEY = "sawaa_token_storage"
 
 let accessToken: string | null = null
-
-function getTokenStorage(): Storage {
-  if (typeof window === "undefined") return localStorage
-  const storageType = localStorage.getItem(TOKEN_STORAGE_KEY)
-  return storageType === "session" ? sessionStorage : localStorage
-}
 
 export function setAccessToken(token: string | null) {
   accessToken = token
@@ -47,33 +41,33 @@ export function getAccessToken(): string | null {
   return accessToken
 }
 
+export function clearLegacyAccessTokenStorage(): void {
+  if (typeof window === "undefined") return
+  localStorage.removeItem(ACCESS_TOKEN_KEY)
+  localStorage.removeItem(TOKEN_STORAGE_KEY)
+  sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+}
+
 function clearAuthState() {
   accessToken = null
   if (typeof window !== "undefined") {
     localStorage.removeItem("sawaa_user")
-    localStorage.removeItem(ACCESS_TOKEN_KEY)
-    localStorage.removeItem(TOKEN_STORAGE_KEY)
-    sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+    clearLegacyAccessTokenStorage()
   }
 }
 
 /* ─── Initialise the shared client (browser only) ─── */
 
 if (typeof window !== "undefined") {
-  // Restore token from localStorage/sessionStorage on page load
-  const storage = getTokenStorage()
-  const storedToken = storage.getItem(ACCESS_TOKEN_KEY)
-  if (storedToken) {
-    accessToken = storedToken
-  }
+  // Access tokens are memory-only. Clear legacy Web Storage tokens on bootstrap.
+  clearLegacyAccessTokenStorage()
 
   initClient({
     baseUrl: PROXY_BASE_URL,
     getAccessToken: () => accessToken,
     onTokenRefreshed: (a) => {
       setAccessToken(a)
-      const st = getTokenStorage()
-      st.setItem(ACCESS_TOKEN_KEY, a)
+      clearLegacyAccessTokenStorage()
     },
     onAuthFailure: () => {
       clearAuthState()

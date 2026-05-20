@@ -32,8 +32,10 @@ import { employeeBookingsService as bookingsService } from '@/services/employee/
 import { getStatusLabel } from '@/lib/status-helpers';
 import type { Booking } from '@/types/models';
 import { JoinVideoCallButton } from '@/components/features/JoinVideoCallButton';
+import { hasZoomMeetingAccess, resolveBookingType, resolveDeliveryType } from '@/types/booking-enums';
 
 const TYPE_META: Record<string, { icon: React.ElementType; color: string }> = {
+  individual: { icon: Building2, color: '#1D4ED8' },
   in_person: { icon: Building2, color: '#1D4ED8' },
   online: { icon: Video, color: '#7C3AED' },
   walk_in: { icon: Building2, color: '#059669' },
@@ -70,7 +72,12 @@ export default function DoctorAppointmentDetailScreen() {
 
   if (!booking) return null;
 
-  const meta = TYPE_META[booking.type] ?? TYPE_META.in_person;
+  const bookingType = resolveBookingType(booking.bookingType ?? booking.type);
+  const deliveryType = resolveDeliveryType(booking.deliveryType);
+  const isOnline = deliveryType === 'online';
+  const canShowZoom = hasZoomMeetingAccess(booking);
+  const typeMetaKey = isOnline ? 'online' : bookingType;
+  const meta = TYPE_META[typeMetaKey] ?? TYPE_META.individual;
   const TypeIcon = meta.icon;
 
   const handleMarkComplete = () => {
@@ -162,7 +169,7 @@ export default function DoctorAppointmentDetailScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <ThemedText variant="body" style={{ fontWeight: '500' }}>
-                {t(`booking.${booking.type === 'in_person' ? 'inPerson' : booking.type === 'walk_in' ? 'walkIn' : booking.type === 'group' ? 'group' : 'online'}`)}
+                {t(`booking.${isOnline ? 'online' : bookingType === 'walk_in' ? 'walkIn' : bookingType === 'group' ? 'group' : 'inPerson'}`)}
               </ThemedText>
             </View>
           </View>
@@ -216,7 +223,7 @@ export default function DoctorAppointmentDetailScreen() {
               {t('doctor.cancelBooking')}
             </ThemedButton>
           )}
-          {booking.type === 'online' && booking.zoomMeetingStatus && booking.scheduledAt && booking.durationMins ? (
+          {canShowZoom && (booking.zoomMeetingStatus || booking.zoomStartUrl || booking.zoomJoinUrl) && booking.scheduledAt && booking.durationMins ? (
             <JoinVideoCallButton
               url={booking.zoomStartUrl ?? booking.zoomJoinUrl ?? null}
               scheduledAt={booking.scheduledAt}
@@ -225,7 +232,7 @@ export default function DoctorAppointmentDetailScreen() {
               isRTL={isRTL}
               variant="start"
             />
-          ) : booking.type === 'online' && booking.zoomLink ? (
+          ) : canShowZoom && booking.zoomLink ? (
             <ThemedButton
               onPress={() => Linking.openURL(booking.zoomLink!)}
               variant="primary"

@@ -12,21 +12,31 @@
  *
  */
 
-import { Page, expect } from '@playwright/test';
-import { TEST_TENANT } from './tenant';
+import { expect, type Page } from "@playwright/test"
+import {
+  expectAuthenticatedShell,
+  expectCurrentPath,
+  expectNoAppCrash,
+  getUserMenuTrigger,
+} from "./assertions"
+import { TEST_TENANT } from "./tenant"
 
-export type Persona = 'admin' | 'owner' | 'receptionist';
+export type Persona = "admin" | "owner" | "receptionist" | "employee"
+
+const LOGIN_FORM_TIMEOUT_MS = 10_000
 
 /**
  * Credentials keyed by persona.
  *
- * - admin / owner: resolved from TEST_TENANT so they stay in sync with
- *   the backend seed script (SEED_EMAIL / SEED_PASSWORD env vars or defaults).
- * - receptionist: sourced from its own env vars; falls back to a known
- *   test default.  A receptionist membership must be seeded separately if
- *   receptionist-specific tests are needed.
+ * - admin / owner: resolved from TEST_TENANT; owner aliases the seeded admin
+ *   by default unless SEED_OWNER_* overrides point at a distinct seeded owner.
+ * - receptionist / employee: default seeded personas with env var overrides
+ *   for CI or custom seed fixtures.
  */
-const PERSONA_CREDENTIALS: Record<Persona, { email: string; password: string }> = {
+export const PERSONA_CREDENTIALS: Record<
+  Persona,
+  { email: string; password: string }
+> = {
   admin: {
     email: TEST_TENANT.adminEmail,
     password: TEST_TENANT.adminPassword,
@@ -39,10 +49,14 @@ const PERSONA_CREDENTIALS: Record<Persona, { email: string; password: string }> 
     password: process.env.SEED_OWNER_PASSWORD ?? TEST_TENANT.adminPassword,
   },
   receptionist: {
-    email: process.env.SEED_RECEPTIONIST_EMAIL ?? 'receptionist@sawaa-test.com',
-    password: process.env.SEED_RECEPTIONIST_PASSWORD ?? 'Recept@1234',
+    email: process.env.SEED_RECEPTIONIST_EMAIL ?? "receptionist@sawaa-test.com",
+    password: process.env.SEED_RECEPTIONIST_PASSWORD ?? "Recept@1234",
   },
-};
+  employee: {
+    email: process.env.SEED_EMPLOYEE_EMAIL ?? "employee@sawaa-test.com",
+    password: process.env.SEED_EMPLOYEE_PASSWORD ?? "Employee@1234",
+  },
+}
 
 /**
  * Log in as a given persona by filling the login form.
@@ -51,49 +65,91 @@ const PERSONA_CREDENTIALS: Record<Persona, { email: string; password: string }> 
  *    so Playwright reuses a pre-authenticated context.  Only call `loginAs` when
  *    you need a *different* persona mid-test or when the setup state is stale.
  */
-export async function loginAs(page: Page, persona: Persona = 'admin'): Promise<void> {
-  const { email, password } = PERSONA_CREDENTIALS[persona];
+export async function loginAs(
+  page: Page,
+  persona: Persona = "admin"
+): Promise<void> {
+  const { email, password } = PERSONA_CREDENTIALS[persona]
 
-  // Fast path: already authenticated (storageState or previous login)
-  await page.goto('/');
-  await page.waitForLoadState('domcontentloaded').catch(() => {});
-  // Give client-side auth check a moment to settle
-  await page.waitForTimeout(1_000);
-  const isLoginFormVisible = await page.locator('#identifier').isVisible().catch(() => false);
-  if (!isLoginFormVisible) {
-    return;
+  await page.goto("/login", { waitUntil: "domcontentloaded" })
+
+  const loginIdentifier = page.locator("#identifier")
+
+  if (!isLoginPath(page.url())) {
+    await expectAuthenticatedShell(page)
+    await expectNoAppCrash(page)
+    return
+  }
+
+  const loginEntryState = await Promise.race([
+    page
+      .waitForURL((url) => !isLoginPath(url.toString()), {
+        timeout: LOGIN_FORM_TIMEOUT_MS,
+      })
+      .then(() => "redirected" as const)
+      .catch(() => "timeout" as const),
+    loginIdentifier
+      .waitFor({ state: "visible", timeout: LOGIN_FORM_TIMEOUT_MS })
+      .then(() => "form-visible" as const)
+      .catch(() => "timeout" as const),
+  ])
+
+  if (loginEntryState === "redirected" || !isLoginPath(page.url())) {
+    await expectAuthenticatedShell(page)
+    await expectNoAppCrash(page)
+    return
+  }
+
+  if (loginEntryState !== "form-visible") {
+    await expect(
+      loginIdentifier,
+      `Login form did not become visible within ${LOGIN_FORM_TIMEOUT_MS}ms while the page remained on ${page.url()}. ` +
+        "Refusing to treat a hidden #identifier field as an authenticated session."
+    ).toBeVisible({ timeout: 0 })
   }
 
   // Multi-step login wizard
-  await page.locator('#identifier').fill(email);
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await page.getByRole('button', { name: 'باستخدام كلمة المرور' }).click();
-  await page.locator('#password').fill(password);
-  await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
+  await expectCurrentPath(page, "/login")
+  await expect(loginIdentifier).toBeVisible()
+  await loginIdentifier.fill(email)
 
-  // Wait for login to complete (header becomes visible, login form disappears)
-  await expect(page.locator('header').first()).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('#identifier')).not.toBeVisible({ timeout: 5_000 });
+  const continueButton = page.getByRole("button", { name: "متابعة" })
+  await expect(continueButton).toBeEnabled()
+  await continueButton.click()
+
+  const passwordMethodButton = page.getByRole("button", {
+    name: "باستخدام كلمة المرور",
+  })
+  await expect(passwordMethodButton).toBeEnabled()
+  await passwordMethodButton.click()
+
+  await page.locator("#password").fill(password)
+  const submitButton = page.getByRole("button", { name: "تسجيل الدخول" })
+  await expect(submitButton).toBeEnabled()
+  await submitButton.click()
+
+  await expectAuthenticatedShell(page)
+  await expect(loginIdentifier).not.toBeVisible({ timeout: 5_000 })
+  await expectNoAppCrash(page)
 }
 
 /**
- * Log out the current user via the header user menu.
+ * Log out the current user via the authenticated shell user menu.
  */
 export async function logout(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto("/")
+  await expectAuthenticatedShell(page)
 
-  // Header user button (last icon button in header)
-  const userButton = page.locator('header button').filter({ has: page.locator('svg') }).last();
-  if (await userButton.isVisible()) {
-    await userButton.click();
-    await page.waitForTimeout(300);
+  const userButton = getUserMenuTrigger(page)
+  await expect(userButton).toBeVisible()
+  await userButton.click()
 
-    const logoutButton = page.locator('text=/logout|تسجيل الخروج/i');
-    if (await logoutButton.isVisible()) {
-      await logoutButton.click();
-      await page.waitForURL('/login', { timeout: 10_000 });
-    }
-  }
+  const logoutButton = page.getByRole("button", {
+    name: /logout|تسجيل الخروج|Sign Out/i,
+  })
+  await expect(logoutButton).toBeVisible()
+  await logoutButton.click()
+  await expectCurrentPath(page, "/login")
 }
 
 /**
@@ -103,13 +159,20 @@ export async function logout(page: Page): Promise<void> {
  *   test.use({ storageState: storageStatePath('admin') });
  */
 export function storageStatePath(persona: Persona): string {
-  return `playwright/.auth/${persona}.json`;
+  return `playwright/.auth/${persona}.json`
 }
 
 /**
  * Return the raw credentials for a persona (useful for API-level auth in
  * seed helpers that need a token outside of a browser context).
  */
-export function getPersonaCredentials(persona: Persona): { email: string; password: string } {
-  return PERSONA_CREDENTIALS[persona];
+export function getPersonaCredentials(persona: Persona): {
+  email: string
+  password: string
+} {
+  return PERSONA_CREDENTIALS[persona]
+}
+
+function isLoginPath(url: string): boolean {
+  return new URL(url).pathname === "/login"
 }

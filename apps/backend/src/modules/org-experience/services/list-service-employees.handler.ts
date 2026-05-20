@@ -31,18 +31,20 @@ export class ListServiceEmployeesHandler {
       }),
       this.prisma.serviceBookingConfig.findMany({
         where: { serviceId: query.serviceId, isActive: true },
-        orderBy: { bookingType: 'asc' },
+        orderBy: { deliveryType: 'asc' },
       }),
     ]);
 
     const serviceTypes = configs.map((c) => ({
-      id: `${query.serviceId}:${c.bookingType}`,
-      bookingType: c.bookingType.toLowerCase(),
+      id: `${query.serviceId}:${c.deliveryType}`,
+      deliveryType: c.deliveryType,
+      /** @deprecated deliveryType is the source of truth. */
+      bookingType: c.deliveryType,
       price: Number(c.price),
       durationMins: c.durationMins,
       isActive: c.isActive,
     }));
-    const availableTypes = serviceTypes.map((s) => s.bookingType);
+    const availableTypes = serviceTypes.map((s) => s.deliveryType);
 
     const empById = new Map(employees.map((e) => [e.id, e]));
     return links

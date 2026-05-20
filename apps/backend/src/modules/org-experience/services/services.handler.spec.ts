@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { ServiceBookingMode } from '@prisma/client';
+import { DeliveryType } from '@prisma/client';
 import { CreateServiceHandler } from './create-service.handler';
 
 const buildEventBus = () => ({ publish: jest.fn().mockResolvedValue(undefined) });
@@ -337,7 +337,7 @@ describe('SetServiceBookingConfigsHandler', () => {
   it('upserts configs for service', async () => {
     const prisma = buildConfigPrisma();
     const handler = new SetServiceBookingConfigsHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
-    await handler.execute({ serviceId: 'svc-1', types: [{ bookingType: ServiceBookingMode.IN_PERSON, price: 100, durationMins: 30 }] });
+    await handler.execute({ serviceId: 'svc-1', types: [{ deliveryType: DeliveryType.IN_PERSON, price: 100, durationMins: 30 }] });
     expect(prisma.service.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: 'svc-1' }) }),
     );

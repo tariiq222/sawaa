@@ -138,6 +138,7 @@ model EmployeeBranch {
   employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   branchId   String
 
+  // NOTE: (employeeId, branchId) unique constraint already exists — no migration needed.
   @@unique([employeeId, branchId])
   @@index([employeeId])
 }
@@ -148,6 +149,7 @@ model EmployeeService {
   employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   serviceId  String
 
+  // NOTE: (employeeId, serviceId) unique constraint already exists — no migration needed.
   @@unique([employeeId, serviceId])
   @@index([employeeId])
 }

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { publicEmployeesService } from '@/services/client';
+import type { BookingType, DeliveryType } from '@/types/booking-enums';
 
 import { therapistKeys } from './useTherapists';
 
@@ -11,7 +12,9 @@ interface SlotsParams {
   durationMins?: number;
   serviceId?: string;
   durationOptionId?: string;
-  bookingType?: string;
+  deliveryType?: DeliveryType;
+  /** Appointment/category type only. Never use for delivery channel. */
+  bookingType?: BookingType;
 }
 
 type SlotsResponse = Array<{ startTime: string; endTime: string }>;
@@ -28,6 +31,7 @@ export function useSlots(params: SlotsParams) {
         durationMins: params.durationMins,
         serviceId: params.serviceId,
         durationOptionId: params.durationOptionId,
+        deliveryType: params.deliveryType,
         bookingType: params.bookingType,
       }),
     enabled,

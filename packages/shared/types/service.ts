@@ -38,9 +38,19 @@ export interface ServiceWithCategory extends Service {
   category: ServiceCategory;
 }
 
+/**
+ * Delivery channel — independent from BookingType.
+ * IN_PERSON = physically at the branch; ONLINE = virtual (Zoom or other).
+ */
+export type DeliveryType = 'IN_PERSON' | 'ONLINE';
+
 export interface ServiceDurationOption {
   id: string;
   serviceId: string;
+  /** Legacy booking type — prefer deliveryType for new code */
+  bookingType?: 'in_person' | 'online' | 'walk_in' | 'group';
+  /** Delivery channel (IN_PERSON or ONLINE) */
+  deliveryType?: DeliveryType;
   label: string;
   labelAr: string | null;
   durationMinutes: number;
@@ -52,7 +62,10 @@ export interface ServiceDurationOption {
 export interface ServiceBookingType {
   id: string;
   serviceId: string;
+  /** Legacy booking mode — prefer deliveryType for new code */
   bookingType: 'in_person' | 'online';
+  /** Delivery channel (IN_PERSON or ONLINE) */
+  deliveryType?: DeliveryType;
   price: number; // halalat
   duration: number; // minutes
   isActive: boolean;

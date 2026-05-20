@@ -1,317 +1,308 @@
 /**
- * bookings-payment-invoices.spec.ts
+ * Payment and invoice assertions for the bookings finance trail.
  *
- * Payment and invoice flows on the bookings detail page.
- * Requires a live backend (:5200) and dashboard (:5203).
- *
- * Strategy: seed a client + service + employee + booking in beforeAll so
- * the bookings table is guaranteed non-empty.  Tests that click into a
- * booking detail (e.g. Pay, Invoice) rely on the seeded row.
- * Cleanup in afterAll cancels the seeded booking.
+ * This spec seeds one pay-at-clinic booking, creates its invoice through the
+ * dashboard finance API, records a CASH payment, then verifies the UI surfaces
+ * that exact seeded booking/payment/invoice instead of accepting page-body smoke.
  */
-import { test, expect } from '@playwright/test';
-import { loginAs } from '../../fixtures/auth';
-import { getTestTenant } from '../../fixtures/tenant';
+import { expect, test, type Page } from "@playwright/test"
+import { expectCurrentPath, expectNoAppCrash } from "../../fixtures/assertions"
+import { loginAs } from "../../fixtures/auth"
+import { getTestTenant } from "../../fixtures/tenant"
 import {
-  seedClient,
-  seedService,
-  seedEmployee,
-  seedBooking,
-  cleanupClient,
-  cleanupService,
-  cleanupEmployee,
   cleanupBooking,
-  type SeededClient,
-  type SeededService,
-  type SeededEmployee,
+  cleanupClient,
+  cleanupEmployee,
+  cleanupService,
+  ensureValidBranchId,
+  seedBooking,
+  seedClient,
+  seedEmployee,
+  seedService,
   type SeededBooking,
-} from '../../fixtures/seed';
+  type SeededClient,
+  type SeededEmployee,
+  type SeededService,
+} from "../../fixtures/seed"
 
-// ─── Module-level seeded entities ────────────────────────────────────────────
+const API_BASE = process.env.PW_API_URL ?? "http://localhost:5200"
+const CASH_SUBTOTAL_HALALAS = 30_000
+const EXPECTED_TOTAL_HALALAS = 34_500
+const EXPECTED_TOTAL_AR_OR_EN = /٣٤٥(?:٫|\.)٠٠|345(?:\.|٫)00|345/
 
-let token = '';
-let seededClient: SeededClient;
-let seededService: SeededService;
-let seededEmployee: SeededEmployee;
-let seededBooking: SeededBooking;
+type SeededInvoice = {
+  id: string
+  number?: number
+  subtotal: number | string
+  vatAmt: number | string
+  total: number | string
+}
 
-// ─── Setup / teardown ────────────────────────────────────────────────────────
+type SeededPayment = {
+  id: string
+  number?: number
+  invoiceId: string
+  amount: number | string
+  method: string
+  status: string
+}
+
+let token = ""
+let seededClient: SeededClient
+let seededService: SeededService
+let seededEmployee: SeededEmployee
+let seededBooking: SeededBooking
+let seededInvoice: SeededInvoice
+let seededPayment: SeededPayment
+let seededClientName = ""
 
 test.beforeAll(async () => {
-  const organization = await getTestTenant();
-  token = organization.accessToken;
+  const organization = await getTestTenant()
+  token = organization.accessToken
 
   seededClient = await seedClient(token, {
-    firstName: 'اختبار',
-    lastName: 'دفع',
-    gender: 'FEMALE',
-  });
+    firstName: "اختبار",
+    lastName: `دفع ${Date.now().toString().slice(-5)}`,
+    gender: "FEMALE",
+  })
+  seededClientName = `${seededClient.firstName} ${seededClient.lastName}`
 
   seededService = await seedService(token, {
-    nameAr: 'خدمة الدفع',
-    nameEn: 'Payment Test Service',
+    nameAr: "خدمة دفع نقدي",
+    nameEn: "Cash Payment E2E Service",
     durationMins: 45,
-    price: 300,
-  });
+    price: CASH_SUBTOTAL_HALALAS,
+  })
 
   seededEmployee = await seedEmployee(token, {
-    name: 'موظف الدفع',
-    gender: 'MALE',
-  });
+    name: "موظف الدفع النقدي",
+    gender: "MALE",
+  })
 
+  const branchId = await ensureValidBranchId(token)
   seededBooking = await seedBooking(token, {
+    branchId,
     clientId: seededClient.id,
     employeeId: seededEmployee.id,
     serviceId: seededService.id,
     payAtClinic: true,
-  });
-});
+  })
+
+  seededInvoice = await apiPost<SeededInvoice>(
+    "/dashboard/finance/invoices",
+    token,
+    {
+      bookingId: seededBooking.id,
+      branchId,
+      clientId: seededClient.id,
+      employeeId: seededEmployee.id,
+      subtotal: CASH_SUBTOTAL_HALALAS,
+      vatRate: 0.15,
+      notes: `e2e cash invoice for ${seededBooking.id}`,
+    }
+  )
+
+  expect(Number(seededInvoice.total)).toBe(EXPECTED_TOTAL_HALALAS)
+
+  seededPayment = await apiPost<SeededPayment>(
+    "/dashboard/finance/payments",
+    token,
+    {
+      invoiceId: seededInvoice.id,
+      amount: Number(seededInvoice.total),
+      method: "CASH",
+      gatewayRef: `e2e-cash-${seededBooking.id}`,
+      idempotencyKey: `e2e-cash-${seededBooking.id}`,
+    }
+  )
+})
 
 test.afterAll(async () => {
-  if (seededBooking?.id) await cleanupBooking(seededBooking.id, token).catch(() => undefined);
-  if (seededEmployee?.id) await cleanupEmployee(seededEmployee.id, token).catch(() => undefined);
-  if (seededService?.id) await cleanupService(seededService.id, token).catch(() => undefined);
-  if (seededClient?.id) await cleanupClient(seededClient.id, token).catch(() => undefined);
-});
+  if (seededBooking?.id)
+    await cleanupBooking(seededBooking.id, token).catch(() => undefined)
+  if (seededEmployee?.id)
+    await cleanupEmployee(seededEmployee.id, token).catch(() => undefined)
+  if (seededService?.id)
+    await cleanupService(seededService.id, token).catch(() => undefined)
+  if (seededClient?.id)
+    await cleanupClient(seededClient.id, token).catch(() => undefined)
+})
 
-// ─── Tests ────────────────────────────────────────────────────────────────────
-
-test.describe('Bookings - Payment & Invoices', () => {
+test.describe("Bookings - payment and invoice finance trail", () => {
   test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'admin');
-    await page.goto('/bookings');
-    await page.waitForLoadState('networkidle');
-    // Give React time to render the table - use timeout-free wait
-    await page.waitForTimeout(2_000);
-  });
+    await loginAs(page, "admin")
+  })
 
-  test('should display payment status on booking', async ({ page }) => {
-    const firstRow = page.locator('tbody tr').first();
-    await expect(firstRow).toBeVisible({ timeout: 10_000 });
-    await firstRow.click();
-    await page.waitForTimeout(1_000);
+  test("shows the seeded booking payment status, method, and amount in its detail sheet", async ({
+    page,
+  }) => {
+    const dialog = await openSeededBookingDetail(page)
 
-    const paymentStatus = page.locator('text=/paid|unpaid|مدفوع|غير مدفوع/i').first();
-    const hasPaymentStatus = await paymentStatus.isVisible({ timeout: 5_000 }).catch(() => false);
-    // Soft: page may not show payment status until booking is confirmed.
-    expect(hasPaymentStatus || (await page.locator('body').isVisible())).toBeTruthy();
-  });
+    await expect(dialog.getByText(seededClientName)).toBeVisible()
+    await expect(dialog.getByText(seededService.nameAr)).toBeVisible()
+    await expect(dialog.getByText(/^(الدفع|Payment)$/i)).toBeVisible()
+    await expect(dialog.getByText(/مدفوع|Paid/i)).toBeVisible()
+    await expect(dialog.getByText(/نقداً|Cash/i)).toBeVisible()
+    await expect(
+      dialog.getByText(EXPECTED_TOTAL_AR_OR_EN).first()
+    ).toBeVisible()
 
-  test('should record cash payment at clinic', async ({ page }) => {
-    const firstRow = page.locator('tbody tr').first();
-    await expect(firstRow).toBeVisible({ timeout: 10_000 });
-    await firstRow.click();
-    await page.waitForTimeout(1_000);
+    // Current booking detail UI does not expose an in-dialog cash collection action;
+    // it renders the completed finance trail once CASH is recorded.
+    await expect(dialog.getByRole("button", { name: /دفع|Pay/i })).toHaveCount(
+      0
+    )
+  })
 
-    const paymentBtn = page
-      .locator('button:has-text("Pay"), button:has-text("دفع")')
-      .first();
-    if (await paymentBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await paymentBtn.click();
-      await page.waitForTimeout(500);
+  test("documents current booking invoice action state and verifies the invoice list row", async ({
+    page,
+  }) => {
+    const dialog = await openSeededBookingDetail(page)
 
-      const cashOption = page.locator('text=/cash|نقدي/i').first();
-      if (await cashOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await cashOption.click();
-        await page.waitForTimeout(500);
-      }
+    // Current UI has no invoice action inside booking details; the invoice surface
+    // is the dedicated /invoices list backed by payment rows.
+    await expect(
+      dialog.getByRole("button", { name: /فاتورة|Invoice/i })
+    ).toHaveCount(0)
 
-      const confirmBtn = page
-        .locator('button:has-text("Confirm"), button:has-text("تأكيد")')
-        .first();
-      if (await confirmBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await confirmBtn.click();
-        await page.waitForTimeout(2_000);
-      }
-    }
-    await expect(page.locator('body')).toBeVisible();
-  });
+    await gotoFinancePage(page, "/invoices", /الفواتير|Invoices/i)
+    await expect(
+      page.getByRole("columnheader", { name: /رقم الفاتورة|Invoice/i })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("columnheader", { name: /الإجمالي|Total/i })
+    ).toBeVisible()
+    const invoiceRow = page
+      .getByRole("row")
+      .filter({ hasText: invoiceListNumber() })
+      .first()
+    await expect(invoiceRow).toBeVisible()
+    await expect(
+      invoiceRow.getByText(EXPECTED_TOTAL_AR_OR_EN).first()
+    ).toBeVisible()
+  })
 
-  test('should process online payment', async ({ page }) => {
-    const firstRow = page.locator('tbody tr').first();
-    await expect(firstRow).toBeVisible({ timeout: 10_000 });
-    await firstRow.click();
-    await page.waitForTimeout(1_000);
+  test("shows the seeded cash payment on the payments list with strong table assertions", async ({
+    page,
+  }) => {
+    await gotoFinancePage(page, "/payments", /المدفوعات|Payments/i)
 
-    const paymentBtn = page
-      .locator('button:has-text("Pay"), button:has-text("دفع")')
-      .first();
-    if (await paymentBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await paymentBtn.click();
-      await page.waitForTimeout(500);
+    await expect(
+      page.getByRole("columnheader", { name: /المستفيد|Client/i })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("columnheader", { name: /المبلغ|Amount/i })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("columnheader", { name: /الطريقة|Method/i })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("columnheader", { name: /الحالة|Status/i })
+    ).toBeVisible()
 
-      const onlineOption = page.locator('text=/online|أونلاين|card|بطاقة/i').first();
-      if (await onlineOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await onlineOption.click();
-        await page.waitForTimeout(500);
+    const paymentRow = page
+      .getByRole("row")
+      .filter({ hasText: seededClientName })
+      .first()
+    await expect(paymentRow).toBeVisible()
+    await expect(
+      paymentRow.getByText(EXPECTED_TOTAL_AR_OR_EN).first()
+    ).toBeVisible()
+    await expect(paymentRow.getByText(/نقدي|Cash/i)).toBeVisible()
+    await expect(paymentRow.getByText("COMPLETED")).toBeVisible()
+  })
 
-        const payNowBtn = page
-          .locator('button:has-text("Pay now"), button:has-text("ادفع الآن")')
-          .first();
-        if (await payNowBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
-          await payNowBtn.click();
-          await page.waitForTimeout(3_000);
-        }
-      }
-    }
-    await expect(page.locator('body')).toBeVisible();
-  });
+  test("method filter narrows payments to the seeded cash payment without body fallbacks", async ({
+    page,
+  }) => {
+    await gotoFinancePage(page, "/payments", /المدفوعات|Payments/i)
 
-  test('should view invoice for booking', async ({ page }) => {
-    const firstRow = page.locator('tbody tr').first();
-    await expect(firstRow).toBeVisible({ timeout: 10_000 });
-    await firstRow.click();
-    await page.waitForTimeout(1_000);
+    await page
+      .getByRole("combobox")
+      .filter({ hasText: /جميع الطرق|All Methods/i })
+      .click()
+    await page.getByRole("option", { name: /نقدي|Cash/i }).click()
 
-    const invoiceBtn = page
-      .locator('button:has-text("Invoice"), button:has-text("فاتورة")')
-      .first();
-    if (await invoiceBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await invoiceBtn.click();
-      await page.waitForTimeout(1_000);
+    await expect(
+      page.getByRole("row").filter({ hasText: seededClientName })
+    ).toBeVisible()
+    await expect(
+      page
+        .getByRole("row")
+        .filter({ hasText: /نقدي|Cash/i })
+        .first()
+    ).toBeVisible()
+  })
+})
 
-      const invoiceView = page.locator('[class*="invoice"], [role="dialog"]').first();
-      const hasInvoice = await invoiceView.isVisible({ timeout: 5_000 }).catch(() => false);
-      expect(hasInvoice || (await page.locator('body').isVisible())).toBeTruthy();
-    }
-    await expect(page.locator('body')).toBeVisible();
-  });
+async function openSeededBookingDetail(page: Page) {
+  await gotoFinancePage(page, "/bookings", /الحجوزات|Bookings/i)
 
-  test('should download invoice as PDF', async ({ page }) => {
-    const firstRow = page.locator('tbody tr').first();
-    await expect(firstRow).toBeVisible({ timeout: 10_000 });
-    await firstRow.click();
-    await page.waitForTimeout(1_000);
+  await expect(
+    page.getByRole("columnheader", { name: /المريض|Client/i })
+  ).toBeVisible()
+  await expect(
+    page.getByRole("columnheader", { name: /حالة الدفع|Payment Status/i })
+  ).toBeVisible()
+  await page
+    .getByRole("textbox", { name: /بحث بالاسم|Search by name/i })
+    .fill(seededBooking.id)
 
-    const invoiceBtn = page
-      .locator('button:has-text("Invoice"), button:has-text("فاتورة")')
-      .first();
-    if (await invoiceBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await invoiceBtn.click();
-      await page.waitForTimeout(500);
+  const clientButton = page
+    .getByRole("button", { name: new RegExp(escapeRegex(seededClientName)) })
+    .first()
+  await expect(clientButton).toBeVisible({ timeout: 20_000 })
+  await clientButton.click()
 
-      const downloadBtn = page
-        .locator('button:has-text("Download PDF"), button:has-text("تحميل PDF")')
-        .first();
-      if (await downloadBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await downloadBtn.click();
-        await page.waitForTimeout(2_000);
-      }
-    }
-    await expect(page.locator('body')).toBeVisible();
-  });
+  const dialog = page
+    .getByRole("dialog")
+    .filter({ hasText: seededClientName })
+    .first()
+  await expect(dialog).toBeVisible()
+  return dialog
+}
 
-  test('should send invoice via email', async ({ page }) => {
-    const firstRow = page.locator('tbody tr').first();
-    await expect(firstRow).toBeVisible({ timeout: 10_000 });
-    await firstRow.click();
-    await page.waitForTimeout(1_000);
+async function gotoFinancePage(
+  page: Page,
+  path: "/bookings" | "/payments" | "/invoices",
+  heading: RegExp
+) {
+  await page.goto(path, { waitUntil: "domcontentloaded" })
+  await expectCurrentPath(page, path)
+  await expectNoAppCrash(page)
+  await expect(
+    page.getByRole("heading", { name: heading }).first()
+  ).toBeVisible()
+}
 
-    const invoiceBtn = page
-      .locator('button:has-text("Invoice"), button:has-text("فاتورة")')
-      .first();
-    if (await invoiceBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await invoiceBtn.click();
-      await page.waitForTimeout(500);
+async function apiPost<T>(
+  path: string,
+  bearerToken: string,
+  body: Record<string, unknown>
+) {
+  const res = await fetch(`${API_BASE}/api/v1${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${bearerToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  })
 
-      const sendBtn = page
-        .locator('button:has-text("Send"), button:has-text("إرسال")')
-        .first();
-      if (await sendBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await sendBtn.click();
-        await page.waitForTimeout(1_000);
+  if (!res.ok) {
+    const text = await res.text().catch(() => "(unreadable)")
+    throw new Error(`[e2e] POST ${path} failed — HTTP ${res.status}: ${text}`)
+  }
 
-        const emailInput = page.locator('input[type="email"]').first();
-        if (await emailInput.isVisible({ timeout: 3_000 }).catch(() => false)) {
-          await emailInput.fill('client@example.com');
-          await page.waitForTimeout(500);
+  return res.json() as Promise<T>
+}
 
-          const confirmBtn = page
-            .locator('button:has-text("Send"), button:has-text("إرسال")')
-            .first();
-          if (await confirmBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
-            await confirmBtn.click();
-            await page.waitForTimeout(2_000);
-          }
-        }
-      }
-    }
-    await expect(page.locator('body')).toBeVisible();
-  });
+function invoiceListNumber() {
+  return seededPayment.number
+    ? `INV-${String(seededPayment.number).padStart(4, "0")}`
+    : seededPayment.id.slice(0, 8).toUpperCase()
+}
 
-  test('should view payments list', async ({ page }) => {
-    await page.goto('/payments');
-    await page.waitForLoadState('networkidle');
-
-    const paymentsTable = page.locator('table').first();
-    const hasPayments = await paymentsTable.isVisible({ timeout: 5_000 }).catch(() => false);
-    expect(hasPayments || (await page.locator('body').isVisible())).toBeTruthy();
-  });
-
-  test('should filter payments by method', async ({ page }) => {
-    await page.goto('/payments');
-    await page.waitForLoadState('networkidle');
-
-    const methodFilter = page
-      .locator('select[id*="method"], select[id*="type"]')
-      .first();
-    if (await methodFilter.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      const options = methodFilter.locator('option');
-      const count = await options.count();
-      if (count > 1) {
-        await methodFilter.selectOption({ index: 1 });
-        await page.waitForTimeout(1_000);
-      }
-    }
-    await expect(page.locator('body')).toBeVisible();
-  });
-
-  test('should view invoices list', async ({ page }) => {
-    await page.goto('/invoices');
-    await page.waitForLoadState('networkidle');
-
-    const invoicesTable = page.locator('table').first();
-    const hasInvoices = await invoicesTable.isVisible({ timeout: 5_000 }).catch(() => false);
-    expect(hasInvoices || (await page.locator('body').isVisible())).toBeTruthy();
-  });
-
-  test('should download invoice', async ({ page }) => {
-    await page.goto('/invoices');
-    await page.waitForLoadState('networkidle');
-
-    const downloadBtn = page
-      .locator('button[aria-label*="download" i], button:has-text("Download")')
-      .first();
-    if (await downloadBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await downloadBtn.click();
-      await page.waitForTimeout(1_000);
-    }
-    await expect(page.locator('body')).toBeVisible();
-  });
-
-  test('should refund payment', async ({ page }) => {
-    await page.goto('/payments');
-    await page.waitForLoadState('networkidle');
-
-    const firstRow = page.locator('tbody tr').first();
-    if (await firstRow.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      const refundBtn = page
-        .locator('button:has-text("Refund"), button:has-text("استرداد")')
-        .first();
-      if (await refundBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await refundBtn.click();
-        await page.waitForTimeout(500);
-
-        const confirmBtn = page
-          .locator('button:has-text("Confirm"), button:has-text("تأكيد")')
-          .first();
-        if (await confirmBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
-          await confirmBtn.click();
-          await page.waitForTimeout(2_000);
-        }
-      }
-    }
-    // Payments page may be empty in test env — page stability is the gate.
-    await expect(page.locator('body')).toBeVisible();
-  });
-});
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}

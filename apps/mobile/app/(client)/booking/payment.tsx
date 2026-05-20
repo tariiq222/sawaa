@@ -16,6 +16,7 @@ import { APP_SCHEME } from '@/constants/config';
 import { clientBookingsService } from '@/services/client/bookings';
 import { clientPaymentsService } from '@/services/client/payments';
 import { formatHalalas } from '@/lib/money';
+import type { DeliveryType } from '@/types/booking-enums';
 
 type Method = 'card' | 'apple_pay' | 'bank_transfer';
 
@@ -24,7 +25,7 @@ export default function BookingPaymentScreen() {
     serviceId?: string;
     employeeId?: string;
     branchId?: string;
-    type?: string;
+    deliveryType?: DeliveryType;
     scheduledAt?: string;
     durationOptionId?: string;
     amount?: string;
@@ -69,6 +70,7 @@ export default function BookingPaymentScreen() {
         serviceId: params.serviceId!,
         scheduledAt: params.scheduledAt!,
         durationOptionId: params.durationOptionId,
+        deliveryType: params.deliveryType ?? 'in_person',
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 

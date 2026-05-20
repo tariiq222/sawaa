@@ -152,7 +152,7 @@ describe('CheckAvailabilityHandler', () => {
       expect(result[0].endTime.getTime() - result[0].startTime.getTime()).toBe(90 * 60_000);
     });
 
-    it('resolves duration by bookingType scoped default', async () => {
+    it('resolves duration by deliveryType scoped default', async () => {
       const prisma = makePrisma();
       prisma.serviceDurationOption.findFirst = jest.fn().mockResolvedValue({ durationMins: 45 });
       const settingsHandler = makeSettingsHandler();
@@ -170,13 +170,13 @@ describe('CheckAvailabilityHandler', () => {
         branchId: 'branch-1',
         date: tomorrowMidnight,
         serviceId: 'svc-1',
-        bookingType: 'INDIVIDUAL' as any,
+        deliveryType: 'IN_PERSON' as any,
       });
       expect(prisma.serviceDurationOption.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             serviceId: 'svc-1',
-            bookingType: 'INDIVIDUAL',
+            deliveryType: 'IN_PERSON',
             isDefault: true,
             isActive: true,
           }),
@@ -186,7 +186,7 @@ describe('CheckAvailabilityHandler', () => {
       expect(result[0].endTime.getTime() - result[0].startTime.getTime()).toBe(45 * 60_000);
     });
 
-    it('falls back to global default when bookingType scoped default is missing', async () => {
+    it('falls back to first active option when no deliveryType default exists', async () => {
       const prisma = makePrisma();
       prisma.serviceDurationOption.findFirst = jest
         .fn()
@@ -947,7 +947,7 @@ describe('CheckAvailabilityHandler', () => {
       );
     });
 
-    it('resolves by bookingType scoped default', async () => {
+    it('resolves by deliveryType scoped default', async () => {
       const prisma = makePrisma();
       prisma.serviceDurationOption.findFirst = jest.fn().mockResolvedValue({ durationMins: 45 });
       const settingsHandler = makeSettingsHandler();
@@ -960,13 +960,13 @@ describe('CheckAvailabilityHandler', () => {
       }).compile();
       handler = moduleRef.get(CheckAvailabilityHandler);
 
-      const result = await (handler as any).resolveDurationOption('svc-1', null, 'INDIVIDUAL');
+      const result = await (handler as any).resolveDurationOption('svc-1', null, null, 'IN_PERSON');
       expect(result).toEqual({ durationMins: 45 });
       expect(prisma.serviceDurationOption.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             serviceId: 'svc-1',
-            bookingType: 'INDIVIDUAL',
+            deliveryType: 'IN_PERSON',
             isDefault: true,
             isActive: true,
           }),
@@ -1014,6 +1014,109 @@ describe('CheckAvailabilityHandler', () => {
       const result = await (handler as any).resolveDurationOption('svc-1', null, null);
       expect(result).toEqual({ durationMins: 30 });
       expect(prisma.serviceDurationOption.findFirst).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // ─── DeliveryType-aware availability (TDD — refactor-booking-delivery-type) ───
+
+  describe('execute — deliveryType-aware duration resolution', () => {
+    it('uses deliveryType for duration calculation when provided', async () => {
+      const prisma = makePrisma();
+      prisma.serviceDurationOption.findFirst = jest.fn().mockResolvedValue({ durationMins: 90 });
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        date: tomorrowMidnight,
+        serviceId: 'svc-1',
+        deliveryType: 'ONLINE' as any,
+      });
+
+      expect(prisma.serviceDurationOption.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            serviceId: 'svc-1',
+            deliveryType: 'ONLINE',
+            isDefault: true,
+            isActive: true,
+          }),
+        }),
+      );
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0].endTime.getTime() - result[0].startTime.getTime()).toBe(90 * 60_000);
+    });
+
+    it('rejects slots for unsupported delivery type', async () => {
+      const prisma = makePrisma();
+      prisma.serviceDurationOption.findFirst = jest.fn().mockResolvedValue(null);
+      prisma.service.findFirst = jest.fn().mockResolvedValue({
+        id: 'svc-1',
+        bufferMinutes: 0,
+        minLeadMinutes: 0,
+        maxAdvanceDays: 90,
+        bookingConfigs: [{ bookingType: 'IN_PERSON' }],
+      });
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        date: tomorrowMidnight,
+        serviceId: 'svc-1',
+        deliveryType: 'ONLINE' as any,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it('falls back to service default when deliveryType is omitted', async () => {
+      const prisma = makePrisma();
+      prisma.serviceDurationOption.findFirst = jest.fn().mockResolvedValue({ durationMins: 60 });
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        date: tomorrowMidnight,
+        serviceId: 'svc-1',
+        bookingType: 'INDIVIDUAL' as any,
+      });
+
+      expect(prisma.serviceDurationOption.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            serviceId: 'svc-1',
+            isDefault: true,
+            isActive: true,
+          }),
+        }),
+      );
+      expect(result.length).toBeGreaterThan(0);
     });
   });
 });

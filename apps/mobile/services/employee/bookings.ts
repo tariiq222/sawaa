@@ -1,6 +1,6 @@
 import api from '../api';
 import type { ApiResponse, PaginatedResponse } from '@/types/api';
-import type { Booking, BookingStatus, BookingType } from '@/types/models';
+import type { Booking, BookingStatus, BookingType, DeliveryType } from '@/types/models';
 
 // Employee-side booking calls. All endpoints live under `/mobile/employee/bookings/...`
 // (see apps/backend/src/api/mobile/employee/bookings.controller.ts) and enforce
@@ -12,6 +12,8 @@ export interface CreateEmployeeBookingData {
   serviceId: string;
   scheduledAt: string;
   durationOptionId?: string;
+  deliveryType: DeliveryType;
+  /** Appointment/category type only. Never use for delivery channel. */
   bookingType?: BookingType;
   notes?: string;
 }

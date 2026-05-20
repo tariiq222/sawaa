@@ -96,7 +96,7 @@ export class RescheduleBookingHandler {
     }, { isolationLevel: 'Serializable' }).catch(mapDbConflict) as [Awaited<ReturnType<typeof this.prisma.booking.update>>, unknown];
 
     if (booking.zoomMeetingId) {
-      // Best effort update
+      // Best effort update — only for ONLINE delivery type bookings
       this.zoomMeetingService
         .updateMeeting(DEFAULT_ORG_ID, booking.zoomMeetingId, {
           topic: `Booking ${booking.id}`,

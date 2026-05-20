@@ -115,7 +115,7 @@ describe("useEmployeeServiceTypes", () => {
   beforeEach(() => { vi.clearAllMocks(); navState.reset() })
 
   it("fetches service types when both ids are provided", async () => {
-    fetchEmployeeServiceTypes.mockResolvedValueOnce([{ bookingType: "IN_PERSON" }])
+    fetchEmployeeServiceTypes.mockResolvedValueOnce([{ deliveryType: "IN_PERSON" }])
 
     const { result } = renderHook(
       () => useEmployeeServiceTypes("p-1", "svc-1"),

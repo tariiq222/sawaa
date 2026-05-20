@@ -24,6 +24,9 @@ import { CreateIntakeFormHandler } from './intake-forms/create-intake-form.handl
 import { GetIntakeFormHandler } from './intake-forms/get-intake-form.handler';
 import { ListIntakeFormsHandler } from './intake-forms/list-intake-forms.handler';
 import { DeleteIntakeFormHandler } from './intake-forms/delete-intake-form.handler';
+import { UpdateIntakeFormHandler } from './intake-forms/update-intake-form.handler';
+import { SetIntakeFieldsHandler } from './intake-forms/set-intake-fields.handler';
+import { GetIntakeFormResponsesHandler } from './intake-forms/get-intake-form-responses.handler';
 import { SubmitRatingHandler } from './ratings/submit-rating.handler';
 import { ListRatingsHandler } from './ratings/list-ratings.handler';
 import { GetOrgSettingsHandler } from './org-settings/get-org-settings.handler';
@@ -58,6 +61,7 @@ const bundleHandlers = [
     ...bundleHandlers,
     UpsertBrandingHandler, GetBrandingHandler, GetPublicBrandingHandler, UploadLogoHandler,
     CreateIntakeFormHandler, GetIntakeFormHandler, ListIntakeFormsHandler, DeleteIntakeFormHandler,
+    UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,
     SubmitRatingHandler, ListRatingsHandler,
     GetOrgSettingsHandler, UpsertOrgSettingsHandler,
     GetBookingSettingsHandler, UpsertBookingSettingsHandler,
@@ -67,6 +71,7 @@ const bundleHandlers = [
     ...bundleHandlers,
     UpsertBrandingHandler, GetBrandingHandler, GetPublicBrandingHandler, UploadLogoHandler,
     CreateIntakeFormHandler, GetIntakeFormHandler, ListIntakeFormsHandler, DeleteIntakeFormHandler,
+    UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,
     SubmitRatingHandler, ListRatingsHandler,
     GetOrgSettingsHandler, UpsertOrgSettingsHandler,
     GetBookingSettingsHandler, UpsertBookingSettingsHandler,

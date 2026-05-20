@@ -263,6 +263,7 @@ export const arMisc: Record<string, string> = {
   "login.passwordLabel": "كلمة المرور",
   "login.showPassword": "إظهار كلمة المرور",
   "login.hidePassword": "إخفاء كلمة المرور",
+  "login.rememberMe": "تذكرني",
   "login.signingIn": "جارٍ تسجيل الدخول...",
   "login.signIn": "تسجيل الدخول",
   "login.orgSuspended": "تم تعليق حساب المنظمة. تواصل مع الإدارة لإعادة التفعيل.",

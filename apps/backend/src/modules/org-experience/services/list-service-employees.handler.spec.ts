@@ -45,7 +45,7 @@ describe('ListServiceEmployeesHandler', () => {
       { id: 'emp-2', name: 'Sara', nameAr: null, nameEn: 'Sara Smith', title: 'Nurse', avatarUrl: 'url', isActive: true },
     ]);
     prisma.serviceBookingConfig.findMany.mockResolvedValue([
-      { serviceId: 'svc-1', bookingType: 'ONLINE', price: 100, durationMins: 30, isActive: true },
+      { serviceId: 'svc-1', deliveryType: 'ONLINE', price: 100, durationMins: 30, isActive: true },
     ]);
 
     const result = await handler.execute({ serviceId: 'svc-1' });
@@ -55,7 +55,7 @@ describe('ListServiceEmployeesHandler', () => {
     expect(result[1].employee.user.firstName).toBe('Sara');
     expect(result[1].employee.user.lastName).toBe('Smith');
     expect(result[0].serviceTypes).toHaveLength(1);
-    expect(result[0].availableTypes).toContain('online');
+    expect(result[0].availableTypes).toContain('ONLINE');
   });
 
   it('should use full name when ar and en are null', async () => {

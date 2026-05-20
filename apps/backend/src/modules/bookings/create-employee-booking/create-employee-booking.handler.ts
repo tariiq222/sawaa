@@ -31,6 +31,7 @@ export class CreateEmployeeBookingHandler {
       scheduledAt: new Date(command.scheduledAt),
       durationOptionId: command.durationOptionId,
       bookingType: command.bookingType ?? 'INDIVIDUAL',
+      deliveryType: command.deliveryType,
       notes: command.notes,
     });
   }

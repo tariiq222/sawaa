@@ -36,6 +36,11 @@ import { GetIntakeFormHandler } from '../../modules/org-experience/intake-forms/
 import { ListIntakeFormsHandler } from '../../modules/org-experience/intake-forms/list-intake-forms.handler';
 import { ListIntakeFormsDto } from '../../modules/org-experience/intake-forms/list-intake-forms.dto';
 import { DeleteIntakeFormHandler } from '../../modules/org-experience/intake-forms/delete-intake-form.handler';
+import { UpdateIntakeFormHandler } from '../../modules/org-experience/intake-forms/update-intake-form.handler';
+import { UpdateIntakeFormDto } from '../../modules/org-experience/intake-forms/update-intake-form.dto';
+import { SetIntakeFieldsHandler } from '../../modules/org-experience/intake-forms/set-intake-fields.handler';
+import { SetIntakeFieldsDto } from '../../modules/org-experience/intake-forms/set-intake-fields.dto';
+import { GetIntakeFormResponsesHandler } from '../../modules/org-experience/intake-forms/get-intake-form-responses.handler';
 import { SubmitRatingHandler } from '../../modules/org-experience/ratings/submit-rating.handler';
 import { SubmitRatingDto } from '../../modules/org-experience/ratings/submit-rating.dto';
 import { ListRatingsHandler } from '../../modules/org-experience/ratings/list-ratings.handler';
@@ -75,6 +80,9 @@ export class DashboardOrganizationSettingsController {
     private readonly getIntakeForm: GetIntakeFormHandler,
     private readonly listIntakeForms: ListIntakeFormsHandler,
     private readonly deleteIntakeForm: DeleteIntakeFormHandler,
+    private readonly updateIntakeForm: UpdateIntakeFormHandler,
+    private readonly setIntakeFields: SetIntakeFieldsHandler,
+    private readonly getIntakeFormResponses: GetIntakeFormResponsesHandler,
     private readonly submitRating: SubmitRatingHandler,
     private readonly listRatings: ListRatingsHandler,
     private readonly getOrgSettings: GetOrgSettingsHandler,
@@ -310,6 +318,17 @@ export class DashboardOrganizationSettingsController {
     return this.listIntakeForms.execute(query);
   }
 
+  // NOTE: This static-segment route MUST be declared before /:formId routes
+  // so NestJS does not treat "responses" as a formId value.
+  @Get('intake-forms/responses/:bookingId')
+  @CheckPermissions({ action: 'read', subject: 'Setting' })
+  @ApiOperation({ summary: 'Get intake form responses for a booking' })
+  @ApiParam({ name: 'bookingId', description: 'Booking UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'List of intake responses (empty until model is implemented)' })
+  getIntakeFormResponsesEndpoint(@Param('bookingId', ParseUUIDPipe) bookingId: string) {
+    return this.getIntakeFormResponses.execute({ bookingId });
+  }
+
   @Get('intake-forms/:formId')
   @CheckPermissions({ action: 'read', subject: 'Setting' })
   @ApiOperation({ summary: 'Get an intake form by ID' })
@@ -318,6 +337,34 @@ export class DashboardOrganizationSettingsController {
   @ApiResponse({ status: 404, description: 'Intake form not found' })
   getIntakeFormEndpoint(@Param('formId', ParseUUIDPipe) formId: string) {
     return this.getIntakeForm.execute({ formId });
+  }
+
+  @Patch('intake-forms/:formId')
+  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update an intake form' })
+  @ApiParam({ name: 'formId', description: 'Intake form UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Intake form updated' })
+  @ApiResponse({ status: 404, description: 'Intake form not found' })
+  updateIntakeFormEndpoint(
+    @Param('formId', ParseUUIDPipe) formId: string,
+    @Body() body: UpdateIntakeFormDto,
+  ) {
+    return this.updateIntakeForm.execute({ formId, ...body });
+  }
+
+  @Put('intake-forms/:formId/fields')
+  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Replace all fields on an intake form' })
+  @ApiParam({ name: 'formId', description: 'Intake form UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Fields replaced, full form returned' })
+  @ApiResponse({ status: 404, description: 'Intake form not found' })
+  setIntakeFieldsEndpoint(
+    @Param('formId', ParseUUIDPipe) formId: string,
+    @Body() body: SetIntakeFieldsDto,
+  ) {
+    return this.setIntakeFields.execute({ formId, fields: body.fields ?? [] });
   }
 
   @Delete('intake-forms/:formId')

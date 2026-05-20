@@ -17,22 +17,19 @@ import {
 } from "@/lib/api/employees"
 import type { EmployeeListQuery, EmployeeSortField } from "@/lib/types/employee"
 
-// Re-export mutations from dedicated file for backward compatibility
-export {
-  useEmployeeMutations,
-  useSetAvailability,
-  useSetBreaks,
-  useVacationMutations,
-  useEmployeeServiceMutations,
-  useEmployeeAccountMutations,
-} from "./use-employee-mutations"
-
 /* ─── List Hook ─── */
 
-const SORT_FIELDS: ReadonlyArray<EmployeeSortField> = ["name", "experience", "isActive", "createdAt"]
+const SORT_FIELDS: ReadonlyArray<EmployeeSortField> = [
+  "name",
+  "experience",
+  "isActive",
+  "createdAt",
+]
 
 function parseSortField(value: string | null): EmployeeSortField | undefined {
-  return value && (SORT_FIELDS as ReadonlyArray<string>).includes(value) ? (value as EmployeeSortField) : undefined
+  return value && (SORT_FIELDS as ReadonlyArray<string>).includes(value)
+    ? (value as EmployeeSortField)
+    : undefined
 }
 
 function parseIsActive(value: string | null): boolean | undefined {
@@ -52,7 +49,11 @@ export function useEmployees() {
   const urlSortBy = parseSortField(searchParams.get("sortBy"))
   const sortOrderRaw = searchParams.get("sortOrder")
   const urlSortOrder: "asc" | "desc" | undefined =
-    sortOrderRaw === "desc" ? "desc" : sortOrderRaw === "asc" ? "asc" : undefined
+    sortOrderRaw === "desc"
+      ? "desc"
+      : sortOrderRaw === "asc"
+        ? "asc"
+        : undefined
 
   const [search, setSearchState] = useState(urlSearch)
   const [debouncedSearch, setDebouncedSearch] = useState(urlSearch)
@@ -72,36 +73,48 @@ export function useEmployees() {
       const qs = next.toString()
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
     },
-    [pathname, router, searchParams],
+    [pathname, router, searchParams]
   )
 
   useEffect(() => {
-    updateParams({ search: debouncedSearch || undefined, page: debouncedSearch !== urlSearch ? "1" : undefined })
+    updateParams({
+      search: debouncedSearch || undefined,
+      page: debouncedSearch !== urlSearch ? "1" : undefined,
+    })
   }, [debouncedSearch, updateParams, urlSearch])
 
-  const setSearch = useCallback((s: string) => {
-    setSearchState(s)
-  }, [setSearchState])
+  const setSearch = useCallback(
+    (s: string) => {
+      setSearchState(s)
+    },
+    [setSearchState]
+  )
 
   const setIsActive = useCallback(
     (v: boolean | undefined) => {
-      updateParams({ isActive: v === undefined ? undefined : String(v), page: "1" })
+      updateParams({
+        isActive: v === undefined ? undefined : String(v),
+        page: "1",
+      })
     },
-    [updateParams],
+    [updateParams]
   )
 
   const setPage = useCallback(
     (p: number) => {
       updateParams({ page: p === 1 ? undefined : String(p) })
     },
-    [updateParams],
+    [updateParams]
   )
 
   const setSort = useCallback(
-    (sortBy: EmployeeSortField | undefined, sortOrder: "asc" | "desc" | undefined) => {
+    (
+      sortBy: EmployeeSortField | undefined,
+      sortOrder: "asc" | "desc" | undefined
+    ) => {
       updateParams({ sortBy, sortOrder })
     },
-    [updateParams],
+    [updateParams]
   )
 
   const query: EmployeeListQuery = {
@@ -126,7 +139,11 @@ export function useEmployees() {
     router.replace(pathname, { scroll: false })
   }, [pathname, router, setDebouncedSearch, setSearchState])
 
-  const hasFilters = !!(debouncedSearch || urlIsActive !== undefined || urlSortBy)
+  const hasFilters = !!(
+    debouncedSearch ||
+    urlIsActive !== undefined ||
+    urlSortBy
+  )
 
   return {
     employees: data?.items ?? [],
@@ -217,11 +234,14 @@ export function useEmployeeServices(id: string | null) {
 
 export function useEmployeeServiceTypes(
   employeeId: string | null,
-  serviceId: string | null,
+  serviceId: string | null
 ) {
   const enabled = !!employeeId && !!serviceId
   return useQuery({
-    queryKey: queryKeys.employees.serviceTypes(employeeId ?? "", serviceId ?? ""),
+    queryKey: queryKeys.employees.serviceTypes(
+      employeeId ?? "",
+      serviceId ?? ""
+    ),
     queryFn: () => fetchEmployeeServiceTypes(employeeId!, serviceId!),
     enabled,
   })

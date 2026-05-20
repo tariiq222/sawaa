@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import type { FormEvent } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -11,11 +11,7 @@ import { Label } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { performStaffPasswordReset } from "@/lib/api/auth"
 
-const strongPasswordSchema = z
-  .string()
-  .min(8)
-  .regex(/[A-Z]/)
-  .regex(/[0-9]/)
+const strongPasswordSchema = z.string().min(8).regex(/[A-Z]/).regex(/[0-9]/)
 
 export function ResetPasswordForm() {
   return (
@@ -29,13 +25,25 @@ function ResetPasswordFormInner() {
   const { t } = useLocale()
   const searchParams = useSearchParams()
   const router = useRouter()
-  const token = searchParams?.get("token") ?? ""
+  const [token] = useState(() => searchParams?.get("token") ?? "")
 
   const [newPassword, setNewPassword] = useState("")
   const [confirm, setConfirm] = useState("")
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!token || !searchParams?.has("token")) return
+
+    const url = new URL(window.location.href)
+    url.searchParams.delete("token")
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${url.pathname}${url.search}${url.hash}`
+    )
+  }, [searchParams, token])
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -57,7 +65,7 @@ function ResetPasswordFormInner() {
       setTimeout(() => router.push("/"), 2000)
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : t("resetPassword.invalidToken"),
+        err instanceof Error ? err.message : t("resetPassword.invalidToken")
       )
     } finally {
       setLoading(false)
@@ -72,7 +80,7 @@ function ResetPasswordFormInner() {
         </p>
         <Link
           href="/"
-          className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+          className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
           {t("resetPassword.backToLogin")}
         </Link>
@@ -82,7 +90,7 @@ function ResetPasswordFormInner() {
 
   if (success) {
     return (
-      <div className="text-center space-y-3">
+      <div className="space-y-3 text-center">
         <div className="mb-4 flex justify-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
             <svg
@@ -183,7 +191,7 @@ function ResetPasswordFormInner() {
       <div className="mt-6 text-center">
         <Link
           href="/"
-          className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+          className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
           {t("resetPassword.backToLogin")}
         </Link>

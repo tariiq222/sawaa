@@ -1,13 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
-import type { BookingType } from '@prisma/client';
+import type { BookingType, DeliveryType } from '@prisma/client';
 import { CheckAvailabilityDto } from './check-availability.dto';
+import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 
-export type CheckAvailabilityQuery = Omit<CheckAvailabilityDto, 'date' | 'durationOptionId' | 'bookingType'> & {
+export type CheckAvailabilityQuery = Omit<CheckAvailabilityDto, 'date' | 'durationOptionId' | 'bookingType' | 'deliveryType'> & {
   date: Date;
   durationOptionId?: string | null;
-  bookingType?: BookingType | null;
+  bookingType?: BookingType | string | null;
+  deliveryType?: DeliveryType | null;
 };
 
 export interface AvailableSlot {
@@ -56,10 +58,15 @@ export class CheckAvailabilityHandler {
 
     let durationMins = query.durationMins ?? 0;
     if (query.serviceId) {
+      const normalizedTypes = normalizeBookingTypes({
+        bookingType: query.bookingType,
+        deliveryType: query.deliveryType,
+      });
       const option = await this.resolveDurationOption(
         query.serviceId,
         query.durationOptionId ?? null,
-        query.bookingType ?? null,
+        normalizedTypes.bookingType,
+        normalizedTypes.deliveryType,
       );
       if (option) durationMins = option.durationMins;
     }
@@ -173,7 +180,6 @@ export class CheckAvailabilityHandler {
 
     if (adjustedWindows.length === 0) return [];
 
-    const earliestStart = adjustedWindows[0][0];
     const latestEnd = adjustedWindows[adjustedWindows.length - 1][1];
 
     const existingBookings = await this.prisma.booking.findMany({
@@ -218,7 +224,8 @@ export class CheckAvailabilityHandler {
   private async resolveDurationOption(
     serviceId: string,
     durationOptionId: string | null,
-    bookingType: BookingType | null,
+    _bookingType: BookingType | null,
+    deliveryType: DeliveryType | null,
   ) {
     if (durationOptionId) {
       return this.prisma.serviceDurationOption.findFirst({
@@ -226,21 +233,21 @@ export class CheckAvailabilityHandler {
         select: { durationMins: true },
       });
     }
-    if (bookingType) {
+    if (deliveryType) {
       const scoped = await this.prisma.serviceDurationOption.findFirst({
-        where: { serviceId, bookingType, isDefault: true, isActive: true },
+        where: { serviceId, deliveryType, isDefault: true, isActive: true },
         select: { durationMins: true },
       });
       if (scoped) return scoped;
     }
     const global = await this.prisma.serviceDurationOption.findFirst({
-      where: { serviceId, bookingType: null, isDefault: true, isActive: true },
+      where: { serviceId, isDefault: true, isActive: true },
       select: { durationMins: true },
     });
     if (global) return global;
     return this.prisma.serviceDurationOption.findFirst({
       where: { serviceId, isActive: true },
-      orderBy: [{ bookingType: 'asc' }, { sortOrder: 'asc' }],
+      orderBy: [{ deliveryType: 'asc' }, { sortOrder: 'asc' }],
       select: { durationMins: true },
     });
   }

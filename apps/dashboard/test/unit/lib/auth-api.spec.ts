@@ -7,6 +7,7 @@ const {
   logoutMock,
   changePasswordMock,
   setAccessTokenMock,
+  clearLegacyAccessTokenStorageMock,
 } = vi.hoisted(() => ({
   loginMock: vi.fn(),
   refreshTokenMock: vi.fn(),
@@ -14,6 +15,11 @@ const {
   logoutMock: vi.fn(),
   changePasswordMock: vi.fn(),
   setAccessTokenMock: vi.fn(),
+  clearLegacyAccessTokenStorageMock: vi.fn(() => {
+    localStorage.removeItem("sawaa_access_token")
+    localStorage.removeItem("sawaa_token_storage")
+    sessionStorage.removeItem("sawaa_access_token")
+  }),
 }))
 
 vi.mock("@sawaa/api-client", () => ({
@@ -29,6 +35,7 @@ vi.mock("@sawaa/api-client", () => ({
 
 vi.mock("@/lib/api", () => ({
   setAccessToken: setAccessTokenMock,
+  clearLegacyAccessTokenStorage: clearLegacyAccessTokenStorageMock,
   getAccessToken: vi.fn(() => null),
 }))
 
@@ -63,11 +70,13 @@ describe("auth api", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    sessionStorage.clear()
   })
 
-  it("login delegates to authApi.login and persists access token + user", async () => {
+  it("login delegates to authApi.login and keeps access token memory-only", async () => {
     // Refresh tokens are managed as HttpOnly cookies by @sawaa/api-client; the
-    // dashboard wrapper only persists the access token + user payload locally.
+    // dashboard wrapper only keeps the access token in memory and stores the
+    // non-token user payload locally.
     loginMock.mockResolvedValueOnce({
       accessToken: "token123",
       refreshToken: "rt123",
@@ -79,8 +88,31 @@ describe("auth api", () => {
 
     expect(loginMock).toHaveBeenCalledWith({ email: "a@b.com", password: "pass" })
     expect(setAccessTokenMock).toHaveBeenCalledWith("token123")
+    expect(clearLegacyAccessTokenStorageMock).toHaveBeenCalledOnce()
     expect(localStorage.getItem("sawaa_user")).toContain("a@b.com")
+    expect(localStorage.getItem("sawaa_access_token")).toBeNull()
+    expect(sessionStorage.getItem("sawaa_access_token")).toBeNull()
     expect(result.accessToken).toBe("token123")
+  })
+
+  it("passes rememberMe to the backend without storing access tokens", async () => {
+    loginMock.mockResolvedValueOnce({
+      accessToken: "rememberedToken",
+      refreshToken: "rt123",
+      expiresIn: 900,
+      user: fakeUser,
+    })
+
+    await login("a@b.com", "pass", true)
+
+    expect(loginMock).toHaveBeenCalledWith({
+      email: "a@b.com",
+      password: "pass",
+      rememberMe: true,
+    })
+    expect(localStorage.getItem("sawaa_access_token")).toBeNull()
+    expect(sessionStorage.getItem("sawaa_access_token")).toBeNull()
+    expect(clearLegacyAccessTokenStorageMock).toHaveBeenCalledOnce()
   })
 
   it("fetchMe delegates to authApi.getMe and stores user", async () => {
@@ -95,8 +127,8 @@ describe("auth api", () => {
 
   it("refreshToken delegates to authApi.refreshToken and updates access token", async () => {
     // The api-client owns refresh-token retrieval (HttpOnly cookie); the
-    // dashboard wrapper only forwards the call and re-persists the new
-    // access token returned by the server.
+    // dashboard wrapper only forwards the call and keeps the new access token
+    // returned by the server in memory.
     refreshTokenMock.mockResolvedValueOnce({
       accessToken: "newToken",
       refreshToken: "newRt",
@@ -107,7 +139,27 @@ describe("auth api", () => {
 
     expect(refreshTokenMock).toHaveBeenCalledOnce()
     expect(setAccessTokenMock).toHaveBeenCalledWith("newToken")
+    expect(clearLegacyAccessTokenStorageMock).toHaveBeenCalledOnce()
     expect(result.accessToken).toBe("newToken")
+  })
+
+  it("refreshToken keeps the refreshed access token in memory only", async () => {
+    localStorage.setItem("sawaa_token_storage", "local")
+    localStorage.setItem("sawaa_access_token", "stale-local-token")
+    sessionStorage.setItem("sawaa_access_token", "stale-session-token")
+    refreshTokenMock.mockResolvedValueOnce({
+      accessToken: "newToken",
+      refreshToken: "newRt",
+      expiresIn: 900,
+    })
+
+    await refreshToken()
+
+    expect(setAccessTokenMock).toHaveBeenCalledWith("newToken")
+    expect(clearLegacyAccessTokenStorageMock).toHaveBeenCalledOnce()
+    expect(localStorage.getItem("sawaa_access_token")).toBeNull()
+    expect(localStorage.getItem("sawaa_token_storage")).toBeNull()
+    expect(sessionStorage.getItem("sawaa_access_token")).toBeNull()
   })
 
   it("refreshToken propagates errors from the api-client", async () => {
@@ -125,6 +177,7 @@ describe("auth api", () => {
     expect(logoutMock).toHaveBeenCalledOnce()
     expect(localStorage.getItem("sawaa_user")).toBeNull()
     expect(setAccessTokenMock).toHaveBeenCalledWith(null)
+    expect(clearLegacyAccessTokenStorageMock).toHaveBeenCalledOnce()
   })
 
   it("logoutApi still clears state when API call fails", async () => {
@@ -135,6 +188,7 @@ describe("auth api", () => {
 
     expect(localStorage.getItem("sawaa_user")).toBeNull()
     expect(setAccessTokenMock).toHaveBeenCalledWith(null)
+    expect(clearLegacyAccessTokenStorageMock).toHaveBeenCalledOnce()
   })
 
   it("logout clears state without API call", () => {
@@ -142,6 +196,7 @@ describe("auth api", () => {
     logout()
     expect(localStorage.getItem("sawaa_user")).toBeNull()
     expect(setAccessTokenMock).toHaveBeenCalledWith(null)
+    expect(clearLegacyAccessTokenStorageMock).toHaveBeenCalledOnce()
     expect(logoutMock).not.toHaveBeenCalled()
   })
 

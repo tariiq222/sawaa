@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { jest } from "@jest/globals";
 
 // ─── Global E2E test setup ─────────────────────────────────────────────────
 //
@@ -11,29 +11,32 @@ import { jest } from '@jest/globals';
 const fn = jest.fn as (...args: any[]) => jest.Mock<any>;
 
 // Redis
-jest.mock('ioredis', () => {
+jest.mock("ioredis", () => {
   return fn().mockImplementation(() => ({
     on: fn(),
     get: fn().mockResolvedValue(null),
-    set: fn().mockResolvedValue('OK'),
-    setex: fn().mockResolvedValue('OK'),
+    set: fn().mockResolvedValue("OK"),
+    setex: fn().mockResolvedValue("OK"),
     del: fn().mockResolvedValue(1),
     incr: fn().mockResolvedValue(1),
     expire: fn().mockResolvedValue(1),
     multi: fn().mockReturnValue({
       incr: fn().mockReturnThis(),
       expire: fn().mockReturnThis(),
-      exec: fn().mockResolvedValue([[null, 1], [null, 1]]),
+      exec: fn().mockResolvedValue([
+        [null, 1],
+        [null, 1],
+      ]),
     }),
-    flushdb: fn().mockResolvedValue('OK'),
-    ping: fn().mockResolvedValue('PONG'),
-    quit: fn().mockResolvedValue('OK'),
-    disconnect: fn().mockResolvedValue('OK'),
+    flushdb: fn().mockResolvedValue("OK"),
+    ping: fn().mockResolvedValue("PONG"),
+    quit: fn().mockResolvedValue("OK"),
+    disconnect: fn().mockResolvedValue("OK"),
   }));
 });
 
 // Throttler storage — must be before AppModule imports
-jest.mock('@nest-lab/throttler-storage-redis', () => ({
+jest.mock("@nest-lab/throttler-storage-redis", () => ({
   ThrottlerStorageRedisService: fn().mockImplementation(() => ({
     addRecord: fn().mockResolvedValue(undefined),
     getRecord: fn().mockResolvedValue([]),
@@ -44,50 +47,50 @@ jest.mock('@nest-lab/throttler-storage-redis', () => ({
     redis: {
       on: fn(),
       get: fn().mockResolvedValue(null),
-      set: fn().mockResolvedValue('OK'),
+      set: fn().mockResolvedValue("OK"),
       del: fn().mockResolvedValue(1),
-      ping: fn().mockResolvedValue('PONG'),
+      ping: fn().mockResolvedValue("PONG"),
     },
   })),
 }));
 
 // Sentry
-jest.mock('@sentry/node', () => ({
+jest.mock("@sentry/node", () => ({
   init: fn(),
   withScope: fn((cb: any) => cb({ setTag: fn(), setUser: fn() })),
   captureException: fn(),
 }));
 
 // Shutdown state — never report shutting down in tests
-jest.mock('../src/common/shutdown.state', () => ({
+jest.mock("../src/common/shutdown.state", () => ({
   setShuttingDown: fn(),
   isShuttingDown: fn().mockReturnValue(false),
 }));
 
 // MinIO
-jest.mock('minio', () => ({
+jest.mock("minio", () => ({
   Client: fn().mockImplementation(() => ({
     bucketExists: fn().mockResolvedValue(true),
     makeBucket: fn().mockResolvedValue(undefined),
-    putObject: fn().mockResolvedValue({ etag: 'etag' }),
-    presignedGetObject: fn().mockResolvedValue('https://cdn.example.com/file'),
+    putObject: fn().mockResolvedValue({ etag: "etag" }),
+    presignedGetObject: fn().mockResolvedValue("https://cdn.example.com/file"),
     removeObject: fn().mockResolvedValue(undefined),
     listObjectsV2: fn().mockReturnValue([]),
   })),
 }));
 
 // Nodemailer
-jest.mock('nodemailer', () => ({
+jest.mock("nodemailer", () => ({
   createTransport: fn().mockReturnValue({
-    sendMail: fn().mockResolvedValue({ messageId: 'msg-1' }),
+    sendMail: fn().mockResolvedValue({ messageId: "msg-1" }),
     verify: fn().mockResolvedValue(true),
   }),
 }));
 
 // BullMQ
-jest.mock('bullmq', () => ({
+jest.mock("bullmq", () => ({
   Queue: fn().mockImplementation(() => ({
-    add: fn().mockResolvedValue({ id: 'job-1' }),
+    add: fn().mockResolvedValue({ id: "job-1" }),
     getJob: fn().mockResolvedValue(null),
     close: fn().mockResolvedValue(undefined),
   })),
@@ -102,13 +105,13 @@ jest.mock('bullmq', () => ({
 }));
 
 // OpenAI
-jest.mock('openai', () => ({
+jest.mock("openai", () => ({
   __esModule: true,
   default: fn().mockImplementation(() => ({
     chat: {
       completions: {
         create: fn().mockResolvedValue({
-          choices: [{ message: { content: 'Hello' } }],
+          choices: [{ message: { content: "Hello" } }],
         }),
       },
     },
@@ -121,9 +124,12 @@ jest.mock('openai', () => ({
 }));
 
 // Zoom
-jest.mock('../src/infrastructure/zoom/zoom-api.client', () => ({
+jest.mock("../src/infrastructure/zoom/zoom-api.client", () => ({
   ZoomApiClient: fn().mockImplementation(() => ({
-    createMeeting: fn().mockResolvedValue({ id: 123, join_url: 'https://zoom.us/j/123' }),
+    createMeeting: fn().mockResolvedValue({
+      id: 123,
+      join_url: "https://zoom.us/j/123",
+    }),
     deleteMeeting: fn().mockResolvedValue(undefined),
   })),
 }));
@@ -135,7 +141,7 @@ beforeAll(() => {
     ok: true,
     status: 200,
     json: fn().mockResolvedValue({}),
-    text: fn().mockResolvedValue(''),
+    text: fn().mockResolvedValue(""),
   }) as any;
 });
 
@@ -143,28 +149,47 @@ afterAll(() => {
   global.fetch = originalFetch;
 });
 
-// Required env vars for bootstrap
-process.env.NODE_ENV = 'test';
-process.env.THROTTLER_DISABLED = 'true';
-process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
-process.env.REDIS_HOST = 'localhost';
-process.env.REDIS_PORT = '6379';
-process.env.REDIS_PASSWORD = '';
-process.env.JWT_ACCESS_SECRET = 'test-jwt-secret-key-for-e2e-tests-only';
-process.env.JWT_ACCESS_TTL = '15m';
-process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-key-for-e2e-tests-only';
-process.env.PLATFORM_SETTINGS_KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-process.env.MINIO_ENDPOINT = 'localhost';
-process.env.MINIO_PORT = '9000';
-process.env.MINIO_USE_SSL = 'false';
-process.env.MINIO_ACCESS_KEY = 'test';
-process.env.MINIO_SECRET_KEY = 'test';
-process.env.MINIO_BUCKET = 'test';
-process.env.SMTP_HOST = 'localhost';
-process.env.SMTP_PORT = '587';
-process.env.SMTP_USER = 'test';
-process.env.SMTP_PASS = 'test';
-process.env.SMS_PROVIDER = 'NONE';
-process.env.OPENAI_API_KEY = 'sk-test';
-process.env.MOYASAR_SECRET_KEY = 'sk_test_dC1t7MVaXhJUmfwSj3QDpT2yRuRSMmdsjQB71zxo';
-process.env.MOYASAR_PUBLISHABLE_KEY = 'pk_test_9WmjNQjvWeKh67QscDUg7Y7YGpuvcpDY9ugi3qkv';
+// Required env vars for bootstrap. Redis, BullMQ, MinIO, mail, fetch-based
+// integrations, and similar external dependencies remain mocked above. The
+// gradual real e2e lane uses only a real Postgres connection, and only when a
+// test helper explicitly validates REAL_E2E_DATABASE_URL and copies it into
+// DATABASE_URL before AppModule boots.
+process.env.NODE_ENV = "test";
+process.env.THROTTLER_DISABLED = "true";
+process.env.DATABASE_URL ??= "postgresql://test:test@localhost:5432/test";
+process.env.REDIS_HOST ??= "localhost";
+process.env.REDIS_PORT ??= "6379";
+process.env.REDIS_PASSWORD ??= "";
+process.env.JWT_ACCESS_SECRET ??= "test-jwt-secret-key-for-e2e-tests-only";
+process.env.JWT_ACCESS_TTL ??= "15m";
+process.env.JWT_REFRESH_SECRET ??= "test-refresh-secret-key-for-e2e-tests-only";
+process.env.JWT_CLIENT_ACCESS_SECRET ??=
+  "test-client-jwt-secret-key-for-e2e-only";
+process.env.JWT_CLIENT_ACCESS_TTL ??= "15m";
+process.env.JWT_CLIENT_REFRESH_TTL ??= "7d";
+process.env.PLATFORM_SETTINGS_KEY ??=
+  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+process.env.MINIO_ENDPOINT ??= "localhost";
+process.env.MINIO_PORT ??= "9000";
+process.env.MINIO_USE_SSL ??= "false";
+process.env.MINIO_ACCESS_KEY ??= "test";
+process.env.MINIO_SECRET_KEY ??= "test";
+process.env.MINIO_BUCKET ??= "test";
+process.env.SMTP_HOST ??= "localhost";
+process.env.SMTP_PORT ??= "587";
+process.env.SMTP_USER ??= "test";
+process.env.SMTP_PASS ??= "test";
+process.env.SMS_PROVIDER ??= "NONE";
+process.env.OPENAI_API_KEY ??= "sk-test";
+process.env.MOYASAR_SECRET_KEY ??=
+  "sk_test_dC1t7MVaXhJUmfwSj3QDpT2yRuRSMmdsjQB71zxo";
+process.env.MOYASAR_PUBLISHABLE_KEY ??=
+  "pk_test_9WmjNQjvWeKh67QscDUg7Y7YGpuvcpDY9ugi3qkv";
+process.env.MOYASAR_ENCRYPTION_KEY ??=
+  "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
+process.env.SMS_PROVIDER_ENCRYPTION_KEY ??=
+  "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
+process.env.ZOOM_PROVIDER_ENCRYPTION_KEY ??=
+  "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
+process.env.EMAIL_PROVIDER_ENCRYPTION_KEY ??=
+  "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";

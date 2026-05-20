@@ -19,7 +19,7 @@ export class GetServiceBookingConfigsHandler {
 
     return this.prisma.serviceBookingConfig.findMany({
       where: { serviceId: cmd.serviceId },
-      orderBy: { bookingType: 'asc' },
+      orderBy: { deliveryType: 'asc' },
     });
   }
 }

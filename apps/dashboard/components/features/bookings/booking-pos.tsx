@@ -48,7 +48,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     selectClient,
     selectService,
     selectEmployee,
-    selectType,
+    selectDeliveryType,
     selectDuration,
     skipDuration,
     selectDate,
@@ -57,8 +57,8 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     setCouponCode,
   } = useBookingFormState()
 
-  const handleSelectType = (type: string) => {
-    selectType(type as "in_person" | "online" | "walk_in")
+  const handleSelectDeliveryType = (deliveryType: string) => {
+    selectDeliveryType(deliveryType as "in_person" | "online")
   }
 
   // Auto-advance wrapped handlers
@@ -69,17 +69,16 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   const handleSkipDuration = () => { skipDuration(); setOpenSection("datetime") }
 
   // Summary strings for collapsed chips
-  const typeLabels: Record<string, string> = {
+  const deliveryTypeLabels: Record<string, string> = {
     in_person: t("bookings.wizard.step.typeDuration.inPerson"),
     online: t("bookings.wizard.step.typeDuration.online"),
-    walk_in: t("bookings.wizard.step.typeDuration.walkIn"),
   }
   const summaries: Record<SectionId, string | null> = {
     client: state.clientName,
     service: state.serviceName,
     employee: state.employeeName,
-    typeDuration: state.type
-      ? [typeLabels[state.type], state.durationLabel].filter(Boolean).join(" · ")
+    typeDuration: state.deliveryType
+      ? [deliveryTypeLabels[state.deliveryType], state.durationLabel].filter(Boolean).join(" · ")
       : null,
     datetime: state.date
       ? state.date + (state.startTime ? ` · ${state.startTime}` : "")
@@ -87,7 +86,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   }
 
   const canShowTypeDuration = Boolean(state.serviceId && state.employeeId)
-  const canShowDatetime = Boolean(state.serviceId && state.employeeId && state.type)
+  const canShowDatetime = Boolean(state.serviceId && state.employeeId && state.deliveryType)
 
   // Selected service price (halalas) for the summary. Reuses the same query
   // StepService issues, so TanStack Query serves it from cache — no extra fetch.
@@ -103,14 +102,15 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   }, [servicesData, state.serviceId])
 
   const handleSubmit = async () => {
-    if (!state.clientId || !state.serviceId || !state.employeeId || !state.type || !state.date || !state.startTime)
+    if (!state.clientId || !state.serviceId || !state.employeeId || !state.deliveryType || !state.date || !state.startTime)
       return
     try {
       await createMut.mutateAsync({
         clientId: state.clientId,
         employeeId: state.employeeId,
         serviceId: state.serviceId,
-        type: state.type,
+        type: "individual",
+        deliveryType: state.deliveryType,
         durationOptionId: state.durationOptionId ?? undefined,
         date: state.date,
         startTime: state.startTime,
@@ -193,9 +193,9 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
               <StepTypeDuration
                 employeeId={state.employeeId!}
                 serviceId={state.serviceId!}
-                selectedType={state.type}
+                selectedType={state.deliveryType}
                 selectedDurationOptionId={state.durationOptionId}
-                onSelectType={handleSelectType}
+                onSelectType={handleSelectDeliveryType}
                 onSelectDuration={handleDurationSelect}
                 onSkipDuration={handleSkipDuration}
               />
@@ -217,7 +217,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
               <StepDatetime
                 employeeId={state.employeeId!}
                 serviceId={state.serviceId!}
-                bookingType={state.type!}
+                deliveryType={state.deliveryType!}
                 durationOptionId={state.durationOptionId}
                 selectedDate={state.date}
                 selectedTime={state.startTime}
@@ -237,7 +237,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
             clientName={state.clientName}
             serviceName={state.serviceName}
             employeeName={state.employeeName}
-            type={state.type}
+            type={state.deliveryType}
             durationLabel={state.durationLabel}
             date={state.date}
             startTime={state.startTime}

@@ -23,6 +23,8 @@ import type { EmployeeService } from "@/lib/types/employee"
 /* ─── Constants ─── */
 
 const TYPE_LABEL_MAP: Record<string, string> = {
+  in_person: "inPerson",
+  online: "online",
   clinic_visit: "clinicVisit",
   phone_consultation: "phoneConsultation",
   video_consultation: "videoConsultation",
@@ -228,8 +230,9 @@ function buildTypeBadges(
     return ps.serviceTypes
       .filter((st) => st.isActive)
       .map((st) => {
-        const key = TYPE_LABEL_MAP[st.bookingType]
-        const typeLabel = key ? t(`employees.services.${key}`) : st.bookingType
+        const deliveryType = st.deliveryType
+        const key = TYPE_LABEL_MAP[deliveryType]
+        const typeLabel = key ? t(`employees.services.${key}`) : deliveryType
         const price = st.price != null
           ? formatPrice(Number(st.price))
           : t("employees.services.defaultPrice")
@@ -237,7 +240,7 @@ function buildTypeBadges(
           ? String(st.duration)
           : t("employees.services.defaultPrice")
         return {
-          type: st.bookingType,
+          type: deliveryType,
           label: `${typeLabel}: ${price} ${sarUnit} | ${duration}${minUnit}`,
         }
       })

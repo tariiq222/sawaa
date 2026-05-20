@@ -118,11 +118,11 @@ async function loadRelations(
   // FormattedCurrency on the dashboard expects halalat (SAR × 100).
   const paymentsByBookingId = new Map(
     invoices
-      .filter((inv) => inv.payments.length > 0)
+      .filter((inv) => inv.bookingId && inv.payments.length > 0)
       .map((inv) => {
         const p = inv.payments[0];
         return [
-          inv.bookingId,
+          inv.bookingId!,
           {
             id: p.id,
             amount: Math.round(Number(p.amount)),         // already halalas

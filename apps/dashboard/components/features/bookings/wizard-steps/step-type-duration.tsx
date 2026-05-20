@@ -6,7 +6,6 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Building01Icon,
   VideoReplayIcon,
-  WalkingIcon,
 } from "@hugeicons/core-free-icons"
 import type { IconSvgElement } from "@hugeicons/react"
 
@@ -16,7 +15,7 @@ import { formatPrice } from "@/lib/money"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchEmployeeServiceTypes } from "@/lib/api/employees-schedule"
 import type { EmployeeServiceType, EmployeeDurationOption } from "@/lib/types/employee"
-import type { BookingType } from "@/lib/types/booking"
+import type { DeliveryType } from "@/lib/types/booking"
 
 /* ─── Types ─── */
 
@@ -32,19 +31,15 @@ interface StepTypeDurationProps {
 
 /* ─── Helpers ─── */
 
-const BOOKING_TYPE_META: Record<BookingType, { icon: IconSvgElement }> = {
+const DELIVERY_TYPE_META: Record<DeliveryType, { icon: IconSvgElement }> = {
   in_person: { icon: Building01Icon },
   online: { icon: VideoReplayIcon },
-  walk_in: { icon: WalkingIcon },
-  group: { icon: Building01Icon },
 }
 
 function getTypeLabel(type: string, t: (key: string) => string): string {
   const map: Record<string, string> = {
     in_person: t("bookings.wizard.step.typeDuration.inPerson"),
     online: t("bookings.wizard.step.typeDuration.online"),
-    walk_in: t("bookings.wizard.step.typeDuration.walkIn"),
-    group: t("bookings.type.group"),
   }
   return map[type] ?? type
 }
@@ -77,8 +72,8 @@ function TypeCard({
   onSelect: () => void
   t: (key: string) => string
 }) {
-  const type = serviceType.bookingType as BookingType
-  const meta = BOOKING_TYPE_META[type]
+  const type = serviceType.deliveryType as DeliveryType
+  const meta = DELIVERY_TYPE_META[type]
   const label = getTypeLabel(type, t)
 
   return (
@@ -164,12 +159,12 @@ export function StepTypeDuration({
   // Auto-select when only one type
   useEffect(() => {
     if (activeTypes.length === 1 && !selectedType) {
-      onSelectType(activeTypes[0].bookingType)
+      onSelectType(activeTypes[0].deliveryType)
     }
   }, [activeTypes, selectedType, onSelectType])
 
   const selectedServiceType = selectedType
-    ? activeTypes.find((st) => st.bookingType === selectedType)
+    ? activeTypes.find((st) => st.deliveryType === selectedType)
     : undefined
 
   const durationOptions: EmployeeDurationOption[] = useMemo(
@@ -214,8 +209,8 @@ export function StepTypeDuration({
               <TypeCard
                 key={st.id}
                 serviceType={st}
-                selected={selectedType === st.bookingType}
-                onSelect={() => onSelectType(st.bookingType)}
+                selected={selectedType === st.deliveryType}
+                onSelect={() => onSelectType(st.deliveryType)}
                 t={t}
               />
             ))}

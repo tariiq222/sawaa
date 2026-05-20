@@ -1,6 +1,6 @@
 /** Booking types — re-exported from the canonical enum module. */
-export type { BookingType, BookingStatus } from './booking-enums';
-import type { BookingType, BookingStatus } from './booking-enums';
+export type { BookingType, BookingStatus, DeliveryType, LegacyBookingType } from './booking-enums';
+import type { BookingStatus, DeliveryType, LegacyBookingType } from './booking-enums';
 export type PaymentStatus = 'pending' | 'awaiting' | 'paid' | 'refunded' | 'failed' | 'rejected';
 export type PaymentMethod = 'moyasar' | 'bank_transfer' | 'cash';
 export type TransferVerificationStatus =
@@ -66,12 +66,12 @@ export interface Booking {
     nameEn?: string | null;
     duration?: number;
   };
-  type: BookingType;
-  /** Alias of `type` — matches the field name used by the client mobile API
-   * (`/mobile/client/bookings`). Kept optional because the employee endpoints
-   * still emit the legacy `type` field. Consumers should prefer
-   * `booking.bookingType ?? booking.type`. */
-  bookingType?: BookingType;
+  /** Legacy mobile API field. May temporarily contain a delivery value. */
+  type: LegacyBookingType;
+  /** Appointment/category type. Legacy payloads may still send delivery here. */
+  bookingType?: LegacyBookingType;
+  /** Session delivery channel. Prefer this for online/in-person decisions. */
+  deliveryType?: DeliveryType | null;
   status: BookingStatus;
   checkedInAt?: string | null;
   date: string;

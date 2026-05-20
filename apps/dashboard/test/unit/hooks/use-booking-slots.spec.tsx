@@ -29,7 +29,7 @@ function makeWrapper() {
 const baseOpts = {
   employeeId: "p-1",
   serviceId: "svc-1",
-  bookingType: "in_person",
+  deliveryType: "in_person",
   date: "2026-03-27",
   durationOptionId: "",
 }
@@ -137,7 +137,7 @@ describe("useCreateBookingSlots", () => {
     const durationOptions = [{ id: "d-1", durationMinutes: 30, label: "30m", labelAr: "٣٠", price: null, isDefault: true, sortOrder: 0 }]
     fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
     fetchEmployeeServiceTypes.mockResolvedValue([
-      { bookingType: "in_person", isActive: true, durationOptions },
+      { deliveryType: "in_person", isActive: true, durationOptions },
     ])
     fetchSlots.mockResolvedValue([])
 
@@ -156,7 +156,7 @@ describe("useCreateBookingSlots", () => {
   it("returns empty duration options for inactive service type", async () => {
     fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
     fetchEmployeeServiceTypes.mockResolvedValue([
-      { bookingType: "in_person", isActive: false, durationOptions: [{ id: "d-1", durationMinutes: 30 }] },
+      { deliveryType: "in_person", isActive: false, durationOptions: [{ id: "d-1", durationMinutes: 30 }] },
     ])
     fetchSlots.mockResolvedValue([])
 
@@ -168,15 +168,15 @@ describe("useCreateBookingSlots", () => {
     expect(result.current.durationOptions).toHaveLength(0)
   })
 
-  it("returns empty duration options when bookingType has no matching service type", async () => {
+  it("returns empty duration options when deliveryType has no matching service type", async () => {
     fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
     fetchEmployeeServiceTypes.mockResolvedValue([
-      { bookingType: "in_person", isActive: true, durationOptions: [] },
+      { deliveryType: "in_person", isActive: true, durationOptions: [] },
     ])
     fetchSlots.mockResolvedValue([])
 
     const { result } = renderHook(
-      () => useCreateBookingSlots({ ...baseOpts, bookingType: "online" }),
+      () => useCreateBookingSlots({ ...baseOpts, deliveryType: "online" }),
       { wrapper: makeWrapper() },
     )
 
@@ -189,7 +189,7 @@ describe("useCreateBookingSlots", () => {
     fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
     fetchEmployeeServiceTypes.mockResolvedValue([
       {
-        bookingType: "in_person",
+        deliveryType: "in_person",
         isActive: true,
         durationOptions: [{ id: "d-1", durationMinutes: 30 }],
       },
@@ -210,7 +210,7 @@ describe("useCreateBookingSlots", () => {
   it("fetches slots with correct duration when option is selected", async () => {
     fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
     fetchEmployeeServiceTypes.mockResolvedValue([
-      { bookingType: "in_person", isActive: true, durationOptions: [{ id: "d-1", durationMinutes: 45 }] },
+      { deliveryType: "in_person", isActive: true, durationOptions: [{ id: "d-1", durationMinutes: 45 }] },
     ])
     fetchSlots.mockResolvedValue([{ startTime: "09:00", endTime: "09:45" }])
 

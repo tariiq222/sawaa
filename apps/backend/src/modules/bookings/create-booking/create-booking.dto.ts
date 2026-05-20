@@ -1,4 +1,4 @@
-import { BookingType } from '@prisma/client';
+import { BookingType, DeliveryType } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,
@@ -11,8 +11,8 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
- * Dashboard sends booking-type as the UI's snake_case alias (in_person / online / walk_in).
- * The DB enum is INDIVIDUAL / ONLINE / WALK_IN / GROUP — map the UI alias before validating.
+ * Dashboard may still send legacy delivery aliases as bookingType.
+ * Keep validation permissive here; the handler normalizes to BookingType + DeliveryType.
  */
 const mapBookingType = (v: unknown) => {
   if (typeof v !== 'string' || !v) return v;
@@ -44,7 +44,10 @@ export class CreateBookingDto {
   @IsOptional() @IsString() currency?: string;
 
   @ApiPropertyOptional({ description: 'Booking type', enum: BookingType, enumName: 'BookingType', example: BookingType.INDIVIDUAL })
-  @IsOptional() @Transform(({ value }) => mapBookingType(value)) @IsEnum(BookingType) bookingType?: BookingType;
+  @IsOptional() @Transform(({ value }) => mapBookingType(value)) @IsString() bookingType?: BookingType | 'ONLINE';
+
+  @ApiPropertyOptional({ description: 'Delivery channel (IN_PERSON or ONLINE)', enum: DeliveryType, enumName: 'DeliveryType', example: DeliveryType.IN_PERSON })
+  @IsOptional() @IsEnum(DeliveryType) deliveryType?: DeliveryType;
 
   @ApiPropertyOptional({ description: 'Free-text notes for the booking', example: 'Client prefers morning sessions' })
   @IsOptional() @IsString() notes?: string;
