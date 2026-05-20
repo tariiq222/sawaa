@@ -59,7 +59,7 @@ export function CombinedStep({ loading, error, onSubmit, onBack, onClearError }:
             type="button"
             className="absolute inset-y-0 end-0 flex items-center pe-3 text-muted-foreground"
             onClick={() => setShowPassword((p) => !p)}
-            tabIndex={-1}
+            aria-label={showPassword ? t("login.hidePassword") : t("login.showPassword")}
           >
             <HugeiconsIcon icon={showPassword ? ScanEyeIcon : EyeIcon} size={18} />
           </button>
@@ -79,7 +79,7 @@ export function CombinedStep({ loading, error, onSubmit, onBack, onClearError }:
           htmlFor="rememberMe"
           className="text-sm text-muted-foreground cursor-pointer select-none"
         >
-          تذكرني
+          {t("login.rememberMe")}
         </label>
       </div>
 

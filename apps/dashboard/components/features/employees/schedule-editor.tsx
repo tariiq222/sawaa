@@ -133,7 +133,10 @@ export function ScheduleEditor({
     for (const b of breaks) {
       if (b.startTime >= b.endTime) {
         toast.error(
-          t("schedule.invalidBreak").replace("{day}", DAY_NAMES[b.dayOfWeek])
+          t("schedule.invalidBreak").replace(
+            "{day}",
+            t(`employees.day.${b.dayOfWeek}`)
+          )
         )
         return
       }
@@ -164,7 +167,7 @@ export function ScheduleEditor({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left">
+      <SheetContent side="end">
         <SheetHeader>
           <SheetTitle>{t("schedule.title")}</SheetTitle>
           <SheetDescription>{t("schedule.description")}</SheetDescription>
@@ -193,6 +196,7 @@ export function ScheduleEditor({
                   onAddBreak={() => addBreak(index)}
                   onRemoveBreak={removeBreak}
                   onUpdateBreak={updateBreak}
+                  t={t}
                 />
               )
             })}

@@ -5,7 +5,6 @@ import { Input } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { Switch } from "@sawaa/ui"
 import type { LocalBreak } from "./schedule-editor.types"
-import { DAY_NAMES } from "./schedule-editor.types"
 
 /* ─── Props ─── */
 
@@ -21,6 +20,7 @@ interface ScheduleDayRowProps {
   onAddBreak: () => void
   onRemoveBreak: (key: string) => void
   onUpdateBreak: (key: string, field: "startTime" | "endTime", value: string) => void
+  t: (key: string) => string
 }
 
 /* ─── Component ─── */
@@ -36,6 +36,7 @@ export function ScheduleDayRow({
   onAddBreak,
   onRemoveBreak,
   onUpdateBreak,
+  t,
 }: ScheduleDayRowProps) {
   return (
     <div key={fieldId} className="rounded-md border border-border p-3">
@@ -47,7 +48,7 @@ export function ScheduleDayRow({
             onCheckedChange={onToggle}
           />
           <Label className="text-xs font-medium">
-            {DAY_NAMES[index]}
+            {t(`employees.day.${index}`)}
           </Label>
         </div>
         <Input
@@ -56,7 +57,7 @@ export function ScheduleDayRow({
           className="h-8 text-xs tabular-nums"
           {...startTimeProps}
         />
-        <span className="text-xs text-muted-foreground">to</span>
+        <span className="text-xs text-muted-foreground">{t("schedule.to")}</span>
         <Input
           type="time"
           disabled={!isActive}
@@ -71,7 +72,7 @@ export function ScheduleDayRow({
           {dayBreaks.map((b) => (
             <div key={b.key} className="flex items-center gap-2">
               <span className="text-[10px] text-muted-foreground shrink-0">
-                Break
+                {t("schedule.break")}
               </span>
               <Input
                 type="time"
@@ -79,7 +80,9 @@ export function ScheduleDayRow({
                 value={b.startTime}
                 onChange={(e) => onUpdateBreak(b.key, "startTime", e.target.value)}
               />
-              <span className="text-[10px] text-muted-foreground">to</span>
+              <span className="text-[10px] text-muted-foreground">
+                {t("schedule.to")}
+              </span>
               <Input
                 type="time"
                 className="h-7 text-xs tabular-nums"
@@ -93,7 +96,7 @@ export function ScheduleDayRow({
                 className="h-7 text-[10px] text-destructive hover:text-destructive"
                 onClick={() => onRemoveBreak(b.key)}
               >
-                Remove
+                {t("schedule.removeBreak")}
               </Button>
             </div>
           ))}
@@ -104,7 +107,7 @@ export function ScheduleDayRow({
             className="h-6 w-fit text-[10px] text-muted-foreground"
             onClick={onAddBreak}
           >
-            + Add Break
+            {t("employees.create.addBreak")}
           </Button>
         </div>
       )}

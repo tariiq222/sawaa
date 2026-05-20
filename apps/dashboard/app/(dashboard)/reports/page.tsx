@@ -38,7 +38,6 @@ function ReportsContent() {
     normalizedFrom,
     normalizedTo,
     apiDateTo,
-    filenameDateTo,
   } = useReportsPeriod()
 
   const canExportExcel = activeTab === "revenue"

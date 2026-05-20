@@ -1,11 +1,21 @@
 {
   "cookies": [
     {
-      "name": "ck_refresh",
-      "value": "a3807ecc-1a30-4b15-99a2-60c2c8d49838",
+      "name": "__next_hmr_refresh_hash__",
+      "value": "10bb95901436848298f06ff02147d07eb792e5b7ffcd9f85",
       "domain": "localhost",
       "path": "/",
-      "expires": 1781344562.117766,
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "ck_refresh",
+      "value": "2e886e09-3020-49a1-99a0-9cddb7ccb98e",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"
@@ -17,7 +27,7 @@
       "localStorage": [
         {
           "name": "sawaa_user",
-          "value": "{\"id\":\"8dc0177d-df18-4679-b137-c5023f2e340e\",\"email\":\"receptionist@sawaa-test.com\",\"isSuperAdmin\":false,\"passwordHash\":\"$2b$10$eaFR/X/O8Qi2rCgrdDm.HuqEa9x/zqtmXDahfMszCNmSxB7LHNj5C\",\"firstName\":\"Receptionist\",\"lastName\":\"\",\"name\":\"Receptionist\",\"phone\":null,\"phoneVerifiedAt\":null,\"emailVerifiedAt\":null,\"gender\":null,\"avatarUrl\":null,\"isActive\":true,\"role\":\"RECEPTIONIST\",\"customRoleId\":null,\"createdAt\":\"2026-05-14T08:39:05.065Z\",\"updatedAt\":\"2026-05-14T08:39:05.065Z\",\"failedLoginAttempts\":0,\"lockedUntil\":null,\"tokenVersion\":0,\"customRole\":null,\"organizationId\":\"00000000-0000-0000-0000-000000000001\",\"permissions\":[\"booking:*\",\"client:*\",\"employee:read\",\"invoice:read\"]}"
+          "value": "{\"id\":\"0ff1733a-7ce2-4c02-b02f-6d4347bb763b\",\"email\":\"receptionist@sawaa-test.com\",\"name\":\"Receptionist\",\"phone\":null,\"gender\":null,\"avatarUrl\":null,\"isActive\":true,\"role\":\"RECEPTIONIST\",\"isSuperAdmin\":false,\"firstName\":\"Receptionist\",\"lastName\":\"\",\"organizationId\":\"00000000-0000-0000-0000-000000000001\",\"permissions\":[\"booking:create\",\"booking:read\",\"booking:update\",\"client:create\",\"client:read\",\"client:update\",\"employee:read\",\"invoice:read\",\"service:read\",\"category:read\"]}"
         },
         {
           "name": "sawaa-locale",

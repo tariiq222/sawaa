@@ -3,11 +3,17 @@ dist/
 .next/
 .expo/
 .turbo/
+apps/dashboard/playwright/.auth/
 .git/
+.env
+.env.*
+**/.env
 **/.env.local
 **/.env.*
 !.env.example
 !.env.prod.example
+!**/.env.prod.example
+!**/.env.example
 coverage/
 *.log
 .DS_Store

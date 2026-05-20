@@ -2,11 +2,21 @@
   "cookies": [
     {
       "name": "ck_refresh",
-      "value": "04303b53-5a89-49bb-b24f-8becad31ccb2",
+      "value": "5c43ca8d-b40d-49f7-aed3-ec0d98b88150",
       "domain": "localhost",
       "path": "/",
-      "expires": 1781344558.008867,
+      "expires": -1,
       "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "__next_hmr_refresh_hash__",
+      "value": "f828911f77dd92a798f06ff02147d07eb792e5b7ffcd9f85",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
     }
@@ -17,7 +27,7 @@
       "localStorage": [
         {
           "name": "sawaa_user",
-          "value": "{\"id\":\"a718220b-d3fe-42ce-a5c1-9a29c3848045\",\"email\":\"admin@sawaa-test.com\",\"isSuperAdmin\":false,\"passwordHash\":\"$2b$10$1V4o389gTAWsRdlAOzUh7uF1rkfv3nkNiNH1O1z4xtuRd5GL9UwOO\",\"firstName\":\"Admin\",\"lastName\":\"\",\"name\":\"Admin\",\"phone\":null,\"phoneVerifiedAt\":null,\"emailVerifiedAt\":null,\"gender\":null,\"avatarUrl\":null,\"isActive\":true,\"role\":\"ADMIN\",\"customRoleId\":null,\"createdAt\":\"2026-05-14T08:39:04.837Z\",\"updatedAt\":\"2026-05-14T08:39:04.837Z\",\"failedLoginAttempts\":0,\"lockedUntil\":null,\"tokenVersion\":0,\"customRole\":null,\"organizationId\":\"00000000-0000-0000-0000-000000000001\",\"permissions\":[\"user:*\",\"booking:*\",\"client:*\",\"employee:*\",\"invoice:*\",\"payment:*\",\"report:*\",\"setting:*\",\"department:*\",\"category:*\",\"service:*\",\"branch:*\",\"branding:*\",\"content:*\",\"integration:*\"]}"
+          "value": "{\"id\":\"8ab628e3-fca4-4cd3-ab03-ccef758a70ef\",\"email\":\"admin@sawaa-test.com\",\"name\":\"Admin\",\"phone\":null,\"gender\":null,\"avatarUrl\":null,\"isActive\":true,\"role\":\"ADMIN\",\"isSuperAdmin\":false,\"firstName\":\"Admin\",\"lastName\":\"\",\"organizationId\":\"00000000-0000-0000-0000-000000000001\",\"permissions\":[\"user:*\",\"booking:*\",\"client:*\",\"employee:*\",\"invoice:*\",\"payment:*\",\"report:*\",\"setting:*\",\"department:*\",\"category:*\",\"service:*\",\"branch:*\",\"branding:*\",\"content:*\",\"integration:*\"]}"
         },
         {
           "name": "sawaa-locale",

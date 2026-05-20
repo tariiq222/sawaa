@@ -46,3 +46,57 @@ export async function expectCurrentPath(
 ): Promise<void> {
   await expect.poll(() => new URL(page.url()).pathname).toBe(path)
 }
+
+/**
+ * Build a strict text matcher for the dashboard's canonical money display:
+ * integer halalas rendered as SAR-major units with two decimals.
+ */
+export function sarAmountPattern(halalas: number): RegExp {
+  const sar = halalas / 100
+  const en = sar.toLocaleString("en", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+  const ar = sar.toLocaleString("ar-SA", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+
+  return new RegExp(`${escapeRegex(en)}|${escapeRegex(ar)}`)
+}
+
+/**
+ * Match the forbidden raw integer-halala display in either English or Arabic
+ * numerals, with grouped whole numbers and grouped two-decimal variants.
+ */
+export function rawHalalasPattern(halalas: number): RegExp {
+  const values = new Set([
+    String(halalas),
+    halalas.toFixed(2),
+    halalas.toLocaleString("en", { maximumFractionDigits: 0 }),
+    halalas.toLocaleString("en", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }),
+    halalas.toLocaleString("ar-SA", {
+      maximumFractionDigits: 0,
+      useGrouping: false,
+    }),
+    halalas.toLocaleString("ar-SA", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      useGrouping: false,
+    }),
+    halalas.toLocaleString("ar-SA", { maximumFractionDigits: 0 }),
+    halalas.toLocaleString("ar-SA", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }),
+  ])
+
+  return new RegExp(Array.from(values).map(escapeRegex).join("|"))
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}

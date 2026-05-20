@@ -18,6 +18,7 @@ import {
   useEmployeeServiceMutations,
 } from "@/hooks/use-employee-mutations"
 import { useLocale } from "@/components/locale-provider"
+import { halalasToSarNumber, sarToHalalas } from "@/lib/money"
 import { z } from "zod"
 import { createEmployeeSchemaStatic } from "@/components/features/employees/create/form-schema"
 
@@ -25,6 +26,32 @@ const _editEmployeeSchema = createEmployeeSchemaStatic.partial().extend({
   isActive: z.boolean(),
 })
 type EditEmployeeFormData = z.infer<typeof _editEmployeeSchema>
+
+function toDisplayTypeConfigs(types: EmployeeService["serviceTypes"] = []) {
+  return types.map((st) => ({
+    bookingType: st.bookingType,
+    price: st.price != null ? halalasToSarNumber(st.price) : undefined,
+    duration: st.duration ?? undefined,
+    useCustomOptions: st.useCustomOptions,
+    isActive: st.isActive,
+    durationOptions: st.durationOptions.map((o) => ({
+      ...o,
+      labelAr: o.labelAr ?? undefined,
+      price: halalasToSarNumber(o.price),
+    })),
+  }))
+}
+
+function toStorageTypeConfigs(types: DraftService["types"] = []) {
+  return types.map((tc) => ({
+    ...tc,
+    price: tc.price != null ? sarToHalalas(tc.price) : tc.price,
+    durationOptions: (tc.durationOptions ?? []).map((o) => ({
+      ...o,
+      price: sarToHalalas(o.price),
+    })),
+  }))
+}
 
 const defaultSchedule: AvailabilitySlot[] = Array.from(
   { length: 7 },
@@ -243,7 +270,7 @@ export function useEmployeeForm({
         availableTypes: ds.availableTypes,
         bufferMinutes: ds.bufferMinutes,
         isActive: ds.isActive,
-        types: ds.types,
+        types: toStorageTypeConfigs(ds.types),
       }
       try {
         if (existingIds.has(ds.serviceId)) {
@@ -351,7 +378,7 @@ export function useEmployeeForm({
               availableTypes: ds.availableTypes,
               bufferMinutes: ds.bufferMinutes,
               isActive: ds.isActive,
-              types: ds.types,
+              types: toStorageTypeConfigs(ds.types),
             })
           )
         )

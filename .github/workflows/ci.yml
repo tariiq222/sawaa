@@ -163,6 +163,11 @@ jobs:
       - name: Unit tests
         run: pnpm --filter=dashboard test
 
+      - name: Build
+        run: pnpm --filter=dashboard build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:5200/api/v1
+
   # ───────────────────────────────────────────────────────────────────────────
   # Dashboard smoke (Playwright)
   # ───────────────────────────────────────────────────────────────────────────

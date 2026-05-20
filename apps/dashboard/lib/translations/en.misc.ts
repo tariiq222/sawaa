@@ -235,6 +235,7 @@ export const enMisc: Record<string, string> = {
   "login.passwordLabel": "Password",
   "login.showPassword": "Show password",
   "login.hidePassword": "Hide password",
+  "login.rememberMe": "Remember me",
   "login.signingIn": "Signing in...",
   "login.signIn": "Sign in",
   "login.orgSuspended": "This organization has been suspended. Contact the platform admin to restore access.",

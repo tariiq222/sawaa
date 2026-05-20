@@ -1,6 +1,6 @@
 import { renderHook, waitFor, act } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { ReactNode } from "react"
 
 // Reactive URL-state mock for next/navigation. The hook reads search params from
@@ -9,25 +9,29 @@ import type { ReactNode } from "react"
 const navState = vi.hoisted(() => ({
   params: new URLSearchParams(),
   listeners: new Set<() => void>(),
-  notify() { this.listeners.forEach((l) => l()) },
+  replace(url: string) {
+    const q = url.indexOf("?")
+    const next = new URLSearchParams(q >= 0 ? url.slice(q + 1) : "")
+    if (next.toString() === this.params.toString()) return
+    this.params = next
+    this.listeners.forEach((l) => l())
+  },
   reset() { this.params = new URLSearchParams(); this.listeners.clear() },
+}))
+
+const routerMock = vi.hoisted(() => ({
+  replace: vi.fn((url: string) => navState.replace(url)),
+  push: vi.fn(),
+  refresh: vi.fn(),
+  back: vi.fn(),
+  forward: vi.fn(),
+  prefetch: vi.fn(),
 }))
 
 vi.mock("next/navigation", async () => {
   const { useState, useEffect } = await import("react")
   return {
-    useRouter: () => ({
-      replace: (url: string) => {
-        const q = url.indexOf("?")
-        navState.params = new URLSearchParams(q >= 0 ? url.slice(q + 1) : "")
-        navState.notify()
-      },
-      push: vi.fn(),
-      refresh: vi.fn(),
-      back: vi.fn(),
-      forward: vi.fn(),
-      prefetch: vi.fn(),
-    }),
+    useRouter: () => routerMock,
     usePathname: () => "/employees",
     useSearchParams: () => {
       const [, force] = useState(0)
@@ -44,6 +48,8 @@ vi.mock("next/navigation", async () => {
 const { fetchEmployees } = vi.hoisted(() => ({
   fetchEmployees: vi.fn(),
 }))
+
+const queryClients = new Set<QueryClient>()
 
 vi.mock("@/lib/api/employees", () => ({
   fetchEmployees,
@@ -78,7 +84,10 @@ vi.mock("@/hooks/use-employee-mutations", () => ({
 import { useEmployees } from "@/hooks/use-employees"
 
 function makeWrapper() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  })
+  queryClients.add(queryClient)
   function TestWrapper({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   }
@@ -88,6 +97,10 @@ function makeWrapper() {
 
 describe("useEmployees", () => {
   beforeEach(() => { vi.clearAllMocks(); navState.reset() })
+  afterEach(() => {
+    for (const queryClient of queryClients) queryClient.clear()
+    queryClients.clear()
+  })
 
   it("fetches employees and returns items", async () => {
     const items = [{ id: "p-1", firstName: "Ali", lastName: "Hassan" }]

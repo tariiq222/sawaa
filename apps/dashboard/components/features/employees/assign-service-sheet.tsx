@@ -143,7 +143,7 @@ export function AssignServiceSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left">
+      <SheetContent side="end">
         <SheetHeader>
           <SheetTitle>{t("employees.services.assign")}</SheetTitle>
           <SheetDescription>

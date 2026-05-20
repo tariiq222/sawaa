@@ -57,6 +57,7 @@ coverage-e2e/
 **/test-results-*.json
 **/playwright-report/
 **/playwright-*-results.json
+apps/dashboard/playwright/.auth/
 **/~$*
 
 # Ad-hoc test reports + artifact analyzers (not source code)

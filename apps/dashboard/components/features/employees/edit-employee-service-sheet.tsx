@@ -163,7 +163,7 @@ export function EditEmployeeServiceSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left">
+      <SheetContent side="end">
         <SheetHeader>
           <SheetTitle>{serviceName}</SheetTitle>
           <SheetDescription>

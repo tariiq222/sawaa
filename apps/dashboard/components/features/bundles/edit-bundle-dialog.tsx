@@ -79,15 +79,17 @@ export function EditBundleDialog({ bundle, open, onOpenChange }: Props) {
     }
   }, [bundle, form])
 
-  const watchedServiceIds = form.watch("serviceIds") ?? []
+  const watchedServiceIds = form.watch("serviceIds")
   const watchedDiscountType = form.watch("discountType") ?? "PERCENTAGE"
   const watchedDiscountValue = form.watch("discountValue") ?? 0
 
   const selectedPrices = useMemo(
-    () =>
-      services
-        .filter((s) => watchedServiceIds.includes(s.id))
-        .map((s) => s.price),
+    () => {
+      const serviceIds = watchedServiceIds ?? []
+      return services
+        .filter((s) => serviceIds.includes(s.id))
+        .map((s) => s.price)
+    },
     [services, watchedServiceIds],
   )
 

@@ -125,6 +125,7 @@ export function EmployeeTypeRow({
           size="sm"
           className="h-6 text-destructive hover:text-destructive"
           onClick={onRemove}
+          aria-label={t("common.delete")}
         >
           <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-3.5" />
         </Button>
@@ -259,6 +260,7 @@ function EmployeeDurationOptionRow({
         size="sm"
         className="h-6 text-destructive hover:text-destructive"
         onClick={onRemove}
+        aria-label={t("services.bookingTypes.removeOption")}
       >
         <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-3.5" />
       </Button>
