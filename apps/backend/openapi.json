@@ -1579,8 +1579,8 @@
             "type": "string"
           },
           "discountAmt": {
-            "description": "Flat discount amount",
-            "example": 10,
+            "description": "Flat discount amount in integer halalas (1 SAR = 100)",
+            "example": 1000,
             "type": "number"
           },
           "dueAt": {
@@ -1599,8 +1599,8 @@
             "type": "string"
           },
           "subtotal": {
-            "description": "Subtotal before discount and tax",
-            "example": 100,
+            "description": "Subtotal before discount and tax in integer halalas (1 SAR = 100)",
+            "example": 10000,
             "type": "number"
           },
           "vatRate": {
@@ -3220,8 +3220,8 @@
       "ProcessPaymentDto": {
         "properties": {
           "amount": {
-            "description": "Amount to charge",
-            "example": 100,
+            "description": "Amount to charge in integer halalas (1 SAR = 100)",
+            "example": 10000,
             "type": "number"
           },
           "gatewayRef": {
@@ -3375,8 +3375,8 @@
       "RefundPaymentDto": {
         "properties": {
           "amount": {
-            "description": "Partial refund amount; omit to refund the full amount",
-            "example": 50,
+            "description": "Partial refund amount in integer halalas (1 SAR = 100); omit to refund the full amount",
+            "example": 5000,
             "type": "number"
           },
           "reason": {
@@ -3733,6 +3733,18 @@
         "required": [
           "options"
         ],
+        "type": "object"
+      },
+      "SetIntakeFieldsDto": {
+        "properties": {
+          "fields": {
+            "description": "Replacement field list (max 100). Omit or pass [] to clear all fields.",
+            "items": {
+              "$ref": "#/components/schemas/IntakeFieldInputDto"
+            },
+            "type": "array"
+          }
+        },
         "type": "object"
       },
       "SetServiceBookingConfigsDto": {
@@ -4558,6 +4570,26 @@
           "title": {
             "description": "Professional title (e.g. Dr.)",
             "example": "Dr.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateIntakeFormDto": {
+        "properties": {
+          "isActive": {
+            "description": "Whether the form is active and shown to clients",
+            "example": true,
+            "type": "boolean"
+          },
+          "nameAr": {
+            "description": "Form name in Arabic",
+            "example": "استبيان ما قبل الجلسة",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "Form name in English",
+            "example": "Pre-session Questionnaire",
             "type": "string"
           }
         },
@@ -9523,6 +9555,66 @@
           }
         ],
         "summary": "List email delivery logs for this organization",
+        "tags": [
+          "Dashboard / Comms"
+        ]
+      }
+    },
+    "/api/v1/dashboard/comms/email-fallback-quota": {
+      "get": {
+        "operationId": "DashboardCommsController_getEmailFallbackQuotaEndpoint",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Email fallback quota"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get email fallback quota usage for the current month",
         "tags": [
           "Dashboard / Comms"
         ]
@@ -16966,6 +17058,77 @@
         ]
       }
     },
+    "/api/v1/dashboard/organization/intake-forms/responses/{bookingId}": {
+      "get": {
+        "operationId": "DashboardOrganizationSettingsController_getIntakeFormResponsesEndpoint",
+        "parameters": [
+          {
+            "description": "Booking UUID",
+            "in": "path",
+            "name": "bookingId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of intake responses (empty until model is implemented)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get intake form responses for a booking",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      }
+    },
     "/api/v1/dashboard/organization/intake-forms/{formId}": {
       "delete": {
         "operationId": "DashboardOrganizationSettingsController_deleteIntakeFormEndpoint",
@@ -17107,6 +17270,172 @@
           }
         ],
         "summary": "Get an intake form by ID",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      },
+      "patch": {
+        "operationId": "DashboardOrganizationSettingsController_updateIntakeFormEndpoint",
+        "parameters": [
+          {
+            "description": "Intake form UUID",
+            "in": "path",
+            "name": "formId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateIntakeFormDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Intake form updated"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Intake form not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update an intake form",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      }
+    },
+    "/api/v1/dashboard/organization/intake-forms/{formId}/fields": {
+      "put": {
+        "operationId": "DashboardOrganizationSettingsController_setIntakeFieldsEndpoint",
+        "parameters": [
+          {
+            "description": "Intake form UUID",
+            "in": "path",
+            "name": "formId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetIntakeFieldsDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Fields replaced, full form returned"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Intake form not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replace all fields on an intake form",
         "tags": [
           "Dashboard / Org Experience"
         ]

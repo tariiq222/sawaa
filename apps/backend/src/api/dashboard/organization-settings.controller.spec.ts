@@ -18,6 +18,9 @@ import { CreateIntakeFormHandler } from '../../modules/org-experience/intake-for
 import { GetIntakeFormHandler } from '../../modules/org-experience/intake-forms/get-intake-form.handler';
 import { ListIntakeFormsHandler } from '../../modules/org-experience/intake-forms/list-intake-forms.handler';
 import { DeleteIntakeFormHandler } from '../../modules/org-experience/intake-forms/delete-intake-form.handler';
+import { UpdateIntakeFormHandler } from '../../modules/org-experience/intake-forms/update-intake-form.handler';
+import { SetIntakeFieldsHandler } from '../../modules/org-experience/intake-forms/set-intake-fields.handler';
+import { GetIntakeFormResponsesHandler } from '../../modules/org-experience/intake-forms/get-intake-form-responses.handler';
 import { SubmitRatingHandler } from '../../modules/org-experience/ratings/submit-rating.handler';
 import { ListRatingsHandler } from '../../modules/org-experience/ratings/list-ratings.handler';
 import { GetOrgSettingsHandler } from '../../modules/org-experience/org-settings/get-org-settings.handler';
@@ -51,6 +54,9 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
   const mockGetIntakeForm = { execute: jest.fn() };
   const mockListIntakeForms = { execute: jest.fn() };
   const mockDeleteIntakeForm = { execute: jest.fn() };
+  const mockUpdateIntakeForm = { execute: jest.fn() };
+  const mockSetIntakeFields = { execute: jest.fn() };
+  const mockGetIntakeFormResponses = { execute: jest.fn() };
   const mockSubmitRating = { execute: jest.fn() };
   const mockListRatings = { execute: jest.fn() };
   const mockGetOrgSettings = { execute: jest.fn() };
@@ -84,6 +90,9 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
         { provide: GetIntakeFormHandler, useValue: mockGetIntakeForm },
         { provide: ListIntakeFormsHandler, useValue: mockListIntakeForms },
         { provide: DeleteIntakeFormHandler, useValue: mockDeleteIntakeForm },
+        { provide: UpdateIntakeFormHandler, useValue: mockUpdateIntakeForm },
+        { provide: SetIntakeFieldsHandler, useValue: mockSetIntakeFields },
+        { provide: GetIntakeFormResponsesHandler, useValue: mockGetIntakeFormResponses },
         { provide: SubmitRatingHandler, useValue: mockSubmitRating },
         { provide: ListRatingsHandler, useValue: mockListRatings },
         { provide: GetOrgSettingsHandler, useValue: mockGetOrgSettings },
@@ -258,6 +267,81 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
         .expect(200);
 
       expect(res.body.maxAdvanceBookingDays).toBe(30);
+    });
+  });
+
+  // ── Intake Forms (new endpoints) ─────────────────────────────────────────
+
+  describe('PATCH /dashboard/organization/intake-forms/:formId', () => {
+    it('returns 200 on valid update', async () => {
+      const form = { id: uuid(1), nameAr: 'نموذج معدّل', isActive: false, fields: [] };
+      mockUpdateIntakeForm.execute.mockResolvedValue(form);
+
+      const res = await request(app.getHttpServer())
+        .patch(`/dashboard/organization/intake-forms/${uuid(1)}`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ nameAr: 'نموذج معدّل', isActive: false })
+        .expect(200);
+
+      expect(res.body.nameAr).toBe('نموذج معدّل');
+      expect(mockUpdateIntakeForm.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ formId: uuid(1), nameAr: 'نموذج معدّل', isActive: false }),
+      );
+    });
+
+    it('returns 400 for invalid UUID', async () => {
+      return request(app.getHttpServer())
+        .patch('/dashboard/organization/intake-forms/not-a-uuid')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ nameAr: 'x' })
+        .expect(400);
+    });
+  });
+
+  describe('PUT /dashboard/organization/intake-forms/:formId/fields', () => {
+    it('returns 200 with replaced fields', async () => {
+      const form = { id: uuid(1), nameAr: 'نموذج', fields: [{ id: uuid(2), labelAr: 'حقل' }] };
+      mockSetIntakeFields.execute.mockResolvedValue(form);
+
+      const res = await request(app.getHttpServer())
+        .put(`/dashboard/organization/intake-forms/${uuid(1)}/fields`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ fields: [{ labelAr: 'حقل', fieldType: 'TEXT', isRequired: true }] })
+        .expect(200);
+
+      expect(res.body.fields).toHaveLength(1);
+      expect(mockSetIntakeFields.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ formId: uuid(1) }),
+      );
+    });
+
+    it('returns 400 for invalid UUID', async () => {
+      return request(app.getHttpServer())
+        .put('/dashboard/organization/intake-forms/not-a-uuid/fields')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ fields: [] })
+        .expect(400);
+    });
+  });
+
+  describe('GET /dashboard/organization/intake-forms/responses/:bookingId', () => {
+    it('returns 200 with empty array (stub)', async () => {
+      mockGetIntakeFormResponses.execute.mockResolvedValue([]);
+
+      const res = await request(app.getHttpServer())
+        .get(`/dashboard/organization/intake-forms/responses/${uuid(1)}`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body).toHaveLength(0);
+    });
+
+    it('returns 400 for invalid UUID', async () => {
+      return request(app.getHttpServer())
+        .get('/dashboard/organization/intake-forms/responses/not-a-uuid')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(400);
     });
   });
 });
