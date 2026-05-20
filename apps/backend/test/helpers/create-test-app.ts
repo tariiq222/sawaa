@@ -8,12 +8,17 @@ import { PrismaService } from '../../src/infrastructure/database';
 export type MockPrisma = {
   [model: string]: {
     findUnique: jest.Mock;
+    findUniqueOrThrow: jest.Mock;
     findFirst: jest.Mock;
+    findFirstOrThrow: jest.Mock;
     findMany: jest.Mock;
     create: jest.Mock;
+    createMany: jest.Mock;
     update: jest.Mock;
+    updateMany: jest.Mock;
     upsert: jest.Mock;
     delete: jest.Mock;
+    deleteMany: jest.Mock;
     count: jest.Mock;
     groupBy: jest.Mock;
     aggregate: jest.Mock;
@@ -31,12 +36,17 @@ export async function createTestApp(): Promise<{ app: INestApplication; prisma: 
     for (const name of names) {
       prismaMock[name] = {
         findUnique: jest.fn().mockResolvedValue(null),
+        findUniqueOrThrow: jest.fn().mockResolvedValue(null),
         findFirst: jest.fn().mockResolvedValue(null),
+        findFirstOrThrow: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn(),
+        createMany: jest.fn().mockResolvedValue({ count: 0 }),
         update: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         upsert: jest.fn(),
         delete: jest.fn(),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
         count: jest.fn().mockResolvedValue(0),
         groupBy: jest.fn().mockResolvedValue([]),
         aggregate: jest.fn().mockResolvedValue({ _sum: {}, _count: {} }),
@@ -49,13 +59,40 @@ export async function createTestApp(): Promise<{ app: INestApplication; prisma: 
     'payment', 'refundRequest', 'groupSession', 'groupEnrollment', 'notification',
     'notificationDeliveryLog', 'smsDelivery', 'organizationEmailConfig',
     'organizationSmsConfig', 'organizationPaymentConfig', 'brandingConfig',
-    'employeeBranch', 'employeeService', 'employeeAvailability', 'serviceBookingConfig',
-    'serviceDurationOption', 'employeeServiceOption', 'employeeAvailabilityException',
+    'employeeBranch', 'employeeService', 'employeeServiceType', 'employeeAvailability',
+    'serviceBookingConfig', 'serviceDurationOption', 'employeeServiceOption',
+    'employeeAvailabilityException', 'employeeBreak', 'businessHour', 'holiday',
+    'bookingSettings', 'bookingStatusLog', 'bookingClient', 'serviceBundle', 'serviceBundleItem',
+    'intakeForm', 'intakeField', 'intakeResponse', 'organizationSettings',
     'contactMessage', 'file', 'platformSetting', 'emailTemplate', 'rating',
     'waitlistEntry', 'clientRefreshToken', 'customRole', 'permission', 'coupon',
     'department', 'category', 'serviceCategory', 'conversation', 'chatMessage', 'fcmToken',
     'outboxEvent', 'activityLog',
   );
+
+  (prismaMock as unknown as { $transaction: jest.Mock }).$transaction = jest.fn(
+    (arg: unknown) =>
+      Array.isArray(arg)
+        ? Promise.all(arg)
+        : typeof arg === 'function'
+          ? (arg as (tx: unknown) => unknown)(prismaMock)
+          : Promise.resolve(undefined),
+  );
+  (prismaMock as unknown as { $executeRaw: jest.Mock }).$executeRaw = jest.fn().mockResolvedValue(0);
+  (prismaMock as unknown as { $executeRawUnsafe: jest.Mock }).$executeRawUnsafe = jest.fn().mockResolvedValue(0);
+  (prismaMock as unknown as { $queryRaw: jest.Mock }).$queryRaw = jest.fn().mockResolvedValue([]);
+  (prismaMock as unknown as { $queryRawUnsafe: jest.Mock }).$queryRawUnsafe = jest.fn().mockResolvedValue([]);
+
+  prismaMock.user.findUnique = jest.fn().mockResolvedValue({
+    id: 'user-1',
+    email: 'owner@sawaa.app',
+    role: 'OWNER',
+    isActive: true,
+    isSuperAdmin: true,
+    tokenVersion: 0,
+    customRoleId: null,
+    customRole: null,
+  });
 
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],

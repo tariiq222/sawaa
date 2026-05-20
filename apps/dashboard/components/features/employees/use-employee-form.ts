@@ -29,7 +29,7 @@ type EditEmployeeFormData = z.infer<typeof _editEmployeeSchema>
 
 function toDisplayTypeConfigs(types: EmployeeService["serviceTypes"] = []) {
   return types.map((st) => ({
-    bookingType: st.bookingType,
+    deliveryType: st.deliveryType,
     price: st.price != null ? halalasToSarNumber(st.price) : undefined,
     duration: st.duration ?? undefined,
     useCustomOptions: st.useCustomOptions,

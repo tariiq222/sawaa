@@ -91,7 +91,7 @@ const draftService = {
   availableTypes: ["in_person"],
   types: [
     {
-      bookingType: "in_person",
+      deliveryType: "in_person",
       price: 150,
       duration: 45,
       useCustomOptions: true,
@@ -163,7 +163,7 @@ describe("useEmployeeForm service price units", () => {
         serviceId: "svc-1",
         types: [
           expect.objectContaining({
-            bookingType: "in_person",
+            deliveryType: "in_person",
             price: 15000,
             durationOptions: [
               expect.objectContaining({ price: 15000 }),
@@ -213,7 +213,7 @@ describe("useEmployeeForm service price units", () => {
       payload: expect.objectContaining({
         types: [
           expect.objectContaining({
-            bookingType: "in_person",
+            deliveryType: "in_person",
             price: 15000,
             durationOptions: [
               expect.objectContaining({ price: 15000 }),
