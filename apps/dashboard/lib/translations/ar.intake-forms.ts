@@ -17,6 +17,12 @@ export const arIntakeForms: Record<string, string> = {
   "intakeForms.col.edit": "تعديل النموذج",
   "intakeForms.col.delete": "حذف النموذج",
 
+  // — Filters —
+  "intakeForms.filter.status": "الحالة",
+  "intakeForms.filter.allStatuses": "كل الحالات",
+  "intakeForms.filter.active": "نشط",
+  "intakeForms.filter.inactive": "غير نشط",
+
   // — Field Editor —
   "intakeForms.field.field": "حقل",
   "intakeForms.field.moveUp": "تحريك لأعلى",

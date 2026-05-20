@@ -24,6 +24,7 @@ import { CancellationReason } from '@prisma/client';
 import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../../common/swagger';
+import { endOfDayInTz, startOfDayInTz } from '../../../common/helpers/date-tz.helper';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../../common/guards/casl.guard';
 import { CurrentUser, JwtUser } from '../../../common/auth/current-user.decorator';
@@ -118,8 +119,8 @@ export class MobileEmployeeBookingsController {
       employeeId: user.sub,
       page: page ?? 1,
       limit: limit ?? 20,
-      fromDate: fromDate ? new Date(fromDate) : undefined,
-      toDate: toDate ? new Date(toDate) : undefined,
+      fromDate: startOfDayInTz(fromDate),
+      toDate: endOfDayInTz(toDate),
     });
   }
 

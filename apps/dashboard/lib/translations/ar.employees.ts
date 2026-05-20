@@ -129,6 +129,7 @@ export const arEmployees: Record<string, string> = {
   "employees.services.priceSar": "السعر (ر.س)",
   "employees.services.required": "مطلوب",
   "employees.services.defaultLabel": "افتراضي",
+  "employees.services.defaultDuration": "المدة الافتراضية",
   "employees.services.buffer": "فاصل: {minutes} دقيقة",
 
   // — Form Page —
@@ -194,6 +195,9 @@ export const arEmployees: Record<string, string> = {
   "employees.services.types": "طرق التقديم",
   "employees.services.typesRequired": "اختر طريقة تقديم واحدة على الأقل",
   "employees.services.useCustomOptions": "استخدام خيارات مخصصة",
+  "employees.services.useCustomPricingTimes": "تفعيل أسعار وأوقات مختلفة عن الخدمة",
+  "employees.services.defaultsUsedHint": "بدون التفعيل سيستخدم الممارس أسعار ومدد الخدمة الأساسية.",
+  "employees.services.usingServiceDefaults": "سيتم استخدام الأسعار والمدد الافتراضية للخدمة. فعّل الخيار أعلاه لتخصيصها لهذا الممارس.",
 
   // — Status Dialog —
   "employees.action.deactivate": "تعطيل",

@@ -172,12 +172,12 @@ describe('clientBookingsService.cancel / reschedule / rate / getJoinUrl', () => 
     );
   });
 
-  it('reschedule PATCHes the new scheduledAt', async () => {
+  it('reschedule PATCHes the newScheduledAt expected by the backend DTO', async () => {
     mockedApi.patch.mockResolvedValueOnce({ data: sampleRow });
     await clientBookingsService.reschedule('b1', '2026-05-02T11:00:00Z');
     expect(mockedApi.patch).toHaveBeenCalledWith(
       '/mobile/client/bookings/b1/reschedule',
-      { scheduledAt: '2026-05-02T11:00:00Z' },
+      { newScheduledAt: '2026-05-02T11:00:00Z' },
     );
   });
 

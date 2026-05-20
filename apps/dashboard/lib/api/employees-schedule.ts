@@ -13,9 +13,11 @@ import type {
   Vacation,
   CreateVacationPayload,
   EmployeeService,
+  EmployeeServiceOption,
   EmployeeServiceType,
   AssignServicePayload,
   UpdateServicePayload,
+  SetEmployeeServiceOptionsPayload,
   TimeSlot,
 } from "@/lib/types/employee"
 import type { Rating } from "@/lib/types/rating"
@@ -165,6 +167,17 @@ export async function fetchEmployeeServiceTypes(
 ): Promise<EmployeeServiceType[]> {
   return api.get<EmployeeServiceType[]>(
     `/dashboard/people/employees/${employeeId}/services/${serviceId}/types`,
+  )
+}
+
+export async function setEmployeeServiceOptions(
+  employeeId: string,
+  serviceId: string,
+  payload: SetEmployeeServiceOptionsPayload,
+): Promise<EmployeeServiceOption[]> {
+  return api.put<EmployeeServiceOption[]>(
+    `/dashboard/people/employees/${employeeId}/services/${serviceId}/options`,
+    payload,
   )
 }
 

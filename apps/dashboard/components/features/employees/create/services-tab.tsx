@@ -15,8 +15,9 @@ import {
   CardDescription,
 } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
-import { useServices } from "@/hooks/use-services"
+import { useServiceBookingTypes, useServices } from "@/hooks/use-services"
 import type { EmployeeTypeConfigPayload } from "@/lib/types/employee"
+import { makeDefaultEmployeeTypeConfigs } from "../employee-service-option-overrides"
 import {
   addServiceSchema,
   nextDraftKey,
@@ -47,6 +48,7 @@ export function ServicesTab({
   const { services } = useServices()
   const [isAdding, setIsAdding] = useState(false)
   const [typeConfigs, setTypeConfigs] = useState<EmployeeTypeConfigPayload[]>([])
+  const [useCustomPricing, setUseCustomPricing] = useState(false)
 
   /* Filter out already-added services */
   const availableServices = useMemo(
@@ -63,17 +65,18 @@ export function ServicesTab({
   })
 
   const selectedServiceId = form.watch("serviceId")
+  const { data: serviceBookingTypes = [] } = useServiceBookingTypes(
+    selectedServiceId || null,
+  )
 
   useEffect(() => {
     if (!selectedServiceId) {
       setTypeConfigs([])
+      setUseCustomPricing(false)
       return
     }
-    setTypeConfigs([
-      { deliveryType: "in_person", price: null, duration: null, useCustomOptions: false, isActive: true, durationOptions: [] },
-      { deliveryType: "online", price: null, duration: null, useCustomOptions: false, isActive: true, durationOptions: [] },
-    ])
-  }, [selectedServiceId])
+    setTypeConfigs(makeDefaultEmployeeTypeConfigs(serviceBookingTypes))
+  }, [selectedServiceId, serviceBookingTypes])
 
   const handleAddService = form.handleSubmit((data) => {
     const svc = services?.find((s) => s.id === data.serviceId)
@@ -89,10 +92,13 @@ export function ServicesTab({
         isActive: data.isActive,
         availableTypes: typeConfigs.map((tc) => tc.deliveryType),
         types: typeConfigs,
+        useCustomPricing,
+        serviceBookingTypes,
       },
     ])
     form.reset()
     setTypeConfigs([])
+    setUseCustomPricing(false)
     setIsAdding(false)
   })
 
@@ -104,6 +110,17 @@ export function ServicesTab({
     setIsAdding(false)
     form.reset()
     setTypeConfigs([])
+    setUseCustomPricing(false)
+  }
+
+  const handleCustomPricingChange = (enabled: boolean) => {
+    setUseCustomPricing(enabled)
+    setTypeConfigs((current) =>
+      current.map((typeConfig) => ({
+        ...typeConfig,
+        useCustomOptions: enabled,
+      })),
+    )
   }
 
   return (
@@ -133,9 +150,11 @@ export function ServicesTab({
           <AddServiceForm
             form={form}
             availableServices={availableServices.map((s) => ({ id: s.id, nameAr: s.nameAr, nameEn: s.nameEn ?? s.nameAr }))}
-            serviceBookingTypes={[]}
+            serviceBookingTypes={serviceBookingTypes}
             typeConfigs={typeConfigs}
             onTypeConfigsChange={setTypeConfigs}
+            useCustomPricing={useCustomPricing}
+            onUseCustomPricingChange={handleCustomPricingChange}
             onSubmit={handleAddService}
             onCancel={handleCancel}
             t={t}

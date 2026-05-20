@@ -1,6 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { BookingType } from '@prisma/client';
+import { BookingType, DeliveryType } from '@prisma/client';
 import { IsDateString, IsEnum, IsInt, IsOptional, IsUUID, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
@@ -30,6 +30,9 @@ export class PublicSlotsQuery {
 
   @ApiPropertyOptional({ description: 'Booking type filter', enum: BookingType, example: BookingType.INDIVIDUAL })
   @IsOptional() @IsEnum(BookingType) bookingType?: BookingType;
+
+  @ApiPropertyOptional({ description: 'Delivery channel filter (IN_PERSON or ONLINE)', enum: DeliveryType, example: DeliveryType.IN_PERSON })
+  @IsOptional() @IsEnum(DeliveryType) deliveryType?: DeliveryType;
 }
 
 @ApiTags('Public / Slots')
@@ -52,6 +55,7 @@ export class PublicSlotsController {
       serviceId: q.serviceId,
       durationOptionId: q.durationOptionId,
       bookingType: q.bookingType,
+      deliveryType: q.deliveryType,
     });
   }
 }

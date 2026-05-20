@@ -9,7 +9,11 @@ import type {
 } from "@/components/features/employees/create/schedule-tab"
 import type { DraftService } from "@/components/features/employees/create/services-tab"
 import type { AvailabilitySlot, EmployeeService } from "@/lib/types/employee"
-import { assignService, uploadEmployeeAvatar } from "@/lib/api/employees"
+import {
+  assignService,
+  setEmployeeServiceOptions,
+  uploadEmployeeAvatar,
+} from "@/lib/api/employees"
 import {
   useEmployeeMutations,
   useSetAvailability,
@@ -19,6 +23,7 @@ import {
 } from "@/hooks/use-employee-mutations"
 import { useLocale } from "@/components/locale-provider"
 import { halalasToSarNumber, sarToHalalas } from "@/lib/money"
+import { buildEmployeeServiceOptionsPayload } from "./employee-service-option-overrides"
 import { z } from "zod"
 import { createEmployeeSchemaStatic } from "@/components/features/employees/create/form-schema"
 
@@ -35,8 +40,12 @@ function toDisplayTypeConfigs(types: EmployeeService["serviceTypes"] = []) {
     useCustomOptions: st.useCustomOptions,
     isActive: st.isActive,
     durationOptions: st.durationOptions.map((o) => ({
-      ...o,
+      id: o.id,
+      label: o.label,
       labelAr: o.labelAr ?? undefined,
+      durationMinutes: o.durationMinutes,
+      isDefault: o.isDefault,
+      sortOrder: o.sortOrder,
       price: halalasToSarNumber(o.price),
     })),
   }))
@@ -183,12 +192,7 @@ export function useEmployeeForm({
         bufferMinutes: ps.bufferMinutes ?? 0,
         isActive: ps.isActive,
         availableTypes: ps.availableTypes ?? [],
-        types: (ps.serviceTypes ?? []).map((st) => ({
-          deliveryType: st.deliveryType,
-          price: st.price ?? undefined,
-          duration: st.duration ?? undefined,
-          isActive: st.isActive,
-        })),
+        types: toDisplayTypeConfigs(ps.serviceTypes ?? []),
       }))
     )
   }, [existingServices, setDraftServices])
@@ -281,6 +285,14 @@ export function useEmployeeForm({
         } else {
           await assignService(id, { serviceId: ds.serviceId, ...payload })
         }
+        const optionsPayload = buildEmployeeServiceOptionsPayload({
+          typeConfigs: ds.types,
+          serviceBookingTypes: ds.serviceBookingTypes,
+          useCustomPricing: ds.useCustomPricing ?? false,
+        })
+        if (ds.useCustomPricing !== undefined && optionsPayload) {
+          await setEmployeeServiceOptions(id, ds.serviceId, optionsPayload)
+        }
       } catch {
         stepErrors.push(t("employees.form.stepErrorServices"))
       }
@@ -372,15 +384,23 @@ export function useEmployeeForm({
     if (draftServices.length > 0) {
       try {
         await Promise.all(
-          draftServices.map((ds) =>
-            assignService(newId, {
+          draftServices.map(async (ds) => {
+            await assignService(newId, {
               serviceId: ds.serviceId,
               availableTypes: ds.availableTypes,
               bufferMinutes: ds.bufferMinutes,
               isActive: ds.isActive,
               types: toStorageTypeConfigs(ds.types),
             })
-          )
+            const optionsPayload = buildEmployeeServiceOptionsPayload({
+              typeConfigs: ds.types,
+              serviceBookingTypes: ds.serviceBookingTypes,
+              useCustomPricing: ds.useCustomPricing ?? false,
+            })
+            if (ds.useCustomPricing !== undefined && optionsPayload) {
+              await setEmployeeServiceOptions(newId, ds.serviceId, optionsPayload)
+            }
+          })
         )
       } catch {
         stepErrors.push(t("employees.form.stepErrorServices"))

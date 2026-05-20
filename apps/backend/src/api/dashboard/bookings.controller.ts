@@ -13,6 +13,7 @@ import { UserId } from '../../common/auth/user-id.decorator';
 import { CurrentUser, type JwtUser } from '../../common/auth/current-user.decorator';
 import { ApiStandardResponses } from '../../common/swagger';
 import { ApiErrorDto } from '../../common/swagger';
+import { endOfDayInTz, startOfDayInTz } from '../../common/helpers/date-tz.helper';
 import { CreateBookingHandler } from '../../modules/bookings/create-booking/create-booking.handler';
 import { CreateBookingDto } from '../../modules/bookings/create-booking/create-booking.dto';
 import { CreateRecurringBookingHandler } from '../../modules/bookings/create-recurring-booking/create-recurring-booking.handler';
@@ -156,8 +157,8 @@ export class DashboardBookingsController {
       ...rest,
       page: page ?? 1,
       limit: limit ?? 20,
-      fromDate: fromDate ? new Date(fromDate) : undefined,
-      toDate: toDate ? new Date(toDate) : undefined,
+      fromDate: startOfDayInTz(fromDate),
+      toDate: endOfDayInTz(toDate),
       userId: user.sub,
     });
   }

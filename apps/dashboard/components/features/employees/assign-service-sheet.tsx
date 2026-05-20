@@ -26,11 +26,15 @@ import {
   SelectValue,
 } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
-import { useServices } from "@/hooks/use-services"
+import { useServiceBookingTypes, useServices } from "@/hooks/use-services"
 import { useEmployeeServices } from "@/hooks/use-employees"
 import { useEmployeeServiceMutations } from "@/hooks/use-employee-mutations"
 import { EmployeeServiceTypesEditor } from "./employee-service-types-editor"
 import { sarToHalalas } from "@/lib/money"
+import {
+  buildEmployeeServiceOptionsPayload,
+  makeDefaultEmployeeTypeConfigs,
+} from "./employee-service-option-overrides"
 import type {
   EmployeeService,
   EmployeeTypeConfigPayload,
@@ -58,12 +62,13 @@ export function AssignServiceSheet({
   const { locale, t } = useLocale()
   const { services } = useServices()
   const { data: assignedServices } = useEmployeeServices(employeeId)
-  const { assignMut } = useEmployeeServiceMutations(employeeId)
+  const { assignMut, optionsMut } = useEmployeeServiceMutations(employeeId)
 
   /* Types state managed outside of react-hook-form */
   const [typeConfigs, setTypeConfigs] = useState<EmployeeTypeConfigPayload[]>(
     []
   )
+  const [useCustomPricing, setUseCustomPricing] = useState(false)
 
   const availableServices = useMemo(() => {
     const assignedIds = new Set(
@@ -85,31 +90,29 @@ export function AssignServiceSheet({
     if (open) {
       form.reset()
       setTypeConfigs([])
+      setUseCustomPricing(false)
     }
   }, [open, form])
 
   const selectedServiceId = form.watch("serviceId")
+  const { data: serviceBookingTypes = [] } = useServiceBookingTypes(
+    selectedServiceId || null,
+  )
 
   useEffect(() => {
-    setTypeConfigs([
-      {
-        deliveryType: "in_person",
-        price: null,
-        duration: null,
-        useCustomOptions: false,
-        isActive: true,
-        durationOptions: [],
-      },
-      {
-        deliveryType: "online",
-        price: null,
-        duration: null,
-        useCustomOptions: false,
-        isActive: true,
-        durationOptions: [],
-      },
-    ])
-  }, [selectedServiceId])
+    setTypeConfigs(makeDefaultEmployeeTypeConfigs(serviceBookingTypes))
+    setUseCustomPricing(false)
+  }, [selectedServiceId, serviceBookingTypes])
+
+  const handleCustomPricingChange = (enabled: boolean) => {
+    setUseCustomPricing(enabled)
+    setTypeConfigs((current) =>
+      current.map((typeConfig) => ({
+        ...typeConfig,
+        useCustomOptions: enabled,
+      })),
+    )
+  }
 
   const onSubmit = form.handleSubmit(async (data) => {
     try {
@@ -132,6 +135,17 @@ export function AssignServiceSheet({
         isActive: data.isActive,
         types: typesPayload,
       })
+      const optionsPayload = buildEmployeeServiceOptionsPayload({
+        typeConfigs,
+        serviceBookingTypes,
+        useCustomPricing,
+      })
+      if (optionsPayload) {
+        await optionsMut.mutateAsync({
+          serviceId: data.serviceId,
+          payload: optionsPayload,
+        })
+      }
       toast.success(t("employees.services.assignSuccess"))
       onOpenChange(false)
     } catch (err) {
@@ -194,15 +208,37 @@ export function AssignServiceSheet({
               )}
             </div>
 
-            {/* Per-type config */}
-            {selectedServiceId && typeConfigs.length > 0 && (
-              <EmployeeServiceTypesEditor
-                serviceBookingTypes={[]}
-                value={typeConfigs}
-                onChange={setTypeConfigs}
-                t={t}
-                locale={locale}
-              />
+            {/* Custom pricing */}
+            {selectedServiceId && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs cursor-pointer">
+                      {t("employees.services.useCustomPricingTimes")}
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {t("employees.services.defaultsUsedHint")}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={useCustomPricing}
+                    onCheckedChange={handleCustomPricingChange}
+                  />
+                </div>
+                {useCustomPricing ? (
+                  <EmployeeServiceTypesEditor
+                    serviceBookingTypes={serviceBookingTypes}
+                    value={typeConfigs}
+                    onChange={setTypeConfigs}
+                    t={t}
+                    locale={locale}
+                  />
+                ) : (
+                  <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+                    {t("employees.services.usingServiceDefaults")}
+                  </p>
+                )}
+              </div>
             )}
 
             {/* Buffer */}
@@ -246,9 +282,9 @@ export function AssignServiceSheet({
           <Button
             type="submit"
             form="assign-service-form"
-            disabled={assignMut.isPending}
+            disabled={assignMut.isPending || optionsMut.isPending}
           >
-            {assignMut.isPending
+            {assignMut.isPending || optionsMut.isPending
               ? t("employees.services.saving")
               : t("common.save")}
           </Button>

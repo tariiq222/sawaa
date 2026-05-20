@@ -92,12 +92,15 @@ describe('DashboardFinanceController', () => {
     });
   });
 
-  it('listPaymentsEndpoint should call listPayments.execute with parsed dates', async () => {
+  it('listPaymentsEndpoint should call listPayments.execute with inclusive Asia/Riyadh date bounds', async () => {
     const query = { page: 1, limit: 10, fromDate: '2026-01-01', toDate: '2026-01-31', invoiceId: 'inv-1', clientId: 'c1', method: 'card' as const, status: 'COMPLETED' as const };
     await controller.listPaymentsEndpoint(query as any);
     expect(handlers.listPayments).toHaveBeenCalledWith({
       page: 1, limit: 10, invoiceId: 'inv-1', clientId: 'c1', method: 'card', status: 'COMPLETED',
-      fromDate: new Date(query.fromDate), toDate: new Date(query.toDate),
+      // Asia/Riyadh is +03:00 fixed offset (no DST): start-of-day 00:00 +03:00 == 21:00 UTC previous day,
+      // end-of-day 23:59:59.999 +03:00 == 20:59:59.999 UTC same day.
+      fromDate: new Date('2026-01-01T00:00:00+03:00'),
+      toDate: new Date('2026-01-31T23:59:59.999+03:00'),
     });
   });
 

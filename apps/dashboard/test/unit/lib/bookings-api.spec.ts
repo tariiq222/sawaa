@@ -40,16 +40,37 @@ describe("bookings api", () => {
     expect(getMock).toHaveBeenCalledWith("/dashboard/bookings/bk-1")
   })
 
-  it("createBooking posts to /dashboard/bookings", async () => {
+  it("createBooking adapts {date,startTime} (Asia/Riyadh wall-clock) to ISO scheduledAt for the backend DTO", async () => {
     postMock.mockResolvedValueOnce({ id: "bk-1" })
-    await createBooking({ serviceId: "svc-1" } as Parameters<typeof createBooking>[0])
-    expect(postMock).toHaveBeenCalledWith("/dashboard/bookings", expect.objectContaining({ serviceId: "svc-1" }))
+    await createBooking({
+      serviceId: "svc-1",
+      employeeId: "emp-1",
+      type: "individual",
+      deliveryType: "in_person",
+      date: "2026-04-01",
+      startTime: "10:00",
+    })
+    expect(postMock).toHaveBeenCalledWith(
+      "/dashboard/bookings",
+      expect.objectContaining({
+        serviceId: "svc-1",
+        scheduledAt: "2026-04-01T10:00:00+03:00",
+        bookingType: "INDIVIDUAL",
+      }),
+    )
+    const sent = postMock.mock.calls[0][1] as Record<string, unknown>
+    expect(sent).not.toHaveProperty("date")
+    expect(sent).not.toHaveProperty("startTime")
+    expect(sent).not.toHaveProperty("type")
   })
 
-  it("rescheduleBooking patches /dashboard/bookings/:id/reschedule", async () => {
+  it("rescheduleBooking patches newScheduledAt expected by RescheduleBookingDto", async () => {
     patchMock.mockResolvedValueOnce({ id: "bk-1" })
-    await rescheduleBooking("bk-1", { slotStart: "2026-04-01T10:00:00Z" } as Parameters<typeof rescheduleBooking>[1])
-    expect(patchMock).toHaveBeenCalledWith("/dashboard/bookings/bk-1/reschedule", expect.anything())
+    await rescheduleBooking("bk-1", { date: "2026-04-01", startTime: "10:00" })
+    expect(patchMock).toHaveBeenCalledWith(
+      "/dashboard/bookings/bk-1/reschedule",
+      { newScheduledAt: "2026-04-01T10:00:00+03:00" },
+    )
   })
 
   it("confirmBooking patches /dashboard/bookings/:id/confirm", async () => {

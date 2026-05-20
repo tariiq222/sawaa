@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   createVacation: vi.fn(),
   updateEmployeeService: vi.fn(),
   assignService: vi.fn(),
+  setEmployeeServiceOptions: vi.fn(),
   uploadEmployeeAvatar: vi.fn(),
   toastSuccess: vi.fn(),
   toastWarning: vi.fn(),
@@ -49,6 +50,7 @@ vi.mock("@/hooks/use-employee-mutations", () => ({
 
 vi.mock("@/lib/api/employees", () => ({
   assignService: mocks.assignService,
+  setEmployeeServiceOptions: mocks.setEmployeeServiceOptions,
   uploadEmployeeAvatar: mocks.uploadEmployeeAvatar,
 }))
 
@@ -89,6 +91,41 @@ const draftService = {
   bufferMinutes: 10,
   isActive: true,
   availableTypes: ["in_person"],
+  useCustomPricing: true,
+  serviceBookingTypes: [
+    {
+      id: "bt-1",
+      serviceId: "svc-1",
+      deliveryType: "IN_PERSON" as const,
+      price: 15000,
+      durationMins: 45,
+      isActive: true,
+      durationOptions: [
+        {
+          id: "opt-45",
+          serviceId: "svc-1",
+          label: "45 minutes",
+          labelAr: "٤٥ دقيقة",
+          durationMins: 45,
+          price: 15000,
+          currency: "SAR",
+          isDefault: true,
+          sortOrder: 0,
+        },
+        {
+          id: "opt-90",
+          serviceId: "svc-1",
+          label: "90 minutes",
+          labelAr: "٩٠ دقيقة",
+          durationMins: 90,
+          price: 30000,
+          currency: "SAR",
+          isDefault: false,
+          sortOrder: 1,
+        },
+      ],
+    },
+  ],
   types: [
     {
       deliveryType: "in_person",
@@ -98,6 +135,7 @@ const draftService = {
       isActive: true,
       durationOptions: [
         {
+          id: "opt-45",
           label: "45 minutes",
           labelAr: "٤٥ دقيقة",
           durationMinutes: 45,
@@ -106,6 +144,7 @@ const draftService = {
           sortOrder: 0,
         },
         {
+          id: "opt-90",
           label: "90 minutes",
           labelAr: "٩٠ دقيقة",
           durationMinutes: 90,
@@ -141,6 +180,7 @@ describe("useEmployeeForm service price units", () => {
     mocks.updateEmployee.mockResolvedValue({ id: "emp-1" })
     mocks.assignService.mockResolvedValue({ id: "employee-service-new" })
     mocks.updateEmployeeService.mockResolvedValue({ id: "employee-service-1" })
+    mocks.setEmployeeServiceOptions.mockResolvedValue([])
   })
 
   it("converts create employee service prices and duration option prices from SAR to halalas", async () => {
@@ -173,6 +213,22 @@ describe("useEmployeeForm service price units", () => {
         ],
       }),
     )
+    expect(mocks.setEmployeeServiceOptions).toHaveBeenCalledWith("emp-new", "svc-1", {
+      options: [
+        expect.objectContaining({
+          durationOptionId: "opt-45",
+          priceOverride: 15000,
+          durationOverride: 45,
+          isActive: true,
+        }),
+        expect.objectContaining({
+          durationOptionId: "opt-90",
+          priceOverride: 30000,
+          durationOverride: 90,
+          isActive: true,
+        }),
+      ],
+    })
   })
 
   it("converts edit employee service prices and duration option prices from SAR to halalas", async () => {
@@ -222,6 +278,12 @@ describe("useEmployeeForm service price units", () => {
           }),
         ],
       }),
+    })
+    expect(mocks.setEmployeeServiceOptions).toHaveBeenCalledWith("emp-1", "svc-1", {
+      options: [
+        expect.objectContaining({ durationOptionId: "opt-45", priceOverride: 15000 }),
+        expect.objectContaining({ durationOptionId: "opt-90", priceOverride: 30000 }),
+      ],
     })
   })
 })

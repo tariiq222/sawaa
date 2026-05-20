@@ -8,7 +8,7 @@ import { Input } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { Switch } from "@sawaa/ui"
 
-import { formatPrice } from "@/lib/money"
+import { formatPrice, halalasToSarNumber } from "@/lib/money"
 import type { ServiceBookingType } from "@/lib/types/service"
 import type { EmployeeTypeConfigPayload } from "@/lib/types/employee"
 
@@ -44,7 +44,7 @@ export function EmployeeTypeRow({
     ? `${t("employees.services.defaultPrice")}: ${defaultPrice} ${t("employees.services.sar")}`
     : t("employees.services.required")
   const durationPlaceholder = hasDefault
-    ? `${t("employees.services.defaultPrice")}: ${defaultDuration} ${t("employees.services.min")}`
+    ? `${t("employees.services.defaultDuration")}: ${defaultDuration} ${t("employees.services.min")}`
     : t("employees.services.required")
 
   const priceDisplay =
@@ -69,10 +69,23 @@ export function EmployeeTypeRow({
   }
 
   const toggleCustomOptions = (checked: boolean) => {
-    onUpdate({ useCustomOptions: checked })
-    if (checked && (!config.durationOptions || config.durationOptions.length === 0)) {
-      onUpdate({ useCustomOptions: true, durationOptions: [] })
+    const defaultOptions = serviceDefault?.durationOptions ?? []
+    if (checked && defaultOptions.length > 0) {
+      onUpdate({
+        useCustomOptions: true,
+        durationOptions: defaultOptions.map((option) => ({
+          id: option.id,
+          label: option.label,
+          labelAr: option.labelAr ?? undefined,
+          durationMinutes: option.durationMins,
+          price: halalasToSarNumber(option.price),
+          isDefault: option.isDefault,
+          sortOrder: option.sortOrder,
+        })),
+      })
+      return
     }
+    onUpdate({ useCustomOptions: checked })
   }
 
   const addDurationOption = () => {
