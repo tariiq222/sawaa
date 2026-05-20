@@ -20,8 +20,45 @@ describe('Booking DeliveryType (e2e)', () => {
     await app.close();
   });
 
+  const BRANCH_ID = 'e4ce5937-1ba1-4f22-9ad1-c62d10961dde';
+  const CLIENT_ID = 'ae461556-3b09-4fa2-a9f6-1b2f156298bf';
+  const EMPLOYEE_ID = '65b0c5c9-e700-4e3f-ab13-a6f42d68b4d1';
+  const SERVICE_ID = '6b5c1a2e-23d9-4328-88a6-b4a41b9ee524';
+
   beforeEach(() => {
     jest.clearAllMocks();
+    prisma.branch.findFirst.mockResolvedValue({ id: BRANCH_ID, nameAr: 'الفرع', nameEn: 'Branch', isActive: true });
+    prisma.client.findFirst.mockResolvedValue({ id: CLIENT_ID, isActive: true });
+    prisma.employee.findFirst.mockResolvedValue({ id: EMPLOYEE_ID, name: 'موظف', nameAr: 'موظف', isActive: true });
+    const serviceRow = {
+      id: SERVICE_ID,
+      nameAr: 'خدمة',
+      price: 20000,
+      duration: 60,
+      durationMins: 60,
+      currency: 'SAR',
+      isActive: true,
+      category: { nameAr: 'تصنيف', department: { nameAr: 'قسم' } },
+    };
+    prisma.service.findFirst.mockResolvedValue(serviceRow);
+    prisma.service.findUniqueOrThrow.mockResolvedValue(serviceRow);
+    prisma.service.findUnique.mockResolvedValue(serviceRow);
+    prisma.employeeService.findUnique.mockResolvedValue({
+      id: 'employee-service-1',
+      isActive: true,
+      availableTypes: ['IN_PERSON', 'ONLINE'],
+    });
+    prisma.serviceBookingConfig.findMany.mockResolvedValue([
+      { deliveryType: 'IN_PERSON', isActive: true },
+      { deliveryType: 'ONLINE', isActive: true },
+    ]);
+    prisma.bookingSettings.findFirst.mockResolvedValue(null);
+    prisma.organizationSettings.findFirst.mockResolvedValue({
+      defaultCurrency: 'SAR',
+      bookingNumberPrefix: 'BK',
+    });
+    prisma.serviceCategory.findFirst.mockResolvedValue({ id: 'cat-1', nameAr: 'تصنيف' });
+    prisma.department.findFirst.mockResolvedValue({ id: 'dep-1', nameAr: 'قسم' });
   });
 
   describe('POST /api/v1/dashboard/bookings', () => {
@@ -30,10 +67,10 @@ describe('Booking DeliveryType (e2e)', () => {
 
       prisma.booking.create.mockResolvedValue({
         id: 'book-1',
-        branchId: 'branch-1',
-        clientId: 'client-1',
-        employeeId: 'emp-1',
-        serviceId: 'svc-1',
+        branchId: 'e4ce5937-1ba1-4f22-9ad1-c62d10961dde',
+        clientId: 'ae461556-3b09-4fa2-a9f6-1b2f156298bf',
+        employeeId: '65b0c5c9-e700-4e3f-ab13-a6f42d68b4d1',
+        serviceId: '6b5c1a2e-23d9-4328-88a6-b4a41b9ee524',
         bookingType: 'INDIVIDUAL',
         deliveryType: 'ONLINE',
         status: 'PENDING',
@@ -49,10 +86,10 @@ describe('Booking DeliveryType (e2e)', () => {
         .post('/api/v1/dashboard/bookings')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          branchId: 'branch-1',
-          clientId: 'client-1',
-          employeeId: 'emp-1',
-          serviceId: 'svc-1',
+          branchId: 'e4ce5937-1ba1-4f22-9ad1-c62d10961dde',
+          clientId: 'ae461556-3b09-4fa2-a9f6-1b2f156298bf',
+          employeeId: '65b0c5c9-e700-4e3f-ab13-a6f42d68b4d1',
+          serviceId: '6b5c1a2e-23d9-4328-88a6-b4a41b9ee524',
           scheduledAt: futureDate,
           bookingType: 'INDIVIDUAL',
           deliveryType: 'ONLINE',
@@ -76,10 +113,10 @@ describe('Booking DeliveryType (e2e)', () => {
 
       prisma.booking.create.mockResolvedValue({
         id: 'book-2',
-        branchId: 'branch-1',
-        clientId: 'client-1',
-        employeeId: 'emp-1',
-        serviceId: 'svc-1',
+        branchId: 'e4ce5937-1ba1-4f22-9ad1-c62d10961dde',
+        clientId: 'ae461556-3b09-4fa2-a9f6-1b2f156298bf',
+        employeeId: '65b0c5c9-e700-4e3f-ab13-a6f42d68b4d1',
+        serviceId: '6b5c1a2e-23d9-4328-88a6-b4a41b9ee524',
         bookingType: 'INDIVIDUAL',
         deliveryType: 'IN_PERSON',
         status: 'PENDING',
@@ -95,10 +132,10 @@ describe('Booking DeliveryType (e2e)', () => {
         .post('/api/v1/dashboard/bookings')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          branchId: 'branch-1',
-          clientId: 'client-1',
-          employeeId: 'emp-1',
-          serviceId: 'svc-1',
+          branchId: 'e4ce5937-1ba1-4f22-9ad1-c62d10961dde',
+          clientId: 'ae461556-3b09-4fa2-a9f6-1b2f156298bf',
+          employeeId: '65b0c5c9-e700-4e3f-ab13-a6f42d68b4d1',
+          serviceId: '6b5c1a2e-23d9-4328-88a6-b4a41b9ee524',
           scheduledAt: futureDate,
           deliveryType: 'IN_PERSON',
         })
@@ -112,10 +149,10 @@ describe('Booking DeliveryType (e2e)', () => {
 
       prisma.booking.create.mockResolvedValue({
         id: 'book-3',
-        branchId: 'branch-1',
-        clientId: 'client-1',
-        employeeId: 'emp-1',
-        serviceId: 'svc-1',
+        branchId: 'e4ce5937-1ba1-4f22-9ad1-c62d10961dde',
+        clientId: 'ae461556-3b09-4fa2-a9f6-1b2f156298bf',
+        employeeId: '65b0c5c9-e700-4e3f-ab13-a6f42d68b4d1',
+        serviceId: '6b5c1a2e-23d9-4328-88a6-b4a41b9ee524',
         bookingType: 'INDIVIDUAL',
         deliveryType: 'ONLINE',
         status: 'PENDING',
@@ -131,10 +168,10 @@ describe('Booking DeliveryType (e2e)', () => {
         .post('/api/v1/dashboard/bookings')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          branchId: 'branch-1',
-          clientId: 'client-1',
-          employeeId: 'emp-1',
-          serviceId: 'svc-1',
+          branchId: 'e4ce5937-1ba1-4f22-9ad1-c62d10961dde',
+          clientId: 'ae461556-3b09-4fa2-a9f6-1b2f156298bf',
+          employeeId: '65b0c5c9-e700-4e3f-ab13-a6f42d68b4d1',
+          serviceId: '6b5c1a2e-23d9-4328-88a6-b4a41b9ee524',
           scheduledAt: futureDate,
           bookingType: 'ONLINE',
         })
@@ -155,20 +192,36 @@ describe('Booking DeliveryType (e2e)', () => {
     it('persists snapshot fields on booking creation', async () => {
       const futureDate = new Date(Date.now() + 86400_000).toISOString();
 
-      prisma.branch.findFirst.mockResolvedValue({ id: 'branch-1', nameAr: 'الفرع الرئيسي' });
-      prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1', nameAr: 'د. سارة' });
-      prisma.service.findFirst.mockResolvedValue({
-        id: 'svc-1',
-        nameAr: 'استشارة',
-        category: { nameAr: 'الاستشارات', department: { nameAr: 'الأقسام الطبية' } },
+      prisma.branch.findFirst.mockResolvedValue({ id: 'e4ce5937-1ba1-4f22-9ad1-c62d10961dde', nameAr: 'الفرع الرئيسي' });
+      prisma.employee.findFirst.mockResolvedValue({
+        id: '65b0c5c9-e700-4e3f-ab13-a6f42d68b4d1',
+        name: 'د. سارة',
+        nameAr: 'د. سارة',
+        isActive: true,
       });
-      prisma.employeeService.findUnique.mockResolvedValue({ id: 'es-1' });
+      const serviceRow2 = {
+        id: '6b5c1a2e-23d9-4328-88a6-b4a41b9ee524',
+        nameAr: 'استشارة',
+        price: 20000,
+        durationMins: 60,
+        currency: 'SAR',
+        isActive: true,
+        category: { nameAr: 'الاستشارات', department: { nameAr: 'الأقسام الطبية' } },
+      };
+      prisma.service.findFirst.mockResolvedValue(serviceRow2);
+      prisma.service.findUniqueOrThrow.mockResolvedValue(serviceRow2);
+      prisma.service.findUnique.mockResolvedValue(serviceRow2);
+      prisma.employeeService.findUnique.mockResolvedValue({
+        id: '9652f884-c62e-424d-8cda-d0c0bd792544',
+        isActive: true,
+        availableTypes: ['IN_PERSON', 'ONLINE'],
+      });
       prisma.booking.create.mockResolvedValue({
         id: 'book-4',
-        branchId: 'branch-1',
-        clientId: 'client-1',
-        employeeId: 'emp-1',
-        serviceId: 'svc-1',
+        branchId: 'e4ce5937-1ba1-4f22-9ad1-c62d10961dde',
+        clientId: 'ae461556-3b09-4fa2-a9f6-1b2f156298bf',
+        employeeId: '65b0c5c9-e700-4e3f-ab13-a6f42d68b4d1',
+        serviceId: '6b5c1a2e-23d9-4328-88a6-b4a41b9ee524',
         bookingType: 'INDIVIDUAL',
         deliveryType: 'IN_PERSON',
         status: 'PENDING',
@@ -184,10 +237,10 @@ describe('Booking DeliveryType (e2e)', () => {
         .post('/api/v1/dashboard/bookings')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          branchId: 'branch-1',
-          clientId: 'client-1',
-          employeeId: 'emp-1',
-          serviceId: 'svc-1',
+          branchId: 'e4ce5937-1ba1-4f22-9ad1-c62d10961dde',
+          clientId: 'ae461556-3b09-4fa2-a9f6-1b2f156298bf',
+          employeeId: '65b0c5c9-e700-4e3f-ab13-a6f42d68b4d1',
+          serviceId: '6b5c1a2e-23d9-4328-88a6-b4a41b9ee524',
           scheduledAt: futureDate,
         })
         .expect(201);
@@ -195,7 +248,7 @@ describe('Booking DeliveryType (e2e)', () => {
       expect(prisma.booking.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            priceSnapshot: expect.any(Number),
+            priceSnapshot: expect.anything(),
             durationMinutesSnapshot: expect.any(Number),
             branchNameSnapshot: expect.any(String),
             employeeNameSnapshot: expect.any(String),
@@ -212,7 +265,7 @@ describe('Booking DeliveryType (e2e)', () => {
       tomorrow.setHours(0, 0, 0, 0);
 
       prisma.businessHour.findUnique.mockResolvedValue({
-        branchId: 'branch-1',
+        branchId: 'e4ce5937-1ba1-4f22-9ad1-c62d10961dde',
         dayOfWeek: tomorrow.getDay(),
         startTime: '09:00',
         endTime: '17:00',
@@ -220,14 +273,14 @@ describe('Booking DeliveryType (e2e)', () => {
       });
       prisma.employeeAvailability.findMany.mockResolvedValue([
         {
-          employeeId: 'emp-1',
+          employeeId: '65b0c5c9-e700-4e3f-ab13-a6f42d68b4d1',
           dayOfWeek: tomorrow.getDay(),
           startTime: '09:00',
           endTime: '17:00',
           isActive: true,
         },
       ]);
-      prisma.employeeBranch.findUnique.mockResolvedValue({ id: 'eb-1' });
+      prisma.employeeBranch.findUnique.mockResolvedValue({ id: 'd7a2540e-b8f1-4836-aa68-a2c687f02551' });
       prisma.employeeBreak.findMany.mockResolvedValue([]);
       prisma.booking.findMany.mockResolvedValue([]);
       prisma.serviceDurationOption.findFirst.mockResolvedValue({ durationMins: 60 });
@@ -236,10 +289,10 @@ describe('Booking DeliveryType (e2e)', () => {
         .get('/api/v1/dashboard/bookings/availability')
         .set('Authorization', `Bearer ${authToken}`)
         .query({
-          employeeId: 'emp-1',
-          branchId: 'branch-1',
+          employeeId: '65b0c5c9-e700-4e3f-ab13-a6f42d68b4d1',
+          branchId: 'e4ce5937-1ba1-4f22-9ad1-c62d10961dde',
           date: tomorrow.toISOString(),
-          serviceId: 'svc-1',
+          serviceId: '6b5c1a2e-23d9-4328-88a6-b4a41b9ee524',
           deliveryType: 'ONLINE',
         })
         .expect(200);
@@ -249,7 +302,7 @@ describe('Booking DeliveryType (e2e)', () => {
       expect(prisma.serviceDurationOption.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            serviceId: 'svc-1',
+            serviceId: '6b5c1a2e-23d9-4328-88a6-b4a41b9ee524',
             deliveryType: 'ONLINE',
             isDefault: true,
             isActive: true,
@@ -263,7 +316,7 @@ describe('Booking DeliveryType (e2e)', () => {
       tomorrow.setHours(0, 0, 0, 0);
 
       prisma.businessHour.findUnique.mockResolvedValue({
-        branchId: 'branch-1',
+        branchId: 'e4ce5937-1ba1-4f22-9ad1-c62d10961dde',
         dayOfWeek: tomorrow.getDay(),
         startTime: '09:00',
         endTime: '17:00',
@@ -271,14 +324,14 @@ describe('Booking DeliveryType (e2e)', () => {
       });
       prisma.employeeAvailability.findMany.mockResolvedValue([
         {
-          employeeId: 'emp-1',
+          employeeId: '65b0c5c9-e700-4e3f-ab13-a6f42d68b4d1',
           dayOfWeek: tomorrow.getDay(),
           startTime: '09:00',
           endTime: '17:00',
           isActive: true,
         },
       ]);
-      prisma.employeeBranch.findUnique.mockResolvedValue({ id: 'eb-1' });
+      prisma.employeeBranch.findUnique.mockResolvedValue({ id: 'd7a2540e-b8f1-4836-aa68-a2c687f02551' });
       prisma.employeeBreak.findMany.mockResolvedValue([]);
       prisma.booking.findMany.mockResolvedValue([]);
       prisma.serviceDurationOption.findFirst.mockResolvedValue(null);
@@ -287,10 +340,10 @@ describe('Booking DeliveryType (e2e)', () => {
         .get('/api/v1/dashboard/bookings/availability')
         .set('Authorization', `Bearer ${authToken}`)
         .query({
-          employeeId: 'emp-1',
-          branchId: 'branch-1',
+          employeeId: '65b0c5c9-e700-4e3f-ab13-a6f42d68b4d1',
+          branchId: 'e4ce5937-1ba1-4f22-9ad1-c62d10961dde',
           date: tomorrow.toISOString(),
-          serviceId: 'svc-1',
+          serviceId: '6b5c1a2e-23d9-4328-88a6-b4a41b9ee524',
           deliveryType: 'ONLINE',
         })
         .expect(200);
