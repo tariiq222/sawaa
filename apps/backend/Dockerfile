@@ -125,7 +125,6 @@ COPY --from=app-build /app/pnpm-workspace.yaml                ./pnpm-workspace.y
 COPY --from=app-build /app/packages                           ./packages
 COPY --from=app-build /app/apps/backend/package.json          ./apps/backend/package.json
 COPY --from=app-build /app/apps/backend/prisma.config.ts      ./apps/backend/prisma.config.ts
-COPY apps/backend/.env ./apps/backend/.env
 COPY --from=app-build /app/apps/backend/prisma                ./apps/backend/prisma
 COPY --from=app-build /app/apps/backend/dist                  ./apps/backend/dist
 
