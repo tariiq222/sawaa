@@ -54,8 +54,18 @@ const buildPrisma = () => {
       findFirst: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue(mockService),
       update: jest.fn().mockResolvedValue(mockService),
+      delete: jest.fn().mockResolvedValue(mockService),
       findMany: jest.fn().mockResolvedValue([mockService]),
       count: jest.fn().mockResolvedValue(1),
+    },
+    booking: {
+      count: jest.fn().mockResolvedValue(0),
+    },
+    employeeService: {
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
+    serviceBundleItem: {
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     $transaction: jest.fn(),
   };
@@ -278,7 +288,7 @@ describe('ListServicesHandler', () => {
 });
 
 describe('ArchiveServiceHandler', () => {
-  it('archives service', async () => {
+  it('hard deletes service in a transaction after cleaning dependent references when it has no bookings', async () => {
     const prisma = buildPrisma();
     prisma.service.findFirst = jest.fn().mockResolvedValue(mockService);
     const handler = new ArchiveServiceHandler(prisma as never);
@@ -286,6 +296,36 @@ describe('ArchiveServiceHandler', () => {
     expect(prisma.service.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: 'svc-1' }) }),
     );
+    expect(prisma.booking.count).toHaveBeenCalledWith({ where: { serviceId: 'svc-1' } });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.employeeService.deleteMany).toHaveBeenCalledWith({ where: { serviceId: 'svc-1' } });
+    expect(prisma.serviceBundleItem.deleteMany).toHaveBeenCalledWith({ where: { serviceId: 'svc-1' } });
+    expect(prisma.service.delete).toHaveBeenCalledWith({ where: { id: 'svc-1' } });
+    expect(prisma.employeeService.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.service.delete.mock.invocationCallOrder[0],
+    );
+    expect(prisma.serviceBundleItem.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.service.delete.mock.invocationCallOrder[0],
+    );
+    expect(prisma.service.update).not.toHaveBeenCalled();
+    expect(result).toEqual(mockService);
+  });
+
+  it('archives service when it has bookings', async () => {
+    const prisma = buildPrisma();
+    prisma.service.findFirst = jest.fn().mockResolvedValue(mockService);
+    prisma.booking.count = jest.fn().mockResolvedValue(1);
+    const handler = new ArchiveServiceHandler(prisma as never);
+    const result = await handler.execute({ serviceId: 'svc-1' });
+    expect(prisma.booking.count).toHaveBeenCalledWith({ where: { serviceId: 'svc-1' } });
+    expect(prisma.service.update).toHaveBeenCalledWith({
+      where: { id: 'svc-1' },
+      data: { archivedAt: expect.any(Date), isActive: false },
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.employeeService.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.serviceBundleItem.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.service.delete).not.toHaveBeenCalled();
     expect(result).toEqual(mockService);
   });
 
@@ -293,6 +333,12 @@ describe('ArchiveServiceHandler', () => {
     const prisma = buildPrisma();
     const handler = new ArchiveServiceHandler(prisma as never);
     await expect(handler.execute({ serviceId: 'missing' })).rejects.toThrow(NotFoundException);
+    expect(prisma.booking.count).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.employeeService.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.serviceBundleItem.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.service.delete).not.toHaveBeenCalled();
+    expect(prisma.service.update).not.toHaveBeenCalled();
   });
 });
 

@@ -35,7 +35,11 @@ export class ListCategoriesHandler {
           where,
           skip,
           take: limit,
-          include: { _count: { select: { services: true } } },
+          include: {
+            _count: {
+              select: { services: { where: { archivedAt: null } } },
+            },
+          },
           orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
         }),
         tx.serviceCategory.count({ where }),
