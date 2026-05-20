@@ -46,10 +46,10 @@ describe("bookings api", () => {
       serviceId: "svc-1",
       employeeId: "emp-1",
       type: "individual",
-      deliveryType: "IN_PERSON",
+      deliveryType: "in_person",
       date: "2026-04-01",
       startTime: "10:00",
-    } as Parameters<typeof createBooking>[0])
+    })
     expect(postMock).toHaveBeenCalledWith(
       "/dashboard/bookings",
       expect.objectContaining({
