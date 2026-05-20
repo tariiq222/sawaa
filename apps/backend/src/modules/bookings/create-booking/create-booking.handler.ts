@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Optional,
   ConflictException,
   BadRequestException,
   NotFoundException,
@@ -15,6 +16,7 @@ import { ValidateCouponService } from '../coupons/validate-coupon.service';
 import { CreateBookingDto } from './create-booking.dto';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { normalizeBookingTypes } from '../shared/delivery-type.helper';
+import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 
 /** FNV-1a 32-bit hash → signed int32 (Postgres int4 range). Same algorithm as create-zoom-meeting. */
 function hashToInt32(s: string): number {
@@ -59,6 +61,7 @@ export class CreateBookingHandler {
     private readonly groupMinReachedHandler: GroupSessionMinReachedHandler,
     private readonly eventBus: EventBusService,
     private readonly couponValidator: ValidateCouponService,
+    @Optional() private readonly availabilityHandler?: CheckAvailabilityHandler,
   ) {}
 
   async execute(dto: CreateBookingCommand) {
@@ -163,6 +166,16 @@ export class CreateBookingHandler {
     }
 
     const endsAt = new Date(scheduledAt.getTime() + durationMins * 60_000);
+
+    await this.assertSlotAvailable({
+      employeeId: dto.employeeId,
+      branchId: dto.branchId,
+      serviceId: dto.serviceId,
+      scheduledAt,
+      durationMins,
+      bookingType,
+      deliveryType,
+    });
 
     let discountedPrice: number | null = null;
 
@@ -378,5 +391,37 @@ export class CreateBookingHandler {
     }
 
     return booking;
+  }
+
+  private async assertSlotAvailable(input: {
+    employeeId: string;
+    branchId: string;
+    serviceId: string;
+    scheduledAt: Date;
+    durationMins: number;
+    bookingType: string;
+    deliveryType: string;
+  }) {
+    if (!this.availabilityHandler) return;
+
+    // durationOptionId intentionally omitted — durationMins is already the
+    // effective duration (including any employee-service override) resolved by
+    // PriceResolverService. Passing the catalog option here would make
+    // CheckAvailabilityHandler overwrite the effective duration with the
+    // catalog one, leading to slot/booking length mismatch (P0 bug).
+    const slots = await this.availabilityHandler.execute({
+      employeeId: input.employeeId,
+      branchId: input.branchId,
+      serviceId: input.serviceId,
+      date: input.scheduledAt,
+      durationMins: input.durationMins,
+      bookingType: input.bookingType,
+      deliveryType: input.deliveryType as any,
+    });
+
+    const scheduledMs = input.scheduledAt.getTime();
+    if (!slots.some((slot) => slot.startTime.getTime() === scheduledMs)) {
+      throw new BadRequestException('Selected booking time is not available');
+    }
   }
 }

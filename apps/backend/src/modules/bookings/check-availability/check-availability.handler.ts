@@ -10,6 +10,7 @@ export type CheckAvailabilityQuery = Omit<CheckAvailabilityDto, 'date' | 'durati
   durationOptionId?: string | null;
   bookingType?: BookingType | string | null;
   deliveryType?: DeliveryType | null;
+  excludeBookingId?: string | null;
 };
 
 export interface AvailableSlot {
@@ -56,12 +57,18 @@ export class CheckAvailabilityHandler {
     maxDate.setHours(23, 59, 59, 999);
     if (dateOnly > maxDate) return [];
 
+    const normalizedTypes = normalizeBookingTypes({
+      bookingType: query.bookingType,
+      deliveryType: query.deliveryType,
+    });
+
+    // When the caller passes an explicit durationMins (> 0), trust it — it has
+    // already been resolved upstream (e.g. PriceResolverService picks up employee
+    // overrides that may diverge from the catalog option). The option lookup is
+    // only a fallback for callers (portal / availability check) that pass a
+    // durationOptionId or serviceId without a resolved duration.
     let durationMins = query.durationMins ?? 0;
-    if (query.serviceId) {
-      const normalizedTypes = normalizeBookingTypes({
-        bookingType: query.bookingType,
-        deliveryType: query.deliveryType,
-      });
+    if (!durationMins && query.serviceId) {
       const option = await this.resolveDurationOption(
         query.serviceId,
         query.durationOptionId ?? null,
@@ -88,7 +95,7 @@ export class CheckAvailabilityHandler {
 
     const dayOfWeek = dateOnly.getDay();
 
-    const [businessHour, holiday, shifts, exception, breaks] = await Promise.all([
+    const [businessHour, holiday, shifts, exception, breaks, serviceConfig, serviceWindows] = await Promise.all([
       this.prisma.businessHour.findUnique({
         where: { branchId_dayOfWeek: { branchId: query.branchId, dayOfWeek } },
       }),
@@ -110,6 +117,27 @@ export class CheckAvailabilityHandler {
         where: { employeeId: query.employeeId, dayOfWeek },
         orderBy: { startTime: 'asc' },
       }),
+      query.serviceId
+        ? this.prisma.serviceBookingConfig.findUnique({
+            where: {
+              serviceId_deliveryType: {
+                serviceId: query.serviceId,
+                deliveryType: normalizedTypes.deliveryType,
+              },
+            },
+            select: { useCustomAvailability: true },
+          })
+        : Promise.resolve(null),
+      query.serviceId
+        ? this.prisma.serviceAvailabilityWindow.findMany({
+            where: {
+              serviceId: query.serviceId,
+              deliveryType: normalizedTypes.deliveryType,
+              isActive: true,
+            },
+            orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+          })
+        : Promise.resolve([]),
     ]);
 
     if (!businessHour || !businessHour.isOpen) return [];
@@ -139,22 +167,39 @@ export class CheckAvailabilityHandler {
       parseHHmm(businessHour.endTime, dateOnly),
     ];
 
+    let baseWindows: [Date, Date][] = [branchWindow];
+    if (serviceConfig?.useCustomAvailability) {
+      if (serviceWindows.length === 0) return [];
+
+      baseWindows = serviceWindows
+        .filter((window) => window.dayOfWeek === dayOfWeek)
+        .map((window) => intersectWindows(branchWindow, [
+          parseHHmm(window.startTime, dateOnly),
+          parseHHmm(window.endTime, dateOnly),
+        ] as [Date, Date]))
+        .filter((window): window is [Date, Date] => !!window);
+
+      if (baseWindows.length === 0) return [];
+    }
+
     const windows: [Date, Date][] = [];
     for (const shift of shifts) {
       const shiftWindow: [Date, Date] = [
         parseHHmm(shift.startTime, dateOnly),
         parseHHmm(shift.endTime, dateOnly),
       ];
-      let intersection = intersectWindows(shiftWindow, branchWindow);
-      if (intersection && exceptionCutoff) {
-        // Block the day up to exceptionCutoff (exception ends at this time — work resumes after)
-        if (intersection[1] <= exceptionCutoff) {
-          intersection = null;
-        } else if (intersection[0] < exceptionCutoff) {
-          intersection = [exceptionCutoff, intersection[1]];
+      for (const baseWindow of baseWindows) {
+        let intersection = intersectWindows(shiftWindow, baseWindow);
+        if (intersection && exceptionCutoff) {
+          // Block the day up to exceptionCutoff (exception ends at this time — work resumes after)
+          if (intersection[1] <= exceptionCutoff) {
+            intersection = null;
+          } else if (intersection[0] < exceptionCutoff) {
+            intersection = [exceptionCutoff, intersection[1]];
+          }
         }
+        if (intersection) windows.push(intersection);
       }
-      if (intersection) windows.push(intersection);
     }
 
     // Subtract employee breaks from available windows
@@ -185,6 +230,7 @@ export class CheckAvailabilityHandler {
     const existingBookings = await this.prisma.booking.findMany({
       where: {
         employeeId: query.employeeId,
+        ...(query.excludeBookingId ? { id: { not: query.excludeBookingId } } : {}),
         status: { in: ['PENDING', 'PENDING_GROUP_FILL', 'CONFIRMED', 'AWAITING_PAYMENT'] },
         scheduledAt: { lt: latestEnd },
         durationMins: { gt: 0 },

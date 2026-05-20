@@ -58,6 +58,9 @@ export class CreateGuestBookingDto {
   @ApiPropertyOptional({ description: 'Delivery channel (IN_PERSON or ONLINE)', enum: DeliveryType, enumName: 'DeliveryType', example: DeliveryType.IN_PERSON })
   @IsOptional() @IsEnum(DeliveryType) deliveryType?: DeliveryType;
 
+  @ApiPropertyOptional({ description: 'Specific duration option to resolve price and duration', example: '00000000-0000-0000-0000-000000000004' })
+  @IsOptional() @IsUUID() durationOptionId?: string;
+
   @ApiPropertyOptional({ description: 'Booking type (legacy — prefer deliveryType)', enum: BookingType, enumName: 'BookingType', example: BookingType.INDIVIDUAL })
   @IsOptional() @Transform(({ value }) => mapBookingType(value)) @IsString() bookingType?: BookingType | 'ONLINE';
 

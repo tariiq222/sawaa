@@ -40,6 +40,16 @@ export interface DraftBookingType {
   price: number // SAR display
   durationMins: number // minutes
   durationOptions: DraftDurationOption[]
+  useCustomAvailability: boolean
+  availabilityWindows: DraftAvailabilityWindow[]
+}
+
+export interface DraftAvailabilityWindow {
+  key: string
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+  isActive: boolean
 }
 
 /* ─── Key counter ─── */
@@ -110,6 +120,7 @@ export function BookingTypesEditor({ serviceId }: BookingTypesEditorProps) {
           price: sarToHalalas(d.price),
           durationMins: d.durationMins,
           isActive: true,
+          useCustomAvailability: d.useCustomAvailability,
           durationOptions: d.durationOptions.map((o, i) => ({
             label: o.label,
             labelAr: o.labelAr || undefined,
@@ -118,6 +129,14 @@ export function BookingTypesEditor({ serviceId }: BookingTypesEditorProps) {
             isDefault: o.isDefault,
             sortOrder: i,
           })),
+          availabilityWindows: d.useCustomAvailability
+            ? d.availabilityWindows.map((window) => ({
+                dayOfWeek: window.dayOfWeek,
+                startTime: window.startTime,
+                endTime: window.endTime,
+                isActive: window.isActive,
+              }))
+            : [],
         })),
       })
       setDirty(false)
@@ -184,8 +203,8 @@ export function BookingTypesEditor({ serviceId }: BookingTypesEditorProps) {
 function buildEmptyDrafts(): DraftBookingType[] {
   // DB-10: enum values are now uppercase
   return [
-    { deliveryType: "IN_PERSON", enabled: false, price: 0, durationMins: 30, durationOptions: [] },
-    { deliveryType: "ONLINE", enabled: false, price: 0, durationMins: 30, durationOptions: [] },
+    { deliveryType: "IN_PERSON", enabled: false, price: 0, durationMins: 30, durationOptions: [], useCustomAvailability: false, availabilityWindows: [] },
+    { deliveryType: "ONLINE", enabled: false, price: 0, durationMins: 30, durationOptions: [], useCustomAvailability: false, availabilityWindows: [] },
   ]
 }
 
@@ -198,7 +217,7 @@ export function mergeDraftsFromServer(
     (dt) => {
       const server = map.get(dt)
       if (!server) {
-        return { deliveryType: dt, enabled: false, price: 0, durationMins: 30, durationOptions: [] }
+        return { deliveryType: dt, enabled: false, price: 0, durationMins: 30, durationOptions: [], useCustomAvailability: false, availabilityWindows: [] }
       }
       return {
         deliveryType: dt,
@@ -213,6 +232,14 @@ export function mergeDraftsFromServer(
           price: halalasToSarNumber(o.price),
           isDefault: o.isDefault,
           sortOrder: o.sortOrder,
+        })),
+        useCustomAvailability: server.useCustomAvailability ?? false,
+        availabilityWindows: (server.availabilityWindows ?? []).map((window) => ({
+          key: window.id,
+          dayOfWeek: window.dayOfWeek,
+          startTime: window.startTime,
+          endTime: window.endTime,
+          isActive: window.isActive,
         })),
       }
     },

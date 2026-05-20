@@ -16,6 +16,14 @@ vi.mock("@/components/locale-provider", () => ({
         "services.bookingTypes.labelAr": "التسمية (AR)",
         "services.bookingTypes.placeholderEn": "e.g. Standard",
         "services.bookingTypes.placeholderAr": "مثال: عادي",
+        "services.availability.custom": "Custom service availability",
+        "services.availability.inheritHint": "Inherits branch hours",
+        "services.availability.day": "Day",
+        "services.availability.start": "Start",
+        "services.availability.end": "End",
+        "services.availability.remove": "Remove window",
+        "services.availability.addWindow": "Add window",
+        "services.availability.day.0": "Sun",
       }
       return map[k] ?? k
     },
@@ -31,6 +39,8 @@ function makeDraft(option: DraftDurationOption): DraftBookingType {
     price: 100,
     durationMins: 30,
     durationOptions: [option],
+    useCustomAvailability: false,
+    availabilityWindows: [],
   }
 }
 
@@ -178,5 +188,32 @@ describe("DurationOptionMiniRow (via BookingTypeRow) — labelEn + labelAr", () 
       />,
     )
     expect(screen.getByDisplayValue("مميز")).toBeInTheDocument()
+  })
+
+  it("enables custom availability and adds a weekly window", async () => {
+    const onUpdate = vi.fn()
+
+    render(
+      <BookingTypeRow
+        draft={{ ...makeDraft(baseOption), useCustomAvailability: true }}
+        label="In-Person"
+        isAr={false}
+        t={(k: string) => k}
+        onToggle={vi.fn()}
+        onUpdate={onUpdate}
+        onUpdateOptions={vi.fn()}
+      />,
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("services.availability.addWindow"))
+    })
+
+    expect(onUpdate).toHaveBeenCalledWith(
+      "availabilityWindows",
+      expect.arrayContaining([
+        expect.objectContaining({ dayOfWeek: 0, startTime: "09:00", endTime: "17:00" }),
+      ]),
+    )
   })
 })

@@ -195,6 +195,23 @@ describe('CreateBookingHandler', () => {
     await expect(handler.execute(baseDto)).rejects.toThrow('Employee does not provide this service');
   });
 
+  it('throws BadRequestException when selected time is not in computed availability', async () => {
+    const availabilityHandler = { execute: jest.fn().mockResolvedValue([]) };
+    const guardedHandler = new CreateBookingHandler(
+      prisma as any,
+      rlsTransaction as any,
+      priceResolver as any,
+      settingsHandler as any,
+      groupMinReachedHandler as any,
+      eventBus as any,
+      couponValidator as any,
+      availabilityHandler as any,
+    );
+
+    await expect(guardedHandler.execute(baseDto)).rejects.toThrow('Selected booking time is not available');
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
   // ──────────────────────────────────────────────────────────────────────────
   // 2. Individual booking transaction path
   // ──────────────────────────────────────────────────────────────────────────

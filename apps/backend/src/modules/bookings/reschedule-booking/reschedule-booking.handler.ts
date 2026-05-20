@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, ForbiddenException, Optional } from '@nestjs/common';
 import { BookingStatus, Prisma } from '@prisma/client';
 
 /** Re-map a Postgres exclusion violation (23P01) to a domain 409 conflict. */
@@ -18,6 +18,7 @@ import { RescheduleBookingDto } from './reschedule-booking.dto';
 import { fetchBookingOrFail } from '../booking-lifecycle.helper';
 import { ZoomMeetingService } from '../zoom-meeting.service';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 
 export type RescheduleBookingCommand = Omit<RescheduleBookingDto, 'newScheduledAt'> & {
   bookingId: string;
@@ -33,6 +34,7 @@ export class RescheduleBookingHandler {
     private readonly rlsTransaction: RlsTransactionService,
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly zoomMeetingService: ZoomMeetingService,
+    @Optional() private readonly availabilityHandler?: CheckAvailabilityHandler,
   ) {}
 
   async execute(cmd: RescheduleBookingCommand) {
@@ -61,6 +63,18 @@ export class RescheduleBookingHandler {
 
     const durationMins = cmd.newDurationMins ?? booking.durationMins;
     const newEndsAt = new Date(newScheduledAt.getTime() + durationMins * 60_000);
+
+    await this.assertSlotAvailable({
+      bookingId: cmd.bookingId,
+      employeeId: booking.employeeId,
+      branchId: booking.branchId,
+      serviceId: booking.serviceId,
+      scheduledAt: newScheduledAt,
+      durationMins,
+      durationOptionId: booking.durationOptionId,
+      bookingType: booking.bookingType,
+      deliveryType: booking.deliveryType,
+    });
 
     // Serialize conflict check + update + status log inside one transaction.
     const [updated] = await this.rlsTransaction.withTransaction(async (tx) => {
@@ -107,5 +121,36 @@ export class RescheduleBookingHandler {
     }
 
     return updated;
+  }
+
+  private async assertSlotAvailable(input: {
+    bookingId: string;
+    employeeId: string;
+    branchId: string;
+    serviceId: string;
+    scheduledAt: Date;
+    durationMins: number;
+    durationOptionId?: string | null;
+    bookingType: string;
+    deliveryType: string;
+  }) {
+    if (!this.availabilityHandler) return;
+
+    const slots = await this.availabilityHandler.execute({
+      employeeId: input.employeeId,
+      branchId: input.branchId,
+      serviceId: input.serviceId,
+      date: input.scheduledAt,
+      durationMins: input.durationMins,
+      durationOptionId: input.durationOptionId,
+      bookingType: input.bookingType,
+      deliveryType: input.deliveryType as any,
+      excludeBookingId: input.bookingId,
+    });
+
+    const scheduledMs = input.scheduledAt.getTime();
+    if (!slots.some((slot) => slot.startTime.getTime() === scheduledMs)) {
+      throw new BadRequestException('Selected booking time is not available');
+    }
   }
 }

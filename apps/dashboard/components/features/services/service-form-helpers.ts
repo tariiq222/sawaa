@@ -35,6 +35,23 @@ export function buildBookingTypesPayload(bookingTypes: DraftBookingType[]) {
     price: sarToHalalas(d.price),
     durationMins: d.durationMins,
     isActive: true,
+    useCustomAvailability: d.useCustomAvailability,
+    durationOptions: d.durationOptions.map((option, index) => ({
+      label: option.label,
+      labelAr: option.labelAr || undefined,
+      durationMins: option.durationMins,
+      price: sarToHalalas(option.price),
+      isDefault: option.isDefault,
+      sortOrder: index,
+    })),
+    availabilityWindows: d.useCustomAvailability
+      ? d.availabilityWindows.map((window) => ({
+          dayOfWeek: window.dayOfWeek,
+          startTime: window.startTime,
+          endTime: window.endTime,
+          isActive: window.isActive,
+        }))
+      : [],
   }))
 }
 

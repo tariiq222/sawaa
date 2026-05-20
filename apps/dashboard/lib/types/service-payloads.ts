@@ -109,6 +109,15 @@ export interface DeliveryTypeConfigPayload {
   durationMins: number
   isActive?: boolean
   durationOptions?: DurationOptionPayload[]
+  useCustomAvailability?: boolean
+  availabilityWindows?: ServiceAvailabilityWindowPayload[]
+}
+
+export interface ServiceAvailabilityWindowPayload {
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+  isActive?: boolean
 }
 
 // @deprecated Use DeliveryTypeConfigPayload.

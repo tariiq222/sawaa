@@ -12,7 +12,9 @@ describe('GetServiceBookingConfigsHandler', () => {
         GetServiceBookingConfigsHandler,
         { provide: PrismaService, useValue: {
     service: { findFirst: jest.fn() },
-    serviceBookingConfig: { findMany: jest.fn() }
+    serviceBookingConfig: { findMany: jest.fn().mockResolvedValue([]) },
+    serviceDurationOption: { findMany: jest.fn().mockResolvedValue([]) },
+    serviceAvailabilityWindow: { findMany: jest.fn().mockResolvedValue([]) },
         } },
       ],
     }).compile();

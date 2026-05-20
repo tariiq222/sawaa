@@ -127,9 +127,10 @@ model Service {
   // reserveWithoutPayment: payment deferred until minParticipants is reached (24h window)
   reserveWithoutPayment Boolean @default(false)
 
-  durationOptions ServiceDurationOption[]
-  bookingConfigs  ServiceBookingConfig[]
-  bundleItems     ServiceBundleItem[]
+  durationOptions           ServiceDurationOption[]
+  bookingConfigs            ServiceBookingConfig[]
+  availabilityWindows       ServiceAvailabilityWindow[]
+  bundleItems               ServiceBundleItem[]
 
   @@index([isActive])
   @@index([isHidden])
@@ -149,11 +150,32 @@ model ServiceBookingConfig {
   price        Decimal            @default(0) @db.Decimal(12, 2)
   durationMins Int                @default(30)
   isActive     Boolean            @default(true)
+  useCustomAvailability Boolean   @default(false)
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
   @@unique([serviceId, deliveryType])
   @@index([serviceId])
+}
+
+// ─── Service Availability Windows ───────────────────────────────────────────
+
+// Optional per-service weekly windows scoped by delivery channel.
+// Empty or disabled custom availability means the service inherits branch hours.
+model ServiceAvailabilityWindow {
+  id           String       @id @default(uuid())
+  serviceId    String
+  service      Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  deliveryType DeliveryType
+  dayOfWeek    Int
+  startTime    String
+  endTime      String
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([serviceId])
+  @@index([serviceId, deliveryType, dayOfWeek])
 }
 
 // ─── Service Duration Options ────────────────────────────────────────────────
