@@ -4,44 +4,53 @@
  * Safe to re-run: uses upsert everywhere.
  */
 
-import 'dotenv/config';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
-import { createCipheriv, hkdfSync, randomBytes } from 'crypto';
+import "dotenv/config";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
+import * as bcrypt from "bcryptjs";
+import { createCipheriv, hkdfSync, randomBytes } from "crypto";
 
 // ─── Moyasar encryption helper (same algo as MoyasarCredentialsService) ─────
-const HKDF_SALT = 'deqah-moyasar-creds-v1';
+const HKDF_SALT = "deqah-moyasar-creds-v1";
 const HKDF_KEY_LEN = 32;
 
-function encryptMoyasar(payload: Record<string, unknown>, organizationId: string): string {
+function encryptMoyasar(
+  payload: Record<string, unknown>,
+  organizationId: string,
+): string {
   const masterKeyRaw = process.env.MOYASAR_ENCRYPTION_KEY;
-  if (!masterKeyRaw) throw new Error('MOYASAR_ENCRYPTION_KEY is not set');
-  const masterKey = Buffer.from(masterKeyRaw, 'base64');
-  if (masterKey.length !== 32) throw new Error('MOYASAR_ENCRYPTION_KEY must decode to 32 bytes');
+  if (!masterKeyRaw) throw new Error("MOYASAR_ENCRYPTION_KEY is not set");
+  const masterKey = Buffer.from(masterKeyRaw, "base64");
+  if (masterKey.length !== 32)
+    throw new Error("MOYASAR_ENCRYPTION_KEY must decode to 32 bytes");
 
-  const key = Buffer.from(hkdfSync('sha256', masterKey, HKDF_SALT, organizationId, HKDF_KEY_LEN));
+  const key = Buffer.from(
+    hkdfSync("sha256", masterKey, HKDF_SALT, organizationId, HKDF_KEY_LEN),
+  );
   const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', key, iv);
-  const plain = Buffer.from(JSON.stringify(payload), 'utf8');
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const plain = Buffer.from(JSON.stringify(payload), "utf8");
   const ct = Buffer.concat([cipher.update(plain), cipher.final()]);
   const tag = cipher.getAuthTag();
-  return Buffer.concat([iv, tag, ct]).toString('base64');
+  return Buffer.concat([iv, tag, ct]).toString("base64");
 }
 
-const ADMIN_EMAIL    = process.env.SEED_EMAIL    ?? 'admin@sawaa-test.com';
-const ADMIN_PASSWORD = process.env.SEED_PASSWORD ?? 'Admin@1234';
+const ADMIN_EMAIL = process.env.SEED_EMAIL ?? "admin@sawaa-test.com";
+const ADMIN_PASSWORD = process.env.SEED_PASSWORD ?? "Admin@1234";
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL;
 const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD;
 
-const RECEPTIONIST_EMAIL    = process.env.SEED_RECEPTIONIST_EMAIL    ?? 'receptionist@sawaa-test.com';
-const RECEPTIONIST_PASSWORD = process.env.SEED_RECEPTIONIST_PASSWORD ?? 'Recept@1234';
-const EMPLOYEE_EMAIL        = process.env.SEED_EMPLOYEE_EMAIL        ?? 'employee@sawaa-test.com';
-const EMPLOYEE_PASSWORD     = process.env.SEED_EMPLOYEE_PASSWORD     ?? 'Employee@1234';
+const RECEPTIONIST_EMAIL =
+  process.env.SEED_RECEPTIONIST_EMAIL ?? "receptionist@sawaa-test.com";
+const RECEPTIONIST_PASSWORD =
+  process.env.SEED_RECEPTIONIST_PASSWORD ?? "Recept@1234";
+const EMPLOYEE_EMAIL =
+  process.env.SEED_EMPLOYEE_EMAIL ?? "employee@sawaa-test.com";
+const EMPLOYEE_PASSWORD = process.env.SEED_EMPLOYEE_PASSWORD ?? "Employee@1234";
 
 async function main() {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('prisma db seed must not run in production');
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("prisma db seed must not run in production");
   }
   const prisma = new PrismaClient({
     adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
@@ -52,8 +61,8 @@ async function main() {
   await prisma.user.deleteMany({
     where: {
       OR: [
-        { email: { contains: '@t.test' } },
-        { email: { startsWith: 'iso-' } },
+        { email: { contains: "@t.test" } },
+        { email: { startsWith: "iso-" } },
       ],
     },
   });
@@ -65,11 +74,16 @@ async function main() {
     create: {
       email: ADMIN_EMAIL,
       passwordHash,
-      name: 'Admin',
-      role: 'ADMIN',
+      name: "Admin",
+      role: "ADMIN",
       isActive: true,
     },
-    update: {},
+    update: {
+      passwordHash,
+      name: "Admin",
+      role: "ADMIN",
+      isActive: true,
+    },
   });
 
   // 1a. Receptionist user (for E2E role-based tests)
@@ -79,11 +93,16 @@ async function main() {
     create: {
       email: RECEPTIONIST_EMAIL,
       passwordHash: receptionistPasswordHash,
-      name: 'Receptionist',
-      role: 'RECEPTIONIST',
+      name: "Receptionist",
+      role: "RECEPTIONIST",
       isActive: true,
     },
-    update: {},
+    update: {
+      passwordHash: receptionistPasswordHash,
+      name: "Receptionist",
+      role: "RECEPTIONIST",
+      isActive: true,
+    },
   });
 
   // 1b. Employee user (for E2E role-based tests)
@@ -93,15 +112,22 @@ async function main() {
     create: {
       email: EMPLOYEE_EMAIL,
       passwordHash: employeePasswordHash,
-      name: 'Employee',
-      role: 'EMPLOYEE',
+      name: "Employee",
+      role: "EMPLOYEE",
       isActive: true,
     },
-    update: {},
+    update: {
+      passwordHash: employeePasswordHash,
+      name: "Employee",
+      role: "EMPLOYEE",
+      isActive: true,
+    },
   });
 
   if (!SUPER_ADMIN_EMAIL || !SUPER_ADMIN_PASSWORD) {
-    throw new Error('SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD are required to seed the initial super-admin user');
+    throw new Error(
+      "SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD are required to seed the initial super-admin user",
+    );
   }
 
   const superAdminPasswordHash = await bcrypt.hash(SUPER_ADMIN_PASSWORD, 10);
@@ -110,14 +136,14 @@ async function main() {
     create: {
       email: SUPER_ADMIN_EMAIL,
       passwordHash: superAdminPasswordHash,
-      name: 'Platform Admin',
-      role: 'SUPER_ADMIN',
+      name: "Platform Admin",
+      role: "SUPER_ADMIN",
       isSuperAdmin: true,
       isActive: true,
     },
     update: {
       passwordHash: superAdminPasswordHash,
-      role: 'SUPER_ADMIN',
+      role: "SUPER_ADMIN",
       isSuperAdmin: true,
       isActive: true,
     },
@@ -128,23 +154,25 @@ async function main() {
   if (!branding) {
     await prisma.brandingConfig.create({
       data: {
-        organizationNameAr: 'سواء',
-        organizationNameEn: 'Sawaa',
-        colorPrimary: '#14a89a',
-        colorPrimaryLight: '#2fc0b0',
-        colorPrimaryDark: '#098a7d',
-        colorAccent: '#ef7a6b',
-        colorAccentDark: '#d96050',
-        colorBackground: '#f5fbfa',
+        organizationNameAr: "سواء",
+        organizationNameEn: "Sawaa",
+        colorPrimary: "#14a89a",
+        colorPrimaryLight: "#2fc0b0",
+        colorPrimaryDark: "#098a7d",
+        colorAccent: "#ef7a6b",
+        colorAccentDark: "#d96050",
+        colorBackground: "#f5fbfa",
       },
     });
   }
 
   // 3. Organization settings singleton
-  const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
+  const DEFAULT_ORG_ID = "00000000-0000-0000-0000-000000000001";
   const settings = await prisma.organizationSettings.findFirst();
   if (!settings) {
-    await prisma.organizationSettings.create({ data: { paymentMoyasarEnabled: true } });
+    await prisma.organizationSettings.create({
+      data: { paymentMoyasarEnabled: true },
+    });
   } else {
     await prisma.organizationSettings.updateMany({
       data: { paymentMoyasarEnabled: true },
@@ -156,16 +184,16 @@ async function main() {
   const existingMoyasar = await prisma.organizationPaymentConfig.findFirst();
   if (!existingMoyasar) {
     const secretKeyEnc = encryptMoyasar(
-      { secretKey: 'sk_test_dC1t7MVaXhJUmfwSj3QDpT2yRuRSMmdsjQB71zxo' },
+      { secretKey: "sk_test_dC1t7MVaXhJUmfwSj3QDpT2yRuRSMmdsjQB71zxo" },
       DEFAULT_ORG_ID,
     );
     const webhookSecretEnc = encryptMoyasar(
-      { webhookSecret: 'whsec_test_dev_webhook_secret_12345' },
+      { webhookSecret: "whsec_test_dev_webhook_secret_12345" },
       DEFAULT_ORG_ID,
     );
     await prisma.organizationPaymentConfig.create({
       data: {
-        publishableKey: 'pk_test_9WmjNQjvWeKh67QscDUg7Y7YGpuvcpDY9ugi3qkv',
+        publishableKey: "pk_test_9WmjNQjvWeKh67QscDUg7Y7YGpuvcpDY9ugi3qkv",
         secretKeyEnc,
         webhookSecretEnc,
         isLive: false,
@@ -174,17 +202,17 @@ async function main() {
   }
 
   // 4. Main branch
-  const DEFAULT_BRANCH_ID = 'c1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5';
+  const DEFAULT_BRANCH_ID = "c1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5";
   await prisma.branch.upsert({
     where: { id: DEFAULT_BRANCH_ID },
     create: {
-      id:       DEFAULT_BRANCH_ID,
-      nameAr:   'الفرع الرئيسي',
-      nameEn:   'Main Branch',
+      id: DEFAULT_BRANCH_ID,
+      nameAr: "الفرع الرئيسي",
+      nameEn: "Main Branch",
       isActive: true,
-      isMain:   true,
-      timezone: 'Asia/Riyadh',
-      country:  'SA',
+      isMain: true,
+      timezone: "Asia/Riyadh",
+      country: "SA",
     },
     update: {},
   });
@@ -196,11 +224,11 @@ async function main() {
     await prisma.businessHour.upsert({
       where: { branchId_dayOfWeek: { branchId: DEFAULT_BRANCH_ID, dayOfWeek } },
       create: {
-        branchId:       DEFAULT_BRANCH_ID,
+        branchId: DEFAULT_BRANCH_ID,
         dayOfWeek,
-        startTime:      '09:00',
-        endTime:        '17:00',
-        isOpen:         !isWeekend,
+        startTime: "09:00",
+        endTime: "17:00",
+        isOpen: !isWeekend,
       },
       update: {},
     });
@@ -208,7 +236,10 @@ async function main() {
 
   // 6. Email templates — one row per slug the backend sends.
   //    Free-form: owners rewrite name/subject/body in any language they want.
-  const layout = (heading: string, bodyHtml: string) => `<div style="font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif; padding: 24px; max-width: 560px; direction: rtl;">
+  const layout = (
+    heading: string,
+    bodyHtml: string,
+  ) => `<div style="font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif; padding: 24px; max-width: 560px; direction: rtl;">
   <h2 style="color: #354FD8; margin: 0 0 16px;">${heading}</h2>
   ${bodyHtml}
 </div>`;
@@ -216,47 +247,52 @@ async function main() {
   const button = (href: string, label: string) =>
     `<p style="margin: 24px 0;"><a href="${href}" style="background:#354FD8;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">${label}</a></p>`;
 
-  const TEMPLATES: Array<{ slug: string; name: string; subject: string; htmlBody: string }> = [
+  const TEMPLATES: Array<{
+    slug: string;
+    name: string;
+    subject: string;
+    htmlBody: string;
+  }> = [
     {
-      slug: 'user_password_reset',
-      name: 'إعادة تعيين كلمة المرور',
-      subject: 'إعادة تعيين كلمة المرور — Sawaa',
+      slug: "user_password_reset",
+      name: "إعادة تعيين كلمة المرور",
+      subject: "إعادة تعيين كلمة المرور — Sawaa",
       htmlBody: layout(
-        'إعادة تعيين كلمة المرور',
+        "إعادة تعيين كلمة المرور",
         `<p>مرحباً {{userName}}،</p>
   <p>وصلنا طلب لإعادة تعيين كلمة مرورك في Sawaa. اضغط الزر بالأسفل لتعيين كلمة جديدة. الرابط صالح لمدة 30 دقيقة.</p>
-  ${button('{{resetUrl}}', 'إعادة تعيين كلمة المرور')}
+  ${button("{{resetUrl}}", "إعادة تعيين كلمة المرور")}
   <p style="color:#6b7280;font-size:14px;">إذا لم تطلب هذا، يمكنك تجاهل الرسالة بأمان.</p>`,
       ),
     },
     {
-      slug: 'user_email_verification',
-      name: 'تأكيد البريد الإلكتروني',
-      subject: 'تأكيد بريدك الإلكتروني — Sawaa',
+      slug: "user_email_verification",
+      name: "تأكيد البريد الإلكتروني",
+      subject: "تأكيد بريدك الإلكتروني — Sawaa",
       htmlBody: layout(
-        'تأكيد البريد الإلكتروني',
+        "تأكيد البريد الإلكتروني",
         `<p>مرحباً {{userName}}،</p>
   <p>اضغط الزر بالأسفل لتأكيد بريدك الإلكتروني وتفعيل حسابك في Sawaa.</p>
-  ${button('{{verifyUrl}}', 'تأكيد البريد')}
+  ${button("{{verifyUrl}}", "تأكيد البريد")}
   <p style="color:#6b7280;font-size:14px;">إذا لم تنشئ هذا الحساب، يمكنك تجاهل الرسالة.</p>`,
       ),
     },
     {
-      slug: 'welcome',
-      name: 'رسالة ترحيب',
-      subject: 'أهلاً بك في Sawaa',
+      slug: "welcome",
+      name: "رسالة ترحيب",
+      subject: "أهلاً بك في Sawaa",
       htmlBody: layout(
-        'أهلاً بك',
+        "أهلاً بك",
         `<p>مرحباً {{client_name}}،</p>
   <p>سعداء بانضمامك إلينا. حسابك جاهز الآن، ويمكنك حجز موعدك الأول في أي وقت.</p>`,
       ),
     },
     {
-      slug: 'booking-cancelled',
-      name: 'إلغاء حجز',
-      subject: 'تم إلغاء حجزك',
+      slug: "booking-cancelled",
+      name: "إلغاء حجز",
+      subject: "تم إلغاء حجزك",
       htmlBody: layout(
-        'تم إلغاء حجزك',
+        "تم إلغاء حجزك",
         `<p>مرحباً {{client_name}}،</p>
   <p>نأسف لإبلاغك بأنه تم إلغاء حجزك رقم <strong>{{booking_id}}</strong>.</p>
   <p>السبب: {{reason}}</p>
@@ -264,11 +300,11 @@ async function main() {
       ),
     },
     {
-      slug: 'payment-failed',
-      name: 'فشل عملية دفع',
-      subject: 'تعذّر إتمام الدفع',
+      slug: "payment-failed",
+      name: "فشل عملية دفع",
+      subject: "تعذّر إتمام الدفع",
       htmlBody: layout(
-        'تعذّر إتمام الدفع',
+        "تعذّر إتمام الدفع",
         `<p>مرحباً {{client_name}}،</p>
   <p>لم نتمكن من معالجة دفعتك بقيمة <strong>{{amount}} {{currency}}</strong>.</p>
   <p>يرجى التحقق من بيانات بطاقتك أو تجربة وسيلة دفع أخرى.</p>`,
@@ -277,7 +313,9 @@ async function main() {
   ];
 
   for (const tmpl of TEMPLATES) {
-    const existing = await prisma.emailTemplate.findFirst({ where: { slug: tmpl.slug } });
+    const existing = await prisma.emailTemplate.findFirst({
+      where: { slug: tmpl.slug },
+    });
     if (!existing) {
       await prisma.emailTemplate.create({
         data: {
@@ -293,7 +331,7 @@ async function main() {
 
   await prisma.$disconnect();
 
-  console.log('─────────────────────────────────────────────');
+  console.log("─────────────────────────────────────────────");
   console.log(`✔  Admin        : ${ADMIN_EMAIL}`);
   console.log(`✔  Receptionist : ${RECEPTIONIST_EMAIL}`);
   console.log(`✔  Employee     : ${EMPLOYEE_EMAIL}`);
@@ -302,9 +340,14 @@ async function main() {
   console.log(`✔  OrganizationSettings singleton ready`);
   console.log(`✔  Main branch created`);
   console.log(`✔  BusinessHours seeded (Sun–Thu 09:00–17:00, Fri/Sat closed)`);
-  console.log(`✔  Email templates upserted: ${TEMPLATES.map(t => t.slug).join(', ')}`);
+  console.log(
+    `✔  Email templates upserted: ${TEMPLATES.map((t) => t.slug).join(", ")}`,
+  );
   console.log(`✔  Moyasar test config seeded (pk_test_…)`);
-  console.log('─────────────────────────────────────────────');
+  console.log("─────────────────────────────────────────────");
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

@@ -7,72 +7,76 @@
  * Asserts that role-gated widgets on `/` render (or don't) according to
  * the active membership role.
  *
- * Login note: uses the same identifier-first flow proven green by
- * `e2e/smoke/login.spec.ts`. The shared `loginAs` fixture in
- * `e2e/fixtures/auth.ts` still targets the old single-step form
- * (`#email` / `#password`) and currently fails on the live login
- * screen — fixing that fixture is out of scope for Task 10.
- *
- * Seed status (2026-05-06):
- *   - OWNER         → seeded (apps/backend/prisma/seed.ts upserts a
- *                     single Membership with role=OWNER).
- *   - RECEPTIONIST  → NOT seeded by default; gated on
- *                     SEED_RECEPTIONIST_EMAIL/SEED_RECEPTIONIST_PASSWORD.
- *                     Skipped locally.
- *   - EMPLOYEE      → NOT seeded; skipped pending a seed update
- *                     (out of scope for Task 10).
+ * The shared auth fixture uses the same default personas as
+ * apps/backend/prisma/seed.ts: admin/owner alias, receptionist, and employee.
  */
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from "@playwright/test"
+import * as fs from "fs"
+import * as path from "path"
+import {
+  expectAuthenticatedShell,
+  expectCurrentPath,
+  expectNoAppCrash,
+} from "../fixtures/assertions"
+import { loginAs, storageStatePath } from "../fixtures/auth"
 
-const OWNER_EMAIL = process.env.SEED_OWNER_EMAIL ?? process.env.SEED_EMAIL ?? 'admin@sawaa-test.com';
-const OWNER_PASSWORD = process.env.SEED_OWNER_PASSWORD ?? process.env.SEED_PASSWORD ?? 'Admin@1234';
+const DASHBOARD_ROOT = path.join(__dirname, "..", "..")
+const BASE_URL = process.env.PW_DASHBOARD_URL ?? "http://localhost:5203"
+const EMPLOYEE_STORAGE_STATE = path.join(
+  DASHBOARD_ROOT,
+  storageStatePath("employee")
+)
 
-const RECEPTIONIST_EMAIL = process.env.SEED_RECEPTIONIST_EMAIL ?? 'receptionist@sawaa-test.com';
-const RECEPTIONIST_PASSWORD = process.env.SEED_RECEPTIONIST_PASSWORD ?? 'Recept@1234';
+test.describe("Dashboard home — role-based widgets", () => {
+  test("ADMIN sees QuickActions", async ({ page }) => {
+    await loginAs(page, "admin")
+    await expectCurrentPath(page, "/")
+    await expectAuthenticatedShell(page)
+    await expectNoAppCrash(page)
+    await expect(page.getByTestId("quick-actions")).toBeVisible()
+  })
 
-const EMPLOYEE_EMAIL = process.env.SEED_EMPLOYEE_EMAIL ?? 'employee@sawaa-test.com';
-const EMPLOYEE_PASSWORD = process.env.SEED_EMPLOYEE_PASSWORD ?? 'Employee@1234';
+  test("OWNER alias sees QuickActions", async ({ page }) => {
+    await loginAs(page, "owner")
+    await expectCurrentPath(page, "/")
+    await expectAuthenticatedShell(page)
+    await expectNoAppCrash(page)
+    await expect(page.getByTestId("quick-actions")).toBeVisible()
+  })
 
-async function loginAs(page: Page, email: string, password: string): Promise<void> {
-  await page.goto('/login');
-  await expect(page).toHaveURL(/\/login/);
-  await page.waitForLoadState('domcontentloaded');
+  test("RECEPTIONIST sees QuickActions from seeded defaults", async ({
+    page,
+  }) => {
+    await loginAs(page, "receptionist")
+    await expectCurrentPath(page, "/")
+    await expectAuthenticatedShell(page)
+    await expectNoAppCrash(page)
+    await expect(page.getByTestId("quick-actions")).toBeVisible()
+  })
 
-  await page.locator('#identifier').fill(email);
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await page.getByRole('button', { name: 'باستخدام كلمة المرور' }).click();
-  await page.locator('#password').fill(password);
-  await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
-
-  await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 });
-  // Wait for header chrome to confirm we're authenticated (mirrors login.spec).
-  await expect(page.locator('header').first()).toBeVisible({ timeout: 10_000 });
-}
-
-test.describe('Dashboard home — role-based widgets', () => {
-  test('OWNER sees QuickActions', async ({ page }) => {
-    await loginAs(page, OWNER_EMAIL, OWNER_PASSWORD);
-    await page.waitForURL('/', { timeout: 10_000 }).catch(() => {});
-    await expect(page.getByTestId('quick-actions')).toBeVisible();
-  });
-
-  test('RECEPTIONIST sees QuickActions', async ({ page }) => {
+  test("EMPLOYEE sees no QuickActions when optional auth is available", async ({
+    browser,
+  }) => {
     test.skip(
-      !process.env.SEED_RECEPTIONIST_EMAIL,
-      'No receptionist seed user — set SEED_RECEPTIONIST_EMAIL/SEED_RECEPTIONIST_PASSWORD or seed a RECEPTIONIST membership in apps/backend/prisma/seed.ts.',
-    );
-    await loginAs(page, RECEPTIONIST_EMAIL!, RECEPTIONIST_PASSWORD!);
-    await page.goto('/');
-    await expect(page.getByTestId('quick-actions')).toBeVisible();
-  });
+      !fs.existsSync(EMPLOYEE_STORAGE_STATE),
+      `Employee auth state was not generated at ${EMPLOYEE_STORAGE_STATE}; optional employee login likely is unavailable in this environment.`
+    )
 
-  test('EMPLOYEE sees no QuickActions', async ({ page }) => {
-    test.skip(
-      !process.env.SEED_EMPLOYEE_EMAIL,
-      'No employee seed user — set SEED_EMPLOYEE_EMAIL/SEED_EMPLOYEE_PASSWORD or seed an EMPLOYEE membership in apps/backend/prisma/seed.ts.',
-    );
-    await loginAs(page, EMPLOYEE_EMAIL!, EMPLOYEE_PASSWORD!);
-    await page.goto('/');
-    await expect(page.getByTestId('quick-actions')).toHaveCount(0);
-  });
-});
+    const context = await browser.newContext({
+      baseURL: BASE_URL,
+      locale: "ar-SA",
+      storageState: EMPLOYEE_STORAGE_STATE,
+    })
+    const page = await context.newPage()
+
+    try {
+      await page.goto("/", { waitUntil: "domcontentloaded" })
+      await expectCurrentPath(page, "/")
+      await expectAuthenticatedShell(page)
+      await expectNoAppCrash(page)
+      await expect(page.getByTestId("quick-actions")).toHaveCount(0)
+    } finally {
+      await context.close()
+    }
+  })
+})
