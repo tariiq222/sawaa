@@ -10,14 +10,14 @@ import {
 import { useLocale } from "@/components/locale-provider"
 import { BookingTypeRow } from "../booking-type-row"
 import type { DraftBookingType, DraftDurationOption } from "../booking-types-editor"
-import type { ServiceBookingMode } from "@/lib/types/service"
+import type { ServiceDeliveryType } from "@/lib/types/service"
 
 /* ─── Constants ─── */
 
 // DB-10: values are now uppercase enum strings
-const BOOKING_TYPES: { value: ServiceBookingMode; labelKey: string }[] = [
-  { value: "IN_PERSON", labelKey: "services.bookingTypes.clinic" },
-  { value: "ONLINE", labelKey: "services.bookingTypes.online" },
+const DELIVERY_TYPES: { value: ServiceDeliveryType; labelKey: string }[] = [
+  { value: "IN_PERSON", labelKey: "services.deliveryTypes.inPerson" },
+  { value: "ONLINE", labelKey: "services.deliveryTypes.online" },
 ]
 
 /* ─── Props ─── */
@@ -36,33 +36,33 @@ export function PricingTab({
   const { t, locale } = useLocale()
   const isAr = locale === "ar"
 
-  const toggleType = (bookingType: string) => {
+  const toggleType = (deliveryType: string) => {
     onBookingTypesChange(
       bookingTypes.map((d) =>
-        d.bookingType === bookingType ? { ...d, enabled: !d.enabled } : d,
+        d.deliveryType === deliveryType ? { ...d, enabled: !d.enabled } : d,
       ),
     )
   }
 
   const updateType = (
-    bookingType: string,
+    deliveryType: string,
     field: keyof DraftBookingType,
     value: unknown,
   ) => {
     onBookingTypesChange(
       bookingTypes.map((d) =>
-        d.bookingType === bookingType ? { ...d, [field]: value } : d,
+        d.deliveryType === deliveryType ? { ...d, [field]: value } : d,
       ),
     )
   }
 
   const updateOptions = (
-    bookingType: string,
+    deliveryType: string,
     opts: DraftDurationOption[],
   ) => {
     onBookingTypesChange(
       bookingTypes.map((d) =>
-        d.bookingType === bookingType
+        d.deliveryType === deliveryType
           ? { ...d, durationOptions: opts }
           : d,
       ),
@@ -81,20 +81,20 @@ export function PricingTab({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {bookingTypes.map((draft) => (
           <BookingTypeRow
-            key={draft.bookingType}
+            key={draft.deliveryType}
             draft={draft}
             label={t(
-              BOOKING_TYPES.find((bt) => bt.value === draft.bookingType)
+              DELIVERY_TYPES.find((bt) => bt.value === draft.deliveryType)
                 ?.labelKey ?? "",
             )}
             isAr={isAr}
             t={t}
-            onToggle={() => toggleType(draft.bookingType)}
+            onToggle={() => toggleType(draft.deliveryType)}
             onUpdate={(field, value) =>
-              updateType(draft.bookingType, field, value)
+              updateType(draft.deliveryType, field, value)
             }
             onUpdateOptions={(opts) =>
-              updateOptions(draft.bookingType, opts)
+              updateOptions(draft.deliveryType, opts)
             }
           />
         ))}

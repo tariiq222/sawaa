@@ -44,10 +44,10 @@ export class CreateZoomMeetingHandler {
       throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
     }
 
-    // Step 2: booking-type validation — pure, no race concern
-    if (booking.bookingType !== 'ONLINE') {
+    // Step 2: delivery-type validation — Zoom is only for ONLINE delivery
+    if (booking.deliveryType !== 'ONLINE') {
       throw new BadRequestException(
-        'Zoom meetings can only be created for ONLINE bookings',
+        'Zoom meetings can only be created for ONLINE delivery bookings',
       );
     }
 

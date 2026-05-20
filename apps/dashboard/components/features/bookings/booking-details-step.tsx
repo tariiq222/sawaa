@@ -113,7 +113,7 @@ export function BookingStep({ clientName, onSubmit: onSubmitProp, submitting }: 
     useCreateBookingSlots({
       employeeId: watchedEmployeeId,
       serviceId: watchedServiceId,
-      bookingType: watchedType,
+      deliveryType: watchedType,
       date: watchedDate,
       durationOptionId: watchedDurationOptionId ?? "",
     })

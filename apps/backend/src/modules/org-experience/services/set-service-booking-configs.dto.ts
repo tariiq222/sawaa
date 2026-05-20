@@ -1,4 +1,4 @@
-import { ServiceBookingMode } from '@prisma/client';
+import { DeliveryType } from '@prisma/client';
 import {
   ArrayNotEmpty,
   IsArray,
@@ -13,17 +13,15 @@ import {
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-// DB-10: bookingType is now a Prisma enum (ServiceBookingMode).
-// Replaces the old 'in_person' | 'online' string literals.
-
 export class BookingConfigInputDto {
   @ApiProperty({
-    description: 'Booking delivery mode for this service',
-    enum: ServiceBookingMode,
-    example: ServiceBookingMode.IN_PERSON,
+    description: 'Delivery channel for this service',
+    enum: DeliveryType,
+    enumName: 'DeliveryType',
+    example: DeliveryType.IN_PERSON,
   })
-  @IsEnum(ServiceBookingMode)
-  bookingType!: ServiceBookingMode;
+  @IsOptional() @IsEnum(DeliveryType)
+  deliveryType?: DeliveryType;
 
   @ApiProperty({ description: 'Price for this booking type', example: 50 })
   @IsNumber() @Min(0) price!: number;

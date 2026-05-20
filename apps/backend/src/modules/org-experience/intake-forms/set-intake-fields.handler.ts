@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { IntakeFieldInputDto } from './create-intake-form.dto';
 
 export interface SetIntakeFieldsCommand {
@@ -11,6 +11,7 @@ export interface SetIntakeFieldsCommand {
 export class SetIntakeFieldsHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   /**
@@ -19,7 +20,7 @@ export class SetIntakeFieldsHandler {
    * Throws NotFoundException when the form does not exist.
    */
   async execute({ formId, fields }: SetIntakeFieldsCommand) {
-    return this.prisma.$transaction(async (tx) => {
+    return this.rlsTransaction.withTransaction(async (tx) => {
       const form = await tx.intakeForm.findFirst({
         where: { id: formId },
         select: { id: true },

@@ -18,7 +18,8 @@ const sampleRow: ClientBookingRow = {
   scheduledAt: '2026-05-01T10:00:00Z',
   durationMins: 30,
   status: 'confirmed',
-  bookingType: 'online',
+  bookingType: 'individual',
+  deliveryType: 'online',
   employeeId: 'e1',
   branchId: 'br1',
   serviceId: 's1',
@@ -112,9 +113,37 @@ describe('clientBookingsService.create', () => {
       employeeId: 'e1',
       serviceId: 's1',
       scheduledAt: '2026-05-01T10:00:00Z',
+      deliveryType: 'in_person' as const,
     };
     const r = await clientBookingsService.create(dto);
     expect(r).toEqual(sampleRow);
+    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/bookings', dto);
+  });
+
+  it('passes deliveryType without overloading bookingType', async () => {
+    mockedApi.post.mockResolvedValueOnce({ data: sampleRow });
+    const dto = {
+      branchId: 'br1',
+      employeeId: 'e1',
+      serviceId: 's1',
+      scheduledAt: '2026-05-01T10:00:00Z',
+      deliveryType: 'online' as const,
+    };
+    await clientBookingsService.create(dto);
+    expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/bookings', dto);
+  });
+
+  it('keeps bookingType as category only when present', async () => {
+    mockedApi.post.mockResolvedValueOnce({ data: sampleRow });
+    const dto = {
+      branchId: 'br1',
+      employeeId: 'e1',
+      serviceId: 's1',
+      scheduledAt: '2026-05-01T10:00:00Z',
+      deliveryType: 'online' as const,
+      bookingType: 'individual' as const,
+    };
+    await clientBookingsService.create(dto);
     expect(mockedApi.post).toHaveBeenCalledWith('/mobile/client/bookings', dto);
   });
 
@@ -126,6 +155,7 @@ describe('clientBookingsService.create', () => {
         employeeId: 'e1',
         serviceId: 's1',
         scheduledAt: 'x',
+        deliveryType: 'in_person',
       }),
     ).rejects.toThrow(/409/);
   });

@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, DeliveryType } from '@prisma/client';
 import { ConfirmBookingHandler } from './confirm-booking.handler';
 import { buildPrisma, buildRlsTransaction, buildEventBus, buildZoomHandler, mockBooking } from '../testing/booking-test-helpers';
 
@@ -14,6 +14,18 @@ describe('ConfirmBookingHandler', () => {
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.CONFIRMED }) }),
     );
     expect(eb.publish).toHaveBeenCalledWith('bookings.booking.confirmed', expect.anything());
+  });
+
+  it('creates a Zoom meeting when the delivery type is online', async () => {
+    const prisma = buildPrisma();
+    const zoom = buildZoomHandler();
+    prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, deliveryType: DeliveryType.ONLINE });
+
+    await new ConfirmBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildEventBus() as never, zoom as never).execute({
+      bookingId: 'book-1', changedBy: 'user-42',
+    });
+
+    expect(zoom.execute).toHaveBeenCalledWith({ bookingId: 'book-1' });
   });
 
   it('throws BadRequestException when booking is already CONFIRMED', async () => {

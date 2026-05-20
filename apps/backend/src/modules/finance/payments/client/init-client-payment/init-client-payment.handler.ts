@@ -49,17 +49,20 @@ export class InitClientPaymentHandler {
       throw new ForbiddenException('Invoice does not belong to this client');
     }
 
-    const booking = await this.prisma.booking.findFirst({
-      where: { id: invoice.bookingId },
-      select: { id: true, status: true },
-    });
-    if (!booking) {
-      throw new NotFoundException(`Booking ${invoice.bookingId} not found`);
-    }
-    if (!PAYMENT_INIT_BOOKING_STATUSES.includes(booking.status)) {
-      throw new BadRequestException(
-        `Booking ${invoice.bookingId} cannot initialize payment in status ${booking.status}`,
-      );
+    // For bundle invoices, bookingId may be null — skip booking status check.
+    if (invoice.bookingId) {
+      const booking = await this.prisma.booking.findFirst({
+        where: { id: invoice.bookingId },
+        select: { id: true, status: true },
+      });
+      if (!booking) {
+        throw new NotFoundException(`Booking ${invoice.bookingId} not found`);
+      }
+      if (!PAYMENT_INIT_BOOKING_STATUSES.includes(booking.status)) {
+        throw new BadRequestException(
+          `Booking ${invoice.bookingId} cannot initialize payment in status ${booking.status}`,
+        );
+      }
     }
 
     const idempotencyKey = `client:${invoice.id}`;
@@ -97,10 +100,10 @@ export class InitClientPaymentHandler {
         amountHalalas,
         currency: invoice.currency,
         description: `Invoice payment - ${invoice.id}`,
-        callbackUrl: this.buildCallbackUrl(invoice.bookingId, invoice.id),
+        callbackUrl: this.buildCallbackUrl(invoice.bookingId ?? '', invoice.id),
         metadata: {
           invoiceId: invoice.id,
-          bookingId: invoice.bookingId,
+          bookingId: invoice.bookingId ?? '',
           source: 'mobile-client',
         },
         idempotencyKey: `payment:${DEFAULT_ORG_ID}:${invoice.id}`,

@@ -188,7 +188,7 @@ describe('MobileClientBookingsController (e2e)', () => {
       mockPrisma.booking.findFirst.mockResolvedValue({
         id: bookingId,
         clientId: 'client-1',
-        bookingType: 'ONLINE',
+        deliveryType: 'ONLINE',
         zoomJoinUrl: 'https://zoom.us/j/123',
         scheduledAt: '2026-12-31T09:00:00Z',
       });
@@ -205,7 +205,7 @@ describe('MobileClientBookingsController (e2e)', () => {
       mockPrisma.booking.findFirst.mockResolvedValue({
         id: bookingId,
         clientId: 'client-1',
-        bookingType: 'INDIVIDUAL',
+        deliveryType: 'IN_PERSON',
         zoomJoinUrl: null,
         scheduledAt: '2026-12-31T09:00:00Z',
       });

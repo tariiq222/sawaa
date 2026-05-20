@@ -49,15 +49,20 @@ const buildPrisma = () => ({
   }),
 });
 
+const buildRlsTransaction = (prisma: ReturnType<typeof buildPrisma>) => ({
+  withTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => prisma.$transaction(fn)),
+});
+
 describe('SetIntakeFieldsHandler', () => {
   it('replaces fields atomically', async () => {
     const prisma = buildPrisma();
-    const handler = new SetIntakeFieldsHandler(prisma as never);
+    const rlsTransaction = buildRlsTransaction(prisma);
+    const handler = new SetIntakeFieldsHandler(prisma as never, rlsTransaction as never);
     const result = await handler.execute({
       formId: 'form-1',
       fields: [{ labelAr: 'هل لديك حساسية؟', fieldType: IntakeFieldType.TEXT }],
     });
-    expect(prisma.$transaction).toHaveBeenCalled();
+    expect(rlsTransaction.withTransaction).toHaveBeenCalled();
     expect(result).toBeDefined();
   });
 
@@ -76,7 +81,8 @@ describe('SetIntakeFieldsHandler', () => {
       };
       return fn(tx);
     });
-    const handler = new SetIntakeFieldsHandler(prisma as never);
+    const rlsTransaction = buildRlsTransaction(prisma);
+    const handler = new SetIntakeFieldsHandler(prisma as never, rlsTransaction as never);
     await expect(
       handler.execute({ formId: 'missing', fields: [] }),
     ).rejects.toThrow(NotFoundException);

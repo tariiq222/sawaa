@@ -11,15 +11,15 @@ import {
 } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
 import { BookingTypeRow } from "./booking-type-row"
-import type { ServiceBookingType, ServiceBookingMode } from "@/lib/types/service"
+import type { ServiceBookingType, ServiceDeliveryType } from "@/lib/types/service"
 import { sarToHalalas, halalasToSarNumber } from "@/lib/money"
 
 /* ─── Constants ─── */
 
 // DB-10: values are now uppercase enum strings ('IN_PERSON' | 'ONLINE').
-const BOOKING_TYPES: { value: ServiceBookingMode; labelKey: string }[] = [
-  { value: "IN_PERSON", labelKey: "services.bookingTypes.clinic" },
-  { value: "ONLINE", labelKey: "services.bookingTypes.online" },
+const DELIVERY_TYPES: { value: ServiceDeliveryType; labelKey: string }[] = [
+  { value: "IN_PERSON", labelKey: "services.deliveryTypes.inPerson" },
+  { value: "ONLINE", labelKey: "services.deliveryTypes.online" },
 ]
 
 /* ─── Draft Types ─── */
@@ -35,7 +35,7 @@ export interface DraftDurationOption {
 }
 
 export interface DraftBookingType {
-  bookingType: ServiceBookingMode
+  deliveryType: ServiceDeliveryType
   enabled: boolean
   price: number // SAR display
   durationMins: number // minutes
@@ -73,10 +73,10 @@ export function BookingTypesEditor({ serviceId }: BookingTypesEditorProps) {
     setTypes(mergeDraftsFromServer(existing))
   }, [existing, dirty])
 
-  const toggleType = (bookingType: string) => {
+  const toggleType = (deliveryType: string) => {
     setTypes((prev) =>
       prev.map((d) =>
-        d.bookingType === bookingType
+        d.deliveryType === deliveryType
           ? { ...d, enabled: !d.enabled }
           : d,
       ),
@@ -85,13 +85,13 @@ export function BookingTypesEditor({ serviceId }: BookingTypesEditorProps) {
   }
 
   const updateType = (
-    bookingType: string,
+    deliveryType: string,
     field: keyof DraftBookingType,
     value: unknown,
   ) => {
     setTypes((prev) =>
       prev.map((d) =>
-        d.bookingType === bookingType ? { ...d, [field]: value } : d,
+        d.deliveryType === deliveryType ? { ...d, [field]: value } : d,
       ),
     )
     setDirty(true)
@@ -106,7 +106,7 @@ export function BookingTypesEditor({ serviceId }: BookingTypesEditorProps) {
     try {
       await mutation.mutateAsync({
         types: enabledTypes.map((d) => ({
-          bookingType: d.bookingType,
+          deliveryType: d.deliveryType,
           price: sarToHalalas(d.price),
           durationMins: d.durationMins,
           isActive: true,
@@ -123,7 +123,7 @@ export function BookingTypesEditor({ serviceId }: BookingTypesEditorProps) {
       setDirty(false)
       toast.success(t("services.bookingTypes.saved"))
     } catch {
-      toast.error(t("services.bookingTypes.saveFailed"))
+      toast.error(t("services.deliveryTypes.saveFailed"))
     }
   }
 
@@ -131,32 +131,32 @@ export function BookingTypesEditor({ serviceId }: BookingTypesEditorProps) {
     <div className="space-y-3">
       <Separator />
       <p className="text-sm font-medium text-foreground">
-        {t("services.bookingTypes")}
+        {t("services.deliveryTypes.title")}
       </p>
 
       {isLoading && (
         <p className="text-sm text-muted-foreground">
-          {t("services.bookingTypes.loading")}
+          {t("services.deliveryTypes.loading")}
         </p>
       )}
 
       <div className="space-y-3">
         {types.map((draft) => (
           <BookingTypeRow
-            key={draft.bookingType}
+            key={draft.deliveryType}
             draft={draft}
             label={t(
-              BOOKING_TYPES.find((bt) => bt.value === draft.bookingType)
+              DELIVERY_TYPES.find((bt) => bt.value === draft.deliveryType)
                 ?.labelKey ?? "",
             )}
             isAr={isAr}
             t={t}
-            onToggle={() => toggleType(draft.bookingType)}
+            onToggle={() => toggleType(draft.deliveryType)}
             onUpdate={(field, value) =>
-              updateType(draft.bookingType, field, value)
+              updateType(draft.deliveryType, field, value)
             }
             onUpdateOptions={(opts) => {
-              updateType(draft.bookingType, "durationOptions", opts)
+              updateType(draft.deliveryType, "durationOptions", opts)
             }}
           />
         ))}
@@ -171,8 +171,8 @@ export function BookingTypesEditor({ serviceId }: BookingTypesEditorProps) {
           onClick={handleSave}
         >
           {mutation.isPending
-            ? t("services.bookingTypes.saving")
-            : t("services.bookingTypes.save")}
+            ? t("services.deliveryTypes.saving")
+            : t("services.deliveryTypes.save")}
         </Button>
       )}
     </div>
@@ -184,24 +184,24 @@ export function BookingTypesEditor({ serviceId }: BookingTypesEditorProps) {
 function buildEmptyDrafts(): DraftBookingType[] {
   // DB-10: enum values are now uppercase
   return [
-    { bookingType: "IN_PERSON", enabled: false, price: 0, durationMins: 30, durationOptions: [] },
-    { bookingType: "ONLINE", enabled: false, price: 0, durationMins: 30, durationOptions: [] },
+    { deliveryType: "IN_PERSON", enabled: false, price: 0, durationMins: 30, durationOptions: [] },
+    { deliveryType: "ONLINE", enabled: false, price: 0, durationMins: 30, durationOptions: [] },
   ]
 }
 
 export function mergeDraftsFromServer(
   serverTypes: ServiceBookingType[],
 ): DraftBookingType[] {
-  const map = new Map(serverTypes.map((st) => [st.bookingType, st]))
+  const map = new Map(serverTypes.map((st) => [st.deliveryType, st]))
   // DB-10: enum values are now uppercase
   return (["IN_PERSON", "ONLINE"] as const).map(
-    (bt) => {
-      const server = map.get(bt)
+    (dt) => {
+      const server = map.get(dt)
       if (!server) {
-        return { bookingType: bt, enabled: false, price: 0, durationMins: 30, durationOptions: [] }
+        return { deliveryType: dt, enabled: false, price: 0, durationMins: 30, durationOptions: [] }
       }
       return {
-        bookingType: bt,
+        deliveryType: dt,
         enabled: server.isActive,
         price: halalasToSarNumber(server.price),
         durationMins: server.durationMins,

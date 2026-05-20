@@ -7,6 +7,7 @@ import type {
   BookingListResponse,
   BookingStats,
   CreateBookingPayload,
+  CreateBundleBookingPayload,
   UpdateBookingPayload,
 } from '../types/booking'
 import type { GuestBookingPayload, GuestBookingResponse } from '@sawaa/shared'
@@ -27,6 +28,15 @@ export async function get(id: string): Promise<BookingListItem> {
 
 export async function create(payload: CreateBookingPayload): Promise<BookingListItem> {
   return apiRequest<BookingListItem>('/bookings', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function createBundleBooking(
+  payload: CreateBundleBookingPayload,
+): Promise<BookingListItem[]> {
+  return apiRequest<BookingListItem[]>('/bookings/bundle', {
     method: 'POST',
     body: JSON.stringify(payload),
   })

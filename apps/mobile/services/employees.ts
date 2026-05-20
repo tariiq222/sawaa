@@ -1,6 +1,8 @@
 import api from './api';
 import type { ApiResponse, PaginatedResponse } from '@/types/api';
 import type { Employee, Rating } from '@/types/models';
+import { resolveDeliveryType } from '@/types/booking-enums';
+import type { BookingType, DeliveryType } from '@/types/booking-enums';
 
 export type EmployeeAvailability = {
   dayOfWeek: number;
@@ -32,7 +34,24 @@ export const employeesService = {
     return response.data;
   },
 
-  async getAvailability(id: string, date: string, options?: { duration?: number; serviceId?: string; bookingType?: string }) {
+  async getAvailability(
+    id: string,
+    date: string,
+    options?: {
+      duration?: number;
+      serviceId?: string;
+      deliveryType?: DeliveryType;
+      /** Appointment/category type only. Never use for delivery channel. */
+      bookingType?: BookingType;
+    },
+  ) {
+    const selectedDeliveryType = resolveDeliveryType(options?.deliveryType);
+    const bookingCategoryParam = options?.bookingType === 'group'
+      ? 'GROUP'
+      : options?.bookingType === 'walk_in'
+        ? 'WALK_IN'
+        : 'INDIVIDUAL';
+
     const response = await api.get<ApiResponse<{ slots: Array<{ startTime: string; endTime: string; available: boolean }> }>>(
       `/employees/${id}/slots`,
       {
@@ -40,7 +59,8 @@ export const employeesService = {
           date,
           ...(options?.duration && { duration: options.duration }),
           ...(options?.serviceId && { serviceId: options.serviceId }),
-          ...(options?.bookingType && { bookingType: options.bookingType }),
+          deliveryType: selectedDeliveryType,
+          bookingType: bookingCategoryParam,
         },
       },
     );

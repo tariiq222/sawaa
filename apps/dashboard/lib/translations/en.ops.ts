@@ -160,7 +160,7 @@ export const enOps: Record<string, string> = {
   "employees.services.priceOnline": "Online Price",
   "employees.services.customDuration": "Custom Duration",
   "employees.services.defaultPrice": "Default",
-  "employees.services.availableTypes": "Available Booking Types",
+  "employees.services.availableTypes": "Available Delivery Methods",
   "employees.services.bufferMinutes": "Buffer Between Appointments (min)",
   "employees.services.pricingHint": "Leave empty to use default price",
   "employees.services.durationHint": "Leave empty to use default service duration",
@@ -177,7 +177,7 @@ export const enOps: Record<string, string> = {
   "employees.services.saving": "Saving...",
   "employees.services.assignDesc": "Link a service to this employee with custom pricing and duration.",
   "employees.services.editDesc": "Update pricing, duration, and availability for this service.",
-  "employees.services.types": "Booking Types",
+  "employees.services.types": "Delivery Methods",
   "employees.services.useCustomOptions": "Use custom duration options",
   "employees.services.overridePrice": "Override price",
   "employees.services.overrideDuration": "Override duration",
@@ -250,7 +250,7 @@ export const enOps: Record<string, string> = {
   "settings.emailLayout.description": "Customize email appearance (header and footer)",
 
   // ─── Service Booking Types ───
-  "services.bookingTypes": "Booking Types & Pricing",
+  "services.bookingTypes": "Delivery Methods & Pricing",
   "services.bookingTypes.clinic": "Clinic",
   "services.bookingTypes.inPerson": "In Person",
   "services.bookingTypes.online": "Online",
@@ -264,7 +264,7 @@ export const enOps: Record<string, string> = {
   "services.bookingTypes.label": "Label",
   "services.bookingTypes.save": "Save Pricing",
   "services.bookingTypes.saved": "Pricing saved successfully",
-  "services.bookingTypes.noTypes": "No booking types configured",
+  "services.bookingTypes.noTypes": "No delivery methods configured",
 
   // ─── Employee Create Page ───
   "employees.create.pageTitle": "New Employee",

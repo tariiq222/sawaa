@@ -99,11 +99,14 @@ export interface EmployeeDurationOption {
   price: number
   isDefault: boolean
   sortOrder: number
+  /** Delivery channel for this option */
+  deliveryType: 'IN_PERSON' | 'ONLINE'
 }
 
 export interface EmployeeTypeConfig {
   id: string
-  bookingType: 'in_person' | 'online'
+  /** Delivery channel (IN_PERSON or ONLINE) */
+  deliveryType: 'IN_PERSON' | 'ONLINE'
   price: number | null
   duration: number | null
   useCustomOptions: boolean
@@ -147,7 +150,8 @@ export interface UpdateEmployeeServicePayload {
 }
 
 export interface EmployeeTypeConfigInput {
-  bookingType: 'in_person' | 'online'
+  /** Delivery channel (IN_PERSON or ONLINE) */
+  deliveryType: 'IN_PERSON' | 'ONLINE'
   price?: number | null
   duration?: number | null
   useCustomOptions?: boolean
@@ -159,5 +163,7 @@ export interface EmployeeTypeConfigInput {
     price: number
     isDefault?: boolean
     sortOrder?: number
+    /** Delivery channel for this option */
+    deliveryType: 'IN_PERSON' | 'ONLINE'
   }[]
 }

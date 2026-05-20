@@ -17,6 +17,7 @@ import { DaySelector } from '@/components/features/booking/DaySelector';
 import { TimeSlotsGrid, type Slot } from '@/components/features/booking/TimeSlotsGrid';
 import { BookingCta } from '@/components/features/booking/BookingCta';
 import { useReduceMotion } from '@/hooks/useA11y';
+import type { DeliveryType } from '@/types/booking-enums';
 
 function toLocalDateOnly(d: Date): string {
   const yyyy = d.getFullYear();
@@ -30,7 +31,7 @@ export default function BookingScheduleScreen() {
     serviceId?: string;
     employeeId?: string;
     branchId?: string;
-    type?: string;
+    deliveryType?: DeliveryType;
     durationMins?: string;
     durationOptionId?: string;
   }>();
@@ -94,6 +95,7 @@ export default function BookingScheduleScreen() {
     setSlotIdx(null);
     (async () => {
       try {
+        const selectedDeliveryType = params.deliveryType ?? 'in_person';
         const data = await publicEmployeesService.getSlots({
           employeeId,
           branchId,
@@ -101,6 +103,7 @@ export default function BookingScheduleScreen() {
           serviceId: params.serviceId,
           durationOptionId: params.durationOptionId,
           durationMins: params.durationMins ? Number(params.durationMins) : undefined,
+          deliveryType: selectedDeliveryType,
         });
         if (cancelled) return;
         setSlots(data ?? []);
@@ -121,6 +124,7 @@ export default function BookingScheduleScreen() {
     params.serviceId,
     params.durationOptionId,
     params.durationMins,
+    params.deliveryType,
     dir.isRTL,
   ]);
 
@@ -136,7 +140,7 @@ export default function BookingScheduleScreen() {
         serviceId: params.serviceId,
         employeeId: params.employeeId ?? '',
         branchId,
-        type: params.type ?? 'in_person',
+        deliveryType: params.deliveryType ?? 'in_person',
         scheduledAt: selectedSlot.startTime,
         durationOptionId: params.durationOptionId,
       },

@@ -177,7 +177,7 @@ export function EmployeeTypeRow({
         <div className="space-y-2 ps-3 border-s-2 border-border">
           {(config.durationOptions ?? []).map((opt, i) => (
             <EmployeeDurationOptionRow
-              key={`${config.bookingType}-opt-${i}`}
+              key={`${config.deliveryType}-opt-${i}`}
               option={opt}
               t={t}
               onUpdate={(field, val) => updateDurationOption(i, field, val)}

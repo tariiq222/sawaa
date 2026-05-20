@@ -98,21 +98,24 @@ export interface SetDurationOptionsPayload {
   options: DurationOptionPayload[]
 }
 
-/* ─── Booking Type Payloads ─── */
+/* ─── Delivery Type Payloads ─── */
 
-// DB-10: bookingType is now the ServiceBookingMode enum.
-import type { ServiceBookingMode } from './service'
+// DB-10: deliveryType is now the ServiceDeliveryType enum.
+import type { ServiceDeliveryType } from './service'
 
-export interface BookingTypeConfigPayload {
-  bookingType: ServiceBookingMode
+export interface DeliveryTypeConfigPayload {
+  deliveryType: ServiceDeliveryType
   price: number
   durationMins: number
   isActive?: boolean
   durationOptions?: DurationOptionPayload[]
 }
 
+// @deprecated Use DeliveryTypeConfigPayload.
+export type BookingTypeConfigPayload = DeliveryTypeConfigPayload
+
 export interface SetServiceBookingTypesPayload {
-  types: BookingTypeConfigPayload[]
+  types: DeliveryTypeConfigPayload[]
 }
 
 /* ─── Intake Forms Payloads ─── */

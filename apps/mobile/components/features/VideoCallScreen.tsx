@@ -13,6 +13,7 @@ import { JoinVideoCallButton } from '@/components/features/JoinVideoCallButton';
 import { clientBookingsService, type ClientBookingRow } from '@/services/client/bookings';
 import { employeeBookingsService } from '@/services/employee/bookings';
 import type { Booking } from '@/types/models';
+import { hasZoomMeetingAccess } from '@/types/booking-enums';
 
 interface VideoCallScreenProps {
   role: 'client' | 'employee';
@@ -25,6 +26,7 @@ interface BookingView {
   meetingStatus: 'PENDING' | 'CREATED' | 'FAILED' | 'CANCELLED' | null;
   serviceName: string;
   counterpartyName: string;
+  canShowZoom: boolean;
 }
 
 function pickLocale(ar: string | null | undefined, en: string | null | undefined, isRTL: boolean): string {
@@ -40,6 +42,7 @@ function adaptClient(row: ClientBookingRow, isRTL: boolean): BookingView {
     meetingStatus: row.zoomMeetingStatus,
     serviceName: pickLocale(row.service?.nameAr ?? null, row.service?.nameEn ?? null, isRTL),
     counterpartyName: pickLocale(row.employee?.nameAr ?? null, row.employee?.nameEn ?? null, isRTL),
+    canShowZoom: hasZoomMeetingAccess(row),
   };
 }
 
@@ -62,6 +65,7 @@ function adaptEmployee(b: Booking, isRTL: boolean): BookingView {
     meetingStatus: b.zoomMeetingStatus ?? null,
     serviceName: pickLocale(b.service?.nameAr ?? null, b.service?.nameEn ?? null, isRTL),
     counterpartyName: clientName,
+    canShowZoom: hasZoomMeetingAccess(b),
   };
 }
 
@@ -183,16 +187,18 @@ export function VideoCallScreen({ role }: VideoCallScreenProps) {
               />
             </ThemedCard>
 
-            <View style={styles.buttonWrap}>
-              <JoinVideoCallButton
-                url={view.url}
-                scheduledAt={view.scheduledAt}
-                durationMins={view.durationMins}
-                status={view.meetingStatus}
-                isRTL={dir.isRTL}
-                variant={role === 'employee' ? 'start' : 'join'}
-              />
-            </View>
+            {view.canShowZoom ? (
+              <View style={styles.buttonWrap}>
+                <JoinVideoCallButton
+                  url={view.url}
+                  scheduledAt={view.scheduledAt}
+                  durationMins={view.durationMins}
+                  status={view.meetingStatus}
+                  isRTL={dir.isRTL}
+                  variant={role === 'employee' ? 'start' : 'join'}
+                />
+              </View>
+            ) : null}
           </>
         )}
       </ScrollView>

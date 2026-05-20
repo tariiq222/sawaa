@@ -29,8 +29,7 @@ const STATUS_HEX: Record<BookingStatus, string> = {
   expired: "hsl(var(--muted))",
 }
 const TYPE_HEX: Record<BookingType, string> = {
-  in_person: "hsl(var(--primary))",
-  online: "hsl(var(--info))",
+  individual: "hsl(var(--primary))",
   walk_in: "hsl(var(--accent))",
   group: "hsl(var(--accent))",
 }
@@ -46,13 +45,12 @@ const STATUS_KEY: Record<BookingStatus, string> = {
   expired: "employees.chart.status.expired",
 }
 const TYPE_KEY: Record<BookingType, string> = {
-  in_person: "employees.chart.type.inPerson",
-  online: "employees.chart.type.online",
+  individual: "employees.chart.type.individual",
   walk_in: "employees.chart.type.walkIn",
   group: "employees.chart.type.group",
 }
 const STATUSES: BookingStatus[] = ["completed", "confirmed", "pending", "cancelled", "no_show", "cancel_requested"]
-const TYPES: BookingType[] = ["in_person", "online", "walk_in"]
+const TYPES: BookingType[] = ["individual", "group", "walk_in"]
 
 /* ─── Helpers ─── */
 

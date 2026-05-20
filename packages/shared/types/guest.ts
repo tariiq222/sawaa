@@ -31,6 +31,10 @@ export interface GuestBookingPayload {
   employeeId: string;
   branchId: string;
   startsAt: string;
+  /** Delivery channel (IN_PERSON or ONLINE) */
+  deliveryType?: 'IN_PERSON' | 'ONLINE';
+  /** Legacy booking type — prefer deliveryType for new code */
+  bookingType?: 'INDIVIDUAL' | 'ONLINE' | 'WALK_IN' | 'GROUP';
   client: GuestClientInfo;
 }
 

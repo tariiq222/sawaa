@@ -8,9 +8,10 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { Avatar } from '@/components/ui/Avatar';
 import { useTheme } from '@/theme/useTheme';
 import { formatHalalas } from '@/lib/money';
-import type { Booking, BookingType } from '@/types/models';
+import type { Booking } from '@/types/models';
 
 const TYPE_ICON = {
+  individual: Building2,
   in_person: Building2,
   online: Video,
   walk_in: Building2,
@@ -18,6 +19,7 @@ const TYPE_ICON = {
 };
 
 const TYPE_COLOR = {
+  individual: '#1D4ED8',
   in_person: '#1D4ED8',
   online: '#7C3AED',
   walk_in: '#059669',

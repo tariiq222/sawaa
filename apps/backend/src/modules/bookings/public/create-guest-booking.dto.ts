@@ -1,8 +1,15 @@
 import { IsDateString, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ClientGender } from '@prisma/client';
+import { BookingType, ClientGender, DeliveryType } from '@prisma/client';
 import { NormalizePhone } from '../../identity/shared/normalize-phone.transform';
+
+const mapBookingType = (v: unknown) => {
+  if (typeof v !== 'string' || !v) return v;
+  const lower = v.toLowerCase();
+  if (lower === 'in_person') return 'INDIVIDUAL';
+  return v.toUpperCase();
+};
 
 export class GuestClientInfoDto {
   @ApiProperty({ description: 'Client full name', example: 'أحمد محمد' })
@@ -47,6 +54,12 @@ export class CreateGuestBookingDto {
   @ApiProperty({ description: 'Booking start time (ISO 8601)', example: '2026-04-20T09:00:00Z' })
   @IsDateString()
   startsAt!: string;
+
+  @ApiPropertyOptional({ description: 'Delivery channel (IN_PERSON or ONLINE)', enum: DeliveryType, enumName: 'DeliveryType', example: DeliveryType.IN_PERSON })
+  @IsOptional() @IsEnum(DeliveryType) deliveryType?: DeliveryType;
+
+  @ApiPropertyOptional({ description: 'Booking type (legacy — prefer deliveryType)', enum: BookingType, enumName: 'BookingType', example: BookingType.INDIVIDUAL })
+  @IsOptional() @Transform(({ value }) => mapBookingType(value)) @IsString() bookingType?: BookingType | 'ONLINE';
 
   @ApiProperty({ description: 'Client information', type: GuestClientInfoDto })
   @IsNotEmpty()

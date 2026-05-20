@@ -61,13 +61,13 @@ export interface Service {
   durationOptions?: ServiceDurationOption[]
 }
 
-// DB-10: bookingType is now the ServiceBookingMode enum ('IN_PERSON' | 'ONLINE').
-export type ServiceBookingMode = 'IN_PERSON' | 'ONLINE'
+// DB-10: deliveryType is now the ServiceDeliveryType enum ('IN_PERSON' | 'ONLINE').
+export type ServiceDeliveryType = 'IN_PERSON' | 'ONLINE'
 
 export interface ServiceBookingType {
   id: string
   serviceId: string
-  bookingType: ServiceBookingMode
+  deliveryType: ServiceDeliveryType
   price: number
   durationMins: number
   isActive: boolean
@@ -120,7 +120,7 @@ export interface ServiceListQuery extends PaginatedQuery {
 
 export interface ServiceEmployeeServiceType {
   id: string
-  bookingType: string
+  deliveryType: string
   price: number | null
   durationMins: number | null
   isActive: boolean

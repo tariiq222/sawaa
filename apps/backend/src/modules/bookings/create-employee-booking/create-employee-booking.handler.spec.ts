@@ -46,18 +46,18 @@ describe('CreateEmployeeBookingHandler', () => {
     );
   });
 
-  it('should passthrough bookingType if provided', async () => {
+  it('should passthrough supported bookingType if provided', async () => {
     await handler.execute({
       branchId: 'branch-1',
       clientId: 'client-1',
       serviceId: 'service-1',
       scheduledAt: '2026-05-01T09:00:00.000Z',
-      bookingType: 'ONLINE' as never,
+      bookingType: 'GROUP' as never,
       employeeId: 'employee-1',
     });
 
     expect(createBookingHandler.execute).toHaveBeenCalledWith(
-      expect.objectContaining({ bookingType: 'ONLINE' }),
+      expect.objectContaining({ bookingType: 'GROUP' }),
     );
   });
 

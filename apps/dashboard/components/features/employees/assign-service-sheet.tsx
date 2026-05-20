@@ -93,7 +93,7 @@ export function AssignServiceSheet({
   useEffect(() => {
     setTypeConfigs([
       {
-        bookingType: "in_person",
+        deliveryType: "in_person",
         price: null,
         duration: null,
         useCustomOptions: false,
@@ -101,7 +101,7 @@ export function AssignServiceSheet({
         durationOptions: [],
       },
       {
-        bookingType: "online",
+        deliveryType: "online",
         price: null,
         duration: null,
         useCustomOptions: false,
@@ -127,7 +127,7 @@ export function AssignServiceSheet({
       )
       await assignMut.mutateAsync({
         serviceId: data.serviceId,
-        availableTypes: typeConfigs.map((tc) => tc.bookingType),
+        availableTypes: typeConfigs.map((tc) => tc.deliveryType),
         bufferMinutes: data.bufferMinutes,
         isActive: data.isActive,
         types: typesPayload,

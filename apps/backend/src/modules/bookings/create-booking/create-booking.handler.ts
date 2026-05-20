@@ -14,6 +14,7 @@ import { BookingCreatedEvent } from '../events/booking-created.event';
 import { ValidateCouponService } from '../coupons/validate-coupon.service';
 import { CreateBookingDto } from './create-booking.dto';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 
 /** FNV-1a 32-bit hash → signed int32 (Postgres int4 range). Same algorithm as create-zoom-meeting. */
 function hashToInt32(s: string): number {
@@ -41,9 +42,11 @@ function mapDbConflict(err: unknown): never {
 const roundMoney = (amount: Prisma.Decimal | number): Prisma.Decimal =>
   new Prisma.Decimal(amount.toString()).toDecimalPlaces(0);
 
-export type CreateBookingCommand = Omit<CreateBookingDto, 'scheduledAt' | 'expiresAt'> & {
+export type CreateBookingCommand = Omit<CreateBookingDto, 'scheduledAt' | 'expiresAt' | 'bookingType' | 'deliveryType'> & {
   scheduledAt: Date;
   expiresAt?: Date;
+  bookingType?: string;
+  deliveryType?: string;
 };
 
 @Injectable()
@@ -74,19 +77,15 @@ export class CreateBookingHandler {
       }
     }
 
-    if ((dto.bookingType as string) === 'ONLINE') {
-      // SaaS-02g: Integration.provider is now composite-unique per org; findFirst + Proxy auto-scopes.
-      const zoomIntegration = await this.prisma.integration.findFirst({
-        where: { provider: 'zoom' },
-      });
-      if (!zoomIntegration || !zoomIntegration.isActive) {
-        throw new BadRequestException('Zoom integration must be configured for online bookings');
-      }
-    }
+    // Normalize legacy bookingType values into the new (bookingType, deliveryType) model.
+    const { bookingType, deliveryType } = normalizeBookingTypes({
+      bookingType: dto.bookingType,
+      deliveryType: dto.deliveryType,
+    });
 
     const branch = await this.prisma.branch.findFirst({
       where: { id: dto.branchId },
-      select: { id: true },
+      select: { id: true, nameAr: true },
     });
     if (!branch) throw new NotFoundException('Branch not found');
 
@@ -98,13 +97,13 @@ export class CreateBookingHandler {
 
     const employee = await this.prisma.employee.findFirst({
       where: { id: dto.employeeId },
-      select: { id: true },
+      select: { id: true, name: true },
     });
     if (!employee) throw new NotFoundException('Employee not found');
 
     const service = await this.prisma.service.findFirst({
       where: { id: dto.serviceId },
-      select: { id: true },
+      select: { id: true, nameAr: true, categoryId: true },
     });
     if (!service) throw new NotFoundException('Service not found');
 
@@ -115,14 +114,35 @@ export class CreateBookingHandler {
       throw new BadRequestException('Employee does not provide this service');
     }
 
-    if (dto.bookingType && dto.bookingType !== 'WALK_IN') {
+    // Resolve category and department names for snapshots
+    let categoryName: string | null = null;
+    let departmentName: string | null = null;
+    if (service.categoryId) {
+      const category = await this.prisma.serviceCategory.findFirst({
+        where: { id: service.categoryId },
+        select: { nameAr: true, departmentId: true },
+      });
+      if (category) {
+        categoryName = category.nameAr;
+        if (category.departmentId) {
+          const department = await this.prisma.department.findFirst({
+            where: { id: category.departmentId },
+            select: { nameAr: true },
+          });
+          if (department) departmentName = department.nameAr;
+        }
+      }
+    }
+
+    if (bookingType && bookingType !== 'WALK_IN') {
       const allowedConfigs = await this.prisma.serviceBookingConfig.findMany({
         where: { serviceId: dto.serviceId },
-        select: { bookingType: true },
+        select: { deliveryType: true },
       });
-      const allowedTypes = allowedConfigs.map(c => c.bookingType);
-      if (allowedTypes.length > 0 && !allowedTypes.includes(dto.bookingType as any)) {
-        throw new BadRequestException(`Service does not support ${dto.bookingType} booking type`);
+      const allowedDeliveryTypes = allowedConfigs.map(c => c.deliveryType);
+
+      if (allowedDeliveryTypes.length > 0 && !allowedDeliveryTypes.includes(deliveryType)) {
+        throw new BadRequestException(`Service does not support ${deliveryType} delivery type`);
       }
     }
 
@@ -131,7 +151,8 @@ export class CreateBookingHandler {
       serviceId: dto.serviceId,
       employeeServiceId: employeeService.id,
       durationOptionId: dto.durationOptionId ?? null,
-      bookingType: dto.bookingType ?? null,
+      bookingType: bookingType ?? null,
+      deliveryType: deliveryType ?? null,
     });
 
     const durationMins = resolved.durationMins;
@@ -256,7 +277,8 @@ export class CreateBookingHandler {
             durationMins,
             price,
             currency,
-            bookingType: isGroupService ? 'GROUP' : (dto.bookingType ?? 'INDIVIDUAL'),
+            bookingType: isGroupService ? 'GROUP' : bookingType,
+            deliveryType,
             notes: dto.notes,
             expiresAt: dto.expiresAt ?? (!dto.payAtClinic ? new Date(Date.now() + 15 * 60 * 1000) : undefined),
             groupSessionId: dto.groupSessionId,
@@ -264,6 +286,14 @@ export class CreateBookingHandler {
             couponCode: dto.couponCode ?? null,
             discountedPrice: discountedPrice,
             status: initialStatus,
+            // Snapshots: denormalized at creation for stable history
+            priceSnapshot: new Prisma.Decimal(price.toString()),
+            durationMinutesSnapshot: durationMins,
+            branchNameSnapshot: branch.nameAr,
+            employeeNameSnapshot: employee.name,
+            serviceNameSnapshot: service.nameAr,
+            categoryNameSnapshot: categoryName,
+            departmentNameSnapshot: departmentName,
             bookingNumber: nextBookingNumber,
           },
         });

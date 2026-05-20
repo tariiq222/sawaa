@@ -1,4 +1,6 @@
 import api from '../api';
+import { resolveDeliveryType } from '@/types/booking-enums';
+import type { BookingType, DeliveryType } from '@/types/booking-enums';
 
 export interface PublicEmployeeItem {
   id: string;
@@ -37,11 +39,27 @@ export const publicEmployeesService = {
     durationMins?: number;
     serviceId?: string;
     durationOptionId?: string;
-    bookingType?: string;
+    deliveryType?: DeliveryType;
+    /** Appointment/category type only. Never use for delivery channel. */
+    bookingType?: BookingType;
   }) {
+    const { deliveryType, bookingType, ...rest } = params;
+    const selectedDeliveryType = resolveDeliveryType(deliveryType);
+    const bookingCategoryParam = bookingType === 'group'
+      ? 'GROUP'
+      : bookingType === 'walk_in'
+        ? 'WALK_IN'
+        : 'INDIVIDUAL';
+
     const response = await api.get<Array<{ startTime: string; endTime: string }>>(
       '/public/availability',
-      { params },
+      {
+        params: {
+          ...rest,
+          deliveryType: selectedDeliveryType,
+          bookingType: bookingCategoryParam,
+        },
+      },
     );
     return response.data;
   },

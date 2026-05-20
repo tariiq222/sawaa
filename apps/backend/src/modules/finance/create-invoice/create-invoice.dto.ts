@@ -1,9 +1,24 @@
-import { IsDateString, IsInt, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsDateString, IsInt, IsNumber, IsOptional, IsString, IsUUID, Max, Min, Validate } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+class InvoiceXorConstraint {
+  validate(dto: CreateInvoiceDto) {
+    const hasBooking = !!dto.bookingId;
+    const hasBundle = !!dto.bundlePurchaseId;
+    return (hasBooking && !hasBundle) || (!hasBooking && hasBundle);
+  }
+
+  defaultMessage() {
+    return 'Exactly one of bookingId or bundlePurchaseId must be provided (XOR)';
+  }
+}
+
 export class CreateInvoiceDto {
-  @ApiProperty({ description: 'Booking this invoice is for', example: '00000000-0000-0000-0000-000000000000' })
-  @IsUUID() bookingId!: string;
+  @ApiPropertyOptional({ description: 'Booking this invoice is for (XOR with bundlePurchaseId)', example: '00000000-0000-0000-0000-000000000000' })
+  @IsOptional() @IsUUID() bookingId?: string | null;
+
+  @ApiPropertyOptional({ description: 'Bundle purchase this invoice is for (XOR with bookingId)', example: '00000000-0000-0000-0000-000000000000' })
+  @IsOptional() @IsUUID() bundlePurchaseId?: string | null;
 
   @ApiProperty({ description: 'Branch where the service was delivered', example: '00000000-0000-0000-0000-000000000000' })
   @IsUUID() branchId!: string;
@@ -28,4 +43,7 @@ export class CreateInvoiceDto {
 
   @ApiPropertyOptional({ description: 'ISO datetime when payment is due', example: '2026-05-01T09:00:00.000Z' })
   @IsOptional() @IsDateString() dueAt?: string;
+
+  @Validate(InvoiceXorConstraint)
+  _xorCheck?: unknown;
 }

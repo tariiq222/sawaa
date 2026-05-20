@@ -1,7 +1,12 @@
 import api from '../api';
-import type { BookingStatus, BookingType } from '@/types/booking-enums';
+import type {
+  BookingStatus,
+  BookingType,
+  DeliveryType,
+  LegacyBookingType,
+} from '@/types/booking-enums';
 
-export type { BookingStatus, BookingType };
+export type { BookingStatus, BookingType, DeliveryType };
 
 export interface ClientBookingRow {
   id: string;
@@ -9,7 +14,12 @@ export interface ClientBookingRow {
   scheduledAt: string;
   durationMins: number;
   status: BookingStatus;
-  bookingType: BookingType;
+  /** Appointment/category type. Legacy payloads may still send delivery here. */
+  bookingType?: LegacyBookingType;
+  /** Legacy alias used by dashboard mapper shapes. */
+  type?: LegacyBookingType;
+  /** Session delivery channel. Prefer this over bookingType/type for online UI. */
+  deliveryType?: DeliveryType | null;
   employeeId: string;
   employee?: {
     id: string;
@@ -31,6 +41,7 @@ export interface ClientBookingRow {
   } | null;
   zoomJoinUrl: string | null;
   zoomStartUrl: string | null;
+  zoomLink?: string | null;
   zoomMeetingStatus: 'PENDING' | 'CREATED' | 'FAILED' | 'CANCELLED' | null;
 }
 
@@ -53,6 +64,9 @@ interface CreateBookingData {
   serviceId: string;
   scheduledAt: string;
   durationOptionId?: string;
+  deliveryType: DeliveryType;
+  /** Appointment/category type only. Never use for delivery channel. */
+  bookingType?: BookingType;
   notes?: string;
 }
 

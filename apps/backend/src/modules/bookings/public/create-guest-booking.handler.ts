@@ -11,6 +11,7 @@ import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-s
 
 import { CreateGuestBookingDto } from './create-guest-booking.dto';
 import { Prisma, type OtpChannel } from '@prisma/client';
+import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 
 export type CreateGuestBookingCommand = CreateGuestBookingDto & {
   identifier: string;
@@ -118,11 +119,17 @@ export class CreateGuestBookingHandler {
       throw new BadRequestException('Employee does not provide this service');
     }
 
+    const { bookingType, deliveryType } = normalizeBookingTypes({
+      bookingType: cmd.bookingType,
+      deliveryType: cmd.deliveryType,
+    });
+
     const resolved = await this.priceResolver.resolve({
       serviceId: cmd.serviceId,
       employeeServiceId: employeeService.id,
       durationOptionId: null,
-      bookingType: null,
+      bookingType: bookingType ?? null,
+      deliveryType: deliveryType ?? null,
     });
 
     const durationMins = resolved.durationMins;
@@ -203,6 +210,23 @@ export class CreateGuestBookingHandler {
       });
       const nextBookingNumber = (lastBooking?.bookingNumber ?? 0) + 1;
 
+      // Resolve snapshot data
+      const branchSnap = await tx.branch.findFirst({ where: { id: cmd.branchId }, select: { nameAr: true } });
+      const employeeSnap = await tx.employee.findFirst({ where: { id: cmd.employeeId }, select: { name: true } });
+      const serviceSnap = await tx.service.findFirst({ where: { id: cmd.serviceId }, select: { nameAr: true, categoryId: true } });
+      let categoryName: string | null = null;
+      let departmentName: string | null = null;
+      if (serviceSnap?.categoryId) {
+        const cat = await tx.serviceCategory.findFirst({ where: { id: serviceSnap.categoryId }, select: { nameAr: true, departmentId: true } });
+        if (cat) {
+          categoryName = cat.nameAr;
+          if (cat.departmentId) {
+            const dept = await tx.department.findFirst({ where: { id: cat.departmentId }, select: { nameAr: true } });
+            if (dept) departmentName = dept.nameAr;
+          }
+        }
+      }
+
       const booking = await tx.booking.create({
         data: {
           branchId: cmd.branchId,
@@ -215,10 +239,18 @@ export class CreateGuestBookingHandler {
           durationMins,
           price,
           currency,
-          bookingType: 'INDIVIDUAL',
+          bookingType: bookingType ?? 'INDIVIDUAL',
+          deliveryType,
           notes: cmd.client.notes,
           status: 'AWAITING_PAYMENT',
           bookingNumber: nextBookingNumber,
+          priceSnapshot: new Prisma.Decimal(price.toString()),
+          durationMinutesSnapshot: durationMins,
+          branchNameSnapshot: branchSnap?.nameAr ?? null,
+          employeeNameSnapshot: employeeSnap?.name ?? null,
+          serviceNameSnapshot: serviceSnap?.nameAr ?? null,
+          categoryNameSnapshot: categoryName,
+          departmentNameSnapshot: departmentName,
         },
       });
 

@@ -216,6 +216,11 @@ describe('CreateGuestBookingHandler', () => {
             ),
           },
           organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0.15 }) },
+          branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
+          employee: { findFirst: jest.fn().mockResolvedValue({ name: 'Employee' }) },
+          service: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Service', categoryId: null }) },
+          serviceCategory: { findFirst: jest.fn() },
+          department: { findFirst: jest.fn() },
         };
         return fn(txMock);
       });
@@ -231,6 +236,11 @@ describe('CreateGuestBookingHandler', () => {
           ...mockPrisma,
           usedOtpSession: { create: jest.fn().mockRejectedValue(unknownErr) },
           organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0.15 }) },
+          branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
+          employee: { findFirst: jest.fn().mockResolvedValue({ name: 'Employee' }) },
+          service: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Service', categoryId: null }) },
+          serviceCategory: { findFirst: jest.fn() },
+          department: { findFirst: jest.fn() },
         };
         return fn(txMock);
       });
@@ -250,6 +260,11 @@ describe('CreateGuestBookingHandler', () => {
           client: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
           invoice: { create: jest.fn() },
           organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0.15 }) },
+          branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
+          employee: { findFirst: jest.fn().mockResolvedValue({ name: 'Employee' }) },
+          service: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Service', categoryId: null }) },
+          serviceCategory: { findFirst: jest.fn() },
+          department: { findFirst: jest.fn() },
         };
         return fn(txMock);
       });
@@ -273,6 +288,11 @@ describe('CreateGuestBookingHandler', () => {
           },
           invoice: { create: jest.fn().mockResolvedValue({ id: 'invoice-1' }) },
           organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0.15 }) },
+          branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
+          employee: { findFirst: jest.fn().mockResolvedValue({ name: 'Employee' }) },
+          service: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Service', categoryId: null }) },
+          serviceCategory: { findFirst: jest.fn() },
+          department: { findFirst: jest.fn() },
         };
         return fn(txMock);
       });
@@ -298,6 +318,11 @@ describe('CreateGuestBookingHandler', () => {
           },
           invoice: { create: jest.fn().mockResolvedValue({ id: 'invoice-1' }) },
           organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0.15 }) },
+          branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
+          employee: { findFirst: jest.fn().mockResolvedValue({ name: 'Employee' }) },
+          service: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Service', categoryId: null }) },
+          serviceCategory: { findFirst: jest.fn() },
+          department: { findFirst: jest.fn() },
         };
         return fn(txMock);
       });
@@ -326,6 +351,11 @@ describe('CreateGuestBookingHandler', () => {
           },
           invoice: { create: jest.fn().mockResolvedValue({ id: 'invoice-1' }) },
           organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0.15 }) },
+          branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
+          employee: { findFirst: jest.fn().mockResolvedValue({ name: 'Employee' }) },
+          service: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Service', categoryId: null }) },
+          serviceCategory: { findFirst: jest.fn() },
+          department: { findFirst: jest.fn() },
         };
         return fn(txMock);
       });
@@ -353,6 +383,11 @@ describe('CreateGuestBookingHandler', () => {
           },
           invoice: { create: jest.fn().mockResolvedValue({ id: 'invoice-1' }) },
           organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0.15 }) },
+          branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
+          employee: { findFirst: jest.fn().mockResolvedValue({ name: 'Employee' }) },
+          service: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Service', categoryId: null }) },
+          serviceCategory: { findFirst: jest.fn() },
+          department: { findFirst: jest.fn() },
         };
         return fn(txMock);
       });
@@ -380,6 +415,11 @@ describe('CreateGuestBookingHandler', () => {
           },
           invoice: { create: jest.fn().mockResolvedValue({ id: 'invoice-2' }) },
           organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0.05 }) },
+          branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
+          employee: { findFirst: jest.fn().mockResolvedValue({ name: 'Employee' }) },
+          service: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Service', categoryId: null }) },
+          serviceCategory: { findFirst: jest.fn() },
+          department: { findFirst: jest.fn() },
         };
         return fn(txMock);
       });
@@ -408,6 +448,11 @@ describe('CreateGuestBookingHandler', () => {
           },
           invoice: { create: jest.fn().mockResolvedValue({ id: 'invoice-9' }) },
           organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0.15 }) },
+          branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
+          employee: { findFirst: jest.fn().mockResolvedValue({ name: 'Employee' }) },
+          service: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Service', categoryId: null }) },
+          serviceCategory: { findFirst: jest.fn() },
+          department: { findFirst: jest.fn() },
         };
         return fn(txMock);
       });
@@ -435,6 +480,11 @@ describe('CreateGuestBookingHandler', () => {
           },
           invoice: { create: jest.fn().mockResolvedValue({ id: 'invoice-3' }) },
           organizationSettings: { findFirst: jest.fn().mockResolvedValue(null) },
+          branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
+          employee: { findFirst: jest.fn().mockResolvedValue({ name: 'Employee' }) },
+          service: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Service', categoryId: null }) },
+          serviceCategory: { findFirst: jest.fn() },
+          department: { findFirst: jest.fn() },
         };
         return fn(txMock);
       });
@@ -463,6 +513,11 @@ describe('CreateGuestBookingHandler', () => {
           },
           invoice: { create: jest.fn().mockResolvedValue({ id: 'invoice-4' }) },
           organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0.15 }) },
+          branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
+          employee: { findFirst: jest.fn().mockResolvedValue({ name: 'Employee' }) },
+          service: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Service', categoryId: null }) },
+          serviceCategory: { findFirst: jest.fn() },
+          department: { findFirst: jest.fn() },
         };
         return fn(txMock);
       });
@@ -493,6 +548,11 @@ describe('CreateGuestBookingHandler', () => {
           },
           invoice: { create: jest.fn().mockResolvedValue({ id: 'invoice-5' }) },
           organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0.15 }) },
+          branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
+          employee: { findFirst: jest.fn().mockResolvedValue({ name: 'Employee' }) },
+          service: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Service', categoryId: null }) },
+          serviceCategory: { findFirst: jest.fn() },
+          department: { findFirst: jest.fn() },
         };
         return fn(txMock);
       });

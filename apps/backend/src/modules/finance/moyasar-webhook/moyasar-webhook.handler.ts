@@ -377,6 +377,7 @@ export class MoyasarWebhookHandler {
             paymentId: dbPaymentId,
             invoiceId: invoice.id,
             bookingId: invoice.bookingId,
+            bundlePurchaseId: invoice.bundlePurchaseId,
             amount: amountHalalas,
             currency: invoice.currency,
           });

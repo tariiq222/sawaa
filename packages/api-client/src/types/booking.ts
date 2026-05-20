@@ -12,13 +12,18 @@ export type BookingStatus =
   | 'cancel_requested'
 
 /**
- * Booking type (snake_case in UI/API, mapped to UPPER_CASE in DB).
- * in_person -> INDIVIDUAL
- * online -> ONLINE
+ * Booking kind (snake_case in UI/API, mapped to UPPER_CASE in DB).
+ * individual -> INDIVIDUAL
  * walk_in -> WALK_IN
  * group -> GROUP
  */
-export type BookingType = 'in_person' | 'online' | 'walk_in' | 'group'
+export type BookingType = 'individual' | 'walk_in' | 'group'
+
+/**
+ * Delivery channel — independent from BookingType.
+ * IN_PERSON = physically at the branch; ONLINE = virtual (Zoom or other).
+ */
+export type DeliveryType = 'IN_PERSON' | 'ONLINE'
 
 export interface BookingListItem {
   id: string
@@ -27,6 +32,7 @@ export interface BookingListItem {
   endTime: string
   status: BookingStatus
   type: BookingType
+  deliveryType: DeliveryType | null
   checkedInAt: string | null
   isWalkIn: boolean
   bookedPrice: number | null
@@ -46,6 +52,15 @@ export interface BookingListItem {
     specialtyAr: string | null
   }
   service: { nameAr: string; nameEn: string; price: number; duration: number }
+
+  // ─── Snapshot fields (denormalized at booking creation for stable history) ───
+  priceSnapshot: number | null
+  durationMinutesSnapshot: number | null
+  branchNameSnapshot: string | null
+  employeeNameSnapshot: string | null
+  serviceNameSnapshot: string | null
+  categoryNameSnapshot: string | null
+  departmentNameSnapshot: string | null
 }
 
 export interface BookingStats {
@@ -69,12 +84,29 @@ export interface BookingListQuery extends PaginationParams {
 export interface CreateBookingPayload {
   employeeId: string
   serviceId: string
-  type: BookingType
+  /** Booking kind (INDIVIDUAL/GROUP/WALK_IN in the backend). */
+  type?: BookingType
+  /** Delivery channel (IN_PERSON or ONLINE). */
+  deliveryType?: DeliveryType
   date: string
   startTime: string
   clientId?: string
   notes?: string
   branchId?: string
+  durationOptionId?: string
+  payAtClinic?: boolean
+  couponCode?: string
+}
+
+export interface CreateBundleBookingPayload {
+  branchId: string
+  clientId: string
+  employeeId: string
+  bundleId: string
+  scheduledAt: string
+  notes?: string
+  payAtClinic?: boolean
+  deliveryType?: DeliveryType
 }
 
 export interface UpdateBookingPayload {

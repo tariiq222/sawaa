@@ -84,6 +84,13 @@ const buildTx = () => ({
         bookingNumber: 2,
       }),
   },
+  bundlePurchase: {
+    create: jest.fn().mockResolvedValue({ id: 'bp-1', bundleId: 'bundle-1', clientId: 'client-1' }),
+    update: jest.fn().mockResolvedValue({ id: 'bp-1' }),
+  },
+  bundleUsage: {
+    create: jest.fn().mockResolvedValue({ id: 'bu-1' }),
+  },
   invoice: { create: jest.fn().mockResolvedValue({ id: 'inv-1' }) },
   organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: '0.15' }) },
   outboxEvent: { create: jest.fn().mockResolvedValue({ id: 'outbox-1' }) },
@@ -269,12 +276,13 @@ describe('CreateBundleBookingHandler', () => {
     expect(result.bundleGroupId).toBeTruthy();
   });
 
-  it('creates exactly one invoice linked to the first booking', async () => {
+  it('creates exactly one invoice linked to the bundle purchase', async () => {
     const result = await handler.execute(baseDto);
 
     expect(tx.invoice.create).toHaveBeenCalledTimes(1);
     const invoiceCall = (tx.invoice.create as jest.Mock).mock.calls[0][0];
-    expect(invoiceCall.data.bookingId).toBe('book-1');
+    expect(invoiceCall.data.bookingId).toBeNull();
+    expect(invoiceCall.data.bundlePurchaseId).toBeTruthy();
     expect(result.invoiceId).toBe('inv-1');
   });
 
@@ -311,5 +319,90 @@ describe('CreateBundleBookingHandler', () => {
     rlsTransaction.withTransaction = jest.fn().mockRejectedValueOnce(exclusionError);
 
     await expect(handler.execute(baseDto)).rejects.toThrow(ConflictException);
+  });
+
+  // ─── BundlePurchase + BundleUsage (TDD — refactor-booking-delivery-type) ───
+
+  it('creates a BundlePurchase record for the bundle booking', async () => {
+    await handler.execute(baseDto);
+
+    expect(tx.bundlePurchase.create).toHaveBeenCalledTimes(1);
+    expect(tx.bundlePurchase.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          bundleId: 'bundle-1',
+          clientId: 'client-1',
+          branchId: 'branch-1',
+          amountPaid: expect.any(Number),
+          status: 'ACTIVE',
+        }),
+      }),
+    );
+  });
+
+  it('creates BundleUsage per booking with correct service and deliveryType', async () => {
+    await handler.execute(baseDto);
+
+    expect(tx.bundleUsage.create).toHaveBeenCalledTimes(2);
+    const calls = (tx.bundleUsage.create as jest.Mock).mock.calls;
+    expect(calls[0][0].data).toMatchObject({
+      purchaseId: 'bp-1',
+      bookingId: 'book-1',
+      serviceId: 'svc-1',
+      deliveryType: 'IN_PERSON',
+      quantityUsed: 1,
+    });
+    expect(calls[1][0].data).toMatchObject({
+      purchaseId: 'bp-1',
+      bookingId: 'book-2',
+      serviceId: 'svc-2',
+      deliveryType: 'IN_PERSON',
+      quantityUsed: 1,
+    });
+  });
+
+  it('links invoice to BundlePurchase instead of booking', async () => {
+    await handler.execute(baseDto);
+
+    expect(tx.invoice.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          bundlePurchaseId: 'bp-1',
+          bookingId: null,
+        }),
+      }),
+    );
+  });
+
+  it('tracks remaining quantity on BundlePurchase', async () => {
+    tx.bundlePurchase.create = jest.fn().mockResolvedValue({
+      id: 'bp-1',
+      bundleId: 'bundle-1',
+      quantityTotal: 5,
+      quantityUsed: 2,
+    });
+
+    await handler.execute(baseDto);
+
+    // After creating 2 bookings, should have 3 remaining
+    expect(tx.bundlePurchase.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'bp-1' },
+        data: { quantityUsed: 2 },
+      }),
+    );
+  });
+
+  it('prevents over-usage when bundle has no remaining quantity', async () => {
+    tx.bundlePurchase.create = jest.fn().mockResolvedValue({
+      id: 'bp-1',
+      bundleId: 'bundle-1',
+      quantityTotal: 1,
+      quantityUsed: 1,
+    });
+
+    await expect(handler.execute(baseDto)).rejects.toThrow(
+      'Bundle has no remaining sessions',
+    );
   });
 });

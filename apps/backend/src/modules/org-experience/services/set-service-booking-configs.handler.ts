@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { SetServiceBookingConfigsDto } from './set-service-booking-configs.dto';
+import { normalizeDeliveryTypeInput } from './delivery-type-input.helper';
 
 export type SetServiceBookingConfigsCommand = SetServiceBookingConfigsDto & {
   serviceId: string;
@@ -22,26 +23,29 @@ export class SetServiceBookingConfigsHandler {
 
     // Upsert each booking type config; delete types not included in the payload.
     await this.rlsTransaction.withTransaction(async (tx) => {
-      // Remove configs for types not present in the new payload
+      const deliveryTypes = cmd.types.map((t) => normalizeDeliveryTypeInput(t.deliveryType));
+
+      // Remove configs for delivery channels not present in the new payload.
       await tx.serviceBookingConfig.deleteMany({
         where: {
           serviceId: cmd.serviceId,
-          bookingType: { notIn: cmd.types.map((t) => t.bookingType) },
+          deliveryType: { notIn: deliveryTypes },
         },
       });
       // Upsert each config
-      await Promise.all(cmd.types.map((t) =>
-        tx.serviceBookingConfig.upsert({
+      await Promise.all(cmd.types.map((t) => {
+        const deliveryType = normalizeDeliveryTypeInput(t.deliveryType);
+        return tx.serviceBookingConfig.upsert({
           where: {
-            serviceId_bookingType: {
+            serviceId_deliveryType: {
               serviceId: cmd.serviceId,
-              bookingType: t.bookingType,
+              deliveryType,
             },
           },
           create: {
             id: randomUUID(),
             serviceId: cmd.serviceId,
-            bookingType: t.bookingType,
+            deliveryType,
             price: t.price,
             durationMins: t.durationMins,
             isActive: t.isActive ?? true,
@@ -52,13 +56,13 @@ export class SetServiceBookingConfigsHandler {
             isActive: t.isActive ?? true,
             updatedAt: new Date(),
           },
-        }),
-      ));
+        });
+      }));
     });
 
     return this.prisma.serviceBookingConfig.findMany({
       where: { serviceId: cmd.serviceId },
-      orderBy: { bookingType: 'asc' },
+      orderBy: { deliveryType: 'asc' },
     });
   }
 }

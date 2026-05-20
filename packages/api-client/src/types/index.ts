@@ -14,11 +14,13 @@ export { buildQueryString } from './api'
 export type {
   BookingStatus,
   BookingType,
+  DeliveryType,
   BookingListItem,
   BookingStats,
   BookingListQuery,
   BookingListResponse,
   CreateBookingPayload,
+  CreateBundleBookingPayload,
   UpdateBookingPayload,
 } from './booking'
 export type {
@@ -56,6 +58,9 @@ export type {
   ServiceListResponse,
   CreateServicePayload,
   UpdateServicePayload,
+  ServiceBookingConfig,
+  ServiceDurationOption,
+  EmployeeServiceOption,
 } from './service'
 export type {
   BranchListItem,

@@ -11,10 +11,9 @@ export interface GetEmployeeServiceTypesQuery {
  * employee-service pair, consumed by the dashboard create-booking wizard.
  *
  * Source of truth:
- *   ServiceBookingConfig  — which booking types are active for this service.
+ *   ServiceBookingConfig  — which delivery channels are active for this service.
  *   ServiceDurationOption — per-service duration variants, optionally
- *                           scoped to a booking type (bookingType IS NULL means
- *                           the option applies to every active type).
+ *                           scoped to a delivery channel.
  *   EmployeeServiceOption — employee-level price/duration overrides on
  *                           ServiceDurationOption.
  */
@@ -33,7 +32,7 @@ export class GetEmployeeServiceTypesHandler {
     const [configs, durationOptions, employeeOverrides] = await Promise.all([
       this.prisma.serviceBookingConfig.findMany({
         where: { serviceId: query.serviceId, isActive: true },
-        orderBy: { bookingType: 'asc' },
+        orderBy: { deliveryType: 'asc' },
       }),
       this.prisma.serviceDurationOption.findMany({
         where: { serviceId: query.serviceId, isActive: true },
@@ -50,13 +49,15 @@ export class GetEmployeeServiceTypesHandler {
 
     return configs.map((cfg) => {
       const scoped = durationOptions.filter(
-        (d) => d.bookingType === null || d.bookingType === cfg.bookingType,
+        (d) => d.deliveryType === cfg.deliveryType,
       );
 
       return {
-        id: `${link.id}:${cfg.bookingType}`,
+        id: `${link.id}:${cfg.deliveryType}`,
         employeeServiceId: link.id,
-        bookingType: cfg.bookingType.toLowerCase(),
+        deliveryType: cfg.deliveryType,
+        /** @deprecated deliveryType is the source of truth. */
+        bookingType: cfg.deliveryType,
         price: Number(cfg.price),
         duration: cfg.durationMins,
         useCustomOptions: scoped.length > 0,
@@ -65,7 +66,7 @@ export class GetEmployeeServiceTypesHandler {
           const ov = overrideByDurationId.get(d.id);
           return {
             id: d.id,
-            employeeServiceTypeId: `${link.id}:${cfg.bookingType}`,
+            employeeServiceTypeId: `${link.id}:${cfg.deliveryType}`,
             label: d.label,
             labelAr: d.labelAr,
             durationMinutes: ov?.durationOverride ?? d.durationMins,
