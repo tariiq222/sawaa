@@ -27,13 +27,14 @@ import {
 } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useServices } from "@/hooks/use-services"
-import {
-  useEmployeeServices,
-  useEmployeeServiceMutations,
-} from "@/hooks/use-employees"
+import { useEmployeeServices } from "@/hooks/use-employees"
+import { useEmployeeServiceMutations } from "@/hooks/use-employee-mutations"
 import { EmployeeServiceTypesEditor } from "./employee-service-types-editor"
 import { sarToHalalas } from "@/lib/money"
-import type { EmployeeService, EmployeeTypeConfigPayload } from "@/lib/types/employee"
+import type {
+  EmployeeService,
+  EmployeeTypeConfigPayload,
+} from "@/lib/types/employee"
 import {
   assignServiceSchema,
   type AssignServiceFormData,
@@ -56,18 +57,17 @@ export function AssignServiceSheet({
 }: AssignServiceSheetProps) {
   const { locale, t } = useLocale()
   const { services } = useServices()
-  const { data: assignedServices } =
-    useEmployeeServices(employeeId)
+  const { data: assignedServices } = useEmployeeServices(employeeId)
   const { assignMut } = useEmployeeServiceMutations(employeeId)
 
   /* Types state managed outside of react-hook-form */
-  const [typeConfigs, setTypeConfigs] = useState<EmployeeTypeConfigPayload[]>([])
+  const [typeConfigs, setTypeConfigs] = useState<EmployeeTypeConfigPayload[]>(
+    []
+  )
 
   const availableServices = useMemo(() => {
     const assignedIds = new Set(
-      (assignedServices ?? []).map(
-        (ps: EmployeeService) => ps.serviceId,
-      ),
+      (assignedServices ?? []).map((ps: EmployeeService) => ps.serviceId)
     )
     return (services ?? []).filter((s) => !assignedIds.has(s.id))
   }, [services, assignedServices])
@@ -92,8 +92,22 @@ export function AssignServiceSheet({
 
   useEffect(() => {
     setTypeConfigs([
-      { bookingType: "in_person", price: null, duration: null, useCustomOptions: false, isActive: true, durationOptions: [] },
-      { bookingType: "online", price: null, duration: null, useCustomOptions: false, isActive: true, durationOptions: [] },
+      {
+        bookingType: "in_person",
+        price: null,
+        duration: null,
+        useCustomOptions: false,
+        isActive: true,
+        durationOptions: [],
+      },
+      {
+        bookingType: "online",
+        price: null,
+        duration: null,
+        useCustomOptions: false,
+        isActive: true,
+        durationOptions: [],
+      },
     ])
   }, [selectedServiceId])
 
@@ -101,14 +115,16 @@ export function AssignServiceSheet({
     try {
       // The editor inputs collect SAR-major prices; convert back to halalas
       // (the API/DB convention) before submitting.
-      const typesPayload: EmployeeTypeConfigPayload[] = typeConfigs.map((tc) => ({
-        ...tc,
-        price: tc.price != null ? sarToHalalas(tc.price) : tc.price,
-        durationOptions: (tc.durationOptions ?? []).map((o) => ({
-          ...o,
-          price: sarToHalalas(o.price),
-        })),
-      }))
+      const typesPayload: EmployeeTypeConfigPayload[] = typeConfigs.map(
+        (tc) => ({
+          ...tc,
+          price: tc.price != null ? sarToHalalas(tc.price) : tc.price,
+          durationOptions: (tc.durationOptions ?? []).map((o) => ({
+            ...o,
+            price: sarToHalalas(o.price),
+          })),
+        })
+      )
       await assignMut.mutateAsync({
         serviceId: data.serviceId,
         availableTypes: typeConfigs.map((tc) => tc.bookingType),
@@ -120,7 +136,7 @@ export function AssignServiceSheet({
       onOpenChange(false)
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to assign service",
+        err instanceof Error ? err.message : "Failed to assign service"
       )
     }
   })
@@ -148,20 +164,18 @@ export function AssignServiceSheet({
                 control={form.control}
                 name="serviceId"
                 render={({ field }) => (
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                  >
+                  <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger>
                       <SelectValue
-                        placeholder={t(
-                          "employees.services.selectService",
-                        )}
+                        placeholder={t("employees.services.selectService")}
                       />
                     </SelectTrigger>
                     <SelectContent>
                       {availableServices.map((s) => {
-                        const name = (locale === "ar" ? s.nameAr : s.nameEn) || s.nameAr || s.nameEn
+                        const name =
+                          (locale === "ar" ? s.nameAr : s.nameEn) ||
+                          s.nameAr ||
+                          s.nameEn
                         if (!name) return null
                         return (
                           <SelectItem key={s.id} value={s.id}>

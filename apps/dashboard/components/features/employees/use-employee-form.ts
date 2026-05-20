@@ -3,20 +3,20 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { UseFormReturn } from "react-hook-form"
 import type { CreateEmployeeFormData } from "@/components/features/employees/create/form-schema"
-import type { LocalBreak, LocalVacation } from "@/components/features/employees/create/schedule-tab"
+import type {
+  LocalBreak,
+  LocalVacation,
+} from "@/components/features/employees/create/schedule-tab"
 import type { DraftService } from "@/components/features/employees/create/services-tab"
 import type { AvailabilitySlot, EmployeeService } from "@/lib/types/employee"
-import {
-  assignService,
-  uploadEmployeeAvatar,
-} from "@/lib/api/employees"
+import { assignService, uploadEmployeeAvatar } from "@/lib/api/employees"
 import {
   useEmployeeMutations,
   useSetAvailability,
   useSetBreaks,
   useVacationMutations,
   useEmployeeServiceMutations,
-} from "@/hooks/use-employees"
+} from "@/hooks/use-employee-mutations"
 import { useLocale } from "@/components/locale-provider"
 import { z } from "zod"
 import { createEmployeeSchemaStatic } from "@/components/features/employees/create/form-schema"
@@ -26,16 +26,39 @@ const _editEmployeeSchema = createEmployeeSchemaStatic.partial().extend({
 })
 type EditEmployeeFormData = z.infer<typeof _editEmployeeSchema>
 
-const defaultSchedule: AvailabilitySlot[] = Array.from({ length: 7 }, (_, i) => ({
-  dayOfWeek: i, startTime: "09:00", endTime: "17:00", isActive: i <= 4,
-}))
+const defaultSchedule: AvailabilitySlot[] = Array.from(
+  { length: 7 },
+  (_, i) => ({
+    dayOfWeek: i,
+    startTime: "09:00",
+    endTime: "17:00",
+    isActive: i <= 4,
+  })
+)
 
 interface UseEmployeeFormOptions {
   isEdit: boolean
   employeeId: string | undefined
-  employee: { user: { firstName: string; lastName: string }; title?: string | null; nameAr?: string | null; specialty?: string | null; specialtyAr?: string | null; bio?: string | null; bioAr?: string | null; experience?: number | null; education?: string | null; educationAr?: string | null; avatarUrl?: string | null; isActive: boolean } | undefined
+  employee:
+    | {
+        user: { firstName: string; lastName: string }
+        title?: string | null
+        nameAr?: string | null
+        specialty?: string | null
+        specialtyAr?: string | null
+        bio?: string | null
+        bioAr?: string | null
+        experience?: number | null
+        education?: string | null
+        educationAr?: string | null
+        avatarUrl?: string | null
+        isActive: boolean
+      }
+    | undefined
   availability: AvailabilitySlot[] | undefined
-  existingBreaks: { dayOfWeek: number; startTime: string; endTime: string }[] | undefined
+  existingBreaks:
+    | { dayOfWeek: number; startTime: string; endTime: string }[]
+    | undefined
   existingServices: EmployeeService[] | undefined
   form: UseFormReturn<CreateEmployeeFormData>
   schedule: AvailabilitySlot[]
@@ -103,7 +126,9 @@ export function useEmployeeForm({
   useEffect(() => {
     if (!availability?.length) return
     const merged = defaultSchedule.map((def) => {
-      const found = availability.find((a: AvailabilitySlot) => a.dayOfWeek === def.dayOfWeek)
+      const found = availability.find(
+        (a: AvailabilitySlot) => a.dayOfWeek === def.dayOfWeek
+      )
       return found ?? { ...def, isActive: false }
     })
     setSchedule(merged)
@@ -111,25 +136,34 @@ export function useEmployeeForm({
 
   useEffect(() => {
     if (!existingBreaks?.length) return
-    setBreaksState(existingBreaks.map(
-      ({ dayOfWeek, startTime, endTime }, i: number) => ({
-        key: `brk-existing-${i}`, dayOfWeek, startTime, endTime,
-      }),
-    ))
+    setBreaksState(
+      existingBreaks.map(({ dayOfWeek, startTime, endTime }, i: number) => ({
+        key: `brk-existing-${i}`,
+        dayOfWeek,
+        startTime,
+        endTime,
+      }))
+    )
   }, [existingBreaks, setBreaksState])
 
   useEffect(() => {
     if (!existingServices?.length) return
-    setDraftServices(existingServices.map((ps: EmployeeService) => ({
-      key: ps.id, serviceId: ps.serviceId,
-      serviceName: ps.service.nameAr || ps.service.nameEn,
-      bufferMinutes: ps.bufferMinutes ?? 0, isActive: ps.isActive,
-      availableTypes: ps.availableTypes ?? [],
-      types: (ps.serviceTypes ?? []).map((st) => ({
-        bookingType: st.bookingType, price: st.price ?? undefined,
-        duration: st.duration ?? undefined, isActive: st.isActive,
-      })),
-    })))
+    setDraftServices(
+      existingServices.map((ps: EmployeeService) => ({
+        key: ps.id,
+        serviceId: ps.serviceId,
+        serviceName: ps.service.nameAr || ps.service.nameEn,
+        bufferMinutes: ps.bufferMinutes ?? 0,
+        isActive: ps.isActive,
+        availableTypes: ps.availableTypes ?? [],
+        types: (ps.serviceTypes ?? []).map((st) => ({
+          bookingType: st.bookingType,
+          price: st.price ?? undefined,
+          duration: st.duration ?? undefined,
+          isActive: st.isActive,
+        })),
+      }))
+    )
   }, [existingServices, setDraftServices])
 
   async function submitEdit(data: EditEmployeeFormData) {
@@ -155,28 +189,40 @@ export function useEmployeeForm({
         isActive: data.isActive,
       })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("employees.edit.error"))
+      toast.error(
+        err instanceof Error ? err.message : t("employees.edit.error")
+      )
       setIsSubmitting(false)
       return
     }
     if (data.avatarFile) {
-      try { await uploadEmployeeAvatar(id, data.avatarFile) }
-      catch { stepErrors.push(t("employees.form.stepErrorAvatar")) }
+      try {
+        await uploadEmployeeAvatar(id, data.avatarFile)
+      } catch {
+        stepErrors.push(t("employees.form.stepErrorAvatar"))
+      }
     }
     const activeSlots = schedule.filter((s) => s.isActive)
     if (activeSlots.length > 0) {
-      try { await setAvailabilityMut.mutateAsync({ id, schedule: activeSlots }) }
-      catch { stepErrors.push(t("employees.form.stepErrorSchedule")) }
+      try {
+        await setAvailabilityMut.mutateAsync({ id, schedule: activeSlots })
+      } catch {
+        stepErrors.push(t("employees.form.stepErrorSchedule"))
+      }
     }
     if (breaks.length > 0) {
       try {
         await setBreaksMut.mutateAsync({
           id,
           breaks: breaks.map(({ dayOfWeek, startTime, endTime }) => ({
-            dayOfWeek, startTime, endTime,
+            dayOfWeek,
+            startTime,
+            endTime,
           })),
         })
-      } catch { stepErrors.push(t("employees.form.stepErrorBreaks")) }
+      } catch {
+        stepErrors.push(t("employees.form.stepErrorBreaks"))
+      }
     }
     if (vacation.enabled && vacation.startDate && vacation.endDate) {
       try {
@@ -185,24 +231,37 @@ export function useEmployeeForm({
           endDate: vacation.endDate,
           reason: vacation.reason || undefined,
         })
-      } catch { stepErrors.push(t("employees.form.stepErrorVacation")) }
+      } catch {
+        stepErrors.push(t("employees.form.stepErrorVacation"))
+      }
     }
-    const existingIds = new Set((existingServices ?? []).map((ps) => ps.serviceId))
+    const existingIds = new Set(
+      (existingServices ?? []).map((ps) => ps.serviceId)
+    )
     for (const ds of draftServices) {
       const payload = {
-        availableTypes: ds.availableTypes, bufferMinutes: ds.bufferMinutes,
-        isActive: ds.isActive, types: ds.types,
+        availableTypes: ds.availableTypes,
+        bufferMinutes: ds.bufferMinutes,
+        isActive: ds.isActive,
+        types: ds.types,
       }
       try {
         if (existingIds.has(ds.serviceId)) {
-          await serviceMuts.updateMut.mutateAsync({ serviceId: ds.serviceId, payload })
+          await serviceMuts.updateMut.mutateAsync({
+            serviceId: ds.serviceId,
+            payload,
+          })
         } else {
           await assignService(id, { serviceId: ds.serviceId, ...payload })
         }
-      } catch { stepErrors.push(t("employees.form.stepErrorServices")) }
+      } catch {
+        stepErrors.push(t("employees.form.stepErrorServices"))
+      }
     }
     if (stepErrors.length > 0) {
-      toast.warning(`${t("employees.edit.success")} (${t("common.warnings")}: ${[...new Set(stepErrors)].join(t("common.listSep"))})`)
+      toast.warning(
+        `${t("employees.edit.success")} (${t("common.warnings")}: ${[...new Set(stepErrors)].join(t("common.listSep"))})`
+      )
     } else {
       toast.success(t("employees.edit.success"))
     }
@@ -234,52 +293,80 @@ export function useEmployeeForm({
       })
       newId = result.employee.id
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("employees.create.error"))
+      toast.error(
+        err instanceof Error ? err.message : t("employees.create.error")
+      )
       setIsSubmitting(false)
       return
     }
     if (data.avatarFile) {
-      try { await uploadEmployeeAvatar(newId, data.avatarFile) }
-      catch { stepErrors.push(t("employees.form.stepErrorAvatar")) }
+      try {
+        await uploadEmployeeAvatar(newId, data.avatarFile)
+      } catch {
+        stepErrors.push(t("employees.form.stepErrorAvatar"))
+      }
     }
     const activeSlots = schedule.filter((s) => s.isActive)
     if (activeSlots.length > 0) {
-      try { await setAvailabilityMut.mutateAsync({ id: newId, schedule: activeSlots }) }
-      catch { stepErrors.push(t("employees.form.stepErrorSchedule")) }
+      try {
+        await setAvailabilityMut.mutateAsync({
+          id: newId,
+          schedule: activeSlots,
+        })
+      } catch {
+        stepErrors.push(t("employees.form.stepErrorSchedule"))
+      }
     }
     if (breaks.length > 0) {
       try {
         await setBreaksMut.mutateAsync({
           id: newId,
           breaks: breaks.map(({ dayOfWeek, startTime, endTime }) => ({
-            dayOfWeek, startTime, endTime,
+            dayOfWeek,
+            startTime,
+            endTime,
           })),
         })
-      } catch { stepErrors.push(t("employees.form.stepErrorBreaks")) }
+      } catch {
+        stepErrors.push(t("employees.form.stepErrorBreaks"))
+      }
     }
     if (vacation.enabled && vacation.startDate && vacation.endDate) {
       try {
         await vacationMuts.createMut.mutateAsync({
-          startDate: vacation.startDate, endDate: vacation.endDate,
+          startDate: vacation.startDate,
+          endDate: vacation.endDate,
           reason: vacation.reason || undefined,
         })
-      } catch { stepErrors.push(t("employees.form.stepErrorVacation")) }
+      } catch {
+        stepErrors.push(t("employees.form.stepErrorVacation"))
+      }
     }
     if (draftServices.length > 0) {
       try {
         await Promise.all(
           draftServices.map((ds) =>
             assignService(newId, {
-              serviceId: ds.serviceId, availableTypes: ds.availableTypes,
-              bufferMinutes: ds.bufferMinutes, isActive: ds.isActive, types: ds.types,
-            }),
-          ),
+              serviceId: ds.serviceId,
+              availableTypes: ds.availableTypes,
+              bufferMinutes: ds.bufferMinutes,
+              isActive: ds.isActive,
+              types: ds.types,
+            })
+          )
         )
-      } catch { stepErrors.push(t("employees.form.stepErrorServices")) }
+      } catch {
+        stepErrors.push(t("employees.form.stepErrorServices"))
+      }
     }
     setIsSubmitting(false)
     if (stepErrors.length > 0) {
-      toast.warning(t("employees.form.createPartialSuccess").replace("{steps}", stepErrors.join(", ")))
+      toast.warning(
+        t("employees.form.createPartialSuccess").replace(
+          "{steps}",
+          stepErrors.join(", ")
+        )
+      )
     } else {
       toast.success(t("employees.create.success"))
     }
@@ -299,9 +386,17 @@ export function useEmployeeForm({
       // FormMessage (e.g. a select with no error node) would leave the user
       // with a non-responsive submit button and no feedback at all.
       const firstKey = Object.keys(errors)[0]
-      const firstMessage = firstKey ? String((errors[firstKey as keyof typeof errors] as { message?: unknown } | undefined)?.message ?? "") : ""
+      const firstMessage = firstKey
+        ? String(
+            (
+              errors[firstKey as keyof typeof errors] as
+                | { message?: unknown }
+                | undefined
+            )?.message ?? ""
+          )
+        : ""
       toast.error(firstMessage || t("employees.form.validationFailed"))
-    },
+    }
   )
 
   return { onSubmit }

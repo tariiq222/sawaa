@@ -50,39 +50,125 @@ vi.mock("@sawaa/ui", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@sawaa/ui")>()
   return {
     ...actual,
-    Button: actual.Button ?? (({ children, disabled, className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { size?: string }) => (
-      <button disabled={disabled} className={className} {...props}>{children}</button>
-    )),
-    Input: actual.Input ?? (({ value, onChange, placeholder, className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) => (
-      <input value={value ?? ""} onChange={onChange} placeholder={placeholder} className={className} {...props} />
-    )),
-    Tabs: actual.Tabs ?? (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
-    TabsList: actual.TabsList ?? (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
-    TabsTrigger: actual.TabsTrigger ?? (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
-    TabsContent: actual.TabsContent ?? (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
-    Dialog: actual.Dialog ?? (({ children, open, onOpenChange }: { children: React.ReactNode; open?: boolean; onOpenChange?: (o: boolean) => void }) =>
-      open ? <div onClick={() => onOpenChange?.(false)}>{children}</div> : null
+    Button:
+      actual.Button ??
+      (({
+        children,
+        disabled,
+        className,
+        ...props
+      }: React.ButtonHTMLAttributes<HTMLButtonElement> & { size?: string }) => (
+        <button disabled={disabled} className={className} {...props}>
+          {children}
+        </button>
+      )),
+    Input:
+      actual.Input ??
+      (({
+        value,
+        onChange,
+        placeholder,
+        className,
+        ...props
+      }: React.InputHTMLAttributes<HTMLInputElement>) => (
+        <input
+          value={value ?? ""}
+          onChange={onChange}
+          placeholder={placeholder}
+          className={className}
+          {...props}
+        />
+      )),
+    Tabs:
+      actual.Tabs ??
+      (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
+    TabsList:
+      actual.TabsList ??
+      (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
+    TabsTrigger:
+      actual.TabsTrigger ??
+      (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
+    TabsContent:
+      actual.TabsContent ??
+      (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
+    Dialog:
+      actual.Dialog ??
+      (({
+        children,
+        open,
+        onOpenChange,
+      }: {
+        children: React.ReactNode
+        open?: boolean
+        onOpenChange?: (o: boolean) => void
+      }) =>
+        open ? (
+          <div onClick={() => onOpenChange?.(false)}>{children}</div>
+        ) : null),
+    DialogContent: ({ children }: { children: React.ReactNode }) => (
+      <div>{children}</div>
     ),
-    DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-    DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-    Label: actual.Label ?? (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
-    Textarea: actual.Textarea ?? (({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea className={className} {...props} />),
-    PhoneInput: actual.PhoneInput ?? (({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) => <input className={className} {...props} />),
-    Skeleton: actual.Skeleton ?? (({ className }: { className?: string }) => <div className={className} />),
-    Badge: actual.Badge ?? (({ children, className }: { children: React.ReactNode; className?: string }) => <div className={className}>{children}</div>),
-    Avatar: actual.Avatar ?? (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
-    AvatarFallback: actual.AvatarFallback ?? (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
-    Sheet: actual.Sheet ?? (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
-    SheetContent: actual.SheetContent ?? (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
+    DialogHeader: ({ children }: { children: React.ReactNode }) => (
+      <div>{children}</div>
+    ),
+    Label:
+      actual.Label ??
+      (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
+    Textarea:
+      actual.Textarea ??
+      (({
+        className,
+        ...props
+      }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
+        <textarea className={className} {...props} />
+      )),
+    PhoneInput:
+      actual.PhoneInput ??
+      (({
+        className,
+        ...props
+      }: React.InputHTMLAttributes<HTMLInputElement>) => (
+        <input className={className} {...props} />
+      )),
+    Skeleton:
+      actual.Skeleton ??
+      (({ className }: { className?: string }) => (
+        <div className={className} />
+      )),
+    Badge:
+      actual.Badge ??
+      (({
+        children,
+        className,
+      }: {
+        children: React.ReactNode
+        className?: string
+      }) => <div className={className}>{children}</div>),
+    Avatar:
+      actual.Avatar ??
+      (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
+    AvatarFallback:
+      actual.AvatarFallback ??
+      (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
+    Sheet:
+      actual.Sheet ??
+      (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
+    SheetContent:
+      actual.SheetContent ??
+      (({ children }: { children: React.ReactNode }) => <div>{children}</div>),
   }
 })
 
 /* ─── FormattedCurrency stub ──────────────────────────────────────────────── */
 
 vi.mock("@/components/features/shared/sar-symbol", () => ({
-  FormattedCurrency: ({ amount, className }: { amount: number; className?: string }) => (
-    <span className={className}>{amount}</span>
-  ),
+  FormattedCurrency: ({
+    amount,
+    className,
+  }: {
+    amount: number
+    className?: string
+  }) => <span className={className}>{amount}</span>,
 }))
 
 /* ─── Per-test complete form state ──────────────────────────────────────── */
@@ -145,20 +231,28 @@ vi.mock("@/hooks/use-organization-settings", () => ({
 
 vi.mock("@/lib/api/services", () => ({
   fetchServices: vi.fn(() =>
-    Promise.resolve({ items: [{ id: "svc-1", price: 15000 }] }),
+    Promise.resolve({ items: [{ id: "svc-1", price: 15000 }] })
   ),
 }))
 
 /* ─── Renderer ───────────────────────────────────────────────────────────── */
 
 function renderBookingPos(formState = makeCompleteState()) {
-  vi.mocked(useBookingFormState).mockReturnValue(formState as ReturnType<typeof useBookingFormState>)
+  vi.mocked(useBookingFormState).mockReturnValue(
+    formState as ReturnType<typeof useBookingFormState>
+  )
 
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   function Wrapper({ children }: { children: React.ReactNode }) {
-    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    return (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
   }
-  return render(<BookingPos onSuccess={vi.fn()} onCancel={vi.fn()} />, { wrapper: Wrapper })
+  return render(<BookingPos onSuccess={vi.fn()} onCancel={vi.fn()} />, {
+    wrapper: Wrapper,
+  })
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -174,13 +268,17 @@ describe("BookingPos — real handleSubmit → createMut.mutateAsync payload", (
   it("confirm button click calls createMut.mutateAsync with all required payload fields", async () => {
     renderBookingPos()
 
-    fireEvent.click(screen.getByRole("button", { name: /bookings\.pos\.confirm/ }))
+    fireEvent.click(
+      screen.getByRole("button", { name: /bookings\.pos\.confirm/ })
+    )
 
     await waitFor(() => {
       expect(createMut.mutateAsync).toHaveBeenCalledTimes(1)
     })
 
-    const [payload] = createMut.mutateAsync.mock.calls[0] as [Record<string, unknown>]
+    const [payload] = createMut.mutateAsync.mock.calls[0] as [
+      Record<string, unknown>,
+    ]
     expect(payload).toMatchObject({
       clientId: "cli-1",
       serviceId: "svc-1",
@@ -195,51 +293,73 @@ describe("BookingPos — real handleSubmit → createMut.mutateAsync payload", (
   it("submit payload includes couponCode when a coupon is set", async () => {
     renderBookingPos(makeCompleteState({ couponCode: "SAVE20" }))
 
-    fireEvent.click(screen.getByRole("button", { name: /bookings\.pos\.confirm/ }))
+    fireEvent.click(
+      screen.getByRole("button", { name: /bookings\.pos\.confirm/ })
+    )
 
     await waitFor(() => {
       expect(createMut.mutateAsync).toHaveBeenCalledTimes(1)
     })
 
-    const [payload] = createMut.mutateAsync.mock.calls[0] as [Record<string, unknown>]
+    const [payload] = createMut.mutateAsync.mock.calls[0] as [
+      Record<string, unknown>,
+    ]
     expect(payload).toMatchObject({ couponCode: "SAVE20" })
   })
 
   it("submit payload includes payAtClinic: true when toggled", async () => {
     renderBookingPos(makeCompleteState({ payAtClinic: true }))
 
-    fireEvent.click(screen.getByRole("button", { name: /bookings\.pos\.confirm/ }))
+    fireEvent.click(
+      screen.getByRole("button", { name: /bookings\.pos\.confirm/ })
+    )
 
     await waitFor(() => {
       expect(createMut.mutateAsync).toHaveBeenCalledTimes(1)
     })
 
-    const [payload] = createMut.mutateAsync.mock.calls[0] as [Record<string, unknown>]
+    const [payload] = createMut.mutateAsync.mock.calls[0] as [
+      Record<string, unknown>,
+    ]
     expect(payload).toMatchObject({ payAtClinic: true })
   })
 
   it("submit payload includes durationOptionId when a duration is selected", async () => {
     renderBookingPos(
-      makeCompleteState({ durationOptionId: "dur-45", durationLabel: "45 دقيقة" }),
+      makeCompleteState({
+        durationOptionId: "dur-45",
+        durationLabel: "45 دقيقة",
+      })
     )
 
-    fireEvent.click(screen.getByRole("button", { name: /bookings\.pos\.confirm/ }))
+    fireEvent.click(
+      screen.getByRole("button", { name: /bookings\.pos\.confirm/ })
+    )
 
     await waitFor(() => {
       expect(createMut.mutateAsync).toHaveBeenCalledTimes(1)
     })
 
-    const [payload] = createMut.mutateAsync.mock.calls[0] as [Record<string, unknown>]
+    const [payload] = createMut.mutateAsync.mock.calls[0] as [
+      Record<string, unknown>,
+    ]
     expect(payload).toMatchObject({ durationOptionId: "dur-45" })
   })
 
   it("submit button is disabled while mutation is pending", () => {
-    const pendingMut = { ...createMut, isPending: true }
-    vi.mocked(useBookingMutations).mockReturnValueOnce({ createMut: pendingMut } as ReturnType<typeof useBookingMutations>)
+    const pendingMut: typeof createMut & { isPending: true } = {
+      ...createMut,
+      isPending: true,
+    }
+    vi.mocked(useBookingMutations).mockReturnValueOnce({
+      createMut: pendingMut,
+    } as unknown as ReturnType<typeof useBookingMutations>)
 
     renderBookingPos()
 
-    const btn = screen.getByRole("button", { name: /bookings\.pos\.confirm/ }) as HTMLButtonElement
+    const btn = screen.getByRole("button", {
+      name: /bookings\.pos\.confirm/,
+    }) as HTMLButtonElement
     expect(btn).toBeDisabled()
   })
 })

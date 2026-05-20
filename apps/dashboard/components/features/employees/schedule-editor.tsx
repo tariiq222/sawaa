@@ -18,9 +18,11 @@ import {
 import {
   useEmployeeAvailability,
   useEmployeeBreaks,
+} from "@/hooks/use-employees"
+import {
   useSetAvailability,
   useSetBreaks,
-} from "@/hooks/use-employees"
+} from "@/hooks/use-employee-mutations"
 import { useLocale } from "@/components/locale-provider"
 import type { AvailabilitySlot } from "@/lib/types/employee"
 
@@ -94,7 +96,7 @@ export function ScheduleEditor({
         dayOfWeek: b.dayOfWeek,
         startTime: b.startTime,
         endTime: b.endTime,
-      })),
+      }))
     )
   }, [serverBreaks])
 
@@ -113,15 +115,15 @@ export function ScheduleEditor({
   const updateBreak = (
     key: string,
     field: "startTime" | "endTime",
-    value: string,
+    value: string
   ) => {
     setLocalBreaks((prev) =>
-      prev.map((b) => (b.key === key ? { ...b, [field]: value } : b)),
+      prev.map((b) => (b.key === key ? { ...b, [field]: value } : b))
     )
   }
 
   const breaksByDay = DAY_NAMES.map((_, dayIndex) =>
-    breaks.filter((b) => b.dayOfWeek === dayIndex),
+    breaks.filter((b) => b.dayOfWeek === dayIndex)
   )
 
   /* Save both schedule + breaks */
@@ -131,7 +133,7 @@ export function ScheduleEditor({
     for (const b of breaks) {
       if (b.startTime >= b.endTime) {
         toast.error(
-          t("schedule.invalidBreak").replace("{day}", DAY_NAMES[b.dayOfWeek]),
+          t("schedule.invalidBreak").replace("{day}", DAY_NAMES[b.dayOfWeek])
         )
         return
       }
@@ -156,9 +158,7 @@ export function ScheduleEditor({
       toast.success(t("schedule.saveSuccess"))
       onOpenChange(false)
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : t("schedule.saveError"),
-      )
+      toast.error(err instanceof Error ? err.message : t("schedule.saveError"))
     }
   })
 
@@ -167,9 +167,7 @@ export function ScheduleEditor({
       <SheetContent side="left">
         <SheetHeader>
           <SheetTitle>{t("schedule.title")}</SheetTitle>
-          <SheetDescription>
-            {t("schedule.description")}
-          </SheetDescription>
+          <SheetDescription>{t("schedule.description")}</SheetDescription>
         </SheetHeader>
 
         <SheetBody>
@@ -215,11 +213,7 @@ export function ScheduleEditor({
           >
             {t("schedule.cancel")}
           </Button>
-          <Button
-            type="submit"
-            form="schedule-editor-form"
-            disabled={isSaving}
-          >
+          <Button type="submit" form="schedule-editor-form" disabled={isSaving}>
             {isSaving ? t("schedule.saving") : t("schedule.save")}
           </Button>
         </SheetFooter>

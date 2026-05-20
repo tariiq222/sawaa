@@ -20,13 +20,14 @@ import { Input } from "@sawaa/ui"
 import { Switch } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useServiceBookingTypes } from "@/hooks/use-services"
-import {
-  useEmployeeServiceMutations,
-  useEmployeeServiceTypes,
-} from "@/hooks/use-employees"
+import { useEmployeeServiceTypes } from "@/hooks/use-employees"
+import { useEmployeeServiceMutations } from "@/hooks/use-employee-mutations"
 import { EmployeeServiceTypesEditor } from "./employee-service-types-editor"
 import { sarToHalalas, halalasToSarNumber } from "@/lib/money"
-import type { EmployeeService, EmployeeTypeConfigPayload } from "@/lib/types/employee"
+import type {
+  EmployeeService,
+  EmployeeTypeConfigPayload,
+} from "@/lib/types/employee"
 import {
   editEmployeeServiceSchema,
   type EditEmployeeServiceFormData,
@@ -53,14 +54,13 @@ export function EditEmployeeServiceSheet({
   const { updateMut } = useEmployeeServiceMutations(employeeId)
 
   /* Types state managed outside react-hook-form */
-  const [typeConfigs, setTypeConfigs] = useState<EmployeeTypeConfigPayload[]>([])
+  const [typeConfigs, setTypeConfigs] = useState<EmployeeTypeConfigPayload[]>(
+    []
+  )
 
   const serviceId = ps?.serviceId ?? null
   const { data: serviceBookingTypes } = useServiceBookingTypes(serviceId)
-  const { data: existingTypes } = useEmployeeServiceTypes(
-    employeeId,
-    serviceId,
-  )
+  const { data: existingTypes } = useEmployeeServiceTypes(employeeId, serviceId)
 
   const form = useForm<EditEmployeeServiceFormData>({
     resolver: zodResolver(editEmployeeServiceSchema),
@@ -99,7 +99,7 @@ export function EditEmployeeServiceSheet({
           isDefault: o.isDefault,
           sortOrder: o.sortOrder,
         })),
-      })),
+      }))
     )
   }, [existingTypes, open])
 
@@ -116,7 +116,7 @@ export function EditEmployeeServiceSheet({
         useCustomOptions: false,
         isActive: true,
         durationOptions: [],
-      })),
+      }))
     )
   }, [existingTypes, serviceBookingTypes, ps, open])
 
@@ -126,36 +126,40 @@ export function EditEmployeeServiceSheet({
       : ps.service.nameEn
     : ""
 
-  const onSubmit = form.handleSubmit(async (data: EditEmployeeServiceFormData) => {
-    if (!ps) return
-    try {
-      // The editor inputs collect SAR-major prices; convert back to halalas
-      // (the API/DB convention) before submitting.
-      const typesPayload: EmployeeTypeConfigPayload[] = typeConfigs.map((tc) => ({
-        ...tc,
-        price: tc.price != null ? sarToHalalas(tc.price) : tc.price,
-        durationOptions: (tc.durationOptions ?? []).map((o) => ({
-          ...o,
-          price: sarToHalalas(o.price),
-        })),
-      }))
-      await updateMut.mutateAsync({
-        serviceId: ps.serviceId,
-        payload: {
-          availableTypes: typeConfigs.map((tc) => tc.bookingType),
-          bufferMinutes: data.bufferMinutes,
-          isActive: data.isActive,
-          types: typesPayload,
-        },
-      })
-      toast.success(t("employees.services.updateSuccess"))
-      onOpenChange(false)
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to update service",
-      )
+  const onSubmit = form.handleSubmit(
+    async (data: EditEmployeeServiceFormData) => {
+      if (!ps) return
+      try {
+        // The editor inputs collect SAR-major prices; convert back to halalas
+        // (the API/DB convention) before submitting.
+        const typesPayload: EmployeeTypeConfigPayload[] = typeConfigs.map(
+          (tc) => ({
+            ...tc,
+            price: tc.price != null ? sarToHalalas(tc.price) : tc.price,
+            durationOptions: (tc.durationOptions ?? []).map((o) => ({
+              ...o,
+              price: sarToHalalas(o.price),
+            })),
+          })
+        )
+        await updateMut.mutateAsync({
+          serviceId: ps.serviceId,
+          payload: {
+            availableTypes: typeConfigs.map((tc) => tc.bookingType),
+            bufferMinutes: data.bufferMinutes,
+            isActive: data.isActive,
+            types: typesPayload,
+          },
+        })
+        toast.success(t("employees.services.updateSuccess"))
+        onOpenChange(false)
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to update service"
+        )
+      }
     }
-  })
+  )
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
