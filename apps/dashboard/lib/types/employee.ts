@@ -113,12 +113,33 @@ export interface EmployeeTypeConfigPayload {
   useCustomOptions?: boolean
   isActive?: boolean
   durationOptions?: {
+    id?: string
     label: string
     labelAr?: string
     durationMinutes: number
     price: number
     isDefault?: boolean
     sortOrder?: number
+  }[]
+}
+
+export interface EmployeeServiceOption {
+  id: string
+  employeeServiceId: string
+  durationOptionId: string
+  priceOverride: number | null
+  durationOverride: number | null
+  deliveryType: "IN_PERSON" | "ONLINE"
+  isActive: boolean
+}
+
+export interface SetEmployeeServiceOptionsPayload {
+  options: {
+    durationOptionId: string
+    priceOverride?: number | null
+    durationOverride?: number | null
+    deliveryType?: "IN_PERSON" | "ONLINE"
+    isActive?: boolean
   }[]
 }
 

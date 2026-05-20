@@ -129,6 +129,7 @@ export const enEmployees: Record<string, string> = {
   "employees.services.priceSar": "Price (SAR)",
   "employees.services.required": "Required",
   "employees.services.defaultLabel": "default",
+  "employees.services.defaultDuration": "Default Duration",
   "employees.services.buffer": "Buffer: {minutes} min",
 
   // — Form Page —
@@ -194,6 +195,9 @@ export const enEmployees: Record<string, string> = {
   "employees.services.types": "Delivery Methods",
   "employees.services.typesRequired": "Select at least one delivery method",
   "employees.services.useCustomOptions": "Use custom options",
+  "employees.services.useCustomPricingTimes": "Use custom prices and times",
+  "employees.services.defaultsUsedHint": "When off, this employee uses the service's default prices and durations.",
+  "employees.services.usingServiceDefaults": "The service default prices and durations will be used. Turn this on to customize them for this employee.",
 
   // — Status Dialog —
   "employees.action.deactivate": "Deactivate",

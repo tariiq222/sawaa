@@ -1,5 +1,6 @@
 import { z } from "zod"
 import type { EmployeeTypeConfigPayload } from "@/lib/types/employee"
+import type { ServiceBookingType } from "@/lib/types/service"
 
 /* ─── Draft service entry ─── */
 
@@ -11,6 +12,8 @@ export interface DraftService {
   isActive: boolean
   availableTypes: string[]
   types: EmployeeTypeConfigPayload[]
+  useCustomPricing?: boolean
+  serviceBookingTypes?: ServiceBookingType[]
 }
 
 /* ─── Schema for add-service form ─── */

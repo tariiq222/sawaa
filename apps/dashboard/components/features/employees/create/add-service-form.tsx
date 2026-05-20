@@ -25,6 +25,8 @@ interface AddServiceFormProps {
   serviceBookingTypes: import("@/lib/types/service").ServiceBookingType[]
   typeConfigs: EmployeeTypeConfigPayload[]
   onTypeConfigsChange: (types: EmployeeTypeConfigPayload[]) => void
+  useCustomPricing: boolean
+  onUseCustomPricingChange: (enabled: boolean) => void
   onSubmit: () => void
   onCancel: () => void
   t: (key: string) => string
@@ -39,6 +41,8 @@ export function AddServiceForm({
   serviceBookingTypes,
   typeConfigs,
   onTypeConfigsChange,
+  useCustomPricing,
+  onUseCustomPricingChange,
   onSubmit,
   onCancel,
   t,
@@ -87,15 +91,37 @@ export function AddServiceForm({
         )}
       </div>
 
-      {/* Per-type config */}
+      {/* Custom pricing toggle */}
       {selectedServiceId && (
-        <EmployeeServiceTypesEditor
-          serviceBookingTypes={serviceBookingTypes}
-          value={typeConfigs}
-          onChange={onTypeConfigsChange}
-          t={t}
-          locale={locale}
-        />
+        <div className="space-y-3">
+          <div className="flex items-center justify-between rounded-lg border border-border p-3">
+            <div className="space-y-1">
+              <Label className="text-xs cursor-pointer">
+                {t("employees.services.useCustomPricingTimes")}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {t("employees.services.defaultsUsedHint")}
+              </p>
+            </div>
+            <Switch
+              checked={useCustomPricing}
+              onCheckedChange={onUseCustomPricingChange}
+            />
+          </div>
+          {useCustomPricing ? (
+            <EmployeeServiceTypesEditor
+              serviceBookingTypes={serviceBookingTypes}
+              value={typeConfigs}
+              onChange={onTypeConfigsChange}
+              t={t}
+              locale={locale}
+            />
+          ) : (
+            <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+              {t("employees.services.usingServiceDefaults")}
+            </p>
+          )}
+        </div>
       )}
 
       {/* Buffer */}

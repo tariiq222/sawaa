@@ -12,6 +12,7 @@ import {
   deleteVacation,
   assignService,
   updateEmployeeService,
+  setEmployeeServiceOptions,
   removeEmployeeService,
   createEmployeeAccount,
   updateEmployeeAccount,
@@ -21,6 +22,7 @@ import type {
 } from "@/lib/api/employees"
 import type {
   AssignServicePayload,
+  SetEmployeeServiceOptionsPayload,
   UpdateServicePayload,
   OnboardEmployeePayload,
 } from "@/lib/types/employee"
@@ -137,13 +139,29 @@ export function useEmployeeServiceMutations(employeeId: string) {
     onSuccess: invalidate,
   })
 
+  const optionsMut = useMutation({
+    mutationFn: ({
+      serviceId,
+      payload,
+    }: {
+      serviceId: string
+      payload: SetEmployeeServiceOptionsPayload
+    }) => setEmployeeServiceOptions(employeeId, serviceId, payload),
+    onSuccess: (_data, vars) => {
+      invalidate()
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.employees.serviceTypes(employeeId, vars.serviceId),
+      })
+    },
+  })
+
   const removeMut = useMutation({
     mutationFn: (serviceId: string) =>
       removeEmployeeService(employeeId, serviceId),
     onSuccess: invalidate,
   })
 
-  return { assignMut, updateMut, removeMut }
+  return { assignMut, updateMut, optionsMut, removeMut }
 }
 
 /* ─── Employee Account Mutations ─── */
