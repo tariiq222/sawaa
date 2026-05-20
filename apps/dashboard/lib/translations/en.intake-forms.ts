@@ -17,6 +17,12 @@ export const enIntakeForms: Record<string, string> = {
   "intakeForms.col.edit": "Edit form",
   "intakeForms.col.delete": "Delete form",
 
+  // — Filters —
+  "intakeForms.filter.status": "Status",
+  "intakeForms.filter.allStatuses": "All statuses",
+  "intakeForms.filter.active": "Active",
+  "intakeForms.filter.inactive": "Inactive",
+
   // — Field Editor —
   "intakeForms.field.field": "Field",
   "intakeForms.field.moveUp": "Move up",
