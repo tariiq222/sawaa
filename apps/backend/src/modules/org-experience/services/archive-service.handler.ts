@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 
 export type ArchiveServiceCommand = { serviceId: string };
 
@@ -7,6 +7,7 @@ export type ArchiveServiceCommand = { serviceId: string };
 export class ArchiveServiceHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   async execute(dto: ArchiveServiceCommand) {
@@ -20,7 +21,7 @@ export class ArchiveServiceHandler {
     });
 
     if (bookingCount === 0) {
-      return this.prisma.$transaction(async (tx) => {
+      return this.rlsTransaction.withTransaction(async (tx) => {
         await tx.employeeService.deleteMany({
           where: { serviceId: dto.serviceId },
         });

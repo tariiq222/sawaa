@@ -73,6 +73,10 @@ const buildPrisma = () => {
   return prisma;
 };
 
+const buildRlsTransaction = (prisma: ReturnType<typeof buildPrisma>) => ({
+  withTransaction: jest.fn((fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)),
+});
+
 
 
 describe('CreateServiceHandler', () => {
@@ -290,14 +294,15 @@ describe('ListServicesHandler', () => {
 describe('ArchiveServiceHandler', () => {
   it('hard deletes service in a transaction after cleaning dependent references when it has no bookings', async () => {
     const prisma = buildPrisma();
+    const rlsTransaction = buildRlsTransaction(prisma);
     prisma.service.findFirst = jest.fn().mockResolvedValue(mockService);
-    const handler = new ArchiveServiceHandler(prisma as never);
+    const handler = new ArchiveServiceHandler(prisma as never, rlsTransaction as never);
     const result = await handler.execute({ serviceId: 'svc-1' });
     expect(prisma.service.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: 'svc-1' }) }),
     );
     expect(prisma.booking.count).toHaveBeenCalledWith({ where: { serviceId: 'svc-1' } });
-    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(1);
     expect(prisma.employeeService.deleteMany).toHaveBeenCalledWith({ where: { serviceId: 'svc-1' } });
     expect(prisma.serviceBundleItem.deleteMany).toHaveBeenCalledWith({ where: { serviceId: 'svc-1' } });
     expect(prisma.service.delete).toHaveBeenCalledWith({ where: { id: 'svc-1' } });
@@ -313,16 +318,17 @@ describe('ArchiveServiceHandler', () => {
 
   it('archives service when it has bookings', async () => {
     const prisma = buildPrisma();
+    const rlsTransaction = buildRlsTransaction(prisma);
     prisma.service.findFirst = jest.fn().mockResolvedValue(mockService);
     prisma.booking.count = jest.fn().mockResolvedValue(1);
-    const handler = new ArchiveServiceHandler(prisma as never);
+    const handler = new ArchiveServiceHandler(prisma as never, rlsTransaction as never);
     const result = await handler.execute({ serviceId: 'svc-1' });
     expect(prisma.booking.count).toHaveBeenCalledWith({ where: { serviceId: 'svc-1' } });
     expect(prisma.service.update).toHaveBeenCalledWith({
       where: { id: 'svc-1' },
       data: { archivedAt: expect.any(Date), isActive: false },
     });
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
     expect(prisma.employeeService.deleteMany).not.toHaveBeenCalled();
     expect(prisma.serviceBundleItem.deleteMany).not.toHaveBeenCalled();
     expect(prisma.service.delete).not.toHaveBeenCalled();
@@ -331,10 +337,11 @@ describe('ArchiveServiceHandler', () => {
 
   it('throws NotFoundException when service not found', async () => {
     const prisma = buildPrisma();
-    const handler = new ArchiveServiceHandler(prisma as never);
+    const rlsTransaction = buildRlsTransaction(prisma);
+    const handler = new ArchiveServiceHandler(prisma as never, rlsTransaction as never);
     await expect(handler.execute({ serviceId: 'missing' })).rejects.toThrow(NotFoundException);
     expect(prisma.booking.count).not.toHaveBeenCalled();
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
     expect(prisma.employeeService.deleteMany).not.toHaveBeenCalled();
     expect(prisma.serviceBundleItem.deleteMany).not.toHaveBeenCalled();
     expect(prisma.service.delete).not.toHaveBeenCalled();
