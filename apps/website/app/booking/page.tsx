@@ -110,6 +110,13 @@ export default function BookingWizardPage() {
   const hasBranchStep = branches.length > 1;
   const totalSteps = hasBranchStep ? 6 : 5;
 
+  // Single-branch orgs skip BranchStep; default to the only branch so we
+  // never send `branchId: ''` to the backend (which rejects with 400 — the
+  // DTO is @IsUUID()). For multi-branch orgs, fall back to the user's
+  // explicit selection.
+  const effectiveBranch = selectedBranch ?? (!hasBranchStep ? branches[0] ?? null : null);
+  const effectiveBranchId = effectiveBranch?.id;
+
   const stepIndex = (() => {
     if (awaitingBranch) return 2;
     switch (state.step) {
@@ -125,11 +132,11 @@ export default function BookingWizardPage() {
   const employeeId = employee?.id;
   const serviceId = service?.id;
 
-  const branchId = selectedBranch?.id;
+  const branchId = effectiveBranchId;
   const { data: slots = [], isLoading: loadingSlots } = useQuery({
     queryKey: ['public', 'availability', employeeId, selectedDate, serviceId, branchId],
     queryFn: () => getPublicAvailability(employeeId!, selectedDate, serviceId, branchId),
-    enabled: state.step === WizardStep.SLOT && !!employeeId,
+    enabled: state.step === WizardStep.SLOT && !!employeeId && !!branchId,
   });
 
   if (redirectUrl && bookingId) {
@@ -265,11 +272,16 @@ export default function BookingWizardPage() {
             setIsSubmitting(true);
             setSubmitError(null);
             try {
+              if (!effectiveBranchId) {
+                setSubmitError(t('booking.errors.missingBranch'));
+                setIsSubmitting(false);
+                return;
+              }
               const booking = await createGuestBooking(
                 {
                   serviceId: service.id,
                   employeeId: employee.id,
-                  branchId: selectedBranch?.id ?? '',
+                  branchId: effectiveBranchId,
                   startsAt: slot.startTime,
                   client,
                 },

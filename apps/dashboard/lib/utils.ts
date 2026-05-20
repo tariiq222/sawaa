@@ -112,6 +112,62 @@ export function formatClinicTime(time: string, format: TimeFormat = "24h"): stri
 }
 
 /**
+ * Combine a date (YYYY-MM-DD) and time (HH:mm[:ss]) into an ISO 8601 UTC
+ * timestamp, interpreting the wall-clock pair in Asia/Riyadh (+03:00, no DST).
+ *
+ * Asia/Riyadh is the operating timezone for مركز سواء — clinic working hours,
+ * employee schedules, and appointment slots are all expressed in local Riyadh
+ * time. The backend stores `scheduledAt` as UTC, so the contract is:
+ * wall-clock (Riyadh) → UTC ISO. Always go through this helper instead of
+ * `new Date('YYYY-MM-DD HH:mm')`, which is parsed in the *server* local TZ.
+ *
+ * Returns null if either input is missing/malformed.
+ */
+export function combineDateTimeToISO(date: string, time: string): string | null {
+  if (!date || !time) return null
+  const dateMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  const timeMatch = time.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/)
+  if (!dateMatch || !timeMatch) return null
+  const hh = String(Number(timeMatch[1])).padStart(2, "0")
+  const mm = timeMatch[2]
+  const ss = timeMatch[3] ?? "00"
+  return `${dateMatch[0]}T${hh}:${mm}:${ss}+03:00`
+}
+
+/** Convert a Date/ISO timestamp to the HH:mm input expected by formatClinicTime. */
+export function toCanonicalTime(date: Date | string): string {
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return ""
+
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+}
+
+export function parseClinicTimeInput(input: string, format: TimeFormat = "24h"): string | null {
+  const value = input.trim()
+  if (!value) return null
+
+  const suffixMatch = value.match(/\s*(ص|م|am|pm)\s*$/i)
+  const suffix = suffixMatch?.[1]?.toLowerCase()
+  const timeValue = suffixMatch ? value.slice(0, suffixMatch.index ?? value.length).trim() : value
+  const match = timeValue.match(/^(\d{1,2}):(\d{2})$/)
+  if (!match) return null
+
+  let hour = Number(match[1])
+  const minute = Number(match[2])
+  if (!Number.isInteger(hour) || !Number.isInteger(minute) || minute < 0 || minute > 59) return null
+
+  if (suffix) {
+    if (format !== "12h" || hour < 1 || hour > 12) return null
+    const isPm = suffix === "م" || suffix === "pm"
+    hour = hour % 12 + (isPm ? 12 : 0)
+  } else if (hour < 0 || hour > 23) {
+    return null
+  }
+
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
+}
+
+/**
  * Get the week start day as a number (0 = Sunday, 1 = Monday).
  */
 export function getWeekStartDay(weekStartDay: "sunday" | "monday" = "sunday"): 0 | 1 {

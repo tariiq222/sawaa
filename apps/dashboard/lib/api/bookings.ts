@@ -4,6 +4,7 @@
  */
 
 import { api } from "@/lib/api"
+import { combineDateTimeToISO } from "@/lib/utils"
 import type { PaginatedResponse } from "@/lib/types/common"
 import type {
   Booking,
@@ -13,6 +14,32 @@ import type {
   AdminCancelPayload,
   CreateRecurringPayload,
 } from "@/lib/types/booking"
+
+/**
+ * Backend bookings DTOs accept ISO `scheduledAt` (create) and
+ * `newScheduledAt` (reschedule). The dashboard UI carries `date` + `startTime`
+ * (wall-clock Asia/Riyadh). Adapt at the API boundary so feature components
+ * keep their natural shape and only one place owns the contract translation.
+ */
+function adaptCreatePayload(p: CreateBookingPayload) {
+  const { date, startTime, type, ...rest } = p
+  const scheduledAt = combineDateTimeToISO(date, startTime)
+  if (!scheduledAt) {
+    throw new Error("Invalid booking date/time")
+  }
+  return { ...rest, scheduledAt, bookingType: type ? String(type).toUpperCase() : undefined }
+}
+
+function adaptReschedulePayload(p: ReschedulePayload) {
+  if (!p.date || !p.startTime) {
+    throw new Error("Reschedule requires date and startTime")
+  }
+  const newScheduledAt = combineDateTimeToISO(p.date, p.startTime)
+  if (!newScheduledAt) {
+    throw new Error("Invalid reschedule date/time")
+  }
+  return { newScheduledAt }
+}
 
 export async function fetchBookings(
   query: BookingListQuery = {},
@@ -61,7 +88,7 @@ export async function fetchBookingStatusLog(id: string): Promise<BookingStatusLo
 export async function createBooking(
   payload: CreateBookingPayload,
 ): Promise<Booking> {
-  return api.post<Booking>("/dashboard/bookings", payload)
+  return api.post<Booking>("/dashboard/bookings", adaptCreatePayload(payload))
 }
 
 export async function createRecurringBooking(
@@ -74,7 +101,10 @@ export async function rescheduleBooking(
   id: string,
   payload: ReschedulePayload,
 ): Promise<Booking> {
-  return api.patch<Booking>(`/dashboard/bookings/${id}/reschedule`, payload)
+  return api.patch<Booking>(
+    `/dashboard/bookings/${id}/reschedule`,
+    adaptReschedulePayload(payload),
+  )
 }
 
 export async function confirmBooking(id: string): Promise<Booking> {

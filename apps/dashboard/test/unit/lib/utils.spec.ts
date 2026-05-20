@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest"
 import {
   cn,
+  combineDateTimeToISO,
   formatName,
   getInitials,
   getAvatarGradientStyle,
   formatClinicDate,
   formatClinicTime,
   getWeekStartDay,
+  parseClinicTimeInput,
 } from "@/lib/utils"
 import { halalasToSar, sarToHalalas, formatPrice } from "@/lib/money"
 
@@ -227,5 +229,121 @@ describe("formatPrice", () => {
 
   it("converts halalas to SAR numeric value", () => {
     expect(halalasToSar(10000)).toBe(100)
+  })
+})
+
+describe("parseClinicTimeInput", () => {
+  it("returns null for empty input", () => {
+    expect(parseClinicTimeInput("", "24h")).toBeNull()
+  })
+
+  it("returns null for whitespace-only input", () => {
+    expect(parseClinicTimeInput("   ", "24h")).toBeNull()
+  })
+
+  it("returns canonical HH:mm for already-canonical 24h input", () => {
+    expect(parseClinicTimeInput("09:30", "24h")).toBe("09:30")
+  })
+
+  it("pads single-digit hours in 24h input", () => {
+    expect(parseClinicTimeInput("9:30", "24h")).toBe("09:30")
+  })
+
+  it("accepts the upper edge 23:59 in 24h format", () => {
+    expect(parseClinicTimeInput("23:59", "24h")).toBe("23:59")
+  })
+
+  it("rejects 24:00 in 24h format", () => {
+    expect(parseClinicTimeInput("24:00", "24h")).toBeNull()
+  })
+
+  it("parses 12h AM correctly", () => {
+    expect(parseClinicTimeInput("9:30 AM", "12h")).toBe("09:30")
+  })
+
+  it("parses 12h PM correctly", () => {
+    expect(parseClinicTimeInput("9:30 PM", "12h")).toBe("21:30")
+  })
+
+  it("parses 12:00 AM as midnight (00:00)", () => {
+    expect(parseClinicTimeInput("12:00 AM", "12h")).toBe("00:00")
+  })
+
+  it("parses 12:00 PM as noon (12:00)", () => {
+    expect(parseClinicTimeInput("12:00 PM", "12h")).toBe("12:00")
+  })
+
+  it("parses Arabic ص suffix as AM", () => {
+    expect(parseClinicTimeInput("9:30 ص", "12h")).toBe("09:30")
+  })
+
+  it("parses Arabic م suffix as PM", () => {
+    expect(parseClinicTimeInput("9:30 م", "12h")).toBe("21:30")
+  })
+
+  it("is case-insensitive for AM/PM suffix", () => {
+    expect(parseClinicTimeInput("9:30 am", "12h")).toBe("09:30")
+    expect(parseClinicTimeInput("9:30 pm", "12h")).toBe("21:30")
+  })
+
+  it("rejects suffix in 24h format", () => {
+    expect(parseClinicTimeInput("9:30 AM", "24h")).toBeNull()
+  })
+
+  it("rejects hour out of 1-12 when suffix is provided", () => {
+    expect(parseClinicTimeInput("13:00 PM", "12h")).toBeNull()
+  })
+
+  it("rejects 0:30 with suffix (hour must be 1-12)", () => {
+    expect(parseClinicTimeInput("0:30 AM", "12h")).toBeNull()
+  })
+
+  it("returns null for non-numeric input", () => {
+    expect(parseClinicTimeInput("abc", "24h")).toBeNull()
+  })
+
+  it("returns null when minutes are invalid (>59)", () => {
+    expect(parseClinicTimeInput("9:60", "24h")).toBeNull()
+  })
+
+  it("returns null when minutes are missing", () => {
+    expect(parseClinicTimeInput("9", "24h")).toBeNull()
+  })
+
+  it("returns null when minute portion is not two digits", () => {
+    expect(parseClinicTimeInput("9:5", "24h")).toBeNull()
+  })
+
+  it("trims surrounding whitespace before parsing", () => {
+    expect(parseClinicTimeInput("  09:30  ", "24h")).toBe("09:30")
+  })
+})
+
+describe("combineDateTimeToISO", () => {
+  it("returns Asia/Riyadh (+03:00) ISO for a valid date+time pair", () => {
+    expect(combineDateTimeToISO("2026-05-21", "14:30")).toBe(
+      "2026-05-21T14:30:00+03:00",
+    )
+  })
+
+  it("accepts HH:mm:ss and zero-pads single-digit hours", () => {
+    expect(combineDateTimeToISO("2026-05-21", "9:05:45")).toBe(
+      "2026-05-21T09:05:45+03:00",
+    )
+  })
+
+  it("returns null on malformed inputs", () => {
+    expect(combineDateTimeToISO("", "10:00")).toBeNull()
+    expect(combineDateTimeToISO("2026-05-21", "")).toBeNull()
+    expect(combineDateTimeToISO("not-a-date", "10:00")).toBeNull()
+    expect(combineDateTimeToISO("2026-05-21", "10")).toBeNull()
+  })
+
+  it("represents the same UTC instant regardless of host timezone", () => {
+    // Asia/Riyadh has no DST, so +03:00 is invariant — anchoring the
+    // wall-clock pair this way gives a deterministic Date independent
+    // of where the dashboard server runs.
+    const iso = combineDateTimeToISO("2026-05-21", "12:00")!
+    expect(new Date(iso).toISOString()).toBe("2026-05-21T09:00:00.000Z")
   })
 })

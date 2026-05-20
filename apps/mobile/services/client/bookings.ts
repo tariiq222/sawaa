@@ -125,10 +125,10 @@ export const clientBookingsService = {
     return response.data;
   },
 
-  async reschedule(id: string, scheduledAt: string) {
+  async reschedule(id: string, newScheduledAt: string) {
     const response = await api.patch<ClientBookingRow>(
       `/mobile/client/bookings/${id}/reschedule`,
-      { scheduledAt },
+      { newScheduledAt },
     );
     return response.data;
   },

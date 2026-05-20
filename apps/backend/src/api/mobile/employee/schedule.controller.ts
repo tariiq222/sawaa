@@ -1,5 +1,5 @@
 import { Controller, Get, Patch, Body, Query, UseGuards } from '@nestjs/common';
-import { todayRangeInTz } from '../../../common/helpers/date-tz.helper';
+import { endOfDayInTz, startOfDayInTz, todayRangeInTz } from '../../../common/helpers/date-tz.helper';
 import { IsDateString, IsInt, IsOptional, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
@@ -99,8 +99,8 @@ export class MobileEmployeeScheduleController {
   ) {
     return this.listBookings.execute({
       employeeId: user.sub,
-      fromDate: q.fromDate ? new Date(q.fromDate) : undefined,
-      toDate: q.toDate ? new Date(q.toDate) : undefined,
+      fromDate: startOfDayInTz(q.fromDate),
+      toDate: endOfDayInTz(q.toDate),
       page: q.page ?? 1,
       limit: q.limit ?? 100,
     });

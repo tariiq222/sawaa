@@ -12,6 +12,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
 import { ApiStandardResponses, ApiErrorDto } from '../../common/swagger';
+import { endOfDayInTz, startOfDayInTz } from '../../common/helpers/date-tz.helper';
 import { CreateInvoiceHandler } from '../../modules/finance/create-invoice/create-invoice.handler';
 import { CreateInvoiceDto } from '../../modules/finance/create-invoice/create-invoice.dto';
 import { GetInvoiceHandler } from '../../modules/finance/get-invoice/get-invoice.handler';
@@ -153,8 +154,8 @@ export class DashboardFinanceController {
       clientId: query.clientId,
       method: query.method,
       status: query.status,
-      fromDate: query.fromDate ? new Date(query.fromDate) : undefined,
-      toDate: query.toDate ? new Date(query.toDate) : undefined,
+      fromDate: startOfDayInTz(query.fromDate),
+      toDate: endOfDayInTz(query.toDate),
     });
   }
 
