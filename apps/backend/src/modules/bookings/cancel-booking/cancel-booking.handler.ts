@@ -9,6 +9,8 @@ import { CancelBookingDto } from './cancel-booking.dto';
 import { ZoomMeetingService } from '../zoom-meeting.service';
 import { RefundPaymentHandler } from '../../finance/refund-payment/refund-payment.handler';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { assertTransition } from '../booking-state-machine';
+import { computeRefundType } from '../cancellation-policy';
 
 export type CancelBookingCommand = CancelBookingDto & {
   bookingId: string;
@@ -17,11 +19,8 @@ export type CancelBookingCommand = CancelBookingDto & {
   clientId?: string;
 };
 
-const CANCELLABLE_STATUSES: BookingStatus[] = [
-  BookingStatus.PENDING,
-  BookingStatus.CONFIRMED,
-  'CANCEL_REQUESTED' as BookingStatus,
-];
+// Allowed source statuses are defined by the DIRECT_CANCEL transition in booking-state-machine.ts
+// PENDING | CONFIRMED | CANCEL_REQUESTED → CANCELLED
 
 @Injectable()
 export class CancelBookingHandler {
@@ -44,9 +43,7 @@ export class CancelBookingHandler {
     if (cmd.source === 'client' && cmd.clientId && booking.clientId !== cmd.clientId) {
       throw new ForbiddenException('Not your booking');
     }
-    if (!CANCELLABLE_STATUSES.includes(booking.status)) {
-      throw new BadRequestException(`Booking cannot be cancelled (status: ${booking.status})`);
-    }
+    const nextStatus = assertTransition(booking.status, 'DIRECT_CANCEL');
 
     const settings = await this.settingsHandler.execute({
       branchId: booking.branchId,
@@ -63,10 +60,11 @@ export class CancelBookingHandler {
       }
     }
 
-    const hoursUntilBooking = (booking.scheduledAt.getTime() - Date.now()) / 3_600_000;
-    const refundType = hoursUntilBooking >= settings.freeCancelBeforeHours
-      ? settings.freeCancelRefundType
-      : RefundType.NONE;
+    const { refundType } = computeRefundType({
+      scheduledAt: booking.scheduledAt,
+      freeCancelBeforeHours: settings.freeCancelBeforeHours,
+      freeCancelRefundType: settings.freeCancelRefundType,
+    });
 
     const completedPayment = await this.prisma.payment.findFirst({
       where: { invoice: { bookingId: booking.id }, status: 'COMPLETED' },
@@ -80,7 +78,7 @@ export class CancelBookingHandler {
       const cancelledBooking = await tx.booking.update({
         where: { id: cmd.bookingId },
         data: {
-          status: BookingStatus.CANCELLED,
+          status: nextStatus,
           cancelReason: cmd.reason,
           cancelNotes: cmd.cancelNotes,
           cancelledAt: new Date(),
@@ -91,7 +89,7 @@ export class CancelBookingHandler {
         data: {
           bookingId: cmd.bookingId,
           fromStatus: booking.status,
-          toStatus: BookingStatus.CANCELLED,
+          toStatus: nextStatus,
           changedBy: cmd.changedBy,
           reason: cmd.reason,
         },

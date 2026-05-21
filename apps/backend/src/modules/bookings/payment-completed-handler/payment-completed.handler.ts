@@ -1,9 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { BookingStatus } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { assertTransition } from '../booking-state-machine';
 
 interface PaymentCompletedPayload {
   paymentId: string;
@@ -47,7 +49,15 @@ export class PaymentCompletedEventHandler {
             return this.prisma.booking.findFirst({ where: { id: bookingId } });
           });
           if (!booking) return;
-          if (booking.status !== 'PENDING' && booking.status !== 'AWAITING_PAYMENT') return;
+          // Use assertTransition to guard PAYMENT_CONFIRMED; skip silently if already in a
+          // terminal or non-payment-pending state (idempotency for duplicate events).
+          let nextStatus: BookingStatus;
+          try {
+            nextStatus = assertTransition(booking.status, 'PAYMENT_CONFIRMED');
+          } catch {
+            this.logger.warn(`Payment ${paymentId}: booking ${bookingId} status '${booking.status}' does not allow PAYMENT_CONFIRMED — skipping`);
+            return;
+          }
 
           await this.cls.run(async () => {
             this.cls.set('tenant', {
@@ -59,13 +69,13 @@ export class PaymentCompletedEventHandler {
             await this.rlsTransaction.withTransaction((tx) => Promise.all([
               tx.booking.update({
                 where: { id: bookingId },
-                data: { status: 'CONFIRMED', confirmedAt: new Date() },
+                data: { status: nextStatus, confirmedAt: new Date() },
               }),
               tx.bookingStatusLog.create({
                 data: {
                   bookingId,
                   fromStatus: booking.status,
-                  toStatus: 'CONFIRMED',
+                  toStatus: nextStatus,
                   changedBy: 'system',
                   reason: `payment:${paymentId}`,
                 },

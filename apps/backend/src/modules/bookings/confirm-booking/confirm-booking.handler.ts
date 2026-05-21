@@ -5,6 +5,7 @@ import { EventBusService } from '../../../infrastructure/events';
 import { BookingConfirmedEvent } from '../events/booking-confirmed.event';
 import { CreateZoomMeetingHandler } from '../create-zoom-meeting/create-zoom-meeting.handler';
 import { fetchBookingOrFail } from '../booking-lifecycle.helper';
+import { assertTransition } from '../booking-state-machine';
 
 export interface ConfirmBookingCommand {
   bookingId: string;
@@ -22,17 +23,18 @@ export class ConfirmBookingHandler {
 
   async execute(cmd: ConfirmBookingCommand) {
     const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.PENDING], 'confirmed');
+    const nextStatus = assertTransition(booking.status, 'CONFIRM');
 
     const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
       tx.booking.update({
         where: { id: cmd.bookingId },
-        data: { status: BookingStatus.CONFIRMED, confirmedAt: new Date() },
+        data: { status: nextStatus, confirmedAt: new Date() },
       }),
       tx.bookingStatusLog.create({
         data: {
           bookingId: cmd.bookingId,
           fromStatus: booking.status,
-          toStatus: BookingStatus.CONFIRMED,
+          toStatus: nextStatus,
           changedBy: cmd.changedBy,
         },
       }),

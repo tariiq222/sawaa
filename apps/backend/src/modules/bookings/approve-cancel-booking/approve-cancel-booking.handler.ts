@@ -1,13 +1,12 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { BookingCancelApprovedEvent } from '../events/booking-cancel-approved.event';
+import { assertTransition } from '../booking-state-machine';
 
 export interface ApproveCancelBookingCommand {
   bookingId: string;
@@ -31,11 +30,7 @@ export class ApproveCancelBookingHandler {
     if (!booking) {
       throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
     }
-    if (booking.status !== ('CANCEL_REQUESTED' as BookingStatus)) {
-      throw new BadRequestException(
-        `Only CANCEL_REQUESTED bookings can be approved (status: ${booking.status})`,
-      );
-    }
+    const nextStatus = assertTransition(booking.status, 'APPROVE_CANCEL');
 
     const settings = await this.settingsHandler.execute({
       branchId: booking.branchId,
@@ -50,15 +45,15 @@ export class ApproveCancelBookingHandler {
       tx.booking.update({
         where: { id: cmd.bookingId },
         data: {
-          status: BookingStatus.CANCELLED,
+          status: nextStatus,
           cancelledAt: new Date(),
         },
       }),
       tx.bookingStatusLog.create({
         data: {
           bookingId: cmd.bookingId,
-          fromStatus: 'CANCEL_REQUESTED' as BookingStatus,
-          toStatus: BookingStatus.CANCELLED,
+          fromStatus: booking.status,
+          toStatus: nextStatus,
           changedBy: cmd.approvedBy,
           reason: cmd.approverNotes ?? 'Cancel request approved',
         },

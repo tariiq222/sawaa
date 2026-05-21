@@ -3,6 +3,7 @@ import { BookingStatus, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { CompleteBookingDto } from './complete-booking.dto';
 import { fetchBookingOrFail } from '../booking-lifecycle.helper';
+import { assertTransition } from '../booking-state-machine';
 
 export type CompleteBookingCommand = CompleteBookingDto & {
   bookingId: string;
@@ -18,12 +19,13 @@ export class CompleteBookingHandler {
 
   async execute(cmd: CompleteBookingCommand) {
     const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.CONFIRMED], 'completed');
+    const nextStatus = assertTransition(booking.status, 'COMPLETE');
 
     return this.rlsTransaction.withTransaction(async (tx) => {
       const updated = await tx.booking.update({
         where: { id: cmd.bookingId },
         data: {
-          status: BookingStatus.COMPLETED,
+          status: nextStatus,
           completedAt: new Date(),
           ...(cmd.completionNotes && { notes: cmd.completionNotes }),
         },
@@ -33,7 +35,7 @@ export class CompleteBookingHandler {
         data: {
           bookingId: cmd.bookingId,
           fromStatus: booking.status,
-          toStatus: BookingStatus.COMPLETED,
+          toStatus: nextStatus,
           changedBy: cmd.changedBy,
         },
       });

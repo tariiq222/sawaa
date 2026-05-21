@@ -19,6 +19,7 @@ import { fetchBookingOrFail } from '../booking-lifecycle.helper';
 import { ZoomMeetingService } from '../zoom-meeting.service';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
+import { assertTransition } from '../booking-state-machine';
 
 export type RescheduleBookingCommand = Omit<RescheduleBookingDto, 'newScheduledAt'> & {
   bookingId: string;
@@ -39,6 +40,8 @@ export class RescheduleBookingHandler {
 
   async execute(cmd: RescheduleBookingCommand) {
     const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.PENDING, BookingStatus.CONFIRMED], 'rescheduled');
+    // RESCHEDULE is a self-loop: status stays the same (PENDING or CONFIRMED)
+    const nextStatus = assertTransition(booking.status, 'RESCHEDULE');
     if (cmd.clientId && booking.clientId !== cmd.clientId) {
       throw new ForbiddenException('Not your booking');
     }
@@ -101,7 +104,7 @@ export class RescheduleBookingHandler {
             data: {
               bookingId: cmd.bookingId,
               fromStatus: booking.status,
-              toStatus: booking.status,
+              toStatus: nextStatus,
               changedBy: cmd.changedBy,
               reason: 'rescheduled',
             },
