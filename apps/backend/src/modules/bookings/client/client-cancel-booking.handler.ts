@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { BookingStatus, CancellationReason, RefundType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
@@ -7,6 +7,8 @@ import { ClientCancelBookingDto } from './client-cancel-booking.dto';
 import { BookingCancelledEvent } from '../events/booking-cancelled.event';
 import { RefundPaymentHandler } from '../../finance/refund-payment/refund-payment.handler';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { assertTransition } from '../booking-state-machine';
+import { computeRefundType } from '../cancellation-policy';
 
 export type ClientCancelCommand = ClientCancelBookingDto & {
   bookingId: string;
@@ -36,24 +38,17 @@ export class ClientCancelBookingHandler {
       throw new ForbiddenException('You do not own this booking');
     }
 
-    const cancellable: BookingStatus[] = [
-      BookingStatus.PENDING,
-      BookingStatus.CONFIRMED,
-      BookingStatus.AWAITING_PAYMENT,
-    ];
-    if (!cancellable.includes(booking.status)) {
-      throw new BadRequestException(`Booking cannot be cancelled (status: ${booking.status})`);
-    }
-
     const settings = await this.settingsHandler.execute({ branchId: booking.branchId });
     const hoursUntilBooking = (booking.scheduledAt.getTime() - Date.now()) / 3_600_000;
 
     if (settings.requireCancelApproval) {
+      // CLIENT_REQUEST_CANCEL: PENDING | CONFIRMED | AWAITING_PAYMENT → CANCEL_REQUESTED
+      const nextStatus = assertTransition(booking.status, 'CLIENT_REQUEST_CANCEL');
       const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
         tx.booking.update({
           where: { id: cmd.bookingId },
           data: {
-            status: BookingStatus.CANCEL_REQUESTED,
+            status: nextStatus,
             cancelNotes: cmd.reason ?? null,
           },
         }),
@@ -61,7 +56,7 @@ export class ClientCancelBookingHandler {
           data: {
             bookingId: cmd.bookingId,
             fromStatus: booking.status,
-            toStatus: BookingStatus.CANCEL_REQUESTED,
+            toStatus: nextStatus,
             changedBy: cmd.clientId,
             reason: cmd.reason ?? 'CLIENT_CANCEL_REQUIRES_APPROVAL',
           },
@@ -71,11 +66,13 @@ export class ClientCancelBookingHandler {
     }
 
     if (hoursUntilBooking < settings.freeCancelBeforeHours) {
+      // Outside free-cancel window: escalate to CANCEL_REQUESTED for staff review
+      const nextStatus = assertTransition(booking.status, 'CLIENT_REQUEST_CANCEL');
       const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
         tx.booking.update({
           where: { id: cmd.bookingId },
           data: {
-            status: BookingStatus.CANCEL_REQUESTED,
+            status: nextStatus,
             cancelNotes: cmd.reason ?? null,
           },
         }),
@@ -83,7 +80,7 @@ export class ClientCancelBookingHandler {
           data: {
             bookingId: cmd.bookingId,
             fromStatus: booking.status,
-            toStatus: BookingStatus.CANCEL_REQUESTED,
+            toStatus: nextStatus,
             changedBy: cmd.clientId,
             reason: cmd.reason ?? 'CLIENT_CANCEL_WINDOW_EXPIRED',
           },
@@ -92,9 +89,14 @@ export class ClientCancelBookingHandler {
       return { status: 'CANCEL_REQUESTED', booking: updated, requiresApproval: true };
     }
 
-    const refundType = hoursUntilBooking >= settings.freeCancelBeforeHours
-      ? settings.freeCancelRefundType
-      : RefundType.NONE;
+    // Within free-cancel window: direct cancel (CLIENT_DIRECT_CANCEL)
+    const directCancelStatus = assertTransition(booking.status, 'CLIENT_DIRECT_CANCEL');
+
+    const { refundType } = computeRefundType({
+      scheduledAt: booking.scheduledAt,
+      freeCancelBeforeHours: settings.freeCancelBeforeHours,
+      freeCancelRefundType: settings.freeCancelRefundType,
+    });
 
     let refundRequestId: string | null = null;
     let paymentId: string | null = null;
@@ -104,7 +106,7 @@ export class ClientCancelBookingHandler {
       const cancelled = await tx.booking.update({
         where: { id: cmd.bookingId },
         data: {
-          status: BookingStatus.CANCELLED,
+          status: directCancelStatus,
           cancelReason: 'CLIENT_REQUESTED',
           cancelNotes: cmd.reason ?? null,
           cancelledAt: new Date(),
@@ -114,7 +116,7 @@ export class ClientCancelBookingHandler {
         data: {
           bookingId: cmd.bookingId,
           fromStatus: booking.status,
-          toStatus: BookingStatus.CANCELLED,
+          toStatus: directCancelStatus,
           changedBy: cmd.clientId,
           reason: cmd.reason ?? 'CLIENT_CANCEL',
         },

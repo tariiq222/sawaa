@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { fetchBookingOrFail } from '../booking-lifecycle.helper';
+import { assertTransition } from '../booking-state-machine';
 
 export interface CheckInBookingCommand {
   bookingId: string;
@@ -21,6 +22,7 @@ export class CheckInBookingHandler {
     if (booking.checkedInAt) {
       throw new BadRequestException('Booking is already checked in');
     }
+    const nextStatus = assertTransition(booking.status, 'CHECK_IN'); // CONFIRMED → CONFIRMED self-loop
 
     const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
       tx.booking.update({
@@ -30,8 +32,8 @@ export class CheckInBookingHandler {
       tx.bookingStatusLog.create({
         data: {
           bookingId: cmd.bookingId,
-          fromStatus: BookingStatus.CONFIRMED,
-          toStatus: BookingStatus.CONFIRMED,
+          fromStatus: booking.status,
+          toStatus: nextStatus,
           changedBy: cmd.changedBy,
           reason: 'checked-in',
         },

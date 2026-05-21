@@ -1,12 +1,11 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingCancelRejectedEvent } from '../events/booking-cancel-rejected.event';
+import { assertTransition } from '../booking-state-machine';
 
 export interface RejectCancelBookingCommand {
   bookingId: string;
@@ -29,17 +28,13 @@ export class RejectCancelBookingHandler {
     if (!booking) {
       throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
     }
-    if (booking.status !== ('CANCEL_REQUESTED' as BookingStatus)) {
-      throw new BadRequestException(
-        `Only CANCEL_REQUESTED bookings can be rejected (status: ${booking.status})`,
-      );
-    }
+    const nextStatus = assertTransition(booking.status, 'REJECT_CANCEL');
 
     const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
       tx.booking.update({
         where: { id: cmd.bookingId },
         data: {
-          status: BookingStatus.CONFIRMED,
+          status: nextStatus,
           cancelReason: null,
           cancelNotes: null,
         },
@@ -47,8 +42,8 @@ export class RejectCancelBookingHandler {
       tx.bookingStatusLog.create({
         data: {
           bookingId: cmd.bookingId,
-          fromStatus: 'CANCEL_REQUESTED' as BookingStatus,
-          toStatus: BookingStatus.CONFIRMED,
+          fromStatus: booking.status,
+          toStatus: nextStatus,
           changedBy: cmd.rejectedBy,
           reason: cmd.rejectReason,
         },

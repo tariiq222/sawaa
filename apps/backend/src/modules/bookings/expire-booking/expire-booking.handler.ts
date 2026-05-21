@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { fetchBookingOrFail } from '../booking-lifecycle.helper';
+import { assertTransition } from '../booking-state-machine';
 
 export interface ExpireBookingCommand {
   bookingId: string;
@@ -22,17 +23,18 @@ export class ExpireBookingHandler {
       [BookingStatus.PENDING, BookingStatus.PENDING_GROUP_FILL, BookingStatus.AWAITING_PAYMENT],
       'expired',
     );
+    const nextStatus = assertTransition(booking.status, 'EXPIRE');
 
     const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
       tx.booking.update({
         where: { id: cmd.bookingId },
-        data: { status: BookingStatus.EXPIRED, expiresAt: new Date() },
+        data: { status: nextStatus, expiresAt: new Date() },
       }),
       tx.bookingStatusLog.create({
         data: {
           bookingId: cmd.bookingId,
           fromStatus: booking.status,
-          toStatus: BookingStatus.EXPIRED,
+          toStatus: nextStatus,
           changedBy: cmd.changedBy,
         },
       }),

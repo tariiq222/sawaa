@@ -4,6 +4,7 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { ClientRescheduleBookingDto } from './client-reschedule-booking.dto';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
+import { assertTransition } from '../booking-state-machine';
 
 export type ClientRescheduleCommand = ClientRescheduleBookingDto & {
   bookingId: string;
@@ -32,10 +33,8 @@ export class ClientRescheduleBookingHandler {
       throw new ForbiddenException('You do not own this booking');
     }
 
-    const reschedulable: BookingStatus[] = [BookingStatus.PENDING, BookingStatus.CONFIRMED];
-    if (!reschedulable.includes(booking.status)) {
-      throw new BadRequestException(`Booking cannot be rescheduled (status: ${booking.status})`);
-    }
+    // RESCHEDULE self-loop: validates status is PENDING or CONFIRMED, returns same status
+    const nextStatus = assertTransition(booking.status, 'RESCHEDULE');
 
     const newScheduledAt = new Date(cmd.newScheduledAt);
     if (newScheduledAt <= new Date()) {
@@ -100,7 +99,7 @@ export class ClientRescheduleBookingHandler {
             data: {
               bookingId: cmd.bookingId,
               fromStatus: booking.status,
-              toStatus: booking.status,
+              toStatus: nextStatus,
               changedBy: cmd.clientId,
               reason: 'CLIENT_RESCHEDULE',
             },
