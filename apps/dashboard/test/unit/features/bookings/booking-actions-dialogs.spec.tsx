@@ -125,9 +125,7 @@ describe("BookingActions – Dialogs", () => {
   // ─── Admin Cancel Dialog ─────────────────────────────────────────────────────
 
   describe("AdminCancelDialog", () => {
-    it("shows reason-required error when submitted empty", async () => {
-      const toastModule = await import("sonner")
-      const toastErrorSpy = vi.spyOn(toastModule.toast, "error")
+    it("disables the confirm button until a cancellation reason is picked", async () => {
       mockMutations()
       render(<BookingActions booking={makeBooking("confirmed")} onAction={vi.fn()} />)
 
@@ -135,38 +133,26 @@ describe("BookingActions – Dialogs", () => {
       fireEvent.click(findDropdownItem("cancel")!)
       expect(screen.getByTestId("sheet")).toBeTruthy()
 
-      const textarea = document.querySelector("textarea") as HTMLTextAreaElement
-      fireEvent.change(textarea, { target: { value: "" } })
       const sheetFooter = screen.getByTestId("sheet-footer")
       const cancelBtn = sheetFooter.querySelector("button:last-child") as HTMLButtonElement
-      fireEvent.click(cancelBtn)
-
-      await waitFor(() => {
-        expect(toastErrorSpy).toHaveBeenCalledWith("bookings.actions.validation.reasonRequired")
-      })
+      // No reason selected yet → button disabled (validation enforced by `disabled` prop, not toast).
+      expect(cancelBtn.disabled).toBe(true)
     })
 
-    it("shows refund-amount-required error for partial refund with no amount", async () => {
-      const toastModule = await import("sonner")
-      const toastErrorSpy = vi.spyOn(toastModule.toast, "error")
+    it("enables the confirm button once a reason is selected", async () => {
       mockMutations()
       render(<BookingActions booking={makeBooking("confirmed")} onAction={vi.fn()} />)
 
       fireEvent.click(screen.getByTestId("dropdown-trigger"))
       fireEvent.click(findDropdownItem("cancel")!)
 
-      const textarea = document.querySelector("textarea") as HTMLTextAreaElement
-      fireEvent.change(textarea, { target: { value: "Client requested reschedule" } })
-
+      // The mocked <Select> calls onValueChange("partial") on click — wires a reason in.
       fireEvent.click(screen.getByTestId("select"))
-      await waitFor(() => {})
-
-      const sheetFooter = screen.getByTestId("sheet-footer")
-      const cancelBtn = sheetFooter.querySelector("button:last-child") as HTMLButtonElement
-      fireEvent.click(cancelBtn)
 
       await waitFor(() => {
-        expect(toastErrorSpy).toHaveBeenCalledWith("bookings.actions.validation.refundAmountRequired")
+        const sheetFooter = screen.getByTestId("sheet-footer")
+        const cancelBtn = sheetFooter.querySelector("button:last-child") as HTMLButtonElement
+        expect(cancelBtn.disabled).toBe(false)
       })
     })
   })

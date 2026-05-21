@@ -167,6 +167,29 @@ export class CreateBookingHandler {
 
     const endsAt = new Date(scheduledAt.getTime() + durationMins * 60_000);
 
+    // Explicit window checks BEFORE slot availability so the admin gets a
+    // specific reason ("more than 90 days in advance" or "less than 60 min lead")
+    // instead of the generic "not available" thrown by assertSlotAvailable.
+    const now = new Date();
+    const leadMinutes = (scheduledAt.getTime() - now.getTime()) / 60_000;
+    if (
+      bookingSettings.minBookingLeadMinutes != null &&
+      leadMinutes < bookingSettings.minBookingLeadMinutes
+    ) {
+      throw new BadRequestException(
+        `Booking must be at least ${bookingSettings.minBookingLeadMinutes} minutes in advance`,
+      );
+    }
+    if (bookingSettings.maxAdvanceBookingDays != null) {
+      const maxDate = new Date(now);
+      maxDate.setDate(maxDate.getDate() + bookingSettings.maxAdvanceBookingDays);
+      if (scheduledAt > maxDate) {
+        throw new BadRequestException(
+          `Booking cannot be scheduled more than ${bookingSettings.maxAdvanceBookingDays} days in advance`,
+        );
+      }
+    }
+
     await this.assertSlotAvailable({
       employeeId: dto.employeeId,
       branchId: dto.branchId,
