@@ -117,7 +117,7 @@ describe("useCreateBookingSlots", () => {
 
     await waitFor(() => expect(result.current.slotsLoading).toBe(false))
 
-    expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", 30)
+    expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", 30, { serviceId: "svc-1", deliveryType: "in_person" })
     expect(result.current.selectedDuration).toBe(30)
     expect(result.current.slots).toHaveLength(1)
   })
@@ -135,7 +135,7 @@ describe("useCreateBookingSlots", () => {
 
     await waitFor(() => expect(result.current.slotsLoading).toBe(false))
 
-    expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", 45)
+    expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", 45, { serviceId: "svc-1", deliveryType: "in_person" })
     expect(result.current.selectedDuration).toBe(45)
     expect(result.current.slots).toHaveLength(1)
   })
@@ -153,7 +153,7 @@ describe("useCreateBookingSlots", () => {
 
     await waitFor(() => expect(result.current.slotsLoading).toBe(false))
 
-    expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", undefined)
+    expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", undefined, { serviceId: "svc-1", deliveryType: "in_person" })
     expect(result.current.selectedDuration).toBeUndefined()
     expect(result.current.slots).toEqual([])
   })
@@ -258,7 +258,7 @@ describe("useCreateBookingSlots", () => {
 
     await waitFor(() => expect(result.current.slotsLoading).toBe(false))
 
-    expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", 45)
+    expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", 45, { serviceId: "svc-1", deliveryType: "in_person" })
     expect(result.current.canFetchSlots).toBe(true)
   })
 
