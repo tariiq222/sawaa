@@ -2,6 +2,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { BookingStatus, CancellationReason } from '@prisma/client';
 import { RequestCancelBookingHandler } from './request-cancel-booking.handler';
 import { buildPrisma, buildRlsTransaction, buildEventBus, mockBooking } from '../testing/booking-test-helpers';
+// CLIENT_REQUEST_CANCEL is valid from: PENDING, CONFIRMED, AWAITING_PAYMENT (state machine)
 
 describe('RequestCancelBookingHandler', () => {
   it('sets status to CANCEL_REQUESTED for PENDING booking', async () => {
@@ -34,6 +35,22 @@ describe('RequestCancelBookingHandler', () => {
     });
 
     expect(prisma.booking.update).toHaveBeenCalled();
+  });
+
+  it('sets status to CANCEL_REQUESTED for AWAITING_PAYMENT booking (state machine allows it)', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.AWAITING_PAYMENT });
+    prisma.booking.update = jest.fn().mockResolvedValue({ ...mockBooking, status: 'CANCEL_REQUESTED' as BookingStatus });
+    const handler = new RequestCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildEventBus() as never);
+
+    await handler.execute({
+      bookingId: 'book-1',
+      reason: CancellationReason.CLIENT_REQUESTED, requestedBy: 'client-1',
+    });
+
+    expect(prisma.booking.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'CANCEL_REQUESTED' }) }),
+    );
   });
 
   it('throws NotFoundException when booking not found', async () => {
