@@ -47,6 +47,7 @@ import { CreateEmployeeBookingHandler } from './create-employee-booking/create-e
 import { ValidateCouponService } from './coupons/validate-coupon.service';
 import { CancelRecurringSeriesHandler } from './cancel-recurring-series/cancel-recurring-series.handler';
 import { CreateBundleBookingHandler } from './create-bundle-booking/create-bundle-booking.handler';
+import { GroupSessionCapacityService } from './group-session/group-session-capacity.service';
 
 const handlers = [
   CreateBookingHandler,
@@ -89,6 +90,7 @@ const handlers = [
   ValidateCouponService,
   CancelRecurringSeriesHandler,
   CreateBundleBookingHandler,
+  GroupSessionCapacityService,
 ];
 
 @Module({

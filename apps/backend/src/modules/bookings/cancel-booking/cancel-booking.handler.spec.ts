@@ -8,6 +8,7 @@ import { ZoomMeetingService } from '../zoom-meeting.service';
 import { RefundPaymentHandler } from '../../finance/refund-payment/refund-payment.handler';
 import { CancelBookingHandler } from './cancel-booking.handler';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { GroupSessionCapacityService } from '../group-session/group-session-capacity.service';
 
 type MockPrisma = {
   booking: {
@@ -71,6 +72,7 @@ describe('CancelBookingHandler', () => {
         { provide: GetBookingSettingsHandler, useValue: settingsHandler },
         { provide: ZoomMeetingService, useValue: zoomMeetingService },
         { provide: RefundPaymentHandler, useValue: refundHandler },
+        { provide: GroupSessionCapacityService, useValue: { recalculateGroupStatus: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

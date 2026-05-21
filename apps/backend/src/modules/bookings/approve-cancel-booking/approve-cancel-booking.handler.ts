@@ -7,6 +7,7 @@ import { EventBusService } from '../../../infrastructure/events';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { BookingCancelApprovedEvent } from '../events/booking-cancel-approved.event';
 import { assertTransition } from '../booking-state-machine';
+import { GroupSessionCapacityService } from '../group-session/group-session-capacity.service';
 
 export interface ApproveCancelBookingCommand {
   bookingId: string;
@@ -21,6 +22,7 @@ export class ApproveCancelBookingHandler {
     private readonly rlsTransaction: RlsTransactionService,
     private readonly eventBus: EventBusService,
     private readonly settingsHandler: GetBookingSettingsHandler,
+    private readonly groupSessionCapacity: GroupSessionCapacityService,
   ) {}
 
   async execute(cmd: ApproveCancelBookingCommand) {
@@ -41,24 +43,31 @@ export class ApproveCancelBookingHandler {
         ? (settings as Record<string, unknown>).autoRefundOnCancel === true
         : true;
 
-    const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
-      tx.booking.update({
-        where: { id: cmd.bookingId },
-        data: {
-          status: nextStatus,
-          cancelledAt: new Date(),
-        },
-      }),
-      tx.bookingStatusLog.create({
-        data: {
-          bookingId: cmd.bookingId,
-          fromStatus: booking.status,
-          toStatus: nextStatus,
-          changedBy: cmd.approvedBy,
-          reason: cmd.approverNotes ?? 'Cancel request approved',
-        },
-      }),
-    ]));
+    const [updated] = await this.rlsTransaction.withTransaction(async (tx) => {
+      const results = await Promise.all([
+        tx.booking.update({
+          where: { id: cmd.bookingId },
+          data: {
+            status: nextStatus,
+            cancelledAt: new Date(),
+          },
+        }),
+        tx.bookingStatusLog.create({
+          data: {
+            bookingId: cmd.bookingId,
+            fromStatus: booking.status,
+            toStatus: nextStatus,
+            changedBy: cmd.approvedBy,
+            reason: cmd.approverNotes ?? 'Cancel request approved',
+          },
+        }),
+      ]);
+      // Roll back sibling AWAITING_PAYMENT bookings for group sessions.
+      if (booking.groupSessionId) {
+        await this.groupSessionCapacity.recalculateGroupStatus(tx, booking.groupSessionId);
+      }
+      return results;
+    });
 
     const event = new BookingCancelApprovedEvent({
       bookingId: booking.id,

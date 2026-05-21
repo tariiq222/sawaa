@@ -54,9 +54,9 @@ export class MobileEmployeeEarningsController {
         invoiceCount: { type: 'number', example: 12 },
         byMethod: {
           type: 'object',
-          description: 'Gross invoice totals (inc. VAT) by payment method in halalas — for payment-method breakdown',
+          description: 'Employee commission share by payment method in halalas — proportionally split from employee total earnings',
           additionalProperties: { type: 'number' },
-          example: { ONLINE_CARD: 30000, CASH: 15000 },
+          example: { ONLINE_CARD: 21000, CASH: 10500 },
         },
       },
     },
@@ -147,9 +147,18 @@ export class MobileEmployeeEarningsController {
       totalEarningsHalalas += employeeShareHalalas;
       totalRevenueHalalas += new Prisma.Decimal(inv.subtotal).toNumber();
 
-      // byMethod reflects gross payment amounts (for payment-method breakdown context).
-      for (const p of inv.payments) {
-        byMethod[p.method] = (byMethod[p.method] ?? 0) + new Prisma.Decimal(p.amount).toNumber();
+      // byMethod reflects the employee's proportional share of each payment method.
+      // Formula: employeeShareForPayment = employeeShareHalalas * (payment.amount / invoice.total)
+      // This distributes the commission proportionally across payment methods used for
+      // the invoice, so the byMethod totals sum to totalEarningsHalalas.
+      const invTotal = new Prisma.Decimal(inv.total).toNumber();
+      if (invTotal > 0) {
+        for (const p of inv.payments) {
+          const paymentAmount = new Prisma.Decimal(p.amount).toNumber();
+          const proportion = paymentAmount / invTotal;
+          const methodShare = Math.round(employeeShareHalalas * proportion);
+          byMethod[p.method] = (byMethod[p.method] ?? 0) + methodShare;
+        }
       }
     }
 
