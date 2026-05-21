@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Optional,
   ConflictException,
   BadRequestException,
   NotFoundException,
@@ -12,6 +13,7 @@ import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-s
 import { CreateGuestBookingDto } from './create-guest-booking.dto';
 import { Prisma, type OtpChannel } from '@prisma/client';
 import { normalizeBookingTypes } from '../shared/delivery-type.helper';
+import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 
 export type CreateGuestBookingCommand = CreateGuestBookingDto & {
   identifier: string;
@@ -39,6 +41,7 @@ export class CreateGuestBookingHandler {
     private readonly rlsTransaction: RlsTransactionService,
     private readonly priceResolver: PriceResolverService,
     private readonly settingsHandler: GetBookingSettingsHandler,
+    @Optional() private readonly availabilityHandler?: CheckAvailabilityHandler,
   ) {}
 
   async execute(cmd: CreateGuestBookingCommand) {
@@ -127,7 +130,7 @@ export class CreateGuestBookingHandler {
     const resolved = await this.priceResolver.resolve({
       serviceId: cmd.serviceId,
       employeeServiceId: employeeService.id,
-      durationOptionId: null,
+      durationOptionId: cmd.durationOptionId ?? null,
       bookingType: bookingType ?? null,
       deliveryType: deliveryType ?? null,
     });
@@ -136,6 +139,17 @@ export class CreateGuestBookingHandler {
     const price = resolved.price;
     const currency = resolved.currency;
     const endsAt = new Date(scheduledAt.getTime() + durationMins * 60_000);
+
+    await this.assertSlotAvailable({
+      employeeId: cmd.employeeId,
+      branchId: cmd.branchId,
+      serviceId: cmd.serviceId,
+      scheduledAt,
+      durationMins,
+      durationOptionId: cmd.durationOptionId ?? resolved.durationOptionId ?? null,
+      bookingType,
+      deliveryType,
+    });
 
     const result = await this.rlsTransaction.withTransaction(async (tx) => {
       // Fix A — enforce single-use: insert UsedOtpSession or throw if already exists
@@ -285,5 +299,34 @@ export class CreateGuestBookingHandler {
     });
 
     return result;
+  }
+
+  private async assertSlotAvailable(input: {
+    employeeId: string;
+    branchId: string;
+    serviceId: string;
+    scheduledAt: Date;
+    durationMins: number;
+    durationOptionId?: string | null;
+    bookingType: string;
+    deliveryType: string;
+  }) {
+    if (!this.availabilityHandler) return;
+
+    const slots = await this.availabilityHandler.execute({
+      employeeId: input.employeeId,
+      branchId: input.branchId,
+      serviceId: input.serviceId,
+      date: input.scheduledAt,
+      durationMins: input.durationMins,
+      durationOptionId: input.durationOptionId,
+      bookingType: input.bookingType,
+      deliveryType: input.deliveryType as any,
+    });
+
+    const scheduledMs = input.scheduledAt.getTime();
+    if (!slots.some((slot) => slot.startTime.getTime() === scheduledMs)) {
+      throw new BadRequestException('Selected booking time is not available');
+    }
   }
 }

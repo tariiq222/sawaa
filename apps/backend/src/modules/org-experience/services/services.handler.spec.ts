@@ -353,6 +353,8 @@ describe('GetServiceBookingConfigsHandler', () => {
   const buildConfigPrisma = () => ({
     service: { findFirst: jest.fn().mockResolvedValue(mockService) },
     serviceBookingConfig: { findMany: jest.fn().mockResolvedValue([]) },
+    serviceDurationOption: { findMany: jest.fn().mockResolvedValue([]) },
+    serviceAvailabilityWindow: { findMany: jest.fn().mockResolvedValue([]) },
   });
 
   it('returns configs for service', async () => {
@@ -379,6 +381,20 @@ describe('SetServiceBookingConfigsHandler', () => {
       serviceBookingConfig: {
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
         upsert: jest.fn().mockResolvedValue({ id: 'cfg-1' }),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      // Custom-availability feature added two sibling tables that the handler
+      // now writes per delivery type. Stub the new touches so the legacy
+      // describe blocks (which don't exercise the windows themselves) stay
+      // green; dedicated coverage lives in set-service-booking-configs.handler.spec.ts.
+      serviceDurationOption: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        findMany: jest.fn().mockResolvedValue([]),
+        createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      serviceAvailabilityWindow: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        createMany: jest.fn().mockResolvedValue({ count: 0 }),
         findMany: jest.fn().mockResolvedValue([]),
       },
       $transaction: jest.fn(),

@@ -9,6 +9,7 @@ import { Label } from "@sawaa/ui"
 import { Switch } from "@sawaa/ui"
 import type { DraftBookingType, DraftDurationOption } from "./booking-types-editor"
 import { nextOptionKey } from "./booking-types-editor"
+import { ServiceAvailabilityWindowsEditor } from "./service-availability-windows-editor"
 
 /* ─── Props ─── */
 
@@ -134,6 +135,12 @@ export function BookingTypeRow({
           {t("services.bookingTypes.addOption")}
         </Button>
       </div>
+
+      <ServiceAvailabilityWindowsEditor
+        draft={draft}
+        t={t}
+        onUpdate={onUpdate}
+      />
     </div>
   )
 }

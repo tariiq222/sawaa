@@ -17,9 +17,25 @@ export class GetServiceBookingConfigsHandler {
     });
     if (!service) throw new NotFoundException('Service not found');
 
-    return this.prisma.serviceBookingConfig.findMany({
-      where: { serviceId: cmd.serviceId },
-      orderBy: { deliveryType: 'asc' },
-    });
+    const [configs, durationOptions, availabilityWindows] = await Promise.all([
+      this.prisma.serviceBookingConfig.findMany({
+        where: { serviceId: cmd.serviceId },
+        orderBy: { deliveryType: 'asc' },
+      }),
+      this.prisma.serviceDurationOption.findMany({
+        where: { serviceId: cmd.serviceId },
+        orderBy: [{ deliveryType: 'asc' }, { sortOrder: 'asc' }],
+      }),
+      this.prisma.serviceAvailabilityWindow.findMany({
+        where: { serviceId: cmd.serviceId },
+        orderBy: [{ deliveryType: 'asc' }, { dayOfWeek: 'asc' }, { startTime: 'asc' }],
+      }),
+    ]);
+
+    return configs.map((config) => ({
+      ...config,
+      durationOptions: durationOptions.filter((option) => option.deliveryType === config.deliveryType),
+      availabilityWindows: availabilityWindows.filter((window) => window.deliveryType === config.deliveryType),
+    }));
   }
 }

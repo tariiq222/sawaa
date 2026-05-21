@@ -489,6 +489,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/comms/email-fallback-quota": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get email fallback quota usage for the current month */
+        get: operations["DashboardCommsController_getEmailFallbackQuotaEndpoint"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/platform/problem-reports": {
         parameters: {
             query?: never;
@@ -796,6 +813,345 @@ export interface paths {
         put?: never;
         /** Deny a refund request */
         post: operations["RefundsController_denyRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List services */
+        get: operations["DashboardOrganizationSettingsController_listServicesEndpoint"];
+        put?: never;
+        /** Create a service */
+        post: operations["DashboardOrganizationSettingsController_createServiceEndpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/services/{serviceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a service by id */
+        get: operations["DashboardOrganizationSettingsController_getServiceEndpoint"];
+        put?: never;
+        post?: never;
+        /** Archive a service */
+        delete: operations["DashboardOrganizationSettingsController_archiveServiceEndpoint"];
+        options?: never;
+        head?: never;
+        /** Update a service */
+        patch: operations["DashboardOrganizationSettingsController_updateServiceEndpoint"];
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/services/{serviceId}/employees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List active employees who offer this service */
+        get: operations["DashboardOrganizationSettingsController_listServiceEmployeesEndpoint"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/services/{serviceId}/booking-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get booking type configs for a service */
+        get: operations["DashboardOrganizationSettingsController_getServiceBookingTypesEndpoint"];
+        /** Set booking type configs for a service */
+        put: operations["DashboardOrganizationSettingsController_setServiceBookingTypesEndpoint"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/services/{serviceId}/duration-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get duration options for a service */
+        get: operations["DashboardOrganizationSettingsController_getDurationOptionsEndpoint"];
+        /** Set duration options for a service */
+        put: operations["DashboardOrganizationSettingsController_setDurationOptionsEndpoint"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/bundles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List service bundles */
+        get: operations["DashboardOrganizationSettingsController_listBundlesEndpoint"];
+        put?: never;
+        /** Create a service bundle */
+        post: operations["DashboardOrganizationSettingsController_createBundleEndpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/bundles/{bundleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a service bundle by id */
+        get: operations["DashboardOrganizationSettingsController_getBundleEndpoint"];
+        put?: never;
+        post?: never;
+        /** Archive a service bundle */
+        delete: operations["DashboardOrganizationSettingsController_archiveBundleEndpoint"];
+        options?: never;
+        head?: never;
+        /** Update a service bundle */
+        patch: operations["DashboardOrganizationSettingsController_updateBundleEndpoint"];
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/branding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get clinic branding */
+        get: operations["DashboardOrganizationSettingsController_getBrandingEndpoint"];
+        put?: never;
+        /** Upsert clinic branding */
+        post: operations["DashboardOrganizationSettingsController_upsertBrandingEndpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/branding/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload clinic logo */
+        post: operations["DashboardOrganizationSettingsController_uploadLogoEndpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/intake-forms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List intake forms */
+        get: operations["DashboardOrganizationSettingsController_listIntakeFormsEndpoint"];
+        put?: never;
+        /** Create an intake form */
+        post: operations["DashboardOrganizationSettingsController_createIntakeFormEndpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/intake-forms/responses/{bookingId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get intake form responses for a booking */
+        get: operations["DashboardOrganizationSettingsController_getIntakeFormResponsesEndpoint"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/intake-forms/{formId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an intake form by ID */
+        get: operations["DashboardOrganizationSettingsController_getIntakeFormEndpoint"];
+        put?: never;
+        post?: never;
+        /** Delete an intake form */
+        delete: operations["DashboardOrganizationSettingsController_deleteIntakeFormEndpoint"];
+        options?: never;
+        head?: never;
+        /** Update an intake form */
+        patch: operations["DashboardOrganizationSettingsController_updateIntakeFormEndpoint"];
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/intake-forms/{formId}/fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace all fields on an intake form */
+        put: operations["DashboardOrganizationSettingsController_setIntakeFieldsEndpoint"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/ratings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List ratings */
+        get: operations["DashboardOrganizationSettingsController_listRatingsEndpoint"];
+        put?: never;
+        /** Submit a rating for a booking */
+        post: operations["DashboardOrganizationSettingsController_submitRatingEndpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get organization settings */
+        get: operations["DashboardOrganizationSettingsController_getOrgSettingsEndpoint"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update organization settings */
+        patch: operations["DashboardOrganizationSettingsController_upsertOrgSettingsEndpoint"];
+        trace?: never;
+    };
+    "/api/v1/dashboard/organization/booking-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get booking settings */
+        get: operations["DashboardOrganizationSettingsController_getBookingSettingsEndpoint"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update booking settings */
+        patch: operations["DashboardOrganizationSettingsController_upsertBookingSettingsEndpoint"];
+        trace?: never;
+    };
+    "/api/v1/dashboard/media/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload a file to object storage */
+        post: operations["DashboardMediaController_uploadFileEndpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/media/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get file metadata by ID */
+        get: operations["DashboardMediaController_getFileEndpoint"];
+        put?: never;
+        post?: never;
+        /** Delete a file by ID */
+        delete: operations["DashboardMediaController_deleteFileEndpoint"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/media/{id}/presigned-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Generate a presigned URL for temporary file access */
+        get: operations["DashboardMediaController_presignedUrlEndpoint"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1171,56 +1527,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/dashboard/media/upload": {
+    "/api/v1/dashboard/people/employees/{id}/account": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get the login account linked to an employee */
+        get: operations["DashboardPeopleController_getEmployeeAccountEndpoint"];
         put?: never;
-        /** Upload a file to object storage */
-        post: operations["DashboardMediaController_uploadFileEndpoint"];
+        /** Create or link a login account for an employee */
+        post: operations["DashboardPeopleController_createEmployeeAccountEndpoint"];
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/media/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get file metadata by ID */
-        get: operations["DashboardMediaController_getFileEndpoint"];
-        put?: never;
-        post?: never;
-        /** Delete a file by ID */
-        delete: operations["DashboardMediaController_deleteFileEndpoint"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/media/{id}/presigned-url": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Generate a presigned URL for temporary file access */
-        get: operations["DashboardMediaController_presignedUrlEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
+        /** Update an employee login account role or status */
+        patch: operations["DashboardPeopleController_updateEmployeeAccountEndpoint"];
         trace?: never;
     };
     "/api/v1/dashboard/bookings": {
@@ -1495,258 +1818,6 @@ export interface paths {
         head?: never;
         /** Mark a booking as no-show */
         patch: operations["DashboardBookingsController_noShowBooking"];
-        trace?: never;
-    };
-    "/api/v1/dashboard/organization/services": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List services */
-        get: operations["DashboardOrganizationSettingsController_listServicesEndpoint"];
-        put?: never;
-        /** Create a service */
-        post: operations["DashboardOrganizationSettingsController_createServiceEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/organization/services/{serviceId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get a service by id */
-        get: operations["DashboardOrganizationSettingsController_getServiceEndpoint"];
-        put?: never;
-        post?: never;
-        /** Archive a service */
-        delete: operations["DashboardOrganizationSettingsController_archiveServiceEndpoint"];
-        options?: never;
-        head?: never;
-        /** Update a service */
-        patch: operations["DashboardOrganizationSettingsController_updateServiceEndpoint"];
-        trace?: never;
-    };
-    "/api/v1/dashboard/organization/services/{serviceId}/employees": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List active employees who offer this service */
-        get: operations["DashboardOrganizationSettingsController_listServiceEmployeesEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/organization/services/{serviceId}/booking-types": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get booking type configs for a service */
-        get: operations["DashboardOrganizationSettingsController_getServiceBookingTypesEndpoint"];
-        /** Set booking type configs for a service */
-        put: operations["DashboardOrganizationSettingsController_setServiceBookingTypesEndpoint"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/organization/services/{serviceId}/duration-options": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get duration options for a service */
-        get: operations["DashboardOrganizationSettingsController_getDurationOptionsEndpoint"];
-        /** Set duration options for a service */
-        put: operations["DashboardOrganizationSettingsController_setDurationOptionsEndpoint"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/organization/bundles": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List service bundles */
-        get: operations["DashboardOrganizationSettingsController_listBundlesEndpoint"];
-        put?: never;
-        /** Create a service bundle */
-        post: operations["DashboardOrganizationSettingsController_createBundleEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/organization/bundles/{bundleId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get a service bundle by id */
-        get: operations["DashboardOrganizationSettingsController_getBundleEndpoint"];
-        put?: never;
-        post?: never;
-        /** Archive a service bundle */
-        delete: operations["DashboardOrganizationSettingsController_archiveBundleEndpoint"];
-        options?: never;
-        head?: never;
-        /** Update a service bundle */
-        patch: operations["DashboardOrganizationSettingsController_updateBundleEndpoint"];
-        trace?: never;
-    };
-    "/api/v1/dashboard/organization/branding": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get clinic branding */
-        get: operations["DashboardOrganizationSettingsController_getBrandingEndpoint"];
-        put?: never;
-        /** Upsert clinic branding */
-        post: operations["DashboardOrganizationSettingsController_upsertBrandingEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/organization/branding/logo": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Upload clinic logo */
-        post: operations["DashboardOrganizationSettingsController_uploadLogoEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/organization/intake-forms": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List intake forms */
-        get: operations["DashboardOrganizationSettingsController_listIntakeFormsEndpoint"];
-        put?: never;
-        /** Create an intake form */
-        post: operations["DashboardOrganizationSettingsController_createIntakeFormEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/organization/intake-forms/{formId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get an intake form by ID */
-        get: operations["DashboardOrganizationSettingsController_getIntakeFormEndpoint"];
-        put?: never;
-        post?: never;
-        /** Delete an intake form */
-        delete: operations["DashboardOrganizationSettingsController_deleteIntakeFormEndpoint"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/organization/ratings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List ratings */
-        get: operations["DashboardOrganizationSettingsController_listRatingsEndpoint"];
-        put?: never;
-        /** Submit a rating for a booking */
-        post: operations["DashboardOrganizationSettingsController_submitRatingEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/organization/settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get organization settings */
-        get: operations["DashboardOrganizationSettingsController_getOrgSettingsEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update organization settings */
-        patch: operations["DashboardOrganizationSettingsController_upsertOrgSettingsEndpoint"];
-        trace?: never;
-    };
-    "/api/v1/dashboard/organization/booking-settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get booking settings */
-        get: operations["DashboardOrganizationSettingsController_getBookingSettingsEndpoint"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update booking settings */
-        patch: operations["DashboardOrganizationSettingsController_upsertBookingSettingsEndpoint"];
         trace?: never;
     };
     "/api/v1/dashboard/integrations/zoom": {
@@ -3979,10 +4050,15 @@ export interface components {
         };
         CreateInvoiceDto: {
             /**
-             * @description Booking this invoice is for
+             * @description Booking this invoice is for (XOR with bundlePurchaseId)
              * @example 00000000-0000-0000-0000-000000000000
              */
-            bookingId: string;
+            bookingId?: Record<string, never>;
+            /**
+             * @description Bundle purchase this invoice is for (XOR with bookingId)
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            bundlePurchaseId?: Record<string, never>;
             /**
              * @description Branch where the service was delivered
              * @example 00000000-0000-0000-0000-000000000000
@@ -3999,13 +4075,13 @@ export interface components {
              */
             employeeId: string;
             /**
-             * @description Subtotal before discount and tax
-             * @example 100
+             * @description Subtotal before discount and tax in integer halalas (1 SAR = 100)
+             * @example 10000
              */
             subtotal: number;
             /**
-             * @description Flat discount amount
-             * @example 10
+             * @description Flat discount amount in integer halalas (1 SAR = 100)
+             * @example 1000
              */
             discountAmt?: number;
             /**
@@ -4036,8 +4112,8 @@ export interface components {
              */
             invoiceId: string;
             /**
-             * @description Amount to charge
-             * @example 100
+             * @description Amount to charge in integer halalas (1 SAR = 100)
+             * @example 10000
              */
             amount: number;
             /** @description Payment method used */
@@ -4062,8 +4138,8 @@ export interface components {
              */
             reason: string;
             /**
-             * @description Partial refund amount; omit to refund the full amount
-             * @example 50
+             * @description Partial refund amount in integer halalas (1 SAR = 100); omit to refund the full amount
+             * @example 5000
              */
             amount?: number;
         };
@@ -4233,6 +4309,962 @@ export interface components {
         };
         ApproveRefundDto: Record<string, never>;
         DenyRefundDto: Record<string, never>;
+        CreateServiceDto: {
+            /** @example قص الشعر */
+            nameAr: string;
+            /** @example Haircut */
+            nameEn?: string;
+            /** @description Service description in Arabic */
+            descriptionAr?: string;
+            /** @description Service description in English */
+            descriptionEn?: string;
+            /**
+             * @description Duration in minutes
+             * @example 30
+             */
+            durationMins: number;
+            /**
+             * @description Price in integer halalas (1 SAR = 100)
+             * @example 5000
+             */
+            price: number;
+            /**
+             * @default SAR
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @description Service image URL
+             * @example https://example.com/logo.png
+             */
+            imageUrl?: string;
+            /**
+             * Format: uuid
+             * @description Category UUID
+             * @example 550e8400-e29b-41d4-a716-446655440000
+             */
+            categoryId?: string;
+            /**
+             * @description Whether the service is active and bookable
+             * @default true
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description Hide the service from public listings
+             * @default false
+             * @example false
+             */
+            isHidden: boolean;
+            /**
+             * @description Hide the price from the booking UI
+             * @default false
+             * @example false
+             */
+            hidePriceOnBooking: boolean;
+            /**
+             * @description Hide the duration from the booking UI
+             * @default false
+             * @example false
+             */
+            hideDurationOnBooking: boolean;
+            /** @example scissors-01 */
+            iconName?: string;
+            /** @example #F0F4FF */
+            iconBgColor?: string;
+            /**
+             * @description Buffer in minutes between consecutive bookings
+             * @default 0
+             * @example 10
+             */
+            bufferMinutes: number;
+            /**
+             * @description Minimum lead time before booking, in minutes
+             * @example 60
+             */
+            minLeadMinutes?: number;
+            /**
+             * @description Maximum number of days in advance the service can be booked
+             * @example 30
+             */
+            maxAdvanceDays?: number;
+            /**
+             * @description Whether a deposit is required at booking time
+             * @default false
+             * @example false
+             */
+            depositEnabled: boolean;
+            /** @description Fixed deposit amount in integer halalas — must not exceed price */
+            depositAmount?: number;
+            /**
+             * @description Whether recurring bookings are allowed for this service
+             * @default false
+             * @example false
+             */
+            allowRecurring: boolean;
+            /**
+             * @description Allowed recurrence patterns when allowRecurring is true
+             * @example [
+             *       "WEEKLY"
+             *     ]
+             */
+            allowedRecurringPatterns?: ("DAILY" | "WEEKLY" | "BIWEEKLY" | "MONTHLY")[];
+            /**
+             * @description Maximum number of occurrences for a recurring booking
+             * @example 12
+             */
+            maxRecurrences?: number;
+            /**
+             * @description Minimum participants required for the session to proceed
+             * @default 1
+             * @example 1
+             */
+            minParticipants: number;
+            /**
+             * @description Maximum participants allowed in the session
+             * @default 1
+             * @example 1
+             */
+            maxParticipants: number;
+            /** @description Defer payment until minParticipants is reached. Requires maxParticipants > 1 */
+            reserveWithoutPayment?: boolean;
+        };
+        UpdateServiceDto: {
+            /**
+             * @description Service name in Arabic
+             * @example قص الشعر
+             */
+            nameAr?: string;
+            /**
+             * @description Service name in English
+             * @example Haircut
+             */
+            nameEn?: string;
+            /** @description Description in Arabic */
+            descriptionAr?: string;
+            /** @description Description in English */
+            descriptionEn?: string;
+            /**
+             * @description Duration in minutes
+             * @example 30
+             */
+            durationMins?: number;
+            /**
+             * @description Price
+             * @example 50
+             */
+            price?: number;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency?: string;
+            /**
+             * @description Service image URL
+             * @example https://example.com/logo.png
+             */
+            imageUrl?: string;
+            /**
+             * Format: uuid
+             * @description Category UUID
+             * @example 550e8400-e29b-41d4-a716-446655440000
+             */
+            categoryId?: string;
+            /**
+             * @description Whether the service is active
+             * @example true
+             */
+            isActive?: boolean;
+            /**
+             * @description Whether the service is hidden from clients
+             * @example false
+             */
+            isHidden?: boolean;
+            /**
+             * @description Hide price during booking flow
+             * @example false
+             */
+            hidePriceOnBooking?: boolean;
+            /**
+             * @description Hide duration during booking flow
+             * @example false
+             */
+            hideDurationOnBooking?: boolean;
+            /**
+             * @description Icon identifier
+             * @example scissors-01
+             */
+            iconName?: string;
+            /**
+             * @description Icon background color (hex)
+             * @example #F0F4FF
+             */
+            iconBgColor?: string;
+            /**
+             * @description Buffer time in minutes after the service
+             * @example 10
+             */
+            bufferMinutes?: number;
+            /**
+             * @description Minimum lead time in minutes before booking
+             * @example 60
+             */
+            minLeadMinutes?: number;
+            /**
+             * @description Maximum advance booking in days
+             * @example 30
+             */
+            maxAdvanceDays?: number;
+            /**
+             * @description Whether a deposit is required
+             * @example false
+             */
+            depositEnabled?: boolean;
+            /**
+             * @description Fixed deposit amount (must not exceed price)
+             * @example 20
+             */
+            depositAmount?: number;
+            /**
+             * @description Whether recurring bookings are allowed
+             * @example false
+             */
+            allowRecurring?: boolean;
+            /** @description Allowed recurring patterns */
+            allowedRecurringPatterns?: ("DAILY" | "WEEKLY" | "BIWEEKLY" | "MONTHLY")[];
+            /**
+             * @description Maximum number of recurrences
+             * @example 12
+             */
+            maxRecurrences?: number;
+            /**
+             * @description Minimum participants for a group session
+             * @example 1
+             */
+            minParticipants?: number;
+            /**
+             * @description Maximum participants for a group session
+             * @example 1
+             */
+            maxParticipants?: number;
+            /**
+             * @description Allow reservation without payment until minimum participants is reached
+             * @example false
+             */
+            reserveWithoutPayment?: boolean;
+        };
+        /**
+         * @description Delivery channel for this service
+         * @enum {string}
+         */
+        DeliveryType: "IN_PERSON" | "ONLINE";
+        BookingConfigInputDto: {
+            /**
+             * @description Delivery channel for this service
+             * @example IN_PERSON
+             */
+            deliveryType: components["schemas"]["DeliveryType"];
+            /**
+             * @description Price for this booking type
+             * @example 50
+             */
+            price: number;
+            /**
+             * @description Duration in minutes for this booking type
+             * @example 30
+             */
+            durationMins: number;
+            /**
+             * @description Whether this config is active
+             * @example true
+             */
+            isActive?: boolean;
+            /**
+             * @description Use service-specific availability windows instead of only branch hours
+             * @example false
+             */
+            useCustomAvailability?: boolean;
+            /** @description Duration options scoped to this delivery channel */
+            durationOptions?: components["schemas"]["BookingConfigDurationOptionInputDto"][];
+            /** @description Service custom availability windows scoped to this delivery channel */
+            availabilityWindows?: components["schemas"]["ServiceAvailabilityWindowInputDto"][];
+        };
+        BookingConfigDurationOptionInputDto: {
+            /**
+             * Format: uuid
+             * @description Existing duration option UUID
+             */
+            id?: string;
+            /**
+             * @description Option label in English
+             * @example 30 min
+             */
+            label: string;
+            /**
+             * @description Option label in Arabic
+             * @example ٣٠ دقيقة
+             */
+            labelAr?: string;
+            /**
+             * @description Duration in minutes
+             * @example 30
+             */
+            durationMins: number;
+            /**
+             * @description Price for this duration option
+             * @example 50
+             */
+            price: number;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency?: string;
+            /**
+             * @description Whether this option is the default
+             * @example true
+             */
+            isDefault?: boolean;
+            /**
+             * @description Display sort order
+             * @example 0
+             */
+            sortOrder?: number;
+            /**
+             * @description Whether this option is active
+             * @example true
+             */
+            isActive?: boolean;
+        };
+        ServiceAvailabilityWindowInputDto: {
+            /**
+             * @description Day of week, 0=Sunday through 6=Saturday
+             * @example 0
+             */
+            dayOfWeek: number;
+            /**
+             * @description Window start time in HH:mm
+             * @example 09:00
+             */
+            startTime: string;
+            /**
+             * @description Window end time in HH:mm
+             * @example 17:00
+             */
+            endTime: string;
+            /**
+             * @description Whether this window is active
+             * @example true
+             */
+            isActive?: boolean;
+        };
+        SetServiceBookingConfigsDto: {
+            /** @description Booking type configurations (must include at least one) */
+            types: components["schemas"]["BookingConfigInputDto"][];
+        };
+        DurationOptionInputDto: {
+            /**
+             * Format: uuid
+             * @description Existing duration option UUID (for updates)
+             * @example 550e8400-e29b-41d4-a716-446655440000
+             */
+            id?: string;
+            /**
+             * @description Delivery channel this option applies to
+             * @example IN_PERSON
+             * @enum {string|null}
+             */
+            deliveryType?: "IN_PERSON" | "ONLINE" | null;
+            /**
+             * @description Option label in English
+             * @example 30 min
+             */
+            label: string;
+            /**
+             * @description Option label in Arabic
+             * @example 30 دقيقة
+             */
+            labelAr: string;
+            /**
+             * @description Duration in minutes
+             * @example 30
+             */
+            durationMins: number;
+            /**
+             * @description Price for this duration
+             * @example 50
+             */
+            price: number;
+            /**
+             * @description Currency code
+             * @example SAR
+             */
+            currency?: string;
+            /**
+             * @description Whether this is the default option
+             * @example true
+             */
+            isDefault?: boolean;
+            /**
+             * @description Display sort order (0-based)
+             * @example 0
+             */
+            sortOrder?: number;
+            /**
+             * @description Whether this option is active
+             * @example true
+             */
+            isActive?: boolean;
+        };
+        SetDurationOptionsDto: {
+            /** @description Duration options to set (at least one required) */
+            options: components["schemas"]["DurationOptionInputDto"][];
+        };
+        CreateBundleDto: {
+            /** @example باقة العناية الشاملة */
+            nameAr: string;
+            /** @example Full Care Bundle */
+            nameEn?: string;
+            /** @description Bundle description in Arabic */
+            descriptionAr?: string;
+            /** @description Bundle description in English */
+            descriptionEn?: string;
+            /** @description Bundle image URL */
+            imageUrl?: string;
+            /** @example bundle-01 */
+            iconName?: string;
+            /** @example #F0F4FF */
+            iconBgColor?: string;
+            /**
+             * @example PERCENTAGE
+             * @enum {string}
+             */
+            discountType: "PERCENTAGE" | "FIXED";
+            /**
+             * @description Discount value (percentage or fixed amount)
+             * @example 10
+             */
+            discountValue: number;
+            /**
+             * @default SAR
+             * @example SAR
+             */
+            currency: string;
+            /**
+             * @default true
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @default false
+             * @example false
+             */
+            isHidden: boolean;
+            /**
+             * @default 0
+             * @example 0
+             */
+            sortOrder: number;
+            /** @description Array of service UUIDs to include in the bundle. Order defines execution order. */
+            serviceIds: string[];
+        };
+        UpdateBundleDto: {
+            /** @example باقة العناية الشاملة */
+            nameAr?: string;
+            /** @example Full Care Bundle */
+            nameEn?: string;
+            /** @description Bundle description in Arabic */
+            descriptionAr?: string;
+            /** @description Bundle description in English */
+            descriptionEn?: string;
+            /** @description Bundle image URL */
+            imageUrl?: string;
+            /** @example bundle-01 */
+            iconName?: string;
+            /** @example #F0F4FF */
+            iconBgColor?: string;
+            /**
+             * @example PERCENTAGE
+             * @enum {string}
+             */
+            discountType?: "PERCENTAGE" | "FIXED";
+            /**
+             * @description Discount value (percentage or fixed amount)
+             * @example 10
+             */
+            discountValue?: number;
+            /** @example SAR */
+            currency?: string;
+            /** @example true */
+            isActive?: boolean;
+            /** @example false */
+            isHidden?: boolean;
+            /** @example 0 */
+            sortOrder?: number;
+            /** @description Replace bundle services. Must include at least 2 services. Order defines execution order. */
+            serviceIds?: string[];
+        };
+        UpsertBrandingDto: {
+            /**
+             * @description Organization name in Arabic
+             * @example عيادة الرعاية
+             */
+            organizationNameAr: string;
+            /**
+             * @description Organization name in English
+             * @example Sawaa Clinic
+             */
+            organizationNameEn?: string;
+            /**
+             * @description Product tagline shown under the organization name
+             * @example نحو رعاية أفضل
+             */
+            productTagline?: string;
+            /**
+             * @description Logo image URL
+             * @example https://example.com/logo.png
+             */
+            logoUrl?: string;
+            /**
+             * @description Favicon image URL
+             * @example https://example.com/favicon.ico
+             */
+            faviconUrl?: string;
+            /**
+             * @description Primary brand color (hex)
+             * @example #354FD8
+             */
+            colorPrimary?: string;
+            /**
+             * @description Lighter tint of the primary color (hex)
+             * @example #6B7FE3
+             */
+            colorPrimaryLight?: string;
+            /**
+             * @description Darker shade of the primary color (hex)
+             * @example #1E3AB8
+             */
+            colorPrimaryDark?: string;
+            /**
+             * @description Accent / highlight color (hex)
+             * @example #82CC17
+             */
+            colorAccent?: string;
+            /**
+             * @description Darker shade of the accent color (hex)
+             * @example #5A8F0F
+             */
+            colorAccentDark?: string;
+            /**
+             * @description Default background color (hex)
+             * @example #F8F9FF
+             */
+            colorBackground?: string;
+            /**
+             * @description Font family name
+             * @example IBM Plex Sans Arabic
+             */
+            fontFamily?: string;
+            /**
+             * @description Font file or stylesheet URL
+             * @example https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic
+             */
+            fontUrl?: string;
+            /**
+             * @description Custom CSS injected into the clinic app
+             * @example :root { --radius: 8px; }
+             */
+            customCss?: string;
+            /**
+             * @description Public website domain (hostname)
+             * @example clinic.example.com
+             */
+            websiteDomain?: Record<string, never>;
+        };
+        IntakeFieldInputDto: {
+            /**
+             * @description Field label in Arabic
+             * @example هل لديك حساسية؟
+             */
+            labelAr: string;
+            /**
+             * @description Field label in English
+             * @example Do you have any allergies?
+             */
+            labelEn?: string;
+            /**
+             * @description Input field type
+             * @example TEXT
+             * @enum {string}
+             */
+            fieldType: "TEXT" | "TEXTAREA" | "NUMBER" | "DATE" | "SELECT" | "CHECKBOX" | "RADIO";
+            /**
+             * @description Whether the field is required
+             * @example true
+             */
+            isRequired?: boolean;
+            /**
+             * @description Selectable options for RADIO/SELECT/CHECKBOX fields
+             * @example [
+             *       "نعم",
+             *       "لا"
+             *     ]
+             */
+            options?: string[];
+            /**
+             * @description Display order position (0-based)
+             * @example 0
+             */
+            position?: number;
+        };
+        CreateIntakeFormDto: {
+            /**
+             * @description Form name in Arabic
+             * @example استبيان ما قبل الجلسة
+             */
+            nameAr: string;
+            /**
+             * @description Form name in English
+             * @example Pre-session Questionnaire
+             */
+            nameEn?: string;
+            /**
+             * @description Form type
+             * @example PRE_SESSION
+             * @enum {string}
+             */
+            type: "PRE_BOOKING" | "PRE_SESSION" | "POST_SESSION" | "REGISTRATION";
+            /**
+             * @description Form scope
+             * @example GLOBAL
+             * @enum {string}
+             */
+            scope: "GLOBAL" | "SERVICE" | "EMPLOYEE" | "BRANCH";
+            /**
+             * @description Scope entity ID (null for global scope)
+             * @example null
+             */
+            scopeId?: string;
+            /**
+             * @description Whether the form is active and shown to clients
+             * @example true
+             */
+            isActive?: boolean;
+            /** @description Form fields (max 100) */
+            fields?: components["schemas"]["IntakeFieldInputDto"][];
+        };
+        UpdateIntakeFormDto: {
+            /**
+             * @description Form name in Arabic
+             * @example استبيان ما قبل الجلسة
+             */
+            nameAr?: string;
+            /**
+             * @description Form name in English
+             * @example Pre-session Questionnaire
+             */
+            nameEn?: string;
+            /**
+             * @description Whether the form is active and shown to clients
+             * @example true
+             */
+            isActive?: boolean;
+        };
+        SetIntakeFieldsDto: {
+            /** @description Replacement field list (max 100). Omit or pass [] to clear all fields. */
+            fields?: components["schemas"]["IntakeFieldInputDto"][];
+        };
+        SubmitRatingDto: {
+            /**
+             * Format: uuid
+             * @description Booking UUID being rated
+             * @example 550e8400-e29b-41d4-a716-446655440000
+             */
+            bookingId: string;
+            /**
+             * Format: uuid
+             * @description Client UUID submitting the rating
+             * @example 550e8400-e29b-41d4-a716-446655440001
+             */
+            clientId: string;
+            /**
+             * Format: uuid
+             * @description Employee UUID being rated
+             * @example 550e8400-e29b-41d4-a716-446655440002
+             */
+            employeeId: string;
+            /**
+             * @description Rating score from 1 to 5
+             * @example 5
+             */
+            score: number;
+            /**
+             * @description Optional comment (max 2000 chars)
+             * @example Great service!
+             */
+            comment?: string;
+            /**
+             * @description Whether the rating is visible publicly
+             * @example true
+             */
+            isPublic?: boolean;
+        };
+        UpsertOrgSettingsDto: {
+            /**
+             * @description Company name in Arabic
+             * @example عيادة الرعاية
+             */
+            companyNameAr?: string;
+            /**
+             * @description Company name in English
+             * @example Sawaa Clinic
+             */
+            companyNameEn?: string;
+            /**
+             * @description Commercial registration number
+             * @example 1234567890
+             */
+            businessRegistration?: string;
+            /**
+             * @description VAT registration number (15 digits)
+             * @example 300000000000003
+             */
+            vatRegistrationNumber?: string;
+            /**
+             * @description VAT rate as fraction (0..1). Super-admin only.
+             * @example 0.15
+             */
+            vatRate?: number;
+            /**
+             * @description Seller address for invoices
+             * @example 123 King Fahad Rd, Riyadh
+             */
+            sellerAddress?: string;
+            /**
+             * @description Organization city
+             * @example Riyadh
+             */
+            organizationCity?: string;
+            /**
+             * @description Postal code
+             * @example 12345
+             */
+            postalCode?: string;
+            /**
+             * @description Contact phone number
+             * @example +966500000000
+             */
+            contactPhone?: string;
+            /**
+             * @description Contact email address
+             * @example info@clinic.sa
+             */
+            contactEmail?: string;
+            /**
+             * @description Full address
+             * @example Riyadh, Saudi Arabia
+             */
+            address?: string;
+            /**
+             * @description Social media handles keyed by platform
+             * @example {
+             *       "instagram": "clinic_sa"
+             *     }
+             */
+            socialMedia?: Record<string, never>;
+            /** @description About text in Arabic */
+            aboutAr?: string;
+            /** @description About text in English */
+            aboutEn?: string;
+            /** @description Privacy policy in Arabic */
+            privacyPolicyAr?: string;
+            /** @description Privacy policy in English */
+            privacyPolicyEn?: string;
+            /** @description Terms & conditions in Arabic */
+            termsAr?: string;
+            /** @description Terms & conditions in English */
+            termsEn?: string;
+            /** @description Cancellation policy in Arabic */
+            cancellationPolicyAr?: string;
+            /** @description Cancellation policy in English */
+            cancellationPolicyEn?: string;
+            /**
+             * @description Default app language
+             * @example ar
+             */
+            defaultLanguage?: string;
+            /**
+             * @description IANA timezone identifier
+             * @example Asia/Riyadh
+             */
+            timezone?: string;
+            /**
+             * @description Week start day
+             * @example sunday
+             */
+            weekStartDay?: string;
+            /**
+             * @description Date format string
+             * @example DD/MM/YYYY
+             */
+            dateFormat?: string;
+            /**
+             * @description Time format string
+             * @example 12h
+             * @enum {string}
+             */
+            timeFormat?: "12h" | "24h";
+            /**
+             * @description Show clinic logo in email header
+             * @example true
+             */
+            emailHeaderShowLogo?: boolean;
+            /**
+             * @description Show clinic name in email header
+             * @example true
+             */
+            emailHeaderShowName?: boolean;
+            /**
+             * @description Phone number shown in email footer
+             * @example +966500000000
+             */
+            emailFooterPhone?: string;
+            /**
+             * @description Website URL shown in email footer
+             * @example https://example.com
+             */
+            emailFooterWebsite?: string;
+            /**
+             * @description Instagram handle for email footer
+             * @example clinic_sa
+             */
+            emailFooterInstagram?: string;
+            /**
+             * @description Twitter/X handle for email footer
+             * @example clinic_sa
+             */
+            emailFooterTwitter?: string;
+            /**
+             * @description Snapchat handle for email footer
+             * @example clinic_sa
+             */
+            emailFooterSnapchat?: string;
+            /**
+             * @description TikTok handle for email footer
+             * @example clinic_sa
+             */
+            emailFooterTiktok?: string;
+            /**
+             * @description LinkedIn URL for email footer
+             * @example https://linkedin.com/company/clinic
+             */
+            emailFooterLinkedin?: string;
+            /**
+             * @description YouTube channel URL for email footer
+             * @example https://youtube.com/@clinic
+             */
+            emailFooterYoutube?: string;
+            /**
+             * @description Default session duration in minutes (15–480)
+             * @example 60
+             */
+            sessionDuration?: number;
+            /**
+             * @description Minutes before appointment to send reminder
+             * @example 60
+             */
+            reminderBeforeMinutes?: number;
+            /**
+             * @description Booking flow order
+             * @example service_first
+             * @enum {string}
+             */
+            bookingFlowOrder?: "service_first" | "employee_first" | "both";
+            /**
+             * @description Enable Moyasar online payment
+             * @example true
+             */
+            paymentMoyasarEnabled?: boolean;
+            /**
+             * @description Enable pay-at-clinic option
+             * @example true
+             */
+            paymentAtClinicEnabled?: boolean;
+        };
+        /**
+         * @description Refund type when free cancellation window is used
+         * @enum {string}
+         */
+        RefundType: "FULL" | "PARTIAL" | "NONE";
+        UpsertBookingSettingsDto: {
+            /**
+             * @description Buffer time between bookings in minutes
+             * @example 15
+             */
+            bufferMinutes?: number;
+            /**
+             * @description Hours before booking start that free cancellation is allowed
+             * @example 24
+             */
+            freeCancelBeforeHours?: number;
+            /** @description Refund type when free cancellation window is used */
+            freeCancelRefundType?: components["schemas"]["RefundType"];
+            /**
+             * @description Percentage refunded on late cancellation (0–100)
+             * @example 50
+             */
+            lateCancelRefundPercent?: number;
+            /**
+             * @description Maximum number of reschedules allowed per booking
+             * @example 2
+             */
+            maxReschedulesPerBooking?: number;
+            /**
+             * @description Hours after booking start to auto-complete the booking
+             * @example 1
+             */
+            autoCompleteAfterHours?: number;
+            /**
+             * @description Minutes after booking start to auto-mark as no-show
+             * @example 30
+             */
+            autoNoShowAfterMinutes?: number;
+            /**
+             * @description Minimum lead time in minutes before a booking can be created
+             * @example 60
+             */
+            minBookingLeadMinutes?: number;
+            /**
+             * @description Maximum days in advance a booking can be made
+             * @example 90
+             */
+            maxAdvanceBookingDays?: number;
+            /**
+             * @description Whether the waitlist is enabled
+             * @example true
+             */
+            waitlistEnabled?: boolean;
+            /**
+             * @description Maximum waitlist entries per slot
+             * @example 5
+             */
+            waitlistMaxPerSlot?: number;
+            /**
+             * @description Whether pay-at-clinic option is enabled
+             * @example true
+             */
+            payAtClinicEnabled?: boolean;
+            /**
+             * @description Whether cancellations require approval
+             * @example false
+             */
+            requireCancelApproval?: boolean;
+            /**
+             * @description Whether to automatically refund on cancellation
+             * @example true
+             */
+            autoRefundOnCancel?: boolean;
+        };
         ClientResponseDto: {
             /**
              * @description Client UUID
@@ -5138,6 +6170,11 @@ export interface components {
              */
             durationOverride?: Record<string, never> | null;
             /**
+             * @description Delivery channel for this override
+             * @example IN_PERSON
+             */
+            deliveryType?: components["schemas"]["DeliveryType"] | null;
+            /**
              * @description Whether this option is active for the employee
              * @example true
              */
@@ -5147,11 +6184,33 @@ export interface components {
             /** @description Employee service option overrides (at least one required) */
             options: components["schemas"]["EmployeeServiceOptionInputDto"][];
         };
+        CreateEmployeeAccountDto: {
+            /**
+             * @description System role to grant
+             * @example RECEPTIONIST
+             */
+            role: components["schemas"]["UserRole"];
+            /**
+             * Format: password
+             * @description Initial password (min 8 chars). Required only when no existing user account matches the employee email
+             * @example P@ssw0rd123
+             */
+            password?: string;
+        };
+        UpdateEmployeeAccountDto: {
+            /** @example ADMIN */
+            role?: components["schemas"]["UserRole"];
+            /**
+             * @description Enable or disable the login account
+             * @example true
+             */
+            isActive?: boolean;
+        };
         /**
          * @description Booking type
          * @enum {string}
          */
-        BookingType: "INDIVIDUAL" | "WALK_IN" | "GROUP" | "ONLINE";
+        BookingType: "INDIVIDUAL" | "WALK_IN" | "GROUP";
         CreateBookingDto: {
             /**
              * @description Branch where the booking takes place
@@ -5193,6 +6252,11 @@ export interface components {
              * @example INDIVIDUAL
              */
             bookingType?: components["schemas"]["BookingType"];
+            /**
+             * @description Delivery channel (IN_PERSON or ONLINE)
+             * @example IN_PERSON
+             */
+            deliveryType?: components["schemas"]["DeliveryType"];
             /**
              * @description Free-text notes for the booking
              * @example Client prefers morning sessions
@@ -5255,6 +6319,11 @@ export interface components {
              * @example false
              */
             payAtClinic?: boolean;
+            /**
+             * @description Delivery channel for all bundle bookings (IN_PERSON or ONLINE)
+             * @example IN_PERSON
+             */
+            deliveryType?: components["schemas"]["DeliveryType"];
         };
         /**
          * @description Recurrence frequency
@@ -5307,6 +6376,11 @@ export interface components {
              * @example INDIVIDUAL
              */
             bookingType?: components["schemas"]["BookingType"];
+            /**
+             * @description Delivery channel (IN_PERSON or ONLINE)
+             * @example IN_PERSON
+             */
+            deliveryType?: components["schemas"]["DeliveryType"];
             /**
              * @description Notes applied to each booking in the series
              * @example Weekly follow-up
@@ -5428,858 +6502,6 @@ export interface components {
              * @example Session completed successfully
              */
             completionNotes?: string;
-        };
-        CreateServiceDto: {
-            /** @example قص الشعر */
-            nameAr: string;
-            /** @example Haircut */
-            nameEn?: string;
-            /** @description Service description in Arabic */
-            descriptionAr?: string;
-            /** @description Service description in English */
-            descriptionEn?: string;
-            /**
-             * @description Duration in minutes
-             * @example 30
-             */
-            durationMins: number;
-            /**
-             * @description Price in integer halalas (1 SAR = 100)
-             * @example 5000
-             */
-            price: number;
-            /**
-             * @default SAR
-             * @example SAR
-             */
-            currency: string;
-            /**
-             * @description Service image URL
-             * @example https://example.com/logo.png
-             */
-            imageUrl?: string;
-            /**
-             * Format: uuid
-             * @description Category UUID
-             * @example 550e8400-e29b-41d4-a716-446655440000
-             */
-            categoryId?: string;
-            /**
-             * @description Whether the service is active and bookable
-             * @default true
-             * @example true
-             */
-            isActive: boolean;
-            /**
-             * @description Hide the service from public listings
-             * @default false
-             * @example false
-             */
-            isHidden: boolean;
-            /**
-             * @description Hide the price from the booking UI
-             * @default false
-             * @example false
-             */
-            hidePriceOnBooking: boolean;
-            /**
-             * @description Hide the duration from the booking UI
-             * @default false
-             * @example false
-             */
-            hideDurationOnBooking: boolean;
-            /** @example scissors-01 */
-            iconName?: string;
-            /** @example #F0F4FF */
-            iconBgColor?: string;
-            /**
-             * @description Buffer in minutes between consecutive bookings
-             * @default 0
-             * @example 10
-             */
-            bufferMinutes: number;
-            /**
-             * @description Minimum lead time before booking, in minutes
-             * @example 60
-             */
-            minLeadMinutes?: number;
-            /**
-             * @description Maximum number of days in advance the service can be booked
-             * @example 30
-             */
-            maxAdvanceDays?: number;
-            /**
-             * @description Whether a deposit is required at booking time
-             * @default false
-             * @example false
-             */
-            depositEnabled: boolean;
-            /** @description Fixed deposit amount in integer halalas — must not exceed price */
-            depositAmount?: number;
-            /**
-             * @description Whether recurring bookings are allowed for this service
-             * @default false
-             * @example false
-             */
-            allowRecurring: boolean;
-            /**
-             * @description Allowed recurrence patterns when allowRecurring is true
-             * @example [
-             *       "WEEKLY"
-             *     ]
-             */
-            allowedRecurringPatterns?: ("DAILY" | "WEEKLY" | "BIWEEKLY" | "MONTHLY")[];
-            /**
-             * @description Maximum number of occurrences for a recurring booking
-             * @example 12
-             */
-            maxRecurrences?: number;
-            /**
-             * @description Minimum participants required for the session to proceed
-             * @default 1
-             * @example 1
-             */
-            minParticipants: number;
-            /**
-             * @description Maximum participants allowed in the session
-             * @default 1
-             * @example 1
-             */
-            maxParticipants: number;
-            /** @description Defer payment until minParticipants is reached. Requires maxParticipants > 1 */
-            reserveWithoutPayment?: boolean;
-        };
-        UpdateServiceDto: {
-            /**
-             * @description Service name in Arabic
-             * @example قص الشعر
-             */
-            nameAr?: string;
-            /**
-             * @description Service name in English
-             * @example Haircut
-             */
-            nameEn?: string;
-            /** @description Description in Arabic */
-            descriptionAr?: string;
-            /** @description Description in English */
-            descriptionEn?: string;
-            /**
-             * @description Duration in minutes
-             * @example 30
-             */
-            durationMins?: number;
-            /**
-             * @description Price
-             * @example 50
-             */
-            price?: number;
-            /**
-             * @description Currency code
-             * @example SAR
-             */
-            currency?: string;
-            /**
-             * @description Service image URL
-             * @example https://example.com/logo.png
-             */
-            imageUrl?: string;
-            /**
-             * Format: uuid
-             * @description Category UUID
-             * @example 550e8400-e29b-41d4-a716-446655440000
-             */
-            categoryId?: string;
-            /**
-             * @description Whether the service is active
-             * @example true
-             */
-            isActive?: boolean;
-            /**
-             * @description Whether the service is hidden from clients
-             * @example false
-             */
-            isHidden?: boolean;
-            /**
-             * @description Hide price during booking flow
-             * @example false
-             */
-            hidePriceOnBooking?: boolean;
-            /**
-             * @description Hide duration during booking flow
-             * @example false
-             */
-            hideDurationOnBooking?: boolean;
-            /**
-             * @description Icon identifier
-             * @example scissors-01
-             */
-            iconName?: string;
-            /**
-             * @description Icon background color (hex)
-             * @example #F0F4FF
-             */
-            iconBgColor?: string;
-            /**
-             * @description Buffer time in minutes after the service
-             * @example 10
-             */
-            bufferMinutes?: number;
-            /**
-             * @description Minimum lead time in minutes before booking
-             * @example 60
-             */
-            minLeadMinutes?: number;
-            /**
-             * @description Maximum advance booking in days
-             * @example 30
-             */
-            maxAdvanceDays?: number;
-            /**
-             * @description Whether a deposit is required
-             * @example false
-             */
-            depositEnabled?: boolean;
-            /**
-             * @description Fixed deposit amount (must not exceed price)
-             * @example 20
-             */
-            depositAmount?: number;
-            /**
-             * @description Whether recurring bookings are allowed
-             * @example false
-             */
-            allowRecurring?: boolean;
-            /** @description Allowed recurring patterns */
-            allowedRecurringPatterns?: ("DAILY" | "WEEKLY" | "BIWEEKLY" | "MONTHLY")[];
-            /**
-             * @description Maximum number of recurrences
-             * @example 12
-             */
-            maxRecurrences?: number;
-            /**
-             * @description Minimum participants for a group session
-             * @example 1
-             */
-            minParticipants?: number;
-            /**
-             * @description Maximum participants for a group session
-             * @example 1
-             */
-            maxParticipants?: number;
-            /**
-             * @description Allow reservation without payment until minimum participants is reached
-             * @example false
-             */
-            reserveWithoutPayment?: boolean;
-        };
-        BookingConfigInputDto: {
-            /**
-             * @description Booking delivery mode for this service
-             * @example IN_PERSON
-             * @enum {string}
-             */
-            bookingType: "IN_PERSON" | "ONLINE";
-            /**
-             * @description Price for this booking type
-             * @example 50
-             */
-            price: number;
-            /**
-             * @description Duration in minutes for this booking type
-             * @example 30
-             */
-            durationMins: number;
-            /**
-             * @description Whether this config is active
-             * @example true
-             */
-            isActive?: boolean;
-        };
-        SetServiceBookingConfigsDto: {
-            /** @description Booking type configurations (must include at least one) */
-            types: components["schemas"]["BookingConfigInputDto"][];
-        };
-        DurationOptionInputDto: {
-            /**
-             * Format: uuid
-             * @description Existing duration option UUID (for updates)
-             * @example 550e8400-e29b-41d4-a716-446655440000
-             */
-            id?: string;
-            /**
-             * @description Booking type this option applies to
-             * @example INDIVIDUAL
-             * @enum {string|null}
-             */
-            bookingType?: "INDIVIDUAL" | "WALK_IN" | "GROUP" | "ONLINE" | null;
-            /**
-             * @description Option label in English
-             * @example 30 min
-             */
-            label: string;
-            /**
-             * @description Option label in Arabic
-             * @example 30 دقيقة
-             */
-            labelAr: string;
-            /**
-             * @description Duration in minutes
-             * @example 30
-             */
-            durationMins: number;
-            /**
-             * @description Price for this duration
-             * @example 50
-             */
-            price: number;
-            /**
-             * @description Currency code
-             * @example SAR
-             */
-            currency?: string;
-            /**
-             * @description Whether this is the default option
-             * @example true
-             */
-            isDefault?: boolean;
-            /**
-             * @description Display sort order (0-based)
-             * @example 0
-             */
-            sortOrder?: number;
-            /**
-             * @description Whether this option is active
-             * @example true
-             */
-            isActive?: boolean;
-        };
-        SetDurationOptionsDto: {
-            /** @description Duration options to set (at least one required) */
-            options: components["schemas"]["DurationOptionInputDto"][];
-        };
-        CreateBundleDto: {
-            /** @example باقة العناية الشاملة */
-            nameAr: string;
-            /** @example Full Care Bundle */
-            nameEn?: string;
-            /** @description Bundle description in Arabic */
-            descriptionAr?: string;
-            /** @description Bundle description in English */
-            descriptionEn?: string;
-            /** @description Bundle image URL */
-            imageUrl?: string;
-            /** @example bundle-01 */
-            iconName?: string;
-            /** @example #F0F4FF */
-            iconBgColor?: string;
-            /**
-             * @example PERCENTAGE
-             * @enum {string}
-             */
-            discountType: "PERCENTAGE" | "FIXED";
-            /**
-             * @description Discount value (percentage or fixed amount)
-             * @example 10
-             */
-            discountValue: number;
-            /**
-             * @default SAR
-             * @example SAR
-             */
-            currency: string;
-            /**
-             * @default true
-             * @example true
-             */
-            isActive: boolean;
-            /**
-             * @default false
-             * @example false
-             */
-            isHidden: boolean;
-            /**
-             * @default 0
-             * @example 0
-             */
-            sortOrder: number;
-            /** @description Array of service UUIDs to include in the bundle. Order defines execution order. */
-            serviceIds: string[];
-        };
-        UpdateBundleDto: {
-            /** @example باقة العناية الشاملة */
-            nameAr?: string;
-            /** @example Full Care Bundle */
-            nameEn?: string;
-            /** @description Bundle description in Arabic */
-            descriptionAr?: string;
-            /** @description Bundle description in English */
-            descriptionEn?: string;
-            /** @description Bundle image URL */
-            imageUrl?: string;
-            /** @example bundle-01 */
-            iconName?: string;
-            /** @example #F0F4FF */
-            iconBgColor?: string;
-            /**
-             * @example PERCENTAGE
-             * @enum {string}
-             */
-            discountType?: "PERCENTAGE" | "FIXED";
-            /**
-             * @description Discount value (percentage or fixed amount)
-             * @example 10
-             */
-            discountValue?: number;
-            /** @example SAR */
-            currency?: string;
-            /** @example true */
-            isActive?: boolean;
-            /** @example false */
-            isHidden?: boolean;
-            /** @example 0 */
-            sortOrder?: number;
-            /** @description Replace bundle services. Must include at least 2 services. Order defines execution order. */
-            serviceIds?: string[];
-        };
-        UpsertBrandingDto: {
-            /**
-             * @description Organization name in Arabic
-             * @example عيادة الرعاية
-             */
-            organizationNameAr: string;
-            /**
-             * @description Organization name in English
-             * @example Sawaa Clinic
-             */
-            organizationNameEn?: string;
-            /**
-             * @description Product tagline shown under the organization name
-             * @example نحو رعاية أفضل
-             */
-            productTagline?: string;
-            /**
-             * @description Logo image URL
-             * @example https://example.com/logo.png
-             */
-            logoUrl?: string;
-            /**
-             * @description Favicon image URL
-             * @example https://example.com/favicon.ico
-             */
-            faviconUrl?: string;
-            /**
-             * @description Primary brand color (hex)
-             * @example #354FD8
-             */
-            colorPrimary?: string;
-            /**
-             * @description Lighter tint of the primary color (hex)
-             * @example #6B7FE3
-             */
-            colorPrimaryLight?: string;
-            /**
-             * @description Darker shade of the primary color (hex)
-             * @example #1E3AB8
-             */
-            colorPrimaryDark?: string;
-            /**
-             * @description Accent / highlight color (hex)
-             * @example #82CC17
-             */
-            colorAccent?: string;
-            /**
-             * @description Darker shade of the accent color (hex)
-             * @example #5A8F0F
-             */
-            colorAccentDark?: string;
-            /**
-             * @description Default background color (hex)
-             * @example #F8F9FF
-             */
-            colorBackground?: string;
-            /**
-             * @description Font family name
-             * @example IBM Plex Sans Arabic
-             */
-            fontFamily?: string;
-            /**
-             * @description Font file or stylesheet URL
-             * @example https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic
-             */
-            fontUrl?: string;
-            /**
-             * @description Custom CSS injected into the clinic app
-             * @example :root { --radius: 8px; }
-             */
-            customCss?: string;
-            /**
-             * @description Public website domain (hostname)
-             * @example clinic.example.com
-             */
-            websiteDomain?: Record<string, never>;
-        };
-        IntakeFieldInputDto: {
-            /**
-             * @description Field label in Arabic
-             * @example هل لديك حساسية؟
-             */
-            labelAr: string;
-            /**
-             * @description Field label in English
-             * @example Do you have any allergies?
-             */
-            labelEn?: string;
-            /**
-             * @description Input field type
-             * @example TEXT
-             * @enum {string}
-             */
-            fieldType: "TEXT" | "TEXTAREA" | "NUMBER" | "DATE" | "SELECT" | "CHECKBOX" | "RADIO";
-            /**
-             * @description Whether the field is required
-             * @example true
-             */
-            isRequired?: boolean;
-            /**
-             * @description Selectable options for RADIO/SELECT/CHECKBOX fields
-             * @example [
-             *       "نعم",
-             *       "لا"
-             *     ]
-             */
-            options?: string[];
-            /**
-             * @description Display order position (0-based)
-             * @example 0
-             */
-            position?: number;
-        };
-        CreateIntakeFormDto: {
-            /**
-             * @description Form name in Arabic
-             * @example استبيان ما قبل الجلسة
-             */
-            nameAr: string;
-            /**
-             * @description Form name in English
-             * @example Pre-session Questionnaire
-             */
-            nameEn?: string;
-            /**
-             * @description Form type
-             * @example PRE_SESSION
-             * @enum {string}
-             */
-            type: "PRE_BOOKING" | "PRE_SESSION" | "POST_SESSION" | "REGISTRATION";
-            /**
-             * @description Form scope
-             * @example GLOBAL
-             * @enum {string}
-             */
-            scope: "GLOBAL" | "SERVICE" | "EMPLOYEE" | "BRANCH";
-            /**
-             * @description Scope entity ID (null for global scope)
-             * @example null
-             */
-            scopeId?: string;
-            /**
-             * @description Whether the form is active and shown to clients
-             * @example true
-             */
-            isActive?: boolean;
-            /** @description Form fields (max 100) */
-            fields?: components["schemas"]["IntakeFieldInputDto"][];
-        };
-        SubmitRatingDto: {
-            /**
-             * Format: uuid
-             * @description Booking UUID being rated
-             * @example 550e8400-e29b-41d4-a716-446655440000
-             */
-            bookingId: string;
-            /**
-             * Format: uuid
-             * @description Client UUID submitting the rating
-             * @example 550e8400-e29b-41d4-a716-446655440001
-             */
-            clientId: string;
-            /**
-             * Format: uuid
-             * @description Employee UUID being rated
-             * @example 550e8400-e29b-41d4-a716-446655440002
-             */
-            employeeId: string;
-            /**
-             * @description Rating score from 1 to 5
-             * @example 5
-             */
-            score: number;
-            /**
-             * @description Optional comment (max 2000 chars)
-             * @example Great service!
-             */
-            comment?: string;
-            /**
-             * @description Whether the rating is visible publicly
-             * @example true
-             */
-            isPublic?: boolean;
-        };
-        UpsertOrgSettingsDto: {
-            /**
-             * @description Company name in Arabic
-             * @example عيادة الرعاية
-             */
-            companyNameAr?: string;
-            /**
-             * @description Company name in English
-             * @example Sawaa Clinic
-             */
-            companyNameEn?: string;
-            /**
-             * @description Commercial registration number
-             * @example 1234567890
-             */
-            businessRegistration?: string;
-            /**
-             * @description VAT registration number (15 digits)
-             * @example 300000000000003
-             */
-            vatRegistrationNumber?: string;
-            /**
-             * @description VAT rate as fraction (0..1). Super-admin only.
-             * @example 0.15
-             */
-            vatRate?: number;
-            /**
-             * @description Seller address for invoices
-             * @example 123 King Fahad Rd, Riyadh
-             */
-            sellerAddress?: string;
-            /**
-             * @description Organization city
-             * @example Riyadh
-             */
-            organizationCity?: string;
-            /**
-             * @description Postal code
-             * @example 12345
-             */
-            postalCode?: string;
-            /**
-             * @description Contact phone number
-             * @example +966500000000
-             */
-            contactPhone?: string;
-            /**
-             * @description Contact email address
-             * @example info@clinic.sa
-             */
-            contactEmail?: string;
-            /**
-             * @description Full address
-             * @example Riyadh, Saudi Arabia
-             */
-            address?: string;
-            /**
-             * @description Social media handles keyed by platform
-             * @example {
-             *       "instagram": "clinic_sa"
-             *     }
-             */
-            socialMedia?: Record<string, never>;
-            /** @description About text in Arabic */
-            aboutAr?: string;
-            /** @description About text in English */
-            aboutEn?: string;
-            /** @description Privacy policy in Arabic */
-            privacyPolicyAr?: string;
-            /** @description Privacy policy in English */
-            privacyPolicyEn?: string;
-            /** @description Terms & conditions in Arabic */
-            termsAr?: string;
-            /** @description Terms & conditions in English */
-            termsEn?: string;
-            /** @description Cancellation policy in Arabic */
-            cancellationPolicyAr?: string;
-            /** @description Cancellation policy in English */
-            cancellationPolicyEn?: string;
-            /**
-             * @description Default app language
-             * @example ar
-             */
-            defaultLanguage?: string;
-            /**
-             * @description IANA timezone identifier
-             * @example Asia/Riyadh
-             */
-            timezone?: string;
-            /**
-             * @description Week start day
-             * @example sunday
-             */
-            weekStartDay?: string;
-            /**
-             * @description Date format string
-             * @example DD/MM/YYYY
-             */
-            dateFormat?: string;
-            /**
-             * @description Time format string
-             * @example 12h
-             */
-            timeFormat?: string;
-            /**
-             * @description Show clinic logo in email header
-             * @example true
-             */
-            emailHeaderShowLogo?: boolean;
-            /**
-             * @description Show clinic name in email header
-             * @example true
-             */
-            emailHeaderShowName?: boolean;
-            /**
-             * @description Phone number shown in email footer
-             * @example +966500000000
-             */
-            emailFooterPhone?: string;
-            /**
-             * @description Website URL shown in email footer
-             * @example https://example.com
-             */
-            emailFooterWebsite?: string;
-            /**
-             * @description Instagram handle for email footer
-             * @example clinic_sa
-             */
-            emailFooterInstagram?: string;
-            /**
-             * @description Twitter/X handle for email footer
-             * @example clinic_sa
-             */
-            emailFooterTwitter?: string;
-            /**
-             * @description Snapchat handle for email footer
-             * @example clinic_sa
-             */
-            emailFooterSnapchat?: string;
-            /**
-             * @description TikTok handle for email footer
-             * @example clinic_sa
-             */
-            emailFooterTiktok?: string;
-            /**
-             * @description LinkedIn URL for email footer
-             * @example https://linkedin.com/company/clinic
-             */
-            emailFooterLinkedin?: string;
-            /**
-             * @description YouTube channel URL for email footer
-             * @example https://youtube.com/@clinic
-             */
-            emailFooterYoutube?: string;
-            /**
-             * @description Default session duration in minutes (15–480)
-             * @example 60
-             */
-            sessionDuration?: number;
-            /**
-             * @description Minutes before appointment to send reminder
-             * @example 60
-             */
-            reminderBeforeMinutes?: number;
-            /**
-             * @description Booking flow order
-             * @example service_first
-             * @enum {string}
-             */
-            bookingFlowOrder?: "service_first" | "employee_first" | "both";
-            /**
-             * @description Enable Moyasar online payment
-             * @example true
-             */
-            paymentMoyasarEnabled?: boolean;
-            /**
-             * @description Enable pay-at-clinic option
-             * @example true
-             */
-            paymentAtClinicEnabled?: boolean;
-        };
-        /**
-         * @description Refund type when free cancellation window is used
-         * @enum {string}
-         */
-        RefundType: "FULL" | "PARTIAL" | "NONE";
-        UpsertBookingSettingsDto: {
-            /**
-             * @description Buffer time between bookings in minutes
-             * @example 15
-             */
-            bufferMinutes?: number;
-            /**
-             * @description Hours before booking start that free cancellation is allowed
-             * @example 24
-             */
-            freeCancelBeforeHours?: number;
-            /** @description Refund type when free cancellation window is used */
-            freeCancelRefundType?: components["schemas"]["RefundType"];
-            /**
-             * @description Percentage refunded on late cancellation (0–100)
-             * @example 50
-             */
-            lateCancelRefundPercent?: number;
-            /**
-             * @description Maximum number of reschedules allowed per booking
-             * @example 2
-             */
-            maxReschedulesPerBooking?: number;
-            /**
-             * @description Hours after booking start to auto-complete the booking
-             * @example 1
-             */
-            autoCompleteAfterHours?: number;
-            /**
-             * @description Minutes after booking start to auto-mark as no-show
-             * @example 30
-             */
-            autoNoShowAfterMinutes?: number;
-            /**
-             * @description Minimum lead time in minutes before a booking can be created
-             * @example 60
-             */
-            minBookingLeadMinutes?: number;
-            /**
-             * @description Maximum days in advance a booking can be made
-             * @example 90
-             */
-            maxAdvanceBookingDays?: number;
-            /**
-             * @description Whether the waitlist is enabled
-             * @example true
-             */
-            waitlistEnabled?: boolean;
-            /**
-             * @description Maximum waitlist entries per slot
-             * @example 5
-             */
-            waitlistMaxPerSlot?: number;
-            /**
-             * @description Whether pay-at-clinic option is enabled
-             * @example true
-             */
-            payAtClinicEnabled?: boolean;
-            /**
-             * @description Whether cancellations require approval
-             * @example false
-             */
-            requireCancelApproval?: boolean;
-            /**
-             * @description Whether to automatically refund on cancellation
-             * @example true
-             */
-            autoRefundOnCancel?: boolean;
         };
         UpsertZoomConfigDto: {
             /** @example your_client_id */
@@ -6968,6 +7190,11 @@ export interface components {
              */
             bookingType?: components["schemas"]["BookingType"];
             /**
+             * @description Delivery channel (IN_PERSON or ONLINE)
+             * @example IN_PERSON
+             */
+            deliveryType?: components["schemas"]["DeliveryType"];
+            /**
              * @description Free-text notes for the booking
              * @example Walk-in client
              */
@@ -7316,6 +7543,16 @@ export interface components {
              * @example 2026-04-20T09:00:00Z
              */
             startsAt: string;
+            /**
+             * @description Delivery channel (IN_PERSON or ONLINE)
+             * @example IN_PERSON
+             */
+            deliveryType?: components["schemas"]["DeliveryType"];
+            /**
+             * @description Booking type (legacy — prefer deliveryType)
+             * @example INDIVIDUAL
+             */
+            bookingType?: components["schemas"]["BookingType"];
             /** @description Client information */
             client: components["schemas"]["GuestClientInfoDto"];
         };
@@ -9732,6 +9969,60 @@ export interface operations {
             };
         };
     };
+    DashboardCommsController_getEmailFallbackQuotaEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Email fallback quota */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     DashboardPlatformController_listProblemReportsEndpoint: {
         parameters: {
             query?: {
@@ -11160,6 +11451,2211 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_listServicesEndpoint: {
+        parameters: {
+            query?: {
+                /** @description Filter by active status */
+                isActive?: boolean;
+                /** @description Include hidden services */
+                includeHidden?: boolean;
+                /** @description Filter by category UUID */
+                categoryId?: string;
+                /** @description Search by name */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated list of services */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_createServiceEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateServiceDto"];
+            };
+        };
+        responses: {
+            /** @description Service created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_getServiceEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service UUID */
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Service not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_archiveServiceEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service UUID */
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service archived */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Service not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_updateServiceEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service UUID */
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateServiceDto"];
+            };
+        };
+        responses: {
+            /** @description Service updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Service not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_listServiceEmployeesEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service UUID */
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of employees for the service */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_getServiceBookingTypesEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service UUID */
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Booking type configs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Service not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_setServiceBookingTypesEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service UUID */
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetServiceBookingConfigsDto"];
+            };
+        };
+        responses: {
+            /** @description Booking type configs updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Service not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_getDurationOptionsEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service UUID */
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Duration options for the service */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_setDurationOptionsEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service UUID */
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetDurationOptionsDto"];
+            };
+        };
+        responses: {
+            /** @description Duration options updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Service not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_listBundlesEndpoint: {
+        parameters: {
+            query?: {
+                /** @description Filter by active status */
+                isActive?: boolean;
+                /** @description Include hidden bundles */
+                includeHidden?: boolean;
+                /** @description Search by name */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated list of bundles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_createBundleEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBundleDto"];
+            };
+        };
+        responses: {
+            /** @description Bundle created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_getBundleEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Bundle UUID */
+                bundleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bundle details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Bundle not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_archiveBundleEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Bundle UUID */
+                bundleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bundle archived */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Bundle not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_updateBundleEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Bundle UUID */
+                bundleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBundleDto"];
+            };
+        };
+        responses: {
+            /** @description Bundle updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Bundle not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_getBrandingEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current branding config */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_upsertBrandingEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertBrandingDto"];
+            };
+        };
+        responses: {
+            /** @description Branding saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_uploadLogoEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Logo uploaded, URL returned */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_listIntakeFormsEndpoint: {
+        parameters: {
+            query?: {
+                /** @description Filter by active status */
+                isActive?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of intake forms */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_createIntakeFormEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateIntakeFormDto"];
+            };
+        };
+        responses: {
+            /** @description Intake form created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_getIntakeFormResponsesEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Booking UUID */
+                bookingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of intake responses (empty until model is implemented) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_getIntakeFormEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Intake form UUID */
+                formId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Intake form detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Intake form not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_deleteIntakeFormEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Intake form UUID */
+                formId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Intake form deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Intake form not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_updateIntakeFormEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Intake form UUID */
+                formId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateIntakeFormDto"];
+            };
+        };
+        responses: {
+            /** @description Intake form updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Intake form not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_setIntakeFieldsEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Intake form UUID */
+                formId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetIntakeFieldsDto"];
+            };
+        };
+        responses: {
+            /** @description Fields replaced, full form returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Intake form not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_listRatingsEndpoint: {
+        parameters: {
+            query?: {
+                /** @description Filter ratings by employee UUID */
+                employeeId?: string;
+                /** @description Filter ratings by client UUID */
+                clientId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated list of ratings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_submitRatingEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitRatingDto"];
+            };
+        };
+        responses: {
+            /** @description Rating submitted */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_getOrgSettingsEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current organization settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_upsertOrgSettingsEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertOrgSettingsDto"];
+            };
+        };
+        responses: {
+            /** @description Organization settings updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_getBookingSettingsEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current booking settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_upsertBookingSettingsEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertBookingSettingsDto"];
+            };
+        };
+        responses: {
+            /** @description Booking settings updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardMediaController_uploadFileEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description File to upload
+                     */
+                    file: string;
+                    /**
+                     * @description Storage visibility
+                     * @example PUBLIC
+                     * @enum {string}
+                     */
+                    visibility?: "PUBLIC" | "PRIVATE";
+                    /**
+                     * @description Entity type that owns the file
+                     * @example Employee
+                     */
+                    ownerType?: string;
+                    /**
+                     * Format: uuid
+                     * @description UUID of the owning entity
+                     * @example b3d2e1f0-9a8b-7c6d-5e4f-3a2b1c0d9e8f
+                     */
+                    ownerId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description File uploaded successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        url?: string;
+                        filename?: string;
+                        mimetype?: string;
+                        size?: number;
+                        /** @enum {string} */
+                        visibility?: "PUBLIC" | "PRIVATE";
+                        /** Format: date-time */
+                        createdAt?: string;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardMediaController_getFileEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the file */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description File metadata returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        url?: string;
+                        filename?: string;
+                        mimetype?: string;
+                        size?: number;
+                        /** @enum {string} */
+                        visibility?: "PUBLIC" | "PRIVATE";
+                        /** Format: date-time */
+                        createdAt?: string;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description File not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardMediaController_deleteFileEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the file to delete */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description File deleted successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description File not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardMediaController_presignedUrlEndpoint: {
+        parameters: {
+            query?: {
+                /** @description URL validity in seconds (60–86400) */
+                expirySeconds?: number;
+            };
+            header?: never;
+            path: {
+                /** @description UUID of the file */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Presigned URL generated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example https://storage.example.com/file?X-Amz-Signature=... */
+                        url?: string;
+                        /** Format: date-time */
+                        expiresAt?: string;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description File not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
         };
@@ -13580,113 +16076,104 @@ export interface operations {
             };
         };
     };
-    DashboardMediaController_uploadFileEndpoint: {
+    DashboardPeopleController_getEmployeeAccountEndpoint: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                /** @description Employee UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Employee account status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example true */
+                        hasAccount?: boolean;
+                        /** @example practitioner@example.com */
+                        employeeEmail?: string | null;
+                        account?: {
+                            /** Format: uuid */
+                            id?: string;
+                            /** @example practitioner@example.com */
+                            email?: string;
+                            /** @example RECEPTIONIST */
+                            role?: string;
+                            /** @example true */
+                            isActive?: boolean;
+                        } | null;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Employee not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardPeopleController_createEmployeeAccountEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Employee UUID */
+                id: string;
+            };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "multipart/form-data": {
-                    /**
-                     * Format: binary
-                     * @description File to upload
-                     */
-                    file: string;
-                    /**
-                     * @description Storage visibility
-                     * @example PUBLIC
-                     * @enum {string}
-                     */
-                    visibility?: "PUBLIC" | "PRIVATE";
-                    /**
-                     * @description Entity type that owns the file
-                     * @example Employee
-                     */
-                    ownerType?: string;
-                    /**
-                     * Format: uuid
-                     * @description UUID of the owning entity
-                     * @example b3d2e1f0-9a8b-7c6d-5e4f-3a2b1c0d9e8f
-                     */
-                    ownerId?: string;
-                };
+                "application/json": components["schemas"]["CreateEmployeeAccountDto"];
             };
         };
         responses: {
-            /** @description File uploaded successfully */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        id?: string;
-                        url?: string;
-                        filename?: string;
-                        mimetype?: string;
-                        size?: number;
-                        /** @enum {string} */
-                        visibility?: "PUBLIC" | "PRIVATE";
-                        /** Format: date-time */
-                        createdAt?: string;
-                    };
-                };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardMediaController_getFileEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the file */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description File metadata returned */
+            /** @description Linked or created user account */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -13695,14 +16182,12 @@ export interface operations {
                     "application/json": {
                         /** Format: uuid */
                         id?: string;
-                        url?: string;
-                        filename?: string;
-                        mimetype?: string;
-                        size?: number;
-                        /** @enum {string} */
-                        visibility?: "PUBLIC" | "PRIVATE";
-                        /** Format: date-time */
-                        createdAt?: string;
+                        /** @example practitioner@example.com */
+                        email?: string;
+                        /** @example RECEPTIONIST */
+                        role?: string;
+                        /** @example true */
+                        isActive?: boolean;
                     };
                 };
             };
@@ -13733,7 +16218,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description File not found */
+            /** @description Employee not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -13751,96 +16236,37 @@ export interface operations {
             };
         };
     };
-    DashboardMediaController_deleteFileEndpoint: {
+    DashboardPeopleController_updateEmployeeAccountEndpoint: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description UUID of the file to delete */
+                /** @description Employee UUID */
                 id: string;
             };
             cookie?: never;
         };
-        requestBody?: never;
-        responses: {
-            /** @description File deleted successfully */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description File not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEmployeeAccountDto"];
             };
         };
-    };
-    DashboardMediaController_presignedUrlEndpoint: {
-        parameters: {
-            query?: {
-                /** @description URL validity in seconds (60–86400) */
-                expirySeconds?: number;
-            };
-            header?: never;
-            path: {
-                /** @description UUID of the file */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
-            /** @description Presigned URL generated */
+            /** @description Updated user account */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        /** @example https://storage.example.com/file?X-Amz-Signature=... */
-                        url?: string;
-                        /** Format: date-time */
-                        expiresAt?: string;
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example practitioner@example.com */
+                        email?: string;
+                        /** @example ADMIN */
+                        role?: string;
+                        /** @example true */
+                        isActive?: boolean;
                     };
                 };
             };
@@ -13871,7 +16297,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description File not found */
+            /** @description Employee not found or has no linked account */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -14253,6 +16679,8 @@ export interface operations {
                 durationOptionId?: string;
                 /** @description Booking type context for availability check */
                 bookingType?: components["schemas"]["BookingType"];
+                /** @description Delivery channel context for availability check */
+                deliveryType?: components["schemas"]["DeliveryType"];
             };
             header?: never;
             path?: never;
@@ -15186,1709 +17614,6 @@ export interface operations {
             };
             /** @description Booking not found */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_listServicesEndpoint: {
-        parameters: {
-            query?: {
-                /** @description Filter by active status */
-                isActive?: boolean;
-                /** @description Include hidden services */
-                includeHidden?: boolean;
-                /** @description Filter by category UUID */
-                categoryId?: string;
-                /** @description Search by name */
-                search?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Paginated list of services */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_createServiceEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateServiceDto"];
-            };
-        };
-        responses: {
-            /** @description Service created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_getServiceEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Service UUID */
-                serviceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Service details */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Service not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_archiveServiceEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Service UUID */
-                serviceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Service archived */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Service not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_updateServiceEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Service UUID */
-                serviceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateServiceDto"];
-            };
-        };
-        responses: {
-            /** @description Service updated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Service not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_listServiceEmployeesEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Service UUID */
-                serviceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of employees for the service */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_getServiceBookingTypesEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Service UUID */
-                serviceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Booking type configs */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Service not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_setServiceBookingTypesEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Service UUID */
-                serviceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetServiceBookingConfigsDto"];
-            };
-        };
-        responses: {
-            /** @description Booking type configs updated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Service not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_getDurationOptionsEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Service UUID */
-                serviceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Duration options for the service */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_setDurationOptionsEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Service UUID */
-                serviceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetDurationOptionsDto"];
-            };
-        };
-        responses: {
-            /** @description Duration options updated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Service not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_listBundlesEndpoint: {
-        parameters: {
-            query?: {
-                /** @description Filter by active status */
-                isActive?: boolean;
-                /** @description Include hidden bundles */
-                includeHidden?: boolean;
-                /** @description Search by name */
-                search?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Paginated list of bundles */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_createBundleEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateBundleDto"];
-            };
-        };
-        responses: {
-            /** @description Bundle created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_getBundleEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Bundle UUID */
-                bundleId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Bundle details */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Bundle not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_archiveBundleEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Bundle UUID */
-                bundleId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Bundle archived */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Bundle not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_updateBundleEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Bundle UUID */
-                bundleId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateBundleDto"];
-            };
-        };
-        responses: {
-            /** @description Bundle updated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Bundle not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_getBrandingEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Current branding config */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_upsertBrandingEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpsertBrandingDto"];
-            };
-        };
-        responses: {
-            /** @description Branding saved */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_uploadLogoEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    /** Format: binary */
-                    file?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Logo uploaded, URL returned */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_listIntakeFormsEndpoint: {
-        parameters: {
-            query?: {
-                /** @description Filter by active status */
-                isActive?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of intake forms */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_createIntakeFormEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateIntakeFormDto"];
-            };
-        };
-        responses: {
-            /** @description Intake form created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_getIntakeFormEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Intake form UUID */
-                formId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Intake form detail */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Intake form not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_deleteIntakeFormEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Intake form UUID */
-                formId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Intake form deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Intake form not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_listRatingsEndpoint: {
-        parameters: {
-            query?: {
-                /** @description Filter ratings by employee UUID */
-                employeeId?: string;
-                /** @description Filter ratings by client UUID */
-                clientId?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Paginated list of ratings */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_submitRatingEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubmitRatingDto"];
-            };
-        };
-        responses: {
-            /** @description Rating submitted */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_getOrgSettingsEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Current organization settings */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_upsertOrgSettingsEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpsertOrgSettingsDto"];
-            };
-        };
-        responses: {
-            /** @description Organization settings updated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_getBookingSettingsEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Current booking settings */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_upsertBookingSettingsEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpsertBookingSettingsDto"];
-            };
-        };
-        responses: {
-            /** @description Booking settings updated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23154,7 +23879,7 @@ export interface operations {
                 /** @description Duration option UUID for services with multiple duration choices */
                 durationOptionId?: string;
                 /** @description Booking type filter */
-                bookingType?: "INDIVIDUAL" | "WALK_IN" | "GROUP" | "ONLINE";
+                bookingType?: "INDIVIDUAL" | "WALK_IN" | "GROUP";
             };
             header?: never;
             path?: never;

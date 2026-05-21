@@ -48,8 +48,8 @@ import { sarToHalalas, halalasToSar } from "@/lib/money"
 
 // DB-10: enum values are now uppercase
 const EMPTY_BOOKING_TYPES: DraftBookingType[] = [
-  { deliveryType: "IN_PERSON", enabled: true, price: 0, durationMins: 30, durationOptions: [] },
-  { deliveryType: "ONLINE", enabled: false, price: 0, durationMins: 30, durationOptions: [] },
+  { deliveryType: "IN_PERSON", enabled: true, price: 0, durationMins: 30, durationOptions: [], useCustomAvailability: false, availabilityWindows: [] },
+  { deliveryType: "ONLINE", enabled: false, price: 0, durationMins: 30, durationOptions: [], useCustomAvailability: false, availabilityWindows: [] },
 ]
 
 /* ─── Props ─── */

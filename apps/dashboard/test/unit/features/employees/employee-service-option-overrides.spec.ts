@@ -14,6 +14,8 @@ const serviceBookingTypes: ServiceBookingType[] = [
     price: 15000,
     durationMins: 45,
     isActive: true,
+    useCustomAvailability: false,
+    availabilityWindows: [],
     durationOptions: [
       {
         id: "opt-45",

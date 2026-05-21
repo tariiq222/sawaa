@@ -25,6 +25,16 @@ describe('Booking DeliveryType (e2e)', () => {
   const EMPLOYEE_ID = '65b0c5c9-e700-4e3f-ab13-a6f42d68b4d1';
   const SERVICE_ID = '6b5c1a2e-23d9-4328-88a6-b4a41b9ee524';
 
+  // CheckAvailabilityHandler builds slot grid at 30-min boundaries starting from
+  // window start (00:00 in the mocked all-day shift). `assertSlotAvailable` only
+  // accepts an exact match, so the e2e payload must pick a boundary timestamp
+  // tomorrow. Returns ISO at tomorrow 10:00 local server time.
+  const tomorrowAtTenISO = () => {
+    const d = new Date(Date.now() + 86400_000);
+    d.setHours(10, 0, 0, 0);
+    return d.toISOString();
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     prisma.branch.findFirst.mockResolvedValue({ id: BRANCH_ID, nameAr: 'الفرع', nameEn: 'Branch', isActive: true });
@@ -59,11 +69,43 @@ describe('Booking DeliveryType (e2e)', () => {
     });
     prisma.serviceCategory.findFirst.mockResolvedValue({ id: 'cat-1', nameAr: 'تصنيف' });
     prisma.department.findFirst.mockResolvedValue({ id: 'dep-1', nameAr: 'قسم' });
+
+    // The custom-availability feature wires CheckAvailabilityHandler into the
+    // create-booking path, so e2e tests that previously stubbed only the write
+    // models now also need the availability surface (business hour, employee
+    // shift, branch link, no breaks/holidays/conflicts) to expose a slot at
+    // the scheduledAt timestamp the test sends.
+    const allHours = (day: number) => ({
+      branchId: BRANCH_ID,
+      dayOfWeek: day,
+      startTime: '00:00',
+      endTime: '23:59',
+      isOpen: true,
+    });
+    prisma.businessHour.findUnique.mockImplementation(({ where }: any) =>
+      Promise.resolve(allHours(where?.branchId_dayOfWeek?.dayOfWeek ?? 0)),
+    );
+    prisma.employeeAvailability.findMany.mockResolvedValue(
+      Array.from({ length: 7 }, (_, day) => ({
+        employeeId: EMPLOYEE_ID,
+        dayOfWeek: day,
+        startTime: '00:00',
+        endTime: '23:59',
+        isActive: true,
+      })),
+    );
+    prisma.employeeBranch.findUnique.mockResolvedValue({ id: 'eb-1' });
+    prisma.employeeBreak.findMany.mockResolvedValue([]);
+    prisma.employeeAvailabilityException.findMany.mockResolvedValue([]);
+    prisma.holiday.findFirst.mockResolvedValue(null);
+    prisma.booking.findMany.mockResolvedValue([]);
+    prisma.serviceBookingConfig.findUnique.mockResolvedValue(null);
+    prisma.serviceAvailabilityWindow.findMany.mockResolvedValue([]);
   });
 
   describe('POST /api/v1/dashboard/bookings', () => {
     it('creates booking with deliveryType=ONLINE', async () => {
-      const futureDate = new Date(Date.now() + 86400_000).toISOString();
+      const futureDate = tomorrowAtTenISO();
 
       prisma.booking.create.mockResolvedValue({
         id: 'book-1',
@@ -109,7 +151,7 @@ describe('Booking DeliveryType (e2e)', () => {
     });
 
     it('creates booking with deliveryType=IN_PERSON', async () => {
-      const futureDate = new Date(Date.now() + 86400_000).toISOString();
+      const futureDate = tomorrowAtTenISO();
 
       prisma.booking.create.mockResolvedValue({
         id: 'book-2',
@@ -145,7 +187,7 @@ describe('Booking DeliveryType (e2e)', () => {
     });
 
     it('maps legacy bookingType=ONLINE to INDIVIDUAL + ONLINE', async () => {
-      const futureDate = new Date(Date.now() + 86400_000).toISOString();
+      const futureDate = tomorrowAtTenISO();
 
       prisma.booking.create.mockResolvedValue({
         id: 'book-3',
@@ -190,7 +232,7 @@ describe('Booking DeliveryType (e2e)', () => {
     });
 
     it('persists snapshot fields on booking creation', async () => {
-      const futureDate = new Date(Date.now() + 86400_000).toISOString();
+      const futureDate = tomorrowAtTenISO();
 
       prisma.branch.findFirst.mockResolvedValue({ id: 'e4ce5937-1ba1-4f22-9ad1-c62d10961dde', nameAr: 'الفرع الرئيسي' });
       prisma.employee.findFirst.mockResolvedValue({

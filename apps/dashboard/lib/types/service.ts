@@ -71,7 +71,19 @@ export interface ServiceBookingType {
   price: number
   durationMins: number
   isActive: boolean
+  useCustomAvailability: boolean
   durationOptions: ServiceDurationOption[]
+  availabilityWindows: ServiceAvailabilityWindow[]
+}
+
+export interface ServiceAvailabilityWindow {
+  id: string
+  serviceId: string
+  deliveryType: ServiceDeliveryType
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+  isActive: boolean
 }
 
 export interface ServiceDurationOption {

@@ -1,8 +1,9 @@
-import { Injectable, BadRequestException, ForbiddenException, ConflictException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, ConflictException, Optional } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { ClientRescheduleBookingDto } from './client-reschedule-booking.dto';
+import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 
 export type ClientRescheduleCommand = ClientRescheduleBookingDto & {
   bookingId: string;
@@ -15,6 +16,7 @@ export class ClientRescheduleBookingHandler {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly settingsHandler: GetBookingSettingsHandler,
+    @Optional() private readonly availabilityHandler?: CheckAvailabilityHandler,
   ) {}
 
   async execute(cmd: ClientRescheduleCommand) {
@@ -61,6 +63,18 @@ export class ClientRescheduleBookingHandler {
     const durationMins = cmd.newDurationMins ?? booking.durationMins;
     const newEndsAt = new Date(newScheduledAt.getTime() + durationMins * 60_000);
 
+    await this.assertSlotAvailable({
+      bookingId: cmd.bookingId,
+      employeeId: booking.employeeId,
+      branchId: booking.branchId,
+      serviceId: booking.serviceId,
+      scheduledAt: newScheduledAt,
+      durationMins,
+      durationOptionId: booking.durationOptionId,
+      bookingType: booking.bookingType,
+      deliveryType: booking.deliveryType,
+    });
+
     const [updated] = await this.rlsTransaction.withTransaction(
       async (tx) => {
         const conflict = await tx.booking.findFirst({
@@ -97,5 +111,36 @@ export class ClientRescheduleBookingHandler {
     );
 
     return { booking: updated };
+  }
+
+  private async assertSlotAvailable(input: {
+    bookingId: string;
+    employeeId: string;
+    branchId: string;
+    serviceId: string;
+    scheduledAt: Date;
+    durationMins: number;
+    durationOptionId?: string | null;
+    bookingType: string;
+    deliveryType: string;
+  }) {
+    if (!this.availabilityHandler) return;
+
+    const slots = await this.availabilityHandler.execute({
+      employeeId: input.employeeId,
+      branchId: input.branchId,
+      serviceId: input.serviceId,
+      date: input.scheduledAt,
+      durationMins: input.durationMins,
+      durationOptionId: input.durationOptionId,
+      bookingType: input.bookingType,
+      deliveryType: input.deliveryType as any,
+      excludeBookingId: input.bookingId,
+    });
+
+    const scheduledMs = input.scheduledAt.getTime();
+    if (!slots.some((slot) => slot.startTime.getTime() === scheduledMs)) {
+      throw new BadRequestException('Selected booking time is not available');
+    }
   }
 }

@@ -60,7 +60,7 @@ export async function createTestApp(): Promise<{ app: INestApplication; prisma: 
     'notificationDeliveryLog', 'smsDelivery', 'organizationEmailConfig',
     'organizationSmsConfig', 'organizationPaymentConfig', 'brandingConfig',
     'employeeBranch', 'employeeService', 'employeeServiceType', 'employeeAvailability',
-    'serviceBookingConfig', 'serviceDurationOption', 'employeeServiceOption',
+    'serviceBookingConfig', 'serviceDurationOption', 'serviceAvailabilityWindow', 'employeeServiceOption',
     'employeeAvailabilityException', 'employeeBreak', 'businessHour', 'holiday',
     'bookingSettings', 'bookingStatusLog', 'bookingClient', 'serviceBundle', 'serviceBundleItem',
     'intakeForm', 'intakeField', 'intakeResponse', 'organizationSettings',

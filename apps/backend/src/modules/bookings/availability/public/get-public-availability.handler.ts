@@ -59,6 +59,9 @@ export class GetPublicAvailabilityHandler {
       branchId,
       serviceId,
       date,
+      durationOptionId: query.durationOptionId,
+      bookingType: query.bookingType,
+      deliveryType: query.deliveryType,
     });
 
     return slots;
