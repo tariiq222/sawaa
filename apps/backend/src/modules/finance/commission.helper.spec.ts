@@ -1,8 +1,11 @@
+import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { computeCommission } from './commission.helper';
 
+const dec = (v: string | number) => new Prisma.Decimal(v);
+
 describe('computeCommission', () => {
-  const dec = (v: string | number) => new Prisma.Decimal(v);
+  // ─── Core calculation tests ───────────────────────────────────────────────
 
   it('employee 70%, no service override → 7000 from 10000 halalas', () => {
     const result = computeCommission({
@@ -12,7 +15,6 @@ describe('computeCommission', () => {
     });
     expect(result.employeeShareHalalas).toBe(7000);
     expect(result.organizationShareHalalas).toBe(3000);
-    // Prisma.Decimal normalises trailing zeros; compare as number
     expect(result.effectiveRate.toNumber()).toBeCloseTo(0.70, 10);
   });
 
@@ -24,7 +26,6 @@ describe('computeCommission', () => {
     });
     expect(result.employeeShareHalalas).toBe(5000);
     expect(result.organizationShareHalalas).toBe(5000);
-    // Prisma.Decimal normalises trailing zeros; compare as number
     expect(result.effectiveRate.toNumber()).toBeCloseTo(0.50, 10);
   });
 
@@ -67,7 +68,6 @@ describe('computeCommission', () => {
     });
     expect(result.employeeShareHalalas).toBe(1500);
     expect(result.organizationShareHalalas).toBe(8500);
-    // Verify no fractional halalas leaked
     expect(Number.isInteger(result.employeeShareHalalas)).toBe(true);
     expect(Number.isInteger(result.organizationShareHalalas)).toBe(true);
   });
@@ -93,5 +93,65 @@ describe('computeCommission', () => {
       });
       expect(result.employeeShareHalalas + result.organizationShareHalalas).toBe(sub);
     }
+  });
+
+  // ─── Input validation tests (defence-in-depth) ────────────────────────────
+
+  it('throws BadRequestException when employeeRate is negative', () => {
+    expect(() =>
+      computeCommission({
+        subtotalHalalas: 10000,
+        employeeRate: dec('-0.1'),
+      }),
+    ).toThrow(BadRequestException);
+  });
+
+  it('throws BadRequestException when employeeRate exceeds 1', () => {
+    expect(() =>
+      computeCommission({
+        subtotalHalalas: 10000,
+        employeeRate: dec('1.5'),
+      }),
+    ).toThrow(BadRequestException);
+  });
+
+  it('throws BadRequestException when serviceOverride is negative', () => {
+    expect(() =>
+      computeCommission({
+        subtotalHalalas: 10000,
+        employeeRate: dec('0.70'),
+        serviceOverride: dec('-0.01'),
+      }),
+    ).toThrow(BadRequestException);
+  });
+
+  it('throws BadRequestException when serviceOverride exceeds 1', () => {
+    expect(() =>
+      computeCommission({
+        subtotalHalalas: 10000,
+        employeeRate: dec('0.70'),
+        serviceOverride: dec('1.0001'),
+      }),
+    ).toThrow(BadRequestException);
+  });
+
+  it('accepts serviceOverride of exactly 0', () => {
+    const result = computeCommission({
+      subtotalHalalas: 10000,
+      employeeRate: dec('0.70'),
+      serviceOverride: dec('0'),
+    });
+    expect(result.employeeShareHalalas).toBe(0);
+    expect(result.organizationShareHalalas).toBe(10000);
+  });
+
+  it('accepts serviceOverride of exactly 1', () => {
+    const result = computeCommission({
+      subtotalHalalas: 10000,
+      employeeRate: dec('0.70'),
+      serviceOverride: dec('1'),
+    });
+    expect(result.employeeShareHalalas).toBe(10000);
+    expect(result.organizationShareHalalas).toBe(0);
   });
 });
