@@ -18,6 +18,7 @@ const DEFAULT_BRANDING: PublicBranding = {
   fontFamily: null,
   fontUrl: null,
   websiteDomain: null,
+  timeFormat: '24h',
 };
 
 export async function getPublicBrandingForSsr(): Promise<PublicBranding> {

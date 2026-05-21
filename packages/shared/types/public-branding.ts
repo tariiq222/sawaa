@@ -35,4 +35,7 @@ export interface PublicBranding {
 
   // Website
   websiteDomain: string | null;
+
+  // Display preferences (from OrganizationSettings)
+  timeFormat: '12h' | '24h';
 }

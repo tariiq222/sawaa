@@ -18,6 +18,7 @@ const branding: PublicBranding = {
   fontFamily: null,
   fontUrl: null,
   websiteDomain: null,
+  timeFormat: '24h',
 };
 
 describe('BrandingStyle', () => {

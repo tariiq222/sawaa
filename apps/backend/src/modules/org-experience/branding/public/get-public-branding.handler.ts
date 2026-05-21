@@ -7,9 +7,16 @@ export class GetPublicBrandingHandler {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(): Promise<PublicBranding> {
-    const row = await this.prisma.brandingConfig.findFirst({
-      orderBy: { createdAt: 'desc' },
-    });
+    const [row, settings] = await Promise.all([
+      this.prisma.brandingConfig.findFirst({
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.organizationSettings.findFirst({
+        select: { timeFormat: true },
+      }),
+    ]);
+
+    const timeFormat = (settings?.timeFormat === '24h' ? '24h' : '12h') as '12h' | '24h';
 
     if (!row) {
       return {
@@ -27,6 +34,7 @@ export class GetPublicBrandingHandler {
         fontFamily: null,
         fontUrl: null,
         websiteDomain: null,
+        timeFormat,
       };
     }
 
@@ -45,6 +53,7 @@ export class GetPublicBrandingHandler {
       fontFamily: row.fontFamily,
       fontUrl: row.fontUrl,
       websiteDomain: row.websiteDomain,
+      timeFormat,
     };
   }
 }
