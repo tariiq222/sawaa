@@ -21,9 +21,12 @@ const mockRow = {
   updatedAt: new Date(),
 };
 
-const buildPrisma = (row: typeof mockRow | null = mockRow) => ({
+const buildPrisma = (row: typeof mockRow | null = mockRow, timeFormat = '12h') => ({
   brandingConfig: {
     findFirst: jest.fn().mockResolvedValue(row),
+  },
+  organizationSettings: {
+    findFirst: jest.fn().mockResolvedValue({ timeFormat }),
   },
 });
 
@@ -49,6 +52,7 @@ describe('GetPublicBrandingHandler', () => {
       fontFamily: null,
       fontUrl: null,
       websiteDomain: null,
+      timeFormat: '12h',
     });
     expect(result).not.toHaveProperty('customCss');
     expect(result).not.toHaveProperty('id');
