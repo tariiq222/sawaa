@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
 /**
@@ -34,9 +35,30 @@ export interface CommissionResult {
  * - Employee share = round(subtotal × rate, 0, ROUND_HALF_UP).
  * - Organisation share = subtotal − employee share  (guarantees no halala is
  *   lost or double-counted).
+ * - Rates must be in the range [0, 1]. Values outside this range indicate a
+ *   data integrity issue (the DB CHECK constraint should have caught it) and
+ *   are rejected with BadRequestException as defence-in-depth.
  */
 export function computeCommission(input: CommissionInput): CommissionResult {
   const { subtotalHalalas, employeeRate, serviceOverride } = input;
+
+  // ── Defence-in-depth: validate rates before any calculation ─────────────
+  const zero = new Prisma.Decimal(0);
+  const one = new Prisma.Decimal(1);
+
+  if (employeeRate.lt(zero) || employeeRate.gt(one)) {
+    throw new BadRequestException(
+      `Employee commission rate must be between 0 and 1, got ${employeeRate.toString()}`,
+    );
+  }
+  if (serviceOverride != null) {
+    const overrideDec = new Prisma.Decimal(serviceOverride);
+    if (overrideDec.lt(zero) || overrideDec.gt(one)) {
+      throw new BadRequestException(
+        `Service commission rate override must be between 0 and 1, got ${overrideDec.toString()}`,
+      );
+    }
+  }
 
   const effectiveRate: Prisma.Decimal =
     serviceOverride != null ? new Prisma.Decimal(serviceOverride) : new Prisma.Decimal(employeeRate);
