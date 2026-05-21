@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { mapEmployeeRow } from './employee-row.mapper';
 
 describe('mapEmployeeRow', () => {
@@ -28,6 +29,7 @@ describe('mapEmployeeRow', () => {
       publicBioAr: null,
       publicBioEn: null,
       publicImageUrl: null,
+      commissionRate: new Prisma.Decimal('1.0'),
       createdAt: new Date('2024-01-01'),
       updatedAt: new Date('2024-01-02'),
       branches: [{ id: 'eb1', branchId: 'b1', employeeId: 'e1' }],
@@ -73,6 +75,7 @@ describe('mapEmployeeRow', () => {
       publicBioAr: null,
       publicBioEn: null,
       publicImageUrl: null,
+      commissionRate: new Prisma.Decimal('1.0'),
       createdAt: new Date('2024-01-01'),
       updatedAt: new Date('2024-01-02'),
       branches: undefined,

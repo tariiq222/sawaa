@@ -19503,7 +19503,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Earnings totals and breakdown by payment method for the requested period",
+            "description": "Earnings totals (employee commission share) and breakdown by payment method for the requested period",
             "content": {
               "application/json": {
                 "schema": {
@@ -19522,9 +19522,15 @@
                         }
                       }
                     },
-                    "totalEarnings": {
+                    "totalEarningsHalalas": {
                       "type": "number",
-                      "example": 4500
+                      "description": "Employee commission share in halalas (subtotal × effective commission rate)",
+                      "example": 31500
+                    },
+                    "totalRevenueHalalas": {
+                      "type": "number",
+                      "description": "Sum of invoice subtotals (pre-VAT) in halalas — gross context figure",
+                      "example": 45000
                     },
                     "invoiceCount": {
                       "type": "number",
@@ -19532,12 +19538,13 @@
                     },
                     "byMethod": {
                       "type": "object",
+                      "description": "Gross invoice totals (inc. VAT) by payment method in halalas — for payment-method breakdown",
                       "additionalProperties": {
                         "type": "number"
                       },
                       "example": {
-                        "CARD": 3000,
-                        "CASH": 1500
+                        "ONLINE_CARD": 30000,
+                        "CASH": 15000
                       }
                     }
                   }
@@ -24478,27 +24485,87 @@
       "BookingConfigDurationOptionInputDto": {
         "type": "object",
         "properties": {
-          "id": { "type": "string", "format": "uuid", "description": "Existing duration option UUID" },
-          "label": { "type": "string", "description": "Option label in English", "example": "30 min" },
-          "labelAr": { "type": "string", "description": "Option label in Arabic", "example": "٣٠ دقيقة" },
-          "durationMins": { "type": "number", "description": "Duration in minutes", "example": 30 },
-          "price": { "type": "number", "description": "Price for this duration option", "example": 50 },
-          "currency": { "type": "string", "description": "Currency code", "example": "SAR" },
-          "isDefault": { "type": "boolean", "description": "Whether this option is the default", "example": true },
-          "sortOrder": { "type": "number", "description": "Display sort order", "example": 0 },
-          "isActive": { "type": "boolean", "description": "Whether this option is active", "example": true }
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Existing duration option UUID"
+          },
+          "label": {
+            "type": "string",
+            "description": "Option label in English",
+            "example": "30 min"
+          },
+          "labelAr": {
+            "type": "string",
+            "description": "Option label in Arabic",
+            "example": "٣٠ دقيقة"
+          },
+          "durationMins": {
+            "type": "number",
+            "description": "Duration in minutes",
+            "example": 30
+          },
+          "price": {
+            "type": "number",
+            "description": "Price for this duration option",
+            "example": 50
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency code",
+            "example": "SAR"
+          },
+          "isDefault": {
+            "type": "boolean",
+            "description": "Whether this option is the default",
+            "example": true
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Display sort order",
+            "example": 0
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether this option is active",
+            "example": true
+          }
         },
-        "required": ["label", "durationMins", "price"]
+        "required": [
+          "label",
+          "durationMins",
+          "price"
+        ]
       },
       "ServiceAvailabilityWindowInputDto": {
         "type": "object",
         "properties": {
-          "dayOfWeek": { "type": "number", "description": "Day of week, 0=Sunday through 6=Saturday", "example": 0 },
-          "startTime": { "type": "string", "description": "Window start time in HH:mm", "example": "09:00" },
-          "endTime": { "type": "string", "description": "Window end time in HH:mm", "example": "17:00" },
-          "isActive": { "type": "boolean", "description": "Whether this window is active", "example": true }
+          "dayOfWeek": {
+            "type": "number",
+            "description": "Day of week, 0=Sunday through 6=Saturday",
+            "example": 0
+          },
+          "startTime": {
+            "type": "string",
+            "description": "Window start time in HH:mm",
+            "example": "09:00"
+          },
+          "endTime": {
+            "type": "string",
+            "description": "Window end time in HH:mm",
+            "example": "17:00"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether this window is active",
+            "example": true
+          }
         },
-        "required": ["dayOfWeek", "startTime", "endTime"]
+        "required": [
+          "dayOfWeek",
+          "startTime",
+          "endTime"
+        ]
       },
       "SetServiceBookingConfigsDto": {
         "type": "object",
