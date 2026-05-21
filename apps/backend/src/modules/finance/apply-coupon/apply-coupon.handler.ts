@@ -44,17 +44,25 @@ export class ApplyCouponHandler {
     const invoiceVatRate = new Prisma.Decimal(invoice.vatRate.toString());
     const couponDiscountValue = new Prisma.Decimal(coupon.discountValue.toString());
 
-    const discount =
+    // All amounts are integer halalas — use toDecimalPlaces(0, ROUND_HALF_UP) for every rounding step.
+    const discountDecimal: Prisma.Decimal =
       coupon.discountType === 'PERCENTAGE'
-        ? invoiceSubtotal.times(couponDiscountValue).div(100).toDecimalPlaces(2).toNumber()
-        : Prisma.Decimal.min(couponDiscountValue, invoiceSubtotal).toNumber();
+        ? invoiceSubtotal
+            .times(couponDiscountValue)
+            .div(100)
+            .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
+        : Prisma.Decimal.min(couponDiscountValue, invoiceSubtotal);
 
-    const discountDecimal = new Prisma.Decimal(discount);
-    const newDiscountAmt = invoiceDiscountAmt.plus(discountDecimal).toDecimalPlaces(2).toNumber();
-    const newDiscountAmtDec = new Prisma.Decimal(newDiscountAmt);
+    // Invariant: discountDecimal + newSubtotal === invoiceSubtotal (no halala lost/gained).
+    const newDiscountAmtDec = invoiceDiscountAmt
+      .plus(discountDecimal)
+      .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
     const newVatBase = Prisma.Decimal.max(invoiceSubtotal.minus(newDiscountAmtDec), new Prisma.Decimal(0));
-    const newVatAmt = newVatBase.times(invoiceVatRate).toDecimalPlaces(2).toNumber();
-    const newTotal = newVatBase.plus(newVatAmt).toDecimalPlaces(2).toNumber();
+    const newVatAmt = newVatBase.times(invoiceVatRate).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
+    const newTotal = newVatBase.plus(newVatAmt).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
+
+    // Convert to number only at the boundary for Prisma writes.
+    const discountHalalas = discountDecimal.toNumber();
 
     return this.rlsTransaction.withTransaction(async (tx) => {
       if (coupon.maxUses !== null) {
@@ -81,12 +89,16 @@ export class ApplyCouponHandler {
       }
 
       const redemption = await tx.couponRedemption.create({
-        data: { couponId: coupon.id, invoiceId: cmd.invoiceId, clientId: cmd.clientId, discount },
+        data: { couponId: coupon.id, invoiceId: cmd.invoiceId, clientId: cmd.clientId, discount: discountHalalas },
       });
 
       await tx.invoice.update({
         where: { id: cmd.invoiceId },
-        data: { discountAmt: newDiscountAmt, vatAmt: newVatAmt, total: newTotal },
+        data: {
+          discountAmt: newDiscountAmtDec.toNumber(),
+          vatAmt: newVatAmt.toNumber(),
+          total: newTotal.toNumber(),
+        },
       });
 
       return redemption;
