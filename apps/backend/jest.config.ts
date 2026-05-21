@@ -1,5 +1,10 @@
 import type { Config } from 'jest';
 
+// Force the test process timezone to Asia/Riyadh BEFORE any Date code runs.
+// Must happen at module top-level (not in setupFiles) because Node's Date
+// class caches the timezone from process.env.TZ at startup.
+process.env.TZ = 'Asia/Riyadh';
+
 const config: Config = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: '.',
