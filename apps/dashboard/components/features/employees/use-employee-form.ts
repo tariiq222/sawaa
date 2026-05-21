@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { UseFormReturn } from "react-hook-form"
@@ -133,8 +133,16 @@ export function useEmployeeForm({
   const vacationMuts = useVacationMutations(employeeId ?? "")
   const serviceMuts = useEmployeeServiceMutations(employeeId ?? "")
 
+  const hydratedRef = useRef({
+    employee: false,
+    availability: false,
+    breaks: false,
+    services: false,
+  })
+
   useEffect(() => {
-    if (!employee) return
+    if (!employee || hydratedRef.current.employee) return
+    hydratedRef.current.employee = true
     const anyEmp = employee as typeof employee & {
       phone?: string | null
       gender?: "MALE" | "FEMALE" | null
@@ -160,7 +168,8 @@ export function useEmployeeForm({
   }, [employee, form])
 
   useEffect(() => {
-    if (!availability?.length) return
+    if (!availability?.length || hydratedRef.current.availability) return
+    hydratedRef.current.availability = true
     const merged = defaultSchedule.map((def) => {
       const found = availability.find(
         (a: AvailabilitySlot) => a.dayOfWeek === def.dayOfWeek
@@ -171,7 +180,8 @@ export function useEmployeeForm({
   }, [availability, setSchedule])
 
   useEffect(() => {
-    if (!existingBreaks?.length) return
+    if (!existingBreaks?.length || hydratedRef.current.breaks) return
+    hydratedRef.current.breaks = true
     setBreaksState(
       existingBreaks.map(({ dayOfWeek, startTime, endTime }, i: number) => ({
         key: `brk-existing-${i}`,
@@ -183,7 +193,8 @@ export function useEmployeeForm({
   }, [existingBreaks, setBreaksState])
 
   useEffect(() => {
-    if (!existingServices?.length) return
+    if (!existingServices?.length || hydratedRef.current.services) return
+    hydratedRef.current.services = true
     setDraftServices(
       existingServices.map((ps: EmployeeService) => ({
         key: ps.id,

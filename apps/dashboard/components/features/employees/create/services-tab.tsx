@@ -65,8 +65,12 @@ export function ServicesTab({
   })
 
   const selectedServiceId = form.watch("serviceId")
-  const { data: serviceBookingTypes = [] } = useServiceBookingTypes(
+  const { data: serviceBookingTypesData } = useServiceBookingTypes(
     selectedServiceId || null,
+  )
+  const serviceBookingTypes = useMemo(
+    () => serviceBookingTypesData ?? [],
+    [serviceBookingTypesData],
   )
 
   useEffect(() => {
