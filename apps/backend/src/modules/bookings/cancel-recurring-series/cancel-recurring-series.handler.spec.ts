@@ -1,9 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { CancellationReason } from '@prisma/client';
+import { BookingStatus, CancellationReason } from '@prisma/client';
 import { CancelRecurringSeriesHandler } from './cancel-recurring-series.handler';
 import { PrismaService } from '../../../infrastructure/database';
 import { CancelBookingHandler } from '../cancel-booking/cancel-booking.handler';
+import { VALID_TRANSITIONS } from '../booking-state-machine';
 
 describe('CancelRecurringSeriesHandler', () => {
   let handler: CancelRecurringSeriesHandler;
@@ -60,5 +61,18 @@ describe('CancelRecurringSeriesHandler', () => {
   it('should throw when no bookings found', async () => {
     (prisma.booking.findMany as jest.Mock).mockResolvedValue([]);
     await expect(handler.execute({ recurringGroupId: 'rg1', changedBy: 'u1', reason: CancellationReason.OTHER })).rejects.toThrow(NotFoundException);
+  });
+
+  it('queries only statuses listed in DIRECT_CANCEL state machine transition', async () => {
+    (prisma.booking.findMany as jest.Mock).mockResolvedValue([{ id: 'b1' }]);
+    (cancelBooking.execute as jest.Mock).mockResolvedValue(undefined);
+    await handler.execute({ recurringGroupId: 'rg1', changedBy: 'u1', reason: CancellationReason.OTHER });
+    const callWhere = (prisma.booking.findMany as jest.Mock).mock.calls[0][0].where;
+    const expectedStatuses = VALID_TRANSITIONS.DIRECT_CANCEL.from;
+    expect(callWhere.status).toEqual({ in: expectedStatuses });
+    // Verify DIRECT_CANCEL covers the expected values
+    expect(expectedStatuses).toContain(BookingStatus.PENDING);
+    expect(expectedStatuses).toContain(BookingStatus.CONFIRMED);
+    expect(expectedStatuses).toContain(BookingStatus.CANCEL_REQUESTED);
   });
 });

@@ -47,6 +47,7 @@ export type BookingTransition =
   | 'CREATE_CONFIRMED'
   | 'CONFIRM'
   | 'PAYMENT_CONFIRMED'
+  | 'GROUP_FILL_REACHED_MIN'
   | 'CLIENT_REQUEST_CANCEL'
   | 'DIRECT_CANCEL'
   | 'CLIENT_DIRECT_CANCEL'
@@ -102,6 +103,16 @@ export const VALID_TRANSITIONS: Record<
   PAYMENT_CONFIRMED: {
     from: [BookingStatus.PENDING, BookingStatus.AWAITING_PAYMENT],
     to: BookingStatus.CONFIRMED,
+  },
+
+  /**
+   * Minimum participant count reached for a group session slot →
+   * all PENDING_GROUP_FILL bookings are promoted to AWAITING_PAYMENT.
+   * Handler: group-session-min-reached/group-session-min-reached.handler.ts
+   */
+  GROUP_FILL_REACHED_MIN: {
+    from: [BookingStatus.PENDING_GROUP_FILL],
+    to: BookingStatus.AWAITING_PAYMENT,
   },
 
   /**

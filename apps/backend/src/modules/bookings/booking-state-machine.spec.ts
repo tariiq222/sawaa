@@ -116,6 +116,10 @@ describe('BookingStateMachine — assertTransition', () => {
     it('CHECK_IN self-loop: CONFIRMED → CONFIRMED', () => {
       expect(assertTransition(BookingStatus.CONFIRMED, 'CHECK_IN')).toBe(BookingStatus.CONFIRMED);
     });
+
+    it('GROUP_FILL_REACHED_MIN: PENDING_GROUP_FILL → AWAITING_PAYMENT', () => {
+      expect(assertTransition(BookingStatus.PENDING_GROUP_FILL, 'GROUP_FILL_REACHED_MIN')).toBe(BookingStatus.AWAITING_PAYMENT);
+    });
   });
 
   describe('CREATE_* transitions bypass the from-guard (empty from list)', () => {
@@ -164,6 +168,12 @@ describe('BookingStateMachine — assertTransition', () => {
     it('NO_SHOW from PENDING_GROUP_FILL throws', () => {
       expect(() =>
         assertTransition(BookingStatus.PENDING_GROUP_FILL, 'NO_SHOW'),
+      ).toThrow(BadRequestException);
+    });
+
+    it('GROUP_FILL_REACHED_MIN from CONFIRMED throws (only valid from PENDING_GROUP_FILL)', () => {
+      expect(() =>
+        assertTransition(BookingStatus.CONFIRMED, 'GROUP_FILL_REACHED_MIN'),
       ).toThrow(BadRequestException);
     });
 
