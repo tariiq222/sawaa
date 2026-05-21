@@ -23,9 +23,12 @@ const DEFAULT_BRANDING: PublicBranding = {
 
 export async function getPublicBrandingForSsr(): Promise<PublicBranding> {
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
     const response = await fetch(`${getApiBase()}/public/branding`, {
       next: { revalidate: 60, tags: ['branding'] },
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timer));
     if (!response.ok) {
       console.warn(`[branding] fetch failed: ${response.status} — using default branding`);
       return DEFAULT_BRANDING;

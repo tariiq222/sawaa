@@ -35,7 +35,7 @@ export function getClientColumns({
   onToggleActive,
   onDeleteClick,
   t,
-  locale: _locale = "ar",
+  locale = "ar",
   dateFormat = "Y-m-d",
 }: ClientColumnOptions): ColumnDef<Client>[] {
   return [
@@ -47,7 +47,7 @@ export function getClientColumns({
       sortingFn: (a, b) => {
         const nameA = `${a.original.firstName} ${a.original.lastName}`
         const nameB = `${b.original.firstName} ${b.original.lastName}`
-        return nameA.localeCompare(nameB, "ar")
+        return nameA.localeCompare(nameB, locale)
       },
       cell: ({ row }) => {
         const p = row.original

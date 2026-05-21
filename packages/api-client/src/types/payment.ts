@@ -1,14 +1,14 @@
 import type { PaginatedResponse, PaginationParams } from './api'
 
-export type PaymentMethod = 'moyasar' | 'bank_transfer' | 'cash'
+// Aligned with backend Prisma enums (UPPER_CASE).
+export type PaymentMethod = 'MOYASAR' | 'BANK_TRANSFER' | 'CASH'
 
 export type PaymentStatus =
-  | 'pending'
-  | 'awaiting'
-  | 'paid'
-  | 'refunded'
-  | 'failed'
-  | 'rejected'
+  | 'PENDING'
+  | 'PENDING_VERIFICATION'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'REFUNDED'
 
 export interface PaymentBookingClient {
   id: string
@@ -54,13 +54,19 @@ export interface PaymentListItem {
   invoice?: PaymentInvoice | null
 }
 
+// Mirrors backend GetPaymentStatsHandler return shape.
 export interface PaymentStats {
   total: number
-  paid: number
+  totalAmount: number
+  completed: number
+  completedAmount: number
   pending: number
-  failed: number
+  pendingAmount: number
+  pendingVerification: number
+  pendingVerificationAmount: number
   refunded: number
-  totalRevenue: number
+  refundedAmount: number
+  failed: number
 }
 
 export interface PaymentListQuery extends PaginationParams {

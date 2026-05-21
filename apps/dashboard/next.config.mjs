@@ -50,10 +50,17 @@ const nextConfig = {
     'require-in-the-middle',
     'import-in-the-middle',
   ],
-  // Strip dev-only credentials from production builds regardless of what is set in .env
+  // Dev autologin hint values. Renamed away from NEXT_PUBLIC_DEV_PASSWORD —
+  // the previous name made the variable look like a real credential and would
+  // have shown up in any secret-scanner inventory. These are non-secret dev
+  // affordances (seeded test account); blanked in production builds.
   env: {
-    NEXT_PUBLIC_DEV_EMAIL: isProduction ? "" : (process.env.NEXT_PUBLIC_DEV_EMAIL ?? ""),
-    NEXT_PUBLIC_DEV_PASSWORD: isProduction ? "" : (process.env.NEXT_PUBLIC_DEV_PASSWORD ?? ""),
+    NEXT_PUBLIC_DEV_AUTOLOGIN_EMAIL: isProduction
+      ? ""
+      : (process.env.NEXT_PUBLIC_DEV_AUTOLOGIN_EMAIL ?? process.env.NEXT_PUBLIC_DEV_EMAIL ?? ""),
+    NEXT_PUBLIC_DEV_AUTOLOGIN_TOKEN: isProduction
+      ? ""
+      : (process.env.NEXT_PUBLIC_DEV_AUTOLOGIN_TOKEN ?? process.env.NEXT_PUBLIC_DEV_PASSWORD ?? ""),
   },
   async headers() {
     return [

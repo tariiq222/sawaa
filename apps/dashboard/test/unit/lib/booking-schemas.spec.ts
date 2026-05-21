@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   bookingCreateSchema,
   rescheduleBookingSchema,
+  walkInClientSchema,
 } from "@/lib/schemas/booking.schema"
 
 describe("bookingCreateSchema", () => {
@@ -125,6 +126,53 @@ describe("rescheduleBookingSchema", () => {
 
   it("rejects empty startTime string", () => {
     const result = rescheduleBookingSchema.safeParse({ date: "2026-04-15", startTime: "" })
+    expect(result.success).toBe(false)
+  })
+})
+
+describe("walkInClientSchema", () => {
+  const valid = {
+    fullName: "Mohammed Al-Ahmad",
+    phone: "+966501234567",
+  }
+
+  it("accepts a valid walk-in payload", () => {
+    const result = walkInClientSchema.safeParse(valid)
+    expect(result.success).toBe(true)
+  })
+
+  it("rejects missing fullName", () => {
+    const { fullName: _f, ...rest } = valid; void _f
+    const result = walkInClientSchema.safeParse(rest)
+    expect(result.success).toBe(false)
+  })
+
+  it("rejects empty fullName", () => {
+    const result = walkInClientSchema.safeParse({ ...valid, fullName: "" })
+    expect(result.success).toBe(false)
+  })
+
+  it("rejects whitespace-only fullName", () => {
+    const result = walkInClientSchema.safeParse({ ...valid, fullName: "   " })
+    expect(result.success).toBe(false)
+  })
+
+  it("trims fullName before validation", () => {
+    const result = walkInClientSchema.safeParse({ ...valid, fullName: "  Mohammed Al-Ahmad  " })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.fullName).toBe("Mohammed Al-Ahmad")
+    }
+  })
+
+  it("rejects missing phone", () => {
+    const { phone: _p, ...rest } = valid; void _p
+    const result = walkInClientSchema.safeParse(rest)
+    expect(result.success).toBe(false)
+  })
+
+  it("rejects invalid phone format", () => {
+    const result = walkInClientSchema.safeParse({ ...valid, phone: "0501234567" })
     expect(result.success).toBe(false)
   })
 })

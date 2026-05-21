@@ -16,7 +16,7 @@ apps/
 packages/
 ├── shared/       cross-app types + zod schemas
 ├── api-client/   hand-written typed API client (NOT generated — see packages/api-client/CLAUDE.md)
-└── ui/           shadcn primitives for dashboard + website (NOT mobile)
+└── ui/           shadcn primitives for dashboard only today; website and mobile excluded
 ```
 
 ## Commands (run from repo root)
@@ -87,6 +87,52 @@ The shared UI package is published as `@sawaa/ui` and the website as `@sawaa/web
 ## Environment
 
 Copy `.env.example` → `.env` at the repo root. Each app has its own `.env.example` for app-scoped vars. Required infra: Postgres 16, Redis 7, MinIO. Start them with `pnpm docker:up`.
+
+## Security Sensitivity Tiers
+
+| Tier | Area | Rule |
+|---|---|---|
+| Critical | Auth / Authorization | Owner-only. Never change guard logic, token semantics, CASL policies, role permissions, or secret defaults without explicit approval. |
+| Critical | Payments / Moyasar | Owner-only. Any change requires dashboard smoke coverage and Moyasar sandbox verification. |
+| High | Provider credentials / encryption | Read-only for agents unless explicitly scoped. Do not rotate keys, change AAD constants, or rewire encryption flows without approval. |
+| High | Migrations / destructive DB operations | Migrations are additive-only. Never edit or squash existing migrations. Any destructive DB delete/drop/truncate requires explicit confirmation. |
+| Medium | OpenAPI / API contract snapshot | `apps/backend/openapi.json` must be regenerated via `pnpm openapi:sync` and committed with every endpoint change. |
+| Medium | Dashboard smoke tests | Run after any backend or dashboard change that could break dashboard flows. |
+
+## AI workflow / API change checklist
+
+When changing backend endpoints or DTOs:
+
+1. Update backend source (controller, handler, DTO).
+2. Run the relevant backend tests.
+3. Run `pnpm openapi:sync` to export `apps/backend/openapi.json` and regenerate dashboard types.
+4. Update `packages/api-client` manually if it references the changed endpoint or shape; it is hand-written, not generated.
+5. Commit `apps/backend/openapi.json`, regenerated dashboard types, and API client changes together.
+6. Run dashboard smoke tests when dashboard consumes the endpoint.
+
+## Test matrix by change surface
+
+| Surface | Command |
+|---|---|
+| Backend handler/DTO | `pnpm --filter=backend test -- path/to/file.spec.ts` |
+| Backend full suite | `pnpm --filter=backend run test` + `pnpm --filter=backend run test:e2e` |
+| OpenAPI snapshot | `pnpm openapi:sync` |
+| Dashboard component/page | `pnpm --filter=dashboard test -- path/to/file.test.ts` |
+| Dashboard e2e (single spec) | `pnpm --filter=dashboard run e2e -- path/to/spec.ts` |
+| Dashboard e2e smoke | `pnpm --filter=dashboard run e2e:smoke` |
+| Website component/page | `pnpm --filter=website test -- path/to/file.test.ts` |
+| Mobile typecheck | `pnpm --dir apps/mobile typecheck` |
+| Shared / Zod schemas | `pnpm typecheck` (root) |
+| API client | `pnpm typecheck` (root) |
+| UI package | `pnpm --filter=@sawaa/ui typecheck` |
+| Playwright helpers | `pnpm --filter=@sawaa/test-helpers-pw typecheck` |
+| Full turbo typecheck | `pnpm typecheck` |
+| Full turbo build | `pnpm build` |
+| Full turbo test | `pnpm test` |
+
+## Workspace note: mobile
+
+`apps/mobile` exists in the repo but is **not currently part of the root pnpm workspace commands** (`pnpm build`, `pnpm test`, and `pnpm dev:all` do not cover it). Always run mobile commands with `pnpm --dir apps/mobile <cmd>` or from inside `apps/mobile/`. Never use `pnpm --filter=mobile`.
 
 ## Per-app conventions
 

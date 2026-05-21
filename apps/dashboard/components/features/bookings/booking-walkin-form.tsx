@@ -39,7 +39,7 @@ import type { CreateClientResponse } from "@/lib/api/clients"
 import { useLocale } from "@/components/locale-provider"
 import { COUNTRIES } from "@/lib/countries-data"
 import { cn } from "@/lib/utils"
-import { BLOOD_TYPES, BLOOD_LABELS } from "@/lib/schemas/client.schema"
+import { BLOOD_TYPES, BLOOD_LABELS, splitFullName } from "@/lib/schemas/client.schema"
 import {
   walkInClientSchema,
   type WalkInClientFormData,
@@ -121,7 +121,7 @@ interface BookingWalkInFormProps {
 
 /* ── Step 1 fields for partial validation ── */
 
-const step1Fields = ["firstName", "lastName", "phone"] as const
+const step1Fields = ["fullName", "phone"] as const
 
 /* ── Main form ── */
 
@@ -147,12 +147,15 @@ export function BookingWalkInForm({ onSelect }: BookingWalkInFormProps) {
   const handleCreate = form.handleSubmit(async (data) => {
     setCreating(true)
     try {
-      const res = await createWalkInClient(data)
+      const { fullName, ...rest } = data
+      const { firstName, middleName, lastName } = splitFullName(fullName)
+      const payload = { ...rest, firstName, middleName, lastName }
+      const res = await createWalkInClient(payload)
       if (res.isExisting) {
         setDuplicate(res)
       } else {
         toast.success(t("bookings.walkin.toast.created"))
-        onSelect(res.id, `${data.firstName} ${data.lastName}`)
+        onSelect(res.id, [firstName, middleName, lastName].filter(Boolean).join(" "))
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("bookings.walkin.toast.error"))
@@ -172,17 +175,9 @@ export function BookingWalkInForm({ onSelect }: BookingWalkInFormProps) {
           <div className={card}>
             <div className={cardHeader}><p className={cardTitle}>{t("bookings.walkin.section.personalInfo")}</p></div>
             <div className={cardBody}>
-              <div className="grid grid-cols-3 gap-3">
-                <FormField label={t("bookings.walkin.field.firstName")} icon={<HugeiconsIcon icon={User03Icon} size={13} className="shrink-0" />} error={form.formState.errors.firstName?.message}>
-                  <Input {...form.register("firstName")} placeholder={t("bookings.walkin.placeholder.firstName")} className="bg-surface-muted" />
-                </FormField>
-                <FormField label={t("bookings.walkin.field.middleName")} icon={<HugeiconsIcon icon={User03Icon} size={13} className="shrink-0" />}>
-                  <Input {...form.register("middleName")} placeholder={t("bookings.walkin.placeholder.middleName")} className="bg-surface-muted" />
-                </FormField>
-                <FormField label={t("bookings.walkin.field.lastName")} icon={<HugeiconsIcon icon={User03Icon} size={13} className="shrink-0" />} error={form.formState.errors.lastName?.message}>
-                  <Input {...form.register("lastName")} placeholder={t("bookings.walkin.placeholder.lastName")} className="bg-surface-muted" />
-                </FormField>
-              </div>
+              <FormField label={t("bookings.walkin.field.fullName")} icon={<HugeiconsIcon icon={User03Icon} size={13} className="shrink-0" />} error={form.formState.errors.fullName?.message}>
+                <Input {...form.register("fullName")} placeholder={t("bookings.walkin.placeholder.fullName")} className="bg-surface-muted" />
+              </FormField>
 
               <div className="grid grid-cols-3 gap-3">
                 <FormField label={t("bookings.walkin.field.gender")} icon={<HugeiconsIcon icon={UserCircleIcon} size={13} className="shrink-0" />}>

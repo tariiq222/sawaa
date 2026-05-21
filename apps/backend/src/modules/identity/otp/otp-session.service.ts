@@ -31,6 +31,10 @@ export class OtpSessionService {
     return this.config.get<string>('JWT_ACCESS_SECRET') ?? '';
   }
 
+  // Session tokens are short-lived (30m) AND single-use: every successful
+  // verification writes the jti to the UsedOtpSession table, and
+  // OtpSessionGuard rejects any token whose jti has already been consumed.
+  // Reuse is defeated even if a token is intercepted mid-flight.
   async signSession(payload: Omit<OtpSessionPayload, 'jti' | 'exp'>): Promise<string> {
     return this.jwt.sign(
       { ...payload, jti: uuidv4() },

@@ -100,6 +100,8 @@ function mockMutations(overrides: Record<string, { mutateAsync: ReturnType<typeo
     completeMut: { ...empty, ...(overrides.completeMut as object) },
     noShowMut: { ...empty, ...(overrides.noShowMut as object) },
     adminCancelMut: { ...empty, ...(overrides.adminCancelMut as object) },
+    approveCancelMut: { ...empty, ...(overrides.approveCancelMut as object) },
+    rejectCancelMut: { ...empty, ...(overrides.rejectCancelMut as object) },
   }
   useBookingMutations.mockReturnValue(all)
   return all
@@ -204,7 +206,7 @@ describe("BookingActions", () => {
     expect(screen.getByTestId("sheet")).toBeTruthy()
   })
 
-  it('"reject_cancel" fires genericError toast and resets dialog', async () => {
+  it('"reject_cancel" submitted with empty notes fires reasonRequired toast', async () => {
     const toastModule = await import("sonner")
     const toastErrorSpy = vi.spyOn(toastModule.toast, "error")
     mockMutations()
@@ -225,7 +227,7 @@ describe("BookingActions", () => {
     fireEvent.click(rejectBtn)
 
     await waitFor(() => {
-      expect(toastErrorSpy).toHaveBeenCalledWith("bookings.actions.toast.genericError")
+      expect(toastErrorSpy).toHaveBeenCalledWith("bookings.actions.validation.reasonRequired")
     })
   })
 

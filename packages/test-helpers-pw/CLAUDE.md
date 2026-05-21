@@ -1,36 +1,31 @@
 # @sawaa/test-helpers-pw — Playwright Helpers
 
-Shared Playwright utilities for end-to-end testing across Sawa apps. This package is a **dependency of e2e suites**, not a test runner itself.
+Shared Playwright helpers for dashboard e2e and possible future website e2e. This package is a **dependency of e2e suites**, not a test runner itself.
 
 ## Purpose
 
 - Provide reusable setup/teardown logic and cross-cutting helpers for dashboard (and potentially website) Playwright tests.
-- Centralize common concerns like authentication state, tenant context, webhook idempotency, and test configuration.
+- Keep shared Playwright utilities here, while app-specific specs and page objects stay in the consuming app.
 - Keep app-specific assertions, page objects, and secrets out of shared helpers.
 
 ## Exports
 
 | Export Path | File | Purpose |
 |---|---|---|
-| `.` | `src/index.ts` | Re-exports `auth`, `tenant`, `webhook-idempotency`, `config` helpers. |
+| `.` | `src/index.ts` | Main entrypoint. Inspect this file to discover current helper modules. |
 | `./global-setup` | `src/global-setup.ts` | Playwright global setup hook (runs once before all tests). |
 | `./global-teardown` | `src/global-teardown.ts` | Playwright global teardown hook (runs once after all tests). |
 
-### Helper Modules
-
-- **`auth`** — Authentication state management for e2e tests (login helpers, session fixtures).
-- **`tenant`** — Tenant/workspace context utilities for multi-tenant-aware tests (legacy stubs; keep inert).
-- **`webhook-idempotency`** — Helpers to assert idempotency of webhook handlers (Moyasar, SMS DLR, etc.).
-- **`config`** — Shared Playwright configuration defaults and environment helpers.
+When working in this package, inspect `src/index.ts` to discover current helper modules and exports. Do not assume helper module names from older docs.
 
 ## Boundaries
 
 ### What belongs here
 
 - Cross-test setup/teardown logic.
-- Generic authentication fixtures and session builders.
-- Shared configuration objects and environment parsers.
-- Webhook payload builders and idempotency assertions.
+- Generic fixtures and session builders that are reusable across Playwright suites.
+- Shared configuration objects and environment parsers that do not encode app-specific behavior.
+- Cross-cutting helper functions used by multiple consuming e2e suites.
 
 ### What does NOT belong here
 

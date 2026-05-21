@@ -1,8 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ActivityAction } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { MoyasarApiClient } from '../../finance/moyasar-api/moyasar-api.client';
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+
+const CRON_ACTOR_EMAIL = 'system:reconcile-refunds-cron';
 
 /**
  * Reconciles RefundRequest rows that are stuck in PROCESSING.
@@ -92,9 +95,20 @@ export class ReconcileRefundsCron {
     }
 
     if (status === 'failed') {
-      await this.prisma.refundRequest.update({
-        where: { id: refundRequestId },
-        data: { status: 'FAILED' },
+      await this.rlsTransaction.withTransaction(async (tx) => {
+        await tx.refundRequest.update({
+          where: { id: refundRequestId },
+          data: { status: 'FAILED' },
+        });
+        await tx.activityLog.create({
+          data: {
+            userEmail: CRON_ACTOR_EMAIL,
+            action: ActivityAction.SYSTEM,
+            entity: 'RefundRequest',
+            entityId: refundRequestId,
+            description: 'Reconciled from Moyasar → FAILED',
+          },
+        });
       });
       this.logger.warn(
         `reconcile-refunds: RefundRequest ${refundRequestId} → FAILED (Moyasar reported failure)`,
@@ -116,6 +130,15 @@ export class ReconcileRefundsCron {
         await tx.invoice.update({
           where: { id: invoiceId },
           data: { status: 'REFUNDED' },
+        });
+        await tx.activityLog.create({
+          data: {
+            userEmail: CRON_ACTOR_EMAIL,
+            action: ActivityAction.SYSTEM,
+            entity: 'RefundRequest',
+            entityId: refundRequestId,
+            description: `Reconciled from Moyasar → COMPLETED (payment=${paymentId} invoice=${invoiceId})`,
+          },
         });
       });
       this.logger.log(

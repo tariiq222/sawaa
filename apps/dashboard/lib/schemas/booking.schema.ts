@@ -4,8 +4,6 @@ import { BLOOD_TYPES } from "@/lib/schemas/client.schema"
 /* ─── Walk-in client schema (booking-client-step) ─── */
 
 const phoneRegex = /^\+[1-9]\d{6,14}$/
-const requiredName = z.string().min(1).max(255)
-const optionalName = z.string().max(255).optional()
 const optionalMedicalText = z.string().max(1000).optional()
 
 /**
@@ -14,9 +12,7 @@ const optionalMedicalText = z.string().max(1000).optional()
  */
 export function createWalkInClientSchema(t: (key: string) => string) {
   return z.object({
-    firstName: requiredName,
-    middleName: optionalName,
-    lastName: requiredName,
+    fullName: z.string().trim().min(1).max(255),
     gender: z.enum(["male", "female"]).optional(),
     dateOfBirth: z.string().optional(),
     nationality: z.string().max(100).optional(),
@@ -38,9 +34,7 @@ export function createWalkInClientSchema(t: (key: string) => string) {
 
 /** @deprecated Use createWalkInClientSchema(t) for i18n support */
 export const walkInClientSchema = z.object({
-  firstName: requiredName,
-  middleName: optionalName,
-  lastName: requiredName,
+  fullName: z.string().trim().min(1).max(255),
   gender: z.enum(["male", "female"]).optional(),
   dateOfBirth: z.string().optional(),
   nationality: z.string().max(100).optional(),

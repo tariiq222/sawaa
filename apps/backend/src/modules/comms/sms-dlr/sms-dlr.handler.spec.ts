@@ -49,6 +49,9 @@ describe('SmsDlrHandler', () => {
       smsDelivery: {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
+      webhookEvent: {
+        create: jest.fn().mockResolvedValue({ id: 'evt-1' }),
+      },
     };
     const factory = new SmsProviderFactory(prisma as never, creds);
     const cls = buildCls();

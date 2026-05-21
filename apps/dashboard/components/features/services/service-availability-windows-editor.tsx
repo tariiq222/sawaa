@@ -81,8 +81,8 @@ export function ServiceAvailabilityWindowsEditor({ draft, t, onUpdate }: Props) 
                 <Label className="text-xs text-muted-foreground">{t("services.availability.end")}</Label>
                 <Input type="time" value={window.endTime} onChange={(event) => updateWindow(window.key, "endTime", event.target.value)} className="h-8 text-xs" />
               </div>
-              <Button type="button" variant="ghost" size="icon" className="size-8 text-destructive" onClick={() => removeWindow(window.key)} aria-label={t("services.availability.remove")}> 
-                <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-3.5" />
+              <Button type="button" variant="ghost" size="icon" className="size-11 text-destructive" onClick={() => removeWindow(window.key)} aria-label={t("services.availability.remove")}>
+                <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-4" />
               </Button>
             </div>
           ))}

@@ -77,25 +77,13 @@ export function ClientFormFields({ form, errors, mode }: ClientFormFieldsProps) 
             description={t("clients.form.personalInfoDesc")}
           />
 
-          <div className="grid grid-cols-3 gap-3">
-            <Field
-              label={t("clients.form.firstName")}
-              error={errors.firstName?.message}
-              required={isCreate}
-            >
-              <Input {...register("firstName")} />
-            </Field>
-            <Field label={t("clients.form.middleName")}>
-              <Input {...register("middleName")} />
-            </Field>
-            <Field
-              label={t("clients.form.lastName")}
-              error={errors.lastName?.message}
-              required={isCreate}
-            >
-              <Input {...register("lastName")} />
-            </Field>
-          </div>
+          <Field
+            label={t("clients.form.fullName")}
+            error={errors.fullName?.message}
+            required={isCreate}
+          >
+            <Input {...register("fullName")} />
+          </Field>
 
           <Field label={t("clients.form.gender")}>
             <Controller

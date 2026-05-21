@@ -372,4 +372,6 @@ export const arOps: Record<string, string> = {
   "common.to": "إلى",
   "common.reset": "إعادة تعيين",
   "common.saving": "جاري الحفظ...",
+  "common.filters": "الفلاتر",
+  "common.search": "بحث",
 }

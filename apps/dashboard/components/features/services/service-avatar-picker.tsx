@@ -20,35 +20,37 @@ const ALL_ICON_NAMES: string[] = Object.keys(HugeIcons).filter(
     Array.isArray((HugeIcons as Record<string, unknown>)[k])
 )
 
-/* ─── Color palette — organization-brandable via CSS variables ─── */
-const DEFAULT_BG_COLORS = [
-  "#354FD8",
-  "#82CC17",
-  "#E04040",
-  "#E07A10",
-  "#9B59B6",
-  "#1ABC9C",
-  "#2980B9",
-  "#F39C12",
-  "#16A085",
-  "#8E44AD",
-  "#C0392B",
-  "#27AE60",
+/* ─── Color palette — calm presets aligned with brand warmth (60-30-10) ─── */
+// Avatar bg colors are user-chosen presets persisted as hex (sent to backend, rendered as inline style).
+// Brand primary/accent are surfaced as the first two swatches client-side via useBgColors().
+const PRESET_bgColors = [
+  "#3B82C4", // blue
+  "#7FAE3A", // green
+  "#C8503E", // red
+  "#C77A2E", // orange
+  "#8E5BA8", // purple
+  "#2FA694", // teal
+  "#2D7AB0", // deep blue
+  "#D89432", // amber
+  "#2A8E78", // emerald
+  "#7B3F94", // violet
+  "#A53A30", // brick
+  "#3B8F52", // forest
 ]
 
-/** Resolved at render time from CSS vars so the organization sees its brand colors. */
-function getBgColors(): string[] {
-  if (typeof window === "undefined") return DEFAULT_BG_COLORS
-  const root = getComputedStyle(document.documentElement)
-  const primary =
-    root.getPropertyValue("--primary").trim() || DEFAULT_BG_COLORS[0]
-  const accent =
-    root.getPropertyValue("--accent").trim() || DEFAULT_BG_COLORS[1]
-  // Build an organization-aware palette from brand vars + fallbacks
-  return [primary, accent, ...DEFAULT_BG_COLORS.slice(2)]
+/** Resolves brand primary/accent from CSS vars at client render time. */
+function useBgColors(): string[] {
+  return useMemo(() => {
+    if (typeof window === "undefined") return PRESET_bgColors
+    const root = getComputedStyle(document.documentElement)
+    const primary = root.getPropertyValue("--primary").trim()
+    const accent = root.getPropertyValue("--accent").trim()
+    const head: string[] = []
+    if (primary) head.push(primary)
+    if (accent && accent !== primary) head.push(accent)
+    return [...head, ...PRESET_bgColors].slice(0, 12)
+  }, [])
 }
-
-const BG_COLORS = getBgColors()
 
 /* ─── Props ─── */
 interface ServiceAvatarPickerProps {
@@ -72,13 +74,14 @@ export function ServiceAvatarPicker({
   onClear,
 }: ServiceAvatarPickerProps) {
   const { t } = useLocale()
+  const bgColors = useBgColors()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [selectedIcon, setSelectedIcon] = useState<string | null>(
     iconName ?? null
   )
   const [selectedColor, setSelectedColor] = useState<string>(
-    iconBgColor ?? BG_COLORS[0]
+    iconBgColor ?? bgColors[0]
   )
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(
     imageUrl ?? undefined
@@ -203,7 +206,7 @@ export function ServiceAvatarPicker({
                     {t("services.avatar.bgColor")}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
-                    {BG_COLORS.map((color) => (
+                    {bgColors.map((color) => (
                       <button
                         key={color}
                         type="button"
@@ -225,18 +228,18 @@ export function ServiceAvatarPicker({
                         onClick={() => colorPickerRef.current?.click()}
                         className={cn(
                           "flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all",
-                          !BG_COLORS.includes(selectedColor)
+                          !bgColors.includes(selectedColor)
                             ? "scale-110 border-foreground"
                             : "border-dashed border-muted-foreground/40 hover:scale-105 hover:border-muted-foreground"
                         )}
                         style={
-                          !BG_COLORS.includes(selectedColor)
+                          !bgColors.includes(selectedColor)
                             ? { backgroundColor: selectedColor }
                             : undefined
                         }
                         aria-label={t("services.avatar.customColor")}
                       >
-                        {BG_COLORS.includes(selectedColor) && (
+                        {bgColors.includes(selectedColor) && (
                           <span className="text-[10px] leading-none font-bold text-muted-foreground">
                             +
                           </span>

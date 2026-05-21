@@ -24,7 +24,6 @@ import {
 } from "@sawaa/ui"
 import { useBookingMutations } from "@/hooks/use-bookings"
 import { ApiError } from "@/lib/api"
-import { sarToHalalas } from "@/lib/money"
 import type { Booking, CancellationReason, RefundType } from "@/lib/types/booking"
 import { ApproveCancelDialog, RejectCancelDialog, AdminCancelDialog } from "./cancel-dialogs"
 
@@ -83,6 +82,8 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
     completeMut,
     noShowMut,
     adminCancelMut,
+    approveCancelMut,
+    rejectCancelMut,
   } = useBookingMutations()
 
   const [cancelDialog, setCancelDialog] = useState<"approve" | "reject" | "admin" | null>(null)
@@ -96,7 +97,9 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
     checkInMut.isPending ||
     completeMut.isPending ||
     noShowMut.isPending ||
-    adminCancelMut.isPending
+    adminCancelMut.isPending ||
+    approveCancelMut.isPending ||
+    rejectCancelMut.isPending
 
   const run = async (action: () => Promise<unknown>, msg: string) => {
     try {
@@ -209,7 +212,13 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
             toast.error(t("bookings.actions.validation.refundAmountRequired"))
             return
           }
-          toast.error(t("bookings.actions.toast.genericError"))
+          await run(
+            () => approveCancelMut.mutateAsync({
+              id: booking.id,
+              approverNotes: adminNotes || undefined,
+            }),
+            t("bookings.actions.toast.cancelled"),
+          )
           resetDialog()
         }}
       />
@@ -221,7 +230,17 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
         loading={loading}
         onReset={resetDialog}
         onReject={async () => {
-          toast.error(t("bookings.actions.toast.genericError"))
+          if (!adminNotes || adminNotes.trim().length < 1) {
+            toast.error(t("bookings.actions.validation.reasonRequired"))
+            return
+          }
+          await run(
+            () => rejectCancelMut.mutateAsync({
+              id: booking.id,
+              rejectReason: adminNotes,
+            }),
+            t("bookings.actions.toast.confirmed"),
+          )
           resetDialog()
         }}
       />

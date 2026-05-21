@@ -372,4 +372,6 @@ export const enOps: Record<string, string> = {
   "common.to": "To",
   "common.reset": "Reset",
   "common.saving": "Saving...",
+  "common.filters": "Filters",
+  "common.search": "Search",
 }

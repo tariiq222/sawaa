@@ -97,15 +97,18 @@ describe('LoginHandler', () => {
     await expect(handler.execute(cmd)).rejects.toThrow('Account locked');
   });
 
-  it('increments failed attempts on wrong password', async () => {
+  it('increments failed attempts atomically on wrong password', async () => {
     prisma.user.findUnique.mockResolvedValue({
       id: 'u1', email: 'a@b.com', isActive: true, passwordHash: 'hash', failedLoginAttempts: 0, lockedUntil: null, isSuperAdmin: false,
     });
     password.verify.mockResolvedValue(false);
+    prisma.user.update.mockResolvedValue({ failedLoginAttempts: 1 });
     await expect(handler.execute(cmd)).rejects.toThrow('Invalid credentials');
     expect(prisma.user.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ failedLoginAttempts: 1 }) }),
+      expect.objectContaining({ data: { failedLoginAttempts: { increment: 1 } }, select: { failedLoginAttempts: true } }),
     );
+    // No lock follow-up at attempt 1
+    expect(prisma.user.update).toHaveBeenCalledTimes(1);
   });
 
   it('locks account after max failed attempts', async () => {
@@ -113,8 +116,18 @@ describe('LoginHandler', () => {
       id: 'u1', email: 'a@b.com', isActive: true, passwordHash: 'hash', failedLoginAttempts: 4, lockedUntil: null, isSuperAdmin: false,
     });
     password.verify.mockResolvedValue(false);
+    // First call: atomic increment returns the post-increment value crossing the threshold
+    prisma.user.update.mockResolvedValueOnce({ failedLoginAttempts: 5 });
+    prisma.user.update.mockResolvedValueOnce({} as any);
     await expect(handler.execute(cmd)).rejects.toThrow('Invalid credentials');
-    expect(prisma.user.update).toHaveBeenCalledWith(
+    // First call atomically increments.
+    expect(prisma.user.update).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ data: { failedLoginAttempts: { increment: 1 } }, select: { failedLoginAttempts: true } }),
+    );
+    // Second call applies the lock + resets counter.
+    expect(prisma.user.update).toHaveBeenNthCalledWith(
+      2,
       expect.objectContaining({ data: expect.objectContaining({ failedLoginAttempts: 0, lockedUntil: expect.any(Date) }) }),
     );
   });

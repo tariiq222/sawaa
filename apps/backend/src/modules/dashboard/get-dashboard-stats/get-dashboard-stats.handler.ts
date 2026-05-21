@@ -76,7 +76,7 @@ export class GetDashboardStatsHandler {
           where: { ...baseWhere, status: BookingStatus.CANCEL_REQUESTED },
         }),
         this.prisma.client.count({
-          where: { createdAt: { gte: rangeStart, lt: rangeEnd } },
+          where: { createdAt: { gte: rangeStart, lt: rangeEnd }, deletedAt: null },
         }),
       ]);
 

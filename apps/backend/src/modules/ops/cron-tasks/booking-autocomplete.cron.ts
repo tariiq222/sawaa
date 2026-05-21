@@ -1,8 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { DEFAULT_BOOKING_SETTINGS } from '../../bookings/get-booking-settings/get-booking-settings.handler';
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
+
+const CRON_ACTOR = 'system:booking-autocomplete-cron';
+const COMPLETE_REASON = 'Auto-complete: booking end-time passed after check-in';
 
 @Injectable()
 export class BookingAutocompleteCron {
@@ -10,6 +13,7 @@ export class BookingAutocompleteCron {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   async execute(): Promise<void> {
@@ -22,21 +26,47 @@ export class BookingAutocompleteCron {
         settings?.autoCompleteAfterHours ?? DEFAULT_BOOKING_SETTINGS.autoCompleteAfterHours;
       const cutoff = new Date(Date.now() - hours * 3_600_000);
 
-      const result = await this.prisma.booking.updateMany({
+      // Snapshot the matching ids first so we can audit each transition via
+      // BookingStatusLog (updateMany skips per-row history).
+      const targets = await this.prisma.booking.findMany({
         where: {
           status: BookingStatus.CONFIRMED,
           endsAt: { lte: cutoff },
           checkedInAt: { not: null },
         },
-        data: {
-          status: BookingStatus.COMPLETED,
-          completedAt: new Date(),
-        },
+        select: { id: true, status: true },
       });
 
-      if (result.count > 0) {
-        this.logger.log(`completed ${result.count} bookings`);
+      if (targets.length === 0) return;
+
+      const now = new Date();
+      let succeeded = 0;
+      for (const target of targets) {
+        try {
+          await this.rlsTransaction.withTransaction(async (tx) => {
+            await tx.booking.update({
+              where: { id: target.id, status: BookingStatus.CONFIRMED },
+              data: { status: BookingStatus.COMPLETED, completedAt: now },
+            });
+            await tx.bookingStatusLog.create({
+              data: {
+                bookingId: target.id,
+                fromStatus: target.status,
+                toStatus: BookingStatus.COMPLETED,
+                changedBy: CRON_ACTOR,
+                reason: COMPLETE_REASON,
+              },
+            });
+          });
+          succeeded += 1;
+        } catch (err) {
+          this.logger.warn(
+            `booking-autocomplete: skipped ${target.id} (already transitioned): ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
       }
+
+      this.logger.log(`completed ${succeeded}/${targets.length} bookings`);
     });
   }
 }

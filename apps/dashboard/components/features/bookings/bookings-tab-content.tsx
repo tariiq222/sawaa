@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Skeleton } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
@@ -99,7 +99,11 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
     setDeleteTarget(booking)
   }
 
-  const columns = getBookingColumns(onRowClick, onEditClick, handleStatusAction, handleDelete, t, { dateFormat, locale })
+  const columns = useMemo(
+    () => getBookingColumns(onRowClick, onEditClick, handleStatusAction, handleDelete, t, { dateFormat, locale }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, dateFormat, locale]
+  )
 
   return (
     <div className="flex flex-col gap-5">

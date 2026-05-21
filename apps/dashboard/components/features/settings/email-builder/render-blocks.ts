@@ -1,6 +1,16 @@
 import type { EmailBlock } from "@/lib/types/email-template"
 
-const DEFAULT_BUTTON_COLOR = "#354FD8"
+// Email-safe palette — must be raw hex because email clients do not support CSS custom properties.
+// Keep these aligned with brand tokens (--primary, --foreground, --muted-foreground, --border) when those change.
+const EMAIL_COLORS = {
+  buttonBg: "#354FD8", // brand primary fallback (matches --primary baseline)
+  buttonText: "#ffffff",
+  heading: "#111827", // matches --foreground
+  body: "#374151", // matches --muted-foreground
+  divider: "#e5e7eb", // matches --border
+} as const
+
+const DEFAULT_BUTTON_COLOR = EMAIL_COLORS.buttonBg
 const SAFE_IMAGE_SRC_FALLBACK = "about:blank"
 const SAFE_LINK_HREF_FALLBACK = "#"
 
@@ -71,10 +81,10 @@ export function renderBlocksToHtml(blocks: EmailBlock[]): string {
             2: "20px",
             3: "16px",
           }
-          return `<${tag} style="margin:0 0 12px;font-size:${sizes[level]};font-weight:600;color:#111827;">${escapeHtml(block.text)}</${tag}>`
+          return `<${tag} style="margin:0 0 12px;font-size:${sizes[level]};font-weight:600;color:${EMAIL_COLORS.heading};">${escapeHtml(block.text)}</${tag}>`
         }
         case "paragraph":
-          return `<p style="margin:0 0 12px;font-size:14px;color:#374151;line-height:1.6;">${escapeHtml(block.text)}</p>`
+          return `<p style="margin:0 0 12px;font-size:14px;color:${EMAIL_COLORS.body};line-height:1.6;">${escapeHtml(block.text)}</p>`
         case "button": {
           const bg = safeHexColor(block.color)
           const href = safeUrl(
@@ -82,10 +92,10 @@ export function renderBlocksToHtml(blocks: EmailBlock[]): string {
             ["http:", "https:", "mailto:"],
             SAFE_LINK_HREF_FALLBACK
           )
-          return `<div style="margin:0 0 12px;text-align:center;"><a href="${escapeHtml(href)}" style="display:inline-block;padding:10px 24px;background:${escapeHtml(bg)};color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500;">${escapeHtml(block.text)}</a></div>`
+          return `<div style="margin:0 0 12px;text-align:center;"><a href="${escapeHtml(href)}" style="display:inline-block;padding:10px 24px;background:${escapeHtml(bg)};color:${EMAIL_COLORS.buttonText};text-decoration:none;border-radius:6px;font-size:14px;font-weight:500;">${escapeHtml(block.text)}</a></div>`
         }
         case "divider":
-          return `<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;" />`
+          return `<hr style="border:none;border-top:1px solid ${EMAIL_COLORS.divider};margin:16px 0;" />`
         case "image": {
           const src = safeUrl(
             block.src,

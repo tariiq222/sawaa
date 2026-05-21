@@ -1,0 +1,9 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "command": {
+    "e2e": {
+      "description": "Run Sawaa dashboard E2E analysis, execution, and gap detection",
+      "template": "Invoke the sawaa-dashboard-e2e agent to analyze scenarios, run Playwright tests, diagnose failures, fix non-critical issues, and suggest missing test coverage for the Sawaa dashboard."
+    }
+  }
+}

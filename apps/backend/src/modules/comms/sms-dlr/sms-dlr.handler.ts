@@ -6,11 +6,12 @@
 //   3. Run mutation inside cls.run with the default org so RLS is satisfied.
 
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { createHash } from 'node:crypto';
 import { ClsService } from 'nestjs-cls';
 import {
   SYSTEM_CONTEXT_CLS_KEY,
   TENANT_CLS_KEY,
-  DEFAULT_ORG_ID,
 } from '../../../common/constants';
 import { PrismaService } from '../../../infrastructure/database';
 import { SmsProviderFactory } from '../../../infrastructure/sms/sms-provider.factory';
@@ -73,6 +74,33 @@ export class SmsDlrHandler {
       },
       cfg.webhookSecret,
     );
+
+    // STAGE 2.5 — idempotency dedup. The dedup key is keyed on
+    // `providerMessageId:status` (stable across retries of the same DLR, yet
+    // distinct per status transition — so SENT → DELIVERED still processes).
+    // Optimistic insert (create → catch P2002) makes the dedup atomic under
+    // concurrent retries.
+    const webhookEventId = `${parsed.providerMessageId}:${parsed.status}`;
+    const payloadHash = createHash('sha256').update(req.rawBody).digest('hex');
+    try {
+      await this.prisma.webhookEvent.create({
+        data: {
+          provider: `SMS_${req.provider}`,
+          eventId: webhookEventId,
+          eventType: parsed.status,
+          payloadHash,
+        },
+        select: { id: true },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        this.logger.log(
+          `SMS DLR: skipped_duplicate provider=SMS_${req.provider} eventId=${webhookEventId}`,
+        );
+        return { skipped: true };
+      }
+      throw err;
+    }
 
     // STAGE 3 — mutate inside resolved tenant's CLS context.
     return this.cls.run(async () => {

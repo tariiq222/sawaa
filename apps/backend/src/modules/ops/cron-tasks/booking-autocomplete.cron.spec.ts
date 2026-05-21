@@ -10,8 +10,12 @@ const buildPrisma = () => ({
     .mockResolvedValueOnce([{ v: BigInt(12345) }])
     .mockResolvedValueOnce([{ acquired: true }]),
   booking: {
-    findMany: jest.fn().mockResolvedValue([{}]),
+    findMany: jest.fn().mockResolvedValue([]),
+    update: jest.fn().mockResolvedValue({}),
     updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+  },
+  bookingStatusLog: {
+    create: jest.fn().mockResolvedValue({}),
   },
   bookingSettings: {
     findFirst: jest.fn().mockResolvedValue(null),
@@ -27,35 +31,57 @@ const buildPrisma = () => ({
   },
 });
 
+// Lightweight mock — invokes the callback with a tx mirror so update + log
+// calls land on tracked jest.fn()s.
+const buildRlsTx = (prisma: ReturnType<typeof buildPrisma>) => ({
+  withTransaction: jest.fn(async (cb: (tx: any) => Promise<unknown>) => {
+    const tx = {
+      booking: { update: prisma.booking.update },
+      bookingStatusLog: { create: prisma.bookingStatusLog.create },
+    };
+    return cb(tx);
+  }),
+});
+
 describe('BookingAutocompleteCron', () => {
   it('executes without throwing', async () => {
     const prisma = buildPrisma();
-    const cron = new BookingAutocompleteCron(prisma as never);
+    const cron = new BookingAutocompleteCron(prisma as never, buildRlsTx(prisma) as never);
     await expect(cron.execute()).resolves.not.toThrow();
   });
 
-  it('calls updateMany with CONFIRMED status, cutoff, and checkedInAt not null', async () => {
+  it('selects CONFIRMED bookings past cutoff with checkedInAt set', async () => {
     const prisma = buildPrisma();
-    const cron = new BookingAutocompleteCron(prisma as never);
+    const cron = new BookingAutocompleteCron(prisma as never, buildRlsTx(prisma) as never);
     await cron.execute();
-    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
+    expect(prisma.booking.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           status: BookingStatus.CONFIRMED,
           checkedInAt: { not: null },
         }),
-        data: expect.objectContaining({ status: BookingStatus.COMPLETED }),
       }),
     );
   });
 
+  it('writes a BookingStatusLog entry for each completed booking', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findMany = jest.fn().mockResolvedValue([
+      { id: 'b-1', status: BookingStatus.CONFIRMED },
+      { id: 'b-2', status: BookingStatus.CONFIRMED },
+    ]);
+    const rls = buildRlsTx(prisma);
+    const cron = new BookingAutocompleteCron(prisma as never, rls as never);
+    await cron.execute();
+    expect(rls.withTransaction).toHaveBeenCalledTimes(2);
+    expect(prisma.bookingStatusLog.create).toHaveBeenCalledTimes(2);
+  });
+
   it('reads bookingSettings once for default org', async () => {
     const prisma = buildPrisma();
-    const cron = new BookingAutocompleteCron(prisma as never);
+    const cron = new BookingAutocompleteCron(prisma as never, buildRlsTx(prisma) as never);
     await cron.execute();
-
     expect(prisma.bookingSettings.findFirst).toHaveBeenCalledTimes(1);
-    expect(prisma.booking.updateMany).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -89,34 +115,41 @@ describe('BookingExpiryCron', () => {
 describe('BookingNoShowCron', () => {
   it('executes without throwing', async () => {
     const prisma = buildPrisma();
-    const cron = new BookingNoShowCron(prisma as never);
+    const cron = new BookingNoShowCron(prisma as never, buildRlsTx(prisma) as never);
     await expect(cron.execute()).resolves.not.toThrow();
   });
 
-  it('marks confirmed bookings past cutoff as NO_SHOW', async () => {
+  it('selects confirmed bookings past cutoff (no check-in)', async () => {
     const prisma = buildPrisma();
-    prisma.booking.updateMany = jest.fn().mockResolvedValue({ count: 2 });
-    const cron = new BookingNoShowCron(prisma as never);
+    const cron = new BookingNoShowCron(prisma as never, buildRlsTx(prisma) as never);
     await cron.execute();
-    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
+    expect(prisma.booking.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           status: BookingStatus.CONFIRMED,
-        }),
-        data: expect.objectContaining({
-          status: BookingStatus.NO_SHOW,
+          checkedInAt: null,
         }),
       }),
     );
   });
 
-  it('reads bookingSettings once and calls updateMany once', async () => {
+  it('writes a BookingStatusLog entry for each NO_SHOW booking', async () => {
     const prisma = buildPrisma();
-    const cron = new BookingNoShowCron(prisma as never);
+    prisma.booking.findMany = jest.fn().mockResolvedValue([
+      { id: 'b-1', status: BookingStatus.CONFIRMED },
+    ]);
+    const rls = buildRlsTx(prisma);
+    const cron = new BookingNoShowCron(prisma as never, rls as never);
     await cron.execute();
+    expect(rls.withTransaction).toHaveBeenCalledTimes(1);
+    expect(prisma.bookingStatusLog.create).toHaveBeenCalledTimes(1);
+  });
 
+  it('reads bookingSettings once', async () => {
+    const prisma = buildPrisma();
+    const cron = new BookingNoShowCron(prisma as never, buildRlsTx(prisma) as never);
+    await cron.execute();
     expect(prisma.bookingSettings.findFirst).toHaveBeenCalledTimes(1);
-    expect(prisma.booking.updateMany).toHaveBeenCalledTimes(1);
   });
 });
 

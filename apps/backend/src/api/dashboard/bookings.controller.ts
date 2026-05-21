@@ -42,6 +42,10 @@ import { CheckAvailabilityDto } from '../../modules/bookings/check-availability/
 import { ListBookingStatusLogHandler } from '../../modules/bookings/list-booking-status-log/list-booking-status-log.handler';
 import { CreateBundleBookingHandler } from '../../modules/bookings/create-bundle-booking/create-bundle-booking.handler';
 import { CreateBundleBookingDto } from '../../modules/bookings/create-bundle-booking/create-bundle-booking.dto';
+import { ApproveCancelBookingHandler } from '../../modules/bookings/approve-cancel-booking/approve-cancel-booking.handler';
+import { ApproveCancelBookingDto } from '../../modules/bookings/approve-cancel-booking/approve-cancel-booking.dto';
+import { RejectCancelBookingHandler } from '../../modules/bookings/reject-cancel-booking/reject-cancel-booking.handler';
+import { RejectCancelBookingDto } from '../../modules/bookings/reject-cancel-booking/reject-cancel-booking.dto';
 
 @ApiTags('Dashboard / Bookings')
 @ApiBearerAuth()
@@ -68,6 +72,8 @@ export class DashboardBookingsController {
     private readonly availabilityHandler: CheckAvailabilityHandler,
     private readonly statusLogHandler: ListBookingStatusLogHandler,
     private readonly createBundleHandler: CreateBundleBookingHandler,
+    private readonly approveCancelHandler: ApproveCancelBookingHandler,
+    private readonly rejectCancelHandler: RejectCancelBookingHandler,
   ) {}
 
   @Post()
@@ -341,6 +347,63 @@ export class DashboardBookingsController {
       bookingId: id,
       changedBy: userId,
       ...body,
+    });
+  }
+
+  @Patch(':id/approve-cancel')
+  @CheckPermissions({ action: 'manage', subject: 'Booking' })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Approve a pending cancel request' })
+  @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({
+    description: 'Cancel request approved',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        status: { type: 'string', example: 'CANCELLED' },
+        autoRefund: { type: 'boolean' },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
+  approveCancelBooking(
+    @UserId() userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: ApproveCancelBookingDto,
+  ) {
+    return this.approveCancelHandler.execute({
+      bookingId: id,
+      approvedBy: userId,
+      approverNotes: body.approverNotes,
+    });
+  }
+
+  @Patch(':id/reject-cancel')
+  @CheckPermissions({ action: 'manage', subject: 'Booking' })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reject a pending cancel request' })
+  @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({
+    description: 'Cancel request rejected; booking returns to CONFIRMED',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        status: { type: 'string', example: 'CONFIRMED' },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
+  rejectCancelBooking(
+    @UserId() userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: RejectCancelBookingDto,
+  ) {
+    return this.rejectCancelHandler.execute({
+      bookingId: id,
+      rejectedBy: userId,
+      rejectReason: body.rejectReason,
     });
   }
 

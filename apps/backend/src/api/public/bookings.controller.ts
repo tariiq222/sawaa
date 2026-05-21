@@ -27,6 +27,7 @@ export class PublicBookingsController {
   ) {}
 
   @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 60 } })
   @Get('group-sessions')
   @ApiOperation({ summary: 'List public group session slots' })
   @ApiQuery({ name: 'branchId', required: false, type: String })
@@ -36,6 +37,7 @@ export class PublicBookingsController {
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 60 } })
   @Get('group-sessions/:id')
   @ApiOperation({ summary: 'Get a group session by ID' })
   @ApiParam({ name: 'id', format: 'uuid' })

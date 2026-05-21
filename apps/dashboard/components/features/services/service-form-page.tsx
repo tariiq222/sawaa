@@ -318,7 +318,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
 
         </Tabs>
 
-        <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background/80 backdrop-blur-sm px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" onClick={() => router.push("/services")}>
             {t(isEdit ? "services.edit.cancel" : "services.create.cancel")}
           </Button>

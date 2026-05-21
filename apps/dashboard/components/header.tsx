@@ -47,7 +47,7 @@ export function Header() {
   }, [fontSize])
 
   return (
-    <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background/80 backdrop-blur-sm px-3 sm:px-6">
+    <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background px-3 sm:px-6">
       <SidebarTrigger className="hover:text-primary hover:bg-primary/8" />
 
       <div className="flex-1" />

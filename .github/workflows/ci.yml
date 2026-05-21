@@ -126,6 +126,40 @@ jobs:
           MINIO_BUCKET: sawaa-test
           MINIO_USE_SSL: false
 
+      - name: openapi snapshot drift
+        # Boot Nest just enough to regenerate openapi.json and fail if the
+        # committed snapshot differs from what the current source produces.
+        # Runs here (not in the dashboard job) because only this job has the
+        # full backend env wired up. `@sawaa/shared` must be built first
+        # because the snapshot step loads the compiled `dist/main.js`, which
+        # resolves the shared package via its built CJS entry.
+        run: |
+          cd packages/shared && node ../../node_modules/typescript/bin/tsc -p tsconfig.json && cd ../..
+          pnpm --filter=backend run openapi:build-and-snapshot
+          if ! git diff --exit-code apps/backend/openapi.json; then
+            echo "::error::apps/backend/openapi.json drifted from source. Run 'pnpm openapi:sync' locally and commit."
+            exit 1
+          fi
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_ACCESS_SECRET: ci-jwt-access-secret-32chars-long
+          JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
+          JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
+          JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
+          MOYASAR_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          SMS_PROVIDER_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          ZOOM_PROVIDER_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          EMAIL_PROVIDER_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          AUTHENTICA_API_KEY: ci-authentica-key
+          MINIO_ENDPOINT: localhost
+          MINIO_PORT: 9000
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin123
+          MINIO_BUCKET: sawaa-test
+          MINIO_USE_SSL: false
+
   # ───────────────────────────────────────────────────────────────────────────
   # Dashboard
   # ───────────────────────────────────────────────────────────────────────────
@@ -152,6 +186,9 @@ jobs:
           cd packages/shared && node ../../node_modules/typescript/bin/tsc -p tsconfig.json
 
       - name: Generate API client
+        # Best-effort regen: requires a running backend to fetch /api/docs-json,
+        # which this job does not spin up. The actual drift gate runs in the
+        # backend job (where Nest can boot) — see "openapi snapshot drift" step.
         run: pnpm openapi:sync || true
 
       - name: Lint

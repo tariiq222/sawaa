@@ -12,7 +12,7 @@ import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { Button } from "@sawaa/ui"
 import { useClientMutations } from "@/hooks/use-clients"
 import { useLocale } from "@/components/locale-provider"
-import { createClientSchema, type CreateClientFormData } from "@/lib/schemas/client.schema"
+import { createClientSchema, type CreateClientFormData, splitFullName } from "@/lib/schemas/client.schema"
 import { ClientFormFields } from "@/components/features/clients/client-form"
 
 export default function CreateClientPage() {
@@ -24,7 +24,7 @@ export default function CreateClientPage() {
   const form = useForm<CreateClientFormData>({
     resolver: zodResolver(createClientSchema),
     defaultValues: {
-      firstName: "", middleName: "", lastName: "", phone: "",
+      fullName: "", phone: "",
       emergencyName: "", emergencyPhone: "",
       allergies: "", chronicConditions: "",
     },
@@ -32,7 +32,10 @@ export default function CreateClientPage() {
 
   const onSubmit = form.handleSubmit(async (data) => {
     try {
-      const result = await createMut.mutateAsync(data) as { isExisting?: boolean }
+      const { fullName, ...rest } = data
+      const { firstName, middleName, lastName } = splitFullName(fullName)
+      const payload = { ...rest, firstName, middleName, lastName }
+      const result = await createMut.mutateAsync(payload) as { isExisting?: boolean }
       if (result?.isExisting) {
         toast.info(t("clients.create.alreadyRegistered"))
       } else {

@@ -56,6 +56,7 @@ export const arSettings: Record<string, string> = {
   "settings.moyasarSecret": "المفتاح السري",
   "settings.moyasar.webhookSecret": "سر Webhook",
   "settings.moyasar.webhookSecretRequired": "أعد إدخال السر عند كل حفظ — لا يمكن استرجاع السابق.",
+  "settings.moyasar.rotateAllOrNone": "عند تغيير أي مفتاح يجب إعادة إدخال الثلاثة معاً (المفتاح العام + السري + سر الـ webhook) لتفادي عدم التطابق.",
   "settings.moyasar.liveMode": "وضع الإنتاج",
   "settings.moyasar.liveModeDesc": "استخدم مفاتيح الإنتاج لمعالجة المدفوعات الحقيقية.",
   "settings.moyasar.lastStatus": "آخر تحقق",
