@@ -115,7 +115,7 @@ model Service {
 
   // ─── Commission override ────────────────────────────────────────────────
   /// Per-service commission rate override (0.0000–1.0000). Null → use Employee.commissionRate.
-  commissionRateOverride Decimal? @db.Decimal(4, 4)
+  commissionRateOverride Decimal? @db.Decimal(5, 4)
 
   // ─── Participants (group sessions) ───────────────────────────────────────
   // minParticipants <= maxParticipants — enforced via CHECK constraint in migration SQL

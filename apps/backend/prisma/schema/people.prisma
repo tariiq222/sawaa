@@ -117,7 +117,7 @@ model Employee {
   isActive         Boolean          @default(true)
   /// Commission rate for this employee (0.0000–1.0000). Default 1.0 = 100% to employee.
   /// Override per service via Service.commissionRateOverride.
-  commissionRate   Decimal          @default(1.0) @db.Decimal(4, 4)
+  commissionRate   Decimal          @default(1.0) @db.Decimal(5, 4)
   slug             String?
   isPublic         Boolean          @default(false)
   publicBioAr      String?
