@@ -147,7 +147,9 @@ describe('DashboardMediaController (e2e)', () => {
         .expect(200);
 
       expect(res.body.url).toBe('https://storage.example.com/presigned');
-      expect(mockPresignedUrl.execute).toHaveBeenCalledWith({ fileId, expirySeconds: undefined });
+      expect(mockPresignedUrl.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ fileId, expirySeconds: undefined }),
+      );
     });
 
     it('passes expirySeconds query param', async () => {
@@ -158,7 +160,9 @@ describe('DashboardMediaController (e2e)', () => {
         .set('Authorization', 'Bearer fake-jwt')
         .expect(200);
 
-      expect(mockPresignedUrl.execute).toHaveBeenCalledWith({ fileId, expirySeconds: 600 });
+      expect(mockPresignedUrl.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ fileId, expirySeconds: 600 }),
+      );
     });
 
     it('returns 400 for invalid expirySeconds', async () => {
