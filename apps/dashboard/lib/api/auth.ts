@@ -15,6 +15,22 @@ export type { AuthResponse }
 
 const USER_KEY = "sawaa_user"
 
+// Minimal, non-PII subset cached in localStorage as a hydration hint for the
+// auth UI before the first /me round-trip lands. Full UserPayload (with email,
+// phone, firstName, lastName, etc.) is never persisted to storage because
+// localStorage is XSS-readable; the canonical user is held in the in-memory
+// AuthProvider state, sourced from /me on every load.
+type CachedUserHint = Pick<UserPayload, "id" | "role" | "isSuperAdmin" | "organizationId">
+
+function toCachedHint(u: UserPayload): CachedUserHint {
+  return {
+    id: u.id,
+    role: u.role,
+    isSuperAdmin: u.isSuperAdmin,
+    organizationId: u.organizationId,
+  }
+}
+
 export async function login(
   identifier: string,
   password: string,
@@ -57,7 +73,7 @@ export async function verifyDashboardOtp(identifier: string, code: string): Prom
 
 export async function fetchMe(): Promise<AuthUser> {
   const data = await authApi.getMe()
-  localStorage.setItem(USER_KEY, JSON.stringify(data))
+  localStorage.setItem(USER_KEY, JSON.stringify(toCachedHint(data)))
   return data
 }
 
@@ -65,12 +81,16 @@ export async function refreshToken(): Promise<AuthResponse> {
   const tokens = await authApi.refreshToken()
   setAccessToken(tokens.accessToken)
   clearLegacyAccessTokenStorage()
-  const cached = getStoredUser()
+  // Caller is responsible for invoking fetchMe() to repopulate the full user
+  // payload; we only return the token portion plus the minimal hint we kept
+  // in storage (no PII). Returning a partial UserPayload shape preserves the
+  // AuthResponse contract without re-exposing email/phone from localStorage.
+  const hint = getStoredUserHint()
   return {
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,
     expiresIn: tokens.expiresIn,
-    user: cached as UserPayload,
+    user: (hint ? { ...hint } : { id: "", role: "" }) as UserPayload,
   }
 }
 
@@ -142,12 +162,29 @@ export async function performPasswordReset(token: string, newPassword: string): 
   }
 }
 
+/**
+ * @deprecated PII is no longer persisted to localStorage. This now returns
+ * only the non-sensitive subset previously stored. Consumers needing the
+ * full user payload must read from the AuthProvider context (in-memory).
+ */
 export function getStoredUser(): AuthUser | null {
+  const hint = getStoredUserHint()
+  return hint ? ({ ...hint } as AuthUser) : null
+}
+
+export function getStoredUserHint(): CachedUserHint | null {
   if (typeof window === "undefined") return null
   const raw = localStorage.getItem(USER_KEY)
   if (!raw) return null
   try {
-    return JSON.parse(raw) as AuthUser
+    const parsed = JSON.parse(raw) as Partial<CachedUserHint>
+    if (!parsed || typeof parsed.id !== "string") return null
+    return {
+      id: parsed.id,
+      role: typeof parsed.role === "string" ? parsed.role : "",
+      isSuperAdmin: parsed.isSuperAdmin === true,
+      organizationId: typeof parsed.organizationId === "string" ? parsed.organizationId : null,
+    }
   } catch {
     return null
   }
@@ -155,7 +192,9 @@ export function getStoredUser(): AuthUser | null {
 
 
 function persistAuth(data: AuthResponse): void {
-  localStorage.setItem(USER_KEY, JSON.stringify(data.user))
+  // Persist only the non-PII hint; the full UserPayload (email, phone, name)
+  // stays in memory and is re-fetched via /me on each app load.
+  localStorage.setItem(USER_KEY, JSON.stringify(toCachedHint(data.user)))
   setAccessToken(data.accessToken)
   clearLegacyAccessTokenStorage()
 }

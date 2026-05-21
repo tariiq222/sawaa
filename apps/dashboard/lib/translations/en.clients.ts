@@ -64,6 +64,7 @@ export const enClients: Record<string, string> = {
   "clients.form.firstName": "First Name",
   "clients.form.middleName": "Middle Name",
   "clients.form.lastName": "Last Name",
+  "clients.form.fullName": "Full Name",
   "clients.form.gender": "Gender",
   "clients.form.male": "Male",
   "clients.form.female": "Female",

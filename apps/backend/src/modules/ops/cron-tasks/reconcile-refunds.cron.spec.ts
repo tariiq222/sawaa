@@ -14,6 +14,7 @@ interface TxMock {
   refundRequest: { update: jest.Mock };
   payment: { update: jest.Mock };
   invoice: { update: jest.Mock };
+  activityLog: { create: jest.Mock };
 }
 
 function buildTx(): TxMock {
@@ -21,6 +22,7 @@ function buildTx(): TxMock {
     refundRequest: { update: jest.fn().mockResolvedValue({}) },
     payment: { update: jest.fn().mockResolvedValue({}) },
     invoice: { update: jest.fn().mockResolvedValue({}) },
+    activityLog: { create: jest.fn().mockResolvedValue({}) },
   };
 }
 
@@ -102,10 +104,12 @@ describe('ReconcileRefundsCron', () => {
     await cron.execute();
 
     expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORG_ID, 'moyasar_ref_2');
-    expect(prisma.refundRequest.update).toHaveBeenCalledWith({
+    expect(tx.refundRequest.update).toHaveBeenCalledWith({
       where: { id: 'rr_2' },
       data: { status: 'FAILED' },
     });
+    // Audit row is written for the FAILED reconciliation
+    expect(tx.activityLog.create).toHaveBeenCalledTimes(1);
     // No payment or invoice update for a failed refund
     expect(tx.payment.update).not.toHaveBeenCalled();
   });

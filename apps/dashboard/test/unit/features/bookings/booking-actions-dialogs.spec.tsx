@@ -102,6 +102,8 @@ function mockMutations(overrides: Record<string, { mutateAsync: ReturnType<typeo
     completeMut: { ...empty, ...(overrides.completeMut as object) },
     noShowMut: { ...empty, ...(overrides.noShowMut as object) },
     adminCancelMut: { ...empty, ...(overrides.adminCancelMut as object) },
+    approveCancelMut: { ...empty, ...(overrides.approveCancelMut as object) },
+    rejectCancelMut: { ...empty, ...(overrides.rejectCancelMut as object) },
   }
   useBookingMutations.mockReturnValue(all)
   return all

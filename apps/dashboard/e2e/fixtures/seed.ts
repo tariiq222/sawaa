@@ -95,6 +95,12 @@ export interface SeedServiceInput {
   durationMins?: number
   price?: number
   currency?: string
+  allowRecurring?: boolean
+  allowedRecurringPatterns?: string[]
+  maxRecurrences?: number
+  minParticipants?: number
+  maxParticipants?: number
+  reserveWithoutPayment?: boolean
 }
 
 export interface SeedEmployeeInput {
@@ -114,6 +120,35 @@ export interface SeedBookingInput {
   payAtClinic?: boolean
 }
 
+export interface CreateDashboardBookingInput {
+  branchId: string
+  clientId: string
+  employeeId: string
+  serviceId: string
+  scheduledAt: string
+  bookingType?: "INDIVIDUAL" | "WALK_IN" | "GROUP"
+  deliveryType?: "IN_PERSON" | "ONLINE"
+  payAtClinic?: boolean
+  notes?: string
+}
+
+export interface CreateRecurringDashboardBookingInput {
+  branchId: string
+  clientId: string
+  employeeId: string
+  serviceId: string
+  scheduledAt: string
+  durationMins: number
+  price: number
+  frequency: "DAILY" | "WEEKLY" | "CUSTOM"
+  occurrences?: number
+  intervalDays?: number
+  bookingType?: "INDIVIDUAL" | "WALK_IN" | "GROUP"
+  deliveryType?: "IN_PERSON" | "ONLINE"
+  notes?: string
+  skipConflicts?: boolean
+}
+
 // ─── Seeded entity shapes ────────────────────────────────────────────────
 
 export interface SeededClient {
@@ -129,6 +164,14 @@ export interface SeededService {
   nameEn: string
   durationMins: number
   price: number
+}
+
+export interface ServiceBookingTypeInput {
+  deliveryType?: "IN_PERSON" | "ONLINE"
+  durationMins: number
+  price: number
+  isActive?: boolean
+  useCustomAvailability?: boolean
 }
 
 export interface SeededEmployee {
@@ -290,6 +333,28 @@ async function apiPatch<T>(
   return res.json() as Promise<T>
 }
 
+async function apiPut<T>(
+  path: string,
+  token: string,
+  body: Record<string, unknown>
+): Promise<T> {
+  const res = await fetchWithRetry(`${API_BASE}/api/v1${path}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  })
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "(unreadable)")
+    throw new Error(`[seed] PUT ${path} failed — HTTP ${res.status}: ${text}`)
+  }
+
+  return res.json() as Promise<T>
+}
+
 // ─── Client ──────────────────────────────────────────────────────────────
 
 /**
@@ -346,6 +411,12 @@ export async function seedService(
     price: overrides.price ?? 100,
     currency: overrides.currency ?? "SAR",
     isActive: true,
+    allowRecurring: overrides.allowRecurring,
+    allowedRecurringPatterns: overrides.allowedRecurringPatterns,
+    maxRecurrences: overrides.maxRecurrences,
+    minParticipants: overrides.minParticipants,
+    maxParticipants: overrides.maxParticipants,
+    reserveWithoutPayment: overrides.reserveWithoutPayment,
   }
 
   const created = await apiPost<{
@@ -370,6 +441,22 @@ export async function cleanupService(id: string, token: string): Promise<void> {
   await apiDelete(`/dashboard/organization/services/${id}`, token)
 }
 
+export async function setServiceBookingTypes(
+  token: string,
+  serviceId: string,
+  types: ServiceBookingTypeInput[]
+): Promise<void> {
+  await apiPut(`/dashboard/organization/services/${serviceId}/booking-types`, token, {
+    types: types.map((type) => ({
+      deliveryType: type.deliveryType ?? "IN_PERSON",
+      durationMins: type.durationMins,
+      price: type.price,
+      isActive: type.isActive ?? true,
+      useCustomAvailability: type.useCustomAvailability ?? false,
+    })),
+  })
+}
+
 // ─── Employee ↔ Service assignment ────────────────────────────────────────
 
 /**
@@ -382,6 +469,45 @@ export async function assignEmployeeToService(
 ): Promise<void> {
   await apiPost(`/dashboard/people/employees/${employeeId}/services`, token, {
     serviceId,
+  })
+}
+
+export async function assignEmployeeToBranch(
+  token: string,
+  branchId: string,
+  employeeId: string
+): Promise<void> {
+  await apiPost(`/dashboard/organization/branches/${branchId}/employees`, token, {
+    employeeId,
+  })
+}
+
+export async function setBranchBusinessHours(
+  token: string,
+  branchId: string
+): Promise<void> {
+  await apiPost("/dashboard/organization/hours", token, {
+    branchId,
+    schedule: Array.from({ length: 7 }, (_, dayOfWeek) => ({
+      dayOfWeek,
+      startTime: "09:00",
+      endTime: "17:00",
+      isOpen: true,
+    })),
+  })
+}
+
+export async function setEmployeeAvailability(
+  token: string,
+  employeeId: string
+): Promise<void> {
+  await apiPatch(`/dashboard/people/employees/${employeeId}/availability`, token, {
+    windows: Array.from({ length: 7 }, (_, dayOfWeek) => ({
+      dayOfWeek,
+      startTime: "09:00",
+      endTime: "17:00",
+      isActive: true,
+    })),
   })
 }
 
@@ -419,6 +545,41 @@ export async function ensureValidBranchId(token: string): Promise<string> {
   })
 
   return created.id
+}
+
+export async function ensureValidMainBranchId(token: string): Promise<string> {
+  const suffix = uniqueSuffix()
+  const created = await apiPost<{ id: string }>(
+    "/dashboard/organization/branches",
+    token,
+    {
+      nameAr: `فرع رحلة مستخدم ${suffix}`,
+      nameEn: `Full Journey Branch ${suffix}`,
+      isMain: true,
+      isActive: true,
+    }
+  )
+
+  await apiPatch(
+    `/dashboard/organization/booking-settings?branchId=${created.id}`,
+    token,
+    {
+      payAtClinicEnabled: true,
+    }
+  ).catch(() => undefined)
+
+  return created.id
+}
+
+export async function prepareBookableSchedule(
+  token: string,
+  input: { branchId: string; employeeId: string }
+): Promise<void> {
+  await setBranchBusinessHours(token, input.branchId)
+  await assignEmployeeToBranch(token, input.branchId, input.employeeId).catch(
+    () => undefined
+  )
+  await setEmployeeAvailability(token, input.employeeId)
 }
 
 export async function cleanupBranch(
@@ -503,6 +664,11 @@ export async function seedBooking(
   // Resolve a valid branch UUID
   const branchId = input.branchId ?? (await ensureValidBranchId(token))
 
+  await prepareBookableSchedule(token, {
+    branchId,
+    employeeId: input.employeeId,
+  })
+
   const body = {
     branchId,
     clientId: input.clientId,
@@ -530,6 +696,79 @@ export async function seedBooking(
     scheduledAt: created.scheduledAt,
     status: created.status,
   }
+}
+
+export async function createDashboardBooking(
+  token: string,
+  input: CreateDashboardBookingInput
+): Promise<SeededBooking> {
+  const created = await apiPost<{
+    id: string
+    clientId: string
+    employeeId: string
+    serviceId: string
+    scheduledAt: string
+    status: string
+  }>("/dashboard/bookings", token, {
+    branchId: input.branchId,
+    clientId: input.clientId,
+    employeeId: input.employeeId,
+    serviceId: input.serviceId,
+    scheduledAt: input.scheduledAt,
+    bookingType: input.bookingType ?? "INDIVIDUAL",
+    deliveryType: input.deliveryType ?? "IN_PERSON",
+    payAtClinic: input.payAtClinic ?? true,
+    notes: input.notes,
+  })
+
+  return {
+    id: created.id,
+    clientId: created.clientId,
+    employeeId: created.employeeId,
+    serviceId: created.serviceId,
+    scheduledAt: created.scheduledAt,
+    status: created.status,
+  }
+}
+
+export async function createRecurringDashboardBookings(
+  token: string,
+  input: CreateRecurringDashboardBookingInput
+): Promise<SeededBooking[]> {
+  const created = await apiPost<
+    Array<{
+      id: string
+      clientId: string
+      employeeId: string
+      serviceId: string
+      scheduledAt: string
+      status: string
+    }>
+  >("/dashboard/bookings/recurring", token, {
+    branchId: input.branchId,
+    clientId: input.clientId,
+    employeeId: input.employeeId,
+    serviceId: input.serviceId,
+    scheduledAt: input.scheduledAt,
+    durationMins: input.durationMins,
+    price: input.price,
+    frequency: input.frequency,
+    occurrences: input.occurrences,
+    intervalDays: input.intervalDays,
+    bookingType: input.bookingType ?? "INDIVIDUAL",
+    deliveryType: input.deliveryType ?? "IN_PERSON",
+    notes: input.notes,
+    skipConflicts: input.skipConflicts,
+  })
+
+  return created.map((booking) => ({
+    id: booking.id,
+    clientId: booking.clientId,
+    employeeId: booking.employeeId,
+    serviceId: booking.serviceId,
+    scheduledAt: booking.scheduledAt,
+    status: booking.status,
+  }))
 }
 
 export async function cleanupBooking(id: string, token: string): Promise<void> {

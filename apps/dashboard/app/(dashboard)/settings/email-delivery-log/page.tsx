@@ -51,7 +51,7 @@ export default function EmailDeliveryLogPage() {
       />
 
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl border border-border/60 bg-surface/60 backdrop-blur-sm mb-4">
+      <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl border border-border bg-surface mb-4">
         <Select
           value={status ?? ""}
           onValueChange={(v) => {

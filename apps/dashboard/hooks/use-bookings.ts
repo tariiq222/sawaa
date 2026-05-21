@@ -12,6 +12,8 @@ import {
   markNoShow,
   checkInBooking,
   adminCancelBooking,
+  approveCancelBooking,
+  rejectCancelBooking,
   createRecurringBooking,
   fetchBookingsStats,
 } from "@/lib/api/bookings"
@@ -171,6 +173,18 @@ export function useBookingMutations() {
     onSuccess: invalidate,
   })
 
+  const approveCancelMut = useMutation({
+    mutationFn: ({ id, ...payload }: { id: string } & Parameters<typeof approveCancelBooking>[1]) =>
+      approveCancelBooking(id, payload),
+    onSuccess: invalidate,
+  })
+
+  const rejectCancelMut = useMutation({
+    mutationFn: ({ id, ...payload }: { id: string } & Parameters<typeof rejectCancelBooking>[1]) =>
+      rejectCancelBooking(id, payload),
+    onSuccess: invalidate,
+  })
+
   const recurringMut = useMutation({
     mutationFn: createRecurringBooking,
     onSuccess: invalidate,
@@ -184,6 +198,8 @@ export function useBookingMutations() {
     noShowMut,
     checkInMut,
     adminCancelMut,
+    approveCancelMut,
+    rejectCancelMut,
     recurringMut,
   }
 }

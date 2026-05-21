@@ -377,7 +377,7 @@ services:
         max-file: "5"
 
   minio-backup:
-    image: minio/mc:latest
+    image: minio/mc:RELEASE.2025-04-08T15-39-49Z
     container_name: sawaa-minio-backup
     depends_on:
       minio:

@@ -61,7 +61,7 @@ export function TopPerformers({ employees }: TopPerformersProps) {
             <div
               key={p.id}
               className={cn(
-                "relative flex items-center gap-4 rounded-[10px] border p-5 transition-all hover:-translate-y-0.5 hover:shadow-sm",
+                "relative flex items-center gap-4 rounded-md border p-5 transition-all hover:-translate-y-0.5 hover:shadow-sm",
                 style.card
               )}
             >

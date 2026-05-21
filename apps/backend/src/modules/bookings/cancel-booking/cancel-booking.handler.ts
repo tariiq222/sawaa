@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { BookingStatus, RefundType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
@@ -25,6 +25,8 @@ export type CancelBookingCommand = CancelBookingDto & {
 
 @Injectable()
 export class CancelBookingHandler {
+  private readonly logger = new Logger(CancelBookingHandler.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
@@ -139,7 +141,12 @@ export class CancelBookingHandler {
     await this.eventBus.publish(event.eventName, event.toEnvelope());
 
     if (booking.zoomMeetingId) {
-      this.zoomMeetingService.deleteMeeting(DEFAULT_ORG_ID, booking.zoomMeetingId).catch(() => {});
+      this.zoomMeetingService.deleteMeeting(DEFAULT_ORG_ID, booking.zoomMeetingId).catch((err) => {
+        this.logger.error(
+          `Failed to delete Zoom meeting ${booking.zoomMeetingId} for booking ${booking.id} after cancel. Meeting may be orphaned on Zoom.`,
+          err instanceof Error ? err.stack : String(err),
+        );
+      });
     }
 
     return { ...updated, refundType };

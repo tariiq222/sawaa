@@ -45,17 +45,27 @@ export function SettingsPaymentTab() {
   }
 
   const handleSaveMoyasar = () => {
+    const pubChanged = publishableKey.trim() !== (moyasarConfig?.publishableKey ?? "")
+    const secretEntered = secretKey.trim().length > 0
+    const webhookEntered = webhookSecret.trim().length > 0
+    // Atomic rotation guard: if the user is rotating *any* credential,
+    // require them to re-enter *all* three together. Partial rotation can
+    // desync webhook verification (new pk, old secret/webhook → 401 on next
+    // webhook call). All-or-nothing for credential changes.
+    const anyChanged = pubChanged || secretEntered || webhookEntered
+    const allProvided = pubChanged && secretEntered && webhookEntered
+    if (anyChanged && !allProvided) {
+      toast.error(t("settings.moyasar.rotateAllOrNone"))
+      return
+    }
+
     const payload: UpsertMoyasarConfigPayload = {
       publishableKey: publishableKey.trim(),
       isLive,
     }
-    // Only send secrets if the user re-entered them
-    if (secretKey.trim().length > 0) {
-      payload.secretKey = secretKey.trim()
-    }
-    if (webhookSecret.trim().length > 0) {
-      payload.webhookSecret = webhookSecret.trim()
-    }
+    if (secretEntered) payload.secretKey = secretKey.trim()
+    if (webhookEntered) payload.webhookSecret = webhookSecret.trim()
+
     upsertMoyasar.mutate(payload, {
       onSuccess: () => {
         toast.success(t("settings.saved"))

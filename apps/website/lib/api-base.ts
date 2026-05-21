@@ -3,8 +3,12 @@ const API_PREFIX = '/api/v1';
 
 export function getApiBase(): string {
   const origin =
-    process.env.INTERNAL_API_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
+    (process.env.INTERNAL_API_URL && process.env.INTERNAL_API_URL.length > 0
+      ? process.env.INTERNAL_API_URL
+      : undefined) ??
+    (process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.length > 0
+      ? process.env.NEXT_PUBLIC_API_URL
+      : undefined) ??
     DEFAULT_ORIGIN;
   return `${origin.replace(/\/$/, '')}${API_PREFIX}`;
 }

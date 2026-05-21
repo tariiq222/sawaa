@@ -1735,6 +1735,40 @@ export interface paths {
         patch: operations["DashboardBookingsController_cancelBooking"];
         trace?: never;
     };
+    "/api/v1/dashboard/bookings/{id}/approve-cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Approve a pending cancel request */
+        patch: operations["DashboardBookingsController_approveCancelBooking"];
+        trace?: never;
+    };
+    "/api/v1/dashboard/bookings/{id}/reject-cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Reject a pending cancel request */
+        patch: operations["DashboardBookingsController_rejectCancelBooking"];
+        trace?: never;
+    };
     "/api/v1/dashboard/bookings/{id}/reschedule": {
         parameters: {
             query?: never;
@@ -6504,6 +6538,20 @@ export interface components {
              * @enum {string}
              */
             source?: "client" | "admin" | "employee" | "system";
+        };
+        ApproveCancelBookingDto: {
+            /**
+             * @description Optional notes from the approver
+             * @example Approved per client request
+             */
+            approverNotes?: string;
+        };
+        RejectCancelBookingDto: {
+            /**
+             * @description Reason for rejecting the cancel request
+             * @example Outside cancellation window
+             */
+            rejectReason: string;
         };
         RescheduleBookingDto: {
             /**
@@ -17228,6 +17276,161 @@ export interface operations {
                         refundType?: string | null;
                         /** Format: date-time */
                         cancelledAt?: string | null;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Booking not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardBookingsController_approveCancelBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Booking ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveCancelBookingDto"];
+            };
+        };
+        responses: {
+            /** @description Cancel request approved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example CANCELLED */
+                        status?: string;
+                        autoRefund?: boolean;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Booking not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardBookingsController_rejectCancelBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Booking ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectCancelBookingDto"];
+            };
+        };
+        responses: {
+            /** @description Cancel request rejected; booking returns to CONFIRMED */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example CONFIRMED */
+                        status?: string;
                     };
                 };
             };

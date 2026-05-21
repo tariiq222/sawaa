@@ -152,7 +152,14 @@ jobs:
           cd packages/shared && node ../../node_modules/typescript/bin/tsc -p tsconfig.json
 
       - name: Generate API client
-        run: pnpm openapi:sync || true
+        run: pnpm openapi:sync
+
+      - name: Fail on openapi.json drift
+        run: |
+          if ! git diff --exit-code apps/backend/openapi.json apps/dashboard/lib/types/api.generated.ts; then
+            echo "::error::openapi.json or apps/dashboard/lib/types/api.generated.ts drifted from source. Run 'pnpm openapi:sync' and commit."
+            exit 1
+          fi
 
       - name: Lint
         run: pnpm --filter=dashboard lint

@@ -1,18 +1,8 @@
 {
   "cookies": [
     {
-      "name": "__next_hmr_refresh_hash__",
-      "value": "10bb95901436848298f06ff02147d07eb792e5b7ffcd9f85",
-      "domain": "localhost",
-      "path": "/",
-      "expires": -1,
-      "httpOnly": false,
-      "secure": false,
-      "sameSite": "Lax"
-    },
-    {
       "name": "ck_refresh",
-      "value": "2e886e09-3020-49a1-99a0-9cddb7ccb98e",
+      "value": "24e473ed-ce3e-4b58-982a-e58e131bb115",
       "domain": "localhost",
       "path": "/",
       "expires": -1,
@@ -27,7 +17,7 @@
       "localStorage": [
         {
           "name": "sawaa_user",
-          "value": "{\"id\":\"0ff1733a-7ce2-4c02-b02f-6d4347bb763b\",\"email\":\"receptionist@sawaa-test.com\",\"name\":\"Receptionist\",\"phone\":null,\"gender\":null,\"avatarUrl\":null,\"isActive\":true,\"role\":\"RECEPTIONIST\",\"isSuperAdmin\":false,\"firstName\":\"Receptionist\",\"lastName\":\"\",\"organizationId\":\"00000000-0000-0000-0000-000000000001\",\"permissions\":[\"booking:create\",\"booking:read\",\"booking:update\",\"client:create\",\"client:read\",\"client:update\",\"employee:read\",\"invoice:read\",\"service:read\",\"category:read\"]}"
+          "value": "{\"id\":\"d3e22c21-e09f-43ef-8373-9320f84ec701\",\"email\":\"receptionist@sawaa-test.com\",\"name\":\"Receptionist\",\"phone\":null,\"gender\":null,\"avatarUrl\":null,\"isActive\":true,\"role\":\"RECEPTIONIST\",\"isSuperAdmin\":false,\"firstName\":\"Receptionist\",\"lastName\":\"\",\"organizationId\":\"00000000-0000-0000-0000-000000000001\",\"permissions\":[\"booking:create\",\"booking:read\",\"booking:update\",\"client:create\",\"client:read\",\"client:update\",\"employee:read\",\"invoice:read\",\"service:read\",\"category:read\"]}"
         },
         {
           "name": "sawaa-locale",

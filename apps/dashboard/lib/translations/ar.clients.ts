@@ -64,6 +64,7 @@ export const arClients: Record<string, string> = {
   "clients.form.firstName": "الاسم الأول",
   "clients.form.middleName": "الاسم الثاني",
   "clients.form.lastName": "اسم العائلة",
+  "clients.form.fullName": "الاسم الكامل",
   "clients.form.gender": "الجنس",
   "clients.form.male": "ذكر",
   "clients.form.female": "أنثى",

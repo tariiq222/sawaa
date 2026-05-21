@@ -10,7 +10,7 @@ export function SawaaMark({ size = 40 }: SawaaMarkProps) {
   return (
     <div
       aria-hidden="true"
-      className="relative flex aspect-square items-center justify-center rounded-[16px] bg-primary/[0.10] ring-1 ring-primary/20"
+      className="relative flex aspect-square items-center justify-center rounded-lg bg-primary/[0.10] ring-1 ring-primary/20"
       style={{ width: size, height: size }}
     >
       <Image

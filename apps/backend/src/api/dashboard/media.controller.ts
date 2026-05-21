@@ -162,10 +162,12 @@ export class DashboardMediaController {
   presignedUrlEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: GeneratePresignedUrlDto,
+    @CurrentUser() user: JwtUser,
   ) {
     return this.generatePresignedUrl.execute({
       fileId: id,
       ...query,
+      userId: user.sub,
     });
   }
 }

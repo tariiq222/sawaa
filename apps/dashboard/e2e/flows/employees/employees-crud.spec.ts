@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { devLogin } from './helpers/auth'
+import { expectCurrentPath } from '../../fixtures/assertions'
+import { loginAs } from '../../fixtures/auth'
 
 test.describe('Employees CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
-    await devLogin(page)
+    await loginAs(page, 'admin')
     await page.goto('/employees')
     await page.waitForLoadState('networkidle')
   })
@@ -85,28 +86,25 @@ test.describe('Employees CRUD Operations', () => {
   })
 
   test('should create new employee with valid data', async ({ page }) => {
-    await page.goto('/employees/create')
-    await page.waitForLoadState('networkidle')
+    // Keep create navigation inside the authenticated SPA session from
+    // beforeEach so the in-memory access token remains available.
+    await expectCurrentPath(page, '/employees')
+    await page.getByRole('button', { name: /إضافة ممارس|Add Employee/i }).click()
+    await expectCurrentPath(page, '/employees/create')
 
-    const nameInput = page.locator('input[id*="name"], input[placeholder*="name"], input[placeholder*="الاسم"]')
-    const emailInput = page.locator('input[id*="email"], input[placeholder*="email"], input[placeholder*="البريد"]')
-    const phoneInput = page.locator('input[id*="phone"], input[placeholder*="phone"], input[placeholder*="الهاتف"]')
-    const saveButton = page.locator('button[type="submit"], button:has-text("Save"), button:has-text("حفظ")')
+    const suffix = Date.now()
+    await page.locator('input[name="nameEn"]').fill(`Test Employee ${suffix}`)
+    await page.locator('input[name="nameAr"]').fill(`ممارس اختبار ${suffix}`)
+    await page.locator('input[name="email"]').fill(`employee${suffix}@test.com`)
+    await page.locator('input[name="phone"]').fill('+966501234567')
+    await page.locator('input[name="specialty"]').fill('Family Counselor')
+    await page.locator('input[name="specialtyAr"]').fill('إرشاد أسري')
 
-    if (await nameInput.isVisible()) {
-      await nameInput.fill(`Test Employee ${Date.now()}`)
-    }
-    if (await emailInput.isVisible()) {
-      await emailInput.fill(`employee${Date.now()}@test.com`)
-    }
-    if (await phoneInput.isVisible()) {
-      await phoneInput.fill('0501234567')
-    }
-
-    if (await saveButton.isVisible()) {
-      await saveButton.click()
-      await page.waitForTimeout(2000)
-    }
+    const saveButton = page.getByRole('button', { name: /إنشاء الممارس|إضافة ممارس|Add Employee/i })
+    await expect(saveButton).toBeEnabled()
+    await saveButton.click()
+    await expectCurrentPath(page, '/employees')
+    await expect(page.getByText(`ممارس اختبار ${suffix}`).or(page.getByText(`Test Employee ${suffix}`)).first()).toBeVisible()
   })
 
   test('should edit existing employee', async ({ page }) => {

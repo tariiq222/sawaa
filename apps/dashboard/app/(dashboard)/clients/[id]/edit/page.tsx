@@ -14,7 +14,7 @@ import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useClient, useClientMutations } from "@/hooks/use-clients"
-import { editClientSchema, type EditClientFormData } from "@/lib/schemas/client.schema"
+import { editClientSchema, type EditClientFormData, splitFullName, composeFullName } from "@/lib/schemas/client.schema"
 import { ClientFormFields } from "@/components/features/clients/client-form"
 
 export default function EditClientPage() {
@@ -30,9 +30,7 @@ export default function EditClientPage() {
   useEffect(() => {
     if (!client) return
     form.reset({
-      firstName:         client.firstName ?? "",
-      middleName:        client.middleName ?? "",
-      lastName:          client.lastName ?? "",
+      fullName:          composeFullName(client.firstName, client.middleName, client.lastName),
       gender:            (client.gender as "male" | "female") ?? undefined,
       dateOfBirth:       client.dateOfBirth ? client.dateOfBirth.split("T")[0] : "",
       nationality:       client.nationality ?? "",
@@ -49,7 +47,10 @@ export default function EditClientPage() {
 
   const onSubmit = form.handleSubmit(async (data) => {
     try {
-      await updateMut.mutateAsync({ id: params.id, payload: data })
+      const { fullName, ...rest } = data
+      const { firstName, middleName, lastName } = splitFullName(fullName)
+      const payload = { ...rest, firstName, middleName, lastName }
+      await updateMut.mutateAsync({ id: params.id, payload })
       toast.success(t("clients.edit.changesSaved"))
       router.push("/clients")
     } catch (err) {
@@ -74,7 +75,7 @@ export default function EditClientPage() {
     )
   }
 
-  const clientName = client ? `${client.firstName} ${client.lastName}` : ""
+  const clientName = client ? composeFullName(client.firstName, client.middleName, client.lastName) : ""
 
   return (
     <ListPageShell>

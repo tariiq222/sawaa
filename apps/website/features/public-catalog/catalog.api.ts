@@ -9,9 +9,12 @@ const EMPTY_CATALOG: PublicCatalog = {
 
 export async function getPublicCatalog(): Promise<PublicCatalog> {
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
     const res = await fetch(`${getApiBase()}/public/services`, {
       next: { revalidate: 60, tags: ['public-catalog'] },
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timer));
     if (!res.ok) {
       console.warn(`[catalog] fetch failed: ${res.status} — using empty catalog`);
       return EMPTY_CATALOG;

@@ -89,7 +89,11 @@ describe("auth api", () => {
     expect(loginMock).toHaveBeenCalledWith({ email: "a@b.com", password: "pass" })
     expect(setAccessTokenMock).toHaveBeenCalledWith("token123")
     expect(clearLegacyAccessTokenStorageMock).toHaveBeenCalledOnce()
-    expect(localStorage.getItem("sawaa_user")).toContain("a@b.com")
+    // PII is no longer persisted to localStorage — only id/role/isSuperAdmin/orgId hint.
+    const stored = localStorage.getItem("sawaa_user")
+    expect(stored).not.toContain("a@b.com")
+    expect(stored).toContain(fakeUser.id)
+    expect(stored).toContain(fakeUser.role)
     expect(localStorage.getItem("sawaa_access_token")).toBeNull()
     expect(sessionStorage.getItem("sawaa_access_token")).toBeNull()
     expect(result.accessToken).toBe("token123")
@@ -115,13 +119,18 @@ describe("auth api", () => {
     expect(clearLegacyAccessTokenStorageMock).toHaveBeenCalledOnce()
   })
 
-  it("fetchMe delegates to authApi.getMe and stores user", async () => {
+  it("fetchMe delegates to authApi.getMe and stores only a non-PII hint", async () => {
     getMeMock.mockResolvedValueOnce(fakeUser)
 
     const result = await fetchMe()
 
     expect(getMeMock).toHaveBeenCalledOnce()
-    expect(localStorage.getItem("sawaa_user")).toContain("a@b.com")
+    const stored = localStorage.getItem("sawaa_user")
+    // No PII in storage — name/email/phone must never be persisted.
+    expect(stored).not.toContain("a@b.com")
+    expect(stored).not.toContain(fakeUser.name)
+    expect(stored).toContain(fakeUser.id)
+    // The returned value (in-memory) still contains the full payload.
     expect(result.email).toBe("a@b.com")
   })
 
@@ -213,9 +222,20 @@ describe("auth api", () => {
     expect(getStoredUser()).toBeNull()
   })
 
-  it("getStoredUser returns parsed user when stored", () => {
+  it("getStoredUser returns only the non-PII hint, not the full user payload", () => {
     localStorage.setItem("sawaa_user", JSON.stringify(fakeUser))
-    expect(getStoredUser()).toEqual(fakeUser)
+    const result = getStoredUser()
+    expect(result).toEqual({
+      id: fakeUser.id,
+      role: fakeUser.role,
+      isSuperAdmin: fakeUser.isSuperAdmin,
+      organizationId: fakeUser.organizationId,
+    })
+    // Ensure PII fields are dropped even if they were present on disk
+    // (e.g. from a pre-upgrade legacy entry).
+    expect(result).not.toHaveProperty("email")
+    expect(result).not.toHaveProperty("phone")
+    expect(result).not.toHaveProperty("name")
   })
 
   it("getStoredUser returns null for invalid JSON", () => {

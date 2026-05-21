@@ -20,6 +20,8 @@ import { RemoveWaitlistEntryHandler } from '../../modules/bookings/remove-waitli
 import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
 import { ListBookingStatusLogHandler } from '../../modules/bookings/list-booking-status-log/list-booking-status-log.handler';
 import { CreateBundleBookingHandler } from '../../modules/bookings/create-bundle-booking/create-bundle-booking.handler';
+import { ApproveCancelBookingHandler } from '../../modules/bookings/approve-cancel-booking/approve-cancel-booking.handler';
+import { RejectCancelBookingHandler } from '../../modules/bookings/reject-cancel-booking/reject-cancel-booking.handler';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
@@ -44,6 +46,8 @@ describe('DashboardBookingsController (e2e)', () => {
   const mockAvailability = { execute: jest.fn() };
   const mockStatusLog = { execute: jest.fn() };
   const mockCreateBundleBooking = { execute: jest.fn() };
+  const mockApproveCancel = { execute: jest.fn() };
+  const mockRejectCancel = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -67,6 +71,8 @@ describe('DashboardBookingsController (e2e)', () => {
         { provide: CheckAvailabilityHandler, useValue: mockAvailability },
         { provide: ListBookingStatusLogHandler, useValue: mockStatusLog },
         { provide: CreateBundleBookingHandler, useValue: mockCreateBundleBooking },
+        { provide: ApproveCancelBookingHandler, useValue: mockApproveCancel },
+        { provide: RejectCancelBookingHandler, useValue: mockRejectCancel },
       ],
     })
       .overrideGuard(JwtGuard)

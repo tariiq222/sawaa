@@ -81,17 +81,24 @@ export class LoginHandler {
     const valid = await this.password.verify(cmd.password, user.passwordHash);
 
     if (!valid) {
-      const newCount = user.failedLoginAttempts + 1;
-      const shouldLock = newCount >= MAX_FAILED_ATTEMPTS;
-      await this.prisma.user.update({
+      // Atomic increment — `{ increment: 1 }` resolves in a single SQL statement,
+      // so two parallel wrong-password attempts cannot both observe the same
+      // pre-increment value and reset each other to 0.
+      const updated = await this.prisma.user.update({
         where: { id: user.id },
-        data: {
-          failedLoginAttempts: shouldLock ? 0 : newCount,
-          ...(shouldLock
-            ? { lockedUntil: new Date(Date.now() + LOCKOUT_WINDOW_MINUTES * 60 * 1000) }
-            : {}),
-        },
+        data: { failedLoginAttempts: { increment: 1 } },
+        select: { failedLoginAttempts: true },
       });
+
+      if (updated.failedLoginAttempts >= MAX_FAILED_ATTEMPTS) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            failedLoginAttempts: 0,
+            lockedUntil: new Date(Date.now() + LOCKOUT_WINDOW_MINUTES * 60 * 1000),
+          },
+        });
+      }
       throw new UnauthorizedException('Invalid credentials');
     }
 

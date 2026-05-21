@@ -17,6 +17,17 @@ export class SemanticSearchHandler {
       throw new BadRequestException('EmbeddingAdapter is not available — set OPENAI_API_KEY');
     }
 
+    // SECURITY: $queryRawUnsafe is used because pgvector's <=> operator
+    // requires raw SQL — Prisma has no first-class pgvector support.
+    // Injection is prevented by three layers:
+    //   1. DTO validation: topK is @IsInt @Max(50); documentId is @IsUUID.
+    //   2. topK clamped to [1, 20] again here as defense-in-depth.
+    //   3. All user-influenced values pass through $1/$2/$3 parameter
+    //      bindings, NOT string interpolation. docFilter is a fixed string
+    //      literal chosen from two compile-time constants.
+    //   4. vectorLiteral is built from a float[] returned by EmbeddingAdapter
+    //      (not user input), and is still passed as $1::vector parameter.
+    // Do NOT switch any of $1/$2/$3 to template-literal interpolation.
     const topK = Math.min(dto.topK ?? 5, 20);
     const [vector] = await this.embedding.embed([dto.query]);
     const vectorLiteral = `[${vector.join(',')}]`;

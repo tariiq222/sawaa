@@ -12,7 +12,7 @@
  *
  */
 
-import { expect, type Page } from "@playwright/test"
+import { type Page } from "@playwright/test"
 import {
   expectAuthenticatedShell,
   expectCurrentPath,
@@ -23,7 +23,8 @@ import { TEST_TENANT } from "./tenant"
 
 export type Persona = "admin" | "owner" | "receptionist" | "employee"
 
-const LOGIN_FORM_TIMEOUT_MS = 10_000
+const API_BASE = process.env.PW_API_URL ?? "http://localhost:5200"
+const DASHBOARD_BASE = process.env.PW_DASHBOARD_URL ?? "http://localhost:5203"
 
 /**
  * Credentials keyed by persona.
@@ -69,67 +70,31 @@ export async function loginAs(
   page: Page,
   persona: Persona = "admin"
 ): Promise<void> {
-  const { email, password } = PERSONA_CREDENTIALS[persona]
-
-  await page.goto("/login", { waitUntil: "domcontentloaded" })
-
-  const loginIdentifier = page.locator("#identifier")
-
-  if (!isLoginPath(page.url())) {
-    await expectAuthenticatedShell(page)
-    await expectNoAppCrash(page)
-    return
-  }
-
-  const loginEntryState = await Promise.race([
-    page
-      .waitForURL((url) => !isLoginPath(url.toString()), {
-        timeout: LOGIN_FORM_TIMEOUT_MS,
-      })
-      .then(() => "redirected" as const)
-      .catch(() => "timeout" as const),
-    loginIdentifier
-      .waitFor({ state: "visible", timeout: LOGIN_FORM_TIMEOUT_MS })
-      .then(() => "form-visible" as const)
-      .catch(() => "timeout" as const),
+  const data = await apiLogin(persona)
+  const dashboardUrl = new URL(DASHBOARD_BASE)
+  await page.context().addCookies([
+    {
+      name: "ck_refresh",
+      value: data.refreshToken,
+      domain: dashboardUrl.hostname,
+      path: "/",
+      expires: -1,
+      httpOnly: true,
+      secure: dashboardUrl.protocol === "https:",
+      sameSite: "Lax",
+    },
   ])
 
-  if (loginEntryState === "redirected" || !isLoginPath(page.url())) {
-    await expectAuthenticatedShell(page)
-    await expectNoAppCrash(page)
-    return
-  }
-
-  if (loginEntryState !== "form-visible") {
-    await expect(
-      loginIdentifier,
-      `Login form did not become visible within ${LOGIN_FORM_TIMEOUT_MS}ms while the page remained on ${page.url()}. ` +
-        "Refusing to treat a hidden #identifier field as an authenticated session."
-    ).toBeVisible({ timeout: 0 })
-  }
-
-  // Multi-step login wizard
-  await expectCurrentPath(page, "/login")
-  await expect(loginIdentifier).toBeVisible()
-  await loginIdentifier.fill(email)
-
-  const continueButton = page.getByRole("button", { name: "متابعة" })
-  await expect(continueButton).toBeEnabled()
-  await continueButton.click()
-
-  const passwordMethodButton = page.getByRole("button", {
-    name: "باستخدام كلمة المرور",
-  })
-  await expect(passwordMethodButton).toBeEnabled()
-  await passwordMethodButton.click()
-
-  await page.locator("#password").fill(password)
-  const submitButton = page.getByRole("button", { name: "تسجيل الدخول" })
-  await expect(submitButton).toBeEnabled()
-  await submitButton.click()
-
+  await page.goto("/", { waitUntil: "domcontentloaded" })
+  await page.evaluate(
+    ({ user }) => {
+      localStorage.setItem("sawaa_user", JSON.stringify(user))
+      localStorage.setItem("sawaa-locale", "ar")
+    },
+    { user: data.user }
+  )
+  await page.reload({ waitUntil: "domcontentloaded" })
   await expectAuthenticatedShell(page)
-  await expect(loginIdentifier).not.toBeVisible({ timeout: 5_000 })
   await expectNoAppCrash(page)
 }
 
@@ -173,6 +138,43 @@ export function getPersonaCredentials(persona: Persona): {
   return PERSONA_CREDENTIALS[persona]
 }
 
-function isLoginPath(url: string): boolean {
-  return new URL(url).pathname === "/login"
+interface ApiLoginResponse {
+  accessToken: string
+  refreshToken?: string
+  user: unknown
+}
+
+async function apiLogin(persona: Persona): Promise<{
+  accessToken: string
+  refreshToken: string
+  user: unknown
+}> {
+  const { email, password } = PERSONA_CREDENTIALS[persona]
+  const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  })
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "(unreadable)")
+    throw new Error(
+      `[e2e/auth] API login failed for ${persona} (${email}) — HTTP ${res.status}: ${body}`
+    )
+  }
+
+  const data = (await res.json()) as ApiLoginResponse
+  const refreshToken = data.refreshToken ?? parseRefreshCookie(res.headers.get("set-cookie"))
+  if (!data.accessToken || !refreshToken || !data.user) {
+    throw new Error(
+      `[e2e/auth] API login response missing token/user for ${persona}`
+    )
+  }
+  return { accessToken: data.accessToken, refreshToken, user: data.user }
+}
+
+function parseRefreshCookie(setCookie: string | null): string | null {
+  if (!setCookie) return null
+  const match = /(?:^|;\s*)ck_refresh=([^;]+)/.exec(setCookie)
+  return match?.[1] ?? null
 }

@@ -130,3 +130,17 @@ export async function adminCancelBooking(
   return api.patch<Booking>(`/dashboard/bookings/${id}/cancel`, payload)
 }
 
+export async function approveCancelBooking(
+  id: string,
+  payload: { approverNotes?: string },
+): Promise<Booking> {
+  return api.patch<Booking>(`/dashboard/bookings/${id}/approve-cancel`, payload)
+}
+
+export async function rejectCancelBooking(
+  id: string,
+  payload: { rejectReason: string },
+): Promise<Booking> {
+  return api.patch<Booking>(`/dashboard/bookings/${id}/reject-cancel`, payload)
+}
+

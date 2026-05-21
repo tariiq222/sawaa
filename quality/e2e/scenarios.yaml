@@ -1,0 +1,855 @@
+# Sawaa Dashboard E2E Scenarios
+# Scored: score = probability × impact × risk
+# P0: 80-125 | P1: 40-79 | P2: 15-39 | P3: <15
+
+scenarios:
+  # ─────────────────────────────────────────────────────────
+  # AUTH (5 scenarios)
+  # ─────────────────────────────────────────────────────────
+  - id: DASH-AUTH-001
+    area: auth
+    actor: admin
+    action: Admin login with valid credentials
+    probability: 5
+    impact: 5
+    risk: 5
+    score: 125
+    priority: P0
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/auth.spec.ts
+    last_result: unknown
+    notes: Core login flow for admin persona
+
+  - id: DASH-AUTH-002
+    area: auth
+    actor: receptionist
+    action: Receptionist login with valid credentials
+    probability: 5
+    impact: 4
+    risk: 5
+    score: 100
+    priority: P0
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/auth.spec.ts
+    last_result: unknown
+    notes: Core login flow for receptionist persona
+
+  - id: DASH-AUTH-003
+    area: auth
+    actor: employee
+    action: Employee login with valid credentials
+    probability: 5
+    impact: 4
+    risk: 5
+    score: 100
+    priority: P0
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/auth.spec.ts
+    last_result: unknown
+    notes: Core login flow for employee persona
+
+  - id: DASH-AUTH-004
+    area: auth
+    actor: owner
+    action: Owner login with valid credentials
+    probability: 5
+    impact: 5
+    risk: 5
+    score: 125
+    priority: P0
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/auth.spec.ts
+    last_result: unknown
+    notes: Core login flow for owner persona
+
+  - id: DASH-AUTH-005
+    area: auth
+    actor: admin
+    action: Admin logout
+    probability: 4
+    impact: 3
+    risk: 3
+    score: 36
+    priority: P2
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/auth.spec.ts
+    last_result: unknown
+    notes: Session termination
+
+  # ─────────────────────────────────────────────────────────
+  # BOOKINGS (6 scenarios)
+  # ─────────────────────────────────────────────────────────
+  - id: DASH-BOOKING-001
+    area: bookings
+    actor: receptionist
+    action: Create new booking for client
+    probability: 5
+    impact: 5
+    risk: 5
+    score: 125
+    priority: P0
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/bookings.spec.ts
+    last_result: unknown
+    notes: Core booking creation flow
+
+  - id: DASH-BOOKING-002
+    area: bookings
+    actor: receptionist
+    action: Cancel existing booking
+    probability: 4
+    impact: 4
+    risk: 4
+    score: 64
+    priority: P1
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/bookings.spec.ts
+    last_result: unknown
+    notes: Booking cancellation workflow
+
+  - id: DASH-BOOKING-003
+    area: bookings
+    actor: admin
+    action: Update booking status (pending → confirmed → completed)
+    probability: 4
+    impact: 4
+    risk: 4
+    score: 64
+    priority: P1
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/bookings.spec.ts
+    last_result: unknown
+    notes: Status workflow state machine
+
+  - id: DASH-BOOKING-004
+    area: bookings
+    actor: admin
+    action: View bookings list with filters
+    probability: 5
+    impact: 3
+    risk: 2
+    score: 30
+    priority: P2
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/bookings.spec.ts
+    last_result: unknown
+    notes: List view filtering and pagination
+
+  - id: DASH-BOOKING-005
+    area: bookings
+    actor: employee
+    action: View personal schedule
+    probability: 5
+    impact: 3
+    risk: 2
+    score: 30
+    priority: P2
+    automation: nightly
+    status: missing
+    test: null
+    last_result: unknown
+    notes: Employee calendar view
+
+  - id: DASH-BOOKING-006
+    area: bookings
+    actor: receptionist
+    action: Book overlapping appointments (should fail gracefully)
+    probability: 3
+    impact: 4
+    risk: 4
+    score: 48
+    priority: P1
+    automation: nightly
+    status: missing
+    test: null
+    last_result: unknown
+    notes: Conflict detection edge case
+
+  # ─────────────────────────────────────────────────────────
+  # CLIENTS (5 scenarios)
+  # ─────────────────────────────────────────────────────────
+  - id: DASH-CLIENT-001
+    area: clients
+    actor: receptionist
+    action: Create new client record
+    probability: 5
+    impact: 5
+    risk: 4
+    score: 100
+    priority: P0
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/clients.spec.ts
+    last_result: unknown
+    notes: Client registration
+
+  - id: DASH-CLIENT-002
+    area: clients
+    actor: admin
+    action: View client details
+    probability: 5
+    impact: 3
+    risk: 2
+    score: 30
+    priority: P2
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/clients.spec.ts
+    last_result: unknown
+    notes: Client profile view
+
+  - id: DASH-CLIENT-003
+    area: clients
+    actor: admin
+    action: Update client information
+    probability: 4
+    impact: 4
+    risk: 3
+    score: 48
+    priority: P1
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/clients.spec.ts
+    last_result: unknown
+    notes: Client edit workflow
+
+  - id: DASH-CLIENT-004
+    area: clients
+    actor: admin
+    action: Delete client (soft delete)
+    probability: 3
+    impact: 5
+    risk: 3
+    score: 45
+    priority: P1
+    automation: nightly
+    status: missing
+    test: null
+    last_result: unknown
+    notes: Soft delete with data integrity
+
+  - id: DASH-CLIENT-005
+    area: clients
+    actor: receptionist
+    action: Search clients by name/phone
+    probability: 5
+    impact: 3
+    risk: 2
+    score: 30
+    priority: P2
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/clients.spec.ts
+    last_result: unknown
+    notes: Search and filter
+
+  # ─────────────────────────────────────────────────────────
+  # SERVICES (4 scenarios)
+  # ─────────────────────────────────────────────────────────
+  - id: DASH-SERVICE-001
+    area: services
+    actor: admin
+    action: Create new service
+    probability: 3
+    impact: 5
+    risk: 3
+    score: 45
+    priority: P1
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/services.spec.ts
+    last_result: unknown
+    notes: Service creation
+
+  - id: DASH-SERVICE-002
+    area: services
+    actor: admin
+    action: Update service details
+    probability: 3
+    impact: 4
+    risk: 3
+    score: 36
+    priority: P2
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/services.spec.ts
+    last_result: unknown
+    notes: Service edit
+
+  - id: DASH-SERVICE-003
+    area: services
+    actor: admin
+    action: Deactivate service
+    probability: 2
+    impact: 4
+    risk: 3
+    score: 24
+    priority: P2
+    automation: nightly
+    status: missing
+    test: null
+    last_result: unknown
+    notes: Service deactivation
+
+  - id: DASH-SERVICE-004
+    area: services
+    actor: receptionist
+    action: View services list
+    probability: 5
+    impact: 2
+    risk: 2
+    score: 20
+    priority: P2
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/services.spec.ts
+    last_result: unknown
+    notes: Service catalog view
+
+  # ─────────────────────────────────────────────────────────
+  # EMPLOYEES (4 scenarios)
+  # ─────────────────────────────────────────────────────────
+  - id: DASH-EMPLOYEE-001
+    area: employees
+    actor: admin
+    action: Create new employee
+    probability: 3
+    impact: 5
+    risk: 4
+    score: 60
+    priority: P1
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/employees.spec.ts
+    last_result: unknown
+    notes: Employee onboarding
+
+  - id: DASH-EMPLOYEE-002
+    area: employees
+    actor: admin
+    action: Update employee details
+    probability: 3
+    impact: 4
+    risk: 3
+    score: 36
+    priority: P2
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/employees.spec.ts
+    last_result: unknown
+    notes: Employee profile update
+
+  - id: DASH-EMPLOYEE-003
+    area: employees
+    actor: admin
+    action: Deactivate employee
+    probability: 2
+    impact: 5
+    risk: 3
+    score: 30
+    priority: P2
+    automation: nightly
+    status: missing
+    test: null
+    last_result: unknown
+    notes: Employee deactivation workflow
+
+  - id: DASH-EMPLOYEE-004
+    area: employees
+    actor: owner
+    action: View employee list
+    probability: 4
+    impact: 3
+    risk: 2
+    score: 24
+    priority: P2
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/employees.spec.ts
+    last_result: unknown
+    notes: Employee roster view
+
+  # ─────────────────────────────────────────────────────────
+  # INVOICES (4 scenarios)
+  # ─────────────────────────────────────────────────────────
+  - id: DASH-INVOICE-001
+    area: invoices
+    actor: admin
+    action: View invoice details
+    probability: 5
+    impact: 5
+    risk: 4
+    score: 100
+    priority: P0
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/invoices.spec.ts
+    last_result: unknown
+    notes: Invoice viewing core flow
+
+  - id: DASH-INVOICE-002
+    area: invoices
+    actor: receptionist
+    action: View invoices list
+    probability: 5
+    impact: 4
+    risk: 2
+    score: 40
+    priority: P1
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/invoices.spec.ts
+    last_result: unknown
+    notes: Invoice list pagination
+
+  - id: DASH-INVOICE-003
+    area: invoices
+    actor: admin
+    action: Check invoice payment status
+    probability: 4
+    impact: 4
+    risk: 3
+    score: 48
+    priority: P1
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/invoices.spec.ts
+    last_result: unknown
+    notes: Payment status verification
+
+  - id: DASH-INVOICE-004
+    area: invoices
+    actor: owner
+    action: Export invoice
+    probability: 2
+    impact: 3
+    risk: 3
+    score: 18
+    priority: P3
+    automation: nightly
+    status: missing
+    test: null
+    last_result: unknown
+    notes: PDF export functionality
+
+  # ─────────────────────────────────────────────────────────
+  # PAYMENTS (4 scenarios)
+  # ─────────────────────────────────────────────────────────
+  - id: DASH-PAYMENT-001
+    area: payments
+    actor: receptionist
+    action: Record cash payment
+    probability: 4
+    impact: 5
+    risk: 4
+    score: 80
+    priority: P0
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/payments.spec.ts
+    last_result: unknown
+    notes: Cash payment recording
+
+  - id: DASH-PAYMENT-002
+    area: payments
+    actor: receptionist
+    action: Record card payment
+    probability: 4
+    impact: 5
+    risk: 4
+    score: 80
+    priority: P0
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/payments.spec.ts
+    last_result: unknown
+    notes: Card payment recording
+
+  - id: DASH-PAYMENT-003
+    area: payments
+    actor: admin
+    action: View payment history
+    probability: 4
+    impact: 4
+    risk: 2
+    score: 32
+    priority: P2
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/payments.spec.ts
+    last_result: unknown
+    notes: Payment history log
+
+  - id: DASH-PAYMENT-004
+    area: payments
+    actor: admin
+    action: Void payment
+    probability: 2
+    impact: 5
+    risk: 4
+    score: 40
+    priority: P1
+    automation: nightly
+    status: missing
+    test: null
+    last_result: unknown
+    notes: Payment reversal workflow
+
+  # ─────────────────────────────────────────────────────────
+  # DEPARTMENTS (3 scenarios)
+  # ─────────────────────────────────────────────────────────
+  - id: DASH-DEPT-001
+    area: departments
+    actor: owner
+    action: Create department
+    probability: 2
+    impact: 4
+    risk: 3
+    score: 24
+    priority: P2
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/departments.spec.ts
+    last_result: unknown
+    notes: Department creation
+
+  - id: DASH-DEPT-002
+    area: departments
+    actor: owner
+    action: Update department
+    probability: 2
+    impact: 3
+    risk: 3
+    score: 18
+    priority: P3
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/departments.spec.ts
+    last_result: unknown
+    notes: Department edit
+
+  - id: DASH-DEPT-003
+    area: departments
+    actor: owner
+    action: View departments list
+    probability: 3
+    impact: 2
+    risk: 2
+    score: 12
+    priority: P3
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/departments.spec.ts
+    last_result: unknown
+    notes: Department list view
+
+  # ─────────────────────────────────────────────────────────
+  # CATEGORIES (3 scenarios)
+  # ─────────────────────────────────────────────────────────
+  - id: DASH-CAT-001
+    area: categories
+    actor: admin
+    action: Create category
+    probability: 2
+    impact: 3
+    risk: 3
+    score: 18
+    priority: P3
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/categories.spec.ts
+    last_result: unknown
+    notes: Category creation
+
+  - id: DASH-CAT-002
+    area: categories
+    actor: admin
+    action: Update category
+    probability: 2
+    impact: 3
+    risk: 3
+    score: 18
+    priority: P3
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/categories.spec.ts
+    last_result: unknown
+    notes: Category edit
+
+  - id: DASH-CAT-003
+    area: categories
+    actor: admin
+    action: Delete category
+    probability: 1
+    impact: 3
+    risk: 4
+    score: 12
+    priority: P3
+    automation: nightly
+    status: missing
+    test: null
+    last_result: unknown
+    notes: Category removal with referential integrity check
+
+  # ─────────────────────────────────────────────────────────
+  # SETTINGS (3 scenarios)
+  # ─────────────────────────────────────────────────────────
+  - id: DASH-SETTING-001
+    area: settings
+    actor: admin
+    action: Update clinic settings
+    probability: 2
+    impact: 4
+    risk: 3
+    score: 24
+    priority: P2
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/settings.spec.ts
+    last_result: unknown
+    notes: Clinic configuration
+
+  - id: DASH-SETTING-002
+    area: settings
+    actor: admin
+    action: Configure working hours
+    probability: 2
+    impact: 4
+    risk: 3
+    score: 24
+    priority: P2
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/settings.spec.ts
+    last_result: unknown
+    notes: Working hours configuration
+
+  - id: DASH-SETTING-003
+    area: settings
+    actor: owner
+    action: Manage clinic branding
+    probability: 1
+    impact: 2
+    risk: 2
+    score: 4
+    priority: P3
+    automation: manual
+    status: missing
+    test: null
+    last_result: unknown
+    notes: Logo and branding settings
+
+  # ─────────────────────────────────────────────────────────
+  # REPORTS (3 scenarios)
+  # ─────────────────────────────────────────────────────────
+  - id: DASH-REPORT-001
+    area: reports
+    actor: owner
+    action: View revenue report
+    probability: 4
+    impact: 5
+    risk: 3
+    score: 60
+    priority: P1
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/reports.spec.ts
+    last_result: unknown
+    notes: Revenue dashboard
+
+  - id: DASH-REPORT-002
+    area: reports
+    actor: admin
+    action: View bookings report
+    probability: 4
+    impact: 4
+    risk: 2
+    score: 32
+    priority: P2
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/reports.spec.ts
+    last_result: unknown
+    notes: Bookings analytics
+
+  - id: DASH-REPORT-003
+    area: reports
+    actor: owner
+    action: Export report to PDF
+    probability: 2
+    impact: 3
+    risk: 3
+    score: 18
+    priority: P3
+    automation: nightly
+    status: missing
+    test: null
+    last_result: unknown
+    notes: Report export functionality
+
+  # ─────────────────────────────────────────────────────────
+  # NOTIFICATIONS (2 scenarios)
+  # ─────────────────────────────────────────────────────────
+  - id: DASH-NOTIF-001
+    area: notifications
+    actor: employee
+    action: View notifications list
+    probability: 5
+    impact: 3
+    risk: 2
+    score: 30
+    priority: P2
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/notifications.spec.ts
+    last_result: unknown
+    notes: Notification center
+
+  - id: DASH-NOTIF-002
+    area: notifications
+    actor: employee
+    action: Mark notification as read
+    probability: 4
+    impact: 2
+    risk: 2
+    score: 16
+    priority: P3
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/notifications.spec.ts
+    last_result: unknown
+    notes: Notification state management
+
+  # ─────────────────────────────────────────────────────────
+  # RATINGS (2 scenarios)
+  # ─────────────────────────────────────────────────────────
+  - id: DASH-RATING-001
+    area: ratings
+    actor: client
+    action: Submit rating after appointment
+    probability: 3
+    impact: 4
+    risk: 3
+    score: 36
+    priority: P2
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/ratings.spec.ts
+    last_result: unknown
+    notes: Client feedback submission
+
+  - id: DASH-RATING-002
+    area: ratings
+    actor: admin
+    action: View ratings list
+    probability: 4
+    impact: 3
+    risk: 2
+    score: 24
+    priority: P2
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/ratings.spec.ts
+    last_result: unknown
+    notes: Ratings overview
+
+  # ─────────────────────────────────────────────────────────
+  # ERROR STATES (2 scenarios)
+  # ─────────────────────────────────────────────────────────
+  - id: DASH-ERROR-001
+    area: errors
+    actor: receptionist
+    action: Handle network error during booking save
+    probability: 3
+    impact: 4
+    risk: 4
+    score: 48
+    priority: P1
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/flows/error-handling.spec.ts
+    last_result: unknown
+    notes: Error boundary and retry
+
+  - id: DASH-ERROR-002
+    area: errors
+    actor: admin
+    action: View 404 page
+    probability: 2
+    impact: 2
+    risk: 2
+    score: 8
+    priority: P3
+    automation: nightly
+    status: covered
+    test: apps/dashboard/e2e/smoke/error-handling.spec.ts
+    last_result: unknown
+    notes: 404 page rendering
+
+  # ─────────────────────────────────────────────────────────
+  # RBAC ROUTE ACCESS (3 scenarios)
+  # ─────────────────────────────────────────────────────────
+  - id: DASH-RBAC-001
+    area: rbac
+    actor: employee
+    action: Attempt to access admin-only route (should be blocked)
+    probability: 4
+    impact: 5
+    risk: 5
+    score: 100
+    priority: P0
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/rbac.spec.ts
+    last_result: unknown
+    notes: Route protection for employee role
+
+  - id: DASH-RBAC-002
+    area: rbac
+    actor: receptionist
+    action: Attempt to access owner-only route (should be blocked)
+    probability: 3
+    impact: 5
+    risk: 4
+    score: 60
+    priority: P1
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/rbac.spec.ts
+    last_result: unknown
+    notes: Route protection for receptionist role
+
+  - id: DASH-RBAC-003
+    area: rbac
+    actor: admin
+    action: Access all permitted routes for admin role
+    probability: 5
+    impact: 4
+    risk: 3
+    score: 60
+    priority: P1
+    automation: every_pr
+    status: covered
+    test: apps/dashboard/e2e/smoke/rbac.spec.ts
+    last_result: unknown
+    notes: Full route access verification
+
+# ─────────────────────────────────────────────────────────
+# SUMMARY
+# ─────────────────────────────────────────────────────────
+summary:
+  total_scenarios: 43
+  priority_distribution:
+    P0: 8   # AUTH-001, AUTH-004, BOOKING-001, CLIENT-001, INVOICE-001, PAYMENT-001, PAYMENT-002, RBAC-001
+    P1: 10  # AUTH-002, AUTH-003, BOOKING-002, BOOKING-003, BOOKING-006, CLIENT-003, CLIENT-004, SERVICE-001, INVOICE-003, PAYMENT-004, REPORT-001, RBAC-002, RBAC-003
+    P2: 14  # AUTH-005, BOOKING-004, BOOKING-005, CLIENT-002, CLIENT-005, SERVICE-002, SERVICE-004, EMPLOYEE-002, EMPLOYEE-004, INVOICE-002, PAYMENT-003, DEPT-001, DEPT-002, SETTING-001, SETTING-002, REPORT-002, RATING-001, ERROR-001
+    P3: 11  # SERVICE-003, EMPLOYEE-003, INVOICE-004, DEPT-003, CAT-001, CAT-002, CAT-003, SETTING-003, REPORT-003, NOTIF-002, ERROR-002
