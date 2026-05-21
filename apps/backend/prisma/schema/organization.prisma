@@ -113,6 +113,10 @@ model Service {
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
   depositAmount  Decimal? @db.Decimal(12, 2)
 
+  // ─── Commission override ────────────────────────────────────────────────
+  /// Per-service commission rate override (0.0000–1.0000). Null → use Employee.commissionRate.
+  commissionRateOverride Decimal? @db.Decimal(4, 4)
+
   // ─── Participants (group sessions) ───────────────────────────────────────
   // minParticipants <= maxParticipants — enforced via CHECK constraint in migration SQL
   minParticipants Int @default(1)
