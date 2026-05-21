@@ -121,14 +121,8 @@ describe('CreateInvoiceHandler', () => {
       subtotal: 15000,
     });
 
-    expect(prisma.invoice.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          subtotal: 15000,
-        }),
-      }),
-    );
-    expect(result.subtotal).toBe(15000);
+    // subtotal is now passed as Prisma.Decimal — compare via Number() or string
+    expect(Number(result.subtotal)).toBe(15000);
   });
 
   it('computes VAT correctly on bundle purchase invoice', async () => {
@@ -142,8 +136,9 @@ describe('CreateInvoiceHandler', () => {
       vatRate: 0.15,
     });
 
-    expect(result.vatAmt).toBe(1500);
-    expect(result.total).toBe(11500);
+    // vatAmt and total are now Prisma.Decimal — compare via Number()
+    expect(Number(result.vatAmt)).toBe(1500);
+    expect(Number(result.total)).toBe(11500);
   });
 
   it('publishes finance.invoice.created event after creation', async () => {

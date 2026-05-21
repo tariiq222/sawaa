@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { BundlePurchaseStatus, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { BundlePriceService } from '../../org-experience/bundles/bundle-price.service';
+import { computeVat, toHalalas } from '../money.helper';
 
 export interface CreateBundlePurchaseCommand {
   bundleId: string;
@@ -74,11 +75,12 @@ export class CreateBundlePurchaseHandler {
         where: {},
         select: { vatRate: true },
       });
-      const vatRate = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
-      const vatBase = new Prisma.Decimal(finalPrice.toString());
-      const vatAmt = new Prisma.Decimal(Math.round(vatBase.toNumber() * vatRate.toNumber()).toString());
-      const total = new Prisma.Decimal(Math.round(vatBase.toNumber() + vatAmt.toNumber()).toString());
-      const discountAmt = new Prisma.Decimal(Math.round(subtotal - finalPrice).toString());
+      const vatRateDec = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
+      // All monetary arithmetic stays in Prisma.Decimal — no float intermediary
+      const subtotalDec = toHalalas(subtotal);
+      const finalPriceDec = toHalalas(finalPrice);
+      const discountAmt = subtotalDec.minus(finalPriceDec);
+      const { vatAmtHalalas, totalHalalas } = computeVat(finalPriceDec, vatRateDec);
 
       const invoice = await tx.invoice.create({
         data: {
@@ -86,11 +88,11 @@ export class CreateBundlePurchaseHandler {
           clientId: cmd.clientId,
           employeeId: cmd.employeeId,
           bundlePurchaseId: purchase.id,
-          subtotal,
-          discountAmt: discountAmt.toNumber(),
-          vatRate: vatRate.toNumber(),
-          vatAmt: vatAmt.toNumber(),
-          total: total.toNumber(),
+          subtotal: subtotalDec,
+          discountAmt,
+          vatRate: vatRateDec,
+          vatAmt: vatAmtHalalas,
+          total: totalHalalas,
           currency: bundle.currency,
           status: 'ISSUED',
           issuedAt: new Date(),
