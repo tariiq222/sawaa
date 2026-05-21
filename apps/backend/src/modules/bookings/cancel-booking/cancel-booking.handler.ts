@@ -11,6 +11,7 @@ import { RefundPaymentHandler } from '../../finance/refund-payment/refund-paymen
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertTransition } from '../booking-state-machine';
 import { computeRefundType } from '../cancellation-policy';
+import { GroupSessionCapacityService } from '../group-session/group-session-capacity.service';
 
 export type CancelBookingCommand = CancelBookingDto & {
   bookingId: string;
@@ -31,6 +32,7 @@ export class CancelBookingHandler {
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly zoomMeetingService: ZoomMeetingService,
     private readonly refundHandler: RefundPaymentHandler,
+    private readonly groupSessionCapacity: GroupSessionCapacityService,
   ) {}
 
   async execute(cmd: CancelBookingCommand) {
@@ -111,6 +113,11 @@ export class CancelBookingHandler {
         });
         refundRequestId = created.refundRequestId;
         idempotencyKey = created.idempotencyKey;
+      }
+      // Roll back sibling AWAITING_PAYMENT bookings for group sessions
+      // when the cancellation drops the enrolled count below the threshold.
+      if (booking.groupSessionId) {
+        await this.groupSessionCapacity.recalculateGroupStatus(tx, booking.groupSessionId);
       }
       return cancelledBooking;
     });

@@ -116,6 +116,12 @@ describe('BookingStateMachine — assertTransition', () => {
     it('CHECK_IN self-loop: CONFIRMED → CONFIRMED', () => {
       expect(assertTransition(BookingStatus.CONFIRMED, 'CHECK_IN')).toBe(BookingStatus.CONFIRMED);
     });
+
+    it('GROUP_FILL_ROLLBACK: AWAITING_PAYMENT → PENDING_GROUP_FILL', () => {
+      expect(assertTransition(BookingStatus.AWAITING_PAYMENT, 'GROUP_FILL_ROLLBACK')).toBe(
+        BookingStatus.PENDING_GROUP_FILL,
+      );
+    });
   });
 
   describe('CREATE_* transitions bypass the from-guard (empty from list)', () => {
@@ -159,6 +165,18 @@ describe('BookingStateMachine — assertTransition', () => {
 
     it('COMPLETE from PENDING throws', () => {
       expect(() => assertTransition(BookingStatus.PENDING, 'COMPLETE')).toThrow(BadRequestException);
+    });
+
+    it('GROUP_FILL_ROLLBACK from PENDING throws (only AWAITING_PAYMENT is valid source)', () => {
+      expect(() => assertTransition(BookingStatus.PENDING, 'GROUP_FILL_ROLLBACK')).toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('GROUP_FILL_ROLLBACK from CONFIRMED throws', () => {
+      expect(() => assertTransition(BookingStatus.CONFIRMED, 'GROUP_FILL_ROLLBACK')).toThrow(
+        BadRequestException,
+      );
     });
 
     it('NO_SHOW from PENDING_GROUP_FILL throws', () => {
