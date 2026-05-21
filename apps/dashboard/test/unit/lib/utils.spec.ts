@@ -320,15 +320,17 @@ describe("parseClinicTimeInput", () => {
 })
 
 describe("combineDateTimeToISO", () => {
-  it("returns Asia/Riyadh (+03:00) ISO for a valid date+time pair", () => {
+  it("converts a Riyadh wall-clock pair to its UTC instant", () => {
+    // 14:30 Riyadh (UTC+3) = 11:30 UTC
     expect(combineDateTimeToISO("2026-05-21", "14:30")).toBe(
-      "2026-05-21T14:30:00+03:00",
+      "2026-05-21T11:30:00.000Z",
     )
   })
 
   it("accepts HH:mm:ss and zero-pads single-digit hours", () => {
+    // 09:05:45 Riyadh = 06:05:45 UTC
     expect(combineDateTimeToISO("2026-05-21", "9:05:45")).toBe(
-      "2026-05-21T09:05:45+03:00",
+      "2026-05-21T06:05:45.000Z",
     )
   })
 
@@ -340,9 +342,8 @@ describe("combineDateTimeToISO", () => {
   })
 
   it("represents the same UTC instant regardless of host timezone", () => {
-    // Asia/Riyadh has no DST, so +03:00 is invariant — anchoring the
-    // wall-clock pair this way gives a deterministic Date independent
-    // of where the dashboard server runs.
+    // 12:00 Riyadh = 09:00 UTC. Asia/Riyadh has no DST, so this is invariant
+    // across any host timezone or season.
     const iso = combineDateTimeToISO("2026-05-21", "12:00")!
     expect(new Date(iso).toISOString()).toBe("2026-05-21T09:00:00.000Z")
   })

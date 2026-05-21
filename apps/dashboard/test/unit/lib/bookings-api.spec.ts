@@ -54,7 +54,7 @@ describe("bookings api", () => {
       "/dashboard/bookings",
       expect.objectContaining({
         serviceId: "svc-1",
-        scheduledAt: "2026-04-01T10:00:00+03:00",
+        scheduledAt: "2026-04-01T07:00:00.000Z",
         bookingType: "INDIVIDUAL",
       }),
     )
@@ -69,7 +69,7 @@ describe("bookings api", () => {
     await rescheduleBooking("bk-1", { date: "2026-04-01", startTime: "10:00" })
     expect(patchMock).toHaveBeenCalledWith(
       "/dashboard/bookings/bk-1/reschedule",
-      { newScheduledAt: "2026-04-01T10:00:00+03:00" },
+      { newScheduledAt: "2026-04-01T07:00:00.000Z" },
     )
   })
 

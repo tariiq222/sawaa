@@ -2,6 +2,11 @@ import { Test } from '@nestjs/testing';
 import { CheckAvailabilityHandler } from './check-availability.handler';
 import { PrismaService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
+import { formatToBusinessHHmm } from '../../../common/timezone';
+
+// Returns the hour-of-day in Asia/Riyadh (business TZ), independent of process.env.TZ.
+// CI runs in UTC; local dev may run in Riyadh — both should agree on business hours.
+const hourInBusinessTz = (d: Date): number => Number(formatToBusinessHHmm(d).slice(0, 2));
 
 const tomorrow = new Date(Date.now() + 86400_000);
 const tomorrowMidnight = new Date(tomorrow);
@@ -403,7 +408,7 @@ describe('CheckAvailabilityHandler', () => {
         deliveryType: 'IN_PERSON' as any,
       });
 
-      expect(result.map((slot) => slot.startTime.getHours())).toEqual([10, 11, 11]);
+      expect(result.map((slot) => hourInBusinessTz(slot.startTime))).toEqual([10, 11, 11]);
       expect(result.map((slot) => slot.startTime.getMinutes())).toEqual([0, 0, 30]);
     });
 
@@ -501,8 +506,8 @@ describe('CheckAvailabilityHandler', () => {
 
       expect(result.length).toBeGreaterThan(0);
       // Branch hours are 09:00-17:00 — confirm we're using them.
-      expect(result.every((s) => s.startTime.getHours() >= 9)).toBe(true);
-      expect(result.every((s) => s.endTime.getHours() <= 17)).toBe(true);
+      expect(result.every((s) => hourInBusinessTz(s.startTime) >= 9)).toBe(true);
+      expect(result.every((s) => hourInBusinessTz(s.endTime) <= 17)).toBe(true);
     });
   });
 
@@ -592,7 +597,7 @@ describe('CheckAvailabilityHandler', () => {
         durationMins: 60,
       });
       expect(result.length).toBeGreaterThan(0);
-      expect(result[0].startTime.getHours()).toBeGreaterThanOrEqual(12);
+      expect(hourInBusinessTz(result[0].startTime)).toBeGreaterThanOrEqual(12);
     });
   });
 
@@ -668,8 +673,8 @@ describe('CheckAvailabilityHandler', () => {
         date: tomorrowMidnight,
         durationMins: 60,
       });
-      expect(result.every((s) => s.startTime.getHours() >= 9)).toBe(true);
-      expect(result.every((s) => s.endTime.getHours() <= 17)).toBe(true);
+      expect(result.every((s) => hourInBusinessTz(s.startTime) >= 9)).toBe(true);
+      expect(result.every((s) => hourInBusinessTz(s.endTime) <= 17)).toBe(true);
     });
 
     it('handles exact edge case where shift ends exactly at branch start', async () => {
@@ -783,7 +788,7 @@ describe('CheckAvailabilityHandler', () => {
         durationMins: 60,
       });
       expect(result.length).toBeGreaterThan(0);
-      expect(result[0].startTime.getHours()).toBe(12);
+      expect(hourInBusinessTz(result[0].startTime)).toBe(12);
     });
 
     it('keeps window unchanged when entirely after exceptionCutoff', async () => {
@@ -821,7 +826,7 @@ describe('CheckAvailabilityHandler', () => {
         durationMins: 60,
       });
       expect(result.length).toBeGreaterThan(0);
-      expect(result[0].startTime.getHours()).toBe(9);
+      expect(hourInBusinessTz(result[0].startTime)).toBe(9);
     });
   });
 
@@ -855,7 +860,7 @@ describe('CheckAvailabilityHandler', () => {
         durationMins: 60,
       });
       const tenAMSlots = result.filter(
-        (s) => s.startTime.getHours() === 10,
+        (s) => hourInBusinessTz(s.startTime) === 10,
       );
       expect(tenAMSlots.length).toBe(0);
     });
@@ -888,7 +893,7 @@ describe('CheckAvailabilityHandler', () => {
         durationMins: 60,
       });
       const nineAMSlots = result.filter(
-        (s) => s.startTime.getHours() === 9,
+        (s) => hourInBusinessTz(s.startTime) === 9,
       );
       expect(nineAMSlots.length).toBeGreaterThan(0);
     });
@@ -922,7 +927,7 @@ describe('CheckAvailabilityHandler', () => {
         durationMins: 60,
       });
       const tenAMSlots = result.filter(
-        (s) => s.startTime.getHours() === 10,
+        (s) => hourInBusinessTz(s.startTime) === 10,
       );
       expect(tenAMSlots.length).toBe(0);
     });
@@ -958,12 +963,12 @@ describe('CheckAvailabilityHandler', () => {
       });
       // 9:00 slot conflicts with booking 8:30-9:30 — must NOT appear
       const nineOclockSlots = result.filter(
-        (s) => s.startTime.getHours() === 9 && s.startTime.getMinutes() === 0,
+        (s) => hourInBusinessTz(s.startTime) === 9 && s.startTime.getMinutes() === 0,
       );
       expect(nineOclockSlots.length).toBe(0);
       // 9:30 slot starts exactly when booking ends — allowed
       const nineThirtySlots = result.filter(
-        (s) => s.startTime.getHours() === 9 && s.startTime.getMinutes() === 30,
+        (s) => hourInBusinessTz(s.startTime) === 9 && s.startTime.getMinutes() === 30,
       );
       expect(nineThirtySlots.length).toBe(1);
     });
@@ -1034,7 +1039,7 @@ describe('CheckAvailabilityHandler', () => {
         date: tomorrowMidnight,
         durationMins: 60,
       });
-      const hours = result.map((s) => s.startTime.getHours());
+      const hours = result.map((s) => hourInBusinessTz(s.startTime));
       expect(hours.every((h) => (h >= 9 && h < 13) || (h >= 16 && h < 21))).toBe(true);
       expect(hours.some((h) => h >= 13 && h < 16)).toBe(false);
       expect(result.length).toBeGreaterThan(0);
@@ -1258,7 +1263,7 @@ describe('CheckAvailabilityHandler', () => {
 
       // 9:00 slot would be 9:00→10:00, overlapping the existing 9:00→9:45 booking.
       const nineSlots = result.filter(
-        (s) => s.startTime.getHours() === 9 && s.startTime.getMinutes() === 0,
+        (s) => hourInBusinessTz(s.startTime) === 9 && s.startTime.getMinutes() === 0,
       );
       expect(nineSlots.length).toBe(0);
     });

@@ -1,101 +1,88 @@
 import { BookingExpiryCron } from './booking-expiry.cron';
 
 describe('BookingExpiryCron', () => {
-  describe('basic smoke (no stale bookings)', () => {
-    const buildPrisma = () => ({
-      $queryRaw: jest.fn()
-        .mockResolvedValueOnce([{ v: BigInt(12345) }])
-        .mockResolvedValueOnce([{ acquired: true }]),
-      booking: {
-        findMany: jest.fn().mockResolvedValue([]),
-        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
-      },
-      coupon: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
-    });
+  const buildPrisma = (bookings: { id: string }[] = []) => ({
+    $queryRaw: jest.fn()
+      .mockResolvedValueOnce([{ v: BigInt(12345) }])
+      .mockResolvedValueOnce([{ acquired: true }]),
+    booking: {
+      findMany: jest.fn().mockResolvedValue(bookings),
+    },
+  });
 
-    it('calls findMany', async () => {
+  const buildHandler = () => ({
+    execute: jest.fn().mockResolvedValue(undefined),
+  });
+
+  describe('no stale bookings', () => {
+    it('calls findMany with correct filter and take:100', async () => {
       const prisma = buildPrisma();
-      const cron = new BookingExpiryCron(prisma as never);
+      const handler = buildHandler();
+      const cron = new BookingExpiryCron(prisma as never, handler as never);
       await cron.execute();
       expect(prisma.booking.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.booking.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 100 }),
+      );
     });
 
-    it('does not call updateMany when no stale bookings found', async () => {
+    it('does not call handler when no stale bookings found', async () => {
       const prisma = buildPrisma();
-      const cron = new BookingExpiryCron(prisma as never);
+      const handler = buildHandler();
+      const cron = new BookingExpiryCron(prisma as never, handler as never);
       await cron.execute();
-      expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+      expect(handler.execute).not.toHaveBeenCalled();
     });
   });
 
-  describe('enhanced path', () => {
+  describe('with stale bookings', () => {
     const NOW = new Date('2026-05-04T12:00:00Z');
     beforeEach(() => jest.spyOn(Date, 'now').mockReturnValue(NOW.getTime()));
     afterEach(() => jest.restoreAllMocks());
 
-    const buildPrisma = () => ({
-      $queryRaw: jest.fn()
-        .mockResolvedValueOnce([{ v: BigInt(12345) }])
-        .mockResolvedValueOnce([{ acquired: true }]),
-      booking: {
-        findMany: jest.fn().mockResolvedValue([]),
-        updateMany: jest.fn().mockResolvedValue({ count: 2 }),
-      },
-      coupon: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
-    });
-
-    it('expires PENDING/AWAITING_PAYMENT/PENDING_GROUP_FILL bookings', async () => {
-      const stale = [
-        { id: 'b1', status: 'PENDING', couponCode: 'PROMO' },
-        { id: 'b2', status: 'AWAITING_PAYMENT', couponCode: null },
-      ];
-      const prisma = buildPrisma();
-      prisma.booking.findMany.mockResolvedValue(stale);
-      const cron = new BookingExpiryCron(prisma as never);
+    it('calls handler.execute for each stale booking', async () => {
+      const stale = [{ id: 'b1' }, { id: 'b2' }];
+      const prisma = buildPrisma(stale);
+      const handler = buildHandler();
+      const cron = new BookingExpiryCron(prisma as never, handler as never);
       await cron.execute();
 
-      expect(prisma.booking.findMany).toHaveBeenCalledWith({
-        where: {
-          expiresAt: { lt: expect.any(Date) },
-          status: { in: ['PENDING', 'AWAITING_PAYMENT', 'PENDING_GROUP_FILL'] },
-        },
-        select: { id: true, couponCode: true },
-      });
-      expect(prisma.booking.updateMany).toHaveBeenCalledWith({
-        where: { id: { in: ['b1', 'b2'] } },
-        data: { status: 'EXPIRED' },
-      });
-      expect(prisma.coupon.updateMany).toHaveBeenCalledWith({
-        where: { code: 'PROMO', usedCount: { gt: 0 } },
-        data: { usedCount: { decrement: 1 } },
-      });
+      expect(handler.execute).toHaveBeenCalledTimes(2);
+      expect(handler.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ bookingId: 'b1', changedBy: expect.any(String) }),
+      );
+      expect(handler.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ bookingId: 'b2', changedBy: expect.any(String) }),
+      );
     });
 
-    it('idempotent: empty result is a no-op', async () => {
+    it('queries with correct status filter', async () => {
       const prisma = buildPrisma();
-      const cron = new BookingExpiryCron(prisma as never);
+      const handler = buildHandler();
+      const cron = new BookingExpiryCron(prisma as never, handler as never);
       await cron.execute();
-      expect(prisma.booking.findMany).toHaveBeenCalledTimes(1);
+
+      expect(prisma.booking.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            expiresAt: { lt: expect.any(Date) },
+            status: { in: ['PENDING', 'AWAITING_PAYMENT', 'PENDING_GROUP_FILL'] },
+          },
+          select: { id: true },
+          take: 100,
+        }),
+      );
     });
 
-    it('decrements coupon once per booking that had it', async () => {
-      const stale = [
-        { id: 'b1', status: 'PENDING', couponCode: 'X' },
-        { id: 'b2', status: 'PENDING', couponCode: 'X' },
-        { id: 'b3', status: 'PENDING', couponCode: 'Y' },
-      ];
-      const prisma = buildPrisma();
-      prisma.booking.findMany.mockResolvedValue(stale);
-      const cron = new BookingExpiryCron(prisma as never);
-      await cron.execute();
-      const calls = prisma.coupon.updateMany.mock.calls;
-      expect(calls.length).toBe(3);
-      expect(
-        calls.filter(([c]: [{ where: { code: string } }]) => c.where.code === 'X').length,
-      ).toBe(2);
-      expect(
-        calls.filter(([c]: [{ where: { code: string } }]) => c.where.code === 'Y').length,
-      ).toBe(1);
+    it('does not throw when handler rejects for one booking', async () => {
+      const stale = [{ id: 'b1' }, { id: 'b2' }];
+      const prisma = buildPrisma(stale);
+      const handler = buildHandler();
+      handler.execute
+        .mockRejectedValueOnce(new Error('already expired'))
+        .mockResolvedValueOnce(undefined);
+      const cron = new BookingExpiryCron(prisma as never, handler as never);
+      await expect(cron.execute()).resolves.toBeUndefined();
     });
   });
 });

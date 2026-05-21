@@ -1,4 +1,5 @@
 import type { Booking, Client, Employee, Service } from '@prisma/client';
+import { formatToBusinessHHmm, formatToBusinessYmd } from '../../common/timezone';
 
 /** One representative payment per booking (latest). Amounts in halalat. */
 export interface BookingPaymentRelation {
@@ -35,9 +36,12 @@ export function mapBookingRow(b: Booking, relations: BookingRelations) {
   const scheduled = b.scheduledAt;
   const ends = b.endsAt;
 
-  const date = `${scheduled.getUTCFullYear()}-${pad(scheduled.getUTCMonth() + 1)}-${pad(scheduled.getUTCDate())}`;
-  const startTime = `${pad(scheduled.getUTCHours())}:${pad(scheduled.getUTCMinutes())}`;
-  const endTime = `${pad(ends.getUTCHours())}:${pad(ends.getUTCMinutes())}`;
+  // Convert UTC instants to Asia/Riyadh wall-clock for display.
+  // Using formatToBusinessYmd/HHmm (date-fns-tz) ensures the output is
+  // correct regardless of the server's process TZ.
+  const date = formatToBusinessYmd(scheduled);
+  const startTime = formatToBusinessHHmm(scheduled);
+  const endTime = formatToBusinessHHmm(ends);
 
   const clientNames = splitName(client?.name ?? null, client?.firstName ?? null, client?.lastName ?? null);
   const employeeNames = splitName(employee?.name ?? null, null, null);

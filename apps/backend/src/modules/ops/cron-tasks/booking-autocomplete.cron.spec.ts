@@ -60,17 +60,20 @@ describe('BookingAutocompleteCron', () => {
 });
 
 describe('BookingExpiryCron', () => {
+  const buildHandler = () => ({ execute: jest.fn().mockResolvedValue(undefined) });
+
   it('executes without throwing', async () => {
     const prisma = buildPrisma();
-    const cron = new BookingExpiryCron(prisma as never);
+    const handler = buildHandler();
+    const cron = new BookingExpiryCron(prisma as never, handler as never);
     await expect(cron.execute()).resolves.not.toThrow();
   });
 
   it('calls findMany to discover expired bookings', async () => {
     const prisma = buildPrisma();
     prisma.booking.findMany = jest.fn().mockResolvedValue([]);
-    prisma.booking.updateMany = jest.fn().mockResolvedValue({ count: 0 });
-    const cron = new BookingExpiryCron(prisma as never);
+    const handler = buildHandler();
+    const cron = new BookingExpiryCron(prisma as never, handler as never);
     await cron.execute();
     expect(prisma.booking.findMany).toHaveBeenCalledWith(
       expect.objectContaining({

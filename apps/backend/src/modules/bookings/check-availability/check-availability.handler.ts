@@ -4,6 +4,7 @@ import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-s
 import type { BookingType, DeliveryType } from '@prisma/client';
 import { CheckAvailabilityDto } from './check-availability.dto';
 import { normalizeBookingTypes } from '../shared/delivery-type.helper';
+import { combineYmdAndHmInBusinessTz, formatToBusinessYmd } from '../../../common/timezone';
 
 export type CheckAvailabilityQuery = Omit<CheckAvailabilityDto, 'date' | 'durationOptionId' | 'bookingType' | 'deliveryType'> & {
   date: Date;
@@ -24,11 +25,17 @@ function slotInterval(durationMins: number): number {
   return 30; // for longer sessions, keep 30-min grid
 }
 
+/**
+ * Parse an HH:mm business-hours string into a UTC Date anchored to the given
+ * date. The anchor is a UTC Date representing a calendar day in Asia/Riyadh;
+ * the HH:mm components are wall-clock Riyadh times stored in the DB.
+ *
+ * Uses `combineYmdAndHmInBusinessTz` (via `date-fns-tz`) so the result is
+ * correct regardless of the process's local TZ.
+ */
 function parseHHmm(hhmm: string, anchor: Date): Date {
-  const [h, m] = hhmm.split(':').map(Number);
-  const d = new Date(anchor);
-  d.setHours(h, m, 0, 0);
-  return d;
+  const ymd = formatToBusinessYmd(anchor);
+  return combineYmdAndHmInBusinessTz(ymd, hhmm);
 }
 
 function intersectWindows(a: [Date, Date], b: [Date, Date]): [Date, Date] | null {

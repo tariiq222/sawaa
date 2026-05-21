@@ -1,8 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
+import { ExpireBookingHandler } from '../../bookings/expire-booking/expire-booking.handler';
 
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
+
+const CRON_ACTOR = 'system:booking-expiry-cron';
+const BATCH_SIZE = 100;
 
 @Injectable()
 export class BookingExpiryCron {
@@ -10,13 +14,10 @@ export class BookingExpiryCron {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly expireBooking: ExpireBookingHandler,
   ) {}
 
   async execute(): Promise<void> {
-    return this.enhancedExpire();
-  }
-
-  private async enhancedExpire(): Promise<void> {
     this.logger.log('booking-expiry tick');
 
     await withCronLeader(this.prisma, 'booking-expiry', async () => {
@@ -32,28 +33,33 @@ export class BookingExpiryCron {
             ],
           },
         },
-        select: { id: true, couponCode: true },
+        select: { id: true },
+        take: BATCH_SIZE,
       });
+
       if (stale.length === 0) return;
 
-      const ids = stale.map((b) => b.id);
-      await this.prisma.booking.updateMany({
-        where: { id: { in: ids } },
-        data: { status: BookingStatus.EXPIRED },
-      });
+      const results = await Promise.allSettled(
+        stale.map((b) =>
+          this.expireBooking.execute({ bookingId: b.id, changedBy: CRON_ACTOR }),
+        ),
+      );
 
-      for (const b of stale) {
-        if (!b.couponCode) continue;
-        await this.prisma.coupon.updateMany({
-          where: {
-            code: b.couponCode,
-            usedCount: { gt: 0 },
-          },
-          data: { usedCount: { decrement: 1 } },
-        });
+      const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+      const failed = results.filter((r) => r.status === 'rejected').length;
+
+      if (failed > 0) {
+        for (const result of results) {
+          if (result.status === 'rejected') {
+            this.logger.error('Failed to expire a booking', result.reason);
+          }
+        }
       }
 
-      this.logger.log(`expired ${ids.length} bookings`);
+      this.logger.log(
+        `booking-expiry: expired ${succeeded}/${stale.length} bookings` +
+          (failed > 0 ? ` (${failed} failed)` : ''),
+      );
     });
   }
 }
