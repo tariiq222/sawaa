@@ -4,6 +4,7 @@ import { fetchSlots, fetchEmployeeServiceTypes } from "@/lib/api/employees-sched
 import { fetchEmployeeServices } from "@/lib/api/employees-schedule"
 import { queryKeys } from "@/lib/query-keys"
 import type { EmployeeDurationOption, EmployeeService } from "@/lib/types/employee"
+import { utcTimeToRiyadhHHMM } from "@/lib/utils"
 
 interface UseBookingSlotsOptions {
   employeeId: string
@@ -63,11 +64,26 @@ export function useCreateBookingSlots({
   const canFetchSlots = !!employeeId && !!date &&
     (!hasDurationOptions || !!selectedDuration)
 
-  const { data: slots = [], isLoading: slotsLoading } = useQuery({
-    queryKey: [...queryKeys.employees.slots(employeeId, date), selectedDuration],
-    queryFn: () => fetchSlots(employeeId, date, selectedDuration),
+  const { data: rawSlots = [], isLoading: slotsLoading } = useQuery({
+    queryKey: [...queryKeys.employees.slots(employeeId, date), selectedDuration, serviceId, deliveryType],
+    queryFn: () =>
+      fetchSlots(employeeId, date, selectedDuration, {
+        serviceId,
+        deliveryType,
+      }),
     enabled: canFetchSlots,
   })
+
+  // Backend returns slot times in UTC; convert to Asia/Riyadh wall-clock so
+  // the UI displays times consistent with the rest of the dashboard.
+  const slots = React.useMemo(
+    () =>
+      rawSlots.map((s) => ({
+        startTime: utcTimeToRiyadhHHMM(date, s.startTime),
+        endTime: utcTimeToRiyadhHHMM(date, s.endTime),
+      })),
+    [rawSlots, date],
+  )
 
   return {
     employeeServices,

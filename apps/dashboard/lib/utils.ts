@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react"
-import { fromZonedTime } from "date-fns-tz"
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz"
 
 // cn() moved to @sawaa/ui/lib/cn as of SaaS-05a.
 // Re-exported here for backward compatibility across the dashboard workspace;
@@ -141,6 +141,20 @@ export function combineDateTimeToISO(date: string, time: string): string | null 
   const zonedDateTimeStr = `${dateMatch[0]}T${hh}:${mm}:${ss}`
   const utcDate = fromZonedTime(zonedDateTimeStr, BUSINESS_TZ)
   return utcDate.toISOString()
+}
+
+/**
+ * Convert a UTC HH:mm time (as returned by the backend slot endpoint) to the
+ * equivalent wall-clock HH:mm in Asia/Riyadh on a given date.
+ * Inputs: dateISO=YYYY-MM-DD (selected date in Riyadh), timeUtc=HH:mm UTC.
+ */
+export function utcTimeToRiyadhHHMM(dateISO: string, timeUtc: string): string {
+  const m = timeUtc.match(/^(\d{1,2}):(\d{2})$/)
+  const dm = dateISO.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m || !dm) return timeUtc
+  // Construct a UTC instant for that date + UTC time, then format in Riyadh
+  const utcIso = `${dateISO}T${m[1].padStart(2, "0")}:${m[2]}:00Z`
+  return formatInTimeZone(new Date(utcIso), BUSINESS_TZ, "HH:mm")
 }
 
 /** Convert a Date/ISO timestamp to the HH:mm input expected by formatClinicTime. */

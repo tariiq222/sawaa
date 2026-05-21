@@ -104,14 +104,14 @@ describe("useBookingMutations", () => {
     act(() => {
       result.current.adminCancelMut.mutate({
         id: "bk-1",
-        reason: "No show",
+        reason: "NO_SHOW",
       } as Parameters<typeof result.current.adminCancelMut.mutate>[0])
     })
 
     await waitFor(() =>
       expect(adminCancelBooking).toHaveBeenCalledWith(
         "bk-1",
-        expect.objectContaining({ reason: "No show" }),
+        expect.objectContaining({ reason: "NO_SHOW" }),
       ),
     )
   })

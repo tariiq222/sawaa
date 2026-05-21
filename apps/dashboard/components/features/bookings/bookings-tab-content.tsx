@@ -16,7 +16,7 @@ import { queryKeys } from "@/lib/query-keys"
 import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import { ApiError } from "@/lib/api"
-import type { Booking, RefundType } from "@/lib/types/booking"
+import type { Booking, CancellationReason, RefundType } from "@/lib/types/booking"
 
 interface BookingsTabContentProps {
   onRowClick: (b: Booking) => void
@@ -43,7 +43,7 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
   }, [search])
 
   const [deleteTarget, setDeleteTarget] = useState<Booking | null>(null)
-  const [deleteReason, setDeleteReason] = useState("")
+  const [deleteReason, setDeleteReason] = useState<CancellationReason | "">("")
   const [deleteRefundType, setDeleteRefundType] = useState<RefundType>("none")
   const [deleteRefundAmount, setDeleteRefundAmount] = useState("")
   const [deleteAdminNotes, setDeleteAdminNotes] = useState("")
@@ -229,26 +229,20 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
 
       <AdminCancelDialog
         open={deleteTarget !== null}
-        cancelReason={deleteReason}
+        cancelReason={deleteReason as CancellationReason | ""}
         setCancelReason={setDeleteReason}
-        refundType={deleteRefundType}
-        setRefundType={setDeleteRefundType}
-        refundAmount={deleteRefundAmount}
-        setRefundAmount={setDeleteRefundAmount}
         adminNotes={deleteAdminNotes}
         setAdminNotes={setDeleteAdminNotes}
         loading={adminCancelMut.isPending}
         onReset={resetDelete}
         onCancel={async () => {
           if (!deleteTarget) return
-          if (!deleteReason.trim()) return
+          if (!deleteReason) return
           try {
             await adminCancelMut.mutateAsync({
               id: deleteTarget.id,
-              reason: deleteReason,
-              refundType: deleteRefundType,
-              refundAmount: deleteRefundType === "partial" ? Number(deleteRefundAmount) : undefined,
-              adminNotes: deleteAdminNotes || undefined,
+              reason: deleteReason as CancellationReason,
+              cancelNotes: deleteAdminNotes || undefined,
             })
             refresh()
             resetDelete()

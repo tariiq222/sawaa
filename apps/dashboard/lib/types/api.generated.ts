@@ -4558,37 +4558,6 @@ export interface components {
          * @enum {string}
          */
         DeliveryType: "IN_PERSON" | "ONLINE";
-        BookingConfigInputDto: {
-            /**
-             * @description Delivery channel for this service
-             * @example IN_PERSON
-             */
-            deliveryType: components["schemas"]["DeliveryType"];
-            /**
-             * @description Price for this booking type
-             * @example 50
-             */
-            price: number;
-            /**
-             * @description Duration in minutes for this booking type
-             * @example 30
-             */
-            durationMins: number;
-            /**
-             * @description Whether this config is active
-             * @example true
-             */
-            isActive?: boolean;
-            /**
-             * @description Use service-specific availability windows instead of only branch hours
-             * @example false
-             */
-            useCustomAvailability?: boolean;
-            /** @description Duration options scoped to this delivery channel */
-            durationOptions?: components["schemas"]["BookingConfigDurationOptionInputDto"][];
-            /** @description Service custom availability windows scoped to this delivery channel */
-            availabilityWindows?: components["schemas"]["ServiceAvailabilityWindowInputDto"][];
-        };
         BookingConfigDurationOptionInputDto: {
             /**
              * Format: uuid
@@ -4657,6 +4626,37 @@ export interface components {
              * @example true
              */
             isActive?: boolean;
+        };
+        BookingConfigInputDto: {
+            /**
+             * @description Delivery channel for this service
+             * @example IN_PERSON
+             */
+            deliveryType: components["schemas"]["DeliveryType"];
+            /**
+             * @description Price for this booking type
+             * @example 50
+             */
+            price: number;
+            /**
+             * @description Duration in minutes for this booking type
+             * @example 30
+             */
+            durationMins: number;
+            /**
+             * @description Whether this config is active
+             * @example true
+             */
+            isActive?: boolean;
+            /**
+             * @description Use service-specific availability windows instead of only branch hours
+             * @example false
+             */
+            useCustomAvailability?: boolean;
+            /** @description Duration options scoped to this delivery channel */
+            durationOptions?: components["schemas"]["BookingConfigDurationOptionInputDto"][];
+            /** @description Service custom availability windows scoped to this delivery channel */
+            availabilityWindows?: components["schemas"]["ServiceAvailabilityWindowInputDto"][];
         };
         SetServiceBookingConfigsDto: {
             /** @description Booking type configurations (must include at least one) */
@@ -5111,9 +5111,8 @@ export interface components {
             /**
              * @description Time format string
              * @example 12h
-             * @enum {string}
              */
-            timeFormat?: "12h" | "24h";
+            timeFormat?: string;
             /**
              * @description Show clinic logo in email header
              * @example true
@@ -7548,6 +7547,11 @@ export interface components {
              * @example IN_PERSON
              */
             deliveryType?: components["schemas"]["DeliveryType"];
+            /**
+             * @description Specific duration option to resolve price and duration
+             * @example 00000000-0000-0000-0000-000000000004
+             */
+            durationOptionId?: string;
             /**
              * @description Booking type (legacy — prefer deliveryType)
              * @example INDIVIDUAL
@@ -22170,7 +22174,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Earnings totals and breakdown by payment method for the requested period */
+            /** @description Earnings totals (employee commission share) and breakdown by payment method for the requested period */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -22183,14 +22187,23 @@ export interface operations {
                             /** Format: date-time */
                             to?: string;
                         };
-                        /** @example 4500 */
-                        totalEarnings?: number;
+                        /**
+                         * @description Employee commission share in halalas (subtotal × effective commission rate)
+                         * @example 31500
+                         */
+                        totalEarningsHalalas?: number;
+                        /**
+                         * @description Sum of invoice subtotals (pre-VAT) in halalas — gross context figure
+                         * @example 45000
+                         */
+                        totalRevenueHalalas?: number;
                         /** @example 12 */
                         invoiceCount?: number;
                         /**
+                         * @description Employee commission share by payment method in halalas — proportionally split from employee total earnings
                          * @example {
-                         *       "CARD": 3000,
-                         *       "CASH": 1500
+                         *       "ONLINE_CARD": 21000,
+                         *       "CASH": 10500
                          *     }
                          */
                         byMethod?: {
@@ -23880,6 +23893,8 @@ export interface operations {
                 durationOptionId?: string;
                 /** @description Booking type filter */
                 bookingType?: "INDIVIDUAL" | "WALK_IN" | "GROUP";
+                /** @description Delivery channel filter (IN_PERSON or ONLINE) */
+                deliveryType?: "IN_PERSON" | "ONLINE";
             };
             header?: never;
             path?: never;
@@ -24133,6 +24148,12 @@ export interface operations {
                 serviceId?: string;
                 /** @description Branch ID */
                 branchId?: string;
+                /** @description Specific duration option to resolve duration */
+                durationOptionId?: string;
+                /** @description Delivery channel */
+                deliveryType?: components["schemas"]["DeliveryType"];
+                /** @description Booking type context */
+                bookingType?: components["schemas"]["BookingType"];
             };
             header?: never;
             path: {

@@ -19,7 +19,15 @@ import {
 import { Input } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { Textarea } from "@sawaa/ui"
-import type { RefundType } from "@/lib/types/booking"
+import type { RefundType, CancellationReason } from "@/lib/types/booking"
+
+const CANCELLATION_REASONS: CancellationReason[] = [
+  "CLIENT_REQUESTED",
+  "EMPLOYEE_UNAVAILABLE",
+  "NO_SHOW",
+  "SYSTEM_EXPIRED",
+  "OTHER",
+]
 import { useLocale } from "@/components/locale-provider"
 
 /* ─── Shared Types ─── */
@@ -137,10 +145,14 @@ export function RejectCancelDialog({
 
 /* ─── Admin Cancel Dialog ─── */
 
-interface AdminCancelDialogProps extends CancelDialogState {
+interface AdminCancelDialogProps {
   open: boolean
-  cancelReason: string
-  setCancelReason: (v: string) => void
+  cancelReason: CancellationReason | ""
+  setCancelReason: (v: CancellationReason) => void
+  adminNotes: string
+  setAdminNotes: (v: string) => void
+  loading: boolean
+  onReset: () => void
   onCancel: () => void
 }
 
@@ -148,10 +160,6 @@ export function AdminCancelDialog({
   open,
   cancelReason,
   setCancelReason,
-  refundType,
-  setRefundType,
-  refundAmount,
-  setRefundAmount,
   adminNotes,
   setAdminNotes,
   loading,
@@ -169,22 +177,27 @@ export function AdminCancelDialog({
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label>{t("bookings.cancel.admin.reasonLabel")}</Label>
-            <Textarea
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              placeholder={t("bookings.cancel.admin.reasonPlaceholder")}
-              rows={3}
-            />
+            <Select
+              value={cancelReason || undefined}
+              onValueChange={(v) => setCancelReason(v as CancellationReason)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={t("bookings.cancel.admin.reasonPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                {CANCELLATION_REASONS.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {t(`bookings.cancel.reason.${r}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <RefundTypeField value={refundType} onChange={setRefundType} />
-          {refundType === "partial" && (
-            <RefundAmountField value={refundAmount} onChange={setRefundAmount} />
-          )}
           <AdminNotesField value={adminNotes} onChange={setAdminNotes} />
         </div>
         <SheetFooter>
           <Button variant="outline" onClick={onReset}>{t("bookings.cancel.button.dismiss")}</Button>
-          <Button variant="destructive" onClick={onCancel} disabled={loading}>
+          <Button variant="destructive" onClick={onCancel} disabled={loading || !cancelReason}>
             {loading ? t("bookings.cancel.button.processing") : t("bookings.cancel.admin.button")}
           </Button>
         </SheetFooter>

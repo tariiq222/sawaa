@@ -164,11 +164,16 @@ export interface CancelRejectPayload {
   adminNotes?: string
 }
 
+export type CancellationReason =
+  | "CLIENT_REQUESTED"
+  | "EMPLOYEE_UNAVAILABLE"
+  | "NO_SHOW"
+  | "SYSTEM_EXPIRED"
+  | "OTHER"
+
 export interface AdminCancelPayload {
-  reason: string
-  refundType: RefundType
-  refundAmount?: number
-  adminNotes?: string
+  reason: CancellationReason
+  cancelNotes?: string
 }
 
 export interface EmployeeCancelPayload {

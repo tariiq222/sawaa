@@ -19538,13 +19538,13 @@
                     },
                     "byMethod": {
                       "type": "object",
-                      "description": "Gross invoice totals (inc. VAT) by payment method in halalas — for payment-method breakdown",
+                      "description": "Employee commission share by payment method in halalas — proportionally split from employee total earnings",
                       "additionalProperties": {
                         "type": "number"
                       },
                       "example": {
-                        "ONLINE_CARD": 30000,
-                        "CASH": 15000
+                        "ONLINE_CARD": 21000,
+                        "CASH": 10500
                       }
                     }
                   }
@@ -21905,6 +21905,20 @@
                 "GROUP"
               ]
             }
+          },
+          {
+            "name": "deliveryType",
+            "required": false,
+            "in": "query",
+            "description": "Delivery channel filter (IN_PERSON or ONLINE)",
+            "schema": {
+              "example": "IN_PERSON",
+              "type": "string",
+              "enum": [
+                "IN_PERSON",
+                "ONLINE"
+              ]
+            }
           }
         ],
         "responses": {
@@ -22236,6 +22250,34 @@
             "schema": {
               "example": "00000000-0000-0000-0000-000000000002",
               "type": "string"
+            }
+          },
+          {
+            "name": "durationOptionId",
+            "required": false,
+            "in": "query",
+            "description": "Specific duration option to resolve duration",
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000003",
+              "type": "string"
+            }
+          },
+          {
+            "name": "deliveryType",
+            "required": false,
+            "in": "query",
+            "description": "Delivery channel",
+            "schema": {
+              "$ref": "#/components/schemas/DeliveryType"
+            }
+          },
+          {
+            "name": "bookingType",
+            "required": false,
+            "in": "query",
+            "description": "Booking type context",
+            "schema": {
+              "$ref": "#/components/schemas/BookingType"
             }
           }
         ],
@@ -24429,66 +24471,13 @@
         ],
         "description": "Delivery channel for this service"
       },
-      "BookingConfigInputDto": {
-        "type": "object",
-        "properties": {
-          "deliveryType": {
-            "description": "Delivery channel for this service",
-            "example": "IN_PERSON",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DeliveryType"
-              }
-            ]
-          },
-          "price": {
-            "type": "number",
-            "description": "Price for this booking type",
-            "example": 50
-          },
-          "durationMins": {
-            "type": "number",
-            "description": "Duration in minutes for this booking type",
-            "example": 30
-          },
-          "isActive": {
-            "type": "boolean",
-            "description": "Whether this config is active",
-            "example": true
-          },
-          "useCustomAvailability": {
-            "type": "boolean",
-            "description": "Use service-specific availability windows instead of only branch hours",
-            "example": false
-          },
-          "durationOptions": {
-            "description": "Duration options scoped to this delivery channel",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/BookingConfigDurationOptionInputDto"
-            }
-          },
-          "availabilityWindows": {
-            "description": "Service custom availability windows scoped to this delivery channel",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ServiceAvailabilityWindowInputDto"
-            }
-          }
-        },
-        "required": [
-          "deliveryType",
-          "price",
-          "durationMins"
-        ]
-      },
       "BookingConfigDurationOptionInputDto": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid",
-            "description": "Existing duration option UUID"
+            "description": "Existing duration option UUID",
+            "format": "uuid"
           },
           "label": {
             "type": "string",
@@ -24565,6 +24554,59 @@
           "dayOfWeek",
           "startTime",
           "endTime"
+        ]
+      },
+      "BookingConfigInputDto": {
+        "type": "object",
+        "properties": {
+          "deliveryType": {
+            "description": "Delivery channel for this service",
+            "example": "IN_PERSON",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryType"
+              }
+            ]
+          },
+          "price": {
+            "type": "number",
+            "description": "Price for this booking type",
+            "example": 50
+          },
+          "durationMins": {
+            "type": "number",
+            "description": "Duration in minutes for this booking type",
+            "example": 30
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether this config is active",
+            "example": true
+          },
+          "useCustomAvailability": {
+            "type": "boolean",
+            "description": "Use service-specific availability windows instead of only branch hours",
+            "example": false
+          },
+          "durationOptions": {
+            "description": "Duration options scoped to this delivery channel",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingConfigDurationOptionInputDto"
+            }
+          },
+          "availabilityWindows": {
+            "description": "Service custom availability windows scoped to this delivery channel",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceAvailabilityWindowInputDto"
+            }
+          }
+        },
+        "required": [
+          "deliveryType",
+          "price",
+          "durationMins"
         ]
       },
       "SetServiceBookingConfigsDto": {
@@ -25210,10 +25252,6 @@
           "timeFormat": {
             "type": "string",
             "description": "Time format string",
-            "enum": [
-              "12h",
-              "24h"
-            ],
             "example": "12h"
           },
           "emailHeaderShowLogo": {
@@ -28642,6 +28680,11 @@
                 "$ref": "#/components/schemas/DeliveryType"
               }
             ]
+          },
+          "durationOptionId": {
+            "type": "string",
+            "description": "Specific duration option to resolve price and duration",
+            "example": "00000000-0000-0000-0000-000000000004"
           },
           "bookingType": {
             "description": "Booking type (legacy — prefer deliveryType)",

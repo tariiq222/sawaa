@@ -27,6 +27,7 @@ describe('getPublicBranding', () => {
       fontFamily: null,
       fontUrl: null,
       websiteDomain: null,
+      timeFormat: '24h',
     };
 
     mockApiRequest.mockResolvedValue(mockResponse);

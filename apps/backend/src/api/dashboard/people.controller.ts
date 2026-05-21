@@ -3,6 +3,7 @@ import {
   UseGuards, ParseUUIDPipe, HttpCode, HttpStatus,
   UseInterceptors, UploadedFile, BadRequestException, NotFoundException, Request,
 } from '@nestjs/common';
+import type { DeliveryType } from '@prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiQuery,
@@ -78,6 +79,10 @@ class EmployeeSlotsQuery {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) duration?: number;
 
   @IsOptional() @IsString() branchId?: string;
+
+  @IsOptional() @IsString() serviceId?: string;
+
+  @IsOptional() @IsString() deliveryType?: string;
 }
 
 function formatHHmm(d: Date): string {
@@ -677,6 +682,8 @@ export class DashboardPeopleController {
       branchId,
       date: new Date(q.date),
       durationMins: q.duration,
+      serviceId: q.serviceId,
+      deliveryType: q.deliveryType as DeliveryType | undefined,
     });
     return slots.map((s) => ({
       startTime: formatHHmm(s.startTime),

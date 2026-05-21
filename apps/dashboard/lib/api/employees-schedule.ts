@@ -84,10 +84,16 @@ export async function fetchSlots(
   id: string,
   date: string,
   duration?: number,
+  opts?: { serviceId?: string; deliveryType?: string },
 ): Promise<TimeSlot[]> {
   const res = await api.get<TimeSlot[] | { slots: TimeSlot[] }>(
     `/dashboard/people/employees/${id}/slots`,
-    { date, duration },
+    {
+      date,
+      duration,
+      serviceId: opts?.serviceId,
+      deliveryType: opts?.deliveryType,
+    },
   )
   return Array.isArray(res) ? res : (res.slots ?? [])
 }

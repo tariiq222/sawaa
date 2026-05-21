@@ -25,7 +25,7 @@ import {
 import { useBookingMutations } from "@/hooks/use-bookings"
 import { ApiError } from "@/lib/api"
 import { sarToHalalas } from "@/lib/money"
-import type { Booking, RefundType } from "@/lib/types/booking"
+import type { Booking, CancellationReason, RefundType } from "@/lib/types/booking"
 import { ApproveCancelDialog, RejectCancelDialog, AdminCancelDialog } from "./cancel-dialogs"
 
 interface BookingActionsProps {
@@ -89,7 +89,7 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
   const [refundType, setRefundType] = useState<RefundType>("full")
   const [refundAmount, setRefundAmount] = useState("")
   const [adminNotes, setAdminNotes] = useState("")
-  const [cancelReason, setCancelReason] = useState("")
+  const [cancelReason, setCancelReason] = useState<CancellationReason | "">("")
 
   const loading =
     confirmMut.isPending ||
@@ -228,32 +228,22 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
 
       <AdminCancelDialog
         open={cancelDialog === "admin"}
-        cancelReason={cancelReason}
+        cancelReason={cancelReason as CancellationReason | ""}
         setCancelReason={setCancelReason}
-        refundType={refundType}
-        setRefundType={setRefundType}
-        refundAmount={refundAmount}
-        setRefundAmount={setRefundAmount}
         adminNotes={adminNotes}
         setAdminNotes={setAdminNotes}
         loading={loading}
         onReset={resetDialog}
         onCancel={async () => {
-          if (!cancelReason.trim()) {
+          if (!cancelReason) {
             toast.error(t("bookings.actions.validation.reasonRequired"))
-            return
-          }
-          if (refundType === "partial" && (!refundAmount || Number(refundAmount) < 1)) {
-            toast.error(t("bookings.actions.validation.refundAmountRequired"))
             return
           }
           await run(
             () => adminCancelMut.mutateAsync({
               id: booking.id,
-              reason: cancelReason,
-              refundType,
-              refundAmount: refundType === "partial" ? sarToHalalas(Number(refundAmount)) : undefined,
-              adminNotes: adminNotes || undefined,
+              reason: cancelReason as CancellationReason,
+              cancelNotes: adminNotes || undefined,
             }),
             t("bookings.actions.toast.cancelled"),
           )
