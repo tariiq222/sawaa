@@ -10307,6 +10307,129 @@
         ]
       }
     },
+    "/api/v1/dashboard/people/employees/{id}/available-days": {
+      "get": {
+        "operationId": "DashboardPeopleController_getEmployeeAvailableDaysEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Employee UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "deliveryType",
+            "required": false,
+            "in": "query",
+            "description": "IN_PERSON | ONLINE",
+            "schema": {}
+          },
+          {
+            "name": "serviceId",
+            "required": false,
+            "in": "query",
+            "description": "Service UUID",
+            "schema": {}
+          },
+          {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Branch UUID (defaults to main)",
+            "schema": {}
+          },
+          {
+            "name": "duration",
+            "required": false,
+            "in": "query",
+            "description": "Slot duration in minutes",
+            "schema": {}
+          },
+          {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "description": "Number of days to evaluate (default 30, max 90)",
+            "schema": {}
+          },
+          {
+            "name": "startDate",
+            "required": true,
+            "in": "query",
+            "description": "First day to evaluate (YYYY-MM-DD)",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of ISO dates that have ≥1 available slot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "example": "2026-05-25"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Action denied by permission policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Days that have at least one bookable slot — used to disable empty day chips in the wizard",
+        "tags": [
+          "Dashboard / People"
+        ]
+      }
+    },
     "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/types": {
       "get": {
         "operationId": "DashboardPeopleController_getEmployeeServiceTypesEndpoint",

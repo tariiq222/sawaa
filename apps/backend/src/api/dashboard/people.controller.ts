@@ -85,9 +85,28 @@ class EmployeeSlotsQuery {
   @IsOptional() @IsString() deliveryType?: string;
 }
 
+class EmployeeAvailableDaysQuery {
+  @IsDateString() startDate!: string;
+
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) days?: number;
+
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) duration?: number;
+
+  @IsOptional() @IsString() branchId?: string;
+
+  @IsOptional() @IsString() serviceId?: string;
+
+  @IsOptional() @IsString() deliveryType?: string;
+}
+
 function formatHHmm(d: Date): string {
   const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
   return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+}
+
+function formatDateYmd(d: Date): string {
+  const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 @ApiTags('Dashboard / People')
@@ -689,6 +708,55 @@ export class DashboardPeopleController {
       startTime: formatHHmm(s.startTime),
       endTime: formatHHmm(s.endTime),
     }));
+  }
+
+  @Get('employees/:id/available-days')
+  @CheckPermissions({ action: 'read', subject: 'Employee' })
+  @ApiOperation({
+    summary: 'Days that have at least one bookable slot — used to disable empty day chips in the wizard',
+  })
+  @ApiParam({ name: 'id', description: 'Employee UUID' })
+  @ApiQuery({ name: 'startDate', description: 'First day to evaluate (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'days', description: 'Number of days to evaluate (default 30, max 90)', required: false })
+  @ApiQuery({ name: 'duration', description: 'Slot duration in minutes', required: false })
+  @ApiQuery({ name: 'branchId', description: 'Branch UUID (defaults to main)', required: false })
+  @ApiQuery({ name: 'serviceId', description: 'Service UUID', required: false })
+  @ApiQuery({ name: 'deliveryType', description: 'IN_PERSON | ONLINE', required: false })
+  @ApiOkResponse({
+    description: 'Array of ISO dates that have ≥1 available slot',
+    schema: { type: 'array', items: { type: 'string', example: '2026-05-25' } },
+  })
+  async getEmployeeAvailableDaysEndpoint(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() q: EmployeeAvailableDaysQuery,
+  ) {
+    let branchId = q.branchId;
+    if (!branchId) {
+      const mainBranch = await this.prisma.branch.findFirst({ where: { isMain: true } });
+      if (!mainBranch) throw new NotFoundException('No main branch configured');
+      branchId = mainBranch.id;
+    }
+    const horizon = Math.min(q.days ?? 30, 90);
+    const start = new Date(q.startDate);
+    const dates = Array.from({ length: horizon }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return d;
+    });
+    const results = await Promise.all(
+      dates.map(async (date) => {
+        const slots = await this.checkAvailability.execute({
+          employeeId: id,
+          branchId: branchId!,
+          date,
+          durationMins: q.duration,
+          serviceId: q.serviceId,
+          deliveryType: q.deliveryType as DeliveryType | undefined,
+        });
+        return slots.length > 0 ? formatDateYmd(date) : null;
+      }),
+    );
+    return results.filter((d): d is string => !!d);
   }
 
   @Get('employees/:id/services/:serviceId/types')

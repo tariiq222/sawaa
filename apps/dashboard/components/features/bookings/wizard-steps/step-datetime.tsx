@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { useLocale } from '@/components/locale-provider'
-import { useCreateBookingSlots } from '../use-booking-slots'
+import { useAvailableDays, useCreateBookingSlots } from '../use-booking-slots'
 
 /** Format date as YYYY-MM-DD using LOCAL time (not UTC) to avoid date shift near midnight. */
 function toISODate(d: Date): string {
@@ -46,12 +46,21 @@ export function StepDatetime({
 
   const days = useMemo(() => generateDays(Math.min(maxAdvanceDays, 90)), [maxAdvanceDays])
 
-  const { slots = [], slotsLoading } = useCreateBookingSlots({
+  const { slots = [], slotsLoading, selectedDuration } = useCreateBookingSlots({
     employeeId,
     serviceId,
     deliveryType,
     date: selectedDate ?? '',
     durationOptionId: durationOptionId ?? '',
+  })
+
+  const { availableDates, loading: daysLoading, enabled: daysEnabled } = useAvailableDays({
+    employeeId,
+    serviceId,
+    deliveryType,
+    startDate: toISODate(days[0]),
+    duration: selectedDuration,
+    days: days.length,
   })
 
   return (
@@ -67,16 +76,24 @@ export function StepDatetime({
             const weekday = day.toLocaleDateString('ar-SA', { weekday: 'short' })
             const dayNum = day.toLocaleDateString('ar-SA', { day: 'numeric' })
             const monthName = day.toLocaleDateString('ar-SA', { month: 'short' })
+            // Day is disabled if availability data is loaded and this date
+            // has no bookable slots. While loading (or before we can query)
+            // keep all days enabled so the picker is never blank.
+            const hasNoSlots = daysEnabled && !daysLoading && !availableDates.has(iso)
             return (
               <button
                 key={iso}
                 type="button"
                 onClick={() => onSelectDate(iso)}
+                disabled={hasNoSlots}
+                aria-disabled={hasNoSlots || undefined}
                 className={cn(
                   'flex min-w-[88px] flex-col items-center gap-1 rounded-xl border border-border bg-surface px-3 py-4',
                   'text-center transition-all duration-150',
-                  'hover:border-primary/60 hover:bg-primary/5',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+                  hasNoSlots
+                    ? 'cursor-not-allowed opacity-40'
+                    : 'hover:border-primary/60 hover:bg-primary/5',
                   isSelected && 'border-primary bg-primary/10 ring-2 ring-primary/20 shadow-sm',
                 )}
               >

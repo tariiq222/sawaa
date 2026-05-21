@@ -80,6 +80,28 @@ export async function setBreaks(
 
 /* ─── Slots ─── */
 
+export async function fetchAvailableDays(
+  id: string,
+  startDate: string,
+  opts?: {
+    days?: number
+    duration?: number
+    serviceId?: string
+    deliveryType?: string
+  },
+): Promise<string[]> {
+  return api.get<string[]>(
+    `/dashboard/people/employees/${id}/available-days`,
+    {
+      startDate,
+      days: opts?.days,
+      duration: opts?.duration,
+      serviceId: opts?.serviceId,
+      deliveryType: opts?.deliveryType,
+    },
+  )
+}
+
 export async function fetchSlots(
   id: string,
   date: string,

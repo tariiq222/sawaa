@@ -1,7 +1,11 @@
 import React from "react"
 import { useQuery } from "@tanstack/react-query"
-import { fetchSlots, fetchEmployeeServiceTypes } from "@/lib/api/employees-schedule"
-import { fetchEmployeeServices } from "@/lib/api/employees-schedule"
+import {
+  fetchAvailableDays,
+  fetchEmployeeServiceTypes,
+  fetchEmployeeServices,
+  fetchSlots,
+} from "@/lib/api/employees-schedule"
 import { queryKeys } from "@/lib/query-keys"
 import type { EmployeeDurationOption, EmployeeService } from "@/lib/types/employee"
 import { utcTimeToRiyadhHHMM } from "@/lib/utils"
@@ -97,4 +101,42 @@ export function useCreateBookingSlots({
     slots,
     slotsLoading,
   }
+}
+
+interface UseAvailableDaysOptions {
+  employeeId: string
+  serviceId: string
+  deliveryType?: string
+  startDate: string
+  duration?: number
+  days?: number
+}
+
+/**
+ * Returns the subset of dates (within `days` of `startDate`) that have at
+ * least one bookable slot — used by the wizard to disable empty day chips.
+ */
+export function useAvailableDays({
+  employeeId,
+  serviceId,
+  deliveryType,
+  startDate,
+  duration,
+  days = 30,
+}: UseAvailableDaysOptions) {
+  const enabled = !!employeeId && !!serviceId && !!deliveryType && !!startDate && !!duration
+  const { data = [], isLoading } = useQuery({
+    queryKey: ["available-days", employeeId, serviceId, deliveryType, startDate, days, duration],
+    queryFn: () =>
+      fetchAvailableDays(employeeId, startDate, {
+        days,
+        duration,
+        serviceId,
+        deliveryType,
+      }),
+    enabled,
+    staleTime: 60 * 1000,
+  })
+  const set = React.useMemo(() => new Set(data), [data])
+  return { availableDates: set, loading: isLoading, enabled }
 }

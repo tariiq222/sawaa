@@ -1441,6 +1441,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/people/employees/{id}/available-days": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Days that have at least one bookable slot — used to disable empty day chips in the wizard */
+        get: operations["DashboardPeopleController_getEmployeeAvailableDaysEndpoint"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/types": {
         parameters: {
             query?: never;
@@ -15584,6 +15601,78 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardPeopleController_getEmployeeAvailableDaysEndpoint: {
+        parameters: {
+            query: {
+                /** @description IN_PERSON | ONLINE */
+                deliveryType?: unknown;
+                /** @description Service UUID */
+                serviceId?: unknown;
+                /** @description Branch UUID (defaults to main) */
+                branchId?: unknown;
+                /** @description Slot duration in minutes */
+                duration?: unknown;
+                /** @description Number of days to evaluate (default 30, max 90) */
+                days?: unknown;
+                /** @description First day to evaluate (YYYY-MM-DD) */
+                startDate: unknown;
+            };
+            header?: never;
+            path: {
+                /** @description Employee UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of ISO dates that have ≥1 available slot */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
             };
             /** @description Unhandled server error */
             500: {
