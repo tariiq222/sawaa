@@ -1,18 +1,19 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { BookingStatus, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { CancelBookingHandler } from '../cancel-booking/cancel-booking.handler';
+import { VALID_TRANSITIONS } from '../booking-state-machine';
 import type { CancelRecurringSeriesDto } from './cancel-recurring-series.dto';
 
 export type CancelRecurringSeriesCommand = CancelRecurringSeriesDto & {
   changedBy: string;
 };
 
-const CANCELLABLE_STATUSES: BookingStatus[] = [
-  BookingStatus.PENDING,
-  BookingStatus.CONFIRMED,
-  'CANCEL_REQUESTED' as BookingStatus,
-];
+/**
+ * Statuses from which a DIRECT_CANCEL transition is valid.
+ * Derived from the state machine — single source of truth.
+ */
+const CANCELLABLE_STATUSES = VALID_TRANSITIONS.DIRECT_CANCEL.from;
 
 @Injectable()
 export class CancelRecurringSeriesHandler {
