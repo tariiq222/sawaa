@@ -2,6 +2,11 @@ import { defineConfig } from "vitest/config"
 import react from "@vitejs/plugin-react"
 import path from "path"
 
+// Force the test process to the business timezone before vitest workers
+// initialise Node's Date class. Local dev runs Asia/Riyadh, CI runs UTC;
+// without this pin, time-formatting assertions silently drift by 3 hours.
+process.env.TZ = "Asia/Riyadh"
+
 export default defineConfig({
   plugins: [react()],
   test: {
