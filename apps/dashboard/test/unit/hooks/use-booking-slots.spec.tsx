@@ -106,7 +106,7 @@ describe("useCreateBookingSlots", () => {
     expect(fetchEmployeeServiceTypes).not.toHaveBeenCalled()
   })
 
-  it("fetches slots when employeeId and date are provided with no duration options", async () => {
+  it("fetches slots with fallback service duration when no duration options exist", async () => {
     fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
     fetchEmployeeServiceTypes.mockResolvedValue([])
     fetchSlots.mockResolvedValue([{ startTime: "09:00", endTime: "09:30" }])
@@ -117,8 +117,45 @@ describe("useCreateBookingSlots", () => {
 
     await waitFor(() => expect(result.current.slotsLoading).toBe(false))
 
-    expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", undefined)
+    expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", 30)
+    expect(result.current.selectedDuration).toBe(30)
     expect(result.current.slots).toHaveLength(1)
+  })
+
+  it("falls back to service type duration when duration options are empty", async () => {
+    fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
+    fetchEmployeeServiceTypes.mockResolvedValue([
+      { deliveryType: "in_person", isActive: true, duration: 45, durationOptions: [] },
+    ])
+    fetchSlots.mockResolvedValue([{ startTime: "09:00", endTime: "09:45" }])
+
+    const { result } = renderHook(() => useCreateBookingSlots(baseOpts), {
+      wrapper: makeWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.slotsLoading).toBe(false))
+
+    expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", 45)
+    expect(result.current.selectedDuration).toBe(45)
+    expect(result.current.slots).toHaveLength(1)
+  })
+
+  it("returns undefined selectedDuration and empty slots when no duration options and no fallback duration exist", async () => {
+    fetchEmployeeServices.mockResolvedValue([])
+    fetchEmployeeServiceTypes.mockResolvedValue([
+      { deliveryType: "in_person", isActive: true, duration: null, durationOptions: [] },
+    ])
+    fetchSlots.mockResolvedValue([])
+
+    const { result } = renderHook(() => useCreateBookingSlots(baseOpts), {
+      wrapper: makeWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.slotsLoading).toBe(false))
+
+    expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", undefined)
+    expect(result.current.selectedDuration).toBeUndefined()
+    expect(result.current.slots).toEqual([])
   })
 
   it("does not fetch slots when date is missing", () => {

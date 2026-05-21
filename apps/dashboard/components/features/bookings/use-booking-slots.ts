@@ -47,10 +47,18 @@ export function useCreateBookingSlots({
   const hasDurationOptions = durationOptions.length > 0
 
   const selectedDuration = React.useMemo((): number | undefined => {
-    if (!hasDurationOptions) return undefined
-    const opt = durationOptions.find((d) => d.id === durationOptionId)
-    return opt?.durationMinutes
-  }, [hasDurationOptions, durationOptions, durationOptionId])
+    if (hasDurationOptions) {
+      const opt = durationOptions.find((d) => d.id === durationOptionId)
+      return opt?.durationMinutes
+    }
+
+    // Fallback: when no duration options, use service type duration or service duration
+    const pst = serviceTypes.find((st) => st.deliveryType === deliveryType)
+    if (pst?.isActive && pst?.duration != null) return pst.duration
+
+    const es = employeeServices.find((s) => s.serviceId === serviceId)
+    return es?.service?.duration
+  }, [hasDurationOptions, durationOptions, durationOptionId, serviceTypes, deliveryType, employeeServices, serviceId])
 
   const canFetchSlots = !!employeeId && !!date &&
     (!hasDurationOptions || !!selectedDuration)
