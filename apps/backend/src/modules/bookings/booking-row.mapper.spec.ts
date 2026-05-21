@@ -88,11 +88,13 @@ describe('mapBookingRow', () => {
     expect(result.date).toBe('2026-05-04');
   });
 
-  it('derives startTime and endTime from scheduledAt and endsAt', () => {
+  it('derives startTime and endTime in Asia/Riyadh wall-clock from scheduledAt and endsAt', () => {
     const result = mapBookingRow(mockBooking, relations);
 
-    expect(result.startTime).toBe('10:00');
-    expect(result.endTime).toBe('11:00');
+    // scheduledAt = 2026-05-04T10:00:00Z  → 13:00 Riyadh (+03:00)
+    // endsAt      = 2026-05-04T11:00:00Z  → 14:00 Riyadh (+03:00)
+    expect(result.startTime).toBe('13:00');
+    expect(result.endTime).toBe('14:00');
   });
 
   it('maps bookingType INDIVIDUAL to in_person', () => {

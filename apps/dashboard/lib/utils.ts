@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react"
+import { fromZonedTime } from "date-fns-tz"
 
 // cn() moved to @sawaa/ui/lib/cn as of SaaS-05a.
 // Re-exported here for backward compatibility across the dashboard workspace;
@@ -111,15 +112,21 @@ export function formatClinicTime(time: string, format: TimeFormat = "24h"): stri
   return `${String(hour).padStart(2, "0")}:${minute}`
 }
 
+/** Timezone for مركز سواء — Asia/Riyadh, fixed +03:00, no DST. */
+const BUSINESS_TZ = "Asia/Riyadh"
+
 /**
- * Combine a date (YYYY-MM-DD) and time (HH:mm[:ss]) into an ISO 8601 UTC
- * timestamp, interpreting the wall-clock pair in Asia/Riyadh (+03:00, no DST).
+ * Combine a date (YYYY-MM-DD) and time (HH:mm[:ss]) into a UTC ISO 8601
+ * string, interpreting the wall-clock pair in Asia/Riyadh.
  *
  * Asia/Riyadh is the operating timezone for مركز سواء — clinic working hours,
  * employee schedules, and appointment slots are all expressed in local Riyadh
  * time. The backend stores `scheduledAt` as UTC, so the contract is:
- * wall-clock (Riyadh) → UTC ISO. Always go through this helper instead of
- * `new Date('YYYY-MM-DD HH:mm')`, which is parsed in the *server* local TZ.
+ * wall-clock (Riyadh) → UTC ISO.
+ *
+ * Uses `date-fns-tz/fromZonedTime` instead of a hardcoded `+03:00` offset so
+ * the conversion is driven by the IANA database and will survive any future
+ * TZ policy change without a code edit.
  *
  * Returns null if either input is missing/malformed.
  */
@@ -131,7 +138,9 @@ export function combineDateTimeToISO(date: string, time: string): string | null 
   const hh = String(Number(timeMatch[1])).padStart(2, "0")
   const mm = timeMatch[2]
   const ss = timeMatch[3] ?? "00"
-  return `${dateMatch[0]}T${hh}:${mm}:${ss}+03:00`
+  const zonedDateTimeStr = `${dateMatch[0]}T${hh}:${mm}:${ss}`
+  const utcDate = fromZonedTime(zonedDateTimeStr, BUSINESS_TZ)
+  return utcDate.toISOString()
 }
 
 /** Convert a Date/ISO timestamp to the HH:mm input expected by formatClinicTime. */
