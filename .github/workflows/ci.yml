@@ -130,8 +130,11 @@ jobs:
         # Boot Nest just enough to regenerate openapi.json and fail if the
         # committed snapshot differs from what the current source produces.
         # Runs here (not in the dashboard job) because only this job has the
-        # full backend env wired up.
+        # full backend env wired up. `@sawaa/shared` must be built first
+        # because the snapshot step loads the compiled `dist/main.js`, which
+        # resolves the shared package via its built CJS entry.
         run: |
+          cd packages/shared && node ../../node_modules/typescript/bin/tsc -p tsconfig.json && cd ../..
           pnpm --filter=backend run openapi:build-and-snapshot
           if ! git diff --exit-code apps/backend/openapi.json; then
             echo "::error::apps/backend/openapi.json drifted from source. Run 'pnpm openapi:sync' locally and commit."
