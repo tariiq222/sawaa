@@ -94,4 +94,7 @@ export class CreateRecurringBookingDto {
 
   @ApiPropertyOptional({ description: 'Skip conflicting slots silently instead of aborting the series', example: false })
   @IsOptional() @IsBoolean() skipConflicts?: boolean;
+
+  @ApiPropertyOptional({ description: 'Pay at clinic (no invoice/payment generated upfront)', example: true })
+  @IsOptional() @IsBoolean() payAtClinic?: boolean;
 }

@@ -6440,6 +6440,11 @@ export interface components {
              * @example false
              */
             skipConflicts?: boolean;
+            /**
+             * @description Pay at clinic (no invoice/payment generated upfront)
+             * @example true
+             */
+            payAtClinic?: boolean;
         };
         /** @enum {string} */
         BookingStatus: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED";

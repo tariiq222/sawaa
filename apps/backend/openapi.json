@@ -27170,6 +27170,11 @@
             "type": "boolean",
             "description": "Skip conflicting slots silently instead of aborting the series",
             "example": false
+          },
+          "payAtClinic": {
+            "type": "boolean",
+            "description": "Pay at clinic (no invoice/payment generated upfront)",
+            "example": true
           }
         },
         "required": [

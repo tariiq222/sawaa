@@ -47,8 +47,15 @@ export class CreateRecurringBookingHandler {
     // Resolve snapshot data once for the series
     const service = await this.prisma.service.findFirst({
       where: { id: dto.serviceId },
-      select: { nameAr: true, categoryId: true, currency: true },
+      select: { nameAr: true, categoryId: true, currency: true, price: true },
     });
+
+    // Money is stored as integer halalas (see money-stored-as-integer-halalas memory).
+    // Prefer the service's authoritative price (already halalas) over the dto.price,
+    // which legacy callers may send in SAR units, leading to 100x-too-small invoices.
+    const resolvedPrice = service?.price != null
+      ? Number(service.price)
+      : dto.price;
     const employee = await this.prisma.employee.findFirst({
       where: { id: dto.employeeId },
       select: { name: true },
@@ -77,7 +84,7 @@ export class CreateRecurringBookingHandler {
     }
 
     const snapshots = {
-      priceSnapshot: dto.price,
+      priceSnapshot: resolvedPrice,
       durationMinutesSnapshot: dto.durationMins,
       branchNameSnapshot: branch?.nameAr ?? null,
       employeeNameSnapshot: employee?.name ?? null,
@@ -90,10 +97,10 @@ export class CreateRecurringBookingHandler {
     // skipConflicts=false (default): all-or-nothing — wrap in transaction so a mid-series
     // conflict rolls back already-created bookings.
     if (dto.skipConflicts) {
-      return this.createBookings(this.prisma, dto, dates, recurringGroupId, bookingType, deliveryType, snapshots);
+      return this.createBookings(this.prisma, dto, dates, recurringGroupId, bookingType, deliveryType, snapshots, resolvedPrice);
     }
     return this.rlsTransaction.withTransaction((tx) =>
-      this.createBookings(tx as unknown as PrismaService, dto, dates, recurringGroupId, bookingType, deliveryType, snapshots),
+      this.createBookings(tx as unknown as PrismaService, dto, dates, recurringGroupId, bookingType, deliveryType, snapshots, resolvedPrice),
     );
   }
 
@@ -105,6 +112,7 @@ export class CreateRecurringBookingHandler {
     bookingType: BookingType,
     deliveryType: DeliveryType,
     snapshots: Record<string, unknown>,
+    resolvedPrice: number,
   ): Promise<Booking[]> {
     const created: Booking[] = [];
 
@@ -145,7 +153,7 @@ export class CreateRecurringBookingHandler {
           scheduledAt,
           endsAt,
           durationMins: dto.durationMins,
-          price: dto.price,
+          price: resolvedPrice,
           currency: dto.currency ?? 'SAR',
           bookingType,
           deliveryType,
@@ -155,6 +163,7 @@ export class CreateRecurringBookingHandler {
           recurringPattern: dto.frequency,
           status: 'PENDING',
           bookingNumber: currentBookingNumber,
+          payAtClinic: dto.payAtClinic ?? false,
           ...snapshots,
         },
       });
