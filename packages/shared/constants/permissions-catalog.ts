@@ -17,7 +17,6 @@
  */
 
 export const PERMISSION_SUBJECTS = [
-  'Billing',
   'Booking',
   'Branch',
   'Branding',
@@ -30,12 +29,10 @@ export const PERMISSION_SUBJECTS = [
   'Integration',
   'Invoice',
   'Payment',
-  'Plan',
   'Report',
   'Role',
   'Service',
   'Setting',
-  'Subscription',
   'User',
 ] as const;
 
