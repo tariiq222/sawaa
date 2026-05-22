@@ -104,17 +104,17 @@ model Booking {
 
   // ─── Snapshot fields (denormalized at booking creation for stable history) ───
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
-  priceSnapshot          Decimal? @db.Decimal(12, 2)
+  priceSnapshot           Decimal? @db.Decimal(12, 2)
   durationMinutesSnapshot Int?
-  branchNameSnapshot     String?
-  employeeNameSnapshot   String?
-  serviceNameSnapshot    String?
-  categoryNameSnapshot   String?
-  departmentNameSnapshot String?
+  branchNameSnapshot      String?
+  employeeNameSnapshot    String?
+  serviceNameSnapshot     String?
+  categoryNameSnapshot    String?
+  departmentNameSnapshot  String?
 
-  bookingNumber        Int
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
+  bookingNumber Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   groupEnrollment GroupEnrollment?
 
@@ -286,21 +286,21 @@ enum BundlePurchaseStatus {
 }
 
 model BundlePurchase {
-  id             String               @id @default(uuid())
-  bundleId       String
-  clientId       String
-  branchId       String
+  id            String               @id @default(uuid())
+  bundleId      String
+  clientId      String
+  branchId      String
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
-  amountPaid     Decimal              @db.Decimal(12, 2)
-  paidAt         DateTime
-  expiresAt      DateTime?
-  status         BundlePurchaseStatus @default(ACTIVE)
-  notes          String?
+  amountPaid    Decimal              @db.Decimal(12, 2)
+  paidAt        DateTime
+  expiresAt     DateTime?
+  status        BundlePurchaseStatus @default(ACTIVE)
+  notes         String?
   /// Total number of sessions included in the bundle.
-  quantityTotal  Int                  @default(0)
+  quantityTotal Int                  @default(0)
   /// Number of sessions already consumed.
-  quantityUsed   Int                  @default(0)
-  createdAt      DateTime             @default(now())
+  quantityUsed  Int                  @default(0)
+  createdAt     DateTime             @default(now())
 
   usages BundleUsage[]
 
@@ -310,16 +310,16 @@ model BundlePurchase {
 }
 
 model BundleUsage {
-  id          String       @id @default(uuid())
-  purchaseId  String
-  purchase    BundlePurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
-  bookingId   String? // cross-BC ref to Booking — plain string, no FK
-  serviceId   String
+  id           String         @id @default(uuid())
+  purchaseId   String
+  purchase     BundlePurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  bookingId    String? // cross-BC ref to Booking — plain string, no FK
+  serviceId    String
   deliveryType DeliveryType
-  quantityUsed Int          @default(1)
-  usedAt      DateTime     @default(now())
-  notes       String?
-  createdAt   DateTime     @default(now())
+  quantityUsed Int            @default(1)
+  usedAt       DateTime       @default(now())
+  notes        String?
+  createdAt    DateTime       @default(now())
 
   @@index([purchaseId])
   @@index([bookingId])

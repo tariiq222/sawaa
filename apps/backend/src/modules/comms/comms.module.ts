@@ -53,7 +53,6 @@ import { OnClientEnrolledStaffHandler } from './events/on-client-enrolled-staff.
 import { ResilientNotificationDispatcher } from './resilient-notification-dispatcher/resilient-notification-dispatcher.service';
 import { NotificationRetryWorker } from './resilient-notification-dispatcher/notification-retry-worker';
 import { ListTenantDeliveryLogsHandler } from './list-tenant-delivery-logs/list-tenant-delivery-logs.handler';
-import { GetEmailFallbackQuotaHandler } from './get-email-fallback-quota/get-email-fallback-quota.handler';
 
 const handlers = [
   SendPushHandler,
@@ -93,7 +92,6 @@ const handlers = [
   ResilientNotificationDispatcher,
   NotificationRetryWorker,
   ListTenantDeliveryLogsHandler,
-  GetEmailFallbackQuotaHandler,
 ];
 
 const eventHandlers = [

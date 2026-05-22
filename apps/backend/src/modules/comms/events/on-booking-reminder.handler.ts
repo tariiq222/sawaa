@@ -8,7 +8,10 @@ interface BookingReminderPayload {
   bookingId: string;
   clientId: string;
   scheduledAt: Date | string;
+  clientName?: string;
   clientPhone?: string;
+  clientEmail?: string;
+  serviceName?: string;
 }
 
 @Injectable()
@@ -35,6 +38,7 @@ export class OnBookingReminderHandler {
       const { pushEnabled, tokens } = await this.pushTargets.execute({ clientId: payload.clientId });
       const channels: Array<'in-app' | 'push' | 'sms' | 'email'> = ['in-app', 'sms'];
       if (pushEnabled && tokens.length > 0) channels.push('push');
+      if (payload.clientEmail) channels.push('email');
       await this.notify.execute({
         recipientId: payload.clientId,
         recipientType: RecipientType.CLIENT,
@@ -44,6 +48,15 @@ export class OnBookingReminderHandler {
         channels,
         fcmTokens: tokens,
         recipientPhone: payload.clientPhone,
+        recipientEmail: payload.clientEmail,
+        emailTemplateSlug: payload.clientEmail ? 'booking-reminder' : undefined,
+        emailVars: payload.clientEmail
+          ? {
+              client_name: payload.clientName ?? '',
+              service_name: payload.serviceName ?? '',
+              time: timeStr,
+            }
+          : undefined,
       });
     } catch (err) {
       this.logger.error(

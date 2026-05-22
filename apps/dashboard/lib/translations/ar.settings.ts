@@ -369,10 +369,4 @@ export const arSettings: Record<string, string> = {
   "settings.deliveryLog.colSentAt": "وقت الإرسال",
   "settings.deliveryLog.colAttempts": "المحاولات",
   "settings.deliveryLog.noLogs": "لا توجد سجلات إرسال",
-  // Fallback quota banner
-  "settings.emailFallbackQuota.title": "بريد المنصة الاحتياطي",
-  "settings.emailFallbackQuota.desc": "رسائل مُرسَلة عبر خادم بريد ديقة (تُستخدم عند عدم ضبط مزوّد البريد الخاص بك).",
-  "settings.emailFallbackQuota.usage": "تم استخدام {used} من أصل {limit} رسالة هذا الشهر",
-  "settings.emailFallbackQuota.unlimited": "إرسال غير محدود هذا الشهر",
-  "settings.emailFallbackQuota.limitReached": "تم الوصول إلى الحد الشهري — يرجى ضبط مزوّد بريد خاص بك للمتابعة.",
 }

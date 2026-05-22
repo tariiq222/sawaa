@@ -14,6 +14,12 @@ const buildDeps = (overrides: Partial<{
 
   const prisma = {
     booking: { findMany: jest.fn().mockResolvedValue(bookings) },
+    client: {
+      findMany: jest.fn().mockResolvedValue([
+        { id: 'cl-1', name: 'سارة', firstName: 'سارة', lastName: 'أحمد', email: 's@x.com', phone: '+966500000000' },
+        { id: 'cl-2', name: 'علي', firstName: 'علي', lastName: null, email: null, phone: null },
+      ]),
+    },
     invoice: { findFirst: jest.fn().mockResolvedValue(overrides.invoiceExists ? mockInvoice : null) },
     organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: '0.15' }) },
   };

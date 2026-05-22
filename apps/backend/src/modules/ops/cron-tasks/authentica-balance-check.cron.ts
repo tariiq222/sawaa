@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthenticaClient } from '../../../infrastructure/authentica/authentica.client';
-import { PlatformMailerService } from '../../../infrastructure/mail/platform-mailer.service';
+import { EmailProviderFactory } from '../../../infrastructure/email/email-provider.factory';
 
 /** Balance below this threshold triggers an alert email (SAR / units depending on Authentica plan). */
 const LOW_BALANCE_THRESHOLD = 500;
@@ -13,7 +13,7 @@ export class AuthenticaBalanceCheckCron {
 
   constructor(
     private readonly authentica: AuthenticaClient,
-    private readonly mailer: PlatformMailerService,
+    private readonly emailFactory: EmailProviderFactory,
     config: ConfigService,
   ) {
     this.ownerAlertEmail = config.get<string>('OWNER_ALERT_EMAIL');
@@ -28,29 +28,37 @@ export class AuthenticaBalanceCheckCron {
     const balance = await this.authentica.getBalance();
     this.logger.log(`Authentica balance: ${balance}`);
 
-    if (balance < LOW_BALANCE_THRESHOLD) {
+    if (balance >= LOW_BALANCE_THRESHOLD) return;
+
+    this.logger.warn(
+      `Authentica balance LOW: ${balance} < threshold ${LOW_BALANCE_THRESHOLD}`,
+    );
+
+    if (!this.ownerAlertEmail) {
+      this.logger.warn('OWNER_ALERT_EMAIL not set — cannot send balance alert');
+      return;
+    }
+
+    const adapter = await this.emailFactory.resolve();
+    if (!adapter.isAvailable()) {
       this.logger.warn(
-        `Authentica balance LOW: ${balance} < threshold ${LOW_BALANCE_THRESHOLD}`,
+        'No email provider configured — cannot send Authentica balance alert',
       );
+      return;
+    }
 
-      if (!this.ownerAlertEmail) {
-        this.logger.warn(
-          'OWNER_ALERT_EMAIL not set — cannot send balance alert email',
-        );
-        return;
-      }
-
-      await this.mailer.sendRaw({
+    try {
+      await adapter.sendMail({
         to: this.ownerAlertEmail,
-        subject: `تحذير: رصيد Authentica منخفض · Authentica Balance Low`,
+        subject: 'تحذير: رصيد Authentica منخفض · Authentica Balance Low',
         html: `
           <p dir="rtl">رصيد Authentica الحالي <strong>${balance}</strong> أقل من الحد الأدنى (${LOW_BALANCE_THRESHOLD}). يرجى إعادة الشحن لضمان استمرار إرسال OTP.</p>
           <p>Current Authentica balance is <strong>${balance}</strong>, which is below the low-balance threshold of ${LOW_BALANCE_THRESHOLD}. Please top up to ensure continued OTP delivery.</p>
         `,
-        templateSlug: 'authentica-balance-alert',
       });
-
       this.logger.log(`Balance alert email sent to ${this.ownerAlertEmail}`);
+    } catch (err) {
+      this.logger.error('Failed to send Authentica balance alert', err);
     }
   }
 }

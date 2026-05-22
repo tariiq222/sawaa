@@ -16,6 +16,9 @@ interface GroupSessionPaymentLink {
   invoiceId: string;
   amount: number;
   currency: string;
+  clientName?: string;
+  clientEmail?: string;
+  clientPhone?: string;
 }
 
 /**
@@ -79,6 +82,13 @@ export class GroupSessionReadyHandler {
       }),
     ]);
 
+    const clientIds = [...new Set(bookings.map((b) => b.clientId))];
+    const clients = await this.prisma.client.findMany({
+      where: { id: { in: clientIds } },
+      select: { id: true, name: true, firstName: true, lastName: true, email: true, phone: true },
+    });
+    const clientById = new Map(clients.map((c) => [c.id, c]));
+
     const vatRate = orgSettings?.vatRate ? Number(orgSettings.vatRate) : undefined;
 
     const paymentLinks: GroupSessionPaymentLink[] = [];
@@ -108,12 +118,17 @@ export class GroupSessionReadyHandler {
       }
 
       if (invoice) {
+        const client = clientById.get(booking.clientId);
+        const fullName = [client?.firstName, client?.lastName].filter(Boolean).join(' ').trim() || client?.name;
         paymentLinks.push({
           bookingId: booking.id,
           clientId: booking.clientId,
           invoiceId: invoice.id,
           amount: subtotal,
           currency: booking.currency,
+          clientName: fullName || undefined,
+          clientEmail: client?.email ?? undefined,
+          clientPhone: client?.phone ?? undefined,
         });
       }
     }

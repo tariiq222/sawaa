@@ -15,7 +15,6 @@ import { ListIntegrationsHandler } from './integrations/list-integrations.handle
 import { FinanceModule } from '../finance/finance.module';
 import { IdentityModule } from '../identity/identity.module';
 import { PlatformSettingsModule } from './settings/platform-settings.module';
-import { PlatformEmailModule } from './email/platform-email.module';
 import { NotificationsConfigModule } from './notifications-config/notifications-config.module';
 import { SystemHealthModule } from './system-health/system-health.module';
 
@@ -27,7 +26,6 @@ import { SystemHealthModule } from './system-health/system-health.module';
     IdentityModule,
    
     PlatformSettingsModule,
-    PlatformEmailModule,
     NotificationsConfigModule,
     SystemHealthModule,
     MailModule,

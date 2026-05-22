@@ -1,7 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 
 import { PrismaService } from '../../../infrastructure/database';
-import { SmtpService } from '../../../infrastructure/mail';
 import { EmailProviderFactory } from '../../../infrastructure/email/email-provider.factory';
 
 import { SendEmailDto } from './send-email.dto';
@@ -13,7 +12,6 @@ export class SendEmailHandler {
   private readonly logger = new Logger(SendEmailHandler.name);
 
   constructor(
-    private readonly smtp: SmtpService,
     private readonly prisma: PrismaService,
     private readonly emailFactory: EmailProviderFactory,
   ) {}
@@ -31,35 +29,22 @@ export class SendEmailHandler {
     const html = this.interpolate(template.htmlBody, dto.vars);
     const subject = this.interpolate(template.subject, dto.vars);
 
-    // Try configured email provider first; fall back to platform SMTP.
-    let useFallback = true;
-    try {
-      const adapter = await this.emailFactory.resolve();
+    const adapter = await this.emailFactory.resolve();
 
-      if (adapter.isAvailable()) {
-        await adapter.sendMail({ to: dto.to, subject, html });
-        return;
-      }
-    } catch {
-      // Config lookup failed — fall through to platform SMTP
-    }
-
-    if (useFallback) {
-      await this.sendViaFallback(dto.to, subject, html);
-    }
-  }
-
-  private async sendViaFallback(to: string, subject: string, html: string): Promise<void> {
-    // SMTP fallback
-    if (!this.smtp.isAvailable()) {
-      this.logger.warn('No email provider configured — skipping send to ' + to);
-      return;
+    if (!adapter.isAvailable()) {
+      this.logger.error(
+        `Cannot send "${dto.templateSlug}" to ${dto.to}: no email provider configured`,
+      );
+      throw new ServiceUnavailableException(
+        'Email provider not configured. Configure one in Settings → Email.',
+      );
     }
 
     try {
-      await this.smtp.sendMail(to, subject, html);
+      await adapter.sendMail({ to: dto.to, subject, html });
     } catch (err) {
-      this.logger.error(`Failed to send email to ${to}`, err);
+      this.logger.error(`Failed to send "${dto.templateSlug}" to ${dto.to}`, err);
+      throw err;
     }
   }
 
