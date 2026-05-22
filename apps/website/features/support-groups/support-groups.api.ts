@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/nextjs';
+
 import { getApiBase } from '@/lib/api-base';
 
 export interface SupportGroup {
@@ -40,13 +42,23 @@ export async function getPublicGroupSessions(
       next: { revalidate: 60, tags: ['public-group-sessions'] },
     });
     if (!res.ok) {
-      console.warn(`[support-groups] fetch failed: ${res.status} — using empty list`);
+      Sentry.addBreadcrumb({
+        category: 'fetch',
+        level: 'warning',
+        message: '[support-groups] fetch failed — using empty list',
+        data: { status: res.status },
+      });
       return [];
     }
     const json = await res.json();
     return (json.data ?? json) as SupportGroup[];
   } catch (err) {
-    console.warn('[support-groups] fetch error — using empty list', err);
+    Sentry.addBreadcrumb({
+      category: 'fetch',
+      level: 'warning',
+      message: '[support-groups] fetch error — using empty list',
+      data: { error: err instanceof Error ? err.message : String(err) },
+    });
     return [];
   }
 }

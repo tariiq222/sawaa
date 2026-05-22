@@ -34,7 +34,8 @@ export function useCurrentClient(): UseCurrentClientResult {
       }
     },
     initialData: initialClient ?? undefined,
-    staleTime: 60_000,
+    staleTime: 15_000,
+    gcTime: 5 * 60_000,
   });
 
   return {

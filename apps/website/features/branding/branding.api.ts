@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import type { PublicBranding } from '@sawaa/shared';
 
 import { getApiBase } from '@/lib/api-base';
@@ -30,12 +31,22 @@ export async function getPublicBrandingForSsr(): Promise<PublicBranding> {
       signal: controller.signal,
     }).finally(() => clearTimeout(timer));
     if (!response.ok) {
-      console.warn(`[branding] fetch failed: ${response.status} — using default branding`);
+      Sentry.addBreadcrumb({
+        category: 'fetch',
+        level: 'warning',
+        message: '[branding] fetch failed — using default branding',
+        data: { status: response.status },
+      });
       return DEFAULT_BRANDING;
     }
     return (await response.json()) as PublicBranding;
   } catch (err) {
-    console.warn('[branding] fetch error — using default branding', err);
+    Sentry.addBreadcrumb({
+      category: 'fetch',
+      level: 'warning',
+      message: '[branding] fetch error — using default branding',
+      data: { error: err instanceof Error ? err.message : String(err) },
+    });
     return DEFAULT_BRANDING;
   }
 }

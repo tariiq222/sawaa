@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import type { PublicEmployee } from '@sawaa/api-client';
 
 import { publicFetch } from '@/lib/public-fetch';
@@ -19,7 +20,12 @@ export async function listPublicEmployees(): Promise<PublicEmployee[]> {
     }).finally(() => clearTimeout(timer));
     return unwrap<PublicEmployee[]>(json);
   } catch (err) {
-    console.warn('[therapists] listPublicEmployees error — using empty list', err);
+    Sentry.addBreadcrumb({
+      category: 'fetch',
+      level: 'warning',
+      message: '[therapists] listPublicEmployees error — using empty list',
+      data: { error: err instanceof Error ? err.message : String(err) },
+    });
     return [];
   }
 }

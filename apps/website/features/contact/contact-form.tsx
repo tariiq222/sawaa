@@ -1,11 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useT } from '@/features/locale/locale-provider';
 import { submitContactMessage } from './contact.api';
-
-interface Props {
-  locale: 'ar' | 'en';
-}
 
 interface FormState {
   name: string;
@@ -17,21 +14,24 @@ interface FormState {
 
 const INITIAL: FormState = { name: '', phone: '', email: '', subject: '', body: '' };
 
-function validate(state: FormState, locale: 'ar' | 'en') {
+type Translator = ReturnType<typeof useT>;
+
+function validate(state: FormState, t: Translator) {
   const errors: Partial<Record<keyof FormState, string>> = {};
   if (state.name.trim().length < 2) {
-    errors.name = locale === 'ar' ? 'الاسم مطلوب' : 'Name is required';
+    errors.name = t('contact.form.errors.name');
   }
   if (!state.phone && !state.email) {
-    errors.email = locale === 'ar' ? 'البريد أو الجوال مطلوب' : 'Email or phone required';
+    errors.email = t('contact.form.errors.contact');
   }
   if (state.body.trim().length < 5) {
-    errors.body = locale === 'ar' ? 'الرسالة قصيرة جداً' : 'Message too short';
+    errors.body = t('contact.form.errors.body');
   }
   return errors;
 }
 
-export function ContactForm({ locale }: Props) {
+export function ContactForm() {
+  const t = useT();
   const [form, setForm] = useState<FormState>(INITIAL);
   const [errors, setErrors] = useState<ReturnType<typeof validate>>({});
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -42,7 +42,7 @@ export function ContactForm({ locale }: Props) {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const errs = validate(form, locale);
+    const errs = validate(form, t);
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
@@ -74,12 +74,10 @@ export function ContactForm({ locale }: Props) {
           textAlign: 'center',
         }}
       >
-        <h3 style={{ color: 'var(--accent-dark)' }}>
-          {locale === 'ar' ? 'تم إرسال رسالتك بنجاح' : 'Your message has been sent'}
-        </h3>
-        <p>{locale === 'ar' ? 'سنتواصل معك قريباً.' : 'We will contact you soon.'}</p>
+        <h3 style={{ color: 'var(--accent-dark)' }}>{t('contact.form.success')}</h3>
+        <p>{t('contact.form.successDesc')}</p>
         <button onClick={() => setStatus('idle')} style={{ marginTop: '1rem' }}>
-          {locale === 'ar' ? 'إرسال رسالة أخرى' : 'Send another message'}
+          {t('contact.form.sendAnother')}
         </button>
       </div>
     );
@@ -87,11 +85,11 @@ export function ContactForm({ locale }: Props) {
 
   const labelFor = (key: keyof FormState) =>
     ({
-      name: locale === 'ar' ? 'الاسم' : 'Name',
-      phone: locale === 'ar' ? 'الجوال' : 'Phone',
-      email: locale === 'ar' ? 'البريد الإلكتروني' : 'Email',
-      subject: locale === 'ar' ? 'الموضوع' : 'Subject',
-      body: locale === 'ar' ? 'الرسالة' : 'Message',
+      name: t('contact.form.name'),
+      phone: t('contact.form.phone'),
+      email: t('contact.form.email'),
+      subject: t('contact.form.subject'),
+      body: t('contact.form.body'),
     })[key];
 
   const inputStyle: React.CSSProperties = {
@@ -139,13 +137,7 @@ export function ContactForm({ locale }: Props) {
           fontSize: '1rem',
         }}
       >
-        {status === 'loading'
-          ? locale === 'ar'
-            ? 'جاري الإرسال...'
-            : 'Sending...'
-          : locale === 'ar'
-            ? 'إرسال'
-            : 'Send'}
+        {status === 'loading' ? t('contact.form.sending') : t('contact.form.send')}
       </button>
     </form>
   );

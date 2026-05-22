@@ -1,7 +1,7 @@
 'use client';
 
 import type { AvailableSlot } from '@sawaa/shared';
-import { useT } from '@/features/locale/locale-provider';
+import { useT, useLocale } from '@/features/locale/locale-provider';
 
 interface SlotPickerProps {
   slots: AvailableSlot[];
@@ -12,6 +12,7 @@ interface SlotPickerProps {
 
 export function SlotPicker({ slots, selected, onSelect, isLoading }: SlotPickerProps) {
   const t = useT();
+  const locale = useLocale();
   if (isLoading) {
     return <div style={{ textAlign: 'center', padding: '2rem' }}>{t('booking.loadingSlots')}</div>;
   }
@@ -24,7 +25,7 @@ export function SlotPicker({ slots, selected, onSelect, isLoading }: SlotPickerP
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '0.75rem' }}>
         {slots.map((slot) => {
           const start = new Date(slot.startTime);
-          const timeStr = start.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+          const timeStr = start.toLocaleTimeString(locale === 'ar' ? 'ar-SA' : 'en-US', { hour: '2-digit', minute: '2-digit' });
           const isSelected = selected?.startTime === slot.startTime;
           return (
             <button

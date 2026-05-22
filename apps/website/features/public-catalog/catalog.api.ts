@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/nextjs';
+
 import { getApiBase } from '@/lib/api-base';
 import type { PublicCatalog } from './types';
 
@@ -16,12 +18,22 @@ export async function getPublicCatalog(): Promise<PublicCatalog> {
       signal: controller.signal,
     }).finally(() => clearTimeout(timer));
     if (!res.ok) {
-      console.warn(`[catalog] fetch failed: ${res.status} — using empty catalog`);
+      Sentry.addBreadcrumb({
+        category: 'fetch',
+        level: 'warning',
+        message: '[catalog] fetch failed — using empty catalog',
+        data: { status: res.status },
+      });
       return EMPTY_CATALOG;
     }
     return (await res.json()) as PublicCatalog;
   } catch (err) {
-    console.warn('[catalog] fetch error — using empty catalog', err);
+    Sentry.addBreadcrumb({
+      category: 'fetch',
+      level: 'warning',
+      message: '[catalog] fetch error — using empty catalog',
+      data: { error: err instanceof Error ? err.message : String(err) },
+    });
     return EMPTY_CATALOG;
   }
 }

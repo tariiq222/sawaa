@@ -3,6 +3,12 @@
 import type { ClientProfile } from '@sawaa/shared';
 
 const CLIENT_KEY = 'sawa_client';
+const CLIENT_CACHE_TTL_MS = 15 * 60 * 1000;
+
+interface StoredClient {
+  profile: ClientProfile;
+  savedAt: number;
+}
 
 function readLocalStorage(key: string): string | null {
   try {
@@ -30,7 +36,19 @@ let storedClient: ClientProfile | null = (() => {
   const raw = readLocalStorage(CLIENT_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as ClientProfile;
+    const parsed = JSON.parse(raw) as StoredClient;
+    if (
+      !parsed ||
+      typeof parsed !== 'object' ||
+      typeof parsed.savedAt !== 'number' ||
+      !parsed.profile
+    ) {
+      return null;
+    }
+    if (Date.now() - parsed.savedAt >= CLIENT_CACHE_TTL_MS) {
+      return null;
+    }
+    return parsed.profile;
   } catch {
     return null;
   }
@@ -38,7 +56,12 @@ let storedClient: ClientProfile | null = (() => {
 
 export function setClient(client: ClientProfile | null): void {
   storedClient = client;
-  writeLocalStorage(CLIENT_KEY, client ? JSON.stringify(client) : null);
+  if (client === null) {
+    writeLocalStorage(CLIENT_KEY, null);
+    return;
+  }
+  const payload: StoredClient = { profile: client, savedAt: Date.now() };
+  writeLocalStorage(CLIENT_KEY, JSON.stringify(payload));
 }
 
 export function getClient(): ClientProfile | null {

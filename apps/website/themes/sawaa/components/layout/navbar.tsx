@@ -6,17 +6,22 @@ import { useEffect, useState } from 'react';
 import { Calendar, Menu, X, User } from 'lucide-react';
 import { useBranding } from '@/features/branding/public';
 import { isAuthenticated } from '@/features/auth/public';
-import { NAV_LINKS, SITE } from '../../lib/constants';
+import { useT } from '@/features/locale/locale-provider';
+import { SITE } from '../../lib/constants';
+
+const navLinks = [
+  { key: 'nav.home', href: '/' },
+  { key: 'nav.therapists', href: '/therapists' },
+  { key: 'nav.supportGroups', href: '/support-groups' },
+  { key: 'nav.burnout', href: '/burnout-test' },
+  { key: 'nav.contact', href: '/contact' },
+] as const;
 
 export function Navbar() {
+  const t = useT();
   const branding = useBranding();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isAuthed, setIsAuthed] = useState(false);
-
-  useEffect(() => {
-    setIsAuthed(isAuthenticated());
-  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -49,35 +54,35 @@ export function Navbar() {
           background: scrolled ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.62)',
           border: '1px solid rgba(255,255,255,0.5)',
         }}
-        aria-label="التنقل الرئيسي"
+        aria-label={t('nav.ariaPrimary')}
       >
-        <Link href="/" aria-label={`الصفحة الرئيسية لـ ${brandName}`} className="flex items-center gap-2 ps-2 pe-3 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2">
-          <Image src={logo} alt={`شعار ${brandName}`} width={32} height={32} className="h-7 sm:h-8 w-auto" style={{ display: 'block' }} unoptimized={logo?.startsWith('http')} />
+        <Link href="/" aria-label={`${t('nav.ariaHomePrefix')} ${brandName}`} className="flex items-center gap-2 ps-2 pe-3 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2">
+          <Image src={logo} alt={`${t('nav.logoAltPrefix')} ${brandName}`} width={32} height={32} className="h-7 sm:h-8 w-auto" style={{ display: 'block' }} unoptimized={logo?.startsWith('http')} />
           <span className="font-extrabold text-sm sm:text-base whitespace-nowrap" style={{ color: 'var(--sw-primary-600)' }}>
-            {brandName}
+            سواء للإرشاد الأسري
           </span>
         </Link>
 
         <div className="hidden md:flex gap-0.5 rounded-full p-1" role="menubar">
-          {NAV_LINKS.map((l) => (
+          {navLinks.map((l) => (
             <a
               key={l.href}
               href={l.href}
               role="menuitem"
               className="px-4 py-2 text-[0.813rem] font-semibold rounded-full transition-all duration-200 text-[var(--sw-neutral-700)] hover:bg-[var(--sw-primary-50)] hover:text-[var(--sw-primary-700)] focus-visible:bg-[var(--sw-primary-50)] focus-visible:text-[var(--sw-primary-700)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             >
-              {l.label}
+              {t(l.key)}
             </a>
           ))}
         </div>
 
         <div className="hidden md:flex items-center gap-2">
           <Link
-            href={isAuthed ? '/account' : '/login'}
+            href={isAuthenticated() ? '/account' : '/login'}
             className="inline-flex items-center gap-2 text-[0.813rem] font-semibold px-4 py-2.5 rounded-full transition-all text-[var(--sw-neutral-700)] hover:bg-[var(--sw-primary-50)] hover:text-[var(--sw-primary-700)] focus-visible:bg-[var(--sw-primary-50)] focus-visible:text-[var(--sw-primary-700)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
           >
             <User className="w-4 h-4" aria-hidden="true" />
-            {isAuthed ? 'حسابي' : 'تسجيل الدخول'}
+            {isAuthenticated() ? t('nav.account') : t('nav.login')}
           </Link>
           <Link
             href="/booking"
@@ -88,14 +93,14 @@ export function Navbar() {
               boxShadow: 'var(--sw-shadow-primary)',
             }}
           >
-            احجز موعدك
+            {t('nav.booking')}
             <Calendar className="w-4 h-4" aria-hidden="true" />
           </Link>
         </div>
 
         <button
           onClick={() => setMobileOpen(true)}
-          aria-label="فتح القائمة"
+          aria-label={t('nav.openMenu')}
           aria-expanded={mobileOpen}
           aria-controls="mobile-menu"
           className="md:hidden w-10 h-10 rounded-full flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
@@ -110,19 +115,19 @@ export function Navbar() {
           id="mobile-menu"
           role="dialog"
           aria-modal="true"
-          aria-label="قائمة التنقل"
+          aria-label={t('nav.menuLabel')}
           className="fixed inset-0 z-[999] flex flex-col items-center justify-center gap-2 backdrop-blur-xl"
           style={{ background: 'rgba(255,255,255,0.98)' }}
         >
           <button
             onClick={() => setMobileOpen(false)}
-            aria-label="إغلاق القائمة"
+            aria-label={t('nav.closeMenu')}
             className="absolute top-6 end-6 w-11 h-11 rounded-full flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{ background: 'var(--sw-neutral-100)' }}
           >
             <X className="w-6 h-6" style={{ color: 'var(--sw-secondary-700)' }} aria-hidden="true" />
           </button>
-          {NAV_LINKS.map((l) => (
+          {navLinks.map((l) => (
             <a
               key={l.href}
               href={l.href}
@@ -130,16 +135,16 @@ export function Navbar() {
               className="text-xl font-semibold px-9 py-3.5 rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
               style={{ color: 'var(--sw-secondary-700)' }}
             >
-              {l.label}
+              {t(l.key)}
             </a>
           ))}
           <Link
-            href={isAuthed ? '/account' : '/login'}
+            href={isAuthenticated() ? '/account' : '/login'}
             onClick={() => setMobileOpen(false)}
             className="text-xl font-semibold px-9 py-3.5 rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{ color: 'var(--sw-primary-700)', background: 'var(--sw-primary-50)' }}
           >
-            {isAuthed ? 'حسابي' : 'تسجيل الدخول'}
+            {isAuthenticated() ? t('nav.account') : t('nav.login')}
           </Link>
           <Link
             href="/booking"
@@ -151,7 +156,7 @@ export function Navbar() {
               boxShadow: 'var(--sw-shadow-primary)',
             }}
           >
-            احجز موعدك
+            {t('nav.booking')}
             <Calendar className="w-4 h-4" aria-hidden="true" />
           </Link>
         </div>
