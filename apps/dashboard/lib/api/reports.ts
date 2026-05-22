@@ -1,70 +1,109 @@
 /**
  * Reports API — Sawaa Dashboard
- * Controller: dashboard/ops/reports
+ * Backend: POST /dashboard/ops/reports — single polymorphic endpoint, type discriminator.
  */
 
 import { api, getAccessToken } from "@/lib/api"
-import type { RevenueReport, BookingReport, EmployeeReport, TopPractitionersReport } from "@/lib/types/report"
+import type {
+  BookingReport,
+  ClientsReport,
+  OverviewReport,
+  PractitionerDetail,
+  PractitionersReport,
+  RatingsReport,
+  ReportQuery,
+  RevenueReport,
+  ServicesReport,
+  WithPrevious,
+} from "@/lib/types/report"
 
-export async function fetchRevenueReport(params: {
-  dateFrom: string
-  dateTo: string
-  branchId?: string
-}): Promise<RevenueReport> {
-  return api.post<RevenueReport>("/dashboard/ops/reports", {
-    type: "REVENUE",
-    from: params.dateFrom,
-    to: params.dateTo,
-    branchId: params.branchId,
-  })
-}
+type ReportType =
+  | "OVERVIEW"
+  | "REVENUE"
+  | "BOOKINGS"
+  | "EMPLOYEES"
+  | "CLIENTS"
+  | "SERVICES"
+  | "RATINGS"
+  | "ACTIVITY"
 
-export async function fetchBookingReport(params: {
-  dateFrom: string
-  dateTo: string
-  branchId?: string
-}): Promise<BookingReport> {
-  return api.post<BookingReport>("/dashboard/ops/reports", {
-    type: "BOOKINGS",
-    from: params.dateFrom,
-    to: params.dateTo,
-    branchId: params.branchId,
-  })
-}
-
-/**
- * Fetch EMPLOYEES report. Pass employeeId to get per-employee data,
- * or omit it to get the top-5 practitioners list.
- */
-export async function fetchEmployeeReport(params: {
-  dateFrom: string
-  dateTo: string
-  employeeId?: string
-}): Promise<EmployeeReport | TopPractitionersReport[]> {
-  if (params.employeeId) {
-    return api.post<EmployeeReport>("/dashboard/ops/reports", {
-      type: "EMPLOYEES",
-      from: params.dateFrom,
-      to: params.dateTo,
-      employeeId: params.employeeId,
-    })
+function buildBody(
+  type: ReportType,
+  q: ReportQuery & { employeeId?: string },
+): Record<string, unknown> {
+  return {
+    type,
+    from: q.dateFrom,
+    to: q.dateTo,
+    branchId: q.branchId,
+    employeeId: q.employeeId,
+    compareWithPrevious: q.compareWithPrevious,
   }
-  // No employeeId → returns top-5 practitioners list
-  return api.post<TopPractitionersReport[]>("/dashboard/ops/reports", {
-    type: "EMPLOYEES",
-    from: params.dateFrom,
-    to: params.dateTo,
-  })
 }
+
+export async function fetchOverviewReport(
+  q: ReportQuery,
+): Promise<WithPrevious<OverviewReport>> {
+  return api.post("/dashboard/ops/reports", buildBody("OVERVIEW", q))
+}
+
+export async function fetchRevenueReport(
+  q: ReportQuery,
+): Promise<WithPrevious<RevenueReport>> {
+  return api.post("/dashboard/ops/reports", buildBody("REVENUE", q))
+}
+
+export async function fetchBookingReport(
+  q: ReportQuery,
+): Promise<WithPrevious<BookingReport>> {
+  return api.post("/dashboard/ops/reports", buildBody("BOOKINGS", q))
+}
+
+export async function fetchClientsReport(
+  q: ReportQuery,
+): Promise<WithPrevious<ClientsReport>> {
+  return api.post("/dashboard/ops/reports", buildBody("CLIENTS", q))
+}
+
+export async function fetchPractitionersReport(
+  q: ReportQuery,
+): Promise<WithPrevious<PractitionersReport>> {
+  return api.post("/dashboard/ops/reports", buildBody("EMPLOYEES", q))
+}
+
+export async function fetchPractitionerDetail(
+  q: ReportQuery & { employeeId: string },
+): Promise<PractitionerDetail | null> {
+  return api.post("/dashboard/ops/reports", buildBody("EMPLOYEES", q))
+}
+
+export async function fetchServicesReport(
+  q: ReportQuery,
+): Promise<WithPrevious<ServicesReport>> {
+  return api.post("/dashboard/ops/reports", buildBody("SERVICES", q))
+}
+
+export async function fetchRatingsReport(
+  q: ReportQuery,
+): Promise<WithPrevious<RatingsReport>> {
+  return api.post("/dashboard/ops/reports", buildBody("RATINGS", q))
+}
+
+/** Back-compat alias for the old single-employee detail fetcher */
+export const fetchEmployeeReport = fetchPractitionerDetail
 
 /* ─── Excel Export ─── */
 
-export type ExportableReportType = "REVENUE" | "ACTIVITY"
+export type ExportableReportType =
+  | "OVERVIEW"
+  | "REVENUE"
+  | "BOOKINGS"
+  | "EMPLOYEES"
+  | "CLIENTS"
+  | "SERVICES"
+  | "RATINGS"
+  | "ACTIVITY"
 
-/**
- * Downloads an Excel report as a binary blob and triggers browser download.
- * Backend supports EXCEL format for REVENUE and ACTIVITY report types.
- */
 export async function exportReportExcel(params: {
   type: ExportableReportType
   dateFrom: string

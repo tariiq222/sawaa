@@ -1,17 +1,26 @@
+import { PaymentStatus } from '@prisma/client';
 import { buildRevenueExcel, buildActivityExcel } from './excel-export.builder';
+import type { RevenueReportResult } from './revenue-report.builder';
 
-const mockRevenueReport = {
+const mockRevenueReport: RevenueReportResult = {
   totalRevenue: 15000.5,
+  netRevenue: 14500,
   totalBookings: 50,
   averagePerBooking: 300.01,
+  refundsTotal: 500.5,
   byMethod: [
     { method: 'CASH', amount: 10000, count: 30 },
-    { method: 'MOYASAR', amount: 5000.5, count: 20 },
+    { method: 'ONLINE_CARD', amount: 5000.5, count: 20 },
+  ],
+  byStatus: [
+    { status: PaymentStatus.COMPLETED, amount: 15000.5, count: 50 },
   ],
   byDay: [
     { date: '2026-04-01', amount: 5000, count: 15 },
     { date: '2026-04-02', amount: 10000.5, count: 30 },
   ],
+  couponsUsed: [],
+  recentPayments: [],
 };
 
 const mockActivityReport = {

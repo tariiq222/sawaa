@@ -10,9 +10,14 @@ vi.mock("@/lib/api", () => ({
 }))
 
 import {
-  fetchRevenueReport,
   fetchBookingReport,
-  fetchEmployeeReport,
+  fetchClientsReport,
+  fetchOverviewReport,
+  fetchPractitionerDetail,
+  fetchPractitionersReport,
+  fetchRatingsReport,
+  fetchRevenueReport,
+  fetchServicesReport,
 } from "@/lib/api/reports"
 
 describe("reports api", () => {
@@ -20,58 +25,104 @@ describe("reports api", () => {
     vi.clearAllMocks()
   })
 
-  it("fetchRevenueReport posts to /dashboard/ops/reports with type REVENUE and branchId", async () => {
+  it("posts type=OVERVIEW for fetchOverviewReport", async () => {
     postMock.mockResolvedValueOnce({})
-    await fetchRevenueReport({ dateFrom: "2026-01-01", dateTo: "2026-01-31", branchId: "branch-1" })
+    await fetchOverviewReport({ dateFrom: "2026-01-01", dateTo: "2026-01-31" })
     expect(postMock).toHaveBeenCalledWith(
       "/dashboard/ops/reports",
-      expect.objectContaining({ type: "REVENUE", from: "2026-01-01", to: "2026-01-31", branchId: "branch-1" }),
+      expect.objectContaining({ type: "OVERVIEW", from: "2026-01-01" }),
     )
   })
 
-  it("fetchRevenueReport omits branchId when not provided", async () => {
+  it("posts type=REVENUE with branchId when provided", async () => {
     postMock.mockResolvedValueOnce({})
-    await fetchRevenueReport({ dateFrom: "2026-01-01", dateTo: "2026-01-31" })
+    await fetchRevenueReport({
+      dateFrom: "2026-01-01",
+      dateTo: "2026-01-31",
+      branchId: "branch-1",
+    })
     expect(postMock).toHaveBeenCalledWith(
       "/dashboard/ops/reports",
-      expect.not.objectContaining({ branchId: expect.anything() }),
+      expect.objectContaining({
+        type: "REVENUE",
+        from: "2026-01-01",
+        to: "2026-01-31",
+        branchId: "branch-1",
+      }),
     )
   })
 
-  it("fetchBookingReport posts to /dashboard/ops/reports with type BOOKINGS", async () => {
+  it("posts type=BOOKINGS", async () => {
     postMock.mockResolvedValueOnce({})
     await fetchBookingReport({ dateFrom: "2026-01-01", dateTo: "2026-01-31" })
     expect(postMock).toHaveBeenCalledWith(
       "/dashboard/ops/reports",
-      expect.objectContaining({ type: "BOOKINGS", from: "2026-01-01", to: "2026-01-31" }),
+      expect.objectContaining({ type: "BOOKINGS" }),
     )
   })
 
-  it("fetchEmployeeReport with employeeId posts employeeId in payload", async () => {
+  it("posts type=CLIENTS", async () => {
     postMock.mockResolvedValueOnce({})
-    await fetchEmployeeReport({ employeeId: "p-1", dateFrom: "2026-01-01", dateTo: "2026-01-31" })
+    await fetchClientsReport({ dateFrom: "2026-01-01", dateTo: "2026-01-31" })
     expect(postMock).toHaveBeenCalledWith(
       "/dashboard/ops/reports",
-      expect.objectContaining({ type: "EMPLOYEES", from: "2026-01-01", employeeId: "p-1" }),
+      expect.objectContaining({ type: "CLIENTS" }),
     )
   })
 
-  it("fetchEmployeeReport without employeeId omits it from payload (top-5 practitioners)", async () => {
-    postMock.mockResolvedValueOnce([])
-    await fetchEmployeeReport({ dateFrom: "2026-01-01", dateTo: "2026-01-31" })
+  it("posts type=EMPLOYEES for practitioners list", async () => {
+    postMock.mockResolvedValueOnce({})
+    await fetchPractitionersReport({
+      dateFrom: "2026-01-01",
+      dateTo: "2026-01-31",
+    })
     expect(postMock).toHaveBeenCalledWith(
       "/dashboard/ops/reports",
-      expect.not.objectContaining({ employeeId: expect.anything() }),
+      expect.objectContaining({ type: "EMPLOYEES" }),
     )
   })
 
-  it("fetchEmployeeReport without employeeId returns the array from the API (top-5 practitioners)", async () => {
-    const mockTop5 = [
-      { employeeId: "e1", displayName: "Dr A", totalRevenue: 5000, completedBookings: 10, totalBookings: 12, averageRating: 4.5 },
-      { employeeId: "e2", displayName: "Dr B", totalRevenue: 3000, completedBookings: 8, totalBookings: 10, averageRating: 4.2 },
-    ]
-    postMock.mockResolvedValueOnce(mockTop5)
-    const result = await fetchEmployeeReport({ dateFrom: "2026-01-01", dateTo: "2026-01-31" })
-    expect(result).toEqual(mockTop5)
+  it("posts type=EMPLOYEES with employeeId for practitioner detail", async () => {
+    postMock.mockResolvedValueOnce({})
+    await fetchPractitionerDetail({
+      employeeId: "p-1",
+      dateFrom: "2026-01-01",
+      dateTo: "2026-01-31",
+    })
+    expect(postMock).toHaveBeenCalledWith(
+      "/dashboard/ops/reports",
+      expect.objectContaining({ type: "EMPLOYEES", employeeId: "p-1" }),
+    )
+  })
+
+  it("posts type=SERVICES", async () => {
+    postMock.mockResolvedValueOnce({})
+    await fetchServicesReport({ dateFrom: "2026-01-01", dateTo: "2026-01-31" })
+    expect(postMock).toHaveBeenCalledWith(
+      "/dashboard/ops/reports",
+      expect.objectContaining({ type: "SERVICES" }),
+    )
+  })
+
+  it("posts type=RATINGS", async () => {
+    postMock.mockResolvedValueOnce({})
+    await fetchRatingsReport({ dateFrom: "2026-01-01", dateTo: "2026-01-31" })
+    expect(postMock).toHaveBeenCalledWith(
+      "/dashboard/ops/reports",
+      expect.objectContaining({ type: "RATINGS" }),
+    )
+  })
+
+  it("forwards compareWithPrevious flag", async () => {
+    postMock.mockResolvedValueOnce({})
+    await fetchOverviewReport({
+      dateFrom: "2026-01-01",
+      dateTo: "2026-01-31",
+      compareWithPrevious: true,
+    })
+    expect(postMock).toHaveBeenCalledWith(
+      "/dashboard/ops/reports",
+      expect.objectContaining({ compareWithPrevious: true }),
+    )
   })
 })

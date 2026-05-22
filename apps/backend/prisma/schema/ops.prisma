@@ -17,6 +17,10 @@ enum ReportType {
   ACTIVITY
   BOOKINGS
   EMPLOYEES
+  OVERVIEW
+  CLIENTS
+  SERVICES
+  RATINGS
 }
 
 enum ReportFormat {

@@ -115,8 +115,14 @@ export const queryKeys = {
 
   /* ─── Reports ─── */
   reports: {
+    overview: (filters?: object) => ["reports", "overview", filters] as const,
     revenue: (filters?: object) => ["reports", "revenue", filters] as const,
     bookings: (filters?: object) => ["reports", "bookings", filters] as const,
+    clients: (filters?: object) => ["reports", "clients", filters] as const,
+    practitioners: (filters?: object) =>
+      ["reports", "practitioners", filters] as const,
+    services: (filters?: object) => ["reports", "services", filters] as const,
+    ratings: (filters?: object) => ["reports", "ratings", filters] as const,
     employee: (id: string, filters?: object) =>
       ["reports", "employee", id, filters] as const,
   },

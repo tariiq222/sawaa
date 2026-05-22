@@ -2573,6 +2573,11 @@
             "example": "b1c2d3e4-f5a6-7890-abcd-ef1234567890",
             "type": "string"
           },
+          "compareWithPrevious": {
+            "description": "Include same-length previous period for delta comparison (JSON format only)",
+            "example": false,
+            "type": "boolean"
+          },
           "employeeId": {
             "description": "Restrict report to a specific employee UUID",
             "example": "a9b8c7d6-e5f4-3210-fedc-ba9876543210",
@@ -2608,7 +2613,11 @@
               "REVENUE",
               "ACTIVITY",
               "BOOKINGS",
-              "EMPLOYEES"
+              "EMPLOYEES",
+              "OVERVIEW",
+              "CLIENTS",
+              "SERVICES",
+              "RATINGS"
             ],
             "example": "REVENUE",
             "type": "string"

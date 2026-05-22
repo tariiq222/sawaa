@@ -1,4 +1,4 @@
-import { IsDateString, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsBoolean, IsDateString, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ReportFormat, ReportType } from '@prisma/client';
 
@@ -57,4 +57,12 @@ export class GenerateReportDto {
   @IsOptional()
   @IsString()
   requestedBy?: string;
+
+  @ApiPropertyOptional({
+    description: 'Include same-length previous period for delta comparison (JSON format only)',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  compareWithPrevious?: boolean;
 }
