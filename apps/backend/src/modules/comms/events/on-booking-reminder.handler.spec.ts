@@ -6,28 +6,78 @@ import { GetClientPushTargetsHandler } from '../fcm-tokens/get-client-push-targe
 
 describe('OnBookingReminderHandler', () => {
   let handler: OnBookingReminderHandler;
+  let notify: { execute: jest.Mock };
+  let pushTargets: { execute: jest.Mock };
 
   beforeEach(async () => {
+    notify = { execute: jest.fn().mockResolvedValue(undefined) };
+    pushTargets = { execute: jest.fn().mockResolvedValue({ pushEnabled: false, tokens: [] }) };
     const module = await Test.createTestingModule({
       providers: [
         OnBookingReminderHandler,
-    { provide: SendNotificationHandler, useValue: { execute: jest.fn() } },
-    { provide: GetClientPushTargetsHandler, useValue: { execute: jest.fn() } }
+        { provide: SendNotificationHandler, useValue: notify },
+        { provide: GetClientPushTargetsHandler, useValue: pushTargets },
       ],
     }).compile();
 
     handler = module.get(OnBookingReminderHandler);
   });
 
-  it('should be defined', () => {
-    expect(handler).toBeDefined();
+  const envelope = (extras: Record<string, unknown> = {}) => ({
+    payload: {
+      bookingId: 'bk-1',
+      clientId: 'cl-1',
+      scheduledAt: new Date('2026-05-23T10:00:00Z'),
+      ...extras,
+    },
+    source: 'test',
+    version: 1,
+    occurredAt: new Date(),
+    eventId: 'evt-1',
   });
 
-  it('handles without throwing', async () => {
-    try {
-      await handler.handle({ payload: { bookingId: 'b1', clientId: 'c1', scheduledAt: new Date() }, source: 'test', version: 1, occurredAt: new Date().toISOString(), eventId: '1' });
-    } catch (e) {
-      // Expected for incomplete mocks
-    }
+  it('sends in-app + sms when no email provided', async () => {
+    await handler.handle(envelope({ clientPhone: '+966500000000' }) as never);
+    expect(notify.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channels: ['in-app', 'sms'],
+        emailTemplateSlug: undefined,
+      }),
+    );
+  });
+
+  it('adds email channel + slug when clientEmail provided', async () => {
+    await handler.handle(
+      envelope({
+        clientPhone: '+966500000000',
+        clientEmail: 'a@b.com',
+        clientName: 'سارة',
+        serviceName: 'استشارة أسرية',
+      }) as never,
+    );
+    expect(notify.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channels: expect.arrayContaining(['in-app', 'sms', 'email']),
+        recipientEmail: 'a@b.com',
+        emailTemplateSlug: 'booking-reminder',
+        emailVars: expect.objectContaining({
+          client_name: 'سارة',
+          service_name: 'استشارة أسرية',
+        }),
+      }),
+    );
+  });
+
+  it('adds push channel when push tokens present', async () => {
+    pushTargets.execute.mockResolvedValueOnce({ pushEnabled: true, tokens: ['tok-1'] });
+    await handler.handle(envelope() as never);
+    expect(notify.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ channels: expect.arrayContaining(['push']) }),
+    );
+  });
+
+  it('swallows downstream errors', async () => {
+    notify.execute.mockRejectedValueOnce(new Error('boom'));
+    await expect(handler.handle(envelope() as never)).resolves.toBeUndefined();
   });
 });

@@ -26,12 +26,6 @@ export interface DeliveryLogsFilters {
   perPage?: number
 }
 
-export interface EmailFallbackQuota {
-  used: number
-  limit: number
-  periodStart: string
-}
-
 export async function fetchDeliveryLogs(
   filters: DeliveryLogsFilters = {},
 ): Promise<PaginatedResponse<DeliveryLogItem>> {
@@ -43,8 +37,4 @@ export async function fetchDeliveryLogs(
   return api.get<PaginatedResponse<DeliveryLogItem>>(
     `/dashboard/comms/delivery-logs?${params.toString()}`,
   )
-}
-
-export async function fetchEmailFallbackQuota(): Promise<EmailFallbackQuota> {
-  return api.get<EmailFallbackQuota>("/dashboard/comms/email-fallback-quota")
 }

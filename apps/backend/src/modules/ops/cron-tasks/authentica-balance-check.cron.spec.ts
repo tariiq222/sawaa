@@ -5,57 +5,70 @@ const buildAuthentica = (configured: boolean, balance: number) => ({
   getBalance: jest.fn().mockResolvedValue(balance),
 });
 
-const buildMailer = () => ({
-  sendRaw: jest.fn().mockResolvedValue(undefined),
+const buildAdapter = (available = true) => ({
+  isAvailable: () => available,
+  sendMail: jest.fn().mockResolvedValue(undefined),
+});
+
+const buildFactory = (adapter: ReturnType<typeof buildAdapter>) => ({
+  resolve: jest.fn().mockResolvedValue(adapter),
 });
 
 describe('AuthenticaBalanceCheckCron', () => {
   it('skips when authentica is not configured', async () => {
+    const factory = buildFactory(buildAdapter());
     const cron = new AuthenticaBalanceCheckCron(
       buildAuthentica(false, 0) as any,
-      buildMailer() as any,
+      factory as any,
       { get: () => undefined } as any,
     );
     await expect(cron.execute()).resolves.not.toThrow();
+    expect(factory.resolve).not.toHaveBeenCalled();
   });
 
-  it('logs balance when above threshold', async () => {
-    const authentica = buildAuthentica(true, 1000);
+  it('does not send email when balance is above threshold', async () => {
+    const adapter = buildAdapter();
     const cron = new AuthenticaBalanceCheckCron(
-      authentica as any,
-      buildMailer() as any,
-      { get: () => undefined } as any,
-    );
-    await cron.execute();
-    expect(authentica.getBalance).toHaveBeenCalled();
-  });
-
-  it('sends alert when balance is low and email is set', async () => {
-    const authentica = buildAuthentica(true, 100);
-    const mailer = buildMailer();
-    const cron = new AuthenticaBalanceCheckCron(
-      authentica as any,
-      mailer as any,
+      buildAuthentica(true, 1000) as any,
+      buildFactory(adapter) as any,
       { get: () => 'owner@example.com' } as any,
     );
     await cron.execute();
-    expect(mailer.sendRaw).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: 'owner@example.com',
-        templateSlug: 'authentica-balance-alert',
-      }),
+    expect(adapter.sendMail).not.toHaveBeenCalled();
+  });
+
+  it('sends alert when balance is low and email is set', async () => {
+    const adapter = buildAdapter();
+    const cron = new AuthenticaBalanceCheckCron(
+      buildAuthentica(true, 100) as any,
+      buildFactory(adapter) as any,
+      { get: () => 'owner@example.com' } as any,
+    );
+    await cron.execute();
+    expect(adapter.sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: 'owner@example.com' }),
     );
   });
 
-  it('warns and skips email when balance is low but no alert email configured', async () => {
-    const authentica = buildAuthentica(true, 100);
-    const mailer = buildMailer();
+  it('skips email when no alert email is configured', async () => {
+    const adapter = buildAdapter();
     const cron = new AuthenticaBalanceCheckCron(
-      authentica as any,
-      mailer as any,
+      buildAuthentica(true, 100) as any,
+      buildFactory(adapter) as any,
       { get: () => undefined } as any,
     );
     await cron.execute();
-    expect(mailer.sendRaw).not.toHaveBeenCalled();
+    expect(adapter.sendMail).not.toHaveBeenCalled();
+  });
+
+  it('skips email when no email provider configured', async () => {
+    const adapter = buildAdapter(false);
+    const cron = new AuthenticaBalanceCheckCron(
+      buildAuthentica(true, 100) as any,
+      buildFactory(adapter) as any,
+      { get: () => 'owner@example.com' } as any,
+    );
+    await cron.execute();
+    expect(adapter.sendMail).not.toHaveBeenCalled();
   });
 });

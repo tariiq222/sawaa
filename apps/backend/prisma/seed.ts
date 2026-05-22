@@ -310,6 +310,30 @@ async function main() {
   <p>يرجى التحقق من بيانات بطاقتك أو تجربة وسيلة دفع أخرى.</p>`,
       ),
     },
+    {
+      slug: "booking-reminder",
+      name: "تذكير بموعد",
+      subject: "تذكير بموعدك غداً",
+      htmlBody: layout(
+        "تذكير بموعدك",
+        `<p>مرحباً {{client_name}}،</p>
+  <p>نذكّرك بموعدك <strong>{{service_name}}</strong> غداً الساعة <strong>{{time}}</strong>.</p>
+  <p>إذا احتجت إعادة جدولته أو إلغاءه، تواصل معنا قبل الموعد بوقت كافٍ.</p>`,
+      ),
+    },
+    {
+      slug: "group-session-payment-due",
+      name: "اكتمل الحد الأدنى للجلسة الجماعية",
+      subject: "اكتمل الحد الأدنى — يرجى إتمام الدفع",
+      htmlBody: layout(
+        "اكتمل الحد الأدنى للجلسة الجماعية",
+        `<p>مرحباً {{client_name}}،</p>
+  <p>الخبر السار: اكتمل الحد الأدنى للجلسة الجماعية وتم تأكيدها.</p>
+  <p>لتأمين مقعدك، يرجى إتمام الدفع بقيمة <strong>{{amount}} {{currency}}</strong> خلال <strong>24 ساعة</strong>.</p>
+  ${button("{{payment_url}}", "إتمام الدفع")}
+  <p style="color:#6b7280;font-size:14px;">في حال عدم الدفع خلال المدة، قد يفقد مقعدك لصالح عميل آخر.</p>`,
+      ),
+    },
   ];
 
   for (const tmpl of TEMPLATES) {

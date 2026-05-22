@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { SmtpService, PlatformMailerService } from '../../../infrastructure/mail';
+import { ServiceUnavailableException } from '@nestjs/common';
 import { AuthenticaClient } from '../../../infrastructure/authentica';
 import { EmailProviderFactory } from '../../../infrastructure/email/email-provider.factory';
 import { EmailChannelAdapter } from './email-channel.adapter';
@@ -7,68 +7,61 @@ import { SmsChannelAdapter } from './sms-channel.adapter';
 import { NotificationChannelRegistry } from './notification-channel-registry';
 import { OtpChannel } from '@prisma/client';
 
-const buildEmailFactoryMock = (): jest.Mocked<Partial<EmailProviderFactory>> => ({
-  resolve: jest.fn().mockResolvedValue({ isAvailable: () => false }),
+const buildAdapter = (available = true) => ({
+  name: 'resend',
+  isAvailable: () => available,
+  sendMail: jest.fn().mockResolvedValue(undefined),
 });
 
-const buildPlatformMailerMock = () => ({
-  sendOtpLogin: jest.fn().mockResolvedValue(undefined),
+const buildFactory = (adapter: ReturnType<typeof buildAdapter>) => ({
+  resolve: jest.fn().mockResolvedValue(adapter),
 });
 
 describe('EmailChannelAdapter', () => {
   let adapter: EmailChannelAdapter;
-  let smtp: jest.Mocked<Pick<SmtpService, 'isAvailable' | 'sendMail'>>;
-  let platformMailer: jest.Mocked<Pick<PlatformMailerService, 'sendOtpLogin'>>;
+  let providerAdapter: ReturnType<typeof buildAdapter>;
 
   beforeEach(async () => {
-    const smtpMock = {
-      isAvailable: jest.fn().mockReturnValue(true),
-      sendMail: jest.fn().mockResolvedValue(undefined),
-    };
-    const platformMailerMock = buildPlatformMailerMock();
+    providerAdapter = buildAdapter();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EmailChannelAdapter,
-        { provide: SmtpService, useValue: smtpMock },
-        { provide: EmailProviderFactory, useValue: buildEmailFactoryMock() },
-        { provide: PlatformMailerService, useValue: platformMailerMock },
+        { provide: EmailProviderFactory, useValue: buildFactory(providerAdapter) },
       ],
     }).compile();
 
     adapter = module.get<EmailChannelAdapter>(EmailChannelAdapter);
-    smtp = module.get(SmtpService);
-    platformMailer = module.get(PlatformMailerService);
   });
 
-  it('should have EMAIL kind', () => {
+  it('has EMAIL kind', () => {
     expect(adapter.kind).toBe(OtpChannel.EMAIL);
   });
 
-  it('should send OTP via platform Resend (no organizationId)', async () => {
+  it('sends OTP via the configured provider', async () => {
     await adapter.send('test@example.com', '1234');
-    expect(platformMailer.sendOtpLogin).toHaveBeenCalledWith(
-      'test@example.com',
-      { code: '1234', expiresInMinutes: 5 },
-    );
-    expect(smtp.sendMail).not.toHaveBeenCalled();
-  });
-
-  it('falls through to SMTP when platformMailer throws', async () => {
-    (platformMailer.sendOtpLogin as jest.Mock).mockRejectedValueOnce(new Error('queue down'));
-    await adapter.send('test@example.com', '1234');
-    expect(smtp.sendMail).toHaveBeenCalledWith(
-      'test@example.com',
-      'رمز التحقق / Verification Code',
-      expect.stringContaining('1234'),
+    expect(providerAdapter.sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'test@example.com',
+        subject: 'رمز التحقق / Verification Code',
+        html: expect.stringContaining('1234'),
+      }),
     );
   });
 
-  it('should not throw when both platformMailer and smtp are unavailable', async () => {
-    (platformMailer.sendOtpLogin as jest.Mock).mockRejectedValueOnce(new Error('queue down'));
-    (smtp as jest.Mocked<typeof smtp>).isAvailable.mockReturnValue(false);
-    await expect(adapter.send('test@example.com', '1234')).resolves.not.toThrow();
-    expect(smtp.sendMail).not.toHaveBeenCalled();
+  it('throws ServiceUnavailableException when no provider is configured', async () => {
+    const unavailable = buildAdapter(false);
+    const local: TestingModule = await Test.createTestingModule({
+      providers: [
+        EmailChannelAdapter,
+        { provide: EmailProviderFactory, useValue: buildFactory(unavailable) },
+      ],
+    }).compile();
+    const localAdapter = local.get<EmailChannelAdapter>(EmailChannelAdapter);
+    await expect(localAdapter.send('test@example.com', '1234')).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+    expect(unavailable.sendMail).not.toHaveBeenCalled();
   });
 });
 
@@ -115,25 +108,18 @@ describe('NotificationChannelRegistry', () => {
   let smsAdapter: SmsChannelAdapter;
 
   beforeEach(async () => {
-    const smtpMock = {
-      isAvailable: jest.fn().mockReturnValue(true),
-      sendMail: jest.fn().mockResolvedValue(undefined),
-    };
     const authenticaMock = {
       isConfigured: jest.fn().mockReturnValue(true),
       sendOtp: jest.fn().mockResolvedValue(undefined),
     };
-    const platformMailerMock = buildPlatformMailerMock();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EmailChannelAdapter,
         SmsChannelAdapter,
         NotificationChannelRegistry,
-        { provide: SmtpService, useValue: smtpMock },
         { provide: AuthenticaClient, useValue: authenticaMock },
-        { provide: EmailProviderFactory, useValue: buildEmailFactoryMock() },
-        { provide: PlatformMailerService, useValue: platformMailerMock },
+        { provide: EmailProviderFactory, useValue: buildFactory(buildAdapter()) },
       ],
     }).compile();
 
@@ -143,16 +129,16 @@ describe('NotificationChannelRegistry', () => {
   });
 
   it('resolves EMAIL channel', () => {
-    const channel = registry.resolve(OtpChannel.EMAIL);
-    expect(channel).toBe(emailAdapter);
+    expect(registry.resolve(OtpChannel.EMAIL)).toBe(emailAdapter);
   });
 
   it('resolves SMS channel', () => {
-    const channel = registry.resolve(OtpChannel.SMS);
-    expect(channel).toBe(smsAdapter);
+    expect(registry.resolve(OtpChannel.SMS)).toBe(smsAdapter);
   });
 
   it('throws for unknown channel kind', () => {
-    expect(() => registry.resolve('WHATSAPP' as OtpChannel)).toThrow('No notification channel registered for kind: WHATSAPP');
+    expect(() => registry.resolve('WHATSAPP' as OtpChannel)).toThrow(
+      'No notification channel registered for kind: WHATSAPP',
+    );
   });
 });

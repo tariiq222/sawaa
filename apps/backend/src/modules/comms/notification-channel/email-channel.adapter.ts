@@ -1,28 +1,24 @@
-// email-channel-adapter — sends OTP/notification emails.
-//
-// Priority (in order):
-//   1. Configured email provider (Resend / SendGrid / Mailchimp / SMTP)
-//   2. PlatformMailerService (Resend via BullMQ) — platform-level fallback
-//   3. Platform SMTP (SmtpService) — last resort
+// email-channel-adapter — sends OTP/verification emails via the single
+// tenant-configured email provider. No fallbacks: if the provider is
+// missing or fails, we throw so the caller surfaces a clear error.
 
-import { Injectable, Logger } from '@nestjs/common';
-import { SmtpService, PlatformMailerService } from '../../../infrastructure/mail';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { EmailProviderFactory } from '../../../infrastructure/email/email-provider.factory';
 import { NotificationChannel } from './notification-channel';
 
 // Must match OTP_EXPIRY_MINUTES in request-dashboard-otp.handler.ts (5 min).
-const PLATFORM_OTP_EXPIRY_MINUTES = 5;
+const OTP_EXPIRY_MINUTES = 5;
 
 const OTP_SUBJECT = 'رمز التحقق / Verification Code';
 
 const buildOtpHtml = (code: string) => `
   <div dir="rtl" style="font-family:'IBM Plex Sans Arabic',Arial,sans-serif;text-align:center;padding:40px 20px;">
-    <h2 style="color:#354FD8;margin-bottom:24px;">رمز التحقق من دقّة</h2>
+    <h2 style="color:#354FD8;margin-bottom:24px;">رمز التحقق</h2>
     <p style="font-size:18px;color:#333;">استخدم الرمز التالي:</p>
     <div style="background:#F5F7FA;border-radius:12px;padding:24px;margin:24px 0;">
       <span style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#354FD8;">${code}</span>
     </div>
-    <p style="font-size:14px;color:#888;">سينتهي هذا الرمز خلال ${PLATFORM_OTP_EXPIRY_MINUTES} دقائق</p>
+    <p style="font-size:14px;color:#888;">سينتهي هذا الرمز خلال ${OTP_EXPIRY_MINUTES} دقائق</p>
   </div>
   <div dir="ltr" style="font-family:Arial,sans-serif;text-align:center;padding:20px;border-top:1px solid #eee;margin-top:20px;">
     <h2 style="color:#354FD8;margin-bottom:24px;">Your Verification Code</h2>
@@ -30,7 +26,7 @@ const buildOtpHtml = (code: string) => `
     <div style="background:#F5F7FA;border-radius:12px;padding:24px;margin:24px 0;">
       <span style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#354FD8;">${code}</span>
     </div>
-    <p style="font-size:14px;color:#888;">This code expires in ${PLATFORM_OTP_EXPIRY_MINUTES} minutes</p>
+    <p style="font-size:14px;color:#888;">This code expires in ${OTP_EXPIRY_MINUTES} minutes</p>
   </div>`;
 
 @Injectable()
@@ -39,56 +35,27 @@ export class EmailChannelAdapter implements NotificationChannel {
 
   readonly kind = 'EMAIL' as const;
 
-  constructor(
-    private readonly smtp: SmtpService,
-    private readonly emailFactory: EmailProviderFactory,
-    private readonly platformMailer: PlatformMailerService,
-  ) {}
+  constructor(private readonly emailFactory: EmailProviderFactory) {}
 
-  async send(
-    identifier: string,
-    message: string,
-    _organizationId?: string,
-  ): Promise<void> {
+  async send(identifier: string, message: string): Promise<void> {
     const html = buildOtpHtml(message);
 
-    // ── 1. Configured email provider ──────────────────────────────────────
-    try {
-      const adapter = await this.emailFactory.resolve();
-      if (adapter.isAvailable()) {
-        await adapter.sendMail({ to: identifier, subject: OTP_SUBJECT, html });
-        this.logger.debug(`OTP email sent via configured provider to ${identifier}`);
-        return;
-      }
-    } catch (err) {
-      // Config lookup failed — fall through to platform Resend
-      this.logger.warn(`Email provider lookup failed: ${String(err)}`);
-    }
+    const adapter = await this.emailFactory.resolve();
 
-    // ── 2. Platform Resend (PlatformMailerService) ────────────────────────
-    try {
-      await this.platformMailer.sendOtpLogin(identifier, {
-        code: message,
-        expiresInMinutes: PLATFORM_OTP_EXPIRY_MINUTES,
-      });
-      this.logger.debug(`OTP email sent via platform Resend to ${identifier}`);
-      return;
-    } catch (err) {
-      // Queue unavailable or Resend key missing — fall through to SMTP last resort
-      this.logger.warn(`Platform Resend sendOtpLogin failed for ${identifier}: ${String(err)}`);
-    }
-
-    // ── 3. Platform SMTP (last resort) ────────────────────────────────────
-    if (!this.smtp.isAvailable()) {
-      this.logger.warn(`No email transport available — skipping OTP email to ${identifier}`);
-      return;
+    if (!adapter.isAvailable()) {
+      this.logger.error(
+        `Cannot send OTP to ${identifier}: no email provider configured`,
+      );
+      throw new ServiceUnavailableException(
+        'Email provider not configured. Configure one in Settings → Email.',
+      );
     }
 
     try {
-      await this.smtp.sendMail(identifier, OTP_SUBJECT, html);
-      this.logger.debug(`OTP email sent via platform SMTP to ${identifier}`);
+      await adapter.sendMail({ to: identifier, subject: OTP_SUBJECT, html });
+      this.logger.debug(`OTP email sent to ${identifier} via ${adapter.name}`);
     } catch (err) {
-      this.logger.error(`Failed to send OTP email to ${identifier}`, err);
+      this.logger.error(`Failed to send OTP to ${identifier} via ${adapter.name}`, err);
       throw err;
     }
   }

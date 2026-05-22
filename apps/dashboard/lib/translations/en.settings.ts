@@ -369,10 +369,4 @@ export const enSettings: Record<string, string> = {
   "settings.deliveryLog.colSentAt": "Sent At",
   "settings.deliveryLog.colAttempts": "Attempts",
   "settings.deliveryLog.noLogs": "No delivery records found",
-  // Fallback quota banner
-  "settings.emailFallbackQuota.title": "Platform Email Fallback",
-  "settings.emailFallbackQuota.desc": "Emails sent via Sawaa's platform mailer (used when your own provider is not configured).",
-  "settings.emailFallbackQuota.usage": "{used} of {limit} emails used this month",
-  "settings.emailFallbackQuota.unlimited": "Unlimited emails this month",
-  "settings.emailFallbackQuota.limitReached": "Monthly limit reached — configure your own email provider to continue sending.",
 }

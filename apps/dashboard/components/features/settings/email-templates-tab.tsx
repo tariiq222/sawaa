@@ -11,7 +11,6 @@ import { useLocale } from "@/components/locale-provider"
 import { EmailLayoutForm } from "./email-layout-form"
 import { EmailTemplateInlineEditor } from "./email-template-inline-editor"
 import { BlockPreview } from "./email-builder/block-preview"
-import { EmailFallbackQuotaBanner } from "./email-fallback-quota-banner"
 import type { EmailTemplate } from "@/lib/types/email-template"
 
 const EMAIL_LAYOUT_ID = "__email-layout__"
@@ -83,15 +82,12 @@ export function EmailTemplatesTab() {
 
   if (isLoading) {
     return (
-      <>
-        <EmailFallbackQuotaBanner />
-        <div className="flex gap-0 rounded-xl border border-border overflow-hidden">
-          <div className="w-64 border-e border-border bg-surface-muted space-y-1 p-2">
-            {Array.from({ length: 5 }).map((_, i) => <Skeleton key={`skeleton-${i}`} className="h-14 rounded-lg" />)}
-          </div>
-          <div className="flex-1 p-6"><Skeleton className="h-48 rounded-lg" /></div>
+      <div className="flex gap-0 rounded-xl border border-border overflow-hidden">
+        <div className="w-64 border-e border-border bg-surface-muted space-y-1 p-2">
+          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={`skeleton-${i}`} className="h-14 rounded-lg" />)}
         </div>
-      </>
+        <div className="flex-1 p-6"><Skeleton className="h-48 rounded-lg" /></div>
+      </div>
     )
   }
 
@@ -103,9 +99,7 @@ export function EmailTemplatesTab() {
   const isEditing = selectedTemplate?.id === editingId
 
   return (
-    <>
-      <EmailFallbackQuotaBanner />
-      <Card className="overflow-hidden p-0">
+    <Card className="overflow-hidden p-0">
       <div className="flex min-h-[520px]">
         {/* Sidebar */}
         <div className="w-56 shrink-0 border-e border-border bg-surface-muted flex flex-col">
@@ -195,6 +189,5 @@ export function EmailTemplatesTab() {
         </div>
       </div>
     </Card>
-    </>
   )
 }

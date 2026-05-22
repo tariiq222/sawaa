@@ -1,171 +1,94 @@
+import { ServiceUnavailableException } from '@nestjs/common';
 import { SendEmailHandler } from './send-email.handler';
-import type { SmtpService } from '../../../infrastructure/mail';
 import type { PrismaService } from '../../../infrastructure/database';
 import type { EmailProviderFactory } from '../../../infrastructure/email/email-provider.factory';
 
 const mockTemplate = {
   id: 'tpl-1',
   slug: 'welcome',
-  subject: 'مرحباً',
+  subject: 'مرحباً {{client_name}}',
   htmlBody: '<p>{{client_name}}</p>',
   isActive: true,
 };
 
-const buildPrisma = () => ({
-  emailTemplate: {
-    findFirst: jest.fn().mockResolvedValue(mockTemplate),
-  },
+const buildPrisma = (template: unknown = mockTemplate) => ({
+  emailTemplate: { findFirst: jest.fn().mockResolvedValue(template) },
 });
 
-/** NoOp email factory — simulates no provider configured */
-const buildNoOpFactory = () =>
-  ({
-    resolve: jest.fn().mockResolvedValue({ isAvailable: () => false }),
-  }) as unknown as EmailProviderFactory;
+const buildFactory = (adapter: { isAvailable: () => boolean; sendMail: jest.Mock }) =>
+  ({ resolve: jest.fn().mockResolvedValue(adapter) }) as unknown as EmailProviderFactory;
 
 describe('SendEmailHandler', () => {
-  it('substitutes template variables and sends email via platform SMTP when no tenant provider', async () => {
+  it('interpolates template variables and sends via the configured provider', async () => {
     const prisma = buildPrisma();
-    const smtp = {
-      isAvailable: jest.fn().mockReturnValue(true),
-      sendMail: jest.fn().mockResolvedValue(undefined),
-    };
-    await new SendEmailHandler(
-      smtp as unknown as SmtpService,
-      prisma as unknown as PrismaService,
-      buildNoOpFactory(),
-    ).execute({
+    const sendMail = jest.fn().mockResolvedValue(undefined);
+    const factory = buildFactory({ isAvailable: () => true, sendMail });
+
+    await new SendEmailHandler(prisma as unknown as PrismaService, factory).execute({
       to: 'client@example.com',
       templateSlug: 'welcome',
       vars: { client_name: 'أحمد' },
     });
-    expect(smtp.sendMail).toHaveBeenCalledWith(
-      'client@example.com',
-      'مرحباً',
-      '<p>أحمد</p>',
-    );
-  });
 
-  it('skips when no provider at all (SMTP unavailable + no tenant provider)', async () => {
-    const prisma = buildPrisma();
-    const smtp = {
-      isAvailable: jest.fn().mockReturnValue(false),
-      sendMail: jest.fn(),
-    };
-    await new SendEmailHandler(
-      smtp as unknown as SmtpService,
-      prisma as unknown as PrismaService,
-      buildNoOpFactory(),
-    ).execute({
+    expect(sendMail).toHaveBeenCalledWith({
       to: 'client@example.com',
-      templateSlug: 'welcome',
-      vars: {},
+      subject: 'مرحباً أحمد',
+      html: '<p>أحمد</p>',
     });
-    expect(smtp.sendMail).not.toHaveBeenCalled();
   });
 
-  it('skips when template not found', async () => {
+  it('throws ServiceUnavailableException when no provider is configured', async () => {
     const prisma = buildPrisma();
-    prisma.emailTemplate.findFirst.mockResolvedValue(null);
-    const smtp = {
-      isAvailable: jest.fn().mockReturnValue(true),
-      sendMail: jest.fn(),
-    };
-    await new SendEmailHandler(
-      smtp as unknown as SmtpService,
-      prisma as unknown as PrismaService,
-      buildNoOpFactory(),
-    ).execute({
-      to: 'client@example.com',
+    const sendMail = jest.fn();
+    const factory = buildFactory({ isAvailable: () => false, sendMail });
+
+    await expect(
+      new SendEmailHandler(prisma as unknown as PrismaService, factory).execute({
+        to: 'client@example.com',
+        templateSlug: 'welcome',
+        vars: {},
+      }),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(sendMail).not.toHaveBeenCalled();
+  });
+
+  it('returns silently when template is missing', async () => {
+    const prisma = buildPrisma(null);
+    const sendMail = jest.fn();
+    const factory = buildFactory({ isAvailable: () => true, sendMail });
+
+    await new SendEmailHandler(prisma as unknown as PrismaService, factory).execute({
+      to: 'a@b.com',
       templateSlug: 'missing',
       vars: {},
     });
-    expect(smtp.sendMail).not.toHaveBeenCalled();
-  });
-});
-
-describe('SendEmailHandler — interpolation', () => {
-  it('skips when template not found', async () => {
-    const smtp = { isAvailable: jest.fn().mockReturnValue(true), sendMail: jest.fn() };
-    const prisma = { emailTemplate: { findFirst: jest.fn().mockResolvedValue(null) } };
-    await new SendEmailHandler(
-      smtp as unknown as SmtpService,
-      prisma as unknown as PrismaService,
-      buildNoOpFactory(),
-    ).execute({ to: 'a@b.com', templateSlug: 'missing', vars: {} });
-    expect(smtp.sendMail).not.toHaveBeenCalled();
+    expect(sendMail).not.toHaveBeenCalled();
   });
 
-  it('skips when template is inactive', async () => {
-    const smtp = { isAvailable: jest.fn().mockReturnValue(true), sendMail: jest.fn() };
-    const prisma = { emailTemplate: { findFirst: jest.fn().mockResolvedValue({ isActive: false, htmlBody: '', subject: '' }) } };
-    await new SendEmailHandler(
-      smtp as unknown as SmtpService,
-      prisma as unknown as PrismaService,
-      buildNoOpFactory(),
-    ).execute({ to: 'a@b.com', templateSlug: 'tpl', vars: {} });
-    expect(smtp.sendMail).not.toHaveBeenCalled();
+  it('returns silently when template is inactive', async () => {
+    const prisma = buildPrisma({ ...mockTemplate, isActive: false });
+    const sendMail = jest.fn();
+    const factory = buildFactory({ isAvailable: () => true, sendMail });
+
+    await new SendEmailHandler(prisma as unknown as PrismaService, factory).execute({
+      to: 'a@b.com',
+      templateSlug: 'welcome',
+      vars: {},
+    });
+    expect(sendMail).not.toHaveBeenCalled();
   });
 
-  it('replaces {{vars}} in htmlBody and subject via platform SMTP', async () => {
-    const smtp = { isAvailable: jest.fn().mockReturnValue(true), sendMail: jest.fn().mockResolvedValue(undefined) };
-    const prisma = {
-      emailTemplate: {
-        findFirst: jest.fn().mockResolvedValue({
-          isActive: true,
-          htmlBody: '<p>Hello {{name}}</p>',
-          subject: 'مرحبا {{name}}',
-        }),
-      },
-    };
-    await new SendEmailHandler(
-      smtp as unknown as SmtpService,
-      prisma as unknown as PrismaService,
-      buildNoOpFactory(),
-    ).execute({ to: 'a@b.com', templateSlug: 'tpl', vars: { name: 'Ahmad' } });
-    expect(smtp.sendMail).toHaveBeenCalledWith('a@b.com', 'مرحبا Ahmad', '<p>Hello Ahmad</p>');
-  });
+  it('propagates errors from the provider', async () => {
+    const prisma = buildPrisma();
+    const sendMail = jest.fn().mockRejectedValue(new Error('Provider down'));
+    const factory = buildFactory({ isAvailable: () => true, sendMail });
 
-  it('uses configured email provider when available', async () => {
-    const smtp = { isAvailable: jest.fn().mockReturnValue(true), sendMail: jest.fn() };
-    const prisma = {
-      emailTemplate: {
-        findFirst: jest.fn().mockResolvedValue({
-          isActive: true,
-          htmlBody: 'body',
-          subject: 'subject',
-        }),
-      },
-    };
-    const configuredSendMail = jest.fn().mockResolvedValue({ messageId: 'msg-1' });
-    const configuredFactory = {
-      resolve: jest.fn().mockResolvedValue({
-        isAvailable: () => true,
-        sendMail: configuredSendMail,
-      }),
-    } as unknown as EmailProviderFactory;
-
-    await new SendEmailHandler(
-      smtp as unknown as SmtpService,
-      prisma as unknown as PrismaService,
-      configuredFactory,
-    ).execute({ to: 'a@b.com', templateSlug: 'tpl', vars: {} });
-
-    expect(configuredSendMail).toHaveBeenCalled();
-    expect(smtp.sendMail).not.toHaveBeenCalled();
-  });
-
-  it('does not throw when smtp.sendMail rejects', async () => {
-    const smtp = { isAvailable: jest.fn().mockReturnValue(true), sendMail: jest.fn().mockRejectedValue(new Error('SMTP down')) };
-    const prisma = {
-      emailTemplate: { findFirst: jest.fn().mockResolvedValue({ isActive: true, htmlBody: 'body', subject: 'subj' }) },
-    };
     await expect(
-      new SendEmailHandler(
-        smtp as unknown as SmtpService,
-        prisma as unknown as PrismaService,
-        buildNoOpFactory(),
-      ).execute({ to: 'a@b.com', templateSlug: 'tpl', vars: {} }),
-    ).resolves.not.toThrow();
+      new SendEmailHandler(prisma as unknown as PrismaService, factory).execute({
+        to: 'a@b.com',
+        templateSlug: 'welcome',
+        vars: {},
+      }),
+    ).rejects.toThrow('Provider down');
   });
 });

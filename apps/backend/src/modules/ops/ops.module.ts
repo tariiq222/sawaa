@@ -3,6 +3,7 @@ import { DashboardOpsController } from '../../api/dashboard/ops.controller';
 import { TerminusModule } from '@nestjs/terminus';
 import { DatabaseModule } from '../../infrastructure/database';
 import { MessagingModule } from '../../infrastructure/messaging.module';
+import { EmailModule } from '../../infrastructure/email/email.module';
 import { BookingsModule } from '../bookings/bookings.module';
 import { FinanceModule } from '../finance/finance.module';
 import { CronTasksService } from './cron-tasks/cron-tasks.service';
@@ -53,7 +54,7 @@ const cronHandlers = [
 // FinanceModule is imported to make MoyasarApiClient available to
 // ReconcileRefundsCron. MoyasarApiClient is exported by FinanceModule.
 @Module({
-  imports: [DatabaseModule, MessagingModule, TerminusModule, BookingsModule, FinanceModule],
+  imports: [DatabaseModule, MessagingModule, TerminusModule, BookingsModule, FinanceModule, EmailModule],
   controllers: [DashboardOpsController],
   providers: [...handlers, ...cronHandlers, RedisService, CronTasksService, DbMetricsService, RunOrphanAuditHandler],
   exports: [...handlers, RunOrphanAuditHandler, DbMetricsService],
