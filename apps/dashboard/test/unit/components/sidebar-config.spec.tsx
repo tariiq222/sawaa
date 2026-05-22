@@ -1,23 +1,19 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  overviewNav,
-  operationsNav,
-  peopleNav,
-  financeNav,
-  catalogNav,
-  systemNav,
+  receptionNav,
+  practiceNav,
+  managementNav,
+  setupNav,
   navGroups,
 } from "@/components/sidebar-config"
 
-describe("SidebarConfig — groups added", () => {
+describe("SidebarConfig — persona groups", () => {
   const allNavItems = [
-    ...overviewNav,
-    ...operationsNav,
-    ...peopleNav,
-    ...financeNav,
-    ...catalogNav,
-    ...systemNav,
+    ...receptionNav,
+    ...practiceNav,
+    ...managementNav,
+    ...setupNav,
   ]
 
   const allHrefs = allNavItems.map((item) => item.href)
@@ -27,30 +23,33 @@ describe("SidebarConfig — groups added", () => {
     expect(duplicates).toHaveLength(0)
   })
 
-  it("navGroups has all 6 sections", () => {
-    expect(navGroups).toHaveLength(6)
+  it("navGroups has all 4 persona sections", () => {
+    expect(navGroups).toHaveLength(4)
     expect(navGroups.map((g) => g.labelKey)).toEqual([
-      "nav.overview",
-      "nav.operations",
-      "nav.people",
-      "nav.finance",
-      "nav.catalog",
-      "nav.system",
+      "nav.reception",
+      "nav.practice",
+      "nav.management",
+      "nav.setup",
     ])
   })
 
-  it("catalogNav contains expected items", () => {
+  it("setupNav contains catalog & system items", () => {
     expect(allHrefs).toContain("/services")
     expect(allHrefs).toContain("/categories")
     expect(allHrefs).toContain("/departments")
     expect(allHrefs).toContain("/branches")
-    expect(allHrefs).toContain("/intake-forms")
+    expect(allHrefs).toContain("/settings")
   })
 
-  it("operationsNav contains expected items", () => {
+  it("receptionNav contains front-desk items", () => {
     expect(allHrefs).toContain("/bookings")
     expect(allHrefs).toContain("/clients")
-    expect(allHrefs).toContain("/ratings")
     expect(allHrefs).toContain("/contact-messages")
+  })
+
+  it("practiceNav contains practitioner items", () => {
+    expect(allHrefs).toContain("/employees")
+    expect(allHrefs).toContain("/ratings")
+    expect(allHrefs).toContain("/intake-forms")
   })
 })
