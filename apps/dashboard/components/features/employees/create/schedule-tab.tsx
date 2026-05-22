@@ -116,8 +116,10 @@ export function ScheduleTab({
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader>
-          <CardTitle>{t("employees.branches.sectionTitle")}</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">
+            {t("employees.branches.sectionTitle")}
+          </CardTitle>
           <CardDescription>{t("employees.branches.sectionDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
