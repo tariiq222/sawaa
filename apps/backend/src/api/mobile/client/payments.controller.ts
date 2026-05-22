@@ -141,6 +141,7 @@ export class MobileClientPaymentsController {
       fileBuffer: file.buffer,
       mimetype: file.mimetype,
       filename: file.originalname,
+      clientId: user.id, // SECURITY (P0-5): bind invoice to caller
     });
   }
 }

@@ -1,11 +1,11 @@
-import { Injectable, BadRequestException, ServiceUnavailableException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, ServiceUnavailableException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { ChatAdapter } from '../../../infrastructure/ai';
 import { SemanticSearchHandler } from '../semantic-search/semantic-search.handler';
 import { GetChatbotConfigHandler } from '../chatbot-config/get-chatbot-config.handler';
-import { ChatCompletionDto, ChatCompletionResult } from './chat-completion.dto';
+import { ChatCompletionCommand, ChatCompletionResult } from './chat-completion.dto';
 
-export type ChatCompletionCommand = ChatCompletionDto;
+export type { ChatCompletionCommand };
 
 const MAX_OUTPUT_TOKENS = 800;
 const MAX_HISTORY_MESSAGES = 20;
@@ -47,9 +47,23 @@ export class ChatCompletionHandler {
 
     const context = chunks.map((c) => c.content).join('\n\n');
 
-    // Resolve/create session and persist user message BEFORE LLM call
+    // SECURITY (P0-4): if a sessionId is supplied, it MUST belong to the caller.
+    // Without this check, any client could pass any session UUID and inject into
+    // or read context from another user's chat history.
     let sessionId = dto.sessionId;
-    if (!sessionId) {
+    if (sessionId) {
+      const ownerOk = await this.prisma.chatSession.findFirst({
+        where: {
+          id: sessionId,
+          ...(dto.clientId ? { clientId: dto.clientId } : {}),
+          ...(dto.userId ? { userId: dto.userId } : {}),
+        },
+        select: { id: true },
+      });
+      if (!ownerOk) {
+        throw new ForbiddenException('Session does not belong to caller');
+      }
+    } else {
       const session = await this.prisma.chatSession.create({
         data: {
           clientId: dto.clientId,

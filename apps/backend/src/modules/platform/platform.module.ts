@@ -12,6 +12,7 @@ import { ListProblemReportsHandler } from './problem-reports/list-problem-report
 import { UpdateProblemReportStatusHandler } from './problem-reports/update-problem-report-status.handler';
 import { UpsertIntegrationHandler } from './integrations/upsert-integration.handler';
 import { ListIntegrationsHandler } from './integrations/list-integrations.handler';
+import { IntegrationCredentialsService } from '../../infrastructure/integrations/integration-credentials.service';
 import { FinanceModule } from '../finance/finance.module';
 import { IdentityModule } from '../identity/identity.module';
 import { PlatformSettingsModule } from './settings/platform-settings.module';
@@ -50,6 +51,7 @@ import { SystemHealthModule } from './system-health/system-health.module';
     UpdateProblemReportStatusHandler,
     UpsertIntegrationHandler,
     ListIntegrationsHandler,
+    IntegrationCredentialsService,
   ],
   exports: [
     PlatformSettingsModule,

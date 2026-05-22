@@ -88,11 +88,13 @@ export class MobileClientChatController {
   @ApiParam({ name: 'id', description: 'Conversation UUID', example: '00000000-0000-0000-0000-000000000000' })
   @Get('conversations/:id/messages')
   listMessagesEndpoint(
+    @ClientSession() user: ClientSession,
     @Param('id', ParseUUIDPipe) id: string,
     @Query() q: MobileListMessagesQuery,
   ) {
     return this.listMessages.execute({
       conversationId: id,
+      clientId: user.id, // SECURITY (P0-4): restrict to caller's own conversation
       cursor: q.cursor,
       limit: q.limit ?? 30,
     });

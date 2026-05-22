@@ -18,7 +18,13 @@ describe('PublicPaymentsController (e2e)', () => {
       ],
     })
       .overrideGuard(OtpSessionGuard)
-      .useValue({ canActivate: () => true })
+      .useValue({
+        canActivate: (ctx: any) => {
+          const req = ctx.switchToHttp().getRequest();
+          req.otpSession = { identifier: '+966500000000', jti: 'jti-test', purpose: 'GUEST_BOOKING', channel: 'SMS', organizationId: null };
+          return true;
+        },
+      })
       .compile();
 
     app = moduleRef.createNestApplication();

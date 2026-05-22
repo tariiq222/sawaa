@@ -37,6 +37,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     if (!user || !user.isActive) throw new UnauthorizedException('User not found or inactive');
 
+    // P0-1: admin/dashboard JwtStrategy must never accept CLIENT-role tokens.
+    // Mobile clients have their own namespace via ClientSessionGuard.
+    // This blocks privilege escalation if any path creates a User row with
+    // role=CLIENT (e.g. mobile self-registration).
+    if (user.role === 'CLIENT') {
+      throw new UnauthorizedException('Client tokens cannot access this surface');
+    }
+
     // P0-6: If the JWT carries a tokenVersion, verify it matches the DB value.
     if (typeof payload.tokenVersion === 'number' && user.tokenVersion !== payload.tokenVersion) {
       throw new UnauthorizedException('Session has been revoked');

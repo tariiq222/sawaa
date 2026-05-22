@@ -11,6 +11,8 @@ describe('PublicMetricsController (e2e)', () => {
   const mockAppMetrics = { registry: { metrics: jest.fn() } };
   const mockDbMetrics = { registry: { metrics: jest.fn() } };
 
+  const OLD_ENV = process.env;
+
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [PublicMetricsController],
@@ -25,6 +27,7 @@ describe('PublicMetricsController (e2e)', () => {
   });
 
   afterAll(async () => {
+    process.env = OLD_ENV;
     await app.close();
   });
 
@@ -33,12 +36,32 @@ describe('PublicMetricsController (e2e)', () => {
   });
 
   describe('GET /public/metrics', () => {
-    it('returns 200 with prometheus metrics', async () => {
+    it('returns 503 when METRICS_TOKEN is not configured (P0-13 fail-closed)', async () => {
+      delete process.env['METRICS_TOKEN'];
+      await request(app.getHttpServer()).get('/public/metrics').expect(503);
+    });
+
+    it('returns 401 with wrong token (P0-13)', async () => {
+      process.env['METRICS_TOKEN'] = 'correct-horse-battery-staple-32-chars';
+      await request(app.getHttpServer())
+        .get('/public/metrics')
+        .set('Authorization', 'Bearer wrong-token')
+        .expect(401);
+    });
+
+    it('returns 401 with no Authorization header', async () => {
+      process.env['METRICS_TOKEN'] = 'correct-horse-battery-staple-32-chars';
+      await request(app.getHttpServer()).get('/public/metrics').expect(401);
+    });
+
+    it('returns 200 with prometheus metrics when token matches', async () => {
+      process.env['METRICS_TOKEN'] = 'correct-horse-battery-staple-32-chars';
       mockAppMetrics.registry.metrics.mockResolvedValue('# app metrics');
       mockDbMetrics.registry.metrics.mockResolvedValue('# db metrics');
 
       const res = await request(app.getHttpServer())
         .get('/public/metrics')
+        .set('Authorization', 'Bearer correct-horse-battery-staple-32-chars')
         .expect(200);
 
       expect(res.text).toContain('# app metrics');

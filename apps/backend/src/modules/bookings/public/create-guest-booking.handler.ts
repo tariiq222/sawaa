@@ -80,6 +80,12 @@ export class CreateGuestBookingHandler {
     });
     if (!branch) throw new NotFoundException('Branch not found');
 
+    // SECURITY (P0-17): even though `employeeId` comes from the public DTO,
+    // we constrain it three ways: must be active, must be flagged `isPublic`,
+    // must be assigned to the requested branch, AND (below) must offer the
+    // requested service via EmployeeService. This blocks an attacker from
+    // spoofing an arbitrary `employeeId` to fraudulently credit commission
+    // to themselves or to route a booking to a private/internal therapist.
     const employee = await this.prisma.employee.findFirst({
       where: { id: cmd.employeeId },
       select: { id: true, isActive: true, isPublic: true },

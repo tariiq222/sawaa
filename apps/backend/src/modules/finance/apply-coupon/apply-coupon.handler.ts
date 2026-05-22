@@ -1,10 +1,17 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 
 import { ApplyCouponDto } from './apply-coupon.dto';
 
-export type ApplyCouponCommand = ApplyCouponDto;
+export type ApplyCouponCommand = ApplyCouponDto & {
+  /**
+   * SECURITY (P0-8): when set, the invoice's client MUST equal this id.
+   * Mobile/website client surfaces inject the JWT subject here; dashboard
+   * staff omit it (CASL guards the endpoint).
+   */
+  callerClientId?: string;
+};
 
 @Injectable()
 export class ApplyCouponHandler {
@@ -22,6 +29,14 @@ export class ApplyCouponHandler {
     if (!invoice) {
       throw new NotFoundException(`Invoice ${cmd.invoiceId} not found`);
     }
+
+    // SECURITY (P0-8): the redeeming client is ALWAYS the invoice owner.
+    // Caller-supplied clientId is gone. For client surfaces, also verify the
+    // caller actually owns the invoice.
+    if (cmd.callerClientId && invoice.clientId !== cmd.callerClientId) {
+      throw new ForbiddenException('Invoice does not belong to caller');
+    }
+    const redeemingClientId = invoice.clientId;
 
     const coupon = await this.prisma.coupon.findFirst({
       where: { code: cmd.code },
@@ -79,7 +94,7 @@ export class ApplyCouponHandler {
 
       if (coupon.maxUsesPerUser !== null) {
         const userRedemptionCount = await tx.couponRedemption.count({
-          where: { couponId: coupon.id, clientId: cmd.clientId },
+          where: { couponId: coupon.id, clientId: redeemingClientId },
         });
         if (userRedemptionCount >= coupon.maxUsesPerUser) {
           throw new BadRequestException(
@@ -89,7 +104,7 @@ export class ApplyCouponHandler {
       }
 
       const redemption = await tx.couponRedemption.create({
-        data: { couponId: coupon.id, invoiceId: cmd.invoiceId, clientId: cmd.clientId, discount: discountHalalas },
+        data: { couponId: coupon.id, invoiceId: cmd.invoiceId, clientId: redeemingClientId, discount: discountHalalas },
       });
 
       await tx.invoice.update({

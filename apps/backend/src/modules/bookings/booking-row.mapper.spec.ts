@@ -361,7 +361,7 @@ describe('mapBookingRow', () => {
     expect(result.completedAt).toBe('2026-05-04T11:30:00.000Z');
   });
 
-  it('handles zoom URLs when present', () => {
+  it('strips zoom host/start URLs by default (P0-6)', () => {
     const bookingWithZoom = {
       ...mockBooking,
       zoomJoinUrl: 'https://zoom.us/j/123',
@@ -374,10 +374,23 @@ describe('mapBookingRow', () => {
     const result = mapBookingRow(bookingWithZoom, relations);
 
     expect(result.zoomJoinUrl).toBe('https://zoom.us/j/123');
-    expect(result.zoomHostUrl).toBe('https://zoom.us/s/123');
-    expect(result.zoomStartUrl).toBe('https://zoom.us/start/123');
+    // P0-6: host/start URLs MUST be stripped without an explicit opt-in.
+    expect(result.zoomHostUrl).toBeNull();
+    expect(result.zoomStartUrl).toBeNull();
     expect(result.zoomMeetingStatus).toBe('started');
     expect(result.zoomMeetingError).toBeNull();
+  });
+
+  it('returns host URLs only when includeHostUrls=true (P0-6)', () => {
+    const bookingWithZoom = {
+      ...mockBooking,
+      zoomJoinUrl: 'https://zoom.us/j/123',
+      zoomHostUrl: 'https://zoom.us/s/123',
+      zoomStartUrl: 'https://zoom.us/start/123',
+    } as unknown as Booking;
+    const result = mapBookingRow(bookingWithZoom, relations, { includeHostUrls: true });
+    expect(result.zoomHostUrl).toBe('https://zoom.us/s/123');
+    expect(result.zoomStartUrl).toBe('https://zoom.us/start/123');
   });
 
   it('pads single digit months and days correctly', () => {

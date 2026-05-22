@@ -16,6 +16,7 @@ import { GetCurrentUserHandler } from './get-current-user/get-current-user.handl
 import { CreateUserHandler } from './users/create-user.handler';
 import { GetUserHandler } from './users/get-user.handler';
 import { UpdateUserHandler } from './users/update-user.handler';
+import { UpdateUserRoleHandler } from './users/update-user-role.handler';
 import { ListUsersHandler } from './users/list-users.handler';
 import { DeactivateUserHandler } from './users/deactivate-user.handler';
 import { DeleteUserHandler } from './users/delete-user.handler';
@@ -63,7 +64,7 @@ import { UpdateEmployeeAccountHandler } from './employee-account/update-employee
 
 const handlers = [
   LoginHandler, RefreshTokenHandler, LogoutHandler,
-  GetCurrentUserHandler, CreateUserHandler, GetUserHandler, UpdateUserHandler, ListUsersHandler,
+  GetCurrentUserHandler, CreateUserHandler, GetUserHandler, UpdateUserHandler, UpdateUserRoleHandler, ListUsersHandler,
   DeactivateUserHandler, DeleteUserHandler, AssignRoleHandler, RemoveRoleHandler,
   CreateRoleHandler, DeleteRoleHandler, AssignPermissionsHandler, ListRolesHandler,
   ListPermissionsHandler,

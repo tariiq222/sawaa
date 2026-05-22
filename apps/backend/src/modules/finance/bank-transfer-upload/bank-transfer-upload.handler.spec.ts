@@ -1,4 +1,4 @@
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PaymentMethod, PaymentStatus } from '@prisma/client';
 import { BankTransferUploadHandler } from './bank-transfer-upload.handler';
 
@@ -228,6 +228,21 @@ describe('BankTransferUploadHandler', () => {
       await expect(
         handler.execute({ ...baseCmd, fileBuffer: JPEG_BUFFER, mimetype: 'image/jpeg', filename: 'receipt.jpg' }),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException when client tries to pay another client\'s invoice (P0-5)', async () => {
+      const prisma = buildPrisma({ clientId: 'other-client' });
+      const handler = new BankTransferUploadHandler(prisma as never, buildStorage() as never);
+      await expect(
+        handler.execute({
+          ...baseCmd,
+          clientId: 'attacker',
+          fileBuffer: JPEG_BUFFER,
+          mimetype: 'image/jpeg',
+          filename: 'receipt.jpg',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.payment.create).not.toHaveBeenCalled();
     });
   });
 });

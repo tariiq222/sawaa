@@ -94,12 +94,24 @@ export interface AbilitySubjectUser {
 export class CaslAbilityFactory {
   buildForUser(user: AbilitySubjectUser): AppAbility {
     const { can, build } = new AbilityBuilder<AppAbility>(createMongoAbility);
+    // SECURITY (P0-3): defense-in-depth — refuse the wildcard `manage:all`
+    // CASL pair from customRole sources. Only the built-in SUPER_ADMIN row
+    // (gated separately by User.isSuperAdmin) may hold that pair. Filtering
+    // here closes the door if AssignPermissionsDto validation is ever bypassed.
+    const isWildcard = (action: unknown, subject: unknown): boolean => {
+      const a = String(action).toLowerCase();
+      const s = String(subject).toLowerCase();
+      return (a === 'manage' && s === 'all') || s === 'all';
+    };
+
     if (user.customRole) {
-      for (const p of user.customRole.permissions) can(p.action, p.subject);
-    } else {
-      const effectiveRole = user.role ?? '';
-      for (const p of BUILT_IN[effectiveRole] ?? []) can(p.action, p.subject);
+      for (const p of user.customRole.permissions) {
+        if (isWildcard(p.action, p.subject)) continue;
+        can(p.action, p.subject);
+      }
     }
+    const effectiveRole = user.role ?? '';
+    for (const p of BUILT_IN[effectiveRole] ?? []) can(p.action, p.subject);
     return build();
   }
 }

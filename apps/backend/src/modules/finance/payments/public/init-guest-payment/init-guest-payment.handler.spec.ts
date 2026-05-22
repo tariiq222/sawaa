@@ -6,7 +6,15 @@ const mockBooking = {
   status: 'AWAITING_PAYMENT',
   price: 100,
   currency: 'SAR',
+  clientId: 'client-1',
 };
+
+const mockClient = {
+  phone: '+966500000000',
+  email: 'guest@example.com',
+};
+
+const validOtp = { otpIdentifier: '+966500000000', otpJti: 'jti-1' };
 
 const mockInvoice = {
   id: 'inv-1',
@@ -43,8 +51,10 @@ const buildMoyasar = () => ({
 
 interface MockPrisma {
   booking: { findFirst: jest.Mock };
+  client: { findFirst: jest.Mock };
   invoice: { findFirst: jest.Mock };
   payment: { findFirst: jest.Mock; create: jest.Mock; update: jest.Mock; delete: jest.Mock };
+  usedOtpSession: { create: jest.Mock };
 }
 
 interface MockPrismaWithTx extends MockPrisma {
@@ -54,6 +64,7 @@ interface MockPrismaWithTx extends MockPrisma {
 function buildPrisma(): MockPrismaWithTx {
   const prisma: MockPrismaWithTx = {
     booking: { findFirst: jest.fn().mockResolvedValue({ ...mockBooking }) },
+    client: { findFirst: jest.fn().mockResolvedValue({ ...mockClient }) },
     invoice: { findFirst: jest.fn().mockResolvedValue({ ...mockInvoice }) },
     payment: {
       findFirst: jest.fn().mockResolvedValue(null),
@@ -61,6 +72,7 @@ function buildPrisma(): MockPrismaWithTx {
       update: jest.fn().mockResolvedValue({ ...mockPayment, gatewayRef: 'moyasar-pay-1' }),
       delete: jest.fn().mockResolvedValue({ ...mockPayment }),
     },
+    usedOtpSession: { create: jest.fn().mockResolvedValue({ jti: 'jti-1' }) },
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation(async (fn: (tx: MockPrismaWithTx) => Promise<unknown>) => fn(prisma));
@@ -85,11 +97,11 @@ describe('InitGuestPaymentHandler', () => {
       const moyasar = buildMoyasar();
       const handler = new InitGuestPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, moyasar as never);
 
-      const result = await handler.execute({ bookingId: 'booking-1' });
+      const result = await handler.execute({ bookingId: 'booking-1', ...validOtp });
 
       expect(prisma.booking.findFirst).toHaveBeenCalledWith({
         where: { id: 'booking-1' },
-        select: { id: true, status: true, price: true, currency: true },
+        select: { id: true, status: true, price: true, currency: true, clientId: true },
       });
       expect(prisma.invoice.findFirst).toHaveBeenCalledWith({
         where: { bookingId: 'booking-1' },
@@ -138,7 +150,7 @@ describe('InitGuestPaymentHandler', () => {
       const moyasar = buildMoyasar();
       const handler = new InitGuestPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, moyasar as never);
 
-      await expect(handler.execute({ bookingId: 'nonexistent' })).rejects.toThrow(NotFoundException);
+      await expect(handler.execute({ bookingId: 'nonexistent', ...validOtp })).rejects.toThrow(NotFoundException);
       expect(prisma.payment.create).not.toHaveBeenCalled();
     });
 
@@ -148,7 +160,7 @@ describe('InitGuestPaymentHandler', () => {
       const moyasar = buildMoyasar();
       const handler = new InitGuestPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, moyasar as never);
 
-      await expect(handler.execute({ bookingId: 'booking-1' })).rejects.toThrow(BadRequestException);
+      await expect(handler.execute({ bookingId: 'booking-1', ...validOtp })).rejects.toThrow(BadRequestException);
       expect(prisma.payment.create).not.toHaveBeenCalled();
     });
 
@@ -158,7 +170,7 @@ describe('InitGuestPaymentHandler', () => {
       const moyasar = buildMoyasar();
       const handler = new InitGuestPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, moyasar as never);
 
-      await expect(handler.execute({ bookingId: 'booking-1' })).rejects.toThrow(NotFoundException);
+      await expect(handler.execute({ bookingId: 'booking-1', ...validOtp })).rejects.toThrow(NotFoundException);
       expect(prisma.payment.create).not.toHaveBeenCalled();
     });
 
@@ -168,7 +180,7 @@ describe('InitGuestPaymentHandler', () => {
       const moyasar = buildMoyasar();
       const handler = new InitGuestPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, moyasar as never);
 
-      await expect(handler.execute({ bookingId: 'booking-1' })).rejects.toThrow(ConflictException);
+      await expect(handler.execute({ bookingId: 'booking-1', ...validOtp })).rejects.toThrow(ConflictException);
       expect(moyasar.createPayment).not.toHaveBeenCalled();
     });
 
@@ -178,7 +190,7 @@ describe('InitGuestPaymentHandler', () => {
       const moyasar = buildMoyasar();
       const handler = new InitGuestPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, moyasar as never);
 
-      const result = await handler.execute({ bookingId: 'booking-1' });
+      const result = await handler.execute({ bookingId: 'booking-1', ...validOtp });
 
       expect(result).toEqual({ paymentId: 'pay-1', redirectUrl: 'https://checkout.moyasar.com/pay/pay_xxx' });
       expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'pay-1' } });
@@ -192,7 +204,7 @@ describe('InitGuestPaymentHandler', () => {
       const moyasar = buildMoyasar();
       const handler = new InitGuestPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, moyasar as never);
 
-      const result = await handler.execute({ bookingId: 'booking-1' });
+      const result = await handler.execute({ bookingId: 'booking-1', ...validOtp });
 
       expect(result).toEqual({ paymentId: 'pay-1', redirectUrl: 'https://checkout.moyasar.com/pay/pay_xxx' });
       expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'pay-1' } });
@@ -206,7 +218,7 @@ describe('InitGuestPaymentHandler', () => {
       const moyasar = buildMoyasar();
       const handler = new InitGuestPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, moyasar as never);
 
-      const result = await handler.execute({ bookingId: 'booking-1' });
+      const result = await handler.execute({ bookingId: 'booking-1', ...validOtp });
 
       expect(result).toEqual({ paymentId: 'pay-1', redirectUrl: 'https://checkout.moyasar.com/pay/pay_xxx' });
       expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'pay-1' } });
@@ -220,7 +232,7 @@ describe('InitGuestPaymentHandler', () => {
       const moyasar = buildMoyasar();
       const handler = new InitGuestPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, moyasar as never);
 
-      await handler.execute({ bookingId: 'booking-1' });
+      await handler.execute({ bookingId: 'booking-1', ...validOtp });
 
       const params = moyasar.createPayment.mock.calls[0][1];
       expect(params.amountHalalas).toBe(12000);
@@ -233,7 +245,7 @@ describe('InitGuestPaymentHandler', () => {
       moyasar.createPayment.mockResolvedValue({ ...mockMoyasarPayment, redirectUrl: null });
       const handler = new InitGuestPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, moyasar as never);
 
-      await expect(handler.execute({ bookingId: 'booking-1' })).rejects.toThrow(BadRequestException);
+      await expect(handler.execute({ bookingId: 'booking-1', ...validOtp })).rejects.toThrow(BadRequestException);
 
       expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'pay-1' } });
       expect(prisma.payment.update).not.toHaveBeenCalled();
@@ -245,7 +257,7 @@ describe('InitGuestPaymentHandler', () => {
       const moyasar = buildMoyasar();
       const handler = new InitGuestPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, moyasar as never);
 
-      await handler.execute({ bookingId: 'booking-1' });
+      await handler.execute({ bookingId: 'booking-1', ...validOtp });
 
       expect(moyasar.createPayment).toHaveBeenCalledWith(
         '00000000-0000-0000-0000-000000000001',

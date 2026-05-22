@@ -1,6 +1,11 @@
 import { envValidationSchema } from './env.validation';
 
-const base64_44 = Buffer.alloc(32).toString('base64');
+// Non-zero 32-byte key, base64 — `Buffer.alloc(32)` would be all-zero, which
+// the env validator (P0-14) rejects in production as trivially decryptable.
+const base64_44 = Buffer.from(
+  '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+  'hex',
+).toString('base64');
 
 const baseValidEnv = {
   NODE_ENV: 'production',
