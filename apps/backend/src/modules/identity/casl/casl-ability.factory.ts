@@ -28,6 +28,7 @@ type Rule = {
 
 const ADMIN_RULES: readonly Rule[] = [
   { action: 'manage', subject: 'User' },
+  { action: 'manage', subject: 'Role' },
   { action: 'manage', subject: 'Booking' },
   { action: 'manage', subject: 'Client' },
   { action: 'manage', subject: 'Employee' },

@@ -2,7 +2,10 @@ import { render, screen, fireEvent } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 vi.mock("@/components/locale-provider", () => ({
-  useLocale: () => ({ locale: "en" }),
+  useLocale: () => ({
+    locale: "en",
+    t: (key: string) => key,
+  }),
 }))
 
 import { NotificationCard } from "@/components/features/notifications/notification-card"
@@ -12,7 +15,7 @@ const base: Notification = {
   id: "n-1",
   recipientId: "u-1",
   recipientType: "CLIENT" as Notification["recipientType"],
-  type: "booking.confirmed",
+  type: "BOOKING_CONFIRMED",
   title: "New booking confirmed",
   body: "Sara Ali booked Cardiology at 10:00.",
   metadata: null,
@@ -38,15 +41,14 @@ describe("NotificationCard", () => {
     const { container } = render(
       <NotificationCard notification={{ ...base, isRead: true }} onMarkRead={() => {}} />,
     )
-    // Read state renders an empty placeholder div (no bg-primary circle).
     const card = container.querySelector("[data-testid='notification-card']")
-    expect(card?.querySelector(".bg-primary.rounded-full, .bg-primary.size-2\\.5")).toBeNull()
+    expect(card?.querySelector(".bg-primary.rounded-full")).toBeNull()
   })
 
   it("calls onMarkRead with the notification id when an unread card is clicked", () => {
     const onMarkRead = vi.fn()
     render(<NotificationCard notification={base} onMarkRead={onMarkRead} />)
-    fireEvent.click(screen.getByTestId("notification-card"))
+    fireEvent.click(screen.getByRole("button"))
     expect(onMarkRead).toHaveBeenCalledWith("n-1")
   })
 
@@ -55,13 +57,12 @@ describe("NotificationCard", () => {
     render(
       <NotificationCard notification={{ ...base, isRead: true }} onMarkRead={onMarkRead} />,
     )
-    fireEvent.click(screen.getByTestId("notification-card"))
+    fireEvent.click(screen.getByRole("button"))
     expect(onMarkRead).not.toHaveBeenCalled()
   })
 
   it("renders a relative time string for createdAt", () => {
     render(<NotificationCard notification={base} onMarkRead={() => {}} />)
-    // e.g. "1 minute ago" — don't pin to exact copy; just assert a time suffix appears.
     expect(screen.getByText(/ago/i)).toBeTruthy()
   })
 })

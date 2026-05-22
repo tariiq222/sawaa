@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { IBM_Plex_Sans_Arabic } from "next/font/google"
 
 import "./globals.css"
@@ -10,6 +11,14 @@ import { AuthProvider } from "@/components/providers/auth-provider"
 import { QueryProvider } from "@/components/providers/query-provider"
 import { LocaleProvider } from "@/components/locale-provider"
 import { cn } from "@/lib/utils"
+
+export const metadata: Metadata = {
+  title: {
+    default: "لوحة التحكم — سواء",
+    template: "%s — لوحة التحكم — سواء",
+  },
+  description: "لوحة تحكم مركز سواء للاستشارات الأسرية",
+}
 
 const ibmPlexSansArabic = IBM_Plex_Sans_Arabic({
   subsets: ["arabic"],
