@@ -5,6 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   CustomerService01Icon,
   Book02Icon,
+  Add01Icon,
 } from "@hugeicons/core-free-icons"
 import { SawaaMark } from "@/components/brand/sawaa-mark"
 
@@ -65,6 +66,23 @@ export function AppSidebar() {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
+
+        {/* ─── Quick action: new booking ─── */}
+        <div className="px-3 pb-2">
+          <Link
+            href="/bookings?new=1"
+            onClick={() => isMobile && setOpenMobile(false)}
+            className={cn(
+              "group flex w-full items-center justify-center gap-1.5 rounded-lg",
+              "bg-primary text-primary-foreground px-3 py-2 text-xs font-semibold",
+              "transition-all hover:bg-primary/90 hover:-translate-y-px",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2",
+            )}
+          >
+            <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={2.5} />
+            <span>{t("bookings.newBooking")}</span>
+          </Link>
+        </div>
 
         {/* ─── Navigation ─── */}
         <SidebarContent className="pt-0">
