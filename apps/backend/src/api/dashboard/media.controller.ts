@@ -1,6 +1,6 @@
 import {
-  Controller, Get, Post, Delete, Param, Query, Body,
-  UseGuards, ParseUUIDPipe, HttpCode, HttpStatus,
+  Controller, Get, Post, Delete, Param, Query, Body, Request,
+  UseGuards, ParseUUIDPipe, HttpCode, HttpStatus, ForbiddenException,
   UseInterceptors, UploadedFile, BadRequestException,
 } from '@nestjs/common';
 import {
@@ -139,8 +139,16 @@ export class DashboardMediaController {
   @ApiNotFoundResponse({ description: 'File not found' })
   deleteFileEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
+    @Request() req: { user?: { id?: string; isSuperAdmin?: boolean } },
   ) {
-    return this.deleteFile.execute(id);
+    const actorUserId = req.user?.id;
+    if (!actorUserId) throw new ForbiddenException('Missing actor');
+    return this.deleteFile.execute({
+      fileId: id,
+      actorUserId,
+      // Super-admin can delete any file (audit-trail / cleanup).
+      bypassOwnership: req.user?.isSuperAdmin === true,
+    });
   }
 
   @Get(':id/presigned-url')

@@ -1231,7 +1231,7 @@
             "type": "string"
           },
           "discountValue": {
-            "description": "Discount value (percent 0–100 or flat amount)",
+            "description": "Discount value (percent 0–100 or flat amount, ≥ 0)",
             "example": 10,
             "type": "number"
           },

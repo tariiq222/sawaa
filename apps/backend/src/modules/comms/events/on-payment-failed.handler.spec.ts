@@ -36,10 +36,13 @@ describe('OnPaymentFailedHandler', () => {
   it('should send notification without push when disabled', async () => {
     pushTargets.execute.mockResolvedValue({ pushEnabled: false, tokens: [] });
     await handler.handle({ payload: { paymentId: 'p1', clientId: 'c1', amount: 100, currency: 'SAR', clientEmail: 'a@b.com', clientName: 'John' } } as any);
+    // P1: push body MUST NOT include amount/currency (lock-screen leak).
+    // Amount still flows through emailVars for the email channel.
     expect(notify.execute).toHaveBeenCalledWith(expect.objectContaining({
       channels: ['in-app', 'email'],
       type: 'PAYMENT_FAILED',
-      body: expect.stringContaining('100 SAR'),
+      body: expect.not.stringContaining('100 SAR'),
+      emailVars: expect.objectContaining({ amount: '100', currency: 'SAR' }),
     }));
   });
 

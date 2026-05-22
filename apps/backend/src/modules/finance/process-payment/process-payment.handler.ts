@@ -47,6 +47,38 @@ export class ProcessPaymentHandler {
         );
       }
 
+      // SECURITY (P1): clamp the client-supplied amount against the
+      // outstanding invoice balance. Previously the handler accepted any
+      // positive amount, letting a forged dashboard call overpay (and create
+      // an unjustified refund balance) or pay above-total to credit a vendor.
+      if (dto.amount <= 0) {
+        throw new BadRequestException('Payment amount must be positive');
+      }
+      const previouslyPaid = await tx.payment.aggregate({
+        where: { invoiceId: dto.invoiceId, status: 'COMPLETED' },
+        _sum: { amount: true },
+      });
+      const alreadyPaid = Number(previouslyPaid._sum?.amount ?? 0);
+      const outstanding = invoiceTotal - alreadyPaid;
+      if (outstanding <= 0) {
+        throw new BadRequestException('Invoice is already fully paid');
+      }
+      if (dto.amount > outstanding) {
+        throw new BadRequestException(
+          `Payment amount (${dto.amount}) exceeds outstanding balance (${outstanding})`,
+        );
+      }
+
+      // SECURITY (P1): never accept a client-supplied gatewayRef for an
+      // ONLINE_CARD without an out-of-band gateway re-fetch. The Moyasar
+      // webhook handler is the only authoritative writer for ONLINE_CARD
+      // payments. Allow operators (BANK_TRANSFER / CASH / COUPON) only.
+      if (dto.method === 'ONLINE_CARD') {
+        throw new BadRequestException(
+          'ONLINE_CARD payments must come through the Moyasar webhook flow, not the dashboard endpoint',
+        );
+      }
+
       let createdPayment;
       try {
         createdPayment = await tx.payment.create({

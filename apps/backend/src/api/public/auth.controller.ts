@@ -75,6 +75,10 @@ export class AuthController {
     private readonly lookupUser: LookupUserHandler,
   ) {}
 
+  // SECURITY (P1): tight per-IP throttle on staff login. The handler already
+  // enforces per-account bcrypt + tokenVersion checks; this stops broad
+  // credential-stuffing before it reaches them.
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Log in with email and password' })
@@ -162,10 +166,18 @@ export class AuthController {
 
     const record = await this.findActiveToken(rawToken);
 
-    await this.prisma.refreshToken.update({
-      where: { id: record.id },
+    // SECURITY (P1): conditional updateMany prevents refresh-token reuse race.
+    // If two parallel /auth/refresh calls arrive with the same token, only the
+    // first updateMany matches (revokedAt: null); the second sees count=0 and
+    // we refuse — otherwise both calls would mint fresh token pairs.
+    const { count } = await this.prisma.refreshToken.updateMany({
+      where: { id: record.id, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+    if (count === 0) {
+      // Token already consumed by a parallel refresh — treat as replay.
+      throw new UnauthorizedException('Refresh token already consumed');
+    }
 
     const user = await this.prisma.user.findUnique({
       where: { id: record.userId },

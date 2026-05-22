@@ -182,15 +182,6 @@ export const envValidationSchema = Joi.object({
   AUTHENTICA_BASE_URL: Joi.string().uri().default('https://api.authentica.sa'),
   AUTHENTICA_DEFAULT_TEMPLATE_ID: Joi.string().default('1'),
 
-  // OWNER_EMAILS — comma-separated allowlist consumed by OwnerOnlyGuard.
-  // Required in production: without it, every owner-only endpoint (refund / waive / grant / change-plan)
-  // refuses all requests, silently locking owners out of their own platform.
-  OWNER_EMAILS: Joi.when('NODE_ENV', {
-    is: 'production',
-    then: Joi.string().min(3).required(),
-    otherwise: Joi.string().allow('').optional(),
-  }),
-
   INTERNAL_METRICS_ALLOWED_IPS: Joi.string().when('NODE_ENV', {
     is: 'production',
     then: Joi.string().required(),

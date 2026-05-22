@@ -40,6 +40,11 @@ model Client {
   firstName         String?
   middleName        String?
   lastName          String?
+  // SECURITY (P1): uniqueness enforced via PARTIAL unique indexes
+  // (`client_phone_unique_idx`, `client_email_unique_idx`) defined in the
+  // 20260522030000_security_hardening_constraints migration. Prisma's `@unique`
+  // would reject any NULL beyond the first row, but walk-in clients legitimately
+  // lack contact info — the partial index covers only non-null, non-empty values.
   phone             String?
   email             String?
   emailVerified     DateTime?

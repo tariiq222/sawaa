@@ -48,7 +48,6 @@ const baseValidEnv = {
   AUTHENTICA_DEFAULT_TEMPLATE_ID: '1',
   INTERNAL_METRICS_ALLOWED_IPS: '127.0.0.1',
   INTERNAL_METRICS_TOKEN: 'internal-metrics-token-that-is-very-long-32b',
-  OWNER_EMAILS: 'owner@example.com',
   OPENROUTER_BASE_URL: 'https://openrouter.ai/api/v1',
   OPENROUTER_CHAT_MODEL: 'anthropic/claude-3.5-haiku',
   OPENAI_EMBEDDING_MODEL: 'text-embedding-3-small',
@@ -238,25 +237,6 @@ describe('envValidationSchema', () => {
     it('is allowed in development', () => {
       process.env.NODE_ENV = 'development';
       const env = buildDevEnv({ MOBILE_OTP_DEV_BYPASS_CODE: '123456' });
-      const result = envValidationSchema.validate(env, { abortEarly: false });
-      expect(result.error).toBeUndefined();
-    });
-  });
-
-  describe('OWNER_EMAILS', () => {
-    it('is required in production', () => {
-      process.env.NODE_ENV = 'production';
-      const env = { ...baseValidEnv, OWNER_EMAILS: undefined };
-      const result = envValidationSchema.validate(env, { abortEarly: false });
-      expect(result.error).toBeDefined();
-      expect(
-        result.error?.details.some((d) => d.path.includes('OWNER_EMAILS')),
-      ).toBe(true);
-    });
-
-    it('is optional in development', () => {
-      process.env.NODE_ENV = 'development';
-      const env = buildDevEnv({ OWNER_EMAILS: undefined });
       const result = envValidationSchema.validate(env, { abortEarly: false });
       expect(result.error).toBeUndefined();
     });

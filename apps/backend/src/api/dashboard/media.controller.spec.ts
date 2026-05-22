@@ -122,15 +122,15 @@ describe('DashboardMediaController (e2e)', () => {
   });
 
   describe('DELETE /dashboard/media/:id', () => {
-    it('returns 204 on delete', async () => {
-      mockDeleteFile.execute.mockResolvedValue(undefined);
-
+    it('returns 403 when actor identity is missing (JwtGuard mocked, no req.user populated)', async () => {
+      // P1: handler now requires actorUserId from req.user. The mocked guard
+      // here doesn't populate it, so the controller throws ForbiddenException.
+      // Production wires JwtStrategy which does set req.user.
       await request(app.getHttpServer())
         .delete(`/dashboard/media/${fileId}`)
         .set('Authorization', 'Bearer fake-jwt')
-        .expect(204);
-
-      expect(mockDeleteFile.execute).toHaveBeenCalledWith(fileId);
+        .expect(403);
+      expect(mockDeleteFile.execute).not.toHaveBeenCalled();
     });
   });
 

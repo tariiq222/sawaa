@@ -46,9 +46,17 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       if (onSuccess) {
         onSuccess();
       } else {
-        // Preserve full query string from the redirect param (e.g. /support-groups?groupId=xxx)
-        const target = redirectTo
-          ? `${redirectTo}${searchParams.get('groupId') ? `?groupId=${searchParams.get('groupId')}` : ''}`
+        // SECURITY (P1): only follow a `redirect` param that is a same-origin
+        // absolute path. `//evil.com` and `https://evil.com/foo` are now
+        // rejected and fall through to /account. Reject anything that doesn't
+        // start with a single `/` followed by a non-slash, and anything that
+        // contains a backslash or control characters (browser quirks).
+        const isSafeRelativePath =
+          typeof redirectTo === 'string' &&
+          /^\/(?![/\\])[A-Za-z0-9_\-./?&=%:]*$/.test(redirectTo);
+        const groupId = searchParams.get('groupId');
+        const target = isSafeRelativePath
+          ? `${redirectTo}${groupId ? `?groupId=${encodeURIComponent(groupId)}` : ''}`
           : '/account';
         router.push(target);
       }

@@ -97,11 +97,12 @@ export function useUserMutations() {
 
 /* ─── Roles ─── */
 
-export function useRoles() {
+export function useRoles(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.roles.list(),
     queryFn: fetchRoles,
     staleTime: 5 * 60 * 1000, // permissions rarely change
+    enabled: options?.enabled ?? true,
   })
 }
 
@@ -124,10 +125,11 @@ export function useRoleMutations() {
 
 /* ─── Permissions ─── */
 
-export function usePermissions() {
+export function usePermissions(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.permissions.list(),
     queryFn: fetchPermissions,
     staleTime: 10 * 60 * 1000, // permissions list is static — changes only via migration
+    enabled: options?.enabled ?? true,
   })
 }

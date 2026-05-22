@@ -112,6 +112,9 @@ model Booking {
   categoryNameSnapshot    String?
   departmentNameSnapshot  String?
 
+  // SECURITY (P1): uniqueness on bookingNumber is enforced by the partial
+  // unique index `booking_bookingnumber_unique_idx` in the
+  // 20260522030000_security_hardening_constraints migration.
   bookingNumber Int
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

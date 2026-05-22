@@ -52,14 +52,35 @@ export interface OrganizationSchema {
   logo?: string;
 }
 
+/**
+ * SECURITY (P1): JSON-LD is injected into the page via
+ * dangerouslySetInnerHTML. If any CMS-controlled string in the schema
+ * contains "</script>" or one of the U+2028 / U+2029 line separators, the
+ * raw JSON.stringify output breaks out of the script block and runs as HTML
+ * — stored XSS via a content admin.
+ *
+ * Escape: "<" -> "<" (defangs "</script>"), plus the two unicode
+ * separators (valid inside JSON strings but ILLEGAL inside JS strings).
+ * Use char codes so the source file is plain ASCII.
+ */
+const RE_LT = /</g;
+const RE_U2028 = new RegExp(String.fromCharCode(0x2028), 'g');
+const RE_U2029 = new RegExp(String.fromCharCode(0x2029), 'g');
+function jsonLdEscape(json: string): string {
+  return json
+    .replace(RE_LT, '\\u003C')
+    .replace(RE_U2028, '\\u2028')
+    .replace(RE_U2029, '\\u2029');
+}
+
 export function generateMedicalBusinessSchema(data: MedicalBusinessSchema): string {
-  return JSON.stringify(data);
+  return jsonLdEscape(JSON.stringify(data));
 }
 
 export function generateBookActionSchema(data: BookActionSchema): string {
-  return JSON.stringify(data);
+  return jsonLdEscape(JSON.stringify(data));
 }
 
 export function generateOrganizationSchema(data: OrganizationSchema): string {
-  return JSON.stringify(data);
+  return jsonLdEscape(JSON.stringify(data));
 }

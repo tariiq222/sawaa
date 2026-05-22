@@ -33,7 +33,8 @@ export function UserListPage() {
   const { t, locale } = useLocale()
   const { canDo } = useAuth()
   const { users, meta, isLoading, error, search, setSearch } = useUsers()
-  const { data: roles } = useRoles()
+  const canReadRoles = canDo("role", "read")
+  const { data: roles } = useRoles({ enabled: canReadRoles })
   const { activateMut, deactivateMut } = useUserMutations()
 
   const [activeTab, setActiveTab] = useState(defaultTab)
@@ -93,7 +94,7 @@ export function UserListPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="users">{t("users.tabs.users")}</TabsTrigger>
-          <TabsTrigger value="roles">{t("users.tabs.roles")}</TabsTrigger>
+          {canReadRoles && <TabsTrigger value="roles">{t("users.tabs.roles")}</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="users" className="mt-6 flex flex-col gap-6">
@@ -128,7 +129,7 @@ export function UserListPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="roles" className="mt-6"><RolesTab /></TabsContent>
+        {canReadRoles && <TabsContent value="roles" className="mt-6"><RolesTab /></TabsContent>}
       </Tabs>
 
       <CreateRoleDialog open={createRoleOpen} onOpenChange={setCreateRoleOpen} />

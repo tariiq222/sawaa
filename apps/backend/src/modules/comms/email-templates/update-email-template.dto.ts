@@ -1,12 +1,13 @@
 import { IsBoolean, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { NoCRLF } from '../../../common/validators/no-crlf.validator';
 
 export class UpdateEmailTemplateDto {
   @ApiPropertyOptional({ description: 'Display name (free-form, any language)', example: 'تأكيد الحجز' })
-  @IsOptional() @IsString() @MinLength(1) @MaxLength(200) name?: string;
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(200) @NoCRLF() name?: string;
 
   @ApiPropertyOptional({ description: 'Email subject line (free-form, any language)', example: 'تم تأكيد حجزك' })
-  @IsOptional() @IsString() @MinLength(1) @MaxLength(300) subject?: string;
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(300) @NoCRLF() subject?: string;
 
   @ApiPropertyOptional({ description: 'HTML body of the email (supports Handlebars variables)', example: '<p>Hello {{name}}</p>' })
   @IsOptional() @IsString() htmlBody?: string;

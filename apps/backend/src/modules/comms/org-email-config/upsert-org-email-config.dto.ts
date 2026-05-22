@@ -13,6 +13,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { NoCRLF } from '../../../common/validators/no-crlf.validator';
 
 export class SmtpCredentialsDto {
   @ApiProperty({ description: 'SMTP host', example: 'smtp.gmail.com' })
@@ -71,11 +72,15 @@ export class UpsertOrgEmailConfigDto {
   @IsOptional()
   @IsString()
   @MaxLength(100)
+  @NoCRLF()
   senderName?: string;
 
+  // SECURITY (P1): IsEmail rejects CR/LF, but we add NoCRLF as belt-and-braces
+  // against any future relaxing of IsEmail or a custom validator swap.
   @ApiPropertyOptional({ description: 'Sender email address', example: 'noreply@clinic.com' })
   @IsOptional()
   @IsEmail()
+  @NoCRLF()
   senderEmail?: string;
 
   @ApiPropertyOptional({ type: SmtpCredentialsDto })

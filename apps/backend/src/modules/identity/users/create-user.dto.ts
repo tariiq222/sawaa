@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 import { UserRole, UserGender } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { NormalizePhone } from '../shared/normalize-phone.transform';
@@ -7,11 +7,12 @@ export class CreateUserDto {
   @ApiProperty({ description: 'User email address', example: 'user@example.com' })
   @IsEmail() email!: string;
 
+  // SECURITY (P1): cap password — see client-login.dto.ts for rationale.
   @ApiProperty({ description: 'Initial password (min 8 characters)', example: 'P@ssw0rd123', format: 'password' })
-  @IsString() @MinLength(8) password!: string;
+  @IsString() @MinLength(8) @MaxLength(200) password!: string;
 
   @ApiProperty({ description: 'Full display name', example: 'Sara Al-Harbi' })
-  @IsString() name!: string;
+  @IsString() @MaxLength(200) name!: string;
 
   @ApiProperty({ description: 'System role', enum: UserRole, enumName: 'UserRole', example: UserRole.RECEPTIONIST })
   @IsEnum(UserRole) role!: UserRole;

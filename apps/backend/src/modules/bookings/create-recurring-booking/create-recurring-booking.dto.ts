@@ -11,6 +11,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -80,7 +81,10 @@ export class CreateRecurringBookingDto {
   @IsOptional() @IsInt() @Min(1) intervalDays?: number;
 
   @ApiPropertyOptional({ description: 'Number of bookings to create (mutually exclusive with until)', example: 8 })
-  @IsOptional() @IsInt() @Min(1) occurrences?: number;
+  // SECURITY (P1): without an upper bound a single request could fan out
+  // to thousands of inserts (DoS + cost amplification). 52 = one weekly
+  // session per week for a year, generous for any real counseling plan.
+  @IsOptional() @IsInt() @Min(1) @Max(52) occurrences?: number;
 
   @ApiPropertyOptional({ description: 'Last possible date for the series, inclusive (mutually exclusive with occurrences)', example: '2026-07-01T00:00:00.000Z' })
   @IsOptional() @IsDateString() until?: string;
