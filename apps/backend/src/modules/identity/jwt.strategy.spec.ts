@@ -76,6 +76,21 @@ describe('JwtStrategy', () => {
     ).rejects.toThrow(UnauthorizedException);
   });
 
+  it('validate rejects CLIENT role tokens (P0-1)', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u1',
+      isActive: true,
+      role: 'CLIENT',
+      customRoleId: null,
+      customRole: null,
+      isSuperAdmin: false,
+      tokenVersion: 0,
+    });
+    await expect(
+      strategy.validate({ sub: 'u1' } as any),
+    ).rejects.toThrow(UnauthorizedException);
+  });
+
   it('validate throws when tokenVersion mismatches', async () => {
     prisma.user.findUnique.mockResolvedValue({
       id: 'u1',

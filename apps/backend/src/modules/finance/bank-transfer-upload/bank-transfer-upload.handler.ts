@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PaymentMethod, PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { MinioService } from '../../../infrastructure/storage/minio.service';
@@ -19,6 +19,10 @@ export type BankTransferUploadCommand = BankTransferUploadDto & {
   fileBuffer: Buffer;
   mimetype: string;
   filename: string;
+  // SECURITY (P0-5): when present, the invoice MUST belong to this client.
+  // Required for any client-facing surface (mobile/website). Dashboard staff
+  // controllers may omit it (gated by CASL).
+  clientId?: string;
 };
 
 @Injectable()
@@ -45,6 +49,11 @@ export class BankTransferUploadHandler {
     });
     if (!invoice) {
       throw new NotFoundException(`Invoice ${cmd.invoiceId} not found`);
+    }
+
+    // SECURITY (P0-5): caller must own the invoice when invoked from a client surface.
+    if (cmd.clientId && invoice.clientId !== cmd.clientId) {
+      throw new ForbiddenException('Invoice does not belong to caller');
     }
 
     const invoiceTotal = Number(invoice.total);

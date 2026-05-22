@@ -44,6 +44,9 @@ export class RegisterMobileUserHandler {
         phoneVerifiedAt: null,
         emailVerifiedAt: null,
         isActive: false,
+        // SECURITY (P0-1): mobile self-signup MUST NOT default to RECEPTIONIST.
+        // Force CLIENT role so admin JwtStrategy refuses these tokens.
+        role: 'CLIENT',
       },
     });
 

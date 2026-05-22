@@ -526,19 +526,9 @@
       },
       "ChatCompletionDto": {
         "properties": {
-          "clientId": {
-            "description": "Client UUID to associate with the session",
-            "example": "00000000-0000-0000-0000-000000000020",
-            "type": "string"
-          },
           "sessionId": {
             "description": "Session UUID for conversation continuity",
             "example": "00000000-0000-0000-0000-000000000010",
-            "type": "string"
-          },
-          "userId": {
-            "description": "Staff user UUID to associate with the session",
-            "example": "00000000-0000-0000-0000-000000000030",
             "type": "string"
           },
           "userMessage": {
@@ -3364,12 +3354,41 @@
       "PermissionEntryDto": {
         "properties": {
           "action": {
-            "description": "CASL action (e.g. manage, read, create)",
+            "description": "CASL action",
+            "enum": [
+              "manage",
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "example": "read",
             "type": "string"
           },
           "subject": {
-            "description": "CASL subject (resource name or \"all\")",
+            "description": "CASL subject (resource name)",
+            "enum": [
+              "Billing",
+              "Booking",
+              "Branch",
+              "Branding",
+              "Category",
+              "Client",
+              "Content",
+              "Coupon",
+              "Department",
+              "Employee",
+              "Integration",
+              "Invoice",
+              "Payment",
+              "Plan",
+              "Report",
+              "Role",
+              "Service",
+              "Setting",
+              "Subscription",
+              "User"
+            ],
             "example": "Booking",
             "type": "string"
           }
@@ -4982,12 +5001,6 @@
       },
       "UpdateUserDto": {
         "properties": {
-          "customRoleId": {
-            "description": "Custom role UUID or null to clear",
-            "example": "00000000-0000-0000-0000-000000000000",
-            "nullable": true,
-            "type": "object"
-          },
           "email": {
             "description": "Updated email address",
             "example": "user@example.com",
@@ -5011,6 +5024,17 @@
             "description": "Updated phone number",
             "example": "+966501234567",
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateUserRoleDto": {
+        "properties": {
+          "customRoleId": {
+            "description": "Custom role UUID or null to clear",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "nullable": true,
+            "type": "object"
           },
           "role": {
             "allOf": [
@@ -5018,7 +5042,7 @@
                 "$ref": "#/components/schemas/UserRole"
               }
             ],
-            "description": "Updated system role",
+            "description": "New built-in role",
             "example": "RECEPTIONIST"
           }
         },
@@ -13709,6 +13733,97 @@
           }
         ],
         "summary": "Deactivate a user",
+        "tags": [
+          "Dashboard / Identity"
+        ]
+      }
+    },
+    "/api/v1/dashboard/identity/users/{id}/role": {
+      "patch": {
+        "operationId": "DashboardIdentityController_updateUserRoleEndpoint",
+        "parameters": [
+          {
+            "description": "User UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRoleDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Role updated"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Insufficient rank"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "User or custom role not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change a user's role or custom-role (rank-checked)",
         "tags": [
           "Dashboard / Identity"
         ]

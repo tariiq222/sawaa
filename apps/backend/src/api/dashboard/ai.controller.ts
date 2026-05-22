@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Patch, Delete, Body, Param, Query,
+  Controller, Get, Post, Patch, Delete, Body, Param, Query, Request,
   UseGuards, ParseUUIDPipe, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import {
@@ -124,7 +124,15 @@ export class DashboardAiController {
   @ApiOperation({ summary: 'Send a chat message and receive an AI reply' })
   @ApiOkResponse({ description: 'AI reply with session ID and sources count' })
   @CheckPermissions({ action: 'read', subject: 'Booking' })
-  chatCompletionEndpoint(@Body() body: ChatCompletionDto) {
-    return this.chatCompletion.execute(body);
+  chatCompletionEndpoint(
+    @Body() body: ChatCompletionDto,
+    @Request() req: { user?: { id?: string } },
+  ) {
+    // SECURITY (P0-4): caller identity is injected from the JWT, never from body.
+    return this.chatCompletion.execute({
+      userMessage: body.userMessage,
+      sessionId: body.sessionId,
+      userId: req.user?.id,
+    });
   }
 }

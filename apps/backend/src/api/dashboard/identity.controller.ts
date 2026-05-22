@@ -1,6 +1,6 @@
 import {
-  Controller, Get, Post, Patch, Delete, Body, Param, Query,
-  UseGuards, ParseUUIDPipe, HttpCode, HttpStatus,
+  Controller, Get, Post, Patch, Delete, Body, Param, Query, Request,
+  UseGuards, ParseUUIDPipe, HttpCode, HttpStatus, ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiQuery,
@@ -13,6 +13,7 @@ import { ListUsersHandler } from '../../modules/identity/users/list-users.handle
 import { GetUserHandler } from '../../modules/identity/users/get-user.handler';
 import { CreateUserHandler } from '../../modules/identity/users/create-user.handler';
 import { UpdateUserHandler } from '../../modules/identity/users/update-user.handler';
+import { UpdateUserRoleHandler } from '../../modules/identity/users/update-user-role.handler';
 import { DeactivateUserHandler } from '../../modules/identity/users/deactivate-user.handler';
 import { DeleteUserHandler } from '../../modules/identity/users/delete-user.handler';
 import { AssignRoleHandler } from '../../modules/identity/users/assign-role.handler';
@@ -57,11 +58,17 @@ class UpdateUserDto {
   @ApiPropertyOptional({ description: 'Updated gender', enum: UserGender, enumName: 'UserGender', example: UserGender.FEMALE })
   @IsOptional() @IsEnum(UserGender) gender?: UserGender;
 
-  @ApiPropertyOptional({ description: 'Updated system role', enum: UserRole, enumName: 'UserRole', example: UserRole.RECEPTIONIST })
+  // SECURITY (P0-2): role and customRoleId removed from this DTO. Use the dedicated
+  // /users/:id/role endpoint with proper rank checks. Mass-assigning role here
+  // allowed any user with update:User to escalate themselves to OWNER.
+}
+
+class UpdateUserRoleDto {
+  @ApiPropertyOptional({ description: 'New built-in role', enum: UserRole, enumName: 'UserRole', example: UserRole.RECEPTIONIST })
   @IsOptional() @IsEnum(UserRole) role?: UserRole;
 
   @ApiPropertyOptional({ description: 'Custom role UUID or null to clear', example: '00000000-0000-0000-0000-000000000000', nullable: true })
-  @IsOptional() @IsString() customRoleId?: string | null;
+  @IsOptional() @IsUUID() customRoleId?: string | null;
 }
 
 class AssignRoleDto {
@@ -80,6 +87,7 @@ export class DashboardIdentityController {
     private readonly getUserHandler: GetUserHandler,
     private readonly createUserHandler: CreateUserHandler,
     private readonly updateUserHandler: UpdateUserHandler,
+    private readonly updateUserRoleHandler: UpdateUserRoleHandler,
     private readonly deactivateUserHandler: DeactivateUserHandler,
     private readonly deleteUserHandler: DeleteUserHandler,
     private readonly assignRoleHandler: AssignRoleHandler,
@@ -192,6 +200,28 @@ export class DashboardIdentityController {
     @Body() body: UpdateUserDto,
   ) {
     return this.updateUserHandler.execute({ ...body, userId });
+  }
+
+  @Patch('users/:id/role')
+  @CheckPermissions({ action: 'manage', subject: 'Role' })
+  @ApiOperation({ summary: "Change a user's role or custom-role (rank-checked)" })
+  @ApiParam({ name: 'id', description: 'User UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Role updated' })
+  @ApiResponse({ status: 403, description: 'Insufficient rank', type: ApiErrorDto })
+  @ApiResponse({ status: 404, description: 'User or custom role not found', type: ApiErrorDto })
+  async updateUserRoleEndpoint(
+    @Param('id', ParseUUIDPipe) userId: string,
+    @Body() body: UpdateUserRoleDto,
+    @Request() req: { user?: { id?: string } },
+  ) {
+    const actorUserId = req.user?.id;
+    if (!actorUserId) throw new ForbiddenException('Missing actor');
+    return this.updateUserRoleHandler.execute({
+      actorUserId,
+      targetUserId: userId,
+      role: body.role,
+      customRoleId: body.customRoleId,
+    });
   }
 
   @Patch('users/:id/deactivate')

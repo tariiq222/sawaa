@@ -18,7 +18,10 @@ describe('ChatCompletionHandler', () => {
         {
           provide: PrismaService,
           useValue: {
-            chatSession: { create: jest.fn().mockResolvedValue({ id: 'session-1' }) },
+            chatSession: {
+              create: jest.fn().mockResolvedValue({ id: 'session-1' }),
+              findFirst: jest.fn().mockResolvedValue({ id: 'session-2' }),
+            },
             chatMessage: {
               create: jest.fn().mockResolvedValue({}),
               findMany: jest.fn().mockResolvedValue([]),
@@ -72,5 +75,13 @@ describe('ChatCompletionHandler', () => {
   it('should throw on AI error', async () => {
     (chat.complete as jest.Mock).mockRejectedValue(new Error('API error'));
     await expect(handler.execute({ userMessage: 'Hello', clientId: 'c1', userId: 'u1' })).rejects.toThrow(ServiceUnavailableException);
+  });
+
+  it('rejects sessionId not owned by caller (P0-4)', async () => {
+    const { ForbiddenException } = require('@nestjs/common');
+    (prisma.chatSession.findFirst as jest.Mock).mockResolvedValue(null);
+    await expect(
+      handler.execute({ userMessage: 'Hello', clientId: 'c1', sessionId: 'foreign-session' }),
+    ).rejects.toThrow(ForbiddenException);
   });
 });

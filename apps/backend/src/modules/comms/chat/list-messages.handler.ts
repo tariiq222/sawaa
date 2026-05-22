@@ -5,6 +5,10 @@ import { ListMessagesDto } from './list-messages.dto';
 export type ListMessagesCommand = Omit<ListMessagesDto, 'limit'> & {
   conversationId: string;
   limit: number;
+  // SECURITY (P0-4): when present, restricts access to the caller's conversation only.
+  // Required for any mobile/client surface; optional for dashboard staff endpoints
+  // (which gate on CASL booking-staff permissions instead).
+  clientId?: string;
 };
 
 @Injectable()
@@ -13,7 +17,10 @@ export class ListMessagesHandler {
 
   async execute(cmd: ListMessagesCommand) {
     const conversation = await this.prisma.chatConversation.findFirst({
-      where: { id: cmd.conversationId },
+      where: {
+        id: cmd.conversationId,
+        ...(cmd.clientId ? { clientId: cmd.clientId } : {}),
+      },
       select: { id: true },
     });
     if (!conversation) {

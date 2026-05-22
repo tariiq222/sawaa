@@ -6,6 +6,7 @@ import { ListUsersHandler } from '../../modules/identity/users/list-users.handle
 import { GetUserHandler } from '../../modules/identity/users/get-user.handler';
 import { CreateUserHandler } from '../../modules/identity/users/create-user.handler';
 import { UpdateUserHandler } from '../../modules/identity/users/update-user.handler';
+import { UpdateUserRoleHandler } from '../../modules/identity/users/update-user-role.handler';
 import { DeactivateUserHandler } from '../../modules/identity/users/deactivate-user.handler';
 import { DeleteUserHandler } from '../../modules/identity/users/delete-user.handler';
 import { AssignRoleHandler } from '../../modules/identity/users/assign-role.handler';
@@ -25,6 +26,7 @@ describe('DashboardIdentityController (e2e)', () => {
   const mockGetUser = { execute: jest.fn() };
   const mockCreateUser = { execute: jest.fn() };
   const mockUpdateUser = { execute: jest.fn() };
+  const mockUpdateUserRole = { execute: jest.fn() };
   const mockDeactivateUser = { execute: jest.fn() };
   const mockDeleteUser = { execute: jest.fn() };
   const mockAssignRole = { execute: jest.fn() };
@@ -43,6 +45,7 @@ describe('DashboardIdentityController (e2e)', () => {
         { provide: GetUserHandler, useValue: mockGetUser },
         { provide: CreateUserHandler, useValue: mockCreateUser },
         { provide: UpdateUserHandler, useValue: mockUpdateUser },
+        { provide: UpdateUserRoleHandler, useValue: mockUpdateUserRole },
         { provide: DeactivateUserHandler, useValue: mockDeactivateUser },
         { provide: DeleteUserHandler, useValue: mockDeleteUser },
         { provide: AssignRoleHandler, useValue: mockAssignRole },
@@ -215,6 +218,28 @@ describe('DashboardIdentityController (e2e)', () => {
         .set('Authorization', 'Bearer fake-jwt')
         .send({ email: 'invalid' })
         .expect(400);
+    });
+
+    it('rejects role mass-assignment via PATCH /users/:id (P0-2)', async () => {
+      // role and customRoleId MUST be forbidden on this endpoint;
+      // ValidationPipe is configured with forbidNonWhitelisted=true.
+      return request(app.getHttpServer())
+        .patch('/dashboard/identity/users/00000000-0000-0000-0000-000000000001')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ name: 'X', role: 'ADMIN' })
+        .expect(400);
+    });
+  });
+
+  describe('PATCH /dashboard/identity/users/:id/role', () => {
+    it('returns 403 when actor identity is missing (JwtGuard mocked here)', async () => {
+      // In production JwtGuard populates req.user. Our test mock bypasses the
+      // guard so the controller's ForbiddenException("Missing actor") triggers.
+      return request(app.getHttpServer())
+        .patch('/dashboard/identity/users/00000000-0000-0000-0000-000000000001/role')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ role: 'ADMIN' })
+        .expect(403);
     });
   });
 
