@@ -97,7 +97,7 @@ export function Footer({ clinics = [] }: FooterProps) {
                 />
               </div>
               <b style={{ color: 'var(--sw-primary-600)' }} className="font-extrabold">
-                سواء للإرشاد الأسري
+                {brandName}
               </b>
             </div>
             <p

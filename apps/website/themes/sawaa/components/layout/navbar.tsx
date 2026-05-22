@@ -12,6 +12,11 @@ export function Navbar() {
   const branding = useBranding();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isAuthed, setIsAuthed] = useState(false);
+
+  useEffect(() => {
+    setIsAuthed(isAuthenticated());
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -49,7 +54,7 @@ export function Navbar() {
         <Link href="/" aria-label={`الصفحة الرئيسية لـ ${brandName}`} className="flex items-center gap-2 ps-2 pe-3 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2">
           <Image src={logo} alt={`شعار ${brandName}`} width={32} height={32} className="h-7 sm:h-8 w-auto" style={{ display: 'block' }} unoptimized={logo?.startsWith('http')} />
           <span className="font-extrabold text-sm sm:text-base whitespace-nowrap" style={{ color: 'var(--sw-primary-600)' }}>
-            سواء للإرشاد الأسري
+            {brandName}
           </span>
         </Link>
 
@@ -68,11 +73,11 @@ export function Navbar() {
 
         <div className="hidden md:flex items-center gap-2">
           <Link
-            href={isAuthenticated() ? '/account' : '/login'}
+            href={isAuthed ? '/account' : '/login'}
             className="inline-flex items-center gap-2 text-[0.813rem] font-semibold px-4 py-2.5 rounded-full transition-all text-[var(--sw-neutral-700)] hover:bg-[var(--sw-primary-50)] hover:text-[var(--sw-primary-700)] focus-visible:bg-[var(--sw-primary-50)] focus-visible:text-[var(--sw-primary-700)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
           >
             <User className="w-4 h-4" aria-hidden="true" />
-            {isAuthenticated() ? 'حسابي' : 'تسجيل الدخول'}
+            {isAuthed ? 'حسابي' : 'تسجيل الدخول'}
           </Link>
           <Link
             href="/booking"
@@ -129,12 +134,12 @@ export function Navbar() {
             </a>
           ))}
           <Link
-            href={isAuthenticated() ? '/account' : '/login'}
+            href={isAuthed ? '/account' : '/login'}
             onClick={() => setMobileOpen(false)}
             className="text-xl font-semibold px-9 py-3.5 rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{ color: 'var(--sw-primary-700)', background: 'var(--sw-primary-50)' }}
           >
-            {isAuthenticated() ? 'حسابي' : 'تسجيل الدخول'}
+            {isAuthed ? 'حسابي' : 'تسجيل الدخول'}
           </Link>
           <Link
             href="/booking"

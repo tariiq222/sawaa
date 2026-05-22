@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Locale } from '@/features/locale/locale';
@@ -16,6 +17,12 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
   const { client, isLoading, error } = useCurrentClient();
   const router = useRouter();
   const tt = useT();
+
+  useEffect(() => {
+    if (!isLoading && (error || client === null)) {
+      router.push('/login');
+    }
+  }, [client, error, router, isLoading]);
 
   async function handleLogout() {
     try {
@@ -35,8 +42,11 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
   }
 
   if (error || client === null) {
-    router.push('/login');
-    return null;
+    return (
+      <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.6 }}>
+        {tt('common.loading')}
+      </div>
+    );
   }
 
   return (

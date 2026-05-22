@@ -6,6 +6,15 @@ import { OtpRequestForm } from '@/features/otp/otp-request-form';
 import { OtpVerifyForm } from '@/features/otp/otp-verify-form';
 import { useOtpSession } from '@/features/otp/use-otp-session';
 import { useT } from '@/features/locale/locale-provider';
+import { validateEmail } from '@/features/auth/auth.schema';
+
+function validateSaudiPhone(phone: string): string | null {
+  const stripped = phone.replace(/\s+/g, '');
+  if (/^\+9665\d{8}$/.test(stripped)) return null;
+  if (/^9665\d{8}$/.test(stripped)) return null;
+  if (/^05\d{8}$/.test(stripped)) return null;
+  return 'رقم الجوال غير صحيح';
+}
 
 interface ClientInfoStepProps {
   slot: AvailableSlot;
@@ -18,7 +27,13 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
   const t = useT();
   const [client, setClient] = useState<GuestClientInfo>({ name: '', phone: '', email: '' });
   const [otpStep, setOtpStep] = useState<'form' | 'request' | 'verify'>('form');
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; phone?: string }>({});
   const { token, storeToken } = useOtpSession();
+
+  const hasFieldErrors = Boolean(fieldErrors.email || fieldErrors.phone);
+  const isFormIncomplete = !client.name || !client.phone || !client.email;
+  const verifyDisabled = hasFieldErrors || isFormIncomplete;
+  const continueDisabled = isSubmitting || isFormIncomplete || hasFieldErrors;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -56,7 +71,17 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
           <input
             type="tel"
             value={client.phone}
-            onChange={(e) => setClient((c) => ({ ...c, phone: e.target.value }))}
+            onChange={(e) => {
+              const v = e.target.value;
+              setClient((c) => ({ ...c, phone: v }));
+              if (fieldErrors.phone) {
+                setFieldErrors((p) => ({ ...p, phone: undefined }));
+              }
+            }}
+            onBlur={(e) => {
+              const err = validateSaudiPhone(e.target.value);
+              setFieldErrors((p) => ({ ...p, phone: err ?? undefined }));
+            }}
             placeholder="+966..."
             style={{
               padding: '0.75rem',
@@ -65,13 +90,28 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
               width: '100%',
             }}
           />
+          {fieldErrors.phone && (
+            <div style={{ color: 'var(--destructive)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+              {fieldErrors.phone}
+            </div>
+          )}
         </div>
         <div>
           <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem' }}>{t('booking.email')}</label>
           <input
             type="email"
             value={client.email}
-            onChange={(e) => setClient((c) => ({ ...c, email: e.target.value }))}
+            onChange={(e) => {
+              const v = e.target.value;
+              setClient((c) => ({ ...c, email: v }));
+              if (fieldErrors.email) {
+                setFieldErrors((p) => ({ ...p, email: undefined }));
+              }
+            }}
+            onBlur={(e) => {
+              const err = validateEmail(e.target.value);
+              setFieldErrors((p) => ({ ...p, email: err ?? undefined }));
+            }}
             style={{
               padding: '0.75rem',
               border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
@@ -79,6 +119,11 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
               width: '100%',
             }}
           />
+          {fieldErrors.email && (
+            <div style={{ color: 'var(--destructive)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+              {fieldErrors.email}
+            </div>
+          )}
         </div>
       </div>
 
@@ -102,6 +147,7 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
       {otpStep === 'form' && !token && (
         <button
           onClick={() => setOtpStep('request')}
+          disabled={verifyDisabled}
           style={{
             padding: '0.875rem',
             background: 'var(--primary)',
@@ -109,7 +155,8 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
             border: 'none',
             borderRadius: 'var(--radius)',
             fontWeight: 600,
-            cursor: 'pointer',
+            cursor: verifyDisabled ? 'not-allowed' : 'pointer',
+            opacity: verifyDisabled ? 0.6 : 1,
           }}
         >
           {t('booking.verifyEmail')}
@@ -119,7 +166,7 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
       {otpStep === 'form' && token && (
         <button
           onClick={() => onSubmitInfo(client)}
-          disabled={isSubmitting || !client.name || !client.phone || !client.email}
+          disabled={continueDisabled}
           style={{
             padding: '0.875rem',
             background: 'var(--primary)',
@@ -127,8 +174,8 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
             border: 'none',
             borderRadius: 'var(--radius)',
             fontWeight: 600,
-            cursor: isSubmitting || !client.name || !client.phone || !client.email ? 'not-allowed' : 'pointer',
-            opacity: isSubmitting || !client.name || !client.phone || !client.email ? 0.6 : 1,
+            cursor: continueDisabled ? 'not-allowed' : 'pointer',
+            opacity: continueDisabled ? 0.6 : 1,
           }}
         >
           {isSubmitting ? t('booking.processing') : t('booking.continueToPayment')}

@@ -7,7 +7,6 @@ import type { Service, EmployeeWithUser } from '@sawaa/shared';
 import { ServicePicker } from '@/features/booking/service-picker';
 import { TherapistPicker } from '@/features/booking/therapist-picker';
 import { SlotPicker } from '@/features/booking/slot-picker';
-import { BookingSummary } from '@/features/booking/booking-summary';
 import { BranchStep } from '@/features/booking/branch-step';
 import { ClientInfoStep } from '@/features/booking/client-info-step';
 import { useOtpSession } from '@/features/otp/use-otp-session';
@@ -23,9 +22,17 @@ import { PaymentRedirect } from '@/features/payment/payment-redirect';
 import { BookingSkeleton } from '@/features/booking/booking-skeleton';
 import { useT } from '@/features/locale/locale-provider';
 
+function todayLocalIso(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function ProgressBar({ current, total }: { current: number; total: number }) {
   return (
-    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem' }}>
+    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', direction: 'rtl' }}>
       {Array.from({ length: total }).map((_, i) => (
         <div
           key={`progress-${i}`}
@@ -55,7 +62,7 @@ export default function BookingWizardPage() {
   const [selectedBranch, setSelectedBranch] = useState<PublicBranch | null>(null);
 
   const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split('T')[0],
+    todayLocalIso(),
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -108,7 +115,7 @@ export default function BookingWizardPage() {
       : null;
 
   const hasBranchStep = branches.length > 1;
-  const totalSteps = hasBranchStep ? 6 : 5;
+  const totalSteps = hasBranchStep ? 5 : 4;
 
   // Single-branch orgs skip BranchStep; default to the only branch so we
   // never send `branchId: ''` to the backend (which rejects with 400 — the
@@ -124,7 +131,6 @@ export default function BookingWizardPage() {
       case WizardStep.THERAPIST: return 1;
       case WizardStep.SLOT: return hasBranchStep ? 3 : 2;
       case WizardStep.INFO_OTP: return hasBranchStep ? 4 : 3;
-      case WizardStep.PAYMENT: return hasBranchStep ? 5 : 4;
       default: return totalSteps - 1;
     }
   })();
@@ -245,7 +251,7 @@ export default function BookingWizardPage() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
+              min={todayLocalIso()}
               suppressHydrationWarning
               style={{
                 padding: '0.5rem',
@@ -298,20 +304,6 @@ export default function BookingWizardPage() {
           }}
           isSubmitting={isSubmitting}
         />
-      )}
-
-      {state.step === WizardStep.PAYMENT && service && employee && slot && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {backBtn(() => dispatch({ type: 'SELECT_SLOT', slot }))}
-          <BookingSummary
-            service={service}
-            employee={employee}
-            slot={slot}
-            totalHalalat={Number(service.price)}
-            onConfirm={() => {}}
-            isSubmitting={false}
-          />
-        </div>
       )}
 
       {state.step === WizardStep.CONFIRMATION && (

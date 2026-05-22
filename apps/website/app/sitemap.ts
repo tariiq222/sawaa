@@ -1,6 +1,9 @@
 import type { MetadataRoute } from 'next';
 import { listPublicEmployees } from '@/features/therapists/public';
 
+export const revalidate = 3600;
+export const dynamic = 'force-static';
+
 const BASE_URL = process.env.NEXT_PUBLIC_WEBSITE_URL ?? 'https://example.com';
 
 const STATIC_ROUTES: Array<{

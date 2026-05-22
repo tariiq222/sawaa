@@ -10,6 +10,14 @@ import { useCurrentClient } from '@/features/auth/public';
 import type { ClientBookingItem } from '@sawaa/shared';
 import { getMyBookingApi, cancelMyBookingApi, rescheduleMyBookingApi } from '@/features/auth/auth.api';
 
+function todayLocalIso(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 interface BookingDetailFeatureProps {
   bookingId: string;
   locale: Locale;
@@ -169,7 +177,7 @@ function RescheduleModal({ booking, locale, onClose, onSuccess, rescheduleApi }:
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <div>
             <label style={{ fontSize: '0.875rem', fontWeight: 500, display: 'block', marginBottom: '0.375rem' }}>{tt('booking.detail.newDate')}</label>
-            <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} min={new Date().toISOString().split('T')[0]} style={inputStyle()} suppressHydrationWarning />
+            <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} min={todayLocalIso()} style={inputStyle()} suppressHydrationWarning />
           </div>
           <div>
             <label style={{ fontSize: '0.875rem', fontWeight: 500, display: 'block', marginBottom: '0.375rem' }}>{tt('booking.detail.newTime')}</label>
