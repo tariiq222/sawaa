@@ -3362,7 +3362,6 @@
           "subject": {
             "description": "CASL subject (resource name)",
             "enum": [
-              "Billing",
               "Booking",
               "Branch",
               "Branding",
@@ -3375,12 +3374,10 @@
               "Integration",
               "Invoice",
               "Payment",
-              "Plan",
               "Report",
               "Role",
               "Service",
               "Setting",
-              "Subscription",
               "User"
             ],
             "example": "Booking",
