@@ -43,6 +43,7 @@ const ADMIN_RULES: readonly Rule[] = [
   { action: 'manage', subject: 'Branding' },
   { action: 'manage', subject: 'Content' },
   { action: 'manage', subject: 'Integration' },
+  { action: 'manage', subject: 'Coupon' },
 ];
 
 const BUILT_IN: Record<string, readonly Rule[]> = {
