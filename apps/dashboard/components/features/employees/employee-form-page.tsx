@@ -73,6 +73,7 @@ export function EmployeeFormPage(props: Props) {
   const [breaks, setBreaksState] = useState<LocalBreak[]>([])
   const [draftServices, setDraftServices] = useState<DraftService[]>([])
   const [vacation, setVacation] = useState<LocalVacation>({ enabled: false, startDate: "", endDate: "", reason: "" })
+  const [branchIds, setBranchIds] = useState<string[]>([])
 
   const translatedSchema = createEmployeeSchema(t)
   const form = useForm<CreateEmployeeFormData>({
@@ -97,6 +98,8 @@ export function EmployeeFormPage(props: Props) {
     draftServices,
     setDraftServices,
     vacation,
+    branchIds,
+    setBranchIds,
     setIsSubmitting,
   })
 
@@ -167,6 +170,9 @@ export function EmployeeFormPage(props: Props) {
               onBreaksChange={setBreaksState}
               vacation={vacation}
               onVacationChange={setVacation}
+              branchIds={branchIds}
+              onBranchIdsChange={setBranchIds}
+              autoSelectMainBranch={!isEdit}
             />
           </TabsContent>
 

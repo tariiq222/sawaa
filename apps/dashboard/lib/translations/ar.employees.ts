@@ -160,6 +160,14 @@ export const arEmployees: Record<string, string> = {
   "employees.create.scheduleSection": "الجدول الأسبوعي",
   "employees.create.addBreak": "إضافة استراحة",
 
+  // — Branches Section —
+  "employees.branches.sectionTitle": "الفروع",
+  "employees.branches.sectionDesc": "اختر الفروع التي يعمل بها هذا الممارس. يُحدَّد الفرع الرئيسي تلقائياً.",
+  "employees.branches.mainBadge": "رئيسي",
+  "employees.branches.noBranchesHint": "لا توجد فروع بعد. أضف فرعاً أولاً.",
+  "employees.branches.addBranch": "إضافة فرع",
+  "employees.form.stepErrorBranches": "تعذّر حفظ الفروع",
+
   // — Services Tab —
   "employees.create.addService": "إضافة خدمة",
   "employees.create.noServices": "لا توجد خدمات مرتبطة بعد. أضف خدمة أدناه.",

@@ -160,6 +160,14 @@ export const enEmployees: Record<string, string> = {
   "employees.create.scheduleSection": "Weekly Schedule",
   "employees.create.addBreak": "Add Break",
 
+  // — Branches Section —
+  "employees.branches.sectionTitle": "Branches",
+  "employees.branches.sectionDesc": "Select the branches this practitioner works at. The main branch is selected by default.",
+  "employees.branches.mainBadge": "Main",
+  "employees.branches.noBranchesHint": "No branches yet. Add one first.",
+  "employees.branches.addBranch": "Add Branch",
+  "employees.form.stepErrorBranches": "Could not save branches",
+
   // — Services Tab —
   "employees.create.addService": "Add Service",
   "employees.create.noServices": "No services linked yet. Add a service below.",
