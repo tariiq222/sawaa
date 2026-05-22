@@ -162,8 +162,14 @@ export const enEmployees: Record<string, string> = {
 
   // — Branches Section —
   "employees.branches.sectionTitle": "Branches",
-  "employees.branches.sectionDesc": "Select the branches this practitioner works at. The main branch is selected by default.",
+  "employees.branches.sectionDesc": "Choose where this practitioner works.",
   "employees.branches.mainBadge": "Main",
+  "employees.branches.placeholder": "Select one or more branches",
+  "employees.branches.summary": "{count} branches selected",
+  "employees.branches.searchPlaceholder": "Search branches…",
+  "employees.branches.noResults": "No matching branches",
+  "employees.branches.emptyHint": "No branches selected yet",
+  "employees.branches.removeAria": "Remove branch",
   "employees.branches.noBranchesHint": "No branches yet. Add one first.",
   "employees.branches.addBranch": "Add Branch",
   "employees.form.stepErrorBranches": "Could not save branches",
