@@ -12,6 +12,9 @@ const mocks = vi.hoisted(() => ({
   assignService: vi.fn(),
   setEmployeeServiceOptions: vi.fn(),
   uploadEmployeeAvatar: vi.fn(),
+  assignEmployeeToBranch: vi.fn(),
+  unassignEmployeeFromBranch: vi.fn(),
+  fetchBranches: vi.fn(),
   toastSuccess: vi.fn(),
   toastWarning: vi.fn(),
   toastError: vi.fn(),
@@ -52,6 +55,12 @@ vi.mock("@/lib/api/employees", () => ({
   assignService: mocks.assignService,
   setEmployeeServiceOptions: mocks.setEmployeeServiceOptions,
   uploadEmployeeAvatar: mocks.uploadEmployeeAvatar,
+}))
+
+vi.mock("@/lib/api/branches", () => ({
+  assignEmployeeToBranch: mocks.assignEmployeeToBranch,
+  unassignEmployeeFromBranch: mocks.unassignEmployeeFromBranch,
+  fetchBranches: mocks.fetchBranches,
 }))
 
 import { useEmployeeForm } from "@/components/features/employees/use-employee-form"
@@ -172,6 +181,8 @@ const baseOptions = {
   draftServices: [draftService],
   setDraftServices: vi.fn(),
   vacation: { enabled: false, startDate: "", endDate: "", reason: "" },
+  branchIds: [],
+  setBranchIds: vi.fn(),
   setIsSubmitting: vi.fn(),
 }
 
@@ -183,6 +194,9 @@ describe("useEmployeeForm service price units", () => {
     mocks.assignService.mockResolvedValue({ id: "employee-service-new" })
     mocks.updateEmployeeService.mockResolvedValue({ id: "employee-service-1" })
     mocks.setEmployeeServiceOptions.mockResolvedValue([])
+    mocks.assignEmployeeToBranch.mockResolvedValue({ id: "eb-1" })
+    mocks.unassignEmployeeFromBranch.mockResolvedValue({ id: "eb-1" })
+    mocks.fetchBranches.mockResolvedValue({ items: [{ id: "main-branch", isMain: true }], meta: {} })
   })
 
   it("converts create employee service prices and duration option prices from SAR to halalas", async () => {

@@ -15,6 +15,11 @@ import {
   uploadEmployeeAvatar,
 } from "@/lib/api/employees"
 import {
+  assignEmployeeToBranch,
+  unassignEmployeeFromBranch,
+  fetchBranches,
+} from "@/lib/api/branches"
+import {
   useEmployeeMutations,
   useSetAvailability,
   useSetBreaks,
@@ -89,6 +94,7 @@ interface UseEmployeeFormOptions {
         educationAr?: string | null
         avatarUrl?: string | null
         isActive: boolean
+        branchIds?: string[]
       }
     | undefined
   availability: AvailabilitySlot[] | undefined
@@ -104,6 +110,8 @@ interface UseEmployeeFormOptions {
   draftServices: DraftService[]
   setDraftServices: (ds: DraftService[]) => void
   vacation: LocalVacation
+  branchIds: string[]
+  setBranchIds: (ids: string[]) => void
   setIsSubmitting: (v: boolean) => void
 }
 
@@ -122,6 +130,8 @@ export function useEmployeeForm({
   draftServices,
   setDraftServices,
   vacation,
+  branchIds,
+  setBranchIds,
   setIsSubmitting,
 }: UseEmployeeFormOptions) {
   const router = useRouter()
@@ -138,6 +148,7 @@ export function useEmployeeForm({
     availability: false,
     breaks: false,
     services: false,
+    branches: false,
   })
 
   useEffect(() => {
@@ -207,6 +218,13 @@ export function useEmployeeForm({
       }))
     )
   }, [existingServices, setDraftServices])
+
+  useEffect(() => {
+    if (!isEdit || hydratedRef.current.branches) return
+    if (!employee?.branchIds) return
+    hydratedRef.current.branches = true
+    setBranchIds(employee.branchIds)
+  }, [isEdit, employee, setBranchIds])
 
   async function submitEdit(data: EditEmployeeFormData) {
     const id = employeeId!
@@ -308,6 +326,18 @@ export function useEmployeeForm({
         stepErrors.push(t("employees.form.stepErrorServices"))
       }
     }
+    try {
+      const existing = new Set(employee?.branchIds ?? [])
+      const target = new Set(branchIds)
+      const toAdd = [...target].filter((id) => !existing.has(id))
+      const toRemove = [...existing].filter((id) => !target.has(id))
+      await Promise.all([
+        ...toAdd.map((branchId) => assignEmployeeToBranch(branchId, id)),
+        ...toRemove.map((branchId) => unassignEmployeeFromBranch(branchId, id)),
+      ])
+    } catch {
+      stepErrors.push(t("employees.form.stepErrorBranches"))
+    }
     if (stepErrors.length > 0) {
       toast.warning(
         `${t("employees.edit.success")} (${t("common.warnings")}: ${[...new Set(stepErrors)].join(t("common.listSep"))})`
@@ -355,6 +385,19 @@ export function useEmployeeForm({
       } catch {
         stepErrors.push(t("employees.form.stepErrorAvatar"))
       }
+    }
+    try {
+      let targetBranches = branchIds
+      if (targetBranches.length === 0) {
+        const res = await fetchBranches({ page: 1, perPage: 100 })
+        const main = res.items.find((b) => b.isMain) ?? res.items[0]
+        if (main) targetBranches = [main.id]
+      }
+      await Promise.all(
+        targetBranches.map((branchId) => assignEmployeeToBranch(branchId, newId)),
+      )
+    } catch {
+      stepErrors.push(t("employees.form.stepErrorBranches"))
     }
     const activeSlots = schedule.filter((s) => s.isActive)
     if (activeSlots.length > 0) {
