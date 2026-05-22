@@ -115,26 +115,28 @@ export function ScheduleTab({
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">
-            {t("employees.branches.sectionTitle")}
-          </CardTitle>
-          <CardDescription>{t("employees.branches.sectionDesc")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <EmployeeBranchesPicker
-            value={branchIds}
-            onChange={onBranchIdsChange}
-            autoSelectMain={autoSelectMainBranch}
-          />
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">
+              {t("employees.branches.sectionTitle")}
+            </CardTitle>
+            <CardDescription>{t("employees.branches.sectionDesc")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EmployeeBranchesPicker
+              value={branchIds}
+              onChange={onBranchIdsChange}
+              autoSelectMain={autoSelectMainBranch}
+            />
+          </CardContent>
+        </Card>
 
-      <VacationCard
-        vacation={vacation}
-        onVacationChange={onVacationChange}
-      />
+        <VacationCard
+          vacation={vacation}
+          onVacationChange={onVacationChange}
+        />
+      </div>
 
       <Card
         className={vacation.enabled ? "opacity-40 pointer-events-none" : ""}

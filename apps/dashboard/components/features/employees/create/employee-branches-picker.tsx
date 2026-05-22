@@ -57,7 +57,13 @@ export function EmployeeBranchesPicker({
   const branches: Branch[] = data?.items ?? []
 
   useEffect(() => {
-    if (!autoSelectMain || value.length > 0 || branches.length === 0) return
+    if (value.length > 0 || branches.length === 0) return
+    // Single branch: pick it regardless of autoSelectMain — it's the only option.
+    if (branches.length === 1) {
+      onChange([branches[0].id])
+      return
+    }
+    if (!autoSelectMain) return
     const main = branches.find((b) => b.isMain) ?? branches[0]
     if (main) onChange([main.id])
   }, [autoSelectMain, branches, value.length, onChange])

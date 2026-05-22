@@ -42,6 +42,7 @@ export function BookingsPageContent({
 }: BookingsPageContentProps) {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get("tab")
+  const newParam = searchParams.get("new")
   const defaultTab = tabParam === "waitlist" ? "waitlist" : "bookings"
   const { t } = useLocale()
   const { user } = useAuth()
@@ -54,7 +55,7 @@ export function BookingsPageContent({
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
 
-  const [creating, setCreating] = useState(false)
+  const [creating, setCreating] = useState(newParam === "1")
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailDefaultTab, setDetailDefaultTab] = useState<
@@ -83,10 +84,12 @@ export function BookingsPageContent({
         >
           {!creating && (
             <Button
-              className="gap-2 rounded-full px-5"
+              variant="accent"
+              size="lg"
+              className="gap-2 rounded-full px-6 shadow-md"
               onClick={() => setCreating(true)}
             >
-              <HugeiconsIcon icon={Add01Icon} size={16} />
+              <HugeiconsIcon icon={Add01Icon} size={18} strokeWidth={2.5} />
               {t("bookings.newBooking")}
             </Button>
           )}
