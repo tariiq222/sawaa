@@ -126,11 +126,6 @@
       },
       "ApplyCouponDto": {
         "properties": {
-          "clientId": {
-            "description": "Client redeeming the coupon",
-            "example": "00000000-0000-0000-0000-000000000000",
-            "type": "string"
-          },
           "code": {
             "description": "Coupon code to apply",
             "example": "WELCOME10",
@@ -144,7 +139,6 @@
         },
         "required": [
           "invoiceId",
-          "clientId",
           "code"
         ],
         "type": "object"

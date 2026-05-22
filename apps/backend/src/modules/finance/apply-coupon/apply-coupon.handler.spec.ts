@@ -1,4 +1,4 @@
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ApplyCouponHandler } from './apply-coupon.handler';
 
 // ---------------------------------------------------------------------------
@@ -18,6 +18,7 @@ const buildCoupon = (overrides: Partial<typeof defaultCoupon> = {}) => ({
 // Default invoice: 10 000 halalas subtotal, 0 existing discount, 15% VAT
 const defaultInvoice = {
   id: 'inv-1',
+  clientId: 'client-1',
   subtotal: 10000,
   discountAmt: 0,
   vatRate: 0.15,
@@ -93,7 +94,7 @@ const buildHandler = (
   return { handler, prisma };
 };
 
-const cmd = { invoiceId: 'inv-1', clientId: 'client-1', code: 'SAVE10' };
+const cmd = { invoiceId: 'inv-1', code: 'SAVE10' };
 
 // ---------------------------------------------------------------------------
 // Test helpers: extract what was written to invoice and redemption
@@ -297,5 +298,19 @@ describe('ApplyCouponHandler — guard tests', () => {
     const result = await handler.execute(cmd);
     expect(result.id).toBe('red-1');
     expect(prisma.coupon.findFirst).toHaveBeenCalled();
+  });
+
+  it('rejects callerClientId mismatch (P0-8)', async () => {
+    const { handler } = buildHandler();
+    await expect(
+      handler.execute({ ...cmd, callerClientId: 'attacker' }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('uses invoice.clientId as the redeeming client (P0-8)', async () => {
+    const { handler, prisma } = buildHandler();
+    await handler.execute(cmd);
+    const redemption = prisma.couponRedemption.create.mock.calls[0]?.[0];
+    expect(redemption?.data?.clientId).toBe('client-1');
   });
 });

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../../../infrastructure/database';
 import { MoyasarApiClient } from '../../../moyasar-api/moyasar-api.client';
 import { InitGuestPaymentDto } from './init-guest-payment.dto';
@@ -9,6 +9,20 @@ export interface InitGuestPaymentResult {
   redirectUrl: string;
 }
 
+export type InitGuestPaymentCommand = InitGuestPaymentDto & {
+  /**
+   * SECURITY (P0-9): identifier (phone/email) extracted from the OTP session
+   * by the controller. MUST equal the booking client's phone or email, or the
+   * request is rejected as a session-replay against a different booking.
+   */
+  otpIdentifier: string;
+  /**
+   * SECURITY (P0-9): jti of the OTP session. Marked consumed atomically after
+   * Moyasar accepts the payment so the same session cannot init a second one.
+   */
+  otpJti: string;
+};
+
 @Injectable()
 export class InitGuestPaymentHandler {
   constructor(
@@ -17,15 +31,26 @@ export class InitGuestPaymentHandler {
     private readonly moyasar: MoyasarApiClient,
   ) {}
 
-  async execute(dto: InitGuestPaymentDto): Promise<InitGuestPaymentResult> {
+  async execute(dto: InitGuestPaymentCommand): Promise<InitGuestPaymentResult> {
     const organizationId = DEFAULT_ORG_ID;
     const booking = await this.prisma.booking.findFirst({
       where: { id: dto.bookingId },
-      select: { id: true, status: true, price: true, currency: true },
+      select: { id: true, status: true, price: true, currency: true, clientId: true },
     });
 
     if (!booking) {
       throw new NotFoundException(`Booking ${dto.bookingId} not found`);
+    }
+
+    // SECURITY (P0-9): the OTP session must belong to the booking owner.
+    const client = await this.prisma.client.findFirst({
+      where: { id: booking.clientId },
+      select: { phone: true, email: true },
+    });
+    const id = dto.otpIdentifier;
+    const matches = !!client && (client.phone === id || client.email === id);
+    if (!matches) {
+      throw new ForbiddenException('OTP session does not match booking');
     }
 
     if (booking.status !== 'AWAITING_PAYMENT') {
@@ -104,6 +129,18 @@ export class InitGuestPaymentHandler {
     }
 
     const updatedPayment = await this.rlsTransaction.withTransaction(async (tx) => {
+      // SECURITY (P0-9): consume the OTP jti atomically. If the same session
+      // is replayed, the unique constraint on UsedOtpSession.jti rejects it.
+      try {
+        // 30m mirrors the OTP session TTL — long enough for replay protection,
+        // short enough for the table to be swept by the periodic cleanup job.
+        const expiresAt = new Date(Date.now() + 30 * 60_000);
+        await tx.usedOtpSession.create({ data: { jti: dto.otpJti, expiresAt } });
+      } catch {
+        // Already consumed (concurrent caller won) — refuse to mint a second payment.
+        await tx.payment.delete({ where: { id: payment.id } });
+        throw new ConflictException('OTP session already consumed');
+      }
       return tx.payment.update({
         where: { id: payment.id },
         data: {

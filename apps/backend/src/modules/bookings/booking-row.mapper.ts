@@ -28,7 +28,19 @@ export interface BookingRelations {
  * Booking lives in its own bounded context; `client / employee / service` are
  * loaded separately and passed in via `relations` — there is no Prisma relation.
  */
-export function mapBookingRow(b: Booking, relations: BookingRelations) {
+export interface MapBookingRowOptions {
+  /**
+   * SECURITY (P0-6): Zoom `zoomHostUrl` and `zoomStartUrl` grant host privileges
+   * (no auth, just a token in the URL). They must NEVER appear in list/read
+   * responses for booking-staff. Only a verified host (e.g. the assigned
+   * employee, via a dedicated "start meeting" endpoint) should ever see them.
+   * Default: strip both fields. Set to `true` only from a path that has
+   * already verified the caller is the meeting host.
+   */
+  includeHostUrls?: boolean;
+}
+
+export function mapBookingRow(b: Booking, relations: BookingRelations, opts: MapBookingRowOptions = {}) {
   const client = relations.clientsById.get(b.clientId) ?? null;
   const employee = relations.employeesById.get(b.employeeId) ?? null;
   const service = relations.servicesById.get(b.serviceId) ?? null;
@@ -63,8 +75,9 @@ export function mapBookingRow(b: Booking, relations: BookingRelations) {
     checkedInAt: b.checkedInAt?.toISOString() ?? null,
     notes: b.notes ?? null,
     zoomJoinUrl: b.zoomJoinUrl ?? null,
-    zoomHostUrl: b.zoomHostUrl ?? null,
-    zoomStartUrl: b.zoomStartUrl ?? null,
+    // P0-6: host URLs stripped by default. See MapBookingRowOptions.
+    zoomHostUrl: opts.includeHostUrls ? (b.zoomHostUrl ?? null) : null,
+    zoomStartUrl: opts.includeHostUrls ? (b.zoomStartUrl ?? null) : null,
     zoomMeetingStatus: b.zoomMeetingStatus ?? null,
     zoomMeetingError: b.zoomMeetingError ?? null,
     cancellationReason: b.cancelReason ?? null,

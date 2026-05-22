@@ -1,6 +1,19 @@
 import { Injectable, Logger, InternalServerErrorException, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { fetchWithTimeout } from '../http';
+
+/**
+ * Zoom meeting password — random 10-char alphanumeric.
+ * Zoom rejects symbols on free/Pro plans; alphanumeric is the safe lowest
+ * common denominator. CSPRNG (crypto.randomBytes) — never use Math.random().
+ */
+function generateMeetingPassword(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = randomBytes(10);
+  let out = '';
+  for (let i = 0; i < 10; i++) out += chars[bytes[i] % chars.length];
+  return out;
+}
 
 export interface ZoomMeetingRequest {
   topic: string;
@@ -125,10 +138,12 @@ export class ZoomApiClient implements OnModuleInit, OnModuleDestroy {
         start_time: opts.startTime,
         duration: opts.durationMins,
         timezone,
+        // SECURITY (P0-7): family-counseling sessions discuss minors, custody,
+        // and mental health. Waiting room + password + host-first are required.
+        password: generateMeetingPassword(),
         settings: {
-          join_before_host: true,
-          waiting_room: false,
-          jbh_time: 0,
+          join_before_host: false,
+          waiting_room: true,
         },
       }),
     });
