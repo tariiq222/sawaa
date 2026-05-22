@@ -327,9 +327,13 @@ export class AuthController {
   }
 
   @Public()
+  // SECURITY (P0-12): tight throttle on the lookup oracle. Even though we now
+  // return a constant response, throttle still bounds the cost-amplification
+  // risk and limits any future regression that re-exposes the difference.
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('lookup')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Check if a user exists and what auth methods are available' })
+  @ApiOperation({ summary: 'Check if a user exists and what auth methods are available (constant response; login is the authoritative path)' })
   @ApiOkResponse({
     description: 'User lookup result',
     schema: {

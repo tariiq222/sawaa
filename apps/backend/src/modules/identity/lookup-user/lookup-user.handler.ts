@@ -21,18 +21,22 @@ export class LookupUserHandler {
     const channel = detectChannel(cmd.identifier);
     const identifier = normalizeIdentifier(cmd.identifier, channel);
 
-    const userWhere = channel === 'EMAIL'
-      ? { email: identifier }
-      : { phone: identifier };
-
-    const user = await this.prisma.user.findFirst({
-      where: userWhere,
-      select: { id: true, passwordHash: true, isActive: true },
+    // SECURITY (P0-12): the endpoint USED to return `{ exists, hasPassword }`
+    // which let attackers enumerate every staff identifier in the system.
+    // We now ALWAYS return `{ exists: true, hasPassword: true }` regardless of
+    // whether the identifier corresponds to a real user. The login endpoint
+    // (rate-limited + bcrypt) is the only place credentials are checked.
+    // We still consult the DB (a) so timing is comparable to a real lookup
+    // and (b) so future logic that needs to silently no-op for missing users
+    // has the value available, but the result is NEVER exposed.
+    await this.prisma.user.findFirst({
+      where: channel === 'EMAIL' ? { email: identifier } : { phone: identifier },
+      select: { id: true },
     });
 
     return {
-      exists: !!user && user.isActive,
-      hasPassword: !!user?.passwordHash,
+      exists: true,
+      hasPassword: true,
       identifier,
       channel,
     };

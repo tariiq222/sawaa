@@ -230,6 +230,21 @@ export const envValidationSchema = Joi.object({
           message: `${key} contains a dev placeholder and must be replaced before running in production`,
         });
       }
+      // SECURITY (P0-14): reject base64-decoded all-zero keys. CI used to
+      // ship `AAAAAAAA…=` placeholders; if one ever leaks into prod env, the
+      // ciphertext is trivially decryptable. Any such key fails fast at boot.
+      if (key.endsWith('ENCRYPTION_KEY')) {
+        try {
+          const raw = Buffer.from(v, 'base64');
+          if (raw.length > 0 && raw.every((b) => b === 0)) {
+            return helpers.error('any.invalid', {
+              message: `${key} decodes to all-zero bytes — refusing to boot with a trivially-decryptable key`,
+            });
+          }
+        } catch {
+          // base64() Joi already validated the format above; ignore.
+        }
+      }
     }
     // Reject known bootstrap default for super-admin password
     if (typeof value.SUPER_ADMIN_PASSWORD === 'string') {

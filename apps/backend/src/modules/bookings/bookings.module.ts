@@ -21,6 +21,7 @@ import { NoShowBookingHandler } from './no-show-booking/no-show-booking.handler'
 import { ExpireBookingHandler } from './expire-booking/expire-booking.handler';
 import { ListBookingStatusLogHandler } from './list-booking-status-log/list-booking-status-log.handler';
 import { PaymentCompletedEventHandler } from './payment-completed-handler/payment-completed.handler';
+import { RefundCompletedEventHandler } from './refund-completed-handler/refund-completed.handler';
 import { OnBookingCancelledPromoteWaitlistHandler } from './waitlist/on-booking-cancelled-promote-waitlist.handler';
 import { GetBookingSettingsHandler } from './get-booking-settings/get-booking-settings.handler';
 import { UpsertBookingSettingsHandler } from './upsert-booking-settings/upsert-booking-settings.handler';
@@ -102,17 +103,19 @@ const handlers = [
     FinanceModule,
   ],
   controllers: [DashboardBookingsController],
-  providers: [...handlers, PaymentCompletedEventHandler, OnBookingCancelledPromoteWaitlistHandler],
+  providers: [...handlers, PaymentCompletedEventHandler, RefundCompletedEventHandler, OnBookingCancelledPromoteWaitlistHandler],
   exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CancelRecurringSeriesHandler],
 })
 export class BookingsModule implements OnModuleInit {
   constructor(
     private readonly paymentCompletedHandler: PaymentCompletedEventHandler,
+    private readonly refundCompletedHandler: RefundCompletedEventHandler,
     private readonly promoteWaitlist: OnBookingCancelledPromoteWaitlistHandler,
   ) {}
 
   onModuleInit(): void {
     this.paymentCompletedHandler.register();
+    this.refundCompletedHandler.register();
     this.promoteWaitlist.register();
   }
 }

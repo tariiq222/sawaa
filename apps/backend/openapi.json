@@ -6023,7 +6023,7 @@
             "description": "Unhandled server error"
           }
         },
-        "summary": "Check if a user exists and what auth methods are available",
+        "summary": "Check if a user exists and what auth methods are available (constant response; login is the authoritative path)",
         "tags": [
           "Public / Auth"
         ]
