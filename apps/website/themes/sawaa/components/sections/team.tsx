@@ -74,7 +74,6 @@ export function Team({ therapists, intro, totalCount }: Props) {
                         width={64}
                         height={64}
                         className="w-full h-full object-cover"
-                        unoptimized={t.publicImageUrl?.startsWith('http')}
                       />
                     ) : (
                       <span

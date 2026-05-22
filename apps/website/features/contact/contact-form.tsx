@@ -30,6 +30,9 @@ function validate(state: FormState, t: Translator) {
   return errors;
 }
 
+const inputClass =
+  'w-full p-3 rounded-lg border border-[color-mix(in_srgb,var(--primary)_20%,transparent)] bg-[var(--bg)]';
+
 export function ContactForm() {
   const t = useT();
   const [form, setForm] = useState<FormState>(INITIAL);
@@ -66,17 +69,10 @@ export function ContactForm() {
 
   if (status === 'success') {
     return (
-      <div
-        style={{
-          padding: '2rem',
-          borderRadius: '1rem',
-          background: 'color-mix(in srgb, var(--accent) 10%, transparent)',
-          textAlign: 'center',
-        }}
-      >
-        <h3 style={{ color: 'var(--accent-dark)' }}>{t('contact.form.success')}</h3>
+      <div className="p-8 rounded-2xl bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-center">
+        <h3 className="text-[var(--accent-dark)]">{t('contact.form.success')}</h3>
         <p>{t('contact.form.successDesc')}</p>
-        <button onClick={() => setStatus('idle')} style={{ marginTop: '1rem' }}>
+        <button onClick={() => setStatus('idle')} className="mt-4">
           {t('contact.form.sendAnother')}
         </button>
       </div>
@@ -92,50 +88,34 @@ export function ContactForm() {
       body: t('contact.form.body'),
     })[key];
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '0.75rem',
-    borderRadius: '0.5rem',
-    border: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)',
-    background: 'var(--bg)',
-  };
-
   return (
-    <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
       {(['name', 'phone', 'email', 'subject'] as const).map((key) => (
-        <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-          <span style={{ fontSize: '0.9rem', color: 'var(--primary-dark)' }}>{labelFor(key)}</span>
+        <label key={key} className="flex flex-col gap-1 text-start">
+          <span className="text-sm text-[var(--primary-dark)]">{labelFor(key)}</span>
           <input
             type={key === 'email' ? 'email' : key === 'phone' ? 'tel' : 'text'}
             value={form[key]}
             onChange={update(key)}
-            style={inputStyle}
+            className={inputClass}
           />
-          {errors[key] ? <span style={{ fontSize: '0.85rem', color: '#d4183d' }}>{errors[key]}</span> : null}
+          {errors[key] ? <span className="text-[0.85rem] text-[#d4183d]">{errors[key]}</span> : null}
         </label>
       ))}
-      <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-        <span style={{ fontSize: '0.9rem', color: 'var(--primary-dark)' }}>{labelFor('body')}</span>
-        <textarea rows={5} value={form.body} onChange={update('body')} style={inputStyle} />
-        {errors.body ? <span style={{ fontSize: '0.85rem', color: '#d4183d' }}>{errors.body}</span> : null}
+      <label className="flex flex-col gap-1 text-start">
+        <span className="text-sm text-[var(--primary-dark)]">{labelFor('body')}</span>
+        <textarea rows={5} value={form.body} onChange={update('body')} className={inputClass} />
+        {errors.body ? <span className="text-[0.85rem] text-[#d4183d]">{errors.body}</span> : null}
       </label>
 
       {status === 'error' && errorMsg ? (
-        <div style={{ color: '#d4183d', fontSize: '0.9rem' }}>{errorMsg}</div>
+        <div className="text-sm text-[#d4183d]">{errorMsg}</div>
       ) : null}
 
       <button
         type="submit"
         disabled={status === 'loading'}
-        style={{
-          padding: '0.75rem 1.5rem',
-          borderRadius: '0.5rem',
-          background: 'var(--primary)',
-          color: 'white',
-          border: 'none',
-          cursor: status === 'loading' ? 'wait' : 'pointer',
-          fontSize: '1rem',
-        }}
+        className="px-6 py-3 rounded-lg bg-[var(--primary)] text-white border-0 text-base cursor-pointer disabled:cursor-wait"
       >
         {status === 'loading' ? t('contact.form.sending') : t('contact.form.send')}
       </button>

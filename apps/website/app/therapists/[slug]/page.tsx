@@ -61,7 +61,6 @@ export default async function TherapistProfilePage({ params }: Props) {
                 objectFit: 'cover',
                 border: '4px solid color-mix(in srgb, var(--primary) 20%, transparent)',
               }}
-              unoptimized={therapist.publicImageUrl?.startsWith('http')}
             />
           ) : (
             <div

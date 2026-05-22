@@ -67,20 +67,20 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     }
   }
 
+  const inputClass =
+    'w-full py-3 ps-[2.625rem] pe-4 rounded-xl border border-[var(--sw-neutral-200)] bg-[var(--sw-neutral-50)] text-base text-[var(--sw-secondary-700)] outline-none box-border transition-[border-color,box-shadow] duration-150 focus:border-[var(--sw-primary-500)] focus:bg-[var(--sw-neutral-0)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--sw-primary-500)_15%,transparent)]';
+
+  const iconClass =
+    'absolute start-3.5 top-1/2 -translate-y-1/2 text-[var(--sw-neutral-400)] flex items-center pointer-events-none';
+
+  const labelClass = 'text-sm font-medium text-[var(--sw-secondary-700)]';
+
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.125rem' }}>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-[1.125rem]">
       {/* Error message */}
       {error && (
         <div
-          style={{
-            padding: '0.75rem 1rem',
-            background: 'color-mix(in srgb, var(--error) 8%, transparent)',
-            border: '1px solid color-mix(in srgb, var(--error) 25%, transparent)',
-            borderRadius: '12px',
-            color: 'var(--error)',
-            fontSize: '0.875rem',
-            lineHeight: 1.5,
-          }}
+          className="px-4 py-3 rounded-xl text-sm leading-normal bg-[color-mix(in_srgb,var(--error)_8%,transparent)] border border-[color-mix(in_srgb,var(--error)_25%,transparent)] text-[var(--error)]"
           role="alert"
         >
           {error}
@@ -88,31 +88,12 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       )}
 
       {/* Email field */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-        <label
-          htmlFor="email"
-          style={{
-            fontSize: '0.875rem',
-            fontWeight: 500,
-            color: 'var(--sw-secondary-700)',
-          }}
-        >
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="email" className={labelClass}>
           {t('auth.email')}
         </label>
-        <div style={{ position: 'relative' }}>
-          <span
-            style={{
-              position: 'absolute',
-              insetInlineStart: '0.875rem',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'var(--sw-neutral-400)',
-              display: 'flex',
-              alignItems: 'center',
-              pointerEvents: 'none',
-            }}
-            aria-hidden="true"
-          >
+        <div className="relative">
+          <span className={iconClass} aria-hidden="true">
             <Mail size={16} />
           </span>
           <input
@@ -122,60 +103,18 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="client@example.com"
             autoComplete="email"
-            style={{
-              width: '100%',
-              paddingBlock: '0.75rem',
-              paddingInlineStart: '2.625rem',
-              paddingInlineEnd: '1rem',
-              borderRadius: '12px',
-              border: '1px solid var(--sw-neutral-200)',
-              background: 'var(--sw-neutral-50)',
-              fontSize: '1rem',
-              color: 'var(--sw-secondary-700)',
-              outline: 'none',
-              transition: 'border-color 0.15s, box-shadow 0.15s',
-              boxSizing: 'border-box',
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = 'var(--sw-primary-500)';
-              e.currentTarget.style.boxShadow = '0 0 0 3px color-mix(in srgb, var(--sw-primary-500) 15%, transparent)';
-              e.currentTarget.style.background = 'var(--sw-neutral-0)';
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = 'var(--sw-neutral-200)';
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.background = 'var(--sw-neutral-50)';
-            }}
+            className={inputClass}
           />
         </div>
       </div>
 
       {/* Password field */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-        <label
-          htmlFor="password"
-          style={{
-            fontSize: '0.875rem',
-            fontWeight: 500,
-            color: 'var(--sw-secondary-700)',
-          }}
-        >
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="password" className={labelClass}>
           {t('auth.password')}
         </label>
-        <div style={{ position: 'relative' }}>
-          <span
-            style={{
-              position: 'absolute',
-              insetInlineStart: '0.875rem',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'var(--sw-neutral-400)',
-              display: 'flex',
-              alignItems: 'center',
-              pointerEvents: 'none',
-            }}
-            aria-hidden="true"
-          >
+        <div className="relative">
+          <span className={iconClass} aria-hidden="true">
             <Lock size={16} />
           </span>
           <input
@@ -185,43 +124,16 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             autoComplete="current-password"
-            style={{
-              width: '100%',
-              paddingBlock: '0.75rem',
-              paddingInlineStart: '2.625rem',
-              paddingInlineEnd: '1rem',
-              borderRadius: '12px',
-              border: '1px solid var(--sw-neutral-200)',
-              background: 'var(--sw-neutral-50)',
-              fontSize: '1rem',
-              color: 'var(--sw-secondary-700)',
-              outline: 'none',
-              transition: 'border-color 0.15s, box-shadow 0.15s',
-              boxSizing: 'border-box',
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = 'var(--sw-primary-500)';
-              e.currentTarget.style.boxShadow = '0 0 0 3px color-mix(in srgb, var(--sw-primary-500) 15%, transparent)';
-              e.currentTarget.style.background = 'var(--sw-neutral-0)';
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = 'var(--sw-neutral-200)';
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.background = 'var(--sw-neutral-50)';
-            }}
+            className={inputClass}
           />
         </div>
       </div>
 
       {/* Forgot password */}
-      <p style={{ textAlign: 'start', margin: '-0.25rem 0 0' }}>
+      <p className="text-start -mt-1 mb-0">
         <a
           href="/forgot-password"
-          style={{
-            color: 'var(--sw-primary-600)',
-            fontSize: '0.8125rem',
-            fontWeight: 500,
-          }}
+          className="text-[var(--sw-primary-600)] text-[0.8125rem] font-medium"
         >
           {t('auth.forgotPassword')}
         </a>
@@ -231,30 +143,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       <button
         type="submit"
         disabled={isLoading}
-        style={{
-          marginTop: '0.25rem',
-          padding: '0.875rem 1.5rem',
-          borderRadius: '9999px',
-          background: isLoading
-            ? 'color-mix(in srgb, var(--sw-primary-500) 60%, transparent)'
-            : 'var(--sw-primary-500)',
-          color: 'var(--sw-neutral-0)',
-          fontWeight: 800,
-          fontSize: '1rem',
-          border: 'none',
-          cursor: isLoading ? 'not-allowed' : 'pointer',
-          boxShadow: isLoading ? 'none' : 'var(--sw-shadow-primary)',
-          transition: 'transform 0.15s, box-shadow 0.15s, background 0.15s',
-          width: '100%',
-        }}
-        onMouseEnter={(e) => {
-          if (!isLoading) {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)';
-        }}
+        className="mt-1 px-6 py-3.5 rounded-full bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] font-extrabold text-base border-0 cursor-pointer shadow-[var(--sw-shadow-primary)] w-full transition-[transform,box-shadow,background] duration-150 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:translate-y-0"
       >
         {isLoading ? t('auth.signingIn') : t('auth.signIn')}
       </button>
