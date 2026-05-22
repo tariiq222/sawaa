@@ -23,6 +23,12 @@ interface ClientInfoStepProps {
   isSubmitting: boolean;
 }
 
+const inputClass =
+  'w-full p-3 border border-[color-mix(in_srgb,var(--primary)_30%,transparent)] rounded-[var(--radius)]';
+const errorClass = 'text-[var(--destructive)] text-xs mt-1';
+const primaryButtonClass =
+  'p-3.5 font-semibold cursor-pointer rounded-[var(--radius)] bg-[var(--primary)] text-[var(--primary-foreground)] border-none disabled:opacity-60 disabled:cursor-not-allowed';
+
 export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInfoStepProps) {
   const t = useT();
   const [client, setClient] = useState<GuestClientInfo>({ name: '', phone: '', email: '' });
@@ -36,38 +42,26 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
   const continueDisabled = isSubmitting || isFormIncomplete || hasFieldErrors;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div className="flex flex-col gap-4">
       <button
         onClick={onBack}
-        style={{
-          background: 'transparent',
-          border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-          borderRadius: 'var(--radius)',
-          padding: '0.5rem 1rem',
-          cursor: 'pointer',
-          alignSelf: 'start',
-        }}
+        className="self-start cursor-pointer bg-transparent border border-[color-mix(in_srgb,var(--primary)_30%,transparent)] rounded-[var(--radius)] px-4 py-2"
       >
         {t('booking.back')}
       </button>
 
-      <div style={{ display: 'grid', gap: '0.75rem' }}>
+      <div className="grid gap-3">
         <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem' }}>{t('booking.fullName')}</label>
+          <label className="block text-sm mb-1">{t('booking.fullName')}</label>
           <input
             type="text"
             value={client.name}
             onChange={(e) => setClient((c) => ({ ...c, name: e.target.value }))}
-            style={{
-              padding: '0.75rem',
-              border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-              borderRadius: 'var(--radius)',
-              width: '100%',
-            }}
+            className={inputClass}
           />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem' }}>{t('booking.phone')}</label>
+          <label className="block text-sm mb-1">{t('booking.phone')}</label>
           <input
             type="tel"
             value={client.phone}
@@ -83,21 +77,16 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
               setFieldErrors((p) => ({ ...p, phone: err ?? undefined }));
             }}
             placeholder="+966..."
-            style={{
-              padding: '0.75rem',
-              border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-              borderRadius: 'var(--radius)',
-              width: '100%',
-            }}
+            className={inputClass}
           />
           {fieldErrors.phone && (
-            <div style={{ color: 'var(--destructive)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+            <div className={errorClass}>
               {fieldErrors.phone}
             </div>
           )}
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem' }}>{t('booking.email')}</label>
+          <label className="block text-sm mb-1">{t('booking.email')}</label>
           <input
             type="email"
             value={client.email}
@@ -112,15 +101,10 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
               const err = validateEmail(e.target.value);
               setFieldErrors((p) => ({ ...p, email: err ?? undefined }));
             }}
-            style={{
-              padding: '0.75rem',
-              border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-              borderRadius: 'var(--radius)',
-              width: '100%',
-            }}
+            className={inputClass}
           />
           {fieldErrors.email && (
-            <div style={{ color: 'var(--destructive)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+            <div className={errorClass}>
               {fieldErrors.email}
             </div>
           )}
@@ -148,16 +132,7 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
         <button
           onClick={() => setOtpStep('request')}
           disabled={verifyDisabled}
-          style={{
-            padding: '0.875rem',
-            background: 'var(--primary)',
-            color: 'var(--primary-foreground)',
-            border: 'none',
-            borderRadius: 'var(--radius)',
-            fontWeight: 600,
-            cursor: verifyDisabled ? 'not-allowed' : 'pointer',
-            opacity: verifyDisabled ? 0.6 : 1,
-          }}
+          className={primaryButtonClass}
         >
           {t('booking.verifyEmail')}
         </button>
@@ -167,16 +142,7 @@ export function ClientInfoStep({ onBack, onSubmitInfo, isSubmitting }: ClientInf
         <button
           onClick={() => onSubmitInfo(client)}
           disabled={continueDisabled}
-          style={{
-            padding: '0.875rem',
-            background: 'var(--primary)',
-            color: 'var(--primary-foreground)',
-            border: 'none',
-            borderRadius: 'var(--radius)',
-            fontWeight: 600,
-            cursor: continueDisabled ? 'not-allowed' : 'pointer',
-            opacity: continueDisabled ? 0.6 : 1,
-          }}
+          className={primaryButtonClass}
         >
           {isSubmitting ? t('booking.processing') : t('booking.continueToPayment')}
         </button>

@@ -31,25 +31,25 @@ export function BookingSummary({
   const timeStr = start.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{t('booking.summary.title')}</h2>
-      <div style={{ padding: '1rem', border: '1px solid color-mix(in srgb, var(--primary) 15%, transparent)', borderRadius: 'var(--radius)' }}>
-        <div style={{ display: 'grid', gap: '0.75rem' }}>
+    <div className="flex flex-col gap-4">
+      <h2 className="text-xl font-semibold">{t('booking.summary.title')}</h2>
+      <div className="p-4 border border-[color-mix(in_srgb,var(--primary)_15%,transparent)] rounded-[var(--radius)]">
+        <div className="grid gap-3">
           <div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{t('booking.summary.service')}</div>
-            <div style={{ fontWeight: 500 }}>{service.nameAr}</div>
+            <div className="text-xs opacity-60">{t('booking.summary.service')}</div>
+            <div className="font-medium">{service.nameAr}</div>
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{t('booking.summary.therapist')}</div>
-            <div style={{ fontWeight: 500 }}>{employee.user.firstName} {employee.user.lastName}</div>
+            <div className="text-xs opacity-60">{t('booking.summary.therapist')}</div>
+            <div className="font-medium">{employee.user.firstName} {employee.user.lastName}</div>
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{t('booking.summary.dateTime')}</div>
-            <div style={{ fontWeight: 500 }}>{dateStr} · {timeStr}</div>
+            <div className="text-xs opacity-60">{t('booking.summary.dateTime')}</div>
+            <div className="font-medium">{dateStr} · {timeStr}</div>
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{t('booking.summary.total')}</div>
-            <div style={{ fontWeight: 700, fontSize: '1.125rem' }}>
+            <div className="text-xs opacity-60">{t('booking.summary.total')}</div>
+            <div className="font-bold text-lg">
               {Intl.NumberFormat('ar-SA', { style: 'decimal' }).format(halalasToSarNumber(totalHalalat))} {'⃁'}
             </div>
           </div>
@@ -58,16 +58,7 @@ export function BookingSummary({
       <button
         onClick={onConfirm}
         disabled={isSubmitting}
-        style={{
-          padding: '0.875rem',
-          background: 'var(--primary)',
-          color: 'white',
-          border: 'none',
-          borderRadius: 'var(--radius)',
-          fontWeight: 600,
-          cursor: isSubmitting ? 'not-allowed' : 'pointer',
-          opacity: isSubmitting ? 0.6 : 1,
-        }}
+        className="p-3.5 font-semibold cursor-pointer rounded-[var(--radius)] bg-[var(--primary)] text-white border-none disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {isSubmitting ? t('booking.processing') : t('booking.confirmAndPay')}
       </button>

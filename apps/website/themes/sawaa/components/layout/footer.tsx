@@ -103,7 +103,6 @@ export function Footer({ clinics = [] }: FooterProps) {
                   width={42}
                   height={42}
                   className="w-full h-full rounded-lg object-contain"
-                  unoptimized={(branding.logoUrl ?? SITE.logo)?.startsWith('http')}
                 />
               </div>
               <b style={{ color: 'var(--sw-primary-600)' }} className="font-extrabold">

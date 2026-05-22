@@ -67,7 +67,8 @@ describe('TherapistCard', () => {
   it('renders the image with alt text equal to the active-locale name', () => {
     render(<TherapistCard therapist={full} locale="en" />);
     const img = screen.getByRole('img') as HTMLImageElement;
-    expect(img.src).toBe('https://cdn.test/sara.jpg');
+    // Next.js Image rewrites src through /_next/image for optimization; the source URL is encoded in the query string.
+    expect(img.src).toContain(encodeURIComponent('https://cdn.test/sara.jpg'));
     expect(img.alt).toBe('Sara Ali');
   });
 });

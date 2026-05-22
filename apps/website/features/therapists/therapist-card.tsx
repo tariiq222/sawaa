@@ -27,7 +27,6 @@ export function TherapistCard({ therapist, locale }: Props) {
           width={96}
           height={96}
           style={{ borderRadius: '50%', objectFit: 'cover', marginBottom: '1rem' }}
-          unoptimized={therapist.publicImageUrl?.startsWith('http')}
         />
       ) : null}
       <h3 style={{ margin: 0, color: 'var(--primary-dark)' }}>{name ?? '—'}</h3>

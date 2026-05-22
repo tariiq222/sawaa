@@ -14,15 +14,15 @@ export function SlotPicker({ slots, selected, onSelect, isLoading }: SlotPickerP
   const t = useT();
   const locale = useLocale();
   if (isLoading) {
-    return <div style={{ textAlign: 'center', padding: '2rem' }}>{t('booking.loadingSlots')}</div>;
+    return <div className="text-center p-8">{t('booking.loadingSlots')}</div>;
   }
   if (slots.length === 0) {
-    return <div style={{ textAlign: 'center', padding: '2rem' }}>{t('booking.noSlots')}</div>;
+    return <div className="text-center p-8">{t('booking.noSlots')}</div>;
   }
   return (
     <div className="grid gap-3">
-      <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{t('booking.selectTime')}</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '0.75rem' }}>
+      <h2 className="text-xl font-semibold">{t('booking.selectTime')}</h2>
+      <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(120px,1fr))]">
         {slots.map((slot) => {
           const start = new Date(slot.startTime);
           const timeStr = start.toLocaleTimeString(locale === 'ar' ? 'ar-SA' : 'en-US', { hour: '2-digit', minute: '2-digit' });
@@ -31,18 +31,11 @@ export function SlotPicker({ slots, selected, onSelect, isLoading }: SlotPickerP
             <button
               key={slot.startTime}
               onClick={() => onSelect(slot)}
-              style={{
-                padding: '0.75rem',
-                border: isSelected
-                  ? '2px solid var(--primary)'
-                  : '1px solid color-mix(in srgb, var(--primary) 20%, transparent)',
-                borderRadius: 'var(--radius)',
-                background: isSelected
-                  ? 'color-mix(in srgb, var(--primary) 15%, transparent)'
-                  : 'transparent',
-                fontWeight: isSelected ? 600 : 400,
-                cursor: 'pointer',
-              }}
+              className={
+                isSelected
+                  ? 'p-3 cursor-pointer rounded-[var(--radius)] font-semibold border-2 border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_15%,transparent)]'
+                  : 'p-3 cursor-pointer rounded-[var(--radius)] font-normal border border-[color-mix(in_srgb,var(--primary)_20%,transparent)] bg-transparent'
+              }
             >
               {timeStr}
             </button>

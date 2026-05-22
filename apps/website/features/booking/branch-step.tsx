@@ -12,44 +12,27 @@ interface BranchStepProps {
 export function BranchStep({ branches, onSelect, onBack }: BranchStepProps) {
   const t = useT();
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div className="flex flex-col gap-4">
       <button
         onClick={onBack}
-        style={{
-          background: 'transparent',
-          border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-          borderRadius: 'var(--radius)',
-          padding: '0.5rem 1rem',
-          cursor: 'pointer',
-          alignSelf: 'start',
-        }}
+        className="self-start cursor-pointer bg-transparent border border-[color-mix(in_srgb,var(--primary)_30%,transparent)] rounded-[var(--radius)] px-4 py-2"
       >
         {t('booking.back')}
       </button>
-      <h2 style={{ fontSize: '1.125rem', fontWeight: 600 }}>{t('booking.selectBranch')}</h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <h2 className="text-lg font-semibold">{t('booking.selectBranch')}</h2>
+      <div className="flex flex-col gap-3">
         {branches.map((branch) => (
           <button
             key={branch.id}
             onClick={() => onSelect(branch)}
-            style={{
-              textAlign: 'start',
-              padding: '1rem',
-              border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-              borderRadius: 'var(--radius)',
-              background: 'color-mix(in srgb, var(--primary) 5%, transparent)',
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.25rem',
-            }}
+            className="text-start p-4 cursor-pointer flex flex-col gap-1 border border-[color-mix(in_srgb,var(--primary)_30%,transparent)] rounded-[var(--radius)] bg-[color-mix(in_srgb,var(--primary)_5%,transparent)]"
           >
-            <span style={{ fontWeight: 600 }}>{branch.nameAr}</span>
+            <span className="font-semibold">{branch.nameAr}</span>
             {branch.nameEn && (
-              <span style={{ fontSize: '0.875rem', opacity: 0.7 }}>{branch.nameEn}</span>
+              <span className="text-sm opacity-70">{branch.nameEn}</span>
             )}
             {branch.addressAr && (
-              <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>{branch.addressAr}</span>
+              <span className="text-xs opacity-60">{branch.addressAr}</span>
             )}
           </button>
         ))}

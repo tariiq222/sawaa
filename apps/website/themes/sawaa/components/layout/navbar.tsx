@@ -77,7 +77,7 @@ export function Navbar() {
         aria-label={t('nav.ariaPrimary')}
       >
         <Link href="/" aria-label={`${t('nav.ariaHomePrefix')} ${brandName}`} className="flex items-center gap-2 ps-2 pe-3 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2">
-          <Image src={logo} alt={`${t('nav.logoAltPrefix')} ${brandName}`} width={32} height={32} className="h-7 sm:h-8 w-auto" style={{ display: 'block' }} unoptimized={logo?.startsWith('http')} />
+          <Image src={logo} alt={`${t('nav.logoAltPrefix')} ${brandName}`} width={32} height={32} className="h-7 sm:h-8 w-auto" style={{ display: 'block' }} />
           <span className="font-extrabold text-sm sm:text-base whitespace-nowrap" style={{ color: 'var(--sw-primary-600)' }}>
             سواء للإرشاد الأسري
           </span>
