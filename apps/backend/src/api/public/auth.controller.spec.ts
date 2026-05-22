@@ -66,6 +66,8 @@ describe('AuthController (e2e)', () => {
     refreshToken: {
       findMany: jest.fn(),
       update: jest.fn(),
+      // P1: conditional updateMany prevents refresh-token reuse race.
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     user: {
       findUnique: jest.fn(),

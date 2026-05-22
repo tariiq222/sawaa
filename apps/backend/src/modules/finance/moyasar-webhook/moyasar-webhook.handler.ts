@@ -13,6 +13,7 @@ import { MoyasarWebhookDto } from './moyasar-webhook.dto';
 import { AppMetricsService } from '../../../infrastructure/telemetry/app-metrics.service';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { MoyasarApiClient, MoyasarPaymentStatus } from '../moyasar-api/moyasar-api.client';
+import { assertValidTransition } from '../payment-state-machine';
 
 export interface MoyasarWebhookRequest {
   payload: MoyasarWebhookDto;
@@ -334,6 +335,20 @@ export class MoyasarWebhookHandler {
             `Webhook: skipping update for REFUNDED payment (gatewayRef=${paymentId})`,
           );
           return { skipped: true, reason: 'already_refunded' } as MoyasarWebhookResult;
+        }
+        // SECURITY (P1): refuse webhook-driven status regressions. A replayed
+        // `failed` or `voided` event arriving after the payment is already
+        // COMPLETED must not flip it back — `payment.upsert` would otherwise
+        // silently overwrite status. Same for COMPLETED→PENDING.
+        if (existingPayment) {
+          try {
+            assertValidTransition(existingPayment.status, status);
+          } catch {
+            this.logger.warn(
+              `Webhook: refusing payment status regression ${existingPayment.status} → ${status} (gatewayRef=${paymentId})`,
+            );
+            return { skipped: true, reason: 'invalid_transition' } as MoyasarWebhookResult;
+          }
         }
 
         // Wrap payment upsert + invoice update in a single transaction to ensure

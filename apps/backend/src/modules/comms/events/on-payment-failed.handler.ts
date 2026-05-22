@@ -32,12 +32,15 @@ export class OnPaymentFailedHandler {
       const { pushEnabled, tokens } = await this.pushTargets.execute({ clientId: payload.clientId });
       const channels: Array<'in-app' | 'push' | 'email' | 'sms'> = ['in-app', 'email'];
       if (pushEnabled && tokens.length > 0) channels.push('push');
+      // SECURITY (P1): push notifications land on a (possibly unlocked) lock
+      // screen visible to anyone holding the phone. Don't include the amount
+      // or currency. Email/in-app channels carry the full detail.
       await this.notify.execute({
         recipientId: payload.clientId,
         recipientType: RecipientType.CLIENT,
         type: NotificationType.PAYMENT_FAILED,
         title: 'فشل الدفع',
-        body: `لم تتم معالجة دفعتك بقيمة ${payload.amount} ${payload.currency}. يرجى المحاولة مرة أخرى.`,
+        body: 'لم تتم معالجة الدفع. افتح التطبيق للتفاصيل.',
         channels,
         fcmTokens: tokens,
         recipientEmail: payload.clientEmail,

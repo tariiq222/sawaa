@@ -9,7 +9,10 @@ jest.mock('bcryptjs', () => ({
 
 describe('ClientLogoutHandler', () => {
   let handler: ClientLogoutHandler;
-  let prisma: { clientRefreshToken: { findMany: jest.Mock; update: jest.Mock } };
+  let prisma: {
+    clientRefreshToken: { findMany: jest.Mock; update: jest.Mock };
+    fcmToken: { deleteMany: jest.Mock };
+  };
 
   beforeEach(async () => {
     prisma = {
@@ -17,6 +20,7 @@ describe('ClientLogoutHandler', () => {
         findMany: jest.fn(),
         update: jest.fn().mockResolvedValue({}),
       },
+      fcmToken: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
     };
 
     const module = await Test.createTestingModule({
@@ -39,6 +43,8 @@ describe('ClientLogoutHandler', () => {
     expect(prisma.clientRefreshToken.update).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'tok-1' }, data: { revokedAt: expect.any(Date) } }),
     );
+    // P1: FCM tokens revoked alongside the refresh-token revocation.
+    expect(prisma.fcmToken.deleteMany).toHaveBeenCalledWith({ where: { clientId: 'client-1' } });
   });
 
   it('does nothing when no candidates match', async () => {

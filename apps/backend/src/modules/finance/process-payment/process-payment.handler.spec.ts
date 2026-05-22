@@ -49,7 +49,22 @@ const buildEventBus = () => ({ publish: jest.fn().mockResolvedValue(undefined) }
 
 describe('ProcessPaymentHandler', () => {
   it('creates payment and marks invoice PAID when fully paid', async () => {
-    const tx = buildTx();
+    // P1: ONLINE_CARD is no longer accepted by this endpoint (Moyasar webhook
+    // is the authoritative writer). Test with CASH instead — the rest of the
+    // flow (status update + event emission) is identical.
+    const tx = buildTx({
+      invoice: { findFirst: jest.fn().mockResolvedValue(mockInvoice), update: jest.fn() },
+      payment: {
+        findFirst: jest.fn().mockResolvedValue(mockPayment),
+        create: jest.fn().mockResolvedValue(mockPayment),
+        // Aggregate is called twice now: (1) outstanding-balance check before
+        // create, (2) post-create paid-vs-total check. First call: 0 paid so
+        // outstanding = 230. Second call: 230 paid → PAID status.
+        aggregate: jest.fn()
+          .mockResolvedValueOnce({ _sum: { amount: 0 } })
+          .mockResolvedValueOnce({ _sum: { amount: 230 } }),
+      },
+    });
     const prisma = buildPrisma(tx);
     const eventBus = buildEventBus();
     const handler = new ProcessPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(tx)) } as never, eventBus as never);
@@ -57,7 +72,7 @@ describe('ProcessPaymentHandler', () => {
     const result = await handler.execute({
       invoiceId: 'inv-1',
       amount: 230,
-      method: PaymentMethod.ONLINE_CARD,
+      method: PaymentMethod.CASH,
       idempotencyKey: 'key-1',
     });
 
@@ -81,7 +96,11 @@ describe('ProcessPaymentHandler', () => {
       payment: {
         findFirst: jest.fn(),
         create: jest.fn().mockResolvedValue(mockPayment),
-        aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 100 } }),
+        // First call = outstanding-balance check (0 paid → 230 outstanding).
+        // Second call = post-create total (only 100 paid → PARTIALLY_PAID).
+        aggregate: jest.fn()
+          .mockResolvedValueOnce({ _sum: { amount: 0 } })
+          .mockResolvedValueOnce({ _sum: { amount: 100 } }),
       },
     });
     const prisma = buildPrisma(tx);
@@ -115,16 +134,18 @@ describe('ProcessPaymentHandler', () => {
       payment: {
         findFirst: jest.fn().mockResolvedValue(mockPayment),
         create: jest.fn().mockRejectedValue(uniqueError),
-        aggregate: jest.fn(),
+        // P1: aggregate is called once now (outstanding check) before create.
+        aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
       },
     });
     const prisma = buildPrisma(tx);
     const handler = new ProcessPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(tx)) } as never, buildEventBus() as never);
 
+    // P1: ONLINE_CARD is no longer allowed via this endpoint. Use CASH.
     const result = await handler.execute({
       invoiceId: 'inv-1',
       amount: 230,
-      method: PaymentMethod.ONLINE_CARD,
+      method: PaymentMethod.CASH,
       idempotencyKey: 'key-1',
     });
 

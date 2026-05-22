@@ -45,6 +45,16 @@ export class ApplyCouponHandler {
     if (coupon.expiresAt && coupon.expiresAt < new Date()) {
       throw new BadRequestException(`Coupon ${cmd.code} has expired`);
     }
+    // SECURITY (P1): defense-in-depth against legacy/migrated rows that may
+    // pre-date the DTO Min/Max validators (P0-8 era). Refuse negative or
+    // out-of-range coupons rather than letting them flip the invoice math.
+    const couponValueNum = Number(coupon.discountValue);
+    if (couponValueNum < 0) {
+      throw new BadRequestException(`Coupon ${cmd.code} has an invalid discountValue`);
+    }
+    if (coupon.discountType === 'PERCENTAGE' && couponValueNum > 100) {
+      throw new BadRequestException(`Coupon ${cmd.code} has an invalid percentage value`);
+    }
     if (coupon.minOrderAmt !== null && Number(invoice.subtotal) < Number(coupon.minOrderAmt)) {
       throw new BadRequestException(`Order total does not meet minimum for coupon ${cmd.code}`);
     }

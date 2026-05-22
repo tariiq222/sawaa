@@ -194,8 +194,14 @@ export class RefundPaymentHandler {
     });
 
     const refundAmount = Number(row.amount);
-    const idempotencyKey = `refund:${row.id}:${refundAmount.toFixed(2)}`;
     const refundRequestId = randomUUID();
+    // SECURITY (P1): idempotency key keyed on the unique refundRequestId,
+    // NOT on (paymentId, amount). Two legitimate partial refunds of equal
+    // amounts on the same payment used to collide on the gateway side —
+    // Moyasar would silently return the first refund while the merchant
+    // recorded two RefundRequest rows. ApproveRefundHandler already keys on
+    // refundRequestId; this aligns both code paths.
+    const idempotencyKey = `refund:${refundRequestId}`;
 
     await tx.refundRequest.create({
       data: {

@@ -24,7 +24,7 @@ describe('AuthController (unit)', () => {
     mockLogin = { execute: jest.fn() };
     mockLogout = { execute: jest.fn() };
     mockPrisma = {
-      refreshToken: { findMany: jest.fn(), update: jest.fn() },
+      refreshToken: { findMany: jest.fn(), update: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       user: { findUnique: jest.fn() },
     };
     mockTokens = { issueTokenPair: jest.fn() };

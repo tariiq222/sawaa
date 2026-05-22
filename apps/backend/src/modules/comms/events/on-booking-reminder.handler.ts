@@ -44,7 +44,9 @@ export class OnBookingReminderHandler {
         recipientType: RecipientType.CLIENT,
         type: NotificationType.BOOKING_REMINDER,
         title: 'تذكير بموعدك',
-        body: `موعدك غداً الساعة ${timeStr}`,
+        // SECURITY (P1): redact exact time from the lock-screen push body.
+        // The SMS/email channels carry the full detail.
+        body: 'تذكير بموعدك غداً. افتح التطبيق للتفاصيل.',
         channels,
         fcmTokens: tokens,
         recipientPhone: payload.clientPhone,

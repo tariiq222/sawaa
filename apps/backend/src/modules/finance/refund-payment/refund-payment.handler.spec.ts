@@ -233,7 +233,8 @@ describe('RefundPaymentHandler', () => {
       });
 
       expect(result.refundRequestId).toBe('test-uuid-1234');
-      expect(result.idempotencyKey).toBe(`refund:pay-1:${(100).toFixed(2)}`);
+      // P1: idempotency key now keyed on refundRequestId (collision-free).
+      expect(result.idempotencyKey).toBe('refund:test-uuid-1234');
       expect(result.payment.id).toBe('pay-1');
       expect(result.payment.gatewayRef).toBe('gateway-ref-1');
       expect(prisma.refundRequest.create).toHaveBeenCalledWith(
