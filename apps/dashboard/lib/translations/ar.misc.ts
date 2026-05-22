@@ -218,8 +218,17 @@ export const arMisc: Record<string, string> = {
   "notifications.types.BOOKING_CREATED": "حجز جديد",
   "notifications.types.BOOKING_CONFIRMED": "تأكيد حجز",
   "notifications.types.BOOKING_CANCELLED": "إلغاء حجز",
+  "notifications.types.BOOKING_REMINDER": "تذكير بحجز",
   "notifications.types.PAYMENT_COMPLETED": "دفع مكتمل",
+  "notifications.types.PAYMENT_RECEIVED": "دفعة مستلمة",
   "notifications.types.PAYMENT_FAILED": "فشل الدفع",
+  "notifications.types.PAYMENT_REMINDER": "تذكير بالدفع",
+  "notifications.types.WELCOME": "ترحيب",
+  "notifications.types.GENERAL": "إشعار عام",
+  "notifications.timeline.today": "اليوم",
+  "notifications.timeline.yesterday": "أمس",
+  "notifications.timeline.earlier": "في وقت سابق",
+  "notifications.markRead": "تحديد كمقروء",
 
   // — Chatbot —
   "chatbot.col.id": "المعرف",

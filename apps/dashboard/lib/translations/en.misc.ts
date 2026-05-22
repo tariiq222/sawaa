@@ -218,8 +218,17 @@ export const enMisc: Record<string, string> = {
   "notifications.types.BOOKING_CREATED": "New Booking",
   "notifications.types.BOOKING_CONFIRMED": "Booking Confirmed",
   "notifications.types.BOOKING_CANCELLED": "Booking Cancelled",
+  "notifications.types.BOOKING_REMINDER": "Booking Reminder",
   "notifications.types.PAYMENT_COMPLETED": "Payment Completed",
+  "notifications.types.PAYMENT_RECEIVED": "Payment Received",
   "notifications.types.PAYMENT_FAILED": "Payment Failed",
+  "notifications.types.PAYMENT_REMINDER": "Payment Reminder",
+  "notifications.types.WELCOME": "Welcome",
+  "notifications.types.GENERAL": "Notification",
+  "notifications.timeline.today": "Today",
+  "notifications.timeline.yesterday": "Yesterday",
+  "notifications.timeline.earlier": "Earlier",
+  "notifications.markRead": "Mark as read",
 
   // — Chatbot —
   "chatbot.col.id": "ID",
