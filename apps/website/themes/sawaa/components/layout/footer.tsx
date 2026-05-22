@@ -4,7 +4,16 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, Phone, Mail } from 'lucide-react';
 import { useBranding } from '@/features/branding/public';
-import { NAV_LINKS, PAYMENT_METHODS, SITE, SUPPORT_GROUPS } from '../../lib/constants';
+import { useT } from '@/features/locale/locale-provider';
+import { PAYMENT_METHODS, SITE, SUPPORT_GROUPS } from '../../lib/constants';
+
+const navLinks = [
+  { key: 'nav.home', href: '/' },
+  { key: 'nav.therapists', href: '/therapists' },
+  { key: 'nav.supportGroups', href: '/support-groups' },
+  { key: 'nav.burnout', href: '/burnout-test' },
+  { key: 'nav.contact', href: '/contact' },
+] as const;
 
 export interface FooterClinic {
   id: string;
@@ -57,6 +66,7 @@ function ColumnHeader({ children }: { children: React.ReactNode }) {
 }
 
 export function Footer({ clinics = [] }: FooterProps) {
+  const t = useT();
   const branding = useBranding();
   const brandName = branding.organizationNameAr || SITE.name;
   const tagline = branding.productTagline || SITE.desc;
@@ -97,7 +107,7 @@ export function Footer({ clinics = [] }: FooterProps) {
                 />
               </div>
               <b style={{ color: 'var(--sw-primary-600)' }} className="font-extrabold">
-                سواء للإرشاد الأسري
+                {brandName}
               </b>
             </div>
             <p
@@ -132,28 +142,28 @@ export function Footer({ clinics = [] }: FooterProps) {
           </div>
 
           <div>
-            <ColumnHeader>روابط سريعة</ColumnHeader>
+            <ColumnHeader>{t('footer.quickLinks')}</ColumnHeader>
             <ul className="space-y-3">
-              {NAV_LINKS.map((l) => (
+              {navLinks.map((l) => (
                 <li key={l.href}>
                   <a
                     href={l.href}
-                    aria-label={l.label}
+                    aria-label={t(l.key)}
                     className="text-[0.813rem] transition"
                     style={{ color: 'var(--sw-neutral-500)' }}
                   >
-                    {l.label}
+                    {t(l.key)}
                   </a>
                 </li>
               ))}
               <li>
                 <Link
                   href="/booking"
-                  aria-label="احجز موعدك"
+                  aria-label={t('nav.booking')}
                   className="text-[0.813rem] transition"
                   style={{ color: 'var(--sw-neutral-500)' }}
                 >
-                  احجز موعدك
+                  {t('nav.booking')}
                 </Link>
               </li>
             </ul>
@@ -161,7 +171,7 @@ export function Footer({ clinics = [] }: FooterProps) {
 
           {clinics.length > 0 ? (
             <div>
-              <ColumnHeader>العيادات</ColumnHeader>
+              <ColumnHeader>{t('footer.clinics')}</ColumnHeader>
               <ul className="space-y-3">
                 {clinics.map((c) => (
                   <li key={c.id}>
@@ -175,7 +185,7 @@ export function Footer({ clinics = [] }: FooterProps) {
           ) : null}
 
           <div>
-            <ColumnHeader>مجموعات الدعم</ColumnHeader>
+            <ColumnHeader>{t('footer.supportGroups')}</ColumnHeader>
             <ul className="space-y-3">
               {SUPPORT_GROUPS.map((g) => (
                 <li key={g.slug}>
@@ -193,7 +203,7 @@ export function Footer({ clinics = [] }: FooterProps) {
           </div>
 
           <div>
-            <ColumnHeader>تواصل معنا</ColumnHeader>
+            <ColumnHeader>{t('footer.contact')}</ColumnHeader>
             <div className="space-y-4">
               <div className="flex gap-3 items-start text-[0.813rem]" style={{ color: 'var(--sw-neutral-500)' }}>
                 <div
@@ -242,7 +252,7 @@ export function Footer({ clinics = [] }: FooterProps) {
             className="text-[0.75rem] font-bold uppercase tracking-widest"
             style={{ color: 'var(--sw-neutral-500)' }}
           >
-            طرق الدفع
+            {t('footer.paymentMethods')}
           </span>
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center">
             {PAYMENT_METHODS.map((p) => (
@@ -268,10 +278,10 @@ export function Footer({ clinics = [] }: FooterProps) {
           style={{ color: 'var(--sw-neutral-500)' }}
         >
           <span suppressHydrationWarning>
-            جميع الحقوق محفوظة لـ{brandName} © {new Date().getFullYear()}
+            {t('footer.allRights')}{brandName} © {new Date().getFullYear()}
           </span>
           <span className="inline-flex items-center gap-1.5" suppressHydrationWarning>
-            صنع بحب <span style={{ color: '#ef4444' }}>♥</span> {new Date().getFullYear()}
+            {t('footer.madeWith')} <span style={{ color: '#ef4444' }}>♥</span> {new Date().getFullYear()}
           </span>
         </div>
       </div>

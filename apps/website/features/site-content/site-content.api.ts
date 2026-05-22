@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/nextjs';
+
 import { getApiBase } from '@/lib/api-base';
 import type { SiteSettingRow, SiteSettingsMap } from './types';
 
@@ -8,12 +10,22 @@ export async function fetchSiteSettings(prefix?: string): Promise<SiteSettingRow
       next: { revalidate: 60, tags: ['site-content'] },
     });
     if (!res.ok) {
-      console.warn(`[site-content] fetch failed: ${res.status} — using empty settings`);
+      Sentry.addBreadcrumb({
+        category: 'fetch',
+        level: 'warning',
+        message: '[site-content] fetch failed — using empty settings',
+        data: { status: res.status },
+      });
       return [];
     }
     return (await res.json()) as SiteSettingRow[];
   } catch (err) {
-    console.warn('[site-content] fetch error — using empty settings', err);
+    Sentry.addBreadcrumb({
+      category: 'fetch',
+      level: 'warning',
+      message: '[site-content] fetch error — using empty settings',
+      data: { error: err instanceof Error ? err.message : String(err) },
+    });
     return [];
   }
 }

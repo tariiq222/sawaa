@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
 
 vi.mock('./contact.api', () => ({
   submitContactMessage: vi.fn(),
@@ -7,8 +8,14 @@ vi.mock('./contact.api', () => ({
 
 import { ContactForm } from './contact-form';
 import { submitContactMessage } from './contact.api';
+import { LocaleProvider } from '@/features/locale/locale-provider';
+import type { Locale } from '@/features/locale/locale';
 
 const submitMock = submitContactMessage as unknown as ReturnType<typeof vi.fn>;
+
+function withLocale(locale: Locale, children: ReactNode) {
+  return <LocaleProvider locale={locale}>{children}</LocaleProvider>;
+}
 
 function fillField(label: RegExp | string, value: string) {
   const el = screen.getByLabelText(label) as HTMLInputElement | HTMLTextAreaElement;
@@ -21,7 +28,7 @@ describe('ContactForm', () => {
   });
 
   it('blocks submission and shows a name error when name is too short', async () => {
-    render(<ContactForm locale="en" />);
+    render(withLocale('en', <ContactForm />));
     fillField(/message/i, 'a valid message');
     fillField(/email/i, 'a@b.co');
     fireEvent.click(screen.getByRole('button', { name: /send/i }));
@@ -30,7 +37,7 @@ describe('ContactForm', () => {
   });
 
   it('requires email or phone', async () => {
-    render(<ContactForm locale="en" />);
+    render(withLocale('en', <ContactForm />));
     fillField(/name/i, 'Sara');
     fillField(/message/i, 'a valid message');
     fireEvent.click(screen.getByRole('button', { name: /send/i }));
@@ -39,7 +46,7 @@ describe('ContactForm', () => {
   });
 
   it('flags messages shorter than 5 characters', async () => {
-    render(<ContactForm locale="en" />);
+    render(withLocale('en', <ContactForm />));
     fillField(/name/i, 'Sara');
     fillField(/email/i, 'a@b.co');
     fillField(/message/i, 'hi');
@@ -50,7 +57,7 @@ describe('ContactForm', () => {
 
   it('calls submitContactMessage with omitted empty optionals', async () => {
     submitMock.mockResolvedValue(undefined);
-    render(<ContactForm locale="en" />);
+    render(withLocale('en', <ContactForm />));
     fillField(/name/i, 'Sara');
     fillField(/email/i, 'sara@test.com');
     fillField(/message/i, 'Looking forward to the session.');
@@ -70,7 +77,7 @@ describe('ContactForm', () => {
 
   it('surfaces the API error message when submission fails', async () => {
     submitMock.mockRejectedValue(new Error('Network down'));
-    render(<ContactForm locale="en" />);
+    render(withLocale('en', <ContactForm />));
     fillField(/name/i, 'Sara');
     fillField(/email/i, 'sara@test.com');
     fillField(/message/i, 'Looking forward to the session.');
@@ -79,7 +86,7 @@ describe('ContactForm', () => {
   });
 
   it('renders Arabic validation error when locale is ar', async () => {
-    render(<ContactForm locale="ar" />);
+    render(withLocale('ar', <ContactForm />));
     fillField(/الرسالة/, 'رسالة صالحة');
     fillField(/البريد/, 'a@b.co');
     fireEvent.click(screen.getByRole('button', { name: /إرسال/ }));
