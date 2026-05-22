@@ -6,8 +6,8 @@ const nextConfig = {
   outputFileTracingRoot: new URL('../../', import.meta.url).pathname,
   transpilePackages: ['@sawaa/api-client', '@sawaa/shared'],
   typedRoutes: false,
-  eslint: { ignoreDuringBuilds: process.env.NODE_ENV !== 'production' },
-  typescript: { ignoreBuildErrors: process.env.NODE_ENV !== 'production' },
+  eslint: { ignoreDuringBuilds: false },
+  typescript: { ignoreBuildErrors: false },
   images: {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],

@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useState } from 'react';
+import { useReducer } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { reduce, INITIAL_WIZARD_STATE, WizardStep } from '@sawaa/shared';
 import type { Service, EmployeeWithUser } from '@sawaa/shared';
@@ -30,6 +30,63 @@ function todayLocalIso(): string {
   return `${y}-${m}-${day}`;
 }
 
+type UiState = {
+  awaitingBranch: boolean;
+  pendingEmployee: EmployeeWithUser | null;
+  selectedBranch: PublicBranch | null;
+  selectedDate: string;
+  isSubmitting: boolean;
+  submitError: string | null;
+  redirectUrl: string | null;
+  bookingId: string | null;
+};
+
+type UiAction =
+  | { type: 'START_BRANCH_PICK'; employee: EmployeeWithUser }
+  | { type: 'PICK_BRANCH'; branch: PublicBranch }
+  | { type: 'CANCEL_BRANCH_PICK' }
+  | { type: 'SET_DATE'; date: string }
+  | { type: 'SUBMIT_START' }
+  | { type: 'SUBMIT_ERROR'; error: string }
+  | { type: 'SUBMIT_DONE'; bookingId: string; redirectUrl: string };
+
+const INITIAL_UI_STATE: UiState = {
+  awaitingBranch: false,
+  pendingEmployee: null,
+  selectedBranch: null,
+  selectedDate: todayLocalIso(),
+  isSubmitting: false,
+  submitError: null,
+  redirectUrl: null,
+  bookingId: null,
+};
+
+function uiReducer(state: UiState, action: UiAction): UiState {
+  switch (action.type) {
+    case 'START_BRANCH_PICK':
+      return { ...state, awaitingBranch: true, pendingEmployee: action.employee };
+    case 'PICK_BRANCH':
+      return { ...state, selectedBranch: action.branch, awaitingBranch: false };
+    case 'CANCEL_BRANCH_PICK':
+      return { ...state, awaitingBranch: false, pendingEmployee: null };
+    case 'SET_DATE':
+      return { ...state, selectedDate: action.date };
+    case 'SUBMIT_START':
+      return { ...state, isSubmitting: true, submitError: null };
+    case 'SUBMIT_ERROR':
+      return { ...state, isSubmitting: false, submitError: action.error };
+    case 'SUBMIT_DONE':
+      return {
+        ...state,
+        isSubmitting: false,
+        bookingId: action.bookingId,
+        redirectUrl: action.redirectUrl,
+      };
+    default:
+      return state;
+  }
+}
+
 function ProgressBar({ current, total }: { current: number; total: number }) {
   return (
     <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', direction: 'rtl' }}>
@@ -55,19 +112,17 @@ export default function BookingWizardPage() {
   const t = useT();
   const [state, dispatch] = useReducer(reduce, INITIAL_WIZARD_STATE);
   // Whether we are on the intermediate branch-selection step (between THERAPIST and SLOT).
-  const [awaitingBranch, setAwaitingBranch] = useState(false);
-  const [pendingEmployee, setPendingEmployee] = useState<EmployeeWithUser | null>(null);
-
-
-  const [selectedBranch, setSelectedBranch] = useState<PublicBranch | null>(null);
-
-  const [selectedDate, setSelectedDate] = useState<string>(
-    todayLocalIso(),
-  );
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
-  const [bookingId, setBookingId] = useState<string | null>(null);
+  const [ui, dispatchUi] = useReducer(uiReducer, INITIAL_UI_STATE);
+  const {
+    awaitingBranch,
+    pendingEmployee,
+    selectedBranch,
+    selectedDate,
+    isSubmitting,
+    submitError,
+    redirectUrl,
+    bookingId,
+  } = ui;
   const { token } = useOtpSession();
 
   // React Query: fetch initial data with caching, deduping, and error handling
@@ -151,16 +206,14 @@ export default function BookingWizardPage() {
 
   const handleEmployeeSelect = (emp: EmployeeWithUser) => {
     if (hasBranchStep) {
-      setPendingEmployee(emp);
-      setAwaitingBranch(true);
+      dispatchUi({ type: 'START_BRANCH_PICK', employee: emp });
     } else {
       dispatch({ type: 'SELECT_EMPLOYEE', employee: emp });
     }
   };
 
   const handleBranchSelect = (branch: PublicBranch) => {
-    setSelectedBranch(branch);
-    setAwaitingBranch(false);
+    dispatchUi({ type: 'PICK_BRANCH', branch });
     dispatch({ type: 'SELECT_EMPLOYEE', employee: pendingEmployee! });
   };
 
@@ -226,10 +279,7 @@ export default function BookingWizardPage() {
         <BranchStep
           branches={branches}
           onSelect={handleBranchSelect}
-          onBack={() => {
-            setAwaitingBranch(false);
-            setPendingEmployee(null);
-          }}
+          onBack={() => dispatchUi({ type: 'CANCEL_BRANCH_PICK' })}
         />
       )}
 
@@ -237,8 +287,7 @@ export default function BookingWizardPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {backBtn(() => {
             if (hasBranchStep) {
-              setPendingEmployee(employee);
-              setAwaitingBranch(true);
+              dispatchUi({ type: 'START_BRANCH_PICK', employee });
             } else {
               dispatch({ type: 'SELECT_EMPLOYEE', employee });
             }
@@ -250,7 +299,7 @@ export default function BookingWizardPage() {
             <input
               type="date"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              onChange={(e) => dispatchUi({ type: 'SET_DATE', date: e.target.value })}
               min={todayLocalIso()}
               suppressHydrationWarning
               style={{
@@ -275,12 +324,10 @@ export default function BookingWizardPage() {
           onBack={() => dispatch({ type: 'SELECT_SLOT', slot })}
           onSubmitInfo={async (client) => {
             if (!token) return;
-            setIsSubmitting(true);
-            setSubmitError(null);
+            dispatchUi({ type: 'SUBMIT_START' });
             try {
               if (!effectiveBranchId) {
-                setSubmitError(t('booking.errors.missingBranch'));
-                setIsSubmitting(false);
+                dispatchUi({ type: 'SUBMIT_ERROR', error: t('booking.errors.missingBranch') });
                 return;
               }
               const booking = await createGuestBooking(
@@ -294,12 +341,16 @@ export default function BookingWizardPage() {
                 token,
               );
               const payment = await initGuestPayment(booking.bookingId, token);
-              setBookingId(booking.bookingId);
-              setRedirectUrl(payment.redirectUrl);
+              dispatchUi({
+                type: 'SUBMIT_DONE',
+                bookingId: booking.bookingId,
+                redirectUrl: payment.redirectUrl,
+              });
             } catch (err) {
-              setSubmitError(err instanceof Error ? err.message : t('common.bookingFailed'));
-            } finally {
-              setIsSubmitting(false);
+              dispatchUi({
+                type: 'SUBMIT_ERROR',
+                error: err instanceof Error ? err.message : t('common.bookingFailed'),
+              });
             }
           }}
           isSubmitting={isSubmitting}

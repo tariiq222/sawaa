@@ -32,7 +32,10 @@ function writeLocalStorage(key: string, value: string | null): void {
   }
 }
 
-let storedClient: ClientProfile | null = (() => {
+// `undefined` = not yet loaded from localStorage; `null` = loaded and absent/expired.
+let storedClient: ClientProfile | null | undefined = undefined;
+
+function loadFromStorage(): ClientProfile | null {
   const raw = readLocalStorage(CLIENT_KEY);
   if (!raw) return null;
   try {
@@ -52,7 +55,7 @@ let storedClient: ClientProfile | null = (() => {
   } catch {
     return null;
   }
-})();
+}
 
 export function setClient(client: ClientProfile | null): void {
   storedClient = client;
@@ -65,6 +68,9 @@ export function setClient(client: ClientProfile | null): void {
 }
 
 export function getClient(): ClientProfile | null {
+  if (storedClient === undefined) {
+    storedClient = loadFromStorage();
+  }
   return storedClient;
 }
 
@@ -74,5 +80,5 @@ export function clearAuth(): void {
 }
 
 export function isAuthenticated(): boolean {
-  return storedClient !== null;
+  return getClient() !== null;
 }

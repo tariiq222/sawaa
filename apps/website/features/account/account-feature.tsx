@@ -27,10 +27,11 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
   async function handleLogout() {
     try {
       await clientLogoutApi();
-    } finally {
-      clearAuth();
-      router.push('/login');
+    } catch {
+      // ignore network failure — local clear still runs below
     }
+    clearAuth();
+    router.push('/login');
   }
 
   if (isLoading) {

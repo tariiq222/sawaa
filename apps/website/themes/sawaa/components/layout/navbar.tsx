@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Calendar, Menu, X, User } from 'lucide-react';
 import { useBranding } from '@/features/branding/public';
 import { isAuthenticated } from '@/features/auth/public';
@@ -22,12 +22,19 @@ export function Navbar() {
   const branding = useBranding();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const node = sentinelRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setScrolled(!entry.isIntersecting);
+      },
+      { threshold: 0, rootMargin: '0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
   }, []);
 
   // Lock body scroll when mobile menu is open
@@ -47,6 +54,19 @@ export function Navbar() {
 
   return (
     <>
+      <div
+        ref={sentinelRef}
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: '40px',
+          left: 0,
+          height: '1px',
+          width: '1px',
+          pointerEvents: 'none',
+          opacity: 0,
+        }}
+      />
       <nav
         className="sw-nav-glass fixed top-4 left-1/2 z-[1000] w-[calc(100%-16px)] sm:w-[calc(100%-32px)] max-w-[1260px] rounded-full px-3 py-2 flex items-center justify-between transition-all duration-300"
         style={{
