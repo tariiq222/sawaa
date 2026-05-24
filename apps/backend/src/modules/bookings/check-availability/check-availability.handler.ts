@@ -298,10 +298,20 @@ export class CheckAvailabilityHandler {
       select: { durationMins: true },
     });
     if (global) return global;
-    return this.prisma.serviceDurationOption.findFirst({
+    const any = await this.prisma.serviceDurationOption.findFirst({
       where: { serviceId, isActive: true },
       orderBy: [{ deliveryType: 'asc' }, { sortOrder: 'asc' }],
       select: { durationMins: true },
     });
+    if (any) return any;
+    // Final fallback: services that don't configure ServiceDurationOption rows
+    // still carry the base duration on the Service row itself. Use it so the
+    // availability check has a non-zero duration to grid against.
+    const svc = await this.prisma.service.findFirst({
+      where: { id: serviceId, isActive: true },
+      select: { durationMins: true },
+    });
+    if (svc && svc.durationMins > 0) return { durationMins: svc.durationMins };
+    return null;
   }
 }

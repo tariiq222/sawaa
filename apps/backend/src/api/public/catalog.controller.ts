@@ -33,6 +33,15 @@ export class PublicCatalogController {
             where: { isActive: true },
             orderBy: { sortOrder: 'asc' },
           },
+          bookingConfigs: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              deliveryType: true,
+              price: true,
+              durationMins: true,
+            },
+          },
         },
         orderBy: { nameAr: 'asc' },
       }),
