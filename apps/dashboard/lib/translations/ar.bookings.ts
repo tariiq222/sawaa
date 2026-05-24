@@ -275,6 +275,7 @@ export const arBookings: Record<string, string> = {
   "bookings.pos.summary.title": "ملخص الحجز",
   "bookings.pos.summary.servicePrice": "سعر الخدمة",
   "bookings.pos.confirm": "تأكيد الحجز",
+  "bookings.pos.missingPrefix": "أكمل أولاً",
 
   // booking-columns (list table)
   "bookings.col.header.client": "المريض",

@@ -207,11 +207,15 @@ export class CreateBookingHandler {
       where: { id: dto.serviceId },
       select: { minParticipants: true, maxParticipants: true, reserveWithoutPayment: true },
     });
-    const isGroupService =
-      !!serviceRecord && serviceRecord.maxParticipants > 1 && serviceRecord.reserveWithoutPayment;
+    // A service is "group" for capacity/bookingType purposes whenever it
+    // accepts more than one participant. `reserveWithoutPayment` separately
+    // controls the fill-then-charge flow (PENDING_GROUP_FILL status).
+    const isGroupService = !!serviceRecord && serviceRecord.maxParticipants > 1;
+    const isReserveBeforePaymentGroup =
+      isGroupService && !!serviceRecord?.reserveWithoutPayment;
 
-    // For group services, use PENDING_GROUP_FILL until minParticipants is reached.
-    const initialStatus = isGroupService ? 'PENDING_GROUP_FILL' : 'PENDING';
+    // For reserve-before-payment group services, use PENDING_GROUP_FILL until minParticipants is reached.
+    const initialStatus = isReserveBeforePaymentGroup ? 'PENDING_GROUP_FILL' : 'PENDING';
 
     // Serializable: prevents two concurrent group-session bookings from both reading slotCount=N-1 and overflowing capacity.
     const booking = await this.rlsTransaction.withTransaction(

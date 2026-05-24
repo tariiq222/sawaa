@@ -275,6 +275,7 @@ export const enBookings: Record<string, string> = {
   "bookings.pos.summary.title": "Booking Summary",
   "bookings.pos.summary.servicePrice": "Service Price",
   "bookings.pos.confirm": "Confirm Booking",
+  "bookings.pos.missingPrefix": "Complete first",
 
   // booking-columns (list table)
   "bookings.col.header.client": "Client",

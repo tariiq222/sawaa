@@ -35,8 +35,11 @@ function getTypeLabel(type: string | null, t: (key: string) => string): string |
     in_person: t("bookings.wizard.step.typeDuration.inPerson"),
     online: t("bookings.wizard.step.typeDuration.online"),
     walk_in: t("bookings.wizard.step.typeDuration.walkIn"),
+    IN_PERSON: t("bookings.wizard.step.typeDuration.inPerson"),
+    ONLINE: t("bookings.wizard.step.typeDuration.online"),
+    WALK_IN: t("bookings.wizard.step.typeDuration.walkIn"),
   }
-  return map[type] ?? type
+  return map[type] ?? map[type.toLowerCase()] ?? type
 }
 
 /* ─── Summary row ─── */
@@ -225,6 +228,19 @@ export function BookingSummary({
       >
         {t("bookings.pos.confirm")}
       </Button>
+      {!isComplete && (
+        <p className="text-center text-xs text-muted-foreground">
+          {(() => {
+            const missing: string[] = []
+            if (!clientName) missing.push(t("bookings.pos.section.client"))
+            if (!serviceName) missing.push(t("bookings.pos.section.service"))
+            if (!employeeName) missing.push(t("bookings.pos.section.employee"))
+            if (!type) missing.push(t("bookings.pos.section.typeDuration"))
+            if (!date || !startTime) missing.push(t("bookings.pos.section.datetime"))
+            return `${t("bookings.pos.missingPrefix")}: ${missing.join("، ")}`
+          })()}
+        </p>
+      )}
     </div>
   )
 }
