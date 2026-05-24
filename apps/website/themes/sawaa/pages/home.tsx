@@ -39,13 +39,18 @@ export async function SawaaHomePage() {
   const intros: HomeSectionIntros = resolveSectionIntros(settings);
   const featureCards: FeatureCards = resolveFeatureCards(settings);
 
-  const clinics: ClinicItem[] = catalog.departments.map((d) => ({
-    id: d.id,
-    nameAr: d.nameAr,
-    descriptionAr: d.descriptionAr,
-    icon: d.icon,
-    image: null,
-  }));
+  const clinicsDept = catalog.departments.find((d) => d.nameAr === 'عيادات سواء');
+  const clinics: ClinicItem[] = clinicsDept
+    ? catalog.categories
+        .filter((c) => c.departmentId === clinicsDept.id)
+        .map((c) => ({
+          id: c.id,
+          nameAr: c.nameAr,
+          descriptionAr: null,
+          icon: null,
+          image: null,
+        }))
+    : [];
 
   return (
     <>

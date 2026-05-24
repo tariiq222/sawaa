@@ -60,6 +60,10 @@ export type WizardEvent =
   | { type: 'RESET' };
 
 export function reduce(state: WizardState, event: WizardEvent): WizardState {
+  // RESET always returns to the SERVICE step from any state.
+  if (event.type === 'RESET') {
+    return { step: WizardStep.SERVICE };
+  }
   switch (state.step) {
     case WizardStep.SERVICE:
       if (event.type === 'SELECT_SERVICE') {
@@ -150,9 +154,7 @@ export function reduce(state: WizardState, event: WizardEvent): WizardState {
       break;
 
     case WizardStep.CONFIRMATION:
-      if (event.type === 'RESET') {
-        return { step: WizardStep.SERVICE };
-      }
+      // RESET handled globally above; no other transitions from CONFIRMATION.
       break;
   }
 

@@ -22,7 +22,9 @@ const makePrisma = () => {
   const p = {
     serviceDurationOption: { findFirst: jest.fn().mockResolvedValue(null) },
     service: { findFirst: jest.fn().mockResolvedValue(null) },
-    serviceBookingConfig: { findUnique: jest.fn().mockResolvedValue(null) },
+    // Default: service supports the requested delivery type. Tests that
+    // assert "unsupported" must override this to mockResolvedValue(null).
+    serviceBookingConfig: { findUnique: jest.fn().mockResolvedValue({ useCustomAvailability: false }) },
     serviceAvailabilityWindow: { findMany: jest.fn().mockResolvedValue([]) },
     businessHour: {
       findUnique: jest.fn().mockResolvedValue({

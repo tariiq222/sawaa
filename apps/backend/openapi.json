@@ -3443,6 +3443,30 @@
       },
       "PublicEmployeeResponseDto": {
         "properties": {
+          "availableDaysOfWeek": {
+            "description": "Days of week (0=Sun..6=Sat) the employee has at least one active availability rule on",
+            "example": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "branchIds": {
+            "description": "Branch ids this employee works from",
+            "example": [
+              "br_1"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "employmentType": {
             "description": "Employment type",
             "example": "FULL_TIME",
@@ -3460,6 +3484,11 @@
           },
           "isAvailableToday": {
             "description": "Whether employee has availability today",
+            "example": true,
+            "type": "boolean"
+          },
+          "isBookable": {
+            "description": "True only if employee has ≥1 service, ≥1 branch, and ≥1 active availability rule",
             "example": true,
             "type": "boolean"
           },
@@ -3507,6 +3536,16 @@
             "example": 18,
             "type": "number"
           },
+          "serviceIds": {
+            "description": "Service ids this employee can deliver",
+            "example": [
+              "svc_1"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "slug": {
             "description": "Public URL slug",
             "example": "dr-ahmed",
@@ -3535,7 +3574,11 @@
           "id",
           "employmentType",
           "ratingCount",
-          "isAvailableToday"
+          "isAvailableToday",
+          "serviceIds",
+          "branchIds",
+          "isBookable",
+          "availableDaysOfWeek"
         ],
         "type": "object"
       },
@@ -28291,6 +28334,86 @@
           }
         },
         "summary": "Get available time slots for an employee",
+        "tags": [
+          "Public / Employees"
+        ]
+      }
+    },
+    "/api/v1/public/employees/{id}/availability/days": {
+      "get": {
+        "operationId": "PublicAvailabilityController_getAvailabilityDays",
+        "parameters": [
+          {
+            "description": "Employee ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000001",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "serviceId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "branchId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "startDate",
+            "required": false,
+            "schema": {
+              "example": "2026-05-24",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "example": 14,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Per-day boolean: does this day have at least one open slot?"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Probe which days in a window have any open slots",
         "tags": [
           "Public / Employees"
         ]

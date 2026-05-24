@@ -22,6 +22,28 @@ export async function getPublicBranches(): Promise<PublicBranch[]> {
   return unwrap<PublicBranch[]>(json);
 }
 
+export interface AvailabilityDay {
+  date: string;
+  hasSlots: boolean;
+}
+
+export async function getPublicAvailabilityDays(
+  employeeId: string,
+  opts: { serviceId?: string; branchId?: string; startDate?: string; days?: number } = {},
+): Promise<AvailabilityDay[]> {
+  const params = new URLSearchParams();
+  if (opts.serviceId) params.set('serviceId', opts.serviceId);
+  if (opts.branchId) params.set('branchId', opts.branchId);
+  if (opts.startDate) params.set('startDate', opts.startDate);
+  if (opts.days) params.set('days', String(opts.days));
+  const qs = params.toString();
+  const json = await publicFetch<unknown>(
+    `/public/employees/${employeeId}/availability/days${qs ? `?${qs}` : ''}`,
+    { cache: 'no-store' },
+  );
+  return unwrap<AvailabilityDay[]>(json);
+}
+
 export async function getPublicAvailability(
   employeeId: string,
   date: string,

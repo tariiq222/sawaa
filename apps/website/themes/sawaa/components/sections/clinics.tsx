@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -164,10 +165,13 @@ export function Clinics({ clinics, intro }: Props) {
             {clinics.map((c, i) => {
               const t = TONE;
               const Icon = resolveIcon(c.icon);
+              const href = `/booking?categoryId=${encodeURIComponent(c.id)}`;
               return (
                 <AnimatedSection key={c.id} delay={i * 40} className="flex-shrink-0">
-                  <div
-                    className="group w-[300px] bg-white rounded-2xl p-4 transition-all duration-300 hover:-translate-y-1"
+                  <Link
+                    href={href}
+                    aria-label={`احجز في ${c.nameAr}`}
+                    className="group block w-[300px] bg-white rounded-2xl p-4 transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
                     style={{
                       border: '1px solid var(--sw-neutral-100)',
                       boxShadow: 'var(--sw-shadow-xs)',
@@ -232,9 +236,9 @@ export function Clinics({ clinics, intro }: Props) {
                       className="inline-flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider"
                       style={{ color: t.accent }}
                     >
-                      اعرف أكثر
+                      احجز موعد
                       <span
-                        className="w-6 h-6 rounded-full flex items-center justify-center"
+                        className="w-6 h-6 rounded-full flex items-center justify-center transition-transform group-hover:-translate-x-0.5"
                         style={{
                           background: `color-mix(in srgb, ${t.accent} 12%, transparent)`,
                         }}
@@ -242,7 +246,7 @@ export function Clinics({ clinics, intro }: Props) {
                         <ArrowLeft className="w-3 h-3" style={{ color: t.accent }} />
                       </span>
                     </span>
-                  </div>
+                  </Link>
                 </AnimatedSection>
               );
             })}
@@ -250,6 +254,18 @@ export function Clinics({ clinics, intro }: Props) {
         </div>
 
         <div className="flex items-center gap-3 justify-center mt-6">
+          <Link
+            href="/clinics"
+            className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[0.8125rem] font-bold transition-all hover:-translate-y-[1px]"
+            style={{
+              background: 'var(--sw-primary-700)',
+              color: '#fff',
+              boxShadow: 'var(--sw-shadow-sm)',
+            }}
+          >
+            عرض كل العيادات
+            <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-180" />
+          </Link>
           <button
             onClick={() => scroll('right')}
             disabled={!canScrollRight}

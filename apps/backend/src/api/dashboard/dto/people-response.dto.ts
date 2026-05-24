@@ -231,4 +231,16 @@ export class PublicEmployeeResponseDto {
 
   @ApiProperty({ description: 'Whether employee has availability today', example: true })
   isAvailableToday!: boolean;
+
+  @ApiProperty({ description: 'Service ids this employee can deliver', example: ['svc_1'], type: [String] })
+  serviceIds!: string[];
+
+  @ApiProperty({ description: 'Branch ids this employee works from', example: ['br_1'], type: [String] })
+  branchIds!: string[];
+
+  @ApiProperty({ description: 'True only if employee has ≥1 service, ≥1 branch, and ≥1 active availability rule', example: true })
+  isBookable!: boolean;
+
+  @ApiProperty({ description: 'Days of week (0=Sun..6=Sat) the employee has at least one active availability rule on', example: [0, 1, 2, 3, 4], type: [Number] })
+  availableDaysOfWeek!: number[];
 }

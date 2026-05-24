@@ -38,10 +38,12 @@ const DELIVERY_TYPE_META: Record<DeliveryType, { icon: IconSvgElement }> = {
 
 function getTypeLabel(type: string, t: (key: string) => string): string {
   const map: Record<string, string> = {
+    IN_PERSON: t("bookings.wizard.step.typeDuration.inPerson"),
+    ONLINE: t("bookings.wizard.step.typeDuration.online"),
     in_person: t("bookings.wizard.step.typeDuration.inPerson"),
     online: t("bookings.wizard.step.typeDuration.online"),
   }
-  return map[type] ?? type
+  return map[type] ?? map[type?.toUpperCase()] ?? type
 }
 
 /* ─── Skeleton ─── */

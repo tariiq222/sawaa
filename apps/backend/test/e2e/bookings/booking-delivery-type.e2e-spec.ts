@@ -99,7 +99,9 @@ describe('Booking DeliveryType (e2e)', () => {
     prisma.employeeAvailabilityException.findMany.mockResolvedValue([]);
     prisma.holiday.findFirst.mockResolvedValue(null);
     prisma.booking.findMany.mockResolvedValue([]);
-    prisma.serviceBookingConfig.findUnique.mockResolvedValue(null);
+    // Default: service supports the requested delivery type. Individual tests
+    // override with `mockResolvedValueOnce(null)` to assert "unsupported".
+    prisma.serviceBookingConfig.findUnique.mockResolvedValue({ useCustomAvailability: false });
     prisma.serviceAvailabilityWindow.findMany.mockResolvedValue([]);
   });
 
@@ -377,6 +379,9 @@ describe('Booking DeliveryType (e2e)', () => {
       prisma.employeeBreak.findMany.mockResolvedValue([]);
       prisma.booking.findMany.mockResolvedValue([]);
       prisma.serviceDurationOption.findFirst.mockResolvedValue(null);
+      // Service does not support ONLINE — handler reads serviceBookingConfig
+      // by (serviceId, deliveryType); a null row signals "unsupported".
+      prisma.serviceBookingConfig.findUnique.mockResolvedValueOnce(null);
 
       const res = await request(app.getHttpServer())
         .get('/api/v1/dashboard/bookings/availability')

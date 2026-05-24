@@ -40,6 +40,14 @@ export interface EmployeeWithUser extends Employee {
     phone: string | null;
     avatarUrl: string | null;
   };
+  /** Service ids the employee is configured to deliver. Public list endpoint includes this. */
+  serviceIds?: string[];
+  /** Branch ids the employee works from. Public list endpoint includes this. */
+  branchIds?: string[];
+  /** Whether the employee has services + branches + availability configured. */
+  isBookable?: boolean;
+  /** Days of week (0=Sun..6=Sat) the employee has at least one active availability rule on. */
+  availableDaysOfWeek?: number[];
 }
 
 export interface EmployeeAvailability {

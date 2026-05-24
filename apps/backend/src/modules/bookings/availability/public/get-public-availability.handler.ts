@@ -34,10 +34,6 @@ export class GetPublicAvailabilityHandler {
       branchId = employeeBranch?.branchId;
     }
 
-    if (!branchId) {
-      throw new NotFoundException('Resource not found or not available');
-    }
-
     let serviceId = query.serviceId;
 
     if (!serviceId) {
@@ -48,8 +44,12 @@ export class GetPublicAvailabilityHandler {
       serviceId = employeeService?.serviceId;
     }
 
-    if (!serviceId) {
-      throw new NotFoundException('Resource not found or not available');
+    // Soft-fail: if the employee has no branch link or no service link configured,
+    // return an empty slot list instead of 404. The FE distinguishes "no slots on
+    // this date" from "configuration missing" via the bookability metadata on
+    // /public/employees; this endpoint just answers "no openings".
+    if (!branchId || !serviceId) {
+      return [];
     }
 
     const date = new Date(query.date);

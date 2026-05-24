@@ -40,6 +40,7 @@ describe('Public employees handlers', () => {
             },
             employeeService: { findMany: jest.fn().mockResolvedValue([]) },
             employeeAvailability: { findMany: jest.fn().mockResolvedValue([]) },
+            employeeBranch: { findMany: jest.fn().mockResolvedValue([]) },
             service: { findMany: jest.fn().mockResolvedValue([]) },
           },
         },

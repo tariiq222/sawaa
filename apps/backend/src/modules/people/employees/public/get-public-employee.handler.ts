@@ -27,21 +27,37 @@ export class GetPublicEmployeeHandler {
         publicImageUrl: true,
         gender: true,
         employmentType: true,
+        experience: true,
       },
     });
     if (!row) throw new NotFoundException('Employee not found');
 
-    const ratings = await this.prisma.rating.aggregate({
-      where: { employeeId: row.id, isPublic: true },
-      _avg: { score: true },
-      _count: { _all: true },
-    });
+    const [ratings, links, branches, anyAvail, todayAvailability] = await Promise.all([
+      this.prisma.rating.aggregate({
+        where: { employeeId: row.id, isPublic: true },
+        _avg: { score: true },
+        _count: { _all: true },
+      }),
+      this.prisma.employeeService.findMany({
+        where: { employeeId: row.id },
+        select: { serviceId: true },
+      }),
+      this.prisma.employeeBranch.findMany({
+        where: { employeeId: row.id },
+        select: { branchId: true },
+      }),
+      this.prisma.employeeAvailability.findMany({
+        where: { employeeId: row.id, isActive: true },
+        select: { id: true, dayOfWeek: true },
+      }),
+      this.prisma.employeeAvailability.findMany({
+        where: { employeeId: row.id, isActive: true, dayOfWeek: new Date().getDay() },
+        select: { id: true },
+      }),
+    ]);
 
-    const links = await this.prisma.employeeService.findMany({
-      where: { employeeId: row.id },
-      select: { serviceId: true },
-    });
     const serviceIds = links.map((l) => l.serviceId);
+    const branchIds = branches.map((b) => b.branchId);
     const services =
       serviceIds.length > 0
         ? await this.prisma.service.findMany({
@@ -51,17 +67,33 @@ export class GetPublicEmployeeHandler {
         : [];
     const prices = services.map((s) => parseFloat(String(s.price)));
 
-    const todayAvailability = await this.prisma.employeeAvailability.findMany({
-      where: { employeeId: row.id, isActive: true, dayOfWeek: new Date().getDay() },
-    });
+    const display = row.nameAr ?? row.nameEn ?? '';
+    const tokens = display.trim().split(/\s+/).filter(Boolean);
+    const firstName = tokens.length > 0 ? tokens[0] : '';
+    const lastName = tokens.length > 1 ? tokens.slice(1).join(' ') : '';
 
     return {
       ...row,
+      experience: row.experience ?? 0,
       gender: row.gender ?? null,
       ratingAverage: ratings._avg.score ?? null,
       ratingCount: ratings._count._all,
       minServicePrice: prices.length > 0 ? Math.min(...prices) : null,
       isAvailableToday: todayAvailability.length > 0,
+      serviceIds,
+      branchIds,
+      isBookable: serviceIds.length > 0 && branchIds.length > 0 && anyAvail.length > 0,
+      availableDaysOfWeek: Array.from(new Set(anyAvail.map((a) => a.dayOfWeek))).sort((a, b) => a - b),
+      rating: ratings._avg.score ?? 0,
+      reviewCount: ratings._count._all,
+      user: {
+        id: row.id,
+        firstName,
+        lastName,
+        email: '',
+        phone: null,
+        avatarUrl: row.publicImageUrl,
+      },
     };
   }
 }

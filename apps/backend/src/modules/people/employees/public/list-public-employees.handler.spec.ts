@@ -12,6 +12,7 @@ describe('ListPublicEmployeesHandler', () => {
       rating: { groupBy: jest.fn() },
       employeeService: { findMany: jest.fn() },
       employeeAvailability: { findMany: jest.fn() },
+      employeeBranch: { findMany: jest.fn().mockResolvedValue([]) },
       service: { findMany: jest.fn() },
     };
 

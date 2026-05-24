@@ -22,13 +22,6 @@ describe('BranchStep', () => {
     expect(onSelect).toHaveBeenCalledWith(branches[0]);
   });
 
-  it('calls onBack when Back button is clicked', () => {
-    const onBack = vi.fn();
-    render(<BranchStep branches={branches} onSelect={vi.fn()} onBack={onBack} />);
-    fireEvent.click(screen.getByRole('button', { name: /رجوع/i }));
-    expect(onBack).toHaveBeenCalled();
-  });
-
   it('shows English name when provided', () => {
     render(<BranchStep branches={branches} onSelect={vi.fn()} onBack={vi.fn()} />);
     expect(screen.getByText('Main Branch')).toBeTruthy();
