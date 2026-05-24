@@ -12,6 +12,7 @@ import { BookingCreatedEvent } from '../events/booking-created.event';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { CreateBundleBookingDto } from './create-bundle-booking.dto';
 import { normalizeBookingTypes } from '../shared/delivery-type.helper';
+import { computeVat } from '../../finance/money.helper';
 
 /** FNV-1a 32-bit hash → signed int32 (Postgres int4 range). */
 function hashToInt32(s: string): number {
@@ -295,17 +296,11 @@ export class CreateBundleBookingHandler {
             where: {},
             select: { vatRate: true },
           });
-          const vatRate = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
-          const vatBase = new Prisma.Decimal(finalPrice.toString());
-          const vatAmt = new Prisma.Decimal(
-            Math.round(vatBase.toNumber() * vatRate.toNumber()).toString(),
-          );
-          const total = new Prisma.Decimal(
-            Math.round(vatBase.toNumber() + vatAmt.toNumber()).toString(),
-          );
-          const discountAmt = new Prisma.Decimal(
-            Math.round(subtotal - finalPrice).toString(),
-          );
+          const vatRateDec = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
+          const subtotalDec = new Prisma.Decimal(subtotal.toString());
+          const finalPriceDec = new Prisma.Decimal(finalPrice.toString());
+          const discountAmtDec = subtotalDec.sub(finalPriceDec);
+          const { vatAmtHalalas, totalHalalas } = computeVat(finalPriceDec, vatRateDec);
 
           invoice = await tx.invoice.create({
             data: {
@@ -314,11 +309,11 @@ export class CreateBundleBookingHandler {
               employeeId: dto.employeeId,
               bundlePurchaseId: bundlePurchase.id,
               bookingId: null,
-              subtotal,
-              discountAmt: discountAmt.toNumber(),
-              vatRate: vatRate.toNumber(),
-              vatAmt: vatAmt.toNumber(),
-              total: total.toNumber(),
+              subtotal: subtotalDec,
+              discountAmt: discountAmtDec,
+              vatRate: vatRateDec,
+              vatAmt: vatAmtHalalas,
+              total: totalHalalas,
               currency: slots[0].service.currency,
               status: 'ISSUED',
               issuedAt: new Date(),

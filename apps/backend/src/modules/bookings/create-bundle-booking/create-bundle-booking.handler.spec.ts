@@ -286,6 +286,24 @@ describe('CreateBundleBookingHandler', () => {
     expect(result.invoiceId).toBe('inv-1');
   });
 
+  it('creates bundle invoice using computeVat (subtotal=20000, finalPrice=18000)', async () => {
+    bundlePriceService.computeBundlePrice = jest.fn().mockReturnValue({
+      subtotal: 20000,
+      discountAmount: 2000,
+      finalPrice: 18000,
+    });
+
+    await handler.execute(baseDto);
+
+    const invoiceData = (tx.invoice.create as jest.Mock).mock.calls[0][0].data;
+    expect(invoiceData.subtotal.toString()).toBe('20000');
+    expect(invoiceData.discountAmt.toString()).toBe('2000');
+    // vatBase = 18000, vatAmt = round_half_up(18000 * 0.15) = 2700, total = 20700
+    expect(invoiceData.vatRate.toString()).toBe('0.15');
+    expect(invoiceData.vatAmt.toString()).toBe('2700');
+    expect(invoiceData.total.toString()).toBe('20700');
+  });
+
   it('skips invoice when payAtClinic=true', async () => {
     const result = await handler.execute({ ...baseDto, payAtClinic: true });
 
