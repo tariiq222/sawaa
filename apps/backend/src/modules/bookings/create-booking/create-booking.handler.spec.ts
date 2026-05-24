@@ -279,32 +279,20 @@ describe('CreateBookingHandler', () => {
     prisma.organizationSettings.findFirst = jest.fn().mockResolvedValue(null);
     await handler.execute(baseDto);
 
-    expect(prisma.invoice.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          vatRate: 0.15,
-          vatAmt: 30,
-          total: 230,
-        }),
-        select: { id: true },
-      }),
-    );
+    const invoiceData = prisma.invoice.create.mock.calls[0][0].data;
+    expect(invoiceData.vatRate.toString()).toBe('0.15');
+    expect(invoiceData.vatAmt.toString()).toBe('30');
+    expect(invoiceData.total.toString()).toBe('230');
   });
 
   it('creates invoice with custom VAT when orgSettings.vatRate is set', async () => {
     prisma.organizationSettings.findFirst = jest.fn().mockResolvedValue({ vatRate: '0.10' });
     await handler.execute(baseDto);
 
-    expect(prisma.invoice.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          vatRate: 0.10,
-          vatAmt: 20,
-          total: 220,
-        }),
-        select: { id: true },
-      }),
-    );
+    const invoiceData = prisma.invoice.create.mock.calls[0][0].data;
+    expect(invoiceData.vatRate.toString()).toBe('0.1');
+    expect(invoiceData.vatAmt.toString()).toBe('20');
+    expect(invoiceData.total.toString()).toBe('220');
   });
 
   it('rounds VAT to whole halalas (no fractional halala on the invoice)', async () => {
@@ -321,15 +309,43 @@ describe('CreateBookingHandler', () => {
     await handler.execute(baseDto);
 
     const invoiceData = prisma.invoice.create.mock.calls[0][0].data;
-    expect(Number.isInteger(invoiceData.vatAmt)).toBe(true);
-    expect(invoiceData.vatAmt).toBe(1499);
-    expect(invoiceData.total).toBe(11489);
+    // Decimals representing whole halalas — no fractional digits in string form.
+    expect(invoiceData.vatAmt.toString()).toBe('1499');
+    expect(invoiceData.total.toString()).toBe('11489');
   });
 
   it('does not create invoice when payAtClinic=true', async () => {
     settingsHandler.execute = jest.fn().mockResolvedValue({ payAtClinicEnabled: true });
     await handler.execute({ ...baseDto, payAtClinic: true });
     expect(prisma.invoice.create).not.toHaveBeenCalled();
+  });
+
+  it('computes invoice VAT and total using computeVat (subtotal=10000, discount=2000, vatRate=0.15)', async () => {
+    // Arrange: service priced at 10000 halalas, 20%-off coupon discounting by 2000 halalas.
+    priceResolver.resolve = jest.fn().mockResolvedValue({
+      price: 10000,
+      durationMins: 60,
+      durationOptionId: '',
+      currency: 'SAR',
+      isEmployeeOverride: false,
+    });
+    couponValidator.validate = jest.fn().mockResolvedValue({ couponId: 'c-1', discount: 2000 });
+    prisma.organizationSettings.findFirst = jest.fn().mockResolvedValue({ vatRate: '0.15' });
+
+    await handler.execute({
+      ...baseDto,
+      couponCode: 'PCT20OFF',
+      payAtClinic: false,
+    });
+
+    const invoiceData = prisma.invoice.create.mock.calls[0][0].data;
+    // vatBase = 10000 - 2000 = 8000
+    // vatAmt = round_half_up(8000 * 0.15) = 1200
+    // total  = 8000 + 1200 = 9200
+    expect(invoiceData.subtotal.toString()).toBe('10000');
+    expect(invoiceData.discountAmt.toString()).toBe('2000');
+    expect(invoiceData.vatAmt.toString()).toBe('1200');
+    expect(invoiceData.total.toString()).toBe('9200');
   });
 
   // ──────────────────────────────────────────────────────────────────────────
