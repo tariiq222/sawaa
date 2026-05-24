@@ -147,6 +147,10 @@ export class CheckAvailabilityHandler {
         : Promise.resolve([]),
     ]);
 
+    // Gate: when a serviceId is provided, the service must have a
+    // ServiceBookingConfig row for the requested deliveryType. Otherwise
+    // the combination is unsupported and we return no slots.
+    if (query.serviceId && !serviceConfig) return [];
     if (!businessHour || !businessHour.isOpen) return [];
     if (holiday) return [];
     if (shifts.length === 0) return [];
