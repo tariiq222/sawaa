@@ -12,7 +12,7 @@ export function Hero({ content }: Props) {
   return (
     <section
       id="hero"
-      className="relative h-screen min-h-[640px] w-full overflow-hidden"
+      className="relative -mt-[88px] h-screen min-h-[640px] w-full overflow-hidden"
     >
       {/* Full-bleed background image */}
       <div

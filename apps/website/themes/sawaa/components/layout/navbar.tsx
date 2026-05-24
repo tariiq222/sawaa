@@ -12,6 +12,7 @@ import { SITE } from '../../lib/constants';
 const navLinks = [
   { key: 'nav.home', href: '/' },
   { key: 'nav.therapists', href: '/therapists' },
+  { key: 'nav.clinics', href: '/clinics' },
   { key: 'nav.supportGroups', href: '/support-groups' },
   { key: 'nav.burnout', href: '/burnout-test' },
   { key: 'nav.contact', href: '/contact' },
@@ -22,7 +23,16 @@ export function Navbar() {
   const branding = useBranding();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [authed, setAuthed] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Auth is hydrated client-side from localStorage by `auth-store`.
+  // Wait for mount before reading it to avoid SSR/CSR markup mismatch.
+  useEffect(() => {
+    setAuthed(isAuthenticated());
+    setAuthReady(true);
+  }, []);
 
   useEffect(() => {
     const node = sentinelRef.current;
@@ -98,11 +108,14 @@ export function Navbar() {
 
         <div className="hidden md:flex items-center gap-2">
           <Link
-            href={isAuthenticated() ? '/account' : '/login'}
+            href={authed ? '/account' : '/login'}
+            suppressHydrationWarning
             className="inline-flex items-center gap-2 text-[0.813rem] font-semibold px-4 py-2.5 rounded-full transition-all text-[var(--sw-neutral-700)] hover:bg-[var(--sw-primary-50)] hover:text-[var(--sw-primary-700)] focus-visible:bg-[var(--sw-primary-50)] focus-visible:text-[var(--sw-primary-700)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
           >
             <User className="w-4 h-4" aria-hidden="true" />
-            {isAuthenticated() ? t('nav.account') : t('nav.login')}
+            <span suppressHydrationWarning>
+              {authReady && authed ? t('nav.account') : t('nav.login')}
+            </span>
           </Link>
           <Link
             href="/booking"
@@ -159,12 +172,13 @@ export function Navbar() {
             </a>
           ))}
           <Link
-            href={isAuthenticated() ? '/account' : '/login'}
+            href={authed ? '/account' : '/login'}
             onClick={() => setMobileOpen(false)}
+            suppressHydrationWarning
             className="text-xl font-semibold px-9 py-3.5 rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{ color: 'var(--sw-primary-700)', background: 'var(--sw-primary-50)' }}
           >
-            {isAuthenticated() ? t('nav.account') : t('nav.login')}
+            {authReady && authed ? t('nav.account') : t('nav.login')}
           </Link>
           <Link
             href="/booking"

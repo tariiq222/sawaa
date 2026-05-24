@@ -8,7 +8,8 @@ export interface Theme {
   Layout: ComponentType<ThemeLayoutProps>;
   pages: {
     home: ComponentType;
-    therapists: ComponentType;
+    therapists: ComponentType<{ initialSpecialty?: string | null }>;
+    clinics: ComponentType;
     contact: ComponentType;
     burnoutTest: ComponentType;
     booking: ComponentType;

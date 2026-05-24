@@ -8,17 +8,22 @@ export async function generateMetadata(): Promise<Metadata> {
   return buildPageMetadata({
     branding,
     path: '/therapists',
-    titleAr: 'الأخصائيون',
-    descriptionAr: 'تعرّف على فريق الأخصائيين المعتمدين واحجز موعدك مع المتخصص المناسب لك.',
+    titleAr: 'المعالجون',
+    descriptionAr: 'تعرّف على فريق المعالجين المعتمدين واحجز موعدك مع المعالج المناسب لك.',
   });
 }
 
-export default async function TherapistsRoute() {
+interface TherapistsRouteProps {
+  searchParams: Promise<{ specialty?: string }>;
+}
+
+export default async function TherapistsRoute({ searchParams }: TherapistsRouteProps) {
   const Page = theme.pages.therapists;
   const Layout = theme.Layout;
+  const { specialty } = await searchParams;
   return (
     <Layout>
-      <Page />
+      <Page initialSpecialty={specialty ?? null} />
     </Layout>
   );
 }

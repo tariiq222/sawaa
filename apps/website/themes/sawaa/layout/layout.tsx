@@ -22,7 +22,7 @@ export async function SawaaLayout({ children }: ThemeLayoutProps) {
     <div className="theme-sawaa">
       <SkipLink />
       <Navbar />
-      <main id="main-content" className="relative">
+      <main id="main-content" className="relative pt-[88px]">
         {children}
       </main>
       <Footer clinics={clinics} />
