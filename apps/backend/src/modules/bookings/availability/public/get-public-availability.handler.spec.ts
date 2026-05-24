@@ -33,17 +33,21 @@ describe('GetPublicAvailabilityHandler', () => {
     await expect(handler.execute({ employeeId: 'emp-1', date: '2026-01-01' })).rejects.toThrow(NotFoundException);
   });
 
-  it('should throw NotFoundException when no branch found', async () => {
+  // Soft-fail: when the employee exists but has no branch or service link,
+  // we return an empty slot list (not 404). The FE distinguishes
+  // "no openings on this date" from "configuration missing" via the
+  // bookability metadata on /public/employees.
+  it('returns [] when no branch link configured', async () => {
     prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
     prisma.employeeBranch.findFirst.mockResolvedValue(null);
-    await expect(handler.execute({ employeeId: 'emp-1', date: '2026-01-01' })).rejects.toThrow(NotFoundException);
+    await expect(handler.execute({ employeeId: 'emp-1', date: '2026-01-01' })).resolves.toEqual([]);
   });
 
-  it('should throw NotFoundException when no service found', async () => {
+  it('returns [] when no service link configured', async () => {
     prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
     prisma.employeeBranch.findFirst.mockResolvedValue({ branchId: 'branch-1' });
     prisma.employeeService.findFirst.mockResolvedValue(null);
-    await expect(handler.execute({ employeeId: 'emp-1', date: '2026-01-01' })).rejects.toThrow(NotFoundException);
+    await expect(handler.execute({ employeeId: 'emp-1', date: '2026-01-01' })).resolves.toEqual([]);
   });
 
   it('should use provided branchId and serviceId', async () => {
