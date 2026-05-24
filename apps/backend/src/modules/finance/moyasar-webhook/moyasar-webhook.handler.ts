@@ -395,6 +395,7 @@ export class MoyasarWebhookHandler {
             bundlePurchaseId: invoice.bundlePurchaseId,
             amount: amountHalalas,
             currency: invoice.currency,
+            organizationId: DEFAULT_ORG_ID,
           });
           await this.eventBus.publish(event.eventName, event.toEnvelope());
         } else if (status === PaymentStatus.FAILED) {

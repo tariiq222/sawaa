@@ -2,6 +2,8 @@ import { Module, OnModuleInit } from '@nestjs/common';
 import { DashboardFinanceController } from '../../api/dashboard/finance.controller';
 import { RefundsController } from '../../api/dashboard/refunds.controller';
 import { DatabaseModule } from '../../infrastructure/database';
+import { EmailModule } from '../../infrastructure/email/email.module';
+import { EventBusService } from '../../infrastructure/events/event-bus.service';
 import { MessagingModule } from '../../infrastructure/messaging.module';
 import { PaymentsInfraModule } from '../../infrastructure/payments/payments.module';
 import { StorageModule } from '../../infrastructure/storage';
@@ -40,6 +42,9 @@ import { OnBookingCancelledRefundHandler } from './events/on-booking-cancelled.h
 import { CreateBundlePurchaseHandler } from './bundle-purchases/create-bundle-purchase.handler';
 import { UseBundleHandler } from './bundle-purchases/use-bundle.handler';
 import { ListClientBundlePurchasesHandler } from './bundle-purchases/list-client-bundle-purchases.handler';
+import { IssueInvoiceReceiptHandler } from './issue-invoice-receipt/issue-invoice-receipt.handler';
+import { SendInvoiceReceiptHandler } from './issue-invoice-receipt/send-invoice-receipt.handler';
+import { InvoicePdfRendererService } from './issue-invoice-receipt/invoice-pdf-renderer.service';
 
 const handlers = [
   CreateInvoiceHandler,
@@ -75,7 +80,7 @@ const handlers = [
 ];
 
 @Module({
-  imports: [DatabaseModule, MessagingModule, PaymentsInfraModule, StorageModule, OrgExperienceModule],
+  imports: [DatabaseModule, MessagingModule, PaymentsInfraModule, StorageModule, OrgExperienceModule, EmailModule],
   controllers: [DashboardFinanceController, RefundsController],
   providers: [
     ...handlers,
@@ -83,19 +88,27 @@ const handlers = [
     GroupSessionReadyHandler,
     MoyasarApiClient,
     OnBookingCancelledRefundHandler,
+    IssueInvoiceReceiptHandler,
+    SendInvoiceReceiptHandler,
+    InvoicePdfRendererService,
   ],
-  exports: [...handlers, MoyasarApiClient],
+  exports: [...handlers, MoyasarApiClient, InvoicePdfRendererService],
 })
 export class FinanceModule implements OnModuleInit {
   constructor(
     private readonly bookingConfirmedHandler: BookingConfirmedHandler,
     private readonly groupSessionReadyHandler: GroupSessionReadyHandler,
     private readonly onBookingCancelledRefundHandler: OnBookingCancelledRefundHandler,
+    private readonly issueInvoiceReceiptHandler: IssueInvoiceReceiptHandler,
+    private readonly sendInvoiceReceiptHandler: SendInvoiceReceiptHandler,
+    private readonly eventBus: EventBusService,
   ) {}
 
   onModuleInit(): void {
     this.bookingConfirmedHandler.register();
     this.groupSessionReadyHandler.register();
     this.onBookingCancelledRefundHandler.register();
+    this.issueInvoiceReceiptHandler.register();
+    this.sendInvoiceReceiptHandler.register(this.eventBus);
   }
 }

@@ -47,7 +47,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Check if a user exists and what auth methods are available */
+        /** Check if a user exists and what auth methods are available (constant response; login is the authoritative path) */
         post: operations["AuthController_lookupEndpoint"];
         delete?: never;
         options?: never;
@@ -970,6 +970,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/finance/invoices/{id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a URL to download the invoice PDF */
+        get: operations["DashboardFinanceController_getInvoicePdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/finance/moyasar/config": {
         parameters: {
             query?: never;
@@ -1229,6 +1246,23 @@ export interface paths {
         head?: never;
         /** Deactivate a user */
         patch: operations["DashboardIdentityController_deactivateUserEndpoint"];
+        trace?: never;
+    };
+    "/api/v1/dashboard/identity/users/{id}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change a user's role or custom-role (rank-checked) */
+        patch: operations["DashboardIdentityController_updateUserRoleEndpoint"];
         trace?: never;
     };
     "/api/v1/dashboard/identity/users/{userId}/roles": {
@@ -3473,6 +3507,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/invoices/{id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a URL to download the invoice PDF (client-owned only) */
+        get: operations["PublicInvoicesController_getPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/me": {
         parameters: {
             query?: never;
@@ -3803,11 +3854,6 @@ export interface components {
         };
         ApplyCouponDto: {
             /**
-             * @description Client redeeming the coupon
-             * @example 00000000-0000-0000-0000-000000000000
-             */
-            clientId: string;
-            /**
              * @description Coupon code to apply
              * @example WELCOME10
              */
@@ -4049,20 +4095,10 @@ export interface components {
         };
         ChatCompletionDto: {
             /**
-             * @description Client UUID to associate with the session
-             * @example 00000000-0000-0000-0000-000000000020
-             */
-            clientId?: string;
-            /**
              * @description Session UUID for conversation continuity
              * @example 00000000-0000-0000-0000-000000000010
              */
             sessionId?: string;
-            /**
-             * @description Staff user UUID to associate with the session
-             * @example 00000000-0000-0000-0000-000000000030
-             */
-            userId?: string;
             /**
              * @description The user message to send to the chatbot
              * @example What are your clinic hours?
@@ -4587,7 +4623,7 @@ export interface components {
              */
             discountType: "PERCENTAGE" | "FIXED";
             /**
-             * @description Discount value (percent 0–100 or flat amount)
+             * @description Discount value (percent 0–100 or flat amount, ≥ 0)
              * @example 10
              */
             discountValue: number;
@@ -5548,6 +5584,11 @@ export interface components {
              */
             branchId?: string;
             /**
+             * @description Include same-length previous period for delta comparison (JSON format only)
+             * @example false
+             */
+            compareWithPrevious?: boolean;
+            /**
              * @description Restrict report to a specific employee UUID
              * @example a9b8c7d6-e5f4-3210-fedc-ba9876543210
              */
@@ -5578,7 +5619,7 @@ export interface components {
              * @example REVENUE
              * @enum {string}
              */
-            type: "REVENUE" | "ACTIVITY" | "BOOKINGS" | "EMPLOYEES";
+            type: "REVENUE" | "ACTIVITY" | "BOOKINGS" | "EMPLOYEES" | "OVERVIEW" | "CLIENTS" | "SERVICES" | "RATINGS";
         };
         GuestClientInfoDto: {
             /**
@@ -6060,15 +6101,17 @@ export interface components {
         };
         PermissionEntryDto: {
             /**
-             * @description CASL action (e.g. manage, read, create)
+             * @description CASL action
              * @example read
+             * @enum {string}
              */
-            action: string;
+            action: "manage" | "create" | "read" | "update" | "delete";
             /**
-             * @description CASL subject (resource name or "all")
+             * @description CASL subject (resource name)
              * @example Booking
+             * @enum {string}
              */
-            subject: string;
+            subject: "Booking" | "Branch" | "Branding" | "Category" | "Client" | "Content" | "Coupon" | "Department" | "Employee" | "Integration" | "Invoice" | "Payment" | "Report" | "Role" | "Service" | "Setting" | "User";
         };
         PreviewEmailTemplateDto: {
             /**
@@ -7159,11 +7202,6 @@ export interface components {
         };
         UpdateUserDto: {
             /**
-             * @description Custom role UUID or null to clear
-             * @example 00000000-0000-0000-0000-000000000000
-             */
-            customRoleId?: Record<string, never> | null;
-            /**
              * @description Updated email address
              * @example user@example.com
              */
@@ -7183,8 +7221,15 @@ export interface components {
              * @example +966501234567
              */
             phone?: string;
+        };
+        UpdateUserRoleDto: {
             /**
-             * @description Updated system role
+             * @description Custom role UUID or null to clear
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            customRoleId?: Record<string, never> | null;
+            /**
+             * @description New built-in role
              * @example RECEPTIONIST
              */
             role?: components["schemas"]["UserRole"];
@@ -12176,6 +12221,72 @@ export interface operations {
             };
         };
     };
+    DashboardFinanceController_getInvoicePdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Invoice UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice PDF URL */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No PDF generated for this invoice yet */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     DashboardFinanceController_getMoyasarConfigEndpoint: {
         parameters: {
             query?: never;
@@ -13555,6 +13666,76 @@ export interface operations {
                 };
             };
             /** @description User not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardIdentityController_updateUserRoleEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description User UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserRoleDto"];
+            };
+        };
+        responses: {
+            /** @description Role updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Insufficient rank */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description User or custom role not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -24370,6 +24551,43 @@ export interface operations {
         };
     };
     PublicInvoicesController_getInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PublicInvoicesController_getPdf: {
         parameters: {
             query?: never;
             header?: never;

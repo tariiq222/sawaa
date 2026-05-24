@@ -6,11 +6,11 @@ import type { Config } from 'jest';
 process.env.TZ = 'Asia/Riyadh';
 
 const config: Config = {
-  moduleFileExtensions: ['js', 'json', 'ts'],
+  moduleFileExtensions: ['js', 'json', 'ts', 'tsx'],
   rootDir: '.',
   testRegex: '.*\\.spec\\.ts$',
   transform: {
-    '^.+\\.(t|j)s$': ['ts-jest', { diagnostics: false }],
+    '^.+\\.(t|j)sx?$': ['ts-jest', { diagnostics: false }],
   },
   collectCoverageFrom: [
     'src/**/*.(t|j)s',
@@ -38,6 +38,10 @@ const config: Config = {
     // Redirect to a CJS-compatible manual mock for the test environment.
     // Production code uses `await import('file-type')` which works at runtime.
     '^file-type$': '<rootDir>/src/__mocks__/file-type.ts',
+    // @react-pdf/renderer is pure ESM (and pulls in yoga-layout which uses
+    // import.meta) — same situation as file-type. Test environment uses the
+    // CJS shim; production uses Node 22's native require(esm) path.
+    '^@react-pdf/renderer$': '<rootDir>/src/__mocks__/react-pdf-renderer.ts',
   },
   transformIgnorePatterns: ['node_modules/(?!(uuid)/)'],
 };

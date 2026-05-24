@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { InvoiceStatus, PaymentStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { VerifyPaymentHandler } from './verify-payment.handler';
 
 describe('VerifyPaymentHandler', () => {
@@ -34,5 +36,58 @@ describe('VerifyPaymentHandler', () => {
     } catch (e) {
       // Expected for incomplete mocks
     }
+  });
+
+  it('publishes PaymentCompletedEvent with organizationId on approve', async () => {
+    // Pending payment to be approved (bank transfer flow).
+    const pendingPayment = {
+      id: 'pay-1',
+      invoiceId: 'inv-1',
+      status: PaymentStatus.PENDING_VERIFICATION,
+      amount: 230,
+      gatewayRef: null,
+    };
+    const updatedPayment = {
+      ...pendingPayment,
+      status: PaymentStatus.COMPLETED,
+      processedAt: new Date(),
+    };
+    const invoice = {
+      id: 'inv-1',
+      bookingId: 'booking-1',
+      currency: 'SAR',
+      total: 230,
+    };
+
+    const prismaMock = {
+      payment: {
+        findFirst: jest.fn().mockResolvedValue(pendingPayment),
+        update: jest.fn().mockResolvedValue(updatedPayment),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 230 } }),
+      },
+      invoice: {
+        findFirst: jest.fn().mockResolvedValue(invoice),
+        update: jest.fn().mockResolvedValue({ ...invoice, status: InvoiceStatus.PAID }),
+      },
+    };
+    const rlsTransaction = {
+      withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prismaMock)),
+    };
+    const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
+
+    const localHandler = new VerifyPaymentHandler(
+      prismaMock as never,
+      rlsTransaction as never,
+      eventBus as never,
+    );
+
+    await localHandler.execute({ paymentId: 'pay-1', action: 'approve' });
+
+    expect(eventBus.publish).toHaveBeenCalledWith(
+      'finance.payment.completed',
+      expect.objectContaining({
+        payload: expect.objectContaining({ organizationId: DEFAULT_ORG_ID }),
+      }),
+    );
   });
 });

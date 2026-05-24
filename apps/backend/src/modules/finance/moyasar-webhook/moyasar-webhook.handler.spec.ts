@@ -209,6 +209,17 @@ describe('MoyasarWebhookHandler', () => {
       expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.completed', expect.anything());
     });
 
+    it('publishes PaymentCompletedEvent with organizationId populated', async () => {
+      const { handler, eventBus } = makeHandler();
+      await handler.execute(makeReq());
+      expect(eventBus.publish).toHaveBeenCalledWith(
+        'finance.payment.completed',
+        expect.objectContaining({
+          payload: expect.objectContaining({ organizationId: DEFAULT_ORG_ID }),
+        }),
+      );
+    });
+
     it('routes the payment by the invoice referenced in metadata', async () => {
       const { handler, prisma, eventBus } = makeHandler({
         prisma: buildPrisma(buildInvoice(ORG_B, 'inv-b'), buildPaymentConfig(ORG_B)),

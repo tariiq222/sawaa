@@ -17,6 +17,7 @@ import { CreateBookingDto } from './create-booking.dto';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
+import { computeVat } from '../../finance/money.helper';
 
 /** FNV-1a 32-bit hash → signed int32 (Postgres int4 range). Same algorithm as create-zoom-meeting. */
 function hashToInt32(s: string): number {
@@ -39,10 +40,6 @@ function mapDbConflict(err: unknown): never {
   }
   throw err;
 }
-
-// Money is integer halalas — round to whole halalas (0 decimal places).
-const roundMoney = (amount: Prisma.Decimal | number): Prisma.Decimal =>
-  new Prisma.Decimal(amount.toString()).toDecimalPlaces(0);
 
 export type CreateBookingCommand = Omit<CreateBookingDto, 'scheduledAt' | 'expiresAt' | 'bookingType' | 'deliveryType'> & {
   scheduledAt: Date;
@@ -344,15 +341,14 @@ export class CreateBookingHandler {
             where: {},
             select: { vatRate: true },
           });
-          const vatRate = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
+          const vatRateDec = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
 
           const subtotalDec = new Prisma.Decimal(price.toString());
           const discountAmtDec = discountedPrice !== null
             ? subtotalDec.sub(new Prisma.Decimal(discountedPrice.toString()))
             : new Prisma.Decimal(0);
           const vatBaseDec = subtotalDec.sub(discountAmtDec);
-          const vatAmt = roundMoney(vatBaseDec.mul(vatRate));
-          const total = roundMoney(vatBaseDec.add(vatAmt));
+          const { vatAmtHalalas, totalHalalas } = computeVat(vatBaseDec, vatRateDec);
 
           invoice = await tx.invoice.create({
             data: {
@@ -360,11 +356,11 @@ export class CreateBookingHandler {
               clientId: booking.clientId,
               employeeId: booking.employeeId,
               bookingId: booking.id,
-              subtotal: subtotalDec.toDecimalPlaces(2).toNumber(),
-              discountAmt: discountAmtDec.toDecimalPlaces(2).toNumber(),
-              vatRate: vatRate.toNumber(),
-              vatAmt: vatAmt.toNumber(),
-              total: total.toNumber(),
+              subtotal: subtotalDec,
+              discountAmt: discountAmtDec,
+              vatRate: vatRateDec,
+              vatAmt: vatAmtHalalas,
+              total: totalHalalas,
               currency: booking.currency,
               status: 'ISSUED',
               issuedAt: new Date(),

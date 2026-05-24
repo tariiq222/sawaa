@@ -1,5 +1,6 @@
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { InvoiceStatus, PaymentMethod, Prisma } from '@prisma/client';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { ProcessPaymentHandler } from './process-payment.handler';
 
 const mockInvoice = {
@@ -195,6 +196,36 @@ describe('ProcessPaymentHandler', () => {
         method: PaymentMethod.CASH,
       }),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it('publishes PaymentCompletedEvent with organizationId populated', async () => {
+    const tx = buildTx({
+      invoice: { findFirst: jest.fn().mockResolvedValue(mockInvoice), update: jest.fn() },
+      payment: {
+        findFirst: jest.fn().mockResolvedValue(mockPayment),
+        create: jest.fn().mockResolvedValue(mockPayment),
+        aggregate: jest.fn()
+          .mockResolvedValueOnce({ _sum: { amount: 0 } })
+          .mockResolvedValueOnce({ _sum: { amount: 230 } }),
+      },
+    });
+    const prisma = buildPrisma(tx);
+    const eventBus = buildEventBus();
+    const handler = new ProcessPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(tx)) } as never, eventBus as never);
+
+    await handler.execute({
+      invoiceId: 'inv-1',
+      amount: 230,
+      method: PaymentMethod.CASH,
+      idempotencyKey: 'key-1',
+    });
+
+    expect(eventBus.publish).toHaveBeenCalledWith(
+      'finance.payment.completed',
+      expect.objectContaining({
+        payload: expect.objectContaining({ organizationId: DEFAULT_ORG_ID }),
+      }),
+    );
   });
 
   it('throws BadRequestException when amount appears to be in SAR instead of halalas', async () => {

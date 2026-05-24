@@ -81,17 +81,12 @@ describe('payAtClinic invoice creation', () => {
 
     await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
-    expect(prisma.invoice.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          subtotal: 100,
-          vatRate: 0.15,
-          vatAmt: 15,
-          total: 115,
-          status: 'ISSUED',
-        }),
-      }),
-    );
+    const invoiceData = prisma.invoice.create.mock.calls[0][0].data;
+    expect(invoiceData.subtotal.toString()).toBe('100');
+    expect(invoiceData.vatRate.toString()).toBe('0.15');
+    expect(invoiceData.vatAmt.toString()).toBe('15');
+    expect(invoiceData.total.toString()).toBe('115');
+    expect(invoiceData.status).toBe('ISSUED');
   });
 
   it('does NOT create an invoice when payAtClinic is false', async () => {
@@ -137,11 +132,8 @@ describe('payAtClinic invoice creation', () => {
 
     await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
-    expect(prisma.invoice.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ subtotal: 80 }),
-      }),
-    );
+    const invoiceData = prisma.invoice.create.mock.calls[0][0].data;
+    expect(invoiceData.subtotal.toString()).toBe('80');
   });
 
   it('uses per-org vatRate from OrganizationSettings', async () => {
@@ -159,10 +151,31 @@ describe('payAtClinic invoice creation', () => {
 
     await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
 
-    expect(prisma.invoice.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ vatAmt: 10, total: 210 }),
-      }),
-    );
+    const invoiceData = prisma.invoice.create.mock.calls[0][0].data;
+    expect(invoiceData.vatAmt.toString()).toBe('10');
+    expect(invoiceData.total.toString()).toBe('210');
+  });
+
+  it('creates payAtClinic invoice using computeVat with discount applied', async () => {
+    // subtotal=8000 (discountedPrice), vatRate=0.15
+    // vatAmt = round_half_up(8000 * 0.15) = 1200
+    // total  = 8000 + 1200 = 9200
+    const prisma = buildPrismaWithInvoice();
+    const confirmedBooking = {
+      ...mockBooking,
+      status: BookingStatus.CONFIRMED,
+      payAtClinic: true,
+      price: 10000,
+      discountedPrice: 8000,
+      currency: 'SAR',
+    };
+    prisma.booking.findUnique = jest.fn().mockResolvedValue(confirmedBooking);
+
+    await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+
+    const invoiceData = prisma.invoice.create.mock.calls[0][0].data;
+    expect(invoiceData.subtotal.toString()).toBe('8000');
+    expect(invoiceData.vatAmt.toString()).toBe('1200');
+    expect(invoiceData.total.toString()).toBe('9200');
   });
 });

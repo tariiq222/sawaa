@@ -1,7 +1,7 @@
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
   UseGuards, ParseUUIDPipe, HttpCode, HttpStatus,
-  UseInterceptors, UploadedFile, BadRequestException,
+  UseInterceptors, UploadedFile, BadRequestException, NotFoundException,
 } from '@nestjs/common';
 import {
   ApiTags, ApiBearerAuth, ApiOperation, ApiParam,
@@ -89,6 +89,20 @@ export class DashboardFinanceController {
   @ApiResponse({ status: 404, description: 'Invoice not found', type: ApiErrorDto })
   getInv(@Param('id', ParseUUIDPipe) id: string) {
     return this.getInvoice.execute({ invoiceId: id });
+  }
+
+  @Get('invoices/:id/pdf')
+  @CheckPermissions({ action: 'read', subject: 'Invoice' })
+  @ApiOperation({ summary: 'Get a URL to download the invoice PDF' })
+  @ApiParam({ name: 'id', description: 'Invoice UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Invoice PDF URL' })
+  @ApiResponse({ status: 404, description: 'No PDF generated for this invoice yet', type: ApiErrorDto })
+  async getInvoicePdf(@Param('id', ParseUUIDPipe) id: string) {
+    const invoice = await this.getInvoice.execute({ invoiceId: id });
+    if (!invoice.pdfUrl) {
+      throw new NotFoundException('No PDF has been generated for this invoice yet');
+    }
+    return { url: invoice.pdfUrl };
   }
 
   // ── Payments ──────────────────────────────────────────────────────────────

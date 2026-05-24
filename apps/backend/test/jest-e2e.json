@@ -1,15 +1,17 @@
 {
-  "moduleFileExtensions": ["js", "json", "ts"],
+  "moduleFileExtensions": ["js", "json", "ts", "tsx"],
   "rootDir": "..",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": {
-    "^.+\\.(t|j)s$": ["ts-jest", { "diagnostics": false }]
+    "^.+\\.(t|j)sx?$": ["ts-jest", { "diagnostics": false }]
   },
   "moduleNameMapper": {
     "^@/(.*)$": "<rootDir>/src/$1",
     "^@sawaa/shared/(.*)$": "<rootDir>/../../packages/shared/$1",
-    "^@sawaa/shared$": "<rootDir>/../../packages/shared/index"
+    "^@sawaa/shared$": "<rootDir>/../../packages/shared/index",
+    "^file-type$": "<rootDir>/src/__mocks__/file-type.ts",
+    "^@react-pdf/renderer$": "<rootDir>/src/__mocks__/react-pdf-renderer.ts"
   },
   "transformIgnorePatterns": ["node_modules/(?!(uuid)/)"],
   "setupFilesAfterEnv": ["<rootDir>/test/setup-e2e.ts"]

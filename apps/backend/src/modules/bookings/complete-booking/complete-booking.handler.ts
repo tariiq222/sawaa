@@ -4,6 +4,7 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { CompleteBookingDto } from './complete-booking.dto';
 import { fetchBookingOrFail } from '../booking-lifecycle.helper';
 import { assertTransition } from '../booking-state-machine';
+import { computeVat } from '../../finance/money.helper';
 
 export type CompleteBookingCommand = CompleteBookingDto & {
   bookingId: string;
@@ -52,19 +53,20 @@ export class CompleteBookingHandler {
             select: { vatRate: true },
           });
           const vatRateDec = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
-          const subtotalDec = new Prisma.Decimal((booking.discountedPrice ?? booking.price).toString());
-          const vatAmt = subtotalDec.mul(vatRateDec).toDecimalPlaces(2).toNumber();
-          const total = subtotalDec.add(subtotalDec.mul(vatRateDec)).toDecimalPlaces(2).toNumber();
+          const subtotalDec = new Prisma.Decimal(
+            (booking.discountedPrice ?? booking.price).toString(),
+          );
+          const { vatAmtHalalas, totalHalalas } = computeVat(subtotalDec, vatRateDec);
           await tx.invoice.create({
             data: {
               branchId: booking.branchId,
               clientId: booking.clientId,
               employeeId: booking.employeeId,
               bookingId: booking.id,
-              subtotal: subtotalDec.toNumber(),
-              vatRate: vatRateDec.toNumber(),
-              vatAmt,
-              total,
+              subtotal: subtotalDec,
+              vatRate: vatRateDec,
+              vatAmt: vatAmtHalalas,
+              total: totalHalalas,
               currency: booking.currency,
               status: 'ISSUED',
               issuedAt: new Date(),
