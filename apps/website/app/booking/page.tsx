@@ -333,6 +333,7 @@ function BookingWizardInner() {
     if (loadingData) return;
     if (!preselectEmployeeId && !preselectServiceId && !preselectBranchId) {
       didPreselectRef.current = true;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot init guarded by ref
       setPreselectDone(true);
       return;
     }

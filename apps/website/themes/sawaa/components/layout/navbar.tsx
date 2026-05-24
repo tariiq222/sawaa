@@ -30,6 +30,7 @@ export function Navbar() {
   // Auth is hydrated client-side from localStorage by `auth-store`.
   // Wait for mount before reading it to avoid SSR/CSR markup mismatch.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot client-side hydration to avoid SSR/CSR markup mismatch
     setAuthed(isAuthenticated());
     setAuthReady(true);
   }, []);
