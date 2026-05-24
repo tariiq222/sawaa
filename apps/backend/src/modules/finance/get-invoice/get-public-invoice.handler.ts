@@ -23,6 +23,7 @@ export interface GetPublicInvoiceResult {
   dueAt: string | null;
   paidAt: string | null;
   createdAt: string;
+  pdfUrl: string | null;
 }
 
 @Injectable()
@@ -64,6 +65,7 @@ export class GetPublicInvoiceHandler {
       dueAt: invoice.dueAt?.toISOString() ?? null,
       paidAt: invoice.paidAt?.toISOString() ?? null,
       createdAt: invoice.createdAt.toISOString(),
+      pdfUrl: invoice.pdfUrl ?? null,
     };
   }
 }

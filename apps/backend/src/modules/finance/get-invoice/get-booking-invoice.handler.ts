@@ -42,6 +42,7 @@ export class GetBookingInvoiceHandler {
       dueAt: invoice.dueAt?.toISOString() ?? null,
       paidAt: invoice.paidAt?.toISOString() ?? null,
       createdAt: invoice.createdAt.toISOString(),
+      pdfUrl: invoice.pdfUrl ?? null,
     };
   }
 }
