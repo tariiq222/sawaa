@@ -34,6 +34,7 @@ export function EntityTab() {
 
   useEffect(() => {
     if (!settings) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm({
       companyNameAr: settings.companyNameAr ?? "",
       companyNameEn: settings.companyNameEn ?? "",
