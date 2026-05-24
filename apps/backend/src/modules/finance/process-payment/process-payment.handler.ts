@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InvoiceStatus, Prisma } from '@prisma/client';
+import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { PaymentCompletedEvent } from '../events/payment-completed.event';
@@ -143,6 +144,7 @@ export class ProcessPaymentHandler {
           bookingId: invoice.bookingId,
           amount: Number(dto.amount),
           currency: invoice.currency,
+          organizationId: DEFAULT_ORG_ID,
         });
         await this.eventBus.publish(event.eventName, event.toEnvelope());
       }
