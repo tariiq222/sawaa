@@ -3,16 +3,21 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { PublicAvailabilityController } from './availability.controller';
 import { GetPublicAvailabilityHandler } from '../../modules/bookings/availability/public/get-public-availability.handler';
+import { GetPublicAvailabilityDaysHandler } from '../../modules/bookings/availability/public/get-public-availability-days.handler';
 
 describe('PublicAvailabilityController (e2e)', () => {
   let app: INestApplication;
 
   const mockAvailabilityHandler = { execute: jest.fn() };
+  const mockDaysHandler = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [PublicAvailabilityController],
-      providers: [{ provide: GetPublicAvailabilityHandler, useValue: mockAvailabilityHandler }],
+      providers: [
+        { provide: GetPublicAvailabilityHandler, useValue: mockAvailabilityHandler },
+        { provide: GetPublicAvailabilityDaysHandler, useValue: mockDaysHandler },
+      ],
     }).compile();
 
     app = moduleRef.createNestApplication();
