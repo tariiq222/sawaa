@@ -17,6 +17,9 @@ export interface PublicEmployee {
   publicBioAr: string | null
   publicBioEn: string | null
   publicImageUrl: string | null
+  serviceIds: string[]
+  branchIds: string[]
+  isBookable: boolean
 }
 
 export type ContactMessageStatus = 'NEW' | 'READ' | 'REPLIED' | 'ARCHIVED'

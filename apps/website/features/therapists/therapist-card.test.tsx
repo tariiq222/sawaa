@@ -14,6 +14,9 @@ const full: PublicEmployee = {
   publicBioAr: 'سيرة بالعربية',
   publicBioEn: 'English bio',
   publicImageUrl: 'https://cdn.test/sara.jpg',
+  serviceIds: [],
+  branchIds: [],
+  isBookable: false,
 };
 
 describe('TherapistCard', () => {
@@ -57,6 +60,9 @@ describe('TherapistCard', () => {
       publicBioAr: null,
       publicBioEn: null,
       publicImageUrl: null,
+      serviceIds: [],
+      branchIds: [],
+      isBookable: false,
     };
     render(<TherapistCard therapist={minimal} locale="ar" />);
     expect(screen.queryByRole('link')).toBeNull();

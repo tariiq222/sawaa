@@ -13,6 +13,9 @@ const sample: PublicEmployee = {
   publicBioAr: null,
   publicBioEn: null,
   publicImageUrl: null,
+  serviceIds: [],
+  branchIds: [],
+  isBookable: false,
 };
 
 describe('therapists.api', () => {
