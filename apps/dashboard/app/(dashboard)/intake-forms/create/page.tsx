@@ -19,9 +19,9 @@ export default function CreateIntakeFormPage() {
         nameEn: draft.nameEn,
         type: draft.type,
         scope: draft.scope,
-        ...(draft.scope === "service" && { serviceId: draft.scopeId }),
-        ...(draft.scope === "employee" && { employeeId: draft.scopeId }),
-        ...(draft.scope === "branch" && { branchId: draft.scopeId }),
+        ...(draft.scope !== "global" && draft.scopeId
+          ? { scopeId: draft.scopeId }
+          : {}),
         isActive: draft.isActive,
       })
 
@@ -34,9 +34,8 @@ export default function CreateIntakeFormPage() {
               labelEn: f.labelEn,
               fieldType: f.type,
               options: f.options.length > 0 ? f.options : undefined,
-              condition: f.condition,
               isRequired: f.required,
-              sortOrder: i,
+              position: i,
             })),
           },
         })

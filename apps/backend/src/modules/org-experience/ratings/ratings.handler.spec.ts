@@ -13,6 +13,8 @@ const mockRating = {
   createdAt: new Date(),
 };
 
+const mockClient = { id: 'client-1', name: 'سارة' };
+
 const buildPrisma = () => {
   const prisma = {
     rating: {
@@ -20,6 +22,9 @@ const buildPrisma = () => {
       create: jest.fn().mockResolvedValue(mockRating),
       findMany: jest.fn().mockResolvedValue([mockRating]),
       count: jest.fn().mockResolvedValue(1),
+    },
+    client: {
+      findMany: jest.fn().mockResolvedValue([mockClient]),
     },
     $transaction: jest.fn(),
   };
@@ -63,6 +68,26 @@ describe('ListRatingsHandler', () => {
     expect(prisma.rating.findMany).toHaveBeenCalled();
     expect(result.items).toHaveLength(1);
     expect(result.meta.total).toBe(1);
+  });
+
+  it('enriches items with the batched client lookup', async () => {
+    const prisma = buildPrisma();
+    const handler = new ListRatingsHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
+    const result = await handler.execute({});
+    // Batched lookup selects only id + name, scoped to the de-duped clientIds in the page.
+    expect(prisma.client.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ['client-1'] } },
+      select: { id: true, name: true },
+    });
+    expect(result.items[0].client).toEqual(mockClient);
+  });
+
+  it('falls back to null client when no matching client row exists', async () => {
+    const prisma = buildPrisma();
+    (prisma.client.findMany as jest.Mock).mockResolvedValue([]);
+    const handler = new ListRatingsHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
+    const result = await handler.execute({});
+    expect(result.items[0].client).toBeNull();
   });
 
   it('filters by employeeId', async () => {

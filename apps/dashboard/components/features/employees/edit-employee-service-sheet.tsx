@@ -23,7 +23,7 @@ import { useServiceBookingTypes } from "@/hooks/use-services"
 import { useEmployeeServiceTypes } from "@/hooks/use-employees"
 import { useEmployeeServiceMutations } from "@/hooks/use-employee-mutations"
 import { EmployeeServiceTypesEditor } from "./employee-service-types-editor"
-import { sarToHalalas, halalasToSarNumber } from "@/lib/money"
+import { halalasToSarNumber } from "@/lib/money"
 import {
   buildEmployeeServiceOptionsPayload,
   hasCustomEmployeeServiceOptions,
@@ -144,25 +144,10 @@ export function EditEmployeeServiceSheet({
     async (data: EditEmployeeServiceFormData) => {
       if (!ps) return
       try {
-        // The editor inputs collect SAR-major prices; convert back to halalas
-        // (the API/DB convention) before submitting.
-        const typesPayload: EmployeeTypeConfigPayload[] = typeConfigs.map(
-          (tc) => ({
-            ...tc,
-            price: tc.price != null ? sarToHalalas(tc.price) : tc.price,
-            durationOptions: (tc.durationOptions ?? []).map((o) => ({
-              ...o,
-              price: sarToHalalas(o.price),
-            })),
-          })
-        )
         await updateMut.mutateAsync({
           serviceId: ps.serviceId,
           payload: {
-            availableTypes: typeConfigs.map((tc) => tc.deliveryType),
-            bufferMinutes: data.bufferMinutes,
             isActive: data.isActive,
-            types: typesPayload,
           },
         })
         const optionsPayload = buildEmployeeServiceOptionsPayload({

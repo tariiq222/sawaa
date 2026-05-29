@@ -316,11 +316,9 @@ describe("useServiceEmployees / useAssignEmployeesToService", () => {
     const { result } = renderHook(() => useAssignEmployeesToService("s-1"), { wrapper: Wrapper })
     await result.current.mutateAsync(["e-1", "e-2", "e-3"])
     expect(employeesApi.assignService).toHaveBeenCalledTimes(3)
-    expect(employeesApi.assignService).toHaveBeenCalledWith("e-1", {
-      serviceId: "s-1",
-      availableTypes: ["IN_PERSON", "ONLINE"],
-      isActive: true,
-    })
+    expect(employeesApi.assignService).toHaveBeenCalledWith("e-1", { serviceId: "s-1" })
+    expect(employeesApi.assignService).toHaveBeenCalledWith("e-2", { serviceId: "s-1" })
+    expect(employeesApi.assignService).toHaveBeenCalledWith("e-3", { serviceId: "s-1" })
   })
 
   it("useAssignEmployeesToService invalidates the service's employees cache on success", async () => {

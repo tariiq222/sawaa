@@ -23,6 +23,7 @@ import { SetIntakeFieldsHandler } from '../../modules/org-experience/intake-form
 import { GetIntakeFormResponsesHandler } from '../../modules/org-experience/intake-forms/get-intake-form-responses.handler';
 import { SubmitRatingHandler } from '../../modules/org-experience/ratings/submit-rating.handler';
 import { ListRatingsHandler } from '../../modules/org-experience/ratings/list-ratings.handler';
+import { UpdateRatingVisibilityHandler } from '../../modules/org-experience/ratings/update-rating-visibility.handler';
 import { GetOrgSettingsHandler } from '../../modules/org-experience/org-settings/get-org-settings.handler';
 import { UpsertOrgSettingsHandler } from '../../modules/org-experience/org-settings/upsert-org-settings.handler';
 import { GetBookingSettingsHandler } from '../../modules/bookings/get-booking-settings/get-booking-settings.handler';
@@ -59,6 +60,7 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
   const mockGetIntakeFormResponses = { execute: jest.fn() };
   const mockSubmitRating = { execute: jest.fn() };
   const mockListRatings = { execute: jest.fn() };
+  const mockUpdateRatingVisibility = { execute: jest.fn() };
   const mockGetOrgSettings = { execute: jest.fn() };
   const mockUpsertOrgSettings = { execute: jest.fn() };
   const mockGetBookingSettings = { execute: jest.fn() };
@@ -95,6 +97,7 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
         { provide: GetIntakeFormResponsesHandler, useValue: mockGetIntakeFormResponses },
         { provide: SubmitRatingHandler, useValue: mockSubmitRating },
         { provide: ListRatingsHandler, useValue: mockListRatings },
+        { provide: UpdateRatingVisibilityHandler, useValue: mockUpdateRatingVisibility },
         { provide: GetOrgSettingsHandler, useValue: mockGetOrgSettings },
         { provide: UpsertOrgSettingsHandler, useValue: mockUpsertOrgSettings },
         { provide: GetBookingSettingsHandler, useValue: mockGetBookingSettings },
@@ -267,6 +270,44 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
         .expect(200);
 
       expect(res.body.maxAdvanceBookingDays).toBe(30);
+    });
+  });
+
+  // ── Ratings ───────────────────────────────────────────────────────────────
+
+  describe('PATCH /dashboard/organization/ratings/:id/visibility', () => {
+    it('returns 200 and forwards id + isPublic to the handler', async () => {
+      mockUpdateRatingVisibility.execute.mockResolvedValue({ id: uuid(1), isPublic: true });
+
+      const res = await request(app.getHttpServer())
+        // DTO requires both id and isPublic; the controller takes id from the
+        // path param and isPublic from the body when forwarding to the handler.
+        .patch(`/dashboard/organization/ratings/${uuid(1)}/visibility`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ id: uuid(1), isPublic: true })
+        .expect(200);
+
+      expect(res.body.isPublic).toBe(true);
+      expect(mockUpdateRatingVisibility.execute).toHaveBeenCalledWith({
+        id: uuid(1),
+        isPublic: true,
+      });
+    });
+
+    it('returns 400 for invalid UUID', async () => {
+      return request(app.getHttpServer())
+        .patch('/dashboard/organization/ratings/not-a-uuid/visibility')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ isPublic: true })
+        .expect(400);
+    });
+
+    it('returns 400 for non-boolean isPublic', async () => {
+      return request(app.getHttpServer())
+        .patch(`/dashboard/organization/ratings/${uuid(1)}/visibility`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ isPublic: 'yes' })
+        .expect(400);
     });
   });
 

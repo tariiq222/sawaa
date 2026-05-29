@@ -441,10 +441,6 @@ export function useEmployeeForm({
           draftServices.map(async (ds) => {
             await assignService(newId, {
               serviceId: ds.serviceId,
-              availableTypes: ds.availableTypes,
-              bufferMinutes: ds.bufferMinutes,
-              isActive: ds.isActive,
-              types: toStorageTypeConfigs(ds.types),
             })
             const optionsPayload = buildEmployeeServiceOptionsPayload({
               typeConfigs: ds.types,

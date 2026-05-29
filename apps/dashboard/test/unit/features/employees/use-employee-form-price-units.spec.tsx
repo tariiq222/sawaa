@@ -213,22 +213,12 @@ describe("useEmployeeForm service price units", () => {
       await result.current.onSubmit()
     })
 
-    expect(mocks.assignService).toHaveBeenCalledWith(
-      "emp-new",
-      expect.objectContaining({
-        serviceId: "svc-1",
-        types: [
-          expect.objectContaining({
-            deliveryType: "in_person",
-            price: 15000,
-            durationOptions: [
-              expect.objectContaining({ price: 15000 }),
-              expect.objectContaining({ price: 30000 }),
-            ],
-          }),
-        ],
-      }),
-    )
+    // The create path no longer sends types/availableTypes/customDuration on the
+    // assign call — assignService just links the service by id. Price-unit
+    // conversion (SAR -> halalas) happens in the separate options payload below.
+    expect(mocks.assignService).toHaveBeenCalledWith("emp-new", {
+      serviceId: "svc-1",
+    })
     expect(mocks.setEmployeeServiceOptions).toHaveBeenCalledWith("emp-new", "svc-1", {
       options: [
         expect.objectContaining({

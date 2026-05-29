@@ -35,8 +35,8 @@ describe("users api", () => {
 
   it("fetches user list with query params", async () => {
     getMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
-    await fetchUsers({ page: 1, perPage: 20, search: "أحمد", role: "ADMIN" })
-    expect(getMock).toHaveBeenCalledWith("/dashboard/identity/users", expect.objectContaining({ page: 1, search: "أحمد", role: "ADMIN" }))
+    await fetchUsers({ page: 1, perPage: 20, search: "أحمد", isActive: true })
+    expect(getMock).toHaveBeenCalledWith("/dashboard/identity/users", expect.objectContaining({ page: 1, limit: 20, search: "أحمد", isActive: true }))
   })
 
   it("fetches single user by id", async () => {

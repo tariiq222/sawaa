@@ -3,7 +3,6 @@ import type { PaginatedResponse } from "@/lib/api"
 
 export interface DeliveryLogItem {
   id: string
-  organizationId: string
   recipientId: string
   type: string
   priority: string

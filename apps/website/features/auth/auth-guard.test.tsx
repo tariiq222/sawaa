@@ -20,11 +20,10 @@ const fakeClient: ClientProfile = {
   name: 'Sara',
   email: 'sara@test.com',
   phone: null,
-  gender: null,
-  avatarUrl: null,
-  emailVerified: true,
-  phoneVerified: false,
-  isActive: true,
+  emailVerified: '2026-01-01T00:00:00.000Z',
+  phoneVerified: null,
+  accountType: 'REGISTERED',
+  claimedAt: null,
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 

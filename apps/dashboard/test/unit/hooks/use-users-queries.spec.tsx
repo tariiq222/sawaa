@@ -116,20 +116,28 @@ describe("useUsers", () => {
     )
   })
 
-  it("passes role filter to api and resets page", async () => {
+  it("setRole resets page but does not send role to the api (role is no longer a query param)", async () => {
     fetchUsers.mockResolvedValue({ items: [], meta: { total: 0 } })
 
     const { result } = renderHook(() => useUsers(), { wrapper: makeWrapper() })
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
+    act(() => { result.current.setPage(4) })
     act(() => { result.current.setRole("ADMIN") })
 
+    // local role state still updates, page resets to 1
+    await waitFor(() => expect(result.current.role).toBe("ADMIN"))
+    expect(result.current.page).toBe(1)
+
+    // but the api is never called with a role param — ListUsersQueryDto only accepts search/isActive/page/limit
     await waitFor(() =>
-      expect(fetchUsers).toHaveBeenCalledWith(
-        expect.objectContaining({ role: "ADMIN", page: 1 }),
+      expect(fetchUsers).toHaveBeenLastCalledWith(
+        expect.objectContaining({ page: 1 }),
       ),
     )
+    const lastCall = fetchUsers.mock.calls.at(-1)?.[0]
+    expect(lastCall).not.toHaveProperty("role")
   })
 
   it("resetFilters clears search and role", async () => {

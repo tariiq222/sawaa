@@ -17,9 +17,16 @@ export interface PublicEmployee {
   publicBioAr: string | null
   publicBioEn: string | null
   publicImageUrl: string | null
+  gender: string | null
+  employmentType: string
+  ratingAverage: number | null
+  ratingCount: number
+  minServicePrice: number | null
+  isAvailableToday: boolean
   serviceIds: string[]
   branchIds: string[]
   isBookable: boolean
+  availableDaysOfWeek: number[]
 }
 
 export type ContactMessageStatus = 'NEW' | 'READ' | 'REPLIED' | 'ARCHIVED'

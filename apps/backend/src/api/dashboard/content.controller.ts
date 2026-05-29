@@ -36,8 +36,11 @@ export class DashboardContentController {
         type: 'object',
         properties: {
           key: { type: 'string', example: 'site.title' },
-          value: { type: 'string' },
-          updatedAt: { type: 'string', format: 'date-time' },
+          valueText: { type: 'string', nullable: true },
+          valueAr: { type: 'string', nullable: true },
+          valueEn: { type: 'string', nullable: true },
+          valueJson: { type: 'object', nullable: true },
+          valueMedia: { type: 'string', nullable: true },
         },
       },
     },
@@ -53,7 +56,7 @@ export class DashboardContentController {
     description: 'Count of rows updated',
     schema: {
       type: 'object',
-      properties: { count: { type: 'number', example: 3 } },
+      properties: { updated: { type: 'number', example: 3 } },
     },
   })
   upsert(@Body() dto: BulkUpsertSiteSettingsDto) {

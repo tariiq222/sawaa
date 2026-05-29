@@ -11,21 +11,14 @@ export interface Rating {
   bookingId: string
   stars: number
   comment: string | null
+  isPublic: boolean
   createdAt: string
   client?: {
-    firstName: string
-    lastName: string
+    id: string
+    name: string
   } | null
 }
 
 /* ─── Query ─── */
 
 export type RatingListQuery = PaginatedQuery
-
-/* ─── DTOs ─── */
-
-export interface CreateRatingPayload {
-  bookingId: string
-  stars: number
-  comment?: string
-}

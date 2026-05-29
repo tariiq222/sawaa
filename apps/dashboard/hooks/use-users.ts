@@ -31,7 +31,6 @@ export function useUsers() {
     page,
     perPage: 20,
     search: search || undefined,
-    role,
   }
 
   const { data, isLoading, error, refetch } = useQuery({

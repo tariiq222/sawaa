@@ -220,19 +220,10 @@ export interface SetBreaksPayload {
 
 export interface AssignServicePayload {
   serviceId: string
-  customDuration?: number
-  bufferMinutes?: number
-  availableTypes: string[]
-  isActive?: boolean
-  types?: EmployeeTypeConfigPayload[]
 }
 
 export interface UpdateServicePayload {
-  customDuration?: number | null
-  bufferMinutes?: number
-  availableTypes?: string[]
   isActive?: boolean
-  types?: EmployeeTypeConfigPayload[]
 }
 
 export interface OnboardEmployeePayload {

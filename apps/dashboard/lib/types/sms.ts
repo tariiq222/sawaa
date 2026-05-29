@@ -11,7 +11,6 @@ export type SmsDeliveryStatus =
 
 export interface SmsConfigView {
   id: string
-  organizationId: string
   provider: SmsProvider
   senderId: string | null
   credentialsConfigured: boolean

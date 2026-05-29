@@ -134,9 +134,7 @@ export function EmployeeRatingsSection({
                       <HugeiconsIcon icon={UserIcon} size={14} className="text-primary" />
                     </div>
                     <span className="text-sm font-medium text-foreground">
-                      {r.client
-                        ? `${r.client.firstName} ${r.client.lastName}`
-                        : t("ratings.anonymous")}
+                      {r.client?.name ?? t("ratings.anonymous")}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5">

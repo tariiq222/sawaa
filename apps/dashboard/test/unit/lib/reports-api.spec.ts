@@ -13,7 +13,6 @@ import {
   fetchBookingReport,
   fetchClientsReport,
   fetchOverviewReport,
-  fetchPractitionerDetail,
   fetchPractitionersReport,
   fetchRatingsReport,
   fetchRevenueReport,
@@ -79,19 +78,6 @@ describe("reports api", () => {
     expect(postMock).toHaveBeenCalledWith(
       "/dashboard/ops/reports",
       expect.objectContaining({ type: "EMPLOYEES" }),
-    )
-  })
-
-  it("posts type=EMPLOYEES with employeeId for practitioner detail", async () => {
-    postMock.mockResolvedValueOnce({})
-    await fetchPractitionerDetail({
-      employeeId: "p-1",
-      dateFrom: "2026-01-01",
-      dateTo: "2026-01-31",
-    })
-    expect(postMock).toHaveBeenCalledWith(
-      "/dashboard/ops/reports",
-      expect.objectContaining({ type: "EMPLOYEES", employeeId: "p-1" }),
     )
   })
 

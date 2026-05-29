@@ -12,8 +12,7 @@ import type { IntakeFormApi } from "@/lib/types/intake-form-api"
 /* ─── Map API form → draft ─── */
 
 function mapToDraft(form: IntakeFormApi): Partial<IntakeFormDraft> {
-  const scopeId =
-    form.serviceId ?? form.employeeId ?? form.branchId ?? ""
+  const scopeId = form.scopeId ?? ""
 
   return {
     nameEn: form.nameEn,
@@ -29,7 +28,6 @@ function mapToDraft(form: IntakeFormApi): Partial<IntakeFormDraft> {
       type: f.fieldType,
       required: f.isRequired,
       options: f.options ?? [],
-      condition: f.condition ?? undefined,
     })),
   }
 }
@@ -65,9 +63,8 @@ export default function EditIntakeFormPage({
             labelEn: f.labelEn,
             fieldType: f.type,
             options: f.options.length > 0 ? f.options : undefined,
-            condition: f.condition,
             isRequired: f.required,
-            sortOrder: i,
+            position: i,
           })),
         },
       })

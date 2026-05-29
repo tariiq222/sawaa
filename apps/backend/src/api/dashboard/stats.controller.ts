@@ -65,10 +65,10 @@ export class DashboardStatsController {
         type: 'object',
         properties: {
           employeeId: { type: 'string' },
-          name: { type: 'string' },
+          displayName: { type: 'string' },
           avatarUrl: { type: 'string', nullable: true },
           revenue: { type: 'number' },
-          bookings: { type: 'number' },
+          bookingsCount: { type: 'number' },
         },
       },
     },

@@ -327,8 +327,6 @@ export function useAssignEmployeesToService(serviceId: string) {
         employeeIds.map((employeeId) =>
           assignService(employeeId, {
             serviceId,
-            availableTypes: ["IN_PERSON", "ONLINE"],
-            isActive: true,
           } satisfies AssignServicePayload),
         ),
       ),

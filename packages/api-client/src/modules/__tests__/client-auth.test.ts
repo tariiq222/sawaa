@@ -4,7 +4,6 @@ import {
   initClientAuth,
   clientLogin,
   clientRegister,
-  clientRefresh,
   clientLogout,
   clientResetPassword,
 } from '../client-auth'
@@ -89,25 +88,6 @@ describe('clientRegister', () => {
       password: 'pw',
       name: 'Alice',
     })
-  })
-})
-
-describe('clientRefresh', () => {
-  it('POSTs /public/auth/refresh with credentials included (cookie-based refresh)', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      jsonResponse({
-        success: true,
-        data: { accessToken: 'new.a', refreshToken: 'new.r' },
-      }),
-    )
-
-    const result = await clientRefresh()
-
-    expect(result).toEqual({ accessToken: 'new.a', refreshToken: 'new.r' })
-    const [url, init] = vi.mocked(fetch).mock.calls[0]!
-    expect(url).toBe('http://api.test/public/auth/refresh')
-    expect(JSON.parse(init?.body as string)).toEqual({})
-    expect((init as RequestInit).credentials).toBe('include')
   })
 })
 

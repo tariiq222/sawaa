@@ -118,12 +118,12 @@ describe("useIntakeForms", () => {
     fetchIntakeForms.mockResolvedValueOnce([])
 
     const { result } = renderHook(
-      () => useIntakeForms({ serviceId: "svc-1" }),
+      () => useIntakeForms({ scopeId: "svc-1" }),
       { wrapper: makeWrapper() },
     )
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(fetchIntakeForms).toHaveBeenCalledWith({ serviceId: "svc-1" })
+    expect(fetchIntakeForms).toHaveBeenCalledWith({ scopeId: "svc-1" })
   })
 
   it("setQuery is now a deprecated no-op (state is URL-driven)", async () => {
@@ -137,7 +137,7 @@ describe("useIntakeForms", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     fetchIntakeForms.mockClear()
-    act(() => { result.current.setQuery({ serviceId: "svc-2" }) })
+    act(() => { result.current.setQuery({ scopeId: "svc-2" }) })
 
     expect(warnSpy).toHaveBeenCalled()
     expect(fetchIntakeForms).not.toHaveBeenCalled()

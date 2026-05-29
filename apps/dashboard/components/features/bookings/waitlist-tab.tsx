@@ -20,23 +20,19 @@ const statusStyles: Record<
   WaitlistStatus,
   { labelKey: string; className: string }
 > = {
-  waiting: {
+  WAITING: {
     labelKey: "waitlist.status.waiting",
     className: "border-warning/20 bg-warning/10 text-warning",
   },
-  notified: {
-    labelKey: "waitlist.status.notified",
-    className: "border-info/20 bg-info/10 text-info",
-  },
-  booked: {
+  PROMOTED: {
     labelKey: "waitlist.status.booked",
     className: "border-success/20 bg-success/10 text-success",
   },
-  expired: {
+  EXPIRED: {
     labelKey: "waitlist.status.expired",
     className: "border-muted-foreground/20 bg-muted text-muted-foreground",
   },
-  cancelled: {
+  REMOVED: {
     labelKey: "waitlist.status.cancelled",
     className: "border-muted-foreground/20 bg-muted text-muted-foreground",
   },
@@ -60,19 +56,27 @@ function WaitlistEntryCard({ entry, t }: WaitlistEntryCardProps) {
   return (
     <div className="rounded-2xl border border-border bg-surface p-4 flex flex-wrap items-center justify-between gap-3">
       <div>
-        <p className="font-medium">
-          {entry.client.firstName} {entry.client.lastName}
+        <p className="font-medium text-sm">
+          {entry.client?.name ?? entry.clientId}
         </p>
         <p className="text-sm text-muted-foreground">
-          {entry.service?.nameAr ?? "—"}
+          {entry.service?.nameAr ?? entry.service?.nameEn ?? entry.notes ?? "—"}
         </p>
       </div>
       <div className="text-right">
-        <span
-          className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusStyles[entry.status].className}`}
-        >
-          {t(statusStyles[entry.status].labelKey)}
-        </span>
+        {(() => {
+          const style = statusStyles[entry.status]
+          return (
+            <span
+              className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
+                style?.className ??
+                "border-muted-foreground/20 bg-muted text-muted-foreground"
+              }`}
+            >
+              {style ? t(style.labelKey) : entry.status}
+            </span>
+          )
+        })()}
         <p className="text-sm text-muted-foreground mt-1">{preferredDateStr}</p>
       </div>
     </div>
@@ -99,11 +103,10 @@ export function WaitlistTab() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("waitlist.allStatuses")}</SelectItem>
-            <SelectItem value="waiting">{t("waitlist.status.waiting")}</SelectItem>
-            <SelectItem value="notified">{t("waitlist.status.notified")}</SelectItem>
-            <SelectItem value="booked">{t("waitlist.status.booked")}</SelectItem>
-            <SelectItem value="expired">{t("waitlist.status.expired")}</SelectItem>
-            <SelectItem value="cancelled">{t("waitlist.status.cancelled")}</SelectItem>
+            <SelectItem value="WAITING">{t("waitlist.status.waiting")}</SelectItem>
+            <SelectItem value="PROMOTED">{t("waitlist.status.booked")}</SelectItem>
+            <SelectItem value="EXPIRED">{t("waitlist.status.expired")}</SelectItem>
+            <SelectItem value="REMOVED">{t("waitlist.status.cancelled")}</SelectItem>
           </SelectContent>
         </Select>
       </div>

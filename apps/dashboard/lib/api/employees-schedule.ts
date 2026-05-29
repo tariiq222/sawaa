@@ -241,3 +241,40 @@ export async function fetchEmployeeRatings(
     meta: res.meta,
   }
 }
+
+export async function fetchAllRatings(
+  query: { page?: number; perPage?: number } = {},
+): Promise<PaginatedResponse<Rating>> {
+  const res = await api.get<PaginatedResponse<RawRating> | RawRating[]>(
+    `/dashboard/organization/ratings`,
+    { page: query.page, limit: query.perPage },
+  )
+
+  if (Array.isArray(res)) {
+    const page = query.page ?? 1
+    const perPage = query.perPage ?? 20
+    return {
+      items: res.map(mapRating),
+      meta: {
+        total: res.length,
+        page,
+        perPage,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPreviousPage: page > 1,
+      },
+    }
+  }
+
+  return {
+    items: res.items.map(mapRating),
+    meta: res.meta,
+  }
+}
+
+export async function updateRatingVisibility(
+  id: string,
+  isPublic: boolean,
+): Promise<void> {
+  await api.patch(`/dashboard/organization/ratings/${id}/visibility`, { isPublic })
+}

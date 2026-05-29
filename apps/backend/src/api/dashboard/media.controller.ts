@@ -160,8 +160,11 @@ export class DashboardMediaController {
     schema: {
       type: 'object',
       properties: {
+        fileId: { type: 'string', format: 'uuid' },
         url: { type: 'string', example: 'https://storage.example.com/file?X-Amz-Signature=...' },
-        expiresAt: { type: 'string', format: 'date-time' },
+        expiresInSeconds: { type: 'number', example: 3600 },
+        filename: { type: 'string' },
+        mimetype: { type: 'string' },
       },
     },
   })

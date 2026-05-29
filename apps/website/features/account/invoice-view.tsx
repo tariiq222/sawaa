@@ -102,6 +102,12 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
               <span>{t('invoice.total')}</span>
               <span>{formatCurrency(invoice.total, invoice.currency, locale)}</span>
             </div>
+            {invoice.refundedAmount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--warning)' }}>
+                <span>{locale === 'ar' ? 'المبلغ المسترد' : 'Refunded'}</span>
+                <span>-{formatCurrency(invoice.refundedAmount, invoice.currency, locale)}</span>
+              </div>
+            )}
           </div>
 
           <div

@@ -53,7 +53,7 @@ describe('PublicCatalogController (e2e)', () => {
       expect(res.body.services[0].nameAr).toBe('قص الشعر');
     });
 
-    it('calls prisma with active filters', async () => {
+    it('calls prisma with active + non-hidden filters', async () => {
       mockPrisma.department.findMany.mockResolvedValue([]);
       mockPrisma.serviceCategory.findMany.mockResolvedValue([]);
       mockPrisma.service.findMany.mockResolvedValue([]);
@@ -66,8 +66,77 @@ describe('PublicCatalogController (e2e)', () => {
         expect.objectContaining({ where: { isActive: true } }),
       );
       expect(mockPrisma.service.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { isActive: true, archivedAt: null } }),
+        expect.objectContaining({
+          where: { isActive: true, isHidden: false, archivedAt: null },
+        }),
       );
+    });
+
+    it('uses an explicit public-safe select (not include) for services', async () => {
+      mockPrisma.department.findMany.mockResolvedValue([]);
+      mockPrisma.serviceCategory.findMany.mockResolvedValue([]);
+      mockPrisma.service.findMany.mockResolvedValue([]);
+
+      await request(app.getHttpServer())
+        .get('/public/services')
+        .expect(200);
+
+      const serviceArg = mockPrisma.service.findMany.mock.calls[0][0];
+
+      // Projection must use `select`, never `include`.
+      expect(serviceArg.select).toBeDefined();
+      expect(serviceArg.include).toBeUndefined();
+
+      // Public-safe fields are explicitly projected.
+      expect(serviceArg.select).toEqual(
+        expect.objectContaining({
+          id: true,
+          categoryId: true,
+          nameAr: true,
+          nameEn: true,
+          descriptionAr: true,
+          descriptionEn: true,
+          durationMins: true,
+          price: true,
+          currency: true,
+          imageUrl: true,
+          isActive: true,
+          iconName: true,
+          iconBgColor: true,
+          hidePriceOnBooking: true,
+          hideDurationOnBooking: true,
+          minParticipants: true,
+        }),
+      );
+
+      // Relations are projected via nested select, not include.
+      expect(serviceArg.select.durationOptions).toEqual(
+        expect.objectContaining({
+          where: { isActive: true },
+          select: expect.objectContaining({
+            id: true,
+            label: true,
+            durationMins: true,
+            price: true,
+            sortOrder: true,
+          }),
+        }),
+      );
+      expect(serviceArg.select.bookingConfigs).toEqual(
+        expect.objectContaining({
+          where: { isActive: true },
+          select: expect.objectContaining({
+            id: true,
+            deliveryType: true,
+            price: true,
+            durationMins: true,
+          }),
+        }),
+      );
+
+      // Sensitive internal fields must NOT be exposed.
+      expect(serviceArg.select.commissionRateOverride).toBeUndefined();
+      expect(serviceArg.select.depositAmount).toBeUndefined();
     });
   });
 });

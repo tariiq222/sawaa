@@ -27,11 +27,34 @@ export class PublicCatalogController {
         orderBy: { sortOrder: 'asc' },
       }),
       this.prisma.service.findMany({
-        where: { isActive: true, archivedAt: null },
-        include: {
+        where: { isActive: true, isHidden: false, archivedAt: null },
+        select: {
+          id: true,
+          categoryId: true,
+          nameAr: true,
+          nameEn: true,
+          descriptionAr: true,
+          descriptionEn: true,
+          durationMins: true,
+          price: true,
+          currency: true,
+          imageUrl: true,
+          isActive: true,
+          iconName: true,
+          iconBgColor: true,
+          hidePriceOnBooking: true,
+          hideDurationOnBooking: true,
+          minParticipants: true,
           durationOptions: {
             where: { isActive: true },
             orderBy: { sortOrder: 'asc' },
+            select: {
+              id: true,
+              label: true,
+              durationMins: true,
+              price: true,
+              sortOrder: true,
+            },
           },
           bookingConfigs: {
             where: { isActive: true },
