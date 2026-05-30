@@ -11859,6 +11859,87 @@
         ]
       }
     },
+    "/api/v1/dashboard/finance/invoices/{id}/pdf": {
+      "get": {
+        "operationId": "DashboardFinanceController_getInvoicePdf",
+        "parameters": [
+          {
+            "description": "Invoice UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice PDF URL"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No PDF generated for this invoice yet"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a URL to download the invoice PDF",
+        "tags": [
+          "Dashboard / Finance"
+        ]
+      }
+    },
     "/api/v1/dashboard/finance/moyasar/config": {
       "get": {
         "operationId": "DashboardFinanceController_getMoyasarConfigEndpoint",
@@ -28399,6 +28480,55 @@
           }
         ],
         "summary": "Get invoice details (requires client auth)",
+        "tags": [
+          "Public / Invoices"
+        ]
+      }
+    },
+    "/api/v1/public/invoices/{id}/pdf": {
+      "get": {
+        "operationId": "PublicInvoicesController_getPdf",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a URL to download the invoice PDF (client-owned only)",
         "tags": [
           "Public / Invoices"
         ]
