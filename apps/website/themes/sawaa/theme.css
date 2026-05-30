@@ -58,6 +58,20 @@
   --sw-heading: var(--sw-secondary-700);
   --sw-body: #4B5D6B;
 
+  /* ═══ Status tokens (used by auth forms + bookings) ═══ */
+  --error:   #D92D20;
+  --warning: #F79009;
+  --success: #027A48;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  --on-primary: #FFFFFF;
+  --surface: #FFFFFF;
+  --background: #FFFFFF;
+  --foreground: var(--sw-secondary-700);
+  --card: #FFFFFF;
+  --border: #E2E8F0;
+  --primary-foreground: #FFFFFF;
+
   --sw-shadow-xs: 0 1px 2px 0 rgba(10, 46, 63, 0.04);
   --sw-shadow-sm: 0 2px 4px -1px rgba(10, 46, 63, 0.05),
                   0 1px 2px -1px rgba(10, 46, 63, 0.04);

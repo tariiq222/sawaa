@@ -18,7 +18,11 @@ export async function listPublicEmployees(): Promise<PublicEmployee[]> {
       next: { revalidate: 60, tags: ['public-employees'] },
       signal: controller.signal,
     }).finally(() => clearTimeout(timer));
-    return unwrap<PublicEmployee[]>(json);
+    const all = unwrap<PublicEmployee[]>(json);
+    // Hide therapists that aren't actually bookable — no active services,
+    // no branch, or no availability rules. Mirrors the booking wizard logic
+    // so the directory never shows a card that dead-ends on booking.
+    return all.filter((e) => e.isBookable);
   } catch (err) {
     Sentry.addBreadcrumb({
       category: 'fetch',

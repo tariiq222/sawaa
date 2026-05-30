@@ -4,8 +4,7 @@ import { ListPageShell } from "@/components/features/list-page-shell"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { PageHeader } from "@/components/features/page-header"
 import { PermissionGuard } from "@/components/features/permission-guard"
-import { AllRatingsTab } from "@/components/features/employees/all-ratings-tab"
-import { useEmployees } from "@/hooks/use-employees"
+import { RatingsManagementTab } from "@/components/features/employees/ratings-management-tab"
 import { useLocale } from "@/components/locale-provider"
 
 export default function RatingsPage() {
@@ -18,16 +17,15 @@ export default function RatingsPage() {
 
 function RatingsPageInner() {
   const { t } = useLocale()
-  const { employees } = useEmployees()
 
   return (
     <ListPageShell>
       <Breadcrumbs />
       <PageHeader
-        title={t("employees.ratings.title")}
-        description={t("employees.ratings.description")}
+        title={t("ratings.management.title")}
+        description={t("ratings.management.description")}
       />
-      <AllRatingsTab employees={employees} />
+      <RatingsManagementTab />
     </ListPageShell>
   )
 }

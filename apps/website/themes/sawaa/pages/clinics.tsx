@@ -79,6 +79,8 @@ export async function SawaaClinicsPage() {
             serviceCount: categoryServiceIds.size,
           };
         })
+        // Hide clinics with no bookable services/therapists — they'd dead-end on the booking wizard.
+        .filter((c) => c.serviceCount > 0 && c.therapistCount > 0)
     : [];
 
   const total = clinics.length;

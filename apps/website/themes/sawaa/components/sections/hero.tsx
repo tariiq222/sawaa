@@ -15,9 +15,15 @@ export function Hero({ content }: Props) {
       className="relative -mt-[88px] h-screen min-h-[640px] w-full overflow-hidden"
     >
       {/* Full-bleed background image */}
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(${content.heroImageUrl})` }}
+      <Image
+        src={content.heroImageUrl}
+        alt=""
+        fill
+        className="object-cover"
+        sizes="100vw"
+        priority
+        loading="eager"
+        fetchPriority="high"
       />
 
       {/* Readability overlay */}
@@ -33,7 +39,7 @@ export function Hero({ content }: Props) {
       <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-5 sm:px-6 md:px-8">
         <AnimatedSection>
           <span
-            className="inline-flex items-center gap-2 text-[0.75rem] font-bold px-5 py-2.5 rounded-full mb-6"
+            className="inline-flex items-center gap-2 text-[0.75rem] font-bold px-5 py-2.5 rounded-full mb-6 overflow-hidden"
             style={{
               color: '#fff',
               background: 'rgba(255,255,255,0.14)',
@@ -42,7 +48,7 @@ export function Hero({ content }: Props) {
               boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.25)',
             }}
           >
-            <span className="relative flex w-2 h-2">
+            <span className="relative flex w-2 h-2 overflow-hidden">
               <span className="absolute inset-0 rounded-full opacity-70 animate-ping bg-white" />
               <span className="relative rounded-full w-2 h-2 bg-white" />
             </span>

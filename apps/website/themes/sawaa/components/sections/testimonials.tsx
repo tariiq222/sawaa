@@ -1,5 +1,6 @@
 import { MessageCircle, Quote, Star } from 'lucide-react';
 import type { SectionIntro } from '@/features/site-content/public';
+import type { PublicTestimonial } from '@/features/testimonials/public';
 import { TESTIMONIALS } from '../../lib/constants';
 import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';
@@ -7,11 +8,24 @@ import { IntroTitle } from '../ui/intro-title';
 
 interface Props {
   intro: SectionIntro;
+  items: PublicTestimonial[];
+}
+
+function mapFallback(t: (typeof TESTIMONIALS)[number]): PublicTestimonial {
+  return {
+    id: t.name,
+    text: t.text,
+    name: t.name,
+    letter: t.letter,
+    rating: 5,
+    date: '',
+  };
 }
 
 const AVATAR_TONE = { bg: 'var(--sw-primary-50)', text: 'var(--sw-primary-700)' };
 
-export function Testimonials({ intro }: Props) {
+export function Testimonials({ intro, items }: Props) {
+  const displayItems = items.length > 0 ? items : TESTIMONIALS.map(mapFallback);
   return (
     <section id="testimonials" className="py-20 md:py-24 relative sw-section-mint">
       <div className="max-w-[1260px] mx-auto px-5 sm:px-6 md:px-8">
@@ -25,10 +39,10 @@ export function Testimonials({ intro }: Props) {
         </AnimatedSection>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {TESTIMONIALS.map((t, i) => {
+          {displayItems.map((t, i) => {
             const tone = AVATAR_TONE;
             return (
-              <AnimatedSection key={t.name} delay={i * 80}>
+              <AnimatedSection key={t.id} delay={i * 80}>
                 <div
                   className="group relative h-full bg-white rounded-2xl p-8 transition-all duration-300 hover:-translate-y-1.5 flex flex-col"
                   style={{
@@ -84,7 +98,7 @@ export function Testimonials({ intro }: Props) {
                         className="text-[0.75rem] font-semibold"
                         style={{ color: 'var(--sw-neutral-500)' }}
                       >
-                        {t.label}
+                        عميل
                       </div>
                     </div>
                   </div>

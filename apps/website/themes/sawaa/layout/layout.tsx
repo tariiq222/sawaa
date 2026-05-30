@@ -1,4 +1,5 @@
 import { getPublicCatalog } from '@/features/public-catalog/public';
+import { fetchSiteSettingsMap, resolveSupportGroups } from '@/features/site-content/public';
 import type { ThemeLayoutProps } from '../../types';
 import { Footer, type FooterClinic } from '../components/layout/footer';
 import { Navbar } from '../components/layout/navbar';
@@ -17,7 +18,11 @@ async function loadFooterClinics(): Promise<FooterClinic[]> {
 }
 
 export async function SawaaLayout({ children }: ThemeLayoutProps) {
-  const clinics = await loadFooterClinics();
+  const [clinics, settings] = await Promise.all([
+    loadFooterClinics(),
+    fetchSiteSettingsMap().catch(() => new Map()),
+  ]);
+  const supportGroups = resolveSupportGroups(settings);
   return (
     <div className="theme-sawaa">
       <SkipLink />
@@ -25,7 +30,7 @@ export async function SawaaLayout({ children }: ThemeLayoutProps) {
       <main id="main-content" className="relative pt-[88px]">
         {children}
       </main>
-      <Footer clinics={clinics} />
+      <Footer clinics={clinics} supportGroups={supportGroups} />
     </div>
   );
 }

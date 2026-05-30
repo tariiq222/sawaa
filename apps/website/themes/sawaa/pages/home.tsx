@@ -1,18 +1,30 @@
 import { listPublicEmployees } from '@/features/therapists/public';
 import { getPublicCatalog } from '@/features/public-catalog/public';
+import { listPublicTestimonials } from '@/features/testimonials/public';
 import {
   fetchSiteSettingsMap,
   resolveFeatureCards,
   resolveHeroContent,
   resolveSectionIntros,
+  resolveBlogPosts,
+  resolveFaqItems,
+  resolveSupportGroups,
   type FeatureCards,
   type HeroContent,
   type HomeSectionIntros,
   type SiteSettingsMap,
+  type BlogPost,
+  type FaqItem,
+  type SupportGroup,
 } from '@/features/site-content/public';
 import type { PublicEmployee } from '@sawaa/api-client';
 import { Blog } from '../components/sections/blog';
 import { Clinics, type ClinicItem } from '../components/sections/clinics';
+import dynamic from 'next/dynamic';
+
+const FAQ = dynamic(() => import('../components/sections/faq').then((m) => m.FAQ), {
+  loading: () => <div className="py-20" />,
+});
 import { CTA } from '../components/sections/cta';
 import { Features } from '../components/sections/features';
 import { Hero } from '../components/sections/hero';
@@ -29,15 +41,19 @@ async function safeFetch<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
 }
 
 export async function SawaaHomePage() {
-  const [therapists, catalog, settings] = await Promise.all([
+  const [therapists, catalog, settings, testimonials] = await Promise.all([
     safeFetch<PublicEmployee[]>(() => listPublicEmployees(), []),
     safeFetch(() => getPublicCatalog(), { departments: [], categories: [], services: [] }),
-    safeFetch<SiteSettingsMap>(() => fetchSiteSettingsMap('home.'), new Map()),
+    safeFetch<SiteSettingsMap>(() => fetchSiteSettingsMap(), new Map()),
+    safeFetch(() => listPublicTestimonials(6), []),
   ]);
 
   const hero: HeroContent = resolveHeroContent(settings);
   const intros: HomeSectionIntros = resolveSectionIntros(settings);
   const featureCards: FeatureCards = resolveFeatureCards(settings);
+  const blogPosts: BlogPost[] = resolveBlogPosts(settings);
+  const faqItems: FaqItem[] = resolveFaqItems(settings);
+  const supportGroups: SupportGroup[] = resolveSupportGroups(settings);
 
   const clinicsDept = catalog.departments.find((d) => d.nameAr === 'عيادات سواء');
   const clinics: ClinicItem[] = clinicsDept
@@ -57,10 +73,11 @@ export async function SawaaHomePage() {
       <Hero content={hero} />
       <Features intro={intros.features} cards={featureCards} />
       <Clinics clinics={clinics} intro={intros.clinics} />
-      <SupportGroups intro={intros.supportGroups} />
+      <SupportGroups intro={intros.supportGroups} items={supportGroups} />
       <Team therapists={therapists} intro={intros.team} />
-      <Testimonials intro={intros.testimonials} />
-      <Blog intro={intros.blog} />
+      <Testimonials intro={intros.testimonials} items={testimonials} />
+      <Blog intro={intros.blog} items={blogPosts} />
+      <FAQ intro={intros.faq} items={faqItems} />
       <CTA />
     </>
   );

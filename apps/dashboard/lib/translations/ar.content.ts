@@ -25,6 +25,9 @@ export const arContent: Record<string, string> = {
   "content.home.tab.hero": "Hero",
   "content.home.tab.intros": "عناوين العيادات",
   "content.home.tab.features": "بطاقات المميزات",
+  "content.home.tab.blog": "المدونة",
+  "content.home.tab.faq": "الأسئلة الشائعة",
+  "content.home.tab.supportGroups": "مجموعات الدعم",
 
   // — Shared buttons —
   "content.form.reset": "استعادة",
@@ -69,4 +72,38 @@ export const arContent: Record<string, string> = {
   "content.intros.section.blog": "المدونة",
   "content.intros.section.faq": "الأسئلة الشائعة",
   "content.intros.section.cta": "الدعوة للإجراء",
+
+  // — Blog form —
+  "content.blog.postHeading": "المقال {index}",
+  "content.blog.title": "العنوان (ع)",
+  "content.blog.titleEn": "العنوان (إن)",
+  "content.blog.date": "التاريخ",
+  "content.blog.tag": "الوسم (ع)",
+  "content.blog.tagEn": "الوسم (إن)",
+  "content.blog.author": "الكاتب",
+  "content.blog.image": "رابط الصورة",
+  "content.blog.slug": "المعرف (slug)",
+  "content.blog.content": "المحتوى",
+  "content.blog.addPost": "إضافة مقال",
+
+  // — FAQ form —
+  "content.faq.itemHeading": "السؤال {index}",
+  "content.faq.q": "السؤال (ع)",
+  "content.faq.qEn": "السؤال (إن)",
+  "content.faq.a": "الجواب (ع)",
+  "content.faq.aEn": "الجواب (إن)",
+  "content.faq.addItem": "إضافة سؤال",
+
+  // — Support groups form —
+  "content.supportGroups.groupHeading": "المجموعة {index}",
+  "content.supportGroups.name": "الاسم (ع)",
+  "content.supportGroups.nameEn": "الاسم (إن)",
+  "content.supportGroups.desc": "الوصف (ع)",
+  "content.supportGroups.descEn": "الوصف (إن)",
+  "content.supportGroups.image": "رابط الصورة",
+  "content.supportGroups.slug": "المعرف (slug)",
+  "content.supportGroups.participants": "المشاركون",
+  "content.supportGroups.sessions": "الجلسات",
+  "content.supportGroups.format": "التنسيق",
+  "content.supportGroups.addGroup": "إضافة مجموعة",
 }

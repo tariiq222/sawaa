@@ -13,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
     const branding = await getPublicBrandingForSsr();
     return {
       title: branding.organizationNameAr,
-      description: branding.productTagline ?? undefined,
+      description: branding.productTagline ?? 'مركز متخصص في الاستشارات النفسية والأسرية وعلاج الإدمان بسرية تامة وكوادر سعودية مؤهلة.',
       icons: branding.faviconUrl ? { icon: branding.faviconUrl } : undefined,
     };
   } catch {
@@ -49,13 +49,24 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <BrandingStyle branding={branding} />
         {branding.fontUrl ? (
-          <link rel="stylesheet" href={branding.fontUrl} />
+          <>
+            <link rel="preload" as="style" href={branding.fontUrl} />
+            <link rel="stylesheet" href={branding.fontUrl} />
+          </>
         ) : (
-          // eslint-disable-next-line @next/next/no-page-custom-font -- dynamic brand font loaded at runtime
-          <link
-            rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap"
-          />
+          <>
+            {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+            <link
+              rel="preload"
+              as="style"
+              href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap"
+            />
+            {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+            <link
+              rel="stylesheet"
+              href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap"
+            />
+          </>
         )}
         <script
           type="application/ld+json"

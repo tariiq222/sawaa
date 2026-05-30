@@ -31,13 +31,14 @@ import { OrgConfigModule } from '../../modules/org-config/org-config.module';
 import { PlatformModule } from '../../modules/platform/platform.module';
 import { OpsModule } from '../../modules/ops/ops.module';
 import { PublicHealthController } from './health.controller';
+import { PublicTestimonialsController } from './testimonials.controller';
 import { AppMetricsService } from '../../infrastructure/telemetry/app-metrics.service';
 import { DbMetricsService } from '../../infrastructure/telemetry/db-metrics.service';
 import { PublicMetricsController } from './metrics.controller';
 
 @Module({
   imports: [DatabaseModule, BookingsModule, OrgExperienceModule, IdentityModule, PeopleModule, CommsModule, FinanceModule, OrgConfigModule, ContentModule, PlatformModule, OpsModule],
-  controllers: [AuthController, PublicAuthController, PublicMeController, PublicBrandingController, PublicCatalogController, PublicSlotsController, PublicEmployeesController, PublicContactMessagesController, PublicOtpController, PublicAvailabilityController, PublicBookingsController, PublicPaymentsController, PublicBranchesController, PublicInvoicesController, PublicRefundsController, PublicContentController, PublicSmsWebhooksController, PublicPaymentWebhookController, PublicVerifyEmailController, PublicHealthController, PublicMetricsController],
+  controllers: [AuthController, PublicAuthController, PublicMeController, PublicBrandingController, PublicCatalogController, PublicSlotsController, PublicEmployeesController, PublicContactMessagesController, PublicOtpController, PublicAvailabilityController, PublicBookingsController, PublicPaymentsController, PublicBranchesController, PublicInvoicesController, PublicRefundsController, PublicContentController, PublicSmsWebhooksController, PublicPaymentWebhookController, PublicVerifyEmailController, PublicHealthController, PublicMetricsController, PublicTestimonialsController],
   providers: [AppMetricsService, DbMetricsService],
 })
 export class PublicModule {}

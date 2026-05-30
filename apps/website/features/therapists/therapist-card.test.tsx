@@ -14,9 +14,16 @@ const full: PublicEmployee = {
   publicBioAr: 'سيرة بالعربية',
   publicBioEn: 'English bio',
   publicImageUrl: 'https://cdn.test/sara.jpg',
+  gender: null,
+  employmentType: 'FULL_TIME',
+  ratingAverage: null,
+  ratingCount: 0,
+  minServicePrice: null,
+  isAvailableToday: false,
   serviceIds: [],
   branchIds: [],
   isBookable: false,
+  availableDaysOfWeek: [],
 };
 
 describe('TherapistCard', () => {
@@ -60,9 +67,16 @@ describe('TherapistCard', () => {
       publicBioAr: null,
       publicBioEn: null,
       publicImageUrl: null,
+      gender: null,
+      employmentType: 'FULL_TIME',
+      ratingAverage: null,
+      ratingCount: 0,
+      minServicePrice: null,
+      isAvailableToday: false,
       serviceIds: [],
       branchIds: [],
       isBookable: false,
+      availableDaysOfWeek: [],
     };
     render(<TherapistCard therapist={minimal} locale="ar" />);
     expect(screen.queryByRole('link')).toBeNull();

@@ -8,13 +8,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@sawaa/ui"
 import { HeroForm } from "@/components/features/content/hero-form"
 import { FeatureCardsForm } from "@/components/features/content/feature-cards-form"
 import { SectionIntrosForm } from "@/components/features/content/section-intros-form"
+import { BlogPostsForm } from "@/components/features/content/blog-posts-form"
+import { FaqForm } from "@/components/features/content/faq-form"
+import { SupportGroupsForm } from "@/components/features/content/support-groups-form"
 import { useLocale } from "@/components/locale-provider"
 import { useSiteSettings } from "@/hooks/use-site-settings"
 
 export default function ContentHomePage() {
   const { t } = useLocale()
-  const { data, isLoading } = useSiteSettings("home.")
-  const rows = data ?? []
+  const { data: homeData, isLoading: homeLoading } = useSiteSettings("home.")
+  const { data: contentData, isLoading: contentLoading } = useSiteSettings("content.")
+  const rows = [...(homeData ?? []), ...(contentData ?? [])]
+  const isLoading = homeLoading || contentLoading
 
   return (
     <ListPageShell>
@@ -37,6 +42,9 @@ export default function ContentHomePage() {
             <TabsTrigger value="hero">{t("content.home.tab.hero")}</TabsTrigger>
             <TabsTrigger value="intros">{t("content.home.tab.intros")}</TabsTrigger>
             <TabsTrigger value="features">{t("content.home.tab.features")}</TabsTrigger>
+            <TabsTrigger value="blog">{t("content.home.tab.blog")}</TabsTrigger>
+            <TabsTrigger value="faq">{t("content.home.tab.faq")}</TabsTrigger>
+            <TabsTrigger value="support-groups">{t("content.home.tab.supportGroups")}</TabsTrigger>
           </TabsList>
           <TabsContent value="hero" className="pt-6">
             <HeroForm rows={rows} />
@@ -46,6 +54,15 @@ export default function ContentHomePage() {
           </TabsContent>
           <TabsContent value="features" className="pt-6">
             <FeatureCardsForm rows={rows} />
+          </TabsContent>
+          <TabsContent value="blog" className="pt-6">
+            <BlogPostsForm rows={rows} />
+          </TabsContent>
+          <TabsContent value="faq" className="pt-6">
+            <FaqForm rows={rows} />
+          </TabsContent>
+          <TabsContent value="support-groups" className="pt-6">
+            <SupportGroupsForm rows={rows} />
           </TabsContent>
         </Tabs>
       )}

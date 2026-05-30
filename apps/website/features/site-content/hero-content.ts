@@ -11,7 +11,7 @@ const DEFAULTS: HeroContent = {
   ctaPrimaryHref: '/booking',
   ctaSecondaryText: 'استكشف المعالجين',
   ctaSecondaryHref: '/therapists',
-  heroImageUrl: '/images/hero.png',
+  heroImageUrl: '/images/hero.webp',
   badgeFloatTopLabel: 'خبرة تتجاوز',
   badgeFloatTopValue: '15 عاماً',
   badgeFloatBottomLabel: 'مؤهلون من',
