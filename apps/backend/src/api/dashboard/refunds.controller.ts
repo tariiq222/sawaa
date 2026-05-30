@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiQuery, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
+import { IsUUID, IsString, IsNotEmpty } from 'class-validator';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
 import { CurrentUser, JwtUser } from '../../common/auth/current-user.decorator';
@@ -8,11 +9,19 @@ import { ApproveRefundHandler } from '../../modules/finance/refund-payment/appro
 import { DenyRefundHandler } from '../../modules/finance/refund-payment/deny-refund.handler';
 
 class ApproveRefundDto {
+  @ApiProperty({ description: 'ID of the refund request to approve', example: '550e8400-e29b-41d4-a716-446655440000' })
+  @IsUUID()
   refundRequestId!: string;
 }
 
 class DenyRefundDto {
+  @ApiProperty({ description: 'ID of the refund request to deny', example: '550e8400-e29b-41d4-a716-446655440000' })
+  @IsUUID()
   refundRequestId!: string;
+
+  @ApiProperty({ description: 'Reason for denying the refund request', example: 'Refund window has expired' })
+  @IsString()
+  @IsNotEmpty()
   reason!: string;
 }
 

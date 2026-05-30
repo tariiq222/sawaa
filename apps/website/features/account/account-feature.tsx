@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Locale } from '@/features/locale/locale';
@@ -8,6 +8,7 @@ import { t } from '@/features/locale/dictionary';
 import { useT } from '@/features/locale/locale-provider';
 import { useCurrentClient, clearAuth, clientLogoutApi } from '@/features/auth/public';
 import { ClientBookingsList } from '@/features/auth/client-bookings-list';
+import { ArrowRight, Mail, Phone, BadgeCheck, LogOut, User } from 'lucide-react';
 
 interface AccountFeatureProps {
   locale: Locale;
@@ -17,6 +18,7 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
   const { client, isLoading, error } = useCurrentClient();
   const router = useRouter();
   const tt = useT();
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     if (!isLoading && (error || client === null)) {
@@ -25,117 +27,188 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
   }, [client, error, router, isLoading]);
 
   async function handleLogout() {
+    setLoggingOut(true);
     try {
       await clientLogoutApi();
     } catch {
-      // ignore network failure — local clear still runs below
+      // ignore — clear local + redirect anyway
     }
     clearAuth();
     router.push('/login');
   }
 
-  if (isLoading) {
+  if (isLoading || error || client === null) {
     return (
-      <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.6 }}>
+      <div className="grid place-items-center py-24 text-[var(--sw-neutral-500)]">
         {tt('common.loading')}
       </div>
     );
   }
 
-  if (error || client === null) {
-    return (
-      <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.6 }}>
-        {tt('common.loading')}
-      </div>
-    );
-  }
+  const firstName = client.name?.split(' ')[0] ?? client.name ?? '';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      <div
-        style={{
-          padding: '1.5rem',
-          borderRadius: '12px',
-          background: 'color-mix(in srgb, var(--surface) 60%, transparent)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid color-mix(in srgb, var(--primary) 12%, transparent)',
-        }}
-      >
-        <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--primary-dark)' }}>
-          {t(locale, 'account.profile')}
-        </h2>
-        <ProfileSection client={client} />
-      </div>
+    <div className="flex flex-col gap-8">
+      <ProfileCard
+        name={client.name}
+        email={client.email}
+        phone={client.phone}
+        emailVerified={client.emailVerified != null}
+        greeting={`${tt('account.greeting')} ${firstName}`}
+        subtitle={tt('account.subtitle')}
+        emailVerifiedLabel={tt('account.emailVerified')}
+        notVerifiedLabel={tt('account.notVerified')}
+        emailLabel={tt('account.email')}
+        phoneLabel={tt('account.phone')}
+        logoutLabel={tt('account.logout')}
+        loggingOutLabel={tt('account.loggingOut')}
+        loggingOut={loggingOut}
+        onLogout={handleLogout}
+      />
 
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--primary-dark)' }}>
+      <section>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-bold text-[var(--sw-secondary-700)]">
             {t(locale, 'account.bookings')}
           </h2>
-          <Link href="/account/bookings" style={{ fontSize: '0.875rem', color: 'var(--primary)', fontWeight: 500 }}>
+          <Link
+            href="/account/bookings"
+            className="text-sm font-semibold text-[var(--sw-primary-600)] hover:underline inline-flex items-center gap-1"
+          >
             {tt('account.viewAll')}
+            <ArrowRight size={14} className="rtl:rotate-180" />
           </Link>
         </div>
         <ClientBookingsList locale={locale} />
-      </div>
-
-      <button
-        onClick={handleLogout}
-        style={{
-          padding: '0.75rem',
-          borderRadius: '8px',
-          background: 'color-mix(in srgb, var(--error) 10%, transparent)',
-          color: 'var(--error)',
-          border: '1px solid color-mix(in srgb, var(--error) 25%, transparent)',
-          fontWeight: 600,
-          cursor: 'pointer',
-          fontSize: '0.9375rem',
-        }}
-      >
-        {t(locale, 'nav.logout')}
-      </button>
+      </section>
     </div>
   );
 }
 
-function ProfileSection({ client }: { client: { name: string; email: string | null; phone: string | null; emailVerified: boolean; phoneVerified: boolean } }) {
-  const tt = useT();
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-      <ProfileRow label={tt('account.name')} value={client.name} />
-      <ProfileRow label={tt('account.email')} value={client.email ?? '—'} />
-      <ProfileRow label={tt('account.phone')} value={client.phone ?? '—'} />
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.5rem' }}>
-        {client.emailVerified && <VerificationBadge label={tt('account.emailVerified')} color="success" />}
-      </div>
-    </div>
-  );
+interface ProfileCardProps {
+  name: string;
+  email: string | null;
+  phone: string | null;
+  emailVerified: boolean;
+  greeting: string;
+  subtitle: string;
+  emailVerifiedLabel: string;
+  notVerifiedLabel: string;
+  emailLabel: string;
+  phoneLabel: string;
+  logoutLabel: string;
+  loggingOutLabel: string;
+  loggingOut: boolean;
+  onLogout: () => void;
 }
 
-function ProfileRow({ label, value }: { label: string; value: string }) {
+function ProfileCard(props: ProfileCardProps) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9375rem' }}>
-      <span style={{ opacity: 0.7 }}>{label}</span>
-      <span style={{ fontWeight: 500 }}>{value}</span>
-    </div>
-  );
-}
-
-function VerificationBadge({ label, color }: { label: string; color: 'success' | 'warning' }) {
-  const colorMap = { success: 'var(--success)', warning: 'var(--warning)' };
-  return (
-    <span
+    <div
+      className="relative overflow-hidden rounded-[24px] p-6 sm:p-8"
       style={{
-        padding: '0.2rem 0.6rem',
-        borderRadius: '999px',
-        fontSize: '0.75rem',
-        fontWeight: 600,
-        background: `color-mix(in srgb, ${colorMap[color]} 15%, transparent)`,
-        color: colorMap[color],
-        border: `1px solid color-mix(in srgb, ${colorMap[color]} 30%, transparent)`,
+        background:
+          'linear-gradient(135deg, color-mix(in srgb, var(--sw-primary-500) 8%, var(--sw-neutral-0)) 0%, var(--sw-neutral-0) 70%)',
+        border: '1px solid color-mix(in srgb, var(--sw-primary-500) 12%, transparent)',
+        boxShadow: 'var(--sw-shadow-md)',
       }}
     >
-      {label}
-    </span>
+      <div
+        className="absolute -top-12 -end-12 w-44 h-44 rounded-full pointer-events-none"
+        style={{ background: 'color-mix(in srgb, var(--sw-primary-500) 10%, transparent)' }}
+        aria-hidden="true"
+      />
+
+      <div className="relative flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div
+            className="shrink-0 w-12 h-12 rounded-full grid place-items-center text-[var(--sw-neutral-0)]"
+            style={{
+              background: 'var(--sw-primary-500)',
+              boxShadow: 'var(--sw-shadow-primary)',
+            }}
+            aria-hidden="true"
+          >
+            <User size={22} />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <p className="text-sm text-[var(--sw-body)]">{props.greeting}</p>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-[var(--sw-secondary-700)] leading-tight">
+              {props.name}
+            </h1>
+            <p className="text-sm text-[var(--sw-body)] mt-1 max-w-md leading-relaxed">
+              {props.subtitle}
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={props.onLogout}
+          disabled={props.loggingOut}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border bg-[var(--sw-neutral-0)] text-[var(--error)] border-[color-mix(in_srgb,var(--error)_25%,transparent)] hover:bg-[color-mix(in_srgb,var(--error)_6%,transparent)] transition-colors disabled:opacity-60"
+        >
+          <LogOut size={14} aria-hidden="true" className="rtl:scale-x-[-1]" />
+          {props.loggingOut ? props.loggingOutLabel : props.logoutLabel}
+        </button>
+      </div>
+
+      <div className="relative mt-6 grid sm:grid-cols-2 gap-3">
+        <InfoTile
+          icon={<Mail size={14} aria-hidden="true" />}
+          label={props.emailLabel}
+          value={props.email ?? '—'}
+          badge={
+            props.email
+              ? {
+                  ok: props.emailVerified,
+                  okLabel: props.emailVerifiedLabel,
+                  warnLabel: props.notVerifiedLabel,
+                }
+              : null
+          }
+        />
+        <InfoTile
+          icon={<Phone size={14} aria-hidden="true" />}
+          label={props.phoneLabel}
+          value={props.phone ?? '—'}
+        />
+      </div>
+    </div>
+  );
+}
+
+function InfoTile({
+  icon,
+  label,
+  value,
+  badge,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  badge?: { ok: boolean; okLabel: string; warnLabel: string } | null;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-[var(--sw-neutral-0)] border border-[var(--sw-neutral-100)]">
+      <span className="shrink-0 w-8 h-8 rounded-full grid place-items-center bg-[color-mix(in_srgb,var(--sw-primary-500)_10%,transparent)] text-[var(--sw-primary-600)]">
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-[var(--sw-neutral-500)]">{label}</p>
+        <p className="text-sm font-semibold text-[var(--sw-secondary-700)] truncate">{value}</p>
+      </div>
+      {badge && (
+        <span
+          className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.6875rem] font-semibold ${
+            badge.ok
+              ? 'bg-[color-mix(in_srgb,var(--success)_12%,transparent)] text-[var(--success)]'
+              : 'bg-[color-mix(in_srgb,var(--warning)_14%,transparent)] text-[var(--warning)]'
+          }`}
+        >
+          {badge.ok && <BadgeCheck size={11} aria-hidden="true" />}
+          {badge.ok ? badge.okLabel : badge.warnLabel}
+        </span>
+      )}
+    </div>
   );
 }

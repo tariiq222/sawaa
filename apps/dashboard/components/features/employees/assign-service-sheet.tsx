@@ -118,22 +118,8 @@ export function AssignServiceSheet({
     try {
       // The editor inputs collect SAR-major prices; convert back to halalas
       // (the API/DB convention) before submitting.
-      const typesPayload: EmployeeTypeConfigPayload[] = typeConfigs.map(
-        (tc) => ({
-          ...tc,
-          price: tc.price != null ? sarToHalalas(tc.price) : tc.price,
-          durationOptions: (tc.durationOptions ?? []).map((o) => ({
-            ...o,
-            price: sarToHalalas(o.price),
-          })),
-        })
-      )
       await assignMut.mutateAsync({
         serviceId: data.serviceId,
-        availableTypes: typeConfigs.map((tc) => tc.deliveryType),
-        bufferMinutes: data.bufferMinutes,
-        isActive: data.isActive,
-        types: typesPayload,
       })
       const optionsPayload = buildEmployeeServiceOptionsPayload({
         typeConfigs,

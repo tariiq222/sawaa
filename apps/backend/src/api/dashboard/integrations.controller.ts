@@ -28,7 +28,7 @@ export class DashboardIntegrationsController {
     schema: {
       type: 'object',
       properties: {
-        isConfigured: { type: 'boolean' },
+        configured: { type: 'boolean' },
         isActive: { type: 'boolean' },
       },
     },
@@ -45,7 +45,7 @@ export class DashboardIntegrationsController {
     schema: {
       type: 'object',
       properties: {
-        isConfigured: { type: 'boolean' },
+        configured: { type: 'boolean' },
         isActive: { type: 'boolean' },
       },
     },

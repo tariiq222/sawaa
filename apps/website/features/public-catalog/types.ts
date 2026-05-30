@@ -27,7 +27,7 @@ export interface PublicService {
   descriptionAr: string | null;
   descriptionEn: string | null;
   durationMins: number;
-  price: string | null;
+  price: string;
   currency: string;
   imageUrl: string | null;
   iconName: string | null;

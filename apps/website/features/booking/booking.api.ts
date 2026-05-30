@@ -49,10 +49,18 @@ export async function getPublicAvailability(
   date: string,
   serviceId?: string,
   branchId?: string,
+  opts: {
+    durationOptionId?: string;
+    deliveryType?: 'IN_PERSON' | 'ONLINE';
+    bookingType?: 'INDIVIDUAL' | 'ONLINE' | 'WALK_IN' | 'GROUP';
+  } = {},
 ): Promise<AvailableSlot[]> {
   const params = new URLSearchParams({ date });
   if (serviceId) params.set('serviceId', serviceId);
   if (branchId) params.set('branchId', branchId);
+  if (opts.durationOptionId) params.set('durationOptionId', opts.durationOptionId);
+  if (opts.deliveryType) params.set('deliveryType', opts.deliveryType);
+  if (opts.bookingType) params.set('bookingType', opts.bookingType);
   const json = await publicFetch<unknown>(
     `/public/employees/${employeeId}/availability?${params}`,
     { cache: 'no-store' },

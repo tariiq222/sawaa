@@ -29,6 +29,21 @@ export class ListRatingsHandler {
       ]),
     );
 
-    return toListResponse(items, total, page, limit);
+    // Cross-BC clientId carries no Prisma FK relation by design — enrich the
+    // reviewer name via a batched lookup so the dashboard isn't stuck on "anonymous".
+    const clients = items.length
+      ? await this.prisma.client.findMany({
+          where: { id: { in: [...new Set(items.map((r) => r.clientId))] } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const clientById = new Map(clients.map((c) => [c.id, c]));
+
+    const enriched = items.map((rating) => ({
+      ...rating,
+      client: clientById.get(rating.clientId) ?? null,
+    }));
+
+    return toListResponse(enriched, total, page, limit);
   }
 }

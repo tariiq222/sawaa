@@ -1,12 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import type { ClientBookingItem } from '@sawaa/shared';
 import { getMyBookingsApi } from '@/features/auth/auth.api';
 import { t } from '@/features/locale/dictionary';
+import { useT } from '@/features/locale/locale-provider';
 import type { Locale } from '@/features/locale/locale';
+import { Calendar, Clock, MapPin, ChevronRight, CalendarPlus } from 'lucide-react';
 
 interface ClientBookingsListProps {
   locale: Locale;
@@ -14,14 +17,20 @@ interface ClientBookingsListProps {
   initialTotal?: number;
 }
 
+type Tab = 'upcoming' | 'past';
+
 export function ClientBookingsList({ locale, initialBookings, initialTotal }: ClientBookingsListProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
+  const tt = useT();
+  const [activeTab, setActiveTab] = useState<Tab>('upcoming');
 
-  const { data } = useQuery({
+  const hasInitial = !!initialBookings && initialBookings.length > 0;
+  const { data, isLoading } = useQuery({
     queryKey: ['client', 'bookings'],
     queryFn: () => getMyBookingsApi(1, 50),
-    initialData: initialBookings ? { items: initialBookings, total: initialTotal ?? initialBookings.length, page: 1, pageSize: 50 } : undefined,
+    initialData: hasInitial
+      ? { items: initialBookings!, total: initialTotal ?? initialBookings!.length, page: 1, pageSize: 50 }
+      : undefined,
   });
 
   const bookings = data?.items ?? [];
@@ -30,63 +39,138 @@ export function ClientBookingsList({ locale, initialBookings, initialTotal }: Cl
   const now = new Date();
   const upcoming = bookings.filter((b) => new Date(b.scheduledAt) > now);
   const past = bookings.filter((b) => new Date(b.scheduledAt) <= now);
-
   const displayed = activeTab === 'upcoming' ? upcoming : past;
 
-  if (total === 0 && bookings.length === 0) {
+  if (isLoading && bookings.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '3rem 1rem', opacity: 0.6 }}>
-        {t(locale, 'account.noBookings')}
+      <div className="flex flex-col gap-3">
+        {[0, 1].map((i) => (
+          <div
+            key={i}
+            className="h-28 rounded-2xl bg-[var(--sw-neutral-100)] animate-pulse"
+            aria-hidden="true"
+          />
+        ))}
       </div>
     );
   }
 
+  if (total === 0 && bookings.length === 0) {
+    return <BookingsEmpty locale={locale} />;
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid color-mix(in srgb, var(--primary) 15%, transparent)' }}>
-        {(['upcoming', 'past'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              padding: '0.75rem 1.25rem',
-              background: 'none',
-              border: 'none',
-              borderBottom: activeTab === tab ? '2px solid var(--primary)' : '2px solid transparent',
-              color: activeTab === tab ? 'var(--primary)' : 'var(--muted-foreground)',
-              fontWeight: activeTab === tab ? 600 : 400,
-              cursor: 'pointer',
-              fontSize: '0.9375rem',
-              transition: 'all 0.2s',
-            }}
-          >
-            {t(locale, `account.${tab}`)}
-            <span
-              style={{
-                marginInlineStart: '0.5rem',
-                background: 'var(--primary)',
-                color: 'var(--on-primary)',
-                borderRadius: '999px',
-                padding: '0.1em 0.5em',
-                fontSize: '0.75rem',
-              }}
+    <div className="flex flex-col gap-5">
+      <div
+        className="flex gap-1 p-1 rounded-full self-start"
+        style={{ background: 'var(--sw-neutral-100)' }}
+        role="tablist"
+      >
+        {(['upcoming', 'past'] as const).map((tab) => {
+          const active = activeTab === tab;
+          const count = tab === 'upcoming' ? upcoming.length : past.length;
+          return (
+            <button
+              key={tab}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors inline-flex items-center gap-2 ${
+                active
+                  ? 'bg-[var(--sw-neutral-0)] text-[var(--sw-secondary-700)] shadow-[var(--sw-shadow-sm)]'
+                  : 'text-[var(--sw-neutral-500)] hover:text-[var(--sw-secondary-700)]'
+              }`}
             >
-              {tab === 'upcoming' ? upcoming.length : past.length}
-            </span>
-          </button>
-        ))}
+              {tt(`account.${tab}` as never)}
+              <span
+                className={`text-xs font-bold px-1.5 rounded-full min-w-[1.25rem] text-center ${
+                  active
+                    ? 'bg-[color-mix(in_srgb,var(--sw-primary-500)_15%,transparent)] text-[var(--sw-primary-600)]'
+                    : 'bg-[var(--sw-neutral-200)] text-[var(--sw-neutral-500)]'
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {displayed.map((booking) => (
-          <BookingCard key={booking.id} booking={booking} locale={locale} onClick={() => router.push(`/account/bookings/${booking.id}`)} />
-        ))}
-      </div>
+      {displayed.length === 0 ? (
+        <div className="text-center py-10 text-sm text-[var(--sw-neutral-500)]">
+          {tt('account.noBookings')}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {displayed.map((b) => (
+            <BookingCard
+              key={b.id}
+              booking={b}
+              locale={locale}
+              onClick={() => router.push(`/account/bookings/${b.id}`)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function BookingCard({ booking, locale, onClick }: { booking: ClientBookingItem; locale: Locale; onClick: () => void }) {
+function BookingsEmpty({ locale }: { locale: Locale }) {
+  const tt = useT();
+  return (
+    <div
+      className="grid place-items-center text-center py-12 px-6 rounded-3xl"
+      style={{
+        background: 'color-mix(in srgb, var(--sw-primary-500) 4%, var(--sw-neutral-0))',
+        border: '1px dashed color-mix(in srgb, var(--sw-primary-500) 25%, transparent)',
+      }}
+    >
+      <div
+        className="w-14 h-14 rounded-full grid place-items-center mb-4"
+        style={{
+          background: 'color-mix(in srgb, var(--sw-primary-500) 12%, transparent)',
+          color: 'var(--sw-primary-600)',
+        }}
+        aria-hidden="true"
+      >
+        <CalendarPlus size={26} />
+      </div>
+      <h3 className="font-bold text-[var(--sw-secondary-700)] text-lg mb-1">
+        {tt('account.empty.title')}
+      </h3>
+      <p className="text-sm text-[var(--sw-body)] max-w-xs leading-relaxed mb-5">
+        {tt('account.empty.body')}
+      </p>
+      <Link
+        href="/booking"
+        className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform"
+      >
+        {t(locale, 'account.empty.cta')}
+        <ChevronRight size={14} className="rtl:rotate-180" aria-hidden="true" />
+      </Link>
+    </div>
+  );
+}
+
+const STATUS_TOKEN: Record<string, string> = {
+  PENDING: 'var(--warning)',
+  CONFIRMED: 'var(--success)',
+  COMPLETED: 'var(--sw-primary-600)',
+  CANCELLED: 'var(--error)',
+  CANCEL_REQUESTED: 'var(--warning)',
+};
+
+function BookingCard({
+  booking,
+  locale,
+  onClick,
+}: {
+  booking: ClientBookingItem;
+  locale: Locale;
+  onClick: () => void;
+}) {
+  const tt = useT();
   const scheduledAt = new Date(booking.scheduledAt);
   const dateStr = scheduledAt.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
     year: 'numeric',
@@ -99,61 +183,81 @@ function BookingCard({ booking, locale, onClick }: { booking: ClientBookingItem;
   });
 
   const statusKey = `booking.status.${booking.status.toLowerCase()}`;
-  const statusColor: Record<string, string> = {
-    PENDING: 'var(--warning)',
-    CONFIRMED: 'var(--success)',
-    COMPLETED: 'var(--success)',
-    CANCELLED: 'var(--error)',
-    CANCEL_REQUESTED: 'var(--warning)',
-  };
+  const statusColor = STATUS_TOKEN[booking.status] ?? 'var(--sw-neutral-400)';
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
+      className="group text-start w-full p-5 rounded-2xl bg-[var(--sw-neutral-0)] border border-[var(--sw-neutral-100)] hover:border-[color-mix(in_srgb,var(--sw-primary-500)_30%,transparent)] hover:shadow-[var(--sw-shadow-md)] transition-all flex items-center gap-4"
+    >
+      <div
+        className="hidden sm:flex shrink-0 w-14 h-14 rounded-2xl flex-col items-center justify-center"
+        style={{
+          background: 'color-mix(in srgb, var(--sw-primary-500) 8%, transparent)',
+          color: 'var(--sw-primary-600)',
+        }}
+        aria-hidden="true"
+      >
+        <Calendar size={18} />
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-bold text-[var(--sw-secondary-700)] truncate">
+            {booking.serviceName}
+          </h3>
+          <StatusPill color={statusColor} label={t(locale, statusKey as never) ?? booking.status} />
+        </div>
+        <p className="text-sm text-[var(--sw-body)] mt-1 truncate">
+          {booking.employeeName}
+          {booking.branchName ? ` · ${booking.branchName}` : ''}
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--sw-neutral-500)]">
+          <span className="inline-flex items-center gap-1">
+            <Calendar size={11} aria-hidden="true" /> {dateStr}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Clock size={11} aria-hidden="true" /> {timeStr} · {booking.durationMins} {tt('booking.minutesShort')}
+          </span>
+          {booking.branchName && (
+            <span className="inline-flex items-center gap-1 sm:hidden">
+              <MapPin size={11} aria-hidden="true" /> {booking.branchName}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="shrink-0 flex flex-col items-end gap-1">
+        <span className="text-sm font-bold text-[var(--sw-primary-600)]">
+          {booking.price} <span className="text-[var(--sw-neutral-500)] font-medium">{booking.currency}</span>
+        </span>
+        <ChevronRight
+          size={16}
+          className="text-[var(--sw-neutral-400)] rtl:rotate-180 group-hover:text-[var(--sw-primary-600)] group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 transition-all"
+          aria-hidden="true"
+        />
+      </div>
+    </button>
+  );
+}
+
+function StatusPill({ color, label }: { color: string; label: string }) {
+  return (
+    <span
+      className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.6875rem] font-bold border whitespace-nowrap"
       style={{
-        padding: '1.25rem',
-        borderRadius: '12px',
-        border: '1px solid color-mix(in srgb, var(--primary) 12%, transparent)',
-        background: 'color-mix(in srgb, var(--surface) 60%, transparent)',
-        backdropFilter: 'blur(12px)',
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        gap: '1rem',
+        background: `color-mix(in srgb, ${color} 12%, transparent)`,
+        color,
+        borderColor: `color-mix(in srgb, ${color} 30%, transparent)`,
       }}
     >
-      <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 600, marginBottom: '0.25rem', color: 'var(--primary-dark)' }}>
-          {booking.serviceName}
-        </div>
-        <div style={{ fontSize: '0.875rem', opacity: 0.75, marginBottom: '0.5rem' }}>
-          {booking.employeeName}
-          {booking.branchName && ` · ${booking.branchName}`}
-        </div>
-        <div style={{ fontSize: '0.8125rem', opacity: 0.7 }}>
-          {dateStr} · {timeStr} · {booking.durationMins} min
-        </div>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-        <span
-          style={{
-            padding: '0.25rem 0.75rem',
-            borderRadius: '999px',
-            fontSize: '0.75rem',
-            fontWeight: 600,
-            background: `color-mix(in srgb, ${statusColor[booking.status] ?? 'var(--muted)'} 15%, transparent)`,
-            color: statusColor[booking.status] ?? 'var(--muted-foreground)',
-            border: `1px solid color-mix(in srgb, ${statusColor[booking.status] ?? 'var(--muted)'} 30%, transparent)`,
-          }}
-        >
-          {t(locale, statusKey as never) ?? booking.status}
-        </span>
-        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--primary)' }}>
-          {booking.currency} {booking.price}
-        </span>
-      </div>
-    </div>
+      <span
+        className="w-1.5 h-1.5 rounded-full"
+        style={{ background: color }}
+        aria-hidden="true"
+      />
+      {label}
+    </span>
   );
 }

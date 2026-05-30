@@ -62,9 +62,11 @@ export async function SawaaClinicsPage() {
         .filter((c) => c.departmentId === clinicsDept.id)
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((c) => {
-          const serviceCount = catalog.services.filter((s) => s.categoryId === c.id).length;
-          const therapistCount = therapists.filter(
-            (th) => th.specialtyAr === c.nameAr || th.specialty === c.nameAr,
+          const categoryServiceIds = new Set(
+            catalog.services.filter((s) => s.categoryId === c.id).map((s) => s.id),
+          );
+          const therapistCount = therapists.filter((th) =>
+            th.serviceIds.some((id) => categoryServiceIds.has(id)),
           ).length;
           return {
             id: c.id,
@@ -74,9 +76,11 @@ export async function SawaaClinicsPage() {
             descriptionEn: null,
             icon: null,
             therapistCount,
-            serviceCount,
+            serviceCount: categoryServiceIds.size,
           };
         })
+        // Hide clinics with no bookable services/therapists — they'd dead-end on the booking wizard.
+        .filter((c) => c.serviceCount > 0 && c.therapistCount > 0)
     : [];
 
   const total = clinics.length;

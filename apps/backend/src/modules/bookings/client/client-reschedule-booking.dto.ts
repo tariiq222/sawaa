@@ -1,8 +1,9 @@
-import { IsDateString, IsInt, IsOptional, Min } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsDateString, IsInt, IsNotEmpty, IsOptional, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ClientRescheduleBookingDto {
-  @ApiPropertyOptional({ description: 'New appointment time (ISO 8601)' })
+  @ApiProperty({ description: 'New appointment time (ISO 8601)' })
+  @IsNotEmpty()
   @IsDateString()
   newScheduledAt!: string;
 

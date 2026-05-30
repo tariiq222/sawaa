@@ -45,6 +45,8 @@ import { SubmitRatingHandler } from '../../modules/org-experience/ratings/submit
 import { SubmitRatingDto } from '../../modules/org-experience/ratings/submit-rating.dto';
 import { ListRatingsHandler } from '../../modules/org-experience/ratings/list-ratings.handler';
 import { ListRatingsDto } from '../../modules/org-experience/ratings/list-ratings.dto';
+import { UpdateRatingVisibilityHandler } from '../../modules/org-experience/ratings/update-rating-visibility.handler';
+import { UpdateRatingVisibilityDto } from '../../modules/org-experience/ratings/update-rating-visibility.dto';
 import { GetOrgSettingsHandler } from '../../modules/org-experience/org-settings/get-org-settings.handler';
 import { UpsertOrgSettingsHandler } from '../../modules/org-experience/org-settings/upsert-org-settings.handler';
 import { UpsertOrgSettingsDto } from '../../modules/org-experience/org-settings/upsert-org-settings.dto';
@@ -85,6 +87,7 @@ export class DashboardOrganizationSettingsController {
     private readonly getIntakeFormResponses: GetIntakeFormResponsesHandler,
     private readonly submitRating: SubmitRatingHandler,
     private readonly listRatings: ListRatingsHandler,
+    private readonly updateRatingVisibility: UpdateRatingVisibilityHandler,
     private readonly getOrgSettings: GetOrgSettingsHandler,
     private readonly upsertOrgSettings: UpsertOrgSettingsHandler,
     private readonly getBookingSettings: GetBookingSettingsHandler,
@@ -394,6 +397,18 @@ export class DashboardOrganizationSettingsController {
   @ApiOkResponse({ description: 'Paginated list of ratings' })
   listRatingsEndpoint(@Query() query: ListRatingsDto) {
     return this.listRatings.execute(query);
+  }
+
+  @Patch('ratings/:id/visibility')
+  @CheckPermissions({ action: 'update', subject: 'Booking' })
+  @ApiOperation({ summary: 'Update rating public visibility' })
+  @ApiParam({ name: 'id', description: 'Rating UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Visibility updated' })
+  updateRatingVisibilityEndpoint(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateRatingVisibilityDto,
+  ) {
+    return this.updateRatingVisibility.execute({ id, isPublic: body.isPublic });
   }
 
   // ── Organization Settings ─────────────────────────────────────────────────

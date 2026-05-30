@@ -8,7 +8,6 @@ import type {
   BookingReport,
   ClientsReport,
   OverviewReport,
-  PractitionerDetail,
   PractitionersReport,
   RatingsReport,
   ReportQuery,
@@ -71,12 +70,6 @@ export async function fetchPractitionersReport(
   return api.post("/dashboard/ops/reports", buildBody("EMPLOYEES", q))
 }
 
-export async function fetchPractitionerDetail(
-  q: ReportQuery & { employeeId: string },
-): Promise<PractitionerDetail | null> {
-  return api.post("/dashboard/ops/reports", buildBody("EMPLOYEES", q))
-}
-
 export async function fetchServicesReport(
   q: ReportQuery,
 ): Promise<WithPrevious<ServicesReport>> {
@@ -88,9 +81,6 @@ export async function fetchRatingsReport(
 ): Promise<WithPrevious<RatingsReport>> {
   return api.post("/dashboard/ops/reports", buildBody("RATINGS", q))
 }
-
-/** Back-compat alias for the old single-employee detail fetcher */
-export const fetchEmployeeReport = fetchPractitionerDetail
 
 /* ─── Excel Export ─── */
 
@@ -129,7 +119,11 @@ export async function exportReportExcel(params: {
   })
 
   if (!res.ok) {
-    throw new Error(`Export failed: ${res.status}`)
+    const reason =
+      res.status === 401 || res.status === 403
+        ? "unauthorized"
+        : res.statusText || "request failed"
+    throw new Error(`Report export failed (${res.status} ${reason})`)
   }
 
   const blob = await res.blob()

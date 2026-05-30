@@ -6,6 +6,7 @@ import {
   retryBookingZoomMeeting,
   testZoomConfig,
   upsertZoomConfig,
+  type RetryZoomMeetingResult,
 } from "@/lib/api/zoom"
 import type {
   TestZoomResult,
@@ -46,7 +47,7 @@ export function useTestZoomConfig() {
 
 export function useRetryBookingZoom() {
   const qc = useQueryClient()
-  return useMutation<{ ok: true }, Error, string>({
+  return useMutation<RetryZoomMeetingResult, Error, string>({
     mutationFn: retryBookingZoomMeeting,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["bookings"] })

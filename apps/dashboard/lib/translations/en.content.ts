@@ -25,6 +25,9 @@ export const enContent: Record<string, string> = {
   "content.home.tab.hero": "Hero",
   "content.home.tab.intros": "Section intros",
   "content.home.tab.features": "Feature cards",
+  "content.home.tab.blog": "Blog",
+  "content.home.tab.faq": "FAQ",
+  "content.home.tab.supportGroups": "Support groups",
 
   // — Shared buttons —
   "content.form.reset": "Reset",
@@ -69,4 +72,38 @@ export const enContent: Record<string, string> = {
   "content.intros.section.blog": "Blog",
   "content.intros.section.faq": "FAQ",
   "content.intros.section.cta": "Call to action",
+
+  // — Blog form —
+  "content.blog.postHeading": "Post {index}",
+  "content.blog.title": "Title (AR)",
+  "content.blog.titleEn": "Title (EN)",
+  "content.blog.date": "Date",
+  "content.blog.tag": "Tag (AR)",
+  "content.blog.tagEn": "Tag (EN)",
+  "content.blog.author": "Author",
+  "content.blog.image": "Image URL",
+  "content.blog.slug": "Slug",
+  "content.blog.content": "Content",
+  "content.blog.addPost": "Add post",
+
+  // — FAQ form —
+  "content.faq.itemHeading": "Question {index}",
+  "content.faq.q": "Question (AR)",
+  "content.faq.qEn": "Question (EN)",
+  "content.faq.a": "Answer (AR)",
+  "content.faq.aEn": "Answer (EN)",
+  "content.faq.addItem": "Add question",
+
+  // — Support groups form —
+  "content.supportGroups.groupHeading": "Group {index}",
+  "content.supportGroups.name": "Name (AR)",
+  "content.supportGroups.nameEn": "Name (EN)",
+  "content.supportGroups.desc": "Description (AR)",
+  "content.supportGroups.descEn": "Description (EN)",
+  "content.supportGroups.image": "Image URL",
+  "content.supportGroups.slug": "Slug",
+  "content.supportGroups.participants": "Participants",
+  "content.supportGroups.sessions": "Sessions",
+  "content.supportGroups.format": "Format",
+  "content.supportGroups.addGroup": "Add group",
 }

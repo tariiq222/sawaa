@@ -2,13 +2,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, Clock, UserCheck, Users } from 'lucide-react';
 import type { SectionIntro } from '@/features/site-content/public';
-import { SUPPORT_GROUPS } from '../../lib/constants';
+import type { SupportGroup } from '@/features/site-content/public';
 import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';
 import { IntroTitle } from '../ui/intro-title';
 
 interface Props {
   intro: SectionIntro;
+  items: SupportGroup[];
 }
 
 interface Tone {
@@ -25,7 +26,7 @@ const TONE: Tone = {
   ring: 'color-mix(in srgb, var(--primary) 20%, transparent)',
 };
 
-export function SupportGroups({ intro }: Props) {
+export function SupportGroups({ intro, items }: Props) {
   return (
     <section id="support-groups" className="py-20 md:py-24 relative">
       <div className="max-w-[1260px] mx-auto px-8">
@@ -39,7 +40,7 @@ export function SupportGroups({ intro }: Props) {
         </AnimatedSection>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {SUPPORT_GROUPS.map((g, i) => {
+          {items.map((g, i) => {
             const t = TONE;
             return (
               <AnimatedSection key={g.slug} delay={i * 40}>

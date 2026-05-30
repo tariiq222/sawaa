@@ -13,6 +13,23 @@ const sample: PublicEmployee = {
   publicBioAr: null,
   publicBioEn: null,
   publicImageUrl: null,
+  gender: null,
+  employmentType: 'FULL_TIME',
+  ratingAverage: null,
+  ratingCount: 0,
+  minServicePrice: null,
+  isAvailableToday: false,
+  serviceIds: ['svc-1'],
+  branchIds: ['br-1'],
+  isBookable: true,
+  availableDaysOfWeek: [],
+};
+
+const unbookable: PublicEmployee = {
+  ...sample,
+  id: 'e2',
+  slug: 'noor',
+  isBookable: false,
 };
 
 describe('therapists.api', () => {
@@ -27,8 +44,8 @@ describe('therapists.api', () => {
     vi.unstubAllGlobals();
   });
 
-  it('listPublicEmployees GETs /api/v1/public/employees with revalidation tags', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve([sample]) });
+  it('listPublicEmployees GETs /api/v1/public/employees and drops unbookable employees', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve([sample, unbookable]) });
     const out = await listPublicEmployees();
     expect(out).toEqual([sample]);
     const [url, init] = fetchMock.mock.calls[0];

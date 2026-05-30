@@ -1,4 +1,4 @@
-import type { Clinic, Therapist, BlogPost, Testimonial, SupportGroup, FaqItem } from './types';
+import type { Clinic, Therapist, Testimonial } from './types';
 
 export const SITE = {
   name: 'مركز سواء',
@@ -48,15 +48,6 @@ export const CLINICS: Clinic[] = [
   { slug: 'change',       name: 'عيادة التحفيز والتغيير', nameEn: 'Motivation & Change Clinic', desc: 'علاج الإدمان والسلوكيات الخطرة بمنهجيات علمية حديثة وبرامج تعافي',       descEn: 'Addiction and high-risk behavior treatment using modern scientific methods and recovery programs', icon: 'RefreshCw',     image: '/images/clinics/change.webp' },
 ];
 
-export const SUPPORT_GROUPS: SupportGroup[] = [
-  { slug: 'art-therapy',    name: 'العلاج بالفن',    nameEn: 'Art Therapy',        desc: 'التعبير الإبداعي لمعالجة المشاعر عبر الرسم والألوان في بيئة جماعية آمنة',    descEn: 'Creative expression to process emotions through drawing and color in a safe group setting',     icon: 'Palette',     image: '/images/support-groups/art-therapy.jpg',    participants: '6-10 مشاركين', participantsEn: '6-10 participants', sessions: '8 جلسات',  sessionsEn: '8 sessions',  format: 'حضوري',  formatEn: 'In-person' },
-  { slug: 'grief-loss',     name: 'الحزن والفقد',    nameEn: 'Grief & Loss',       desc: 'دعم جماعي لمن فقدوا عزيزاً، ومساحة آمنة للتعبير والتعافي',                  descEn: 'Group support for those who have lost a loved one — a safe space to express and heal',          icon: 'HeartCrack',  image: '/images/support-groups/grief-loss.jpg',     participants: '6-10 مشاركين', participantsEn: '6-10 participants', sessions: '10 جلسات', sessionsEn: '10 sessions', format: 'مختلط',  formatEn: 'Hybrid' },
-  { slug: 'recovery-circle',name: 'دائرة التعافي',   nameEn: 'Recovery Circle',    desc: 'دعم مستمر للمتعافين من الإدمان وتعزيز الوقاية من الانتكاسة',                 descEn: 'Ongoing support for those recovering from addiction and strengthening relapse prevention',      icon: 'RefreshCw',   image: '/images/support-groups/recovery-circle.jpg',participants: '6-10 مشاركين', participantsEn: '6-10 participants', sessions: '12 جلسة',  sessionsEn: '12 sessions', format: 'حضوري',  formatEn: 'In-person' },
-  { slug: 'new-mothers',    name: 'الأمهات الجدد',   nameEn: 'New Mothers',        desc: 'دعم ما بعد الولادة، اكتئاب الأمومة، وبناء الثقة بدور الأم',                  descEn: 'Postpartum support, maternal depression, and building confidence in the role of motherhood',    icon: 'Baby',        image: '/images/support-groups/new-mothers.jpg',    participants: '6-10 مشاركين', participantsEn: '6-10 participants', sessions: '6 جلسات',  sessionsEn: '6 sessions',  format: 'عن بُعد', formatEn: 'Remote' },
-  { slug: 'teen-support',   name: 'دعم المراهقين',   nameEn: 'Teen Support',       desc: 'مهارات اجتماعية وبناء الهوية في مجموعة أقران من نفس الفئة',                 descEn: 'Social skills and identity building in a peer group of similar age',                            icon: 'Users',       image: '/images/support-groups/teen-support.jpg',   participants: '6-10 مشاركين', participantsEn: '6-10 participants', sessions: '8 جلسات',  sessionsEn: '8 sessions',  format: 'حضوري',  formatEn: 'In-person' },
-  { slug: 'social-anxiety', name: 'القلق الاجتماعي', nameEn: 'Social Anxiety',     desc: 'تدريب تدريجي على المواقف الاجتماعية في بيئة داعمة وآمنة',                   descEn: 'Gradual training on social situations in a safe and supportive environment',                    icon: 'UsersRound',  image: '/images/support-groups/social-anxiety.jpg', participants: '6-10 مشاركين', participantsEn: '6-10 participants', sessions: '10 جلسات', sessionsEn: '10 sessions', format: 'مختلط',  formatEn: 'Hybrid' },
-];
-
 export const THERAPISTS: Therapist[] = [
   { slug: 'aisha-hijazi',         clinicSlugs: ['adaptation'],              name: 'د. عائشة حجازي',     nameEn: 'Dr. Aisha Hijazi',         role: 'أستاذ مشارك استشاري',          roleEn: 'Associate Professor & Consultant', badge: 'أستاذ مشارك', exp: '+20 سنة', letter: 'ع' },
   { slug: 'ohoud-alshalhoub',     clinicSlugs: ['growth', 'support'],       name: 'د. عهود الشلهوب',    nameEn: 'Dr. Ohoud Alshalhoub',     role: 'استشاري علم النفس',            roleEn: 'Psychology Consultant',            badge: 'استشاري',   exp: '+15 سنة', letter: 'ع' },
@@ -78,25 +69,10 @@ export const THERAPISTS: Therapist[] = [
   { slug: 'doaa-alfadli',         clinicSlugs: ['wellness'],                name: 'أ. دعاء الفضلي',     nameEn: 'Ms. Doaa Alfadli',         role: 'أخصائي نفسي',                  roleEn: 'Psychologist',                     badge: 'أخصائي',    exp: '+5 سنوات', letter: 'د', image: '/images/team/doaa.webp' },
 ];
 
-export const BLOG_POSTS: BlogPost[] = [
-  { title: 'بـ 6 خطوات استعد إيقاع حياتك بعد الإجازة',    titleEn: 'In 6 Steps: Restore Your Life Rhythm After the Holiday', date: 'أبريل 2025',  tag: 'علم اجتماع', tagEn: 'Sociology',  image: '/images/blog/post-1.webp' },
-  { title: 'لماذا القلق والتوتر أخطر ما يمر به الإنسان؟', titleEn: 'Why Anxiety and Stress Are Among the Most Dangerous Things We Face', date: 'مارس 2025',   author: 'د. عهود الشلهوب', tag: 'علم النفس', tagEn: 'Psychology', image: '/images/blog/post-2.webp' },
-  { title: 'الاحتراق الوظيفي: كيف تتعرف عليه وتتعامل معه', titleEn: 'Job Burnout: How to Recognize and Manage It', date: 'أكتوبر 2024', author: 'د. عهود الشلهوب', tag: 'علم النفس', tagEn: 'Psychology', image: '/images/blog/post-3.webp' },
-];
-
 export const TESTIMONIALS: Testimonial[] = [
   { text: 'مركز فيه جهود جبارة ورائعة، أخص بالذكر الدكتورة عهود التي قدمت لنا دعماً استثنائياً ومهنية عالية.', textEn: 'An amazing center with tremendous efforts — special thanks to Dr. Ohoud who gave us exceptional support and high professionalism.', name: 'أبو يامن',      nameEn: 'Abu Yamen',     label: 'عميل', labelEn: 'Client', letter: 'أ' },
   { text: 'من أفضل المراكز صحياً ونفسياً، الابتسامة ما تفارقهم والتعامل راقي جداً. أنصح الجميع.',               textEn: 'One of the best health and mental wellness centers — they never lose their smile and the service is top-class. I recommend it to everyone.', name: 'متعب الحربي',   nameEn: 'Mutaib Alharbi', label: 'عميل', labelEn: 'Client', letter: 'م' },
   { text: 'مركز تخصصي واعد، راقي ومريح. البيئة مهيأة ممتاز والفريق محترف ومتعاون.',                            textEn: 'A promising specialist center — refined and comfortable. The environment is excellently prepared and the team is professional and cooperative.', name: 'Moutaz Ali',    nameEn: 'Moutaz Ali',    label: 'عميل', labelEn: 'Client', letter: 'M' },
-];
-
-export const FAQS: FaqItem[] = [
-  { q: 'كم تكلفة الجلسة؟',               qEn: 'How much does a session cost?',                   a: 'تختلف تكلفة الجلسة حسب نوع الاستشارة والمعالج. للاطلاع على الأسعار التفصيلية يمكنك التواصل معنا أو زيارة صفحة الحجز.', aEn: 'Session pricing varies by consultation type and therapist. For detailed pricing, please contact us or visit the booking page.' },
-  { q: 'هل تقبلون التأمين الطبي؟',       qEn: 'Do you accept medical insurance?',                a: 'نعمل حالياً على توسيع شبكة شركاء التأمين. تواصل معنا للاستفسار عن آخر التحديثات بخصوص شركة التأمين الخاصة بك.', aEn: 'We are currently expanding our insurance partner network. Please contact us for the latest update on your insurance provider.' },
-  { q: 'هل الجلسات سرية تماماً؟',        qEn: 'Are sessions fully confidential?',                a: 'نعم — جميع الجلسات والبيانات محمية بسرية مهنية مطلقة وفق معايير الهيئة السعودية للتخصصات الصحية. لا تُشارك أي معلومات مع أي طرف دون إذنك الصريح.', aEn: 'Yes — all sessions and data are protected under strict professional confidentiality per Saudi Commission for Health Specialties standards. No information is shared with any party without your explicit consent.' },
-  { q: 'كم تستغرق الجلسة الواحدة؟',      qEn: 'How long does a single session take?',            a: 'الجلسة الاعتيادية 45 دقيقة، وقد تختلف حسب نوع الاستشارة وتوصية المعالج.', aEn: 'A standard session is 45 minutes and may vary depending on the consultation type and your therapist’s recommendation.' },
-  { q: 'ما الفرق بين الجلسة الحضورية وعن بُعد؟', qEn: 'What is the difference between in-person and remote sessions?', a: 'الحضورية في مقر العيادة بالرياض، وعن بُعد عبر منصة آمنة مشفّرة من أي مكان. كلاهما بنفس الجودة والكفاءة العلاجية.', aEn: 'In-person sessions take place at our clinic in Riyadh; remote sessions run on a secure, encrypted platform from anywhere. Both deliver the same therapeutic quality and effectiveness.' },
-  { q: 'كيف تكون الجلسة الأولى؟',        qEn: 'What is the first session like?',                 a: 'تقييم أولي يستمع فيه المعالج لاحتياجاتك ويبني خطة علاجية مناسبة لك. لا التزام بعدد جلسات محدد — أنت تقرر.', aEn: 'An initial assessment where the therapist listens to your needs and builds a treatment plan suited to you. No commitment to a fixed number of sessions — you decide.' },
 ];
 
 export const PAYMENT_METHODS = [

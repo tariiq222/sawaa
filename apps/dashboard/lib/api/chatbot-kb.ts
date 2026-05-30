@@ -46,10 +46,8 @@ export async function updateKnowledgeEntry(
   )
 }
 
-export async function deleteKnowledgeEntry(
-  id: string,
-): Promise<{ deleted: boolean }> {
-  return api.delete<{ deleted: boolean }>(`/dashboard/ai/knowledge-base/${id}`)
+export async function deleteKnowledgeEntry(id: string): Promise<void> {
+  return api.delete<void>(`/dashboard/ai/knowledge-base/${id}`)
 }
 
 export async function syncKnowledgeBase(): Promise<{ synced: number }> {

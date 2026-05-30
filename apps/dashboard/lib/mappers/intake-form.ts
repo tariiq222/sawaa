@@ -4,7 +4,7 @@ import type { IntakeFormApi, IntakeFieldApi } from "@/lib/types/intake-form-api"
 /* ─── API shape → Frontend shape ─── */
 
 export function mapApiForm(f: IntakeFormApi): IntakeForm {
-  const scopeId = f.serviceId ?? f.employeeId ?? f.branchId ?? ""
+  const scopeId = f.scopeId ?? ""
 
   const fields: FormField[] =
     f.fields?.map(
@@ -15,7 +15,6 @@ export function mapApiForm(f: IntakeFormApi): IntakeForm {
         type: fi.fieldType,
         required: fi.isRequired,
         options: fi.options ?? [],
-        condition: fi.condition ?? undefined,
       })
     ) ?? []
 

@@ -29,6 +29,8 @@ import { SetIntakeFieldsHandler } from './intake-forms/set-intake-fields.handler
 import { GetIntakeFormResponsesHandler } from './intake-forms/get-intake-form-responses.handler';
 import { SubmitRatingHandler } from './ratings/submit-rating.handler';
 import { ListRatingsHandler } from './ratings/list-ratings.handler';
+import { ListPublicTestimonialsHandler } from './ratings/list-public-testimonials.handler';
+import { UpdateRatingVisibilityHandler } from './ratings/update-rating-visibility.handler';
 import { GetOrgSettingsHandler } from './org-settings/get-org-settings.handler';
 import { UpsertOrgSettingsHandler } from './org-settings/upsert-org-settings.handler';
 import { GetBookingSettingsHandler } from '../bookings/get-booking-settings/get-booking-settings.handler';
@@ -62,7 +64,7 @@ const bundleHandlers = [
     UpsertBrandingHandler, GetBrandingHandler, GetPublicBrandingHandler, UploadLogoHandler,
     CreateIntakeFormHandler, GetIntakeFormHandler, ListIntakeFormsHandler, DeleteIntakeFormHandler,
     UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,
-    SubmitRatingHandler, ListRatingsHandler,
+    SubmitRatingHandler, ListRatingsHandler, ListPublicTestimonialsHandler, UpdateRatingVisibilityHandler,
     GetOrgSettingsHandler, UpsertOrgSettingsHandler,
     GetBookingSettingsHandler, UpsertBookingSettingsHandler,
   ],
@@ -72,7 +74,7 @@ const bundleHandlers = [
     UpsertBrandingHandler, GetBrandingHandler, GetPublicBrandingHandler, UploadLogoHandler,
     CreateIntakeFormHandler, GetIntakeFormHandler, ListIntakeFormsHandler, DeleteIntakeFormHandler,
     UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,
-    SubmitRatingHandler, ListRatingsHandler,
+    SubmitRatingHandler, ListRatingsHandler, ListPublicTestimonialsHandler, UpdateRatingVisibilityHandler,
     GetOrgSettingsHandler, UpsertOrgSettingsHandler,
     GetBookingSettingsHandler, UpsertBookingSettingsHandler,
   ],

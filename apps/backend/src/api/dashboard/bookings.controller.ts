@@ -227,6 +227,7 @@ export class DashboardBookingsController {
           fromStatus: { type: 'string', nullable: true },
           toStatus: { type: 'string' },
           changedBy: { type: 'string', format: 'uuid', nullable: true },
+          reason: { type: 'string', nullable: true },
           createdAt: { type: 'string', format: 'date-time' },
         },
       },

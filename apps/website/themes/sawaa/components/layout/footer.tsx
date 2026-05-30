@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { MapPin, Phone, Mail } from 'lucide-react';
 import { useBranding } from '@/features/branding/public';
 import { useT } from '@/features/locale/locale-provider';
-import { PAYMENT_METHODS, SITE, SUPPORT_GROUPS } from '../../lib/constants';
+import { PAYMENT_METHODS, SITE } from '../../lib/constants';
+import type { SupportGroup } from '@/features/site-content/public';
 
 const navLinks = [
   { key: 'nav.home', href: '/' },
@@ -22,6 +23,7 @@ export interface FooterClinic {
 
 interface FooterProps {
   clinics?: FooterClinic[];
+  supportGroups?: SupportGroup[];
 }
 
 function SocialIcon({
@@ -65,7 +67,7 @@ function ColumnHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Footer({ clinics = [] }: FooterProps) {
+export function Footer({ clinics = [], supportGroups = [] }: FooterProps) {
   const t = useT();
   const branding = useBranding();
   const brandName = branding.organizationNameAr || SITE.name;
@@ -186,7 +188,7 @@ export function Footer({ clinics = [] }: FooterProps) {
           <div>
             <ColumnHeader>{t('footer.supportGroups')}</ColumnHeader>
             <ul className="space-y-3">
-              {SUPPORT_GROUPS.map((g) => (
+              {(supportGroups.length > 0 ? supportGroups : []).map((g) => (
                 <li key={g.slug}>
                   <Link
                     href="/support-groups"

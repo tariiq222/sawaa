@@ -48,7 +48,7 @@ describe("useUsers", () => {
     const { Wrapper } = makeWrapper()
     const { result } = renderHook(() => useUsers(), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(apiMocks.fetchUsers).toHaveBeenCalledWith({ page: 1, perPage: 20, search: undefined, role: undefined })
+    expect(apiMocks.fetchUsers).toHaveBeenCalledWith({ page: 1, perPage: 20, search: undefined })
   })
 
   it("setSearch resets page to 1 and passes search to the API", async () => {
@@ -65,18 +65,24 @@ describe("useUsers", () => {
     )
   })
 
-  it("setRole resets page to 1", async () => {
+  it("setRole resets page to 1 and updates local role state without sending role to the api", async () => {
     apiMocks.fetchUsers.mockResolvedValue({ items: [], meta: { total: 0 } })
     const { Wrapper } = makeWrapper()
     const { result } = renderHook(() => useUsers(), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     act(() => { result.current.setPage(5) })
     act(() => { result.current.setRole("ADMIN") })
+    // page resets and local role state updates
+    await waitFor(() => expect(result.current.role).toBe("ADMIN"))
+    expect(result.current.page).toBe(1)
+    // role is no longer a backend query param (ListUsersQueryDto: search/isActive/page/limit only)
     await waitFor(() =>
       expect(apiMocks.fetchUsers).toHaveBeenLastCalledWith(
-        expect.objectContaining({ page: 1, role: "ADMIN" }),
+        expect.objectContaining({ page: 1 }),
       ),
     )
+    const lastCall = apiMocks.fetchUsers.mock.calls.at(-1)?.[0]
+    expect(lastCall).not.toHaveProperty("role")
   })
 
   it("resetFilters clears search + role and resets page to 1", async () => {

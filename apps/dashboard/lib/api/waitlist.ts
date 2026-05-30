@@ -24,10 +24,11 @@ export async function fetchWaitlist(
 /** Admin: add to waitlist — POST /dashboard/bookings/waitlist */
 export interface AddToWaitlistPayload {
   clientId: string
+  employeeId: string
   serviceId: string
-  employeeId?: string
-  branchId?: string
+  branchId: string
   preferredDate?: string
+  notes?: string
 }
 
 export async function addToWaitlist(payload: AddToWaitlistPayload): Promise<WaitlistEntry> {

@@ -3,16 +3,17 @@
 import { useState } from 'react';
 import { HelpCircle, Plus } from 'lucide-react';
 import type { SectionIntro } from '@/features/site-content/public';
-import { FAQS } from '../../lib/constants';
+import type { FaqItem } from '@/features/site-content/public';
 import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';
 import { IntroTitle } from '../ui/intro-title';
 
 interface Props {
   intro: SectionIntro;
+  items: FaqItem[];
 }
 
-export function FAQ({ intro }: Props) {
+export function FAQ({ intro, items }: Props) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
@@ -28,10 +29,10 @@ export function FAQ({ intro }: Props) {
         </AnimatedSection>
 
         <div className="space-y-3">
-          {FAQS.map((item, i) => {
+          {items.map((item, i) => {
             const isOpen = openIndex === i;
             return (
-              <AnimatedSection key={item.q} delay={i * 40}>
+              <AnimatedSection key={i} delay={i * 40}>
                 <div
                   className="bg-white rounded-2xl transition-all duration-300"
                   style={{

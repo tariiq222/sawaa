@@ -31,6 +31,8 @@ export interface GuestBookingPayload {
   employeeId: string;
   branchId: string;
   startsAt: string;
+  /** Specific duration/price option chosen for the service */
+  durationOptionId?: string;
   /** Delivery channel (IN_PERSON or ONLINE) */
   deliveryType?: 'IN_PERSON' | 'ONLINE';
   /** Legacy booking type — prefer deliveryType for new code */

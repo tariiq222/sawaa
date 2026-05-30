@@ -65,10 +65,45 @@ export class DashboardOpsController {
     schema: {
       type: 'object',
       properties: {
-        data: { type: 'array', items: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, action: { type: 'string' }, entity: { type: 'string' }, entityId: { type: 'string', format: 'uuid', nullable: true }, userId: { type: 'string', format: 'uuid', nullable: true }, createdAt: { type: 'string', format: 'date-time' } } } },
-        total: { type: 'number' },
-        page: { type: 'number' },
-        totalPages: { type: 'number' },
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              userId: { type: 'string', format: 'uuid', nullable: true },
+              action: { type: 'string' },
+              module: { type: 'string' },
+              resourceId: { type: 'string', format: 'uuid', nullable: true },
+              description: { type: 'string', nullable: true },
+              ipAddress: { type: 'string', nullable: true },
+              userAgent: { type: 'string', nullable: true },
+              createdAt: { type: 'string', format: 'date-time' },
+              userEmail: { type: 'string', nullable: true },
+              user: {
+                type: 'object',
+                nullable: true,
+                properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  firstName: { type: 'string', nullable: true },
+                  lastName: { type: 'string', nullable: true },
+                  email: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        meta: {
+          type: 'object',
+          properties: {
+            total: { type: 'number' },
+            page: { type: 'number' },
+            perPage: { type: 'number' },
+            totalPages: { type: 'number' },
+            hasNextPage: { type: 'boolean' },
+            hasPreviousPage: { type: 'boolean' },
+          },
+        },
       },
     },
   })

@@ -24,10 +24,7 @@ export async function fetchUsers(
   return api.get<PaginatedResponse<User>>("/dashboard/identity/users", {
     page: query.page,
     limit: query.perPage,
-    sortBy: query.sortBy,
-    sortOrder: query.sortOrder,
     search: query.search,
-    role: query.role,
     isActive: query.isActive,
   })
 }

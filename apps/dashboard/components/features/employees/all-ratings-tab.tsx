@@ -150,9 +150,7 @@ export function AllRatingsTab({ employees }: AllRatingsTabProps) {
                       <p className="text-sm text-foreground">{r.comment}</p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      {r.client
-                        ? `${r.client.firstName} ${r.client.lastName}`
-                        : t("ratings.anonymous")}
+                      {r.client?.name ?? t("ratings.anonymous")}
                       {" · "}
                       <span className="tabular-nums">
                         {formatLocaleDate(r.createdAt, locale)}

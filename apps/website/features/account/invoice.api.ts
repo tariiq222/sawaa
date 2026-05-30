@@ -7,11 +7,14 @@ export interface InvoiceDetail {
   clientId: string;
   employeeId: string;
   bookingId: string;
+  bundlePurchaseId: string | null;
   subtotal: number;
   discountAmt: number;
   vatRate: number;
   vatAmt: number;
   total: number;
+  refundedAmount: number;
+  refundedVatAmt: number;
   currency: string;
   status: string;
   issuedAt: string | null;

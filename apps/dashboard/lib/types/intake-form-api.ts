@@ -3,17 +3,11 @@
  * These match the NestJS backend response shapes exactly.
  */
 
-import type { FormScope, FormType, FieldType, ConditionOperator } from "./intake-form-shared"
+import type { FormScope, FormType, FieldType } from "./intake-form-shared"
 
 export type { FormScope, FormType, FieldType, ConditionOperator } from "./intake-form-shared"
 
 /* ─── Entities ─── */
-
-export interface FieldConditionApi {
-  fieldId: string
-  operator: ConditionOperator
-  value: string
-}
 
 export interface IntakeFieldApi {
   id: string
@@ -22,9 +16,8 @@ export interface IntakeFieldApi {
   labelEn: string
   fieldType: FieldType
   options: string[] | null
-  condition: FieldConditionApi | null
   isRequired: boolean
-  sortOrder: number
+  position: number
 }
 
 export interface IntakeFormApi {
@@ -33,9 +26,7 @@ export interface IntakeFormApi {
   nameEn: string
   type: FormType
   scope: FormScope
-  serviceId: string | null
-  employeeId: string | null
-  branchId: string | null
+  scopeId: string | null
   isActive: boolean
   submissionsCount: number
   createdAt: string
@@ -58,9 +49,7 @@ export interface IntakeResponseApi {
 export interface IntakeFormListQuery {
   scope?: FormScope
   type?: FormType
-  serviceId?: string
-  employeeId?: string
-  branchId?: string
+  scopeId?: string
   isActive?: boolean
 }
 
@@ -71,9 +60,7 @@ export interface CreateIntakeFormApiPayload {
   nameEn: string
   type: FormType
   scope: FormScope
-  serviceId?: string
-  employeeId?: string
-  branchId?: string
+  scopeId?: string
   isActive?: boolean
 }
 
@@ -88,9 +75,8 @@ export interface SetFieldItemApiPayload {
   labelEn: string
   fieldType: FieldType
   options?: string[]
-  condition?: FieldConditionApi
   isRequired?: boolean
-  sortOrder?: number
+  position?: number
 }
 
 export interface SetFieldsApiPayload {

@@ -259,7 +259,7 @@ describe("useEmployeeServiceMutations", () => {
     act(() => {
       result.current.updateMut.mutate({
         serviceId: "svc-1",
-        payload: { customDuration: 30 },
+        payload: { isActive: false },
       })
     })
 
@@ -267,7 +267,7 @@ describe("useEmployeeServiceMutations", () => {
       expect(updateEmployeeService).toHaveBeenCalledWith(
         "p-1",
         "svc-1",
-        expect.objectContaining({ customDuration: 30 }),
+        expect.objectContaining({ isActive: false }),
       ),
     )
   })

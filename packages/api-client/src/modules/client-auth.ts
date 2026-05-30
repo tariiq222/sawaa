@@ -74,16 +74,6 @@ export async function clientRegister(
   });
 }
 
-export async function clientRefresh(): Promise<{ accessToken: string; refreshToken: string }> {
-  return clientFetch<{ accessToken: string; refreshToken: string }>(
-    '/public/auth/refresh',
-    {
-      method: 'POST',
-      body: JSON.stringify({}),
-    },
-  );
-}
-
 export async function clientLogout(): Promise<void> {
   return clientFetch<void>('/public/auth/logout', {
     method: 'POST',

@@ -7,6 +7,7 @@ import { validatePassword } from './auth.schema';
 import { clientResetPasswordApi } from './auth.api';
 import { verifyOtp } from '@/features/otp/otp.api';
 import { OtpPurpose } from '@sawaa/shared';
+import { KeyRound, Lock, CheckCircle2 } from 'lucide-react';
 
 type Step = 'otp' | 'password';
 
@@ -14,6 +15,14 @@ interface ResetPasswordFormProps {
   initialEmail?: string;
   onSuccess?: () => void;
 }
+
+const INPUT =
+  'w-full py-3 ps-[2.625rem] pe-4 rounded-xl border border-[var(--sw-neutral-200)] bg-[var(--sw-neutral-50)] text-base text-[var(--sw-secondary-700)] outline-none box-border transition-[border-color,box-shadow] duration-150 focus:border-[var(--sw-primary-500)] focus:bg-[var(--sw-neutral-0)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--sw-primary-500)_15%,transparent)]';
+const ICON =
+  'absolute start-3.5 top-1/2 -translate-y-1/2 text-[var(--sw-neutral-400)] flex items-center pointer-events-none';
+const LABEL = 'text-sm font-medium text-[var(--sw-secondary-700)]';
+const PRIMARY_BTN =
+  'mt-1 px-6 py-3.5 rounded-full bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] font-extrabold text-base border-0 cursor-pointer shadow-[var(--sw-shadow-primary)] w-full transition-[transform,box-shadow,background] duration-150 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:translate-y-0';
 
 export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordFormProps) {
   const t = useT();
@@ -50,19 +59,16 @@ export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordForm
   async function handlePasswordSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-
     const pwError = validatePassword(newPassword);
     if (pwError) {
       setError(pwError);
       return;
     }
-
     if (!otpToken) {
       setError(t('auth.sessionExpired'));
       setStep('otp');
       return;
     }
-
     setIsLoading(true);
     try {
       await clientResetPasswordApi({ sessionToken: otpToken, newPassword });
@@ -80,61 +86,63 @@ export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordForm
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div className="flex flex-col gap-[1.125rem]">
       {error && (
-        <div style={{
-          padding: '0.75rem',
-          background: 'color-mix(in srgb, var(--error) 10%, transparent)',
-          border: '1px solid color-mix(in srgb, var(--error) 30%, transparent)',
-          borderRadius: '8px',
-          color: 'var(--error)',
-          fontSize: '0.875rem',
-        }}>
+        <div
+          className="px-4 py-3 rounded-xl text-sm leading-normal bg-[color-mix(in_srgb,var(--error)_8%,transparent)] border border-[color-mix(in_srgb,var(--error)_25%,transparent)] text-[var(--error)]"
+          role="alert"
+        >
           {error}
         </div>
       )}
       {successMsg && (
-        <div style={{
-          padding: '0.75rem',
-          background: 'color-mix(in srgb, var(--success, #22c55e) 10%, transparent)',
-          border: '1px solid color-mix(in srgb, var(--success, #22c55e) 30%, transparent)',
-          borderRadius: '8px',
-          color: 'var(--success, #16a34a)',
-          fontSize: '0.875rem',
-        }}>
-          {successMsg}
+        <div
+          className="px-4 py-3 rounded-xl text-sm leading-normal bg-[color-mix(in_srgb,var(--success)_10%,transparent)] border border-[color-mix(in_srgb,var(--success)_25%,transparent)] text-[var(--success)] flex items-center gap-2"
+          role="status"
+        >
+          <CheckCircle2 size={16} aria-hidden="true" />
+          <span>{successMsg}</span>
         </div>
       )}
 
       {step === 'otp' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <p style={{ fontSize: '0.875rem', opacity: 0.8 }}>
-            {t('auth.codeSent')} {email}
+        <div className="flex flex-col gap-[1.125rem]">
+          <p className="text-sm text-[var(--sw-body)] leading-relaxed">
+            {t('auth.codeSent')}{' '}
+            <span className="font-semibold text-[var(--sw-secondary-700)]">{email}</span>
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <label htmlFor="rp-otp" style={{ fontSize: '0.875rem', fontWeight: 500 }}>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="rp-otp" className={LABEL}>
               {t('auth.verificationCode')}
             </label>
-            <input
-              id="rp-otp"
-              type="text"
-              inputMode="numeric"
-              value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              maxLength={6}
-              placeholder="000000"
-              style={{ ...inputStyle(), fontSize: '1.5rem', letterSpacing: '0.5em', textAlign: 'center' }}
-            />
+            <div className="relative">
+              <span className={ICON} aria-hidden="true">
+                <KeyRound size={16} />
+              </span>
+              <input
+                id="rp-otp"
+                type="text"
+                inputMode="numeric"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                maxLength={6}
+                placeholder="000000"
+                className={`${INPUT} text-2xl tracking-[0.5em] text-center font-semibold`}
+              />
+            </div>
           </div>
           <button
             onClick={handleOtpSubmit}
             disabled={isLoading || otpCode.length !== 6}
-            style={primaryButtonStyle(isLoading || otpCode.length !== 6)}
+            className={PRIMARY_BTN}
           >
             {isLoading ? t('auth.verifying') : t('auth.verify')}
           </button>
-          <p style={{ textAlign: 'center', fontSize: '0.875rem', opacity: 0.8 }}>
-            <a href="/forgot-password" style={{ color: 'var(--primary)' }}>
+          <p className="text-center text-sm text-[var(--sw-body)]">
+            <a
+              href="/forgot-password"
+              className="text-[var(--sw-primary-600)] font-semibold hover:underline"
+            >
               {t('auth.requestNewCode')}
             </a>
           </p>
@@ -142,59 +150,41 @@ export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordForm
       )}
 
       {step === 'password' && (
-        <form onSubmit={handlePasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <p style={{ fontSize: '0.875rem', opacity: 0.8 }}>
-            {t('auth.emailVerifiedSetPassword')}
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <label htmlFor="rp-password" style={{ fontSize: '0.875rem', fontWeight: 500 }}>
+        <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-[1.125rem]">
+          <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-[color-mix(in_srgb,var(--success)_8%,transparent)] border border-[color-mix(in_srgb,var(--success)_22%,transparent)]">
+            <span className="mt-0.5 text-[var(--success)]" aria-hidden="true">
+              <CheckCircle2 size={14} />
+            </span>
+            <p className="text-sm text-[var(--sw-secondary-700)] leading-relaxed">
+              {t('auth.emailVerifiedSetPassword')}
+            </p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="rp-password" className={LABEL}>
               {t('auth.newPassword')}
             </label>
-            <input
-              id="rp-password"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder={t('auth.passwordHint')}
-              autoComplete="new-password"
-              required
-              style={inputStyle()}
-            />
+            <div className="relative">
+              <span className={ICON} aria-hidden="true">
+                <Lock size={16} />
+              </span>
+              <input
+                id="rp-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder={t('auth.passwordHint')}
+                autoComplete="new-password"
+                required
+                className={INPUT}
+              />
+            </div>
           </div>
-          <button type="submit" disabled={isLoading} style={primaryButtonStyle(isLoading)}>
+          <p className="text-xs text-[var(--sw-neutral-500)] -mt-2">{t('auth.passwordHint')}</p>
+          <button type="submit" disabled={isLoading} className={PRIMARY_BTN}>
             {isLoading ? t('auth.resetting') : t('auth.resetPassword')}
           </button>
         </form>
       )}
     </div>
   );
-}
-
-function inputStyle(): React.CSSProperties {
-  return {
-    padding: '0.75rem 1rem',
-    borderRadius: '8px',
-    border: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)',
-    background: 'color-mix(in srgb, var(--surface) 80%, transparent)',
-    fontSize: '1rem',
-    outline: 'none',
-    width: '100%',
-    boxSizing: 'border-box',
-  };
-}
-
-function primaryButtonStyle(disabled: boolean): React.CSSProperties {
-  return {
-    padding: '0.875rem',
-    borderRadius: '8px',
-    background: disabled ? 'var(--muted)' : 'var(--primary)',
-    color: disabled ? 'var(--muted-foreground)' : 'var(--on-primary)',
-    fontWeight: 600,
-    fontSize: '1rem',
-    border: 'none',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.7 : 1,
-    transition: 'opacity 0.2s',
-    width: '100%',
-  };
 }

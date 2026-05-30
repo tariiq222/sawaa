@@ -1,15 +1,12 @@
-import type { UserGender } from '../enums/user';
-
 export interface ClientProfile {
   id: string;
   name: string;
   email: string | null;
   phone: string | null;
-  gender: UserGender | null;
-  avatarUrl: string | null;
-  emailVerified: boolean;
-  phoneVerified: boolean;
-  isActive: boolean;
+  emailVerified: string | null;
+  phoneVerified: string | null;
+  accountType: string;
+  claimedAt: string | null;
   createdAt: string;
 }
 

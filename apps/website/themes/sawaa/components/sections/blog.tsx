@@ -1,16 +1,18 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { ArrowLeft, FileText } from 'lucide-react';
 import type { SectionIntro } from '@/features/site-content/public';
-import { BLOG_POSTS } from '../../lib/constants';
+import type { BlogPost } from '@/features/site-content/public';
 import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';
 import { IntroTitle } from '../ui/intro-title';
 
 interface Props {
   intro: SectionIntro;
+  items: BlogPost[];
 }
 
-export function Blog({ intro }: Props) {
+export function Blog({ intro, items }: Props) {
   return (
     <section id="blog" className="py-20 md:py-24 relative sw-section-cream">
       <div className="max-w-[1260px] mx-auto px-5 sm:px-6 md:px-8">
@@ -24,8 +26,9 @@ export function Blog({ intro }: Props) {
         </AnimatedSection>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-          {BLOG_POSTS.map((p, i) => (
-            <AnimatedSection key={p.title} delay={i * 80}>
+          {items.map((p, i) => (
+            <AnimatedSection key={p.slug} delay={i * 80}>
+              <Link href={`/blog/${p.slug}`} className="block h-full">
               <article
                 className="group h-full bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1.5"
                 style={{
@@ -105,6 +108,7 @@ export function Blog({ intro }: Props) {
                   </div>
                 </div>
               </article>
+              </Link>
             </AnimatedSection>
           ))}
         </div>
