@@ -10,6 +10,6 @@ export class RefundPaymentDto {
   @ApiPropertyOptional({ description: 'Partial refund amount in integer halalas (1 SAR = 100); omit to refund the full amount', example: 5000 })
   @IsInt()
   @IsOptional()
-  @Min(0)
+  @Min(1)
   amount?: number;
 }

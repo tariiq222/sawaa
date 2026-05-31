@@ -28,6 +28,7 @@
     "prisma:hooks": "prisma db execute --file prisma/hooks/ensure_vector_indexes.sql",
     "prisma:studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
+    "bootstrap:admin": "tsx prisma/bootstrap-admin.ts",
     "seed:sawa": "tsx prisma/seeds/sawa-customer.ts",
     "seed:therapists": "tsx prisma/seeds/demo-therapists.ts",
     "seed:support-groups": "tsx prisma/seeds/demo-support-groups.ts",

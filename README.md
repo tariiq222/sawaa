@@ -41,7 +41,7 @@ pnpm dev:website    # ← terminal 3
 ```
 
 الخدمات:
-- Backend:   http://localhost:5100
+- Backend:   http://localhost:5200
 - Dashboard: http://localhost:5103
 - Website:   http://localhost:5105
 
@@ -75,7 +75,7 @@ pnpm dev:website    # ← terminal 3
 
 ### Backend
 - **Single-tenant** — لا يوجد multi-tenancy
-- **Tenant enforcement = off** — كل البيانات تنتمي لمنظمة واحدة
+- **بدون أعلام tenant** — تمت إزالة سقالة multi-tenant بالكامل؛ لا يوجد متغير `TENANT_ENFORCEMENT` ولا تصفية حسب المنظمة
 - **Prisma schema** — تم إزالة جداول SaaS (Organization, Membership, Subscription, Plan, Billing)
 
 ### Database Schema
@@ -103,8 +103,8 @@ pnpm openapi:sync
 
 | البيئة | URL |
 |--------|-----|
-| التطوير | http://localhost:5100 (backend) |
-| الإنتاج | https://api.sawa.sa |
+| التطوير | http://localhost:5200 (backend) |
+| الإنتاج | https://api.sawaa.sa |
 
 ---
 

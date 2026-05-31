@@ -2,13 +2,18 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, ChevronDown } from 'lucide-react';
 import type { HeroContent } from '@/features/site-content/public';
+import { getLocale } from '@/features/locale/public';
+import { t as translate, type MessageKey } from '@/features/locale/dictionary';
 import { AnimatedSection } from '../ui/animated-section';
 
 interface Props {
   content: HeroContent;
 }
 
-export function Hero({ content }: Props) {
+export async function Hero({ content }: Props) {
+  const locale = await getLocale();
+  const t = (key: MessageKey) => translate(locale, key);
+
   return (
     <section
       id="hero"
@@ -94,10 +99,10 @@ export function Hero({ content }: Props) {
       {/* Scroll-down discover button */}
       <a
         href="#features"
-        aria-label="اكتشف المزيد"
+        aria-label={t('hero.discoverMore')}
         className="group absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-white/80 transition-colors hover:text-white"
       >
-        <span className="text-xs font-bold tracking-wide">اكتشف</span>
+        <span className="text-xs font-bold tracking-wide">{t('hero.discover')}</span>
         <span
           className="w-9 h-9 rounded-full flex items-center justify-center animate-bounce"
           style={{

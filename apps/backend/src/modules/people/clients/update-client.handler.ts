@@ -33,6 +33,22 @@ export class UpdateClientHandler {
       }
     }
 
+    if (cmd.email && cmd.email !== client.email) {
+      const duplicate = await this.prisma.client.findFirst({
+        where: {
+          email: cmd.email,
+          deletedAt: null,
+          NOT: { id: cmd.clientId },
+        },
+      });
+      if (duplicate) {
+        throw new ConflictException({
+          error: 'CLIENT_EMAIL_EXISTS',
+          message: 'Email already registered for another client',
+        });
+      }
+    }
+
     const firstName = cmd.firstName ?? client.firstName ?? client.name;
     const middleName = cmd.middleName !== undefined ? cmd.middleName : client.middleName;
     const lastName = cmd.lastName ?? client.lastName ?? '';

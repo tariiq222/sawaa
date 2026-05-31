@@ -24,6 +24,11 @@ export async function getPublicCatalog(): Promise<PublicCatalog> {
         message: '[catalog] fetch failed — using empty catalog',
         data: { status: res.status },
       });
+      Sentry.captureMessage('[catalog] fetch failed — using empty catalog', {
+        level: 'warning',
+        tags: { surface: 'public-catalog' },
+        extra: { status: res.status },
+      });
       return EMPTY_CATALOG;
     }
     return (await res.json()) as PublicCatalog;
@@ -33,6 +38,10 @@ export async function getPublicCatalog(): Promise<PublicCatalog> {
       level: 'warning',
       message: '[catalog] fetch error — using empty catalog',
       data: { error: err instanceof Error ? err.message : String(err) },
+    });
+    Sentry.captureException(err, {
+      level: 'warning',
+      tags: { surface: 'public-catalog' },
     });
     return EMPTY_CATALOG;
   }

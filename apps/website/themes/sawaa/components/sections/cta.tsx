@@ -1,8 +1,12 @@
 import Link from 'next/link';
 import { ArrowLeft, Calendar } from 'lucide-react';
 import { AnimatedSection } from '../ui/animated-section';
+import { getLocale } from '@/features/locale/public';
+import { t as translate, type MessageKey } from '@/features/locale/dictionary';
 
-export function CTA() {
+export async function CTA() {
+  const locale = await getLocale();
+  const t = (key: MessageKey) => translate(locale, key);
   return (
     <section id="cta" className="px-5 sm:px-6 md:px-8 py-20 md:py-24">
       <div className="max-w-[1260px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -24,13 +28,13 @@ export function CTA() {
               <div className="flex-1">
                 <span className="inline-flex items-center gap-1.5 text-[0.625rem] font-extrabold text-white bg-white/15 px-2.5 py-1 rounded-full mb-2 uppercase tracking-wider">
                   <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
-                  متاح الآن
+                  {t('cta.availableNow')}
                 </span>
                 <h3 className="text-[1.25rem] font-extrabold text-white mb-1 leading-tight">
-                  احجز موعدك الآن
+                  {t('cta.title')}
                 </h3>
                 <p className="text-[0.813rem] text-white/85 leading-snug">
-                  فريقنا جاهز لمساعدتك — سرية تامة
+                  {t('cta.subtitle')}
                 </p>
               </div>
             </div>
@@ -38,15 +42,15 @@ export function CTA() {
               <div className="flex items-center gap-2 text-[0.688rem] text-white/80 font-semibold">
                 <span className="flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-white/80" />
-                  حضوري
+                  {t('cta.inPerson')}
                 </span>
                 <span className="text-white/40">·</span>
                 <span className="flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-white/80" />
-                  عن بُعد
+                  {t('cta.online')}
                 </span>
                 <span className="text-white/40">·</span>
-                <span>45 دقيقة</span>
+                <span>{t('cta.duration')}</span>
               </div>
               <Link
                 href="/booking"
@@ -56,7 +60,7 @@ export function CTA() {
                   boxShadow: 'var(--sw-shadow-md)',
                 }}
               >
-                احجز <ArrowLeft className="w-3.5 h-3.5" />
+                {t('cta.book')} <ArrowLeft className="w-3.5 h-3.5" />
               </Link>
             </div>
           </div>
@@ -113,13 +117,13 @@ export function CTA() {
                     className="w-1 h-1 rounded-full animate-pulse"
                     style={{ background: 'var(--sw-primary-400)' }}
                   />
-                  قريباً
+                  {t('cta.comingSoon')}
                 </span>
                 <h3 className="text-[1.25rem] font-extrabold text-white mb-1 leading-tight">
-                  حمّل تطبيق سواء
+                  {t('cta.appTitle')}
                 </h3>
                 <p className="text-[0.813rem] text-white/70 leading-snug">
-                  احجز جلساتك من جوالك بكل سهولة
+                  {t('cta.appSubtitle')}
                 </p>
               </div>
             </div>

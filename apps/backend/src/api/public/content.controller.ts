@@ -19,14 +19,22 @@ export class PublicContentController {
   @Public()
   @Throttle({ default: { ttl: 60_000, limit: 60 } })
   @Get('site-settings')
-  @ApiOperation({ summary: 'List site settings (optionally filtered by key prefix)' })
+  @ApiOperation({
+    summary:
+      'List public site settings (allowlisted key prefixes only, optionally filtered)',
+  })
   @ApiQuery({
     name: 'prefix',
     required: false,
     description: 'Filter by key prefix (e.g. "home.hero.")',
   })
-  @ApiOkResponse({ description: 'Array of key/value settings' })
+  @ApiOkResponse({
+    description:
+      'Array of key/value settings, restricted to public-safe key prefixes',
+  })
   list(@Query('prefix') prefix?: string) {
-    return this.listSettings.execute({ prefix });
+    // Public boundary: only allowlisted key prefixes are ever exposed,
+    // regardless of the requested prefix. Private settings stay internal.
+    return this.listSettings.execute({ prefix, publicOnly: true });
   }
 }

@@ -1,5 +1,7 @@
 import { CronTasksService, CRON_JOBS } from './cron-tasks.service';
 import { BullMqService } from '../../../infrastructure/queue/bull-mq.service';
+import { ConfigService } from '@nestjs/config';
+import { EmailProviderFactory } from '../../../infrastructure/email/email-provider.factory';
 import { BookingAutocompleteCron } from './booking-autocomplete.cron';
 import { BookingExpiryCron } from './booking-expiry.cron';
 import { BookingNoShowCron } from './booking-noshow.cron';
@@ -20,6 +22,8 @@ jest.mock('@sentry/node', () => ({
 describe('CronTasksService', () => {
   let service: CronTasksService;
   let mockBullMq: jest.Mocked<BullMqService>;
+  let mockConfig: jest.Mocked<ConfigService>;
+  let mockEmailFactory: jest.Mocked<EmailProviderFactory>;
   let mockQueue: { add: jest.Mock };
   let mockWorker: { on: jest.Mock; close: jest.Mock };
   let workerEventHandlers: Map<string, Function>;
@@ -49,6 +53,17 @@ describe('CronTasksService', () => {
       getQueue: jest.fn().mockReturnValue(mockQueue),
       createWorker: jest.fn().mockReturnValue(mockWorker),
     } as unknown as jest.Mocked<BullMqService>;
+
+    mockConfig = {
+      get: jest.fn().mockReturnValue(undefined),
+    } as unknown as jest.Mocked<ConfigService>;
+
+    mockEmailFactory = {
+      resolve: jest.fn().mockResolvedValue({
+        isAvailable: () => false,
+        sendMail: jest.fn().mockResolvedValue(undefined),
+      }),
+    } as unknown as jest.Mocked<EmailProviderFactory>;
 
     mockBookingAutocomplete = {
       execute: jest.fn().mockResolvedValue(undefined),
@@ -86,6 +101,8 @@ describe('CronTasksService', () => {
 
     service = new CronTasksService(
       mockBullMq,
+      mockConfig,
+      mockEmailFactory,
       mockBookingAutocomplete,
       mockBookingExpiry,
       mockBookingNoShow,
@@ -122,6 +139,53 @@ describe('CronTasksService', () => {
     });
   });
 
+  describe('CRON_JOBS constants', () => {
+    it('no longer carries dead SaaS subscription/billing crons', () => {
+      const keys = Object.keys(CRON_JOBS);
+      const values = Object.values(CRON_JOBS);
+      const deadKeys = [
+        'METER_USAGE',
+        'CHARGE_DUE_SUBSCRIPTIONS',
+        'ENFORCE_GRACE_PERIOD',
+        'EXPIRE_TRIALS',
+        'USAGE_WARNINGS',
+        'PROCESS_SCHEDULED_PLAN_CHANGES',
+        'DUNNING_RETRY',
+      ];
+      const deadValues = [
+        'meter-usage',
+        'charge-due-subscriptions',
+        'enforce-grace-period',
+        'expire-trials',
+        'usage-warnings',
+        'process-scheduled-plan-changes',
+        'dunning-retry',
+      ];
+      for (const k of deadKeys) expect(keys).not.toContain(k);
+      for (const v of deadValues) expect(values).not.toContain(v);
+    });
+
+    it('still defines every active cron', () => {
+      const values = Object.values(CRON_JOBS);
+      expect(values).toEqual(
+        expect.arrayContaining([
+          'booking-autocomplete',
+          'booking-expiry',
+          'booking-noshow',
+          'appointment-reminders',
+          'group-session-automation',
+          'refresh-token-cleanup',
+          'db-row-count',
+          'orphan-audit',
+          'reconcile-refunds',
+          'outbox-publisher',
+          'authentica-balance-check',
+        ]),
+      );
+      expect(values).toHaveLength(11);
+    });
+  });
+
   describe('registerRepeatingJobs', () => {
     it('adds all jobs to the queue with correct cron patterns', () => {
       (service as any).registerRepeatingJobs();
@@ -133,7 +197,7 @@ describe('CronTasksService', () => {
         { name: CRON_JOBS.BOOKING_AUTOCOMPLETE, cron: '*/15 * * * *' },
         { name: CRON_JOBS.BOOKING_EXPIRY, cron: '*/10 * * * *' },
         { name: CRON_JOBS.BOOKING_NOSHOW, cron: '*/5 * * * *' },
-        { name: CRON_JOBS.APPOINTMENT_REMINDERS, cron: '0 * * * *' },
+        { name: CRON_JOBS.APPOINTMENT_REMINDERS, cron: '*/5 * * * *' },
         { name: CRON_JOBS.GROUP_SESSION_AUTOMATION, cron: '*/30 * * * *' },
         { name: CRON_JOBS.REFRESH_TOKEN_CLEANUP, cron: '0 3 * * *' },
         { name: CRON_JOBS.DB_ROW_COUNT, cron: '0 1 * * 0' },

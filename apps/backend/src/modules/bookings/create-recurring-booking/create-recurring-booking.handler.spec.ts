@@ -35,11 +35,25 @@ const buildPrisma = (overrides?: Partial<{ findFirst: jest.Mock; create: jest.Mo
     branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
     serviceCategory: { findFirst: jest.fn() },
     department: { findFirst: jest.fn() },
+    // Advisory-lock SQL (pg_advisory_xact_lock) is a no-op in unit tests.
+    $executeRaw: jest.fn().mockResolvedValue(undefined),
     // Simulate $transaction by calling the callback with the prisma itself (unit test context)
     $transaction: jest.fn().mockImplementation((cb: (tx: unknown) => Promise<unknown>) => cb(prisma)),
   };
   return prisma;
 };
+
+// Availability handler that always reports the requested slot as available.
+const buildAvailabilityHandler = (available = true) => ({
+  execute: jest.fn(async (input: { date: Date }) =>
+    available ? [{ startTime: new Date(input.date) }] : [],
+  ),
+});
+
+// Settings handler that reports whether payAtClinic is enabled.
+const buildSettingsHandler = (payAtClinicEnabled = true) => ({
+  execute: jest.fn().mockResolvedValue({ payAtClinicEnabled }),
+});
 
 const buildRlsTransaction = (prisma: ReturnType<typeof buildPrisma>) => ({
   withTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
@@ -270,5 +284,80 @@ describe('CreateRecurringBookingHandler', () => {
     });
   });
 
+  describe('advisory lock (TOCTOU hardening)', () => {
+    it('acquires a pg_advisory_xact_lock before the overlap check for each occurrence', async () => {
+      const prisma = buildPrisma();
+      const handler = new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never);
+      await handler.execute({
+        ...baseDto,
+        frequency: RecurringFrequency.WEEKLY,
+        occurrences: 3,
+      });
+      // One advisory lock per occurrence (3).
+      expect(prisma.$executeRaw).toHaveBeenCalledTimes(3);
+    });
+  });
 
+  describe('slot availability validation', () => {
+    it('rejects an occurrence whose slot is not available (skipConflicts false)', async () => {
+      const prisma = buildPrisma();
+      const availability = buildAvailabilityHandler(false);
+      const handler = new CreateRecurringBookingHandler(
+        prisma as never,
+        buildRlsTransaction(prisma) as never,
+        undefined,
+        availability as never,
+      );
+      await expect(
+        handler.execute({ ...baseDto, frequency: RecurringFrequency.WEEKLY, occurrences: 3 }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.booking.create).not.toHaveBeenCalled();
+    });
+
+    it('skips unavailable occurrences when skipConflicts is true', async () => {
+      const prisma = buildPrisma();
+      let n = 0;
+      const availability = {
+        execute: jest.fn(async (input: { date: Date }) => {
+          n++;
+          // 2nd occurrence unavailable
+          return n === 2 ? [] : [{ startTime: new Date(input.date) }];
+        }),
+      };
+      const result = await new CreateRecurringBookingHandler(
+        prisma as never,
+        buildRlsTransaction(prisma) as never,
+        undefined,
+        availability as never,
+      ).execute({ ...baseDto, frequency: RecurringFrequency.WEEKLY, occurrences: 3, skipConflicts: true });
+      expect(result).toHaveLength(2);
+    });
+  });
+
+  describe('payAtClinic gate', () => {
+    it('rejects payAtClinic when the branch disables it', async () => {
+      const prisma = buildPrisma();
+      const settings = buildSettingsHandler(false);
+      const handler = new CreateRecurringBookingHandler(
+        prisma as never,
+        buildRlsTransaction(prisma) as never,
+        settings as never,
+      );
+      await expect(
+        handler.execute({ ...baseDto, frequency: RecurringFrequency.WEEKLY, occurrences: 2, payAtClinic: true }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.booking.create).not.toHaveBeenCalled();
+    });
+
+    it('allows payAtClinic when the branch enables it', async () => {
+      const prisma = buildPrisma();
+      const settings = buildSettingsHandler(true);
+      const result = await new CreateRecurringBookingHandler(
+        prisma as never,
+        buildRlsTransaction(prisma) as never,
+        settings as never,
+      ).execute({ ...baseDto, frequency: RecurringFrequency.WEEKLY, occurrences: 2, payAtClinic: true });
+      expect(result).toHaveLength(2);
+    });
+  });
 });

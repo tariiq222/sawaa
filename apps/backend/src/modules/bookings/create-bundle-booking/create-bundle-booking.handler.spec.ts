@@ -423,4 +423,73 @@ describe('CreateBundleBookingHandler', () => {
       'Bundle has no remaining sessions',
     );
   });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // 7. payAtClinic gate + per-slot availability validation (Sprint-3 hardening)
+  // ────────────────────────────────────────────────────────────────────────────
+
+  describe('payAtClinic gate', () => {
+    const buildSettings = (payAtClinicEnabled: boolean) => ({
+      execute: jest.fn().mockResolvedValue({ payAtClinicEnabled }),
+    });
+
+    it('rejects payAtClinic when the branch disables it', async () => {
+      const h = new CreateBundleBookingHandler(
+        prisma as never,
+        rlsTransaction as never,
+        bundlePriceService as never,
+        buildSettings(false) as never,
+      );
+      await expect(h.execute({ ...baseDto, payAtClinic: true })).rejects.toThrow(
+        'Pay at clinic is not enabled for this branch',
+      );
+      expect(tx.booking.create).not.toHaveBeenCalled();
+    });
+
+    it('allows payAtClinic when the branch enables it', async () => {
+      const h = new CreateBundleBookingHandler(
+        prisma as never,
+        rlsTransaction as never,
+        bundlePriceService as never,
+        buildSettings(true) as never,
+      );
+      const result = await h.execute({ ...baseDto, payAtClinic: true });
+      expect(result.bundleGroupId).toBeTruthy();
+    });
+  });
+
+  describe('per-slot availability validation', () => {
+    const buildAvailability = (allAvailable: boolean) => ({
+      execute: jest.fn(async (input: { date: Date }) =>
+        allAvailable ? [{ startTime: new Date(input.date) }] : [],
+      ),
+    });
+
+    it('rejects when a bundle service slot is not available', async () => {
+      const h = new CreateBundleBookingHandler(
+        prisma as never,
+        rlsTransaction as never,
+        bundlePriceService as never,
+        undefined,
+        buildAvailability(false) as never,
+      );
+      await expect(h.execute(baseDto)).rejects.toThrow(BadRequestException);
+      expect(tx.booking.create).not.toHaveBeenCalled();
+    });
+
+    it('creates the bundle when all slots are available', async () => {
+      const availability = buildAvailability(true);
+      const h = new CreateBundleBookingHandler(
+        prisma as never,
+        rlsTransaction as never,
+        bundlePriceService as never,
+        undefined,
+        availability as never,
+      );
+      const result = await h.execute(baseDto);
+      expect(result.bookings).toHaveLength(2);
+      // One availability check per bundle service (2).
+      expect(availability.execute).toHaveBeenCalledTimes(2);
+    });
+  });
 });

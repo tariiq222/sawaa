@@ -42,10 +42,26 @@ export interface InvoiceStats {
   pending: number
 }
 
+/* ─── Invoice status (mirrors backend InvoiceStatus enum) ─── */
+
+export type InvoiceStatus =
+  | "DRAFT"
+  | "ISSUED"
+  | "PAID"
+  | "PARTIALLY_PAID"
+  | "PARTIALLY_REFUNDED"
+  | "VOID"
+  | "REFUNDED"
+
 /* ─── Query ─── */
 
 export interface InvoiceListQuery extends PaginatedQuery {
+  /** Page size sent to the backend list endpoint (mirrors PaginationDto.limit). */
+  limit?: number
   search?: string
+  status?: InvoiceStatus
+  clientId?: string
+  bookingId?: string
   dateFrom?: string
   dateTo?: string
 }
@@ -53,8 +69,30 @@ export interface InvoiceListQuery extends PaginatedQuery {
 /* ─── DTOs ─── */
 
 /**
- * Flat list-row type used when we render payment data as invoice rows
- * (no dedicated list-invoices endpoint yet, so we adapt Payment fields).
+ * Raw row returned by GET /dashboard/finance/invoices. Monetary fields are
+ * integer halalas serialized by Prisma Decimal (string over the wire).
+ */
+export interface InvoiceListRow {
+  id: string
+  number: number
+  clientId: string
+  bookingId: string | null
+  clientName: string | null
+  subtotal: string | number
+  vatAmt: string | number
+  total: string | number
+  refundedAmount: string | number
+  currency: string
+  status: InvoiceStatus
+  issuedAt: string | null
+  paidAt: string | null
+  sentToClientAt: string | null
+  hasPdf: boolean
+  createdAt: string
+}
+
+/**
+ * Flat list-row type consumed by the invoice table + columns.
  */
 export interface InvoiceListItem {
   id: string
@@ -63,8 +101,9 @@ export interface InvoiceListItem {
   totalAmount: number
   taxAmount: number | null
   createdAt: string
-  status: string
+  status: InvoiceStatus
   sentAt: string | null
+  hasPdf: boolean
 }
 
 export interface CreateInvoicePayload {

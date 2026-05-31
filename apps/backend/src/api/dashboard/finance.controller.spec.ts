@@ -1,14 +1,15 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { DashboardFinanceController } from './finance.controller';
 
 describe('DashboardFinanceController', () => {
   let controller: DashboardFinanceController;
   let handlers: Record<string, jest.Mock>;
+  let storage: { getSignedUrl: jest.Mock };
 
   beforeEach(() => {
     const handlerNames = [
       'createInvoice', 'getInvoice', 'processPayment', 'listPayments',
-      'applyCoupon', 'listCoupons', 'getCoupon', 'createCoupon',
+      'listInvoices', 'applyCoupon', 'listCoupons', 'getCoupon', 'createCoupon',
       'updateCoupon', 'deleteCoupon', 'getPaymentStats', 'refundPayment',
       'verifyPayment', 'bankTransferUpload', 'getMoyasarConfig',
       'upsertMoyasarConfig', 'testMoyasarConfig',
@@ -21,24 +22,28 @@ describe('DashboardFinanceController', () => {
       return { execute: mock };
     });
 
+    storage = { getSignedUrl: jest.fn().mockResolvedValue('https://minio.test/presigned') };
+
     controller = new DashboardFinanceController(
       handlerMocks[0] as any,  // createInvoice
       handlerMocks[1] as any,  // getInvoice
       handlerMocks[2] as any,  // processPayment
       handlerMocks[3] as any,  // listPayments
-      handlerMocks[4] as any,  // applyCoupon
-      handlerMocks[5] as any,  // listCoupons
-      handlerMocks[6] as any,  // getCoupon
-      handlerMocks[7] as any,  // createCoupon
-      handlerMocks[8] as any,  // updateCoupon
-      handlerMocks[9] as any,  // deleteCoupon
-      handlerMocks[10] as any, // getPaymentStats
-      handlerMocks[11] as any, // refundPayment
-      handlerMocks[12] as any, // verifyPayment
-      handlerMocks[13] as any, // bankTransferUpload
-      handlerMocks[14] as any, // getMoyasarConfig
-      handlerMocks[15] as any, // upsertMoyasarConfig
-      handlerMocks[16] as any, // testMoyasarConfig
+      handlerMocks[4] as any,  // listInvoices
+      handlerMocks[5] as any,  // applyCoupon
+      handlerMocks[6] as any,  // listCoupons
+      handlerMocks[7] as any,  // getCoupon
+      handlerMocks[8] as any,  // createCoupon
+      handlerMocks[9] as any,  // updateCoupon
+      handlerMocks[10] as any, // deleteCoupon
+      handlerMocks[11] as any, // getPaymentStats
+      handlerMocks[12] as any, // refundPayment
+      handlerMocks[13] as any, // verifyPayment
+      handlerMocks[14] as any, // bankTransferUpload
+      handlerMocks[15] as any, // getMoyasarConfig
+      handlerMocks[16] as any, // upsertMoyasarConfig
+      handlerMocks[17] as any, // testMoyasarConfig
+      storage as any,          // MinioService
     );
   });
 
@@ -61,6 +66,57 @@ describe('DashboardFinanceController', () => {
   it('getInv should call getInvoice.execute', async () => {
     await controller.getInv('inv-1');
     expect(handlers.getInvoice).toHaveBeenCalledWith({ invoiceId: 'inv-1' });
+  });
+
+  it('getInvoicePdf returns a short-lived presigned URL from the stored object key', async () => {
+    handlers.getInvoice.mockResolvedValue({
+      id: 'inv-1',
+      pdfUrl: 'invoices/inv-1/1700000000000.pdf',
+    });
+    const res = await controller.getInvoicePdf('inv-1');
+    expect(storage.getSignedUrl).toHaveBeenCalledWith(
+      'finance-invoices',
+      'invoices/inv-1/1700000000000.pdf',
+      300,
+    );
+    expect(res).toEqual({ url: 'https://minio.test/presigned' });
+  });
+
+  it('getInvoicePdf normalises a legacy full URL back to the key', async () => {
+    handlers.getInvoice.mockResolvedValue({
+      id: 'inv-1',
+      pdfUrl: 'http://localhost:9000/finance-invoices/invoices/inv-1/42.pdf',
+    });
+    await controller.getInvoicePdf('inv-1');
+    expect(storage.getSignedUrl).toHaveBeenCalledWith(
+      'finance-invoices',
+      'invoices/inv-1/42.pdf',
+      300,
+    );
+  });
+
+  it('getInvoicePdf throws 404 when no PDF generated yet', async () => {
+    handlers.getInvoice.mockResolvedValue({ id: 'inv-1', pdfUrl: null });
+    await expect(controller.getInvoicePdf('inv-1')).rejects.toThrow(NotFoundException);
+    expect(storage.getSignedUrl).not.toHaveBeenCalled();
+  });
+
+  it('listInvoicesEndpoint should call listInvoices.execute with inclusive Asia/Riyadh date bounds', async () => {
+    const query = { page: 1, limit: 10, fromDate: '2026-01-01', toDate: '2026-01-31', clientId: 'c1', bookingId: 'b1', status: 'PAID' as const };
+    await controller.listInvoicesEndpoint(query as any);
+    expect(handlers.listInvoices).toHaveBeenCalledWith({
+      page: 1, limit: 10, clientId: 'c1', bookingId: 'b1', status: 'PAID',
+      fromDate: new Date('2026-01-01T00:00:00+03:00'),
+      toDate: new Date('2026-01-31T23:59:59.999+03:00'),
+    });
+  });
+
+  it('listInvoicesEndpoint should omit dates when not provided', async () => {
+    const query = { page: 1, limit: 10 };
+    await controller.listInvoicesEndpoint(query as any);
+    expect(handlers.listInvoices).toHaveBeenCalledWith(expect.objectContaining({
+      page: 1, limit: 10, fromDate: undefined, toDate: undefined,
+    }));
   });
 
   // ── Payments ──────────────────────────────────────────────────────────────

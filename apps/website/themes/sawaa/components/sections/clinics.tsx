@@ -20,6 +20,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { SectionIntro } from '@/features/site-content/public';
+import { useT } from '@/features/locale/locale-provider';
 import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';
 import { IntroTitle } from '../ui/intro-title';
@@ -70,6 +71,7 @@ function resolveIcon(name: string | null): LucideIcon {
 }
 
 export function Clinics({ clinics, intro }: Props) {
+  const t = useT();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -129,13 +131,13 @@ export function Clinics({ clinics, intro }: Props) {
                 className="text-base font-extrabold mb-2"
                 style={{ color: 'var(--sw-secondary-700)' }}
               >
-                العيادات قيد الإعداد
+                {t('clinics.emptyTitle')}
               </h3>
               <p
                 className="text-sm leading-relaxed"
                 style={{ color: 'var(--sw-neutral-500)' }}
               >
-                نعمل على إضافة عياداتنا المتخصصة. تابعنا قريباً.
+                {t('clinics.empty')}
               </p>
             </div>
           </div>
@@ -163,14 +165,14 @@ export function Clinics({ clinics, intro }: Props) {
             className="sw-no-scrollbar flex gap-5 overflow-x-auto overflow-y-visible scroll-smooth pt-4 pb-12 px-6"
           >
             {clinics.map((c, i) => {
-              const t = TONE;
+              const tone = TONE;
               const Icon = resolveIcon(c.icon);
               const href = `/booking?categoryId=${encodeURIComponent(c.id)}`;
               return (
                 <AnimatedSection key={c.id} delay={i * 40} className="flex-shrink-0">
                   <Link
                     href={href}
-                    aria-label={`احجز في ${c.nameAr}`}
+                    aria-label={`${t('clinics.bookAria')} ${c.nameAr}`}
                     className="group block w-[300px] bg-white rounded-2xl p-4 transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
                     style={{
                       border: '1px solid var(--sw-neutral-100)',
@@ -180,10 +182,10 @@ export function Clinics({ clinics, intro }: Props) {
                     <div
                       className="relative w-full h-[160px] rounded-xl overflow-hidden mb-4 flex items-center justify-center"
                       style={{
-                        boxShadow: `0 0 0 1px ${t.ring}`,
+                        boxShadow: `0 0 0 1px ${tone.ring}`,
                         background: c.image
                           ? undefined
-                          : `linear-gradient(135deg, ${t.soft} 0%, ${t.ring} 100%)`,
+                          : `linear-gradient(135deg, ${tone.soft} 0%, ${tone.ring} 100%)`,
                       }}
                     >
                       {c.image ? (
@@ -197,13 +199,13 @@ export function Clinics({ clinics, intro }: Props) {
                       ) : (
                         <Icon
                           className="w-16 h-16"
-                          style={{ color: t.accent }}
+                          style={{ color: tone.accent }}
                           strokeWidth={1.5}
                         />
                       )}
                       <span
                         className="absolute top-2 end-2 text-[0.625rem] font-extrabold bg-white/95 backdrop-blur px-2 py-0.5 rounded-full"
-                        style={{ color: t.softText }}
+                        style={{ color: tone.softText }}
                       >
                         {String(i + 1).padStart(2, '0')}
                       </span>
@@ -212,10 +214,10 @@ export function Clinics({ clinics, intro }: Props) {
                     <div className="flex items-center gap-2 mb-2">
                       <span
                         className="inline-flex items-center gap-1 text-[0.65rem] font-bold px-2 py-0.5 rounded-full"
-                        style={{ background: t.soft, color: t.softText }}
+                        style={{ background: tone.soft, color: tone.softText }}
                       >
                         <CheckCircle2 className="w-2.5 h-2.5" />
-                        عيادة متخصصة
+                        {t('clinics.cardBadge')}
                       </span>
                     </div>
 
@@ -229,21 +231,21 @@ export function Clinics({ clinics, intro }: Props) {
                       className="text-[0.8rem] leading-relaxed mb-3 line-clamp-2"
                       style={{ color: 'var(--sw-neutral-600)' }}
                     >
-                      {c.descriptionAr ?? 'عيادة متخصصة بفريق معتمد.'}
+                      {c.descriptionAr ?? t('clinics.defaultDescription')}
                     </p>
 
                     <span
                       className="inline-flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider"
-                      style={{ color: t.accent }}
+                      style={{ color: tone.accent }}
                     >
-                      احجز موعد
+                      {t('clinics.bookCta')}
                       <span
                         className="w-6 h-6 rounded-full flex items-center justify-center transition-transform group-hover:-translate-x-0.5"
                         style={{
-                          background: `color-mix(in srgb, ${t.accent} 12%, transparent)`,
+                          background: `color-mix(in srgb, ${tone.accent} 12%, transparent)`,
                         }}
                       >
-                        <ArrowLeft className="w-3 h-3" style={{ color: t.accent }} />
+                        <ArrowLeft className="w-3 h-3" style={{ color: tone.accent }} />
                       </span>
                     </span>
                   </Link>
@@ -263,7 +265,7 @@ export function Clinics({ clinics, intro }: Props) {
               boxShadow: 'var(--sw-shadow-sm)',
             }}
           >
-            عرض كل العيادات
+            {t('clinics.viewAll')}
             <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-180" />
           </Link>
           <button
@@ -271,7 +273,7 @@ export function Clinics({ clinics, intro }: Props) {
             disabled={!canScrollRight}
             className="w-10 h-10 rounded-full bg-white flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
             style={{ border: '1px solid var(--sw-neutral-200)' }}
-            aria-label="التمرير لليمين"
+            aria-label={t('clinics.scrollNext')}
           >
             <ChevronRight
               className="w-4.5 h-4.5"
@@ -283,7 +285,7 @@ export function Clinics({ clinics, intro }: Props) {
             disabled={!canScrollLeft}
             className="w-10 h-10 rounded-full bg-white flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
             style={{ border: '1px solid var(--sw-neutral-200)' }}
-            aria-label="التمرير لليسار"
+            aria-label={t('clinics.scrollPrev')}
           >
             <ChevronLeft
               className="w-4.5 h-4.5"

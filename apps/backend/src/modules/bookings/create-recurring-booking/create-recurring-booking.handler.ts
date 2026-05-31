@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Optional,
   BadRequestException,
   ConflictException,
   Logger,
@@ -11,6 +12,18 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { randomUUID } from 'crypto';
 import { CreateRecurringBookingDto } from './create-recurring-booking.dto';
 import { normalizeBookingTypes } from '../shared/delivery-type.helper';
+import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
+import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
+
+/** FNV-1a 32-bit hash → signed int32 (Postgres int4 range). Same algorithm as create-booking. */
+function hashToInt32(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return h | 0;
+}
 
 export type CreateRecurringBookingCommand = Omit<
   CreateRecurringBookingDto,
@@ -31,6 +44,8 @@ export class CreateRecurringBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
+    @Optional() private readonly settingsHandler?: GetBookingSettingsHandler,
+    @Optional() private readonly availabilityHandler?: CheckAvailabilityHandler,
   ) {}
 
   async execute(dto: CreateRecurringBookingCommand) {
@@ -40,6 +55,16 @@ export class CreateRecurringBookingHandler {
       bookingType: dto.bookingType,
       deliveryType: dto.deliveryType,
     });
+
+    // payAtClinic gate — reject pay-at-clinic when the branch disables it.
+    // Mirrors create-booking.handler. Skipped when the settings handler is not
+    // wired (isolated unit tests construct the handler without it).
+    if ((dto.payAtClinic ?? false) && this.settingsHandler) {
+      const bookingSettings = await this.settingsHandler.execute({ branchId: dto.branchId });
+      if (!('payAtClinicEnabled' in bookingSettings) || !(bookingSettings as Record<string, unknown>).payAtClinicEnabled) {
+        throw new BadRequestException('Pay at clinic is not enabled for this branch');
+      }
+    }
 
     const dates = this.resolveDates(dto);
     const recurringGroupId = randomUUID();
@@ -125,6 +150,39 @@ export class CreateRecurringBookingHandler {
 
     for (const scheduledAt of dates) {
       const endsAt = new Date(scheduledAt.getTime() + dto.durationMins * 60_000);
+
+      // Per-occurrence availability validation — confirm the employee actually
+      // works this slot (hours/exceptions/holidays) and the catalog has it free.
+      // Mirrors create-booking.handler's assertSlotAvailable. Skipped when the
+      // availability handler is not wired (isolated unit tests).
+      if (this.availabilityHandler) {
+        const slots = await this.availabilityHandler.execute({
+          employeeId: dto.employeeId,
+          branchId: dto.branchId,
+          serviceId: dto.serviceId,
+          date: scheduledAt,
+          durationMins: dto.durationMins,
+          bookingType,
+          deliveryType: deliveryType as any,
+        });
+        const slotMs = scheduledAt.getTime();
+        const isAvailable = slots.some((s) => s.startTime.getTime() === slotMs);
+        if (!isAvailable) {
+          if (dto.skipConflicts) continue;
+          throw new BadRequestException(
+            `Selected time ${scheduledAt.toISOString()} is not available`,
+          );
+        }
+      }
+
+      // CR-5: acquire an advisory lock keyed on employee + slot window BEFORE
+      // the overlap check so two concurrent series cannot both see "no conflict"
+      // and both insert (TOCTOU double-booking race). Mirrors create-booking.
+      // The xact lock is held until the surrounding transaction commits; on the
+      // skipConflicts (no-transaction) path it is a cheap no-op statement lock.
+      const slotLockKey1 = hashToInt32(`${dto.employeeId}`);
+      const slotLockKey2 = hashToInt32(`${scheduledAt.toISOString()}:${endsAt.toISOString()}`);
+      await db.$executeRaw`SELECT pg_advisory_xact_lock(${slotLockKey1}::int, ${slotLockKey2}::int)`;
 
       const conflict = await db.booking.findFirst({
         where: {

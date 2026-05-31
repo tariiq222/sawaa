@@ -1,6 +1,8 @@
 import { MessageCircle, Quote, Star } from 'lucide-react';
 import type { SectionIntro } from '@/features/site-content/public';
 import type { PublicTestimonial } from '@/features/testimonials/public';
+import { getLocale } from '@/features/locale/public';
+import { t as translate } from '@/features/locale/dictionary';
 import { TESTIMONIALS } from '../../lib/constants';
 import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';
@@ -24,7 +26,8 @@ function mapFallback(t: (typeof TESTIMONIALS)[number]): PublicTestimonial {
 
 const AVATAR_TONE = { bg: 'var(--sw-primary-50)', text: 'var(--sw-primary-700)' };
 
-export function Testimonials({ intro, items }: Props) {
+export async function Testimonials({ intro, items }: Props) {
+  const locale = await getLocale();
   const displayItems = items.length > 0 ? items : TESTIMONIALS.map(mapFallback);
   return (
     <section id="testimonials" className="py-20 md:py-24 relative sw-section-mint">
@@ -98,7 +101,7 @@ export function Testimonials({ intro, items }: Props) {
                         className="text-[0.75rem] font-semibold"
                         style={{ color: 'var(--sw-neutral-500)' }}
                       >
-                        عميل
+                        {translate(locale, 'testimonials.clientFallback')}
                       </div>
                     </div>
                   </div>

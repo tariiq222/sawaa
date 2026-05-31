@@ -1,12 +1,15 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
+import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   MoreHorizontalIcon,
   ViewIcon,
   SentIcon,
+  Download01Icon,
 } from "@hugeicons/core-free-icons"
+import { Badge } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
 import {
   DropdownMenu,
@@ -14,10 +17,35 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@sawaa/ui"
-import type { InvoiceListItem } from "@/lib/types/invoice"
+import { ApiError } from "@/lib/api"
+import { fetchInvoicePdf } from "@/lib/api/invoices"
+import type { InvoiceListItem, InvoiceStatus } from "@/lib/types/invoice"
 import { formatPrice } from "@/lib/money"
 import { formatClinicDate } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"
+
+const statusStyles: Record<InvoiceStatus, string> = {
+  DRAFT: "border-muted-foreground/30 bg-muted text-muted-foreground",
+  ISSUED: "border-info/30 bg-info/10 text-info",
+  PAID: "border-success/30 bg-success/10 text-success",
+  PARTIALLY_PAID: "border-warning/30 bg-warning/10 text-warning",
+  PARTIALLY_REFUNDED: "border-warning/30 bg-warning/10 text-warning",
+  VOID: "border-destructive/30 bg-destructive/10 text-destructive",
+  REFUNDED: "border-info/30 bg-info/10 text-info",
+}
+
+async function handleDownloadPdf(id: string, t: (key: string) => string) {
+  try {
+    const { url } = await fetchInvoicePdf(id)
+    window.open(url, "_blank")
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) {
+      toast.error(t("invoices.noPdfYet"))
+      return
+    }
+    toast.error(t("invoices.downloadPdfError"))
+  }
+}
 
 interface InvoiceColumnCallbacks {
   onView: (invoice: InvoiceListItem) => void
@@ -89,39 +117,57 @@ export function getInvoiceColumns(
         </span>
       ),
     },
+    {
+      accessorKey: "status",
+      header: t("invoices.col.status"),
+      cell: ({ row }) => {
+        const status = row.original.status
+        return (
+          <Badge variant="outline" className={statusStyles[status] ?? ""}>
+            {t(`invoices.status.${status}`)}
+          </Badge>
+        )
+      },
+    },
   ]
 
-  if (callbacks) {
-    columns.push({
-      id: "actions",
-      header: "",
-      cell: ({ row }) => {
-        const invoice = row.original
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm">
-                <HugeiconsIcon icon={MoreHorizontalIcon} size={16} />
-                <span className="sr-only">{t("invoices.col.actions")}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+  columns.push({
+    id: "actions",
+    header: "",
+    cell: ({ row }) => {
+      const invoice = row.original
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-sm">
+              <HugeiconsIcon icon={MoreHorizontalIcon} size={16} />
+              <span className="sr-only">{t("invoices.col.actions")}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {callbacks && (
               <DropdownMenuItem onClick={() => callbacks.onView(invoice)}>
                 <HugeiconsIcon icon={ViewIcon} size={14} />
                 {t("invoices.col.viewDetails")}
               </DropdownMenuItem>
-              {!invoice.sentAt && (
-                <DropdownMenuItem onClick={() => callbacks.onSend(invoice)}>
-                  <HugeiconsIcon icon={SentIcon} size={14} />
-                  {t("invoices.col.sendInvoice")}
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      },
-    })
-  }
+            )}
+            {invoice.hasPdf && (
+              <DropdownMenuItem onClick={() => handleDownloadPdf(invoice.id, t)}>
+                <HugeiconsIcon icon={Download01Icon} size={14} />
+                {t("invoices.downloadPdf")}
+              </DropdownMenuItem>
+            )}
+            {callbacks && !invoice.sentAt && (
+              <DropdownMenuItem onClick={() => callbacks.onSend(invoice)}>
+                <HugeiconsIcon icon={SentIcon} size={14} />
+                {t("invoices.col.sendInvoice")}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
+    },
+  })
 
   return columns
 }

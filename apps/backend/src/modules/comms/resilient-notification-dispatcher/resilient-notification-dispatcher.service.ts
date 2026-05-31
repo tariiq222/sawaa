@@ -11,6 +11,7 @@
 // STANDARD types: best-effort via existing SendNotificationHandler path.
 
 import { Injectable, Logger } from '@nestjs/common';
+import * as Sentry from '@sentry/node';
 import { PrismaService } from '../../../infrastructure/database';
 import { BullMqService } from '../../../infrastructure/queue/bull-mq.service';
 import { SendEmailHandler } from '../send-email/send-email.handler';
@@ -176,6 +177,22 @@ export class ResilientNotificationDispatcher {
         this.logger.error(
           `[${channel}] All retries exhausted for log ${logId} (org: ${payload.organizationId})`,
         );
+        // Surface an exhausted CRITICAL delivery to Sentry — best-effort, must
+        // not throw and must not mask the delivery failure already recorded.
+        try {
+          Sentry.captureException(err instanceof Error ? err : new Error(errorMessage), {
+            level: 'error',
+            tags: {
+              area: 'notification-dispatch',
+              channel,
+              type: payload.type,
+              logId,
+            },
+            extra: { recipientId: payload.recipientId, organizationId: payload.organizationId },
+          });
+        } catch {
+          // ignore — alerting must never break the dispatch path
+        }
       }
     }
   }

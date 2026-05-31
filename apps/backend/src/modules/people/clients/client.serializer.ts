@@ -9,7 +9,18 @@ type ClientBookingSummary = {
   status: string;
 };
 
-export type SerializedClient = Omit<Client, 'gender' | 'accountType'> & {
+// Sensitive auth columns on the Client row that must never be serialized out
+// to the dashboard/mobile API surface (passwordHash + lockout/session state).
+type SensitiveClientAuthField =
+  | 'passwordHash'
+  | 'tokenVersion'
+  | 'loginAttempts'
+  | 'lockoutUntil';
+
+export type SerializedClient = Omit<
+  Client,
+  'gender' | 'accountType' | SensitiveClientAuthField
+> & {
   gender: 'male' | 'female' | null;
   accountType: 'full' | 'walk_in';
   lastBooking?: ClientBookingSummary | null;
@@ -22,8 +33,17 @@ type SerializeOptions = {
 };
 
 export function serializeClient(client: Client, options: SerializeOptions = {}): SerializedClient {
+  // Strip sensitive auth columns so they never reach the API surface.
+  const {
+    passwordHash: _passwordHash,
+    tokenVersion: _tokenVersion,
+    loginAttempts: _loginAttempts,
+    lockoutUntil: _lockoutUntil,
+    ...safe
+  } = client;
+
   return {
-    ...client,
+    ...safe,
     gender: client.gender ? (client.gender.toLowerCase() as 'male' | 'female') : null,
     accountType: client.accountType === 'FULL' ? 'full' : 'walk_in',
     lastBooking: options.lastBooking ?? null,

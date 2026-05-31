@@ -1,11 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { BookingStatus, DeliveryType } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertTransition } from '../booking-state-machine';
+import { CreateZoomMeetingHandler } from '../create-zoom-meeting/create-zoom-meeting.handler';
 
 interface PaymentCompletedPayload {
   paymentId: string;
@@ -31,6 +32,7 @@ export class PaymentCompletedEventHandler {
     private readonly rlsTransaction: RlsTransactionService,
     private readonly eventBus: EventBusService,
     private readonly cls: ClsService,
+    @Optional() private readonly createZoomMeeting?: CreateZoomMeetingHandler,
   ) {}
 
   register(): void {
@@ -81,6 +83,23 @@ export class PaymentCompletedEventHandler {
                 },
               }),
             ]));
+
+            // For ONLINE bookings, provision the Zoom meeting now that payment
+            // confirmed the booking — mirrors the admin confirm-booking path.
+            // Best-effort: the Zoom handler persists FAILED status internally on
+            // API errors, and this catch swallows any other failure so a Zoom
+            // outage can never fail the payment confirmation. Runs inside the
+            // tenant CLS window so the Zoom handler's tenant-scoped reads pass.
+            if (booking.deliveryType === DeliveryType.ONLINE && this.createZoomMeeting) {
+              try {
+                await this.createZoomMeeting.execute({ bookingId });
+              } catch (zoomErr) {
+                this.logger.error(
+                  `Failed to create Zoom meeting for booking ${bookingId} after payment ${paymentId}`,
+                  zoomErr,
+                );
+              }
+            }
           });
         } catch (err) {
           this.logger.error(`Failed to confirm booking ${bookingId} after payment`, err);

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConflictException } from '@nestjs/common';
 import { ClientSource } from '@prisma/client';
 import { CreateClientHandler } from './create-client.handler';
 import { PrismaService } from '../../../infrastructure/database';
@@ -44,6 +45,15 @@ describe('CreateClientHandler', () => {
     prisma.client.findFirst.mockResolvedValue({ id: 'existing', name: 'Existing', phone: dtoBase.phone });
     const result = await handler.execute(dtoBase);
     expect(result).toMatchObject({ id: 'existing', isExisting: true });
+    expect(prisma.client.create).not.toHaveBeenCalled();
+  });
+
+  it('should reject with 409 on email-only collision (different phone)', async () => {
+    // phone lookup misses, email lookup hits a different record
+    prisma.client.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'other', name: 'Other', email: dtoBase.email });
+    await expect(handler.execute(dtoBase)).rejects.toThrow(ConflictException);
     expect(prisma.client.create).not.toHaveBeenCalled();
   });
 

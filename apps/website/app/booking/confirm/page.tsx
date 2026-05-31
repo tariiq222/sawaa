@@ -26,6 +26,9 @@ function ConfirmContent() {
   const [state, setState] = useState<ConfirmState>(
     bookingId ? { phase: 'loading' } : { phase: 'failed', bookingId: null },
   );
+  // Bumping this re-runs the polling effect — used by the "check again" button
+  // when the payment is still pending after the initial polling window.
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     if (!bookingId) return;
@@ -62,15 +65,22 @@ function ConfirmContent() {
         }
         setTimeout(poll, intervalMs);
       } catch {
-        if (!cancelled) {
-          setState({ phase: 'failed', bookingId: bookingId });
+        if (cancelled) return;
+        // A transient network/server error during polling is NOT a payment
+        // failure — surface it as still-pending so the user can retry rather
+        // than wrongly telling them payment failed.
+        attempts++;
+        if (attempts >= maxAttempts) {
+          setState({ phase: 'pending', bookingId: bookingId! });
+          return;
         }
+        setTimeout(poll, intervalMs);
       }
     }
 
     poll();
     return () => { cancelled = true; };
-  }, [bookingId]);
+  }, [bookingId, retryNonce]);
 
   if (state.phase === 'loading') {
     return (
@@ -83,7 +93,12 @@ function ConfirmContent() {
   if (state.phase === 'success') {
     return (
       <div style={{ textAlign: 'center', padding: '3rem' }}>
-        <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>&#x2705;</div>
+        <div aria-hidden style={{ display: 'inline-flex', marginBottom: '1.5rem', color: 'var(--primary)' }}>
+          <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M8 12.5l2.5 2.5 5.5-6" />
+          </svg>
+        </div>
         <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>{t('booking.confirmed')}</h1>
         <p style={{ opacity: 0.7, marginBottom: '2rem' }}>{t('booking.confirmedDesc')}</p>
         <Link
@@ -99,24 +114,49 @@ function ConfirmContent() {
   if (state.phase === 'pending') {
     return (
       <div style={{ textAlign: 'center', padding: '3rem' }}>
-        <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>&#x23F3;</div>
+        <div
+          aria-hidden
+          style={{ display: 'inline-flex', marginBottom: '1.5rem', color: 'var(--primary)' }}
+        >
+          <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+        </div>
         <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>{t('booking.paymentProcessing')}</h1>
         <p style={{ opacity: 0.7, marginBottom: '2rem' }}>
           {t('booking.paymentProcessingDesc')}
         </p>
-        <Link
-          href="/account/bookings"
-          style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius)', fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
-        >
-          {t('booking.viewBookings')}
-        </Link>
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => {
+              setState({ phase: 'loading' });
+              setRetryNonce((n) => n + 1);
+            }}
+            style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius)', fontWeight: 600, border: 'none', cursor: 'pointer' }}
+          >
+            {t('booking.checkAgain')}
+          </button>
+          <Link
+            href="/account/bookings"
+            style={{ padding: '0.875rem 2rem', background: 'transparent', color: 'var(--primary)', borderRadius: 'var(--radius)', fontWeight: 600, textDecoration: 'none', display: 'inline-block', border: '1.5px solid color-mix(in srgb, var(--primary) 35%, transparent)' }}
+          >
+            {t('booking.viewBookings')}
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
     <div style={{ textAlign: 'center', padding: '3rem' }}>
-      <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>&#x274C;</div>
+      <div aria-hidden style={{ display: 'inline-flex', marginBottom: '1.5rem', color: 'var(--destructive)' }}>
+        <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9 9l6 6M15 9l-6 6" />
+        </svg>
+      </div>
       <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>{t('booking.paymentFailed')}</h1>
       <p style={{ opacity: 0.7, marginBottom: '2rem' }}>{t('booking.paymentFailedDesc')}</p>
       <Link

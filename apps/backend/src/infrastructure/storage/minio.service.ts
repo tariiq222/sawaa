@@ -2,6 +2,12 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client } from 'minio';
 
+// Finance buckets are referenced by string literal in the finance handlers
+// (bank-transfer-upload.handler.ts, issue-invoice-receipt.handler.ts). Keep
+// these names as the single source of truth so onModuleInit provisions them.
+export const FINANCE_RECEIPTS_BUCKET = 'finance-receipts';
+export const FINANCE_INVOICES_BUCKET = 'finance-invoices';
+
 interface IStorageService {
   uploadFile(bucket: string, key: string, buffer: Buffer, mimetype: string): Promise<string>;
   deleteFile(bucket: string, key: string): Promise<void>;
@@ -36,10 +42,17 @@ export class MinioService implements IStorageService, OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     try {
-      const exists = await this.client.bucketExists(this.defaultBucket);
-      if (!exists) {
-        await this.client.makeBucket(this.defaultBucket);
-        this.logger.log(`Bucket "${this.defaultBucket}" created`);
+      const requiredBuckets = [
+        this.defaultBucket,
+        FINANCE_RECEIPTS_BUCKET,
+        FINANCE_INVOICES_BUCKET,
+      ];
+      for (const bucket of requiredBuckets) {
+        const exists = await this.client.bucketExists(bucket);
+        if (!exists) {
+          await this.client.makeBucket(bucket);
+          this.logger.log(`Bucket "${bucket}" created`);
+        }
       }
       this.logger.log('MinIO connected');
     } catch (err) {

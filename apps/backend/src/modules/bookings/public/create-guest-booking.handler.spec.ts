@@ -564,5 +564,44 @@ describe('CreateGuestBookingHandler', () => {
       const result = await handler.execute(cmd);
       expect(result.bookingId).toBe('booking-5');
     });
+
+    it('acquires the slot advisory lock BEFORE the conflict findFirst (TOCTOU hardening)', async () => {
+      const callOrder: string[] = [];
+      const executeRaw = jest.fn(() => { callOrder.push('lock'); return Promise.resolve(undefined); });
+      const conflictFindFirst = jest.fn(() => { callOrder.push('conflict'); return Promise.resolve(null); });
+
+      mockPrisma.$transaction.mockImplementation(async (fn) => {
+        const txMock = {
+          $executeRaw: executeRaw,
+          usedOtpSession: { create: jest.fn().mockResolvedValue({}) },
+          booking: {
+            // First findFirst is the conflict check; subsequent is last-booking lookup.
+            findFirst: jest.fn()
+              .mockImplementationOnce(conflictFindFirst)
+              .mockResolvedValue({ bookingNumber: 5 }),
+            create: jest.fn().mockResolvedValue({ id: 'booking-lock', bookingNumber: 6 }),
+          },
+          client: {
+            findFirst: jest.fn().mockResolvedValue(null),
+            create: jest.fn().mockResolvedValue({ id: 'client-lock' }),
+            update: jest.fn(),
+          },
+          invoice: { create: jest.fn().mockResolvedValue({ id: 'invoice-lock' }) },
+          organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: 0.15 }) },
+          branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
+          employee: { findFirst: jest.fn().mockResolvedValue({ name: 'Employee' }) },
+          service: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Service', categoryId: null }) },
+          serviceCategory: { findFirst: jest.fn() },
+          department: { findFirst: jest.fn() },
+        };
+        return fn(txMock);
+      });
+
+      await handler.execute(baseCmd());
+
+      // The advisory lock must be acquired before the conflict query runs.
+      expect(callOrder.indexOf('lock')).toBeGreaterThanOrEqual(0);
+      expect(callOrder.indexOf('lock')).toBeLessThan(callOrder.indexOf('conflict'));
+    });
   });
 });

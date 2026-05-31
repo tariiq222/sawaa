@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Calendar, Tag, User } from 'lucide-react';
 import { getPublicBrandingForSsr } from '@/features/branding/public';
 import { fetchSiteSettingsMap, resolveBlogPosts } from '@/features/site-content/public';
+import { getLocale } from '@/features/locale/public';
+import { t as translate, type MessageKey } from '@/features/locale/dictionary';
 import { buildPageMetadata } from '@/lib/seo/page-metadata';
 import { theme } from '@/themes/registry';
 
@@ -29,6 +31,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BlogPostRoute({ params }: Props) {
   const { slug } = await params;
+  const locale = await getLocale();
+  const t = (key: MessageKey) => translate(locale, key);
   const settings = await fetchSiteSettingsMap().catch(() => new Map());
   const posts = resolveBlogPosts(settings);
   const post = posts.find((p) => p.slug === slug);
@@ -61,7 +65,7 @@ export default async function BlogPostRoute({ params }: Props) {
               style={{ color: 'var(--sw-neutral-500)' }}
             >
               <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-180" />
-              العودة للرئيسية
+              {t('blog.backHome')}
             </Link>
 
             <div className="grid md:grid-cols-12 gap-8 md:gap-12 items-start">
@@ -152,7 +156,7 @@ export default async function BlogPostRoute({ params }: Props) {
                       className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] mb-4"
                       style={{ color: 'var(--sw-neutral-500)' }}
                     >
-                      المحتوى
+                      {t('blog.contentHeading')}
                     </h2>
                     {post.content.split('\n').map((paragraph, i) => (
                       <p key={i} className="mb-5 whitespace-pre-line">
@@ -172,7 +176,7 @@ export default async function BlogPostRoute({ params }: Props) {
                       className="text-[0.875rem] font-medium"
                       style={{ color: 'var(--sw-neutral-400)' }}
                     >
-                      المحتوى قيد الإعداد
+                      {t('blog.contentPending')}
                     </p>
                   </div>
                 )}
@@ -194,14 +198,14 @@ export default async function BlogPostRoute({ params }: Props) {
                     letterSpacing: '-0.015em',
                   }}
                 >
-                  مقالات أخرى
+                  {t('blog.otherPosts')}
                 </h2>
                 <Link
                   href="/"
                   className="hidden sm:inline-flex items-center gap-1.5 text-[0.8125rem] font-semibold transition-all hover:gap-2.5"
                   style={{ color: 'var(--sw-secondary-700)' }}
                 >
-                  العودة للرئيسية
+                  {t('blog.backHome')}
                   <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-180" />
                 </Link>
               </div>
@@ -262,7 +266,7 @@ export default async function BlogPostRoute({ params }: Props) {
                             className="inline-flex items-center gap-1 text-[0.75rem] font-bold transition-all group-hover:gap-2"
                             style={{ color: 'var(--sw-primary-600)' }}
                           >
-                            اقرأ <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
+                            {t('blog.read')} <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
                           </span>
                         </div>
                       </div>

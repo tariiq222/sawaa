@@ -24,7 +24,25 @@ async function main(): Promise<void> {
   }
 
   const spec = await res.json();
-  writeFileSync(OUT_PATH, JSON.stringify(spec, null, 2), 'utf-8');
+  // Deterministic key order so git diffs stay readable AND so this output
+  // byte-matches the committed snapshot produced by the WRITE_OPENAPI_SPEC
+  // path in src/main.ts. Both must use the IDENTICAL recursive sort, otherwise
+  // the CI drift gate can never match. JSON.stringify's replacer cannot do this
+  // (arrays act as a global property allowlist and drop nested keys), so we walk
+  // the tree ourselves.
+  const sortKeys = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(sortKeys);
+    if (value && typeof value === 'object') {
+      return Object.keys(value as Record<string, unknown>)
+        .sort()
+        .reduce<Record<string, unknown>>((acc, key) => {
+          acc[key] = sortKeys((value as Record<string, unknown>)[key]);
+          return acc;
+        }, {});
+    }
+    return value;
+  };
+  writeFileSync(OUT_PATH, JSON.stringify(sortKeys(spec), null, 2), 'utf-8');
   console.log(`✓ OpenAPI spec written to ${OUT_PATH}`);
 }
 

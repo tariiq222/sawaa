@@ -41,14 +41,30 @@ describe('PublicContentController (e2e)', () => {
       expect(res.body[0].key).toBe('site.title');
     });
 
-    it('passes prefix filter to handler', async () => {
+    it('passes prefix filter to handler with publicOnly enforced', async () => {
       mockListSettings.execute.mockResolvedValue([]);
 
       await request(app.getHttpServer())
         .get('/public/content/site-settings?prefix=home.')
         .expect(200);
 
-      expect(mockListSettings.execute).toHaveBeenCalledWith({ prefix: 'home.' });
+      expect(mockListSettings.execute).toHaveBeenCalledWith({
+        prefix: 'home.',
+        publicOnly: true,
+      });
+    });
+
+    it('always requests publicOnly even without a prefix', async () => {
+      mockListSettings.execute.mockResolvedValue([]);
+
+      await request(app.getHttpServer())
+        .get('/public/content/site-settings')
+        .expect(200);
+
+      expect(mockListSettings.execute).toHaveBeenCalledWith({
+        prefix: undefined,
+        publicOnly: true,
+      });
     });
   });
 });

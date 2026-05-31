@@ -59,6 +59,16 @@ export async function SawaaHomePage() {
   const clinics: ClinicItem[] = clinicsDept
     ? catalog.categories
         .filter((c) => c.departmentId === clinicsDept.id)
+        .filter((c) => {
+          // Hide clinics with no bookable services/therapists — they'd dead-end on the booking wizard.
+          const categoryServiceIds = new Set(
+            catalog.services.filter((s) => s.categoryId === c.id).map((s) => s.id),
+          );
+          if (categoryServiceIds.size === 0) return false;
+          return therapists.some((th) =>
+            th.serviceIds.some((id) => categoryServiceIds.has(id)),
+          );
+        })
         .map((c) => ({
           id: c.id,
           nameAr: c.nameAr,

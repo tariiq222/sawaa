@@ -67,12 +67,13 @@ describe('RefundPaymentHandler', () => {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  const makePaymentRow = (overrides?: Partial<{ id: string; status: string; gatewayRef: string | null; amount: number; invoiceId: string }>) => [
+  const makePaymentRow = (overrides?: Partial<{ id: string; status: string; gatewayRef: string | null; amount: number; refundedAmount: number; invoiceId: string }>) => [
     {
       id: 'pay-1',
       status: PaymentStatus.COMPLETED,
       gatewayRef: 'gateway-ref-1',
       amount: 100,
+      refundedAmount: 0,
       invoiceId: 'inv-1',
       ...overrides,
     },
@@ -382,6 +383,52 @@ describe('RefundPaymentHandler', () => {
       await expect(
         handler.execute({ paymentId: 'pay-1', reason: 'test' }),
       ).rejects.toThrow('Payment refund is already processing');
+    });
+
+    it('P1: rejects an over-refund beyond the outstanding balance and never calls moyasar', async () => {
+      prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
+        // Payment of 100 halalas with 40 already refunded → outstanding = 60.
+        prisma.$queryRaw.mockResolvedValueOnce(makePaymentRow({ amount: 100, refundedAmount: 40 }));
+        prisma.invoice.findUniqueOrThrow.mockResolvedValueOnce(makeInvoice());
+        prisma.refundRequest.findFirst.mockResolvedValueOnce(null);
+        return cb(prisma);
+      });
+
+      await expect(
+        handler.execute({ paymentId: 'pay-1', reason: 'test', amount: 61 }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(moyasar.createRefund).not.toHaveBeenCalled();
+      expect(prisma.refundRequest.create).not.toHaveBeenCalled();
+    });
+
+    it('P1: idempotencyKey passed to moyasar is keyed on reqId, not on the amount', async () => {
+      let txCallCount = 0;
+      prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
+        txCallCount++;
+        if (txCallCount === 1) {
+          prisma.$queryRaw.mockResolvedValueOnce(makePaymentRow({ amount: 100, refundedAmount: 0 }));
+          prisma.invoice.findUniqueOrThrow.mockResolvedValueOnce(makeInvoice());
+          prisma.refundRequest.findFirst.mockResolvedValueOnce(null);
+          prisma.refundRequest.create.mockResolvedValueOnce({ id: 'test-uuid-1234' });
+        } else if (txCallCount === 2) {
+          prisma.refundRequest.update.mockResolvedValueOnce({ id: 'test-uuid-1234' });
+          prisma.payment.update.mockResolvedValueOnce({ id: 'pay-1', status: PaymentStatus.REFUNDED });
+          prisma.invoice.findUniqueOrThrow.mockResolvedValueOnce(makeInvoice());
+        }
+        return cb(prisma);
+      });
+
+      moyasar.createRefund.mockResolvedValue({ id: 'moy-ref-1' });
+
+      await handler.execute({ paymentId: 'pay-1', reason: 'test', amount: 50 });
+
+      expect(moyasar.createRefund).toHaveBeenCalledWith(
+        DEFAULT_ORG_ID,
+        expect.objectContaining({ idempotencyKey: 'refund:test-uuid-1234' }),
+      );
+      const params = moyasar.createRefund.mock.calls[0][1];
+      expect(params.idempotencyKey).not.toBe('refund:pay-1:50.00');
     });
 
     it('full success path: creates refund request, calls moyasar, finalizes DB, publishes event', async () => {

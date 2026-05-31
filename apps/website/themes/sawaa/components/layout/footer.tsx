@@ -167,6 +167,26 @@ export function Footer({ clinics = [], supportGroups = [] }: FooterProps) {
                   {t('nav.booking')}
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/privacy"
+                  aria-label={t('footer.privacy')}
+                  className="text-[0.813rem] transition"
+                  style={{ color: 'var(--sw-neutral-500)' }}
+                >
+                  {t('footer.privacy')}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/terms"
+                  aria-label={t('footer.terms')}
+                  className="text-[0.813rem] transition"
+                  style={{ color: 'var(--sw-neutral-500)' }}
+                >
+                  {t('footer.terms')}
+                </Link>
+              </li>
             </ul>
           </div>
 

@@ -193,6 +193,17 @@ export const envValidationSchema = Joi.object({
     otherwise: Joi.string().allow('').optional(),
   }),
 
+  // Platform settings AES-256-GCM key. Decoded as Buffer.from(raw, 'hex') and
+  // MUST be exactly 32 bytes = 64 hex chars (see modules/platform/settings/crypto.util.ts).
+  // REQUIRED in production: a missing/short key throws at first encrypt/decrypt,
+  // which would otherwise surface as a runtime crash rather than a boot failure.
+  // Generate with: openssl rand -hex 32
+  PLATFORM_SETTINGS_KEY: Joi.string().length(64).hex().when('NODE_ENV', {
+    is: 'production',
+    then: Joi.required(),
+    otherwise: Joi.string().length(64).hex().allow('').optional(),
+  }),
+
 })
   .unknown(true)
   // Production safety net: refuse to boot if any sensitive value is still a
@@ -212,6 +223,7 @@ export const envValidationSchema = Joi.object({
       'MOYASAR_ENCRYPTION_KEY',
       'EMAIL_PROVIDER_ENCRYPTION_KEY',
       'AUTHENTICA_API_KEY',
+      'PLATFORM_SETTINGS_KEY',
     ];
     for (const key of sensitiveKeys) {
       const v = value[key];
@@ -220,6 +232,22 @@ export const envValidationSchema = Joi.object({
         return helpers.error('any.invalid', {
           message: `${key} contains a dev placeholder and must be replaced before running in production`,
         });
+      }
+      // PLATFORM_SETTINGS_KEY is hex-encoded (not base64) and does not end in
+      // ENCRYPTION_KEY, so it bypasses the all-zero base64 guard below. Reject an
+      // all-zero hex key here so a `0000…` placeholder cannot ship trivially-
+      // decryptable platform settings to production.
+      if (key === 'PLATFORM_SETTINGS_KEY') {
+        try {
+          const raw = Buffer.from(v, 'hex');
+          if (raw.length > 0 && raw.every((b) => b === 0)) {
+            return helpers.error('any.invalid', {
+              message: `${key} decodes to all-zero bytes — refusing to boot with a trivially-decryptable key`,
+            });
+          }
+        } catch {
+          // hex() Joi rule already validated the format above; ignore.
+        }
       }
       // SECURITY (P0-14): reject base64-decoded all-zero keys. CI used to
       // ship `AAAAAAAA…=` placeholders; if one ever leaks into prod env, the

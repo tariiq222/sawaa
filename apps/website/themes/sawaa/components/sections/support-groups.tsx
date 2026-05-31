@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, Clock, UserCheck, Users } from 'lucide-react';
 import type { SectionIntro } from '@/features/site-content/public';
 import type { SupportGroup } from '@/features/site-content/public';
+import { getLocale } from '@/features/locale/public';
+import { t as translate } from '@/features/locale/dictionary';
 import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';
 import { IntroTitle } from '../ui/intro-title';
@@ -26,7 +28,8 @@ const TONE: Tone = {
   ring: 'color-mix(in srgb, var(--primary) 20%, transparent)',
 };
 
-export function SupportGroups({ intro, items }: Props) {
+export async function SupportGroups({ intro, items }: Props) {
+  const locale = await getLocale();
   return (
     <section id="support-groups" className="py-20 md:py-24 relative">
       <div className="max-w-[1260px] mx-auto px-8">
@@ -41,7 +44,7 @@ export function SupportGroups({ intro, items }: Props) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {items.map((g, i) => {
-            const t = TONE;
+            const tone = TONE;
             return (
               <AnimatedSection key={g.slug} delay={i * 40}>
                 <div
@@ -53,7 +56,7 @@ export function SupportGroups({ intro, items }: Props) {
                 >
                   <div
                     className="relative w-full h-full rounded-xl overflow-hidden"
-                    style={{ boxShadow: `0 0 0 1px ${t.ring}` }}
+                    style={{ boxShadow: `0 0 0 1px ${tone.ring}` }}
                   >
                     <Image
                       src={g.image}
@@ -64,7 +67,7 @@ export function SupportGroups({ intro, items }: Props) {
                     />
                     <span
                       className="absolute top-2 end-2 text-[0.625rem] font-extrabold bg-white/95 backdrop-blur px-2 py-0.5 rounded-full"
-                      style={{ color: t.softText }}
+                      style={{ color: tone.softText }}
                     >
                       {g.format}
                     </span>
@@ -74,10 +77,10 @@ export function SupportGroups({ intro, items }: Props) {
                     <div className="flex items-center gap-2 mb-1.5">
                       <span
                         className="inline-flex items-center gap-1 text-[0.65rem] font-bold px-2 py-0.5 rounded-full"
-                        style={{ background: t.soft, color: t.softText }}
+                        style={{ background: tone.soft, color: tone.softText }}
                       >
                         <CheckCircle2 className="w-2.5 h-2.5" />
-                        مجموعة دعم
+                        {translate(locale, 'supportGroups.badge')}
                       </span>
                       <span
                         className="inline-flex items-center gap-1 text-[0.6rem]"
@@ -111,16 +114,16 @@ export function SupportGroups({ intro, items }: Props) {
                     <Link
                       href="/support-groups"
                       className="inline-flex items-center gap-1.5 self-start text-[0.7rem] font-bold uppercase tracking-wider transition-all hover:gap-2"
-                      style={{ color: t.accent }}
+                      style={{ color: tone.accent }}
                     >
-                      اعرف أكثر
+                      {translate(locale, 'supportGroups.learnMore')}
                       <span
                         className="w-6 h-6 rounded-full flex items-center justify-center transition-transform group-hover:-translate-x-1"
                         style={{
-                          background: `color-mix(in srgb, ${t.accent} 12%, transparent)`,
+                          background: `color-mix(in srgb, ${tone.accent} 12%, transparent)`,
                         }}
                       >
-                        <ArrowLeft className="w-3 h-3" style={{ color: t.accent }} />
+                        <ArrowLeft className="w-3 h-3" style={{ color: tone.accent }} />
                       </span>
                     </Link>
                   </div>

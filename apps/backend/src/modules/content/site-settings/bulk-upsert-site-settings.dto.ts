@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsOptional,
@@ -8,6 +9,11 @@ import {
   MaxLength,
   ValidateNested,
 } from 'class-validator';
+
+/** Upper bound on a single text value field to prevent unbounded payloads. */
+const MAX_VALUE_LENGTH = 10_000;
+/** Upper bound on the number of entries accepted in one bulk-upsert call. */
+const MAX_ENTRIES = 100;
 
 export class SiteSettingEntryDto {
   @ApiProperty({
@@ -21,16 +27,19 @@ export class SiteSettingEntryDto {
   @ApiPropertyOptional({ description: 'Plain text value (lang-neutral)' })
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_VALUE_LENGTH)
   valueText?: string | null;
 
   @ApiPropertyOptional({ description: 'Arabic text value' })
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_VALUE_LENGTH)
   valueAr?: string | null;
 
   @ApiPropertyOptional({ description: 'English text value' })
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_VALUE_LENGTH)
   valueEn?: string | null;
 
   @ApiPropertyOptional({
@@ -44,6 +53,7 @@ export class SiteSettingEntryDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_VALUE_LENGTH)
   valueMedia?: string | null;
 }
 
@@ -54,6 +64,7 @@ export class BulkUpsertSiteSettingsDto {
   })
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_ENTRIES)
   @ValidateNested({ each: true })
   @Type(() => SiteSettingEntryDto)
   entries!: SiteSettingEntryDto[];

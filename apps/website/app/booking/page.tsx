@@ -57,6 +57,7 @@ type UiState = {
   lockedEmployee: EmployeeWithUser | null;
   selectedBranch: PublicBranch | null;
   selectedDate: string;
+  selectedChoice: { durationOptionId: string; deliveryType: 'IN_PERSON' | 'ONLINE' } | null;
   isSubmitting: boolean;
   submitError: string | null;
   redirectUrl: string | null;
@@ -72,6 +73,7 @@ type UiAction =
   | { type: 'PICK_BRANCH'; branch: PublicBranch }
   | { type: 'CANCEL_BRANCH_PICK' }
   | { type: 'SET_DATE'; date: string }
+  | { type: 'SET_CHOICE'; choice: { durationOptionId: string; deliveryType: 'IN_PERSON' | 'ONLINE' } | null }
   | { type: 'SUBMIT_START' }
   | { type: 'SUBMIT_ERROR'; error: string }
   | { type: 'SUBMIT_DONE'; bookingId: string; redirectUrl: string };
@@ -83,6 +85,7 @@ const INITIAL_UI_STATE: UiState = {
   lockedEmployee: null,
   selectedBranch: null,
   selectedDate: todayLocalIso(),
+  selectedChoice: null,
   isSubmitting: false,
   submitError: null,
   redirectUrl: null,
@@ -107,6 +110,8 @@ function uiReducer(state: UiState, action: UiAction): UiState {
       return { ...state, awaitingBranch: false, pendingEmployee: null };
     case 'SET_DATE':
       return { ...state, selectedDate: action.date };
+    case 'SET_CHOICE':
+      return { ...state, selectedChoice: action.choice };
     case 'SUBMIT_START':
       return { ...state, isSubmitting: true, submitError: null };
     case 'SUBMIT_ERROR':
@@ -284,6 +289,7 @@ function BookingWizardInner() {
     lockedEmployee,
     selectedBranch,
     selectedDate,
+    selectedChoice,
     isSubmitting,
     submitError,
     redirectUrl,
@@ -472,15 +478,37 @@ function BookingWizardInner() {
   const serviceId = service?.id;
   const branchId = effectiveBranchId;
   const { data: slots = [], isLoading: loadingSlots } = useQuery({
-    queryKey: ['public', 'availability', employeeId, selectedDate, serviceId, branchId],
-    queryFn: () => getPublicAvailability(employeeId!, selectedDate, serviceId, branchId),
+    queryKey: [
+      'public',
+      'availability',
+      employeeId,
+      selectedDate,
+      serviceId,
+      branchId,
+      selectedChoice?.durationOptionId,
+      selectedChoice?.deliveryType,
+    ],
+    queryFn: () =>
+      getPublicAvailability(employeeId!, selectedDate, serviceId, branchId, {
+        durationOptionId: selectedChoice?.durationOptionId,
+        deliveryType: selectedChoice?.deliveryType,
+      }),
     enabled: state.step === WizardStep.SLOT && !!employeeId && !!branchId,
   });
 
   // Per-day "has any slot?" probe drives the date-strip greying. Anchored to
   // today and renewed when employee/service/branch change.
   const { data: availabilityDays = [] } = useQuery({
-    queryKey: ['public', 'availability', 'days', employeeId, serviceId, branchId],
+    queryKey: [
+      'public',
+      'availability',
+      'days',
+      employeeId,
+      serviceId,
+      branchId,
+      selectedChoice?.durationOptionId,
+      selectedChoice?.deliveryType,
+    ],
     queryFn: () =>
       getPublicAvailabilityDays(employeeId!, {
         serviceId,
@@ -496,8 +524,12 @@ function BookingWizardInner() {
 
   // === Handlers (entry-point aware) ===
 
-  const handleServiceSelect = (svc: Service) => {
+  const handleServiceSelect = (
+    svc: Service,
+    choice?: { durationOptionId: string; deliveryType: 'IN_PERSON' | 'ONLINE' },
+  ) => {
     dispatch({ type: 'SELECT_SERVICE', service: svc });
+    dispatchUi({ type: 'SET_CHOICE', choice: choice ?? null });
     // If a therapist was already chosen (deep link), apply it now — the state
     // machine accepts SELECT_EMPLOYEE only after SELECT_SERVICE, so we sequence
     // them.
@@ -681,6 +713,7 @@ function BookingWizardInner() {
       case WizardStep.THERAPIST:
         // Back to service picker.
         dispatch({ type: 'RESET' });
+        dispatchUi({ type: 'SET_CHOICE', choice: null });
         break;
       case WizardStep.SLOT:
         // Back to therapist picker.
@@ -893,6 +926,8 @@ function BookingWizardInner() {
                   employeeId: employee.id,
                   branchId: effectiveBranchId,
                   startsAt: slot.startTime,
+                  durationOptionId: selectedChoice?.durationOptionId,
+                  deliveryType: selectedChoice?.deliveryType,
                   client,
                 },
                 token,

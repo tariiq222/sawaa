@@ -330,9 +330,10 @@ export class RefundPaymentHandler {
             status: string;
             gatewayRef: string | null;
             amount: unknown;
+            refundedAmount: unknown;
             invoiceId: string;
           }>
-        >`SELECT id, status, "gatewayRef", amount, "invoiceId"
+        >`SELECT id, status, "gatewayRef", amount, "refundedAmount", "invoiceId"
             FROM "Payment"
             WHERE id = ${cmd.paymentId}
             FOR UPDATE`;
@@ -373,8 +374,21 @@ export class RefundPaymentHandler {
         }
 
         const refAmt = cmd.amount ?? Number(lockedPayment.amount);
+        // P1 (money-safety): clamp the refund to the payment's outstanding
+        // (un-refunded) balance. Without this a caller could over-refund —
+        // refund more than was ever paid, or stack partial refunds past the
+        // total. `refundedAmount` is read under the same FOR UPDATE lock.
+        const outstanding = Number(lockedPayment.amount) - Number(row.refundedAmount ?? 0);
+        if (refAmt <= 0 || refAmt > outstanding) {
+          throw new BadRequestException(
+            `Refund amount ${refAmt} exceeds the refundable balance of ${outstanding} halalas`,
+          );
+        }
         const reqId = randomUUID();
-        const iKey = `refund:${lockedPayment.id}:${Number(refAmt).toFixed(2)}`;
+        // P1 (idempotency): key on the unique refundRequestId, NOT on
+        // (paymentId, amount) — two equal-amount partial refunds used to
+        // collide on Moyasar's side. Mirrors createRefundRequestInTx.
+        const iKey = `refund:${reqId}`;
 
         // Step 1 — persist in-flight refund record inside the lock so no
         // concurrent request can slip past the PROCESSING check before this row exists.

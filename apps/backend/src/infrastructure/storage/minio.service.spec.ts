@@ -80,4 +80,110 @@ describe('MinioService', () => {
   it('should ping', async () => {
     await expect(service.ping()).resolves.not.toThrow();
   });
+
+  it('should create all required buckets on init when missing', async () => {
+    const { Client } = require('minio');
+    const bucketExists = jest.fn().mockResolvedValue(false);
+    const makeBucket = jest.fn().mockResolvedValue(undefined);
+    Client.mockImplementationOnce(() => ({ bucketExists, makeBucket }));
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        MinioService,
+        {
+          provide: ConfigService,
+          useValue: {
+            getOrThrow: jest.fn((key: string) => {
+              if (key === 'MINIO_ENDPOINT') return 'localhost';
+              if (key === 'MINIO_PORT') return 9000;
+              if (key === 'MINIO_ACCESS_KEY') return 'key';
+              if (key === 'MINIO_SECRET_KEY') return 'secret';
+              if (key === 'MINIO_BUCKET') return 'test-bucket';
+              return undefined;
+            }),
+            get: jest.fn((key: string) => {
+              if (key === 'MINIO_USE_SSL') return 'false';
+              return undefined;
+            }),
+          },
+        },
+      ],
+    }).compile();
+
+    const svc = module.get<MinioService>(MinioService);
+    await svc.onModuleInit();
+
+    expect(makeBucket).toHaveBeenCalledWith('test-bucket');
+    expect(makeBucket).toHaveBeenCalledWith('finance-receipts');
+    expect(makeBucket).toHaveBeenCalledWith('finance-invoices');
+    expect(makeBucket).toHaveBeenCalledTimes(3);
+  });
+
+  it('should not create buckets that already exist on init', async () => {
+    const { Client } = require('minio');
+    const bucketExists = jest.fn().mockResolvedValue(true);
+    const makeBucket = jest.fn().mockResolvedValue(undefined);
+    Client.mockImplementationOnce(() => ({ bucketExists, makeBucket }));
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        MinioService,
+        {
+          provide: ConfigService,
+          useValue: {
+            getOrThrow: jest.fn((key: string) => {
+              if (key === 'MINIO_ENDPOINT') return 'localhost';
+              if (key === 'MINIO_PORT') return 9000;
+              if (key === 'MINIO_ACCESS_KEY') return 'key';
+              if (key === 'MINIO_SECRET_KEY') return 'secret';
+              if (key === 'MINIO_BUCKET') return 'test-bucket';
+              return undefined;
+            }),
+            get: jest.fn((key: string) => {
+              if (key === 'MINIO_USE_SSL') return 'false';
+              return undefined;
+            }),
+          },
+        },
+      ],
+    }).compile();
+
+    const svc = module.get<MinioService>(MinioService);
+    await svc.onModuleInit();
+
+    expect(bucketExists).toHaveBeenCalledTimes(3);
+    expect(makeBucket).not.toHaveBeenCalled();
+  });
+
+  it('should swallow MinIO errors on init so the server still boots', async () => {
+    const { Client } = require('minio');
+    const bucketExists = jest.fn().mockRejectedValue(new Error('MinIO down'));
+    Client.mockImplementationOnce(() => ({ bucketExists, makeBucket: jest.fn() }));
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        MinioService,
+        {
+          provide: ConfigService,
+          useValue: {
+            getOrThrow: jest.fn((key: string) => {
+              if (key === 'MINIO_ENDPOINT') return 'localhost';
+              if (key === 'MINIO_PORT') return 9000;
+              if (key === 'MINIO_ACCESS_KEY') return 'key';
+              if (key === 'MINIO_SECRET_KEY') return 'secret';
+              if (key === 'MINIO_BUCKET') return 'test-bucket';
+              return undefined;
+            }),
+            get: jest.fn((key: string) => {
+              if (key === 'MINIO_USE_SSL') return 'false';
+              return undefined;
+            }),
+          },
+        },
+      ],
+    }).compile();
+
+    const svc = module.get<MinioService>(MinioService);
+    await expect(svc.onModuleInit()).resolves.not.toThrow();
+  });
 });

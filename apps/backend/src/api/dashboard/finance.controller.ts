@@ -20,6 +20,8 @@ import { ProcessPaymentHandler } from '../../modules/finance/process-payment/pro
 import { ProcessPaymentDto } from '../../modules/finance/process-payment/process-payment.dto';
 import { ListPaymentsHandler } from '../../modules/finance/list-payments/list-payments.handler';
 import { ListPaymentsDto } from '../../modules/finance/list-payments/list-payments.dto';
+import { ListInvoicesHandler } from '../../modules/finance/list-invoices/list-invoices.handler';
+import { ListInvoicesDto } from '../../modules/finance/list-invoices/list-invoices.dto';
 import { ApplyCouponHandler } from '../../modules/finance/apply-coupon/apply-coupon.handler';
 import { ApplyCouponDto } from '../../modules/finance/apply-coupon/apply-coupon.dto';
 import { ListCouponsHandler } from '../../modules/finance/coupons/list-coupons.handler';
@@ -41,6 +43,14 @@ import { GetMoyasarConfigHandler } from '../../modules/finance/moyasar-config/ge
 import { UpsertMoyasarConfigHandler } from '../../modules/finance/moyasar-config/upsert-moyasar-config.handler';
 import { TestMoyasarConfigHandler } from '../../modules/finance/moyasar-config/test-moyasar-config.handler';
 import { UpsertMoyasarConfigDto } from '../../modules/finance/moyasar-config/upsert-moyasar-config.dto';
+import { MinioService } from '../../infrastructure/storage/minio.service';
+import {
+  FINANCE_INVOICES_BUCKET_NAME,
+  extractInvoicePdfKey,
+} from '../../modules/finance/issue-invoice-receipt/invoice-pdf-key.helper';
+
+// Short-lived presigned download window for dashboard PDF links (5 minutes).
+const INVOICE_PDF_URL_EXPIRY_SECONDS = 300;
 
 @ApiTags('Dashboard / Finance')
 @ApiBearerAuth()
@@ -53,6 +63,7 @@ export class DashboardFinanceController {
     private readonly getInvoice: GetInvoiceHandler,
     private readonly processPayment: ProcessPaymentHandler,
     private readonly listPayments: ListPaymentsHandler,
+    private readonly listInvoices: ListInvoicesHandler,
     private readonly applyCoupon: ApplyCouponHandler,
     private readonly listCoupons: ListCouponsHandler,
     private readonly getCoupon: GetCouponHandler,
@@ -66,9 +77,26 @@ export class DashboardFinanceController {
     private readonly getMoyasarConfig: GetMoyasarConfigHandler,
     private readonly upsertMoyasarConfig: UpsertMoyasarConfigHandler,
     private readonly testMoyasarConfig: TestMoyasarConfigHandler,
+    private readonly storage: MinioService,
   ) {}
 
   // ── Invoices ──────────────────────────────────────────────────────────────
+
+  @Get('invoices')
+  @CheckPermissions({ action: 'read', subject: 'Invoice' })
+  @ApiOperation({ summary: 'List invoices with optional filters' })
+  @ApiOkResponse({ description: 'Paginated invoice list' })
+  listInvoicesEndpoint(@Query() query: ListInvoicesDto) {
+    return this.listInvoices.execute({
+      page: query.page,
+      limit: query.limit,
+      clientId: query.clientId,
+      bookingId: query.bookingId,
+      status: query.status,
+      fromDate: startOfDayInTz(query.fromDate),
+      toDate: endOfDayInTz(query.toDate),
+    });
+  }
 
   @Post('invoices')
   @CheckPermissions({ action: 'manage', subject: 'Invoice' })
@@ -102,7 +130,16 @@ export class DashboardFinanceController {
     if (!invoice.pdfUrl) {
       throw new NotFoundException('No PDF has been generated for this invoice yet');
     }
-    return { url: invoice.pdfUrl };
+    // `pdfUrl` stores the MinIO object key (S2.3a). Mint a short-lived presigned
+    // URL instead of returning the raw stored value. Legacy rows that hold a
+    // full URL are normalised back to the key first.
+    const key = extractInvoicePdfKey(invoice.pdfUrl);
+    const url = await this.storage.getSignedUrl(
+      FINANCE_INVOICES_BUCKET_NAME,
+      key,
+      INVOICE_PDF_URL_EXPIRY_SECONDS,
+    );
+    return { url };
   }
 
   // ── Payments ──────────────────────────────────────────────────────────────

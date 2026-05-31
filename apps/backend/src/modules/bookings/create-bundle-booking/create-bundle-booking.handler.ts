@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Optional,
   BadRequestException,
   ConflictException,
   NotFoundException,
@@ -13,6 +14,8 @@ import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { CreateBundleBookingDto } from './create-bundle-booking.dto';
 import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 import { computeVat } from '../../finance/money.helper';
+import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
+import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 
 /** FNV-1a 32-bit hash → signed int32 (Postgres int4 range). */
 function hashToInt32(s: string): number {
@@ -52,6 +55,8 @@ export class CreateBundleBookingHandler {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly bundlePriceService: BundlePriceService,
+    @Optional() private readonly settingsHandler?: GetBookingSettingsHandler,
+    @Optional() private readonly availabilityHandler?: CheckAvailabilityHandler,
   ) {}
 
   async execute(dto: CreateBundleBookingCommand) {
@@ -110,6 +115,16 @@ export class CreateBundleBookingHandler {
       throw new BadRequestException('Employee does not provide all bundle services');
     }
 
+    // payAtClinic gate — reject pay-at-clinic when the branch disables it.
+    // Mirrors create-booking.handler. Skipped when the settings handler is not
+    // wired (e.g. isolated unit tests construct the handler without it).
+    if ((dto.payAtClinic ?? false) && this.settingsHandler) {
+      const bookingSettings = await this.settingsHandler.execute({ branchId: dto.branchId });
+      if (!('payAtClinicEnabled' in bookingSettings) || !(bookingSettings as Record<string, unknown>).payAtClinicEnabled) {
+        throw new BadRequestException('Pay at clinic is not enabled for this branch');
+      }
+    }
+
     // Resolve snapshot data from already-loaded bundle items
     const firstService = bundle.items[0]?.service;
     let categoryName: string | null = null;
@@ -152,6 +167,30 @@ export class CreateBundleBookingHandler {
       slots.push({ service: item.service, slotStart, slotEnd, durationMins: item.service.durationMins });
     }
     const finalCursor = cursor;
+
+    // 5b. Validate that EACH service slot is actually available for this
+    // employee (working hours, exceptions, holidays, no overlap with other
+    // bookings). Mirrors create-booking.handler's assertSlotAvailable. Skipped
+    // when the availability handler is not wired (isolated unit tests).
+    if (this.availabilityHandler) {
+      for (const slot of slots) {
+        const available = await this.availabilityHandler.execute({
+          employeeId: dto.employeeId,
+          branchId: dto.branchId,
+          serviceId: slot.service.id,
+          date: slot.slotStart,
+          durationMins: slot.durationMins,
+          bookingType: 'INDIVIDUAL',
+          deliveryType: deliveryType as any,
+        });
+        const slotMs = slot.slotStart.getTime();
+        if (!available.some((s) => s.startTime.getTime() === slotMs)) {
+          throw new BadRequestException(
+            `Selected time for "${slot.service.nameAr}" is not available`,
+          );
+        }
+      }
+    }
 
     // 6. Compute bundle price
     const servicePrices = bundle.items.map((i) => Number(i.service.price));

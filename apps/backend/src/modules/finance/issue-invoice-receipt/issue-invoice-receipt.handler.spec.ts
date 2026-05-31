@@ -91,20 +91,26 @@ describe('IssueInvoiceReceiptHandler', () => {
       expect.any(Buffer),
       'application/pdf',
     );
+    // S2.3a: the invoice persists the storage KEY, NOT the raw public URL that
+    // uploadFile returns. The key matches `invoices/<id>/<timestamp>.pdf`.
     expect(prisma.invoice.update).toHaveBeenCalledWith({
       where: { id: 'inv-1' },
       data: expect.objectContaining({
-        pdfUrl: 'http://minio/finance-invoices/inv-1.pdf',
+        pdfUrl: expect.stringMatching(/^invoices\/inv-1\/\d+\.pdf$/),
         pdfGeneratedAt: expect.any(Date),
       }),
     });
+    // The raw uploadFile URL must never be stored.
+    const storedPdfUrl = prisma.invoice.update.mock.calls[0][0].data.pdfUrl;
+    expect(storedPdfUrl).not.toContain('http');
+    // The issued event carries the same key (not a URL) for the email handler.
     expect(eventBus.publish).toHaveBeenCalledWith(
       'finance.invoice.receipt.issued',
       expect.objectContaining({
         payload: expect.objectContaining({
           invoiceId: 'inv-1',
           invoiceNumber: 42,
-          pdfUrl: 'http://minio/finance-invoices/inv-1.pdf',
+          pdfUrl: storedPdfUrl,
         }),
       }),
     );

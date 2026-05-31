@@ -30,9 +30,13 @@ export function InvoiceListPage() {
 
   const columns = getInvoiceColumns(undefined, t)
 
-  const completed = invoices.filter((p) => p.status === "COMPLETED").length
-  const pending = invoices.filter((p) => p.status === "PENDING" || p.status === "PENDING_VERIFICATION").length
-  const failed = invoices.filter((p) => p.status === "FAILED").length
+  const paid = invoices.filter((i) => i.status === "PAID").length
+  const pending = invoices.filter(
+    (i) => i.status === "ISSUED" || i.status === "DRAFT" || i.status === "PARTIALLY_PAID",
+  ).length
+  const voided = invoices.filter(
+    (i) => i.status === "VOID" || i.status === "REFUNDED" || i.status === "PARTIALLY_REFUNDED",
+  ).length
 
   return (
     <ListPageShell>
@@ -56,8 +60,8 @@ export function InvoiceListPage() {
             iconColor="primary"
           />
           <StatCard
-            title={t("invoices.stats.accepted")}
-            value={completed}
+            title={t("invoices.stats.paid")}
+            value={paid}
             icon={CheckmarkCircle02Icon}
             iconColor="success"
           />
@@ -68,8 +72,8 @@ export function InvoiceListPage() {
             iconColor="warning"
           />
           <StatCard
-            title={t("invoices.stats.rejected")}
-            value={failed}
+            title={t("invoices.stats.voided")}
+            value={voided}
             icon={Cancel01Icon}
             iconColor="accent"
           />

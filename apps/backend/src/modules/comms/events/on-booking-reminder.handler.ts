@@ -12,6 +12,7 @@ interface BookingReminderPayload {
   clientPhone?: string;
   clientEmail?: string;
   serviceName?: string;
+  organizationId?: string;
 }
 
 @Injectable()

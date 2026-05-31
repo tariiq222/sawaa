@@ -44,6 +44,64 @@ describe('ListSiteSettingsHandler', () => {
     });
   });
 
+  it('excludes non-allowlisted keys when publicOnly is set', async () => {
+    const prisma = {
+      siteSetting: {
+        findMany: jest.fn().mockResolvedValue([
+          row('home.hero.title.ar'),
+          row('content.about.body'),
+          row('site.title'),
+          row('integrations.zoom.secret'),
+          row('ops.internal.flag'),
+          row('sms.provider.token'),
+        ]),
+      },
+    };
+    const handler = new ListSiteSettingsHandler(prisma as never);
+    const result = await handler.execute({ publicOnly: true });
+
+    const keys = result.map((r) => r.key);
+    expect(keys).toEqual([
+      'home.hero.title.ar',
+      'content.about.body',
+      'site.title',
+    ]);
+    expect(keys).not.toContain('integrations.zoom.secret');
+    expect(keys).not.toContain('ops.internal.flag');
+    expect(keys).not.toContain('sms.provider.token');
+  });
+
+  it('returns all keys when publicOnly is not set', async () => {
+    const prisma = {
+      siteSetting: {
+        findMany: jest.fn().mockResolvedValue([
+          row('home.hero.title.ar'),
+          row('integrations.zoom.secret'),
+        ]),
+      },
+    };
+    const handler = new ListSiteSettingsHandler(prisma as never);
+    const result = await handler.execute();
+    expect(result.map((r) => r.key)).toEqual([
+      'home.hero.title.ar',
+      'integrations.zoom.secret',
+    ]);
+  });
+
+  it('applies the allowlist even when a non-public prefix is requested', async () => {
+    const prisma = {
+      siteSetting: {
+        findMany: jest.fn().mockResolvedValue([row('integrations.zoom.secret')]),
+      },
+    };
+    const handler = new ListSiteSettingsHandler(prisma as never);
+    const result = await handler.execute({
+      prefix: 'integrations.',
+      publicOnly: true,
+    });
+    expect(result).toHaveLength(0);
+  });
+
   it('strips Prisma-internal fields from rows', async () => {
     const prisma = {
       siteSetting: {

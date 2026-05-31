@@ -20,6 +20,7 @@ import {
   Briefcase01Icon,
   InboxIcon,
   Package01Icon,
+  DocumentAttachmentIcon,
 } from "@hugeicons/core-free-icons"
 export interface NavItem {
   titleKey: string
@@ -40,6 +41,7 @@ export const receptionNav: NavItem[] = [
   { titleKey: "nav.clients", href: "/clients", icon: UserMultiple02Icon, permission: "client:read" },
   { titleKey: "nav.contactMessages", href: "/contact-messages", icon: InboxIcon, permission: "setting:read" },
   { titleKey: "nav.payments", href: "/payments", icon: MoneyBag02Icon, permission: "payment:read" },
+  { titleKey: "nav.invoices", href: "/invoices", icon: DocumentAttachmentIcon, permission: "payment:read" },
 ]
 
 export const practiceNav: NavItem[] = [

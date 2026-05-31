@@ -15,7 +15,10 @@ interface ServicePickerProps {
   services: Service[];
   categories: Category[];
   selected: Service | null;
-  onSelect: (service: Service) => void;
+  onSelect: (
+    service: Service,
+    choice?: { durationOptionId: string; deliveryType: 'IN_PERSON' | 'ONLINE' },
+  ) => void;
   /**
    * Set when the user arrived from a therapist page (`?employeeId=...`)
    * without a service. We show a small banner explaining that the therapist
@@ -254,7 +257,12 @@ export function ServicePicker({
 
           const handleHeaderClick = () => {
             if (!hasOptions) {
-              onSelect(service);
+              onSelect(
+                service,
+                singleChoice
+                  ? { durationOptionId: singleChoice.id, deliveryType: singleChoice.deliveryType }
+                  : undefined,
+              );
               return;
             }
             if (isOpen) {
@@ -428,7 +436,10 @@ export function ServicePicker({
                             key={c.id}
                             type="button"
                             onClick={() => {
-                              onSelect(service);
+                              onSelect(service, {
+                                durationOptionId: c.id,
+                                deliveryType: c.deliveryType,
+                              });
                               setPickerOpen(null);
                               setPickerType(null);
                             }}

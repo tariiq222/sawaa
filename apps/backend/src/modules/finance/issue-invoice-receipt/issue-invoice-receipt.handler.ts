@@ -66,13 +66,17 @@ export class IssueInvoiceReceiptHandler {
     const pdfBuffer = await this.renderer.render(data);
 
     const key = `invoices/${invoice.id}/${Date.now()}.pdf`;
-    const pdfUrl = await this.storage.uploadFile(BUCKET, key, pdfBuffer, 'application/pdf');
+    // Perform the upload for its side effect, but DISCARD the raw public URL it
+    // returns. We persist the storage KEY (bucket = 'finance-invoices') on
+    // `invoice.pdfUrl` instead, so read endpoints/email can mint short-lived
+    // presigned URLs and no raw, un-presigned object URL ever leaks (S2.3a).
+    await this.storage.uploadFile(BUCKET, key, pdfBuffer, 'application/pdf');
 
     await this.cls.run(async () => {
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
       await this.prisma.invoice.update({
         where: { id: invoice.id },
-        data: { pdfUrl, pdfGeneratedAt: new Date() },
+        data: { pdfUrl: key, pdfGeneratedAt: new Date() },
       });
     });
 
@@ -80,7 +84,8 @@ export class IssueInvoiceReceiptHandler {
       invoiceId: invoice.id,
       invoiceNumber: invoice.number,
       clientId: invoice.clientId,
-      pdfUrl,
+      // Carries the storage KEY (not a URL); the email handler presigns it.
+      pdfUrl: key,
       organizationId: organizationId ?? DEFAULT_ORG_ID,
     });
     await this.eventBus.publish(issued.eventName, issued.toEnvelope());

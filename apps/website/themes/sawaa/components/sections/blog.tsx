@@ -6,13 +6,17 @@ import type { BlogPost } from '@/features/site-content/public';
 import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';
 import { IntroTitle } from '../ui/intro-title';
+import { getLocale } from '@/features/locale/public';
+import { t as translate, type MessageKey } from '@/features/locale/dictionary';
 
 interface Props {
   intro: SectionIntro;
   items: BlogPost[];
 }
 
-export function Blog({ intro, items }: Props) {
+export async function Blog({ intro, items }: Props) {
+  const locale = await getLocale();
+  const t = (key: MessageKey) => translate(locale, key);
   return (
     <section id="blog" className="py-20 md:py-24 relative sw-section-cream">
       <div className="max-w-[1260px] mx-auto px-5 sm:px-6 md:px-8">
@@ -96,14 +100,14 @@ export function Blog({ intro, items }: Props) {
                         className="text-[0.75rem] font-semibold"
                         style={{ color: 'var(--sw-neutral-500)' }}
                       >
-                        فريق سواء
+                        {t('blog.authorFallback')}
                       </p>
                     )}
                     <span
                       className="inline-flex items-center gap-1 text-[0.75rem] font-bold transition-all group-hover:gap-2"
                       style={{ color: 'var(--sw-primary-600)' }}
                     >
-                      اقرأ <ArrowLeft className="w-3.5 h-3.5" />
+                      {t('blog.read')} <ArrowLeft className="w-3.5 h-3.5" />
                     </span>
                   </div>
                 </div>

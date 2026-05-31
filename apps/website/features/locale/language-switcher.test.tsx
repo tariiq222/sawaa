@@ -18,12 +18,12 @@ describe('LanguageSwitcher', () => {
     document.cookie = 'sawaa-locale=; path=/; max-age=0';
   });
 
-  it('highlights the current locale and dims the other', () => {
+  it('marks the current locale as pressed and the other as not', () => {
     render(<LanguageSwitcher current="ar" />);
     const ar = screen.getByRole('button', { name: 'ع' });
     const en = screen.getByRole('button', { name: 'EN' });
-    expect((ar.style as CSSStyleDeclaration).fontWeight).toBe('700');
-    expect((en.style as CSSStyleDeclaration).fontWeight).toBe('400');
+    expect(ar.getAttribute('aria-pressed')).toBe('true');
+    expect(en.getAttribute('aria-pressed')).toBe('false');
   });
 
   it('writes the locale cookie and calls router.refresh on click', () => {

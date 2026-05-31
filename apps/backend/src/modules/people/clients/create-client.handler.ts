@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { ClientEnrolledEvent } from '../events/client-enrolled.event';
@@ -20,16 +20,28 @@ export class CreateClientHandler {
   ) {}
 
   async execute(dto: CreateClientCommand) {
-    const orClauses: Array<{ phone?: string; email?: string }> = [];
-    if (dto.phone) orClauses.push({ phone: dto.phone });
-    if (dto.email) orClauses.push({ email: dto.email });
-
-    if (orClauses.length > 0) {
-      const existing = await this.prisma.client.findFirst({
-        where: { OR: orClauses, deletedAt: null },
+    // Phone is the primary dedup key: a matching phone returns the existing client
+    // (documented dedup behavior — staff intentionally land on the same record).
+    if (dto.phone) {
+      const existingByPhone = await this.prisma.client.findFirst({
+        where: { phone: dto.phone, deletedAt: null },
       });
-      if (existing) {
-        return { ...serializeClient(existing), isExisting: true };
+      if (existingByPhone) {
+        return { ...serializeClient(existingByPhone), isExisting: true };
+      }
+    }
+
+    // An email-only collision (different/absent phone) is rejected with a 409 so
+    // staff aren't silently editing a different person's record.
+    if (dto.email) {
+      const existingByEmail = await this.prisma.client.findFirst({
+        where: { email: dto.email, deletedAt: null },
+      });
+      if (existingByEmail) {
+        throw new ConflictException({
+          error: 'CLIENT_EMAIL_EXISTS',
+          message: 'Email already registered for another client',
+        });
       }
     }
 

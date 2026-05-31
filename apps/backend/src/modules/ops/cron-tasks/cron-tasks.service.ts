@@ -1,5 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { BullMqService } from '../../../infrastructure/queue/bull-mq.service';
+import { EmailProviderFactory } from '../../../infrastructure/email/email-provider.factory';
 import { BookingAutocompleteCron } from './booking-autocomplete.cron';
 import { BookingExpiryCron } from './booking-expiry.cron';
 import { BookingNoShowCron } from './booking-noshow.cron';
@@ -24,14 +26,6 @@ export const CRON_JOBS = {
   APPOINTMENT_REMINDERS: 'appointment-reminders',
   GROUP_SESSION_AUTOMATION: 'group-session-automation',
   REFRESH_TOKEN_CLEANUP: 'refresh-token-cleanup',
-  METER_USAGE: 'meter-usage',
-  CHARGE_DUE_SUBSCRIPTIONS: 'charge-due-subscriptions',
-  ENFORCE_GRACE_PERIOD: 'enforce-grace-period',
-
-  EXPIRE_TRIALS: 'expire-trials',
-  USAGE_WARNINGS: 'usage-warnings',
-  PROCESS_SCHEDULED_PLAN_CHANGES: 'process-scheduled-plan-changes',
-  DUNNING_RETRY: 'dunning-retry',
   DB_ROW_COUNT: 'db-row-count',
   ORPHAN_AUDIT: 'orphan-audit',
 
@@ -43,9 +37,12 @@ export const CRON_JOBS = {
 @Injectable()
 export class CronTasksService implements OnModuleInit {
   private readonly logger = new Logger(CronTasksService.name);
+  private readonly ownerAlertEmail: string | undefined;
 
   constructor(
     private readonly bullMq: BullMqService,
+    private readonly config: ConfigService,
+    private readonly emailFactory: EmailProviderFactory,
     private readonly bookingAutocomplete: BookingAutocompleteCron,
     private readonly bookingExpiry: BookingExpiryCron,
     private readonly bookingNoShow: BookingNoShowCron,
@@ -58,7 +55,9 @@ export class CronTasksService implements OnModuleInit {
     private readonly reconcileRefunds: ReconcileRefundsCron,
     private readonly outboxPublisher: OutboxPublisherCron,
     private readonly authenticaBalanceCheck: AuthenticaBalanceCheckCron,
-  ) {}
+  ) {
+    this.ownerAlertEmail = this.config.get<string>('OWNER_ALERT_EMAIL');
+  }
 
   onModuleInit(): void {
     this.registerRepeatingJobs();
@@ -72,7 +71,7 @@ export class CronTasksService implements OnModuleInit {
       { name: CRON_JOBS.BOOKING_AUTOCOMPLETE, cron: '*/15 * * * *' },
       { name: CRON_JOBS.BOOKING_EXPIRY, cron: '*/10 * * * *' },
       { name: CRON_JOBS.BOOKING_NOSHOW, cron: '*/5 * * * *' },
-      { name: CRON_JOBS.APPOINTMENT_REMINDERS, cron: '0 * * * *' },
+      { name: CRON_JOBS.APPOINTMENT_REMINDERS, cron: '*/5 * * * *' }, // 5-min slices — must match REMINDER_WINDOW_MINUTES
       { name: CRON_JOBS.GROUP_SESSION_AUTOMATION, cron: '*/30 * * * *' },
       { name: CRON_JOBS.REFRESH_TOKEN_CLEANUP, cron: '0 3 * * *' },
       { name: CRON_JOBS.DB_ROW_COUNT, cron: '0 1 * * 0' }, // weekly Sunday 01:00
@@ -161,12 +160,41 @@ export class CronTasksService implements OnModuleInit {
     worker.on('failed', (job, err) => {
       const exhausted = job ? job.attemptsMade >= (job.opts.attempts ?? 1) : true;
       if (exhausted) {
+        const cronName = job?.name ?? 'unknown';
         this.logger.error(
-          `Cron ${job?.name ?? 'unknown'} EXHAUSTED retries — job ${job?.id} → DLQ`,
+          `Cron ${cronName} EXHAUSTED retries — job ${job?.id} → DLQ`,
           err.stack,
         );
-        Sentry.captureException(err, { tags: { cron: job?.name ?? 'unknown', jobId: job?.id ?? 'unknown' } });
+        Sentry.captureException(err, { tags: { cron: cronName, jobId: job?.id ?? 'unknown' } });
+        // Best-effort owner alert — must never throw from the failure handler.
+        void this.alertOwner(cronName, err);
       }
     });
+  }
+
+  /**
+   * Best-effort email to the operator when a cron job exhausts its retries.
+   * Failures here are swallowed: the alert path must never throw and must
+   * never mask the original cron failure that Sentry already captured.
+   */
+  private async alertOwner(cronName: string, err: Error): Promise<void> {
+    if (!this.ownerAlertEmail) return;
+    try {
+      const adapter = await this.emailFactory.resolve();
+      if (!adapter.isAvailable()) return;
+      await adapter.sendMail({
+        to: this.ownerAlertEmail,
+        subject: `تحذير: فشل مهمة مجدولة (${cronName}) · Cron job failed`,
+        html: `
+          <p dir="rtl">فشلت المهمة المجدولة <strong>${cronName}</strong> بعد استنفاد كل المحاولات.</p>
+          <p>Scheduled job <strong>${cronName}</strong> failed after exhausting all retries.</p>
+          <pre>${(err.message ?? String(err)).slice(0, 1000)}</pre>
+        `,
+      });
+    } catch (alertErr) {
+      this.logger.warn(
+        `Failed to send owner alert for cron ${cronName}: ${alertErr instanceof Error ? alertErr.message : String(alertErr)}`,
+      );
+    }
   }
 }

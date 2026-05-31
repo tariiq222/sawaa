@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
@@ -36,6 +36,7 @@ export type UploadFileCommand = UploadFileDto & {
 
 @Injectable()
 export class UploadFileHandler {
+  private readonly logger = new Logger(UploadFileHandler.name);
   private readonly defaultBucket: string;
 
   constructor(
@@ -102,7 +103,12 @@ export class UploadFileHandler {
       organizationId,
       sizeBytes: file.size,
     });
-    this.eventBus.publish(event.eventName, event.toEnvelope()).catch(() => {});
+    this.eventBus.publish(event.eventName, event.toEnvelope()).catch((err) =>
+      this.logger.error(
+        'Failed to publish media.file.uploaded',
+        err instanceof Error ? err.stack : undefined,
+      ),
+    );
 
     return Object.assign(file, { url });
   }

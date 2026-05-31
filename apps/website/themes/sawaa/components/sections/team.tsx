@@ -6,6 +6,8 @@ import type { SectionIntro } from '@/features/site-content/public';
 import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';
 import { IntroTitle } from '../ui/intro-title';
+import { getLocale } from '@/features/locale/public';
+import { t as translate, type MessageKey } from '@/features/locale/dictionary';
 
 interface Props {
   therapists: PublicEmployee[];
@@ -23,7 +25,9 @@ function firstLetter(name: string | null): string {
   return cleaned.charAt(0) || '?';
 }
 
-export function Team({ therapists, intro, totalCount }: Props) {
+export async function Team({ therapists, intro, totalCount }: Props) {
+  const locale = await getLocale();
+  const t = (key: MessageKey) => translate(locale, key);
   const visible = therapists.slice(0, VISIBLE_COUNT);
   const total = totalCount ?? therapists.length;
 
@@ -40,13 +44,13 @@ export function Team({ therapists, intro, totalCount }: Props) {
         </AnimatedSection>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-          {visible.map((t, i) => {
+          {visible.map((member, i) => {
             const c = TONE;
-            const href = t.slug ? `/therapists/${t.slug}` : '/therapists';
-            const name = t.nameAr ?? t.nameEn ?? '—';
-            const role = t.specialtyAr ?? t.title ?? '';
+            const href = member.slug ? `/therapists/${member.slug}` : '/therapists';
+            const name = member.nameAr ?? member.nameEn ?? '—';
+            const role = member.specialtyAr ?? member.title ?? '';
             return (
-              <AnimatedSection key={t.id} delay={i * 30}>
+              <AnimatedSection key={member.id} delay={i * 30}>
                 <Link
                   href={href}
                   className="group relative block h-full bg-white rounded-2xl transition-all duration-300 hover:-translate-y-1 px-3 pt-9 pb-7 text-center overflow-hidden"
@@ -67,9 +71,9 @@ export function Team({ therapists, intro, totalCount }: Props) {
                       boxShadow: '0 0 0 3px #fff, var(--sw-shadow-md)',
                     }}
                   >
-                    {t.publicImageUrl ? (
+                    {member.publicImageUrl ? (
                       <Image
-                        src={t.publicImageUrl}
+                        src={member.publicImageUrl}
                         alt={name}
                         width={64}
                         height={64}
@@ -102,7 +106,7 @@ export function Team({ therapists, intro, totalCount }: Props) {
                     className="relative inline-flex items-center gap-1 text-[0.75rem] font-extrabold transition-all group-hover:gap-1.5"
                     style={{ color: 'var(--sw-primary-600)' }}
                   >
-                    اعرف أكثر
+                    {t('team.learnMore')}
                   </span>
                 </Link>
               </AnimatedSection>
@@ -121,10 +125,10 @@ export function Team({ therapists, intro, totalCount }: Props) {
                   <UserRound className="w-6 h-6" style={{ color: 'var(--sw-primary-600)' }} />
                 </div>
                 <h3 className="text-base font-extrabold mb-2" style={{ color: 'var(--sw-secondary-700)' }}>
-                  المعالجون قيد الإضافة
+                  {t('team.emptyTitle')}
                 </h3>
                 <p className="text-sm leading-relaxed" style={{ color: 'var(--sw-neutral-500)' }}>
-                  نعمل على إضافة فريقنا من المعالجين المعتمدين. تابعنا قريباً.
+                  {t('team.empty')}
                 </p>
               </div>
             </div>
@@ -148,7 +152,7 @@ export function Team({ therapists, intro, totalCount }: Props) {
               >
                 <ChevronDown className="w-4 h-4" strokeWidth={2.5} />
               </span>
-              عرض كل المعالجين ({total})
+              {`${t('team.viewAll')} (${total})`}
             </Link>
           </div>
         ) : null}

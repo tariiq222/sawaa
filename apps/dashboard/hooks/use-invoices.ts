@@ -3,22 +3,20 @@
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { queryKeys } from "@/lib/query-keys"
-import { fetchInvoicePayments } from "@/lib/api/invoices"
-import type { InvoiceListItem } from "@/lib/types/invoice"
-import type { Payment } from "@/lib/types/payment"
+import { fetchInvoices } from "@/lib/api/invoices"
+import type { InvoiceListItem, InvoiceListRow } from "@/lib/types/invoice"
 
-export function toInvoiceListItem(payment: Payment): InvoiceListItem {
+export function toInvoiceListItem(row: InvoiceListRow): InvoiceListItem {
   return {
-    id: payment.id,
-    invoiceNumber: payment.number
-      ? `INV-${String(payment.number).padStart(4, "0")}`
-      : payment.id.slice(0, 8).toUpperCase(),
-    clientName: null, // client names are not exposed in payment list
-    totalAmount: payment.amount,
-    taxAmount: null, // tax not exposed in payment list
-    createdAt: payment.createdAt,
-    status: payment.status,
-    sentAt: null,
+    id: row.id,
+    invoiceNumber: `INV-${String(row.number).padStart(4, "0")}`,
+    clientName: row.clientName,
+    totalAmount: Number(row.total),
+    taxAmount: row.vatAmt == null ? null : Number(row.vatAmt),
+    createdAt: row.issuedAt ?? row.createdAt,
+    status: row.status,
+    sentAt: row.sentToClientAt,
+    hasPdf: row.hasPdf,
   }
 }
 
@@ -28,7 +26,7 @@ export function useInvoices() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.invoices.list({ page }),
-    queryFn: () => fetchInvoicePayments({ page, limit: 20 }),
+    queryFn: () => fetchInvoices({ page, limit: 20 }),
     staleTime: 5 * 60 * 1000,
   })
 

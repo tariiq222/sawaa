@@ -2,7 +2,6 @@ import { BookingAutocompleteCron } from './booking-autocomplete.cron';
 import { BookingExpiryCron } from './booking-expiry.cron';
 import { BookingNoShowCron } from './booking-noshow.cron';
 import { RefreshTokenCleanupCron } from './refresh-token-cleanup.cron';
-import { AppointmentRemindersCron } from './appointment-reminders.cron';
 import { BookingStatus } from '@prisma/client';
 
 const buildPrisma = () => ({
@@ -177,23 +176,4 @@ describe('RefreshTokenCleanupCron', () => {
   });
 });
 
-describe('AppointmentRemindersCron', () => {
-  it('executes without throwing', async () => {
-    const prisma = buildPrisma();
-    const cron = new AppointmentRemindersCron(prisma as never);
-    await expect(cron.execute()).resolves.not.toThrow();
-  });
-
-  it('checks waitlist entries', async () => {
-    const prisma = buildPrisma();
-    prisma.waitlistEntry.findMany = jest.fn().mockResolvedValue([{ id: 'w-1' }, { id: 'w-2' }]);
-    const cron = new AppointmentRemindersCron(prisma as never);
-    await cron.execute();
-    expect(prisma.waitlistEntry.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ status: 'WAITING' }),
-        take: 50,
-      }),
-    );
-  });
-});
+// AppointmentRemindersCron has full coverage in appointment-reminders.cron.spec.ts.

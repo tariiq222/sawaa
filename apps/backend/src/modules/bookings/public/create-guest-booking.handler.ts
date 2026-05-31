@@ -173,6 +173,15 @@ export class CreateGuestBookingHandler {
         throw err;
       }
 
+      // CR-5: acquire an advisory lock keyed on employee + slot window BEFORE
+      // the conflict query so that two concurrent guest requests on the same
+      // employee+slot cannot both see "no conflict" and both proceed (TOCTOU
+      // double-booking race). Mirrors create-booking.handler. The lock is held
+      // until the transaction commits.
+      const slotLockKey1 = hashToInt32(`${cmd.employeeId}`);
+      const slotLockKey2 = hashToInt32(`${scheduledAt.toISOString()}:${endsAt.toISOString()}`);
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${slotLockKey1}::int, ${slotLockKey2}::int)`;
+
       const conflict = await tx.booking.findFirst({
         where: {
           employeeId: cmd.employeeId,

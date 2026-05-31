@@ -1,4 +1,9 @@
-import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { SubmitRatingDto } from './submit-rating.dto';
 
@@ -15,6 +20,17 @@ export class SubmitRatingHandler {
       throw new BadRequestException('Score must be between 1 and 5');
     }
 
+    // The referenced booking must exist and be COMPLETED. clientId/employeeId are
+    // derived from the booking, never trusted from the request body.
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: dto.bookingId },
+      select: { id: true, clientId: true, employeeId: true, status: true },
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.status !== 'COMPLETED') {
+      throw new BadRequestException('Booking must be completed before it can be rated');
+    }
+
     const existing = await this.prisma.rating.findUnique({
       where: { bookingId: dto.bookingId },
     });
@@ -22,12 +38,14 @@ export class SubmitRatingHandler {
 
     return this.prisma.rating.create({
       data: {
-        bookingId: dto.bookingId,
-        clientId: dto.clientId,
-        employeeId: dto.employeeId,
+        bookingId: booking.id,
+        clientId: booking.clientId,
+        employeeId: booking.employeeId,
         score: dto.score,
         comment: dto.comment,
-        isPublic: dto.isPublic ?? false,
+        // Client-supplied visibility is never trusted; an admin flips visibility
+        // later via the update-rating-visibility slice.
+        isPublic: false,
       },
     });
   }

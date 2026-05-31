@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect } from "react"
+import * as Sentry from "@sentry/nextjs"
 import { Button } from "@sawaa/ui"
 import {
   Alert02Icon,
@@ -16,6 +18,10 @@ export default function DashboardError({
   reset: () => void
 }) {
   const { t } = useLocale()
+
+  useEffect(() => {
+    Sentry.captureException(error)
+  }, [error])
 
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-24">

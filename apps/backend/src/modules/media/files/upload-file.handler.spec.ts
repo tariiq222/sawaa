@@ -88,6 +88,27 @@ describe('UploadFileHandler', () => {
     expect(eventBus.publish).toHaveBeenCalled();
   });
 
+  it('logs (does not swallow) a failed event publish', async () => {
+    const errorSpy = jest
+      .spyOn((handler as unknown as { logger: { error: (...a: unknown[]) => void } }).logger, 'error')
+      .mockImplementation(() => undefined);
+    eventBus.publish.mockRejectedValue(new Error('queue down'));
+
+    // happy path still returns the file even when publish fails
+    const result = await handler.execute(cmd, Buffer.alloc(100));
+    expect(result.url).toBe('https://cdn.example.com/key');
+
+    // allow the rejected publish promise's .catch to run
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      'Failed to publish media.file.uploaded',
+      expect.any(String),
+    );
+    errorSpy.mockRestore();
+  });
+
   it('deletes uploaded file on db error', async () => {
     prisma.file.create.mockRejectedValue(new Error('DB down'));
     await expect(handler.execute(cmd, Buffer.alloc(100))).rejects.toThrow('DB down');

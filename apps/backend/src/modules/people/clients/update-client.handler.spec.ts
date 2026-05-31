@@ -48,6 +48,22 @@ describe('UpdateClientHandler', () => {
     await expect(handler.execute({ clientId: 'c1', phone: '+966509999999' } as any)).rejects.toThrow(ConflictException);
   });
 
+  it('should throw 409 when email already exists for another client', async () => {
+    prisma.client.findFirst
+      .mockResolvedValueOnce(createClient())
+      .mockResolvedValueOnce(createClient({ id: 'c2', email: 'taken@test.com' }));
+    await expect(
+      handler.execute({ clientId: 'c1', email: 'taken@test.com' } as any),
+    ).rejects.toThrow(ConflictException);
+  });
+
+  it('should not check email when unchanged', async () => {
+    prisma.client.findFirst.mockResolvedValue(createClient());
+    prisma.client.update.mockResolvedValue(createClient());
+    await handler.execute({ clientId: 'c1', email: 'john@test.com' } as any);
+    expect(prisma.client.findFirst).toHaveBeenCalledTimes(1);
+  });
+
   it('should not check phone when unchanged', async () => {
     prisma.client.findFirst.mockResolvedValue(createClient());
     prisma.client.update.mockResolvedValue(createClient());
@@ -63,9 +79,11 @@ describe('UpdateClientHandler', () => {
   });
 
   it('should keep existing name when no name parts provided', async () => {
+    // unchanged email so the email-uniqueness guard is skipped — this test is
+    // about name composition, not email collisions.
     prisma.client.findFirst.mockResolvedValue(createClient());
     prisma.client.update.mockResolvedValue(createClient());
-    await handler.execute({ clientId: 'c1', email: 'new@test.com' } as any);
+    await handler.execute({ clientId: 'c1', email: 'john@test.com' } as any);
     expect(prisma.client.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ name: 'John Doe' }),
     }));
