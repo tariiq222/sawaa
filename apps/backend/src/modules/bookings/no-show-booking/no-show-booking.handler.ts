@@ -20,6 +20,17 @@ export class NoShowBookingHandler {
     const booking = await fetchBookingOrFail(this.prisma, cmd.bookingId, [BookingStatus.CONFIRMED], 'marked as no-show');
     const nextStatus = assertTransition(booking.status, 'NO_SHOW');
 
+    // FINANCIAL CONSEQUENCE — NO_SHOW = full forfeiture.
+    // A no-show carries a financial consequence: the client forfeits the
+    // session and is NOT refunded. This handler deliberately does NOT publish
+    // a BookingCancelledEvent and does NOT create a RefundRequest, so the
+    // auto-refund-on-cancel path (OnBookingCancelledRefundHandler) never fires
+    // for a no-show. The paid amount is retained in full.
+    //
+    // FOLLOWUP: a configurable no-show fee/penalty (e.g. a
+    // `noShowRefundPercent` or `noShowFeeHalalas` field on BookingSettings)
+    // would let the clinic refund a portion instead of voiding entirely.
+    // No such settings field exists today; do not invent a schema column.
     const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
       tx.booking.update({
         where: { id: cmd.bookingId },
@@ -31,6 +42,7 @@ export class NoShowBookingHandler {
           fromStatus: booking.status,
           toStatus: nextStatus,
           changedBy: cmd.changedBy,
+          reason: 'No-show — session forfeited, no refund issued',
         },
       }),
     ]));

@@ -7,6 +7,7 @@ import { OtpSessionService } from '../otp/otp-session.service';
 import { ClientTokenService } from '../shared/client-token.service';
 import { PasswordService } from '../shared/password.service';
 import { RegisterHandler } from './register.handler';
+import { PRIVACY_POLICY_VERSION } from './consent.constants';
 
 function mockRequest(authHeader?: string): Partial<Request> {
   return {
@@ -86,6 +87,9 @@ describe('RegisterHandler', () => {
     expect(createData.email).toBe('a@b.com');
     expect(createData.phone).toBeNull();
     expect(createData.name).toBe('John');
+    // PDPL: consent recorded on registration
+    expect(createData.consentedAt).toBeInstanceOf(Date);
+    expect(createData.consentVersion).toBe(PRIVACY_POLICY_VERSION);
   });
 
   it('should create new client for phone channel', async () => {
@@ -126,6 +130,9 @@ describe('RegisterHandler', () => {
     expect(updateData.emailVerified).toBeInstanceOf(Date);
     expect(updateData.phoneVerified).toBeNull();
     expect(updateData.name).toBe('New');
+    // PDPL: consent recorded on guest-to-account merge
+    expect(updateData.consentedAt).toBeInstanceOf(Date);
+    expect(updateData.consentVersion).toBe(PRIVACY_POLICY_VERSION);
   });
 
   it('should update existing guest client for phone channel', async () => {

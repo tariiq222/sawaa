@@ -8,7 +8,7 @@ import { BookingCancelledEvent } from '../events/booking-cancelled.event';
 import { RefundPaymentHandler } from '../../finance/refund-payment/refund-payment.handler';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertTransition } from '../booking-state-machine';
-import { computeRefundType } from '../cancellation-policy';
+import { computeRefundType, computeRefundAmountHalalas } from '../cancellation-policy';
 import { GroupSessionCapacityService } from '../group-session/group-session-capacity.service';
 
 export type ClientCancelCommand = ClientCancelBookingDto & {
@@ -94,10 +94,11 @@ export class ClientCancelBookingHandler {
     // Within free-cancel window: direct cancel (CLIENT_DIRECT_CANCEL)
     const directCancelStatus = assertTransition(booking.status, 'CLIENT_DIRECT_CANCEL');
 
-    const { refundType } = computeRefundType({
+    const { refundType, refundPercent } = computeRefundType({
       scheduledAt: booking.scheduledAt,
       freeCancelBeforeHours: settings.freeCancelBeforeHours,
       freeCancelRefundType: settings.freeCancelRefundType,
+      lateCancelRefundPercent: settings.lateCancelRefundPercent,
     });
 
     let refundRequestId: string | null = null;
@@ -126,16 +127,31 @@ export class ClientCancelBookingHandler {
       if (refundType !== RefundType.NONE) {
         const completedPayment = await tx.payment.findFirst({
           where: { invoice: { bookingId: cmd.bookingId }, status: 'COMPLETED' },
-          select: { id: true },
+          select: { id: true, amount: true },
         });
         if (completedPayment) {
-          const created = await this.refundHandler.createRefundRequestInTx(
-            tx,
-            { paymentId: completedPayment.id, reason: `Booking ${cmd.bookingId} cancellation (${refundType})`, performedBy: cmd.clientId },
-          );
-          paymentId = completedPayment.id;
-          refundRequestId = created.refundRequestId;
-          idempotencyKey = created.idempotencyKey;
+          // Honour the configured refund percent. FULL → whole paid amount
+          // (amount left undefined); PARTIAL → exact integer-halala
+          // round(paidAmount * percent / 100) — never a fractional halala.
+          const paidHalalas = Number(completedPayment.amount);
+          const refundAmount =
+            refundType === RefundType.FULL
+              ? undefined
+              : computeRefundAmountHalalas(paidHalalas, refundPercent);
+          if (refundAmount === undefined || refundAmount > 0) {
+            const created = await this.refundHandler.createRefundRequestInTx(
+              tx,
+              {
+                paymentId: completedPayment.id,
+                reason: `Booking ${cmd.bookingId} cancellation (${refundType})`,
+                performedBy: cmd.clientId,
+                amount: refundAmount,
+              },
+            );
+            paymentId = completedPayment.id;
+            refundRequestId = created.refundRequestId;
+            idempotencyKey = created.idempotencyKey;
+          }
         }
       }
       // Roll back sibling AWAITING_PAYMENT bookings for group sessions

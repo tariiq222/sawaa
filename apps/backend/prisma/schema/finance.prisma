@@ -81,6 +81,7 @@ model Invoice {
   @@index([bookingId])
   @@index([bundlePurchaseId])
   @@index([status, dueAt])
+  @@index([employeeId])
 }
 
 // ─── Payment ──────────────────────────────────────────────────────────────────
@@ -109,6 +110,7 @@ model Payment {
 
   @@index([invoiceId])
   @@index([gatewayRef])
+  @@index([status, createdAt])
 }
 
 // ─── Coupon ───────────────────────────────────────────────────────────────────
@@ -181,6 +183,7 @@ model RefundRequest {
   @@index([clientId])
   @@index([invoiceId])
   @@index([status])
+  @@index([paymentId])
 }
 
 // ─── Per-tenant Moyasar credentials (singleton per org) ──────────────────────

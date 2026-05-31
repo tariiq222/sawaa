@@ -8,6 +8,7 @@ import { RegisterDto } from './register.dto';
 import { OtpPurpose, OtpChannel } from '@prisma/client';
 import { maskIdentifier } from '../../../common/helpers/mask-pii.helper';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { PRIVACY_POLICY_VERSION } from './consent.constants';
 
 @Injectable()
 export class RegisterHandler {
@@ -43,6 +44,10 @@ export class RegisterHandler {
 
     const passwordHash = await this.passwords.hash(dto.password);
 
+    // PDPL: registering via the website implies acceptance of the linked
+    // privacy policy + terms. Record consent against the current policy version.
+    const consentedAt = new Date();
+
     const existing = isEmailChannel
       ? await this.prisma.client.findFirst({ where: { email: identifier } })
       : await this.prisma.client.findFirst({ where: { phone: identifier } });
@@ -63,6 +68,8 @@ export class RegisterHandler {
           name: dto.name ?? existing.name,
           accountType: 'FULL',
           claimedAt: new Date(),
+          consentedAt,
+          consentVersion: PRIVACY_POLICY_VERSION,
         },
       });
       clientId = updated.id;
@@ -78,6 +85,8 @@ export class RegisterHandler {
           phoneVerified: !isEmailChannel ? new Date() : null,
           accountType: 'FULL',
           claimedAt: new Date(),
+          consentedAt,
+          consentVersion: PRIVACY_POLICY_VERSION,
         },
       });
       clientId = created.id;

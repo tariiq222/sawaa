@@ -10,7 +10,7 @@ import { ZoomMeetingService } from '../zoom-meeting.service';
 import { RefundPaymentHandler } from '../../finance/refund-payment/refund-payment.handler';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertTransition } from '../booking-state-machine';
-import { computeRefundType } from '../cancellation-policy';
+import { computeRefundType, computeRefundAmountHalalas } from '../cancellation-policy';
 import { GroupSessionCapacityService } from '../group-session/group-session-capacity.service';
 
 export type CancelBookingCommand = CancelBookingDto & {
@@ -64,15 +64,16 @@ export class CancelBookingHandler {
       }
     }
 
-    const { refundType } = computeRefundType({
+    const { refundType, refundPercent } = computeRefundType({
       scheduledAt: booking.scheduledAt,
       freeCancelBeforeHours: settings.freeCancelBeforeHours,
       freeCancelRefundType: settings.freeCancelRefundType,
+      lateCancelRefundPercent: settings.lateCancelRefundPercent,
     });
 
     const completedPayment = await this.prisma.payment.findFirst({
       where: { invoice: { bookingId: booking.id }, status: 'COMPLETED' },
-      select: { id: true },
+      select: { id: true, amount: true, refundedAmount: true },
     });
 
     let refundRequestId: string | null = null;
@@ -108,13 +109,27 @@ export class CancelBookingHandler {
         });
       }
       if (completedPayment && refundType !== RefundType.NONE) {
-        const created = await this.refundHandler.createRefundRequestInTx(tx, {
-          paymentId: completedPayment.id,
-          reason: `Booking ${booking.id} cancellation (${refundType})`,
-          performedBy: cmd.changedBy,
-        });
-        refundRequestId = created.refundRequestId;
-        idempotencyKey = created.idempotencyKey;
+        // Honour the configured refund percent. FULL → 100% (refundAmount
+        // left undefined so the finance handler refunds the whole paid
+        // amount); PARTIAL → round(paidAmount * percent / 100) in exact
+        // integer halalas — never a fractional halala. A computed 0 here
+        // would be a policy bug (refundType would be NONE), but we guard
+        // against creating a zero-amount refund request anyway.
+        const paidHalalas = Number(completedPayment.amount);
+        const refundAmount =
+          refundType === RefundType.FULL
+            ? undefined
+            : computeRefundAmountHalalas(paidHalalas, refundPercent);
+        if (refundAmount === undefined || refundAmount > 0) {
+          const created = await this.refundHandler.createRefundRequestInTx(tx, {
+            paymentId: completedPayment.id,
+            reason: `Booking ${booking.id} cancellation (${refundType})`,
+            performedBy: cmd.changedBy,
+            amount: refundAmount,
+          });
+          refundRequestId = created.refundRequestId;
+          idempotencyKey = created.idempotencyKey;
+        }
       }
       // Roll back sibling AWAITING_PAYMENT bookings for group sessions
       // when the cancellation drops the enrolled count below the threshold.

@@ -296,6 +296,90 @@ describe('CancelBookingHandler', () => {
     });
   });
 
+  describe('refund amount — honours lateCancelRefundPercent (integer halalas)', () => {
+    it('passes the FULL paid amount (amount undefined) when refundType is FULL', async () => {
+      const in48h = new Date(Date.now() + 48 * 3_600_000);
+      prisma.booking.findFirst.mockResolvedValue({ ...baseBooking, scheduledAt: in48h });
+      settingsHandler.execute.mockResolvedValue({
+        ...baseSettings,
+        freeCancelRefundType: RefundType.FULL,
+        lateCancelRefundPercent: 50,
+      });
+      prisma.payment.findFirst.mockResolvedValue({ id: 'pay-1', amount: 10_000, refundedAmount: 0 });
+      prisma.booking.update.mockResolvedValue({ ...baseBooking, scheduledAt: in48h, status: BookingStatus.CANCELLED });
+      refundHandler.createRefundRequestInTx.mockResolvedValue({ refundRequestId: 'rr-1', idempotencyKey: 'ik-1' });
+
+      await handler.execute({ bookingId: 'book-1', reason: CancellationReason.CLIENT_REQUESTED, changedBy: 'user-1' });
+
+      expect(refundHandler.createRefundRequestInTx).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ paymentId: 'pay-1', amount: undefined }),
+      );
+    });
+
+    it('late cancel refunds exactly round(paid * percent / 100) — no fractional halala', async () => {
+      const in10h = new Date(Date.now() + 10 * 3_600_000);
+      prisma.booking.findFirst.mockResolvedValue({ ...baseBooking, scheduledAt: in10h });
+      settingsHandler.execute.mockResolvedValue({
+        ...baseSettings,
+        freeCancelBeforeHours: 24,
+        freeCancelRefundType: RefundType.FULL,
+        lateCancelRefundPercent: 33, // late window → PARTIAL 33%
+      });
+      // 33% of 10001 = 3300.33 → 3300 exact halalas
+      prisma.payment.findFirst.mockResolvedValue({ id: 'pay-1', amount: 10_001, refundedAmount: 0 });
+      prisma.booking.update.mockResolvedValue({ ...baseBooking, scheduledAt: in10h, status: BookingStatus.CANCELLED });
+      refundHandler.createRefundRequestInTx.mockResolvedValue({ refundRequestId: 'rr-1', idempotencyKey: 'ik-1' });
+
+      const result = await handler.execute({ bookingId: 'book-1', reason: CancellationReason.CLIENT_REQUESTED, changedBy: 'user-1' });
+
+      expect(result.refundType).toBe(RefundType.PARTIAL);
+      const call = refundHandler.createRefundRequestInTx.mock.calls[0][1];
+      expect(call.amount).toBe(3300);
+      expect(Number.isInteger(call.amount)).toBe(true);
+    });
+
+    it('late cancel with 100% refunds in full via PARTIAL→FULL → amount undefined', async () => {
+      const in10h = new Date(Date.now() + 10 * 3_600_000);
+      prisma.booking.findFirst.mockResolvedValue({ ...baseBooking, scheduledAt: in10h });
+      settingsHandler.execute.mockResolvedValue({
+        ...baseSettings,
+        freeCancelBeforeHours: 24,
+        freeCancelRefundType: RefundType.NONE,
+        lateCancelRefundPercent: 100,
+      });
+      prisma.payment.findFirst.mockResolvedValue({ id: 'pay-1', amount: 8_888, refundedAmount: 0 });
+      prisma.booking.update.mockResolvedValue({ ...baseBooking, scheduledAt: in10h, status: BookingStatus.CANCELLED });
+      refundHandler.createRefundRequestInTx.mockResolvedValue({ refundRequestId: 'rr-1', idempotencyKey: 'ik-1' });
+
+      const result = await handler.execute({ bookingId: 'book-1', reason: CancellationReason.CLIENT_REQUESTED, changedBy: 'user-1' });
+
+      expect(result.refundType).toBe(RefundType.FULL);
+      expect(refundHandler.createRefundRequestInTx).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ amount: undefined }),
+      );
+    });
+
+    it('late cancel with 0% issues NO refund request (forfeiture)', async () => {
+      const in10h = new Date(Date.now() + 10 * 3_600_000);
+      prisma.booking.findFirst.mockResolvedValue({ ...baseBooking, scheduledAt: in10h });
+      settingsHandler.execute.mockResolvedValue({
+        ...baseSettings,
+        freeCancelBeforeHours: 24,
+        freeCancelRefundType: RefundType.FULL,
+        lateCancelRefundPercent: 0,
+      });
+      prisma.payment.findFirst.mockResolvedValue({ id: 'pay-1', amount: 10_000, refundedAmount: 0 });
+      prisma.booking.update.mockResolvedValue({ ...baseBooking, scheduledAt: in10h, status: BookingStatus.CANCELLED });
+
+      const result = await handler.execute({ bookingId: 'book-1', reason: CancellationReason.CLIENT_REQUESTED, changedBy: 'user-1' });
+
+      expect(result.refundType).toBe(RefundType.NONE);
+      expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
+    });
+  });
+
   describe('coupon handling', () => {
     it('decrements coupon usedCount when booking has a couponCode', async () => {
       prisma.booking.findFirst.mockResolvedValue({

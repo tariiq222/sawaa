@@ -155,7 +155,7 @@ export class RefundPaymentHandler {
    */
   async createRefundRequestInTx(
     tx: Prisma.TransactionClient,
-    cmd: { paymentId: string; reason: string; performedBy?: string },
+    cmd: { paymentId: string; reason: string; performedBy?: string; amount?: number },
   ): Promise<CreateRefundRequestInTxResult> {
     const rows = await tx.$queryRaw<
       Array<{
@@ -163,9 +163,10 @@ export class RefundPaymentHandler {
         status: string;
         gatewayRef: string | null;
         amount: unknown;
+        refundedAmount: unknown;
         invoiceId: string;
       }>
-    >`SELECT id, status, "gatewayRef", amount, "invoiceId"
+    >`SELECT id, status, "gatewayRef", amount, "refundedAmount", "invoiceId"
         FROM "Payment"
         WHERE id = ${cmd.paymentId}
         FOR UPDATE`;
@@ -193,7 +194,20 @@ export class RefundPaymentHandler {
       select: { id: true, bookingId: true, clientId: true, currency: true },
     });
 
-    const refundAmount = Number(row.amount);
+    // Refund amount (integer halalas). When the caller supplies a partial
+    // amount (e.g. a late-cancel honouring lateCancelRefundPercent) we use it
+    // instead of the full paid amount, clamped to the outstanding balance so
+    // we never over-refund. Math.round guards against any fractional halala
+    // sneaking in from the caller's percent math.
+    const fullAmount = Number(row.amount);
+    const outstanding = fullAmount - Number(row.refundedAmount ?? 0);
+    const requestedAmount = cmd.amount === undefined ? fullAmount : Math.round(cmd.amount);
+    if (requestedAmount <= 0 || requestedAmount > outstanding) {
+      throw new BadRequestException(
+        `Refund amount ${requestedAmount} exceeds the refundable balance of ${outstanding} halalas`,
+      );
+    }
+    const refundAmount = requestedAmount;
     const refundRequestId = randomUUID();
     // SECURITY (P1): idempotency key keyed on the unique refundRequestId,
     // NOT on (paymentId, amount). Two legitimate partial refunds of equal

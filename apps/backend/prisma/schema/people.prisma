@@ -72,6 +72,10 @@ model Client {
   lastLoginAt       DateTime?
   preferredLocale   String?           @db.VarChar(8)
   pushEnabled       Boolean           @default(true)
+  // PDPL: explicit consent capture (privacy policy acceptance). Nullable —
+  // legacy/walk-in clients predate consent; set on registration/booking.
+  consentedAt       DateTime?
+  consentVersion    String?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
