@@ -41,7 +41,17 @@ export interface IntakeResponseApi {
   clientId: string
   answers: Record<string, string | string[]>
   createdAt: string
-  form: IntakeFormApi
+  /**
+   * The form this response belongs to. The responses endpoint enriches the
+   * base form with a computed `scopeLabel` and scope target ids, hence the
+   * intersection with the optional fields below.
+   */
+  form: IntakeFormApi & {
+    scopeLabel?: string | null
+    serviceId?: string | null
+    employeeId?: string | null
+    branchId?: string | null
+  }
 }
 
 /* ─── Query params ─── */

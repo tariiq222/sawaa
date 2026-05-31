@@ -91,4 +91,22 @@ export const enIntakeForms: Record<string, string> = {
   "intakeForms.delete.confirm": "Are you sure you want to delete this form? This action cannot be undone.",
 
   "intakeForms.info.selectScope": "Select {scope}",
+
+  // — Scope labels —
+  "intakeForms.scope.global": "Global",
+  "intakeForms.scope.service": "Service",
+  "intakeForms.scope.employee": "Employee",
+  "intakeForms.scope.branch": "Branch",
+
+  // — Type labels —
+  "intakeForms.type.pre_booking": "Pre-booking",
+  "intakeForms.type.pre_session": "Pre-session",
+  "intakeForms.type.post_session": "Post-session",
+  "intakeForms.type.registration": "Registration",
+
+  // — Booking Responses Panel —
+  "intakeForms.responses.title": "Intake Forms",
+  "intakeForms.responses.loading": "Loading responses...",
+  "intakeForms.responses.error": "Failed to load form responses",
+  "intakeForms.responses.empty": "No intake forms were filled for this booking",
 }

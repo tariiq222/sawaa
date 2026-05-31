@@ -8,6 +8,7 @@ import type { Locale } from '@/features/locale/locale';
 import { t } from '@/features/locale/dictionary';
 import { useT } from '@/features/locale/locale-provider';
 import { useCurrentClient } from '@/features/auth/public';
+import { IntakeFormsSection } from '@/features/intake/intake-forms-section';
 import type { ClientBookingItem } from '@sawaa/shared';
 import {
   getMyBookingApi,
@@ -89,6 +90,14 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
   const statusKey = `booking.status.${booking.status.toLowerCase()}`;
   const statusColor = STATUS_TOKEN[booking.status] ?? 'var(--sw-neutral-400)';
   const canAct = booking.status === 'PENDING' || booking.status === 'CONFIRMED';
+  // The booking-detail payload may carry context IDs even though the shared
+  // ClientBookingItem type does not declare them yet. Read them defensively;
+  // IntakeFormsSection stays inert when serviceId is absent.
+  const ctx = booking as ClientBookingItem & {
+    serviceId?: string | null;
+    employeeId?: string | null;
+    branchId?: string | null;
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -167,6 +176,14 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
           </span>
         </div>
       </section>
+
+      <IntakeFormsSection
+        bookingId={booking.id}
+        serviceId={ctx.serviceId}
+        employeeId={ctx.employeeId}
+        branchId={ctx.branchId}
+        enabled={canAct}
+      />
 
       {canAct && (
         <div className="flex flex-col-reverse sm:flex-row gap-3">

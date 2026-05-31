@@ -17,6 +17,7 @@ import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import type { Booking } from "@/lib/types/booking"
 import { BookingActions } from "./booking-actions"
 import { DetailsBody } from "./booking-details-body"
+import { BookingIntakeResponses } from "./booking-intake-responses"
 import { BookingRescheduleTab } from "./booking-reschedule-tab"
 import { BookingStatusLog } from "./booking-status-log"
 
@@ -99,6 +100,12 @@ export function BookingDetailSheet({ booking, open, onOpenChange, onAction, defa
                 />
                 <div className="flex flex-col gap-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t("intakeForms.responses.title")}
+                  </p>
+                  <BookingIntakeResponses bookingId={booking.id} />
+                </div>
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     {t("bookings.statusLog.title")}
                   </p>
                   <BookingStatusLog bookingId={booking.id} />
@@ -123,6 +130,12 @@ export function BookingDetailSheet({ booking, open, onOpenChange, onAction, defa
                 t={t}
                 locale={locale}
               />
+              <div className="flex flex-col gap-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("intakeForms.responses.title")}
+                </p>
+                <BookingIntakeResponses bookingId={booking.id} />
+              </div>
               <div className="flex flex-col gap-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {t("bookings.statusLog.title")}

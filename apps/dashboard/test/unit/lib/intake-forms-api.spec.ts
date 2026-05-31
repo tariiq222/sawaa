@@ -20,6 +20,7 @@ import {
   deleteIntakeForm,
   setIntakeFields,
   fetchIntakeResponses,
+  fetchBookingIntakeResponses,
 } from "@/lib/api/intake-forms"
 
 describe("intake-forms api", () => {
@@ -65,5 +66,11 @@ describe("intake-forms api", () => {
     getMock.mockResolvedValueOnce([])
     await fetchIntakeResponses("bk-1")
     expect(getMock).toHaveBeenCalledWith("/dashboard/organization/intake-forms/responses/bk-1")
+  })
+
+  it("fetchBookingIntakeResponses calls /intake-forms/responses/:bookingId", async () => {
+    getMock.mockResolvedValueOnce([])
+    await fetchBookingIntakeResponses("bk-2")
+    expect(getMock).toHaveBeenCalledWith("/dashboard/organization/intake-forms/responses/bk-2")
   })
 })

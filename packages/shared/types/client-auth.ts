@@ -18,6 +18,9 @@ export interface ClientBookingItem {
   durationMins: number;
   price: string;
   currency: string;
+  serviceId?: string;
+  employeeId?: string;
+  branchId?: string;
   serviceName: string;
   serviceNameAr: string | null;
   employeeName: string;

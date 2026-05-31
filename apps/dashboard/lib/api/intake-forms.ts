@@ -59,3 +59,6 @@ export async function fetchIntakeResponses(
 ): Promise<IntakeResponseApi[]> {
   return api.get<IntakeResponseApi[]>(`/dashboard/organization/intake-forms/responses/${bookingId}`)
 }
+
+/** Alias of {@link fetchIntakeResponses} — fetches a booking's submitted intake responses. */
+export const fetchBookingIntakeResponses = fetchIntakeResponses

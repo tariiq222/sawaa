@@ -91,4 +91,22 @@ export const arIntakeForms: Record<string, string> = {
   "intakeForms.delete.confirm": "هل أنت متأكد من حذف هذا النموذج؟ لا يمكن التراجع عن هذا الإجراء.",
 
   "intakeForms.info.selectScope": "اختر {scope}",
+
+  // — Scope labels —
+  "intakeForms.scope.global": "عام",
+  "intakeForms.scope.service": "خدمة",
+  "intakeForms.scope.employee": "موظف",
+  "intakeForms.scope.branch": "فرع",
+
+  // — Type labels —
+  "intakeForms.type.pre_booking": "قبل الحجز",
+  "intakeForms.type.pre_session": "قبل الجلسة",
+  "intakeForms.type.post_session": "بعد الجلسة",
+  "intakeForms.type.registration": "تسجيل",
+
+  // — Booking Responses Panel —
+  "intakeForms.responses.title": "نماذج الاستقبال",
+  "intakeForms.responses.loading": "جارٍ تحميل الردود...",
+  "intakeForms.responses.error": "تعذّر تحميل ردود النماذج",
+  "intakeForms.responses.empty": "لم يُعبَّأ أي نموذج استقبال لهذا الحجز",
 }

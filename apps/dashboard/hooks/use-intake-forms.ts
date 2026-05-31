@@ -11,6 +11,7 @@ import {
   updateIntakeForm,
   deleteIntakeForm,
   setIntakeFields,
+  fetchIntakeResponses,
 } from "@/lib/api/intake-forms"
 import type {
   IntakeFormListQuery,
@@ -125,6 +126,17 @@ export function useIntakeForm(formId: string | null) {
     queryKey: queryKeys.intakeForms.detail(formId ?? ""),
     queryFn: () => fetchIntakeForm(formId!),
     enabled: !!formId,
+  })
+}
+
+/* ─── Booking Responses Hook ─── */
+
+export function useBookingIntakeResponses(bookingId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.intakeForms.responses(bookingId ?? ""),
+    queryFn: () => fetchIntakeResponses(bookingId!),
+    enabled: !!bookingId,
+    staleTime: 5 * 60 * 1000,
   })
 }
 

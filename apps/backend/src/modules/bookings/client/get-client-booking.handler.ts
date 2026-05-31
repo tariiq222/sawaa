@@ -42,6 +42,7 @@ export class GetClientBookingHandler {
       serviceId: booking.serviceId,
       serviceName: service?.nameEn ?? service?.nameAr ?? '',
       serviceNameAr: service?.nameAr ?? null,
+      employeeId: booking.employeeId,
       employeeName: employee?.name ?? '',
       employeeNameAr: null,
       branchId: booking.branchId,
