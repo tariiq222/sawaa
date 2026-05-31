@@ -20,7 +20,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { SectionIntro } from '@/features/site-content/public';
-import { useT } from '@/features/locale/locale-provider';
+import { useLocale, useT } from '@/features/locale/locale-provider';
 import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';
 import { IntroTitle } from '../ui/intro-title';
@@ -29,7 +29,9 @@ export interface ClinicItem {
   id: string;
   slug?: string;
   nameAr: string;
+  nameEn?: string | null;
   descriptionAr: string | null;
+  descriptionEn?: string | null;
   icon: string | null;
   image?: string | null;
 }
@@ -72,6 +74,11 @@ function resolveIcon(name: string | null): LucideIcon {
 
 export function Clinics({ clinics, intro }: Props) {
   const t = useT();
+  const locale = useLocale();
+  const clinicName = (c: ClinicItem): string =>
+    (locale === 'en' ? c.nameEn?.trim() || c.nameAr : c.nameAr);
+  const clinicDescription = (c: ClinicItem): string | null =>
+    locale === 'en' ? c.descriptionEn?.trim() || c.descriptionAr : c.descriptionAr;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -168,11 +175,13 @@ export function Clinics({ clinics, intro }: Props) {
               const tone = TONE;
               const Icon = resolveIcon(c.icon);
               const href = `/booking?categoryId=${encodeURIComponent(c.id)}`;
+              const name = clinicName(c);
+              const description = clinicDescription(c);
               return (
                 <AnimatedSection key={c.id} delay={i * 40} className="flex-shrink-0">
                   <Link
                     href={href}
-                    aria-label={`${t('clinics.bookAria')} ${c.nameAr}`}
+                    aria-label={`${t('clinics.bookAria')} ${name}`}
                     className="group block w-[300px] bg-white rounded-2xl p-4 transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
                     style={{
                       border: '1px solid var(--sw-neutral-100)',
@@ -191,7 +200,7 @@ export function Clinics({ clinics, intro }: Props) {
                       {c.image ? (
                         <Image
                           src={c.image}
-                          alt={c.nameAr}
+                          alt={name}
                           width={300}
                           height={160}
                           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -225,13 +234,13 @@ export function Clinics({ clinics, intro }: Props) {
                       className="text-base font-bold mb-1.5 leading-tight line-clamp-1"
                       style={{ color: 'var(--sw-secondary-700)' }}
                     >
-                      {c.nameAr}
+                      {name}
                     </h3>
                     <p
                       className="text-[0.8rem] leading-relaxed mb-3 line-clamp-2"
                       style={{ color: 'var(--sw-neutral-600)' }}
                     >
-                      {c.descriptionAr ?? t('clinics.defaultDescription')}
+                      {description ?? t('clinics.defaultDescription')}
                     </p>
 
                     <span

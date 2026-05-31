@@ -8,6 +8,7 @@ import { BookingNoShowCron } from './booking-noshow.cron';
 import { AppointmentRemindersCron } from './appointment-reminders.cron';
 import { GroupSessionAutomationCron } from './group-session-automation.cron';
 import { RefreshTokenCleanupCron } from './refresh-token-cleanup.cron';
+import { DataRetentionCron } from './data-retention.cron';
 
 import { DbRowCountCron } from './db-row-count.cron';
 import { RunOrphanAuditHandler } from '../orphan-audit/run-orphan-audit.handler';
@@ -26,6 +27,7 @@ export const CRON_JOBS = {
   APPOINTMENT_REMINDERS: 'appointment-reminders',
   GROUP_SESSION_AUTOMATION: 'group-session-automation',
   REFRESH_TOKEN_CLEANUP: 'refresh-token-cleanup',
+  DATA_RETENTION: 'data-retention',
   DB_ROW_COUNT: 'db-row-count',
   ORPHAN_AUDIT: 'orphan-audit',
 
@@ -49,6 +51,7 @@ export class CronTasksService implements OnModuleInit {
     private readonly appointmentReminders: AppointmentRemindersCron,
     private readonly groupSessionAutomation: GroupSessionAutomationCron,
     private readonly refreshTokenCleanup: RefreshTokenCleanupCron,
+    private readonly dataRetention: DataRetentionCron,
     private readonly dbRowCount: DbRowCountCron,
     private readonly orphanAudit: RunOrphanAuditHandler,
 
@@ -74,6 +77,7 @@ export class CronTasksService implements OnModuleInit {
       { name: CRON_JOBS.APPOINTMENT_REMINDERS, cron: '*/5 * * * *' }, // 5-min slices — must match REMINDER_WINDOW_MINUTES
       { name: CRON_JOBS.GROUP_SESSION_AUTOMATION, cron: '*/30 * * * *' },
       { name: CRON_JOBS.REFRESH_TOKEN_CLEANUP, cron: '0 3 * * *' },
+      { name: CRON_JOBS.DATA_RETENTION, cron: '0 3 * * *' }, // daily 03:00 — PDPL PII/log purge
       { name: CRON_JOBS.DB_ROW_COUNT, cron: '0 1 * * 0' }, // weekly Sunday 01:00
       { name: CRON_JOBS.ORPHAN_AUDIT, cron: '0 2 * * 0' }, // weekly Sunday 02:00
 
@@ -126,6 +130,9 @@ export class CronTasksService implements OnModuleInit {
             break;
           case CRON_JOBS.REFRESH_TOKEN_CLEANUP:
             await this.refreshTokenCleanup.execute();
+            break;
+          case CRON_JOBS.DATA_RETENTION:
+            await this.dataRetention.execute();
             break;
           case CRON_JOBS.DB_ROW_COUNT:
             await this.dbRowCount.execute();

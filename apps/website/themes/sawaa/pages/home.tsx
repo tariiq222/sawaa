@@ -18,6 +18,7 @@ import {
   type SupportGroup,
 } from '@/features/site-content/public';
 import type { PublicEmployee } from '@sawaa/api-client';
+import { getLocale } from '@/features/locale/public';
 import { Blog } from '../components/sections/blog';
 import { Clinics, type ClinicItem } from '../components/sections/clinics';
 import dynamic from 'next/dynamic';
@@ -41,15 +42,18 @@ async function safeFetch<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
 }
 
 export async function SawaaHomePage() {
-  const [therapists, catalog, settings, testimonials] = await Promise.all([
-    safeFetch<PublicEmployee[]>(() => listPublicEmployees(), []),
-    safeFetch(() => getPublicCatalog(), { departments: [], categories: [], services: [] }),
-    safeFetch<SiteSettingsMap>(() => fetchSiteSettingsMap(), new Map()),
-    safeFetch(() => listPublicTestimonials(6), []),
+  const [locale, [therapists, catalog, settings, testimonials]] = await Promise.all([
+    getLocale(),
+    Promise.all([
+      safeFetch<PublicEmployee[]>(() => listPublicEmployees(), []),
+      safeFetch(() => getPublicCatalog(), { departments: [], categories: [], services: [] }),
+      safeFetch<SiteSettingsMap>(() => fetchSiteSettingsMap(), new Map()),
+      safeFetch(() => listPublicTestimonials(6), []),
+    ]),
   ]);
 
-  const hero: HeroContent = resolveHeroContent(settings);
-  const intros: HomeSectionIntros = resolveSectionIntros(settings);
+  const hero: HeroContent = resolveHeroContent(settings, locale);
+  const intros: HomeSectionIntros = resolveSectionIntros(settings, locale);
   const featureCards: FeatureCards = resolveFeatureCards(settings);
   const blogPosts: BlogPost[] = resolveBlogPosts(settings);
   const faqItems: FaqItem[] = resolveFaqItems(settings);
@@ -72,7 +76,9 @@ export async function SawaaHomePage() {
         .map((c) => ({
           id: c.id,
           nameAr: c.nameAr,
+          nameEn: c.nameEn,
           descriptionAr: null,
+          descriptionEn: null,
           icon: null,
           image: null,
         }))

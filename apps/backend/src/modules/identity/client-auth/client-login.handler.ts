@@ -42,13 +42,15 @@ export class ClientLoginHandler {
     const ipKey = `client_login:ip:${ip}`;
     const redisClient = this.redis.getClient();
 
-    const [emailAttempts, ipAttempts] = await Promise.all([
-      redisClient.incr(emailKey),
-      redisClient.incr(ipKey),
+    // Atomic INCR + EXPIRE via multi/exec to prevent a race where a crash
+    // between incr and expire leaves a key without TTL (mirrors staff login).
+    const [emailMultiRes, ipMultiRes] = await Promise.all([
+      redisClient.multi().incr(emailKey).expire(emailKey, RATE_LIMIT_WINDOW_SECONDS).exec(),
+      redisClient.multi().incr(ipKey).expire(ipKey, RATE_LIMIT_WINDOW_SECONDS).exec(),
     ]);
 
-    if (emailAttempts === 1) await redisClient.expire(emailKey, RATE_LIMIT_WINDOW_SECONDS);
-    if (ipAttempts === 1) await redisClient.expire(ipKey, RATE_LIMIT_WINDOW_SECONDS);
+    const emailAttempts = (emailMultiRes?.[0]?.[1] as number | undefined) ?? 0;
+    const ipAttempts = (ipMultiRes?.[0]?.[1] as number | undefined) ?? 0;
 
     if (emailAttempts > MAX_EMAIL_ATTEMPTS || ipAttempts > MAX_IP_ATTEMPTS) {
       await redisClient.expire(emailKey, RATE_LIMIT_WINDOW_SECONDS);

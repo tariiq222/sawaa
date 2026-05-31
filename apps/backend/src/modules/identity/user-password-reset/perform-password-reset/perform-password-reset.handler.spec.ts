@@ -62,11 +62,24 @@ describe('PerformPasswordResetHandler', () => {
     });
     await handler.execute({ token: rawToken, newPassword: 'newpass12' });
     expect(passwords.hash).toHaveBeenCalledWith('newpass12');
-    expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: 'u1' }, data: { passwordHash: 'hashed-pw' } });
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+      data: { passwordHash: 'hashed-pw', tokenVersion: { increment: 1 } },
+    });
     expect(prisma.passwordResetToken.update).toHaveBeenCalledWith({ where: { id: 't1' }, data: { consumedAt: expect.any(Date) } });
     expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
       where: { userId: 'u1', revokedAt: null },
       data: { revokedAt: expect.any(Date) },
     });
+  });
+
+  it('bumps tokenVersion in the same user update that sets the new passwordHash', async () => {
+    prisma.passwordResetToken.findFirst.mockResolvedValue({
+      id: 't1', userId: 'u1', tokenHash, expiresAt: new Date(Date.now() + 60_000), consumedAt: null,
+    });
+    await handler.execute({ token: rawToken, newPassword: 'newpass12' });
+    const updateArg = prisma.user.update.mock.calls[0][0];
+    expect(updateArg.data.passwordHash).toBe('hashed-pw');
+    expect(updateArg.data.tokenVersion).toEqual({ increment: 1 });
   });
 });

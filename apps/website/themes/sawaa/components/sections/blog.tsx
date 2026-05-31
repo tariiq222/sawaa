@@ -17,6 +17,10 @@ interface Props {
 export async function Blog({ intro, items }: Props) {
   const locale = await getLocale();
   const t = (key: MessageKey) => translate(locale, key);
+  const postTitle = (p: BlogPost): string =>
+    locale === 'en' ? p.titleEn?.trim() || p.title : p.title;
+  const postTag = (p: BlogPost): string =>
+    locale === 'en' ? p.tagEn?.trim() || p.tag : p.tag;
   return (
     <section id="blog" className="py-20 md:py-24 relative sw-section-cream">
       <div className="max-w-[1260px] mx-auto px-5 sm:px-6 md:px-8">
@@ -46,7 +50,7 @@ export async function Blog({ intro, items }: Props) {
                 >
                   <Image
                     src={p.image}
-                    alt={p.title}
+                    alt={postTitle(p)}
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-110"
                     sizes="(max-width:640px) 100vw, (max-width:768px) 50vw, 33vw"
@@ -65,7 +69,7 @@ export async function Blog({ intro, items }: Props) {
                       boxShadow: 'var(--sw-shadow-md)',
                     }}
                   >
-                    {p.tag}
+                    {postTag(p)}
                   </span>
                   <span
                     className="absolute bottom-4 start-4 text-[0.75rem] font-semibold text-white/95 px-3 py-1 rounded-full"
@@ -82,7 +86,7 @@ export async function Blog({ intro, items }: Props) {
                     className="text-[1.125rem] font-extrabold leading-[1.45] mb-3 transition-colors line-clamp-2"
                     style={{ color: 'var(--sw-secondary-700)' }}
                   >
-                    {p.title}
+                    {postTitle(p)}
                   </h3>
                   <div
                     className="flex items-center justify-between pt-4"

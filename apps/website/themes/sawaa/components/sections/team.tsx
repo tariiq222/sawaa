@@ -47,7 +47,10 @@ export async function Team({ therapists, intro, totalCount }: Props) {
           {visible.map((member, i) => {
             const c = TONE;
             const href = member.slug ? `/therapists/${member.slug}` : '/therapists';
-            const name = member.nameAr ?? member.nameEn ?? '—';
+            const name =
+              (locale === 'en'
+                ? member.nameEn ?? member.nameAr
+                : member.nameAr ?? member.nameEn) ?? '—';
             const role = member.specialtyAr ?? member.title ?? '';
             return (
               <AnimatedSection key={member.id} delay={i * 30}>

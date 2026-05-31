@@ -30,6 +30,10 @@ const TONE: Tone = {
 
 export async function SupportGroups({ intro, items }: Props) {
   const locale = await getLocale();
+  const groupName = (g: SupportGroup): string =>
+    locale === 'en' ? g.nameEn?.trim() || g.name : g.name;
+  const groupDesc = (g: SupportGroup): string =>
+    locale === 'en' ? g.descEn?.trim() || g.desc : g.desc;
   return (
     <section id="support-groups" className="py-20 md:py-24 relative">
       <div className="max-w-[1260px] mx-auto px-8">
@@ -60,7 +64,7 @@ export async function SupportGroups({ intro, items }: Props) {
                   >
                     <Image
                       src={g.image}
-                      alt={g.name}
+                      alt={groupName(g)}
                       fill
                       className="object-cover transition-transform duration-700 group-hover:scale-105"
                       sizes="(max-width:768px) 150px, 150px"
@@ -102,13 +106,13 @@ export async function SupportGroups({ intro, items }: Props) {
                       className="text-base font-bold mb-1.5 leading-tight transition-colors line-clamp-1"
                       style={{ color: 'var(--sw-secondary-700)' }}
                     >
-                      {g.name}
+                      {groupName(g)}
                     </h3>
                     <p
                       className="text-[0.8rem] leading-relaxed mb-2.5 line-clamp-3"
                       style={{ color: 'var(--sw-neutral-600)' }}
                     >
-                      {g.desc}
+                      {groupDesc(g)}
                     </p>
 
                     <Link

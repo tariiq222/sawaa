@@ -86,7 +86,7 @@ describe('ResetPasswordHandler', () => {
     await handler.execute({ sessionToken: 't', newPassword: 'p' });
     expect(passwordHistory.assertNotReused).toHaveBeenCalledWith('c1', expect.any(String), 'p', 'old');
     expect(passwords.hash).toHaveBeenCalledWith('p');
-    expect(prisma.client.update).toHaveBeenCalledWith({ where: { id: 'c1' }, data: { passwordHash: 'newHash', loginAttempts: 0, lockoutUntil: null } });
+    expect(prisma.client.update).toHaveBeenCalledWith({ where: { id: 'c1' }, data: { passwordHash: 'newHash', loginAttempts: 0, lockoutUntil: null, tokenVersion: { increment: 1 } } });
     expect(passwordHistory.record).toHaveBeenCalledWith(prisma, 'c1', expect.any(String), 'newHash');
     expect(prisma.clientRefreshToken.updateMany).toHaveBeenCalledWith({ where: { clientId: 'c1', revokedAt: null }, data: { revokedAt: expect.any(Date) } });
   });
@@ -102,5 +102,20 @@ describe('ResetPasswordHandler', () => {
 
     await handler.execute({ sessionToken: 't', newPassword: 'p' });
     expect(prisma.client.findFirst).toHaveBeenCalledWith({ where: { phone: '+966501234567', deletedAt: null } });
+  });
+
+  it('bumps tokenVersion in the same client update that sets the new passwordHash', async () => {
+    const session = { purpose: OtpPurpose.CLIENT_PASSWORD_RESET, channel: OtpChannel.EMAIL, identifier: 'a@b.com', jti: 'j1', exp: Math.floor(Date.now() / 1000) + 3600 };
+    otpSession.verifySession.mockReturnValue(session);
+    prisma.client.findFirst.mockResolvedValue({ id: 'c1', passwordHash: 'old' });
+    passwords.hash.mockResolvedValue('newHash');
+    prisma.usedOtpSession.create.mockResolvedValue({});
+    prisma.client.update.mockResolvedValue({});
+    prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 0 });
+
+    await handler.execute({ sessionToken: 't', newPassword: 'p' });
+    const updateArg = prisma.client.update.mock.calls[0][0];
+    expect(updateArg.data.passwordHash).toBe('newHash');
+    expect(updateArg.data.tokenVersion).toEqual({ increment: 1 });
   });
 });

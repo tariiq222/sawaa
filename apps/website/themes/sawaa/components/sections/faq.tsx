@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { HelpCircle, Plus } from 'lucide-react';
 import type { SectionIntro } from '@/features/site-content/public';
 import type { FaqItem } from '@/features/site-content/public';
+import { useLocale } from '@/features/locale/locale-provider';
 import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';
 import { IntroTitle } from '../ui/intro-title';
@@ -15,6 +16,11 @@ interface Props {
 
 export function FAQ({ intro, items }: Props) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const locale = useLocale();
+  const faqQ = (item: FaqItem): string =>
+    locale === 'en' ? item.qEn?.trim() || item.q : item.q;
+  const faqA = (item: FaqItem): string =>
+    locale === 'en' ? item.aEn?.trim() || item.a : item.a;
 
   return (
     <section id="faq" className="py-20 md:py-24 relative">
@@ -50,7 +56,7 @@ export function FAQ({ intro, items }: Props) {
                       className="font-extrabold leading-snug flex-1"
                       style={{ color: 'var(--sw-secondary-700)', fontSize: '0.938rem' }}
                     >
-                      {item.q}
+                      {faqQ(item)}
                     </span>
                     <span
                       className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300"
@@ -79,7 +85,7 @@ export function FAQ({ intro, items }: Props) {
                           fontSize: '0.813rem',
                         }}
                       >
-                        {item.a}
+                        {faqA(item)}
                       </p>
                     </div>
                   </div>

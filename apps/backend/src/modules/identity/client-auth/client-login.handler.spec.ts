@@ -19,11 +19,34 @@ describe('ClientLoginHandler', () => {
     },
   };
 
+  // The handler now uses an atomic pipeline: multi().incr(key).expire(key, ttl).exec().
+  // exec() resolves to [[err, incrResult], [err, expireResult]] (ioredis shape).
+  // We queue exec() results in call order (email pipeline first, then ip pipeline).
+  const execResults: unknown[] = [];
+  const multiIncr = jest.fn();
+  const multiExpire = jest.fn();
+  const multiExec = jest.fn(() => Promise.resolve(execResults.shift() ?? [[null, 1], [null, 1]]));
+  const multiBuilder: { incr: jest.Mock; expire: jest.Mock; exec: jest.Mock } = {
+    incr: multiIncr,
+    expire: multiExpire,
+    exec: multiExec,
+  };
+  // make incr/expire chainable
+  multiIncr.mockReturnValue(multiBuilder);
+  multiExpire.mockReturnValue(multiBuilder);
+
   const mockRedisClient = {
+    multi: jest.fn(() => multiBuilder),
     incr: jest.fn(),
     expire: jest.fn(),
     del: jest.fn(),
   };
+
+  /** Queue attempt counts for the next [email, ip] multi/exec pipelines. */
+  function queueAttempts(emailCount: number, ipCount: number) {
+    execResults.push([[null, emailCount], [null, 1]]);
+    execResults.push([[null, ipCount], [null, 1]]);
+  }
 
   const mockRedis = { getClient: jest.fn(() => mockRedisClient) };
   const mockPasswords = { verify: jest.fn() };
@@ -38,6 +61,12 @@ describe('ClientLoginHandler', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    execResults.length = 0;
+    // Re-establish chainable behavior after clearAllMocks wiped return values.
+    multiIncr.mockReturnValue(multiBuilder);
+    multiExpire.mockReturnValue(multiBuilder);
+    multiExec.mockImplementation(() => Promise.resolve(execResults.shift() ?? [[null, 1], [null, 1]]));
+    mockRedisClient.multi.mockImplementation(() => multiBuilder);
     mockClientTokens.issueTokenPair.mockResolvedValue({
       accessToken: 'mock-access-token',
       accessMaxAgeMs: 900_000,
@@ -67,7 +96,7 @@ describe('ClientLoginHandler', () => {
         loginAttempts: 0,
         lockoutUntil: null,
       });
-      mockRedisClient.incr.mockResolvedValue(1);
+      queueAttempts(1, 1);
       mockPasswords.verify.mockResolvedValue(true);
       mockPrisma.client.update.mockResolvedValue({ id: 'cl-1' });
 
@@ -75,6 +104,16 @@ describe('ClientLoginHandler', () => {
         { email: 'test@example.com', password: 'SecurePass123' },
         '1.2.3.4',
       );
+
+      // Lockout counters are incremented atomically via a multi/incr/expire/exec pipeline.
+      expect(mockRedisClient.multi).toHaveBeenCalled();
+      expect(multiIncr).toHaveBeenCalledWith('client_login:email:test@example.com');
+      expect(multiIncr).toHaveBeenCalledWith('client_login:ip:1.2.3.4');
+      expect(multiExpire).toHaveBeenCalledWith('client_login:email:test@example.com', 600);
+      expect(multiExpire).toHaveBeenCalledWith('client_login:ip:1.2.3.4', 600);
+      expect(multiExec).toHaveBeenCalled();
+      // Non-atomic standalone incr must no longer be used.
+      expect(mockRedisClient.incr).not.toHaveBeenCalled();
 
       expect(result.accessToken).toBe('mock-access-token');
       expect(result.refreshToken).toBe('mock-raw-refresh');
@@ -120,7 +159,7 @@ describe('ClientLoginHandler', () => {
         loginAttempts: 0,
         lockoutUntil: null,
       });
-      mockRedisClient.incr.mockResolvedValue(2);
+      queueAttempts(2, 1);
       mockPasswords.verify.mockResolvedValue(false);
       mockPrisma.client.update.mockResolvedValue({ id: 'cl-3' });
 
@@ -142,7 +181,7 @@ describe('ClientLoginHandler', () => {
         loginAttempts: 4,
         lockoutUntil: null,
       });
-      mockRedisClient.incr.mockResolvedValue(5);
+      queueAttempts(5, 1);
       mockPasswords.verify.mockResolvedValue(false);
       mockPrisma.client.update.mockResolvedValue({ id: 'cl-4' });
 
@@ -167,9 +206,7 @@ describe('ClientLoginHandler', () => {
         lockoutUntil: null,
       });
       // email key returns 6 (over limit of 5), IP key returns 1
-      mockRedisClient.incr
-        .mockResolvedValueOnce(6)
-        .mockResolvedValueOnce(1);
+      queueAttempts(6, 1);
 
       await expect(
         handler.execute({ email: 'test@example.com', password: 'WrongPass1' }, '1.2.3.4'),
@@ -184,13 +221,37 @@ describe('ClientLoginHandler', () => {
         lockoutUntil: null,
       });
       // email key returns 1 (fine), IP key returns 21 (over limit of 20)
-      mockRedisClient.incr
-        .mockResolvedValueOnce(1)
-        .mockResolvedValueOnce(21);
+      queueAttempts(1, 21);
 
       await expect(
         handler.execute({ email: 'test@example.com', password: 'WrongPass1' }, '5.5.5.5'),
       ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('uses an atomic multi/incr/expire/exec pipeline for both email and ip keys', async () => {
+      mockPrisma.client.findFirst.mockResolvedValue({
+        id: 'cl-7',
+        email: 'test@example.com',
+        passwordHash: 'hashed_pw',
+        loginAttempts: 0,
+        lockoutUntil: null,
+      });
+      queueAttempts(1, 1);
+      mockPasswords.verify.mockResolvedValue(true);
+      mockPrisma.client.update.mockResolvedValue({ id: 'cl-7' });
+
+      await handler.execute({ email: 'test@example.com', password: 'SecurePass123' }, '9.9.9.9');
+
+      // multi() opened once per key (email + ip).
+      expect(mockRedisClient.multi).toHaveBeenCalledTimes(2);
+      // Each pipeline chains incr then expire then exec.
+      expect(multiIncr).toHaveBeenCalledWith('client_login:email:test@example.com');
+      expect(multiIncr).toHaveBeenCalledWith('client_login:ip:9.9.9.9');
+      expect(multiExpire).toHaveBeenCalledWith('client_login:email:test@example.com', 600);
+      expect(multiExpire).toHaveBeenCalledWith('client_login:ip:9.9.9.9', 600);
+      expect(multiExec).toHaveBeenCalledTimes(2);
+      // The old non-atomic standalone INCR is gone.
+      expect(mockRedisClient.incr).not.toHaveBeenCalled();
     });
   });
 });

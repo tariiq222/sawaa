@@ -8,6 +8,7 @@ import { BookingNoShowCron } from './booking-noshow.cron';
 import { AppointmentRemindersCron } from './appointment-reminders.cron';
 import { GroupSessionAutomationCron } from './group-session-automation.cron';
 import { RefreshTokenCleanupCron } from './refresh-token-cleanup.cron';
+import { DataRetentionCron } from './data-retention.cron';
 import { DbRowCountCron } from './db-row-count.cron';
 import { RunOrphanAuditHandler } from '../orphan-audit/run-orphan-audit.handler';
 import { ReconcileRefundsCron } from './reconcile-refunds.cron';
@@ -33,6 +34,7 @@ describe('CronTasksService', () => {
   let mockAppointmentReminders: jest.Mocked<AppointmentRemindersCron>;
   let mockGroupSessionAutomation: jest.Mocked<GroupSessionAutomationCron>;
   let mockRefreshTokenCleanup: jest.Mocked<RefreshTokenCleanupCron>;
+  let mockDataRetention: jest.Mocked<DataRetentionCron>;
   let mockDbRowCount: jest.Mocked<DbRowCountCron>;
   let mockOrphanAudit: jest.Mocked<RunOrphanAuditHandler>;
   let mockReconcileRefunds: jest.Mocked<ReconcileRefundsCron>;
@@ -83,6 +85,9 @@ describe('CronTasksService', () => {
     mockRefreshTokenCleanup = {
       execute: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<RefreshTokenCleanupCron>;
+    mockDataRetention = {
+      execute: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<DataRetentionCron>;
     mockDbRowCount = {
       execute: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<DbRowCountCron>;
@@ -109,6 +114,7 @@ describe('CronTasksService', () => {
       mockAppointmentReminders,
       mockGroupSessionAutomation,
       mockRefreshTokenCleanup,
+      mockDataRetention,
       mockDbRowCount,
       mockOrphanAudit,
       mockReconcileRefunds,
@@ -175,6 +181,7 @@ describe('CronTasksService', () => {
           'appointment-reminders',
           'group-session-automation',
           'refresh-token-cleanup',
+          'data-retention',
           'db-row-count',
           'orphan-audit',
           'reconcile-refunds',
@@ -182,7 +189,7 @@ describe('CronTasksService', () => {
           'authentica-balance-check',
         ]),
       );
-      expect(values).toHaveLength(11);
+      expect(values).toHaveLength(12);
     });
   });
 
@@ -191,7 +198,7 @@ describe('CronTasksService', () => {
       (service as any).registerRepeatingJobs();
 
       expect(mockBullMq.getQueue).toHaveBeenCalledWith('ops-cron');
-      expect(mockQueue.add).toHaveBeenCalledTimes(11);
+      expect(mockQueue.add).toHaveBeenCalledTimes(12);
 
       const expectedJobs = [
         { name: CRON_JOBS.BOOKING_AUTOCOMPLETE, cron: '*/15 * * * *' },
@@ -200,6 +207,7 @@ describe('CronTasksService', () => {
         { name: CRON_JOBS.APPOINTMENT_REMINDERS, cron: '*/5 * * * *' },
         { name: CRON_JOBS.GROUP_SESSION_AUTOMATION, cron: '*/30 * * * *' },
         { name: CRON_JOBS.REFRESH_TOKEN_CLEANUP, cron: '0 3 * * *' },
+        { name: CRON_JOBS.DATA_RETENTION, cron: '0 3 * * *' },
         { name: CRON_JOBS.DB_ROW_COUNT, cron: '0 1 * * 0' },
         { name: CRON_JOBS.ORPHAN_AUDIT, cron: '0 2 * * 0' },
         { name: CRON_JOBS.RECONCILE_REFUNDS, cron: '*/15 * * * *' },
@@ -273,6 +281,13 @@ describe('CronTasksService', () => {
       const processor = (mockBullMq.createWorker as jest.Mock).mock.calls[0][1];
       await processor(createJob(CRON_JOBS.REFRESH_TOKEN_CLEANUP));
       expect(mockRefreshTokenCleanup.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it('handles data-retention', async () => {
+      (service as any).registerWorker();
+      const processor = (mockBullMq.createWorker as jest.Mock).mock.calls[0][1];
+      await processor(createJob(CRON_JOBS.DATA_RETENTION));
+      expect(mockDataRetention.execute).toHaveBeenCalledTimes(1);
     });
 
     it('handles db-row-count', async () => {

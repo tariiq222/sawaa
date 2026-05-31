@@ -50,7 +50,9 @@ export class PerformPasswordResetHandler {
       // bypassRls: pre-auth flow — caller has only the reset token, no tenant context.
       await tx.user.update({
         where: { id: record.userId },
-        data: { passwordHash },
+        // Bump tokenVersion in the same update so any access token issued before
+        // the reset (valid ~15 min) is immediately invalidated by the JWT strategy.
+        data: { passwordHash, tokenVersion: { increment: 1 } },
       });
       await tx.passwordResetToken.update({
         where: { id: record.id },

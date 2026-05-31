@@ -71,10 +71,12 @@ export class ResetPasswordHandler {
         throw new UnauthorizedException('Session already used');
       }
 
-      // Update password
+      // Update password. Bump tokenVersion in the same update so any client
+      // access token issued before the reset is immediately invalidated by
+      // ClientJwtStrategy (which compares Client.tokenVersion to the JWT claim).
       await tx.client.update({
         where: { id: existing.id },
-        data: { passwordHash, loginAttempts: 0, lockoutUntil: null },
+        data: { passwordHash, loginAttempts: 0, lockoutUntil: null, tokenVersion: { increment: 1 } },
       });
 
       // Record new password in history (trims to HISTORY_DEPTH)

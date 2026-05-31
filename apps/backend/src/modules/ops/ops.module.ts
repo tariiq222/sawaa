@@ -13,6 +13,7 @@ import { BookingNoShowCron } from './cron-tasks/booking-noshow.cron';
 import { AppointmentRemindersCron } from './cron-tasks/appointment-reminders.cron';
 import { GroupSessionAutomationCron } from './cron-tasks/group-session-automation.cron';
 import { RefreshTokenCleanupCron } from './cron-tasks/refresh-token-cleanup.cron';
+import { DataRetentionCron } from './cron-tasks/data-retention.cron';
 import { LogActivityHandler } from './log-activity/log-activity.handler';
 import { ListActivityHandler } from './log-activity/list-activity.handler';
 import { GenerateReportHandler } from './generate-report/generate-report.handler';
@@ -40,6 +41,8 @@ const cronHandlers = [
   AppointmentRemindersCron,
   GroupSessionAutomationCron,
   RefreshTokenCleanupCron,
+  // PDPL — daily PII/log retention purge
+  DataRetentionCron,
   // DB-12/13
   DbRowCountCron,
 
