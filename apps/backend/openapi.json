@@ -4155,6 +4155,33 @@
         ],
         "type": "object"
       },
+      "SubmitIntakeResponseDto": {
+        "properties": {
+          "answers": {
+            "additionalProperties": true,
+            "description": "Answers keyed by field ID. Values are a string (TEXT/TEXTAREA/NUMBER/DATE/SELECT/RADIO) or string[] (CHECKBOX).",
+            "example": {
+              "11111111-1111-1111-1111-111111111111": "نعم",
+              "22222222-2222-2222-2222-222222222222": [
+                "خيار أ",
+                "خيار ب"
+              ]
+            },
+            "type": "object"
+          },
+          "formId": {
+            "description": "The intake form being answered",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "formId",
+          "answers"
+        ],
+        "type": "object"
+      },
       "SubmitRatingDto": {
         "properties": {
           "bookingId": {
@@ -17964,7 +17991,7 @@
         ],
         "responses": {
           "200": {
-            "description": "List of intake responses (empty until model is implemented)"
+            "description": "List of intake responses for the booking, each with its form, resolved scope label and submission count"
           },
           "400": {
             "content": {
@@ -18013,6 +18040,81 @@
           }
         ],
         "summary": "Get intake form responses for a booking",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      },
+      "post": {
+        "operationId": "DashboardOrganizationSettingsController_submitIntakeResponseEndpoint",
+        "parameters": [
+          {
+            "description": "Booking UUID",
+            "in": "path",
+            "name": "bookingId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitIntakeResponseDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Persisted intake response"
+          },
+          "400": {
+            "description": "Validation failed (missing required field, unknown field, or invalid option)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Booking or form not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Submit (or overwrite) intake answers on behalf of a client for a booking",
         "tags": [
           "Dashboard / Org Experience"
         ]
@@ -28306,6 +28408,69 @@
         ]
       }
     },
+    "/api/v1/public/bookings/{bookingId}/intake-responses": {
+      "post": {
+        "operationId": "PublicIntakeFormsController_submit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bookingId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitIntakeResponseDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Persisted intake response",
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Validation failed (missing required field, unknown field, or invalid option)"
+          },
+          "404": {
+            "description": "Booking or form not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Submit intake form answers for one of your bookings (requires client auth)",
+        "tags": [
+          "Public / Org Experience"
+        ]
+      }
+    },
     "/api/v1/public/bookings/{id}/status": {
       "get": {
         "operationId": "PublicBookingsController_getBookingStatusEndpoint",
@@ -28906,6 +29071,102 @@
         "summary": "Get single public employee by slug or id",
         "tags": [
           "Public / Employees"
+        ]
+      }
+    },
+    "/api/v1/public/intake-forms/applicable": {
+      "get": {
+        "operationId": "PublicIntakeFormsController_applicable",
+        "parameters": [
+          {
+            "description": "Service ID to match SERVICE-scoped forms",
+            "in": "query",
+            "name": "serviceId",
+            "required": false,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Employee ID to match EMPLOYEE-scoped forms",
+            "in": "query",
+            "name": "employeeId",
+            "required": false,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Branch ID to match BRANCH-scoped forms",
+            "in": "query",
+            "name": "branchId",
+            "required": false,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Restrict to a single form type",
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "enum": [
+                "PRE_BOOKING",
+                "PRE_SESSION",
+                "POST_SESSION",
+                "REGISTRATION"
+              ],
+              "example": "PRE_BOOKING",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Applicable intake forms with ordered fields",
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "List active intake forms that apply to a booking context",
+        "tags": [
+          "Public / Org Experience"
         ]
       }
     },

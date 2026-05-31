@@ -1752,7 +1752,8 @@ export interface paths {
         /** Get intake form responses for a booking */
         get: operations["DashboardOrganizationSettingsController_getIntakeFormResponsesEndpoint"];
         put?: never;
-        post?: never;
+        /** Submit (or overwrite) intake answers on behalf of a client for a booking */
+        post: operations["DashboardOrganizationSettingsController_submitIntakeResponseEndpoint"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3338,6 +3339,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/bookings/{bookingId}/intake-responses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit intake form answers for one of your bookings (requires client auth) */
+        post: operations["PublicIntakeFormsController_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/bookings/{id}/status": {
         parameters: {
             query?: never;
@@ -3517,6 +3535,23 @@ export interface paths {
         };
         /** Get single public employee by slug or id */
         get: operations["PublicEmployeesController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/intake-forms/applicable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List active intake forms that apply to a booking context */
+        get: operations["PublicIntakeFormsController_applicable"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6612,6 +6647,27 @@ export interface components {
              * @example clinic@example.com
              */
             user: string;
+        };
+        SubmitIntakeResponseDto: {
+            /**
+             * @description Answers keyed by field ID. Values are a string (TEXT/TEXTAREA/NUMBER/DATE/SELECT/RADIO) or string[] (CHECKBOX).
+             * @example {
+             *       "11111111-1111-1111-1111-111111111111": "نعم",
+             *       "22222222-2222-2222-2222-222222222222": [
+             *         "خيار أ",
+             *         "خيار ب"
+             *       ]
+             *     }
+             */
+            answers: {
+                [key: string]: unknown;
+            };
+            /**
+             * Format: uuid
+             * @description The intake form being answered
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            formId: string;
         };
         SubmitRatingDto: {
             /**
@@ -16845,7 +16901,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description List of intake responses (empty until model is implemented) */
+            /** @description List of intake responses for the booking, each with its form, resolved scope label and submission count */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -16878,6 +16934,72 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_submitIntakeResponseEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Booking UUID */
+                bookingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitIntakeResponseDto"];
+            };
+        };
+        responses: {
+            /** @description Persisted intake response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed (missing required field, unknown field, or invalid option) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Booking or form not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -24411,6 +24533,54 @@ export interface operations {
             };
         };
     };
+    PublicIntakeFormsController_submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitIntakeResponseDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Validation failed (missing required field, unknown field, or invalid option) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Booking or form not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     PublicBookingsController_getBookingStatusEndpoint: {
         parameters: {
             query?: never;
@@ -24860,6 +25030,52 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PublicIntakeFormsController_applicable: {
+        parameters: {
+            query?: {
+                /** @description Service ID to match SERVICE-scoped forms */
+                serviceId?: string;
+                /** @description Employee ID to match EMPLOYEE-scoped forms */
+                employeeId?: string;
+                /** @description Branch ID to match BRANCH-scoped forms */
+                branchId?: string;
+                /** @description Restrict to a single form type */
+                type?: "PRE_BOOKING" | "PRE_SESSION" | "POST_SESSION" | "REGISTRATION";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>[];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
             };
             /** @description Unhandled server error */
             500: {

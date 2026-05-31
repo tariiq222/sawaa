@@ -27,6 +27,8 @@ import { DeleteIntakeFormHandler } from './intake-forms/delete-intake-form.handl
 import { UpdateIntakeFormHandler } from './intake-forms/update-intake-form.handler';
 import { SetIntakeFieldsHandler } from './intake-forms/set-intake-fields.handler';
 import { GetIntakeFormResponsesHandler } from './intake-forms/get-intake-form-responses.handler';
+import { ResolveApplicableIntakeFormsHandler } from './resolve-applicable-intake-forms/resolve-applicable-intake-forms.handler';
+import { SubmitIntakeResponseHandler } from './submit-intake-response/submit-intake-response.handler';
 import { SubmitRatingHandler } from './ratings/submit-rating.handler';
 import { ListRatingsHandler } from './ratings/list-ratings.handler';
 import { ListPublicTestimonialsHandler } from './ratings/list-public-testimonials.handler';
@@ -64,6 +66,7 @@ const bundleHandlers = [
     UpsertBrandingHandler, GetBrandingHandler, GetPublicBrandingHandler, UploadLogoHandler,
     CreateIntakeFormHandler, GetIntakeFormHandler, ListIntakeFormsHandler, DeleteIntakeFormHandler,
     UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,
+    ResolveApplicableIntakeFormsHandler, SubmitIntakeResponseHandler,
     SubmitRatingHandler, ListRatingsHandler, ListPublicTestimonialsHandler, UpdateRatingVisibilityHandler,
     GetOrgSettingsHandler, UpsertOrgSettingsHandler,
     GetBookingSettingsHandler, UpsertBookingSettingsHandler,
@@ -74,6 +77,7 @@ const bundleHandlers = [
     UpsertBrandingHandler, GetBrandingHandler, GetPublicBrandingHandler, UploadLogoHandler,
     CreateIntakeFormHandler, GetIntakeFormHandler, ListIntakeFormsHandler, DeleteIntakeFormHandler,
     UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,
+    ResolveApplicableIntakeFormsHandler, SubmitIntakeResponseHandler,
     SubmitRatingHandler, ListRatingsHandler, ListPublicTestimonialsHandler, UpdateRatingVisibilityHandler,
     GetOrgSettingsHandler, UpsertOrgSettingsHandler,
     GetBookingSettingsHandler, UpsertBookingSettingsHandler,

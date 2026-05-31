@@ -21,6 +21,7 @@ import { DeleteIntakeFormHandler } from '../../modules/org-experience/intake-for
 import { UpdateIntakeFormHandler } from '../../modules/org-experience/intake-forms/update-intake-form.handler';
 import { SetIntakeFieldsHandler } from '../../modules/org-experience/intake-forms/set-intake-fields.handler';
 import { GetIntakeFormResponsesHandler } from '../../modules/org-experience/intake-forms/get-intake-form-responses.handler';
+import { SubmitIntakeResponseHandler } from '../../modules/org-experience/submit-intake-response/submit-intake-response.handler';
 import { SubmitRatingHandler } from '../../modules/org-experience/ratings/submit-rating.handler';
 import { ListRatingsHandler } from '../../modules/org-experience/ratings/list-ratings.handler';
 import { UpdateRatingVisibilityHandler } from '../../modules/org-experience/ratings/update-rating-visibility.handler';
@@ -95,6 +96,7 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
         { provide: UpdateIntakeFormHandler, useValue: mockUpdateIntakeForm },
         { provide: SetIntakeFieldsHandler, useValue: mockSetIntakeFields },
         { provide: GetIntakeFormResponsesHandler, useValue: mockGetIntakeFormResponses },
+        { provide: SubmitIntakeResponseHandler, useValue: { execute: jest.fn() } },
         { provide: SubmitRatingHandler, useValue: mockSubmitRating },
         { provide: ListRatingsHandler, useValue: mockListRatings },
         { provide: UpdateRatingVisibilityHandler, useValue: mockUpdateRatingVisibility },

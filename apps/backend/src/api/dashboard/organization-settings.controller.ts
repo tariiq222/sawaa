@@ -41,6 +41,8 @@ import { UpdateIntakeFormDto } from '../../modules/org-experience/intake-forms/u
 import { SetIntakeFieldsHandler } from '../../modules/org-experience/intake-forms/set-intake-fields.handler';
 import { SetIntakeFieldsDto } from '../../modules/org-experience/intake-forms/set-intake-fields.dto';
 import { GetIntakeFormResponsesHandler } from '../../modules/org-experience/intake-forms/get-intake-form-responses.handler';
+import { SubmitIntakeResponseHandler } from '../../modules/org-experience/submit-intake-response/submit-intake-response.handler';
+import { SubmitIntakeResponseDto } from '../../modules/org-experience/submit-intake-response/submit-intake-response.dto';
 import { SubmitRatingHandler } from '../../modules/org-experience/ratings/submit-rating.handler';
 import { SubmitRatingDto } from '../../modules/org-experience/ratings/submit-rating.dto';
 import { ListRatingsHandler } from '../../modules/org-experience/ratings/list-ratings.handler';
@@ -85,6 +87,7 @@ export class DashboardOrganizationSettingsController {
     private readonly updateIntakeForm: UpdateIntakeFormHandler,
     private readonly setIntakeFields: SetIntakeFieldsHandler,
     private readonly getIntakeFormResponses: GetIntakeFormResponsesHandler,
+    private readonly submitIntakeResponse: SubmitIntakeResponseHandler,
     private readonly submitRating: SubmitRatingHandler,
     private readonly listRatings: ListRatingsHandler,
     private readonly updateRatingVisibility: UpdateRatingVisibilityHandler,
@@ -327,9 +330,27 @@ export class DashboardOrganizationSettingsController {
   @CheckPermissions({ action: 'read', subject: 'Setting' })
   @ApiOperation({ summary: 'Get intake form responses for a booking' })
   @ApiParam({ name: 'bookingId', description: 'Booking UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'List of intake responses (empty until model is implemented)' })
+  @ApiOkResponse({ description: 'List of intake responses for the booking, each with its form, resolved scope label and submission count' })
   getIntakeFormResponsesEndpoint(@Param('bookingId', ParseUUIDPipe) bookingId: string) {
     return this.getIntakeFormResponses.execute({ bookingId });
+  }
+
+  @Post('intake-forms/responses/:bookingId')
+  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @ApiOperation({ summary: 'Submit (or overwrite) intake answers on behalf of a client for a booking' })
+  @ApiParam({ name: 'bookingId', description: 'Booking UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiCreatedResponse({ description: 'Persisted intake response' })
+  @ApiResponse({ status: 400, description: 'Validation failed (missing required field, unknown field, or invalid option)' })
+  @ApiResponse({ status: 404, description: 'Booking or form not found' })
+  submitIntakeResponseEndpoint(
+    @Param('bookingId', ParseUUIDPipe) bookingId: string,
+    @Body() body: SubmitIntakeResponseDto,
+  ) {
+    return this.submitIntakeResponse.execute({
+      bookingId,
+      formId: body.formId,
+      answers: body.answers,
+    });
   }
 
   @Get('intake-forms/:formId')
