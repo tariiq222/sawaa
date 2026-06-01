@@ -247,9 +247,18 @@ export function ServicePicker({
           const singleChoice = choices.length === 1 ? choices[0] : null;
           const displayDuration =
             singleChoice?.durationMins ?? fallbackDuration;
+          // Delivery types come from bookingConfigs — durationOptions are
+          // delivery-agnostic duration/price tiers and carry no deliveryType,
+          // so deriving from `choices` yields [null] when options are present.
+          const usesDurationOptions = durationOpts.length > 0;
+          const deliveryTypeSource = configs.length > 0 ? configs : choices;
           const displayTypes: Array<'IN_PERSON' | 'ONLINE'> = Array.from(
-            new Set(choices.map((c) => c.deliveryType)),
-          ) as Array<'IN_PERSON' | 'ONLINE'>;
+            new Set(
+              deliveryTypeSource
+                .map((c) => c.deliveryType)
+                .filter((d): d is 'IN_PERSON' | 'ONLINE' => d === 'IN_PERSON' || d === 'ONLINE'),
+            ),
+          );
 
           const isOpen = pickerOpen === service.id;
           const stage: 'default' | 'type' | 'duration' =
@@ -274,8 +283,13 @@ export function ServicePicker({
             }
           };
 
+          // durationOptions are delivery-agnostic → show every tier once a type
+          // is chosen. bookingConfig-based choices stay filtered by delivery type.
           const durationsForType = pickerType
-            ? choices.filter((c) => c.deliveryType === pickerType).sort((a, b) => a.durationMins - b.durationMins)
+            ? (usesDurationOptions
+                ? [...choices]
+                : choices.filter((c) => c.deliveryType === pickerType)
+              ).sort((a, b) => a.durationMins - b.durationMins)
             : [];
 
           return (

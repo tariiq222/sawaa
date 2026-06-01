@@ -58,8 +58,8 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
         purpose: OtpPurpose.CLIENT_LOGIN,
       });
       setStep('otp');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.failedToSendCode'));
+    } catch {
+      setError(t('auth.failedToSendCode'));
     } finally {
       setIsLoading(false);
     }
@@ -76,8 +76,8 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       const result = await verifyOtp(email, otpCode, OtpPurpose.CLIENT_LOGIN);
       setOtpToken(result.sessionToken);
       setStep('password');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.invalidCode'));
+    } catch {
+      setError(t('auth.invalidCode'));
     } finally {
       setIsLoading(false);
     }
@@ -110,8 +110,8 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       } else {
         router.push('/account');
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.registerFailed'));
+    } catch {
+      setError(t('auth.registerFailed'));
     } finally {
       setIsLoading(false);
     }

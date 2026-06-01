@@ -49,8 +49,8 @@ export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordForm
       const result = await verifyOtp(email, otpCode, OtpPurpose.CLIENT_PASSWORD_RESET);
       setOtpToken(result.sessionToken);
       setStep('password');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.invalidCode'));
+    } catch {
+      setError(t('auth.invalidCode'));
     } finally {
       setIsLoading(false);
     }
@@ -78,8 +78,8 @@ export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordForm
       } else {
         setTimeout(() => router.push('/login'), 1500);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.resetFailed'));
+    } catch {
+      setError(t('auth.resetFailed'));
     } finally {
       setIsLoading(false);
     }

@@ -16,17 +16,16 @@ const sentryOrigin = process.env.SENTRY_URL || 'https://errors.webvue.pro';
 
 // Content-Security-Policy for the public Next.js site.
 //
-// IMPORTANT: this ships as REPORT-ONLY (Content-Security-Policy-Report-Only).
-// A report-only policy is evaluated by the browser and violations are logged to
-// the console (and any report endpoint) but NOTHING is blocked — so a slightly
-// wrong directive cannot take the site down. Next.js needs 'unsafe-inline' for
-// its injected styles, and (without a nonce setup) inline/eval scripts during
-// hydration, so those are allowed here.
+// This ships as an ENFORCING policy (Content-Security-Policy) — violations are
+// blocked by the browser. The policy stays deliberately permissive on scripts:
+// Next.js needs 'unsafe-inline' for its injected styles, and (without a nonce
+// setup) inline/eval scripts during hydration, so those are allowed. The value
+// of enforcing even with those is real: object-src 'none', frame-ancestors
+// 'none' (clickjacking), base-uri/form-action 'self', and a locked-down
+// default-src/connect-src/img-src/font-src allowlist.
 //
-// TODO(security): after validating in production for a release cycle that the
-// report-only policy produces no legitimate violations, promote this header to
-// the enforcing `Content-Security-Policy` key (and tighten script-src by
-// dropping 'unsafe-eval' / adopting nonces where feasible).
+// TODO(security): tighten script-src by dropping 'unsafe-eval' and adopting
+// nonce/hash-based inline scripts where the Next.js build allows it.
 function buildCsp() {
   const api = apiOrigin();
   return [
@@ -44,8 +43,8 @@ function buildCsp() {
 }
 
 const securityHeaders = [
-  // Report-only — see buildCsp() note above before promoting to enforcing.
-  { key: 'Content-Security-Policy-Report-Only', value: buildCsp() },
+  // Enforcing — see buildCsp() note above.
+  { key: 'Content-Security-Policy', value: buildCsp() },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },

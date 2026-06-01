@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import type { PublicBranding } from '@sawaa/shared';
 
-const BASE_URL = process.env.NEXT_PUBLIC_WEBSITE_URL ?? 'https://example.com';
+const BASE_URL = process.env.NEXT_PUBLIC_WEBSITE_URL ?? 'https://sawaa.sa';
 
 interface PageSeoInput {
   branding: PublicBranding;

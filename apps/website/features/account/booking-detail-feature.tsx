@@ -314,8 +314,8 @@ function CancelModal({
     try {
       const result = await cancelApi(reason || undefined);
       onSuccess(result.status === 'CANCELLED' ? 'CANCELLED' : 'CANCEL_REQUESTED');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : tt('booking.cancelFailed'));
+    } catch {
+      setError(tt('booking.cancelFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -398,8 +398,8 @@ function RescheduleModal({
     try {
       await rescheduleApi(new Date(`${newDate}T${newTime}`).toISOString());
       onSuccess();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : tt('booking.rescheduleFailed'));
+    } catch {
+      setError(tt('booking.rescheduleFailed'));
     } finally {
       setIsLoading(false);
     }

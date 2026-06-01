@@ -27,8 +27,8 @@ export function OtpVerifyForm({ client, onVerified }: OtpVerifyFormProps) {
       const api = await import('./otp.api');
       const result = await api.verifyOtp(client.email, code);
       onVerified(result.sessionToken);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('otp.verificationFailed'));
+    } catch {
+      setError(t('otp.verificationFailed'));
     } finally {
       setIsLoading(false);
     }

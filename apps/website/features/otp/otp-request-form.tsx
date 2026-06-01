@@ -29,8 +29,10 @@ export function OtpRequestForm({
         purpose: OtpPurpose.GUEST_BOOKING,
       });
       onRequestSent();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('otp.failedToSend'));
+    } catch {
+      // Show a localized message — the backend message is English/generic
+      // (e.g. "An unexpected error occurred" on a 503) and shouldn't surface raw.
+      setError(t('otp.failedToSend'));
     } finally {
       setIsLoading(false);
     }

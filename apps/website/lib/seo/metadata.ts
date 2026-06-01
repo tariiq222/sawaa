@@ -9,7 +9,7 @@ export interface PageMetadataOptions {
 }
 
 export function buildPageMetadata(options: PageMetadataOptions): Metadata {
-  const baseUrl = process.env.NEXT_PUBLIC_WEBSITE_URL ?? 'https://example.com';
+  const baseUrl = process.env.NEXT_PUBLIC_WEBSITE_URL ?? 'https://sawaa.sa';
 
   return {
     title: options.title,

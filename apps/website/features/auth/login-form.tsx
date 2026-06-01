@@ -60,8 +60,8 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           : '/account';
         router.push(target);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.loginFailed'));
+    } catch {
+      setError(t('auth.loginFailed'));
     } finally {
       setIsLoading(false);
     }

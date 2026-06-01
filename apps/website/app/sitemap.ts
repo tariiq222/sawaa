@@ -4,7 +4,7 @@ import { listPublicEmployees } from '@/features/therapists/public';
 export const revalidate = 3600;
 export const dynamic = 'force-static';
 
-const BASE_URL = process.env.NEXT_PUBLIC_WEBSITE_URL ?? 'https://example.com';
+const BASE_URL = process.env.NEXT_PUBLIC_WEBSITE_URL ?? 'https://sawaa.sa';
 
 const STATIC_ROUTES: Array<{
   path: string;
@@ -15,6 +15,7 @@ const STATIC_ROUTES: Array<{
   { path: '/therapists', changeFrequency: 'weekly', priority: 0.9 },
   { path: '/booking', changeFrequency: 'monthly', priority: 0.9 },
   { path: '/support-groups', changeFrequency: 'weekly', priority: 0.8 },
+  { path: '/blog', changeFrequency: 'weekly', priority: 0.6 },
   { path: '/contact', changeFrequency: 'yearly', priority: 0.5 },
   { path: '/burnout-test', changeFrequency: 'monthly', priority: 0.6 },
   { path: '/login', changeFrequency: 'yearly', priority: 0.3 },

@@ -27,16 +27,16 @@ describe('website security headers', () => {
     else process.env.NEXT_PUBLIC_API_URL = original;
   });
 
-  it('emits a REPORT-ONLY CSP (does not block) rather than an enforcing one', async () => {
+  it('emits an ENFORCING CSP (blocks violations)', async () => {
     const headers = await loadHeaders();
-    expect(headers.has('Content-Security-Policy-Report-Only')).toBe(true);
-    // Must NOT ship the enforcing key yet — report-only is the whole point.
-    expect(headers.has('Content-Security-Policy')).toBe(false);
+    expect(headers.has('Content-Security-Policy')).toBe(true);
+    // Enforcing replaces the old report-only key.
+    expect(headers.has('Content-Security-Policy-Report-Only')).toBe(false);
   });
 
   it('scopes the CSP sensibly for a Next.js app', async () => {
     const headers = await loadHeaders();
-    const csp = headers.get('Content-Security-Policy-Report-Only')!;
+    const csp = headers.get('Content-Security-Policy')!;
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("frame-ancestors 'none'");
@@ -46,7 +46,7 @@ describe('website security headers', () => {
 
   it('allows the API origin derived from NEXT_PUBLIC_API_URL in connect-src', async () => {
     const headers = await loadHeaders();
-    const csp = headers.get('Content-Security-Policy-Report-Only')!;
+    const csp = headers.get('Content-Security-Policy')!;
     // Only the origin (no /api/v1 path) belongs in a CSP source.
     expect(csp).toContain('connect-src');
     expect(csp).toContain('https://api.sawaa.sa');

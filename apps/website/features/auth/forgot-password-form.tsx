@@ -47,8 +47,8 @@ export function ForgotPasswordForm({ onSuccess }: ForgotPasswordFormProps) {
       } else {
         router.push(`/reset-password?email=${encodeURIComponent(email)}`);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.failedToSendCode'));
+    } catch {
+      setError(t('auth.failedToSendCode'));
     } finally {
       setIsLoading(false);
     }
