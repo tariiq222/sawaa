@@ -1,5 +1,5 @@
 import { PrismaService } from '../../../infrastructure/database';
-import { BookingStatus, ClientGender, PaymentStatus, Prisma } from '@prisma/client';
+import { BookingStatus, ClientGender, Prisma } from '@prisma/client';
 
 export interface ClientsReportParams {
   from: Date;

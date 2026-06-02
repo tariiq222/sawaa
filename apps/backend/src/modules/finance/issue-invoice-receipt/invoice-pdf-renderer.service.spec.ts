@@ -10,7 +10,6 @@ jest.mock('qrcode', () => ({
   toDataURL: jest.fn(),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const QRCode = require('qrcode') as { toDataURL: jest.Mock };
 
 describe('InvoicePdfRendererService', () => {

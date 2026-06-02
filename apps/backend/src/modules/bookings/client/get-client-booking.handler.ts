@@ -18,7 +18,7 @@ export class GetClientBookingHandler {
       throw new NotFoundException('Booking not found');
     }
 
-    const [client, employee, service, branch] = await Promise.all([
+    const [_client, employee, service, branch] = await Promise.all([
       this.prisma.client.findFirst({ where: { id: booking.clientId } }),
       this.prisma.employee.findFirst({ where: { id: booking.employeeId } }),
       this.prisma.service.findFirst({ where: { id: booking.serviceId } }),

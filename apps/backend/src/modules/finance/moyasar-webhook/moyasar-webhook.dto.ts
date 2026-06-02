@@ -1,6 +1,6 @@
 import { IsIn, IsInt, IsObject, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class MoyasarWebhookMetadataDto {
   @ApiPropertyOptional({ description: 'Invoice UUID embedded in the payment metadata', example: '00000000-0000-0000-0000-000000000000' })

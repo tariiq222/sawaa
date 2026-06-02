@@ -54,7 +54,7 @@ export function EmployeeBranchesPicker({
     staleTime: 5 * 60 * 1000,
   })
 
-  const branches: Branch[] = data?.items ?? []
+  const branches = useMemo<Branch[]>(() => data?.items ?? [], [data])
 
   useEffect(() => {
     if (value.length > 0 || branches.length === 0) return

@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { Prisma } from '@prisma/client';
+import { Prisma, type DeliveryType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { BundlePriceService } from '../../org-experience/bundles/bundle-price.service';
 import { BookingCreatedEvent } from '../events/booking-created.event';
@@ -181,7 +181,7 @@ export class CreateBundleBookingHandler {
           date: slot.slotStart,
           durationMins: slot.durationMins,
           bookingType: 'INDIVIDUAL',
-          deliveryType: deliveryType as any,
+          deliveryType: deliveryType as DeliveryType,
         });
         const slotMs = slot.slotStart.getTime();
         if (!available.some((s) => s.startTime.getTime() === slotMs)) {
@@ -365,6 +365,7 @@ export class CreateBundleBookingHandler {
         for (const booking of createdBookings) {
           const createdEvent = new BookingCreatedEvent({
             bookingId: booking.id,
+            bookingNumber: booking.bookingNumber,
             clientId: booking.clientId,
             employeeId: booking.employeeId ?? '',
             organizationId: DEFAULT_ORG_ID,

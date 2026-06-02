@@ -266,7 +266,6 @@ describe('BookingStateMachine — VALID_TRANSITIONS integrity', () => {
       for (const fromStatus of rule.from) {
         expect(TERMINAL_STATUSES.has(fromStatus)).toBe(false);
         if (TERMINAL_STATUSES.has(fromStatus)) {
-          // eslint-disable-next-line no-console
           console.error(`Violation: transition '${name}' lists terminal status '${fromStatus}' in its from[] list`);
         }
       }

@@ -30,7 +30,6 @@ import { useServiceBookingTypes, useServices } from "@/hooks/use-services"
 import { useEmployeeServices } from "@/hooks/use-employees"
 import { useEmployeeServiceMutations } from "@/hooks/use-employee-mutations"
 import { EmployeeServiceTypesEditor } from "./employee-service-types-editor"
-import { sarToHalalas } from "@/lib/money"
 import {
   buildEmployeeServiceOptionsPayload,
   makeDefaultEmployeeTypeConfigs,

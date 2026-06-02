@@ -16,7 +16,7 @@ import { queryKeys } from "@/lib/query-keys"
 import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import { ApiError } from "@/lib/api"
-import type { Booking, CancellationReason, RefundType } from "@/lib/types/booking"
+import type { Booking, CancellationReason } from "@/lib/types/booking"
 
 interface BookingsTabContentProps {
   onRowClick: (b: Booking) => void
@@ -44,8 +44,6 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
 
   const [deleteTarget, setDeleteTarget] = useState<Booking | null>(null)
   const [deleteReason, setDeleteReason] = useState<CancellationReason | "">("")
-  const [deleteRefundType, setDeleteRefundType] = useState<RefundType>("none")
-  const [deleteRefundAmount, setDeleteRefundAmount] = useState("")
   const [deleteAdminNotes, setDeleteAdminNotes] = useState("")
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
@@ -53,8 +51,6 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
   const resetDelete = () => {
     setDeleteTarget(null)
     setDeleteReason("")
-    setDeleteRefundType("none")
-    setDeleteRefundAmount("")
     setDeleteAdminNotes("")
   }
 

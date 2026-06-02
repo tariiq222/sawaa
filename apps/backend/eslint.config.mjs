@@ -105,10 +105,19 @@ export default defineConfig([
     files: ["test/**/*.ts", "**/*.spec.ts"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": "off",
       "sawaa/require-api-operation": "off",
       // Test helpers and e2e fixtures legitimately call $transaction directly for
       // database setup/teardown; they are not application code subject to RLS rules.
       "no-restricted-syntax": "off",
+    },
+  },
+
+  {
+    // Manual mocks often match external APIs and may not use every argument.
+    files: ["src/__mocks__/**"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": "off",
     },
   },
 

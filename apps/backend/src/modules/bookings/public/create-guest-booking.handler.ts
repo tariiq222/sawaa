@@ -11,7 +11,7 @@ import { PriceResolverService } from '../../org-experience/services/price-resolv
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 
 import { CreateGuestBookingDto } from './create-guest-booking.dto';
-import { Prisma, type OtpChannel } from '@prisma/client';
+import { Prisma, type OtpChannel, type DeliveryType } from '@prisma/client';
 import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 
@@ -336,7 +336,7 @@ export class CreateGuestBookingHandler {
       durationMins: input.durationMins,
       durationOptionId: input.durationOptionId,
       bookingType: input.bookingType,
-      deliveryType: input.deliveryType as any,
+      deliveryType: input.deliveryType as DeliveryType,
     });
 
     const scheduledMs = input.scheduledAt.getTime();

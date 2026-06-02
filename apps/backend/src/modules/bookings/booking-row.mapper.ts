@@ -132,10 +132,6 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
   };
 }
 
-function pad(n: number): string {
-  return n < 10 ? `0${n}` : String(n);
-}
-
 /** DB BookingType → dashboard snake_case alias. INDIVIDUAL → in_person. */
 function mapTypeForUi(t: string): string {
   const lower = t.toLowerCase();

@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { BookingStatus, RefundType } from '@prisma/client';
+import { RefundType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingCancelledEvent } from '../events/booking-cancelled.event';
@@ -143,6 +143,7 @@ export class CancelBookingHandler {
       organizationId: DEFAULT_ORG_ID,
       scheduledAt: booking.scheduledAt,
       bookingId: booking.id,
+      bookingNumber: booking.bookingNumber,
       clientId: booking.clientId,
       employeeId: booking.employeeId,
       reason: cmd.reason,

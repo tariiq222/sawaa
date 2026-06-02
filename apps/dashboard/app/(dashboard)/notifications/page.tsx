@@ -62,8 +62,8 @@ function NotificationsContent() {
     staleTime: 60_000,
   })
 
-  const notifications = data?.items ?? []
-  const meta = data?.meta ?? null
+  const notifications = useMemo(() => data?.items ?? [], [data])
+  const meta = useMemo(() => data?.meta ?? null, [data])
   const { data: unreadCount, isLoading: unreadLoading } = useUnreadCount()
   const { markAllMut, markOneMut } = useNotificationMutations()
 

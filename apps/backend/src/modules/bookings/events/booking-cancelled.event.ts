@@ -7,6 +7,7 @@ export interface BookingCancelledPayload {
   organizationId: string;
   scheduledAt: Date;
   bookingId: string;
+  bookingNumber: number;
   clientId: string;
   employeeId: string;
   reason: CancellationReason;

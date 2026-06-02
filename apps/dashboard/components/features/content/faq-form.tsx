@@ -43,7 +43,7 @@ export function FaqForm({ rows }: Props) {
     resolver: zodResolver(faqItemsSchema),
     defaultValues: { items: FAQ_DEFAULTS },
   })
-  const { fields, append, remove, move } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "items",
   })

@@ -2,6 +2,7 @@ import { BaseEvent } from '../../../common/events';
 
 export interface BookingCreatedPayload {
   bookingId: string;
+  bookingNumber: number;
   clientId: string;
   employeeId: string;
   organizationId: string;

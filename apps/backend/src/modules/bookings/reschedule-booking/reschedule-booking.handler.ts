@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, ConflictException, ForbiddenException, Optional } from '@nestjs/common';
-import { BookingStatus, Prisma } from '@prisma/client';
+import { BookingStatus, Prisma, type DeliveryType } from '@prisma/client';
 
 /** Re-map a Postgres exclusion violation (23P01) to a domain 409 conflict. */
 function mapDbConflict(err: unknown): never {
@@ -147,7 +147,7 @@ export class RescheduleBookingHandler {
       durationMins: input.durationMins,
       durationOptionId: input.durationOptionId,
       bookingType: input.bookingType,
-      deliveryType: input.deliveryType as any,
+      deliveryType: input.deliveryType as DeliveryType,
       excludeBookingId: input.bookingId,
     });
 

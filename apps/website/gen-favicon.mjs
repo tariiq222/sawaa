@@ -2,8 +2,6 @@
 // Design: WHITE rounded card, TURQUOISE logo drawn on top. No turquoise box.
 // Requires: sharp (resolved from workspace root node_modules), npx png-to-ico
 
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
 // Resolve sharp from the workspace root so it works from apps/website too
 const sharp = (await import('/Users/tariq/code/sawaa/node_modules/sharp/lib/index.js')).default;
 

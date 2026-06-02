@@ -5,6 +5,7 @@ import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { EventBusService, type DomainEventEnvelope } from '../../../infrastructure/events';
 import { SYSTEM_CONTEXT_CLS_KEY, DEFAULT_ORG_ID } from '../../../common/constants';
 import type { PaymentCompletedPayload } from '../events/payment-completed.event';
+import type { Invoice } from '@prisma/client';
 import { InvoicePdfRendererService } from './invoice-pdf-renderer.service';
 import { InvoiceReceiptIssuedEvent } from './invoice-receipt-issued.event';
 import type { InvoicePdfData } from './invoice-pdf.template';
@@ -91,7 +92,7 @@ export class IssueInvoiceReceiptHandler {
     await this.eventBus.publish(issued.eventName, issued.toEnvelope());
   }
 
-  private async buildPdfData(invoice: any, paymentId: string): Promise<InvoicePdfData> {
+  private async buildPdfData(invoice: Invoice, paymentId: string): Promise<InvoicePdfData> {
     const [orgSettings, client, payment, booking] = await this.cls.run(async () => {
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
       return Promise.all([

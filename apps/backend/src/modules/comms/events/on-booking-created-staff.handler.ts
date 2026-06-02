@@ -3,9 +3,11 @@ import { NotificationType, RecipientType } from '@prisma/client';
 import { EventBusService, type DomainEventEnvelope } from '../../../infrastructure/events';
 import { SendNotificationHandler } from '../send-notification/send-notification.handler';
 import { GetStaffTargetsHandler } from '../notifications/get-staff-targets.handler';
+import { formatBookingRef } from './booking-ref.util';
 
 interface BookingCreatedPayload {
   bookingId: string;
+  bookingNumber?: number;
   clientId: string;
   employeeId: string;
   organizationId: string;
@@ -43,7 +45,7 @@ export class OnBookingCreatedStaffHandler {
             recipientType: RecipientType.EMPLOYEE,
             type: NotificationType.BOOKING_CREATED,
             title: 'حجز جديد',
-            body: `تم إنشاء حجز جديد #${payload.bookingId.slice(-6)}`,
+            body: `تم إنشاء حجز جديد ${formatBookingRef(payload.bookingNumber, payload.bookingId)}`,
             channels: ['in-app'],
           }),
         ),

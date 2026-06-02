@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, ForbiddenException, ConflictException, Optional } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
+import type { DeliveryType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { ClientRescheduleBookingDto } from './client-reschedule-booking.dto';
@@ -133,7 +133,7 @@ export class ClientRescheduleBookingHandler {
       durationMins: input.durationMins,
       durationOptionId: input.durationOptionId,
       bookingType: input.bookingType,
-      deliveryType: input.deliveryType as any,
+      deliveryType: input.deliveryType as DeliveryType,
       excludeBookingId: input.bookingId,
     });
 

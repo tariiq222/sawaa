@@ -3,9 +3,11 @@ import { NotificationType, RecipientType } from '@prisma/client';
 import { EventBusService, type DomainEventEnvelope } from '../../../infrastructure/events';
 import { SendNotificationHandler } from '../send-notification/send-notification.handler';
 import { GetStaffTargetsHandler } from '../notifications/get-staff-targets.handler';
+import { formatBookingRef } from './booking-ref.util';
 
 interface BookingCancelledPayload {
   bookingId: string;
+  bookingNumber?: number;
   clientId: string;
   employeeId: string;
   organizationId?: string;
@@ -44,7 +46,7 @@ export class OnBookingCancelledStaffHandler {
             recipientType: RecipientType.EMPLOYEE,
             type: NotificationType.BOOKING_CANCELLED,
             title: 'تم إلغاء حجز',
-            body: `تم إلغاء الحجز #${payload.bookingId.slice(-6)} — ${payload.reason}`,
+            body: `تم إلغاء الحجز ${formatBookingRef(payload.bookingNumber, payload.bookingId)} — ${payload.reason}`,
             channels: ['in-app'],
           }),
         ),

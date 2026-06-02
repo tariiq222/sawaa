@@ -5,7 +5,7 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type DeliveryType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { PriceResolverService } from '../../org-experience/services/price-resolver.service';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
@@ -374,6 +374,7 @@ export class CreateBookingHandler {
         // publish, the OutboxPublisherCron picks up the unpublished row.
         const createdEvent = new BookingCreatedEvent({
           bookingId: booking.id,
+          bookingNumber: booking.bookingNumber,
           clientId: booking.clientId,
           employeeId: booking.employeeId ?? '',
           organizationId: DEFAULT_ORG_ID,
@@ -439,7 +440,7 @@ export class CreateBookingHandler {
       date: input.scheduledAt,
       durationMins: input.durationMins,
       bookingType: input.bookingType,
-      deliveryType: input.deliveryType as any,
+      deliveryType: input.deliveryType as DeliveryType,
     });
 
     const scheduledMs = input.scheduledAt.getTime();

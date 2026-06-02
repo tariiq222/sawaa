@@ -163,7 +163,7 @@ export class CreateRecurringBookingHandler {
           date: scheduledAt,
           durationMins: dto.durationMins,
           bookingType,
-          deliveryType: deliveryType as any,
+          deliveryType: deliveryType as DeliveryType,
         });
         const slotMs = scheduledAt.getTime();
         const isAvailable = slots.some((s) => s.startTime.getTime() === slotMs);
