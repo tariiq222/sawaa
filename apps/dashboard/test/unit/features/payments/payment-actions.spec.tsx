@@ -1,6 +1,19 @@
 import { render, screen, fireEvent } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
+const { useLocale } = vi.hoisted(() => {
+  // Buttons are queried by accessible name, so resolve the keys the
+  // component renders to their real English labels (from en.misc.ts).
+  const labels: Record<string, string> = {
+    "detail.refund": "Refund",
+    "detail.verifyTransfer": "Verify transfer",
+  }
+  return {
+    useLocale: vi.fn(() => ({ t: (k: string) => labels[k] ?? k, locale: "ar" })),
+  }
+})
+vi.mock("@/components/locale-provider", () => ({ useLocale }))
+
 vi.mock("@/components/features/payments/refund-dialog", () => ({
   RefundDialog: ({ open }: { open: boolean }) => (open ? <div data-testid="refund-dialog" /> : null),
 }))

@@ -57,6 +57,14 @@ vi.mock("@sawaa/ui", () => {
     SheetTitle: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet-title">{children}</div>,
     SheetDescription: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet-desc">{children}</div>,
     SheetFooter: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet-footer">{children}</div>,
+    // Cancel dialogs migrated Sheet → Dialog; map Dialog* onto the same testids the tests query.
+    Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) => (open ? <div data-testid="sheet">{children}</div> : null),
+    DialogContent: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet-content">{children}</div>,
+    DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet-header">{children}</div>,
+    DialogTitle: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet-title">{children}</div>,
+    DialogDescription: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet-desc">{children}</div>,
+    DialogBody: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet-body">{children}</div>,
+    DialogFooter: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet-footer">{children}</div>,
     Select: ({ children, onValueChange }: { children: React.ReactNode; onValueChange?: (v: string) => void }) => (
       <div data-testid="select" onClick={() => onValueChange?.("partial")}>{children}</div>
     ),
