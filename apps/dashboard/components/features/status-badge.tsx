@@ -14,7 +14,7 @@ import { bookingStatusStyles, bookingTypeStyles } from "@/lib/ds"
 import { cn } from "@/lib/utils"
 import type { BookingStatus, BookingType } from "@/lib/types/booking"
 
-const statusTranslationKeys: Record<BookingStatus, string> = {
+export const statusTranslationKeys: Record<BookingStatus, string> = {
   pending: "bookings.status.pending",
   pending_group_fill: "bookings.status.pending",
   awaiting_payment: "bookings.status.pending",
@@ -38,8 +38,9 @@ const statusIconMap: Record<BookingStatus, { icon: typeof Tick01Icon; iconClass:
   expired:          { icon: Clock02Icon,            iconClass: "text-muted-foreground" },
 }
 
-const typeTranslationKeys: Record<BookingType, string> = {
+const typeTranslationKeys: Record<BookingType | "in_person", string> = {
   individual: "bookings.type.individual",
+  in_person: "bookings.type.inPerson",
   walk_in: "bookings.type.walkIn",
   group: "bookings.type.group",
 }
@@ -75,7 +76,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
 }
 
 interface BookingTypeBadgeProps {
-  type: BookingType
+  type: BookingType | "in_person"
   className?: string
 }
 

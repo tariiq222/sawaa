@@ -7,6 +7,14 @@ import { useLocale } from "@/components/locale-provider"
 import { fetchBookingStatusLog } from "@/lib/api/bookings"
 import { arSA, enUS } from "date-fns/locale"
 import { formatDatePattern } from "@/lib/date"
+import { statusTranslationKeys } from "@/components/features/status-badge"
+import type { BookingStatus } from "@/lib/types/booking"
+
+/** Backend returns the Prisma enum (UPPERCASE); the UI keys are lowercase. */
+function statusKey(raw: string): string {
+  const lower = raw.toLowerCase()
+  return statusTranslationKeys[lower as BookingStatus] ?? `bookings.status.${lower}`
+}
 
 const STATUS_COLORS: Record<string, string> = {
   pending:              "bg-warning/10 text-warning border-warning/20",
@@ -74,17 +82,17 @@ export function BookingStatusLog({ bookingId }: BookingStatusLogProps) {
               {entry.fromStatus && (
                 <>
                   <span
-                    className={`inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium ${STATUS_COLORS[entry.fromStatus] ?? "bg-muted text-muted-foreground border-border"}`}
+                    className={`inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium ${STATUS_COLORS[entry.fromStatus.toLowerCase()] ?? "bg-muted text-muted-foreground border-border"}`}
                   >
-                    {t(`bookings.status.${entry.fromStatus}`)}
+                    {t(statusKey(entry.fromStatus))}
                   </span>
                   <span className="text-xs text-muted-foreground">→</span>
                 </>
               )}
               <span
-                className={`inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium ${STATUS_COLORS[entry.toStatus] ?? "bg-muted text-muted-foreground border-border"}`}
+                className={`inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium ${STATUS_COLORS[entry.toStatus.toLowerCase()] ?? "bg-muted text-muted-foreground border-border"}`}
               >
-                {t(`bookings.status.${entry.toStatus}`)}
+                {t(statusKey(entry.toStatus))}
               </span>
             </div>
 

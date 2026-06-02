@@ -86,6 +86,11 @@ export const bookingTypeStyles = {
     text: "text-primary",
     border: "border-primary/20",
   },
+  in_person: {
+    bg: "bg-primary/10",
+    text: "text-primary",
+    border: "border-primary/20",
+  },
   walk_in: {
     bg: "bg-success/10",
     text: "text-success",

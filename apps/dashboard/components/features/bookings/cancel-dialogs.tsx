@@ -75,9 +75,9 @@ export function ApproveCancelDialog({
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
           {suggestedRefundType && (
-            <p className="text-xs text-muted-foreground rounded-md bg-muted/50 p-2">
+            <p className="text-xs rounded-lg border border-info/20 bg-info/10 px-3 py-2.5 text-info">
               {t("bookings.cancel.approve.systemSuggestion")}{" "}
-              <span className="font-medium text-foreground">
+              <span className="font-semibold">
                 {suggestedRefundType === "full"
                   ? t("bookings.cancel.field.refundFull")
                   : suggestedRefundType === "partial"
