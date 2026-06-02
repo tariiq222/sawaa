@@ -2,13 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query"
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetBody,
-  SheetFooter,
-  SheetTitle,
-  SheetDescription,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogBody,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
 } from "@sawaa/ui"
 import { Badge } from "@sawaa/ui"
 import { Separator } from "@sawaa/ui"
@@ -32,6 +32,21 @@ const statusStyles: Record<string, string> = {
   FAILED: "border-destructive/30 bg-destructive/10 text-destructive",
 }
 
+/** Prisma PaymentStatus enum → existing `detail.paymentStatus.*` UI keys. */
+const statusUiKey: Record<string, string> = {
+  PENDING: "pending",
+  PENDING_VERIFICATION: "awaiting",
+  COMPLETED: "paid",
+  REFUNDED: "refunded",
+  FAILED: "failed",
+}
+
+const methodKey: Record<string, string> = {
+  BANK_TRANSFER: "detail.bankTransfer",
+  ONLINE_CARD: "detail.moyasar",
+  CASH: "detail.paymentMethod.cash",
+}
+
 const verificationStyles: Record<string, string> = {
   pending: "border-warning/30 bg-warning/10 text-warning",
   matched: "border-success/30 bg-success/10 text-success",
@@ -45,7 +60,7 @@ const verificationStyles: Record<string, string> = {
 
 /* ─── Props ─── */
 
-interface PaymentDetailSheetProps {
+interface PaymentDetailDialogProps {
   paymentId: string | null
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -54,12 +69,12 @@ interface PaymentDetailSheetProps {
 
 /* ─── Component ─── */
 
-export function PaymentDetailSheet({
+export function PaymentDetailDialog({
   paymentId,
   open,
   onOpenChange,
   onAction,
-}: PaymentDetailSheetProps) {
+}: PaymentDetailDialogProps) {
   const { t } = useLocale()
   const { data: payment, isLoading } = useQuery({
     queryKey: queryKeys.payments.detail(paymentId ?? ""),
@@ -71,37 +86,39 @@ export function PaymentDetailSheet({
   })
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="end">
-        <SheetHeader>
-          <SheetTitle>{t("detail.paymentDetails")}</SheetTitle>
-          <SheetDescription>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{t("detail.paymentDetails")}</DialogTitle>
+          <DialogDescription asChild>
             {payment ? (
               <Badge
                 variant="outline"
                 className={statusStyles[payment.status] ?? ""}
               >
-                {payment.status}
+                {statusUiKey[payment.status]
+                  ? t(`detail.paymentStatus.${statusUiKey[payment.status]}`)
+                  : payment.status}
               </Badge>
             ) : (
-              t("common.loading")
+              <span>{t("common.loading")}</span>
             )}
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
         {isLoading ? (
-          <SheetBody>
+          <DialogBody>
             <div className="flex flex-col gap-4">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={`skeleton-${i}`} className="h-16 rounded-lg" />
               ))}
             </div>
-          </SheetBody>
+          </DialogBody>
         ) : payment ? (
           <PaymentDetailBody payment={payment} onAction={onAction} />
         ) : null}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -119,7 +136,7 @@ function PaymentDetailBody({
 
   return (
     <>
-      <SheetBody>
+      <DialogBody>
         <div className="flex flex-col gap-6">
           {/* Amount */}
           <DetailSection title={t("detail.payment")}>
@@ -135,7 +152,7 @@ function PaymentDetailBody({
             />
             <DetailRow
               label={t("detail.method")}
-              value={payment.method === "BANK_TRANSFER" ? t("detail.bankTransfer") : payment.method === "ONLINE_CARD" ? t("detail.moyasar") : payment.method}
+              value={methodKey[payment.method] ? t(methodKey[payment.method]) : payment.method}
             />
             {payment.gatewayRef && (
               <DetailRow label={t("detail.transactionRef")} value={payment.gatewayRef} numeric />
@@ -146,7 +163,7 @@ function PaymentDetailBody({
 
           {/* Invoice */}
           <DetailSection title={t("nav.bookings")}>
-            <DetailRow label={t("detail.invoiceId")} value={payment.invoiceId?.slice(0, 12) ?? "\u2014"} numeric />
+            <DetailRow label={t("detail.invoiceId")} value={payment.invoiceId?.slice(0, 12) ?? "—"} numeric />
           </DetailSection>
 
           {/* Bank Transfer Receipts */}
@@ -190,11 +207,11 @@ function PaymentDetailBody({
             </>
           )}
         </div>
-      </SheetBody>
+      </DialogBody>
 
-      <SheetFooter>
+      <DialogFooter>
         <PaymentActions payment={payment} onAction={onAction} />
-      </SheetFooter>
+      </DialogFooter>
     </>
   )
 }

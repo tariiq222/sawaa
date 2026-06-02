@@ -11,7 +11,7 @@ import { ErrorBanner } from "@/components/features/error-banner"
 import { DataTable } from "@/components/features/data-table"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { getPaymentColumns } from "@/components/features/payments/payment-columns"
-import { PaymentDetailSheet } from "@/components/features/payments/payment-detail-sheet"
+import { PaymentDetailDialog } from "@/components/features/payments/payment-detail-dialog"
 import { FilterBar } from "@/components/features/filter-bar"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { Skeleton } from "@sawaa/ui"
@@ -74,7 +74,7 @@ export function PaymentListPage() {
         <DataTable columns={columns} data={payments} emptyTitle={t("payments.empty.title")} emptyDescription={t("payments.empty.description")} />
       )}
 
-      <PaymentDetailSheet paymentId={selectedPaymentId} open={sheetOpen} onOpenChange={setSheetOpen} onAction={handleAction} />
+      <PaymentDetailDialog paymentId={selectedPaymentId} open={sheetOpen} onOpenChange={setSheetOpen} onAction={handleAction} />
     </ListPageShell>
   )
 }

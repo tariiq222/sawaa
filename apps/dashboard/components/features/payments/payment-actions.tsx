@@ -5,6 +5,7 @@ import { useState } from "react"
 import { Button } from "@sawaa/ui"
 
 import type { Payment } from "@/lib/types/payment"
+import { useLocale } from "@/components/locale-provider"
 import { RefundDialog } from "./refund-dialog"
 import { VerifyDialog } from "./verify-dialog"
 
@@ -18,6 +19,7 @@ interface PaymentActionsProps {
 /* ─── Component ─── */
 
 export function PaymentActions({ payment, onAction }: PaymentActionsProps) {
+  const { t } = useLocale()
   const [refundOpen, setRefundOpen] = useState(false)
   const [verifyOpen, setVerifyOpen] = useState(false)
 
@@ -32,7 +34,7 @@ export function PaymentActions({ payment, onAction }: PaymentActionsProps) {
       <div className="flex flex-wrap gap-2 pb-4">
         {canRefund && (
           <Button size="sm" onClick={() => setRefundOpen(true)}>
-            Refund
+            {t("detail.refund")}
           </Button>
         )}
         {canVerify && (
@@ -41,7 +43,7 @@ export function PaymentActions({ payment, onAction }: PaymentActionsProps) {
             variant="outline"
             onClick={() => setVerifyOpen(true)}
           >
-            Verify Transfer
+            {t("detail.verifyTransfer")}
           </Button>
         )}
       </div>
