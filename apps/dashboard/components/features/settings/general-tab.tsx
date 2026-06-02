@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils"
 import { useOrganizationSettings, useUpdateOrganizationSettings } from "@/hooks/use-organization-settings"
 import { useLocale } from "@/components/locale-provider"
+import { GeneralContactSection } from "@/components/features/settings/general-contact-section"
 
 type TabId = "contact" | "regional" | "notifications"
 
@@ -59,9 +60,6 @@ export function GeneralTab() {
 
   const [activeTab, setActiveTab] = useState<TabId>("contact")
 
-  const [organizationEmail, setClinicEmail] = useState("")
-  const [organizationPhone, setClinicPhone] = useState("")
-  const [organizationAddress, setClinicAddress] = useState("")
   const [weekStartDay, setWeekStartDay] = useState("sunday")
   const [dateFormat, setDateFormat] = useState("Y-m-d")
   const [timeFormat, setTimeFormat] = useState("24h")
@@ -74,9 +72,6 @@ export function GeneralTab() {
     if (!settings) return
     // Seed editable form fields from server settings; user edits locally and saves explicitly.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setClinicEmail(settings.contactEmail ?? "")
-    setClinicPhone(settings.contactPhone ?? "")
-    setClinicAddress(settings.address ?? "")
     setWeekStartDay(settings.weekStartDay ?? "sunday")
     setDateFormat(settings.dateFormat ?? "Y-m-d")
     setTimeFormat(settings.timeFormat ?? "24h")
@@ -85,20 +80,6 @@ export function GeneralTab() {
     setSessionDuration(String(settings.sessionDuration ?? 60))
     setReminderBeforeMinutes(String(settings.reminderBeforeMinutes ?? 60))
   }, [settings])
-
-  const handleSaveContact = () => {
-    updateSettings.mutate(
-      {
-        contactEmail: organizationEmail || null,
-        contactPhone: organizationPhone || null,
-        address: organizationAddress || null,
-      },
-      {
-        onSuccess: () => toast.success(t("settings.saved")),
-        onError: () => toast.error(t("settings.error")),
-      },
-    )
-  }
 
   const handleSaveRegional = () => {
     updateSettings.mutate(
@@ -191,36 +172,7 @@ export function GeneralTab() {
         </div>
 
         <div className="flex-1 p-5 overflow-y-auto bg-surface-muted/50 flex flex-col">
-          {activeTab === "contact" && (
-            <div className="flex flex-col gap-3 h-full">
-              <div className="grid grid-cols-2 gap-3">
-                <Card className="shadow-sm bg-surface">
-                  <CardContent className="space-y-2 pt-3 pb-3">
-                    <Label>{t("settings.organizationEmail")}</Label>
-                    <Input type="email" value={organizationEmail} onChange={(e) => setClinicEmail(e.target.value)} />
-                  </CardContent>
-                </Card>
-                <Card className="shadow-sm bg-surface">
-                  <CardContent className="space-y-2 pt-3 pb-3">
-                    <Label>{t("settings.organizationPhone")}</Label>
-                    <Input value={organizationPhone} onChange={(e) => setClinicPhone(e.target.value)} />
-                  </CardContent>
-                </Card>
-                <Card className="shadow-sm bg-surface">
-                  <CardContent className="space-y-2 pt-3 pb-3">
-                    <Label>{t("settings.organizationAddress")}</Label>
-                    <Input value={organizationAddress} onChange={(e) => setClinicAddress(e.target.value)} dir="rtl" />
-                  </CardContent>
-                </Card>
-                <div />
-              </div>
-              <div className="flex justify-end mt-auto pt-2">
-                <Button size="sm" disabled={updateSettings.isPending} onClick={handleSaveContact}>
-                  {t("settings.save")}
-                </Button>
-              </div>
-            </div>
-          )}
+          {activeTab === "contact" && <GeneralContactSection />}
 
           {activeTab === "regional" && (
             <div className="flex flex-col gap-3 h-full">

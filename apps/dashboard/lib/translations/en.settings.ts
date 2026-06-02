@@ -14,7 +14,7 @@ export const enSettings: Record<string, string> = {
   "settings.tabs.cancellation": "Cancellation",
   "settings.tabs.hours": "Working Hours",
   "settings.tabs.features": "Features",
-  "settings.tabs.entity": "Legal Entity",
+  "settings.tabs.entity": "Establishment Info",
   "settings.tabs.legal": "Privacy & Terms",
   "settings.save": "Save Changes",
   "settings.saved": "Settings saved successfully",
@@ -243,7 +243,8 @@ export const enSettings: Record<string, string> = {
   "settings.branches.emptyForHours": "Add a branch before configuring working hours and holidays.",
   "settings.branches.selectForHours": "Select branch",
   // Entity tab
-  "settings.entity.warning": "Legal entity data is used in invoices and official reports. Make sure it is accurate.",
+  "settings.entity.warning": "Establishment data is used in invoices and official reports. Make sure it is accurate.",
+  "settings.entity.vatHint": "Required to show the ZATCA barcode on client invoices. If empty, invoices print without the barcode.",
   "settings.entity.companyNameAr": "Company Name (Arabic)",
   "settings.entity.companyNameEn": "Company Name (English)",
   "settings.entity.businessRegistration": "Business Registration (CR)",

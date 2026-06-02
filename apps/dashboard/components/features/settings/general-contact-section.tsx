@@ -7,6 +7,9 @@ import { useOrganizationSettings, useUpdateOrganizationSettings } from "@/hooks/
 import { useLocale } from "@/components/locale-provider"
 
 type FormState = {
+  contactEmail: string
+  contactPhone: string
+  address: string
   companyNameAr: string
   companyNameEn: string
   businessRegistration: string
@@ -17,6 +20,9 @@ type FormState = {
 }
 
 const EMPTY_FORM: FormState = {
+  contactEmail: "",
+  contactPhone: "",
+  address: "",
   companyNameAr: "",
   companyNameEn: "",
   businessRegistration: "",
@@ -26,7 +32,7 @@ const EMPTY_FORM: FormState = {
   postalCode: "",
 }
 
-export function EntityTab() {
+export function GeneralContactSection() {
   const { t } = useLocale()
   const { data: settings, isLoading } = useOrganizationSettings()
   const update = useUpdateOrganizationSettings()
@@ -36,6 +42,9 @@ export function EntityTab() {
     if (!settings) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm({
+      contactEmail: settings.contactEmail ?? "",
+      contactPhone: settings.contactPhone ?? "",
+      address: settings.address ?? "",
       companyNameAr: settings.companyNameAr ?? "",
       companyNameEn: settings.companyNameEn ?? "",
       businessRegistration: settings.businessRegistration ?? "",
@@ -50,9 +59,12 @@ export function EntityTab() {
     setForm((f) => ({ ...f, [key]: e.target.value }))
   }
 
-  const handleSave = async () => {
-    try {
-      await update.mutateAsync({
+  const handleSave = () => {
+    update.mutate(
+      {
+        contactEmail: form.contactEmail || null,
+        contactPhone: form.contactPhone || null,
+        address: form.address || null,
         companyNameAr: form.companyNameAr || null,
         companyNameEn: form.companyNameEn || null,
         businessRegistration: form.businessRegistration || null,
@@ -60,28 +72,35 @@ export function EntityTab() {
         sellerAddress: form.sellerAddress || null,
         organizationCity: form.organizationCity,
         postalCode: form.postalCode || null,
-      })
-      toast.success(t("common.saved") ?? "Saved")
-    } catch {
-      toast.error(t("common.saveFailed") ?? "Save failed")
-    }
+      },
+      {
+        onSuccess: () => toast.success(t("settings.saved")),
+        onError: () => toast.error(t("settings.error")),
+      },
+    )
   }
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="space-y-3">
-            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-          </div>
+      <Card className="shadow-sm bg-surface">
+        <CardContent className="space-y-3 p-6">
+          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
         </CardContent>
       </Card>
     )
   }
 
   return (
-    <Card>
+    <Card className="shadow-sm bg-surface">
       <CardContent className="space-y-6 p-6">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("settings.organizationEmail")} value={form.contactEmail} onChange={setField("contactEmail")} type="email" dir="ltr" />
+          <Field label={t("settings.organizationPhone")} value={form.contactPhone} onChange={setField("contactPhone")} dir="ltr" />
+          <div className="sm:col-span-2">
+            <Field label={t("settings.organizationAddress")} value={form.address} onChange={setField("address")} dir="rtl" />
+          </div>
+        </div>
+
         <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm text-warning-foreground">
           {t("settings.entity.warning")}
         </div>
@@ -90,12 +109,12 @@ export function EntityTab() {
           <Field label={t("settings.entity.companyNameAr")} value={form.companyNameAr} onChange={setField("companyNameAr")} dir="rtl" />
           <Field label={t("settings.entity.companyNameEn")} value={form.companyNameEn} onChange={setField("companyNameEn")} dir="ltr" />
           <Field label={t("settings.entity.businessRegistration")} value={form.businessRegistration} onChange={setField("businessRegistration")} dir="ltr" />
-          <FieldWithHint
+          <Field
             label={t("settings.entity.vatRegistration")}
             value={form.vatRegistrationNumber}
             onChange={setField("vatRegistrationNumber")}
             dir="ltr"
-            hint="مطلوب لظهور باركود ZATCA على فواتير العملاء. لو فاضي، الفاتورة تطلع بدون باركود."
+            hint={t("settings.entity.vatHint")}
           />
           <Field label={t("settings.entity.organizationCity")} value={form.organizationCity} onChange={setField("organizationCity")} dir="rtl" />
           <Field label={t("settings.entity.postalCode")} value={form.postalCode} onChange={setField("postalCode")} dir="ltr" />
@@ -105,8 +124,8 @@ export function EntityTab() {
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={update.isPending}>
-            {update.isPending ? t("common.saving") ?? "..." : t("common.save") ?? "Save"}
+          <Button size="sm" onClick={handleSave} disabled={update.isPending}>
+            {t("settings.save")}
           </Button>
         </div>
       </CardContent>
@@ -114,32 +133,19 @@ export function EntityTab() {
   )
 }
 
-function Field({ label, value, onChange, dir }: {
+function Field({ label, value, onChange, dir, type, hint }: {
   label: string
   value: string
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   dir: "ltr" | "rtl"
+  type?: string
+  hint?: string
 }) {
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      <Input value={value} onChange={onChange} dir={dir} />
-    </div>
-  )
-}
-
-function FieldWithHint({ label, value, onChange, dir, hint }: {
-  label: string
-  value: string
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-  dir: "ltr" | "rtl"
-  hint: string
-}) {
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <Input value={value} onChange={onChange} dir={dir} />
-      <p className="text-xs text-muted-foreground">{hint}</p>
+      <Input value={value} onChange={onChange} dir={dir} type={type} />
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   )
 }

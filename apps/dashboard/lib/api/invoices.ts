@@ -31,3 +31,12 @@ export async function fetchInvoices(
 export async function fetchInvoicePdf(id: string): Promise<{ url: string }> {
   return api.get<{ url: string }>(`/dashboard/finance/invoices/${id}/pdf`)
 }
+
+/**
+ * Generate (or reuse) an invoice's PDF on demand and return a presigned
+ * download link. Works for invoices in any status — unlike the auto-generated
+ * receipt, which only fires when an invoice is paid in full.
+ */
+export async function generateInvoicePdf(id: string): Promise<{ url: string }> {
+  return api.post<{ url: string }>(`/dashboard/finance/invoices/${id}/pdf`, {})
+}

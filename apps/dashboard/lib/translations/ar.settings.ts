@@ -14,7 +14,7 @@ export const arSettings: Record<string, string> = {
   "settings.tabs.cancellation": "الإلغاء",
   "settings.tabs.hours": "ساعات العمل",
   "settings.tabs.features": "الميزات",
-  "settings.tabs.entity": "الكيان القانوني",
+  "settings.tabs.entity": "بيانات المنشأة",
   "settings.tabs.legal": "الخصوصية والشروط",
   "settings.save": "حفظ التغييرات",
   "settings.saved": "تم حفظ الإعدادات بنجاح",
@@ -243,7 +243,8 @@ export const arSettings: Record<string, string> = {
   "settings.branches.emptyForHours": "أضف فرعاً قبل ضبط ساعات العمل والإجازات.",
   "settings.branches.selectForHours": "اختر الفرع",
   // Entity tab
-  "settings.entity.warning": "بيانات الكيان القانوني تُستخدم في الفواتير والتقارير الرسمية. تأكد من صحتها.",
+  "settings.entity.warning": "بيانات المنشأة تُستخدم في الفواتير والتقارير الرسمية. تأكد من صحتها.",
+  "settings.entity.vatHint": "مطلوب لظهور باركود ZATCA على فواتير العملاء. لو فاضي، الفاتورة تطلع بدون باركود.",
   "settings.entity.companyNameAr": "اسم الشركة (عربي)",
   "settings.entity.companyNameEn": "اسم الشركة (إنجليزي)",
   "settings.entity.businessRegistration": "السجل التجاري",

@@ -5,10 +5,9 @@ import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { EventBusService, type DomainEventEnvelope } from '../../../infrastructure/events';
 import { SYSTEM_CONTEXT_CLS_KEY, DEFAULT_ORG_ID } from '../../../common/constants';
 import type { PaymentCompletedPayload } from '../events/payment-completed.event';
-import type { Invoice } from '@prisma/client';
 import { InvoicePdfRendererService } from './invoice-pdf-renderer.service';
 import { InvoiceReceiptIssuedEvent } from './invoice-receipt-issued.event';
-import type { InvoicePdfData } from './invoice-pdf.template';
+import { buildInvoicePdfData } from './build-invoice-pdf-data';
 
 const BUCKET = 'finance-invoices';
 
@@ -63,7 +62,7 @@ export class IssueInvoiceReceiptHandler {
       return;
     }
 
-    const data = await this.buildPdfData(invoice, paymentId);
+    const data = await buildInvoicePdfData(this.prisma, this.cls, invoice, paymentId);
     const pdfBuffer = await this.renderer.render(data);
 
     const key = `invoices/${invoice.id}/${Date.now()}.pdf`;
@@ -90,49 +89,5 @@ export class IssueInvoiceReceiptHandler {
       organizationId: organizationId ?? DEFAULT_ORG_ID,
     });
     await this.eventBus.publish(issued.eventName, issued.toEnvelope());
-  }
-
-  private async buildPdfData(invoice: Invoice, paymentId: string): Promise<InvoicePdfData> {
-    const [orgSettings, client, payment, booking] = await this.cls.run(async () => {
-      this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-      return Promise.all([
-        this.prisma.organizationSettings.findFirst({
-          select: { companyNameAr: true, vatRegistrationNumber: true, sellerAddress: true },
-        }),
-        this.prisma.client.findUnique({
-          where: { id: invoice.clientId },
-          select: { firstName: true, lastName: true },
-        }),
-        this.prisma.payment.findFirst({
-          where: { id: paymentId },
-          select: { method: true },
-        }),
-        invoice.bookingId
-          ? this.prisma.booking.findFirst({
-              where: { id: invoice.bookingId },
-              select: { serviceNameSnapshot: true },
-            })
-          : null,
-      ]);
-    });
-
-    return {
-      invoiceNumber: invoice.number,
-      invoiceId: invoice.id,
-      issuedAt: invoice.issuedAt ?? invoice.createdAt,
-      paidAt: invoice.paidAt ?? new Date(),
-      sellerNameAr: orgSettings?.companyNameAr ?? 'مركز سواء',
-      sellerVatNumber: orgSettings?.vatRegistrationNumber ?? null,
-      sellerAddress: orgSettings?.sellerAddress ?? null,
-      clientName: client ? `${client.firstName} ${client.lastName ?? ''}`.trim() : '—',
-      serviceName: booking?.serviceNameSnapshot ?? (invoice.bundlePurchaseId ? 'باقة جلسات' : '—'),
-      subtotal: Number(invoice.subtotal),
-      discountAmt: Number(invoice.discountAmt),
-      vatAmt: Number(invoice.vatAmt),
-      total: Number(invoice.total),
-      currency: invoice.currency,
-      paymentMethod: payment?.method ?? '—',
-      qrDataUrl: null,
-    };
   }
 }

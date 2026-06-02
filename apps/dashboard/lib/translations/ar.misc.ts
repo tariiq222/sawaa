@@ -369,6 +369,10 @@ export const arMisc: Record<string, string> = {
   "ratings.next": "التالي",
   "ratings.title": "التقييمات والمراجعات",
   "ratings.reviews": "تقييم",
+  "ratings.management.title": "التقييمات والمراجعات",
+  "ratings.management.description": "تابع تقييمات المستفيدين لممارسي المركز وملاحظاتهم.",
+  "ratings.empty.title": "لا توجد تقييمات بعد",
+  "ratings.empty.description": "ستظهر هنا تقييمات المستفيدين بعد اكتمال الجلسات.",
 
   // — Problem Reports —
 

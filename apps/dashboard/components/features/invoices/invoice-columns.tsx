@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@sawaa/ui"
 import { ApiError } from "@/lib/api"
-import { fetchInvoicePdf } from "@/lib/api/invoices"
+import { generateInvoicePdf } from "@/lib/api/invoices"
 import type { InvoiceListItem, InvoiceStatus } from "@/lib/types/invoice"
 import { formatPrice } from "@/lib/money"
 import { formatClinicDate } from "@/lib/utils"
@@ -34,11 +34,14 @@ const statusStyles: Record<InvoiceStatus, string> = {
   REFUNDED: "border-info/30 bg-info/10 text-info",
 }
 
-async function handleDownloadPdf(id: string, t: (key: string) => string) {
+async function handleGeneratePdf(id: string, t: (key: string) => string) {
+  const toastId = toast.loading(t("invoices.generatingPdf"))
   try {
-    const { url } = await fetchInvoicePdf(id)
+    const { url } = await generateInvoicePdf(id)
+    toast.dismiss(toastId)
     window.open(url, "_blank")
   } catch (err) {
+    toast.dismiss(toastId)
     if (err instanceof ApiError && err.status === 404) {
       toast.error(t("invoices.noPdfYet"))
       return
@@ -151,12 +154,10 @@ export function getInvoiceColumns(
                 {t("invoices.col.viewDetails")}
               </DropdownMenuItem>
             )}
-            {invoice.hasPdf && (
-              <DropdownMenuItem onClick={() => handleDownloadPdf(invoice.id, t)}>
-                <HugeiconsIcon icon={Download01Icon} size={14} />
-                {t("invoices.downloadPdf")}
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem onClick={() => handleGeneratePdf(invoice.id, t)}>
+              <HugeiconsIcon icon={Download01Icon} size={14} />
+              {invoice.hasPdf ? t("invoices.downloadPdf") : t("invoices.generatePdf")}
+            </DropdownMenuItem>
             {callbacks && !invoice.sentAt && (
               <DropdownMenuItem onClick={() => callbacks.onSend(invoice)}>
                 <HugeiconsIcon icon={SentIcon} size={14} />

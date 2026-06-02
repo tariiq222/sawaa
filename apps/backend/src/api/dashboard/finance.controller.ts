@@ -16,6 +16,7 @@ import { endOfDayInTz, startOfDayInTz } from '../../common/helpers/date-tz.helpe
 import { CreateInvoiceHandler } from '../../modules/finance/create-invoice/create-invoice.handler';
 import { CreateInvoiceDto } from '../../modules/finance/create-invoice/create-invoice.dto';
 import { GetInvoiceHandler } from '../../modules/finance/get-invoice/get-invoice.handler';
+import { GenerateInvoicePdfHandler } from '../../modules/finance/generate-invoice-pdf/generate-invoice-pdf.handler';
 import { ProcessPaymentHandler } from '../../modules/finance/process-payment/process-payment.handler';
 import { ProcessPaymentDto } from '../../modules/finance/process-payment/process-payment.dto';
 import { ListPaymentsHandler } from '../../modules/finance/list-payments/list-payments.handler';
@@ -61,6 +62,7 @@ export class DashboardFinanceController {
   constructor(
     private readonly createInvoice: CreateInvoiceHandler,
     private readonly getInvoice: GetInvoiceHandler,
+    private readonly generateInvoicePdf: GenerateInvoicePdfHandler,
     private readonly processPayment: ProcessPaymentHandler,
     private readonly listPayments: ListPaymentsHandler,
     private readonly listInvoices: ListInvoicesHandler,
@@ -137,6 +139,25 @@ export class DashboardFinanceController {
     const url = await this.storage.getSignedUrl(
       FINANCE_INVOICES_BUCKET_NAME,
       key,
+      INVOICE_PDF_URL_EXPIRY_SECONDS,
+    );
+    return { url };
+  }
+
+  @Post('invoices/:id/pdf')
+  @CheckPermissions({ action: 'manage', subject: 'Invoice' })
+  @ApiOperation({ summary: 'Generate (or reuse) the invoice PDF and return a download URL' })
+  @ApiParam({ name: 'id', description: 'Invoice UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Invoice PDF URL' })
+  @ApiResponse({ status: 404, description: 'Invoice not found', type: ApiErrorDto })
+  @HttpCode(HttpStatus.OK)
+  async generateInvoicePdfEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+    // Renders on demand for invoices in any status; returns the stored key
+    // unchanged when a PDF already exists. We presign here, matching the GET.
+    const storedKey = await this.generateInvoicePdf.execute({ invoiceId: id });
+    const url = await this.storage.getSignedUrl(
+      FINANCE_INVOICES_BUCKET_NAME,
+      extractInvoicePdfKey(storedKey),
       INVOICE_PDF_URL_EXPIRY_SECONDS,
     );
     return { url };

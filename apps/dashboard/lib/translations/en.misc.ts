@@ -369,6 +369,10 @@ export const enMisc: Record<string, string> = {
   "ratings.next": "Next",
   "ratings.title": "Ratings & Reviews",
   "ratings.reviews": "reviews",
+  "ratings.management.title": "Ratings & Reviews",
+  "ratings.management.description": "Track client ratings and feedback for the center's practitioners.",
+  "ratings.empty.title": "No ratings yet",
+  "ratings.empty.description": "Client ratings will appear here once sessions are completed.",
 
   // — Problem Reports —
 

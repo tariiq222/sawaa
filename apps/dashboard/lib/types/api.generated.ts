@@ -981,7 +981,8 @@ export interface paths {
         /** Get a URL to download the invoice PDF */
         get: operations["DashboardFinanceController_getInvoicePdf"];
         put?: never;
-        post?: never;
+        /** Generate (or reuse) the invoice PDF and return a download URL */
+        post: operations["DashboardFinanceController_generateInvoicePdfEndpoint"];
         delete?: never;
         options?: never;
         head?: never;
@@ -12516,6 +12517,72 @@ export interface operations {
                 };
             };
             /** @description No PDF generated for this invoice yet */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardFinanceController_generateInvoicePdfEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Invoice UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice PDF URL */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Invoice not found */
             404: {
                 headers: {
                     [name: string]: unknown;

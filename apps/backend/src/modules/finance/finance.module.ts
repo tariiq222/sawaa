@@ -46,9 +46,11 @@ import { ListClientBundlePurchasesHandler } from './bundle-purchases/list-client
 import { IssueInvoiceReceiptHandler } from './issue-invoice-receipt/issue-invoice-receipt.handler';
 import { SendInvoiceReceiptHandler } from './issue-invoice-receipt/send-invoice-receipt.handler';
 import { InvoicePdfRendererService } from './issue-invoice-receipt/invoice-pdf-renderer.service';
+import { GenerateInvoicePdfHandler } from './generate-invoice-pdf/generate-invoice-pdf.handler';
 
 const handlers = [
   CreateInvoiceHandler,
+  GenerateInvoicePdfHandler,
   ProcessPaymentHandler,
   MoyasarWebhookHandler,
   BankTransferUploadHandler,
