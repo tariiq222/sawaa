@@ -2,12 +2,13 @@
 
 import { Button } from "@sawaa/ui"
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogBody,
+  DialogFooter,
 } from "@sawaa/ui"
 import {
   Select,
@@ -66,13 +67,13 @@ export function ApproveCancelDialog({
 }: ApproveCancelDialogProps) {
   const { t } = useLocale()
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onReset()}>
-      <SheetContent side="end" className="overflow-y-auto w-full sm:max-w-[45vw]">
-        <SheetHeader>
-          <SheetTitle>{t("bookings.cancel.approve.title")}</SheetTitle>
-          <SheetDescription>{t("bookings.cancel.approve.description")}</SheetDescription>
-        </SheetHeader>
-        <div className="flex flex-col gap-4">
+    <Dialog open={open} onOpenChange={(o) => !o && onReset()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("bookings.cancel.approve.title")}</DialogTitle>
+          <DialogDescription>{t("bookings.cancel.approve.description")}</DialogDescription>
+        </DialogHeader>
+        <DialogBody className="flex flex-col gap-4">
           {suggestedRefundType && (
             <p className="text-xs text-muted-foreground rounded-md bg-muted/50 p-2">
               {t("bookings.cancel.approve.systemSuggestion")}{" "}
@@ -90,15 +91,15 @@ export function ApproveCancelDialog({
             <RefundAmountField value={refundAmount} onChange={setRefundAmount} />
           )}
           <AdminNotesField value={adminNotes} onChange={setAdminNotes} />
-        </div>
-        <SheetFooter>
+        </DialogBody>
+        <DialogFooter>
           <Button variant="outline" onClick={onReset}>{t("bookings.cancel.button.dismiss")}</Button>
           <Button onClick={onApprove} disabled={loading}>
             {loading ? t("bookings.cancel.button.processing") : t("bookings.cancel.approve.button")}
           </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -123,23 +124,23 @@ export function RejectCancelDialog({
 }: RejectCancelDialogProps) {
   const { t } = useLocale()
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onReset()}>
-      <SheetContent side="end" className="overflow-y-auto w-full sm:max-w-[45vw]">
-        <SheetHeader>
-          <SheetTitle>{t("bookings.cancel.reject.title")}</SheetTitle>
-          <SheetDescription>{t("bookings.cancel.reject.description")}</SheetDescription>
-        </SheetHeader>
-        <div className="flex flex-col gap-4">
+    <Dialog open={open} onOpenChange={(o) => !o && onReset()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("bookings.cancel.reject.title")}</DialogTitle>
+          <DialogDescription>{t("bookings.cancel.reject.description")}</DialogDescription>
+        </DialogHeader>
+        <DialogBody className="flex flex-col gap-4">
           <AdminNotesField value={adminNotes} onChange={setAdminNotes} placeholder={t("bookings.cancel.reject.reasonPlaceholder")} />
-        </div>
-        <SheetFooter>
+        </DialogBody>
+        <DialogFooter>
           <Button variant="outline" onClick={onReset}>{t("bookings.cancel.button.dismiss")}</Button>
           <Button onClick={onReject} disabled={loading}>
             {loading ? t("bookings.cancel.button.processing") : t("bookings.cancel.reject.button")}
           </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -168,13 +169,13 @@ export function AdminCancelDialog({
 }: AdminCancelDialogProps) {
   const { t } = useLocale()
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onReset()}>
-      <SheetContent side="end" className="overflow-y-auto w-full sm:max-w-[45vw]">
-        <SheetHeader>
-          <SheetTitle>{t("bookings.cancel.admin.title")}</SheetTitle>
-          <SheetDescription>{t("bookings.cancel.admin.description")}</SheetDescription>
-        </SheetHeader>
-        <div className="flex flex-col gap-4">
+    <Dialog open={open} onOpenChange={(o) => !o && onReset()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("bookings.cancel.admin.title")}</DialogTitle>
+          <DialogDescription>{t("bookings.cancel.admin.description")}</DialogDescription>
+        </DialogHeader>
+        <DialogBody className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label>{t("bookings.cancel.admin.reasonLabel")}</Label>
             <Select
@@ -194,15 +195,15 @@ export function AdminCancelDialog({
             </Select>
           </div>
           <AdminNotesField value={adminNotes} onChange={setAdminNotes} />
-        </div>
-        <SheetFooter>
+        </DialogBody>
+        <DialogFooter>
           <Button variant="outline" onClick={onReset}>{t("bookings.cancel.button.dismiss")}</Button>
           <Button variant="destructive" onClick={onCancel} disabled={loading || !cancelReason}>
             {loading ? t("bookings.cancel.button.processing") : t("bookings.cancel.admin.button")}
           </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
