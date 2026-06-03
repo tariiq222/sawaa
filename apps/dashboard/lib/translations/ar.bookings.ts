@@ -70,6 +70,10 @@ export const arBookings: Record<string, string> = {
   "bookings.col.delete": "حذف الحجز",
   "bookings.col.deleteTitle": "حذف الحجز",
   "bookings.col.deleteDesc": "هل أنت متأكد من حذف هذا الحجز؟ لا يمكن التراجع عن هذا الإجراء.",
+  "bookings.delete.title": "حذف الحجز نهائياً",
+  "bookings.delete.description": "سيُحذف هذا الحجز وكل سجلاته نهائياً ولا يمكن استرجاعه. الحجوزات التي عليها دفعة لا يمكن حذفها.",
+  "bookings.delete.confirm": "حذف نهائي",
+  "bookings.delete.cancel": "تراجع",
   "bookings.empty.title": "لا توجد حجوزات",
   "bookings.empty.description": "لا توجد حجوزات تطابق معايير البحث.",
 

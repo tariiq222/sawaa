@@ -70,6 +70,10 @@ export const enBookings: Record<string, string> = {
   "bookings.col.delete": "Delete booking",
   "bookings.col.deleteTitle": "Delete Booking",
   "bookings.col.deleteDesc": "Are you sure you want to delete this booking? This action cannot be undone.",
+  "bookings.delete.title": "Permanently delete booking",
+  "bookings.delete.description": "This booking and all its records will be permanently deleted and cannot be recovered. Bookings with a payment cannot be deleted.",
+  "bookings.delete.confirm": "Delete permanently",
+  "bookings.delete.cancel": "Cancel",
   "bookings.empty.title": "No bookings found",
   "bookings.empty.description": "There are no bookings matching your criteria.",
 

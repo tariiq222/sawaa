@@ -130,6 +130,10 @@ export async function adminCancelBooking(
   return api.patch<Booking>(`/dashboard/bookings/${id}/cancel`, payload)
 }
 
+export async function deleteBooking(id: string): Promise<void> {
+  return api.delete<void>(`/dashboard/bookings/${id}`)
+}
+
 export async function approveCancelBooking(
   id: string,
   payload: { approverNotes?: string },

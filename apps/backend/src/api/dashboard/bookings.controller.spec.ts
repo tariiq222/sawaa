@@ -8,6 +8,7 @@ import { ListBookingsHandler } from '../../modules/bookings/list-bookings/list-b
 import { BookingsStatsHandler } from '../../modules/bookings/bookings-stats/bookings-stats.handler';
 import { GetBookingHandler } from '../../modules/bookings/get-booking/get-booking.handler';
 import { CancelBookingHandler } from '../../modules/bookings/cancel-booking/cancel-booking.handler';
+import { DeleteBookingHandler } from '../../modules/bookings/delete-booking/delete-booking.handler';
 import { RescheduleBookingHandler } from '../../modules/bookings/reschedule-booking/reschedule-booking.handler';
 import { ConfirmBookingHandler } from '../../modules/bookings/confirm-booking/confirm-booking.handler';
 import { RetryZoomMeetingHandler } from '../../modules/bookings/retry-zoom-meeting/retry-zoom-meeting.handler';
@@ -34,6 +35,7 @@ describe('DashboardBookingsController (e2e)', () => {
   const mockStats = { execute: jest.fn() };
   const mockGetBooking = { execute: jest.fn() };
   const mockCancel = { execute: jest.fn() };
+  const mockDelete = { execute: jest.fn() };
   const mockReschedule = { execute: jest.fn() };
   const mockConfirm = { execute: jest.fn() };
   const mockRetryZoom = { execute: jest.fn() };
@@ -59,6 +61,7 @@ describe('DashboardBookingsController (e2e)', () => {
         { provide: BookingsStatsHandler, useValue: mockStats },
         { provide: GetBookingHandler, useValue: mockGetBooking },
         { provide: CancelBookingHandler, useValue: mockCancel },
+        { provide: DeleteBookingHandler, useValue: mockDelete },
         { provide: RescheduleBookingHandler, useValue: mockReschedule },
         { provide: ConfirmBookingHandler, useValue: mockConfirm },
         { provide: RetryZoomMeetingHandler, useValue: mockRetryZoom },

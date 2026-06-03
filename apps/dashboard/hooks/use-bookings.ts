@@ -12,6 +12,7 @@ import {
   markNoShow,
   checkInBooking,
   adminCancelBooking,
+  deleteBooking,
   approveCancelBooking,
   rejectCancelBooking,
   createRecurringBooking,
@@ -173,6 +174,11 @@ export function useBookingMutations() {
     onSuccess: invalidate,
   })
 
+  const deleteMut = useMutation({
+    mutationFn: deleteBooking,
+    onSuccess: invalidate,
+  })
+
   const approveCancelMut = useMutation({
     mutationFn: ({ id, ...payload }: { id: string } & Parameters<typeof approveCancelBooking>[1]) =>
       approveCancelBooking(id, payload),
@@ -198,6 +204,7 @@ export function useBookingMutations() {
     noShowMut,
     checkInMut,
     adminCancelMut,
+    deleteMut,
     approveCancelMut,
     rejectCancelMut,
     recurringMut,

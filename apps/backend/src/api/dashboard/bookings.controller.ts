@@ -24,6 +24,7 @@ import { BookingsStatsHandler } from '../../modules/bookings/bookings-stats/book
 import { GetBookingHandler } from '../../modules/bookings/get-booking/get-booking.handler';
 import { CancelBookingHandler } from '../../modules/bookings/cancel-booking/cancel-booking.handler';
 import { CancelBookingDto } from '../../modules/bookings/cancel-booking/cancel-booking.dto';
+import { DeleteBookingHandler } from '../../modules/bookings/delete-booking/delete-booking.handler';
 import { RescheduleBookingHandler } from '../../modules/bookings/reschedule-booking/reschedule-booking.handler';
 import { RescheduleBookingDto } from '../../modules/bookings/reschedule-booking/reschedule-booking.dto';
 import { ConfirmBookingHandler } from '../../modules/bookings/confirm-booking/confirm-booking.handler';
@@ -60,6 +61,7 @@ export class DashboardBookingsController {
     private readonly statsHandler: BookingsStatsHandler,
     private readonly getHandler: GetBookingHandler,
     private readonly cancelHandler: CancelBookingHandler,
+    private readonly deleteHandler: DeleteBookingHandler,
     private readonly rescheduleHandler: RescheduleBookingHandler,
     private readonly confirmHandler: ConfirmBookingHandler,
     private readonly retryZoomHandler: RetryZoomMeetingHandler,
@@ -349,6 +351,21 @@ export class DashboardBookingsController {
       changedBy: userId,
       ...body,
     });
+  }
+
+  @Delete(':id')
+  @CheckPermissions({ action: 'delete', subject: 'Booking' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Permanently delete a terminal booking' })
+  @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiNoContentResponse({ description: 'Booking deleted' })
+  @ApiResponse({ status: 400, description: 'Booking is not terminal or has a paid/pending payment', type: ApiErrorDto })
+  @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
+  deleteBooking(
+    @UserId() userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.deleteHandler.execute({ bookingId: id, changedBy: userId });
   }
 
   @Patch(':id/approve-cancel')

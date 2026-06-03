@@ -33,6 +33,7 @@ const { useBookings, useBookingMutations } = vi.hoisted(() => ({
     confirmMut: { mutateAsync: vi.fn(), isPending: false },
     noShowMut: { mutateAsync: vi.fn(), isPending: false },
     adminCancelMut: { mutateAsync: vi.fn(), isPending: false },
+    deleteMut: { mutateAsync: vi.fn(), isPending: false },
   })),
 }))
 
@@ -101,6 +102,9 @@ vi.mock("@/components/features/bookings/booking-columns", () => ({
 }))
 vi.mock("@/components/features/bookings/cancel-dialogs", () => ({
   AdminCancelDialog: () => null,
+}))
+vi.mock("@/components/features/bookings/delete-booking-dialog", () => ({
+  DeleteBookingDialog: () => null,
 }))
 vi.mock("@/components/locale-provider", () => ({ useLocale }))
 

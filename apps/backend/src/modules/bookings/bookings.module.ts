@@ -6,6 +6,7 @@ import { FinanceModule } from '../finance/finance.module';
 import { CreateBookingHandler } from './create-booking/create-booking.handler';
 import { CreateRecurringBookingHandler } from './create-recurring-booking/create-recurring-booking.handler';
 import { CancelBookingHandler } from './cancel-booking/cancel-booking.handler';
+import { DeleteBookingHandler } from './delete-booking/delete-booking.handler';
 import { RescheduleBookingHandler } from './reschedule-booking/reschedule-booking.handler';
 import { ConfirmBookingHandler } from './confirm-booking/confirm-booking.handler';
 import { AddToWaitlistHandler } from './add-to-waitlist/add-to-waitlist.handler';
@@ -56,6 +57,7 @@ const handlers = [
   CreateEmployeeBookingHandler,
   CreateRecurringBookingHandler,
   CancelBookingHandler,
+  DeleteBookingHandler,
   RescheduleBookingHandler,
   ConfirmBookingHandler,
   AddToWaitlistHandler,

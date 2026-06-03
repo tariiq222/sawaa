@@ -9,6 +9,7 @@ import { FilterBar } from "@/components/features/filter-bar"
 import { ErrorBanner } from "@/components/features/error-banner"
 import { getBookingColumns } from "@/components/features/bookings/booking-columns"
 import { AdminCancelDialog } from "@/components/features/bookings/cancel-dialogs"
+import { DeleteBookingDialog } from "@/components/features/bookings/delete-booking-dialog"
 import { useBookings, useBookingMutations } from "@/hooks/use-bookings"
 import { useEmployees } from "@/hooks/use-employees"
 import { useQueryClient } from "@tanstack/react-query"
@@ -28,7 +29,7 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
   const { weekStartDayNumber, dateFormat } = useOrganizationConfig()
   const queryClient = useQueryClient()
   const { bookings, meta, loading, error, filters, setFilters, resetFilters, hasFilters, setPage } = useBookings()
-  const { confirmMut, noShowMut, adminCancelMut } = useBookingMutations()
+  const { confirmMut, noShowMut, adminCancelMut, deleteMut } = useBookingMutations()
   const { employees } = useEmployees()
   const [activeTimeTab, setActiveTimeTab] = useState("all")
   const [search, setSearch] = useState("")
@@ -45,6 +46,7 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
   const [deleteTarget, setDeleteTarget] = useState<Booking | null>(null)
   const [deleteReason, setDeleteReason] = useState<CancellationReason | "">("")
   const [deleteAdminNotes, setDeleteAdminNotes] = useState("")
+  const [hardDeleteTarget, setHardDeleteTarget] = useState<Booking | null>(null)
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
 
@@ -91,8 +93,30 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
     }
   }
 
+  // Terminal bookings can't be cancelled, so the trash action hard-deletes
+  // them; active bookings open the cancel dialog (refund/notify flow).
+  const TERMINAL_STATUSES = new Set(["completed", "cancelled", "no_show", "expired"])
+
   const handleDelete = (booking: Booking) => {
-    setDeleteTarget(booking)
+    if (TERMINAL_STATUSES.has(booking.status)) setHardDeleteTarget(booking)
+    else setDeleteTarget(booking)
+  }
+
+  const handleHardDelete = async () => {
+    if (!hardDeleteTarget) return
+    try {
+      await deleteMut.mutateAsync(hardDeleteTarget.id)
+      setHardDeleteTarget(null)
+      refresh()
+    } catch (err) {
+      if (err instanceof ApiError && err.status >= 500) {
+        const requestId = (err.body as Record<string, unknown> | undefined)?.requestId as string | undefined
+        const base = t("bookings.actions.toast.serverError")
+        toast.error(requestId ? `${base} (رقم الطلب: ${requestId})` : base)
+      } else {
+        toast.error(err instanceof Error ? err.message : t("bookings.actions.toast.genericError"))
+      }
+    }
   }
 
   const columns = useMemo(
@@ -256,6 +280,13 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
             }
           }
         }}
+      />
+
+      <DeleteBookingDialog
+        open={hardDeleteTarget !== null}
+        loading={deleteMut.isPending}
+        onClose={() => setHardDeleteTarget(null)}
+        onConfirm={handleHardDelete}
       />
     </div>
   )
