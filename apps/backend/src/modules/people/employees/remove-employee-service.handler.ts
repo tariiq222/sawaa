@@ -18,8 +18,15 @@ export class RemoveEmployeeServiceHandler {
     if (!record) {
       throw new NotFoundException('Service assignment not found');
     }
-    await this.prisma.employeeService.delete({
-      where: { employeeId_serviceId: { employeeId: cmd.employeeId, serviceId: cmd.serviceId } },
-    });
+    // EmployeeServiceOption.employeeServiceId is a plain cross-BC string (no FK),
+    // so price-override rows must be cleaned up here or they orphan.
+    await this.prisma.$transaction([
+      this.prisma.employeeServiceOption.deleteMany({
+        where: { employeeServiceId: record.id },
+      }),
+      this.prisma.employeeService.delete({
+        where: { employeeId_serviceId: { employeeId: cmd.employeeId, serviceId: cmd.serviceId } },
+      }),
+    ]);
   }
 }

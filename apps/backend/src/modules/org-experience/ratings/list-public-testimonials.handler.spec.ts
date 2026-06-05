@@ -59,7 +59,7 @@ describe('ListPublicTestimonialsHandler', () => {
       {
         id: 'r2',
         clientId: 'c-missing',
-        comment: null,
+        comment: 'تجربة ممتازة',
         score: 4,
         createdAt: new Date('2025-01-15'),
       },
@@ -70,6 +70,30 @@ describe('ListPublicTestimonialsHandler', () => {
 
     expect(result[0].name).toBe('عم****');
     expect(result[0].letter).toBe('ع');
-    expect(result[0].text).toBe('');
+    expect(result[0].text).toBe('تجربة ممتازة');
+  });
+
+  it('queries only ratings that have a comment', async () => {
+    mockFindManyRatings.mockResolvedValue([]);
+    mockFindManyClients.mockResolvedValue([]);
+
+    await handler.execute({ limit: 6 });
+
+    expect(mockFindManyRatings).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { isPublic: true, comment: { not: null } } }),
+    );
+  });
+
+  it('excludes whitespace-only comments that slip past the DB filter', async () => {
+    mockFindManyRatings.mockResolvedValue([
+      { id: 'blank', clientId: 'c1', comment: '   ', score: 5, createdAt: new Date('2025-01-15') },
+      { id: 'real', clientId: 'c1', comment: 'نص حقيقي', score: 5, createdAt: new Date('2025-01-16') },
+    ]);
+    mockFindManyClients.mockResolvedValue([{ id: 'c1', name: 'سارة', firstName: 'سارة', lastName: null }]);
+
+    const result = await handler.execute({ limit: 6 });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('real');
   });
 });

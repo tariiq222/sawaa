@@ -11,7 +11,9 @@ describe('RemoveEmployeeServiceHandler', () => {
       providers: [
         RemoveEmployeeServiceHandler,
         { provide: PrismaService, useValue: {
-    employeeService: { findUnique: jest.fn(), delete: jest.fn() }
+    employeeService: { findUnique: jest.fn(), delete: jest.fn() },
+    employeeServiceOption: { deleteMany: jest.fn() },
+    $transaction: jest.fn((ops: any[]) => Promise.all(ops)),
         } },
       ],
     }).compile();
@@ -27,8 +29,18 @@ describe('RemoveEmployeeServiceHandler', () => {
   it('should execute', async () => {
     (prisma.employeeService.findUnique as jest.Mock).mockResolvedValue({ id: 'test' });
     await handler.execute({employeeId:"00000000-0000-0000-0000-000000000001",serviceId:"00000000-0000-0000-0000-000000000001"});
-    
+
     (prisma.employeeService.findUnique as jest.Mock).mockResolvedValue(null);
     await expect(handler.execute({employeeId:"00000000-0000-0000-0000-000000000001",serviceId:"00000000-0000-0000-0000-000000000001"})).rejects.toThrow();
+  });
+
+  it('removes orphan EmployeeServiceOption rows in the same transaction as the link', async () => {
+    (prisma.employeeService.findUnique as jest.Mock).mockResolvedValue({ id: 'link-1' });
+    await handler.execute({ employeeId: 'e1', serviceId: 's1' });
+
+    expect((prisma.employeeServiceOption.deleteMany as jest.Mock)).toHaveBeenCalledWith({
+      where: { employeeServiceId: 'link-1' },
+    });
+    expect((prisma.$transaction as jest.Mock)).toHaveBeenCalledTimes(1);
   });
 });

@@ -94,7 +94,7 @@ export class CreateBundleBookingHandler {
     if (!branch) throw new NotFoundException('Branch not found');
 
     const client = await this.prisma.client.findFirst({
-      where: { id: dto.clientId },
+      where: { id: dto.clientId, deletedAt: null },
       select: { id: true },
     });
     if (!client) throw new NotFoundException('Client not found');

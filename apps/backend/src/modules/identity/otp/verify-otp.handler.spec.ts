@@ -74,6 +74,20 @@ describe('VerifyOtpHandler', () => {
 
     await expect(handler.execute({ identifier: '+966500000001', code: '123456', purpose: 'CLIENT_LOGIN' } as any)).rejects.toThrow(UnauthorizedException);
     expect(prisma.otpCode.update).toHaveBeenCalledWith(expect.objectContaining({ data: { attempts: { increment: 1 } } }));
+    // below maxAttempts → no lockedUntil set
+    expect(prisma.otpCode.update.mock.calls[0][0].data).not.toHaveProperty('lockedUntil');
+  });
+
+  it('sets lockedUntil when the failing attempt reaches maxAttempts', async () => {
+    prisma.otpCode.findFirst.mockResolvedValue({ ...otpRecord, attempts: 4, maxAttempts: 5 });
+    (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+    prisma.otpCode.update.mockResolvedValue({});
+
+    await expect(handler.execute({ identifier: '+966500000001', code: '000000', purpose: 'CLIENT_LOGIN' } as any)).rejects.toThrow(UnauthorizedException);
+    const data = prisma.otpCode.update.mock.calls[0][0].data;
+    expect(data.attempts).toEqual({ increment: 1 });
+    expect(data.lockedUntil).toBeInstanceOf(Date);
+    expect(data.lockedUntil.getTime()).toBeGreaterThan(Date.now());
   });
 
   it('should throw BadRequestException when already consumed during verify', async () => {

@@ -6,7 +6,7 @@ import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { VerifyOtpDto } from './verify-otp.dto';
 import { OtpSessionService } from './otp-session.service';
 
-const _LOCKOUT_WINDOW_MINUTES = 15;
+const LOCKOUT_WINDOW_MINUTES = 15;
 
 export type VerifyOtpCommand = VerifyOtpDto;
 
@@ -52,9 +52,15 @@ export class VerifyOtpHandler {
 
       const codeMatch = await bcrypt.compare(dto.code, otpRecord.codeHash);
       if (!codeMatch) {
+        const shouldLock = otpRecord.attempts + 1 >= otpRecord.maxAttempts;
         await this.prisma.otpCode.update({
           where: { id: otpRecord.id },
-          data: { attempts: { increment: 1 } },
+          data: {
+            attempts: { increment: 1 },
+            ...(shouldLock
+              ? { lockedUntil: new Date(now.getTime() + LOCKOUT_WINDOW_MINUTES * 60 * 1000) }
+              : {}),
+          },
         });
         throw new UnauthorizedException('Invalid OTP code');
       }
