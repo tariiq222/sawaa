@@ -302,8 +302,8 @@ describe('AuthController (e2e)', () => {
     it.each(['loginEndpoint', 'lookupEndpoint', 'refreshEndpoint', 'logoutEndpoint'])(
       '%s is exempt from the global JwtGuard',
       (method) => {
-        const handler = (AuthController.prototype as Record<string, unknown>)[method];
-        expect(reflector.get(IS_PUBLIC_KEY, handler as () => unknown)).toBe(true);
+        const handler = (AuthController.prototype as unknown as Record<string, () => unknown>)[method];
+        expect(reflector.get(IS_PUBLIC_KEY, handler)).toBe(true);
       },
     );
   });
