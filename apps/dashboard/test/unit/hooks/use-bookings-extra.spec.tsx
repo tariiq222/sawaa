@@ -12,6 +12,9 @@ const apiMocks = vi.hoisted(() => ({
   markNoShow: vi.fn(),
   checkInBooking: vi.fn(),
   adminCancelBooking: vi.fn(),
+  deleteBooking: vi.fn(),
+  approveCancelBooking: vi.fn(),
+  rejectCancelBooking: vi.fn(),
   createRecurringBooking: vi.fn(),
 }))
 

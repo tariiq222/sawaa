@@ -6197,7 +6197,7 @@ export interface components {
          */
         PaymentMethod: "ONLINE_CARD" | "BANK_TRANSFER" | "CASH" | "COUPON";
         /** @enum {string} */
-        PaymentStatus: "PENDING" | "PENDING_VERIFICATION" | "COMPLETED" | "FAILED" | "REFUNDED";
+        PaymentStatus: "PENDING" | "PENDING_VERIFICATION" | "COMPLETED" | "FAILED" | "PARTIALLY_REFUNDED" | "REFUNDED";
         PerformPasswordResetDto: {
             /**
              * @description New password (≥8 chars)
