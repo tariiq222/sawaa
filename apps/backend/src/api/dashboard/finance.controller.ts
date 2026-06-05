@@ -232,7 +232,10 @@ export class DashboardFinanceController {
   }
 
   @Patch('payments/:id/refund')
-  @CheckPermissions({ action: 'manage', subject: 'Payment' })
+  // Direct refund moves real money via Moyasar — OWNER/ADMIN only (manage:Setting),
+  // excluding ACCOUNTANT. Mirrors dashboard/refunds approve/deny. Routine
+  // payment work (record/verify) stays on manage:Payment below.
+  @CheckPermissions({ action: 'manage', subject: 'Setting' })
   @ApiOperation({ summary: 'Refund a payment' })
   @ApiParam({ name: 'id', description: 'Payment UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiOkResponse({ description: 'Payment refunded' })

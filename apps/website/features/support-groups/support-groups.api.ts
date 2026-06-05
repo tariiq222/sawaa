@@ -39,7 +39,7 @@ export async function getPublicGroupSessions(
 
   try {
     const res = await fetch(url, {
-      next: { revalidate: 60, tags: ['public-group-sessions'] },
+      next: { revalidate: 60 },
     });
     if (!res.ok) {
       Sentry.addBreadcrumb({
@@ -69,7 +69,7 @@ export async function getPublicGroupSession(
   const res = await fetch(
     `${getApiBase()}/public/bookings/group-sessions/${encodeURIComponent(groupSessionId)}`,
     {
-      next: { revalidate: 60, tags: ['public-group-sessions', `group-session-${groupSessionId}`] },
+      next: { revalidate: 60 },
     },
   );
   if (!res.ok) throw new Error(`Failed to fetch group session: ${res.status}`);

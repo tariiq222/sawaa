@@ -24,6 +24,20 @@ export class DeleteBranchHandler {
       );
     }
 
+    // Booking/WaitlistEntry/GroupSession carry branchId as a plain cross-BC
+    // string with no FK, so the DB will not block deletion — guard manually to
+    // avoid leaving rows pointing at a non-existent branch.
+    const [linkedBookings, linkedWaitlist, linkedGroupSessions] = await Promise.all([
+      this.prisma.booking.count({ where: { branchId: dto.branchId } }),
+      this.prisma.waitlistEntry.count({ where: { branchId: dto.branchId } }),
+      this.prisma.groupSession.count({ where: { branchId: dto.branchId } }),
+    ]);
+    if (linkedBookings > 0 || linkedWaitlist > 0 || linkedGroupSessions > 0) {
+      throw new ConflictException(
+        `Cannot delete branch: ${linkedBookings} booking(s), ${linkedWaitlist} waitlist entr(ies), and ${linkedGroupSessions} group session(s) reference it.`,
+      );
+    }
+
     await this.prisma.branch.delete({ where: { id: dto.branchId } });
     return { id: dto.branchId };
   }

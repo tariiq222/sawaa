@@ -1,6 +1,7 @@
 import { Controller, Get, Param, UseGuards, ParseUUIDPipe, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
+import { Public } from '../../common/guards/jwt.guard';
 import { ClientSession } from '../../common/auth/client-session.decorator';
 import { ApiPublicResponses } from '../../common/swagger';
 import { GetPublicInvoiceHandler } from '../../modules/finance/get-invoice/get-public-invoice.handler';
@@ -16,6 +17,9 @@ const INVOICE_PDF_URL_EXPIRY_SECONDS = 300;
 @ApiTags('Public / Invoices')
 @ApiBearerAuth()
 @ApiPublicResponses()
+// Class-level @Public() exempts these routes from the global admin JwtGuard;
+// the per-method @UseGuards(ClientSessionGuard) still enforces client auth.
+@Public()
 @Controller('public/invoices')
 export class PublicInvoicesController {
   constructor(

@@ -16,7 +16,7 @@ export async function listPublicTestimonials(limit = 6): Promise<PublicTestimoni
     const timer = setTimeout(() => controller.abort(), 3000);
     const json = await publicFetch<PublicTestimonial[] | { data?: PublicTestimonial[] }>(
       `/public/testimonials?limit=${limit}`,
-      { next: { revalidate: 60, tags: ['public-testimonials'] }, signal: controller.signal },
+      { next: { revalidate: 60 }, signal: controller.signal },
     ).finally(() => clearTimeout(timer));
     const data = Array.isArray(json) ? json : json.data ?? [];
     return data;

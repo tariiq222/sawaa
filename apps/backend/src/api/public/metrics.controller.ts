@@ -12,6 +12,7 @@ import { timingSafeEqual } from 'crypto';
 import type { Request } from 'express';
 import { AppMetricsService } from '../../infrastructure/telemetry/app-metrics.service';
 import { DbMetricsService } from '../../infrastructure/telemetry/db-metrics.service';
+import { Public } from '../../common/guards/jwt.guard';
 
 /**
  * SECURITY (P0-13): the Prometheus exposition endpoint is gated by both an
@@ -25,6 +26,7 @@ import { DbMetricsService } from '../../infrastructure/telemetry/db-metrics.serv
  * uniformly regardless of source IP.
  */
 @ApiExcludeController()
+@Public()
 @Controller('public/metrics')
 export class PublicMetricsController {
   constructor(

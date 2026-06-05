@@ -115,7 +115,12 @@ export class ApproveRefundHandler {
 
         await tx.payment.update({
           where: { id: refundRequest.paymentId },
-          data: { status: 'REFUNDED' },
+          data: {
+            // Mirror the invoice outcome: a partial refund keeps the payment
+            // refundable; only a full refund closes it.
+            status: accounting.newInvoiceStatus === 'REFUNDED' ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
+            refundedAmount: { increment: Number(refundRequest.amount) },
+          },
         });
 
         return { updated, invoice };

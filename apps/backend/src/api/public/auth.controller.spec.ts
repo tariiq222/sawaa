@@ -15,7 +15,8 @@ import { PerformPasswordResetHandler } from '../../modules/identity/user-passwor
 import { RequestDashboardOtpHandler } from '../../modules/identity/request-dashboard-otp/request-dashboard-otp.handler';
 import { VerifyDashboardOtpHandler } from '../../modules/identity/verify-dashboard-otp/verify-dashboard-otp.handler';
 import { PlatformSettingsService } from '../../modules/platform/settings/platform-settings.service';
-import { JwtGuard } from '../../common/guards/jwt.guard';
+import { Reflector } from '@nestjs/core';
+import { JwtGuard, IS_PUBLIC_KEY } from '../../common/guards/jwt.guard';
 import { AuthResponseBuilder } from '../../modules/identity/shared/auth-response.builder';
 import { LookupUserHandler } from '../../modules/identity/lookup-user/lookup-user.handler';
 
@@ -290,5 +291,20 @@ describe('AuthController (e2e)', () => {
         .send({ refreshToken: '' })
         .expect(200);
     });
+  });
+
+  // Regression guard: the global APP_GUARD JwtGuard makes every route
+  // authenticated unless marked @Public(). These staff-auth routes carry no
+  // access token (login/lookup) or authenticate via the ck_refresh cookie
+  // (refresh/logout), so a missing @Public() returns 401 and breaks login.
+  describe('@Public() metadata on tokenless auth routes', () => {
+    const reflector = new Reflector();
+    it.each(['loginEndpoint', 'lookupEndpoint', 'refreshEndpoint', 'logoutEndpoint'])(
+      '%s is exempt from the global JwtGuard',
+      (method) => {
+        const handler = (AuthController.prototype as unknown as Record<string, () => unknown>)[method];
+        expect(reflector.get(IS_PUBLIC_KEY, handler)).toBe(true);
+      },
+    );
   });
 });

@@ -46,7 +46,10 @@ export class RefundsController {
   }
 
   @Post('approve')
-  @CheckPermissions({ action: 'manage', subject: 'Payment' })
+  // Approving a refund moves real money via Moyasar — restrict to OWNER/ADMIN
+  // (who hold manage:Setting) and exclude ACCOUNTANT, which only carries
+  // manage:Payment for routine invoice/payment work. See casl-ability.factory.
+  @CheckPermissions({ action: 'manage', subject: 'Setting' })
   @ApiOperation({ summary: 'Approve a refund request' })
   @ApiOkResponse({ schema: { type: 'object', description: 'Approved refund result' } })
   async approveRefund(
@@ -60,7 +63,8 @@ export class RefundsController {
   }
 
   @Post('deny')
-  @CheckPermissions({ action: 'manage', subject: 'Payment' })
+  // Same restriction as approve — refund decisions are OWNER/ADMIN only.
+  @CheckPermissions({ action: 'manage', subject: 'Setting' })
   @ApiOperation({ summary: 'Deny a refund request' })
   @ApiOkResponse({ schema: { type: 'object', description: 'Denied refund result' } })
   async denyRefund(

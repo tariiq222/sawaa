@@ -125,7 +125,7 @@ describe('ApproveRefundHandler', () => {
     });
     expect(txMock.payment.update).toHaveBeenCalledWith({
       where: { id: 'pay-1' },
-      data: { status: 'REFUNDED' },
+      data: { status: 'REFUNDED', refundedAmount: { increment: 100 } },
     });
     expect(eventBus.publish).toHaveBeenCalledWith(
       'finance.refund.completed',

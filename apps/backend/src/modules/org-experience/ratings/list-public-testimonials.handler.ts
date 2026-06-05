@@ -18,11 +18,13 @@ export class ListPublicTestimonialsHandler {
   async execute(dto: ListPublicTestimonialsDto): Promise<PublicTestimonial[]> {
     const limit = dto.limit ?? 6;
 
-    const rows = await this.prisma.rating.findMany({
-      where: { isPublic: true },
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-    });
+    const rows = (
+      await this.prisma.rating.findMany({
+        where: { isPublic: true, comment: { not: null } },
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      })
+    ).filter((r) => (r.comment ?? '').trim().length > 0);
 
     const clientIds = rows.map((r) => r.clientId);
     const clients = await this.prisma.client.findMany({

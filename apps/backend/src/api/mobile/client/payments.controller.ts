@@ -30,6 +30,7 @@ import { GetInvoiceHandler } from '../../../modules/finance/get-invoice/get-invo
 import { BankTransferUploadHandler } from '../../../modules/finance/bank-transfer-upload/bank-transfer-upload.handler';
 import { InitClientPaymentHandler } from '../../../modules/finance/payments/client/init-client-payment/init-client-payment.handler';
 import { InitClientPaymentDto } from '../../../modules/finance/payments/client/init-client-payment/init-client-payment.dto';
+import { Public } from '../../../common/guards/jwt.guard';
 
 export class MobileListPaymentsQuery {
   @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
@@ -51,6 +52,7 @@ export class MobileBankTransferUploadDto {
 @ApiBearerAuth()
 @ApiStandardResponses()
 @UseGuards(ClientSessionGuard)
+@Public()
 @Controller('mobile/client/payments')
 export class MobileClientPaymentsController {
   constructor(

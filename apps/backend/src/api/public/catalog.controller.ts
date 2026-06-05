@@ -19,7 +19,9 @@ export class PublicCatalogController {
   async getCatalog() {
     const [departments, categories, services] = await Promise.all([
       this.prisma.department.findMany({
-        where: { isActive: true },
+        // isVisible is the public hide-from-booking toggle; filter at the source
+        // so hidden departments never reach any client (website/mobile). (R-32)
+        where: { isActive: true, isVisible: true },
         orderBy: { sortOrder: 'asc' },
       }),
       this.prisma.serviceCategory.findMany({

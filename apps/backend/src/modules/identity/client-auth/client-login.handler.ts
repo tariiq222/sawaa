@@ -35,7 +35,8 @@ export class ClientLoginHandler {
     }
 
     if (client.lockoutUntil && client.lockoutUntil > new Date()) {
-      throw new UnauthorizedException('Account is temporarily locked. Try again later.');
+      // Same constant message as the wrong-password path — see note below.
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     const emailKey = `client_login:email:${dto.email}`;
@@ -72,12 +73,11 @@ export class ClientLoginHandler {
         },
       });
 
-      const remaining = MAX_EMAIL_ATTEMPTS - emailAttempts;
-      throw new UnauthorizedException(
-        remaining > 0
-          ? `Invalid credentials. ${remaining} attempt(s) remaining.`
-          : 'Invalid credentials. Account locked for 15 minutes.',
-      );
+      // Constant response on every failure path (unknown account, missing
+      // password, wrong password, lockout) so the error message can't be used
+      // to enumerate which emails are registered. Lockout is still enforced
+      // server-side via lockoutUntil above. Mirrors the staff /auth/lookup fix.
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     if (client.loginAttempts > 0 || client.lockoutUntil) {

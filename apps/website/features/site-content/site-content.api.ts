@@ -7,7 +7,7 @@ export async function fetchSiteSettings(prefix?: string): Promise<SiteSettingRow
   const qs = prefix ? `?prefix=${encodeURIComponent(prefix)}` : '';
   try {
     const res = await fetch(`${getApiBase()}/public/content/site-settings${qs}`, {
-      next: { revalidate: 60, tags: ['site-content'] },
+      next: { revalidate: 60 },
     });
     if (!res.ok) {
       Sentry.addBreadcrumb({

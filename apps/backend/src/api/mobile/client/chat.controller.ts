@@ -21,6 +21,7 @@ import { ApiStandardResponses } from '../../../common/swagger';
 import { ChatCompletionHandler } from '../../../modules/ai/chat-completion/chat-completion.handler';
 import { ListConversationsHandler } from '../../../modules/comms/chat/list-conversations.handler';
 import { ListMessagesHandler } from '../../../modules/comms/chat/list-messages.handler';
+import { Public } from '../../../common/guards/jwt.guard';
 
 export class MobileChatBody {
   @ApiProperty({ description: 'The message text sent by the client', example: 'What are your opening hours?' })
@@ -50,6 +51,7 @@ export class MobileListMessagesQuery {
 @ApiBearerAuth()
 @ApiStandardResponses()
 @UseGuards(ClientSessionGuard)
+@Public()
 @Controller('mobile/client/chat')
 export class MobileClientChatController {
   constructor(

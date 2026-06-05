@@ -40,14 +40,16 @@ export class GetClientBookingHandler {
       price: booking.price.toString(),
       currency: booking.currency,
       serviceId: booking.serviceId,
-      serviceName: service?.nameEn ?? service?.nameAr ?? '',
-      serviceNameAr: service?.nameAr ?? null,
+      // Fall back to the snapshot captured at booking time so a later
+      // hard-delete of the service/employee/branch does not blank the name.
+      serviceName: service?.nameEn ?? service?.nameAr ?? booking.serviceNameSnapshot ?? '',
+      serviceNameAr: service?.nameAr ?? booking.serviceNameSnapshot ?? null,
       employeeId: booking.employeeId,
-      employeeName: employee?.name ?? '',
-      employeeNameAr: null,
+      employeeName: employee?.name ?? booking.employeeNameSnapshot ?? '',
+      employeeNameAr: booking.employeeNameSnapshot ?? null,
       branchId: booking.branchId,
-      branchName: branch?.nameEn ?? branch?.nameAr ?? '',
-      branchNameAr: branch?.nameAr ?? null,
+      branchName: branch?.nameEn ?? branch?.nameAr ?? booking.branchNameSnapshot ?? '',
+      branchNameAr: branch?.nameAr ?? booking.branchNameSnapshot ?? null,
       paymentStatus: payment?.status ?? null,
       createdAt: booking.createdAt.toISOString(),
     };

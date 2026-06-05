@@ -213,6 +213,44 @@ describe('ClientLoginHandler', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
+    it('returns an identical error message for unknown-account, wrong-password, and locked paths (no account enumeration)', async () => {
+      const messages: string[] = [];
+
+      // 1) unknown account
+      mockPrisma.client.findFirst.mockResolvedValueOnce(null);
+      messages.push(
+        await handler
+          .execute({ email: 'nobody@example.com', password: 'WrongPass1' }, '1.2.3.4')
+          .catch((e) => e.message),
+      );
+
+      // 2) wrong password on an existing account
+      mockPrisma.client.findFirst.mockResolvedValueOnce({
+        id: 'cl-e1', email: 'real@example.com', passwordHash: 'hashed_pw', loginAttempts: 0, lockoutUntil: null,
+      });
+      queueAttempts(2, 1);
+      mockPasswords.verify.mockResolvedValueOnce(false);
+      mockPrisma.client.update.mockResolvedValue({ id: 'cl-e1' });
+      messages.push(
+        await handler
+          .execute({ email: 'real@example.com', password: 'WrongPass1' }, '1.2.3.4')
+          .catch((e) => e.message),
+      );
+
+      // 3) locked existing account
+      mockPrisma.client.findFirst.mockResolvedValueOnce({
+        id: 'cl-e2', email: 'real@example.com', passwordHash: 'hashed_pw', lockoutUntil: new Date(Date.now() + 600_000),
+      });
+      messages.push(
+        await handler
+          .execute({ email: 'real@example.com', password: 'SecurePass123' }, '1.2.3.4')
+          .catch((e) => e.message),
+      );
+
+      expect(messages[0]).toBe('Invalid credentials');
+      expect(new Set(messages).size).toBe(1);
+    });
+
     it('throws Unauthorized when per-IP rate limit exceeded', async () => {
       mockPrisma.client.findFirst.mockResolvedValue({
         id: 'cl-6',

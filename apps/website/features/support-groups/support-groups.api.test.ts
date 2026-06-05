@@ -45,7 +45,7 @@ describe('support-groups.api', () => {
       await getPublicGroupSessions();
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toMatch(/\/public\/bookings\/group-sessions$/);
-      expect(init).toMatchObject({ next: { revalidate: 60, tags: ['public-group-sessions'] } });
+      expect(init).toMatchObject({ next: { revalidate: 60 } });
     });
 
     it('encodes branchId in the query string', async () => {
@@ -67,12 +67,12 @@ describe('support-groups.api', () => {
   });
 
   describe('getPublicGroupSession', () => {
-    it('URL-encodes the session id and tags the slug', async () => {
+    it('URL-encodes the session id', async () => {
       fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve(sample) });
       await getPublicGroupSession('ses/1');
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toContain(encodeURIComponent('ses/1'));
-      expect(init.next.tags).toEqual(['public-group-sessions', `group-session-ses/1`]);
+      expect(init.next).toEqual({ revalidate: 60 });
     });
   });
 

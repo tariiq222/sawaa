@@ -18,6 +18,7 @@ import { IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, Min } from '
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
+import { Public } from '../../../common/guards/jwt.guard';
 import { ClientSession } from '../../../common/auth/client-session.decorator';
 import { ApiStandardResponses, ApiErrorDto } from '../../../common/swagger';
 import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/list-bookings.handler';
@@ -84,6 +85,7 @@ export class MobileListBookingsDto {
 @ApiTags('Mobile Client / Bookings')
 @ApiBearerAuth()
 @ApiStandardResponses()
+@Public()
 @UseGuards(ClientSessionGuard)
 @Controller('mobile/client/bookings')
 export class MobileClientBookingsController {

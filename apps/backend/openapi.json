@@ -3362,6 +3362,7 @@
           "PENDING_VERIFICATION",
           "COMPLETED",
           "FAILED",
+          "PARTIALLY_REFUNDED",
           "REFUNDED"
         ],
         "type": "string"

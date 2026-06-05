@@ -2,8 +2,10 @@ import { Controller, Get, HttpCode, ServiceUnavailableException } from '@nestjs/
 import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { HealthCheckHandler, HealthCheckResult } from '../../modules/ops/health-check/health-check.handler';
 import { isShuttingDown } from '../../common/shutdown.state';
+import { Public } from '../../common/guards/jwt.guard';
 
 @ApiTags('Public / Health')
+@Public()
 @Controller('health')
 export class PublicHealthController {
   constructor(private readonly healthCheck: HealthCheckHandler) {}

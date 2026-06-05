@@ -206,6 +206,13 @@ describe('CreateBundleBookingHandler', () => {
     await expect(handler.execute(baseDto)).rejects.toThrow('Client not found');
   });
 
+  it('excludes soft-deleted clients from the booking lookup', async () => {
+    await handler.execute(baseDto).catch(() => undefined);
+    expect(prisma.client.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ deletedAt: null }) }),
+    );
+  });
+
   it('throws NotFoundException when employee is not found', async () => {
     prisma.employee.findFirst = jest.fn().mockResolvedValue(null);
     await expect(handler.execute(baseDto)).rejects.toThrow('Employee not found');

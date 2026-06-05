@@ -4,7 +4,10 @@ import { PaymentStatus } from '@prisma/client';
 const VALID_TRANSITIONS: Partial<Record<PaymentStatus, PaymentStatus[]>> = {
   PENDING: ['PENDING_VERIFICATION', 'COMPLETED', 'FAILED'],
   PENDING_VERIFICATION: ['COMPLETED', 'FAILED'],
-  COMPLETED: ['REFUNDED'],
+  // A completed payment can be partially or fully refunded; a partially-refunded
+  // payment can take further partial refunds or be refunded in full.
+  COMPLETED: ['PARTIALLY_REFUNDED', 'REFUNDED'],
+  PARTIALLY_REFUNDED: ['PARTIALLY_REFUNDED', 'REFUNDED'],
   FAILED: ['PENDING'],
   REFUNDED: [],
 };
