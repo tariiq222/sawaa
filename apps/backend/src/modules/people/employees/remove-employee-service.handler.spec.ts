@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { RemoveEmployeeServiceHandler } from './remove-employee-service.handler';
 
 describe('RemoveEmployeeServiceHandler', () => {
   let handler: RemoveEmployeeServiceHandler;
   let prisma: PrismaService;
+  let rlsTransaction: RlsTransactionService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -13,13 +14,19 @@ describe('RemoveEmployeeServiceHandler', () => {
         { provide: PrismaService, useValue: {
     employeeService: { findUnique: jest.fn(), delete: jest.fn() },
     employeeServiceOption: { deleteMany: jest.fn() },
-    $transaction: jest.fn((ops: any[]) => Promise.all(ops)),
+        } },
+        { provide: RlsTransactionService, useValue: {
+    withTransaction: jest.fn(),
         } },
       ],
     }).compile();
 
     handler = module.get<RemoveEmployeeServiceHandler>(RemoveEmployeeServiceHandler);
     prisma = module.get<PrismaService>(PrismaService);
+    rlsTransaction = module.get<RlsTransactionService>(RlsTransactionService);
+    (rlsTransaction.withTransaction as jest.Mock).mockImplementation(
+      (fn: (tx: PrismaService) => Promise<unknown>) => fn(prisma),
+    );
   });
 
   it('should be defined', () => {
@@ -41,6 +48,6 @@ describe('RemoveEmployeeServiceHandler', () => {
     expect((prisma.employeeServiceOption.deleteMany as jest.Mock)).toHaveBeenCalledWith({
       where: { employeeServiceId: 'link-1' },
     });
-    expect((prisma.$transaction as jest.Mock)).toHaveBeenCalledTimes(1);
+    expect((rlsTransaction.withTransaction as jest.Mock)).toHaveBeenCalledTimes(1);
   });
 });
