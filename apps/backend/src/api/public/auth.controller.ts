@@ -78,6 +78,7 @@ export class AuthController {
   // SECURITY (P1): tight per-IP throttle on staff login. The handler already
   // enforces per-account bcrypt + tokenVersion checks; this stops broad
   // credential-stuffing before it reaches them.
+  @Public()
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -141,6 +142,7 @@ export class AuthController {
     return response;
   }
 
+  @Public()
   @Post('refresh')
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @HttpCode(HttpStatus.OK)
@@ -197,6 +199,7 @@ export class AuthController {
     };
   }
 
+  @Public()
   @Post('logout')
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @HttpCode(HttpStatus.OK)
@@ -342,6 +345,7 @@ export class AuthController {
   // SECURITY (P0-12): tight throttle on the lookup oracle. Even though we now
   // return a constant response, throttle still bounds the cost-amplification
   // risk and limits any future regression that re-exposes the difference.
+  @Public()
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('lookup')
   @HttpCode(HttpStatus.OK)
