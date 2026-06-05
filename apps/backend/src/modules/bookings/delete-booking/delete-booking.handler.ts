@@ -4,7 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { BookingStatus, PaymentStatus } from '@prisma/client';
+import { ActivityAction, BookingStatus, PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { isTerminalStatus } from '../booking-state-machine';
 
@@ -44,7 +44,14 @@ export class DeleteBookingHandler {
   async execute(cmd: DeleteBookingCommand): Promise<void> {
     const booking = await this.prisma.booking.findFirst({
       where: { id: cmd.bookingId },
-      select: { id: true, status: true },
+      select: {
+        id: true,
+        status: true,
+        bookingNumber: true,
+        clientId: true,
+        serviceNameSnapshot: true,
+        scheduledAt: true,
+      },
     });
     if (!booking) {
       throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
@@ -93,6 +100,28 @@ export class DeleteBookingHandler {
         where: { bookingId: booking.id },
         data: { bookingId: null },
       });
+
+      // Immutable audit row written inside the same transaction, BEFORE the
+      // booking row is removed, so a hard-delete never erases the record of who
+      // deleted what. Captures the snapshot identifiers since the row is gone
+      // after this. (R-11/R-17)
+      await tx.activityLog.create({
+        data: {
+          userId: cmd.changedBy,
+          action: ActivityAction.DELETE,
+          entity: 'Booking',
+          entityId: booking.id,
+          description: `Hard-deleted booking ${booking.bookingNumber ?? booking.id}`,
+          metadata: {
+            bookingNumber: booking.bookingNumber,
+            clientId: booking.clientId,
+            status: booking.status,
+            serviceNameSnapshot: booking.serviceNameSnapshot,
+            scheduledAt: booking.scheduledAt?.toISOString() ?? null,
+          } as Prisma.InputJsonValue,
+        },
+      });
+
       await tx.booking.delete({ where: { id: booking.id } });
     });
 
