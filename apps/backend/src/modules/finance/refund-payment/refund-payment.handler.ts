@@ -111,14 +111,6 @@ export class RefundPaymentHandler {
         where: { id: refundRequestId },
         select: { paymentId: true, amount: true, invoiceId: true },
       });
-      await tx.payment.update({
-        where: { id: refundReq.paymentId },
-        data: {
-          status: PaymentStatus.REFUNDED,
-          failureReason: `Booking cancellation refund (${idempotencyKey})`,
-          refundedAmount: { increment: Number(refundReq.amount) },
-        },
-      });
       const currentInvoice = await tx.invoice.findUniqueOrThrow({
         where: { id: refundReq.invoiceId },
         select: { total: true, vatAmt: true, refundedAmount: true },
@@ -128,6 +120,20 @@ export class RefundPaymentHandler {
         invoiceVatAmt: currentInvoice.vatAmt,
         alreadyRefundedAmount: currentInvoice.refundedAmount,
         thisRefundAmount: Number(refundReq.amount),
+      });
+      // Mirror the invoice's REFUNDED / PARTIALLY_REFUNDED outcome onto the
+      // payment so a payment with an outstanding balance can be refunded again.
+      const paymentStatus =
+        accounting.newInvoiceStatus === 'REFUNDED'
+          ? PaymentStatus.REFUNDED
+          : PaymentStatus.PARTIALLY_REFUNDED;
+      await tx.payment.update({
+        where: { id: refundReq.paymentId },
+        data: {
+          status: paymentStatus,
+          failureReason: `Booking cancellation refund (${idempotencyKey})`,
+          refundedAmount: { increment: Number(refundReq.amount) },
+        },
       });
       await tx.invoice.update({
         where: { id: refundReq.invoiceId },
@@ -173,10 +179,15 @@ export class RefundPaymentHandler {
 
     const row = rows[0];
     if (!row) throw new NotFoundException('Payment not found');
-    if (row.status !== PaymentStatus.COMPLETED) {
-      throw new BadRequestException('Only completed payments can be refunded');
+    if (
+      row.status !== PaymentStatus.COMPLETED &&
+      row.status !== PaymentStatus.PARTIALLY_REFUNDED
+    ) {
+      throw new BadRequestException('Only completed or partially-refunded payments can be refunded');
     }
-    assertValidTransition(row.status as PaymentStatus, PaymentStatus.REFUNDED);
+    // The outstanding-balance clamp below is the real guard against over-refund;
+    // here we only assert the status is in a refundable state.
+    assertValidTransition(row.status as PaymentStatus, PaymentStatus.PARTIALLY_REFUNDED);
     if (!row.gatewayRef) {
       throw new BadRequestException('Payment has no gateway reference; use manual refund path');
     }
@@ -284,14 +295,6 @@ export class RefundPaymentHandler {
         this.logger.warn({ refundRequestId: cmd.refundRequestId }, 'refund_already_finalized_concurrent_skip');
         return;
       }
-      await tx.payment.update({
-        where: { id: refundReq.paymentId },
-        data: {
-          status: PaymentStatus.REFUNDED,
-          failureReason: `Booking cancellation refund (${cmd.idempotencyKey})`,
-          refundedAmount: { increment: Number(refundReq.amount) },
-        },
-      });
       const currentInvoice = await tx.invoice.findUniqueOrThrow({
         where: { id: refundReq.invoiceId },
         select: { total: true, vatAmt: true, refundedAmount: true },
@@ -301,6 +304,18 @@ export class RefundPaymentHandler {
         invoiceVatAmt: currentInvoice.vatAmt,
         alreadyRefundedAmount: currentInvoice.refundedAmount,
         thisRefundAmount: Number(refundReq.amount),
+      });
+      const paymentStatus =
+        accounting.newInvoiceStatus === 'REFUNDED'
+          ? PaymentStatus.REFUNDED
+          : PaymentStatus.PARTIALLY_REFUNDED;
+      await tx.payment.update({
+        where: { id: refundReq.paymentId },
+        data: {
+          status: paymentStatus,
+          failureReason: `Booking cancellation refund (${cmd.idempotencyKey})`,
+          refundedAmount: { increment: Number(refundReq.amount) },
+        },
       });
       await tx.invoice.update({
         where: { id: refundReq.invoiceId },
@@ -354,10 +369,14 @@ export class RefundPaymentHandler {
 
         const row = rows[0];
         if (!row) throw new NotFoundException('Payment not found');
-        if (row.status !== PaymentStatus.COMPLETED) {
-          throw new BadRequestException('Only completed payments can be refunded');
+        if (
+          row.status !== PaymentStatus.COMPLETED &&
+          row.status !== PaymentStatus.PARTIALLY_REFUNDED
+        ) {
+          throw new BadRequestException('Only completed or partially-refunded payments can be refunded');
         }
-        assertValidTransition(row.status as PaymentStatus, PaymentStatus.REFUNDED);
+        // Outstanding-balance clamp below is the real over-refund guard.
+        assertValidTransition(row.status as PaymentStatus, PaymentStatus.PARTIALLY_REFUNDED);
         if (!row.gatewayRef) {
           throw new BadRequestException('Payment has no gateway reference; use manual refund path');
         }
@@ -457,14 +476,6 @@ export class RefundPaymentHandler {
           where: { id: refundRequestId },
           data: { status: RefundStatus.COMPLETED, gatewayRef: moyasarRefundId },
         });
-        const updated = await tx.payment.update({
-          where: { id: cmd.paymentId },
-          data: {
-            status: PaymentStatus.REFUNDED,
-            failureReason: cmd.reason,
-            refundedAmount: { increment: refundAmount },
-          },
-        });
         const currentInvoice = await tx.invoice.findUniqueOrThrow({
           where: { id: payment.invoice.id },
           select: { total: true, vatAmt: true, refundedAmount: true },
@@ -474,6 +485,17 @@ export class RefundPaymentHandler {
           invoiceVatAmt: currentInvoice.vatAmt,
           alreadyRefundedAmount: currentInvoice.refundedAmount,
           thisRefundAmount: refundAmount,
+        });
+        const updated = await tx.payment.update({
+          where: { id: cmd.paymentId },
+          data: {
+            status:
+              accounting.newInvoiceStatus === 'REFUNDED'
+                ? PaymentStatus.REFUNDED
+                : PaymentStatus.PARTIALLY_REFUNDED,
+            failureReason: cmd.reason,
+            refundedAmount: { increment: refundAmount },
+          },
         });
         await tx.invoice.update({
           where: { id: payment.invoice.id },

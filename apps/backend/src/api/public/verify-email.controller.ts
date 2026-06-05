@@ -2,8 +2,10 @@ import { Controller, Get, HttpCode, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../common/swagger';
 import { VerifyEmailHandler } from '../../modules/identity/verify-email/verify-email.handler';
+import { Public } from '../../common/guards/jwt.guard';
 
 @ApiTags('Public / Identity')
+@Public()
 @Controller('public/verify-email')
 export class PublicVerifyEmailController {
   constructor(private readonly verifyEmail: VerifyEmailHandler) {}

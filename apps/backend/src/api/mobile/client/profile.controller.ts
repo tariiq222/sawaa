@@ -11,6 +11,7 @@ import { ClientSessionGuard } from '../../../common/guards/client-session.guard'
 import { ClientSession } from '../../../common/auth/client-session.decorator';
 import { GetClientHandler } from '../../../modules/people/clients/get-client.handler';
 import { UpdateClientHandler } from '../../../modules/people/clients/update-client.handler';
+import { Public } from '../../../common/guards/jwt.guard';
 
 export class MobileUpdateProfileBody {
   @ApiPropertyOptional({ description: 'Full display name', example: 'Sara Al-Harbi' })
@@ -51,6 +52,7 @@ export class MobileUpdateProfileBody {
 @ApiBearerAuth()
 @ApiStandardResponses()
 @UseGuards(ClientSessionGuard)
+@Public()
 @Controller('mobile/client/profile')
 export class MobileClientProfileController {
   constructor(

@@ -7,6 +7,7 @@ import { ClientSessionGuard } from '../../../../common/guards/client-session.gua
 import { ClientSession } from '../../../../common/auth/client-session.decorator';
 import { ApiStandardResponses } from '../../../../common/swagger';
 import { PrismaService } from '../../../../infrastructure/database';
+import { Public } from '../../../../common/guards/jwt.guard';
 
 export class UpcomingQuery {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
@@ -19,6 +20,7 @@ const UPCOMING_STATUSES: BookingStatus[] = [BookingStatus.PENDING, BookingStatus
 @ApiBearerAuth()
 @ApiStandardResponses()
 @UseGuards(ClientSessionGuard)
+@Public()
 @Controller('mobile/client/portal/upcoming')
 export class MobileClientUpcomingController {
   constructor(private readonly prisma: PrismaService) {}

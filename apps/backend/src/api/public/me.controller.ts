@@ -11,11 +11,13 @@ import { ClientRescheduleBookingHandler } from '../../modules/bookings/client/cl
 import { ClientRescheduleBookingDto } from '../../modules/bookings/client/client-reschedule-booking.dto';
 import { GetClientBookingHandler } from '../../modules/bookings/client/get-client-booking.handler';
 import { GetBookingInvoiceHandler } from '../../modules/finance/get-invoice/get-booking-invoice.handler';
+import { Public } from '../../common/guards/jwt.guard';
 
 @ApiTags('Public / Me')
 @ApiBearerAuth()
 @ApiStandardResponses()
 @UseGuards(ClientSessionGuard)
+@Public()
 @Controller('public/me')
 export class PublicMeController {
   constructor(

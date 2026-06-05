@@ -183,6 +183,28 @@ describe('RefundPaymentHandler', () => {
         }),
       });
     });
+
+    it('R-08: sets Payment to PARTIALLY_REFUNDED when the invoice is only partly refunded', async () => {
+      prisma.refundRequest.findUniqueOrThrow.mockResolvedValue({
+        paymentId: 'pay-1', amount: 40, invoiceId: 'inv-1',
+      });
+      // total 100, only 40 refunded → invoice + payment PARTIALLY_REFUNDED.
+      prisma.invoice.findUniqueOrThrow.mockResolvedValue(
+        makeInvoice({ total: 100, vatAmt: 15, refundedAmount: 0 }),
+      );
+
+      await handler.finalizeRefund('rr-1', 'idemp-1', 'moy-ref-1');
+
+      expect(prisma.payment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'pay-1' },
+          data: expect.objectContaining({ status: PaymentStatus.PARTIALLY_REFUNDED }),
+        }),
+      );
+      expect(prisma.invoice.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ status: 'PARTIALLY_REFUNDED' }) }),
+      );
+    });
   });
 
   // ── createRefundRequestInTx ───────────────────────────────────────────────
@@ -566,6 +588,52 @@ describe('RefundPaymentHandler', () => {
 
       expect(result.status).toBe(PaymentStatus.REFUNDED);
       expect(eventBus.publish).toHaveBeenCalledTimes(1);
+    });
+
+    it('R-08: allows a second refund against a PARTIALLY_REFUNDED payment (was blocked before)', async () => {
+      let txCallCount = 0;
+      prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
+        txCallCount++;
+        if (txCallCount === 1) {
+          // 100 paid, 40 already refunded, status PARTIALLY_REFUNDED → outstanding 60.
+          prisma.$queryRaw.mockResolvedValueOnce(
+            makePaymentRow({ status: PaymentStatus.PARTIALLY_REFUNDED, amount: 100, refundedAmount: 40 }),
+          );
+          prisma.invoice.findUniqueOrThrow.mockResolvedValueOnce(makeInvoice({ refundedAmount: 40 }));
+          prisma.refundRequest.findFirst.mockResolvedValueOnce(null);
+          prisma.refundRequest.create.mockResolvedValueOnce({ id: 'test-uuid-1234' });
+        } else if (txCallCount === 2) {
+          prisma.refundRequest.update.mockResolvedValueOnce({ id: 'test-uuid-1234' });
+          prisma.invoice.findUniqueOrThrow.mockResolvedValueOnce(makeInvoice({ refundedAmount: 40 }));
+          prisma.payment.update.mockResolvedValueOnce({ id: 'pay-1', status: PaymentStatus.REFUNDED });
+        }
+        return cb(prisma);
+      });
+      moyasar.createRefund.mockResolvedValue({ id: 'moy-ref-2' });
+
+      await handler.execute({ paymentId: 'pay-1', reason: 'second partial', amount: 60 });
+
+      expect(moyasar.createRefund).toHaveBeenCalledWith(
+        DEFAULT_ORG_ID,
+        expect.objectContaining({ amount: 60 }),
+      );
+    });
+
+    it('R-08: rejects an over-refund on a PARTIALLY_REFUNDED payment via the outstanding clamp', async () => {
+      prisma.$transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => {
+        prisma.$queryRaw.mockResolvedValueOnce(
+          makePaymentRow({ status: PaymentStatus.PARTIALLY_REFUNDED, amount: 100, refundedAmount: 40 }),
+        );
+        prisma.invoice.findUniqueOrThrow.mockResolvedValueOnce(makeInvoice({ refundedAmount: 40 }));
+        prisma.refundRequest.findFirst.mockResolvedValueOnce(null);
+        return cb(prisma);
+      });
+
+      // outstanding = 60; asking for 61 must be rejected, no gateway call.
+      await expect(
+        handler.execute({ paymentId: 'pay-1', reason: 'too much', amount: 61 }),
+      ).rejects.toThrow(BadRequestException);
+      expect(moyasar.createRefund).not.toHaveBeenCalled();
     });
   });
 });

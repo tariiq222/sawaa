@@ -2,6 +2,7 @@ import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsUUID, IsString, IsOptional } from 'class-validator';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
+import { Public } from '../../common/guards/jwt.guard';
 import { ClientSession } from '../../common/auth/client-session.decorator';
 import { ApiPublicResponses } from '../../common/swagger';
 import { RequestRefundHandler } from '../../modules/finance/refund-payment/request-refund.handler';
@@ -20,6 +21,9 @@ class RequestRefundDto {
 @ApiTags('Public / Refunds')
 @ApiBearerAuth()
 @ApiPublicResponses()
+// Class-level @Public() exempts from the global admin JwtGuard; the per-method
+// @UseGuards(ClientSessionGuard) still enforces client auth.
+@Public()
 @Controller('public/refunds')
 export class PublicRefundsController {
   constructor(private readonly requestRefundHandler: RequestRefundHandler) {}

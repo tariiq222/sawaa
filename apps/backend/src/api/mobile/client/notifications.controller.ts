@@ -16,6 +16,7 @@ import { GetUnreadCountHandler } from '../../../modules/comms/notifications/get-
 import { RegisterFcmTokenHandler } from '../../../modules/comms/fcm-tokens/register-fcm-token.handler';
 import { UnregisterFcmTokenHandler } from '../../../modules/comms/fcm-tokens/unregister-fcm-token.handler';
 import { RegisterFcmTokenDto } from '../../../modules/comms/fcm-tokens/register-fcm-token.dto';
+import { Public } from '../../../common/guards/jwt.guard';
 
 export class MobileListNotificationsQuery {
   @ApiPropertyOptional({ description: 'Return only unread notifications', example: true })
@@ -32,6 +33,7 @@ export class MobileListNotificationsQuery {
 @ApiBearerAuth()
 @ApiStandardResponses()
 @UseGuards(ClientSessionGuard)
+@Public()
 @Controller('mobile/client/notifications')
 export class MobileClientNotificationsController {
   constructor(

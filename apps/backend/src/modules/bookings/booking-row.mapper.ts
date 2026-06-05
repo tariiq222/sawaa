@@ -160,6 +160,7 @@ export function mapPaymentStatusForUi(s: string): PaymentStatusUi {
     case 'PENDING_VERIFICATION': return 'awaiting';
     case 'COMPLETED': return 'paid';
     case 'FAILED': return 'failed';
+    case 'PARTIALLY_REFUNDED': return 'refunded';
     case 'REFUNDED': return 'refunded';
     default: return 'pending';
   }

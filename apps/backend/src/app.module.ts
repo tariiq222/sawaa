@@ -5,6 +5,7 @@ import { TenantAwareThrottlerGuard } from "./common/throttler/tenant-aware-throt
 import { ThrottlerStorageRedisService } from "@nest-lab/throttler-storage-redis";
 import { APP_FILTER, APP_GUARD } from "@nestjs/core";
 import { HttpExceptionFilter } from "./common/filters";
+import { JwtGuard } from "./common/guards/jwt.guard";
 import { ClsModule } from "nestjs-cls";
 import { envValidationSchema } from "./config/env.validation";
 
@@ -93,6 +94,12 @@ import { AppMetricsService } from "./infrastructure/telemetry/app-metrics.servic
     AppMetricsService,
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_GUARD, useClass: TenantAwareThrottlerGuard },
+    // Global authentication: every route requires a valid admin JWT unless
+    // decorated @Public() (which client/public/webhook controllers carry; their
+    // own ClientSessionGuard/OtpSessionGuard still enforces their auth). This
+    // closes the gap where a new dashboard controller added without
+    // @UseGuards(JwtGuard) would otherwise be unauthenticated by default.
+    { provide: APP_GUARD, useClass: JwtGuard },
   ],
 })
 export class AppModule {}

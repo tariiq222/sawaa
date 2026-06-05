@@ -5,11 +5,13 @@ import { ClientSessionGuard } from '../../../../common/guards/client-session.gua
 import { ClientSession } from '../../../../common/auth/client-session.decorator';
 import { ApiStandardResponses } from '../../../../common/swagger';
 import { PrismaService } from '../../../../infrastructure/database';
+import { Public } from '../../../../common/guards/jwt.guard';
 
 @ApiTags('Mobile Client / Portal')
 @ApiBearerAuth()
 @ApiStandardResponses()
 @UseGuards(ClientSessionGuard)
+@Public()
 @Controller('mobile/client/portal/summary')
 export class MobileClientSummaryController {
   constructor(private readonly prisma: PrismaService) {}

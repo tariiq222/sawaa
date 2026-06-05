@@ -7,11 +7,13 @@ import { ListBookingsHandler } from '../../../../modules/bookings/list-bookings/
 import { ListNotificationsHandler } from '../../../../modules/comms/notifications/list-notifications.handler';
 import { ListPaymentsHandler } from '../../../../modules/finance/list-payments/list-payments.handler';
 import { GetClientHandler } from '../../../../modules/people/clients/get-client.handler';
+import { Public } from '../../../../common/guards/jwt.guard';
 
 @ApiTags('Mobile Client / Portal')
 @ApiBearerAuth()
 @ApiStandardResponses()
 @UseGuards(ClientSessionGuard)
+@Public()
 @Controller('mobile/client/portal')
 export class MobileClientHomeController {
   constructor(
