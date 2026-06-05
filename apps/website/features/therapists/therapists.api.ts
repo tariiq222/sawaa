@@ -15,7 +15,7 @@ export async function listPublicEmployees(): Promise<PublicEmployee[]> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3000);
     const json = await publicFetch<unknown>('/public/employees', {
-      next: { revalidate: 60, tags: ['public-employees'] },
+      next: { revalidate: 60 },
       signal: controller.signal,
     }).finally(() => clearTimeout(timer));
     const all = unwrap<PublicEmployee[]>(json);
@@ -37,7 +37,7 @@ export async function listPublicEmployees(): Promise<PublicEmployee[]> {
 export async function getPublicEmployee(slug: string): Promise<PublicEmployee> {
   const json = await publicFetch<unknown>(
     `/public/employees/${encodeURIComponent(slug)}`,
-    { next: { revalidate: 60, tags: ['public-employees', `employee-${slug}`] } },
+    { next: { revalidate: 60 } },
   );
   return unwrap<PublicEmployee>(json);
 }

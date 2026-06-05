@@ -63,7 +63,7 @@ describe('PublicCatalogController (e2e)', () => {
         .expect(200);
 
       expect(mockPrisma.department.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { isActive: true } }),
+        expect.objectContaining({ where: { isActive: true, isVisible: true } }),
       );
       expect(mockPrisma.service.findMany).toHaveBeenCalledWith(
         expect.objectContaining({

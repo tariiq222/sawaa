@@ -50,7 +50,7 @@ describe('therapists.api', () => {
     expect(out).toEqual([sample]);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toMatch(/\/api\/v1\/public\/employees$/);
-    expect(init).toMatchObject({ next: { revalidate: 60, tags: ['public-employees'] } });
+    expect(init).toMatchObject({ next: { revalidate: 60 } });
   });
 
   it('listPublicEmployees falls back to an empty list on non-ok response', async () => {
@@ -58,13 +58,13 @@ describe('therapists.api', () => {
     await expect(listPublicEmployees()).resolves.toEqual([]);
   });
 
-  it('getPublicEmployee URL-encodes the slug and tags the slug', async () => {
+  it('getPublicEmployee URL-encodes the slug', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ data: sample }) });
     await getPublicEmployee('dr smith/خاص');
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain(encodeURIComponent('dr smith/خاص'));
     expect(init).toMatchObject({
-      next: { revalidate: 60, tags: ['public-employees', `employee-dr smith/خاص`] },
+      next: { revalidate: 60 },
     });
   });
 

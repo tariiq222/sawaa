@@ -27,7 +27,7 @@ export async function getPublicBrandingForSsr(): Promise<PublicBranding> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3000);
     const response = await fetch(`${getApiBase()}/public/branding`, {
-      next: { revalidate: 60, tags: ['branding'] },
+      next: { revalidate: 60 },
       signal: controller.signal,
     }).finally(() => clearTimeout(timer));
     if (!response.ok) {

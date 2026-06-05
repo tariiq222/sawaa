@@ -6,12 +6,26 @@ const appDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(appDir, "../..");
 const shouldUploadSentryArtifacts = process.env.CI === "true" && Boolean(process.env.SENTRY_AUTH_TOKEN);
 
+const isProduction = process.env.NODE_ENV === "production";
+
+// 'unsafe-eval' is only needed by Next.js dev HMR. The dashboard ships no code
+// that evals (verified: no eval/new Function/wasm in source or deps), so drop it
+// in production to shrink the XSS gadget surface. 'unsafe-inline' stays until a
+// nonce/hash pipeline exists. (R-18)
+const scriptSrc = [
+  "script-src 'self' 'unsafe-inline'",
+  isProduction ? "" : "'unsafe-eval'",
+  "https://cdn.moyasar.com https://*.moyasar.com https://static.cloudflareinsights.com",
+]
+  .filter(Boolean)
+  .join(" ");
+
 const securityHeaders = [
   {
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.moyasar.com https://*.moyasar.com https://static.cloudflareinsights.com",
+      scriptSrc,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
@@ -31,8 +45,6 @@ const securityHeaders = [
 ];
 
 /** @type {import('next').NextConfig} */
-const isProduction = process.env.NODE_ENV === "production"
-
 const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: repoRoot,
