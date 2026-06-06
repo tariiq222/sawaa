@@ -1,6 +1,6 @@
 import { ListBookingsHandler } from './list-bookings.handler';
 import { buildPrisma, mockBooking } from '../testing/booking-test-helpers';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, DeliveryType } from '@prisma/client';
 
 describe('ListBookingsHandler', () => {
   it('returns paginated bookings', async () => {
@@ -29,6 +29,32 @@ describe('ListBookingsHandler', () => {
     expect(prisma.booking.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ branchId: 'branch-1', employeeId: 'emp-1' }),
+      }),
+    );
+  });
+
+  it('filters by deliveryType when provided', async () => {
+    const prisma = buildPrisma();
+    const handler = new ListBookingsHandler(prisma as never);
+    await handler.execute({ deliveryType: DeliveryType.ONLINE, page: 1, limit: 10 });
+    expect(prisma.booking.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ deliveryType: DeliveryType.ONLINE }),
+      }),
+    );
+  });
+
+  it('resolves isGuest=false to non-online client IDs (no booking.client relation)', async () => {
+    const prisma = buildPrisma();
+    prisma.client.findMany = jest.fn().mockResolvedValue([{ id: 'c-1' }, { id: 'c-2' }]);
+    const handler = new ListBookingsHandler(prisma as never);
+    await handler.execute({ isGuest: false, page: 1, limit: 10 });
+    expect(prisma.client.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { source: { not: 'ONLINE' } } }),
+    );
+    expect(prisma.booking.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ clientId: { in: ['c-1', 'c-2'] } }),
       }),
     );
   });

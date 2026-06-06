@@ -7386,6 +7386,15 @@
             }
           },
           {
+            "description": "Filter by delivery channel",
+            "in": "query",
+            "name": "deliveryType",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DeliveryType"
+            }
+          },
+          {
             "description": "Return bookings on or after this date (ISO 8601)",
             "in": "query",
             "name": "fromDate",
@@ -26660,6 +26669,15 @@
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/BookingType"
+            }
+          },
+          {
+            "description": "Filter by delivery channel",
+            "in": "query",
+            "name": "deliveryType",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DeliveryType"
             }
           },
           {

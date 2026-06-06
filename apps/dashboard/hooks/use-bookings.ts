@@ -21,6 +21,7 @@ import {
 import type {
   BookingStatus,
   BookingType,
+  DeliveryType,
   BookingListQuery,
 } from "@/lib/types/booking"
 
@@ -29,6 +30,7 @@ import type {
 interface BookingFilters {
   status: BookingStatus | "all"
   type: BookingType | "all"
+  delivery: DeliveryType | "all"
   isGuest: boolean | "all"
   dateFrom: string
   dateTo: string
@@ -39,6 +41,7 @@ interface BookingFilters {
 const defaultFilters: BookingFilters = {
   status: "all",
   type: "all",
+  delivery: "all",
   isGuest: "all",
   dateFrom: "",
   dateTo: "",
@@ -55,6 +58,7 @@ export function useBookings() {
   const hasFilters =
     filters.status !== "all" ||
     filters.type !== "all" ||
+    filters.delivery !== "all" ||
     filters.isGuest !== "all" ||
     filters.dateFrom !== "" ||
     filters.dateTo !== "" ||
@@ -66,6 +70,7 @@ export function useBookings() {
     perPage: 20,
     status: filters.status !== "all" ? filters.status : undefined,
     type: filters.type !== "all" ? filters.type : undefined,
+    deliveryType: filters.delivery !== "all" ? filters.delivery : undefined,
     isGuest: filters.isGuest !== "all" ? filters.isGuest : undefined,
     dateFrom: filters.dateFrom || undefined,
     dateTo: filters.dateTo || undefined,

@@ -30,8 +30,11 @@ describe("bookings api", () => {
 
   it("fetchBookings sends filters to /dashboard/bookings", async () => {
     getMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
-    await fetchBookings({ page: 1, status: "confirmed" })
-    expect(getMock).toHaveBeenCalledWith("/dashboard/bookings", expect.objectContaining({ status: "confirmed" }))
+    await fetchBookings({ page: 1, status: "confirmed", type: "individual", deliveryType: "online" })
+    expect(getMock).toHaveBeenCalledWith(
+      "/dashboard/bookings",
+      expect.objectContaining({ status: "confirmed", bookingType: "individual", deliveryType: "online" }),
+    )
   })
 
   it("fetchBooking calls /dashboard/bookings/:id", async () => {

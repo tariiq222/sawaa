@@ -1,12 +1,14 @@
-import { BookingStatus, BookingType } from '@prisma/client';
+import { BookingStatus, BookingType, DeliveryType } from '@prisma/client';
 import { Transform } from 'class-transformer';
-import { IsDateString, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsBoolean, IsDateString, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationDto } from '../../../common/dto';
 
 /**
- * Dashboard sends booking-type as the UI's snake_case alias (in_person / online / walk_in).
- * The DB enum is INDIVIDUAL / ONLINE / WALK_IN / GROUP — map the UI alias before validating.
+ * Booking type (appointment shape) is INDIVIDUAL / WALK_IN / GROUP. Delivery channel
+ * (IN_PERSON / ONLINE) is the separate `deliveryType` filter below. The dashboard sends
+ * the UI's snake_case alias (individual / walk_in / group) — uppercase before validating.
+ * The legacy in_person → INDIVIDUAL alias is kept so older mobile clients don't break.
  */
 const mapBookingType = (v: unknown) => {
   if (typeof v !== 'string' || !v) return v;
@@ -14,6 +16,18 @@ const mapBookingType = (v: unknown) => {
   if (lower === 'in_person') return 'INDIVIDUAL';
   return v.toUpperCase();
 };
+
+/** Dashboard sends delivery channel as snake_case (in_person / online); DB enum is uppercase. */
+const mapDeliveryType = (v: unknown) =>
+  typeof v === 'string' && v ? v.toUpperCase() : v;
+
+/**
+ * Query-string booleans arrive as the strings "true" / "false". Read the raw value
+ * straight from the plain object: ValidationPipe's enableImplicitConversion (dev only)
+ * otherwise coerces "false" → Boolean("false") === true before this runs.
+ */
+const toBoolean = (raw: unknown) =>
+  raw === undefined ? undefined : raw === true || raw === 'true';
 
 /**
  * Dashboard sends booking status as lowercase string.
@@ -42,6 +56,9 @@ export class ListBookingsDto extends PaginationDto {
   @ApiPropertyOptional({ description: 'Filter by booking type', enum: BookingType, enumName: 'BookingType', example: BookingType.INDIVIDUAL })
   @IsOptional() @Transform(({ value }) => mapBookingType(value)) @IsEnum(BookingType) bookingType?: BookingType;
 
+  @ApiPropertyOptional({ description: 'Filter by delivery channel', enum: DeliveryType, enumName: 'DeliveryType', example: DeliveryType.IN_PERSON })
+  @IsOptional() @Transform(({ value }) => mapDeliveryType(value)) @IsEnum(DeliveryType) deliveryType?: DeliveryType;
+
   @ApiPropertyOptional({ description: 'Return bookings on or after this date (ISO 8601)', example: '2026-05-01T00:00:00.000Z' })
   @IsOptional() @IsDateString() fromDate?: string;
 
@@ -52,5 +69,5 @@ export class ListBookingsDto extends PaginationDto {
   @IsOptional() @IsString() @MaxLength(120) search?: string;
 
   @ApiPropertyOptional({ description: 'Filter guest (online) vs walk-in bookings', example: true })
-  @IsOptional() isGuest?: boolean;
+  @IsOptional() @Transform(({ obj }) => toBoolean((obj as Record<string, unknown>).isGuest)) @IsBoolean() isGuest?: boolean;
 }

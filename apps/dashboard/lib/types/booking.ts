@@ -126,6 +126,7 @@ export interface BookingListQuery {
   perPage?: number
   status?: BookingStatus
   type?: BookingType
+  deliveryType?: DeliveryType
   employeeId?: string
   clientId?: string
   dateFrom?: string

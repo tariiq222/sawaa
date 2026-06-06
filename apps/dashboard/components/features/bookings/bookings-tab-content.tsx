@@ -142,13 +142,23 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
         }}
         selects={[
           {
+            key: "delivery",
+            value: filters.delivery,
+            placeholder: t("bookings.filters.delivery"),
+            options: [
+              { value: "all", label: t("bookings.filters.allDelivery") },
+              { value: "in_person", label: t("bookings.filters.inPerson") },
+              { value: "online", label: t("bookings.filters.online") },
+            ],
+            onValueChange: (v) => setFilters({ delivery: v as typeof filters.delivery }),
+          },
+          {
             key: "type",
             value: filters.type,
             placeholder: t("bookings.filters.type"),
             options: [
               { value: "all", label: t("bookings.filters.allTypes") },
-              { value: "in_person", label: t("bookings.filters.inPerson") },
-              { value: "online", label: t("bookings.filters.online") },
+              { value: "individual", label: t("bookings.filters.individual") },
               { value: "group", label: t("bookings.filters.group") },
               { value: "walk_in", label: t("bookings.filters.walkIn") },
             ],
