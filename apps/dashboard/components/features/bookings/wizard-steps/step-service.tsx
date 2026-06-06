@@ -44,7 +44,7 @@ function StepServiceSkeleton() {
   return (
     <div className="flex flex-col gap-3">
       <div className="h-12 animate-pulse rounded-2xl bg-muted" />
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={`skeleton-${i}`} className="h-20 animate-pulse rounded-2xl bg-muted" />
         ))}
@@ -56,17 +56,20 @@ function StepServiceSkeleton() {
 /* ─── Step component ─── */
 
 interface StepServiceProps {
+  categoryId: string
   onSelect: (serviceId: string, serviceName: string) => void
 }
 
-export function StepService({ onSelect }: StepServiceProps) {
+export function StepService({ categoryId, onSelect }: StepServiceProps) {
   const { t, locale } = useLocale()
   const isRtl = locale === "ar"
   const [search, setSearch] = useState("")
 
+  const filters = { isActive: true, perPage: 100, categoryId }
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.services.list({ isActive: true, perPage: 100 }),
-    queryFn: () => fetchServices({ isActive: true, perPage: 100 }),
+    queryKey: queryKeys.services.list(filters),
+    queryFn: () => fetchServices(filters),
+    enabled: !!categoryId,
     staleTime: 5 * 60 * 1000,
   })
 
@@ -110,7 +113,7 @@ export function StepService({ onSelect }: StepServiceProps) {
       </div>
 
       {/* Service list */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {services.map((service) => {
           const name =
             locale === "ar"

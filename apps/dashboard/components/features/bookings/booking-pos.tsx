@@ -15,6 +15,8 @@ import { fetchServices } from "@/lib/api/services"
 import { ApiError } from "@/lib/api"
 
 import { ClientStep } from "./booking-client-step"
+import { StepDepartment } from "./wizard-steps/step-department"
+import { StepCategory } from "./wizard-steps/step-category"
 import { StepService } from "./wizard-steps/step-service"
 import { StepEmployee } from "./wizard-steps/step-employee"
 import { StepTypeDuration } from "./wizard-steps/step-type-duration"
@@ -47,6 +49,8 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     isComplete,
     reset,
     selectClient,
+    selectDepartment,
+    selectCategory,
     selectService,
     selectEmployee,
     selectDeliveryType,
@@ -63,7 +67,9 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   }
 
   // Auto-advance wrapped handlers
-  const handleClientSelect = (id: string, name: string) => { selectClient(id, name); setOpenSection("service") }
+  const handleClientSelect = (id: string, name: string) => { selectClient(id, name); setOpenSection("department") }
+  const handleDepartmentSelect = (id: string, name: string) => { selectDepartment(id, name); setOpenSection("category") }
+  const handleCategorySelect = (id: string, name: string) => { selectCategory(id, name); setOpenSection("service") }
   const handleServiceSelect = (id: string, name: string) => { selectService(id, name); setOpenSection("employee") }
   const handleEmployeeSelect = (id: string, name: string) => { selectEmployee(id, name); setOpenSection("typeDuration") }
   const handleDurationSelect = (optId: string, label: string) => { selectDuration(optId, label); setOpenSection("datetime") }
@@ -76,6 +82,8 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   }
   const summaries: Record<SectionId, string | null> = {
     client: state.clientName,
+    department: state.departmentName,
+    category: state.categoryName,
     service: state.serviceName,
     employee: state.employeeName,
     typeDuration: state.deliveryType
@@ -90,10 +98,13 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   const canShowDatetime = Boolean(state.serviceId && state.employeeId && state.deliveryType)
 
   // Selected service price (halalas) for the summary. Reuses the same query
-  // StepService issues, so TanStack Query serves it from cache — no extra fetch.
+  // StepService issues (same filters → same cache key), so TanStack Query
+  // serves it from cache — no extra fetch.
+  const serviceFilters = { isActive: true, perPage: 100, categoryId: state.categoryId ?? "" }
   const { data: servicesData } = useQuery({
-    queryKey: queryKeys.services.list({ isActive: true, perPage: 100 }),
-    queryFn: () => fetchServices({ isActive: true, perPage: 100 }),
+    queryKey: queryKeys.services.list(serviceFilters),
+    queryFn: () => fetchServices(serviceFilters),
+    enabled: !!state.categoryId,
     staleTime: 5 * 60 * 1000,
   })
   const servicePriceHalalas = useMemo(() => {
@@ -163,7 +174,35 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
             <ClientStep onSelect={handleClientSelect} />
           </CollapsibleSection>
 
-          {/* 2. Service */}
+          {/* 2. Department */}
+          <CollapsibleSection
+            id="department"
+            label={t("bookings.pos.section.department")}
+            summary={summaries.department}
+            isOpen={openSection === "department"}
+            isFilled={summaries.department !== null}
+            onToggle={() => setOpenSection("department")}
+          >
+            <StepDepartment onSelect={handleDepartmentSelect} />
+          </CollapsibleSection>
+
+          {/* 3. Category (clinic) */}
+          <CollapsibleSection
+            id="category"
+            label={t("bookings.pos.section.category")}
+            summary={summaries.category}
+            isOpen={openSection === "category"}
+            isFilled={summaries.category !== null}
+            onToggle={() => setOpenSection("category")}
+          >
+            {state.departmentId ? (
+              <StepCategory departmentId={state.departmentId} onSelect={handleCategorySelect} />
+            ) : (
+              <PosSectionHint hint={t("bookings.pos.hint.needDepartment")} />
+            )}
+          </CollapsibleSection>
+
+          {/* 4. Service */}
           <CollapsibleSection
             id="service"
             label={t("bookings.pos.section.service")}
@@ -172,10 +211,14 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
             isFilled={summaries.service !== null}
             onToggle={() => setOpenSection("service")}
           >
-            <StepService onSelect={handleServiceSelect} />
+            {state.categoryId ? (
+              <StepService categoryId={state.categoryId} onSelect={handleServiceSelect} />
+            ) : (
+              <PosSectionHint hint={t("bookings.pos.hint.needCategory")} />
+            )}
           </CollapsibleSection>
 
-          {/* 3. Employee */}
+          {/* 5. Employee */}
           <CollapsibleSection
             id="employee"
             label={t("bookings.pos.section.employee")}

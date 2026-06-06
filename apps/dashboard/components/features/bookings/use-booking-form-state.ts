@@ -3,6 +3,10 @@ import { useCallback, useState } from 'react'
 export interface BookingFormState {
   clientId: string | null
   clientName: string | null
+  departmentId: string | null
+  departmentName: string | null
+  categoryId: string | null
+  categoryName: string | null
   serviceId: string | null
   serviceName: string | null
   employeeId: string | null
@@ -21,6 +25,10 @@ export interface BookingFormState {
 const INITIAL_STATE: BookingFormState = {
   clientId: null,
   clientName: null,
+  departmentId: null,
+  departmentName: null,
+  categoryId: null,
+  categoryName: null,
   serviceId: null,
   serviceName: null,
   employeeId: null,
@@ -55,6 +63,50 @@ export function useBookingFormState() {
       ...prev,
       clientId,
       clientName,
+      departmentId: null,
+      departmentName: null,
+      categoryId: null,
+      categoryName: null,
+      serviceId: null,
+      serviceName: null,
+      employeeId: null,
+      employeeName: null,
+      deliveryType: null,
+      type: null,
+      durationOptionId: null,
+      durationLabel: null,
+      date: null,
+      startTime: null,
+    }))
+  }, [])
+
+  /** Selecting a department resets category and everything downstream */
+  const selectDepartment = useCallback((departmentId: string, departmentName: string) => {
+    setState((prev) => ({
+      ...prev,
+      departmentId,
+      departmentName,
+      categoryId: null,
+      categoryName: null,
+      serviceId: null,
+      serviceName: null,
+      employeeId: null,
+      employeeName: null,
+      deliveryType: null,
+      type: null,
+      durationOptionId: null,
+      durationLabel: null,
+      date: null,
+      startTime: null,
+    }))
+  }, [])
+
+  /** Selecting a category (clinic) resets service and everything downstream */
+  const selectCategory = useCallback((categoryId: string, categoryName: string) => {
+    setState((prev) => ({
+      ...prev,
+      categoryId,
+      categoryName,
       serviceId: null,
       serviceName: null,
       employeeId: null,
@@ -156,6 +208,8 @@ export function useBookingFormState() {
     isComplete,
     reset,
     selectClient,
+    selectDepartment,
+    selectCategory,
     selectService,
     selectEmployee,
     selectDeliveryType,
