@@ -49,6 +49,7 @@ export async function fetchBookings(
     limit: query.perPage,
     status: query.status,
     bookingType: query.type,
+    deliveryType: query.deliveryType,
     employeeId: query.employeeId,
     clientId: query.clientId,
     fromDate: query.dateFrom,

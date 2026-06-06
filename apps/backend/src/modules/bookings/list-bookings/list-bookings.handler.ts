@@ -32,8 +32,21 @@ export class ListBookingsHandler {
       employeeWhere = { employeeId: emp.id };
     }
 
+    // isGuest filters by the client's acquisition source. Booking has no `client`
+    // relation to filter through (only a clientId column), so resolve the matching
+    // client IDs first, then constrain bookings to them.
+    let sourceClientWhere: Record<string, unknown> = {};
+    if (query.isGuest !== undefined) {
+      const sourceClients = await this.prisma.client.findMany({
+        where: { source: query.isGuest ? 'ONLINE' : { not: 'ONLINE' } },
+        select: { id: true },
+      });
+      sourceClientWhere = { clientId: { in: sourceClients.map((c) => c.id) } };
+    }
+
     const searchTerm = query.search?.trim();
     const where: Record<string, unknown> = {
+      ...sourceClientWhere,
       ...(query.clientId ? { clientId: query.clientId } : {}),
       ...(query.employeeId ? { employeeId: query.employeeId } : {}),
       ...employeeWhere,
@@ -41,14 +54,12 @@ export class ListBookingsHandler {
       ...(query.serviceId ? { serviceId: query.serviceId } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.bookingType ? { bookingType: query.bookingType } : {}),
+      ...(query.deliveryType ? { deliveryType: query.deliveryType } : {}),
       ...(query.fromDate || query.toDate
         ? { scheduledAt: { gte: query.fromDate, lte: query.toDate } }
         : {}),
       ...(searchTerm
         ? { id: { contains: searchTerm, mode: 'insensitive' as const } }
-        : {}),
-      ...(query.isGuest !== undefined
-        ? { client: { source: query.isGuest ? 'ONLINE' : { not: 'ONLINE' } } }
         : {}),
     };
 

@@ -8982,6 +8982,8 @@ export interface operations {
                 status?: components["schemas"]["BookingStatus"];
                 /** @description Filter by booking type */
                 bookingType?: components["schemas"]["BookingType"];
+                /** @description Filter by delivery channel */
+                deliveryType?: components["schemas"]["DeliveryType"];
                 /** @description Return bookings on or after this date (ISO 8601) */
                 fromDate?: string;
                 /** @description Return bookings on or before this date (ISO 8601) */
@@ -23357,6 +23359,8 @@ export interface operations {
                 status?: components["schemas"]["BookingStatus"];
                 /** @description Filter by booking type */
                 bookingType?: components["schemas"]["BookingType"];
+                /** @description Filter by delivery channel */
+                deliveryType?: components["schemas"]["DeliveryType"];
                 /** @description Return bookings on or after this date (ISO 8601) */
                 fromDate?: string;
                 /** @description Return bookings on or before this date (ISO 8601) */
