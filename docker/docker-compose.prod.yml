@@ -334,13 +334,26 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
       BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY}
+      BACKUP_ALERT_WEBHOOK_URL: ${BACKUP_ALERT_WEBHOOK_URL:-}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      BACKUP_S3_ACCESS_KEY: ${BACKUP_S3_ACCESS_KEY:-}
+      BACKUP_S3_SECRET_KEY: ${BACKUP_S3_SECRET_KEY:-}
+      BACKUP_GDRIVE_FOLDER: ${BACKUP_GDRIVE_FOLDER:-}
+      RCLONE_CONFIG_GDRIVE_TYPE: ${RCLONE_CONFIG_GDRIVE_TYPE:-}
+      RCLONE_CONFIG_GDRIVE_SCOPE: ${RCLONE_CONFIG_GDRIVE_SCOPE:-}
+      RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_FILE: ${RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_FILE:-}
+      RCLONE_CONFIG_GDRIVE_TEAM_DRIVE: ${RCLONE_CONFIG_GDRIVE_TEAM_DRIVE:-}
     volumes:
       - ./scripts/backup.sh:/scripts/backup.sh:ro
+      - ./scripts/offsite-upload.sh:/scripts/offsite-upload.sh:ro
+      - ./secrets:/secrets:ro
       - backup_data:/backups
     entrypoint: /bin/sh
     command: >
       -c "
-      chmod +x /scripts/backup.sh &&
+      apk add --no-cache openssl curl rclone mc >/dev/null 2>&1 || true &&
+      chmod +x /scripts/backup.sh /scripts/offsite-upload.sh &&
       echo '0 2 * * * /scripts/backup.sh >> /var/log/backup.log 2>&1' > /etc/crontabs/root &&
       crond -f -l 2
       "
@@ -409,7 +422,10 @@ services:
         max-file: "5"
 
   minio-backup:
-    image: minio/mc:RELEASE.2025-04-08T15-39-49Z
+    # NOTE: the official minio/mc image is RHEL-UBI minimal — it ships NO cron,
+    # no package manager, no openssl/tar. The backup script needs all of those,
+    # so we run on alpine and install mc + the toolchain at boot instead.
+    image: alpine:3.20
     container_name: sawaa-minio-backup
     depends_on:
       minio:
@@ -420,13 +436,29 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
       BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY}
+      BACKUP_ALERT_WEBHOOK_URL: ${BACKUP_ALERT_WEBHOOK_URL:-}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      BACKUP_S3_ACCESS_KEY: ${BACKUP_S3_ACCESS_KEY:-}
+      BACKUP_S3_SECRET_KEY: ${BACKUP_S3_SECRET_KEY:-}
+      BACKUP_GDRIVE_FOLDER: ${BACKUP_GDRIVE_FOLDER:-}
+      RCLONE_CONFIG_GDRIVE_TYPE: ${RCLONE_CONFIG_GDRIVE_TYPE:-}
+      RCLONE_CONFIG_GDRIVE_SCOPE: ${RCLONE_CONFIG_GDRIVE_SCOPE:-}
+      RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_FILE: ${RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_FILE:-}
+      RCLONE_CONFIG_GDRIVE_TEAM_DRIVE: ${RCLONE_CONFIG_GDRIVE_TEAM_DRIVE:-}
     volumes:
       - ./scripts/backup-minio.sh:/scripts/backup-minio.sh:ro
+      - ./scripts/offsite-upload.sh:/scripts/offsite-upload.sh:ro
+      - ./secrets:/secrets:ro
       - minio_backup_data:/backups
     entrypoint: /bin/sh
     command: >
       -c "
-      chmod +x /scripts/backup-minio.sh &&
+      apk add --no-cache openssl tar curl rclone mc >/dev/null 2>&1 ||
+        { apk add --no-cache openssl tar curl rclone >/dev/null 2>&1 &&
+          wget -qO /usr/bin/mc https://dl.min.io/client/mc/release/linux-amd64/mc &&
+          chmod +x /usr/bin/mc ; } &&
+      chmod +x /scripts/backup-minio.sh /scripts/offsite-upload.sh &&
       echo '30 2 * * * /scripts/backup-minio.sh >> /var/log/minio-backup.log 2>&1' | crontab - &&
       crond -f -l 2
       "
@@ -449,7 +481,61 @@ services:
         max-size: "5m"
         max-file: "3"
 
+  env-backup:
+    # Encrypted nightly snapshot of the prod env file + secrets dir. Without this,
+    # losing the host means losing BACKUP_ENCRYPTION_KEY and every provider secret
+    # — which makes the encrypted DB/MinIO backups unrecoverable.
+    image: alpine:3.20
+    container_name: sawaa-env-backup
+    environment:
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY}
+      ENV_BACKUP_SOURCES: ${ENV_BACKUP_SOURCES:-/env/.env.prod /secrets}
+      BACKUP_ALERT_WEBHOOK_URL: ${BACKUP_ALERT_WEBHOOK_URL:-}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      BACKUP_S3_ACCESS_KEY: ${BACKUP_S3_ACCESS_KEY:-}
+      BACKUP_S3_SECRET_KEY: ${BACKUP_S3_SECRET_KEY:-}
+      BACKUP_GDRIVE_FOLDER: ${BACKUP_GDRIVE_FOLDER:-}
+      RCLONE_CONFIG_GDRIVE_TYPE: ${RCLONE_CONFIG_GDRIVE_TYPE:-}
+      RCLONE_CONFIG_GDRIVE_SCOPE: ${RCLONE_CONFIG_GDRIVE_SCOPE:-}
+      RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_FILE: ${RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_FILE:-}
+      RCLONE_CONFIG_GDRIVE_TEAM_DRIVE: ${RCLONE_CONFIG_GDRIVE_TEAM_DRIVE:-}
+    volumes:
+      - ./scripts/backup-env.sh:/scripts/backup-env.sh:ro
+      - ./scripts/offsite-upload.sh:/scripts/offsite-upload.sh:ro
+      - ./secrets:/secrets:ro
+      - ./.env.prod:/env/.env.prod:ro
+      - env_backup_data:/backups
+    entrypoint: /bin/sh
+    command: >
+      -c "
+      apk add --no-cache openssl tar curl rclone mc >/dev/null 2>&1 || true &&
+      chmod +x /scripts/backup-env.sh /scripts/offsite-upload.sh &&
+      echo '0 3 * * * /scripts/backup-env.sh >> /var/log/env-backup.log 2>&1' | crontab - &&
+      crond -f -l 2
+      "
+    stop_grace_period: 20s
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep crond || exit 1"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.25'
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
 volumes:
   backup_data:
   minio_backup_data:
+  env_backup_data:
   nginx_logs:

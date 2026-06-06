@@ -11,6 +11,29 @@ BACKUP_DIR="/backups"
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
 DB_NAME="${POSTGRES_DB}"
 
+# Alert on failure: any non-zero exit before the explicit success trap fires
+# posts to BACKUP_ALERT_WEBHOOK_URL (no-op when unset).
+alert_failure() {
+  _code=$?
+  [ "${_code}" = "0" ] && return 0
+  echo "[$(date -Iseconds)] FAILURE: postgres backup exited ${_code}"
+  _payload="{\"text\":\"🔴 Sawa postgres backup FAILED (exit ${_code}) at $(date -Iseconds)\"}"
+  if [ -n "${BACKUP_ALERT_WEBHOOK_URL}" ]; then
+    if command -v curl >/dev/null 2>&1; then
+      curl -fsS -m 10 -X POST -H 'Content-Type: application/json' \
+        -d "${_payload}" "${BACKUP_ALERT_WEBHOOK_URL}" >/dev/null 2>&1 || \
+        echo "[$(date -Iseconds)] WARNING: alert webhook POST failed"
+    elif command -v wget >/dev/null 2>&1; then
+      wget -q -T 10 -O /dev/null --header='Content-Type: application/json' \
+        --post-data="${_payload}" "${BACKUP_ALERT_WEBHOOK_URL}" 2>/dev/null || \
+        echo "[$(date -Iseconds)] WARNING: alert webhook POST failed"
+    else
+      echo "[$(date -Iseconds)] WARNING: no curl/wget — cannot send alert"
+    fi
+  fi
+}
+trap alert_failure EXIT
+
 # Ensure backup directory exists
 mkdir -p "${BACKUP_DIR}"
 
@@ -67,29 +90,8 @@ fi
 BACKUP_SIZE=$(du -h "${BACKUP_FILE}" | cut -f1)
 echo "[$(date -Iseconds)] Backup completed: ${BACKUP_FILE} (${BACKUP_SIZE})"
 
-# Optional offsite upload (opt-in via env; no-op when unset)
-# Triggered when BACKUP_S3_BUCKET is set. Uses mc if available, else aws-cli.
-if [ -n "${BACKUP_S3_BUCKET}" ]; then
-  OFFSITE_KEY="postgres/$(basename "${BACKUP_FILE}")"
-  echo "[$(date -Iseconds)] Offsite upload enabled -> ${BACKUP_S3_BUCKET}/${OFFSITE_KEY}"
-  if command -v mc >/dev/null 2>&1 && [ -n "${BACKUP_S3_ENDPOINT}" ]; then
-    mc alias set offsite "${BACKUP_S3_ENDPOINT}" "${BACKUP_S3_ACCESS_KEY}" "${BACKUP_S3_SECRET_KEY}" >/dev/null 2>&1
-    mc cp "${BACKUP_FILE}" "offsite/${BACKUP_S3_BUCKET}/${OFFSITE_KEY}"
-    echo "[$(date -Iseconds)] Offsite upload via mc completed"
-  elif command -v aws >/dev/null 2>&1; then
-    if [ -n "${BACKUP_S3_ENDPOINT}" ]; then
-      aws --endpoint-url "${BACKUP_S3_ENDPOINT}" s3 cp "${BACKUP_FILE}" "s3://${BACKUP_S3_BUCKET}/${OFFSITE_KEY}"
-    else
-      aws s3 cp "${BACKUP_FILE}" "s3://${BACKUP_S3_BUCKET}/${OFFSITE_KEY}"
-    fi
-    echo "[$(date -Iseconds)] Offsite upload via aws-cli completed"
-  else
-    echo "[$(date -Iseconds)] ERROR: offsite requested but neither mc(+endpoint) nor aws-cli available"
-    exit 1
-  fi
-else
-  echo "[$(date -Iseconds)] Offsite upload disabled (BACKUP_S3_BUCKET unset) — local-only"
-fi
+# Offsite upload (opt-in via env; Google Drive and/or S3 — see offsite-upload.sh)
+sh /scripts/offsite-upload.sh "${BACKUP_FILE}" "postgres"
 
 # Clean up old backups
 DELETED=$(find "${BACKUP_DIR}" -type f -name "postgres_${DB_NAME}_*.sql.gz*" -mtime +"${RETENTION_DAYS}" -delete -print | wc -l)

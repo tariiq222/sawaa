@@ -111,6 +111,31 @@ rm -rf /tmp/restore
 
 ---
 
+## 4b. استعادة متغيرات البيئة والأسرار (Env / Secrets Restore)
+
+يُنتج `backup-env.sh` أرشيفاً مشفّراً `env_<timestamp>.tar.gz.enc` يحوي ملف
+`.env.prod` ومجلد `secrets/`. هذا **أهم** أرشيف: لو ضاع الخادم، بدونه يضيع
+`BACKUP_ENCRYPTION_KEY` وكل أسرار المزوّدين، فتصبح نسخ DB/MinIO المشفّرة غير
+قابلة للاسترجاع.
+
+```sh
+# تحقق ثم استعد يدوياً في مجلد مؤقت (لا تكتب فوق الإنتاج مباشرة)
+mkdir -p /tmp/env-restore
+openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 -md sha256 \
+  -pass "pass:${BACKUP_ENCRYPTION_KEY}" \
+  -in env_<timestamp>.tar.gz.enc \
+  | tar xzf - -C /tmp/env-restore
+
+# الناتج: /tmp/env-restore/env/.env.prod و /tmp/env-restore/secrets/*
+# راجع القيم ثم انسخها لمكانها الصحيح يدوياً.
+```
+
+> هذا الأرشيف مشفّر بـ `BACKUP_ENCRYPTION_KEY` نفسه — لذلك **يجب** الاحتفاظ بنسخة
+> من المفتاح offline (vault/password manager) منفصلة عن الخادم. لو ضاع المفتاح
+> والخادم معاً، لا شيء قابل للاستعادة.
+
+---
+
 ## 5. ملاحظة الرجوع للخلف عند النشر (Deploy Rollback)
 
 استعادة قاعدة البيانات تُعيد **البيانات** فقط، لا الكود. عند الرجوع:
@@ -144,9 +169,27 @@ rm -rf /tmp/restore
 
 ---
 
-## 7. متابعات (Followups — خارج نطاق هذا الملف)
+## 7. ما يُنسخ الآن (نطاق النسخ المجدول)
 
-- ربط متغيرات الـ offsite (`BACKUP_S3_BUCKET`, `BACKUP_S3_ENDPOINT`,
-  `BACKUP_S3_ACCESS_KEY`, `BACKUP_S3_SECRET_KEY`) في ملفات docker-compose
-  وأسرار النشر (يملكها فريق/وكيل النشر).
-- جدولة تمرين الاستعادة الشهري في الـ cron مع تنبيه عند الفشل.
+عند تشغيل `docker/docker-compose.prod.yml` (نشر compose كامل، أو خدمات النسخ
+كتطبيقات Dokploy مستقلة — راجع `docs/DOKPLOY-SETUP.md` Option B):
+
+| الخدمة | يومياً | ما تنسخه | مشفّر | offsite |
+|---|---|---|---|---|
+| `backup` | 02:00 | قاعدة PostgreSQL (`pg_dump`) | ✅ إن وُجد المفتاح | ✅ opt-in |
+| `minio-backup` | 02:30 | كل buckets الملفات المرفوعة | ✅ إن وُجد المفتاح | ✅ opt-in |
+| `env-backup` | 03:00 | `.env.prod` + مجلد `secrets/` | ✅ إلزامي | ✅ opt-in |
+
+- التشفير: AES-256-CBC / PBKDF2 / 100k / SHA-256 بمفتاح `BACKUP_ENCRYPTION_KEY`.
+- offsite (اختياري، وجهتان مستقلتان): S3/MinIO (`BACKUP_S3_*`) و/أو Google Drive
+  عبر rclone (`BACKUP_GDRIVE_FOLDER` + `RCLONE_CONFIG_GDRIVE_*`، مفتاح
+  service-account في `docker/secrets/gdrive-sa.json`). راجع `scripts/offsite-upload.sh`.
+- تنبيه الفشل: عيّن `BACKUP_ALERT_WEBHOOK_URL` (Slack/Discord/generic) — أي فشل
+  في أي من الثلاثة يرسل POST.
+
+## 8. متابعات مفتوحة (Followups)
+
+- توفير القيم الفعلية لمتغيرات offsite + webhook في `docker/.env.prod` وأسرار
+  النشر (يملكها وكيل النشر). الافتراضي: محلي فقط بدون تنبيه.
+- جدولة تمرين الاستعادة الشهري (القسم 6) مع تنبيه عند الفشل.
+- حفظ نسخة من `BACKUP_ENCRYPTION_KEY` في vault offline منفصل عن الخادم.
