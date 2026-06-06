@@ -30,6 +30,8 @@ interface MockPrisma {
     findFirst: jest.Mock;
     findUnique: jest.Mock;
     upsert: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
   };
   invoice: {
     findFirst: jest.Mock;
@@ -51,6 +53,12 @@ function buildPrisma(invoiceOverride?: Record<string, unknown> | null, configOve
   const paymentUpsert = jest.fn().mockImplementation(({ create }: { create: Record<string, unknown> }) =>
     Promise.resolve(buildPayment(create.organizationId as string ?? DEFAULT_ORG_ID)),
   );
+  const paymentCreate = jest.fn().mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+    Promise.resolve({ ...buildPayment(DEFAULT_ORG_ID), id: 'payment-row-1', ...data }),
+  );
+  const paymentUpdate = jest.fn().mockImplementation(({ where, data }: { where: Record<string, unknown>; data: Record<string, unknown> }) =>
+    Promise.resolve({ ...buildPayment(DEFAULT_ORG_ID), id: where.id, ...data }),
+  );
   const invoiceFindFirst = jest.fn().mockResolvedValue(
     invoiceOverride === null ? null : invoiceOverride ?? buildInvoice(ORG_A),
   );
@@ -61,6 +69,8 @@ function buildPrisma(invoiceOverride?: Record<string, unknown> | null, configOve
       findFirst: paymentFindFirst,
       findUnique: paymentFindUnique,
       upsert: paymentUpsert,
+      create: paymentCreate,
+      update: paymentUpdate,
     },
     invoice: {
       findFirst: invoiceFindFirst,
@@ -193,9 +203,8 @@ describe('MoyasarWebhookHandler', () => {
     it('processes paid webhook and emits PaymentCompletedEvent', async () => {
       const { handler, prisma, eventBus } = makeHandler();
       const result = await handler.execute(makeReq());
-      expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
-        where: { idempotencyKey: 'moyasar:moyasar-pay-1' },
-        create: expect.objectContaining({ amount: 230, status: 'COMPLETED' }),
+      expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ amount: 230, status: 'COMPLETED', gatewayRef: 'moyasar-pay-1' }),
       }));
       expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'PAID' }) }));
       expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.completed', expect.anything());
@@ -226,8 +235,8 @@ describe('MoyasarWebhookHandler', () => {
         creds: buildCreds(TEST_SECRET),
       });
       await handler.execute(makeReq({ ...paidPayload, metadata: { invoiceId: 'inv-b' } }));
-      expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
-        create: expect.objectContaining({ invoiceId: 'inv-b' }),
+      expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ invoiceId: 'inv-b' }),
       }));
       expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.completed', expect.anything());
     });
@@ -238,8 +247,8 @@ describe('MoyasarWebhookHandler', () => {
       });
       const failedPayload = { ...paidPayload, status: 'failed' as const, message: 'Declined' } as MoyasarWebhookDto;
       await handler.execute(makeReq(failedPayload));
-      expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
-        create: expect.objectContaining({ status: 'FAILED', failureReason: 'Declined' }),
+      expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: 'FAILED', failureReason: 'Declined' }),
       }));
       expect(prisma.invoice.update).not.toHaveBeenCalled();
     });
@@ -251,9 +260,8 @@ describe('MoyasarWebhookHandler', () => {
       const result = await handler.execute(makeReq(nestedPaidPayload));
       // re-fetch keyed on the PAYMENT id (data.id), not the event id
       expect(moyasarApi.getPaymentStatus).toHaveBeenCalledWith(DEFAULT_ORG_ID, 'moyasar-pay-1');
-      expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
-        where: { idempotencyKey: 'moyasar:moyasar-pay-1' },
-        create: expect.objectContaining({ invoiceId: 'inv-1', amount: 230, status: 'COMPLETED' }),
+      expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ invoiceId: 'inv-1', amount: 230, status: 'COMPLETED' }),
       }));
       expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({ status: 'PAID' }),
@@ -265,8 +273,8 @@ describe('MoyasarWebhookHandler', () => {
     it('still processes a FLAT-shape webhook (existing behavior preserved)', async () => {
       const { handler, prisma, eventBus } = makeHandler();
       const result = await handler.execute(makeReq());
-      expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
-        create: expect.objectContaining({ amount: 230, status: 'COMPLETED' }),
+      expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ amount: 230, status: 'COMPLETED' }),
       }));
       expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.completed', expect.anything());
       expect(result.skipped).toBeUndefined();
@@ -301,8 +309,8 @@ describe('MoyasarWebhookHandler', () => {
       const rawBody = JSON.stringify(tokenPayload);
       const result = await handler.execute({ payload: tokenPayload, rawBody, signature: '' });
       expect(result.skipped).toBeUndefined();
-      expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
-        create: expect.objectContaining({ status: 'COMPLETED' }),
+      expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: 'COMPLETED' }),
       }));
       expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.completed', expect.anything());
     });
@@ -362,8 +370,8 @@ describe('MoyasarWebhookHandler', () => {
       });
       const result = await handler.execute(makeReq(lyingBody));
       expect(result.skipped).toBeUndefined();
-      expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
-        create: expect.objectContaining({ amount: 230, status: 'COMPLETED' }),
+      expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ amount: 230, status: 'COMPLETED' }),
       }));
       expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.completed', expect.anything());
     });
@@ -404,8 +412,8 @@ describe('MoyasarWebhookHandler', () => {
       });
       const result = await handler.execute(makeReq());
       expect(result.skipped).toBeUndefined();
-      expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
-        create: expect.objectContaining({ status: 'COMPLETED' }),
+      expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: 'COMPLETED' }),
       }));
     });
   });
@@ -517,13 +525,34 @@ describe('MoyasarWebhookHandler', () => {
 
     it('does not overwrite a REFUNDED payment back to COMPLETED', async () => {
       const prisma = buildPrisma();
-      prisma.payment.findUnique = jest.fn().mockResolvedValue({ status: PaymentStatus.REFUNDED });
+      prisma.payment.findFirst = jest.fn().mockResolvedValue({ status: PaymentStatus.REFUNDED });
       const { handler } = makeHandler({ prisma });
       const result = await handler.execute(makeReq());
       expect(result.skipped).toBe(true);
       expect(result.reason).toBe('already_refunded');
       expect(prisma.payment.upsert).not.toHaveBeenCalled();
       expect(prisma.invoice.update).not.toHaveBeenCalled();
+    });
+
+    it('updates an existing payment found by gatewayRef instead of creating a duplicate', async () => {
+      const prisma = buildPrisma();
+      prisma.payment.findFirst = jest
+        .fn()
+        .mockResolvedValueOnce({ id: 'payment-existing', status: PaymentStatus.PENDING })
+        .mockResolvedValueOnce({ id: 'payment-existing' });
+      const { handler } = makeHandler({ prisma });
+
+      await handler.execute(makeReq());
+
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+      expect(prisma.payment.update).toHaveBeenCalledWith(expect.objectContaining({
+        where: { id: 'payment-existing' },
+        data: expect.objectContaining({
+          gatewayRef: 'moyasar-pay-1',
+          idempotencyKey: 'moyasar:moyasar-pay-1',
+          status: PaymentStatus.COMPLETED,
+        }),
+      }));
     });
   });
 
@@ -549,8 +578,8 @@ describe('MoyasarWebhookHandler', () => {
       });
       const result = await handler.execute(makeReq());
       expect(result.skipped).toBeUndefined();
-      expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
-        create: expect.objectContaining({ amount: 12000 }),
+      expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ amount: 12000 }),
       }));
     });
   });

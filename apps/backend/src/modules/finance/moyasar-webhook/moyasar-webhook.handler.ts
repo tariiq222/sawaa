@@ -326,8 +326,9 @@ export class MoyasarWebhookHandler {
         });
 
         // Guard: never overwrite a terminal (REFUNDED) payment back to COMPLETED/FAILED.
-        const existingPayment = await this.prisma.payment.findUnique({
-          where: { idempotencyKey: `moyasar:${paymentId}` },
+        const existingPayment = await this.prisma.payment.findFirst({
+          where: { OR: [{ gatewayRef: paymentId }, { idempotencyKey: `moyasar:${paymentId}` }] },
+          orderBy: [{ gatewayRef: 'desc' }, { updatedAt: 'desc' }],
           select: { status: true },
         });
         if (existingPayment?.status === PaymentStatus.REFUNDED) {
@@ -356,10 +357,25 @@ export class MoyasarWebhookHandler {
         // `dbPaymentId` is the internal Payment ROW id; `paymentId` (above) is the
         // Moyasar gateway payment id — they are distinct values.
         const dbPaymentId = await this.rlsTransaction.withTransaction(async (tx) => {
-          const payment = await tx.payment.upsert({
-            where: { idempotencyKey: `moyasar:${paymentId}` },
-            update: { status, processedAt: new Date(), failureReason: message },
-            create: {
+          const payment = await tx.payment.findFirst({
+            where: { OR: [{ gatewayRef: paymentId }, { idempotencyKey: `moyasar:${paymentId}` }] },
+            orderBy: [{ gatewayRef: 'desc' }, { updatedAt: 'desc' }],
+            select: { id: true },
+          });
+
+          const savedPayment = payment
+            ? await tx.payment.update({
+                where: { id: payment.id },
+                data: {
+                  status,
+                  processedAt: status === PaymentStatus.COMPLETED ? new Date() : undefined,
+                  failureReason: message,
+                  gatewayRef: paymentId,
+                  idempotencyKey: `moyasar:${paymentId}`,
+                },
+              })
+            : await tx.payment.create({
+                data: {
               invoiceId,
               amount: amountHalalas,
               currency: fetched.currency,
@@ -369,8 +385,8 @@ export class MoyasarWebhookHandler {
               idempotencyKey: `moyasar:${paymentId}`,
               processedAt: status === PaymentStatus.COMPLETED ? new Date() : undefined,
               failureReason: message,
-            },
-          });
+                },
+              });
 
           if (status === PaymentStatus.COMPLETED) {
             await tx.invoice.update({
@@ -379,7 +395,7 @@ export class MoyasarWebhookHandler {
             });
           }
 
-          return payment.id;
+          return savedPayment.id;
         });
 
         // Event emission is intentionally OUTSIDE the transaction:
