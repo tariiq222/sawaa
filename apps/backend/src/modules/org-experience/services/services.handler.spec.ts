@@ -68,6 +68,7 @@ const buildPrisma = () => {
     },
     employeeService: {
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      groupBy: jest.fn().mockResolvedValue([]),
     },
     serviceBundleItem: {
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
