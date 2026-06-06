@@ -31,20 +31,24 @@ export class ListClientBookingsHandler {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(clientId: string, page = 1, pageSize = 10): Promise<ListClientBookingsResult> {
-    const skip = (page - 1) * pageSize;
+    // Clamp pagination: this handler is reachable from the public /me endpoint
+    // with raw query strings, so guard against huge/negative values here.
+    const safePage = Math.max(1, Math.floor(Number(page)) || 1);
+    const safePageSize = Math.min(100, Math.max(1, Math.floor(Number(pageSize)) || 10));
+    const skip = (safePage - 1) * safePageSize;
 
     const [bookings, total] = await Promise.all([
       this.prisma.booking.findMany({
         where: { clientId },
         orderBy: { scheduledAt: 'desc' },
         skip,
-        take: pageSize,
+        take: safePageSize,
       }),
       this.prisma.booking.count({ where: { clientId } }),
     ]);
 
     if (bookings.length === 0) {
-      return { items: [], total, page, pageSize };
+      return { items: [], total, page: safePage, pageSize: safePageSize };
     }
 
     const employeeIds = [...new Set(bookings.map((b) => b.employeeId))];
@@ -96,6 +100,6 @@ export class ListClientBookingsHandler {
       };
     });
 
-    return { items, total, page, pageSize };
+    return { items, total, page: safePage, pageSize: safePageSize };
   }
 }
