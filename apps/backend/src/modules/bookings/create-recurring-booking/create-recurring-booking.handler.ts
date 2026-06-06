@@ -14,6 +14,7 @@ import { CreateRecurringBookingDto } from './create-recurring-booking.dto';
 import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
+import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
 
 /** FNV-1a 32-bit hash → signed int32 (Postgres int4 range). Same algorithm as create-booking. */
 function hashToInt32(s: string): number {
@@ -187,7 +188,7 @@ export class CreateRecurringBookingHandler {
       const conflict = await db.booking.findFirst({
         where: {
           employeeId: dto.employeeId,
-          status: { in: ['PENDING', 'CONFIRMED', 'AWAITING_PAYMENT'] },
+          status: { in: [...STAFF_TIME_BLOCKING_BOOKING_STATUSES] },
           scheduledAt: { lt: endsAt },
           endsAt: { gt: scheduledAt },
         },

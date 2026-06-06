@@ -14,6 +14,7 @@ import { CreateGuestBookingDto } from './create-guest-booking.dto';
 import { Prisma, type OtpChannel, type DeliveryType } from '@prisma/client';
 import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
+import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
 
 export type CreateGuestBookingCommand = CreateGuestBookingDto & {
   identifier: string;
@@ -185,7 +186,7 @@ export class CreateGuestBookingHandler {
       const conflict = await tx.booking.findFirst({
         where: {
           employeeId: cmd.employeeId,
-          status: { in: ['PENDING', 'CONFIRMED', 'AWAITING_PAYMENT'] },
+          status: { in: [...STAFF_TIME_BLOCKING_BOOKING_STATUSES] },
           scheduledAt: { lt: endsAt },
           endsAt: { gt: scheduledAt },
         },

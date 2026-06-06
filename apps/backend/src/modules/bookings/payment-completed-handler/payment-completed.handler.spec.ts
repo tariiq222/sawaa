@@ -42,11 +42,10 @@ describe('PaymentCompletedEventHandler', () => {
   it('confirms PENDING booking on payment completed', async () => {
     const { prisma, getSubscriber } = buildHandler();
     prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.PENDING });
-    prisma.booking.update = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
 
     await getSubscriber()(makeEnvelope());
 
-    expect(prisma.booking.update).toHaveBeenCalledWith(
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: 'CONFIRMED' }) }),
     );
   });
@@ -54,11 +53,10 @@ describe('PaymentCompletedEventHandler', () => {
   it('confirms AWAITING_PAYMENT booking on payment completed', async () => {
     const { prisma, getSubscriber } = buildHandler();
     prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.AWAITING_PAYMENT });
-    prisma.booking.update = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
 
     await getSubscriber()(makeEnvelope());
 
-    expect(prisma.booking.update).toHaveBeenCalledWith(
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: 'CONFIRMED' }) }),
     );
   });
@@ -69,7 +67,7 @@ describe('PaymentCompletedEventHandler', () => {
 
     await getSubscriber()(makeEnvelope());
 
-    expect(prisma.booking.update).not.toHaveBeenCalled();
+    expect(prisma.booking.updateMany).not.toHaveBeenCalled();
   });
 
   it('skips when booking not found', async () => {
@@ -78,13 +76,12 @@ describe('PaymentCompletedEventHandler', () => {
 
     await getSubscriber()(makeEnvelope());
 
-    expect(prisma.booking.update).not.toHaveBeenCalled();
+    expect(prisma.booking.updateMany).not.toHaveBeenCalled();
   });
 
   it('writes BookingStatusLog on confirmation', async () => {
     const { prisma, getSubscriber } = buildHandler();
     prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.PENDING });
-    prisma.booking.update = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
 
     await getSubscriber()(makeEnvelope());
 
@@ -103,7 +100,6 @@ describe('PaymentCompletedEventHandler', () => {
     };
     const { prisma, getSubscriber } = buildHandler(cls as never);
     prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.PENDING, organizationId: 'org-1' });
-    prisma.booking.update = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED, organizationId: 'org-1' });
 
     await getSubscriber()(makeEnvelope());
 
@@ -125,7 +121,6 @@ describe('PaymentCompletedEventHandler', () => {
         status: BookingStatus.AWAITING_PAYMENT,
         deliveryType: DeliveryType.ONLINE,
       });
-      prisma.booking.update = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
 
       await getSubscriber()(makeEnvelope());
 
@@ -140,7 +135,6 @@ describe('PaymentCompletedEventHandler', () => {
         status: BookingStatus.AWAITING_PAYMENT,
         deliveryType: DeliveryType.IN_PERSON,
       });
-      prisma.booking.update = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
 
       await getSubscriber()(makeEnvelope());
 
@@ -155,10 +149,9 @@ describe('PaymentCompletedEventHandler', () => {
         status: BookingStatus.AWAITING_PAYMENT,
         deliveryType: DeliveryType.ONLINE,
       });
-      prisma.booking.update = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
 
       await expect(getSubscriber()(makeEnvelope())).resolves.toBeUndefined();
-      expect(prisma.booking.update).toHaveBeenCalled();
+      expect(prisma.booking.updateMany).toHaveBeenCalled();
     });
   });
 });

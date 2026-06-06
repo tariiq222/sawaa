@@ -120,11 +120,15 @@ export function StepService({ categoryId, onSelect }: StepServiceProps) {
               ? service.nameAr
               : (service.nameEn ?? service.nameAr)
           const meta = buildMeta(service, t)
+          // No active practitioner offers this service ⇒ unbookable.
+          const isEmpty = service.employeeCount === 0
 
           return (
             <WizardCard
               key={service.id}
               onClick={() => onSelect(service.id, name)}
+              disabled={isEmpty}
+              disabledReason={t("bookings.pos.disabled.service")}
               className="px-4 py-3.5"
             >
               <div className="flex items-center gap-3 text-start">

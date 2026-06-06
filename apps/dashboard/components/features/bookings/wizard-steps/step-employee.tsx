@@ -1,6 +1,7 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
+import { useQueries, useQuery } from "@tanstack/react-query"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { UserIcon } from "@hugeicons/core-free-icons"
 import Image from "next/image"
@@ -9,6 +10,7 @@ import { WizardCard } from "@/components/features/bookings/wizard-card"
 import { useLocale } from "@/components/locale-provider"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchEmployees } from "@/lib/api/employees"
+import { fetchAvailability } from "@/lib/api/employees-schedule"
 import { fetchServiceEmployees } from "@/lib/api/services"
 import type { Employee } from "@/lib/types/employee"
 import type { ServiceEmployee } from "@/lib/types/service"
@@ -85,31 +87,60 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
     staleTime: 5 * 60 * 1000,
   })
 
-  if (loadingByService || loadingAll) return <StepEmployeeSkeleton />
+  const employees: Employee[] = useMemo(
+    () =>
+      serviceId
+        ? (serviceEmployees ?? [])
+            .filter((e) => e.isActive && e.employee.isActive)
+            .map((e) => ({
+              id: e.employee.id,
+              nameAr: e.employee.nameAr,
+              title: e.employee.title,
+              avatarUrl: e.employee.avatarUrl,
+              isActive: e.employee.isActive,
+              user: e.employee.user,
+            } as unknown as Employee))
+        : (allEmployees?.items ?? []).filter((p) => p.isActive),
+    [serviceId, serviceEmployees, allEmployees],
+  )
 
-  const employees: Employee[] = serviceId
-    ? (serviceEmployees ?? [])
-        .filter((e) => e.isActive && e.employee.isActive)
-        .map((e) => ({
-          id: e.employee.id,
-          nameAr: e.employee.nameAr,
-          title: e.employee.title,
-          avatarUrl: e.employee.avatarUrl,
-          isActive: e.employee.isActive,
-          user: e.employee.user,
-        } as unknown as Employee))
-    : (allEmployees?.items ?? []).filter((p) => p.isActive)
+  // Fetch each candidate's weekly schedule in parallel. An employee with no
+  // active availability window can never be booked, so the wizard disables it.
+  const availabilityQueries = useQueries({
+    queries: employees.map((p) => ({
+      queryKey: queryKeys.employees.availability(p.id),
+      queryFn: () => fetchAvailability(p.id),
+      staleTime: 5 * 60 * 1000,
+    })),
+  })
+  const noScheduleById = useMemo(() => {
+    const map: Record<string, boolean> = {}
+    employees.forEach((p, i) => {
+      const q = availabilityQueries[i]
+      // Only mark as "no schedule" once we have data; while loading keep it
+      // enabled so a card is never wrongly disabled mid-fetch.
+      if (q?.data !== undefined) {
+        map[p.id] = !q.data.some((w) => w.isActive)
+      }
+    })
+    return map
+  }, [employees, availabilityQueries])
+
+  if (loadingByService || loadingAll) return <StepEmployeeSkeleton />
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {employees.map((p) => {
         const name = getEmployeeNameFromFull(p, locale)
         const title = p.title ?? ""
+        const noSchedule = noScheduleById[p.id] === true
 
         return (
           <WizardCard
             key={p.id}
             onClick={() => onSelect(p.id, name)}
+            disabled={noSchedule}
+            disabledReason={t("bookings.pos.disabled.employee")}
             className="px-4 py-3.5"
           >
             <div className="flex items-center gap-3 text-start">

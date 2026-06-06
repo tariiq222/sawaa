@@ -7,6 +7,7 @@ import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertTransition } from '../booking-state-machine';
 import { CreateZoomMeetingHandler } from '../create-zoom-meeting/create-zoom-meeting.handler';
+import { updateBookingAtomically } from '../booking-lifecycle.helper';
 
 interface PaymentCompletedPayload {
   paymentId: string;
@@ -69,8 +70,10 @@ export class PaymentCompletedEventHandler {
               isSuperAdmin: false,
             });
             await this.rlsTransaction.withTransaction((tx) => Promise.all([
-              tx.booking.update({
-                where: { id: bookingId },
+              updateBookingAtomically(tx, {
+                bookingId,
+                currentStatus: booking.status,
+                actionLabel: 'confirmed after payment',
                 data: { status: nextStatus, confirmedAt: new Date() },
               }),
               tx.bookingStatusLog.create({

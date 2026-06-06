@@ -35,14 +35,16 @@ describe('ListCategoriesHandler', () => {
     await handler.execute({});
   });
 
-  it('counts only non-archived services', async () => {
+  it('counts only bookable (non-archived, active, visible) services', async () => {
     await handler.execute({});
 
     expect(tx.serviceCategory.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         include: {
           _count: {
-            select: { services: { where: { archivedAt: null } } },
+            select: {
+              services: { where: { archivedAt: null, isActive: true, isHidden: false } },
+            },
           },
         },
       }),

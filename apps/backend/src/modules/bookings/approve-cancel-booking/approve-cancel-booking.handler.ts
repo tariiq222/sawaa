@@ -8,6 +8,7 @@ import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-s
 import { BookingCancelApprovedEvent } from '../events/booking-cancel-approved.event';
 import { assertTransition } from '../booking-state-machine';
 import { GroupSessionCapacityService } from '../group-session/group-session-capacity.service';
+import { updateBookingAtomically } from '../booking-lifecycle.helper';
 
 export interface ApproveCancelBookingCommand {
   bookingId: string;
@@ -45,8 +46,10 @@ export class ApproveCancelBookingHandler {
 
     const [updated] = await this.rlsTransaction.withTransaction(async (tx) => {
       const results = await Promise.all([
-        tx.booking.update({
-          where: { id: cmd.bookingId },
+        updateBookingAtomically(tx, {
+          bookingId: cmd.bookingId,
+          currentStatus: booking.status,
+          actionLabel: 'cancelled',
           data: {
             status: nextStatus,
             cancelledAt: new Date(),

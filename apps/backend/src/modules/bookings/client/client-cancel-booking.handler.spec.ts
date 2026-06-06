@@ -43,9 +43,9 @@ describe('ClientCancelBookingHandler', () => {
 
     expect(result.status).toBe('CANCELLED');
     expect(result.requiresApproval).toBe(false);
-    expect(prisma.booking.update).toHaveBeenCalledWith(
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'book-1' },
+        where: expect.objectContaining({ id: 'book-1', status: BookingStatus.PENDING }),
         data: expect.objectContaining({
           status: BookingStatus.CANCELLED,
           cancelReason: 'CLIENT_REQUESTED',
@@ -83,7 +83,7 @@ describe('ClientCancelBookingHandler', () => {
 
     expect(result.status).toBe('CANCEL_REQUESTED');
     expect(result.requiresApproval).toBe(true);
-    expect(prisma.booking.update).toHaveBeenCalledWith(
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: BookingStatus.CANCEL_REQUESTED }),
       }),

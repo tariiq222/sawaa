@@ -5,6 +5,8 @@ import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-s
 import { ClientRescheduleBookingDto } from './client-reschedule-booking.dto';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { assertTransition } from '../booking-state-machine';
+import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
+import { updateBookingAtomically } from '../booking-lifecycle.helper';
 
 export type ClientRescheduleCommand = ClientRescheduleBookingDto & {
   bookingId: string;
@@ -80,7 +82,7 @@ export class ClientRescheduleBookingHandler {
           where: {
             employeeId: booking.employeeId,
             id: { not: cmd.bookingId },
-            status: { in: ['PENDING', 'CONFIRMED'] },
+            status: { in: [...STAFF_TIME_BLOCKING_BOOKING_STATUSES] },
             scheduledAt: { lt: newEndsAt },
             endsAt: { gt: newScheduledAt },
           },
@@ -91,8 +93,10 @@ export class ClientRescheduleBookingHandler {
         }
 
         return Promise.all([
-          tx.booking.update({
-            where: { id: cmd.bookingId },
+          updateBookingAtomically(tx, {
+            bookingId: cmd.bookingId,
+            currentStatus: booking.status,
+            actionLabel: 'rescheduled',
             data: { scheduledAt: newScheduledAt, endsAt: newEndsAt, durationMins },
           }),
           tx.bookingStatusLog.create({

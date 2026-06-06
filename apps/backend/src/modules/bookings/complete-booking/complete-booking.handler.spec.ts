@@ -8,7 +8,7 @@ describe('CompleteBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
     await new CompleteBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
-    expect(prisma.booking.update).toHaveBeenCalledWith(
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.COMPLETED }) }),
     );
   });

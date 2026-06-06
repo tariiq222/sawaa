@@ -21,6 +21,7 @@ const buildPrismaRaw = () => ({
     findFirst: jest.fn().mockResolvedValue(null),
     create: jest.fn().mockResolvedValue(mockBooking),
     update: jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED }),
+    updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     findMany: jest.fn().mockResolvedValue([]),
     count: jest.fn().mockResolvedValue(1),
   },

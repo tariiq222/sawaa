@@ -15,11 +15,12 @@ function mapDbConflict(err: unknown): never {
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { RescheduleBookingDto } from './reschedule-booking.dto';
-import { fetchBookingOrFail } from '../booking-lifecycle.helper';
+import { fetchBookingOrFail, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { ZoomMeetingService } from '../zoom-meeting.service';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { assertTransition } from '../booking-state-machine';
+import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
 
 export type RescheduleBookingCommand = Omit<RescheduleBookingDto, 'newScheduledAt'> & {
   bookingId: string;
@@ -85,7 +86,7 @@ export class RescheduleBookingHandler {
           where: {
             employeeId: booking.employeeId,
             id: { not: cmd.bookingId },
-            status: { in: ['PENDING', 'CONFIRMED', 'AWAITING_PAYMENT'] },
+            status: { in: [...STAFF_TIME_BLOCKING_BOOKING_STATUSES] },
             scheduledAt: { lt: newEndsAt },
             endsAt: { gt: newScheduledAt },
           },
@@ -96,8 +97,10 @@ export class RescheduleBookingHandler {
         }
 
         return Promise.all([
-          tx.booking.update({
-            where: { id: cmd.bookingId },
+          updateBookingAtomically(tx, {
+            bookingId: cmd.bookingId,
+            currentStatus: booking.status,
+            actionLabel: 'rescheduled',
             data: { scheduledAt: newScheduledAt, endsAt: newEndsAt, durationMins },
           }),
           tx.bookingStatusLog.create({

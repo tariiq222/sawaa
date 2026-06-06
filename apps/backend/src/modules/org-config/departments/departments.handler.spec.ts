@@ -98,6 +98,31 @@ describe('ListDepartmentsHandler', () => {
     const call = (prisma.department.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where).not.toHaveProperty('OR');
   });
+
+  it('derives bookableCategoriesCount from active categories with bookable services', async () => {
+    const prisma = buildPrisma();
+    prisma.department.findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'dept-1',
+        nameAr: 'عيادة',
+        categories: [
+          { id: 'c1', nameAr: 'فئة', _count: { services: 2 } },
+          { id: 'c2', nameAr: 'فاضية', _count: { services: 0 } },
+        ],
+      },
+    ]);
+    const handler = new ListDepartmentsHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, cache);
+
+    const result = await handler.execute({ page: 1, limit: 10 });
+
+    const dept = result.items[0] as {
+      bookableCategoriesCount: number;
+      categories: Array<Record<string, unknown>>;
+    };
+    expect(dept.bookableCategoriesCount).toBe(1);
+    // _count is stripped from the returned categories.
+    expect(dept.categories[0]).not.toHaveProperty('_count');
+  });
 });
 
 describe('UpdateDepartmentHandler', () => {

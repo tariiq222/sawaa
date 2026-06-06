@@ -15,7 +15,7 @@ describe('RejectCancelBookingHandler', () => {
 
     await handler.execute({ bookingId: 'book-1', rejectedBy: 'admin-1', rejectReason: 'No reason' });
 
-    expect(prisma.booking.update).toHaveBeenCalledWith(
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.CONFIRMED }) }),
     );
     expect(eb.publish).toHaveBeenCalledWith('bookings.booking.cancel_rejected', expect.anything());

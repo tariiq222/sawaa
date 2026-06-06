@@ -40,18 +40,42 @@ export class ListDepartmentsHandler {
         }),
       };
 
-      const [items, total] = await this.rlsTransaction.withTransaction((tx) =>
+      const [rawItems, total] = await this.rlsTransaction.withTransaction((tx) =>
         Promise.all([
           tx.department.findMany({
             where,
             skip,
             take: limit,
             orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
-            include: { categories: { where: { isActive: true }, orderBy: { sortOrder: 'asc' } } },
+            include: {
+              categories: {
+                where: { isActive: true },
+                orderBy: { sortOrder: 'asc' },
+                include: {
+                  // Count bookable services per active category so we can tell
+                  // which categories are non-empty without a second round-trip.
+                  _count: {
+                    select: {
+                      services: { where: { archivedAt: null, isActive: true, isHidden: false } },
+                    },
+                  },
+                },
+              },
+            },
           }),
           tx.department.count({ where }),
         ]),
       );
+
+      // bookableCategoriesCount = active categories that have ≥1 bookable
+      // service. The wizard disables a department when this is 0.
+      const items = rawItems.map((dept) => {
+        const bookableCategoriesCount = dept.categories.filter(
+          (c) => c._count.services > 0,
+        ).length;
+        const categories = dept.categories.map(({ _count, ...rest }) => rest);
+        return { ...dept, categories, bookableCategoriesCount };
+      });
 
       return toListResponse(items, total, page, limit);
     });

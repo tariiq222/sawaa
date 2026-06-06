@@ -4,7 +4,7 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingConfirmedEvent } from '../events/booking-confirmed.event';
 import { CreateZoomMeetingHandler } from '../create-zoom-meeting/create-zoom-meeting.handler';
-import { fetchBookingOrFail } from '../booking-lifecycle.helper';
+import { fetchBookingOrFail, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { assertTransition } from '../booking-state-machine';
 
 export interface ConfirmBookingCommand {
@@ -26,8 +26,10 @@ export class ConfirmBookingHandler {
     const nextStatus = assertTransition(booking.status, 'CONFIRM');
 
     const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
-      tx.booking.update({
-        where: { id: cmd.bookingId },
+      updateBookingAtomically(tx, {
+        bookingId: cmd.bookingId,
+        currentStatus: booking.status,
+        actionLabel: 'confirmed',
         data: { status: nextStatus, confirmedAt: new Date() },
       }),
       tx.bookingStatusLog.create({

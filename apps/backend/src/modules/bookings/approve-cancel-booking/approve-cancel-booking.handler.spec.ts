@@ -31,7 +31,7 @@ describe('ApproveCancelBookingHandler', () => {
       approverNotes: 'Approved',
     });
 
-    expect(prisma.booking.update).toHaveBeenCalledWith(
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.CANCELLED }) }),
     );
     expect(eb.publish).toHaveBeenCalledWith('bookings.booking.cancel_approved', expect.anything());

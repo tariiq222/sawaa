@@ -6,6 +6,7 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingCancelRejectedEvent } from '../events/booking-cancel-rejected.event';
 import { assertTransition } from '../booking-state-machine';
+import { updateBookingAtomically } from '../booking-lifecycle.helper';
 
 export interface RejectCancelBookingCommand {
   bookingId: string;
@@ -31,8 +32,10 @@ export class RejectCancelBookingHandler {
     const nextStatus = assertTransition(booking.status, 'REJECT_CANCEL');
 
     const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
-      tx.booking.update({
-        where: { id: cmd.bookingId },
+      updateBookingAtomically(tx, {
+        bookingId: cmd.bookingId,
+        currentStatus: booking.status,
+        actionLabel: 'cancel rejection applied',
         data: {
           status: nextStatus,
           cancelReason: null,

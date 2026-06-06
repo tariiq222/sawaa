@@ -26,7 +26,7 @@ describe('ClientRescheduleBookingHandler', () => {
       endsAt: new Date(Date.now() + 73 * 3_600_000),
     };
     prisma.booking.findUnique.mockResolvedValue(futureBooking);
-    prisma.booking.update.mockResolvedValue(updatedBooking);
+    prisma.booking.findUnique.mockResolvedValue(updatedBooking);
     const settings = buildSettingsHandler();
     const handler = new ClientRescheduleBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, settings as never);
 
@@ -36,7 +36,7 @@ describe('ClientRescheduleBookingHandler', () => {
       newScheduledAt: new Date(Date.now() + 72 * 3_600_000).toISOString(),
     });
 
-    expect(prisma.booking.update).toHaveBeenCalledWith(
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           scheduledAt: expect.any(Date),

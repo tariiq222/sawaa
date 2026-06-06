@@ -45,11 +45,16 @@ export function StepDepartment({ onSelect }: StepDepartmentProps) {
       {departments.map((department) => {
         const name =
           locale === "ar" ? department.nameAr : (department.nameEn || department.nameAr)
+        // bookableCategoriesCount is optional on older payloads; only disable
+        // when the backend explicitly reports zero bookable categories.
+        const isEmpty = department.bookableCategoriesCount === 0
 
         return (
           <WizardCard
             key={department.id}
             onClick={() => onSelect(department.id, name)}
+            disabled={isEmpty}
+            disabledReason={t("bookings.pos.disabled.department")}
             className="px-4 py-3.5"
           >
             <div className="flex items-center gap-3 text-start">

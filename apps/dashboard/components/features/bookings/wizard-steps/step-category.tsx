@@ -48,12 +48,16 @@ export function StepCategory({ departmentId, onSelect }: StepCategoryProps) {
       {categories.map((category) => {
         const name =
           locale === "ar" ? category.nameAr : (category.nameEn || category.nameAr)
+        // _count.services now counts only bookable services (backend-narrowed).
         const count = category._count?.services
+        const isEmpty = count === 0
 
         return (
           <WizardCard
             key={category.id}
             onClick={() => onSelect(category.id, name)}
+            disabled={isEmpty}
+            disabledReason={t("bookings.pos.disabled.category")}
             className="px-4 py-3.5"
           >
             <div className="flex items-center gap-3 text-start">

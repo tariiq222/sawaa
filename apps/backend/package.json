@@ -30,6 +30,7 @@
     "seed": "tsx prisma/seed.ts",
     "bootstrap:admin": "tsx prisma/bootstrap-admin.ts",
     "seed:sawa": "tsx prisma/seeds/sawa-customer.ts",
+    "seed:sawa-clinic-services": "tsx prisma/seeds/sawa-clinic-services.ts",
     "seed:therapists": "tsx prisma/seeds/demo-therapists.ts",
     "seed:support-groups": "tsx prisma/seeds/demo-support-groups.ts",
     "reset:org-suspension": "tsx scripts/reset-org-suspension.ts",

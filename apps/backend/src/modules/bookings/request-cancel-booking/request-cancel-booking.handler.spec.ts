@@ -17,7 +17,7 @@ describe('RequestCancelBookingHandler', () => {
       reason: CancellationReason.CLIENT_REQUESTED, requestedBy: 'client-1',
     });
 
-    expect(prisma.booking.update).toHaveBeenCalledWith(
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: 'CANCEL_REQUESTED' }) }),
     );
     expect(eb.publish).toHaveBeenCalledWith('bookings.booking.cancel_requested', expect.anything());
@@ -34,7 +34,7 @@ describe('RequestCancelBookingHandler', () => {
       reason: CancellationReason.CLIENT_REQUESTED, requestedBy: 'client-1',
     });
 
-    expect(prisma.booking.update).toHaveBeenCalled();
+    expect(prisma.booking.updateMany).toHaveBeenCalled();
   });
 
   it('sets status to CANCEL_REQUESTED for AWAITING_PAYMENT booking (state machine allows it)', async () => {
@@ -48,7 +48,7 @@ describe('RequestCancelBookingHandler', () => {
       reason: CancellationReason.CLIENT_REQUESTED, requestedBy: 'client-1',
     });
 
-    expect(prisma.booking.update).toHaveBeenCalledWith(
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: 'CANCEL_REQUESTED' }) }),
     );
   });
@@ -86,7 +86,7 @@ describe('RequestCancelBookingHandler', () => {
       reason: CancellationReason.OTHER, requestedBy: 'u', cancelNotes: 'urgent',
     });
 
-    expect(prisma.booking.update).toHaveBeenCalledWith(
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ cancelNotes: 'urgent' }) }),
     );
   });

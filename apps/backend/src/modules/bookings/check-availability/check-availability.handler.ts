@@ -5,6 +5,7 @@ import type { BookingType, DeliveryType } from '@prisma/client';
 import { CheckAvailabilityDto } from './check-availability.dto';
 import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 import { combineYmdAndHmInBusinessTz, formatToBusinessYmd } from '../../../common/timezone';
+import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
 
 export type CheckAvailabilityQuery = Omit<CheckAvailabilityDto, 'date' | 'durationOptionId' | 'bookingType' | 'deliveryType'> & {
   date: Date;
@@ -242,7 +243,7 @@ export class CheckAvailabilityHandler {
       where: {
         employeeId: query.employeeId,
         ...(query.excludeBookingId ? { id: { not: query.excludeBookingId } } : {}),
-        status: { in: ['PENDING', 'PENDING_GROUP_FILL', 'CONFIRMED', 'AWAITING_PAYMENT'] },
+        status: { in: [...STAFF_TIME_BLOCKING_BOOKING_STATUSES] },
         scheduledAt: { lt: latestEnd },
         durationMins: { gt: 0 },
       },

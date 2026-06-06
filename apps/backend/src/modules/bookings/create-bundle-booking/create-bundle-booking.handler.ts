@@ -16,6 +16,7 @@ import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 import { computeVat } from '../../finance/money.helper';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
+import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
 
 /** FNV-1a 32-bit hash → signed int32 (Postgres int4 range). */
 function hashToInt32(s: string): number {
@@ -229,7 +230,7 @@ export class CreateBundleBookingHandler {
         const conflict = await tx.booking.findFirst({
           where: {
             employeeId: dto.employeeId,
-            status: { in: ['PENDING', 'CONFIRMED', 'AWAITING_PAYMENT'] },
+            status: { in: [...STAFF_TIME_BLOCKING_BOOKING_STATUSES] },
             scheduledAt: { lt: finalCursor },
             endsAt: { gt: dto.scheduledAt },
           },

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { fetchBookingOrFail } from '../booking-lifecycle.helper';
+import { fetchBookingOrFail, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { assertTransition } from '../booking-state-machine';
 
 export interface NoShowBookingCommand {
@@ -32,8 +32,10 @@ export class NoShowBookingHandler {
     // would let the clinic refund a portion instead of voiding entirely.
     // No such settings field exists today; do not invent a schema column.
     const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
-      tx.booking.update({
-        where: { id: cmd.bookingId },
+      updateBookingAtomically(tx, {
+        bookingId: cmd.bookingId,
+        currentStatus: booking.status,
+        actionLabel: 'marked as no-show',
         data: { status: nextStatus, noShowAt: new Date() },
       }),
       tx.bookingStatusLog.create({

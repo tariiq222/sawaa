@@ -46,21 +46,49 @@ export class ListServicesHandler {
         }),
       };
 
-      const [items, total] = await this.rlsTransaction.withTransaction((tx) =>
-        Promise.all([
-          tx.service.findMany({
-            where,
-            skip,
-            take: limit,
-            orderBy: { createdAt: 'desc' },
-            include: {
-              category: true,
-              durationOptions: { orderBy: { sortOrder: 'asc' } },
-            },
-          }),
-          tx.service.count({ where }),
-        ]),
+      const { rawItems, total, employeeCounts } =
+        await this.rlsTransaction.withTransaction(async (tx) => {
+          const [rawItems, total] = await Promise.all([
+            tx.service.findMany({
+              where,
+              skip,
+              take: limit,
+              orderBy: { createdAt: 'desc' },
+              include: {
+                category: true,
+                durationOptions: { orderBy: { sortOrder: 'asc' } },
+              },
+            }),
+            tx.service.count({ where }),
+          ]);
+
+          // EmployeeService has no Prisma back-relation on Service (the FK is a
+          // plain string), so count assigned active employees with a grouped
+          // query over the fetched page instead of a nested _count.
+          const serviceIds = rawItems.map((s) => s.id);
+          const employeeCounts = serviceIds.length
+            ? await tx.employeeService.groupBy({
+                by: ['serviceId'],
+                where: {
+                  serviceId: { in: serviceIds },
+                  employee: { isActive: true },
+                },
+                _count: { _all: true },
+              })
+            : [];
+
+          return { rawItems, total, employeeCounts };
+        });
+
+      const countByService = new Map(
+        employeeCounts.map((g) => [g.serviceId, g._count._all]),
       );
+      const items = rawItems.map((s) => ({
+        ...s,
+        // employeeCount = active employees offering this service. The wizard
+        // disables a service when this is 0 (nobody can perform it).
+        employeeCount: countByService.get(s.id) ?? 0,
+      }));
 
       return toListResponse(items, total, page, limit);
     });

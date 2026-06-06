@@ -59,6 +59,8 @@ export interface Service {
   updatedAt: string
   category?: ServiceCategory | null
   durationOptions?: ServiceDurationOption[]
+  /** Active employees offering this service. 0 ⇒ wizard disables the service. */
+  employeeCount?: number
 }
 
 // DB-10: deliveryType is now the ServiceDeliveryType enum ('IN_PERSON' | 'ONLINE').

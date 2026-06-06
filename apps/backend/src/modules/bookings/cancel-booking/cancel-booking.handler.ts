@@ -12,6 +12,7 @@ import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertTransition } from '../booking-state-machine';
 import { computeRefundType, computeRefundAmountHalalas } from '../cancellation-policy';
 import { GroupSessionCapacityService } from '../group-session/group-session-capacity.service';
+import { updateBookingAtomically } from '../booking-lifecycle.helper';
 
 export type CancelBookingCommand = CancelBookingDto & {
   bookingId: string;
@@ -80,8 +81,10 @@ export class CancelBookingHandler {
     let idempotencyKey: string | null = null;
 
     const updated = await this.rlsTransaction.withTransaction(async (tx) => {
-      const cancelledBooking = await tx.booking.update({
-        where: { id: cmd.bookingId },
+      const cancelledBooking = await updateBookingAtomically(tx, {
+        bookingId: cmd.bookingId,
+        currentStatus: booking.status,
+        actionLabel: 'cancelled',
         data: {
           status: nextStatus,
           cancelReason: cmd.reason,

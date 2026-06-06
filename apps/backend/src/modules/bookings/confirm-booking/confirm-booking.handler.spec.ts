@@ -10,7 +10,7 @@ describe('ConfirmBookingHandler', () => {
     await new ConfirmBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, eb as never, buildZoomHandler() as never).execute({
       bookingId: 'book-1', changedBy: 'user-42',
     });
-    expect(prisma.booking.update).toHaveBeenCalledWith(
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.CONFIRMED }) }),
     );
     expect(eb.publish).toHaveBeenCalledWith('bookings.booking.confirmed', expect.anything());

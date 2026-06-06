@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BookingStatus, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { CompleteBookingDto } from './complete-booking.dto';
-import { fetchBookingOrFail } from '../booking-lifecycle.helper';
+import { fetchBookingOrFail, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { assertTransition } from '../booking-state-machine';
 import { computeVat } from '../../finance/money.helper';
 
@@ -23,8 +23,10 @@ export class CompleteBookingHandler {
     const nextStatus = assertTransition(booking.status, 'COMPLETE');
 
     return this.rlsTransaction.withTransaction(async (tx) => {
-      const updated = await tx.booking.update({
-        where: { id: cmd.bookingId },
+      const updated = await updateBookingAtomically(tx, {
+        bookingId: cmd.bookingId,
+        currentStatus: booking.status,
+        actionLabel: 'completed',
         data: {
           status: nextStatus,
           completedAt: new Date(),

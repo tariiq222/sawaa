@@ -12,6 +12,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { assertTransition } from './booking-state-machine';
+import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from './active-booking-statuses';
 
 describe('Booking state machine — impossible sequences (integration)', () => {
   describe('terminal state protection', () => {
@@ -93,6 +94,19 @@ describe('Booking state machine — impossible sequences (integration)', () => {
 
     it('PENDING cannot go directly to APPROVE_CANCEL', () => {
       expect(() => assertTransition(BookingStatus.PENDING, 'APPROVE_CANCEL')).toThrow(BadRequestException);
+    });
+  });
+
+  describe('staff time blocking statuses', () => {
+    it('includes PENDING_GROUP_FILL so fill-before-payment groups occupy employee time', () => {
+      expect(STAFF_TIME_BLOCKING_BOOKING_STATUSES).toContain(BookingStatus.PENDING_GROUP_FILL);
+    });
+
+    it('does not include terminal statuses released from employee time', () => {
+      expect(STAFF_TIME_BLOCKING_BOOKING_STATUSES).not.toContain(BookingStatus.CANCELLED);
+      expect(STAFF_TIME_BLOCKING_BOOKING_STATUSES).not.toContain(BookingStatus.COMPLETED);
+      expect(STAFF_TIME_BLOCKING_BOOKING_STATUSES).not.toContain(BookingStatus.NO_SHOW);
+      expect(STAFF_TIME_BLOCKING_BOOKING_STATUSES).not.toContain(BookingStatus.EXPIRED);
     });
   });
 });

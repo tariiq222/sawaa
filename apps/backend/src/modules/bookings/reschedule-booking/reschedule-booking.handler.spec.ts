@@ -5,6 +5,7 @@ import { buildPrisma, buildRlsTransaction, mockBooking } from '../testing/bookin
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 jest.mock('../booking-lifecycle.helper', () => ({
+  ...jest.requireActual('../booking-lifecycle.helper'),
   fetchBookingOrFail: jest.fn(),
 }));
 
@@ -142,7 +143,7 @@ describe('RescheduleBookingHandler', () => {
       newDurationMins: 90,
     });
 
-    expect(prisma.booking.update).toHaveBeenCalledWith(
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           durationMins: 90,
@@ -172,7 +173,7 @@ describe('RescheduleBookingHandler', () => {
       changedBy: 'user-1',
     });
 
-    expect(prisma.booking.update).toHaveBeenCalledWith(
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           durationMins: 60,
@@ -207,7 +208,7 @@ describe('RescheduleBookingHandler', () => {
     const updated = makeBooking({ scheduledAt: futureDate });
     (fetchBookingOrFail as jest.Mock).mockResolvedValue(makeBooking());
     const prisma = buildPrisma();
-    prisma.booking.update = jest.fn().mockResolvedValue(updated);
+    prisma.booking.findUnique.mockResolvedValue(updated);
 
     const handler = new RescheduleBookingHandler(
       prisma as never,
@@ -222,9 +223,9 @@ describe('RescheduleBookingHandler', () => {
       changedBy: 'user-1',
     });
 
-    expect(prisma.booking.update).toHaveBeenCalledWith(
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'book-1' },
+        where: expect.objectContaining({ id: 'book-1', status: BookingStatus.PENDING }),
         data: expect.objectContaining({
           scheduledAt: futureDate,
         }),

@@ -72,20 +72,19 @@ export class BookGroupSessionHandler {
       throw new ConflictException('Already on the waitlist for this group session');
     }
 
-    const spotsLeft = session.maxCapacity - session.enrolledCount;
-
-    if (spotsLeft > 0) {
+    if (session.enrolledCount < session.maxCapacity) {
       return this.createBooking(cmd.clientId, session);
-    } else if (session.waitlistEnabled) {
-      return this.addToWaitlist(cmd.clientId, session);
-    } else {
-      throw new BadRequestException('Group session is full and waitlist is not enabled');
     }
+    if (session.waitlistEnabled) {
+      return this.addToWaitlist(cmd.clientId, session);
+    }
+
+    throw new BadRequestException('Group session is full and waitlist is not enabled');
   }
 
   private async createBooking(
     clientId: string,
-    session: { id: string; price: unknown; currency: string; employeeId: string; serviceId: string; branchId: string; scheduledAt: Date; deliveryType: DeliveryType },
+    session: { id: string; price: unknown; currency: string; employeeId: string; serviceId: string; branchId: string; scheduledAt: Date; durationMins: number; maxCapacity: number; deliveryType: DeliveryType },
   ): Promise<BookGroupSessionResult> {
     const price = Number(session.price);
 
@@ -93,6 +92,22 @@ export class BookGroupSessionHandler {
     // transaction so a paid group booking never exists without its Invoice
     // (the payment-init handlers require an Invoice to start a Moyasar payment).
     const booking = await this.rlsTransaction.withTransaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "GroupSession" WHERE id = ${session.id} FOR UPDATE`;
+
+      const reserved = await tx.groupSession.updateMany({
+        where: {
+          id: session.id,
+          status: GroupSessionStatus.OPEN,
+          enrolledCount: { lt: session.maxCapacity },
+        },
+        data: { enrolledCount: { increment: 1 } },
+      });
+      if (reserved.count !== 1) {
+        throw new ConflictException('Group session is full');
+      }
+
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('booking_number'), 0)`;
+
       const lastBooking = await tx.booking.findFirst({
         where: {},
         orderBy: { bookingNumber: 'desc' },
@@ -110,8 +125,8 @@ export class BookGroupSessionHandler {
           deliveryType: session.deliveryType,
           status: price > 0 ? BookingStatus.AWAITING_PAYMENT : BookingStatus.CONFIRMED,
           scheduledAt: session.scheduledAt,
-          endsAt: new Date(session.scheduledAt.getTime() + 60 * 60 * 1000),
-          durationMins: 60,
+          endsAt: new Date(session.scheduledAt.getTime() + session.durationMins * 60_000),
+          durationMins: session.durationMins,
           price: price,
           currency: session.currency,
           groupSessionId: session.id,
@@ -162,12 +177,12 @@ export class BookGroupSessionHandler {
         },
       });
 
-      await tx.groupSession.update({
-        where: { id: session.id },
-        data: { enrolledCount: { increment: 1 } },
-      });
-
       return booking;
+    }).catch((err) => {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictException('Already enrolled in this group session');
+      }
+      throw err;
     });
 
     return {

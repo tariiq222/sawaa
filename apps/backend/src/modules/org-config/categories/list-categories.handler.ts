@@ -51,7 +51,12 @@ export class ListCategoriesHandler {
             take: limit,
             include: {
               _count: {
-                select: { services: { where: { archivedAt: null } } },
+                select: {
+                  // Bookable services only: a category whose services are all
+                  // archived/inactive/hidden is effectively empty in the booking
+                  // flow, so the wizard disables it.
+                  services: { where: { archivedAt: null, isActive: true, isHidden: false } },
+                },
               },
             },
             orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],

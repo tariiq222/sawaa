@@ -5,29 +5,73 @@ import { ListServicesHandler } from './list-services.handler';
 
 describe('ListServicesHandler', () => {
   let handler: ListServicesHandler;
+  let tx: {
+    service: { findMany: jest.Mock; count: jest.Mock };
+    employeeService: { groupBy: jest.Mock };
+  };
 
-  beforeEach(async () => {
+  const buildModule = async () => {
     const module = await Test.createTestingModule({
       providers: [
         ListServicesHandler,
-    { provide: PrismaService, useValue: { $transaction: jest.fn(), service: { findMany: jest.fn() } } },
-    { provide: RlsTransactionService, useValue: { withTransaction: jest.fn((cb: any) => cb({ service: { findMany: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0) } })) } },
-    { provide: CacheService, useValue: { getOrSet: (_k: string, l: () => Promise<unknown>) => l(), invalidatePrefix: jest.fn() } },
+        { provide: PrismaService, useValue: { $transaction: jest.fn() } },
+        {
+          provide: RlsTransactionService,
+          useValue: { withTransaction: jest.fn((cb: (t: typeof tx) => unknown) => cb(tx)) },
+        },
+        {
+          provide: CacheService,
+          useValue: {
+            getOrSet: (_k: string, l: () => Promise<unknown>) => l(),
+            invalidatePrefix: jest.fn(),
+          },
+        },
       ],
     }).compile();
-
     handler = module.get(ListServicesHandler);
+  };
+
+  beforeEach(() => {
+    tx = {
+      service: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      employeeService: { groupBy: jest.fn().mockResolvedValue([]) },
+    };
   });
 
-  it('should be defined', () => {
+  it('should be defined', async () => {
+    await buildModule();
     expect(handler).toBeDefined();
   });
 
-  it('executes without throwing', async () => {
-    try {
-      await handler.execute({});
-    } catch (e) {
-      // Expected for incomplete mocks
-    }
+  it('returns empty list and skips the employee-count query when no services match', async () => {
+    await buildModule();
+    const res = await handler.execute({});
+    expect(res.items).toEqual([]);
+    expect(tx.employeeService.groupBy).not.toHaveBeenCalled();
+  });
+
+  it('attaches employeeCount per service from the grouped active-employee count', async () => {
+    tx.service.findMany.mockResolvedValue([
+      { id: 's1', nameAr: 'أ' },
+      { id: 's2', nameAr: 'ب' },
+    ]);
+    tx.service.count.mockResolvedValue(2);
+    tx.employeeService.groupBy.mockResolvedValue([{ serviceId: 's1', _count: { _all: 3 } }]);
+    await buildModule();
+
+    const res = await handler.execute({});
+
+    expect(tx.employeeService.groupBy).toHaveBeenCalledWith({
+      by: ['serviceId'],
+      where: { serviceId: { in: ['s1', 's2'] }, employee: { isActive: true } },
+      _count: { _all: true },
+    });
+    const items = res.items as Array<{ id: string; employeeCount: number }>;
+    expect(items.find((s) => s.id === 's1')?.employeeCount).toBe(3);
+    // s2 has no assigned employees → defaults to 0 (wizard disables it).
+    expect(items.find((s) => s.id === 's2')?.employeeCount).toBe(0);
   });
 });

@@ -10,6 +10,7 @@ import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertTransition } from '../booking-state-machine';
 import { computeRefundType, computeRefundAmountHalalas } from '../cancellation-policy';
 import { GroupSessionCapacityService } from '../group-session/group-session-capacity.service';
+import { updateBookingAtomically } from '../booking-lifecycle.helper';
 
 export type ClientCancelCommand = ClientCancelBookingDto & {
   bookingId: string;
@@ -47,8 +48,10 @@ export class ClientCancelBookingHandler {
       // CLIENT_REQUEST_CANCEL: PENDING | CONFIRMED | AWAITING_PAYMENT → CANCEL_REQUESTED
       const nextStatus = assertTransition(booking.status, 'CLIENT_REQUEST_CANCEL');
       const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
-        tx.booking.update({
-          where: { id: cmd.bookingId },
+        updateBookingAtomically(tx, {
+          bookingId: cmd.bookingId,
+          currentStatus: booking.status,
+          actionLabel: 'cancel requested',
           data: {
             status: nextStatus,
             cancelNotes: cmd.reason ?? null,
@@ -71,8 +74,10 @@ export class ClientCancelBookingHandler {
       // Outside free-cancel window: escalate to CANCEL_REQUESTED for staff review
       const nextStatus = assertTransition(booking.status, 'CLIENT_REQUEST_CANCEL');
       const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
-        tx.booking.update({
-          where: { id: cmd.bookingId },
+        updateBookingAtomically(tx, {
+          bookingId: cmd.bookingId,
+          currentStatus: booking.status,
+          actionLabel: 'cancel requested',
           data: {
             status: nextStatus,
             cancelNotes: cmd.reason ?? null,
@@ -106,8 +111,10 @@ export class ClientCancelBookingHandler {
     let idempotencyKey: string | null = null;
 
     const updated = await this.rlsTransaction.withTransaction(async (tx) => {
-      const cancelled = await tx.booking.update({
-        where: { id: cmd.bookingId },
+      const cancelled = await updateBookingAtomically(tx, {
+        bookingId: cmd.bookingId,
+        currentStatus: booking.status,
+        actionLabel: 'cancelled',
         data: {
           status: directCancelStatus,
           cancelReason: 'CLIENT_REQUESTED',

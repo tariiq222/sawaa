@@ -11,6 +11,8 @@ export interface Department {
   createdAt: string
   updatedAt: string
   _count?: { categories: number }
+  /** Active categories that have ≥1 bookable service. 0 ⇒ wizard disables the department. */
+  bookableCategoriesCount?: number
   categories?: Array<{ id: string; nameAr: string; nameEn: string | null }>
 }
 
