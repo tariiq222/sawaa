@@ -176,6 +176,7 @@ export const arBookings: Record<string, string> = {
   "bookings.actions.trigger": "تغيير الحالة",
   "bookings.actions.currentStatus": "الحالة الحالية:",
   "bookings.actions.action.confirm": "تأكيد الحجز",
+  "bookings.actions.action.checkin": "تسجيل حضور",
   "bookings.actions.action.complete": "إتمام الحجز",
   "bookings.actions.action.noshow": "لم يحضر",
   "bookings.actions.action.cancel": "إلغاء الحجز",
@@ -189,6 +190,7 @@ export const arBookings: Record<string, string> = {
   "bookings.actions.status.no_show": "لم يحضر",
   "bookings.actions.status.expired": "منتهي",
   "bookings.actions.toast.confirmed": "تم تأكيد الحجز",
+  "bookings.actions.toast.checkedIn": "تم تسجيل الحضور",
   "bookings.actions.toast.completed": "تم إتمام الحجز",
   "bookings.actions.toast.noShow": "تم تسجيل عدم الحضور",
   "bookings.actions.toast.cancelApproved": "تم قبول طلب الإلغاء",
@@ -220,6 +222,7 @@ export const arBookings: Record<string, string> = {
 
   // booking-wizard
   "bookings.wizard.title": "حجز جديد",
+  "bookings.wizard.submitError": "تعذّر إنشاء الحجز",
   "bookings.wizard.stepLabel.client": "المستفيد",
   "bookings.wizard.stepLabel.service": "الخدمة",
   "bookings.wizard.stepLabel.employee": "الممارس",

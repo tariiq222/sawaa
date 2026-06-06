@@ -12,6 +12,7 @@ import { useBookingSettings } from "@/hooks/use-organization-settings"
 import { useBookingMutations } from "@/hooks/use-bookings"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchServices } from "@/lib/api/services"
+import { ApiError } from "@/lib/api"
 
 import { ClientStep } from "./booking-client-step"
 import { StepService } from "./wizard-steps/step-service"
@@ -120,8 +121,14 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
       })
       reset()
       onSuccess()
-    } catch {
-      toast.error(t("bookings.wizard.submitError"))
+    } catch (err) {
+      if (err instanceof ApiError && err.status >= 500) {
+        const requestId = (err.body as Record<string, unknown> | undefined)?.requestId as string | undefined
+        const base = t("bookings.wizard.submitError")
+        toast.error(requestId ? `${base} (رقم الطلب: ${requestId})` : base)
+      } else {
+        toast.error(err instanceof Error ? err.message : t("bookings.wizard.submitError"))
+      }
     }
   }
 

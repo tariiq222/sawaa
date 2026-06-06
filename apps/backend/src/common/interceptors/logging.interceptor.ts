@@ -3,6 +3,7 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
+  HttpException,
   Logger,
 } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
@@ -29,9 +30,17 @@ export class LoggingInterceptor implements NestInterceptor {
               (context ? ` reqId=${context.requestId}` : ''),
           );
         },
-        error: () => {
+        error: (err: unknown) => {
+          const context = RequestContextStorage.get();
           const ms = Date.now() - start;
-          this.logger.warn(`${method} ${path} ERR ${ms}ms`);
+          const status =
+            err instanceof HttpException ? err.getStatus() : 500;
+          const detail =
+            err instanceof Error ? err.message : String(err);
+          const reqId = context ? ` reqId=${context.requestId}` : '';
+          this.logger.warn(
+            `${method} ${path} ${status} ${ms}ms${reqId} — ${detail}`,
+          );
         },
       }),
     );

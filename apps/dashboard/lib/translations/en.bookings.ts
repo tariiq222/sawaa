@@ -176,6 +176,7 @@ export const enBookings: Record<string, string> = {
   "bookings.actions.trigger": "Change Status",
   "bookings.actions.currentStatus": "Current status:",
   "bookings.actions.action.confirm": "Confirm Booking",
+  "bookings.actions.action.checkin": "Check In",
   "bookings.actions.action.complete": "Complete Booking",
   "bookings.actions.action.noshow": "No Show",
   "bookings.actions.action.cancel": "Cancel Booking",
@@ -189,6 +190,7 @@ export const enBookings: Record<string, string> = {
   "bookings.actions.status.no_show": "No Show",
   "bookings.actions.status.expired": "Expired",
   "bookings.actions.toast.confirmed": "Booking confirmed",
+  "bookings.actions.toast.checkedIn": "Client checked in",
   "bookings.actions.toast.completed": "Booking completed",
   "bookings.actions.toast.noShow": "No-show recorded",
   "bookings.actions.toast.cancelApproved": "Cancellation approved",
@@ -220,6 +222,7 @@ export const enBookings: Record<string, string> = {
 
   // booking-wizard
   "bookings.wizard.title": "New Booking",
+  "bookings.wizard.submitError": "Could not create the booking",
   "bookings.wizard.stepLabel.client": "Client",
   "bookings.wizard.stepLabel.service": "Service",
   "bookings.wizard.stepLabel.employee": "Employee",
