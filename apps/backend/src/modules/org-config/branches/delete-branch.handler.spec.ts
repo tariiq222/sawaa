@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 import { DeleteBranchHandler } from './delete-branch.handler';
 import { PrismaService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
 
 describe('DeleteBranchHandler', () => {
   let handler: DeleteBranchHandler;
@@ -17,7 +18,11 @@ describe('DeleteBranchHandler', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [DeleteBranchHandler, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        DeleteBranchHandler,
+        { provide: PrismaService, useValue: prisma },
+        { provide: CacheService, useValue: { getOrSet: (_k: string, l: () => Promise<unknown>) => l(), invalidatePrefix: jest.fn() } },
+      ],
     }).compile();
 
     handler = module.get<DeleteBranchHandler>(DeleteBranchHandler);

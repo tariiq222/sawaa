@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
 import { DeleteCategoryHandler } from './delete-category.handler';
 
 describe('DeleteCategoryHandler', () => {
@@ -15,6 +16,7 @@ describe('DeleteCategoryHandler', () => {
     serviceCategory: { findFirst: jest.fn(), delete: jest.fn().mockResolvedValue({ id: 'test' }) },
     service: { count: jest.fn() }
         } },
+        { provide: CacheService, useValue: { getOrSet: (_k: string, l: () => Promise<unknown>) => l(), invalidatePrefix: jest.fn() } },
       ],
     }).compile();
 

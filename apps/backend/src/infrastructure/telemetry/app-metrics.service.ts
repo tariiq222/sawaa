@@ -18,4 +18,11 @@ export class AppMetricsService {
     labelNames: ['result'] as const,
     registers: [this.registry],
   });
+
+  readonly auditLogFailures = new Counter({
+    name: 'audit_log_failures_total',
+    help: 'Total ActivityLog write failures (silent audit-trail gaps)',
+    labelNames: ['phase'] as const,
+    registers: [this.registry],
+  });
 }

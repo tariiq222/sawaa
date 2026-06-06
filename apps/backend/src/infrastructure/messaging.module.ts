@@ -1,5 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { RedisService } from './cache/redis.service';
+import { CacheService } from './cache/cache.service';
 import { BullMqService } from './queue/bull-mq.service';
 import { EventBusService } from './events/event-bus.service';
 
@@ -18,7 +19,7 @@ import { EventBusService } from './events/event-bus.service';
  */
 @Global()
 @Module({
-  providers: [RedisService, BullMqService, EventBusService],
-  exports: [RedisService, BullMqService, EventBusService],
+  providers: [RedisService, CacheService, BullMqService, EventBusService],
+  exports: [RedisService, CacheService, BullMqService, EventBusService],
 })
 export class MessagingModule {}

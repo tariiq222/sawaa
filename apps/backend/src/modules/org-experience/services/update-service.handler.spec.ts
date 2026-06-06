@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
+import { CacheService } from '../../../infrastructure/cache';
 import { UpdateServiceHandler } from './update-service.handler';
 
 function createService(overrides?: Partial<any>) {
@@ -34,6 +35,7 @@ describe('UpdateServiceHandler', () => {
         UpdateServiceHandler,
         { provide: PrismaService, useValue: prisma },
         { provide: EventBusService, useValue: eventBus },
+        { provide: CacheService, useValue: { getOrSet: (_k: string, l: () => Promise<unknown>) => l(), invalidatePrefix: jest.fn() } },
       ],
     }).compile();
 

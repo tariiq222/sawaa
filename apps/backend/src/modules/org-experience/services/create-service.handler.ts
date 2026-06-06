@@ -1,8 +1,10 @@
 import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
 import { EventBusService } from '../../../infrastructure/events';
 import { ServiceCreatedEvent } from '../events/service-created.event';
 import { CreateServiceDto } from './create-service.dto';
+import { SERVICES_CACHE_PREFIX } from './services.cache';
 
 export type CreateServiceCommand = CreateServiceDto;
 
@@ -11,6 +13,7 @@ export class CreateServiceHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventBus: EventBusService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(dto: CreateServiceCommand) {
@@ -61,6 +64,8 @@ export class CreateServiceHandler {
         durationOptions: { orderBy: { sortOrder: 'asc' } },
       },
     });
+
+    await this.cache.invalidatePrefix(SERVICES_CACHE_PREFIX);
 
     const event = new ServiceCreatedEvent({ serviceId: service.id });
     this.eventBus.publish(event.eventName, event.toEnvelope()).catch(() => {});

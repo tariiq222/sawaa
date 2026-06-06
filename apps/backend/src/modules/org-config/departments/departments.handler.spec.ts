@@ -25,11 +25,13 @@ const buildPrisma = () => {
   return prisma;
 };
 
+const cache = { getOrSet: jest.fn((_k: string, loader: () => Promise<unknown>) => loader()), invalidatePrefix: jest.fn() } as any;
+
 describe('CreateDepartmentHandler', () => {
   it('creates a department scoped by org and passes all fields to prisma', async () => {
     const prisma = buildPrisma();
     prisma.department.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new CreateDepartmentHandler(prisma as never);
+    const handler = new CreateDepartmentHandler(prisma as never, cache);
     const result = await handler.execute({
       nameAr: 'عيادة',
       nameEn: 'Clinic',
@@ -50,7 +52,7 @@ describe('CreateDepartmentHandler', () => {
   it('throws ConflictException on duplicate nameAr in same org', async () => {
     const prisma = buildPrisma();
     prisma.department.findFirst = jest.fn().mockResolvedValue(mockDept);
-    const handler = new CreateDepartmentHandler(prisma as never);
+    const handler = new CreateDepartmentHandler(prisma as never, cache);
     await expect(handler.execute({ nameAr: 'عيادة' })).rejects.toThrow(ConflictException);
   });
 
@@ -59,8 +61,8 @@ describe('CreateDepartmentHandler', () => {
     prismaA.department.findFirst = jest.fn().mockResolvedValue(null);
     const prismaB = buildPrisma();
     prismaB.department.findFirst = jest.fn().mockResolvedValue(null);
-    const handlerA = new CreateDepartmentHandler(prismaA as never);
-    const handlerB = new CreateDepartmentHandler(prismaB as never);
+    const handlerA = new CreateDepartmentHandler(prismaA as never, cache);
+    const handlerB = new CreateDepartmentHandler(prismaB as never, cache);
     await expect(handlerA.execute({ nameAr: 'عيادة' })).resolves.toBeDefined();
     await expect(handlerB.execute({ nameAr: 'عيادة' })).resolves.toBeDefined();
   });
@@ -69,7 +71,7 @@ describe('CreateDepartmentHandler', () => {
 describe('ListDepartmentsHandler', () => {
   it('returns departments scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new ListDepartmentsHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
+    const handler = new ListDepartmentsHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, cache);
     const result = await handler.execute({ page: 1, limit: 10 });
     expect(result.items).toHaveLength(1);
     expect(prisma.department.findMany).toHaveBeenCalledWith(
@@ -79,7 +81,7 @@ describe('ListDepartmentsHandler', () => {
 
   it('passes search term to where clause', async () => {
     const prisma = buildPrisma();
-    const handler = new ListDepartmentsHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
+    const handler = new ListDepartmentsHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, cache);
     await handler.execute({ page: 1, limit: 10, search: 'طب' });
     const call = (prisma.department.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where).toMatchObject({
@@ -91,7 +93,7 @@ describe('ListDepartmentsHandler', () => {
 
   it('omits search clause when search is undefined', async () => {
     const prisma = buildPrisma();
-    const handler = new ListDepartmentsHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
+    const handler = new ListDepartmentsHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, cache);
     await handler.execute({ page: 1, limit: 10 });
     const call = (prisma.department.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where).not.toHaveProperty('OR');
@@ -101,7 +103,7 @@ describe('ListDepartmentsHandler', () => {
 describe('UpdateDepartmentHandler', () => {
   it('updates department fields scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new UpdateDepartmentHandler(prisma as never);
+    const handler = new UpdateDepartmentHandler(prisma as never, cache);
     await handler.execute({ departmentId: 'dept-1', nameEn: 'Updated' });
     expect(prisma.department.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -113,7 +115,7 @@ describe('UpdateDepartmentHandler', () => {
   it('throws NotFoundException when department not found', async () => {
     const prisma = buildPrisma();
     prisma.department.updateMany = jest.fn().mockResolvedValue({ count: 0 });
-    const handler = new UpdateDepartmentHandler(prisma as never);
+    const handler = new UpdateDepartmentHandler(prisma as never, cache);
     await expect(handler.execute({ departmentId: 'dept-1', nameEn: 'x' })).rejects.toThrow(NotFoundException);
   });
 });
@@ -121,7 +123,7 @@ describe('UpdateDepartmentHandler', () => {
 describe('DeleteDepartmentHandler', () => {
   it('deletes department scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new DeleteDepartmentHandler(prisma as never);
+    const handler = new DeleteDepartmentHandler(prisma as never, cache);
     const result = await handler.execute({ departmentId: 'dept-1' });
     expect(prisma.department.deleteMany).toHaveBeenCalledWith({
       where: { id: 'dept-1' },
@@ -132,7 +134,7 @@ describe('DeleteDepartmentHandler', () => {
   it('throws NotFoundException when department not found', async () => {
     const prisma = buildPrisma();
     prisma.department.deleteMany = jest.fn().mockResolvedValue({ count: 0 });
-    const handler = new DeleteDepartmentHandler(prisma as never);
+    const handler = new DeleteDepartmentHandler(prisma as never, cache);
     await expect(handler.execute({ departmentId: 'dept-1' })).rejects.toThrow(NotFoundException);
   });
 });

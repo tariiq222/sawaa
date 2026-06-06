@@ -8,6 +8,11 @@ const buildEventBus = () => ({ publish: jest.fn().mockResolvedValue(undefined) }
 const buildRlsTx = (prisma: ReturnType<typeof buildPrisma>) => ({
   withTransaction: jest.fn((fn: any) => fn(prisma)),
 });
+const buildCache = () =>
+  ({
+    getOrSet: jest.fn((_k: string, loader: () => Promise<unknown>) => loader()),
+    invalidatePrefix: jest.fn(),
+  }) as any;
 
 const DEFAULT_ORG = '00000000-0000-0000-0000-000000000001';
 const branchId = 'branch-1';
@@ -61,7 +66,7 @@ describe('CreateBranchHandler', () => {
   it('creates branch scoped by org when name is unique', async () => {
     const prisma = buildPrisma();
     prisma.branch.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new CreateBranchHandler(prisma as never, buildRlsTx(prisma) as never, buildEventBus() as never);
+    const handler = new CreateBranchHandler(prisma as never, buildRlsTx(prisma) as never, buildEventBus() as never, buildCache());
     const result = await handler.execute({ nameAr: 'الفرع الرئيسي' });
     expect(result.id).toBe('branch-1');
     // org scoping moved to RLS / removed in single-tenant migration
@@ -73,7 +78,7 @@ describe('CreateBranchHandler', () => {
   it('throws ConflictException when name already exists in same org', async () => {
     const prisma = buildPrisma();
     prisma.branch.findFirst = jest.fn().mockResolvedValue(mockBranch);
-    const handler = new CreateBranchHandler(prisma as never, buildRlsTx(prisma) as never, buildEventBus() as never);
+    const handler = new CreateBranchHandler(prisma as never, buildRlsTx(prisma) as never, buildEventBus() as never, buildCache());
     await expect(handler.execute({ nameAr: 'الفرع الرئيسي' })).rejects.toThrow(ConflictException);
   });
 
@@ -82,8 +87,8 @@ describe('CreateBranchHandler', () => {
     prismaA.branch.findFirst = jest.fn().mockResolvedValue(null);
     const prismaB = buildPrisma();
     prismaB.branch.findFirst = jest.fn().mockResolvedValue(null);
-    const handlerA = new CreateBranchHandler(prismaA as never, buildRlsTx(prismaA) as never, buildEventBus() as never);
-    const handlerB = new CreateBranchHandler(prismaB as never, buildRlsTx(prismaB) as never, buildEventBus() as never);
+    const handlerA = new CreateBranchHandler(prismaA as never, buildRlsTx(prismaA) as never, buildEventBus() as never, buildCache());
+    const handlerB = new CreateBranchHandler(prismaB as never, buildRlsTx(prismaB) as never, buildEventBus() as never, buildCache());
     await expect(handlerA.execute({ nameAr: 'الفرع الرئيسي' })).resolves.toBeDefined();
     await expect(handlerB.execute({ nameAr: 'الفرع الرئيسي' })).resolves.toBeDefined();
   });
@@ -94,7 +99,7 @@ describe('UpdateBranchHandler', () => {
     const prisma = buildPrisma();
     prisma.branch.findFirst = jest.fn().mockResolvedValue(mockBranch);
     const eventBus = buildEventBus();
-    const handler = new UpdateBranchHandler(prisma as never, buildRlsTx(prisma) as never, eventBus as never);
+    const handler = new UpdateBranchHandler(prisma as never, buildRlsTx(prisma) as never, eventBus as never, buildCache());
     const result = await handler.execute({ branchId, city: 'Riyadh' });
     expect(result).toEqual(mockBranch);
   });
@@ -102,7 +107,7 @@ describe('UpdateBranchHandler', () => {
   it('throws NotFoundException when branch not found', async () => {
     const prisma = buildPrisma();
     prisma.branch.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new UpdateBranchHandler(prisma as never, buildRlsTx(prisma) as never, buildEventBus() as never);
+    const handler = new UpdateBranchHandler(prisma as never, buildRlsTx(prisma) as never, buildEventBus() as never, buildCache());
     await expect(handler.execute({ branchId: 'missing', city: 'Riyadh' })).rejects.toThrow(NotFoundException);
   });
 
@@ -111,7 +116,7 @@ describe('UpdateBranchHandler', () => {
     prisma.branch.findFirst = jest.fn().mockResolvedValue(mockBranch); // isActive: true
     prisma.branch.update = jest.fn().mockResolvedValue({ ...mockBranch, isActive: false });
     const eventBus = buildEventBus();
-    const handler = new UpdateBranchHandler(prisma as never, buildRlsTx(prisma) as never, eventBus as never);
+    const handler = new UpdateBranchHandler(prisma as never, buildRlsTx(prisma) as never, eventBus as never, buildCache());
 
     await handler.execute({ branchId, isActive: false });
 
@@ -128,7 +133,7 @@ describe('UpdateBranchHandler', () => {
     prisma.branch.findFirst = jest.fn().mockResolvedValue(mockBranchInactive); // isActive: false
     prisma.branch.update = jest.fn().mockResolvedValue({ ...mockBranch, isActive: true });
     const eventBus = buildEventBus();
-    const handler = new UpdateBranchHandler(prisma as never, buildRlsTx(prisma) as never, eventBus as never);
+    const handler = new UpdateBranchHandler(prisma as never, buildRlsTx(prisma) as never, eventBus as never, buildCache());
 
     await handler.execute({ branchId, isActive: true });
 
@@ -145,7 +150,7 @@ describe('UpdateBranchHandler', () => {
     prisma.branch.findFirst = jest.fn().mockResolvedValue(mockBranch); // isActive: true
     prisma.branch.update = jest.fn().mockResolvedValue(mockBranch);
     const eventBus = buildEventBus();
-    const handler = new UpdateBranchHandler(prisma as never, buildRlsTx(prisma) as never, eventBus as never);
+    const handler = new UpdateBranchHandler(prisma as never, buildRlsTx(prisma) as never, eventBus as never, buildCache());
 
     await handler.execute({ branchId, isActive: true }); // same value — no transition
 
@@ -157,7 +162,7 @@ describe('UpdateBranchHandler', () => {
     prisma.branch.findFirst = jest.fn().mockResolvedValue(mockBranch);
     prisma.branch.update = jest.fn().mockResolvedValue(mockBranch);
     const eventBus = buildEventBus();
-    const handler = new UpdateBranchHandler(prisma as never, buildRlsTx(prisma) as never, eventBus as never);
+    const handler = new UpdateBranchHandler(prisma as never, buildRlsTx(prisma) as never, eventBus as never, buildCache());
 
     await handler.execute({ branchId, city: 'Riyadh' }); // no isActive in payload
 
@@ -168,7 +173,7 @@ describe('UpdateBranchHandler', () => {
 describe('ListBranchesHandler', () => {
   it('returns paginated branches scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new ListBranchesHandler(prisma as never, buildRlsTx(prisma) as never);
+    const handler = new ListBranchesHandler(prisma as never, buildRlsTx(prisma) as never, buildCache());
     const result = await handler.execute({});
     expect(result.items).toHaveLength(1);
     expect(result.meta.total).toBe(1);

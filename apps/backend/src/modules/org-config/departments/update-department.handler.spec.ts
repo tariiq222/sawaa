@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
 import { UpdateDepartmentHandler } from './update-department.handler';
 
 describe('UpdateDepartmentHandler', () => {
@@ -13,6 +14,7 @@ describe('UpdateDepartmentHandler', () => {
         { provide: PrismaService, useValue: {
     department: { updateMany: jest.fn(), findFirst: jest.fn().mockResolvedValue(null) }
         } },
+        { provide: CacheService, useValue: { getOrSet: (_k: string, l: () => Promise<unknown>) => l(), invalidatePrefix: jest.fn() } },
       ],
     }).compile();
 

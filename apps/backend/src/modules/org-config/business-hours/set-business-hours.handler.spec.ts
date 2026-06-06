@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
 import { SetBusinessHoursHandler } from './set-business-hours.handler';
 
 describe('SetBusinessHoursHandler', () => {
@@ -14,7 +15,8 @@ describe('SetBusinessHoursHandler', () => {
     branch: { findFirst: jest.fn() },
     businessHour: { findMany: jest.fn() }
     } },
-    { provide: RlsTransactionService, useValue: { withTransaction: jest.fn() } }
+    { provide: RlsTransactionService, useValue: { withTransaction: jest.fn() } },
+    { provide: CacheService, useValue: { getOrSet: (_k: string, l: () => Promise<unknown>) => l(), invalidatePrefix: jest.fn() } },
       ],
     }).compile();
 

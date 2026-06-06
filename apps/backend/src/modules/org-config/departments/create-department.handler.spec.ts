@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
 import { CreateDepartmentHandler } from './create-department.handler';
 
 describe('CreateDepartmentHandler', () => {
@@ -13,6 +14,7 @@ describe('CreateDepartmentHandler', () => {
         { provide: PrismaService, useValue: {
           department: { findFirst: jest.fn(), create: jest.fn() },
         } },
+        { provide: CacheService, useValue: { getOrSet: (_k: string, l: () => Promise<unknown>) => l(), invalidatePrefix: jest.fn() } },
       ],
     }).compile();
 

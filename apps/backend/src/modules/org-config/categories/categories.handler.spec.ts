@@ -16,6 +16,12 @@ const mockCategory = {
   _count: { services: 0 },
 };
 
+const buildCache = () =>
+  ({
+    getOrSet: jest.fn((_k: string, loader: () => Promise<unknown>) => loader()),
+    invalidatePrefix: jest.fn(),
+  }) as any;
+
 const buildPrisma = () => {
   const prisma = {
     serviceCategory: {
@@ -38,7 +44,7 @@ const buildPrisma = () => {
 describe('CreateCategoryHandler', () => {
   it('creates a category scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new CreateCategoryHandler(prisma as never);
+    const handler = new CreateCategoryHandler(prisma as never, buildCache());
     const result = await handler.execute({ nameAr: 'فحص', nameEn: 'Checkup' });
     // org scoping moved to RLS / removed in single-tenant migration
     expect(prisma.serviceCategory.create).toHaveBeenCalledWith(
@@ -51,7 +57,7 @@ describe('CreateCategoryHandler', () => {
 describe('ListCategoriesHandler', () => {
   it('returns categories scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new ListCategoriesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
+    const handler = new ListCategoriesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, buildCache());
     const result = await handler.execute({ page: 1, limit: 10 });
     expect(prisma.serviceCategory.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.any(Object) }),
@@ -61,7 +67,7 @@ describe('ListCategoriesHandler', () => {
 
   it('passes search term to where clause', async () => {
     const prisma = buildPrisma();
-    const handler = new ListCategoriesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
+    const handler = new ListCategoriesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, buildCache());
     await handler.execute({ page: 1, limit: 10, search: 'فحص' });
     const call = (prisma.serviceCategory.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where).toMatchObject({
@@ -73,7 +79,7 @@ describe('ListCategoriesHandler', () => {
 
   it('omits search clause when search is undefined', async () => {
     const prisma = buildPrisma();
-    const handler = new ListCategoriesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
+    const handler = new ListCategoriesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, buildCache());
     await handler.execute({ page: 1, limit: 10 });
     const call = (prisma.serviceCategory.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where).not.toHaveProperty('OR');
@@ -83,7 +89,7 @@ describe('ListCategoriesHandler', () => {
 describe('UpdateCategoryHandler', () => {
   it('updates category fields scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new UpdateCategoryHandler(prisma as never);
+    const handler = new UpdateCategoryHandler(prisma as never, buildCache());
     await handler.execute({ categoryId: 'cat-1', nameEn: 'Updated' });
     expect(prisma.serviceCategory.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'cat-1' } }),
@@ -94,7 +100,7 @@ describe('UpdateCategoryHandler', () => {
   it('throws NotFoundException when category not found', async () => {
     const prisma = buildPrisma();
     prisma.serviceCategory.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new UpdateCategoryHandler(prisma as never);
+    const handler = new UpdateCategoryHandler(prisma as never, buildCache());
     await expect(handler.execute({ categoryId: 'bad', nameEn: 'x' })).rejects.toThrow(NotFoundException);
   });
 });
@@ -102,7 +108,7 @@ describe('UpdateCategoryHandler', () => {
 describe('DeleteCategoryHandler', () => {
   it('deletes category when it has no active services', async () => {
     const prisma = buildPrisma();
-    const handler = new DeleteCategoryHandler(prisma as never);
+    const handler = new DeleteCategoryHandler(prisma as never, buildCache());
     await handler.execute({ categoryId: 'cat-1' });
     expect(prisma.serviceCategory.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'cat-1' } }),
@@ -116,7 +122,7 @@ describe('DeleteCategoryHandler', () => {
   it('throws NotFoundException when category not found', async () => {
     const prisma = buildPrisma();
     prisma.serviceCategory.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new DeleteCategoryHandler(prisma as never);
+    const handler = new DeleteCategoryHandler(prisma as never, buildCache());
     await expect(handler.execute({ categoryId: 'bad' })).rejects.toThrow(NotFoundException);
     expect(prisma.service.count).not.toHaveBeenCalled();
     expect(prisma.serviceCategory.delete).not.toHaveBeenCalled();
@@ -125,7 +131,7 @@ describe('DeleteCategoryHandler', () => {
   it('throws BadRequestException when category has active services', async () => {
     const prisma = buildPrisma();
     prisma.service.count = jest.fn().mockResolvedValue(2);
-    const handler = new DeleteCategoryHandler(prisma as never);
+    const handler = new DeleteCategoryHandler(prisma as never, buildCache());
     await expect(handler.execute({ categoryId: 'cat-1' })).rejects.toThrow(BadRequestException);
     expect(prisma.service.count).toHaveBeenCalledWith({
       where: { categoryId: 'cat-1', archivedAt: null },

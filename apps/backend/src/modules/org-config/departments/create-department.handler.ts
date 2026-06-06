@@ -1,6 +1,8 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
 import { CreateDepartmentDto } from './create-department.dto';
+import { DEPARTMENTS_CACHE_PREFIX } from './departments.cache';
 
 export type CreateDepartmentCommand = CreateDepartmentDto;
 
@@ -8,6 +10,7 @@ export type CreateDepartmentCommand = CreateDepartmentDto;
 export class CreateDepartmentHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(dto: CreateDepartmentCommand) {
@@ -21,7 +24,7 @@ export class CreateDepartmentHandler {
       });
     }
 
-    return this.prisma.department.create({
+    const created = await this.prisma.department.create({
       data: {
         nameAr: dto.nameAr,
         nameEn: dto.nameEn,
@@ -33,5 +36,9 @@ export class CreateDepartmentHandler {
         sortOrder: dto.sortOrder ?? 0,
       },
     });
+
+    await this.cache.invalidatePrefix(DEPARTMENTS_CACHE_PREFIX);
+
+    return created;
   }
 }

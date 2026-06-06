@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
+import { BRANCHES_CACHE_PREFIX } from './branches.cache';
 
 export type DeleteBranchCommand = { branchId: string };
 
@@ -7,6 +9,7 @@ export type DeleteBranchCommand = { branchId: string };
 export class DeleteBranchHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(dto: DeleteBranchCommand) {
@@ -39,6 +42,9 @@ export class DeleteBranchHandler {
     }
 
     await this.prisma.branch.delete({ where: { id: dto.branchId } });
+
+    await this.cache.invalidatePrefix(BRANCHES_CACHE_PREFIX);
+
     return { id: dto.branchId };
   }
 }

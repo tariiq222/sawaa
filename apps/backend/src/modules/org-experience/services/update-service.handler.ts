@@ -1,9 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
 import { EventBusService } from '../../../infrastructure/events';
 import { ServiceDeactivatedEvent } from '../events/service-deactivated.event';
 import { ServiceReactivatedEvent } from '../events/service-reactivated.event';
 import { UpdateServiceDto } from './update-service.dto';
+import { SERVICES_CACHE_PREFIX } from './services.cache';
 
 export type UpdateServiceCommand = UpdateServiceDto & { serviceId: string };
 
@@ -12,6 +14,7 @@ export class UpdateServiceHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventBus: EventBusService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(dto: UpdateServiceCommand) {
@@ -87,6 +90,8 @@ export class UpdateServiceHandler {
         durationOptions: { orderBy: { sortOrder: 'asc' } },
       },
     });
+
+    await this.cache.invalidatePrefix(SERVICES_CACHE_PREFIX);
 
     if (dto.isActive !== undefined && dto.isActive !== wasActive) {
       const event = dto.isActive

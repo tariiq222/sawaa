@@ -55,10 +55,12 @@ describe('AuditInterceptor pure functions', () => {
 describe('AuditInterceptor', () => {
   let interceptor: AuditInterceptor;
   let mockPrisma: any;
+  let mockMetrics: any;
 
   beforeEach(() => {
     mockPrisma = { activityLog: { create: jest.fn() } };
-    interceptor = new AuditInterceptor(mockPrisma);
+    mockMetrics = { auditLogFailures: { inc: jest.fn() } };
+    interceptor = new AuditInterceptor(mockPrisma, mockMetrics);
     RequestContextStorage.run({ requestId: '' }, () => {});
   });
 
@@ -226,7 +228,7 @@ describe('AuditInterceptor', () => {
     expect(mockPrisma.activityLog.create).toHaveBeenCalled();
   });
 
-  it('handles activityLog.create error in tap silently', async () => {
+  it('records metric on activityLog.create error in tap (no silent gap)', async () => {
     mockPrisma.activityLog.create.mockRejectedValue(new Error('db fail'));
     const req = {
       method: 'POST',
@@ -240,9 +242,10 @@ describe('AuditInterceptor', () => {
 
     await lastValueFrom(interceptor.intercept(createContext(req, 'CreateBookingHandler', 'DashboardBookingsController'), next));
     expect(mockPrisma.activityLog.create).toHaveBeenCalled();
+    expect(mockMetrics.auditLogFailures.inc).toHaveBeenCalledWith({ phase: 'success' });
   });
 
-  it('handles activityLog.create error in catchError silently', async () => {
+  it('records metric on activityLog.create error in catchError (no silent gap)', async () => {
     mockPrisma.activityLog.create.mockRejectedValue(new Error('db fail'));
     const req = {
       method: 'POST',
@@ -257,6 +260,9 @@ describe('AuditInterceptor', () => {
     await expect(
       lastValueFrom(interceptor.intercept(createContext(req, 'CreateBookingHandler', 'DashboardBookingsController'), next)),
     ).rejects.toThrow('handler fail');
+    // microtask: the async logAsync().catch() runs after the throw settles
+    await new Promise((r) => setImmediate(r));
     expect(mockPrisma.activityLog.create).toHaveBeenCalled();
+    expect(mockMetrics.auditLogFailures.inc).toHaveBeenCalledWith({ phase: 'error' });
   });
 });

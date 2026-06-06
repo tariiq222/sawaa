@@ -1,5 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
+import { CATEGORIES_CACHE_PREFIX } from './categories.cache';
+import { DEPARTMENTS_CACHE_PREFIX } from '../departments/departments.cache';
 
 export interface DeleteCategoryCommand {
   categoryId: string;
@@ -9,6 +12,7 @@ export interface DeleteCategoryCommand {
 export class DeleteCategoryHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute({ categoryId }: DeleteCategoryCommand) {
@@ -26,6 +30,11 @@ export class DeleteCategoryHandler {
         'Category still has services; reassign or delete them first',
       );
     }
-    return this.prisma.serviceCategory.delete({ where: { id: categoryId } });
+    const category = await this.prisma.serviceCategory.delete({ where: { id: categoryId } });
+
+    await this.cache.invalidatePrefix(CATEGORIES_CACHE_PREFIX);
+    await this.cache.invalidatePrefix(DEPARTMENTS_CACHE_PREFIX); // departments list embeds active categories
+
+    return category;
   }
 }

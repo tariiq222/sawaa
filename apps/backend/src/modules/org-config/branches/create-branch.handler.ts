@@ -1,9 +1,11 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
 import { EventBusService } from '../../../infrastructure/events';
 
 import { BranchCreatedEvent } from '../events/branch-created.event';
 import { CreateBranchDto } from './create-branch.dto';
+import { BRANCHES_CACHE_PREFIX } from './branches.cache';
 
 export type CreateBranchCommand = CreateBranchDto;
 
@@ -13,6 +15,7 @@ export class CreateBranchHandler {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly eventBus: EventBusService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(dto: CreateBranchCommand) {
@@ -51,6 +54,8 @@ export class CreateBranchHandler {
       },
       { isolationLevel: 'Serializable' },
     );
+
+    await this.cache.invalidatePrefix(BRANCHES_CACHE_PREFIX);
 
     const event = new BranchCreatedEvent({ branchId: branch.id });
     this.eventBus.publish(event.eventName, event.toEnvelope()).catch(() => {});

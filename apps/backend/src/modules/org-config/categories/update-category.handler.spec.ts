@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
 import { UpdateCategoryHandler } from './update-category.handler';
 
 describe('UpdateCategoryHandler', () => {
@@ -13,6 +14,7 @@ describe('UpdateCategoryHandler', () => {
         { provide: PrismaService, useValue: {
     serviceCategory: { findFirst: jest.fn(), update: jest.fn() }
         } },
+        { provide: CacheService, useValue: { getOrSet: (_k: string, l: () => Promise<unknown>) => l(), invalidatePrefix: jest.fn() } },
       ],
     }).compile();
 

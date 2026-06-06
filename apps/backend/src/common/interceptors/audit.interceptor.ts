@@ -4,11 +4,14 @@ import {
   ExecutionContext,
   CallHandler,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { Observable, tap, catchError } from 'rxjs';
 import { Request } from 'express';
+import * as Sentry from '@sentry/node';
 import { ActivityAction } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { AppMetricsService } from '../../infrastructure/telemetry/app-metrics.service';
 import { RequestContextStorage } from '../http/request-context';
 
 /** HTTP methods considered write operations and subject to audit logging. */
@@ -154,8 +157,9 @@ function parseJwtPayload(token: string): Record<string, string> {
  * - Entity name is derived from the handler class name (e.g. CreateBookingHandler
  *   -> entity="Booking", action=CREATE).
  * - User context is pulled first from RequestContextStorage, then from the JWT.
- * - Silently fails: logging errors are caught and logged but do NOT propagate,
- *   ensuring audit failures never break the request.
+ * - Audit failures never break the request, but they are NOT swallowed silently:
+ *   each failure logs, increments the `audit_log_failures_total` metric, and is
+ *   reported to Sentry so a degraded DB cannot open an undetected audit gap.
  */
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
@@ -163,7 +167,16 @@ export class AuditInterceptor implements NestInterceptor {
 
   constructor(
     private readonly prisma: PrismaService,
+    @Optional() private readonly metrics?: AppMetricsService,
   ) {}
+
+  /** Records an audit-log write failure: log + metric + Sentry (never throws). */
+  private reportFailure(phase: 'success' | 'error', err: unknown): void {
+    const message = err instanceof Error ? err.message : String(err);
+    this.logger.error(`AuditInterceptor: failed to log activity [phase=${phase}]`, message);
+    this.metrics?.auditLogFailures.inc({ phase });
+    Sentry.captureException(err, { tags: { component: 'AuditInterceptor', phase } });
+  }
 
   intercept(ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
     const req = ctx.switchToHttp().getRequest<Request>();
@@ -207,21 +220,13 @@ export class AuditInterceptor implements NestInterceptor {
             },
           });
         } catch (err) {
-          this.logger.error(
-            'AuditInterceptor: failed to log activity',
-            err instanceof Error ? err.message : String(err),
-          );
+          this.reportFailure('success', err);
         }
       }),
       catchError((err) => {
         // Still log failures so audit trail captures attempted mutations
         this.logAsync(method, entity, userId, userEmail, metadata, ipAddress, userAgent).catch(
-          (logErr) => {
-            this.logger.error(
-              'AuditInterceptor: failed to log error activity',
-              logErr instanceof Error ? logErr.message : String(logErr),
-            );
-          },
+          (logErr) => this.reportFailure('error', logErr),
         );
         throw err;
       }),
@@ -237,24 +242,20 @@ export class AuditInterceptor implements NestInterceptor {
     ipAddress?: string,
     userAgent?: string,
   ): Promise<void> {
-    try {
-      await this.prisma.activityLog.create({
-        data: {
-          userId,
-          userEmail,
-          action: mapMethodToAction(method),
-          entity,
-          description: buildDescription(method, entity),
-          metadata: metadata as never,
-          ipAddress,
-          userAgent,
-        },
-      });
-    } catch (err) {
-      this.logger.error(
-        `AuditInterceptor: failed to persist ActivityLog [entity=${entity} userId=${userId ?? 'unknown'}]: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
+    // Errors propagate to the caller's .catch(), which routes them through
+    // reportFailure('error') — a single failure path (log + metric + Sentry).
+    await this.prisma.activityLog.create({
+      data: {
+        userId,
+        userEmail,
+        action: mapMethodToAction(method),
+        entity,
+        description: buildDescription(method, entity),
+        metadata: metadata as never,
+        ipAddress,
+        userAgent,
+      },
+    });
   }
 }
 

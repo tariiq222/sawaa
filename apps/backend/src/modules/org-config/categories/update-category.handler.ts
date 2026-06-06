@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
 import { UpdateCategoryDto } from './update-category.dto';
+import { CATEGORIES_CACHE_PREFIX } from './categories.cache';
+import { DEPARTMENTS_CACHE_PREFIX } from '../departments/departments.cache';
 
 export type UpdateCategoryCommand = UpdateCategoryDto & { categoryId: string };
 
@@ -8,6 +11,7 @@ export type UpdateCategoryCommand = UpdateCategoryDto & { categoryId: string };
 export class UpdateCategoryHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(dto: UpdateCategoryCommand) {
@@ -16,7 +20,7 @@ export class UpdateCategoryHandler {
     });
     if (!existing) throw new NotFoundException('ServiceCategory not found');
 
-    return this.prisma.serviceCategory.update({
+    const category = await this.prisma.serviceCategory.update({
       where: { id: dto.categoryId },
       data: {
         ...(dto.nameAr !== undefined && { nameAr: dto.nameAr }),
@@ -26,5 +30,10 @@ export class UpdateCategoryHandler {
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
     });
+
+    await this.cache.invalidatePrefix(CATEGORIES_CACHE_PREFIX);
+    await this.cache.invalidatePrefix(DEPARTMENTS_CACHE_PREFIX); // departments list embeds active categories
+
+    return category;
   }
 }

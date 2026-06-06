@@ -1,9 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
 import { EventBusService } from '../../../infrastructure/events';
 import { BranchDeactivatedEvent } from '../events/branch-deactivated.event';
 import { BranchReactivatedEvent } from '../events/branch-reactivated.event';
 import { UpdateBranchDto } from './update-branch.dto';
+import { BRANCHES_CACHE_PREFIX } from './branches.cache';
 
 export type UpdateBranchCommand = UpdateBranchDto & { branchId: string };
 
@@ -13,10 +15,11 @@ export class UpdateBranchHandler {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly eventBus: EventBusService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(dto: UpdateBranchCommand) {
-    return this.rlsTransaction.withTransaction(
+    const updated = await this.rlsTransaction.withTransaction(
       async (tx) => {
         const branch = await tx.branch.findFirst({
           where: { id: dto.branchId },
@@ -60,5 +63,9 @@ export class UpdateBranchHandler {
       },
       { isolationLevel: 'Serializable' },
     );
+
+    await this.cache.invalidatePrefix(BRANCHES_CACHE_PREFIX);
+
+    return updated;
   }
 }

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
+import { CacheService } from '../../../infrastructure/cache';
 import { CreateServiceHandler } from './create-service.handler';
 
 describe('CreateServiceHandler', () => {
@@ -14,7 +15,8 @@ describe('CreateServiceHandler', () => {
     { provide: PrismaService, useValue: {
     service: { findFirst: jest.fn(), create: jest.fn() }
     } },
-    { provide: EventBusService, useValue: { emit: jest.fn() } }
+    { provide: EventBusService, useValue: { emit: jest.fn() } },
+    { provide: CacheService, useValue: { getOrSet: (_k: string, l: () => Promise<unknown>) => l(), invalidatePrefix: jest.fn() } },
       ],
     }).compile();
 

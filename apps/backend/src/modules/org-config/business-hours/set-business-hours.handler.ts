@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
 import { SetBusinessHoursDto } from './set-business-hours.dto';
+import { BUSINESS_HOURS_CACHE_PREFIX } from './business-hours.cache';
 
 export type SetBusinessHoursCommand = SetBusinessHoursDto;
 
@@ -9,6 +11,7 @@ export class SetBusinessHoursHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(dto: SetBusinessHoursCommand) {
@@ -42,6 +45,8 @@ export class SetBusinessHoursHandler {
         }),
       )),
     );
+
+    await this.cache.invalidatePrefix(`${BUSINESS_HOURS_CACHE_PREFIX}${dto.branchId}`);
 
     return this.prisma.businessHour.findMany({
       where: { branchId: dto.branchId },

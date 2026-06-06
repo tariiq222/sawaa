@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
 import { UpdateDepartmentDto } from './update-department.dto';
+import { DEPARTMENTS_CACHE_PREFIX } from './departments.cache';
 
 export type UpdateDepartmentCommand = UpdateDepartmentDto & { departmentId: string };
 
@@ -8,6 +10,7 @@ export type UpdateDepartmentCommand = UpdateDepartmentDto & { departmentId: stri
 export class UpdateDepartmentHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(dto: UpdateDepartmentCommand) {
@@ -38,6 +41,8 @@ export class UpdateDepartmentHandler {
     });
 
     if (result.count === 0) throw new NotFoundException('Department not found');
+
+    await this.cache.invalidatePrefix(DEPARTMENTS_CACHE_PREFIX);
 
     return this.prisma.department.findFirst({
       where: { id: dto.departmentId },
