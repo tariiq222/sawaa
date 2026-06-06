@@ -3,11 +3,10 @@ import type {
   ClientRegisterPayload,
   ClientAuthResponse,
 } from '@sawaa/shared';
-
-let clientBaseUrl = '';
+import { apiRequest, setApiRequestBaseUrl } from '../client';
 
 export function setClientBaseUrl(url: string): void {
-  clientBaseUrl = url;
+  setApiRequestBaseUrl(url);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -17,46 +16,12 @@ export function initClientAuth(_cfg: {
   // Refresh token is now handled via httpOnly cookie — no localStorage needed.
 }
 
-async function clientFetch<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
-  };
-
-  const res = await fetch(`${clientBaseUrl}${path}`, {
-    ...options,
-    headers,
-    credentials: 'include',
-  });
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(
-      (body as { message?: string }).message ?? res.statusText,
-    );
-  }
-
-  if (res.status === 204) return undefined as T;
-  const json = (await res.json()) as unknown;
-  if (
-    json &&
-    typeof json === 'object' &&
-    'success' in json &&
-    'data' in json
-  ) {
-    return (json as { data: T }).data;
-  }
-  return json as T;
-}
-
 export async function clientLogin(
   payload: ClientLoginPayload,
 ): Promise<ClientAuthResponse> {
-  return clientFetch<ClientAuthResponse>('/public/auth/login', {
+  return apiRequest<ClientAuthResponse>('/public/auth/login', {
     method: 'POST',
+    credentials: 'include',
     body: JSON.stringify(payload),
   });
 }
@@ -64,8 +29,9 @@ export async function clientLogin(
 export async function clientRegister(
   payload: ClientRegisterPayload,
 ): Promise<ClientAuthResponse> {
-  return clientFetch<ClientAuthResponse>('/public/auth/register', {
+  return apiRequest<ClientAuthResponse>('/public/auth/register', {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${payload.otpSessionToken}`,
@@ -75,8 +41,9 @@ export async function clientRegister(
 }
 
 export async function clientLogout(): Promise<void> {
-  return clientFetch<void>('/public/auth/logout', {
+  return apiRequest<void>('/public/auth/logout', {
     method: 'POST',
+    credentials: 'include',
     body: JSON.stringify({}),
   });
 }
@@ -85,8 +52,9 @@ export async function clientResetPassword(payload: {
   sessionToken: string;
   newPassword: string;
 }): Promise<void> {
-  return clientFetch<void>('/public/auth/reset-password', {
+  return apiRequest<void>('/public/auth/reset-password', {
     method: 'POST',
+    credentials: 'include',
     body: JSON.stringify(payload),
   });
 }

@@ -13,6 +13,7 @@ import { useBookingMutations } from "@/hooks/use-bookings"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchServices } from "@/lib/api/services"
 import { ApiError } from "@/lib/api"
+import { bookingPosPayloadSchema } from "@/lib/schemas/booking.schema"
 
 import { ClientStep } from "./booking-client-step"
 import { StepDepartment } from "./wizard-steps/step-department"
@@ -116,20 +117,26 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   const handleSubmit = async () => {
     if (!state.clientId || !state.serviceId || !state.employeeId || !state.deliveryType || !state.date || !state.startTime)
       return
+    const payload = {
+      clientId: state.clientId,
+      employeeId: state.employeeId,
+      serviceId: state.serviceId,
+      type: "individual" as const,
+      deliveryType: state.deliveryType,
+      durationOptionId: state.durationOptionId ?? undefined,
+      date: state.date,
+      startTime: state.startTime,
+      payAtClinic: state.payAtClinic,
+      branchId: mainBranch?.id,
+      couponCode: state.couponCode ?? undefined,
+    }
+    const validation = bookingPosPayloadSchema.safeParse(payload)
+    if (!validation.success) {
+      toast.error(t("bookings.wizard.submitError"))
+      return
+    }
     try {
-      await createMut.mutateAsync({
-        clientId: state.clientId,
-        employeeId: state.employeeId,
-        serviceId: state.serviceId,
-        type: "individual",
-        deliveryType: state.deliveryType,
-        durationOptionId: state.durationOptionId ?? undefined,
-        date: state.date,
-        startTime: state.startTime,
-        payAtClinic: state.payAtClinic,
-        branchId: mainBranch?.id,
-        couponCode: state.couponCode ?? undefined,
-      })
+      await createMut.mutateAsync(validation.data)
       reset()
       onSuccess()
     } catch (err) {

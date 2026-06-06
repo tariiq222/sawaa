@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { initClient } from '../../client'
 import {
   setClientBaseUrl,
   initClientAuth,
@@ -18,6 +19,12 @@ let storedRefresh: string | null = null
 
 beforeEach(() => {
   storedRefresh = null
+  initClient({
+    baseUrl: 'http://api.test',
+    getAccessToken: () => null,
+    onTokenRefreshed: vi.fn(),
+    onAuthFailure: vi.fn(),
+  })
   setClientBaseUrl('http://api.test')
   initClientAuth({ getRefreshToken: () => storedRefresh })
   vi.stubGlobal('fetch', vi.fn())
@@ -57,13 +64,19 @@ describe('clientLogin', () => {
     expect((init as RequestInit).credentials).toBe('include')
   })
 
-  it('throws an Error with backend message on failure', async () => {
+  it('throws ApiError with central status, body, and code on failure', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
-      jsonResponse({ message: 'Bad creds' }, 401),
+      jsonResponse({ error: 'INVALID_CREDENTIALS', message: 'Bad creds' }, 401),
     )
     await expect(
       clientLogin({ email: 'a@b.c', password: 'wrong' }),
-    ).rejects.toThrow('Bad creds')
+    ).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 401,
+      code: 'INVALID_CREDENTIALS',
+      body: { error: 'INVALID_CREDENTIALS', message: 'Bad creds' },
+      message: 'Bad creds',
+    })
   })
 })
 

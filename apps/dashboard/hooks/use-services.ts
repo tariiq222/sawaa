@@ -269,7 +269,7 @@ export function useServiceBookingTypesMutation(serviceId: string) {
 export function useIntakeForms(serviceId: string | null): ReturnType<typeof useQuery<IntakeFormApi[]>> {
   return useQuery({
     queryKey: queryKeys.services.intakeForms(serviceId ?? ""),
-    queryFn: () => fetchIntakeFormsApi(),
+    queryFn: () => fetchIntakeFormsApi({ scope: "service", scopeId: serviceId! }),
     enabled: !!serviceId,
   })
 }
@@ -330,7 +330,7 @@ export function useAssignEmployeesToService(serviceId: string) {
           } satisfies AssignServicePayload),
         ),
       ),
-    onSuccess: () => {
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.services.employees(serviceId),
       })

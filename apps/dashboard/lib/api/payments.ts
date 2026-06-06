@@ -7,6 +7,8 @@ import { api } from "@/lib/api"
 import type { PaginatedResponse } from "@/lib/types/common"
 import type { Payment, PaymentListQuery, PaymentStats } from "@/lib/types/payment"
 
+const PAYMENT_DETAIL_FALLBACK_LIMIT = 200
+
 export async function fetchPaymentStats(): Promise<PaymentStats> {
   return api.get<PaymentStats>("/dashboard/finance/payments/stats")
 }
@@ -36,4 +38,16 @@ export async function fetchPayments(
     fromDate: query.dateFrom,
     toDate: query.dateTo,
   })
+}
+
+export async function fetchPayment(id: string): Promise<Payment | null> {
+  // Backend currently exposes no GET /dashboard/finance/payments/:id endpoint
+  // and ListPaymentsDto has no id filter. Use the maximum allowed first page as
+  // a dashboard-only fallback until a dedicated endpoint is added.
+  const res = await fetchPayments({
+    page: 1,
+    perPage: PAYMENT_DETAIL_FALLBACK_LIMIT,
+  })
+
+  return res.items.find((payment) => payment.id === id) ?? null
 }

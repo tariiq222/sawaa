@@ -254,6 +254,20 @@ describe("useIntakeForms / useIntakeFormMutations", () => {
     expect(intakeFormsApi.fetchIntakeForms).not.toHaveBeenCalled()
   })
 
+  it("fetches service-scoped intake forms when serviceId is provided", async () => {
+    intakeFormsApi.fetchIntakeForms.mockResolvedValue([])
+    const { Wrapper } = makeWrapper()
+
+    renderHook(() => useIntakeForms("svc-1"), { wrapper: Wrapper })
+
+    await waitFor(() =>
+      expect(intakeFormsApi.fetchIntakeForms).toHaveBeenCalledWith({
+        scope: "service",
+        scopeId: "svc-1",
+      }),
+    )
+  })
+
   it("createMut maps the public payload to the backend-shape call", async () => {
     intakeFormsApi.createIntakeForm.mockResolvedValue({ id: "f-1" })
     const { Wrapper } = makeWrapper()
@@ -327,6 +341,21 @@ describe("useServiceEmployees / useAssignEmployeesToService", () => {
     const spy = vi.spyOn(qc, "invalidateQueries")
     const { result } = renderHook(() => useAssignEmployeesToService("s-1"), { wrapper: Wrapper })
     await result.current.mutateAsync(["e-1"])
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["services", "employees", "s-1"] })
+  })
+
+  it("useAssignEmployeesToService invalidates the service's employees cache on partial failure", async () => {
+    employeesApi.assignService
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("assign failed"))
+    const { Wrapper, qc } = makeWrapper()
+    const spy = vi.spyOn(qc, "invalidateQueries")
+    const { result } = renderHook(() => useAssignEmployeesToService("s-1"), { wrapper: Wrapper })
+
+    await expect(result.current.mutateAsync(["e-1", "e-2"])).rejects.toThrow("assign failed")
+
+    expect(employeesApi.assignService).toHaveBeenCalledWith("e-1", { serviceId: "s-1" })
+    expect(employeesApi.assignService).toHaveBeenCalledWith("e-2", { serviceId: "s-1" })
     expect(spy).toHaveBeenCalledWith({ queryKey: ["services", "employees", "s-1"] })
   })
 })

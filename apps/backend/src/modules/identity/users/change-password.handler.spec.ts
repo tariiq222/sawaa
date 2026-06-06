@@ -1,22 +1,31 @@
 import { Test } from '@nestjs/testing';
 import { ChangePasswordHandler } from './change-password.handler';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { PasswordService } from '../shared/password.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('ChangePasswordHandler', () => {
   let handler: ChangePasswordHandler;
-  let prisma: { user: { findUnique: jest.Mock; update: jest.Mock } };
+  let prisma: {
+    user: { findUnique: jest.Mock; update: jest.Mock };
+    refreshToken: { updateMany: jest.Mock };
+  };
   let passwordService: { verify: jest.Mock; hash: jest.Mock };
+  let rlsTransaction: { withTransaction: jest.Mock };
 
   beforeEach(async () => {
-    prisma = { user: { findUnique: jest.fn(), update: jest.fn() } };
+    prisma = {
+      user: { findUnique: jest.fn(), update: jest.fn() },
+      refreshToken: { updateMany: jest.fn() },
+    };
     passwordService = { verify: jest.fn(), hash: jest.fn() };
+    rlsTransaction = { withTransaction: jest.fn((cb: any) => cb(prisma)) };
 
     const module = await Test.createTestingModule({
       providers: [
         ChangePasswordHandler,
         { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: rlsTransaction },
         { provide: PasswordService, useValue: passwordService },
       ],
     }).compile();
@@ -39,17 +48,31 @@ describe('ChangePasswordHandler', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
+  it('throws BadRequestException when user has no passwordHash', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'u1', passwordHash: null });
+
+    await expect(
+      handler.execute({ userId: 'u1', currentPassword: 'old', newPassword: 'new123' }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
   it('updates password when current password is correct', async () => {
     prisma.user.findUnique.mockResolvedValue({ id: 'u1', passwordHash: 'hash' });
     passwordService.verify.mockResolvedValue(true);
     passwordService.hash.mockResolvedValue('newHash');
     prisma.user.update.mockResolvedValue({});
+    prisma.refreshToken.updateMany.mockResolvedValue({ count: 2 });
 
     await handler.execute({ userId: 'u1', currentPassword: 'old', newPassword: 'new123' });
 
+    expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(1);
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: 'u1' },
-      data: { passwordHash: 'newHash' },
+      data: { passwordHash: 'newHash', tokenVersion: { increment: 1 } },
+    });
+    expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+      where: { userId: 'u1', revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
     });
   });
 });

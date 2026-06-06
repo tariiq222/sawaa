@@ -14,7 +14,7 @@ import { Badge } from "@sawaa/ui"
 import { Separator } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 import { DetailSection, DetailRow } from "@/components/features/detail-sheet-parts"
-import { fetchPayments } from "@/lib/api/payments"
+import { fetchPayment } from "@/lib/api/payments"
 import { queryKeys } from "@/lib/query-keys"
 import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
@@ -78,10 +78,7 @@ export function PaymentDetailDialog({
   const { t } = useLocale()
   const { data: payment, isLoading } = useQuery({
     queryKey: queryKeys.payments.detail(paymentId ?? ""),
-    queryFn: async () => {
-      const res = await fetchPayments({ page: 1, perPage: 1 })
-      return res.items.find((p) => p.id === paymentId) ?? null
-    },
+    queryFn: () => fetchPayment(paymentId ?? ""),
     enabled: !!paymentId && open,
   })
 

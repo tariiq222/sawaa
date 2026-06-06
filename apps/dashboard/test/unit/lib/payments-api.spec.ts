@@ -13,6 +13,7 @@ vi.mock("@/lib/api", () => ({
 }))
 
 import {
+  fetchPayment,
   fetchPaymentStats,
   fetchPayments,
   refundPayment,
@@ -70,6 +71,23 @@ describe("payments api", () => {
       })
       await fetchPaymentStats()
       expect(getMock).toHaveBeenCalledWith("/dashboard/finance/payments/stats")
+    })
+  })
+
+  describe("fetchPayment", () => {
+    it("uses the documented list fallback and returns the matching payment", async () => {
+      const payment = { id: "pay-2" }
+      getMock.mockResolvedValueOnce({
+        items: [{ id: "pay-1" }, payment],
+        meta: { total: 2 },
+      })
+
+      await expect(fetchPayment("pay-2")).resolves.toBe(payment)
+      expect(getMock).toHaveBeenCalledWith(
+        "/dashboard/finance/payments",
+        expect.objectContaining({ page: 1, limit: expect.any(Number) }),
+      )
+      expect(getMock.mock.calls[0]?.[1]?.limit).toBeGreaterThan(1)
     })
   })
 

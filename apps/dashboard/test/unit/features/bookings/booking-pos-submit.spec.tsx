@@ -24,6 +24,16 @@ import { useBookingMutations } from "@/hooks/use-bookings"
 
 /* ─── Mocked locale ──────────────────────────────────────────────────────── */
 
+const { toastError } = vi.hoisted(() => ({
+  toastError: vi.fn(),
+}))
+
+vi.mock("sonner", () => ({
+  toast: {
+    error: toastError,
+  },
+}))
+
 vi.mock("@/components/locale-provider", () => ({
   useLocale: vi.fn(() => ({
     t: (k: string) => k,
@@ -353,6 +363,24 @@ describe("BookingPos — real handleSubmit → createMut.mutateAsync payload", (
       Record<string, unknown>,
     ]
     expect(payload).toMatchObject({ durationOptionId: "dur-45" })
+  })
+
+  it("does not call create mutation when the POS payload fails runtime validation", async () => {
+    renderBookingPos(
+      makeCompleteState({
+        deliveryType: "home_visit",
+        type: "home_visit",
+      })
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /bookings\.pos\.confirm/ })
+    )
+
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalled()
+    })
+    expect(createMut.mutateAsync).not.toHaveBeenCalled()
   })
 
   it("submit button is disabled while mutation is pending", () => {

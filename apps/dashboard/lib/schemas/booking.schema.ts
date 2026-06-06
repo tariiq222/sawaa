@@ -86,6 +86,24 @@ export const bookingCreateSchema = z.object({
 
 export type BookingCreateFormData = z.infer<typeof bookingCreateSchema>
 
+/* ─── Booking POS submit schema (booking-pos) ─── */
+
+export const bookingPosPayloadSchema = z.object({
+  clientId: z.string().min(1),
+  employeeId: z.string().min(1),
+  serviceId: z.string().min(1),
+  type: z.enum(["individual", "group", "walk_in"]),
+  deliveryType: z.enum(["IN_PERSON", "ONLINE"]),
+  durationOptionId: z.string().min(1).optional(),
+  date: z.string().min(1),
+  startTime: z.string().min(1),
+  payAtClinic: z.boolean().optional(),
+  branchId: z.string().min(1).optional(),
+  couponCode: z.string().min(1).optional(),
+})
+
+export type BookingPosPayloadData = z.infer<typeof bookingPosPayloadSchema>
+
 /* ─── Reschedule schema (booking-detail-sheet) ─── */
 
 export function createRescheduleBookingSchema(t: (key: string) => string) {

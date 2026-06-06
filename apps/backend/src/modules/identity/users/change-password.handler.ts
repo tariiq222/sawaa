@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { PasswordService } from '../shared/password.service';
 
 export interface ChangePasswordCommand {
@@ -12,6 +12,7 @@ export interface ChangePasswordCommand {
 export class ChangePasswordHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
     private readonly password: PasswordService,
   ) {}
 
@@ -28,6 +29,17 @@ export class ChangePasswordHandler {
     if (!isValid) throw new BadRequestException('Current password is incorrect');
 
     const newHash = await this.password.hash(cmd.newPassword);
-    await this.prisma.user.update({ where: { id: cmd.userId }, data: { passwordHash: newHash } });
+    const now = new Date();
+
+    await this.rlsTransaction.withTransaction(async (tx) => {
+      await tx.user.update({
+        where: { id: cmd.userId },
+        data: { passwordHash: newHash, tokenVersion: { increment: 1 } },
+      });
+      await tx.refreshToken.updateMany({
+        where: { userId: cmd.userId, revokedAt: null },
+        data: { revokedAt: now },
+      });
+    });
   }
 }

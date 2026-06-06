@@ -13,7 +13,7 @@ import {
   setSecureItem,
   deleteSecureItem,
 } from '@/stores/secure-storage';
-import { clearCurrentOrgId, getCurrentOrgIdSync } from './tenant';
+import { clearCurrentOrgId } from './tenant';
 
 const ORG_SUSPENDED_CODE = 'ORG_SUSPENDED';
 
@@ -25,16 +25,13 @@ const api = axios.create({
   },
 });
 
-// Request interceptor: inject JWT token + active organization header.
+// Request interceptor: inject JWT token. The backend derives organization
+// context from auth state and does not read X-Org-Id in this single-tenant app.
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     const token = await getSecureItem('accessToken');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
-    }
-    // Keep X-Org-Id for backend routes that still require org context.
-    if (config.headers) {
-      config.headers['X-Org-Id'] = getCurrentOrgIdSync();
     }
     return config;
   },
@@ -78,12 +75,14 @@ api.interceptors.response.use(
         // /auth/refresh-token by mistake, so refreshes silently failed and
         // users got logged out at every 15-minute access-token expiry.
         const { data } = await axios.post<
-          ApiResponse<{ accessToken: string; refreshToken: string }>
+          ApiResponse<{ accessToken: string; refreshToken?: string }>
         >(`${API_URL}/auth/refresh`, { refreshToken });
 
         if (data.success && data.data) {
           await setSecureItem('accessToken', data.data.accessToken);
-          await setSecureItem('refreshToken', data.data.refreshToken);
+          if (data.data.refreshToken) {
+            await setSecureItem('refreshToken', data.data.refreshToken);
+          }
 
           if (originalRequest.headers) {
             originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;

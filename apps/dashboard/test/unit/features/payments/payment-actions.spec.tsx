@@ -15,7 +15,8 @@ const { useLocale } = vi.hoisted(() => {
 vi.mock("@/components/locale-provider", () => ({ useLocale }))
 
 vi.mock("@/components/features/payments/refund-dialog", () => ({
-  RefundDialog: ({ open }: { open: boolean }) => (open ? <div data-testid="refund-dialog" /> : null),
+  RefundDialog: ({ open, maxAmount }: { open: boolean; maxAmount?: number }) =>
+    open ? <div data-testid="refund-dialog" data-max-amount={maxAmount ?? ""} /> : null,
 }))
 
 vi.mock("@/components/features/payments/verify-dialog", () => ({
@@ -74,6 +75,19 @@ describe("PaymentActions", () => {
     expect(screen.queryByTestId("refund-dialog")).toBeNull()
     fireEvent.click(screen.getByRole("button", { name: /refund/i }))
     expect(screen.getByTestId("refund-dialog")).toBeTruthy()
+  })
+
+  it("passes the remaining refundable amount to the refund dialog", () => {
+    render(
+      <PaymentActions
+        payment={makePayment({ amount: 10_000, refundedAmount: 2_500 })}
+        onAction={() => {}}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: /refund/i }))
+
+    expect(screen.getByTestId("refund-dialog")).toHaveAttribute("data-max-amount", "7500")
   })
 
   it("opens the verify dialog when Verify Transfer is clicked", () => {

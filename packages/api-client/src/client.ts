@@ -25,11 +25,22 @@ export function initClient(cfg: ClientConfig): void {
   config = cfg
 }
 
-async function doRefresh(): Promise<string> {
+export function setApiRequestBaseUrl(baseUrl: string): void {
+  config = config
+    ? { ...config, baseUrl }
+    : {
+        baseUrl,
+        getAccessToken: () => null,
+        onTokenRefreshed: () => undefined,
+        onAuthFailure: () => undefined,
+      }
+}
+
+async function doRefresh(refreshPath: string): Promise<string> {
   if (!config) throw new Error('api-client not initialized')
   // CR-9: refresh token is an httpOnly cookie (ck_refresh); credentials: 'include'
   // sends it automatically. No token in body — empty object for compatibility.
-  const res = await fetch(`${config.baseUrl}/auth/refresh`, {
+  const res = await fetch(`${config.baseUrl}${refreshPath}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -44,8 +55,11 @@ async function doRefresh(): Promise<string> {
     raw && typeof raw === 'object' && 'success' in raw && 'data' in raw
       ? ((raw as { data: { accessToken: string } }).data)
       : (raw as { accessToken: string })
-  config.onTokenRefreshed(data.accessToken)
-  return data.accessToken
+  if (typeof data.accessToken === 'string') {
+    config.onTokenRefreshed(data.accessToken)
+    return data.accessToken
+  }
+  return ''
 }
 
 // Auth endpoints must NEVER trigger the 401-refresh flow:
@@ -56,6 +70,10 @@ const AUTH_ENDPOINTS_NO_RETRY = ['/auth/login', '/auth/refresh', '/auth/logout']
 
 function isAuthEndpoint(path: string): boolean {
   return AUTH_ENDPOINTS_NO_RETRY.some((suffix) => path.endsWith(suffix))
+}
+
+function getRefreshPath(path: string): string {
+  return path.startsWith('/public/') ? '/public/auth/refresh' : '/auth/refresh'
 }
 
 export async function apiRequest<T>(
@@ -92,7 +110,7 @@ export async function apiRequest<T>(
 
     let mutex = getRefreshMutex()
     if (!mutex) {
-      mutex = doRefresh()
+      mutex = doRefresh(getRefreshPath(path))
       // setRefreshMutex attaches the unhandled-rejection sentinel — see
       // refresh-mutex.ts. Awaiters of `mutex` below still observe the
       // original rejection.

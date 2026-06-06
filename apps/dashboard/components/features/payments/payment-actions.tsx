@@ -24,6 +24,10 @@ export function PaymentActions({ payment, onAction }: PaymentActionsProps) {
   const [verifyOpen, setVerifyOpen] = useState(false)
 
   const canRefund = payment.status === "COMPLETED"
+  const refundableAmount = Math.max(
+    Number(payment.amount) - Number(payment.refundedAmount ?? 0),
+    0,
+  )
   const canVerify =
     payment.method === "BANK_TRANSFER" &&
     payment.receipts &&
@@ -50,6 +54,7 @@ export function PaymentActions({ payment, onAction }: PaymentActionsProps) {
 
       <RefundDialog
         paymentId={payment.id}
+        maxAmount={refundableAmount}
         open={refundOpen}
         onOpenChange={setRefundOpen}
         onSuccess={onAction}
