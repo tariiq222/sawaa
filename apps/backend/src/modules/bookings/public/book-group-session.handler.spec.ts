@@ -18,6 +18,7 @@ function createSession(overrides?: Partial<any>) {
     employeeId: 'emp1',
     serviceId: 'svc1',
     branchId: 'branch1',
+    durationMins: 75,
     ...overrides,
   };
 }
@@ -28,12 +29,14 @@ describe('BookGroupSessionHandler', () => {
 
   beforeEach(async () => {
     prisma = {
-      groupSession: { findFirst: jest.fn(), update: jest.fn() },
+      groupSession: { findFirst: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
       groupEnrollment: { findUnique: jest.fn(), create: jest.fn() },
       groupSessionWaitlist: { findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn() },
       booking: { findFirst: jest.fn(), create: jest.fn() },
       invoice: { create: jest.fn() },
       organizationSettings: { findFirst: jest.fn() },
+      $queryRaw: jest.fn().mockResolvedValue([]),
+      $executeRaw: jest.fn().mockResolvedValue(0),
       $transaction: jest.fn(),
     };
     // Run the transaction callback with prisma itself as the tx client.
@@ -87,33 +90,45 @@ describe('BookGroupSessionHandler', () => {
     prisma.groupSession.findFirst.mockResolvedValue(createSession({ enrolledCount: 5, maxCapacity: 10 }));
     prisma.groupEnrollment.findUnique.mockResolvedValue(null);
     prisma.groupSessionWaitlist.findUnique.mockResolvedValue(null);
-    prisma.booking.findFirst.mockResolvedValue({ bookingNumber: 'BK-099' });
-    prisma.booking.create.mockResolvedValue({ id: 'b1', bookingNumber: 'BK-001' });
+    prisma.booking.findFirst.mockResolvedValue({ bookingNumber: 99 });
+    prisma.booking.create.mockResolvedValue({ id: 'b1', bookingNumber: 100 });
     prisma.invoice.create.mockResolvedValue({ id: 'inv1' });
     prisma.organizationSettings.findFirst.mockResolvedValue({ vatRate: '0.15' });
     prisma.groupEnrollment.create.mockResolvedValue({});
-    prisma.groupSession.update.mockResolvedValue({});
+    prisma.groupSession.updateMany.mockResolvedValue({ count: 1 });
 
     const result = await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
     expect(result.type).toBe('BOOKED');
     expect(result.bookingId).toBe('b1');
     expect(prisma.booking.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ expiresAt: expect.any(Date) }),
+      data: expect.objectContaining({ expiresAt: expect.any(Date), bookingNumber: 100 }),
+    }));
+    expect(prisma.groupSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        id: 'gs1',
+        status: GroupSessionStatus.OPEN,
+        enrolledCount: { lt: 10 },
+      }),
     }));
   });
 
   it('should create free booking without expiry', async () => {
-    prisma.groupSession.findFirst.mockResolvedValue(createSession({ price: 0, enrolledCount: 5, maxCapacity: 10 }));
+    const session = createSession({ price: 0, enrolledCount: 5, maxCapacity: 10, durationMins: 75 });
+    prisma.groupSession.findFirst.mockResolvedValue(session);
     prisma.groupEnrollment.findUnique.mockResolvedValue(null);
     prisma.groupSessionWaitlist.findUnique.mockResolvedValue(null);
     prisma.booking.findFirst.mockResolvedValue(null);
-    prisma.booking.create.mockResolvedValue({ id: 'b1', bookingNumber: 'BK-002' });
+    prisma.booking.create.mockResolvedValue({ id: 'b1', bookingNumber: 1 });
     prisma.groupEnrollment.create.mockResolvedValue({});
-    prisma.groupSession.update.mockResolvedValue({});
+    prisma.groupSession.updateMany.mockResolvedValue({ count: 1 });
 
     await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
     expect(prisma.booking.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ expiresAt: null }),
+      data: expect.objectContaining({
+        expiresAt: null,
+        durationMins: 75,
+        endsAt: new Date(session.scheduledAt.getTime() + 75 * 60_000),
+      }),
     }));
   });
 
@@ -123,7 +138,7 @@ describe('BookGroupSessionHandler', () => {
     prisma.groupSessionWaitlist.findUnique.mockResolvedValue(null);
     prisma.groupSessionWaitlist.findFirst.mockResolvedValue({ position: 3 });
     prisma.groupSessionWaitlist.create.mockResolvedValue({});
-    prisma.groupSession.update.mockResolvedValue({});
+    prisma.groupSession.updateMany.mockResolvedValue({ count: 1 });
 
     const result = await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
     expect(result.type).toBe('WAITLISTED');
@@ -136,7 +151,7 @@ describe('BookGroupSessionHandler', () => {
     prisma.groupSessionWaitlist.findUnique.mockResolvedValue(null);
     prisma.groupSessionWaitlist.findFirst.mockResolvedValue(null);
     prisma.groupSessionWaitlist.create.mockResolvedValue({});
-    prisma.groupSession.update.mockResolvedValue({});
+    prisma.groupSession.updateMany.mockResolvedValue({ count: 1 });
 
     const result = await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
     expect(result.waitlistPosition).toBe(1);
@@ -171,7 +186,7 @@ describe('BookGroupSessionHandler', () => {
     prisma.invoice.create.mockResolvedValue({ id: 'inv1' });
     prisma.organizationSettings.findFirst.mockResolvedValue({ vatRate: '0.15' });
     prisma.groupEnrollment.create.mockResolvedValue({});
-    prisma.groupSession.update.mockResolvedValue({});
+    prisma.groupSession.updateMany.mockResolvedValue({ count: 1 });
 
     const result = await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
 
@@ -217,7 +232,7 @@ describe('BookGroupSessionHandler', () => {
     prisma.invoice.create.mockResolvedValue({ id: 'inv1' });
     prisma.organizationSettings.findFirst.mockResolvedValue(null);
     prisma.groupEnrollment.create.mockResolvedValue({});
-    prisma.groupSession.update.mockResolvedValue({});
+    prisma.groupSession.updateMany.mockResolvedValue({ count: 1 });
 
     await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
 
@@ -244,7 +259,7 @@ describe('BookGroupSessionHandler', () => {
       status: 'CONFIRMED',
     });
     prisma.groupEnrollment.create.mockResolvedValue({});
-    prisma.groupSession.update.mockResolvedValue({});
+    prisma.groupSession.updateMany.mockResolvedValue({ count: 1 });
 
     await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
 
@@ -275,7 +290,7 @@ describe('BookGroupSessionHandler', () => {
     prisma.invoice.create.mockResolvedValue({ id: 'inv1' });
     prisma.organizationSettings.findFirst.mockResolvedValue(null);
     prisma.groupEnrollment.create.mockResolvedValue({});
-    prisma.groupSession.update.mockResolvedValue({});
+    prisma.groupSession.updateMany.mockResolvedValue({ count: 1 });
 
     await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
 
@@ -303,7 +318,7 @@ describe('BookGroupSessionHandler', () => {
     prisma.invoice.create.mockResolvedValue({ id: 'inv1' });
     prisma.organizationSettings.findFirst.mockResolvedValue({ vatRate: '0.15' });
     prisma.groupEnrollment.create.mockResolvedValue({});
-    prisma.groupSession.update.mockResolvedValue({});
+    prisma.groupSession.updateMany.mockResolvedValue({ count: 1 });
 
     await handler.execute({ groupSessionId: 'gs1', clientId: 'c1' });
 
@@ -312,5 +327,15 @@ describe('BookGroupSessionHandler', () => {
     expect(prisma.booking.create).toHaveBeenCalledTimes(1);
     expect(prisma.invoice.create).toHaveBeenCalledTimes(1);
     expect(prisma.groupEnrollment.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws ConflictException when capacity reservation loses the race', async () => {
+    prisma.groupSession.findFirst.mockResolvedValue(createSession({ enrolledCount: 9, maxCapacity: 10 }));
+    prisma.groupEnrollment.findUnique.mockResolvedValue(null);
+    prisma.groupSessionWaitlist.findUnique.mockResolvedValue(null);
+    prisma.groupSession.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(handler.execute({ groupSessionId: 'gs1', clientId: 'c1' })).rejects.toThrow(ConflictException);
+    expect(prisma.booking.create).not.toHaveBeenCalled();
   });
 });

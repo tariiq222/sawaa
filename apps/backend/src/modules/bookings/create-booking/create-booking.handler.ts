@@ -18,6 +18,7 @@ import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { computeVat } from '../../finance/money.helper';
+import { GROUP_CAPACITY_BOOKING_STATUSES, STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
 
 /** FNV-1a 32-bit hash → signed int32 (Postgres int4 range). Same algorithm as create-zoom-meeting. */
 function hashToInt32(s: string): number {
@@ -226,7 +227,7 @@ export class CreateBookingHandler {
           const lockKey2 = hashToInt32(`${scheduledAt.toISOString()}:${endsAt.toISOString()}`);
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey1}::int, ${lockKey2}::int)`;
 
-          // Now that the lock is held, check for an overlap with PENDING/CONFIRMED bookings.
+          // Now that the lock is held, check for an overlap with statuses that occupy staff time.
           const bufferMs = bookingSettings.bufferMinutes * 60_000;
           const bufferedStart = new Date(scheduledAt.getTime() - bufferMs);
           const bufferedEnd = new Date(endsAt.getTime() + bufferMs);
@@ -234,7 +235,7 @@ export class CreateBookingHandler {
           const conflict = await tx.booking.findFirst({
             where: {
               employeeId: dto.employeeId,
-              status: { in: ['PENDING', 'CONFIRMED', 'AWAITING_PAYMENT'] },
+              status: { in: [...STAFF_TIME_BLOCKING_BOOKING_STATUSES] },
               scheduledAt: { lt: bufferedEnd },
               endsAt: { gt: bufferedStart },
             },
@@ -258,7 +259,8 @@ export class CreateBookingHandler {
               serviceId: dto.serviceId,
               employeeId: dto.employeeId,
               scheduledAt,
-              status: { in: ['PENDING_GROUP_FILL', 'AWAITING_PAYMENT', 'CONFIRMED'] },
+              ...(dto.groupSessionId ? { groupSessionId: dto.groupSessionId } : {}),
+              status: { in: [...GROUP_CAPACITY_BOOKING_STATUSES] },
             },
           });
           if (slotCount >= serviceRecord!.maxParticipants) {
@@ -401,7 +403,8 @@ export class CreateBookingHandler {
           serviceId: dto.serviceId,
           employeeId: dto.employeeId,
           scheduledAt,
-          status: { in: ['PENDING_GROUP_FILL', 'AWAITING_PAYMENT', 'CONFIRMED'] },
+          ...(dto.groupSessionId ? { groupSessionId: dto.groupSessionId } : {}),
+          status: { in: [...GROUP_CAPACITY_BOOKING_STATUSES] },
         },
       });
       if (filledCount >= serviceRecord!.minParticipants) {

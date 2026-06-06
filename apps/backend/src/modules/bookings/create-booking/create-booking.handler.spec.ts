@@ -9,6 +9,10 @@ import { GroupSessionMinReachedHandler } from '../group-session-min-reached/grou
 import { EventBusService } from '../../../infrastructure/events';
 import { ValidateCouponService } from '../coupons/validate-coupon.service';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
+import {
+  GROUP_CAPACITY_BOOKING_STATUSES,
+  STAFF_TIME_BLOCKING_BOOKING_STATUSES,
+} from '../active-booking-statuses';
 
 const futureDate = new Date(Date.now() + 86400_000);
 
@@ -250,6 +254,13 @@ describe('CreateBookingHandler', () => {
     await expect(handler.execute(baseDto)).rejects.toThrow(
       'Employee already has a booking in this time slot',
     );
+    expect(prisma.booking.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: { in: [...STAFF_TIME_BLOCKING_BOOKING_STATUSES] },
+        }),
+      }),
+    );
   });
 
   it('assigns sequential bookingNumber when prior booking exists', async () => {
@@ -457,6 +468,37 @@ describe('CreateBookingHandler', () => {
       }),
     );
     expect(result.invoiceId).toBeNull();
+    expect(prisma.booking.count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: { in: [...GROUP_CAPACITY_BOOKING_STATUSES] },
+        }),
+      }),
+    );
+  });
+
+  it('scopes group capacity counts by groupSessionId when provided', async () => {
+    setupGroupService();
+    prisma.booking.count = jest.fn().mockResolvedValue(0);
+
+    await handler.execute({ ...baseDto, groupSessionId: 'gs-1' });
+
+    expect(prisma.booking.count).toHaveBeenNthCalledWith(1,
+      expect.objectContaining({
+        where: expect.objectContaining({
+          groupSessionId: 'gs-1',
+          status: { in: [...GROUP_CAPACITY_BOOKING_STATUSES] },
+        }),
+      }),
+    );
+    expect(prisma.booking.count).toHaveBeenNthCalledWith(2,
+      expect.objectContaining({
+        where: expect.objectContaining({
+          groupSessionId: 'gs-1',
+          status: { in: [...GROUP_CAPACITY_BOOKING_STATUSES] },
+        }),
+      }),
+    );
   });
 
   it('throws ConflictException when group session is full', async () => {
