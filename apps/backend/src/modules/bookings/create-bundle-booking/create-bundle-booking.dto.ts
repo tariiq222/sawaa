@@ -6,8 +6,10 @@ import {
   IsString,
   IsUUID,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { DeliveryType } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { mapDeliveryType } from '../booking-enum-transforms';
 
 export class CreateBundleBookingDto {
   @ApiProperty({ description: 'Branch where the bundle booking takes place', example: '00000000-0000-0000-0000-000000000000' })
@@ -32,5 +34,5 @@ export class CreateBundleBookingDto {
   @IsOptional() @IsBoolean() payAtClinic?: boolean;
 
   @ApiPropertyOptional({ description: 'Delivery channel for all bundle bookings (IN_PERSON or ONLINE)', enum: DeliveryType, enumName: 'DeliveryType', example: DeliveryType.IN_PERSON })
-  @IsOptional() @IsEnum(DeliveryType) deliveryType?: DeliveryType;
+  @IsOptional() @Transform(({ value }) => mapDeliveryType(value)) @IsEnum(DeliveryType) deliveryType?: DeliveryType;
 }

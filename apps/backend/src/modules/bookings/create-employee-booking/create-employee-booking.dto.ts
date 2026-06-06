@@ -8,6 +8,7 @@ import {
   IsUUID,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { mapDeliveryType } from '../booking-enum-transforms';
 
 /**
  * Mobile may still send legacy delivery aliases as bookingType.
@@ -40,7 +41,7 @@ export class CreateEmployeeBookingDto {
   @IsOptional() @Transform(({ value }) => mapBookingType(value)) @IsString() bookingType?: BookingType | 'ONLINE';
 
   @ApiPropertyOptional({ description: 'Delivery channel (IN_PERSON or ONLINE)', enum: DeliveryType, enumName: 'DeliveryType', example: DeliveryType.IN_PERSON })
-  @IsOptional() @IsEnum(DeliveryType) deliveryType?: DeliveryType;
+  @IsOptional() @Transform(({ value }) => mapDeliveryType(value)) @IsEnum(DeliveryType) deliveryType?: DeliveryType;
 
   @ApiPropertyOptional({ description: 'Free-text notes for the booking', example: 'Walk-in client' })
   @IsOptional() @IsString() notes?: string;
