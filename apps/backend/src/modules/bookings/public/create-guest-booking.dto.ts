@@ -3,6 +3,7 @@ import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BookingType, ClientGender, DeliveryType } from '@prisma/client';
 import { NormalizePhone } from '../../identity/shared/normalize-phone.transform';
+import { mapDeliveryType } from '../booking-enum-transforms';
 
 const mapBookingType = (v: unknown) => {
   if (typeof v !== 'string' || !v) return v;
@@ -56,7 +57,7 @@ export class CreateGuestBookingDto {
   startsAt!: string;
 
   @ApiPropertyOptional({ description: 'Delivery channel (IN_PERSON or ONLINE)', enum: DeliveryType, enumName: 'DeliveryType', example: DeliveryType.IN_PERSON })
-  @IsOptional() @IsEnum(DeliveryType) deliveryType?: DeliveryType;
+  @IsOptional() @Transform(({ value }) => mapDeliveryType(value)) @IsEnum(DeliveryType) deliveryType?: DeliveryType;
 
   @ApiPropertyOptional({ description: 'Specific duration option to resolve price and duration', example: '00000000-0000-0000-0000-000000000004' })
   @IsOptional() @IsUUID() durationOptionId?: string;

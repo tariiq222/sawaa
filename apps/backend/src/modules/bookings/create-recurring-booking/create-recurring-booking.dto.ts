@@ -1,5 +1,6 @@
 import { BookingType, DeliveryType, RecurringFrequency } from '@prisma/client';
 import { Transform } from 'class-transformer';
+import { mapDeliveryType } from '../booking-enum-transforms';
 import {
   ArrayMinSize,
   IsArray,
@@ -66,7 +67,7 @@ export class CreateRecurringBookingDto {
   @IsOptional() @Transform(({ value }) => mapBookingType(value)) @IsString() bookingType?: BookingType | 'ONLINE';
 
   @ApiPropertyOptional({ description: 'Delivery channel (IN_PERSON or ONLINE)', enum: DeliveryType, enumName: 'DeliveryType', example: DeliveryType.IN_PERSON })
-  @IsOptional() @IsEnum(DeliveryType) deliveryType?: DeliveryType;
+  @IsOptional() @Transform(({ value }) => mapDeliveryType(value)) @IsEnum(DeliveryType) deliveryType?: DeliveryType;
 
   @ApiPropertyOptional({ description: 'Notes applied to each booking in the series', example: 'Weekly follow-up' })
   @IsOptional() @IsString() notes?: string;

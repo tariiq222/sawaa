@@ -3,6 +3,7 @@ import { Transform } from 'class-transformer';
 import { IsBoolean, IsDateString, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationDto } from '../../../common/dto';
+import { mapDeliveryType } from '../booking-enum-transforms';
 
 /**
  * Booking type (appointment shape) is INDIVIDUAL / WALK_IN / GROUP. Delivery channel
@@ -16,10 +17,6 @@ const mapBookingType = (v: unknown) => {
   if (lower === 'in_person') return 'INDIVIDUAL';
   return v.toUpperCase();
 };
-
-/** Dashboard sends delivery channel as snake_case (in_person / online); DB enum is uppercase. */
-const mapDeliveryType = (v: unknown) =>
-  typeof v === 'string' && v ? v.toUpperCase() : v;
 
 /**
  * Query-string booleans arrive as the strings "true" / "false". Read the raw value
