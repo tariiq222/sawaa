@@ -1,7 +1,7 @@
 import {
   Controller, Get, Post, Put, Patch, Delete, Body, Param, Query,
   UseGuards, ParseUUIDPipe, HttpCode, HttpStatus,
-  UseInterceptors, UploadedFile, BadRequestException, NotFoundException, Request,
+  UseInterceptors, UploadedFile, BadRequestException, NotFoundException, ForbiddenException, Request,
 } from '@nestjs/common';
 import type { DeliveryType } from '@prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -1015,8 +1015,11 @@ export class DashboardPeopleController {
   createEmployeeAccountEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: CreateEmployeeAccountDto,
+    @Request() req: { user?: { id?: string } },
   ) {
-    return this.createEmployeeAccount.execute({ employeeId: id, ...body });
+    const actorUserId = req.user?.id;
+    if (!actorUserId) throw new ForbiddenException('Missing actor');
+    return this.createEmployeeAccount.execute({ employeeId: id, ...body, actorUserId });
   }
 
   @Patch('employees/:id/account')
@@ -1040,7 +1043,10 @@ export class DashboardPeopleController {
   updateEmployeeAccountEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateEmployeeAccountDto,
+    @Request() req: { user?: { id?: string } },
   ) {
-    return this.updateEmployeeAccount.execute({ employeeId: id, ...body });
+    const actorUserId = req.user?.id;
+    if (!actorUserId) throw new ForbiddenException('Missing actor');
+    return this.updateEmployeeAccount.execute({ employeeId: id, ...body, actorUserId });
   }
 }

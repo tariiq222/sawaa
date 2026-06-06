@@ -180,8 +180,13 @@ export class DashboardIdentityController {
       },
     },
   })
-  async createUserEndpoint(@Body() body: CreateUserDto) {
-    return this.createUserHandler.execute(body);
+  async createUserEndpoint(
+    @Body() body: CreateUserDto,
+    @Request() req: { user?: { id?: string } },
+  ) {
+    const actorUserId = req.user?.id;
+    if (!actorUserId) throw new ForbiddenException('Missing actor');
+    return this.createUserHandler.execute({ ...body, actorUserId });
   }
 
   @Patch('users/:id')
@@ -275,8 +280,11 @@ export class DashboardIdentityController {
   async assignRoleEndpoint(
     @Param('userId', ParseUUIDPipe) userId: string,
     @Body() body: AssignRoleDto,
+    @Request() req: { user?: { id?: string } },
   ) {
-    await this.assignRoleHandler.execute({ userId, customRoleId: body.customRoleId });
+    const actorUserId = req.user?.id;
+    if (!actorUserId) throw new ForbiddenException('Missing actor');
+    await this.assignRoleHandler.execute({ actorUserId, userId, customRoleId: body.customRoleId });
   }
 
   @Delete('users/:userId/roles/:roleId')

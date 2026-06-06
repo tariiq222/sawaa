@@ -29,6 +29,7 @@ import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../../common/guards/casl.guard';
 import { CurrentUser, JwtUser } from '../../../common/auth/current-user.decorator';
 import { PrismaService } from '../../../infrastructure/database';
+import { resolveEmployeeId } from './resolve-employee-id.helper';
 import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/list-bookings.handler';
 import { ListBookingsDto } from '../../../modules/bookings/list-bookings/list-bookings.dto';
 import { GetBookingHandler } from '../../../modules/bookings/get-booking/get-booking.handler';
@@ -98,13 +99,14 @@ export class MobileEmployeeBookingsController {
   @CheckPermissions({ action: 'create', subject: 'Booking' })
   @ApiOperation({ summary: 'Create a new booking on the authenticated employee calendar' })
   @ApiCreatedResponse({ description: 'Booking created', schema: { type: 'object' } })
-  createMyBooking(
+  async createMyBooking(
     @CurrentUser() user: JwtUser,
     @Body() dto: CreateEmployeeBookingDto,
   ) {
+    const employeeId = await resolveEmployeeId(this.prisma, user);
     return this.createEmployeeHandler.execute({
       ...dto,
-      employeeId: user.sub,
+      employeeId,
     });
   }
 
@@ -112,11 +114,12 @@ export class MobileEmployeeBookingsController {
   @CheckPermissions({ action: 'read', subject: 'Booking' })
   @ApiOperation({ summary: 'List bookings assigned to the authenticated employee' })
   @ApiOkResponse({ description: 'Paginated list of bookings', schema: { type: 'object' } })
-  listMyBookings(@CurrentUser() user: JwtUser, @Query() q: ListBookingsDto) {
+  async listMyBookings(@CurrentUser() user: JwtUser, @Query() q: ListBookingsDto) {
     const { page, limit, fromDate, toDate, ...rest } = q;
+    const employeeId = await resolveEmployeeId(this.prisma, user);
     return this.listHandler.execute({
       ...rest,
-      employeeId: user.sub,
+      employeeId,
       page: page ?? 1,
       limit: limit ?? 20,
       fromDate: startOfDayInTz(fromDate),
@@ -133,7 +136,8 @@ export class MobileEmployeeBookingsController {
     @CurrentUser() user: JwtUser,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    await this.assertOwnership(id, user.sub);
+    const employeeId = await resolveEmployeeId(this.prisma, user);
+    await this.assertOwnership(id, employeeId);
     return this.getHandler.execute({ bookingId: id });
   }
 
@@ -147,7 +151,8 @@ export class MobileEmployeeBookingsController {
     @CurrentUser() user: JwtUser,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    await this.assertOwnership(id, user.sub);
+    const employeeId = await resolveEmployeeId(this.prisma, user);
+    await this.assertOwnership(id, employeeId);
     return this.checkInHandler.execute({ bookingId: id, changedBy: user.sub });
   }
 
@@ -162,7 +167,8 @@ export class MobileEmployeeBookingsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: CompleteBookingDto,
   ) {
-    await this.assertOwnership(id, user.sub);
+    const employeeId = await resolveEmployeeId(this.prisma, user);
+    await this.assertOwnership(id, employeeId);
     return this.completeHandler.execute({
       bookingId: id,
       changedBy: user.sub,
@@ -181,7 +187,8 @@ export class MobileEmployeeBookingsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: EmployeeCancelBookingDto,
   ) {
-    await this.assertOwnership(id, user.sub);
+    const employeeId = await resolveEmployeeId(this.prisma, user);
+    await this.assertOwnership(id, employeeId);
     return this.cancelHandler.execute({
       bookingId: id,
       changedBy: user.sub,
@@ -202,7 +209,8 @@ export class MobileEmployeeBookingsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: EmployeeCancelRequestDto,
   ) {
-    await this.assertOwnership(id, user.sub);
+    const employeeId = await resolveEmployeeId(this.prisma, user);
+    await this.assertOwnership(id, employeeId);
     return this.requestCancelHandler.execute({
       bookingId: id,
       reason: body.reason ?? CancellationReason.EMPLOYEE_UNAVAILABLE,

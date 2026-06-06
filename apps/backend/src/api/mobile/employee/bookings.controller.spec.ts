@@ -17,6 +17,9 @@ describe('MobileEmployeeBookingsController (e2e)', () => {
   let app: INestApplication;
 
   const mockPrisma = {
+    employee: {
+      findFirst: jest.fn(),
+    },
     booking: {
       findFirst: jest.fn(),
     },
@@ -73,6 +76,10 @@ describe('MobileEmployeeBookingsController (e2e)', () => {
       isSuperAdmin: false,
     });
     jest.clearAllMocks();
+    // JWT user carries sub = 'emp-1' (a User.id) and no employeeId claim, so the
+    // controller resolves the real Employee.id via prisma.employee.findFirst.
+    // Returning a DIFFERENT id ('employee-1') proves resolution actually happens.
+    mockPrisma.employee.findFirst.mockResolvedValue({ id: 'employee-1' });
   });
 
   afterEach(async () => {
@@ -90,14 +97,14 @@ describe('MobileEmployeeBookingsController (e2e)', () => {
 
       expect(res.body.data).toHaveLength(1);
       expect(mockListBookings.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ employeeId: 'emp-1', page: 1, limit: 20 }),
+        expect.objectContaining({ employeeId: 'employee-1', page: 1, limit: 20 }),
       );
     });
   });
 
   describe('GET /mobile/employee/bookings/:id', () => {
     it('returns 200 when booking is owned', async () => {
-      mockPrisma.booking.findFirst.mockResolvedValue({ id: uuid(1), employeeId: 'emp-1' });
+      mockPrisma.booking.findFirst.mockResolvedValue({ id: uuid(1), employeeId: 'employee-1' });
       mockGetBooking.execute.mockResolvedValue({ id: uuid(1), status: 'CONFIRMED' });
 
       const res = await request(app.getHttpServer())
@@ -129,7 +136,7 @@ describe('MobileEmployeeBookingsController (e2e)', () => {
 
   describe('POST /mobile/employee/bookings/:id/start', () => {
     it('returns 200 on start (check-in)', async () => {
-      mockPrisma.booking.findFirst.mockResolvedValue({ id: uuid(1), employeeId: 'emp-1' });
+      mockPrisma.booking.findFirst.mockResolvedValue({ id: uuid(1), employeeId: 'employee-1' });
       mockCheckIn.execute.mockResolvedValue({ id: uuid(1), status: 'CHECKED_IN' });
 
       const res = await request(app.getHttpServer())
@@ -143,7 +150,7 @@ describe('MobileEmployeeBookingsController (e2e)', () => {
 
   describe('POST /mobile/employee/bookings/:id/complete', () => {
     it('returns 200 on complete', async () => {
-      mockPrisma.booking.findFirst.mockResolvedValue({ id: uuid(1), employeeId: 'emp-1' });
+      mockPrisma.booking.findFirst.mockResolvedValue({ id: uuid(1), employeeId: 'employee-1' });
       mockComplete.execute.mockResolvedValue({ id: uuid(1), status: 'COMPLETED' });
 
       const res = await request(app.getHttpServer())
@@ -158,7 +165,7 @@ describe('MobileEmployeeBookingsController (e2e)', () => {
 
   describe('POST /mobile/employee/bookings/:id/employee-cancel', () => {
     it('returns 200 on cancel', async () => {
-      mockPrisma.booking.findFirst.mockResolvedValue({ id: uuid(1), employeeId: 'emp-1' });
+      mockPrisma.booking.findFirst.mockResolvedValue({ id: uuid(1), employeeId: 'employee-1' });
       mockCancel.execute.mockResolvedValue({ id: uuid(1), status: 'CANCELLED' });
 
       const res = await request(app.getHttpServer())
@@ -173,7 +180,7 @@ describe('MobileEmployeeBookingsController (e2e)', () => {
 
   describe('POST /mobile/employee/bookings/:id/cancel-request', () => {
     it('returns 200 on cancel request', async () => {
-      mockPrisma.booking.findFirst.mockResolvedValue({ id: uuid(1), employeeId: 'emp-1' });
+      mockPrisma.booking.findFirst.mockResolvedValue({ id: uuid(1), employeeId: 'employee-1' });
       mockRequestCancel.execute.mockResolvedValue({ id: uuid(1), status: 'CANCEL_REQUESTED' });
 
       const res = await request(app.getHttpServer())

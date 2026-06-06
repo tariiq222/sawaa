@@ -10,6 +10,8 @@ import { ApiStandardResponses } from '../../../common/swagger';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../../common/guards/casl.guard';
 import { CurrentUser, JwtUser } from '../../../common/auth/current-user.decorator';
+import { PrismaService } from '../../../infrastructure/database';
+import { resolveEmployeeId } from './resolve-employee-id.helper';
 import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/list-bookings.handler';
 import {
   UpdateAvailabilityHandler,
@@ -44,6 +46,7 @@ export class UpdateAvailabilityBody {
 @Controller('mobile/employee/schedule')
 export class MobileEmployeeScheduleController {
   constructor(
+    private readonly prisma: PrismaService,
     private readonly listBookings: ListBookingsHandler,
     private readonly updateAvailability: UpdateAvailabilityHandler,
   ) {}
@@ -63,10 +66,11 @@ export class MobileEmployeeScheduleController {
   })
   @Get('today')
   @CheckPermissions({ action: 'read', subject: 'Booking' })
-  today(@CurrentUser() user: JwtUser) {
+  async today(@CurrentUser() user: JwtUser) {
     const { start: today, end: tomorrow } = todayRangeInTz();
+    const employeeId = await resolveEmployeeId(this.prisma, user);
     return this.listBookings.execute({
-      employeeId: user.sub,
+      employeeId,
       fromDate: today,
       toDate: tomorrow,
       page: 1,
@@ -93,12 +97,13 @@ export class MobileEmployeeScheduleController {
   @ApiQuery({ name: 'limit', required: false, description: 'Results per page', example: 100 })
   @Get('weekly')
   @CheckPermissions({ action: 'read', subject: 'Booking' })
-  weekly(
+  async weekly(
     @CurrentUser() user: JwtUser,
     @Query() q: EmployeeScheduleQuery,
   ) {
+    const employeeId = await resolveEmployeeId(this.prisma, user);
     return this.listBookings.execute({
-      employeeId: user.sub,
+      employeeId,
       fromDate: startOfDayInTz(q.fromDate),
       toDate: endOfDayInTz(q.toDate),
       page: q.page ?? 1,
@@ -120,12 +125,13 @@ export class MobileEmployeeScheduleController {
   })
   @Patch('availability')
   @CheckPermissions({ action: 'update', subject: 'Booking' })
-  updateAvailabilityEndpoint(
+  async updateAvailabilityEndpoint(
     @CurrentUser() user: JwtUser,
     @Body() body: UpdateAvailabilityBody,
   ) {
+    const employeeId = await resolveEmployeeId(this.prisma, user);
     return this.updateAvailability.execute({
-      employeeId: user.sub,
+      employeeId,
       windows: body.windows,
       exceptions: body.exceptions,
     });

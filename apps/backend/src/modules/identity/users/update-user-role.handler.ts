@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { ROLE_RANK, actorRankOf } from '../shared/role-rank';
 
 export interface UpdateUserRoleCommand {
   actorUserId: string;
@@ -8,16 +9,6 @@ export interface UpdateUserRoleCommand {
   role?: UserRole;
   customRoleId?: string | null;
 }
-
-// Higher number = more powerful. Actor must outrank target's current AND new role.
-const ROLE_RANK: Record<UserRole, number> = {
-  SUPER_ADMIN: 100,
-  ADMIN: 80,
-  ACCOUNTANT: 50,
-  RECEPTIONIST: 40,
-  EMPLOYEE: 30,
-  CLIENT: 10,
-};
 
 @Injectable()
 export class UpdateUserRoleHandler {
@@ -52,7 +43,7 @@ export class UpdateUserRoleHandler {
       throw new ForbiddenException('Only super admins can grant SUPER_ADMIN');
     }
 
-    const actorRank = actor.isSuperAdmin ? ROLE_RANK.SUPER_ADMIN : ROLE_RANK[actor.role];
+    const actorRank = actorRankOf(actor);
     const targetCurrentRank = ROLE_RANK[target.role];
     if (actorRank <= targetCurrentRank) {
       throw new ForbiddenException('Cannot modify a user at or above your rank');

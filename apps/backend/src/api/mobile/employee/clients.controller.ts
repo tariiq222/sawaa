@@ -1,4 +1,4 @@
-import { Controller, ForbiddenException, Get, Param, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
@@ -12,6 +12,7 @@ import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../../common/guards/casl.guard';
 import { CurrentUser, JwtUser } from '../../../common/auth/current-user.decorator';
 import { PrismaService } from '../../../infrastructure/database';
+import { resolveEmployeeId } from './resolve-employee-id.helper';
 
 export class EmployeeClientListQuery {
   @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
@@ -134,19 +135,6 @@ export class MobileEmployeeClientsController {
   }
 
   private async resolveEmployeeId(user: JwtUser): Promise<string> {
-    if (user.employeeId) {
-      return user.employeeId;
-    }
-
-    const employee = await this.prisma.employee.findFirst({
-      where: { userId: user.sub, isActive: true },
-      select: { id: true },
-    });
-
-    if (!employee) {
-      throw new ForbiddenException('employee_profile_not_found');
-    }
-
-    return employee.id;
+    return resolveEmployeeId(this.prisma, user);
   }
 }

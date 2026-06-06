@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { MobileEmployeeScheduleController } from './schedule.controller';
+import { PrismaService } from '../../../infrastructure/database';
 import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/list-bookings.handler';
 import { UpdateAvailabilityHandler } from '../../../modules/people/employees/update-availability.handler';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
@@ -10,6 +11,9 @@ import { CaslGuard } from '../../../common/guards/casl.guard';
 describe('MobileEmployeeScheduleController (e2e)', () => {
   let app: INestApplication;
 
+  const mockPrisma = {
+    employee: { findFirst: jest.fn() },
+  };
   const mockListBookings = { execute: jest.fn() };
   const mockUpdateAvailability = { execute: jest.fn() };
 
@@ -17,6 +21,7 @@ describe('MobileEmployeeScheduleController (e2e)', () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [MobileEmployeeScheduleController],
       providers: [
+        { provide: PrismaService, useValue: mockPrisma },
         { provide: ListBookingsHandler, useValue: mockListBookings },
         { provide: UpdateAvailabilityHandler, useValue: mockUpdateAvailability },
       ],
@@ -49,6 +54,13 @@ describe('MobileEmployeeScheduleController (e2e)', () => {
     await app.close();
   });
 
+  beforeEach(() => {
+    // JWT user carries sub = 'emp-1' (a User.id) and no employeeId claim, so the
+    // controller resolves the real Employee.id via prisma.employee.findFirst.
+    // Returning a DIFFERENT id ('employee-1') proves resolution actually happens.
+    mockPrisma.employee.findFirst.mockResolvedValue({ id: 'employee-1' });
+  });
+
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -64,7 +76,7 @@ describe('MobileEmployeeScheduleController (e2e)', () => {
 
       expect(res.body.data).toHaveLength(1);
       expect(mockListBookings.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ employeeId: 'emp-1', page: 1, limit: 50 }),
+        expect.objectContaining({ employeeId: 'employee-1', page: 1, limit: 50 }),
       );
     });
   });
@@ -80,7 +92,7 @@ describe('MobileEmployeeScheduleController (e2e)', () => {
 
       expect(res.body.data).toHaveLength(1);
       expect(mockListBookings.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ employeeId: 'emp-1', fromDate: expect.any(Date), toDate: expect.any(Date) }),
+        expect.objectContaining({ employeeId: 'employee-1', fromDate: expect.any(Date), toDate: expect.any(Date) }),
       );
     });
 
@@ -94,7 +106,7 @@ describe('MobileEmployeeScheduleController (e2e)', () => {
 
   describe('PATCH /mobile/employee/schedule/availability', () => {
     it('returns 200 on availability update', async () => {
-      mockUpdateAvailability.execute.mockResolvedValue({ employeeId: 'emp-1', windows: [] });
+      mockUpdateAvailability.execute.mockResolvedValue({ employeeId: 'employee-1', windows: [] });
 
       const res = await request(app.getHttpServer())
         .patch('/mobile/employee/schedule/availability')
@@ -102,7 +114,10 @@ describe('MobileEmployeeScheduleController (e2e)', () => {
         .send({ windows: [{ dayOfWeek: 1, startTime: '09:00', endTime: '17:00' }] })
         .expect(200);
 
-      expect(res.body.employeeId).toBe('emp-1');
+      expect(res.body.employeeId).toBe('employee-1');
+      expect(mockUpdateAvailability.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ employeeId: 'employee-1' }),
+      );
     });
   });
 });

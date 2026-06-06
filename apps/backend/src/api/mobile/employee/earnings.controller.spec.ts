@@ -64,8 +64,11 @@ describe('MobileEmployeeEarningsController (e2e)', () => {
 
   describe('GET /mobile/employee/earnings', () => {
     it('returns 200 with commission-based earnings summary (single method)', async () => {
-      // Employee has 70% commission rate
+      // Employee has 70% commission rate. The JWT carries sub = 'emp-1' (a User.id)
+      // and no employeeId claim, so the controller resolves the real Employee.id
+      // ('employee-1', deliberately different from sub) before querying invoices.
       mockPrisma.employee.findFirst.mockResolvedValue({
+        id: 'employee-1',
         commissionRate: new Prisma.Decimal('0.7'),
       });
       // Invoice subtotal = 10000 halalas, total = 11500 (incl. VAT), paid via ONLINE_CARD
@@ -91,11 +94,18 @@ describe('MobileEmployeeEarningsController (e2e)', () => {
       expect(res.body.invoiceCount).toBe(1);
       // byMethod reflects employee share: proportion = 11500/11500 = 1 → 7000
       expect(res.body.byMethod).toEqual({ ONLINE_CARD: 7000 });
+      // The invoice query must key on the RESOLVED Employee.id, not the JWT sub.
+      expect(mockPrisma.invoice.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ employeeId: 'employee-1' }),
+        }),
+      );
     });
 
     it('returns 200 with proportional byMethod when multiple payment methods used', async () => {
       // Employee has 80% commission rate
       mockPrisma.employee.findFirst.mockResolvedValue({
+        id: 'employee-1',
         commissionRate: new Prisma.Decimal('0.8'),
       });
       // Invoice subtotal = 20000 halalas, total = 23000 (incl. VAT)
@@ -130,6 +140,7 @@ describe('MobileEmployeeEarningsController (e2e)', () => {
     it('applies per-service commission rate override when present', async () => {
       // Employee default rate = 0.5, but service override = 0.9
       mockPrisma.employee.findFirst.mockResolvedValue({
+        id: 'employee-1',
         commissionRate: new Prisma.Decimal('0.5'),
       });
       mockPrisma.invoice.findMany.mockResolvedValue([
@@ -158,6 +169,7 @@ describe('MobileEmployeeEarningsController (e2e)', () => {
 
     it('returns 200 with zero totals when no invoices', async () => {
       mockPrisma.employee.findFirst.mockResolvedValue({
+        id: 'employee-1',
         commissionRate: new Prisma.Decimal('0.7'),
       });
       mockPrisma.invoice.findMany.mockResolvedValue([]);
@@ -174,7 +186,11 @@ describe('MobileEmployeeEarningsController (e2e)', () => {
     });
 
     it('defaults to 100% rate when employee row not found', async () => {
-      mockPrisma.employee.findFirst.mockResolvedValue(null);
+      // resolveEmployeeId succeeds (1st findFirst → resolved id), but the commission
+      // lookup (2nd findFirst → null) misses, so the controller falls back to 1.0.
+      mockPrisma.employee.findFirst
+        .mockResolvedValueOnce({ id: 'employee-1' })
+        .mockResolvedValue(null);
       mockPrisma.invoice.findMany.mockResolvedValue([
         {
           subtotal: 5000,

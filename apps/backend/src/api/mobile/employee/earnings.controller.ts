@@ -10,6 +10,7 @@ import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../../common/guards/casl.guard';
 import { CurrentUser, JwtUser } from '../../../common/auth/current-user.decorator';
 import { PrismaService } from '../../../infrastructure/database';
+import { resolveEmployeeId } from './resolve-employee-id.helper';
 import { computeCommission } from '../../../modules/finance/commission.helper';
 
 export class EarningsQuery {
@@ -77,9 +78,11 @@ export class MobileEmployeeEarningsController {
       ? new Date(q.to)
       : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
+    const employeeId = await resolveEmployeeId(this.prisma, user);
+
     // Fetch employee's default commission rate.
     const employee = await this.prisma.employee.findFirst({
-      where: { userId: user.sub },
+      where: { id: employeeId },
       select: { commissionRate: true },
     });
 
@@ -90,7 +93,7 @@ export class MobileEmployeeEarningsController {
     // serviceId so we can resolve per-service commission overrides.
     const invoices = await this.prisma.invoice.findMany({
       where: {
-        employeeId: user.sub,
+        employeeId,
         status: InvoiceStatus.PAID,
         paidAt: { gte: from, lte: to },
       },

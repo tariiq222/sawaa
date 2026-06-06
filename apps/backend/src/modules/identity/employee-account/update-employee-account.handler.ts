@@ -1,8 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
+import { assertCanAssignRole } from '../shared/role-rank';
 import { UpdateEmployeeAccountDto } from './update-employee-account.dto';
 
-export type UpdateEmployeeAccountCommand = UpdateEmployeeAccountDto & { employeeId: string };
+// actorUserId is injected from the authenticated principal (req.user.id), never the body.
+export type UpdateEmployeeAccountCommand = UpdateEmployeeAccountDto & {
+  employeeId: string;
+  actorUserId: string;
+};
 
 @Injectable()
 export class UpdateEmployeeAccountHandler {
@@ -16,6 +21,21 @@ export class UpdateEmployeeAccountHandler {
 
     if (!employee.userId) {
       throw new NotFoundException('Employee has no linked account');
+    }
+
+    // No self-escalation: cannot re-role your own linked account through this path.
+    if (employee.userId === cmd.actorUserId) {
+      throw new ForbiddenException('Cannot change your own role');
+    }
+
+    // Rank gate (only when a built-in role change is requested — role is optional here).
+    if (cmd.role !== undefined) {
+      const actor = await this.prisma.user.findUnique({
+        where: { id: cmd.actorUserId },
+        select: { role: true, isSuperAdmin: true },
+      });
+      if (!actor) throw new ForbiddenException('Actor not found');
+      assertCanAssignRole(actor, cmd.role);
     }
 
     return this.prisma.user.update({

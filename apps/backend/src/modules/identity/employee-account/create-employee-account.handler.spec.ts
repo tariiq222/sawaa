@@ -32,16 +32,22 @@ const buildTx = (user?: ReturnType<typeof makeUser>) => ({
   },
 });
 
+// By default the actor is a SUPER_ADMIN so existing role-assignment assertions
+// (ADMIN / RECEPTIONIST) pass the rank gate. Override `actor` to test denials.
 const buildPrisma = (
   employee: ReturnType<typeof makeEmployee> | null,
   existingUser: ReturnType<typeof makeUser> | null,
   tx: ReturnType<typeof buildTx>,
+  actor: { role: string; isSuperAdmin: boolean } | null = { role: 'SUPER_ADMIN', isSuperAdmin: true },
 ) => ({
   employee: {
     findFirst: jest.fn().mockResolvedValue(employee),
   },
   user: {
-    findUnique: jest.fn().mockResolvedValue(existingUser),
+    // Actor lookup is by { id }, the existing-account lookup is by { email }.
+    findUnique: jest.fn(({ where }: { where: { id?: string; email?: string } }) =>
+      Promise.resolve(where.id ? actor : existingUser),
+    ),
   },
   $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx)),
 });
@@ -72,7 +78,7 @@ describe('CreateEmployeeAccountHandler', () => {
       password as never,
     );
 
-    const result = await handler.execute({ employeeId: 'emp-1', role: 'ADMIN' as never });
+    const result = await handler.execute({ employeeId: 'emp-1', role: 'ADMIN' as never, actorUserId: 'actor-1' });
 
     // Should update the existing user's role, not create a new user
     expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
@@ -101,7 +107,7 @@ describe('CreateEmployeeAccountHandler', () => {
       password as never,
     );
 
-    await handler.execute({ employeeId: 'emp-1', role: 'RECEPTIONIST' as never, password: 'P@ssw0rd123' });
+    await handler.execute({ employeeId: 'emp-1', role: 'RECEPTIONIST' as never, password: 'P@ssw0rd123', actorUserId: 'actor-1' });
 
     expect(password.hash).toHaveBeenCalledWith('P@ssw0rd123');
     expect(tx.user.create).toHaveBeenCalledWith(expect.objectContaining({
@@ -125,7 +131,7 @@ describe('CreateEmployeeAccountHandler', () => {
     );
 
     await expect(
-      handler.execute({ employeeId: 'missing', role: 'ADMIN' as never }),
+      handler.execute({ employeeId: 'missing', role: 'ADMIN' as never, actorUserId: 'actor-1' }),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -140,7 +146,7 @@ describe('CreateEmployeeAccountHandler', () => {
     );
 
     await expect(
-      handler.execute({ employeeId: 'emp-1', role: 'ADMIN' as never }),
+      handler.execute({ employeeId: 'emp-1', role: 'ADMIN' as never, actorUserId: 'actor-1' }),
     ).rejects.toThrow(ConflictException);
   });
 
@@ -155,7 +161,7 @@ describe('CreateEmployeeAccountHandler', () => {
     );
 
     await expect(
-      handler.execute({ employeeId: 'emp-1', role: 'ADMIN' as never }),
+      handler.execute({ employeeId: 'emp-1', role: 'ADMIN' as never, actorUserId: 'actor-1' }),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -170,7 +176,39 @@ describe('CreateEmployeeAccountHandler', () => {
     );
 
     await expect(
-      handler.execute({ employeeId: 'emp-1', role: 'ADMIN' as never }),
+      handler.execute({ employeeId: 'emp-1', role: 'ADMIN' as never, actorUserId: 'actor-1' }),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it('rejects when the actor outranks neither the requested role (rank gate)', async () => {
+    const emp = makeEmployee();
+    const tx = buildTx();
+    // Actor is an ADMIN trying to grant ADMIN — at-or-above own rank, must fail.
+    const prisma = buildPrisma(emp, null, tx, { role: 'ADMIN', isSuperAdmin: false });
+    const handler = new CreateEmployeeAccountHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      buildPassword() as never,
+    );
+
+    await expect(
+      handler.execute({ employeeId: 'emp-1', role: 'ADMIN' as never, actorUserId: 'actor-1' }),
+    ).rejects.toThrow('Cannot assign a role at or above your rank');
+    expect(prisma.employee.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('rejects when the actor cannot be found', async () => {
+    const emp = makeEmployee();
+    const tx = buildTx();
+    const prisma = buildPrisma(emp, null, tx, null);
+    const handler = new CreateEmployeeAccountHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      buildPassword() as never,
+    );
+
+    await expect(
+      handler.execute({ employeeId: 'emp-1', role: 'RECEPTIONIST' as never, actorUserId: 'ghost' }),
+    ).rejects.toThrow('Actor not found');
   });
 });
