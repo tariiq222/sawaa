@@ -8,7 +8,6 @@ import {
   Settings02Icon,
   Tick01Icon,
   UserCheck01Icon,
-  ComputerVideoCallIcon,
   Cancel01Icon,
   CheckmarkCircle01Icon,
   EyeIcon,
@@ -41,7 +40,7 @@ const statusActions = {
   pending: ["confirm", "cancel"] as const,
   pending_group_fill: ["confirm", "cancel"] as const,
   awaiting_payment: ["confirm", "cancel"] as const,
-  confirmed: ["complete", "noshow", "cancel"] as const,
+  confirmed: ["checkin", "complete", "noshow", "cancel"] as const,
   cancel_requested: ["approve_cancel", "reject_cancel"] as const,
   completed: [] as const,
   cancelled: [] as const,
@@ -52,7 +51,6 @@ const statusActions = {
 const getActionMeta = (t: (k: string) => string) => ({
   confirm:        { label: t("bookings.actions.action.confirm"),       icon: Tick01Icon,            variant: "default" },
   checkin:        { label: t("bookings.actions.action.checkin"),       icon: UserCheck01Icon,       variant: "outline" },
-  start:          { label: t("bookings.actions.action.start"),         icon: ComputerVideoCallIcon, variant: "default" },
   complete:       { label: t("bookings.actions.action.complete"),      icon: CheckmarkCircle01Icon, variant: "default" },
   noshow:         { label: t("bookings.actions.action.noshow"),        icon: EyeIcon,               variant: "destructive" },
   cancel:         { label: t("bookings.actions.action.cancel"),        icon: Cancel01Icon,          variant: "destructive" },
@@ -135,9 +133,6 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
         break
       case "checkin":
         run(() => checkInMut.mutateAsync(booking.id), t("bookings.actions.toast.checkedIn"))
-        break
-      case "start":
-        toast.error(t("bookings.actions.toast.genericError"))
         break
       case "complete":
         run(() => completeMut.mutateAsync(booking.id), t("bookings.actions.toast.completed"))
