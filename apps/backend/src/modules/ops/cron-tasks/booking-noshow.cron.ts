@@ -6,6 +6,7 @@ import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
 
 const CRON_ACTOR = 'system:booking-noshow-cron';
 const NOSHOW_REASON = 'Auto no-show: client did not check in within the configured window';
+const BATCH_SIZE = 100;
 
 @Injectable()
 export class BookingNoShowCron {
@@ -36,6 +37,8 @@ export class BookingNoShowCron {
           checkedInAt: null,
         },
         select: { id: true, status: true },
+        orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }],
+        take: BATCH_SIZE,
       });
 
       if (targets.length === 0) return;

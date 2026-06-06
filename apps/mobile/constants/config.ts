@@ -1,17 +1,20 @@
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
 
-/** Hard-coded org id for this single-tenant build. Override via EXPO_PUBLIC_TENANT_ID. */
-export const TENANT_ID =
+/** Default org id for this single-organization build. Override via EXPO_PUBLIC_TENANT_ID. */
+export const DEFAULT_ORGANIZATION_ID =
   process.env.EXPO_PUBLIC_TENANT_ID ?? '00000000-0000-0000-0000-000000000001';
 
+/** Backwards-compatible env-facing export name. */
+export const TENANT_ID = DEFAULT_ORGANIZATION_ID;
+
 /**
- * Vertical slug for the locked tenant. Drives `useTerminology()` so that
+ * Vertical slug for the default organization. Drives `useTerminology()` so that
  * vertical-specific wording (e.g. "Consultants" vs "Therapists" vs "Doctors")
  * resolves from the shared terminology pack instead of being hardcoded in
  * `i18n/{ar,en}.json`. Override per-environment via EXPO_PUBLIC_VERTICAL_SLUG.
  *
- * Default `family-consulting` matches Sawaa's primary tenant and the seed
+ * Default `family-consulting` matches Sawaa's primary organization and the seed
  * row in `prisma/migrations/20260422080855_saas_03_verticals_seed_data`.
  */
 export const VERTICAL_SLUG =

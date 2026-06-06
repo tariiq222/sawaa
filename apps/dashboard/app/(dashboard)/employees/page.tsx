@@ -14,7 +14,6 @@ import { PermissionGuard } from "@/components/features/permission-guard"
 import { useEmployees } from "@/hooks/use-employees"
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
-import { useTerminology } from "@/hooks/use-terminology"
 
 export default function EmployeesPage() {
   return (
@@ -27,11 +26,8 @@ export default function EmployeesPage() {
 function EmployeesPageInner() {
   const router = useRouter()
   const { t } = useLocale()
-  const { user, canDo } = useAuth()
-  // "الأطباء"/"Doctors" (medical), "المصففون"/"Stylists" (salon),
-  // "المدربون"/"Trainers" (fitness), "المستشارون"/"Consultants" (consulting).
-  const { t: term } = useTerminology(user?.verticalSlug ?? undefined)
-  const titleLabel = term("employee.plural", t("nav.employees"))
+  const { canDo } = useAuth()
+  const titleLabel = t("nav.employees")
 
   const {
     employees,

@@ -9,7 +9,7 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
-const BRANCH_ID = 'main-branch';
+const BRANCH_ID = 'c1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5';
 const BRANCH_ID_2 = '00000000-0000-4000-8000-0000000b0002';
 
 async function main() {
@@ -17,6 +17,23 @@ async function main() {
     adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
   });
   await prisma.$connect();
+
+  // Ensure the canonical main branch exists when running demo seed directly.
+  await prisma.branch.upsert({
+    where: { id: BRANCH_ID },
+    create: {
+      id: BRANCH_ID,
+      nameAr: 'الفرع الرئيسي',
+      nameEn: 'Main Branch',
+      city: 'Riyadh',
+      isActive: true,
+      isMain: true,
+      timezone: 'Asia/Riyadh',
+      country: 'SA',
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
 
   // Ensure a second branch exists (plan spec: 2+ branches).
   await prisma.branch.upsert({
@@ -147,14 +164,14 @@ async function main() {
       update: { categoryId: s.categoryId, price: s.price as any },
     });
 
-    // Every service is bookable IN_PERSON by default — the wizard's step-4
-    // reads these rows to know which booking types to offer.
+    // Every service is bookable in person by default — the wizard's step-4
+    // reads these rows to know which delivery types to offer.
     await prisma.serviceBookingConfig.upsert({
-      where: { serviceId_bookingType: { serviceId: s.id, bookingType: 'IN_PERSON' } },
+      where: { serviceId_deliveryType: { serviceId: s.id, deliveryType: 'IN_PERSON' } },
       create: {
         id: `${s.id}-in-person`,
         serviceId: s.id,
-        bookingType: 'IN_PERSON',
+        deliveryType: 'IN_PERSON',
         price: s.price as any,
         durationMins: s.durationMins,
         isActive: true,
@@ -277,6 +294,8 @@ async function main() {
 
   for (const [i, b] of bookings.entries()) {
     const endsAt = new Date(b.at.getTime() + b.durationMins * 60_000);
+    const bookingType = b.type === 'ONLINE' ? 'INDIVIDUAL' : b.type;
+    const deliveryType = b.type === 'ONLINE' ? 'ONLINE' : 'IN_PERSON';
     await prisma.booking.upsert({
       where: { id: b.id },
       create: {
@@ -286,7 +305,8 @@ async function main() {
         clientId: b.clientId,
         employeeId: b.employeeId,
         serviceId: b.serviceId,
-        bookingType: b.type as any,
+        bookingType: bookingType as any,
+        deliveryType: deliveryType as any,
         status: b.status as any,
         scheduledAt: b.at,
         endsAt,

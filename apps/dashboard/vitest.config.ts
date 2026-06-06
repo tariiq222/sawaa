@@ -7,6 +7,12 @@ import path from "path"
 // without this pin, time-formatting assertions silently drift by 3 hours.
 process.env.TZ = "Asia/Riyadh"
 
+// A shell-exported NODE_ENV=production makes React resolve its production CJS
+// build, which drops `React.act` and breaks @testing-library/react renders.
+// Pin to "test" so component specs always load the development build.
+if (process.env.NODE_ENV === "production")
+  (process.env as Record<string, string>).NODE_ENV = "test"
+
 export default defineConfig({
   plugins: [react()],
   test: {

@@ -17,6 +17,12 @@ describe('GroupSessionAutomationCron', () => {
     };
     const cron = new GroupSessionAutomationCron(prisma as never);
     await expect(cron.execute()).resolves.not.toThrow();
+    expect(prisma.groupSession.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }],
+        take: 100,
+      }),
+    );
     expect(prisma.groupSession.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({

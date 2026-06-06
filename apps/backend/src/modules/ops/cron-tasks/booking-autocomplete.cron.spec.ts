@@ -59,6 +59,8 @@ describe('BookingAutocompleteCron', () => {
           status: BookingStatus.CONFIRMED,
           checkedInAt: { not: null },
         }),
+        orderBy: [{ endsAt: 'asc' }, { id: 'asc' }],
+        take: 100,
       }),
     );
   });
@@ -128,6 +130,8 @@ describe('BookingNoShowCron', () => {
           status: BookingStatus.CONFIRMED,
           checkedInAt: null,
         }),
+        orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }],
+        take: 100,
       }),
     );
   });

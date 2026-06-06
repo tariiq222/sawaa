@@ -1,12 +1,17 @@
 "use client"
 
 import type { ReactNode } from "react"
+import dynamic from "next/dynamic"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Header } from "@/components/header"
 import { MobileSidebarTrigger } from "@/components/mobile-sidebar-trigger"
 import { SidebarInset, SidebarProvider } from "@sawaa/ui"
 import { AuthGate } from "@/components/providers/auth-gate"
-import { CommandPalette } from "@/components/features/command-palette"
+
+const CommandPalette = dynamic(
+  () => import("@/components/features/command-palette").then((mod) => mod.CommandPalette),
+  { ssr: false },
+)
 
 export default function DashboardLayout({
   children,

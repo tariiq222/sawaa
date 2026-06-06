@@ -2,18 +2,14 @@
  * useTerminology — unit tests
  *
  * Covers:
- *  1. Returns key as fallback when token is missing from pack
+ *  1. Returns key as fallback when token is missing
  *  2. Returns Arabic value when locale is 'ar' and token exists
  *  3. Returns English value when locale is 'en' and token exists
- *  4. Query is disabled when verticalSlug is undefined
- *  5. t() works before pack loads — returns key as fallback
+ *  4. Does not call the old dynamic terminology endpoint
  */
 
-import { renderHook, waitFor } from "@testing-library/react"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { renderHook } from "@testing-library/react"
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import type { ReactNode } from "react"
-import React from "react"
 
 /* ─── Mock api ─── */
 
@@ -34,106 +30,46 @@ vi.mock("@/components/locale-provider", () => ({
 /* ─── Import after mocks ─── */
 
 import { useTerminology } from "@/hooks/use-terminology"
-import type { TerminologyPack } from "@/hooks/use-terminology"
-
-/* ─── Helpers ─── */
-
-function makeWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-  function TestWrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    )
-  }
-  TestWrapper.displayName = "TestWrapper"
-  return TestWrapper
-}
-
-const samplePack: TerminologyPack = {
-  client: { ar: "مريض", en: "Patient" },
-  employee: { ar: "معالج", en: "Therapist" },
-}
 
 /* ─── Tests ─── */
 
 describe("useTerminology", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // Default locale = ar
     mockUseLocale.mockReturnValue({ locale: "ar" })
   })
 
-  // 1. Returns key as fallback when token is missing from pack
-  it("returns the key when token is absent from pack", async () => {
-    mockApiGet.mockResolvedValueOnce(samplePack)
-
-    const { result } = renderHook(
-      () => useTerminology("clinic"),
-      { wrapper: makeWrapper() },
-    )
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+  // 1. Returns key as fallback when token is missing
+  it("returns the key when token is absent", () => {
+    const { result } = renderHook(() => useTerminology("clinic"))
 
     expect(result.current.t("unknown_token")).toBe("unknown_token")
   })
 
-  // 2. Returns Arabic value when locale is 'ar' and override exists
-  it("returns Arabic value when locale is ar", async () => {
+  // 2. Returns Arabic value when locale is 'ar' and token exists
+  it("returns Arabic value when locale is ar", () => {
     mockUseLocale.mockReturnValue({ locale: "ar" })
-    mockApiGet.mockResolvedValueOnce(samplePack)
 
-    const { result } = renderHook(
-      () => useTerminology("clinic"),
-      { wrapper: makeWrapper() },
-    )
+    const { result } = renderHook(() => useTerminology("clinic"))
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-
-    expect(result.current.t("client")).toBe("مريض")
+    expect(result.current.t("client.plural")).toBe("المستفيدين")
   })
 
-  // 3. Returns English value when locale is 'en' and override exists
-  it("returns English value when locale is en", async () => {
+  // 3. Returns English value when locale is 'en' and token exists
+  it("returns English value when locale is en", () => {
     mockUseLocale.mockReturnValue({ locale: "en" })
-    mockApiGet.mockResolvedValueOnce(samplePack)
 
-    const { result } = renderHook(
-      () => useTerminology("clinic"),
-      { wrapper: makeWrapper() },
-    )
+    const { result } = renderHook(() => useTerminology("clinic"))
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-
-    expect(result.current.t("employee")).toBe("Therapist")
+    expect(result.current.t("employee.plural")).toBe("Employees")
   })
 
-  // 4. Query is disabled when verticalSlug is undefined
-  it("does not fire a query when verticalSlug is undefined", () => {
-    const { result } = renderHook(
-      () => useTerminology(undefined),
-      { wrapper: makeWrapper() },
-    )
+  // 4. Does not call the old dynamic terminology endpoint
+  it("does not fire a query for any verticalSlug", () => {
+    const { result } = renderHook(() => useTerminology("clinic"))
 
-    // With enabled:false the query never starts → isLoading stays false, pack stays undefined
     expect(result.current.isLoading).toBe(false)
-    expect(result.current.pack).toBeUndefined()
+    expect(result.current.pack).toBeDefined()
     expect(mockApiGet).not.toHaveBeenCalled()
-  })
-
-  // 5. t() returns key before pack loads
-  it("returns the key as fallback before pack is available", () => {
-    // Never resolve so we stay in loading state
-    mockApiGet.mockReturnValueOnce(new Promise(() => undefined))
-
-    const { result } = renderHook(
-      () => useTerminology("clinic"),
-      { wrapper: makeWrapper() },
-    )
-
-    // Pack is still undefined while loading
-    expect(result.current.pack).toBeUndefined()
-    expect(result.current.t("client")).toBe("client")
   })
 })

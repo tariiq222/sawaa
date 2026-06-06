@@ -1,11 +1,11 @@
-import { TENANT_ID as DEFAULT_TENANT_ID } from '@/constants/config';
+import { DEFAULT_ORGANIZATION_ID } from '@/constants/config';
 import {
   deleteSecureItem,
   getSecureItem,
   setSecureItem,
 } from '@/stores/secure-storage';
 
-const TENANT_KEY = 'currentOrgId';
+const ORGANIZATION_KEY = 'currentOrgId';
 
 let cachedOrgId: string | null = null;
 let loaded = false;
@@ -16,7 +16,7 @@ let loaded = false;
  * stored (first install / pre-login state).
  */
 export function getCurrentOrgIdSync(): string {
-  return cachedOrgId ?? DEFAULT_TENANT_ID;
+  return cachedOrgId ?? DEFAULT_ORGANIZATION_ID;
 }
 
 /**
@@ -26,7 +26,7 @@ export function getCurrentOrgIdSync(): string {
 export async function loadCurrentOrgId(): Promise<string> {
   if (loaded) return getCurrentOrgIdSync();
   try {
-    const stored = await getSecureItem(TENANT_KEY);
+    const stored = await getSecureItem(ORGANIZATION_KEY);
     cachedOrgId = stored && stored.length > 0 ? stored : null;
   } catch {
     cachedOrgId = null;
@@ -37,26 +37,29 @@ export async function loadCurrentOrgId(): Promise<string> {
 
 /**
  * Persist + cache the active org id. Called on login / register / OTP verify
- * once the JWT is in hand and we know which tenant owns this session.
+ * once the JWT is in hand and we know which organization owns this session.
  */
 export async function setCurrentOrgId(orgId: string): Promise<void> {
   cachedOrgId = orgId;
   loaded = true;
-  await setSecureItem(TENANT_KEY, orgId);
+  await setSecureItem(ORGANIZATION_KEY, orgId);
 }
 
 /**
  * Wipe the active org id on logout / org suspension. Subsequent public
- * requests fall back to the build-time default tenant.
+ * requests fall back to the build-time default organization.
  */
 export async function clearCurrentOrgId(): Promise<void> {
   cachedOrgId = null;
   loaded = true;
-  await deleteSecureItem(TENANT_KEY);
+  await deleteSecureItem(ORGANIZATION_KEY);
 }
 
 /** Test-only: reset module state between cases. */
-export function __resetTenantCacheForTests(): void {
+export function __resetOrganizationCacheForTests(): void {
   cachedOrgId = null;
   loaded = false;
 }
+
+/** Backwards-compatible test helper name. */
+export const __resetTenantCacheForTests = __resetOrganizationCacheForTests;

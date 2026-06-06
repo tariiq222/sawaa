@@ -116,13 +116,15 @@ export class CreateBundleBookingHandler {
       throw new BadRequestException('Employee does not provide all bundle services');
     }
 
-    // payAtClinic gate — reject pay-at-clinic when the branch disables it.
-    // Mirrors create-booking.handler. Skipped when the settings handler is not
-    // wired (e.g. isolated unit tests construct the handler without it).
-    if ((dto.payAtClinic ?? false) && this.settingsHandler) {
-      const bookingSettings = await this.settingsHandler.execute({ branchId: dto.branchId });
-      if (!('payAtClinicEnabled' in bookingSettings) || !(bookingSettings as Record<string, unknown>).payAtClinicEnabled) {
-        throw new BadRequestException('Pay at clinic is not enabled for this branch');
+    // payAtClinic gate — reject pay-at-clinic when the org disables it.
+    // Mirrors create-booking.handler; the flag is org-wide (OrganizationSettings.
+    // paymentAtClinicEnabled), set from the dashboard "الدفع في العيادة" toggle.
+    if (dto.payAtClinic ?? false) {
+      const orgSettings = await this.prisma.organizationSettings.findFirst({
+        select: { paymentAtClinicEnabled: true },
+      });
+      if (!orgSettings?.paymentAtClinicEnabled) {
+        throw new BadRequestException('Pay at clinic is not enabled');
       }
     }
 

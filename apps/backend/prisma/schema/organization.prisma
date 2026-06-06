@@ -390,6 +390,8 @@ model Rating {
 
   @@index([employeeId])
   @@index([clientId])
+  @@index([employeeId, createdAt])
+  @@index([clientId, createdAt])
 }
 
 // ─── Organization Settings ────────────────────────────────────────────────────

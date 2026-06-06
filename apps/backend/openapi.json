@@ -12426,7 +12426,7 @@
             "bearer": []
           }
         ],
-        "summary": "Get the per-tenant Moyasar configuration (secret key masked)",
+        "summary": "Get the Moyasar configuration (secret key masked)",
         "tags": [
           "Dashboard / Finance"
         ]
@@ -12494,7 +12494,7 @@
             "bearer": []
           }
         ],
-        "summary": "Create or update the per-tenant Moyasar configuration",
+        "summary": "Create or update the Moyasar configuration",
         "tags": [
           "Dashboard / Finance"
         ]
@@ -30216,7 +30216,7 @@
         ]
       }
     },
-    "/api/v1/public/sms/webhooks/{provider}/{organizationId}": {
+    "/api/v1/public/sms/webhooks/{provider}": {
       "post": {
         "operationId": "PublicSmsWebhooksController_handle",
         "parameters": [
@@ -30231,9 +30231,49 @@
               ],
               "type": "string"
             }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "received": {
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "summary": "Inbound SMS delivery-receipt webhook",
+        "tags": [
+          "Public / SMS Webhooks"
+        ]
+      }
+    },
+    "/api/v1/public/sms/webhooks/{provider}/{organizationId}": {
+      "post": {
+        "operationId": "PublicSmsWebhooksController_handleLegacy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "enum": [
+                "UNIFONIC",
+                "TAQNYAT"
+              ],
+              "type": "string"
+            }
           },
           {
-            "description": "Organization id (legacy path param)",
+            "description": "Legacy path param; must match the default organization",
             "in": "path",
             "name": "organizationId",
             "required": true,
@@ -30259,7 +30299,7 @@
             "description": ""
           }
         },
-        "summary": "Inbound SMS delivery-receipt webhook",
+        "summary": "Inbound SMS delivery-receipt webhook (legacy path)",
         "tags": [
           "Public / SMS Webhooks"
         ]

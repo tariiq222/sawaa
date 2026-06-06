@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import { GroupSessionStatus } from '@prisma/client';
 import { GetPublicGroupSessionHandler } from './get-public-group-session.handler';
 import { PrismaService } from '../../../infrastructure/database';
 
@@ -35,13 +36,21 @@ describe('GetPublicGroupSessionHandler', () => {
     expect(result.isFull).toBe(false);
     expect(result.isWaitlistOnly).toBe(false);
     expect(result.price).toBe(100);
+    expect(prisma.groupSession.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'gs-1',
+        isPublic: true,
+        status: GroupSessionStatus.OPEN,
+        scheduledAt: { gte: expect.any(Date) },
+      },
+    });
   });
 
-  it('should return full session with waitlist only', async () => {
+  it('should return open capacity-full session with waitlist only', async () => {
     prisma.groupSession.findFirst.mockResolvedValue({
       id: 'gs-1', title: 'Yoga', descriptionAr: null, descriptionEn: null,
       scheduledAt: new Date(), durationMins: 60, maxCapacity: 10, enrolledCount: 10,
-      price: 100, currency: 'SAR', status: 'FULL', isPublic: true,
+      price: 100, currency: 'SAR', status: 'OPEN', isPublic: true,
       waitlistEnabled: true, waitlistCount: 2, employeeId: 'emp-1', serviceId: 'svc-1', branchId: 'branch-1',
     });
 
@@ -55,7 +64,7 @@ describe('GetPublicGroupSessionHandler', () => {
     prisma.groupSession.findFirst.mockResolvedValue({
       id: 'gs-1', title: 'Yoga', descriptionAr: null, descriptionEn: null,
       scheduledAt: new Date(), durationMins: 60, maxCapacity: 10, enrolledCount: 10,
-      price: 100, currency: 'SAR', status: 'FULL', isPublic: true,
+      price: 100, currency: 'SAR', status: 'OPEN', isPublic: true,
       waitlistEnabled: false, waitlistCount: 0, employeeId: 'emp-1', serviceId: 'svc-1', branchId: 'branch-1',
     });
 

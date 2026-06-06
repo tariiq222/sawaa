@@ -74,23 +74,23 @@ function TypeCard({
   onSelect: () => void
   t: (key: string) => string
 }) {
-  const type = serviceType.deliveryType as DeliveryType
+  const type = serviceType.deliveryType.toLowerCase() as DeliveryType
   const meta = DELIVERY_TYPE_META[type]
-  const label = getTypeLabel(type, t)
+  const label = getTypeLabel(serviceType.deliveryType, t)
 
   return (
-    <WizardCard onClick={onSelect} selected={selected} className="py-6">
-      <div className="flex flex-col items-center gap-2">
-        <div className="flex size-14 items-center justify-center rounded-xl bg-primary/10">
+    <WizardCard onClick={onSelect} selected={selected} className="py-5">
+      <div className="flex items-center justify-center gap-3">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
           {meta ? (
             <HugeiconsIcon
               icon={meta.icon}
-              size={26}
+              size={22}
               className="text-primary"
             />
           ) : null}
         </div>
-        <span className="text-sm font-bold text-foreground leading-tight text-center">
+        <span className="text-sm font-bold text-foreground leading-tight">
           {label}
         </span>
       </div>

@@ -18,8 +18,8 @@ export interface UserPayload {
   customRoleId: string | null
   isSuperAdmin: boolean
   permissions: string[]
-  // Resolved from the user's active Membership. Null when the user has
-  // no active membership yet (e.g. freshly created super-admin in seeds).
+  // Canonical org context resolved by the backend. Null when the session has no
+  // active organization yet (e.g. freshly created super-admin in seeds).
   organizationId: string | null
   // Vertical slug of the active membership's organization (e.g. 'clinic',
   // 'salon'). Powers useTerminology() in dashboard/mobile without a second
@@ -27,11 +27,11 @@ export interface UserPayload {
   verticalSlug: string | null
   // ISO timestamp when the org's owner finished the onboarding wizard.
   // Null until completed; the dashboard layout uses it to redirect new
-  // tenants to /onboarding.
+  // organizations to /onboarding.
   onboardingCompletedAt: string | null
-  // Per-membership-profile: per-org display profile resolved from the
-  // active Membership row. UIs should prefer activeMembership.{displayName,
-  // jobTitle, avatarUrl} over the global User counterparts when present.
+  // Organization-scoped display profile for the active session. UIs should
+  // prefer activeMembership.{displayName, jobTitle, avatarUrl} over the global
+  // User counterparts when present.
   activeMembership: {
     id: string
     organizationId: string
@@ -41,8 +41,8 @@ export interface UserPayload {
     jobTitle: string | null
     avatarUrl: string | null
   } | null
-  // Sticky-org fallback: organizationId the user last operated under. Login
-  // resolves to this when it still maps to an active membership.
+  // Last organization selected by the user. Kept in the contract for auth flows
+  // that need to restore a valid organization after login.
   lastActiveOrganizationId?: string | null
   createdAt?: string
   updatedAt?: string

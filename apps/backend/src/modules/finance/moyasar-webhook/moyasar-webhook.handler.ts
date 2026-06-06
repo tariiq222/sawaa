@@ -28,7 +28,7 @@ export interface MoyasarWebhookResult {
 }
 
 /**
- * Processes Moyasar webhook events with PER-TENANT signature verification.
+ * Processes Moyasar webhook events with deployment-level signature verification.
  *
  * Moyasar delivers webhooks in a NESTED shape — an event envelope at the root
  * ({ id, type, secret_token }) wrapping the payment object under `data`. Some
@@ -38,15 +38,15 @@ export interface MoyasarWebhookResult {
  * Stage order:
  *   1. Parse + normalize payload — resolve paymentId/invoiceId/status from
  *      either the nested `data` object or the flat root.
- *   2. System-context lookup of Invoice → resolves the tenant.
- *   3. System-context lookup of OrganizationPaymentConfig for that tenant.
- *   4. Decrypt the tenant's webhook secret (AAD = organizationId).
- *   5. Verify the shared secret with the tenant's secret — via the HMAC
+ *   2. System-context lookup of Invoice.
+ *   3. System-context lookup of OrganizationPaymentConfig.
+ *   4. Decrypt the webhook secret (AAD = DEFAULT_ORG_ID).
+ *   5. Verify the shared secret — via the HMAC
  *      `X-Moyasar-Signature` header when present, else the body `secret_token`.
  *   6. Idempotency check (keyed on paymentId:status, not the root event id).
  *   7. Re-fetch the payment from the Moyasar API (authoritative source of truth)
  *      and validate its amount/currency against the invoice (anti-spoof).
- *   8. Mutations under the resolved tenant CLS context.
+ *   8. Mutations under the default org compatibility CLS context.
  *
  * ── Error classification ──────────────────────────────────────────────────
  * Moyasar RETRIES any non-2xx response with backoff. A malformed or
@@ -63,8 +63,8 @@ export interface MoyasarWebhookResult {
  *   transaction deadlocks, a Moyasar re-fetch failing with a network/5xx
  *   error) propagate so Moyasar retries — a retry can legitimately succeed.
  *
- * Why DB before signature: the tenant secret is per-org, so we cannot verify
- * a signature without first resolving which tenant the payload belongs to.
+ * Why DB before signature: the encrypted webhook secret is stored in the
+ * payment config, so we cannot verify a signature before loading that config.
  * The endpoint is rate-limited (Throttle 120/min) and rejections return the
  * same generic 200 ack to avoid acting as an oracle.
  */
@@ -99,7 +99,7 @@ export class MoyasarWebhookHandler {
 
   /**
    * Constant-time comparison of a body-supplied `secret_token` against the
-   * tenant's stored webhook secret. Some merchant webhook configs put the
+   * stored webhook secret. Some merchant webhook configs put the
    * shared secret in the body instead of an `X-Moyasar-Signature` HMAC header
    * (see the Moyasar security reference §6.4). Returns `true` on an exact
    * match, `false` otherwise — never throws.
@@ -137,7 +137,7 @@ export class MoyasarWebhookHandler {
       return { skipped: true, reason: 'missing_metadata' };
     }
 
-    // STAGE 2 — resolve tenant from invoice (system context bypasses Proxy).
+    // STAGE 2 — read invoice in system context.
     const invoice = await this.cls.run(async () => {
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
       return this.prisma.invoice.findFirst({ where: { id: invoiceId } });
@@ -149,7 +149,7 @@ export class MoyasarWebhookHandler {
       return { skipped: true, reason: 'invoice_not_found' };
     }
 
-    // STAGE 3 — fetch tenant's payment config (system context).
+    // STAGE 3 — fetch payment config in system context.
     const cfg = await this.cls.run(async () => {
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
       return this.prisma.organizationPaymentConfig.findFirst();
@@ -163,7 +163,7 @@ export class MoyasarWebhookHandler {
       return { skipped: true, reason: 'missing_payment_config' };
     }
 
-    // STAGE 4 — decrypt the tenant's webhook secret (AAD = organizationId).
+    // STAGE 4 — decrypt the webhook secret (AAD = DEFAULT_ORG_ID).
     let webhookSecret: string;
     try {
       const decoded = this.creds.decrypt<{ webhookSecret: string }>(
@@ -180,7 +180,7 @@ export class MoyasarWebhookHandler {
       return { skipped: true, reason: 'webhook_secret_decrypt_failed' };
     }
 
-    // STAGE 5 — verify the shared secret with the tenant's own secret.
+    // STAGE 5 — verify the shared secret.
     //
     // Moyasar webhook configs verify via ONE of two channels (security ref §6.4):
     //   - an `X-Moyasar-Signature` HMAC header over the raw body, OR
@@ -219,9 +219,8 @@ export class MoyasarWebhookHandler {
     // just COMPLETED). Moyasar retries failed-payment webhooks — without this
     // guard every retry would re-emit PaymentFailedEvent and re-run mutations.
     // We use the optimistic-insert pattern (create → catch P2002) so the dedup
-    // is atomic under concurrent retries.  WebhookEvent is a platform-level
-    // table (no tenant scope), so plain this.prisma.webhookEvent works without
-    // a CLS bypass.
+    // is atomic under concurrent retries. WebhookEvent is a system-level table,
+    // so plain this.prisma.webhookEvent works without a CLS bypass.
     // The dedup key is keyed on the PAYMENT id + status, NOT the root event
     // id. In the nested shape `payload.id` is the EVENT id — unique per
     // delivery — so keying on it would let every retry through and defeat
@@ -247,7 +246,7 @@ export class MoyasarWebhookHandler {
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         this.logger.log(
-          `Tenant webhook: skipped_duplicate provider=MOYASAR_TENANT eventId=${webhookEventId}`,
+          `Moyasar webhook: skipped_duplicate provider=MOYASAR_TENANT eventId=${webhookEventId}`,
         );
         return { skipped: true, reason: 'duplicate' };
       }
@@ -314,7 +313,7 @@ export class MoyasarWebhookHandler {
         return { skipped: true, reason: `non_terminal_status:${fetched.status}` };
       }
 
-      // STAGE 8 — run mutations inside the resolved tenant's CLS context.
+      // STAGE 8 — run mutations inside the default org compatibility CLS context.
       // Payment.amount is stored in halalas — fetched.amount is already halalas.
       const amountHalalas = fetched.amount;
       const result = await this.cls.run(async () => {

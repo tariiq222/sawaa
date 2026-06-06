@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ClsService } from 'nestjs-cls';
+import { SYSTEM_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../common/constants';
 import { BullMqService } from '../queue/bull-mq.service';
 import { EventBusService } from './event-bus.service';
 
@@ -63,7 +64,7 @@ describe('EventBusService', () => {
     await workerCallback({ name: 'test.event', data: event });
 
     expect(handler).toHaveBeenCalledWith(event);
-    expect(cls.set).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ organizationId: 'org1' }));
+    expect(cls.set).toHaveBeenCalledWith(TENANT_CLS_KEY, expect.objectContaining({ organizationId: 'org1' }));
   });
 
   it('should dispatch to multiple handlers', async () => {
@@ -78,7 +79,7 @@ describe('EventBusService', () => {
 
     expect(handler1).toHaveBeenCalled();
     expect(handler2).toHaveBeenCalled();
-    expect(cls.set).toHaveBeenCalledWith(expect.any(String), true);
+    expect(cls.set).toHaveBeenCalledWith(SYSTEM_CONTEXT_CLS_KEY, true);
   });
 
   it('should not dispatch when no handlers registered', async () => {

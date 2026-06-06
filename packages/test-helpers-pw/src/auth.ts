@@ -5,9 +5,12 @@ import path from 'node:path';
 
 export type Persona =
   | 'superAdmin'
+  | 'orgOwner'
+  | 'orgStaff'
   | 'tenantOwner'
   | 'tenantStaff'
   | 'clientUser'
+  | 'crossOrgOwner'
   | 'crossTenantOwner';
 
 export interface LoginResult {

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { Job, Queue, Worker } from 'bullmq';
 import { ClsService } from 'nestjs-cls';
 import { BullMqService } from '../queue/bull-mq.service';
-import { SUPER_ADMIN_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../common/constants';
+import { SYSTEM_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../common/constants';
 
 /**
  * Minimal envelope every domain event must produce. The full `BaseEvent`
@@ -90,11 +90,10 @@ export class EventBusService {
 
   /**
    * Run every handler registered for `eventName` sequentially inside a CLS
-   * context. If the event payload carries an `organizationId` the handlers
-   * run with a tenant CLS context so scoped Prisma queries work correctly.
-   * Platform-level events (no tenant) run under the super-admin context so
-   * `$allTenants` queries succeed without throwing. Handlers in that path
-   * must not write tenant-scoped rows.
+   * context. Single-tenant/system events run under the system context so
+   * non-request handlers can read through the Prisma context guard. If a
+   * legacy event payload still carries `organizationId`, keep setting the
+   * tenant CLS key so older handlers and tests remain compatible.
    *
    * A failing handler throws, which causes BullMQ to retry the job per its
    * policy — at-least-once delivery is the contract.
@@ -110,7 +109,8 @@ export class EventBusService {
 
     await this.cls.run(async () => {
       if (organizationId) {
-        // Tenant-scoped event: set CLS so scoped Prisma queries work inside handlers
+        // Legacy compatibility: some events still carry organizationId and
+        // downstream handlers may expect the tenant CLS key to be present.
         this.cls.set(TENANT_CLS_KEY, {
           organizationId,
           id: '',
@@ -118,10 +118,7 @@ export class EventBusService {
           isSuperAdmin: false,
         });
       } else {
-        // Platform-level event (no tenant): run in super-admin context so
-        // $allTenants queries work without throwing. Handlers must not write
-        // tenant-scoped rows.
-        this.cls.set(SUPER_ADMIN_CONTEXT_CLS_KEY, true);
+        this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
       }
 
       for (const handler of list) {

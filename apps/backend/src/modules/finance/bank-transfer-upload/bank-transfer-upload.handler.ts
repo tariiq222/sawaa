@@ -6,6 +6,7 @@ import { BankTransferUploadDto } from './bank-transfer-upload.dto';
 import { validateMagicBytes } from '../../../common/security/magic-byte-validator';
 
 const RECEIPTS_BUCKET = 'finance-receipts';
+export const MAX_BANK_TRANSFER_RECEIPT_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME_TYPES: ReadonlySet<string> = new Set([
   'image/jpeg',
   'image/png',
@@ -14,6 +15,7 @@ const ALLOWED_MIME_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 const ALLOWED_MIME_ARRAY = [...ALLOWED_MIME_TYPES] as const;
+export const ALLOWED_BANK_TRANSFER_RECEIPT_MIME_TYPES = ALLOWED_MIME_ARRAY;
 
 export type BankTransferUploadCommand = BankTransferUploadDto & {
   fileBuffer: Buffer;
@@ -33,6 +35,10 @@ export class BankTransferUploadHandler {
   ) {}
 
   async execute(cmd: BankTransferUploadCommand) {
+    if (cmd.fileBuffer.length > MAX_BANK_TRANSFER_RECEIPT_BYTES) {
+      throw new BadRequestException(`Receipt file exceeds maximum size of ${MAX_BANK_TRANSFER_RECEIPT_BYTES} bytes`);
+    }
+
     if (!ALLOWED_MIME_TYPES.has(cmd.mimetype)) {
       throw new BadRequestException(`File type ${cmd.mimetype} not allowed. Use JPEG, PNG, WebP, or PDF.`);
     }

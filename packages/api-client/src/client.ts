@@ -1,9 +1,9 @@
 import { getRefreshMutex, setRefreshMutex } from './refresh-mutex'
 
-// Backend signals tenant suspension via 401 + this code in the error body.
+// Backend signals organization suspension via 401 + this code in the error body.
 // When detected, callers should clear local auth and redirect to root —
 // the refresh-token loop is intentionally skipped (refreshing a suspended
-// tenant just bounces back the same 401).
+// organization just bounces back the same 401).
 export const ORG_SUSPENDED_CODE = 'ORG_SUSPENDED'
 
 export interface ClientConfig {
@@ -81,7 +81,7 @@ export async function apiRequest<T>(
   const res = await fetch(`${config.baseUrl}${path}`, { ...options, headers })
 
   if (res.status === 401 && !retried && !isAuthEndpoint(path)) {
-    // Tenant-suspended responses must NOT trigger the refresh loop —
+    // Organization-suspended responses must NOT trigger the refresh loop —
     // the refresh would just produce another 401. Surface immediately
     // and let the host (dashboard) clear local state + redirect.
     const peek = await peekErrorBody(res)

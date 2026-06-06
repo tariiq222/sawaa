@@ -28,8 +28,6 @@ import { queryKeys } from "@/lib/query-keys"
 import { useLocale } from "@/components/locale-provider"
 import { formatPrice } from "@/lib/money"
 import { useBookingsStats } from "@/hooks/use-bookings"
-import { useAuth } from "@/components/providers/auth-provider"
-import { useTerminology } from "@/hooks/use-terminology"
 import type { Booking } from "@/lib/types/booking"
 import type { BookingSettings } from "@/lib/api/booking-settings"
 
@@ -45,10 +43,7 @@ export function BookingsPageContent({
   const newParam = searchParams.get("new")
   const defaultTab = tabParam === "waitlist" ? "waitlist" : "bookings"
   const { t } = useLocale()
-  const { user } = useAuth()
-  // "المواعيد"/"Appointments" for clinical, "الحصص"/"Classes" for fitness, …
-  const { t: term } = useTerminology(user?.verticalSlug ?? undefined)
-  const titleLabel = term("appointment.plural", t("nav.bookings"))
+  const titleLabel = t("nav.bookings")
   const queryClient = useQueryClient()
   const { data: stats, isLoading: statsLoading } = useBookingsStats()
 

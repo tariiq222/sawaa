@@ -6,6 +6,7 @@ import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 const CRON_ACTOR_EMAIL = 'system:reconcile-refunds-cron';
+const BATCH_SIZE = 100;
 
 /**
  * Reconciles RefundRequest rows that are stuck in PROCESSING.
@@ -56,6 +57,8 @@ export class ReconcileRefundsCron {
           invoiceId: true,
           gatewayRef: true,
         },
+        orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
+        take: BATCH_SIZE,
       });
 
       if (stuckRows.length === 0) return;

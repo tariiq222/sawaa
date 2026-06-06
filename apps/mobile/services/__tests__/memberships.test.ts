@@ -1,51 +1,16 @@
-jest.mock('../api', () => ({
-  __esModule: true,
-  default: {
-    get: jest.fn(),
-    post: jest.fn(),
-  },
-}));
-
-import api from '../api';
 import {
   membershipsService,
   listMemberships,
   switchOrganization,
-  type MembershipSummary,
 } from '../memberships';
 
-const mockedApi = api as unknown as { get: jest.Mock; post: jest.Mock };
-
-beforeEach(() => {
-  jest.clearAllMocks();
-});
-
-const sample: MembershipSummary = {
-  id: 'm1',
-  organizationId: 'org-1',
-  role: 'OWNER',
-  isActive: true,
-  organization: {
-    id: 'org-1',
-    slug: 'acme',
-    nameAr: 'أكمي',
-    nameEn: 'Acme',
-    status: 'ACTIVE',
-  },
-};
-
 describe('membershipsService.list / listMemberships', () => {
-  it('GETs /auth/memberships', async () => {
-    mockedApi.get.mockResolvedValueOnce({ data: [sample] });
-    const r = await membershipsService.list();
-    expect(r).toEqual([sample]);
-    expect(mockedApi.get).toHaveBeenCalledWith('/auth/memberships');
+  it('returns an empty list without querying memberships', async () => {
+    await expect(membershipsService.list()).resolves.toEqual([]);
   });
 
   it('exposes a function-form alias', async () => {
-    mockedApi.get.mockResolvedValueOnce({ data: [] });
-    await listMemberships();
-    expect(mockedApi.get).toHaveBeenCalledWith('/auth/memberships');
+    await expect(listMemberships()).resolves.toEqual([]);
   });
 });
 
@@ -54,13 +19,11 @@ describe('membershipsService.switchOrganization', () => {
     await expect(membershipsService.switchOrganization('org-2')).rejects.toThrow(
       'Organization switching is disabled in Sawaa mobile.',
     );
-    expect(mockedApi.post).not.toHaveBeenCalled();
   });
 
   it('keeps the function-form alias disabled', async () => {
     await expect(switchOrganization('org-3')).rejects.toThrow(
       'Organization switching is disabled in Sawaa mobile.',
     );
-    expect(mockedApi.post).not.toHaveBeenCalled();
   });
 });

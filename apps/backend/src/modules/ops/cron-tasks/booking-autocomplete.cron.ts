@@ -6,6 +6,7 @@ import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
 
 const CRON_ACTOR = 'system:booking-autocomplete-cron';
 const COMPLETE_REASON = 'Auto-complete: booking end-time passed after check-in';
+const BATCH_SIZE = 100;
 
 @Injectable()
 export class BookingAutocompleteCron {
@@ -35,6 +36,8 @@ export class BookingAutocompleteCron {
           checkedInAt: { not: null },
         },
         select: { id: true, status: true },
+        orderBy: [{ endsAt: 'asc' }, { id: 'asc' }],
+        take: BATCH_SIZE,
       });
 
       if (targets.length === 0) return;

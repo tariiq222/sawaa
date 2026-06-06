@@ -1,6 +1,6 @@
 import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PaymentMethod, PaymentStatus } from '@prisma/client';
-import { BankTransferUploadHandler } from './bank-transfer-upload.handler';
+import { BankTransferUploadHandler, MAX_BANK_TRANSFER_RECEIPT_BYTES } from './bank-transfer-upload.handler';
 
 // ── Magic-byte fixtures ──────────────────────────────────────────────────────
 
@@ -218,6 +218,18 @@ describe('BankTransferUploadHandler', () => {
       const handler = new BankTransferUploadHandler(buildPrisma() as never, buildStorage() as never);
       await expect(
         handler.execute({ ...baseCmd, fileBuffer: JPEG_BUFFER, mimetype: 'text/html', filename: 'x.html' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws BadRequestException when receipt exceeds maximum size', async () => {
+      const handler = new BankTransferUploadHandler(buildPrisma() as never, buildStorage() as never);
+      await expect(
+        handler.execute({
+          ...baseCmd,
+          fileBuffer: Buffer.alloc(MAX_BANK_TRANSFER_RECEIPT_BYTES + 1),
+          mimetype: 'image/jpeg',
+          filename: 'receipt.jpg',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 

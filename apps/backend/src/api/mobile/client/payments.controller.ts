@@ -27,7 +27,11 @@ import { ClientSession } from '../../../common/auth/client-session.decorator';
 import { ApiStandardResponses, ApiErrorDto } from '../../../common/swagger';
 import { ListPaymentsHandler } from '../../../modules/finance/list-payments/list-payments.handler';
 import { GetInvoiceHandler } from '../../../modules/finance/get-invoice/get-invoice.handler';
-import { BankTransferUploadHandler } from '../../../modules/finance/bank-transfer-upload/bank-transfer-upload.handler';
+import {
+  ALLOWED_BANK_TRANSFER_RECEIPT_MIME_TYPES,
+  BankTransferUploadHandler,
+  MAX_BANK_TRANSFER_RECEIPT_BYTES,
+} from '../../../modules/finance/bank-transfer-upload/bank-transfer-upload.handler';
 import { InitClientPaymentHandler } from '../../../modules/finance/payments/client/init-client-payment/init-client-payment.handler';
 import { InitClientPaymentDto } from '../../../modules/finance/payments/client/init-client-payment/init-client-payment.dto';
 import { Public } from '../../../common/guards/jwt.guard';
@@ -115,7 +119,16 @@ export class MobileClientPaymentsController {
 
   @Post('bank-transfer')
   @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FileInterceptor('receipt'))
+  @UseInterceptors(FileInterceptor('receipt', {
+    limits: { fileSize: MAX_BANK_TRANSFER_RECEIPT_BYTES, files: 1 },
+    fileFilter: (_req, file, cb) => {
+      if ((ALLOWED_BANK_TRANSFER_RECEIPT_MIME_TYPES as readonly string[]).includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new BadRequestException(`Unsupported receipt file type: ${file.mimetype}`), false);
+      }
+    },
+  }))
   @ApiOperation({ summary: 'Upload a bank-transfer receipt for an invoice (client)' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({

@@ -32,7 +32,7 @@ export class GetPublicEmployeeHandler {
     });
     if (!row) throw new NotFoundException('Employee not found');
 
-    const [ratings, links, branches, anyAvail, todayAvailability] = await Promise.all([
+    const [ratings, links, branchLinks, anyAvail, todayAvailability] = await Promise.all([
       this.prisma.rating.aggregate({
         where: { employeeId: row.id, isPublic: true },
         _avg: { score: true },
@@ -56,16 +56,28 @@ export class GetPublicEmployeeHandler {
       }),
     ]);
 
-    const serviceIds = links.map((l) => l.serviceId);
-    const branchIds = branches.map((b) => b.branchId);
+    const linkedServiceIds = links.map((l) => l.serviceId);
+    const linkedBranchIds = branchLinks.map((b) => b.branchId);
     const services =
-      serviceIds.length > 0
+      linkedServiceIds.length > 0
         ? await this.prisma.service.findMany({
-            where: { id: { in: serviceIds }, isActive: true },
-            select: { price: true },
+            where: { id: { in: linkedServiceIds }, isActive: true, isHidden: false, archivedAt: null },
+            select: { id: true, price: true },
           })
         : [];
+    const activeServiceIds = new Set(services.map((s) => s.id));
+    const serviceIds = links.map((l) => l.serviceId).filter((serviceId) => activeServiceIds.has(serviceId));
     const prices = services.map((s) => parseFloat(String(s.price)));
+
+    const activeBranches =
+      linkedBranchIds.length > 0
+        ? await this.prisma.branch.findMany({
+            where: { id: { in: linkedBranchIds }, isActive: true },
+            select: { id: true },
+          })
+        : [];
+    const activeBranchIds = new Set(activeBranches.map((b) => b.id));
+    const branchIds = branchLinks.map((b) => b.branchId).filter((branchId) => activeBranchIds.has(branchId));
 
     const display = row.nameAr ?? row.nameEn ?? '';
     const tokens = display.trim().split(/\s+/).filter(Boolean);

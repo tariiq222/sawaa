@@ -237,7 +237,14 @@ export class CheckAvailabilityHandler {
 
     if (adjustedWindows.length === 0) return [];
 
-    const latestEnd = adjustedWindows[adjustedWindows.length - 1][1];
+    const earliestWindowStart = adjustedWindows.reduce(
+      (earliest, [windowStart]) => (windowStart < earliest ? windowStart : earliest),
+      adjustedWindows[0][0],
+    );
+    const latestEnd = adjustedWindows.reduce(
+      (latest, [, windowEnd]) => (windowEnd > latest ? windowEnd : latest),
+      adjustedWindows[0][1],
+    );
 
     const existingBookings = await this.prisma.booking.findMany({
       where: {
@@ -245,6 +252,7 @@ export class CheckAvailabilityHandler {
         ...(query.excludeBookingId ? { id: { not: query.excludeBookingId } } : {}),
         status: { in: [...STAFF_TIME_BLOCKING_BOOKING_STATUSES] },
         scheduledAt: { lt: latestEnd },
+        endsAt: { gt: earliestWindowStart },
         durationMins: { gt: 0 },
       },
       orderBy: { scheduledAt: 'asc' },

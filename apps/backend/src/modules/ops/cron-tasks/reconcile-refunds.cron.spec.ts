@@ -228,6 +228,8 @@ describe('ReconcileRefundsCron', () => {
         invoiceId: true,
         gatewayRef: true,
       },
+      orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
+      take: 100,
     });
     // Verify cutoff is ~15 min before NOW
     const callArgs = (prisma.refundRequest.findMany as jest.Mock).mock.calls[0][0] as {

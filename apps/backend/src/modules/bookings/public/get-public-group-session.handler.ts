@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { GroupSessionStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 
 export interface PublicGroupSessionDetail {
@@ -29,10 +30,14 @@ export class GetPublicGroupSessionHandler {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(groupSessionId: string): Promise<PublicGroupSessionDetail> {
+    const now = new Date();
+
     const session = await this.prisma.groupSession.findFirst({
       where: {
         id: groupSessionId,
         isPublic: true,
+        status: GroupSessionStatus.OPEN,
+        scheduledAt: { gte: now },
       },
     });
 

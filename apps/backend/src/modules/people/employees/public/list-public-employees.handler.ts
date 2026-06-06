@@ -96,16 +96,27 @@ export class ListPublicEmployeesHandler {
       }),
     ]);
 
-    // Fetch service prices for all linked serviceIds
+    // Fetch public-bookable services and active branches for all linked ids.
     const serviceIds = [...new Set(employeeServiceLinks.map((l) => l.serviceId))];
     const services =
       serviceIds.length > 0
         ? await this.prisma.service.findMany({
-            where: { id: { in: serviceIds }, isActive: true },
+            where: { id: { in: serviceIds }, isActive: true, isHidden: false, archivedAt: null },
             select: { id: true, price: true },
           })
         : [];
+    const activeServiceIds = new Set(services.map((s) => s.id));
     const priceByServiceId = new Map(services.map((s) => [s.id, parseFloat(String(s.price))]));
+
+    const linkedBranchIds = [...new Set(employeeBranchLinks.map((l) => l.branchId))];
+    const activeBranches =
+      linkedBranchIds.length > 0
+        ? await this.prisma.branch.findMany({
+            where: { id: { in: linkedBranchIds }, isActive: true },
+            select: { id: true },
+          })
+        : [];
+    const activeBranchIds = new Set(activeBranches.map((b) => b.id));
 
     // Group prices by employee
     const pricesByEmployee = new Map<string, number[]>();
@@ -129,11 +140,13 @@ export class ListPublicEmployeesHandler {
 
     const servicesByEmployee = new Map<string, string[]>();
     for (const link of employeeServiceLinks) {
+      if (!activeServiceIds.has(link.serviceId)) continue;
       if (!servicesByEmployee.has(link.employeeId)) servicesByEmployee.set(link.employeeId, []);
       servicesByEmployee.get(link.employeeId)!.push(link.serviceId);
     }
     const branchesByEmployee = new Map<string, string[]>();
     for (const link of employeeBranchLinks) {
+      if (!activeBranchIds.has(link.branchId)) continue;
       if (!branchesByEmployee.has(link.employeeId)) branchesByEmployee.set(link.employeeId, []);
       branchesByEmployee.get(link.employeeId)!.push(link.branchId);
     }

@@ -1,9 +1,9 @@
 // Inbound provider DLR webhook handler.
 //
 // Three-stage flow:
-//   1. System-context read of OrganizationSmsConfig.
+//   1. System-context read of the deployment SMS config.
 //   2. Verify HMAC signature (pure crypto, no DB).
-//   3. Run mutation inside cls.run with the default org so RLS is satisfied.
+//   3. Run mutation inside cls.run with the default org compatibility context.
 
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -102,7 +102,7 @@ export class SmsDlrHandler {
       throw err;
     }
 
-    // STAGE 3 — mutate inside resolved tenant's CLS context.
+    // STAGE 3 — mutate inside the single-tenant compatibility CLS context.
     return this.cls.run(async () => {
       this.cls.set(TENANT_CLS_KEY, {
         organizationId: req.organizationId,

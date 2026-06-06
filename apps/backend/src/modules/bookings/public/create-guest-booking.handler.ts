@@ -77,9 +77,10 @@ export class CreateGuestBookingHandler {
 
     const branch = await this.prisma.branch.findFirst({
       where: { id: cmd.branchId },
-      select: { id: true },
+      select: { id: true, isActive: true },
     });
     if (!branch) throw new NotFoundException('Branch not found');
+    if (branch.isActive === false) throw new BadRequestException('Branch is not active');
 
     // SECURITY (P0-17): even though `employeeId` comes from the public DTO,
     // we constrain it three ways: must be active, must be flagged `isPublic`,

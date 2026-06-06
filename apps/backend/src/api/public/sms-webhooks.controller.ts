@@ -1,4 +1,4 @@
-// Provider DLR webhook endpoint.
+// Provider DLR webhook endpoints.
 // Authentication: path param :provider + HMAC signature header.
 
 import {
@@ -27,24 +27,47 @@ export class PublicSmsWebhooksController {
 
   @Public()
   @Throttle({ default: { ttl: 60_000, limit: 120 } })
-  @Post(':provider/:organizationId')
+  @Post(':provider')
   @HttpCode(200)
   @ApiOperation({ summary: 'Inbound SMS delivery-receipt webhook' })
   @ApiParam({ name: 'provider', enum: ['UNIFONIC', 'TAQNYAT'] })
-  @ApiParam({ name: 'organizationId', description: 'Organization id (legacy path param)' })
   @ApiOkResponse({ schema: { type: 'object', properties: { received: { type: 'boolean' } } } })
   async handle(
+    @Param('provider') provider: string,
+    @Headers('x-signature') signatureHeader: string | undefined,
+    @Req() req: RawBodyRequest<Request>,
+  ) {
+    return this.handleForDefaultOrg(provider, signatureHeader, req);
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 120 } })
+  @Post(':provider/:organizationId')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Inbound SMS delivery-receipt webhook (legacy path)' })
+  @ApiParam({ name: 'provider', enum: ['UNIFONIC', 'TAQNYAT'] })
+  @ApiParam({ name: 'organizationId', description: 'Legacy path param; must match the default organization' })
+  @ApiOkResponse({ schema: { type: 'object', properties: { received: { type: 'boolean' } } } })
+  async handleLegacy(
     @Param('provider') provider: string,
     @Param('organizationId') organizationId: string,
     @Headers('x-signature') signatureHeader: string | undefined,
     @Req() req: RawBodyRequest<Request>,
   ) {
+    if (organizationId !== DEFAULT_ORG_ID) {
+      throw new BadRequestException(`Unknown organization: ${organizationId}`);
+    }
+    return this.handleForDefaultOrg(provider, signatureHeader, req);
+  }
+
+  private handleForDefaultOrg(
+    provider: string,
+    signatureHeader: string | undefined,
+    req: RawBodyRequest<Request>,
+  ) {
     const providerUpper = provider.toUpperCase();
     if (!SUPPORTED_PROVIDERS.has(providerUpper)) {
       throw new BadRequestException(`Unsupported SMS provider: ${provider}`);
-    }
-    if (organizationId !== DEFAULT_ORG_ID) {
-      throw new BadRequestException(`Unknown organization: ${organizationId}`);
     }
     const raw = req.rawBody?.toString('utf8');
     if (!raw) {

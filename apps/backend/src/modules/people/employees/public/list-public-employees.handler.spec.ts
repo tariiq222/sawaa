@@ -13,6 +13,7 @@ describe('ListPublicEmployeesHandler', () => {
       employeeService: { findMany: jest.fn() },
       employeeAvailability: { findMany: jest.fn() },
       employeeBranch: { findMany: jest.fn().mockResolvedValue([]) },
+      branch: { findMany: jest.fn().mockResolvedValue([]) },
       service: { findMany: jest.fn() },
     };
 
@@ -63,6 +64,46 @@ describe('ListPublicEmployeesHandler', () => {
     expect(result[1].ratingAverage).toBeNull();
     expect(result[1].minServicePrice).toBeNull();
     expect(result[1].isAvailableToday).toBe(false);
+  });
+
+  it('should only expose active visible services and active branches as bookable links', async () => {
+    prisma.employee.findMany.mockResolvedValue([
+      { id: 'e1', nameAr: null, nameEn: 'John Doe', gender: null, employmentType: 'FULL_TIME', slug: 'john' },
+    ]);
+    prisma.rating.groupBy.mockResolvedValue([]);
+    prisma.employeeService.findMany.mockResolvedValue([
+      { employeeId: 'e1', serviceId: 'active-service' },
+      { employeeId: 'e1', serviceId: 'stale-service' },
+    ]);
+    prisma.employeeBranch.findMany.mockResolvedValue([
+      { employeeId: 'e1', branchId: 'active-branch' },
+      { employeeId: 'e1', branchId: 'inactive-branch' },
+    ]);
+    prisma.service.findMany.mockResolvedValue([{ id: 'active-service', price: 150 }]);
+    prisma.branch.findMany.mockResolvedValue([{ id: 'active-branch' }]);
+    prisma.employeeAvailability.findMany.mockResolvedValue([
+      { employeeId: 'e1', dayOfWeek: new Date().getDay() },
+    ]);
+
+    const result = await handler.execute();
+
+    expect(prisma.service.findMany).toHaveBeenCalledWith({
+      where: {
+        id: { in: ['active-service', 'stale-service'] },
+        isActive: true,
+        isHidden: false,
+        archivedAt: null,
+      },
+      select: { id: true, price: true },
+    });
+    expect(prisma.branch.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ['active-branch', 'inactive-branch'] }, isActive: true },
+      select: { id: true },
+    });
+    expect(result[0].serviceIds).toEqual(['active-service']);
+    expect(result[0].branchIds).toEqual(['active-branch']);
+    expect(result[0].minServicePrice).toBe(150);
+    expect(result[0].isBookable).toBe(true);
   });
 
   it('should handle no services for employees', async () => {

@@ -129,22 +129,24 @@ export async function SawaaTherapistProfilePage({ slug, locale }: PageProps) {
 
             {/* Sidebar: booking CTA only */}
             <aside className="md:col-span-12 lg:col-span-3">
-              <Link
-                href={`/booking?employeeId=${encodeURIComponent(therapist.id)}`}
-                className="group inline-flex items-center justify-center gap-2 w-full rounded-full px-5 py-3.5 text-[0.9375rem] font-semibold transition-all hover:-translate-y-[2px]"
-                style={{
-                  background: 'var(--sw-secondary-700)',
-                  color: '#fff',
-                  boxShadow:
-                    '0 8px 20px -8px color-mix(in srgb, var(--sw-secondary-900) 35%, transparent)',
-                }}
-              >
-                <Calendar className="w-4 h-4" />
-                <span>
-                  {t('therapists.profile.bookCta')}{' '}
-                  <span className="font-bold">{name.split(/\s+/).slice(0, 2).join(' ')}</span>
-                </span>
-              </Link>
+              {therapist.isBookable ? (
+                <Link
+                  href={`/booking?employeeId=${encodeURIComponent(therapist.id)}`}
+                  className="group inline-flex items-center justify-center gap-2 w-full rounded-full px-5 py-3.5 text-[0.9375rem] font-semibold transition-all hover:-translate-y-[2px]"
+                  style={{
+                    background: 'var(--sw-secondary-700)',
+                    color: '#fff',
+                    boxShadow:
+                      '0 8px 20px -8px color-mix(in srgb, var(--sw-secondary-900) 35%, transparent)',
+                  }}
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>
+                    {t('therapists.profile.bookCta')}{' '}
+                    <span className="font-bold">{name.split(/\s+/).slice(0, 2).join(' ')}</span>
+                  </span>
+                </Link>
+              ) : null}
             </aside>
           </div>
         </div>
@@ -194,4 +196,3 @@ export async function SawaaTherapistProfilePage({ slug, locale }: PageProps) {
     </>
   );
 }
-

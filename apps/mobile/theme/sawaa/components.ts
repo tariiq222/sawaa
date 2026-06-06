@@ -3,7 +3,7 @@ import { sawaaTokens } from './tokens';
 
 /**
  * Unified Sawaa component styles — replaces scattered Themed* + hardcoded colors.
- * All colors reference sawaaTokens (supports tenant branding override).
+ * All colors reference sawaaTokens (supports organization branding override).
  */
 
 // ============ SawaaButton ============

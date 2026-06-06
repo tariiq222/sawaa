@@ -27,17 +27,13 @@ import { Skeleton } from "@sawaa/ui"
 import { useClients, useClientMutations, useClientStats } from "@/hooks/use-clients"
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
-import { useTerminology } from "@/hooks/use-terminology"
 import type { Client } from "@/lib/types/client"
 
 export function ClientListPage() {
   const router = useRouter()
   const { t, locale } = useLocale()
-  const { user, canDo } = useAuth()
-  // Vertical-aware label: "العملاء"/"Clients" for clinic verticals,
-  // "المرضى"/"Patients" for medical, "المتدربون"/"Members" for fitness, …
-  const { t: term } = useTerminology(user?.verticalSlug ?? undefined)
-  const titleLabel = term("client.plural", t("nav.clients"))
+  const { canDo } = useAuth()
+  const titleLabel = t("nav.clients")
   const { clients, meta, isLoading, error, search, setSearch, isActive, setIsActive, resetSearch, page, setPage } = useClients()
   const { toggleActiveMut } = useClientMutations()
   const stats = useClientStats()

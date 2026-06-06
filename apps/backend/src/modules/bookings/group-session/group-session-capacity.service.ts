@@ -14,10 +14,10 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
  * have already crossed the minimum-participants threshold (signalled by all
  * bookings having been transitioned to AWAITING_PAYMENT by
  * GroupSessionMinReachedHandler). If the cancellation drops the enrolled
- * count below the threshold (indicated by the presence of remaining
- * AWAITING_PAYMENT bookings for the same group session), those bookings must
- * be rolled back to PENDING_GROUP_FILL so clients are not charged for a
- * session that no longer has enough participants.
+ * active booking count below the service minimum, remaining AWAITING_PAYMENT
+ * bookings for the same group session must be rolled back to
+ * PENDING_GROUP_FILL so clients are not charged for a session that no longer
+ * has enough participants.
  *
  * The rollback is triggered by `recalculateGroupStatus()`, which is called
  * from any cancel handler that can affect a GROUP booking.
@@ -36,16 +36,14 @@ export class GroupSessionCapacityService {
    * Recalculate the group session capacity state after a participant has left.
    *
    * Logic:
-   * 1. Count bookings for the given groupSessionId that are still "active"
+   * 1. Decrement groupSession.enrolledCount by 1 with a > 0 guard.
+   * 2. Count bookings for the given groupSessionId that are still "active"
    *    (status in PENDING_GROUP_FILL | AWAITING_PAYMENT | CONFIRMED).
-   * 2. If there are any remaining AWAITING_PAYMENT bookings for this session
-   *    (i.e., the session had already crossed the threshold), roll all of them
-   *    back to PENDING_GROUP_FILL.
-   * 3. Decrement the groupSession.enrolledCount by 1 (the caller's cancellation
-   *    has logically removed the participant).
+   * 3. If the active count is below Service.minParticipants, roll remaining
+   *    AWAITING_PAYMENT bookings back to PENDING_GROUP_FILL.
    *
-   * This is idempotent — calling it when there are no AWAITING_PAYMENT bookings
-   * is a no-op.
+   * Calling it when there are no AWAITING_PAYMENT bookings only applies the
+   * guarded enrolledCount decrement.
    *
    * @param tx      - The Prisma transaction client (pass the outer tx if inside
    *                  a transaction, or use this.prisma for a standalone call).
@@ -55,6 +53,38 @@ export class GroupSessionCapacityService {
     tx: Prisma.TransactionClient,
     groupSessionId: string,
   ): Promise<void> {
+    await tx.groupSession.updateMany({
+      where: { id: groupSessionId, enrolledCount: { gt: 0 } },
+      data: { enrolledCount: { decrement: 1 } },
+    });
+
+    const groupSession = await tx.groupSession.findUnique({
+      where: { id: groupSessionId },
+      select: { serviceId: true },
+    });
+    if (!groupSession) return;
+
+    const service = await tx.service.findUnique({
+      where: { id: groupSession.serviceId },
+      select: { minParticipants: true },
+    });
+    if (!service) return;
+
+    const activeBookingCount = await tx.booking.count({
+      where: {
+        groupSessionId,
+        status: {
+          in: [
+            BookingStatus.PENDING_GROUP_FILL,
+            BookingStatus.AWAITING_PAYMENT,
+            BookingStatus.CONFIRMED,
+          ],
+        },
+      },
+    });
+
+    if (activeBookingCount >= service.minParticipants) return;
+
     // Find all remaining AWAITING_PAYMENT bookings for this group session.
     const awaitingPaymentBookings = await tx.booking.findMany({
       where: {

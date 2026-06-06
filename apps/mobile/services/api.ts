@@ -25,14 +25,14 @@ const api = axios.create({
   },
 });
 
-// Request interceptor: inject JWT token + tenant header
+// Request interceptor: inject JWT token + active organization header.
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     const token = await getSecureItem('accessToken');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    // X-Org-Id is required by backend for tenant resolution on public routes
+    // Keep X-Org-Id for backend routes that still require org context.
     if (config.headers) {
       config.headers['X-Org-Id'] = getCurrentOrgIdSync();
     }

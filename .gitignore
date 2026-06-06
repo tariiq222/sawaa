@@ -147,3 +147,6 @@ sawaa-prod-secrets.md
 
 # Local data ops — backups, comparison reports, backfill scripts (contains real client data)
 .sawaa-data/
+
+# Ad-hoc review/migration artifacts — SQL dumps + reports with real client data
+outputs/

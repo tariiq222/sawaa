@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
-import { TenantAwareThrottlerGuard } from "./common/throttler/tenant-aware-throttler.guard";
+import { SingleTenantThrottlerGuard } from "./common/throttler/single-tenant-throttler.guard";
 import { ThrottlerStorageRedisService } from "@nest-lab/throttler-storage-redis";
 import { APP_FILTER, APP_GUARD } from "@nestjs/core";
 import { HttpExceptionFilter } from "./common/filters";
@@ -93,7 +93,7 @@ import { AppMetricsService } from "./infrastructure/telemetry/app-metrics.servic
   providers: [
     AppMetricsService,
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
-    { provide: APP_GUARD, useClass: TenantAwareThrottlerGuard },
+    { provide: APP_GUARD, useClass: SingleTenantThrottlerGuard },
     // Global authentication: every route requires a valid admin JWT unless
     // decorated @Public() (which client/public/webhook controllers carry; their
     // own ClientSessionGuard/OtpSessionGuard still enforces their auth). This

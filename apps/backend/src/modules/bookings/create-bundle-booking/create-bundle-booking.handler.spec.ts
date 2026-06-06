@@ -107,6 +107,7 @@ const buildPrisma = () => ({
       { serviceId: 'svc-2' },
     ]),
   },
+  organizationSettings: { findFirst: jest.fn().mockResolvedValue({ paymentAtClinicEnabled: true }) },
 });
 
 const buildBundlePriceService = () => ({
@@ -436,31 +437,21 @@ describe('CreateBundleBookingHandler', () => {
   // ────────────────────────────────────────────────────────────────────────────
 
   describe('payAtClinic gate', () => {
-    const buildSettings = (payAtClinicEnabled: boolean) => ({
-      execute: jest.fn().mockResolvedValue({ payAtClinicEnabled }),
-    });
-
-    it('rejects payAtClinic when the branch disables it', async () => {
-      const h = new CreateBundleBookingHandler(
-        prisma as never,
-        rlsTransaction as never,
-        bundlePriceService as never,
-        buildSettings(false) as never,
-      );
-      await expect(h.execute({ ...baseDto, payAtClinic: true })).rejects.toThrow(
-        'Pay at clinic is not enabled for this branch',
+    it('rejects payAtClinic when the org disables it', async () => {
+      prisma.organizationSettings.findFirst = jest
+        .fn()
+        .mockResolvedValue({ paymentAtClinicEnabled: false });
+      await expect(handler.execute({ ...baseDto, payAtClinic: true })).rejects.toThrow(
+        'Pay at clinic is not enabled',
       );
       expect(tx.booking.create).not.toHaveBeenCalled();
     });
 
-    it('allows payAtClinic when the branch enables it', async () => {
-      const h = new CreateBundleBookingHandler(
-        prisma as never,
-        rlsTransaction as never,
-        bundlePriceService as never,
-        buildSettings(true) as never,
-      );
-      const result = await h.execute({ ...baseDto, payAtClinic: true });
+    it('allows payAtClinic when the org enables it', async () => {
+      prisma.organizationSettings.findFirst = jest
+        .fn()
+        .mockResolvedValue({ paymentAtClinicEnabled: true });
+      const result = await handler.execute({ ...baseDto, payAtClinic: true });
       expect(result.bundleGroupId).toBeTruthy();
     });
   });

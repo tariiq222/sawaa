@@ -997,14 +997,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get the per-tenant Moyasar configuration (secret key masked) */
+        /** Get the Moyasar configuration (secret key masked) */
         get: operations["DashboardFinanceController_getMoyasarConfigEndpoint"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** Create or update the per-tenant Moyasar configuration */
+        /** Create or update the Moyasar configuration */
         patch: operations["DashboardFinanceController_upsertMoyasarConfigEndpoint"];
         trace?: never;
     };
@@ -3800,7 +3800,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/public/sms/webhooks/{provider}/{organizationId}": {
+    "/api/v1/public/sms/webhooks/{provider}": {
         parameters: {
             query?: never;
             header?: never;
@@ -3811,6 +3811,23 @@ export interface paths {
         put?: never;
         /** Inbound SMS delivery-receipt webhook */
         post: operations["PublicSmsWebhooksController_handle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/sms/webhooks/{provider}/{organizationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Inbound SMS delivery-receipt webhook (legacy path) */
+        post: operations["PublicSmsWebhooksController_handleLegacy"];
         delete?: never;
         options?: never;
         head?: never;
@@ -25899,7 +25916,30 @@ export interface operations {
             header?: never;
             path: {
                 provider: "UNIFONIC" | "TAQNYAT";
-                /** @description Organization id (legacy path param) */
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        received?: boolean;
+                    };
+                };
+            };
+        };
+    };
+    PublicSmsWebhooksController_handleLegacy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: "UNIFONIC" | "TAQNYAT";
+                /** @description Legacy path param; must match the default organization */
                 organizationId: string;
             };
             cookie?: never;

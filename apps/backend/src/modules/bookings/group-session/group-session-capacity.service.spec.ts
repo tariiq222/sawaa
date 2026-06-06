@@ -10,8 +10,16 @@ describe('GroupSessionCapacityService — recalculateGroupStatus', () => {
   beforeEach(async () => {
     tx = {
       booking: {
+        count: jest.fn(),
         findMany: jest.fn(),
         updateMany: jest.fn(),
+      },
+      groupSession: {
+        updateMany: jest.fn(),
+        findUnique: jest.fn(),
+      },
+      service: {
+        findUnique: jest.fn(),
       },
       bookingStatusLog: {
         create: jest.fn(),
@@ -46,17 +54,25 @@ describe('GroupSessionCapacityService — recalculateGroupStatus', () => {
   });
 
   it('is a no-op when no AWAITING_PAYMENT bookings exist for the group session', async () => {
+    tx.groupSession.findUnique.mockResolvedValue({ serviceId: 'svc-1' });
+    tx.service.findUnique.mockResolvedValue({ minParticipants: 2 });
+    tx.booking.count.mockResolvedValue(1);
     tx.booking.findMany.mockResolvedValue([]);
 
     await service.recalculateGroupStatus(tx, 'gs-1');
 
+    expect(tx.groupSession.updateMany).toHaveBeenCalledWith({
+      where: { id: 'gs-1', enrolledCount: { gt: 0 } },
+      data: { enrolledCount: { decrement: 1 } },
+    });
     expect(tx.booking.updateMany).not.toHaveBeenCalled();
     expect(tx.bookingStatusLog.create).not.toHaveBeenCalled();
   });
 
-  it('rolls back all AWAITING_PAYMENT bookings to PENDING_GROUP_FILL when any remain', async () => {
-    // Scenario: 10 bookings were in AWAITING_PAYMENT (min reached), 1 cancels.
-    // The remaining 9 AWAITING_PAYMENT bookings must roll back.
+  it('rolls back AWAITING_PAYMENT bookings when active count is below service minimum', async () => {
+    tx.groupSession.findUnique.mockResolvedValue({ serviceId: 'svc-1' });
+    tx.service.findUnique.mockResolvedValue({ minParticipants: 10 });
+    tx.booking.count.mockResolvedValue(9);
     const awaitingBookings = [
       { id: 'b1' }, { id: 'b2' }, { id: 'b3' }, { id: 'b4' }, { id: 'b5' },
       { id: 'b6' }, { id: 'b7' }, { id: 'b8' }, { id: 'b9' },
@@ -67,6 +83,18 @@ describe('GroupSessionCapacityService — recalculateGroupStatus', () => {
 
     await service.recalculateGroupStatus(tx, 'gs-1');
 
+    expect(tx.booking.count).toHaveBeenCalledWith({
+      where: {
+        groupSessionId: 'gs-1',
+        status: {
+          in: [
+            BookingStatus.PENDING_GROUP_FILL,
+            BookingStatus.AWAITING_PAYMENT,
+            BookingStatus.CONFIRMED,
+          ],
+        },
+      },
+    });
     expect(tx.booking.findMany).toHaveBeenCalledWith({
       where: { groupSessionId: 'gs-1', status: BookingStatus.AWAITING_PAYMENT },
       select: { id: true },
@@ -93,23 +121,22 @@ describe('GroupSessionCapacityService — recalculateGroupStatus', () => {
     );
   });
 
-  it('handles a single remaining AWAITING_PAYMENT booking (edge case)', async () => {
-    tx.booking.findMany.mockResolvedValue([{ id: 'b1' }]);
-    tx.booking.updateMany.mockResolvedValue({ count: 1 });
-    tx.bookingStatusLog.create.mockResolvedValue({});
+  it('does not roll back when active count still meets service minimum', async () => {
+    tx.groupSession.findUnique.mockResolvedValue({ serviceId: 'svc-1' });
+    tx.service.findUnique.mockResolvedValue({ minParticipants: 2 });
+    tx.booking.count.mockResolvedValue(2);
 
     await service.recalculateGroupStatus(tx, 'gs-2');
 
-    expect(tx.booking.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: { in: ['b1'] } },
-        data: expect.objectContaining({ status: BookingStatus.PENDING_GROUP_FILL }),
-      }),
-    );
-    expect(tx.bookingStatusLog.create).toHaveBeenCalledTimes(1);
+    expect(tx.booking.findMany).not.toHaveBeenCalled();
+    expect(tx.booking.updateMany).not.toHaveBeenCalled();
+    expect(tx.bookingStatusLog.create).not.toHaveBeenCalled();
   });
 
   it('clears expiresAt when rolling back to PENDING_GROUP_FILL', async () => {
+    tx.groupSession.findUnique.mockResolvedValue({ serviceId: 'svc-1' });
+    tx.service.findUnique.mockResolvedValue({ minParticipants: 3 });
+    tx.booking.count.mockResolvedValue(2);
     tx.booking.findMany.mockResolvedValue([{ id: 'b1' }, { id: 'b2' }]);
     tx.booking.updateMany.mockResolvedValue({ count: 2 });
     tx.bookingStatusLog.create.mockResolvedValue({});
@@ -124,6 +151,9 @@ describe('GroupSessionCapacityService — recalculateGroupStatus', () => {
   });
 
   it('queries only the correct groupSessionId', async () => {
+    tx.groupSession.findUnique.mockResolvedValue({ serviceId: 'svc-1' });
+    tx.service.findUnique.mockResolvedValue({ minParticipants: 2 });
+    tx.booking.count.mockResolvedValue(1);
     tx.booking.findMany.mockResolvedValue([]);
 
     await service.recalculateGroupStatus(tx, 'gs-specific-id');
@@ -133,5 +163,20 @@ describe('GroupSessionCapacityService — recalculateGroupStatus', () => {
         where: expect.objectContaining({ groupSessionId: 'gs-specific-id' }),
       }),
     );
+  });
+
+  it('skips rollback after decrement when service is missing', async () => {
+    tx.groupSession.findUnique.mockResolvedValue({ serviceId: 'missing-service' });
+    tx.service.findUnique.mockResolvedValue(null);
+
+    await service.recalculateGroupStatus(tx, 'gs-4');
+
+    expect(tx.groupSession.updateMany).toHaveBeenCalledWith({
+      where: { id: 'gs-4', enrolledCount: { gt: 0 } },
+      data: { enrolledCount: { decrement: 1 } },
+    });
+    expect(tx.booking.count).not.toHaveBeenCalled();
+    expect(tx.booking.findMany).not.toHaveBeenCalled();
+    expect(tx.booking.updateMany).not.toHaveBeenCalled();
   });
 });

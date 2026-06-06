@@ -122,6 +122,11 @@ describe('CreateGuestBookingHandler', () => {
       mockPrisma.branch.findFirst.mockResolvedValue(null);
       await expect(handler.execute(baseCmd())).rejects.toThrow(new NotFoundException('Branch not found'));
     });
+
+    it('should throw BadRequestException when branch is inactive', async () => {
+      mockPrisma.branch.findFirst.mockResolvedValue({ id: 'branch-1', isActive: false });
+      await expect(handler.execute(baseCmd())).rejects.toThrow(new BadRequestException('Branch is not active'));
+    });
   });
 
   describe('employee lookup', () => {

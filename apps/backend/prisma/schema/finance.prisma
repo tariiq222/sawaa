@@ -82,6 +82,7 @@ model Invoice {
   @@index([bookingId])
   @@index([bundlePurchaseId])
   @@index([status, dueAt])
+  @@index([status, createdAt])
   @@index([employeeId])
 }
 
@@ -184,6 +185,7 @@ model RefundRequest {
   @@index([clientId])
   @@index([invoiceId])
   @@index([status])
+  @@index([status, createdAt])
   @@index([paymentId])
 }
 

@@ -38,7 +38,11 @@ import { RefundPaymentHandler } from '../../modules/finance/refund-payment/refun
 import { RefundPaymentDto } from '../../modules/finance/refund-payment/refund-payment.dto';
 import { VerifyPaymentHandler } from '../../modules/finance/verify-payment/verify-payment.handler';
 import { VerifyPaymentDto } from '../../modules/finance/verify-payment/verify-payment.dto';
-import { BankTransferUploadHandler } from '../../modules/finance/bank-transfer-upload/bank-transfer-upload.handler';
+import {
+  ALLOWED_BANK_TRANSFER_RECEIPT_MIME_TYPES,
+  BankTransferUploadHandler,
+  MAX_BANK_TRANSFER_RECEIPT_BYTES,
+} from '../../modules/finance/bank-transfer-upload/bank-transfer-upload.handler';
 import { BankTransferUploadDto } from '../../modules/finance/bank-transfer-upload/bank-transfer-upload.dto';
 import { GetMoyasarConfigHandler } from '../../modules/finance/moyasar-config/get-moyasar-config.handler';
 import { UpsertMoyasarConfigHandler } from '../../modules/finance/moyasar-config/upsert-moyasar-config.handler';
@@ -184,7 +188,16 @@ export class DashboardFinanceController {
   @Post('payments/bank-transfer')
   @CheckPermissions({ action: 'manage', subject: 'Payment' })
   @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FileInterceptor('receipt'))
+  @UseInterceptors(FileInterceptor('receipt', {
+    limits: { fileSize: MAX_BANK_TRANSFER_RECEIPT_BYTES, files: 1 },
+    fileFilter: (_req, file, cb) => {
+      if ((ALLOWED_BANK_TRANSFER_RECEIPT_MIME_TYPES as readonly string[]).includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new BadRequestException(`Unsupported receipt file type: ${file.mimetype}`), false);
+      }
+    },
+  }))
   @ApiOperation({ summary: 'Upload a bank transfer receipt for an invoice' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -324,11 +337,11 @@ export class DashboardFinanceController {
     return this.deleteCoupon.execute({ couponId: id });
   }
 
-  // ── Per-tenant Moyasar credentials ────────────────────────────────────────
+  // ── Moyasar Credentials ───────────────────────────────────────────────────
 
   @Get('moyasar/config')
   @CheckPermissions({ action: 'read', subject: 'Setting' })
-  @ApiOperation({ summary: 'Get the per-tenant Moyasar configuration (secret key masked)' })
+  @ApiOperation({ summary: 'Get the Moyasar configuration (secret key masked)' })
   @ApiOkResponse({ description: 'Moyasar configuration or null if unconfigured' })
   getMoyasarConfigEndpoint() {
     return this.getMoyasarConfig.execute();
@@ -336,7 +349,7 @@ export class DashboardFinanceController {
 
   @Patch('moyasar/config')
   @CheckPermissions({ action: 'manage', subject: 'Setting' })
-  @ApiOperation({ summary: 'Create or update the per-tenant Moyasar configuration' })
+  @ApiOperation({ summary: 'Create or update the Moyasar configuration' })
   @ApiOkResponse({ description: 'Moyasar configuration saved (secrets encrypted at rest)' })
   upsertMoyasarConfigEndpoint(@Body() body: UpsertMoyasarConfigDto) {
     return this.upsertMoyasarConfig.execute(body);

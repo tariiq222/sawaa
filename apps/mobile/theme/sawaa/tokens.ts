@@ -105,12 +105,12 @@ export const GLASS_CFG: Record<GlassVariant, GlassCfg> = {
   },
 };
 
-// Primary color system (for multi-tenant branding)
+// Primary color system for the default Sawaa organization.
 export const sawaaTokens = {
   // Color primitives
   colors: sawaaColors,
 
-  // Branding tokens (override via tenant config)
+  // Branding tokens.
   primary: {
     light: '#354FD8',   // Sawaa platform blue
     dark: '#2438B0',    // Dark variant
@@ -134,7 +134,7 @@ export const sawaaTokens = {
   blur: sawaaBlur,
 } as const;
 
-// Branding override helper (for per-tenant customization)
+// Branding override helper for organization-specific customization.
 export function getBrandingTokens(brandingConfig?: { primaryColor?: string; primaryColorDark?: string }) {
   if (!brandingConfig) return sawaaTokens;
   return {

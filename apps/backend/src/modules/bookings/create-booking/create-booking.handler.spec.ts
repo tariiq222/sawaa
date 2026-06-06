@@ -56,7 +56,7 @@ const buildPrisma = () => {
       count: jest.fn().mockResolvedValue(0),
     },
     invoice: { create: jest.fn().mockResolvedValue(mockInvoice) },
-    organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: '0.15' }) },
+    organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: '0.15', paymentAtClinicEnabled: true }) },
     outboxEvent: { create: jest.fn().mockResolvedValue({ id: 'outbox-1' }) },
     coupon: { update: jest.fn().mockResolvedValue({}) },
     $executeRaw: jest.fn().mockResolvedValue(undefined),
@@ -154,22 +154,22 @@ describe('CreateBookingHandler', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('throws BadRequestException when payAtClinic=true but setting key is missing', async () => {
-    settingsHandler.execute = jest.fn().mockResolvedValue({ maxAdvanceBookingDays: 60 });
+  it('throws BadRequestException when payAtClinic=true but org settings row is missing', async () => {
+    prisma.organizationSettings.findFirst = jest.fn().mockResolvedValue(null);
     await expect(
       handler.execute({ ...baseDto, payAtClinic: true }),
-    ).rejects.toThrow('Pay at clinic is not enabled for this branch');
+    ).rejects.toThrow('Pay at clinic is not enabled');
   });
 
-  it('throws BadRequestException when payAtClinic=true but payAtClinicEnabled=false', async () => {
-    settingsHandler.execute = jest.fn().mockResolvedValue({ payAtClinicEnabled: false });
+  it('throws BadRequestException when payAtClinic=true but paymentAtClinicEnabled=false', async () => {
+    prisma.organizationSettings.findFirst = jest.fn().mockResolvedValue({ paymentAtClinicEnabled: false });
     await expect(
       handler.execute({ ...baseDto, payAtClinic: true }),
-    ).rejects.toThrow('Pay at clinic is not enabled for this branch');
+    ).rejects.toThrow('Pay at clinic is not enabled');
   });
 
-  it('passes when payAtClinic=true and payAtClinicEnabled=true', async () => {
-    settingsHandler.execute = jest.fn().mockResolvedValue({ payAtClinicEnabled: true });
+  it('passes when payAtClinic=true and paymentAtClinicEnabled=true', async () => {
+    prisma.organizationSettings.findFirst = jest.fn().mockResolvedValue({ paymentAtClinicEnabled: true });
     await handler.execute({ ...baseDto, payAtClinic: true });
     expect(prisma.booking.create).toHaveBeenCalled();
   });
@@ -177,6 +177,11 @@ describe('CreateBookingHandler', () => {
   it('throws NotFoundException when branch is not found', async () => {
     prisma.branch.findFirst = jest.fn().mockResolvedValue(null);
     await expect(handler.execute(baseDto)).rejects.toThrow('Branch not found');
+  });
+
+  it('throws BadRequestException when branch is inactive', async () => {
+    prisma.branch.findFirst = jest.fn().mockResolvedValue({ id: 'branch-1', nameAr: 'الفرع الرئيسي', isActive: false });
+    await expect(handler.execute(baseDto)).rejects.toThrow('Branch is not active');
   });
 
   it('throws NotFoundException when client is not found', async () => {
@@ -196,9 +201,29 @@ describe('CreateBookingHandler', () => {
     await expect(handler.execute(baseDto)).rejects.toThrow('Employee not found');
   });
 
+  it('throws BadRequestException when employee is inactive', async () => {
+    prisma.employee.findFirst = jest.fn().mockResolvedValue({ id: 'emp-1', name: 'Dr. Sara', isActive: false });
+    await expect(handler.execute(baseDto)).rejects.toThrow('Employee is not active');
+  });
+
   it('throws NotFoundException when service is not found', async () => {
     prisma.service.findFirst = jest.fn().mockResolvedValue(null);
     await expect(handler.execute(baseDto)).rejects.toThrow('Service not found');
+  });
+
+  it('throws BadRequestException when service is inactive', async () => {
+    prisma.service.findFirst = jest.fn().mockResolvedValue({ ...mockService, isActive: false, archivedAt: null, isHidden: false });
+    await expect(handler.execute(baseDto)).rejects.toThrow('Service is not active');
+  });
+
+  it('throws BadRequestException when service is archived', async () => {
+    prisma.service.findFirst = jest.fn().mockResolvedValue({ ...mockService, isActive: true, archivedAt: new Date(), isHidden: false });
+    await expect(handler.execute(baseDto)).rejects.toThrow('Service is archived');
+  });
+
+  it('throws BadRequestException when service is hidden', async () => {
+    prisma.service.findFirst = jest.fn().mockResolvedValue({ ...mockService, isActive: true, archivedAt: null, isHidden: true });
+    await expect(handler.execute(baseDto)).rejects.toThrow('Service is hidden');
   });
 
   it('throws BadRequestException when employee does not provide the service', async () => {
@@ -333,7 +358,6 @@ describe('CreateBookingHandler', () => {
   });
 
   it('does not create invoice when payAtClinic=true', async () => {
-    settingsHandler.execute = jest.fn().mockResolvedValue({ payAtClinicEnabled: true });
     await handler.execute({ ...baseDto, payAtClinic: true });
     expect(prisma.invoice.create).not.toHaveBeenCalled();
   });
@@ -665,7 +689,6 @@ describe('CreateBookingHandler', () => {
   });
 
   it('does not set expiresAt when payAtClinic=true and no expiresAt provided', async () => {
-    settingsHandler.execute = jest.fn().mockResolvedValue({ payAtClinicEnabled: true });
     await handler.execute({ ...baseDto, payAtClinic: true });
     expect(prisma.booking.create).toHaveBeenCalledWith(
       expect.objectContaining({

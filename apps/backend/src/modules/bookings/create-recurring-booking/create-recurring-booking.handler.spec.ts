@@ -35,6 +35,7 @@ const buildPrisma = (overrides?: Partial<{ findFirst: jest.Mock; create: jest.Mo
     branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
     serviceCategory: { findFirst: jest.fn() },
     department: { findFirst: jest.fn() },
+    organizationSettings: { findFirst: jest.fn().mockResolvedValue({ paymentAtClinicEnabled: true }) },
     // Advisory-lock SQL (pg_advisory_xact_lock) is a no-op in unit tests.
     $executeRaw: jest.fn().mockResolvedValue(undefined),
     // Simulate $transaction by calling the callback with the prisma itself (unit test context)
@@ -48,11 +49,6 @@ const buildAvailabilityHandler = (available = true) => ({
   execute: jest.fn(async (input: { date: Date }) =>
     available ? [{ startTime: new Date(input.date) }] : [],
   ),
-});
-
-// Settings handler that reports whether payAtClinic is enabled.
-const buildSettingsHandler = (payAtClinicEnabled = true) => ({
-  execute: jest.fn().mockResolvedValue({ payAtClinicEnabled }),
 });
 
 const buildRlsTransaction = (prisma: ReturnType<typeof buildPrisma>) => ({
@@ -335,13 +331,14 @@ describe('CreateRecurringBookingHandler', () => {
   });
 
   describe('payAtClinic gate', () => {
-    it('rejects payAtClinic when the branch disables it', async () => {
+    it('rejects payAtClinic when the org disables it', async () => {
       const prisma = buildPrisma();
-      const settings = buildSettingsHandler(false);
+      prisma.organizationSettings.findFirst = jest
+        .fn()
+        .mockResolvedValue({ paymentAtClinicEnabled: false });
       const handler = new CreateRecurringBookingHandler(
         prisma as never,
         buildRlsTransaction(prisma) as never,
-        settings as never,
       );
       await expect(
         handler.execute({ ...baseDto, frequency: RecurringFrequency.WEEKLY, occurrences: 2, payAtClinic: true }),
@@ -349,13 +346,14 @@ describe('CreateRecurringBookingHandler', () => {
       expect(prisma.booking.create).not.toHaveBeenCalled();
     });
 
-    it('allows payAtClinic when the branch enables it', async () => {
+    it('allows payAtClinic when the org enables it', async () => {
       const prisma = buildPrisma();
-      const settings = buildSettingsHandler(true);
+      prisma.organizationSettings.findFirst = jest
+        .fn()
+        .mockResolvedValue({ paymentAtClinicEnabled: true });
       const result = await new CreateRecurringBookingHandler(
         prisma as never,
         buildRlsTransaction(prisma) as never,
-        settings as never,
       ).execute({ ...baseDto, frequency: RecurringFrequency.WEEKLY, occurrences: 2, payAtClinic: true });
       expect(result).toHaveLength(2);
     });

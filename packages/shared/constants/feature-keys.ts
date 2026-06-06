@@ -42,6 +42,7 @@ export const FeatureKey = {
   DATA_EXPORT: "data_export",
 
   // ── On/Off — ENTERPRISE (Phase 3) ────────────────────────────────
+  SMS_PROVIDER_DEDICATED: "sms_provider_per_tenant",
   SMS_PROVIDER_PER_TENANT: "sms_provider_per_tenant",
   WHITE_LABEL_MOBILE: "white_label_mobile",
   CUSTOM_DOMAIN: "custom_domain",

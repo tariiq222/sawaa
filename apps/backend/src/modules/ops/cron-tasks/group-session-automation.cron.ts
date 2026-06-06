@@ -3,6 +3,7 @@ import { ActivityAction } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 
 const CRON_ACTOR_EMAIL = 'system:group-session-automation-cron';
+const BATCH_SIZE = 100;
 
 @Injectable()
 export class GroupSessionAutomationCron {
@@ -18,6 +19,8 @@ export class GroupSessionAutomationCron {
     const targets = await this.prisma.groupSession.findMany({
       where: { status: 'OPEN', scheduledAt: { lte: now } },
       select: { id: true },
+      orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }],
+      take: BATCH_SIZE,
     });
     if (targets.length === 0) return;
 

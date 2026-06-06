@@ -9,15 +9,17 @@ export interface SeededOrg {
   cleanup: () => Promise<void>;
 }
 
+export type SeededOrganization = SeededOrg;
+
 interface SeedOptions {
   vertical?: string;
   prefix?: string;
 }
 
 /**
- * Seeds an isolated organization through the super-admin's tenant-create endpoint
+ * Seeds an isolated organization through the super-admin organization endpoint
  * and returns owner credentials + a cleanup function. The org is suspended on cleanup
- * (we do NOT hard-delete tenants — billing/audit-log retention is intentional).
+ * (we do NOT hard-delete organizations — billing/audit-log retention is intentional).
  *
  * Cleanup-on-suspend is the contract: subsequent runs that attempt to log in as the
  * suspended owner will get 403, which is the desired isolation signal.
@@ -87,3 +89,5 @@ export async function seedIsolatedOrg(opts: SeedOptions = {}): Promise<SeededOrg
     cleanup,
   };
 }
+
+export const seedIsolatedOrganization = seedIsolatedOrg;

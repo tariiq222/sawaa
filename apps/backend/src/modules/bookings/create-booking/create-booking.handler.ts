@@ -73,8 +73,11 @@ export class CreateBookingHandler {
     });
 
     if (dto.payAtClinic) {
-      if (!('payAtClinicEnabled' in bookingSettings) || !(bookingSettings as Record<string, unknown>).payAtClinicEnabled) {
-        throw new BadRequestException('Pay at clinic is not enabled for this branch');
+      const orgSettings = await this.prisma.organizationSettings.findFirst({
+        select: { paymentAtClinicEnabled: true },
+      });
+      if (!orgSettings?.paymentAtClinicEnabled) {
+        throw new BadRequestException('Pay at clinic is not enabled');
       }
     }
 
@@ -86,9 +89,10 @@ export class CreateBookingHandler {
 
     const branch = await this.prisma.branch.findFirst({
       where: { id: dto.branchId },
-      select: { id: true, nameAr: true },
+      select: { id: true, nameAr: true, isActive: true },
     });
     if (!branch) throw new NotFoundException('Branch not found');
+    if (branch.isActive === false) throw new BadRequestException('Branch is not active');
 
     const client = await this.prisma.client.findFirst({
       where: { id: dto.clientId, deletedAt: null },
@@ -98,15 +102,19 @@ export class CreateBookingHandler {
 
     const employee = await this.prisma.employee.findFirst({
       where: { id: dto.employeeId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, isActive: true },
     });
     if (!employee) throw new NotFoundException('Employee not found');
+    if (employee.isActive === false) throw new BadRequestException('Employee is not active');
 
     const service = await this.prisma.service.findFirst({
       where: { id: dto.serviceId },
-      select: { id: true, nameAr: true, categoryId: true },
+      select: { id: true, nameAr: true, categoryId: true, isActive: true, archivedAt: true, isHidden: true },
     });
     if (!service) throw new NotFoundException('Service not found');
+    if (service.isActive === false) throw new BadRequestException('Service is not active');
+    if (service.archivedAt != null) throw new BadRequestException('Service is archived');
+    if (service.isHidden === true) throw new BadRequestException('Service is hidden');
 
     const employeeService = await this.prisma.employeeService.findUnique({
       where: { employeeId_serviceId: { employeeId: dto.employeeId, serviceId: dto.serviceId } },

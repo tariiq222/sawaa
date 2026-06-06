@@ -1,8 +1,6 @@
-import api from './api';
-
 /**
- * Mirrors the backend `MembershipSummary` shape returned by
- * `GET /auth/memberships` (apps/backend/src/modules/identity/list-memberships).
+ * Historical membership shape kept for type compatibility with old mobile
+ * imports. Sawaa mobile is single-organization and does not query memberships.
  */
 export interface MembershipSummary {
   id: string;
@@ -18,26 +16,28 @@ export interface MembershipSummary {
   };
 }
 
-/** Token pair shape kept for compatibility only. Mobile is single-tenant. */
+/** Token pair shape kept for compatibility only. Mobile is single-organization. */
 export interface SwitchOrgTokens {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
 }
 
+const ORGANIZATION_SWITCHING_DISABLED =
+  'Organization switching is disabled in Sawaa mobile.';
+
 export const membershipsService = {
   async list(): Promise<MembershipSummary[]> {
-    const { data } = await api.get<MembershipSummary[]>('/auth/memberships');
-    return data;
+    return [];
   },
 
   async switchOrganization(organizationId: string): Promise<SwitchOrgTokens> {
     void organizationId;
-    throw new Error('Organization switching is disabled in Sawaa mobile.');
+    throw new Error(ORGANIZATION_SWITCHING_DISABLED);
   },
 };
 
-/** Backwards-compatible function exports for direct callers. */
+/** Backwards-compatible exports for old direct callers. */
 export const listMemberships = (): Promise<MembershipSummary[]> =>
   membershipsService.list();
 export const switchOrganization = (

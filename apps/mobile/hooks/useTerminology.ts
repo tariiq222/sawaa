@@ -7,7 +7,7 @@
  * `verticalSlug`; the dashboard hook makes the same trade-off — neither the
  * auth session nor OrganizationSettings carry the slug today (Plan 07).
  *
- * For the tenant-locked mobile binary the slug should normally come from
+ * For the single-organization mobile binary the slug should normally come from
  * `EXPO_PUBLIC_VERTICAL_SLUG` (see `constants/config.ts` -> `VERTICAL_SLUG`).
  *
  * Example:

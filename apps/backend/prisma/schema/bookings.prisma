@@ -127,6 +127,10 @@ model Booking {
   @@index([status])
   @@index([employeeId, scheduledAt])
   @@index([employeeId, endsAt])
+  @@index([employeeId, status, scheduledAt])
+  @@index([employeeId, status, endsAt])
+  @@index([branchId, scheduledAt])
+  @@index([serviceId, scheduledAt])
   @@index([recurringGroupId])
   @@index([bundleGroupId])
 }

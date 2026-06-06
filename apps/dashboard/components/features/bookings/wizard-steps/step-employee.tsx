@@ -41,17 +41,44 @@ interface EmployeeAvatarProps {
   name: string
 }
 
-function EmployeeAvatar({ avatarUrl, name }: EmployeeAvatarProps) {
-  if (avatarUrl) {
+export function normalizeEmployeeAvatarSrc(
+  avatarUrl: unknown,
+): string | null {
+  if (typeof avatarUrl !== "string") return null
+  const trimmed = avatarUrl.trim()
+  if (!trimmed) return null
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return trimmed
+
+  try {
+    const url = new URL(trimmed, "http://localhost")
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null
+    return /^https?:\/\//i.test(trimmed) ? trimmed : null
+  } catch {
+    return null
+  }
+}
+
+export function EmployeeAvatar({ avatarUrl, name }: EmployeeAvatarProps) {
+  const safeAvatarUrl = normalizeEmployeeAvatarSrc(avatarUrl)
+
+  if (safeAvatarUrl) {
+    const isRemote = /^https?:\/\//i.test(safeAvatarUrl)
     return (
       <div className="relative size-9 shrink-0 overflow-hidden rounded-full">
-        <Image
-          src={avatarUrl}
-          alt={name}
-          fill
-          className="object-cover"
-          sizes="36px"
-        />
+        {isRemote ? (
+          // Remote avatars (e.g. migrated WordPress media) bypass next/image:
+          // no remotePatterns are configured, so next/image would throw on them.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={safeAvatarUrl} alt={name} className="size-full object-cover" />
+        ) : (
+          <Image
+            src={safeAvatarUrl}
+            alt={name}
+            fill
+            className="object-cover"
+            sizes="36px"
+          />
+        )}
       </div>
     )
   }
