@@ -7,6 +7,7 @@ import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';
 import { IntroTitle } from '../ui/intro-title';
 import { getLocale } from '@/features/locale/public';
+import { safeImageSrc } from '@/lib/image-url';
 import { t as translate, type MessageKey } from '@/features/locale/dictionary';
 
 interface Props {
@@ -74,9 +75,9 @@ export async function Team({ therapists, intro, totalCount }: Props) {
                       boxShadow: '0 0 0 3px #fff, var(--sw-shadow-md)',
                     }}
                   >
-                    {member.publicImageUrl ? (
+                    {safeImageSrc(member.publicImageUrl) ? (
                       <Image
-                        src={member.publicImageUrl}
+                        src={safeImageSrc(member.publicImageUrl)!}
                         alt={name}
                         width={64}
                         height={64}

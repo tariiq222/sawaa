@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import type { PublicEmployee } from '@sawaa/api-client';
+import { safeImageSrc } from '@/lib/image-url';
 
 interface Props {
   therapist: PublicEmployee;
@@ -20,9 +21,9 @@ export function TherapistCard({ therapist, locale }: Props) {
         border: '1px solid color-mix(in srgb, var(--primary) 15%, transparent)',
       }}
     >
-      {therapist.publicImageUrl ? (
+      {safeImageSrc(therapist.publicImageUrl) ? (
         <Image
-          src={therapist.publicImageUrl}
+          src={safeImageSrc(therapist.publicImageUrl)!}
           alt={name ?? ''}
           width={96}
           height={96}

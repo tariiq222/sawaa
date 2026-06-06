@@ -33,8 +33,8 @@ export function LegalPage({
   const locale = useLocale();
 
   return (
-    <section className="relative py-16 sm:py-20">
-      <div className="max-w-[820px] mx-auto px-5 sm:px-6 md:px-8">
+    <section className="sw-section-cream relative overflow-hidden -mt-[88px] pt-[140px] sm:pt-[160px] pb-16 sm:pb-20">
+      <div className="relative max-w-[820px] mx-auto px-5 sm:px-6 md:px-8">
         <header className="mb-10">
           <h1
             className="text-2xl sm:text-3xl font-extrabold mb-3"

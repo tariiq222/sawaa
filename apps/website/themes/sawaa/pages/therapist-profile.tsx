@@ -6,6 +6,7 @@ import type { Locale } from '@/features/locale/locale';
 import { t as translate, type MessageKey } from '@/features/locale/dictionary';
 import { listPublicEmployees, getPublicEmployee } from '@/features/therapists/public';
 import { TherapistCardSawaa } from '../components/therapists/therapist-card';
+import { safeImageSrc } from '@/lib/image-url';
 
 interface PageProps {
   slug: string;
@@ -61,9 +62,9 @@ export async function SawaaTherapistProfilePage({ slug, locale }: PageProps) {
                 className="relative aspect-square w-full max-w-[320px] mx-auto md:mx-0 rounded-[24px] overflow-hidden bg-[color:var(--sw-primary-50)]"
                 style={{ boxShadow: 'var(--sw-shadow-md)' }}
               >
-                {therapist.publicImageUrl ? (
+                {safeImageSrc(therapist.publicImageUrl) ? (
                   <Image
-                    src={therapist.publicImageUrl}
+                    src={safeImageSrc(therapist.publicImageUrl)!}
                     alt={name}
                     fill
                     sizes="(min-width: 1024px) 280px, (min-width: 768px) 32vw, 80vw"

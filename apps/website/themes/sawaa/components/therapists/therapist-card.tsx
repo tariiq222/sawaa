@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import type { PublicEmployee } from '@sawaa/api-client';
+import { safeImageSrc } from '@/lib/image-url';
 
 export interface TherapistCardLabels {
   viewProfile: string;
@@ -59,9 +60,9 @@ export function TherapistCardSawaa({ therapist, locale, labels }: Props) {
       <article className="flex flex-col h-full">
         {/* Portrait area — square-ish, compact */}
         <div className="relative aspect-square w-full overflow-hidden bg-[color:var(--sw-primary-50)]">
-          {therapist.publicImageUrl ? (
+          {safeImageSrc(therapist.publicImageUrl) ? (
             <Image
-              src={therapist.publicImageUrl}
+              src={safeImageSrc(therapist.publicImageUrl)!}
               alt={name}
               fill
               sizes="(min-width: 1280px) 220px, (min-width: 768px) 22vw, (min-width: 640px) 30vw, 45vw"

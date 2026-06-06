@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
 import type { PublicEmployeeItem } from './list-public-employees.handler';
+import { normalizePublicImageUrl } from './public-image-url';
 
 @Injectable()
 export class GetPublicEmployeeHandler {
@@ -84,8 +85,10 @@ export class GetPublicEmployeeHandler {
     const firstName = tokens.length > 0 ? tokens[0] : '';
     const lastName = tokens.length > 1 ? tokens.slice(1).join(' ') : '';
 
+    const publicImageUrl = normalizePublicImageUrl(row.publicImageUrl);
     return {
       ...row,
+      publicImageUrl,
       experience: row.experience ?? 0,
       gender: row.gender ?? null,
       ratingAverage: ratings._avg.score ?? null,
@@ -104,7 +107,7 @@ export class GetPublicEmployeeHandler {
         lastName,
         email: '',
         phone: null,
-        avatarUrl: row.publicImageUrl,
+        avatarUrl: publicImageUrl,
       },
     };
   }

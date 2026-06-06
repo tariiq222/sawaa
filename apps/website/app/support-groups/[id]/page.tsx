@@ -1,8 +1,12 @@
 import type { Metadata } from 'next';
 import { getPublicBrandingForSsr } from '@/features/branding/public';
 import { theme } from '@/themes/registry';
-import { SawaaSupportGroupsPage } from '@/themes/sawaa/pages/support-groups';
+import { SawaaSupportGroupDetailPage } from '@/themes/sawaa/pages/support-group-detail';
 import { buildPageMetadata } from '@/lib/seo/page-metadata';
+
+interface Props {
+  params: Promise<{ id: string }>;
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const branding = await getPublicBrandingForSsr();
@@ -10,15 +14,16 @@ export async function generateMetadata(): Promise<Metadata> {
     branding,
     path: '/support-groups',
     titleAr: 'الدعم الجماعي',
-    descriptionAr: 'برامج دعم جماعي يقودها مختصون في مركز سواء — مساحة آمنة للتعافي المشترك والدعم المجتمعي.',
+    descriptionAr: 'تفاصيل برنامج الدعم الجماعي والجلسات المتاحة في مركز سواء.',
   });
 }
 
-export default function SupportGroupsRoute() {
+export default async function SupportGroupDetailRoute({ params }: Props) {
+  const { id } = await params;
   const Layout = theme.Layout;
   return (
     <Layout>
-      <SawaaSupportGroupsPage />
+      <SawaaSupportGroupDetailPage id={id} />
     </Layout>
   );
 }

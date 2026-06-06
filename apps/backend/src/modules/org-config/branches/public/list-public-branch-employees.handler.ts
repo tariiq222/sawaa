@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
+import { normalizePublicImageUrl } from '../../../people/employees/public/public-image-url';
 
 export interface PublicBranchEmployee {
   id: string;
@@ -53,7 +54,7 @@ export class ListPublicBranchEmployeesHandler {
       .filter((l) => l.employee.isPublic && l.employee.isActive)
       .map((l) => {
         const { isPublic: _ip, isActive: _ia, ...e } = l.employee;
-        return e;
+        return { ...e, publicImageUrl: normalizePublicImageUrl(e.publicImageUrl) };
       });
   }
 }

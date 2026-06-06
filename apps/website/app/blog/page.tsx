@@ -40,7 +40,9 @@ export default async function BlogIndexRoute() {
 
   return (
     <Layout>
-      <Blog intro={intro} items={posts} />
+      <div className="-mt-[88px] pt-[88px]" style={{ background: '#FBF7F2' }}>
+        <Blog intro={intro} items={posts} />
+      </div>
     </Layout>
   );
 }

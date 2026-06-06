@@ -47,6 +47,7 @@ export class PublicBookingsController {
     return this.getGroupSession.execute(id);
   }
 
+  @Public()
   @ApiBearerAuth()
   @UseGuards(ClientSessionGuard)
   @Post('group-sessions/:id/book')

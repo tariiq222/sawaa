@@ -10,8 +10,8 @@ interface AuthCardProps {
 export function AuthCard({ title, subtitle, footer, children }: AuthCardProps) {
   return (
     <section
-      className="sw-section-mint relative overflow-hidden flex items-center justify-center px-5 pb-16 pt-32 sm:pt-36"
-      style={{ minHeight: 'calc(100vh - 120px)' }}
+      className="sw-section-mint relative overflow-hidden flex items-center justify-center px-5 pb-16 -mt-[88px] pt-[140px] sm:pt-[160px]"
+      style={{ minHeight: '100vh' }}
     >
       <div
         className="absolute -top-20 -start-20 w-72 h-72 rounded-full pointer-events-none"

@@ -3,6 +3,7 @@
 import type { EmployeeWithUser } from '@sawaa/shared';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import Image from 'next/image';
+import { safeImageSrc } from '@/lib/image-url';
 
 interface TherapistPickerProps {
   therapists: EmployeeWithUser[];
@@ -165,10 +166,11 @@ function Avatar({
   avatarUrl: string | null;
   initials: string;
 }) {
-  if (avatarUrl) {
+  const safeSrc = safeImageSrc(avatarUrl);
+  if (safeSrc) {
     return (
       <Image
-        src={avatarUrl}
+        src={safeSrc}
         alt=""
         width={64}
         height={64}

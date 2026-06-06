@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
+import { normalizePublicImageUrl } from './public-image-url';
 
 export interface PublicEmployeeItem {
   id: string;
@@ -164,8 +165,10 @@ export class ListPublicEmployeesHandler {
       const tokens = display.trim().split(/\s+/).filter(Boolean);
       const firstName = tokens.length > 0 ? tokens[0] : '';
       const lastName = tokens.length > 1 ? tokens.slice(1).join(' ') : '';
+      const publicImageUrl = normalizePublicImageUrl(r.publicImageUrl);
       return {
         ...r,
+        publicImageUrl,
         experience: r.experience ?? 0,
         gender: r.gender ?? null,
         ratingAverage: stat?.avg ?? null,
@@ -184,7 +187,7 @@ export class ListPublicEmployeesHandler {
           lastName,
           email: '',
           phone: null,
-          avatarUrl: r.publicImageUrl,
+          avatarUrl: publicImageUrl,
         },
       };
     });
