@@ -101,6 +101,12 @@ export interface SeedServiceInput {
   minParticipants?: number
   maxParticipants?: number
   reserveWithoutPayment?: boolean
+  /** Skip auto-creating the default IN_PERSON booking config (default false). */
+  skipBookingConfig?: boolean
+  /** Attach the service to this category instead of the auto-created one. */
+  categoryId?: string
+  /** Skip attaching any category (default false). */
+  skipCategory?: boolean
 }
 
 export interface SeedEmployeeInput {
@@ -108,6 +114,8 @@ export interface SeedEmployeeInput {
   email?: string
   phone?: string
   gender?: "MALE" | "FEMALE"
+  /** Skip the default 7-day availability window seeded for wizard visibility. */
+  skipAvailability?: boolean
 }
 
 export interface SeedBookingInput {
@@ -393,6 +401,45 @@ export async function cleanupClient(id: string, token: string): Promise<void> {
 
 // ─── Service ─────────────────────────────────────────────────────────────
 
+// One shared category per run is enough to make seeded services appear in the
+// booking wizard's clinic/service step. Cached so we don't create one per
+// service. (Categories are lightweight and left for the suite to clean up.)
+let cachedTestCategoryId: string | null = null
+
+async function ensureTestCategoryId(token: string): Promise<string | undefined> {
+  if (cachedTestCategoryId) return cachedTestCategoryId
+  try {
+    // Attach the category to a real department so the booking wizard chain
+    // (department → category → service) can reach the seeded service. Prefer the
+    // individual-clinic department ("عيادات"/Clinics); fall back to the first.
+    // The list endpoint returns { items, meta } (not { data }).
+    const deps = await apiGet<{
+      items?: Array<{ id: string; nameAr?: string; nameEn?: string }>
+    }>("/dashboard/organization/departments?isActive=true", token)
+      .then((r) => r.items ?? [])
+      .catch(() => [] as Array<{ id: string; nameAr?: string; nameEn?: string }>)
+    const clinic =
+      deps.find(
+        (d) => d.nameAr === "عيادات" || /clinic/i.test(d.nameEn ?? "")
+      ) ?? deps[0]
+
+    const created = await apiPost<{ id: string }>(
+      "/dashboard/organization/categories",
+      token,
+      {
+        nameAr: "فئة اختبار",
+        nameEn: "Test Category",
+        ...(clinic ? { departmentId: clinic.id } : {}),
+      }
+    )
+    cachedTestCategoryId = created.id
+    return created.id
+  } catch {
+    // Best-effort: if category creation fails, fall back to no category.
+    return undefined
+  }
+}
+
 /**
  * Create a test service via POST /dashboard/organization/services.
  * Cleans up with cleanupService(id, token).
@@ -404,6 +451,16 @@ export async function seedService(
   const suffix = uniqueSuffix()
   const baseNameAr = overrides.nameAr ?? "خدمة اختبار"
   const baseNameEn = overrides.nameEn ?? "Test Service"
+  // The booking wizard's service step is gated on a category (clinic): it only
+  // fetches services for a selected categoryId (`enabled: !!categoryId`). A
+  // service with no category never appears in the wizard, so wizard-driven
+  // tests can't select it. Attach a category by default (auto-create one).
+  const categoryId =
+    overrides.categoryId ??
+    (overrides.skipCategory === true
+      ? undefined
+      : await ensureTestCategoryId(token))
+
   const body = {
     nameAr: `${baseNameAr} ${suffix}`,
     nameEn: `${baseNameEn} ${suffix}`,
@@ -411,6 +468,7 @@ export async function seedService(
     price: overrides.price ?? 100,
     currency: overrides.currency ?? "SAR",
     isActive: true,
+    categoryId,
     allowRecurring: overrides.allowRecurring,
     allowedRecurringPatterns: overrides.allowedRecurringPatterns,
     maxRecurrences: overrides.maxRecurrences,
@@ -426,6 +484,27 @@ export async function seedService(
     durationMins: number
     price: number
   }>("/dashboard/organization/services", token, body)
+
+  // The availability engine returns zero slots for a service that has no
+  // ServiceBookingConfig for the requested deliveryType (gate in
+  // check-availability.handler: `if (serviceId && !serviceConfig) return []`).
+  // Without this, seeded bookings fail with "Selected booking time is not
+  // available". Give every seeded service an active IN_PERSON config using
+  // branch hours (useCustomAvailability: false) so it is bookable. Callers can
+  // still override the configs explicitly via setServiceBookingTypes.
+  if (overrides.skipBookingConfig !== true) {
+    await setServiceBookingTypes(token, created.id, [
+      {
+        deliveryType: "IN_PERSON",
+        durationMins: created.durationMins,
+        price: created.price,
+        isActive: true,
+        useCustomAvailability: false,
+      },
+    ]).catch(() => {
+      // Tolerate races / pre-existing config; booking config is best-effort.
+    })
+  }
 
   return {
     id: created.id,
@@ -586,9 +665,30 @@ export async function cleanupBranch(
   branchId: string,
   token: string
 ): Promise<void> {
-  // Branch has a real DELETE endpoint. Only 404 is tolerated by apiDelete;
-  // any FK/conflict/authorization failure must surface to the caller.
-  await apiDelete(`/dashboard/organization/branches/${branchId}`, token)
+  // A branch can't be deleted while employees are still assigned (409). Unassign
+  // any that prepareBookableSchedule attached before deleting the branch.
+  const assigned = await apiGet<Array<{ employeeId: string }>>(
+    `/dashboard/organization/branches/${branchId}/employees`,
+    token
+  ).catch(() => [] as Array<{ employeeId: string }>)
+  for (const link of assigned) {
+    await apiDelete(
+      `/dashboard/organization/branches/${branchId}/employees/${link.employeeId}`,
+      token
+    ).catch(() => undefined)
+  }
+
+  // Delete the branch. A 409 here means the branch is still referenced by
+  // bookings/waitlist/group sessions seeded during the test — that's correct
+  // app behavior (you can't delete a branch with live bookings), and a leftover
+  // test branch in the dev DB is harmless. Tolerate it so teardown doesn't fail
+  // an otherwise-passing test; surface any other error.
+  await apiDelete(`/dashboard/organization/branches/${branchId}`, token).catch(
+    (err: unknown) => {
+      if (/HTTP 409/.test(String((err as Error)?.message))) return
+      throw err
+    }
+  )
 }
 
 // ─── Employee ─────────────────────────────────────────────────────────────
@@ -618,6 +718,15 @@ export async function seedEmployee(
     email: string | null
   }>("/dashboard/people/employees", token, body)
 
+  // Give the employee a 7-day 09:00–17:00 availability window so the booking
+  // wizard's employee step shows them as bookable. Without it the wizard
+  // disables the employee tile ("لا يوجد وقت متاح") and no time can be picked.
+  // Best-effort: wizard-less seeds (cancel/payment flows) set availability via
+  // seedBooking, so a failure here must not break those paths.
+  if (overrides.skipAvailability !== true) {
+    await setEmployeeAvailability(token, created.id).catch(() => undefined)
+  }
+
   return {
     id: created.id,
     name: created.name,
@@ -645,15 +754,60 @@ export async function cleanupEmployee(
  * a valid branch UUID (the seeded DEFAULT_BRANCH_ID uses an invalid
  * RFC 4122 variant and is rejected by @IsUUID validation).
  */
+// Track slots already consumed by this run so two seeds for the same employee
+// never request the same start time. Keyed by `${employeeId}|${iso}`.
+const consumedSlots = new Set<string>()
+
+/**
+ * Ask the backend for a genuinely-available slot instead of guessing a time.
+ * This is robust against the engine's slot grid, service duration, branch
+ * business hours, buffers, and bookings left over from earlier runs — all of
+ * which made fixed-time seeds fail with "Selected booking time is not
+ * available". Walks forward day-by-day (within maxAdvanceBookingDays) until it
+ * finds a slot not yet consumed this run. Starts a few days out so the minimum
+ * lead time is never an issue.
+ */
+async function findAvailableSlotIso(
+  token: string,
+  input: { branchId: string; employeeId: string; serviceId: string }
+): Promise<string> {
+  const MAX_DAYS = 80 // safely below the seeded maxAdvanceBookingDays (90)
+  for (let dayOffset = 2; dayOffset <= MAX_DAYS; dayOffset++) {
+    const date = new Date()
+    date.setUTCDate(date.getUTCDate() + dayOffset)
+    date.setUTCHours(0, 0, 0, 0)
+
+    const qs = new URLSearchParams({
+      employeeId: input.employeeId,
+      branchId: input.branchId,
+      serviceId: input.serviceId,
+      date: date.toISOString(),
+      bookingType: "INDIVIDUAL",
+    }).toString()
+
+    const slots = await apiGet<Array<{ startTime: string }>>(
+      `/dashboard/bookings/availability?${qs}`,
+      token
+    ).catch(() => [] as Array<{ startTime: string }>)
+
+    for (const slot of slots) {
+      const iso = new Date(slot.startTime).toISOString()
+      const key = `${input.employeeId}|${iso}`
+      if (!consumedSlots.has(key)) {
+        consumedSlots.add(key)
+        return iso
+      }
+    }
+  }
+  throw new Error(
+    `[seed] no available slot found for employee ${input.employeeId} within ${MAX_DAYS} days`
+  )
+}
+
 export async function seedBooking(
   token: string,
   input: SeedBookingInput
 ): Promise<SeededBooking> {
-  // Default scheduledAt: tomorrow at 09:00 Asia/Riyadh (UTC+3 = 06:00Z)
-  const tomorrow = new Date()
-  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
-  tomorrow.setUTCHours(6, 0, 0, 0) // 06:00 UTC = 09:00 Riyadh
-
   // Ensure employee is assigned to the service
   await assignEmployeeToService(token, input.employeeId, input.serviceId).catch(
     () => {
@@ -669,15 +823,15 @@ export async function seedBooking(
     employeeId: input.employeeId,
   })
 
-  const body = {
-    branchId,
-    clientId: input.clientId,
-    employeeId: input.employeeId,
-    serviceId: input.serviceId,
-    scheduledAt: input.scheduledAt ?? tomorrow.toISOString(),
-    payAtClinic: input.payAtClinic ?? false,
-    bookingType: "INDIVIDUAL",
-  }
+  // Honour a caller-pinned time; otherwise resolve a real, free slot from the
+  // availability engine so the booking POST can't fail on slot validity.
+  const scheduledAt =
+    input.scheduledAt ??
+    (await findAvailableSlotIso(token, {
+      branchId,
+      employeeId: input.employeeId,
+      serviceId: input.serviceId,
+    }))
 
   const created = await apiPost<{
     id: string
@@ -686,7 +840,15 @@ export async function seedBooking(
     serviceId: string
     scheduledAt: string
     status: string
-  }>("/dashboard/bookings", token, body)
+  }>("/dashboard/bookings", token, {
+    branchId,
+    clientId: input.clientId,
+    employeeId: input.employeeId,
+    serviceId: input.serviceId,
+    scheduledAt,
+    payAtClinic: input.payAtClinic ?? false,
+    bookingType: "INDIVIDUAL",
+  })
 
   return {
     id: created.id,

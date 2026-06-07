@@ -5,7 +5,7 @@ test.describe('Ratings CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await devLogin(page)
     await page.goto('/ratings')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
   })
 
   test('should load ratings page without errors', async ({ page }) => {

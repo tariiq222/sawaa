@@ -5,7 +5,7 @@ test.describe('Categories CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await devLogin(page)
     await page.goto('/categories')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
   })
 
   test('should load categories page without errors', async ({ page }) => {
@@ -67,7 +67,7 @@ test.describe('Categories CRUD Operations', () => {
 
   test('should create new category with valid data', async ({ page }) => {
     await page.goto('/categories/create')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
     const nameInput = page.locator('input[id*="name"], input[placeholder*="name"], input[placeholder*="الاسم"]')
     const descriptionInput = page.locator('textarea[id*="description"], textarea[placeholder*="description"]')
@@ -90,7 +90,7 @@ test.describe('Categories CRUD Operations', () => {
     const editButton = page.locator('a[href*="/categories/edit"], button:has-text("edit"), button:has-text("تعديل")').first()
     if (await editButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       await editButton.click()
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
       const nameInput = page.locator('input[id*="name"], input[placeholder*="name"]')
       if (await nameInput.isVisible()) {

@@ -81,9 +81,31 @@ test.describe('Booking Cancel — user flow', () => {
     await loginAs(page, 'admin');
 
     // 2. Go to bookings list
-    await page.goto('/bookings');
+    await page.goto('/bookings', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/bookings/);
-    await page.waitForLoadState('networkidle');
+    // Wait for the table to render before interacting with filters/search.
+    await expect(
+      page.getByRole('columnheader', { name: /المريض|Client/i })
+    ).toBeVisible({ timeout: 15_000 });
+
+    // Seeded bookings are future-dated; switch off the default "today" filter.
+    const allTab = page
+      .getByRole('tab', { name: /^الكل$|^All$/ })
+      .or(page.getByRole('button', { name: /^الكل$|^All$/ }))
+      .first();
+    if (await allTab.isVisible({ timeout: 10_000 }).catch(() => false)) {
+      await allTab.click();
+      await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
+    }
+
+    // With 99+ bookings the seeded row may sit on a later page, so search by the
+    // client name (server-side match on name/phone/number) to surface it.
+    const search = page.getByPlaceholder(/بحث|Search/i).first();
+    if (await search.isVisible({ timeout: 10_000 }).catch(() => false)) {
+      await search.fill('لإلغاء اختبار');
+      await page.waitForTimeout(600);
+      await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
+    }
 
     // 3. Find and click the seeded booking row (click client name button)
     const clientBtn = page.getByRole('button', { name: /لإلغاء اختبار/ }).first();
@@ -109,15 +131,23 @@ test.describe('Booking Cancel — user flow', () => {
     await expect(cancelOption).toBeVisible({ timeout: 5_000 });
     await cancelOption.click();
 
-    // 7. AdminCancelDialog (Sheet) opens — fill reason
-    const reasonTextarea = page.locator('textarea').first();
-    await expect(reasonTextarea).toBeVisible({ timeout: 5_000 });
-    await reasonTextarea.fill('customer requested cancellation via test');
+    // 7. AdminCancelDialog opens. The confirm button is disabled until a
+    //    cancellation reason is picked from the Select (admin notes alone is not
+    //    enough — `disabled={loading || !cancelReason}`). Pick the first reason.
+    const reasonSelect = page.getByRole('combobox').first();
+    await expect(reasonSelect).toBeVisible({ timeout: 5_000 });
+    await reasonSelect.click();
+    await page.getByRole('option').first().click();
 
-    // 8. Click the destructive "إلغاء الحجز" confirm button
-    // Buttons use class-based variants (not data-variant attribute)
+    // Optional admin notes textarea.
+    const reasonTextarea = page.locator('textarea').first();
+    if (await reasonTextarea.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      await reasonTextarea.fill('customer requested cancellation via test');
+    }
+
+    // 8. Click the destructive "إلغاء الحجز" confirm button (now enabled).
     const confirmCancelBtn = page.getByRole('button', { name: 'إلغاء الحجز' }).last();
-    await expect(confirmCancelBtn).toBeVisible({ timeout: 5_000 });
+    await expect(confirmCancelBtn).toBeEnabled({ timeout: 5_000 });
     await confirmCancelBtn.click();
 
     // Wait for mutation and sheet to close
@@ -129,9 +159,28 @@ test.describe('Booking Cancel — user flow', () => {
 
   test('booking detail sheet opens and shows client + service info', async ({ page }) => {
     await loginAs(page, 'admin');
-    await page.goto('/bookings');
+    await page.goto('/bookings', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/bookings/);
-    await page.waitForLoadState('networkidle');
+    await expect(
+      page.getByRole('columnheader', { name: /المريض|Client/i })
+    ).toBeVisible({ timeout: 15_000 });
+
+    // Switch off the default "today" filter and search by name to surface the
+    // future-dated seeded row regardless of which page it lands on.
+    const allTab = page
+      .getByRole('tab', { name: /^الكل$|^All$/ })
+      .or(page.getByRole('button', { name: /^الكل$|^All$/ }))
+      .first();
+    if (await allTab.isVisible({ timeout: 10_000 }).catch(() => false)) {
+      await allTab.click();
+      await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
+    }
+    const search = page.getByPlaceholder(/بحث|Search/i).first();
+    if (await search.isVisible({ timeout: 10_000 }).catch(() => false)) {
+      await search.fill('لإلغاء اختبار');
+      await page.waitForTimeout(600);
+      await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
+    }
 
     // Click the seeded booking's client name
     const clientBtn = page.getByRole('button', { name: /لإلغاء اختبار/ }).first();

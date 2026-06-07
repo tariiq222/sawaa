@@ -73,7 +73,7 @@ test.describe('Booking Create Wizard — user flow', () => {
     // 2. Navigate to bookings
     await page.goto('/bookings');
     await expect(page).toHaveURL(/\/bookings/);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
     // 3. Click "حجز جديد" — wizard renders inline (not in a dialog)
     const addBtn = page.getByRole('button', { name: /حجز جديد/i });
@@ -99,14 +99,31 @@ test.describe('Booking Create Wizard — user flow', () => {
     await clientBtn.click();
     await page.waitForTimeout(1_000);
 
-    // 5. Service section auto-opens — select the seeded service
-    const byServiceBtn = page.getByRole('button', { name: 'ابدأ بالخدمة' });
-    if (await byServiceBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
-      await byServiceBtn.click();
+    // 5. Department section auto-opens — pick the clinics ("عيادات") department.
+    //    Scope to the POS container so we don't match the sidebar "العيادات" nav.
+    const deptBtn = posContainer
+      .getByRole('button', { name: /^عيادات$|^Clinics$/ })
+      .first();
+    if (await deptBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await deptBtn.click();
       await page.waitForTimeout(1_000);
     }
 
-    const serviceBtn = page.locator('button', { hasText: /خدمة حجز اختبار/ }).first();
+    // 6. Category (clinic) section — pick the seeded test category.
+    const categoryBtn = posContainer
+      .locator('button')
+      .filter({ hasText: /فئة اختبار|Test Category/ })
+      .first();
+    if (await categoryBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await categoryBtn.click();
+      await page.waitForTimeout(1_000);
+    }
+
+    // 7. Service section — select the seeded service.
+    const serviceBtn = posContainer
+      .locator('button')
+      .filter({ hasText: /خدمة حجز اختبار/ })
+      .first();
     await expect(serviceBtn).toBeVisible({ timeout: 10_000 });
     await serviceBtn.click();
     await page.waitForTimeout(1_000);
@@ -131,7 +148,7 @@ test.describe('Booking Create Wizard — user flow', () => {
   test('wizard back button returns to previous step', async ({ page }) => {
     await loginAs(page, 'admin');
     await page.goto('/bookings');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
     // Click "حجز جديد" — wizard renders inline (not in a dialog)
     const addBtn = page.getByRole('button', { name: /حجز جديد/i });
@@ -166,7 +183,7 @@ test.describe('Booking Create Wizard — user flow', () => {
   test('wizard close button dismisses inline POS view', async ({ page }) => {
     await loginAs(page, 'admin');
     await page.goto('/bookings');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
     const addBtn = page.getByRole('button', { name: /حجز جديد/i });
     await expect(addBtn).toBeVisible({ timeout: 10_000 });

@@ -8,13 +8,13 @@ test.describe('Notifications', () => {
 
   test('notifications page loads', async ({ page }) => {
     await page.goto('/notifications');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('notification bell icon is visible in header', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await page.waitForTimeout(500);
 
     await expect(page.getByTestId('notifications-bell')).toBeVisible({ timeout: 5000 });
@@ -22,7 +22,7 @@ test.describe('Notifications', () => {
 
   test('notification dropdown opens on bell click', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await page.waitForTimeout(500);
 
     await page.getByTestId('notifications-bell').click();
@@ -34,7 +34,7 @@ test.describe('Notifications', () => {
 
   test('unread notification count badge shows on bell', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await page.waitForTimeout(500);
 
     const badge = page.getByTestId('notifications-badge');
@@ -45,7 +45,7 @@ test.describe('Notifications', () => {
 
   test('individual notification can be marked as read', async ({ page }) => {
     await page.goto('/notifications');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await page.waitForTimeout(1000);
 
     const unreadNotif = page.locator('[class*="unread"], [class*="bg-primary"]').first();
@@ -61,7 +61,7 @@ test.describe('Notifications', () => {
 
   test('empty state when no notifications', async ({ page }) => {
     await page.goto('/notifications');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await page.waitForTimeout(1000);
 
     const emptyState = page.getByTestId('notifications-empty').first();

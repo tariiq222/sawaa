@@ -244,15 +244,40 @@ async function openSeededBookingDetail(page: Page) {
   await expect(
     page.getByRole("columnheader", { name: /حالة الدفع|Payment Status/i })
   ).toBeVisible()
-  await page
-    .getByRole("textbox", { name: /بحث بالاسم|Search by name/i })
-    .fill(seededBooking.id)
+  // Seeded bookings are future-dated, so switch off the default "today" filter
+  // to the "all" tab before searching. Wait for the list re-fetch to settle.
+  const allTab = page
+    .getByRole("tab", { name: /^الكل$|^All$/ })
+    .or(page.getByRole("button", { name: /^الكل$|^All$/ }))
+    .first()
+  if (await allTab.isVisible({ timeout: 10_000 }).catch(() => false)) {
+    await allTab.click()
+    await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {})
+  }
 
-  const clientButton = page
+  // Search by client name — the bookings search matches client name / phone /
+  // booking-number server-side (debounced 300ms). Target by placeholder (robust
+  // whether or not the input exposes an accessible name), then wait for the
+  // debounce + the filtered re-fetch to settle before locating the row.
+  const search = page.getByPlaceholder(/بحث|Search/i).first()
+  await expect(search).toBeVisible({ timeout: 15_000 })
+  await search.fill(seededClientName)
+  await page.waitForTimeout(600)
+  await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {})
+
+  // The filtered list re-renders (the row briefly unmounts during the re-fetch),
+  // so target the row by text — Playwright auto-retries until it settles — then
+  // click the client button inside it. Matching the row (not a button accessible
+  // name assembled from avatar + name + booking number) is the robust anchor.
+  const seededRow = page
+    .getByRole("row")
+    .filter({ hasText: seededClientName })
+    .first()
+  await expect(seededRow).toBeVisible({ timeout: 20_000 })
+  await seededRow
     .getByRole("button", { name: new RegExp(escapeRegex(seededClientName)) })
     .first()
-  await expect(clientButton).toBeVisible({ timeout: 20_000 })
-  await clientButton.click()
+    .click()
 
   const dialog = page
     .getByRole("dialog")
@@ -298,9 +323,11 @@ async function apiPost<T>(
 }
 
 function invoiceListNumber() {
-  return seededPayment.number
-    ? `INV-${String(seededPayment.number).padStart(4, "0")}`
-    : seededPayment.id.slice(0, 8).toUpperCase()
+  // The invoices list renders `INV-<invoice.number>` (see use-invoices.ts), not
+  // the payment number — these are independent sequences.
+  return seededInvoice.number
+    ? `INV-${String(seededInvoice.number).padStart(4, "0")}`
+    : seededInvoice.id.slice(0, 8).toUpperCase()
 }
 
 function escapeRegex(value: string) {

@@ -80,7 +80,7 @@ test.describe('Bookings CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await loginAs(page, 'admin');
     await page.goto('/bookings');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
   });
 
   test('should load bookings page without errors', async ({ page }) => {

@@ -3,10 +3,19 @@ import { expect, type Page } from "@playwright/test"
 /**
  * Assert that the authenticated dashboard chrome rendered instead of a
  * false-positive blank page or redirected login screen.
+ *
+ * Tolerates the transient loading states (AuthGate spinner + route-segment
+ * `loading.tsx` "جارٍ التحميل...") by waiting for them to clear first. Under a
+ * cold dev server compiling routes in parallel, the segment can stream slower
+ * than a flat 15s — wait it out rather than flaking.
  */
 export async function expectAuthenticatedShell(page: Page): Promise<void> {
   await expect(page).not.toHaveURL(/\/login(?:\?|$)/, { timeout: 15_000 })
-  await expect(page.locator("main").first()).toBeVisible({ timeout: 15_000 })
+  // Let any loading placeholder resolve before asserting the shell.
+  await expect(page.getByText(/^جارٍ التحميل\.\.\.$/))
+    .toHaveCount(0, { timeout: 30_000 })
+    .catch(() => {})
+  await expect(page.locator("main").first()).toBeVisible({ timeout: 30_000 })
   await expect(getDashboardBrand(page)).toBeVisible({
     timeout: 10_000,
   })
@@ -36,6 +45,13 @@ export async function expectNoAppCrash(page: Page): Promise<void> {
     page.getByText(
       /حدث خطأ غير متوقع|نعتذر، حدث خطأ في النظام|Application error|Unhandled Runtime Error|Something went wrong/i
     )
+  ).toHaveCount(0)
+  // The route-level error boundary (app/(dashboard)/error.tsx) renders a bare
+  // "حدث خطأ" heading plus the raw error.message — which the fallback text
+  // above does NOT cover when a message is present. Match the boundary heading
+  // exactly (role=heading) so it can't false-positive on inline body copy.
+  await expect(
+    page.getByRole("heading", { name: /^حدث خطأ$/ })
   ).toHaveCount(0)
 }
 

@@ -26,7 +26,7 @@ test.describe('Bookings List — user flow', () => {
     await expect(page).toHaveURL(/\/bookings/);
 
     // 3. Wait for table rows to appear (seeded data or empty state)
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
     // 4. The bookings table or empty state must be visible
     const table = page.locator('table');
@@ -58,7 +58,7 @@ test.describe('Bookings List — user flow', () => {
     await loginAs(page, 'admin');
     await page.goto('/bookings');
     await expect(page).toHaveURL(/\/bookings/);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
     // Filter controls should be present
     const body = page.locator('body');
@@ -69,7 +69,7 @@ test.describe('Bookings List — user flow', () => {
     await loginAs(page, 'admin');
     await page.goto('/bookings');
     await expect(page).toHaveURL(/\/bookings/);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
     // Look for create/add button — try multiple selectors
     const createBtn = page.locator(

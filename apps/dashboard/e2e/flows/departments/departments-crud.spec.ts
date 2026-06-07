@@ -5,7 +5,7 @@ test.describe('Departments CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await devLogin(page)
     await page.goto('/departments')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
   })
 
   test('should load departments page without errors', async ({ page }) => {
@@ -71,7 +71,7 @@ test.describe('Departments CRUD Operations', () => {
 
   test('should create new department with valid data', async ({ page }) => {
     await page.goto('/departments/create')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
     const nameInput = page.locator('input[id*="name"], input[placeholder*="name"], input[placeholder*="الاسم"]')
     const descriptionInput = page.locator('textarea[id*="description"], textarea[placeholder*="description"]')
@@ -94,7 +94,7 @@ test.describe('Departments CRUD Operations', () => {
     const editButton = page.locator('a[href*="/departments/edit"], button:has-text("edit"), button:has-text("تعديل")').first()
     if (await editButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       await editButton.click()
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
       const nameInput = page.locator('input[id*="name"], input[placeholder*="name"]')
       if (await nameInput.isVisible()) {

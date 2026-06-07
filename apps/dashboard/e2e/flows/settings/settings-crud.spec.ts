@@ -5,7 +5,7 @@ test.describe('Settings CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await devLogin(page)
     await page.goto('/settings')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
   })
 
   test('should load settings page without errors', async ({ page }) => {

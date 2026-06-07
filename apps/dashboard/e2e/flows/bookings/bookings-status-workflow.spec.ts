@@ -79,7 +79,7 @@ test.describe('Bookings - Status & Workflow', () => {
   test.beforeEach(async ({ page }) => {
     await loginAs(page, 'admin');
     await page.goto('/bookings');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     // Give React time to render the table
     await page.waitForTimeout(2_000);
   });
@@ -92,7 +92,7 @@ test.describe('Bookings - Status & Workflow', () => {
       const pendingOption = page.locator('[role="option"]:has-text("بالفعل"), [role="option"]:has-text("confirmed")').first();
       if (await pendingOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
         await pendingOption.click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
       }
     }
     await expect(page.locator('body')).toBeVisible();
@@ -106,7 +106,7 @@ test.describe('Bookings - Status & Workflow', () => {
       const pendingOption = page.locator('[role="option"]:has-text("بالانتظار"), [role="option"]:has-text("pending")').first();
       if (await pendingOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
         await pendingOption.click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
       }
     }
     await expect(page.locator('body')).toBeVisible();
@@ -120,7 +120,7 @@ test.describe('Bookings - Status & Workflow', () => {
       const cancelledOption = page.locator('[role="option"]:has-text("ملغى"), [role="option"]:has-text("cancelled")').first();
       if (await cancelledOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
         await cancelledOption.click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
       }
     }
     await expect(page.locator('body')).toBeVisible();

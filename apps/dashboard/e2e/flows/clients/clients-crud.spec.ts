@@ -5,7 +5,7 @@ test.describe('Clients CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await devLogin(page)
     await page.goto('/clients', { waitUntil: 'domcontentloaded' })
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
   })
 
   test('should load clients page without errors', async ({ page }) => {

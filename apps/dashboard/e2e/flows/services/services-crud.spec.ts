@@ -5,7 +5,7 @@ test.describe('Services CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await devLogin(page)
     await page.goto('/services')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
   })
 
   test('should load services page without errors', async ({ page }) => {
@@ -87,7 +87,7 @@ test.describe('Services CRUD Operations', () => {
 
   test('should create new service with valid data', async ({ page }) => {
     await page.goto('/services/create')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
     // Form uses react-hook-form register() — inputs have name attributes, not id or placeholder
     // The locale determines which field is primary (nameAr vs nameEn)
@@ -113,7 +113,7 @@ test.describe('Services CRUD Operations', () => {
     const editButton = page.locator('a[href*="/services/edit"], button:has-text("edit"), button:has-text("تعديل")').first()
     if (await editButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       await editButton.click()
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
       const nameInput = page.locator('input[id*="name"], input[placeholder*="name"]')
       if (await nameInput.isVisible()) {

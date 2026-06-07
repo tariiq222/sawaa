@@ -4,7 +4,7 @@ test.describe('Error States', () => {
   test('should display 404 page for non-existent route', async ({ page }) => {
     await page.goto('/this-route-does-not-exist-12345')
 
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
     const body = page.locator('body')
     await expect(body).toBeVisible()
@@ -19,7 +19,7 @@ test.describe('Error States', () => {
 
   test('should have working back to home link on 404', async ({ page }) => {
     await page.goto('/this-route-does-not-exist-12345')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
     const homeLink = page.locator('a[href="/"], a:has-text("home"), a:has-text("الرئيسية"), a:has-text("dashboard")')
     if (await homeLink.first().isVisible()) {
@@ -35,7 +35,7 @@ test.describe('Error States', () => {
     })
 
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
     await expect(page.locator('body')).toBeVisible()
 
@@ -50,7 +50,7 @@ test.describe('Error States', () => {
     })
 
     await page.goto('/bookings')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
     const body = page.locator('body')
     await expect(body).toBeVisible()
@@ -70,7 +70,7 @@ test.describe('Error States', () => {
     await page.context().clearCookies()
 
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
     await page.waitForTimeout(2000)
 
@@ -80,7 +80,7 @@ test.describe('Error States', () => {
 
   test('should show validation errors on forms', async ({ page }) => {
     await page.goto('/login')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
     await page.waitForTimeout(500)
 
     const identifierInput = page.locator('#identifier')
