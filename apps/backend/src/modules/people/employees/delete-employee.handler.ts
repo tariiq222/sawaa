@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../infrastructure/database';
+import { Prisma } from '@prisma/client';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 
 export interface DeleteEmployeeCommand { employeeId: string; }
 
@@ -7,74 +8,79 @@ export interface DeleteEmployeeCommand { employeeId: string; }
 export class DeleteEmployeeHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rlsTransaction: RlsTransactionService,
   ) {}
 
   async execute(cmd: DeleteEmployeeCommand): Promise<void> {
-    const employee = await this.prisma.employee.findFirst({
-      where: { id: cmd.employeeId },
-    });
-    if (!employee) throw new NotFoundException('Employee not found');
+    await this.rlsTransaction.withTransaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Employee" WHERE id = ${cmd.employeeId} FOR UPDATE`;
 
-    // ─── Cross-BC integrity guards ───────────────────────────────────────────
-    // Booking (people → bookings): block if any active appointment exists
-    const activeBookings = await this.prisma.booking.count({
-      where: {
-        employeeId: cmd.employeeId,
-        status: { in: ['PENDING', 'PENDING_GROUP_FILL', 'AWAITING_PAYMENT', 'CONFIRMED', 'CANCEL_REQUESTED'] },
-      },
-    });
-    if (activeBookings > 0) {
-      throw new ConflictException(
-        `Cannot delete employee with ${activeBookings} active booking(s). Cancel or complete them first.`,
-      );
-    }
+      const employee = await tx.employee.findFirst({
+        where: { id: cmd.employeeId },
+      });
+      if (!employee) throw new NotFoundException('Employee not found');
 
-    // GroupSession (people → bookings): block if hosting upcoming sessions
-    const activeGroupSessions = await this.prisma.groupSession.count({
-      where: {
-        employeeId: cmd.employeeId,
-        status: { in: ['OPEN', 'FULL'] },
-      },
-    });
-    if (activeGroupSessions > 0) {
-      throw new ConflictException(
-        `Cannot delete employee hosting ${activeGroupSessions} upcoming group session(s). Cancel them first.`,
-      );
-    }
+      // ─── Cross-BC integrity guards ───────────────────────────────────────────
+      // Booking (people → bookings): block if any active appointment exists
+      const activeBookings = await tx.booking.count({
+        where: {
+          employeeId: cmd.employeeId,
+          status: { in: ['PENDING', 'PENDING_GROUP_FILL', 'AWAITING_PAYMENT', 'CONFIRMED', 'CANCEL_REQUESTED'] },
+        },
+      });
+      if (activeBookings > 0) {
+        throw new ConflictException(
+          `Cannot delete employee with ${activeBookings} active booking(s). Cancel or complete them first.`,
+        );
+      }
 
-    // Invoice (people → finance): block if unpaid invoices exist
-    const unpaidInvoices = await this.prisma.invoice.count({
-      where: {
-        employeeId: cmd.employeeId,
-        status: { in: ['DRAFT', 'ISSUED', 'PARTIALLY_PAID'] },
-      },
-    });
-    if (unpaidInvoices > 0) {
-      throw new ConflictException(
-        `Cannot delete employee with ${unpaidInvoices} unpaid invoice(s). Settle them first.`,
-      );
-    }
+      // GroupSession (people → bookings): block if hosting upcoming sessions
+      const activeGroupSessions = await tx.groupSession.count({
+        where: {
+          employeeId: cmd.employeeId,
+          status: { in: ['OPEN', 'FULL'] },
+        },
+      });
+      if (activeGroupSessions > 0) {
+        throw new ConflictException(
+          `Cannot delete employee hosting ${activeGroupSessions} upcoming group session(s). Cancel them first.`,
+        );
+      }
 
-    // Waitlist (people → bookings)
-    const waitlistEntries = await this.prisma.waitlistEntry.count({
-      where: { employeeId: cmd.employeeId, status: 'WAITING' },
-    });
-    if (waitlistEntries > 0) {
-      throw new ConflictException(
-        `Cannot delete employee with ${waitlistEntries} waitlist entry(ies). Remove them first.`,
-      );
-    }
+      // Invoice (people → finance): block if unpaid invoices exist
+      const unpaidInvoices = await tx.invoice.count({
+        where: {
+          employeeId: cmd.employeeId,
+          status: { in: ['DRAFT', 'ISSUED', 'PARTIALLY_PAID'] },
+        },
+      });
+      if (unpaidInvoices > 0) {
+        throw new ConflictException(
+          `Cannot delete employee with ${unpaidInvoices} unpaid invoice(s). Settle them first.`,
+        );
+      }
 
-    // Rating (people → organization)
-    const ratings = await this.prisma.rating.count({
-      where: { employeeId: cmd.employeeId },
-    });
-    if (ratings > 0) {
-      throw new ConflictException(
-        `Cannot delete employee with ${ratings} rating(s). Ratings must be preserved for audit.`,
-      );
-    }
+      // Waitlist (people → bookings)
+      const waitlistEntries = await tx.waitlistEntry.count({
+        where: { employeeId: cmd.employeeId, status: 'WAITING' },
+      });
+      if (waitlistEntries > 0) {
+        throw new ConflictException(
+          `Cannot delete employee with ${waitlistEntries} waitlist entry(ies). Remove them first.`,
+        );
+      }
 
-    await this.prisma.employee.delete({ where: { id: cmd.employeeId } });
+      // Rating (people → organization)
+      const ratings = await tx.rating.count({
+        where: { employeeId: cmd.employeeId },
+      });
+      if (ratings > 0) {
+        throw new ConflictException(
+          `Cannot delete employee with ${ratings} rating(s). Ratings must be preserved for audit.`,
+        );
+      }
+
+      await tx.employee.delete({ where: { id: cmd.employeeId } });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 }

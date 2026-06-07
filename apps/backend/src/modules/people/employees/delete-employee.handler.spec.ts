@@ -1,9 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ConflictException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { DeleteEmployeeHandler } from './delete-employee.handler';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 
 const buildPrisma = () => ({
+  $queryRaw: jest.fn(),
   employee: { findFirst: jest.fn(), delete: jest.fn() },
   booking: { count: jest.fn() },
   groupSession: { count: jest.fn() },
@@ -15,11 +17,19 @@ const buildPrisma = () => ({
 describe('DeleteEmployeeHandler', () => {
   let handler: DeleteEmployeeHandler;
   let prisma: ReturnType<typeof buildPrisma>;
+  let rlsTransaction: { withTransaction: jest.Mock };
 
   beforeEach(async () => {
     prisma = buildPrisma();
+    rlsTransaction = {
+      withTransaction: jest.fn(async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)),
+    };
     const module: TestingModule = await Test.createTestingModule({
-      providers: [DeleteEmployeeHandler, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        DeleteEmployeeHandler,
+        { provide: PrismaService, useValue: prisma },
+        { provide: RlsTransactionService, useValue: rlsTransaction },
+      ],
     }).compile();
     handler = module.get<DeleteEmployeeHandler>(DeleteEmployeeHandler);
   });
@@ -79,6 +89,10 @@ describe('DeleteEmployeeHandler', () => {
     prisma.employee.delete.mockResolvedValue({ id: 'emp-1' });
 
     await handler.execute({ employeeId: 'emp-1' });
+    expect(rlsTransaction.withTransaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    });
+    expect(prisma.$queryRaw).toHaveBeenCalled();
     expect(prisma.employee.delete).toHaveBeenCalledWith({ where: { id: 'emp-1' } });
   });
 });

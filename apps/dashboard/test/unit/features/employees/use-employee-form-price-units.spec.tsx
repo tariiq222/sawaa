@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   createVacation: vi.fn(),
   updateEmployeeService: vi.fn(),
   assignService: vi.fn(),
+  deleteEmployee: vi.fn(),
   setEmployeeServiceOptions: vi.fn(),
   uploadEmployeeAvatar: vi.fn(),
   assignEmployeeToBranch: vi.fn(),
@@ -53,6 +54,7 @@ vi.mock("@/hooks/use-employee-mutations", () => ({
 
 vi.mock("@/lib/api/employees", () => ({
   assignService: mocks.assignService,
+  deleteEmployee: mocks.deleteEmployee,
   setEmployeeServiceOptions: mocks.setEmployeeServiceOptions,
   uploadEmployeeAvatar: mocks.uploadEmployeeAvatar,
 }))
@@ -193,6 +195,7 @@ describe("useEmployeeForm service price units", () => {
     mocks.updateEmployee.mockResolvedValue({ id: "emp-1" })
     mocks.assignService.mockResolvedValue({ id: "employee-service-new" })
     mocks.updateEmployeeService.mockResolvedValue({ id: "employee-service-1" })
+    mocks.deleteEmployee.mockResolvedValue(undefined)
     mocks.setEmployeeServiceOptions.mockResolvedValue([])
     mocks.assignEmployeeToBranch.mockResolvedValue({ id: "eb-1" })
     mocks.unassignEmployeeFromBranch.mockResolvedValue({ id: "eb-1" })
@@ -291,5 +294,29 @@ describe("useEmployeeForm service price units", () => {
         expect.objectContaining({ durationOptionId: "opt-90", priceOverride: 30000 }),
       ],
     })
+  })
+
+  it("rolls back the created employee when a create follow-up step fails", async () => {
+    mocks.assignEmployeeToBranch.mockRejectedValueOnce(new Error("branch assignment failed"))
+    const form = makeForm(employeeFormData)
+    const { result } = renderHook(() =>
+      useEmployeeForm({
+        ...baseOptions,
+        isEdit: false,
+        branchIds: ["branch-1"],
+        draftServices: [],
+        form: form as never,
+      }),
+    )
+
+    await act(async () => {
+      await result.current.onSubmit()
+    })
+
+    expect(mocks.deleteEmployee).toHaveBeenCalledWith("emp-new")
+    expect(mocks.toastError).toHaveBeenCalledWith("employees.create.error")
+    expect(mocks.toastSuccess).not.toHaveBeenCalled()
+    expect(mocks.toastWarning).not.toHaveBeenCalled()
+    expect(mocks.routerPush).not.toHaveBeenCalled()
   })
 })
