@@ -1,4 +1,4 @@
-// smtp-adapter — tenant-level SMTP via nodemailer (mirrors SmtpService but per-tenant).
+// smtp-adapter — deployment-level SMTP via nodemailer.
 
 import { Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';

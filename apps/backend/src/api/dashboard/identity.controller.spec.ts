@@ -64,6 +64,13 @@ describe('DashboardIdentityController (e2e)', () => {
       .compile();
 
     app = moduleRef.createNestApplication();
+    app.use((req: { headers: Record<string, string | string[] | undefined>; user?: { id: string } }, _res: unknown, next: () => void) => {
+      const actorId = req.headers['x-test-actor-id'];
+      if (typeof actorId === 'string') {
+        req.user = { id: actorId };
+      }
+      next();
+    });
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
     );
@@ -168,10 +175,15 @@ describe('DashboardIdentityController (e2e)', () => {
       const res = await request(app.getHttpServer())
         .post('/dashboard/identity/users')
         .set('Authorization', 'Bearer fake-jwt')
+        .set('x-test-actor-id', 'actor-user')
         .send(validUser)
         .expect(201);
 
       expect(res.body.id).toBe('user-new');
+      expect(mockCreateUser.execute).toHaveBeenCalledWith({
+        ...validUser,
+        actorUserId: 'actor-user',
+      });
     });
 
     it('returns 400 for invalid email', async () => {

@@ -1,11 +1,17 @@
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
 
-/** Default org id for this single-organization build. Override via EXPO_PUBLIC_TENANT_ID. */
+/**
+ * Default organization id for this single-organization build.
+ * Prefer EXPO_PUBLIC_ORGANIZATION_ID; EXPO_PUBLIC_TENANT_ID remains as a
+ * deprecated fallback for existing mobile environments.
+ */
 export const DEFAULT_ORGANIZATION_ID =
-  process.env.EXPO_PUBLIC_TENANT_ID ?? '00000000-0000-0000-0000-000000000001';
+  process.env.EXPO_PUBLIC_ORGANIZATION_ID ??
+  process.env.EXPO_PUBLIC_TENANT_ID ??
+  '00000000-0000-0000-0000-000000000001';
 
-/** Backwards-compatible env-facing export name. */
+/** @deprecated Use DEFAULT_ORGANIZATION_ID. */
 export const TENANT_ID = DEFAULT_ORGANIZATION_ID;
 
 /**

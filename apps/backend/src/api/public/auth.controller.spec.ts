@@ -16,6 +16,7 @@ import { RequestDashboardOtpHandler } from '../../modules/identity/request-dashb
 import { VerifyDashboardOtpHandler } from '../../modules/identity/verify-dashboard-otp/verify-dashboard-otp.handler';
 import { PlatformSettingsService } from '../../modules/platform/settings/platform-settings.service';
 import { Reflector } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 import { JwtGuard, IS_PUBLIC_KEY } from '../../common/guards/jwt.guard';
 import { AuthResponseBuilder } from '../../modules/identity/shared/auth-response.builder';
 import { LookupUserHandler } from '../../modules/identity/lookup-user/lookup-user.handler';
@@ -100,6 +101,7 @@ describe('AuthController (e2e)', () => {
       .compile();
 
     const nestApp = moduleRef.createNestApplication();
+    nestApp.use(cookieParser());
     nestApp.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -209,17 +211,18 @@ describe('AuthController (e2e)', () => {
 
       const res = await request(refreshApp.getHttpServer())
         .post('/auth/refresh')
-        .send({ refreshToken: 'raw-token' })
+        .set('Cookie', 'ck_refresh=raw-token')
+        .send({})
         .expect(200);
 
       expect(res.body.accessToken).toBe('new-acc');
       await refreshApp.close();
     });
 
-    it('returns 401 when refreshToken is empty', async () => {
+    it('returns 401 when refreshToken cookie is missing', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/refresh')
-        .send({ refreshToken: '' })
+        .send({})
         .expect(401);
 
       expect(res.body.message).toContain('No refresh token');

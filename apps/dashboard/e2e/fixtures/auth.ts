@@ -88,7 +88,11 @@ export async function loginAs(
   await page.goto("/", { waitUntil: "domcontentloaded" })
   await page.evaluate(
     ({ user }) => {
-      localStorage.setItem("sawaa_user", JSON.stringify(user))
+      localStorage.setItem("sawaa_user", JSON.stringify({
+        id: user.id,
+        role: user.role,
+        isSuperAdmin: user.isSuperAdmin,
+      }))
       localStorage.setItem("sawaa-locale", "ar")
     },
     { user: data.user }

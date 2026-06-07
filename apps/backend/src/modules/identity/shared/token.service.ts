@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../infrastructure/database';
+import { SINGLE_TENANT_CONTEXT_ID } from '../../../common/constants';
 
 export interface TokenPair {
   accessToken: string;
@@ -11,10 +12,12 @@ export interface TokenPair {
 }
 
 /**
- * SaaS-02a — per-session tenant identity merged into the JWT payload.
- * Required: every session belongs to exactly one organization.
+ * Legacy tenant identity merged into the JWT payload for API compatibility.
+ * Single-tenant mode ignores caller-supplied organizationId and stamps the
+ * fixed deployment context while keeping the claim present for old clients.
  */
 export interface TenantClaims {
+  /** @deprecated Ignored in single-tenant mode; use SINGLE_TENANT_CONTEXT_ID internally. */
   organizationId: string;
   isSuperAdmin?: boolean;
   scope?: string;
@@ -52,7 +55,7 @@ export class TokenService {
       customRole: { permissions: Array<{ action: string; subject: string }> } | null;
       tokenVersion: number;
     },
-    tenantClaims: TenantClaims,
+    _tenantClaims: TenantClaims,
   ): Promise<TokenPair> {
     const permissions = user.customRole?.permissions ?? [];
     const payload: JwtPayload = {
@@ -62,9 +65,9 @@ export class TokenService {
       customRoleId: user.customRoleId,
       permissions,
       features: [],
-      organizationId: tenantClaims.organizationId,
-      isSuperAdmin: tenantClaims.isSuperAdmin ?? false,
-      scope: tenantClaims.scope,
+      organizationId: SINGLE_TENANT_CONTEXT_ID,
+      isSuperAdmin: _tenantClaims.isSuperAdmin ?? false,
+      scope: _tenantClaims.scope,
       tokenVersion: user.tokenVersion,
     };
 

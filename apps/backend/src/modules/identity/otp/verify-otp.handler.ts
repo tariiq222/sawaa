@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, UnauthorizedException, Logger } from '
 import { ClsService } from 'nestjs-cls';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../infrastructure/database';
-import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
+import { SINGLE_TENANT_CONTEXT_ID, SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { VerifyOtpDto } from './verify-otp.dto';
 import { OtpSessionService } from './otp-session.service';
 
@@ -21,7 +21,7 @@ export class VerifyOtpHandler {
   ) {}
 
   async execute(dto: VerifyOtpCommand): Promise<{ sessionToken: string }> {
-    const orgId = dto.organizationId ?? null;
+    const contextId = SINGLE_TENANT_CONTEXT_ID;
 
     return this.cls.run(async () => {
       this.logger.warn('systemContext bypass activated', { context: 'VerifyOtpHandler' });
@@ -78,7 +78,7 @@ export class VerifyOtpHandler {
         throw new BadRequestException('OTP already used or expired');
       }
 
-      // Verification marks the client as verified for this org (SaaS-02h)
+      // Verification marks the client as verified for the single-tenant deployment.
       if (otpRecord.channel === 'EMAIL') {
         await this.prisma.client.updateMany({
           where: {
@@ -96,7 +96,7 @@ export class VerifyOtpHandler {
       }
 
       const sessionToken = await this.otpSession.signSession({
-        organizationId: orgId,
+        organizationId: contextId,
         identifier: dto.identifier,
         purpose: dto.purpose,
         channel: otpRecord.channel,

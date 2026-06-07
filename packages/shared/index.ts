@@ -5,3 +5,4 @@ export * from './tokens';
 export * from './state-machines/booking-wizard';
 export * from './terminology';
 export * from './money';
+export * from './schemas';

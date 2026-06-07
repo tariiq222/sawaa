@@ -2,7 +2,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { DEFAULT_ORG_ID } from '../../common/constants';
+import { SINGLE_TENANT_CONTEXT_ID } from '../../common/constants';
 import { NoOpAdapter } from './no-op.adapter';
 import { SmsCredentialsService } from './sms-credentials.service';
 import type { SmsProvider } from './sms-provider.interface';
@@ -35,14 +35,14 @@ export class SmsProviderFactory {
       case 'UNIFONIC': {
         const creds = this.credentials.decrypt<UnifonicCredentials>(
           cfg.credentialsCiphertext,
-          DEFAULT_ORG_ID,
+          SINGLE_TENANT_CONTEXT_ID,
         );
         return new UnifonicAdapter(creds);
       }
       case 'TAQNYAT': {
         const creds = this.credentials.decrypt<TaqnyatCredentials>(
           cfg.credentialsCiphertext,
-          DEFAULT_ORG_ID,
+          SINGLE_TENANT_CONTEXT_ID,
         );
         return new TaqnyatAdapter(creds);
       }

@@ -6,12 +6,11 @@ import { PaymentMethod, PaymentStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { MoyasarCredentialsService } from '../../../infrastructure/payments/moyasar-credentials.service';
-import { SYSTEM_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../../common/constants';
+import { DEFAULT_ORG_ID, SINGLE_TENANT_CONTEXT_ID, SYSTEM_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../../common/constants';
 import { PaymentCompletedEvent } from '../events/payment-completed.event';
 import { PaymentFailedEvent } from '../events/payment-failed.event';
 import { MoyasarWebhookDto } from './moyasar-webhook.dto';
 import { AppMetricsService } from '../../../infrastructure/telemetry/app-metrics.service';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { MoyasarApiClient, MoyasarPaymentStatus } from '../moyasar-api/moyasar-api.client';
 import { assertValidTransition } from '../payment-state-machine';
 
@@ -40,7 +39,7 @@ export interface MoyasarWebhookResult {
  *      either the nested `data` object or the flat root.
  *   2. System-context lookup of Invoice.
  *   3. System-context lookup of OrganizationPaymentConfig.
- *   4. Decrypt the webhook secret (AAD = DEFAULT_ORG_ID).
+ *   4. Decrypt the webhook secret (HKDF context = SINGLE_TENANT_CONTEXT_ID).
  *   5. Verify the shared secret — via the HMAC
  *      `X-Moyasar-Signature` header when present, else the body `secret_token`.
  *   6. Idempotency check (keyed on paymentId:status, not the root event id).
@@ -163,18 +162,18 @@ export class MoyasarWebhookHandler {
       return { skipped: true, reason: 'missing_payment_config' };
     }
 
-    // STAGE 4 — decrypt the webhook secret (AAD = DEFAULT_ORG_ID).
+    // STAGE 4 — decrypt the webhook secret (HKDF context = SINGLE_TENANT_CONTEXT_ID).
     let webhookSecret: string;
     try {
       const decoded = this.creds.decrypt<{ webhookSecret: string }>(
         cfg.webhookSecretEnc,
-        DEFAULT_ORG_ID,
+        SINGLE_TENANT_CONTEXT_ID,
       );
       webhookSecret = decoded.webhookSecret;
     } catch (err) {
       // Permanent: a corrupt/unreadable secret will never decrypt on retry.
       this.logger.error(
-        `Moyasar webhook rejected: failed to decrypt webhook secret for org ${DEFAULT_ORG_ID} ` +
+        `Moyasar webhook rejected: failed to decrypt webhook secret for context ${SINGLE_TENANT_CONTEXT_ID} ` +
           `(payment ${paymentId}): ${err instanceof Error ? err.message : 'unknown'}`,
       );
       return { skipped: true, reason: 'webhook_secret_decrypt_failed' };

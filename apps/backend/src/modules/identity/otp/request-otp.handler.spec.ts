@@ -10,6 +10,7 @@ import { NotificationChannelRegistry } from '../../comms/notification-channel/no
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { OtpChannel, OtpPurpose } from '@prisma/client';
+import { SINGLE_TENANT_CONTEXT_ID } from '../../../common/constants';
 
 describe('RequestOtpHandler', () => {
   let handler: RequestOtpHandler;
@@ -81,7 +82,7 @@ describe('RequestOtpHandler', () => {
 
   it('accepts optional organizationId without filtering DB by it (single-tenant: org scoping removed)', async () => {
     // Single-tenant migration: organizationId removed from OtpCode model.
-    // The handler accepts organizationId for cooldown key namespacing but does NOT
+    // The handler accepts legacy organizationId but does NOT
     // filter the DB count or create queries by organizationId.
     const orgId = 'org-123';
     const txMock = {
@@ -110,9 +111,17 @@ describe('RequestOtpHandler', () => {
         where: expect.not.objectContaining({ organizationId: orgId }),
       }),
     );
+    expect(redisSetMock).toHaveBeenCalledWith(
+      `otp:cooldown:${SINGLE_TENANT_CONTEXT_ID}:test@example.com:${OtpPurpose.GUEST_BOOKING}`,
+      '1',
+      'EX',
+      60,
+      'NX',
+    );
+    expect(mockChannel.send).toHaveBeenCalledWith('test@example.com', expect.any(String), SINGLE_TENANT_CONTEXT_ID);
   });
 
-  it('defaults organizationId to null when omitted', async () => {
+  it('uses fixed context when legacy organizationId is omitted', async () => {
     const txMock = {
       otpCode: {
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
@@ -133,6 +142,7 @@ describe('RequestOtpHandler', () => {
         data: expect.objectContaining({ identifier: 'test@example.com' }),
       }),
     );
+    expect(mockChannel.send).toHaveBeenCalledWith('test@example.com', expect.any(String), SINGLE_TENANT_CONTEXT_ID);
   });
 
   it('rate-limit is per-identifier (single-tenant: no per-org isolation)', async () => {
@@ -223,7 +233,7 @@ describe('RequestOtpHandler', () => {
     expect(result).toEqual({ success: true });
     // Confirm the Redis SET was called with the right key pattern and TTL
     expect(redisSetMock).toHaveBeenCalledWith(
-      'otp:cooldown:global:+966500000000:MOBILE_LOGIN',
+      `otp:cooldown:${SINGLE_TENANT_CONTEXT_ID}:+966500000000:MOBILE_LOGIN`,
       '1',
       'EX',
       60,

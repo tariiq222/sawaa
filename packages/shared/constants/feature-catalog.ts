@@ -175,8 +175,8 @@ export const FEATURE_CATALOG: Record<FeatureKey, FeatureCatalogEntry> = {
     descAr: "تصدير التقارير والقوائم بصيغ CSV / Excel",
     descEn: "Export reports and lists as CSV / Excel",
   },
-  [FeatureKey.SMS_PROVIDER_PER_TENANT]: {
-    key: FeatureKey.SMS_PROVIDER_PER_TENANT,
+  [FeatureKey.SMS_PROVIDER_DEDICATED]: {
+    key: FeatureKey.SMS_PROVIDER_DEDICATED,
     kind: "boolean", tier: "ENTERPRISE", group: "Operations",
     nameAr: "مزود رسائل SMS خاص", nameEn: "Dedicated SMS Provider",
     descAr: "ربط مزود رسائل خاص بالمنشأة (Unifonic / Taqnyat)",

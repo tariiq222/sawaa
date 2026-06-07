@@ -11,9 +11,9 @@ let cachedOrgId: string | null = null;
 let loaded = false;
 
 /**
- * Synchronous accessor for the request interceptor. Returns the org id loaded
- * by `loadCurrentOrgId()` at boot, or the build-time default if nothing is
- * stored (first install / pre-login state).
+ * Synchronous accessor for legacy callers. Returns the org id loaded by
+ * `loadCurrentOrgId()` at boot, or the build-time default if nothing is stored
+ * (first install / pre-login state).
  */
 export function getCurrentOrgIdSync(): string {
   return cachedOrgId ?? DEFAULT_ORGANIZATION_ID;
@@ -36,8 +36,8 @@ export async function loadCurrentOrgId(): Promise<string> {
 }
 
 /**
- * Persist + cache the active org id. Called on login / register / OTP verify
- * once the JWT is in hand and we know which organization owns this session.
+ * Persist + cache the active org id for auth/session compatibility. Requests do
+ * not send this as a header; the backend derives org context from auth state.
  */
 export async function setCurrentOrgId(orgId: string): Promise<void> {
   cachedOrgId = orgId;
@@ -46,8 +46,8 @@ export async function setCurrentOrgId(orgId: string): Promise<void> {
 }
 
 /**
- * Wipe the active org id on logout / org suspension. Subsequent public
- * requests fall back to the build-time default organization.
+ * Wipe the active org id on logout / org suspension. Legacy callers then fall
+ * back to the build-time default organization.
  */
 export async function clearCurrentOrgId(): Promise<void> {
   cachedOrgId = null;

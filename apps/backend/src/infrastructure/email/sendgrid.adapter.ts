@@ -1,4 +1,4 @@
-// sendgrid-adapter — tenant-level email via SendGrid API.
+// sendgrid-adapter — deployment-level email via SendGrid API.
 
 import { Logger } from '@nestjs/common';
 import type { EmailProvider, EmailSendPayload, EmailSendResult } from './email-provider.interface';

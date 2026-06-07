@@ -1,16 +1,15 @@
-// zoom-credentials — Per-tenant key derivation via HKDF + AES-256-GCM.
+// zoom-credentials — Context-bound key derivation via HKDF + AES-256-GCM.
 //
 // Security model:
-//   master key (ENV)  +  organizationId  →  HKDF-SHA256  →  per-tenant key
+//   master key (ENV)  +  contextId  →  HKDF-SHA256  →  deployment key
 //
-// This means every tenant gets a cryptographically distinct encryption key
-// derived from the same master secret. A DB dump alone cannot decrypt any
-// tenant's credentials — the attacker needs both the master key AND the
-// correct organizationId for each row.
+// Single-tenant compatibility: contextId is SINGLE_TENANT_CONTEXT_ID at call
+// sites. A DB dump alone cannot decrypt credentials; the attacker needs both
+// the master key and the stable context id used for existing ciphertext.
 //
 // TODO P2.B (2026-05-09): existing rows in DB were encrypted with the legacy
 // master-key-only scheme. Decrypt of those rows will fail with this version.
-// Operator must trigger re-entry from each tenant via the dashboard before
+// Operator must trigger re-entry via the dashboard before
 // rolling out. See docs/operations/p2-credential-rekey-2026-05-09.md.
 
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
@@ -45,8 +44,8 @@ export class ZoomCredentialsService {
     this.masterKey = key;
   }
 
-  encrypt(payload: Record<string, unknown>, organizationId: string): string {
-    const key = this.deriveKey(organizationId);
+  encrypt(payload: Record<string, unknown>, contextId: string): string {
+    const key = this.deriveKey(contextId);
     const iv = randomBytes(12);
     const cipher = createCipheriv('aes-256-gcm', key, iv);
     const plain = Buffer.from(JSON.stringify(payload), 'utf8');
@@ -58,13 +57,13 @@ export class ZoomCredentialsService {
 
   decrypt<T extends Record<string, unknown>>(
     ciphertext: string,
-    organizationId: string,
+    contextId: string,
   ): T {
     const buf = Buffer.from(ciphertext, 'base64');
     if (buf.length < 28) {
       throw new Error('Invalid ciphertext length');
     }
-    const key = this.deriveKey(organizationId);
+    const key = this.deriveKey(contextId);
     const iv = buf.subarray(0, 12);
     const tag = buf.subarray(12, 28);
     const ct = buf.subarray(28);
@@ -77,23 +76,23 @@ export class ZoomCredentialsService {
   // ── Key derivation ────────────────────────────────────────────────────────
 
   /**
-   * Derives a unique 256-bit AES key for this tenant using HKDF-SHA256.
+   * Derives a 256-bit AES key for this deployment context using HKDF-SHA256.
    *
-   *   key = HKDF(hash=SHA256, ikm=masterKey, salt=HKDF_SALT, info=organizationId, len=32)
+   *   key = HKDF(hash=SHA256, ikm=masterKey, salt=HKDF_SALT, info=contextId, len=32)
    *
    * Properties:
-   *  - Deterministic: same org always gets same key → no key storage needed
-   *  - Isolated: different org → completely different key (one-way)
+   *  - Deterministic: same context id always gets same key, no key storage needed
+   *  - Isolated: different context id produces a completely different key
    *  - Forward-safe: compromising one derived key does NOT reveal masterKey
-   *    or any other tenant's key
+   *    or keys for other contexts
    */
-  private deriveKey(organizationId: string): Buffer {
+  private deriveKey(contextId: string): Buffer {
     return Buffer.from(
       hkdfSync(
         'sha256',
         this.masterKey,
         HKDF_SALT,
-        organizationId,
+        contextId,
         HKDF_KEY_LEN,
       ),
     );

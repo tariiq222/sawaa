@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../infrastructure/database';
 import { ClientTokenService } from '../shared/client-token.service';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
+import { SINGLE_TENANT_CONTEXT_ID } from '../../../common/constants';
 
 @Injectable()
 export class ClientRefreshHandler {
@@ -51,7 +51,7 @@ export class ClientRefreshHandler {
 
     const tokens = await this.clientTokens.issueTokenPair(
       { id: clientId, email: client.email },
-      { organizationId: DEFAULT_ORG_ID },
+      { organizationId: SINGLE_TENANT_CONTEXT_ID },
     );
 
     return {

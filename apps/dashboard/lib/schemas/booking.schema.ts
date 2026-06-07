@@ -93,7 +93,7 @@ export const bookingPosPayloadSchema = z.object({
   employeeId: z.string().min(1),
   serviceId: z.string().min(1),
   type: z.enum(["individual", "group", "walk_in"]),
-  deliveryType: z.enum(["IN_PERSON", "ONLINE"]),
+  deliveryType: z.enum(["in_person", "online"]),
   durationOptionId: z.string().min(1).optional(),
   date: z.string().min(1),
   startTime: z.string().min(1),

@@ -26,7 +26,12 @@ export type RequestLoginOtpPayload = { identifier: string };
 export type RequestLoginOtpResponse = { maskedIdentifier: string };
 
 export type VerifyOtpPayload = { identifier: string; code: string; purpose: 'register' | 'login' };
-export type ActiveMembership = { id: string; organizationId: string; role: string };
+export type ActiveMembership = {
+  id: string;
+  /** @deprecated Single-tenant compatibility only; do not use for request context. */
+  organizationId: string;
+  role: string;
+};
 export type VerifyOtpResponse = {
   tokens: { accessToken: string; refreshToken: string };
   activeMembership: ActiveMembership | null;

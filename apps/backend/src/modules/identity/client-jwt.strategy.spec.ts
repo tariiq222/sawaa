@@ -1,5 +1,6 @@
 import { ClientJwtStrategy } from './client-jwt.strategy';
 import { UnauthorizedException } from '@nestjs/common';
+import { SINGLE_TENANT_CONTEXT_ID } from '../../common/constants';
 
 describe('ClientJwtStrategy', () => {
   let strategy: ClientJwtStrategy;
@@ -58,7 +59,11 @@ describe('ClientJwtStrategy', () => {
 
       const result = await strategy.validate({} as any, validPayload);
       expect(result.id).toBe('c1');
-      expect(cls.set).toHaveBeenCalled();
+      expect(result.organizationId).toBe(SINGLE_TENANT_CONTEXT_ID);
+      expect(cls.set).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ organizationId: SINGLE_TENANT_CONTEXT_ID }),
+      );
     });
 
     it('throws when namespace is not client', async () => {
@@ -67,10 +72,18 @@ describe('ClientJwtStrategy', () => {
       ).rejects.toThrow('Invalid token namespace');
     });
 
-    it('throws when organizationId missing', async () => {
-      await expect(
-        strategy.validate({} as any, { ...validPayload, organizationId: undefined }),
-      ).rejects.toThrow('Client token missing tenant claim');
+    it('accepts token without legacy organizationId and defaults response claim', async () => {
+      prisma.client.findUnique.mockResolvedValue({
+        id: 'c1',
+        email: 'client@example.com',
+        phone: '+966500000000',
+        isActive: true,
+        deletedAt: null,
+        tokenVersion: 1,
+      });
+
+      const result = await strategy.validate({} as any, { ...validPayload, organizationId: undefined });
+      expect(result.organizationId).toBe(SINGLE_TENANT_CONTEXT_ID);
     });
 
     it('throws when client not found', async () => {

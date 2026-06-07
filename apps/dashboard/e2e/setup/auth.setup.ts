@@ -137,7 +137,14 @@ async function buildStorageState(persona: Persona) {
       {
         origin: dashboardUrl.origin,
         localStorage: [
-          { name: "sawaa_user", value: JSON.stringify(data.user) },
+          {
+            name: "sawaa_user",
+            value: JSON.stringify({
+              id: data.user.id,
+              role: data.user.role,
+              isSuperAdmin: data.user.isSuperAdmin,
+            }),
+          },
           { name: "sawaa-locale", value: "ar" },
         ],
       },

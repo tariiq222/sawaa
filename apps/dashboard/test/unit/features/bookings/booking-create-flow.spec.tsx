@@ -333,7 +333,7 @@ describe("useBookingFormState — internal state machine", () => {
     expect(s.type).toBe("online")
     expect(s.date).toBe("2026-07-15")
     expect(s.startTime).toBe("14:30")
-    expect(s.payAtClinic).toBe(false)
+    expect(s.payAtClinic).toBe(true)
     expect(s.couponCode).toBeNull()
   })
 
@@ -435,7 +435,7 @@ describe("useBookingFormState — internal state machine", () => {
     const s = result.current.state
     expect(s.clientId).toBeNull()
     expect(s.serviceId).toBeNull()
-    expect(s.payAtClinic).toBe(false)
+    expect(s.payAtClinic).toBe(true)
     expect(s.couponCode).toBeNull()
     expect(result.current.isComplete).toBe(false)
   })

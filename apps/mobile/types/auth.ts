@@ -10,8 +10,9 @@ import type { UserPayload, AuthResponse as CanonicalAuthResponse } from '@sawaa/
 // with mobile-only fields the backend does not (yet) return. Re-exported as
 // `User` so existing mobile imports keep working without churn.
 //
-// firstName/lastName/organizationId now arrive at runtime — they were
-// silently undefined before the SaaS-04 alignment.
+// firstName/lastName are canonical contract fields. organizationId remains a
+// deprecated compatibility field in auth state only; mobile never sends it as a
+// request header.
 //
 // emailVerified + employeeId are NOT yet returned by the backend; they're
 // kept here as optional so consumers compile, but values are `undefined` at
@@ -46,13 +47,19 @@ export function getPrimaryRole(user: User): UserRole {
   return 'employee';
 }
 
-export type ActiveMembership = { id: string; organizationId: string; role: string };
+export type ActiveMembership = {
+  id: string;
+  /** @deprecated Single-tenant compatibility only; do not use for request context. */
+  organizationId: string;
+  role: string;
+};
 
 export interface AuthState {
   token: string | null;
   refreshToken: string | null;
   user: User | null;
   isLoading: boolean;
+  /** @deprecated Single-tenant compatibility only; do not use for request context. */
   organizationId: string | null;
   activeMembership: ActiveMembership | null;
 }

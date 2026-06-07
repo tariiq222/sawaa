@@ -9,7 +9,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { ClsService } from 'nestjs-cls';
 import { PrismaService } from '../../infrastructure/database';
 import { RedisService } from '../../infrastructure/cache';
-import { DEFAULT_ORG_ID, TENANT_CLS_KEY } from '../constants';
+import { SINGLE_TENANT_CONTEXT_ID, TENANT_CLS_KEY } from '../constants';
 
 export const IS_PUBLIC_KEY = 'isPublic';
 
@@ -80,14 +80,15 @@ export class JwtGuard extends AuthGuard('jwt') {
 
   /**
    * Resolves the effective org for the current request.
-   * Single-tenant: always returns DEFAULT_ORG_ID.
+   * Single-tenant: never reads X-Org-Id or any user-supplied org header;
+   * always returns the fixed deployment context.
    */
   private resolveEffectiveOrgId(
     user: AuthenticatedReqUser | undefined,
     _headers: Record<string, string | string[] | undefined> | undefined,
   ): string | undefined {
     if (!user) return undefined;
-    return DEFAULT_ORG_ID;
+    return SINGLE_TENANT_CONTEXT_ID;
   }
 
   /**

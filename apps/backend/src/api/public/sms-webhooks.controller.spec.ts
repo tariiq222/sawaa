@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Logger } from '@nestjs/common';
 import request from 'supertest';
 import { PublicSmsWebhooksController } from './sms-webhooks.controller';
 import { SmsDlrHandler } from '../../modules/comms/sms-dlr/sms-dlr.handler';
@@ -84,6 +84,7 @@ describe('PublicSmsWebhooksController (e2e)', () => {
   describe('POST /public/sms/webhooks/:provider/:organizationId (legacy)', () => {
     it('returns 200 for UNIFONIC when organizationId is DEFAULT_ORG_ID', async () => {
       mockDlr.execute.mockResolvedValue({ received: true });
+      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
 
       const res = await request(app.getHttpServer())
         .post('/public/sms/webhooks/UNIFONIC/00000000-0000-0000-0000-000000000001')
@@ -92,6 +93,11 @@ describe('PublicSmsWebhooksController (e2e)', () => {
         .expect(200);
 
       expect(res.body.received).toBe(true);
+      expect(res.headers.deprecation).toBe('true');
+      expect(res.headers.link).toBe('</public/sms/webhooks/{provider}>; rel="successor-version"');
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Deprecated SMS DLR legacy path used for provider=UNIFONIC; use /public/sms/webhooks/UNIFONIC',
+      );
       expect(mockDlr.execute).toHaveBeenCalledWith(
         expect.objectContaining({
           provider: 'UNIFONIC',
@@ -100,6 +106,7 @@ describe('PublicSmsWebhooksController (e2e)', () => {
           signature: 'valid-sig',
         }),
       );
+      warnSpy.mockRestore();
     });
 
     it('returns 200 for TAQNYAT', async () => {

@@ -162,15 +162,13 @@ describe('AuthController (unit)', () => {
       }));
     });
 
-    it('should use body token when no cookie', async () => {
+    it('should reject when no cookie token present', async () => {
       const req = { cookies: {} } as any;
       mockPrisma.refreshToken.findMany.mockResolvedValue([]);
       mockConfig.get.mockReturnValue('15m');
 
       await expect(controller.refreshEndpoint({ refreshToken: 'body-token' } as any, req, mockRes())).rejects.toThrow(UnauthorizedException);
-      expect(mockPrisma.refreshToken.findMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: expect.objectContaining({ tokenSelector: 'body-tok' }),
-      }));
+      expect(mockPrisma.refreshToken.findMany).not.toHaveBeenCalled();
     });
 
     it('should throw when no token at all', async () => {

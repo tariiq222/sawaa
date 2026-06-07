@@ -11,7 +11,7 @@ import { ClsService } from 'nestjs-cls';
 import { randomInt } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
+import { SINGLE_TENANT_CONTEXT_ID, SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { NotificationChannelRegistry } from '../../comms/notification-channel/notification-channel-registry';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { RequestOtpDto } from './request-otp.dto';
@@ -47,7 +47,7 @@ export class RequestOtpHandler {
     }
 
     // Per-identifier cooldown: prevent SMS-bombing a single victim
-    const cooldownKey = `otp:cooldown:${dto.organizationId ?? 'global'}:${dto.identifier}:${dto.purpose}`;
+    const cooldownKey = `otp:cooldown:${SINGLE_TENANT_CONTEXT_ID}:${dto.identifier}:${dto.purpose}`;
     const redis = this.redisService.getClient();
     // SET key 1 NX EX 60 — atomically set only if not exists, expire in 60s
     const set = await redis.set(cooldownKey, '1', 'EX', OTP_COOLDOWN_SECONDS, 'NX');
@@ -55,7 +55,7 @@ export class RequestOtpHandler {
       throw new HttpException('Please wait before requesting another OTP', HttpStatus.TOO_MANY_REQUESTS);
     }
 
-    const orgId = dto.organizationId ?? null;
+    const contextId = SINGLE_TENANT_CONTEXT_ID;
 
     return this.cls.run(async () => {
       this.logger.warn('systemContext bypass activated', { context: 'RequestOtpHandler' });
@@ -82,7 +82,7 @@ export class RequestOtpHandler {
       const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
 
       const created = await this.rlsTransaction.withTransaction(async (tx) => {
-        // bypassRls: OTP codes have nullable organizationId (cross-org) and run in SYSTEM_CONTEXT
+        // bypassRls: OTP codes are verified in system context; organizationId is legacy-only.
         await tx.otpCode.updateMany({
           where: {
             identifier: dto.identifier,
@@ -107,9 +107,9 @@ export class RequestOtpHandler {
 
       try {
         const channel = this.channelRegistry.resolve(dto.channel);
-        // Pass organizationId so the channel can use the tenant's configured
-        // provider (e.g. Resend) before falling back to platform transport.
-        await channel.send(dto.identifier, rawCode, orgId ?? undefined);
+        // Legacy channel signature still accepts organizationId; pass the fixed
+        // single-tenant context so caller-supplied values cannot select config.
+        await channel.send(dto.identifier, rawCode, contextId);
       } catch (err) {
         // Surface send failures: roll back the persisted OTP row so the user
         // can retry without burning their per-hour quota, then bubble up a

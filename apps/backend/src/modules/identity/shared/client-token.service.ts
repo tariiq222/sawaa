@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../infrastructure/database';
+import { SINGLE_TENANT_CONTEXT_ID } from '../../../common/constants';
 
 export interface ClientTokenPair {
   accessToken: string;
@@ -17,11 +18,13 @@ export interface ClientJwtPayload {
   email: string;
   namespace: 'client';
   jti: string;
+  /** @deprecated Legacy API/JWT compatibility claim. Internal context is fixed. */
   organizationId: string;
   tokenVersion: number;
 }
 
 export interface ClientTenantClaims {
+  /** @deprecated Ignored in single-tenant mode; use SINGLE_TENANT_CONTEXT_ID internally. */
   organizationId: string;
 }
 
@@ -52,7 +55,7 @@ export class ClientTokenService {
       email: string | null;
       tokenVersion?: number;
     },
-    tenantClaims: ClientTenantClaims,
+    _tenantClaims: ClientTenantClaims,
   ): Promise<ClientTokenPair> {
     const jti = randomUUID();
     const payload: ClientJwtPayload = {
@@ -60,7 +63,7 @@ export class ClientTokenService {
       email: client.email ?? '',
       namespace: 'client',
       jti,
-      organizationId: tenantClaims.organizationId,
+      organizationId: SINGLE_TENANT_CONTEXT_ID,
       tokenVersion: client.tokenVersion ?? 0,
     };
 

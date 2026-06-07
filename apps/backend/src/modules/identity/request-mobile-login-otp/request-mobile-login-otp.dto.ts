@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString, MinLength } from 'class-validator';
 import { NormalizePhoneOrEmail } from '../shared/normalize-phone.transform';
 
 export class RequestMobileLoginOtpDto {
@@ -8,4 +8,12 @@ export class RequestMobileLoginOtpDto {
   @MinLength(3)
   @NormalizePhoneOrEmail()
   identifier!: string;
+
+  @ApiPropertyOptional({
+    description: 'Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.',
+    deprecated: true,
+  })
+  @IsOptional()
+  @IsString()
+  organizationId?: string;
 }

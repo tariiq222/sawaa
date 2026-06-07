@@ -1077,6 +1077,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/finance/payments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single payment by id */
+        get: operations["DashboardFinanceController_getPaymentEndpoint"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/finance/payments/{id}/refund": {
         parameters: {
             query?: never;
@@ -3826,7 +3843,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Inbound SMS delivery-receipt webhook (legacy path) */
+        /**
+         * Inbound SMS delivery-receipt webhook (legacy path)
+         * @deprecated
+         */
         post: operations["PublicSmsWebhooksController_handleLegacy"];
         delete?: never;
         options?: never;
@@ -6465,6 +6485,11 @@ export interface components {
              * @example +966501234567
              */
             identifier: string;
+            /**
+             * @deprecated
+             * @description Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.
+             */
+            organizationId?: string;
         };
         RequestOtpDto: {
             /**
@@ -6478,7 +6503,10 @@ export interface components {
              * @example user@example.com
              */
             identifier: string;
-            /** @description Target organization ID */
+            /**
+             * @deprecated
+             * @description Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.
+             */
             organizationId?: string;
             /**
              * @description Purpose of the OTP
@@ -7910,6 +7938,11 @@ export interface components {
             /** @description Phone or email used to request the OTP */
             identifier: string;
             /**
+             * @deprecated
+             * @description Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.
+             */
+            organizationId?: string;
+            /**
              * @description Whether this verifies a registration or a login OTP
              * @enum {string}
              */
@@ -7932,7 +7965,10 @@ export interface components {
              * @example user@example.com
              */
             identifier: string;
-            /** @description Target organization ID */
+            /**
+             * @deprecated
+             * @description Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.
+             */
             organizationId?: string;
             /**
              * @description Purpose of the OTP
@@ -13092,6 +13128,72 @@ export interface operations {
             };
             /** @description Action denied by permission policy */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardFinanceController_getPaymentEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Payment UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payment found */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Payment not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25939,7 +26041,7 @@ export interface operations {
             header?: never;
             path: {
                 provider: "UNIFONIC" | "TAQNYAT";
-                /** @description Legacy path param; must match the default organization */
+                /** @description Deprecated legacy path param; must match the default organization and is ignored internally */
                 organizationId: string;
             };
             cookie?: never;

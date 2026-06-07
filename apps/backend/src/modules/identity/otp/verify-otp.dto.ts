@@ -24,7 +24,10 @@ export class VerifyOtpDto {
   @IsEnum(OtpPurpose)
   purpose!: OtpPurpose;
 
-  @ApiPropertyOptional({ description: 'Target organization ID' })
+  @ApiPropertyOptional({
+    description: 'Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.',
+    deprecated: true,
+  })
   @IsOptional()
   @IsString()
   organizationId?: string;

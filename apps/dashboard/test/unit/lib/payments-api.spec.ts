@@ -75,19 +75,12 @@ describe("payments api", () => {
   })
 
   describe("fetchPayment", () => {
-    it("uses the documented list fallback and returns the matching payment", async () => {
+    it("fetches a single payment by id from the detail endpoint", async () => {
       const payment = { id: "pay-2" }
-      getMock.mockResolvedValueOnce({
-        items: [{ id: "pay-1" }, payment],
-        meta: { total: 2 },
-      })
+      getMock.mockResolvedValueOnce(payment)
 
       await expect(fetchPayment("pay-2")).resolves.toBe(payment)
-      expect(getMock).toHaveBeenCalledWith(
-        "/dashboard/finance/payments",
-        expect.objectContaining({ page: 1, limit: expect.any(Number) }),
-      )
-      expect(getMock.mock.calls[0]?.[1]?.limit).toBeGreaterThan(1)
+      expect(getMock).toHaveBeenCalledWith("/dashboard/finance/payments/pay-2")
     })
   })
 

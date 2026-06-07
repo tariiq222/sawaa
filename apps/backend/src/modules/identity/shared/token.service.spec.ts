@@ -1,4 +1,5 @@
 import { TokenService, TenantClaims } from './token.service';
+import { SINGLE_TENANT_CONTEXT_ID } from '../../../common/constants';
 
 const buildJwt = () => ({
   sign: jest.fn().mockReturnValue('signed.access.token'),
@@ -140,7 +141,7 @@ describe('TokenService', () => {
       expect(config.get).toHaveBeenCalledWith('JWT_REFRESH_TTL');
     });
 
-    it('payload includes all tenantClaims fields', async () => {
+    it('payload includes fixed organizationId plus non-org tenantClaims fields', async () => {
       const jwt = buildJwt();
       const config = buildConfig();
       const prisma = buildPrisma();
@@ -164,7 +165,7 @@ describe('TokenService', () => {
 
       expect(jwt.sign).toHaveBeenCalledWith(
         expect.objectContaining({
-          organizationId: 'org-1',
+          organizationId: SINGLE_TENANT_CONTEXT_ID,
           isSuperAdmin: true,
           scope: 'read:all',
         }),

@@ -89,9 +89,10 @@ describe("auth api", () => {
     expect(loginMock).toHaveBeenCalledWith({ email: "a@b.com", password: "pass" })
     expect(setAccessTokenMock).toHaveBeenCalledWith("token123")
     expect(clearLegacyAccessTokenStorageMock).toHaveBeenCalledOnce()
-    // PII is no longer persisted to localStorage — only id/role/isSuperAdmin/orgId hint.
+    // PII and runtime org context are not persisted to localStorage.
     const stored = localStorage.getItem("sawaa_user")
     expect(stored).not.toContain("a@b.com")
+    expect(stored).not.toContain(fakeUser.organizationId)
     expect(stored).toContain(fakeUser.id)
     expect(stored).toContain(fakeUser.role)
     expect(localStorage.getItem("sawaa_access_token")).toBeNull()
@@ -129,6 +130,7 @@ describe("auth api", () => {
     // No PII in storage — name/email/phone must never be persisted.
     expect(stored).not.toContain("a@b.com")
     expect(stored).not.toContain(fakeUser.name)
+    expect(stored).not.toContain(fakeUser.organizationId)
     expect(stored).toContain(fakeUser.id)
     // The returned value (in-memory) still contains the full payload.
     expect(result.email).toBe("a@b.com")
@@ -229,13 +231,13 @@ describe("auth api", () => {
       id: fakeUser.id,
       role: fakeUser.role,
       isSuperAdmin: fakeUser.isSuperAdmin,
-      organizationId: fakeUser.organizationId,
     })
     // Ensure PII fields are dropped even if they were present on disk
     // (e.g. from a pre-upgrade legacy entry).
     expect(result).not.toHaveProperty("email")
     expect(result).not.toHaveProperty("phone")
     expect(result).not.toHaveProperty("name")
+    expect(result).not.toHaveProperty("organizationId")
   })
 
   it("getStoredUser returns null for invalid JSON", () => {

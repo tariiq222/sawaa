@@ -4,7 +4,7 @@ import { Strategy, ExtractJwt } from 'passport-jwt';
 import { ClsService } from 'nestjs-cls';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
-import { TENANT_CLS_KEY } from '../../common/constants';
+import { SINGLE_TENANT_CONTEXT_ID, TENANT_CLS_KEY } from '../../common/constants';
 import { PrismaService } from '../../infrastructure/database';
 
 export interface ClientJwtPayload {
@@ -12,6 +12,7 @@ export interface ClientJwtPayload {
   email: string;
   namespace: 'client';
   jti: string;
+  /** @deprecated Legacy claim; accepted but ignored for internal context. */
   organizationId?: string;
   tokenVersion: number;
 }
@@ -43,10 +44,6 @@ export class ClientJwtStrategy extends PassportStrategy(Strategy, 'client-jwt') 
     if (payload.namespace !== 'client') {
       throw new UnauthorizedException('Invalid token namespace');
     }
-    if (!payload.organizationId) {
-      throw new UnauthorizedException('Client token missing tenant claim');
-    }
-
     const client = await this.prisma.client.findUnique({
       where: { id: payload.sub },
     });
@@ -59,9 +56,10 @@ export class ClientJwtStrategy extends PassportStrategy(Strategy, 'client-jwt') 
       throw new UnauthorizedException('Token has been revoked');
     }
 
-    // Set tenant context ONLY after all DB validations pass (P1-5)
+    // Set context ONLY after all DB validations pass (P1-5). Ignore the
+    // legacy token organizationId so forged/stale values cannot select config.
     this.cls.set(TENANT_CLS_KEY, {
-      organizationId: payload.organizationId,
+      organizationId: SINGLE_TENANT_CONTEXT_ID,
       id: payload.sub,
       role: 'CLIENT',
       isSuperAdmin: false,
@@ -71,7 +69,7 @@ export class ClientJwtStrategy extends PassportStrategy(Strategy, 'client-jwt') 
       id: client.id,
       email: client.email,
       phone: client.phone,
-      organizationId: payload.organizationId,
+      organizationId: SINGLE_TENANT_CONTEXT_ID,
     };
   }
 }

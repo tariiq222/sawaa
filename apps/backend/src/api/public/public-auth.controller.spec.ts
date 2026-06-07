@@ -8,6 +8,7 @@ import { ClientRefreshHandler } from '../../modules/identity/client-auth/client-
 import { ClientLogoutHandler } from '../../modules/identity/client-auth/client-logout.handler';
 import { ResetPasswordHandler } from '../../modules/identity/client-auth/reset-password/reset-password.handler';
 import { JwtGuard } from '../../common/guards/jwt.guard';
+import cookieParser from 'cookie-parser';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 
 describe('PublicAuthController (e2e)', () => {
@@ -43,6 +44,7 @@ describe('PublicAuthController (e2e)', () => {
       .compile();
 
     app = moduleRef.createNestApplication();
+    app.use(cookieParser());
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -190,17 +192,18 @@ describe('PublicAuthController (e2e)', () => {
 
       return request(app.getHttpServer())
         .post('/public/auth/refresh')
-        .send({ refreshToken: 'valid-refresh-token' })
+        .set('Cookie', 'client_refresh_token=valid-refresh-token')
+        .send({})
         .expect(200)
         .expect(({ body }) => {
           expect(body.clientId).toBe('client-1');
         });
     });
 
-    it('returns 401 when refreshToken is empty', async () => {
+    it('returns 401 when refreshToken cookie is missing', async () => {
       return request(app.getHttpServer())
         .post('/public/auth/refresh')
-        .send({ refreshToken: '' })
+        .send({})
         .expect(401);
     });
   });

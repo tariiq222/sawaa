@@ -3,6 +3,7 @@ import { OtpChannel, OtpPurpose } from '@prisma/client';
 import { RequestMobileLoginOtpHandler } from './request-mobile-login-otp.handler';
 import { PrismaService } from '../../../infrastructure/database';
 import { RequestOtpHandler } from '../otp/request-otp.handler';
+import { SINGLE_TENANT_CONTEXT_ID } from '../../../common/constants';
 
 const prismaMock = { user: { findFirst: jest.fn() } };
 const requestOtpMock = { execute: jest.fn() };
@@ -55,6 +56,7 @@ describe('RequestMobileLoginOtpHandler', () => {
         identifier: '+966500000000',
         channel: OtpChannel.SMS,
         purpose: OtpPurpose.MOBILE_LOGIN,
+        organizationId: SINGLE_TENANT_CONTEXT_ID,
       }),
     );
   });
@@ -85,7 +87,24 @@ describe('RequestMobileLoginOtpHandler', () => {
         identifier: 'a@b.com',
         channel: OtpChannel.EMAIL,
         purpose: OtpPurpose.MOBILE_LOGIN,
+        organizationId: SINGLE_TENANT_CONTEXT_ID,
       }),
+    );
+  });
+
+  it('ignores caller-supplied legacy organizationId', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'u1',
+      phone: '+966500000000',
+      email: 'a@b.com',
+      phoneVerifiedAt: new Date(),
+      emailVerifiedAt: null,
+    });
+
+    await handler.execute({ identifier: '+966500000000', organizationId: 'forged-org' });
+
+    expect(requestOtpMock.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: SINGLE_TENANT_CONTEXT_ID }),
     );
   });
 

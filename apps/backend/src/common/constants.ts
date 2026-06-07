@@ -1,11 +1,20 @@
 /**
  * Application-wide constants for single-tenant mode.
  *
- * DEFAULT_ORG_ID is the canonical Organization UUID for this single-tenant
- * deployment. It is used as AAD for AES-256-GCM encryption (Zoom, SMS, Email,
- * Moyasar) so changing it would invalidate all existing ciphertext.
+ * DEFAULT_ORG_ID is the legacy Organization UUID for this single-tenant
+ * deployment. It is used as the HKDF context/info value for credential
+ * encryption (Zoom, SMS, Email, Moyasar) so changing it would invalidate all
+ * existing ciphertext.
  */
 export const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
+
+/**
+ * Single-tenant cryptographic/context identifier.
+ *
+ * Alias of DEFAULT_ORG_ID for internal services that need a stable deployment
+ * context but should not imply runtime tenant selection.
+ */
+export const SINGLE_TENANT_CONTEXT_ID = DEFAULT_ORG_ID;
 
 // ─── CLS keys ──────────────────────────────────────────────────────────────
 // These are carried in nestjs-cls async-local-storage to propagate context

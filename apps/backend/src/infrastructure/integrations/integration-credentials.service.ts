@@ -2,7 +2,7 @@
 // integration configs.
 //
 // Security model (P0-10):
-//   master key (ENV INTEGRATION_ENCRYPTION_KEY) + DEFAULT_ORG_ID → HKDF-SHA256 → key
+//   master key (ENV INTEGRATION_ENCRYPTION_KEY) + SINGLE_TENANT_CONTEXT_ID → HKDF-SHA256 → key
 //
 // Mirrors moyasar / sms / zoom / email credential services. A DB dump alone
 // cannot decrypt any row — the attacker needs the master key.
@@ -15,7 +15,7 @@ import {
   hkdfSync,
   randomBytes,
 } from 'crypto';
-import { DEFAULT_ORG_ID } from '../../common/constants';
+import { SINGLE_TENANT_CONTEXT_ID } from '../../common/constants';
 
 const HKDF_SALT = 'sawaa-integration-creds-v1';
 const HKDF_KEY_LEN = 32; // 256 bits
@@ -70,7 +70,7 @@ export class IntegrationCredentialsService {
   private deriveKey(): Buffer {
     const ikm = this.masterKey;
     const salt = Buffer.from(HKDF_SALT, 'utf8');
-    const info = Buffer.from(DEFAULT_ORG_ID, 'utf8');
+    const info = Buffer.from(SINGLE_TENANT_CONTEXT_ID, 'utf8');
     return Buffer.from(hkdfSync('sha256', ikm, salt, info, HKDF_KEY_LEN));
   }
 }

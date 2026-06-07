@@ -5,6 +5,7 @@ import * as bcrypt from 'bcryptjs';
 import { VerifyOtpHandler } from './verify-otp.handler';
 import { PrismaService } from '../../../infrastructure/database';
 import { OtpSessionService } from './otp-session.service';
+import { SINGLE_TENANT_CONTEXT_ID } from '../../../common/constants';
 
 jest.mock('bcryptjs', () => ({
   compare: jest.fn(),
@@ -110,6 +111,9 @@ describe('VerifyOtpHandler', () => {
       data: { phoneVerified: expect.any(Date) },
     }));
     expect(otpSession.signSession).toHaveBeenCalled();
+    expect(otpSession.signSession).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: SINGLE_TENANT_CONTEXT_ID }),
+    );
     expect(result.sessionToken).toBe('token-123');
   });
 

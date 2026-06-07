@@ -51,38 +51,38 @@ Subdirectories: `services/client/` (client-only endpoints), `services/employee/`
 
 `useBooking`, `useBookingMutations`, `useBranding`, `useChat`, `useClientBookings`, `useEmployeeClients`, `useEmployeeDayBookings`, `useMe`, `useMemberships` (disabled stub), `useMobileAuth`, `useNotifications`, `usePortal`, `useSlots`, `useTherapist`, `useTherapists`, `useUpcomingBookings` — re-exported via `hooks/queries/index.ts`.
 
-## Tenant Strategy — One App per Tenant
+## Deployment Strategy — One App Instance
 
-`apps/mobile/` is **single-tenant by design**. The `dashboard` and `admin` apps are multi-tenant; mobile is not. Every published build is locked to exactly one organization.
+`apps/mobile/` is **single-tenant by design**. Every published build is locked to exactly one Sawa deployment.
 
 - **Current build:** `سواء للإرشاد الأسري` (Sawa) — bundle `sa.sawa.app`, vertical `family-consulting`. See `app.config.ts`.
-- **Tenant lock mechanism:** `X-Org-Id` header is sent on every request via the Axios interceptor in `services/api.ts`; the org id comes from a hard-coded `TENANT_ID` constant in `constants/config.ts`. Backend `TenantResolverMiddleware` honors this header on public routes only — JWT still wins on authenticated routes (see plan `2026-04-25-mobile-tenant-lock-sawa`).
-- **No runtime tenant switching.** Do not add a tenant switcher, multi-org membership UI, or dynamic vertical hot-swap to mobile. `services/tenant.ts` exists for the header plumbing only.
+- **Request context:** Mobile sends only auth credentials. It must not send a legacy organization-selection header; the backend stamps the fixed single-tenant context from the authenticated session.
+- **No runtime tenant switching.** Do not add a tenant switcher, multi-org membership UI, or dynamic vertical hot-swap to mobile. `services/tenant.ts` is retained only for legacy auth/session compatibility.
 - **Membership/tenant-switch code is inert dead scaffolding.** `services/memberships.ts` (`switchOrganization()` throws by design), `services/tenant-switch.ts` (never imported anywhere), and `hooks/queries/useMemberships.ts` (`enabled: false`, always returns `[]`) are leftovers from the multi-tenant fork. The backend has no `/auth/memberships` endpoint. Don't wire them up, don't render a switcher — the auth slice's `organizationId`/`activeMembership` fields exist only for type compatibility and stay constant.
 - **Branding & terminology** are still fetched at runtime via `PublicBranding` + `useTerminology()` — but for the locked tenant only. Switching tenant is not a user-facing operation.
 
-### Adding a new tenant app
+### Adding a New Branded App
 
-A second tenant means a **new build**, not a runtime mode:
+A second branded deployment means a **new build**, not a runtime mode:
 
 1. Fork `apps/mobile/` (or branch + variant config).
 2. Replace `app.config.ts` (`name`, `slug`, `scheme`, `bundleIdentifier`, `package`, `icon`).
 3. Drop new assets under `assets/<slug>/`.
-4. Update `TENANT_ID` in `constants/config.ts`.
+4. Update app-scoped public configuration in `constants/config.ts`.
 5. Publish under the new bundle ID on App Store / Play Store.
 
 Backend, dashboard, and admin do not change.
 
-## Branding (Per-Tenant Theme)
+## Branding
 
-- `useBranding` query fetches `PublicBranding` for the active org.
+- `useBranding` query fetches `PublicBranding` for the Sawa deployment.
 - Theme slice (Redux) consumes the result and exposes tokens to RN components.
 - All colors, logo, and typography flow from this — no hardcoded brand values anywhere.
 
 ## Terminology
 
 - `hooks/useTerminology.ts` mirrors the dashboard's hook.
-- Resolves vertical-aware labels (e.g. "Patient" vs "Client" vs "Beneficiary") from the active org's vertical/terminology pack.
+- Resolves deployment-aware labels (e.g. "Patient" vs "Client" vs "Beneficiary") from the configured terminology pack.
 - Use `t()` for static i18n, `useTerminology()` for vertical-sensitive nouns.
 
 ## Push Notifications (FCM)

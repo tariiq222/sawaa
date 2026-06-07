@@ -3,7 +3,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { DEFAULT_ORG_ID } from '../../common/constants';
+import { SINGLE_TENANT_CONTEXT_ID } from '../../common/constants';
 import { EmailCredentialsService } from './email-credentials.service';
 import { NoOpEmailAdapter } from './no-op.adapter';
 import { SmtpEmailAdapter, type SmtpCredentials } from './smtp.adapter';
@@ -33,7 +33,7 @@ export class EmailProviderFactory {
       case 'SMTP': {
         const creds = this.credentials.decrypt<SmtpCredentials>(
           cfg.credentialsCiphertext,
-          DEFAULT_ORG_ID,
+          SINGLE_TENANT_CONTEXT_ID,
         );
         const adapter = new SmtpEmailAdapter(creds);
         return this.withSenderDefaults(adapter, senderName, senderEmail);
@@ -41,7 +41,7 @@ export class EmailProviderFactory {
       case 'RESEND': {
         const creds = this.credentials.decrypt<ResendCredentials>(
           cfg.credentialsCiphertext,
-          DEFAULT_ORG_ID,
+          SINGLE_TENANT_CONTEXT_ID,
         );
         const adapter = new ResendEmailAdapter(creds);
         return this.withSenderDefaults(adapter, senderName, senderEmail);
@@ -49,7 +49,7 @@ export class EmailProviderFactory {
       case 'SENDGRID': {
         const creds = this.credentials.decrypt<SendGridCredentials>(
           cfg.credentialsCiphertext,
-          DEFAULT_ORG_ID,
+          SINGLE_TENANT_CONTEXT_ID,
         );
         const adapter = new SendGridEmailAdapter(creds);
         return this.withSenderDefaults(adapter, senderName, senderEmail);
@@ -57,7 +57,7 @@ export class EmailProviderFactory {
       case 'MAILCHIMP': {
         const creds = this.credentials.decrypt<MailchimpCredentials>(
           cfg.credentialsCiphertext,
-          DEFAULT_ORG_ID,
+          SINGLE_TENANT_CONTEXT_ID,
         );
         const adapter = new MailchimpEmailAdapter(creds);
         return this.withSenderDefaults(adapter, senderName, senderEmail);
@@ -68,7 +68,7 @@ export class EmailProviderFactory {
   }
 
   /**
-   * Wrap an adapter to inject tenant-level sender defaults when the caller
+   * Wrap an adapter to inject deployment sender defaults when the caller
    * does not provide fromName/fromEmail in the payload.
    */
   private withSenderDefaults(
@@ -78,7 +78,7 @@ export class EmailProviderFactory {
   ): EmailProvider {
     if (!senderName && !senderEmail) return adapter;
 
-    // Proxy — forwards all calls but enriches payload with tenant sender defaults
+    // Proxy — forwards all calls but enriches payload with deployment sender defaults
     return {
       name: adapter.name,
       isAvailable: () => adapter.isAvailable(),

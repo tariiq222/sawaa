@@ -1,5 +1,5 @@
 /**
- * Historical membership shape kept for type compatibility with old mobile
+ * Historical membership shape kept for type compatibility with existing mobile
  * imports. Sawaa mobile is single-organization and does not query memberships.
  */
 export interface MembershipSummary {
@@ -16,7 +16,7 @@ export interface MembershipSummary {
   };
 }
 
-/** Token pair shape kept for compatibility only. Mobile is single-organization. */
+/** Token pair shape kept for compatibility with disabled switching callers. */
 export interface SwitchOrgTokens {
   accessToken: string;
   refreshToken: string;
@@ -37,7 +37,7 @@ export const membershipsService = {
   },
 };
 
-/** Backwards-compatible exports for old direct callers. */
+/** Backwards-compatible exports for existing direct callers. */
 export const listMemberships = (): Promise<MembershipSummary[]> =>
   membershipsService.list();
 export const switchOrganization = (

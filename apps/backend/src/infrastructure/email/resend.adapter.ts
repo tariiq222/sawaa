@@ -1,4 +1,4 @@
-// resend-adapter — tenant-level email via Resend API.
+// resend-adapter — deployment-level email via Resend API.
 
 import { Logger } from '@nestjs/common';
 import type { EmailProvider, EmailSendPayload, EmailSendResult } from './email-provider.interface';

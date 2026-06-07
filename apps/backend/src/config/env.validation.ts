@@ -100,15 +100,15 @@ export const envValidationSchema = Joi.object({
   OPENROUTER_BASE_URL: Joi.string().uri().default('https://openrouter.ai/api/v1'),
   OPENROUTER_CHAT_MODEL: Joi.string().default('anthropic/claude-3.5-haiku'),
 
-  // Per-tenant Moyasar AES-256-GCM key — REQUIRED; 32 raw bytes base64-encoded (ASCII length 44).
-  // Used to wrap each tenant's MoyasarPublishableKey + secretKey at rest.
+  // Moyasar AES-256-GCM master key — REQUIRED; 32 raw bytes base64-encoded (ASCII length 44).
+  // HKDF combines this key with SINGLE_TENANT_CONTEXT_ID to wrap credentials at rest.
   MOYASAR_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
 
-  // SMS per-tenant (SaaS-02g-sms) — encryption key is REQUIRED; 32 raw bytes base64-encoded (ASCII length 44).
+  // SMS provider master key — REQUIRED; 32 raw bytes base64-encoded (ASCII length 44).
   // Webhook base URL is the public origin registered with providers for DLR callbacks.
   SMS_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
   ZOOM_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
-  // Email provider per-tenant encryption key — 32 raw bytes base64-encoded (ASCII length 44).
+  // Email provider master key — 32 raw bytes base64-encoded (ASCII length 44).
   EMAIL_PROVIDER_ENCRYPTION_KEY: Joi.string().base64().length(44).required(),
   SMS_WEBHOOK_URL_BASE: Joi.string().uri().allow('').optional(),
 

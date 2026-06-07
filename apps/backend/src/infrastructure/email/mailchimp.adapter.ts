@@ -1,4 +1,4 @@
-// mailchimp-adapter — tenant-level transactional email via Mailchimp Transactional (Mandrill).
+// mailchimp-adapter — deployment-level transactional email via Mailchimp Transactional (Mandrill).
 
 import { Logger } from '@nestjs/common';
 import type { EmailProvider, EmailSendPayload, EmailSendResult } from './email-provider.interface';

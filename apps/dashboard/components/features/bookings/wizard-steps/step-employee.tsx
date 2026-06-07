@@ -47,11 +47,11 @@ export function normalizeEmployeeAvatarSrc(
   if (typeof avatarUrl !== "string") return null
   const trimmed = avatarUrl.trim()
   if (!trimmed) return null
-  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return trimmed
 
   try {
     const url = new URL(trimmed, "http://localhost")
     if (url.protocol !== "http:" && url.protocol !== "https:") return null
+    if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return url.pathname + url.search + url.hash
     return /^https?:\/\//i.test(trimmed) ? trimmed : null
   } catch {
     return null

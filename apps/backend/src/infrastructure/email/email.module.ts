@@ -1,4 +1,4 @@
-// email-module — infrastructure module for per-tenant email providers.
+// email-module — infrastructure module for deployment-level email providers.
 
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';

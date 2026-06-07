@@ -3,11 +3,10 @@ import { ClsService } from 'nestjs-cls';
 import * as bcrypt from 'bcryptjs';
 import { OtpChannel, OtpPurpose } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
-import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
+import { SINGLE_TENANT_CONTEXT_ID, SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import { TokenService, TokenPair } from '../shared/token.service';
 import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
 import { MobileOtpPurposeDto, VerifyMobileOtpDto } from './verify-mobile-otp.dto';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 const LOCKOUT_WINDOW_MINUTES = 10;
 
@@ -110,7 +109,7 @@ export class VerifyMobileOtpHandler {
       }
 
       const tokens = await this.tokens.issueTokenPair(tokenUser, {
-        organizationId: DEFAULT_ORG_ID,
+        organizationId: SINGLE_TENANT_CONTEXT_ID,
         isSuperAdmin: false,
       });
 

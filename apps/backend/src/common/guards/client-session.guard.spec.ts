@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { ClientSessionGuard } from './client-session.guard';
 import { ClsService } from 'nestjs-cls';
+import { SINGLE_TENANT_CONTEXT_ID } from '../constants';
 
 describe('ClientSessionGuard', () => {
   let guard: ClientSessionGuard;
@@ -38,15 +39,21 @@ describe('ClientSessionGuard', () => {
     expect(() => guard.handleRequest(null, { organizationId: 'org' }, null, createContext())).toThrow(UnauthorizedException);
   });
 
-  it('should throw on client without organizationId', () => {
-    expect(() => guard.handleRequest(null, { id: 'c1' }, null, createContext())).toThrow(UnauthorizedException);
+  it('should accept client without legacy organizationId', () => {
+    const client = { id: 'c1' };
+    const result = guard.handleRequest(null, client, null, createContext()) as any;
+    expect(result.organizationId).toBe(SINGLE_TENANT_CONTEXT_ID);
   });
 
   it('should return client and set cls', () => {
-    const client = { id: 'c1', organizationId: 'org', role: 'CLIENT' };
+    const client = { id: 'c1', organizationId: 'legacy-org', role: 'CLIENT' };
     const result = guard.handleRequest(null, client, null, createContext());
     expect(result).toBe(client);
-    expect(cls.set).toHaveBeenCalled();
+    expect(result.organizationId).toBe(SINGLE_TENANT_CONTEXT_ID);
+    expect(cls.set).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ organizationId: SINGLE_TENANT_CONTEXT_ID }),
+    );
   });
 
   it('should default role to CLIENT', () => {

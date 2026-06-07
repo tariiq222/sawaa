@@ -18,20 +18,19 @@ export interface UserPayload {
   customRoleId: string | null
   isSuperAdmin: boolean
   permissions: string[]
-  // Canonical org context resolved by the backend. Null when the session has no
-  // active organization yet (e.g. freshly created super-admin in seeds).
+  // Deprecated single-tenant compatibility field. New backend responses stamp
+  // the fixed deployment context when present; clients must not use it for
+  // request routing or send it back as a legacy organization-selection header.
   organizationId: string | null
-  // Vertical slug of the active membership's organization (e.g. 'clinic',
-  // 'salon'). Powers useTerminology() in dashboard/mobile without a second
-  // round-trip. Null when the org has no vertical assigned yet.
+  // Deprecated multi-vertical compatibility field. Kept nullable until all
+  // dashboard/mobile consumers stop depending on the historical auth shape.
   verticalSlug: string | null
   // ISO timestamp when the org's owner finished the onboarding wizard.
   // Null until completed; the dashboard layout uses it to redirect new
   // organizations to /onboarding.
   onboardingCompletedAt: string | null
-  // Organization-scoped display profile for the active session. UIs should
-  // prefer activeMembership.{displayName, jobTitle, avatarUrl} over the global
-  // User counterparts when present.
+  // Deprecated membership compatibility shape retained for staged frontend
+  // cleanup. Do not use organizationId from this object for request context.
   activeMembership: {
     id: string
     organizationId: string

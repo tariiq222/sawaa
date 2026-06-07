@@ -20,14 +20,13 @@ const USER_KEY = "sawaa_user"
 // phone, firstName, lastName, etc.) is never persisted to storage because
 // localStorage is XSS-readable; the canonical user is held in the in-memory
 // AuthProvider state, sourced from /me on every load.
-type CachedUserHint = Pick<UserPayload, "id" | "role" | "isSuperAdmin" | "organizationId">
+type CachedUserHint = Pick<UserPayload, "id" | "role" | "isSuperAdmin">
 
 function toCachedHint(u: UserPayload): CachedUserHint {
   return {
     id: u.id,
     role: u.role,
     isSuperAdmin: u.isSuperAdmin,
-    organizationId: u.organizationId,
   }
 }
 
@@ -183,7 +182,6 @@ export function getStoredUserHint(): CachedUserHint | null {
       id: parsed.id,
       role: typeof parsed.role === "string" ? parsed.role : "",
       isSuperAdmin: parsed.isSuperAdmin === true,
-      organizationId: typeof parsed.organizationId === "string" ? parsed.organizationId : null,
     }
   } catch {
     return null

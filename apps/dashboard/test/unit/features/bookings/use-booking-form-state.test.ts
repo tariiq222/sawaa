@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { useBookingFormState } from '@/components/features/bookings/use-booking-form-state'
 
 describe('useBookingFormState', () => {
-  it('starts with all fields null/false', () => {
+  it('starts with empty booking fields and pay-at-clinic selected', () => {
     const { result } = renderHook(() => useBookingFormState())
     const s = result.current.state
     expect(s.clientId).toBeNull()
@@ -12,7 +12,7 @@ describe('useBookingFormState', () => {
     expect(s.type).toBeNull()
     expect(s.date).toBeNull()
     expect(s.startTime).toBeNull()
-    expect(s.payAtClinic).toBe(false)
+    expect(s.payAtClinic).toBe(true)
     expect(result.current.isComplete).toBe(false)
   })
 

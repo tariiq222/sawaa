@@ -42,8 +42,8 @@ function clearAuthCookies(res: Response) {
   res.clearCookie(REFRESH_COOKIE, { path: '/' });
 }
 
-function getRefreshTokenFromRequest(req: Request, dto?: { refreshToken?: string }): string | undefined {
-  return dto?.refreshToken ?? req.cookies?.[REFRESH_COOKIE];
+function getRefreshTokenFromRequest(req: Request): string | undefined {
+  return req.cookies?.[REFRESH_COOKIE];
 }
 
 @ApiTags('Public / Auth')
@@ -93,7 +93,7 @@ export class PublicAuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const rawToken = getRefreshTokenFromRequest(req, dto);
+    const rawToken = getRefreshTokenFromRequest(req);
     if (!rawToken) {
       throw new UnauthorizedException('Refresh token required');
     }
@@ -113,7 +113,7 @@ export class PublicAuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const rawToken = getRefreshTokenFromRequest(req, dto);
+    const rawToken = getRefreshTokenFromRequest(req);
     if (rawToken) {
       await this.logout.execute(rawToken, session.id);
     }

@@ -43,6 +43,7 @@ export const FeatureKey = {
 
   // ── On/Off — ENTERPRISE (Phase 3) ────────────────────────────────
   SMS_PROVIDER_DEDICATED: "sms_provider_per_tenant",
+  /** @deprecated Use SMS_PROVIDER_DEDICATED. String value is unchanged for persisted flags. */
   SMS_PROVIDER_PER_TENANT: "sms_provider_per_tenant",
   WHITE_LABEL_MOBILE: "white_label_mobile",
   CUSTOM_DOMAIN: "custom_domain",

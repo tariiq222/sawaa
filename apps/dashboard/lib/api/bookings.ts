@@ -22,12 +22,17 @@ import type {
  * keep their natural shape and only one place owns the contract translation.
  */
 function adaptCreatePayload(p: CreateBookingPayload) {
-  const { date, startTime, type, ...rest } = p
+  const { date, startTime, type, deliveryType, ...rest } = p
   const scheduledAt = combineDateTimeToISO(date, startTime)
   if (!scheduledAt) {
     throw new Error("Invalid booking date/time")
   }
-  return { ...rest, scheduledAt, bookingType: type ? String(type).toUpperCase() : undefined }
+  return {
+    ...rest,
+    scheduledAt,
+    bookingType: type ? String(type).toUpperCase() : undefined,
+    deliveryType: deliveryType ? String(deliveryType).toUpperCase() : undefined,
+  }
 }
 
 function adaptReschedulePayload(p: ReschedulePayload) {

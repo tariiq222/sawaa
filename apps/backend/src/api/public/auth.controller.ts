@@ -163,7 +163,7 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const rawToken = (req.cookies as Record<string, string>)?.['ck_refresh'] ?? body.refreshToken;
+    const rawToken = (req.cookies as Record<string, string>)?.['ck_refresh'];
     if (!rawToken) throw new UnauthorizedException('No refresh token');
 
     const record = await this.findActiveToken(rawToken);
@@ -211,7 +211,7 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const rawToken = (req.cookies as Record<string, string>)?.['ck_refresh'] ?? body.refreshToken;
+    const rawToken = (req.cookies as Record<string, string>)?.['ck_refresh'];
     res.clearCookie('ck_refresh', { path: '/' });
     if (!rawToken) return;
     const record = await this.findActiveToken(rawToken);

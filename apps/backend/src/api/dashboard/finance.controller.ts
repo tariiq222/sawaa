@@ -20,6 +20,7 @@ import { GenerateInvoicePdfHandler } from '../../modules/finance/generate-invoic
 import { ProcessPaymentHandler } from '../../modules/finance/process-payment/process-payment.handler';
 import { ProcessPaymentDto } from '../../modules/finance/process-payment/process-payment.dto';
 import { ListPaymentsHandler } from '../../modules/finance/list-payments/list-payments.handler';
+import { GetPaymentHandler } from '../../modules/finance/get-payment/get-payment.handler';
 import { ListPaymentsDto } from '../../modules/finance/list-payments/list-payments.dto';
 import { ListInvoicesHandler } from '../../modules/finance/list-invoices/list-invoices.handler';
 import { ListInvoicesDto } from '../../modules/finance/list-invoices/list-invoices.dto';
@@ -69,6 +70,7 @@ export class DashboardFinanceController {
     private readonly generateInvoicePdf: GenerateInvoicePdfHandler,
     private readonly processPayment: ProcessPaymentHandler,
     private readonly listPayments: ListPaymentsHandler,
+    private readonly getPayment: GetPaymentHandler,
     private readonly listInvoices: ListInvoicesHandler,
     private readonly applyCoupon: ApplyCouponHandler,
     private readonly listCoupons: ListCouponsHandler,
@@ -242,6 +244,16 @@ export class DashboardFinanceController {
       fromDate: startOfDayInTz(query.fromDate),
       toDate: endOfDayInTz(query.toDate),
     });
+  }
+
+  @Get('payments/:id')
+  @CheckPermissions({ action: 'read', subject: 'Payment' })
+  @ApiOperation({ summary: 'Get a single payment by id' })
+  @ApiParam({ name: 'id', description: 'Payment UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Payment found' })
+  @ApiResponse({ status: 404, description: 'Payment not found', type: ApiErrorDto })
+  getPaymentEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+    return this.getPayment.execute({ paymentId: id });
   }
 
   @Patch('payments/:id/refund')

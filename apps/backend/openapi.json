@@ -3772,6 +3772,11 @@
             "description": "Phone (E.164) or email",
             "example": "+966501234567",
             "type": "string"
+          },
+          "organizationId": {
+            "deprecated": true,
+            "description": "Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.",
+            "type": "string"
           }
         },
         "required": [
@@ -3796,7 +3801,8 @@
             "type": "string"
           },
           "organizationId": {
-            "description": "Target organization ID",
+            "deprecated": true,
+            "description": "Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.",
             "type": "string"
           },
           "purpose": {
@@ -5790,6 +5796,11 @@
             "description": "Phone or email used to request the OTP",
             "type": "string"
           },
+          "organizationId": {
+            "deprecated": true,
+            "description": "Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.",
+            "type": "string"
+          },
           "purpose": {
             "description": "Whether this verifies a registration or a login OTP",
             "enum": [
@@ -5828,7 +5839,8 @@
             "type": "string"
           },
           "organizationId": {
-            "description": "Target organization ID",
+            "deprecated": true,
+            "description": "Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.",
             "type": "string"
           },
           "purpose": {
@@ -12900,6 +12912,87 @@
           }
         ],
         "summary": "Get payment statistics summary",
+        "tags": [
+          "Dashboard / Finance"
+        ]
+      }
+    },
+    "/api/v1/dashboard/finance/payments/{id}": {
+      "get": {
+        "operationId": "DashboardFinanceController_getPaymentEndpoint",
+        "parameters": [
+          {
+            "description": "Payment UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment found"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Payment not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a single payment by id",
         "tags": [
           "Dashboard / Finance"
         ]
@@ -30258,6 +30351,7 @@
     },
     "/api/v1/public/sms/webhooks/{provider}/{organizationId}": {
       "post": {
+        "deprecated": true,
         "operationId": "PublicSmsWebhooksController_handleLegacy",
         "parameters": [
           {
@@ -30273,7 +30367,7 @@
             }
           },
           {
-            "description": "Legacy path param; must match the default organization",
+            "description": "Deprecated legacy path param; must match the default organization and is ignored internally",
             "in": "path",
             "name": "organizationId",
             "required": true,

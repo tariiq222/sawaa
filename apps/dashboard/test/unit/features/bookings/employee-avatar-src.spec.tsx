@@ -23,6 +23,11 @@ describe("normalizeEmployeeAvatarSrc", () => {
     )
   })
 
+  it("drops root-relative paths that are invalid URLs", () => {
+    expect(normalizeEmployeeAvatarSrc("//")).toBeNull()
+    expect(normalizeEmployeeAvatarSrc("///")).toBeNull()
+  })
+
   it("drops raw WordPress filenames that next/image cannot parse", () => {
     expect(
       normalizeEmployeeAvatarSrc("df0f5b76b91c0b5d6382dcd635ac7b5b.jpg"),

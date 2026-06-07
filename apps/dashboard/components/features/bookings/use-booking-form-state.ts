@@ -39,7 +39,7 @@ const INITIAL_STATE: BookingFormState = {
   durationLabel: null,
   date: null,
   startTime: null,
-  payAtClinic: false,
+  payAtClinic: true,
   couponCode: null,
 }
 

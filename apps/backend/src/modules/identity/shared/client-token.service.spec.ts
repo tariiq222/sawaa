@@ -1,4 +1,5 @@
 import { ClientTokenService } from './client-token.service';
+import { SINGLE_TENANT_CONTEXT_ID } from '../../../common/constants';
 
 const mockClient = { id: 'client-1', email: 'walk-in@clinic.sa' };
 
@@ -44,7 +45,7 @@ describe('ClientTokenService.issueTokenPair', () => {
     expect(pair.refreshMaxAgeMs).toBeGreaterThan(0);
   });
 
-  it('signs JWT with organizationId claim', async () => {
+  it('signs JWT with fixed legacy organizationId claim', async () => {
     const jwt = buildJwt();
     const svc = new ClientTokenService(jwt as never, buildConfig() as never, buildPrisma() as never);
     await svc.issueTokenPair(mockClient, { organizationId: 'org-2' });
@@ -53,7 +54,7 @@ describe('ClientTokenService.issueTokenPair', () => {
       expect.objectContaining({
         sub: 'client-1',
         namespace: 'client',
-        organizationId: 'org-2',
+        organizationId: SINGLE_TENANT_CONTEXT_ID,
       }),
       expect.objectContaining({ secret: 'client-access-secret' }),
     );
