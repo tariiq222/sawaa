@@ -17,6 +17,11 @@ export class UpdateEmployeeServiceHandler {
     });
     if (!record) throw new NotFoundException('Employee-service assignment not found');
 
-    return record;
+    if (cmd.isActive === undefined) return record;
+
+    return this.prisma.employeeService.update({
+      where: { employeeId_serviceId: { employeeId: cmd.employeeId, serviceId: cmd.serviceId } },
+      data: { isActive: cmd.isActive },
+    });
   }
 }

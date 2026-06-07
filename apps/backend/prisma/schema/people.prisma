@@ -113,7 +113,7 @@ model Employee {
   specialty        String?
   specialtyAr      String?
   phone            String?
-  email            String?
+  email            String?          @unique
   gender           EmployeeGender?
   avatarUrl        String?
   bio              String?
@@ -161,6 +161,7 @@ model EmployeeService {
   employeeId String
   employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   serviceId  String
+  isActive   Boolean  @default(true)
 
   // NOTE: (employeeId, serviceId) unique constraint already exists — no migration needed.
   @@unique([employeeId, serviceId])

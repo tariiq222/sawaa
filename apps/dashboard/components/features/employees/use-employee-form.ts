@@ -11,6 +11,7 @@ import type { DraftService } from "@/components/features/employees/create/servic
 import type { AvailabilitySlot, EmployeeService } from "@/lib/types/employee"
 import {
   assignService,
+  deleteEmployee,
   setEmployeeServiceOptions,
   uploadEmployeeAvatar,
 } from "@/lib/api/employees"
@@ -350,7 +351,6 @@ export function useEmployeeForm({
   }
 
   async function submitCreate(data: CreateEmployeeFormData) {
-    const stepErrors: string[] = []
     let newId: string
     try {
       const result = await onboardMutation.mutateAsync({
@@ -379,14 +379,12 @@ export function useEmployeeForm({
       setIsSubmitting(false)
       return
     }
-    if (data.avatarFile) {
-      try {
-        await uploadEmployeeAvatar(newId, data.avatarFile)
-      } catch {
-        stepErrors.push(t("employees.form.stepErrorAvatar"))
-      }
-    }
+
     try {
+      if (data.avatarFile) {
+        await uploadEmployeeAvatar(newId, data.avatarFile)
+      }
+
       let targetBranches = branchIds
       if (targetBranches.length === 0) {
         const res = await fetchBranches({ page: 1, perPage: 100 })
@@ -396,22 +394,16 @@ export function useEmployeeForm({
       await Promise.all(
         targetBranches.map((branchId) => assignEmployeeToBranch(branchId, newId)),
       )
-    } catch {
-      stepErrors.push(t("employees.form.stepErrorBranches"))
-    }
-    const activeSlots = schedule.filter((s) => s.isActive)
-    if (activeSlots.length > 0) {
-      try {
+
+      const activeSlots = schedule.filter((s) => s.isActive)
+      if (activeSlots.length > 0) {
         await setAvailabilityMut.mutateAsync({
           id: newId,
           schedule: activeSlots,
         })
-      } catch {
-        stepErrors.push(t("employees.form.stepErrorSchedule"))
       }
-    }
-    if (breaks.length > 0) {
-      try {
+
+      if (breaks.length > 0) {
         await setBreaksMut.mutateAsync({
           id: newId,
           breaks: breaks.map(({ dayOfWeek, startTime, endTime }) => ({
@@ -420,23 +412,17 @@ export function useEmployeeForm({
             endTime,
           })),
         })
-      } catch {
-        stepErrors.push(t("employees.form.stepErrorBreaks"))
       }
-    }
-    if (vacation.enabled && vacation.startDate && vacation.endDate) {
-      try {
+
+      if (vacation.enabled && vacation.startDate && vacation.endDate) {
         await vacationMuts.createMut.mutateAsync({
           startDate: vacation.startDate,
           endDate: vacation.endDate,
           reason: vacation.reason || undefined,
         })
-      } catch {
-        stepErrors.push(t("employees.form.stepErrorVacation"))
       }
-    }
-    if (draftServices.length > 0) {
-      try {
+
+      if (draftServices.length > 0) {
         await Promise.all(
           draftServices.map(async (ds) => {
             await assignService(newId, {
@@ -452,21 +438,21 @@ export function useEmployeeForm({
             }
           })
         )
-      } catch {
-        stepErrors.push(t("employees.form.stepErrorServices"))
       }
+    } catch {
+      try {
+        await deleteEmployee(newId)
+      } catch {
+        // The original setup failure is the user-facing error; cleanup failure
+        // should not turn a failed create into a partial-success success path.
+      }
+      setIsSubmitting(false)
+      toast.error(t("employees.create.error"))
+      return
     }
+
     setIsSubmitting(false)
-    if (stepErrors.length > 0) {
-      toast.warning(
-        t("employees.form.createPartialSuccess").replace(
-          "{steps}",
-          stepErrors.join(", ")
-        )
-      )
-    } else {
-      toast.success(t("employees.create.success"))
-    }
+    toast.success(t("employees.create.success"))
     router.push("/employees")
   }
 
