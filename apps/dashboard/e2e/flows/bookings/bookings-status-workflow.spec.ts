@@ -79,51 +79,48 @@ test.describe('Bookings - Status & Workflow', () => {
   test.beforeEach(async ({ page }) => {
     await loginAs(page, 'admin');
     await page.goto('/bookings');
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    // Give React time to render the table
-    await page.waitForTimeout(2_000);
+    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
+    // Wait for the table to actually render rather than guessing with a sleep.
+    await expect(page.getByRole('heading', { name: /الحجوزات|Bookings/i }).first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('should filter bookings by status - confirmed', async ({ page }) => {
     const statusFilter = page.locator('[role="combobox"]:has-text("الحالة"), [role="combobox"]:has-text("all"), select[id*="status"]').first();
-    if (await statusFilter.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await statusFilter.click();
-      await page.waitForTimeout(500);
-      const pendingOption = page.locator('[role="option"]:has-text("بالفعل"), [role="option"]:has-text("confirmed")').first();
-      if (await pendingOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await pendingOption.click();
-        await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-      }
-    }
-    await expect(page.locator('body')).toBeVisible();
+    await expect(statusFilter).toBeVisible({ timeout: 10_000 });
+    await statusFilter.click();
+    const confirmedOption = page.locator('[role="option"]:has-text("بالفعل"), [role="option"]:has-text("confirmed")').first();
+    await expect(confirmedOption).toBeVisible({ timeout: 5_000 });
+    await Promise.all([
+      page.waitForResponse((r) => r.url().includes('/bookings') && r.request().method() === 'GET' && r.ok()).catch(() => {}),
+      confirmedOption.click(),
+    ]);
+    await expect(page.getByRole('heading', { name: /الحجوزات|Bookings/i }).first()).toBeVisible();
   });
 
   test('should filter bookings by status - pending', async ({ page }) => {
     const statusFilter = page.locator('[role="combobox"]:has-text("الحالة"), [role="combobox"]:has-text("all"), select[id*="status"]').first();
-    if (await statusFilter.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await statusFilter.click();
-      await page.waitForTimeout(500);
-      const pendingOption = page.locator('[role="option"]:has-text("بالانتظار"), [role="option"]:has-text("pending")').first();
-      if (await pendingOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await pendingOption.click();
-        await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-      }
-    }
-    await expect(page.locator('body')).toBeVisible();
+    await expect(statusFilter).toBeVisible({ timeout: 10_000 });
+    await statusFilter.click();
+    const pendingOption = page.locator('[role="option"]:has-text("بالانتظار"), [role="option"]:has-text("pending")').first();
+    await expect(pendingOption).toBeVisible({ timeout: 5_000 });
+    await Promise.all([
+      page.waitForResponse((r) => r.url().includes('/bookings') && r.request().method() === 'GET' && r.ok()).catch(() => {}),
+      pendingOption.click(),
+    ]);
+    await expect(page.getByRole('heading', { name: /الحجوزات|Bookings/i }).first()).toBeVisible();
   });
 
   test('should filter bookings by status - cancelled', async ({ page }) => {
     const statusFilter = page.locator('[role="combobox"]:has-text("الحالة"), [role="combobox"]:has-text("all"), select[id*="status"]').first();
-    if (await statusFilter.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await statusFilter.click();
-      await page.waitForTimeout(500);
-      const cancelledOption = page.locator('[role="option"]:has-text("ملغى"), [role="option"]:has-text("cancelled")').first();
-      if (await cancelledOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await cancelledOption.click();
-        await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-      }
-    }
-    await expect(page.locator('body')).toBeVisible();
+    await expect(statusFilter).toBeVisible({ timeout: 10_000 });
+    await statusFilter.click();
+    const cancelledOption = page.locator('[role="option"]:has-text("ملغى"), [role="option"]:has-text("cancelled")').first();
+    await expect(cancelledOption).toBeVisible({ timeout: 5_000 });
+    await Promise.all([
+      page.waitForResponse((r) => r.url().includes('/bookings') && r.request().method() === 'GET' && r.ok()).catch(() => {}),
+      cancelledOption.click(),
+    ]);
+    await expect(page.getByRole('heading', { name: /الحجوزات|Bookings/i }).first()).toBeVisible();
   });
 
   test('should view booking details with status', async ({ page }) => {

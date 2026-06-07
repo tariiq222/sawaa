@@ -8,14 +8,20 @@ test.describe('User Management', () => {
 
   test('users list page loads', async ({ page }) => {
     await page.goto('/users', { waitUntil: 'domcontentloaded' });
+    await page.waitForResponse(
+      (r) => r.url().includes('/users') && r.request().method() === 'GET' && r.ok(),
+    ).catch(() => {});
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    await expect(page.locator('body')).toBeVisible();
+    // The page heading is always rendered once the route resolves.
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15_000 });
   });
 
   test('users table displays user data', async ({ page }) => {
     await page.goto('/users');
+    await page.waitForResponse(
+      (r) => r.url().includes('/users') && r.request().method() === 'GET' && r.ok(),
+    ).catch(() => {});
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    await page.waitForTimeout(1000);
 
     const table = page.locator('table').first();
     if (await table.isVisible({ timeout: 5000 }).catch(() => false)) {
@@ -25,19 +31,21 @@ test.describe('User Management', () => {
 
   test('create user button is visible', async ({ page }) => {
     await page.goto('/users');
+    await page.waitForResponse(
+      (r) => r.url().includes('/users') && r.request().method() === 'GET' && r.ok(),
+    ).catch(() => {});
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    await page.waitForTimeout(500);
 
     const createBtn = page.locator('button:has-text("Create" i), button:has-text("إضافة" i)').first();
-    if (await createBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await expect(createBtn).toBeVisible();
-    }
+    await expect(createBtn).toBeVisible({ timeout: 10_000 });
   });
 
   test('pagination controls are visible', async ({ page }) => {
     await page.goto('/users');
+    await page.waitForResponse(
+      (r) => r.url().includes('/users') && r.request().method() === 'GET' && r.ok(),
+    ).catch(() => {});
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    await page.waitForTimeout(1000);
 
     const pagination = page.locator('[class*="pagination"], button:has-text("Next"), button:has-text("Previous")').first();
     if (await pagination.isVisible({ timeout: 5000 }).catch(() => false)) {
@@ -47,14 +55,14 @@ test.describe('User Management', () => {
 
   test('bulk select users is available', async ({ page }) => {
     await page.goto('/users');
+    await page.waitForResponse(
+      (r) => r.url().includes('/users') && r.request().method() === 'GET' && r.ok(),
+    ).catch(() => {});
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    await page.waitForTimeout(1000);
 
     const checkbox = page.locator('input[type="checkbox"]').first();
-    if (await checkbox.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await checkbox.click();
-      await page.waitForTimeout(300);
-      await expect(checkbox).toBeChecked();
-    }
+    await expect(checkbox).toBeVisible({ timeout: 10_000 });
+    await checkbox.click();
+    await expect(checkbox).toBeChecked({ timeout: 5_000 });
   });
 });

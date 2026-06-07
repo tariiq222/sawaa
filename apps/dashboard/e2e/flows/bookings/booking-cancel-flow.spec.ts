@@ -93,19 +93,18 @@ test.describe('Booking Cancel — user flow', () => {
       .getByRole('tab', { name: /^الكل$|^All$/ })
       .or(page.getByRole('button', { name: /^الكل$|^All$/ }))
       .first();
-    if (await allTab.isVisible({ timeout: 10_000 }).catch(() => false)) {
-      await allTab.click();
-      await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
-    }
+    await expect(allTab).toBeVisible({ timeout: 10_000 });
+    await allTab.click();
 
     // With 99+ bookings the seeded row may sit on a later page, so search by the
-    // client name (server-side match on name/phone/number) to surface it.
+    // client name (server-side match on name/phone/number) to surface it. The
+    // search box is the next stable control after switching tabs.
     const search = page.getByPlaceholder(/بحث|Search/i).first();
-    if (await search.isVisible({ timeout: 10_000 }).catch(() => false)) {
-      await search.fill('لإلغاء اختبار');
-      await page.waitForTimeout(600);
-      await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
-    }
+    await expect(search).toBeVisible({ timeout: 10_000 });
+    await search.fill('لإلغاء اختبار');
+    await page.waitForResponse(
+      (r) => r.url().includes('/bookings') && r.request().method() === 'GET' && r.ok(),
+    ).catch(() => {});
 
     // 3. Find and click the seeded booking row (click client name button)
     const clientBtn = page.getByRole('button', { name: /لإلغاء اختبار/ }).first();
@@ -139,22 +138,19 @@ test.describe('Booking Cancel — user flow', () => {
     await reasonSelect.click();
     await page.getByRole('option').first().click();
 
-    // Optional admin notes textarea.
+    // Admin notes textarea (always rendered in the AdminCancelDialog).
     const reasonTextarea = page.locator('textarea').first();
-    if (await reasonTextarea.isVisible({ timeout: 3_000 }).catch(() => false)) {
-      await reasonTextarea.fill('customer requested cancellation via test');
-    }
+    await expect(reasonTextarea).toBeVisible({ timeout: 5_000 });
+    await reasonTextarea.fill('customer requested cancellation via test');
 
     // 8. Click the destructive "إلغاء الحجز" confirm button (now enabled).
     const confirmCancelBtn = page.getByRole('button', { name: 'إلغاء الحجز' }).last();
     await expect(confirmCancelBtn).toBeEnabled({ timeout: 5_000 });
     await confirmCancelBtn.click();
 
-    // Wait for mutation and sheet to close
-    await page.waitForTimeout(2_000);
-
-    // Sheet should close; verify page is stable
-    await expect(page.locator('body')).toBeVisible();
+    // The cancel dialog closes after the mutation succeeds — the confirm button
+    // disappears, which is the real post-mutation state to wait on.
+    await expect(confirmCancelBtn).toBeHidden({ timeout: 10_000 });
   });
 
   test('booking detail sheet opens and shows client + service info', async ({ page }) => {
@@ -171,16 +167,14 @@ test.describe('Booking Cancel — user flow', () => {
       .getByRole('tab', { name: /^الكل$|^All$/ })
       .or(page.getByRole('button', { name: /^الكل$|^All$/ }))
       .first();
-    if (await allTab.isVisible({ timeout: 10_000 }).catch(() => false)) {
-      await allTab.click();
-      await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
-    }
+    await expect(allTab).toBeVisible({ timeout: 10_000 });
+    await allTab.click();
     const search = page.getByPlaceholder(/بحث|Search/i).first();
-    if (await search.isVisible({ timeout: 10_000 }).catch(() => false)) {
-      await search.fill('لإلغاء اختبار');
-      await page.waitForTimeout(600);
-      await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
-    }
+    await expect(search).toBeVisible({ timeout: 10_000 });
+    await search.fill('لإلغاء اختبار');
+    await page.waitForResponse(
+      (r) => r.url().includes('/bookings') && r.request().method() === 'GET' && r.ok(),
+    ).catch(() => {});
 
     // Click the seeded booking's client name
     const clientBtn = page.getByRole('button', { name: /لإلغاء اختبار/ }).first();

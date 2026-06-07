@@ -60,9 +60,11 @@ test.describe('Bookings List — user flow', () => {
     await expect(page).toHaveURL(/\/bookings/);
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
-    // Filter controls should be present
-    const body = page.locator('body');
-    await expect(body).toBeVisible();
+    // Filter controls should be present — assert the list rendered by checking
+    // the bookings table column header is visible.
+    await expect(
+      page.getByRole('columnheader', { name: /المريض|Client/i }).first(),
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test('login → bookings list → navigate to create booking', async ({ page }) => {

@@ -108,23 +108,20 @@ test.describe('Employees CRUD Operations', () => {
   })
 
   test('should edit existing employee', async ({ page }) => {
-    const editButton = page.locator('a[href*="/employees/edit"], button:has-text("edit"), button:has-text("تعديل")').first()
-    if (await editButton.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await editButton.click()
-      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+    const editButton = page.locator('a[href*="/employees/edit"], a[href*="/edit"], button:has-text("edit"), button:has-text("تعديل")').first()
+    await expect(editButton).toBeVisible({ timeout: 10_000 })
+    await editButton.click()
+    await page.waitForURL(/\/employees\/[^/]+\/edit/, { timeout: 10_000 })
 
-      const nameInput = page.locator('input[id*="name"], input[placeholder*="name"]')
-      if (await nameInput.isVisible()) {
-        await nameInput.clear()
-        await nameInput.fill(`Updated Employee ${Date.now()}`)
-      }
+    const nameInput = page.locator('input[id*="name"], input[name*="name"], input[placeholder*="name"]').first()
+    await expect(nameInput).toBeVisible({ timeout: 10_000 })
+    await nameInput.clear()
+    await nameInput.fill(`Updated Employee ${Date.now()}`)
 
-      const saveButton = page.locator('button[type="submit"], button:has-text("Save"), button:has-text("حفظ")')
-      if (await saveButton.isVisible()) {
-        await saveButton.click()
-        await page.waitForTimeout(2000)
-      }
-    }
+    const saveButton = page.locator('button[type="submit"], button:has-text("Save"), button:has-text("حفظ")').first()
+    await expect(saveButton).toBeVisible({ timeout: 10_000 })
+    await saveButton.click()
+    await expect(saveButton).toBeHidden({ timeout: 15_000 })
   })
 
   test('should delete employee with confirmation', async ({ page }) => {

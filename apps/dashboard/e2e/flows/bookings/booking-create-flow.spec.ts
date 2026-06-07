@@ -97,29 +97,27 @@ test.describe('Booking Create Wizard — user flow', () => {
     const clientBtn = page.locator('button', { hasText: /حجز اختبار/ }).first();
     await expect(clientBtn).toBeVisible({ timeout: 10_000 });
     await clientBtn.click();
-    await page.waitForTimeout(1_000);
 
     // 5. Department section auto-opens — pick the clinics ("عيادات") department.
     //    Scope to the POS container so we don't match the sidebar "العيادات" nav.
+    //    The seed guarantees this step exists, so wait for it explicitly.
     const deptBtn = posContainer
       .getByRole('button', { name: /^عيادات$|^Clinics$/ })
       .first();
-    if (await deptBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await deptBtn.click();
-      await page.waitForTimeout(1_000);
-    }
+    await expect(deptBtn).toBeVisible({ timeout: 10_000 });
+    await deptBtn.click();
 
-    // 6. Category (clinic) section — pick the seeded test category.
+    // 6. Category (clinic) section — pick the seeded test category. Waiting for
+    //    the category button to appear confirms the department click resolved.
     const categoryBtn = posContainer
       .locator('button')
       .filter({ hasText: /فئة اختبار|Test Category/ })
       .first();
-    if (await categoryBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await categoryBtn.click();
-      await page.waitForTimeout(1_000);
-    }
+    await expect(categoryBtn).toBeVisible({ timeout: 10_000 });
+    await categoryBtn.click();
 
-    // 7. Service section — select the seeded service.
+    // 7. Service section — select the seeded service. Its visibility confirms the
+    //    category click resolved and the service step opened.
     const serviceBtn = posContainer
       .locator('button')
       .filter({ hasText: /خدمة حجز اختبار/ })

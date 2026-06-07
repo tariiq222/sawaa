@@ -250,20 +250,36 @@ async function openSeededBookingDetail(page: Page) {
     .getByRole("tab", { name: /^الكل$|^All$/ })
     .or(page.getByRole("button", { name: /^الكل$|^All$/ }))
     .first()
-  if (await allTab.isVisible({ timeout: 10_000 }).catch(() => false)) {
-    await allTab.click()
-    await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {})
-  }
+  await expect(allTab).toBeVisible({ timeout: 10_000 })
+  await Promise.all([
+    page
+      .waitForResponse(
+        (r) =>
+          r.url().includes("/bookings") &&
+          r.request().method() === "GET" &&
+          r.ok()
+      )
+      .catch(() => {}),
+    allTab.click(),
+  ])
 
   // Search by client name — the bookings search matches client name / phone /
   // booking-number server-side (debounced 300ms). Target by placeholder (robust
   // whether or not the input exposes an accessible name), then wait for the
-  // debounce + the filtered re-fetch to settle before locating the row.
+  // debounced filtered re-fetch to settle before locating the row.
   const search = page.getByPlaceholder(/بحث|Search/i).first()
   await expect(search).toBeVisible({ timeout: 15_000 })
-  await search.fill(seededClientName)
-  await page.waitForTimeout(600)
-  await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {})
+  await Promise.all([
+    page
+      .waitForResponse(
+        (r) =>
+          r.url().includes("/bookings") &&
+          r.request().method() === "GET" &&
+          r.ok()
+      )
+      .catch(() => {}),
+    search.fill(seededClientName),
+  ])
 
   // The filtered list re-renders (the row briefly unmounts during the re-fetch),
   // so target the row by text — Playwright auto-retries until it settles — then

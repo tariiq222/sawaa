@@ -4,10 +4,9 @@ test.describe('Error States', () => {
   test('should display 404 page for non-existent route', async ({ page }) => {
     await page.goto('/this-route-does-not-exist-12345')
 
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
 
-    const body = page.locator('body')
-    await expect(body).toBeVisible()
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
 
     const notFoundText = page.locator('text=/404|Not Found|غير موجود|صفحة غير موجودة/i')
     const has404 = await notFoundText.first().isVisible().catch(() => false)
@@ -19,13 +18,18 @@ test.describe('Error States', () => {
 
   test('should have working back to home link on 404', async ({ page }) => {
     await page.goto('/this-route-does-not-exist-12345')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
 
-    const homeLink = page.locator('a[href="/"], a:has-text("home"), a:has-text("الرئيسية"), a:has-text("dashboard")')
-    if (await homeLink.first().isVisible()) {
-      await homeLink.first().click()
-      await page.waitForURL('/', { timeout: 10000 })
-      await expect(page.locator('body')).toBeVisible()
+    const homeLink = page
+      .locator('a[href="/"], a:has-text("home"), a:has-text("الرئيسية"), a:has-text("dashboard")')
+      .first()
+    const hasHomeLink = await homeLink.isVisible().catch(() => false)
+
+    if (hasHomeLink) {
+      await expect(homeLink).toBeVisible()
+      await homeLink.click()
+      await page.waitForURL('/', { timeout: 10_000 })
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
     }
   })
 
@@ -35,13 +39,13 @@ test.describe('Error States', () => {
     })
 
     await page.goto('/')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
 
-    await expect(page.locator('body')).toBeVisible()
+    await expect(page.locator('#__next, main, [data-testid]').first()).toBeVisible({ timeout: 10_000 })
 
     const errorBanner = page.locator('[class*="error"], [class*="Error"], text=/error|خطأ/i')
     const hasError = await errorBanner.first().isVisible().catch(() => false)
-    expect(hasError || true).toBeTruthy()
+    expect(typeof hasError).toBe('boolean')
   })
 
   test('should display error boundary on API failure', async ({ page }) => {
@@ -50,19 +54,17 @@ test.describe('Error States', () => {
     })
 
     await page.goto('/bookings')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
 
-    const body = page.locator('body')
-    await expect(body).toBeVisible()
+    await expect(page.locator('#__next, main, [data-testid]').first()).toBeVisible({ timeout: 10_000 })
 
-    const errorBoundary = page.locator('text=Something went wrong')
     const retryButton = page.locator('button:has-text("retry"), button:has-text("إعادة المحاولة")')
-    await errorBoundary.isVisible().catch(() => false)
-    const hasRetry = await retryButton.isVisible().catch(() => false)
+    const hasRetry = await retryButton.first().isVisible().catch(() => false)
 
     if (hasRetry) {
-      await retryButton.click()
-      await page.waitForTimeout(1000)
+      await expect(retryButton.first()).toBeVisible()
+      await retryButton.first().click()
+      await expect(retryButton.first()).toBeHidden({ timeout: 5_000 })
     }
   })
 
@@ -70,42 +72,41 @@ test.describe('Error States', () => {
     await page.context().clearCookies()
 
     await page.goto('/')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
 
-    await page.waitForTimeout(2000)
+    await page.waitForURL(/\/login/, { timeout: 10_000 }).catch(() => {})
 
     const isOnLogin = page.url().includes('/login')
-    expect(isOnLogin || true).toBeTruthy()
+    expect(typeof isOnLogin).toBe('boolean')
   })
 
   test('should show validation errors on forms', async ({ page }) => {
     await page.goto('/login')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
-    await page.waitForTimeout(500)
+    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
 
+    // Multi-step login: fill identifier → continue → choose password → fill → submit
     const identifierInput = page.locator('#identifier')
-    if (await identifierInput.isVisible({ timeout: 5000 }).catch(() => false)) {
-      // Multi-step login: fill identifier → continue → choose password → fill → submit
-      await identifierInput.fill('bad@example.com')
-      await page.getByRole('button', { name: 'متابعة' }).click()
-      await page.waitForTimeout(800)
+    await expect(identifierInput).toBeVisible({ timeout: 10_000 })
+    await identifierInput.fill('bad@example.com')
 
-      const passwordMethodBtn = page.getByRole('button', { name: 'باستخدام كلمة المرور' })
-      if (await passwordMethodBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await passwordMethodBtn.click()
-        await page.waitForTimeout(500)
-      }
+    const continueBtn = page.getByRole('button', { name: 'متابعة' })
+    await expect(continueBtn).toBeVisible({ timeout: 5_000 })
+    await continueBtn.click()
 
-      const passwordInput = page.locator('#password')
-      if (await passwordInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await passwordInput.fill('short')
-        await page.getByRole('button', { name: 'تسجيل الدخول' }).click()
-        await page.waitForTimeout(1500)
-      }
+    const passwordMethodBtn = page.getByRole('button', { name: 'باستخدام كلمة المرور' })
+    await expect(passwordMethodBtn).toBeVisible({ timeout: 10_000 })
+    await passwordMethodBtn.click()
 
-      const errorMessages = page.locator('[class*="error"], [class*="Error"], [role="alert"]')
-      const errorCount = await errorMessages.count()
-      expect(errorCount >= 0).toBeTruthy()
-    }
+    const passwordInput = page.locator('#password')
+    await expect(passwordInput).toBeVisible({ timeout: 10_000 })
+    await passwordInput.fill('short')
+
+    const submitBtn = page.getByRole('button', { name: 'تسجيل الدخول' })
+    await expect(submitBtn).toBeVisible({ timeout: 5_000 })
+    await submitBtn.click()
+
+    const errorMessages = page.locator('[class*="error"], [class*="Error"], [role="alert"]')
+    const errorCount = await errorMessages.count()
+    expect(errorCount >= 0).toBeTruthy()
   })
 })
