@@ -365,6 +365,32 @@ describe("BookingPos — real handleSubmit → createMut.mutateAsync payload", (
     expect(payload).toMatchObject({ durationOptionId: "dur-45" })
   })
 
+  it("normalizes backend uppercase deliveryType (IN_PERSON) to lowercase so the POS payload validates", async () => {
+    // Regression: the backend serviceTypes API returns deliveryType as
+    // "IN_PERSON"/"ONLINE" (uppercase) and the wizard stores it verbatim,
+    // but bookingPosPayloadSchema expects lowercase. Without normalization
+    // the payload fails runtime validation and no booking is ever created.
+    renderBookingPos(
+      makeCompleteState({
+        deliveryType: "IN_PERSON" as unknown as "in_person",
+      })
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /bookings\.pos\.confirm/ })
+    )
+
+    await waitFor(() => {
+      expect(createMut.mutateAsync).toHaveBeenCalledTimes(1)
+    })
+    expect(toastError).not.toHaveBeenCalled()
+
+    const [payload] = createMut.mutateAsync.mock.calls[0] as [
+      Record<string, unknown>,
+    ]
+    expect(payload).toMatchObject({ deliveryType: "in_person" })
+  })
+
   it("does not call create mutation when the POS payload fails runtime validation", async () => {
     renderBookingPos(
       makeCompleteState({

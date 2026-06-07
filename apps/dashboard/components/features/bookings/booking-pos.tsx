@@ -122,7 +122,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
       employeeId: state.employeeId,
       serviceId: state.serviceId,
       type: "individual" as const,
-      deliveryType: state.deliveryType,
+      deliveryType: state.deliveryType.toLowerCase() as "in_person" | "online",
       durationOptionId: state.durationOptionId ?? undefined,
       date: state.date,
       startTime: state.startTime,

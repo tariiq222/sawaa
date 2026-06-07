@@ -19,6 +19,8 @@ import { useLocale } from "@/components/locale-provider"
 
 const STATUS_OPTIONS = ["PENDING", "SENT", "FAILED", "SKIPPED"]
 const CHANNEL_OPTIONS = ["EMAIL", "SMS", "PUSH"]
+// Radix Select forbids an empty-string item value; use a sentinel for "all".
+const ALL = "all"
 
 function statusVariant(
   status: string,
@@ -53,9 +55,9 @@ export default function EmailDeliveryLogPage() {
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl border border-border bg-surface mb-4">
         <Select
-          value={status ?? ""}
+          value={status ?? ALL}
           onValueChange={(v) => {
-            setStatus(v || undefined)
+            setStatus(v === ALL ? undefined : v)
             setPage(1)
           }}
         >
@@ -63,7 +65,7 @@ export default function EmailDeliveryLogPage() {
             <SelectValue placeholder={t("settings.deliveryLog.filterStatus")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">{t("settings.deliveryLog.filterStatus")}</SelectItem>
+            <SelectItem value={ALL}>{t("settings.deliveryLog.filterStatus")}</SelectItem>
             {STATUS_OPTIONS.map((s) => (
               <SelectItem key={s} value={s}>
                 {s}
@@ -73,9 +75,9 @@ export default function EmailDeliveryLogPage() {
         </Select>
 
         <Select
-          value={channel ?? ""}
+          value={channel ?? ALL}
           onValueChange={(v) => {
-            setChannel(v || undefined)
+            setChannel(v === ALL ? undefined : v)
             setPage(1)
           }}
         >
@@ -83,7 +85,7 @@ export default function EmailDeliveryLogPage() {
             <SelectValue placeholder={t("settings.deliveryLog.filterChannel")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">{t("settings.deliveryLog.filterChannel")}</SelectItem>
+            <SelectItem value={ALL}>{t("settings.deliveryLog.filterChannel")}</SelectItem>
             {CHANNEL_OPTIONS.map((c) => (
               <SelectItem key={c} value={c}>
                 {c}
