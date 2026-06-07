@@ -48,7 +48,7 @@ export function BookingsPageContent({
   const { data: stats, isLoading: statsLoading } = useBookingsStats()
 
   const refresh = () =>
-    queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
+    queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all, refetchType: "all" })
 
   const [creating, setCreating] = useState(newParam === "1")
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)

@@ -140,7 +140,7 @@ export function useTodayBookings(date: string) {
 export function useBookingMutations() {
   const queryClient = useQueryClient()
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
+    queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all, refetchType: "all" })
 
   const createMut = useMutation({
     mutationFn: createBooking,
