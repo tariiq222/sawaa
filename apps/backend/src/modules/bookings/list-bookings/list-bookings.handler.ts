@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListBookingsDto } from './list-bookings.dto';
@@ -45,6 +46,37 @@ export class ListBookingsHandler {
     }
 
     const searchTerm = query.search?.trim();
+
+    // Booking has no `client` relation (only a clientId column), so resolve the
+    // matching client IDs first (name / phone), then constrain bookings to them —
+    // same pattern as sourceClientWhere above.
+    let searchClientIds: string[] = [];
+    if (searchTerm) {
+      const tokens = searchTerm.split(/\s+/).filter(Boolean);
+      const orConditions: Prisma.ClientWhereInput[] = [
+        { firstName: { contains: searchTerm, mode: 'insensitive' } },
+        { lastName: { contains: searchTerm, mode: 'insensitive' } },
+        { phone: { contains: searchTerm, mode: 'insensitive' } },
+      ];
+      // Full name spanning firstName + lastName (e.g. "اختبار دفع 13855"):
+      // require every token to appear in either name field.
+      if (tokens.length > 1) {
+        orConditions.push({
+          AND: tokens.map((tok) => ({
+            OR: [
+              { firstName: { contains: tok, mode: 'insensitive' } },
+              { lastName: { contains: tok, mode: 'insensitive' } },
+            ],
+          })),
+        });
+      }
+      const matched = await this.prisma.client.findMany({
+        where: { OR: orConditions },
+        select: { id: true },
+      });
+      searchClientIds = matched.map((c) => c.id);
+    }
+
     const where: Record<string, unknown> = {
       ...sourceClientWhere,
       ...(query.clientId ? { clientId: query.clientId } : {}),
@@ -59,7 +91,17 @@ export class ListBookingsHandler {
         ? { scheduledAt: { gte: query.fromDate, lte: query.toDate } }
         : {}),
       ...(searchTerm
-        ? { id: { contains: searchTerm, mode: 'insensitive' as const } }
+        ? {
+            OR: [
+              { id: { contains: searchTerm, mode: 'insensitive' as const } },
+              ...(searchClientIds.length
+                ? [{ clientId: { in: searchClientIds } }]
+                : []),
+              ...(/^\d+$/.test(searchTerm)
+                ? [{ bookingNumber: Number(searchTerm) }]
+                : []),
+            ],
+          }
         : {}),
     };
 
