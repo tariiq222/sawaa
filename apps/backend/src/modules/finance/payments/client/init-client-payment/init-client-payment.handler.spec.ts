@@ -38,6 +38,8 @@ const buildPrisma = () => ({
     create: jest.fn().mockResolvedValue({ id: 'payment-1' }),
     update: jest.fn().mockResolvedValue({ id: 'payment-1' }),
     delete: jest.fn().mockResolvedValue({ id: 'payment-1' }),
+    // No prior COMPLETED payments by default → outstanding == total.
+    aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
   },
 });
 
@@ -222,5 +224,33 @@ describe('InitClientPaymentHandler', () => {
     const params = moyasar.createPayment.mock.calls[0][1];
     expect(params.amountHalalas).toBe(12000);
     expect(params.amountHalalas).not.toBe(1200000);
+  });
+
+  it('charges only the OUTSTANDING balance to Moyasar when a deposit was already collected', async () => {
+    const { handler, prisma, moyasar } = buildHandler();
+    prisma.invoice.findFirst.mockResolvedValue({ ...mockInvoice, total: 12000 });
+    // A 5000-halala deposit is already COMPLETED → outstanding = 7000.
+    prisma.payment.aggregate.mockResolvedValue({ _sum: { amount: 5000 } });
+
+    await handler.execute({ invoiceId, clientId });
+
+    const params = moyasar.createPayment.mock.calls[0][1];
+    expect(params.amountHalalas).toBe(7000);
+    expect(params.amountHalalas).not.toBe(12000);
+    // The PENDING Payment row must also carry the outstanding amount, not total.
+    expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ amount: 7000 }),
+    }));
+  });
+
+  it('throws BadRequestException when the invoice is already fully paid (outstanding <= 0)', async () => {
+    const { handler, prisma, moyasar } = buildHandler();
+    prisma.invoice.findFirst.mockResolvedValue({ ...mockInvoice, total: 12000 });
+    // COMPLETED payments already cover the full total → outstanding = 0.
+    prisma.payment.aggregate.mockResolvedValue({ _sum: { amount: 12000 } });
+
+    await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(BadRequestException);
+    expect(moyasar.createPayment).not.toHaveBeenCalled();
+    expect(prisma.payment.create).not.toHaveBeenCalled();
   });
 });

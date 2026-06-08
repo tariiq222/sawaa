@@ -32,10 +32,17 @@ interface MockPrisma {
     upsert: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
+    aggregate: jest.Mock;
   };
   invoice: {
     findFirst: jest.Mock;
     update: jest.Mock;
+  };
+  booking: {
+    findFirst: jest.Mock;
+  };
+  service: {
+    findFirst: jest.Mock;
   };
   organizationPaymentConfig: {
     findFirst: jest.Mock;
@@ -59,9 +66,21 @@ function buildPrisma(invoiceOverride?: Record<string, unknown> | null, configOve
   const paymentUpdate = jest.fn().mockImplementation(({ where, data }: { where: Record<string, unknown>; data: Record<string, unknown> }) =>
     Promise.resolve({ ...buildPayment(DEFAULT_ORG_ID), id: where.id, ...data }),
   );
-  const invoiceFindFirst = jest.fn().mockResolvedValue(
-    invoiceOverride === null ? null : invoiceOverride ?? buildInvoice(ORG_A),
-  );
+  const resolvedInvoice =
+    invoiceOverride === null ? null : invoiceOverride ?? buildInvoice(ORG_A);
+  // payment.aggregate sums COMPLETED payments for the invoice. The handler calls
+  // it twice: once BEFORE the write (prior COMPLETED total — 0 on a fresh invoice
+  // with no deposit) and once AFTER (the new total). The default models the
+  // common "no prior deposit, single full payment" case: first call → 0,
+  // subsequent calls → the full invoice total, so the invoice lands PAID.
+  const invoiceTotal = Number((resolvedInvoice as Record<string, unknown> | null)?.total ?? 0);
+  let aggregateCall = 0;
+  const paymentAggregate = jest.fn().mockImplementation(() => {
+    const sum = aggregateCall === 0 ? 0 : invoiceTotal;
+    aggregateCall += 1;
+    return Promise.resolve({ _sum: { amount: sum } });
+  });
+  const invoiceFindFirst = jest.fn().mockResolvedValue(resolvedInvoice);
   const invoiceUpdate = jest.fn().mockResolvedValue({ status: 'PAID' });
 
   const prisma: MockPrisma = {
@@ -71,10 +90,20 @@ function buildPrisma(invoiceOverride?: Record<string, unknown> | null, configOve
       upsert: paymentUpsert,
       create: paymentCreate,
       update: paymentUpdate,
+      aggregate: paymentAggregate,
     },
     invoice: {
       findFirst: invoiceFindFirst,
       update: invoiceUpdate,
+    },
+    // resolveInvoiceDeposit loads booking → service via scalar bookingId. Default
+    // to a service with NO deposit so the anti-spoof + event logic match the
+    // legacy "full-payment" flow unless a test overrides these mocks.
+    booking: {
+      findFirst: jest.fn().mockResolvedValue({ serviceId: 'svc-1' }),
+    },
+    service: {
+      findFirst: jest.fn().mockResolvedValue({ depositEnabled: false, depositAmount: null }),
     },
     organizationPaymentConfig: {
       findFirst: jest.fn().mockResolvedValue(
@@ -418,6 +447,156 @@ describe('MoyasarWebhookHandler', () => {
     });
   });
 
+  describe('execute — deposit top-up & partial payments (outstanding-aware)', () => {
+    it('accepts a top-up that pays the OUTSTANDING balance after a deposit → invoice PAID, event emitted', async () => {
+      // Invoice total 230, a 100-halala deposit was already COMPLETED, so the
+      // outstanding balance is 130. The card webhook pays exactly that 130.
+      const invoice = { ...buildInvoice(ORG_A), total: 230 };
+      const prisma = buildPrisma(invoice);
+      // pre-write aggregate: prior COMPLETED deposit = 100 → outstanding = 130.
+      // post-write aggregate: 100 + 130 = 230 → fully paid.
+      prisma.payment.aggregate = jest
+        .fn()
+        .mockResolvedValueOnce({ _sum: { amount: 100 } })
+        .mockResolvedValueOnce({ _sum: { amount: 230 } });
+      const { handler, eventBus } = makeHandler({
+        prisma,
+        fetchedPayment: { id: 'moyasar-pay-1', status: 'paid', amount: 130, currency: 'SAR' },
+      });
+
+      const result = await handler.execute(makeReq());
+
+      expect(result.skipped).toBeUndefined();
+      expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ amount: 130, status: 'COMPLETED' }),
+      }));
+      expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: 'PAID' }),
+      }));
+      expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ paidAt: expect.any(Date) }),
+      }));
+      expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.completed', expect.anything());
+    });
+
+    it('marks the invoice PARTIALLY_PAID (no paidAt, no event) when COMPLETED payments still fall short of the total', async () => {
+      // Invoice total 230. The webhook is for a 130-halala payment that matches
+      // the outstanding balance at validation time (a 100 deposit existed), so it
+      // is accepted. But the POST-write aggregate of COMPLETED payments is only
+      // 130 (e.g. the deposit row was voided/refunded concurrently) — strictly
+      // less than the 230 total. The defensive status derivation must therefore
+      // land the invoice on PARTIALLY_PAID, stamp NO paidAt, and emit NO event.
+      const invoice = { ...buildInvoice(ORG_A), total: 230 };
+      const prisma = buildPrisma(invoice);
+      // call 1 (pre-write anti-spoof): prior COMPLETED = 100 → outstanding = 130,
+      //   which equals the fetched amount, so it is accepted.
+      // call 2 (post-write status derivation): only 130 COMPLETED → 130 < 230.
+      prisma.payment.aggregate = jest
+        .fn()
+        .mockResolvedValueOnce({ _sum: { amount: 100 } })
+        .mockResolvedValueOnce({ _sum: { amount: 130 } });
+      const { handler, eventBus } = makeHandler({
+        prisma,
+        fetchedPayment: { id: 'moyasar-pay-1', status: 'paid', amount: 130, currency: 'SAR' },
+      });
+
+      const result = await handler.execute(makeReq());
+
+      expect(result.skipped).toBeUndefined();
+      expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ amount: 130, status: 'COMPLETED' }),
+      }));
+      expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: 'PARTIALLY_PAID' }),
+      }));
+      // PARTIALLY_PAID must NOT stamp paidAt.
+      const updateArg = prisma.invoice.update.mock.calls[0][0];
+      expect(updateArg.data.paidAt).toBeUndefined();
+      // No PaymentCompletedEvent until the invoice is fully PAID.
+      expect(eventBus.publish).not.toHaveBeenCalled();
+    });
+
+    it('rejects an amount that equals NEITHER the total NOR the outstanding (anti-spoof) — no create/update', async () => {
+      // Invoice total 230, a 100 deposit → outstanding 130. A spoofed webhook
+      // claims 200 (≠ 230 total, ≠ 130 outstanding). It must be rejected.
+      const invoice = { ...buildInvoice(ORG_A), total: 230 };
+      const prisma = buildPrisma(invoice);
+      prisma.payment.aggregate = jest
+        .fn()
+        .mockResolvedValue({ _sum: { amount: 100 } });
+      const { handler, eventBus } = makeHandler({
+        prisma,
+        fetchedPayment: { id: 'moyasar-pay-1', status: 'paid', amount: 200, currency: 'SAR' },
+      });
+
+      const result = await handler.execute(makeReq());
+
+      expect(result.skipped).toBe(true);
+      expect(result.reason).toBe('amount_mismatch');
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+      expect(prisma.invoice.update).not.toHaveBeenCalled();
+      expect(eventBus.publish).not.toHaveBeenCalled();
+    });
+
+    it('accepts the EXACT deposit on a deposit-enabled service (≠ full outstanding) → PARTIALLY_PAID + DepositPaidEvent', async () => {
+      // Invoice total 230, nothing collected yet. The service requires a
+      // 50-halala deposit. The card webhook pays exactly 50 — which is NOT the
+      // full 230 outstanding, so without the deposit relaxation the anti-spoof
+      // guard would reject it. It must be accepted, land PARTIALLY_PAID, and
+      // emit DepositPaidEvent (NOT PaymentCompletedEvent).
+      const invoice = { ...buildInvoice(ORG_A), total: 230 };
+      const prisma = buildPrisma(invoice);
+      prisma.service.findFirst = jest
+        .fn()
+        .mockResolvedValue({ depositEnabled: true, depositAmount: 50 });
+      // pre-write aggregate: 0 prior COMPLETED → outstanding 230.
+      // post-write aggregate: 50 COMPLETED → 50 < 230 → PARTIALLY_PAID.
+      prisma.payment.aggregate = jest
+        .fn()
+        .mockResolvedValueOnce({ _sum: { amount: 0 } })
+        .mockResolvedValueOnce({ _sum: { amount: 50 } });
+      const { handler, eventBus } = makeHandler({
+        prisma,
+        fetchedPayment: { id: 'moyasar-pay-1', status: 'paid', amount: 50, currency: 'SAR' },
+      });
+
+      const result = await handler.execute(makeReq());
+
+      expect(result.skipped).toBeUndefined();
+      expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ amount: 50, status: 'COMPLETED' }),
+      }));
+      expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ status: 'PARTIALLY_PAID' }),
+      }));
+      expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.deposit_paid', expect.anything());
+      expect(eventBus.publish).not.toHaveBeenCalledWith('finance.payment.completed', expect.anything());
+    });
+
+    it('rejects a below-deposit amount on a deposit-enabled service (anti-spoof) — no create/update', async () => {
+      // Service deposit is 50, outstanding is 230. A webhook claiming 30
+      // (< deposit, ≠ outstanding) must be rejected by the anti-spoof guard.
+      const invoice = { ...buildInvoice(ORG_A), total: 230 };
+      const prisma = buildPrisma(invoice);
+      prisma.service.findFirst = jest
+        .fn()
+        .mockResolvedValue({ depositEnabled: true, depositAmount: 50 });
+      prisma.payment.aggregate = jest.fn().mockResolvedValue({ _sum: { amount: 0 } });
+      const { handler, eventBus } = makeHandler({
+        prisma,
+        fetchedPayment: { id: 'moyasar-pay-1', status: 'paid', amount: 30, currency: 'SAR' },
+      });
+
+      const result = await handler.execute(makeReq());
+
+      expect(result.skipped).toBe(true);
+      expect(result.reason).toBe('amount_mismatch');
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+      expect(eventBus.publish).not.toHaveBeenCalled();
+    });
+  });
+
   describe('execute — permanent rejections drop-and-ack (no throw, no mutation)', () => {
     it('rejects a forged signature with a skip result — does NOT throw, does NOT mutate', async () => {
       const { handler, prisma, moyasarApi } = makeHandler();
@@ -536,10 +715,11 @@ describe('MoyasarWebhookHandler', () => {
 
     it('updates an existing payment found by gatewayRef instead of creating a duplicate', async () => {
       const prisma = buildPrisma();
+      // The same PENDING row is found by every gatewayRef lookup: the anti-spoof
+      // existing-row check, the REFUNDED guard, and the in-transaction lookup.
       prisma.payment.findFirst = jest
         .fn()
-        .mockResolvedValueOnce({ id: 'payment-existing', status: PaymentStatus.PENDING })
-        .mockResolvedValueOnce({ id: 'payment-existing' });
+        .mockResolvedValue({ id: 'payment-existing', status: PaymentStatus.PENDING });
       const { handler } = makeHandler({ prisma });
 
       await handler.execute(makeReq());

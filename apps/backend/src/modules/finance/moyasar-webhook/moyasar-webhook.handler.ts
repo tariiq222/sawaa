@@ -9,6 +9,8 @@ import { MoyasarCredentialsService } from '../../../infrastructure/payments/moya
 import { DEFAULT_ORG_ID, SINGLE_TENANT_CONTEXT_ID, SYSTEM_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../../common/constants';
 import { PaymentCompletedEvent } from '../events/payment-completed.event';
 import { PaymentFailedEvent } from '../events/payment-failed.event';
+import { DepositPaidEvent } from '../events/deposit-paid.event';
+import { resolveInvoiceDeposit, isDepositPayment } from '../deposit.helper';
 import { MoyasarWebhookDto } from './moyasar-webhook.dto';
 import { AppMetricsService } from '../../../infrastructure/telemetry/app-metrics.service';
 import { MoyasarApiClient, MoyasarPaymentStatus } from '../moyasar-api/moyasar-api.client';
@@ -274,14 +276,52 @@ export class MoyasarWebhookHandler {
         throw err;
       }
 
-      // Verify the re-fetched payment matches the invoice it claims to pay.
-      // invoice.total is already in halalas; Moyasar amount is in halalas.
-      const expectedHalalas = Math.round(Number(invoice.total));
-      if (fetched.amount !== expectedHalalas) {
+      // Verify the re-fetched payment matches the OUTSTANDING balance it claims
+      // to pay. invoice.total and Payment.amount are both in halalas; Moyasar
+      // amount is in halalas. An invoice may already carry a collected deposit,
+      // so the authoritative figure to match is the outstanding remainder
+      // (total − Σ COMPLETED), NOT the full total. Sum COMPLETED payments in
+      // system context (this is a read; the mutation transaction re-derives the
+      // figures below for atomicity).
+      const expectedTotal = Math.round(Number(invoice.total));
+      const { outstanding, alreadyPaid, hasExistingRow, depositAmount } = await this.cls.run(
+        async () => {
+          this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
+          const priorPaid = await this.prisma.payment.aggregate({
+            where: { invoiceId: invoice.id, status: PaymentStatus.COMPLETED },
+            _sum: { amount: true },
+          });
+          // A Payment row already keyed to THIS Moyasar payment means this is a
+          // retry / re-delivery of an event we already wrote (the row may itself
+          // be the COMPLETED one folded into priorPaid). Such retries must not be
+          // re-validated against a now-shrunken outstanding — they are exempt.
+          const existing = await this.prisma.payment.findFirst({
+            where: { OR: [{ gatewayRef: paymentId }, { idempotencyKey: `moyasar:${paymentId}` }] },
+            select: { id: true },
+          });
+          // Resolve the configured deposit for the invoice's service so a
+          // deposit-sized first payment is accepted by the anti-spoof guard.
+          const deposit = await resolveInvoiceDeposit(this.prisma, invoice.bookingId);
+          const paidSoFar = Number(priorPaid._sum?.amount ?? 0);
+          return {
+            outstanding: expectedTotal - paidSoFar,
+            alreadyPaid: paidSoFar,
+            hasExistingRow: existing !== null,
+            depositAmount: deposit.enabled ? deposit.depositAmount : null,
+          };
+        },
+      );
+      // Anti-spoof: a brand-new payment must match the outstanding balance
+      // exactly — OR, on a deposit-enabled service with no money collected yet,
+      // the exact configured deposit. Retries that re-fetch an existing payment
+      // row are exempt.
+      const acceptsDeposit =
+        depositAmount != null && alreadyPaid === 0 && fetched.amount === depositAmount;
+      if (!hasExistingRow && fetched.amount !== outstanding && !acceptsDeposit) {
         // Permanent: a spoofed/mismatched amount will never match on retry.
         this.logger.error(
           `Moyasar webhook rejected: amount mismatch for invoice ${invoice.id} ` +
-            `(expected=${expectedHalalas} fetched=${fetched.amount} payment=${paymentId})`,
+            `(outstanding=${outstanding} total=${expectedTotal} fetched=${fetched.amount} payment=${paymentId})`,
         );
         await this.markWebhookEvent(webhookEventRowId, 'error');
         return { skipped: true, reason: 'amount_mismatch' };
@@ -315,6 +355,9 @@ export class MoyasarWebhookHandler {
       // STAGE 8 — run mutations inside the default org compatibility CLS context.
       // Payment.amount is stored in halalas — fetched.amount is already halalas.
       const amountHalalas = fetched.amount;
+      // Σ COMPLETED payments AFTER the write — needed outside the tx to decide
+      // whether a deposit-sized partial payment should emit DepositPaidEvent.
+      let paidAfterWrite = 0;
       const result = await this.cls.run(async () => {
         this.cls.set(TENANT_CLS_KEY, {
           organizationId: DEFAULT_ORG_ID,
@@ -354,7 +397,7 @@ export class MoyasarWebhookHandler {
         // atomicity — if either fails, both roll back and no inconsistent state is stored.
         // `dbPaymentId` is the internal Payment ROW id; `paymentId` (above) is the
         // Moyasar gateway payment id — they are distinct values.
-        const dbPaymentId = await this.rlsTransaction.withTransaction(async (tx) => {
+        const { dbPaymentId, invoiceFullyPaid } = await this.rlsTransaction.withTransaction(async (tx) => {
           const payment = await tx.payment.findFirst({
             where: { OR: [{ gatewayRef: paymentId }, { idempotencyKey: `moyasar:${paymentId}` }] },
             orderBy: [{ gatewayRef: 'desc' }, { updatedAt: 'desc' }],
@@ -386,27 +429,71 @@ export class MoyasarWebhookHandler {
                 },
               });
 
+          let fullyPaid = false;
           if (status === PaymentStatus.COMPLETED) {
+            // P0: re-aggregate COMPLETED payments AFTER the write and derive the
+            // invoice status from the total collected — a top-up that only
+            // covers part of the balance must land PARTIALLY_PAID, not PAID.
+            // paidAt is stamped ONLY when the invoice is fully settled. Mirrors
+            // ProcessPaymentHandler so card and operator payments agree.
+            const totalPaid = await tx.payment.aggregate({
+              where: { invoiceId, status: PaymentStatus.COMPLETED },
+              _sum: { amount: true },
+            });
+            const paid = Number(totalPaid._sum?.amount ?? 0);
+            const total = Math.round(Number(invoice.total));
+            fullyPaid = paid >= total;
+            paidAfterWrite = paid;
             await tx.invoice.update({
               where: { id: invoiceId },
-              data: { status: 'PAID', paidAt: new Date() },
+              data: {
+                status: fullyPaid ? 'PAID' : 'PARTIALLY_PAID',
+                paidAt: fullyPaid ? new Date() : undefined,
+              },
             });
           }
 
-          return savedPayment.id;
+          return { dbPaymentId: savedPayment.id, invoiceFullyPaid: fullyPaid };
         });
 
         // Event emission is intentionally OUTSIDE the transaction:
         // - The payment and invoice are durably committed.
         // - If eventBus.publish fails, BullMQ will retry (at-least-once semantics).
         // - Consumers (e.g. booking confirmation) are idempotent.
+        //
+        // The success metric increments on ANY COMPLETED card payment (a partial
+        // top-up is still a successful charge), but PaymentCompletedEvent fires
+        // ONLY when the invoice is fully PAID — downstream consumers (booking
+        // confirmation, receipts) must not react to a still-outstanding invoice.
         if (status === PaymentStatus.COMPLETED) {
           this.appMetrics?.paymentAttempts.labels({ result: 'succeeded' }).inc();
+        }
+        if (status === PaymentStatus.COMPLETED && invoiceFullyPaid) {
           const event = new PaymentCompletedEvent({
             paymentId: dbPaymentId,
             invoiceId: invoice.id,
             bookingId: invoice.bookingId,
             bundlePurchaseId: invoice.bundlePurchaseId,
+            amount: amountHalalas,
+            currency: invoice.currency,
+            organizationId: DEFAULT_ORG_ID,
+          });
+          await this.eventBus.publish(event.eventName, event.toEnvelope());
+        } else if (
+          status === PaymentStatus.COMPLETED &&
+          isDepositPayment({
+            paidAfter: paidAfterWrite,
+            total: Math.round(Number(invoice.total)),
+            depositAmount,
+          })
+        ) {
+          // The card payment exactly matched the configured deposit and the
+          // invoice is still PARTIALLY_PAID — move the booking to DEPOSIT_PAID
+          // (reserving staff time) without confirming the appointment.
+          const event = new DepositPaidEvent({
+            paymentId: dbPaymentId,
+            invoiceId: invoice.id,
+            bookingId: invoice.bookingId,
             amount: amountHalalas,
             currency: invoice.currency,
             organizationId: DEFAULT_ORG_ID,

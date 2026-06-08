@@ -80,12 +80,29 @@ export class InitClientPaymentHandler {
       await this.prisma.payment.delete({ where: { id: existingPayment.id } });
     }
 
-    // invoice.total is already stored in halalas — send it to Moyasar verbatim.
-    const amountHalalas = Math.round(Number(invoice.total));
+    // P0: charge only the OUTSTANDING balance, not the full invoice total. An
+    // invoice may already carry a collected deposit (e.g. pay-at-clinic or a
+    // prior partial). Sending the full total to Moyasar would double-charge the
+    // deposit and the webhook would then reject the top-up as an amount_mismatch,
+    // making the invoice impossible to complete by card. Sum COMPLETED payments
+    // (the only authoritative paid status) and bill the remainder.
+    const previouslyPaid = await this.prisma.payment.aggregate({
+      where: { invoiceId: invoice.id, status: PaymentStatus.COMPLETED },
+      _sum: { amount: true },
+    });
+    const alreadyPaid = Number(previouslyPaid._sum?.amount ?? 0);
+    const outstanding = Math.round(Number(invoice.total)) - alreadyPaid;
+    if (outstanding <= 0) {
+      throw new BadRequestException('Invoice is already fully paid');
+    }
+
+    // invoice.total and Payment.amount are both stored in halalas — bill the
+    // outstanding remainder verbatim.
+    const amountHalalas = outstanding;
     const payment = await this.prisma.payment.create({
       data: {
         invoiceId: invoice.id,
-        amount: invoice.total,
+        amount: outstanding,
         currency: invoice.currency,
         method: PaymentMethod.ONLINE_CARD,
         status: PaymentStatus.PENDING,

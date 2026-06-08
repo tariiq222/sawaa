@@ -1,12 +1,28 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, RefundType } from '@prisma/client';
 import { ExpireBookingHandler } from './expire-booking.handler';
-import { buildPrisma, buildRlsTransaction, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, buildRlsTransaction, buildEventBus, mockBooking } from '../testing/booking-test-helpers';
+
+const buildRefundHandler = () => ({
+  createRefundRequestInTx: jest.fn(),
+});
+
+const newHandler = (
+  prisma: ReturnType<typeof buildPrisma>,
+  eventBus: ReturnType<typeof buildEventBus> = buildEventBus(),
+  refundHandler: ReturnType<typeof buildRefundHandler> = buildRefundHandler(),
+) =>
+  new ExpireBookingHandler(
+    prisma as never,
+    buildRlsTransaction(prisma) as never,
+    eventBus as never,
+    refundHandler as never,
+  );
 
 describe('ExpireBookingHandler', () => {
   it('expires PENDING booking', async () => {
     const prisma = buildPrisma();
-    await new ExpireBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'user-42' });
     expect(prisma.booking.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.EXPIRED }) }),
     );
@@ -16,7 +32,7 @@ describe('ExpireBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
     await expect(
-      new ExpireBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' }),
+      newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'user-42' }),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -24,7 +40,7 @@ describe('ExpireBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue(null);
     await expect(
-      new ExpireBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'bad', changedBy: 'user-42' }),
+      newHandler(prisma).execute({ bookingId: 'bad', changedBy: 'user-42' }),
     ).rejects.toThrow(NotFoundException);
   });
 });
@@ -33,7 +49,7 @@ describe('ExpireBookingHandler — group booking statuses', () => {
   it('expires PENDING_GROUP_FILL booking', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.PENDING_GROUP_FILL });
-    await new ExpireBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'system' });
+    await newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'system' });
     expect(prisma.booking.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.EXPIRED }) }),
     );
@@ -42,7 +58,7 @@ describe('ExpireBookingHandler — group booking statuses', () => {
   it('expires AWAITING_PAYMENT booking', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.AWAITING_PAYMENT });
-    await new ExpireBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'system' });
+    await newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'system' });
     expect(prisma.booking.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.EXPIRED }) }),
     );
@@ -52,7 +68,7 @@ describe('ExpireBookingHandler — group booking statuses', () => {
 describe('ExpireBookingHandler — status log', () => {
   it('writes a BookingStatusLog entry on expire', async () => {
     const prisma = buildPrisma();
-    const handler = new ExpireBookingHandler(prisma as never, buildRlsTransaction(prisma) as never);
+    const handler = newHandler(prisma);
 
     await handler.execute({ bookingId: 'book-1', changedBy: 'system' });
 
@@ -63,5 +79,63 @@ describe('ExpireBookingHandler — status log', () => {
         changedBy: 'system',
       }),
     });
+  });
+});
+
+describe('ExpireBookingHandler — deposit refund (MONEY-SAFETY P1)', () => {
+  it('creates a FULL refund request when a COMPLETED deposit payment exists', async () => {
+    const prisma = buildPrisma();
+    prisma.payment.findFirst = jest.fn().mockResolvedValue({ id: 'pay-1', amount: 10_000, refundedAmount: 0 });
+    const refundHandler = buildRefundHandler();
+    refundHandler.createRefundRequestInTx.mockResolvedValue({ refundRequestId: 'rr-1', idempotencyKey: 'ik-1' });
+
+    await newHandler(prisma, buildEventBus(), refundHandler).execute({ bookingId: 'book-1', changedBy: 'system' });
+
+    expect(refundHandler.createRefundRequestInTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        paymentId: 'pay-1',
+        reason: expect.stringContaining('book-1'),
+        performedBy: 'system',
+      }),
+    );
+    // FULL refund: amount omitted so the finance handler refunds the entire paid amount.
+    const call = refundHandler.createRefundRequestInTx.mock.calls[0][1];
+    expect(call.amount).toBeUndefined();
+  });
+
+  it('publishes BookingCancelledEvent carrying refundRequestId + idempotencyKey so the refund is finalized', async () => {
+    const prisma = buildPrisma();
+    prisma.payment.findFirst = jest.fn().mockResolvedValue({ id: 'pay-1', amount: 10_000, refundedAmount: 0 });
+    const eventBus = buildEventBus();
+    const refundHandler = buildRefundHandler();
+    refundHandler.createRefundRequestInTx.mockResolvedValue({ refundRequestId: 'rr-1', idempotencyKey: 'ik-1' });
+
+    await newHandler(prisma, eventBus, refundHandler).execute({ bookingId: 'book-1', changedBy: 'system' });
+
+    expect(eventBus.publish).toHaveBeenCalledWith(
+      'bookings.booking.cancelled',
+      expect.objectContaining({
+        source: 'bookings',
+        version: 1,
+        payload: expect.objectContaining({
+          bookingId: 'book-1',
+          refundType: RefundType.FULL,
+          paymentId: 'pay-1',
+          refundRequestId: 'rr-1',
+          idempotencyKey: 'ik-1',
+        }),
+      }),
+    );
+  });
+
+  it('does NOT create a refund request when there is no COMPLETED payment', async () => {
+    const prisma = buildPrisma();
+    prisma.payment.findFirst = jest.fn().mockResolvedValue(null);
+    const refundHandler = buildRefundHandler();
+
+    await newHandler(prisma, buildEventBus(), refundHandler).execute({ bookingId: 'book-1', changedBy: 'system' });
+
+    expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BookingStatus, Prisma } from '@prisma/client';
+import { BookingStatus, PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 
 /**
@@ -101,18 +101,44 @@ export class GroupSessionCapacityService {
 
     const bookingIds = awaitingPaymentBookings.map((b) => b.id);
 
-    // Roll back all AWAITING_PAYMENT bookings to PENDING_GROUP_FILL.
-    await tx.booking.updateMany({
-      where: { id: { in: bookingIds } },
-      data: {
-        status: BookingStatus.PENDING_GROUP_FILL,
-        expiresAt: null, // clear the payment deadline
+    // MONEY SAFETY: a booking may already have collected a (partial) deposit —
+    // its invoice will be PARTIALLY_PAID/PAID with a COMPLETED payment. Silently
+    // rolling such a booking back to PENDING_GROUP_FILL strands the client's
+    // money with no refund and no audit trail. We must NOT roll those back.
+    //
+    // NOTE: Booking has no `invoice` relation in Prisma — the link is a scalar
+    // FK (Invoice.bookingId). Load invoices independently keyed by bookingId,
+    // filtered to those carrying a COMPLETED payment.
+    const paidInvoices = await tx.invoice.findMany({
+      where: {
+        bookingId: { in: bookingIds },
+        payments: { some: { status: PaymentStatus.COMPLETED } },
       },
+      select: { bookingId: true },
     });
+    const paidBookingIds = new Set(
+      paidInvoices
+        .map((inv) => inv.bookingId)
+        .filter((id): id is string => id !== null),
+    );
 
-    // Create a status log entry for each rolled-back booking.
+    const unpaidBookingIds = bookingIds.filter((id) => !paidBookingIds.has(id));
+    const depositPaidBookingIds = bookingIds.filter((id) => paidBookingIds.has(id));
+
+    // Only roll back bookings that have NOT collected any money.
+    if (unpaidBookingIds.length > 0) {
+      await tx.booking.updateMany({
+        where: { id: { in: unpaidBookingIds } },
+        data: {
+          status: BookingStatus.PENDING_GROUP_FILL,
+          expiresAt: null, // clear the payment deadline
+        },
+      });
+    }
+
+    // Create a status log entry for each rolled-back (unpaid) booking.
     await Promise.all(
-      bookingIds.map((bookingId) =>
+      unpaidBookingIds.map((bookingId) =>
         tx.bookingStatusLog.create({
           data: {
             bookingId,
@@ -120,6 +146,25 @@ export class GroupSessionCapacityService {
             toStatus: BookingStatus.PENDING_GROUP_FILL,
             changedBy: 'system',
             reason: 'Group session capacity dropped below threshold after participant cancellation',
+          },
+        }),
+      ),
+    );
+
+    // For deposit-paid bookings we leave the status as AWAITING_PAYMENT but write
+    // a flagging log entry (from === to) so staff can intervene manually: the
+    // deposit must be refunded or the participant re-seated. We do NOT auto-revert
+    // because that would orphan collected money.
+    await Promise.all(
+      depositPaidBookingIds.map((bookingId) =>
+        tx.bookingStatusLog.create({
+          data: {
+            bookingId,
+            fromStatus: BookingStatus.AWAITING_PAYMENT,
+            toStatus: BookingStatus.AWAITING_PAYMENT,
+            changedBy: 'system',
+            reason:
+              'Group session dropped below minimum participants but a deposit was already collected — manual staff intervention required (refund or re-seat); booking left in AWAITING_PAYMENT',
           },
         }),
       ),
