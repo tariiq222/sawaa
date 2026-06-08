@@ -149,24 +149,7 @@ async function main() {
     },
   });
 
-  // 2. Branding singleton
-  const branding = await prisma.brandingConfig.findFirst();
-  if (!branding) {
-    await prisma.brandingConfig.create({
-      data: {
-        organizationNameAr: "سواء",
-        organizationNameEn: "Sawaa",
-        colorPrimary: "#14a89a",
-        colorPrimaryLight: "#2fc0b0",
-        colorPrimaryDark: "#098a7d",
-        colorAccent: "#ef7a6b",
-        colorAccentDark: "#d96050",
-        colorBackground: "#f5fbfa",
-      },
-    });
-  }
-
-  // 3. Organization settings singleton
+  // 2. Organization settings singleton
   const DEFAULT_ORG_ID = "00000000-0000-0000-0000-000000000001";
   const settings = await prisma.organizationSettings.findFirst();
   if (!settings) {
@@ -360,7 +343,6 @@ async function main() {
   console.log(`✔  Receptionist : ${RECEPTIONIST_EMAIL}`);
   console.log(`✔  Employee     : ${EMPLOYEE_EMAIL}`);
   console.log(`✔  Super admin  : ${SUPER_ADMIN_EMAIL}`);
-  console.log(`✔  Branding singleton ready`);
   console.log(`✔  OrganizationSettings singleton ready`);
   console.log(`✔  Main branch created`);
   console.log(`✔  BusinessHours seeded (Sun–Thu 09:00–17:00, Fri/Sat closed)`);
