@@ -31,7 +31,6 @@ import { VerifyPaymentHandler } from './verify-payment/verify-payment.handler';
 import { GroupSessionReadyHandler } from './group-session-ready/group-session-ready.handler';
 import { MoyasarApiClient } from './moyasar-api/moyasar-api.client';
 
-import { InitGuestPaymentHandler } from './payments/public/init-guest-payment/init-guest-payment.handler';
 import { InitClientPaymentHandler } from './payments/client/init-client-payment/init-client-payment.handler';
 import { RequestRefundHandler } from './refund-payment/request-refund.handler';
 import { ApproveRefundHandler } from './refund-payment/approve-refund.handler';
@@ -48,11 +47,13 @@ import { IssueInvoiceReceiptHandler } from './issue-invoice-receipt/issue-invoic
 import { SendInvoiceReceiptHandler } from './issue-invoice-receipt/send-invoice-receipt.handler';
 import { InvoicePdfRendererService } from './issue-invoice-receipt/invoice-pdf-renderer.service';
 import { GenerateInvoicePdfHandler } from './generate-invoice-pdf/generate-invoice-pdf.handler';
+import { ApplyInvoiceDiscountHandler } from './apply-invoice-discount/apply-invoice-discount.handler';
 
 const handlers = [
   CreateInvoiceHandler,
   GenerateInvoicePdfHandler,
   ProcessPaymentHandler,
+  ApplyInvoiceDiscountHandler,
   MoyasarWebhookHandler,
   BankTransferUploadHandler,
   ApplyCouponHandler,
@@ -71,7 +72,6 @@ const handlers = [
   RefundPaymentHandler,
   VerifyPaymentHandler,
   GroupSessionReadyHandler,
-  InitGuestPaymentHandler,
   InitClientPaymentHandler,
   RequestRefundHandler,
   ApproveRefundHandler,

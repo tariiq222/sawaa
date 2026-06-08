@@ -2,18 +2,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { PublicBookingsController } from './bookings.controller';
-import { CreateGuestBookingHandler } from '../../modules/bookings/public/create-guest-booking.handler';
+import { CreateBookingHandler } from '../../modules/bookings/create-booking/create-booking.handler';
 import { ListPublicGroupSessionsHandler } from '../../modules/bookings/public/list-public-group-sessions.handler';
 import { GetPublicGroupSessionHandler } from '../../modules/bookings/public/get-public-group-session.handler';
 import { BookGroupSessionHandler } from '../../modules/bookings/public/book-group-session.handler';
 import { GetBookingStatusHandler } from '../../modules/bookings/public/get-booking-status.handler';
-import { OtpSessionGuard } from '../../modules/identity/otp/otp-session.guard';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 
 describe('PublicBookingsController (e2e)', () => {
   let app: INestApplication;
 
-  const mockCreateGuest = { execute: jest.fn() };
+  const mockCreateBooking = { execute: jest.fn() };
   const mockListGroup = { execute: jest.fn() };
   const mockGetGroup = { execute: jest.fn() };
   const mockBookGroup = { execute: jest.fn() };
@@ -23,32 +22,18 @@ describe('PublicBookingsController (e2e)', () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [PublicBookingsController],
       providers: [
-        { provide: CreateGuestBookingHandler, useValue: mockCreateGuest },
+        { provide: CreateBookingHandler, useValue: mockCreateBooking },
         { provide: ListPublicGroupSessionsHandler, useValue: mockListGroup },
         { provide: GetPublicGroupSessionHandler, useValue: mockGetGroup },
         { provide: BookGroupSessionHandler, useValue: mockBookGroup },
         { provide: GetBookingStatusHandler, useValue: mockGetBookingStatus },
       ],
     })
-      .overrideGuard(OtpSessionGuard)
-      .useValue({
-        canActivate: (ctx: any) => {
-          const req = ctx.switchToHttp().getRequest();
-          req.otpSession = {
-            identifier: '+966501234567',
-            jti: 'otp-jti-1',
-            exp: Math.floor(Date.now() / 1000) + 1800,
-            channel: 'SMS',
-            purpose: 'GUEST_BOOKING',
-          };
-          return true;
-        },
-      })
       .overrideGuard(ClientSessionGuard)
       .useValue({
         canActivate: (ctx: any) => {
           const req = ctx.switchToHttp().getRequest();
-          req.user = { id: 'client-1', organizationId: 'org-1' };
+          req.user = { id: 'client-1', email: 'client@example.com', phone: '+966501234567' };
           return true;
         },
       })
@@ -69,16 +54,11 @@ describe('PublicBookingsController (e2e)', () => {
     jest.clearAllMocks();
   });
 
-  const validGuestBooking = {
+  const validBooking = {
     serviceId: '00000000-0000-4000-a000-000000000001',
     employeeId: '00000000-0000-4000-a000-000000000002',
     branchId: '00000000-0000-4000-a000-000000000003',
     startsAt: '2026-12-31T09:00:00Z',
-    client: {
-      name: 'أحمد محمد',
-      phone: '+966501234567',
-      email: 'client@example.com',
-    },
   };
 
   describe('GET /public/bookings/group-sessions', () => {
@@ -148,58 +128,58 @@ describe('PublicBookingsController (e2e)', () => {
   });
 
   describe('POST /public/bookings', () => {
-    it('returns 201 on valid guest booking', async () => {
-      mockCreateGuest.execute.mockResolvedValue({ id: 'booking-1', status: 'PENDING' });
+    it('returns 201 on a valid booking and uses the session clientId', async () => {
+      mockCreateBooking.execute.mockResolvedValue({ id: 'booking-1', status: 'CONFIRMED' });
 
       const res = await request(app.getHttpServer())
         .post('/public/bookings')
-        .set('Authorization', 'Bearer fake-otp-session')
-        .send(validGuestBooking)
+        .set('Authorization', 'Bearer fake-client-session')
+        .send(validBooking)
         .expect(201);
 
       expect(res.body.id).toBe('booking-1');
-      expect(mockCreateGuest.execute).toHaveBeenCalledWith(
+      // clientId MUST come from the session, never the request body.
+      expect(mockCreateBooking.execute).toHaveBeenCalledWith(
         expect.objectContaining({
           serviceId: '00000000-0000-4000-a000-000000000001',
-          identifier: '+966501234567',
-          sessionJti: 'otp-jti-1',
-          sessionChannel: 'SMS',
+          employeeId: '00000000-0000-4000-a000-000000000002',
+          branchId: '00000000-0000-4000-a000-000000000003',
+          clientId: 'client-1',
         }),
       );
+      const arg = mockCreateBooking.execute.mock.calls[0][0];
+      expect(arg.scheduledAt).toBeInstanceOf(Date);
     });
 
     it('returns 400 for missing required fields', async () => {
       return request(app.getHttpServer())
         .post('/public/bookings')
-        .set('Authorization', 'Bearer fake-otp-session')
+        .set('Authorization', 'Bearer fake-client-session')
         .send({ serviceId: '00000000-0000-4000-a000-000000000001' })
-        .expect(400);
-    });
-
-    it('returns 400 for invalid client email', async () => {
-      return request(app.getHttpServer())
-        .post('/public/bookings')
-        .set('Authorization', 'Bearer fake-otp-session')
-        .send({
-          ...validGuestBooking,
-          client: { ...validGuestBooking.client, email: 'not-an-email' },
-        })
         .expect(400);
     });
 
     it('returns 400 for invalid startsAt', async () => {
       return request(app.getHttpServer())
         .post('/public/bookings')
-        .set('Authorization', 'Bearer fake-otp-session')
-        .send({ ...validGuestBooking, startsAt: 'tomorrow' })
+        .set('Authorization', 'Bearer fake-client-session')
+        .send({ ...validBooking, startsAt: 'tomorrow' })
+        .expect(400);
+    });
+
+    it('rejects a clientId in the body as an unknown field', async () => {
+      return request(app.getHttpServer())
+        .post('/public/bookings')
+        .set('Authorization', 'Bearer fake-client-session')
+        .send({ ...validBooking, clientId: '00000000-0000-4000-a000-000000000099' })
         .expect(400);
     });
 
     it('returns 400 for unknown fields', async () => {
       return request(app.getHttpServer())
         .post('/public/bookings')
-        .set('Authorization', 'Bearer fake-otp-session')
-        .send({ ...validGuestBooking, extra: 'bad' })
+        .set('Authorization', 'Bearer fake-client-session')
+        .send({ ...validBooking, extra: 'bad' })
         .expect(400);
     });
   });

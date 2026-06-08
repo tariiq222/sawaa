@@ -1,10 +1,13 @@
-import { IsDateString, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
-import { Transform, Type } from 'class-transformer';
+import { IsDateString, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { BookingType, ClientGender, DeliveryType } from '@prisma/client';
-import { NormalizePhone } from '../../identity/shared/normalize-phone.transform';
+import { BookingType, DeliveryType } from '@prisma/client';
 import { mapDeliveryType } from '../booking-enum-transforms';
 
+/**
+ * Keep validation permissive for legacy delivery aliases sent as bookingType.
+ * The handler normalizes to (BookingType, DeliveryType).
+ */
 const mapBookingType = (v: unknown) => {
   if (typeof v !== 'string' || !v) return v;
   const lower = v.toLowerCase();
@@ -12,34 +15,15 @@ const mapBookingType = (v: unknown) => {
   return v.toUpperCase();
 };
 
-export class GuestClientInfoDto {
-  @ApiProperty({ description: 'Client full name', example: 'أحمد محمد' })
-  @IsString()
-  @IsNotEmpty()
-  name!: string;
-
-  @ApiProperty({ description: 'Phone number (any common format; normalized to E.164)', example: '+966501234567' })
-  @IsString()
-  @IsNotEmpty()
-  @NormalizePhone()
-  phone!: string;
-
-  @ApiProperty({ description: 'Email address', example: 'client@example.com' })
-  @IsEmail()
-  email!: string;
-
-  @ApiPropertyOptional({ enum: ClientGender, description: 'Client gender' })
-  @IsOptional()
-  @IsEnum(ClientGender)
-  gender?: ClientGender;
-
-  @ApiPropertyOptional({ description: 'Additional notes for the booking', example: 'First visit' })
-  @IsOptional()
-  @IsString()
-  notes?: string;
-}
-
-export class CreateGuestBookingDto {
+/**
+ * Public website booking input for an AUTHENTICATED client.
+ *
+ * SECURITY: `clientId` is intentionally NOT part of this DTO — it is taken from
+ * the verified client session (ClientSessionGuard), never from the request body.
+ * The previous guest-booking flow (raw name/phone/email + OTP session) has been
+ * removed: a full client account + login is now required before booking.
+ */
+export class CreatePublicBookingDto {
   @ApiProperty({ description: 'Service ID', example: '00000000-0000-0000-0000-000000000001' })
   @IsUUID()
   serviceId!: string;
@@ -65,9 +49,9 @@ export class CreateGuestBookingDto {
   @ApiPropertyOptional({ description: 'Booking type (legacy — prefer deliveryType)', enum: BookingType, enumName: 'BookingType', example: BookingType.INDIVIDUAL })
   @IsOptional() @Transform(({ value }) => mapBookingType(value)) @IsString() bookingType?: BookingType | 'ONLINE';
 
-  @ApiProperty({ description: 'Client information', type: GuestClientInfoDto })
-  @IsNotEmpty()
-  @ValidateNested()
-  @Type(() => GuestClientInfoDto)
-  client!: GuestClientInfoDto;
+  @ApiPropertyOptional({ description: 'Discount coupon code', example: 'SAVE10' })
+  @IsOptional() @IsString() couponCode?: string;
+
+  @ApiPropertyOptional({ description: 'Additional notes for the booking', example: 'First visit' })
+  @IsOptional() @IsString() notes?: string;
 }

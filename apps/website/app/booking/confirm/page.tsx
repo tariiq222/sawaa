@@ -16,6 +16,7 @@ interface BookingStatus {
 type ConfirmState =
   | { phase: 'loading' }
   | { phase: 'success'; bookingId: string }
+  | { phase: 'deposit_paid'; bookingId: string }
   | { phase: 'failed'; bookingId: string | null }
   | { phase: 'pending'; bookingId: string };
 
@@ -46,6 +47,12 @@ function ConfirmContent() {
         );
 
         if (cancelled) return;
+
+        if (data.status === 'DEPOSIT_PAID') {
+          // Deposit paid: slot is reserved, a balance remains due. Terminal — stop polling.
+          setState({ phase: 'deposit_paid', bookingId: bookingId! });
+          return;
+        }
 
         if (data.paymentStatus === 'COMPLETED' || data.status === 'CONFIRMED') {
           setState({ phase: 'success', bookingId: bookingId! });
@@ -107,6 +114,35 @@ function ConfirmContent() {
         >
           {t('booking.bookAnother')}
         </Link>
+      </div>
+    );
+  }
+
+  if (state.phase === 'deposit_paid') {
+    return (
+      <div style={{ textAlign: 'center', padding: '3rem' }}>
+        <div aria-hidden style={{ display: 'inline-flex', marginBottom: '1.5rem', color: 'var(--primary)' }}>
+          <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M8 12.5l2.5 2.5 5.5-6" />
+          </svg>
+        </div>
+        <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>{t('booking.depositPaid')}</h1>
+        <p style={{ opacity: 0.7, marginBottom: '2rem' }}>{t('booking.depositPaidDesc')}</p>
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link
+            href="/account/bookings"
+            style={{ padding: '0.875rem 2rem', background: 'var(--primary)', color: 'white', borderRadius: 'var(--radius)', fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
+          >
+            {t('booking.viewBookings')}
+          </Link>
+          <Link
+            href="/booking"
+            style={{ padding: '0.875rem 2rem', background: 'transparent', color: 'var(--primary)', borderRadius: 'var(--radius)', fontWeight: 600, textDecoration: 'none', display: 'inline-block', border: '1.5px solid color-mix(in srgb, var(--primary) 35%, transparent)' }}
+          >
+            {t('booking.bookAnother')}
+          </Link>
+        </div>
       </div>
     );
   }

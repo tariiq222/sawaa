@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { PublicPaymentsController } from './payments.controller';
-import { InitGuestPaymentHandler } from '../../modules/finance/payments/public/init-guest-payment/init-guest-payment.handler';
-import { OtpSessionGuard } from '../../modules/identity/otp/otp-session.guard';
+import { InitClientPaymentHandler } from '../../modules/finance/payments/client/init-client-payment/init-client-payment.handler';
+import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 
 describe('PublicPaymentsController (e2e)', () => {
   let app: INestApplication;
@@ -14,14 +14,14 @@ describe('PublicPaymentsController (e2e)', () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [PublicPaymentsController],
       providers: [
-        { provide: InitGuestPaymentHandler, useValue: mockInitPayment },
+        { provide: InitClientPaymentHandler, useValue: mockInitPayment },
       ],
     })
-      .overrideGuard(OtpSessionGuard)
+      .overrideGuard(ClientSessionGuard)
       .useValue({
         canActivate: (ctx: any) => {
           const req = ctx.switchToHttp().getRequest();
-          req.otpSession = { identifier: '+966500000000', jti: 'jti-test', purpose: 'GUEST_BOOKING', channel: 'SMS', organizationId: null };
+          req.user = { id: 'client-1', email: 'client@example.com', phone: '+966500000000' };
           return true;
         },
       })
@@ -43,7 +43,7 @@ describe('PublicPaymentsController (e2e)', () => {
   });
 
   describe('POST /public/payments/init', () => {
-    it('returns 201 on valid init payment', async () => {
+    it('returns 201 and binds the session clientId to the invoice', async () => {
       mockInitPayment.execute.mockResolvedValue({
         paymentId: 'pay-1',
         redirectUrl: 'https://pay.example.com',
@@ -51,20 +51,24 @@ describe('PublicPaymentsController (e2e)', () => {
 
       const res = await request(app.getHttpServer())
         .post('/public/payments/init')
-        .set('Authorization', 'Bearer fake-otp-session')
-        .send({ bookingId: '00000000-0000-4000-a000-000000000001' })
+        .set('Authorization', 'Bearer fake-client-session')
+        .send({ invoiceId: '00000000-0000-4000-a000-000000000001' })
         .expect(201);
 
       expect(res.body.paymentId).toBe('pay-1');
+      // clientId MUST come from the session, never the request body.
       expect(mockInitPayment.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ bookingId: '00000000-0000-4000-a000-000000000001' }),
+        expect.objectContaining({
+          invoiceId: '00000000-0000-4000-a000-000000000001',
+          clientId: 'client-1',
+        }),
       );
     });
 
-    it('returns 400 for missing bookingId', async () => {
+    it('returns 400 for missing invoiceId', async () => {
       return request(app.getHttpServer())
         .post('/public/payments/init')
-        .set('Authorization', 'Bearer fake-otp-session')
+        .set('Authorization', 'Bearer fake-client-session')
         .send({})
         .expect(400);
     });
@@ -72,16 +76,16 @@ describe('PublicPaymentsController (e2e)', () => {
     it('returns 400 for invalid UUID', async () => {
       return request(app.getHttpServer())
         .post('/public/payments/init')
-        .set('Authorization', 'Bearer fake-otp-session')
-        .send({ bookingId: 'not-a-uuid' })
+        .set('Authorization', 'Bearer fake-client-session')
+        .send({ invoiceId: 'not-a-uuid' })
         .expect(400);
     });
 
     it('returns 400 for unknown fields', async () => {
       return request(app.getHttpServer())
         .post('/public/payments/init')
-        .set('Authorization', 'Bearer fake-otp-session')
-        .send({ bookingId: '00000000-0000-4000-a000-000000000001', extra: 'bad' })
+        .set('Authorization', 'Bearer fake-client-session')
+        .send({ invoiceId: '00000000-0000-4000-a000-000000000001', extra: 'bad' })
         .expect(400);
     });
   });

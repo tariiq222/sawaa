@@ -11,14 +11,13 @@ import { SlotPicker } from '@/features/booking/slot-picker';
 import { BranchStep } from '@/features/booking/branch-step';
 import { ClientInfoStep } from '@/features/booking/client-info-step';
 import { DateStrip } from '@/features/booking/date-strip';
-import { useOtpSession } from '@/features/otp/use-otp-session';
 import { publicFetch } from '@/lib/public-fetch';
 import {
   getPublicAvailability,
   getPublicAvailabilityDays,
   getPublicBranches,
-  createGuestBooking,
-  initGuestPayment,
+  createBooking,
+  initPayment,
   type PublicBranch,
 } from '@/features/booking/booking.api';
 import { PaymentRedirect } from '@/features/payment/payment-redirect';
@@ -295,7 +294,6 @@ function BookingWizardInner() {
     redirectUrl,
     bookingId,
   } = ui;
-  const { token } = useOtpSession();
 
   const { data: employees = [], isLoading: loadingEmployees, error: employeesError } = useQuery({
     queryKey: ['public', 'employees'],
@@ -912,30 +910,29 @@ function BookingWizardInner() {
           service={service}
           employee={employee}
           onBack={() => dispatch({ type: 'SELECT_EMPLOYEE', employee })}
-          onSubmitInfo={async (client) => {
-            if (!token) return;
+          onSubmitInfo={async () => {
             dispatchUi({ type: 'SUBMIT_START' });
             try {
               if (!effectiveBranchId) {
                 dispatchUi({ type: 'SUBMIT_ERROR', error: t('booking.errors.missingBranch') });
                 return;
               }
-              const booking = await createGuestBooking(
-                {
-                  serviceId: service.id,
-                  employeeId: employee.id,
-                  branchId: effectiveBranchId,
-                  startsAt: slot.startTime,
-                  durationOptionId: selectedChoice?.durationOptionId,
-                  deliveryType: selectedChoice?.deliveryType,
-                  client,
-                },
-                token,
-              );
-              const payment = await initGuestPayment(booking.bookingId, token);
+              const booking = await createBooking({
+                serviceId: service.id,
+                employeeId: employee.id,
+                branchId: effectiveBranchId,
+                startsAt: slot.startTime,
+                durationOptionId: selectedChoice?.durationOptionId,
+                deliveryType: selectedChoice?.deliveryType,
+              });
+              if (!booking.invoiceId) {
+                dispatchUi({ type: 'SUBMIT_ERROR', error: t('common.bookingFailed') });
+                return;
+              }
+              const payment = await initPayment(booking.invoiceId);
               dispatchUi({
                 type: 'SUBMIT_DONE',
-                bookingId: booking.bookingId,
+                bookingId: booking.id,
                 redirectUrl: payment.redirectUrl,
               });
             } catch (err) {

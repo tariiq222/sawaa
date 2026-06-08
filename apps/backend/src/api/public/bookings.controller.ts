@@ -1,25 +1,22 @@
-import { Controller, Post, Get, Body, UseGuards, Param, Query, ParseUUIDPipe, Req } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, Param, Query, ParseUUIDPipe } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiParam, ApiOkResponse, ApiCreatedResponse, ApiResponse } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
-import { CreateGuestBookingHandler } from '../../modules/bookings/public/create-guest-booking.handler';
-import { CreateGuestBookingDto } from '../../modules/bookings/public/create-guest-booking.dto';
-import { OtpSessionGuard } from '../../modules/identity/otp/otp-session.guard';
+import { CreateBookingHandler } from '../../modules/bookings/create-booking/create-booking.handler';
+import { CreatePublicBookingDto } from '../../modules/bookings/public/create-public-booking.dto';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 import { ClientSession } from '../../common/auth/client-session.decorator';
 import { ListPublicGroupSessionsHandler } from '../../modules/bookings/public/list-public-group-sessions.handler';
 import { GetPublicGroupSessionHandler } from '../../modules/bookings/public/get-public-group-session.handler';
 import { BookGroupSessionHandler } from '../../modules/bookings/public/book-group-session.handler';
 import { GetBookingStatusHandler } from '../../modules/bookings/public/get-booking-status.handler';
-import type { OtpSessionPayload } from '../../modules/identity/otp/otp-session.service';
-import type { Request } from 'express';
 @ApiTags('Public / Bookings')
 @ApiPublicResponses()
 @Controller('public/bookings')
 export class PublicBookingsController {
   constructor(
-    private readonly createGuestBookingHandler: CreateGuestBookingHandler,
+    private readonly createBookingHandler: CreateBookingHandler,
     private readonly listGroupSessions: ListPublicGroupSessionsHandler,
     private readonly getGroupSession: GetPublicGroupSessionHandler,
     private readonly bookGroupSession: BookGroupSessionHandler,
@@ -77,21 +74,35 @@ export class PublicBookingsController {
   }
 
   @Public()
-  @UseGuards(OtpSessionGuard)
-  @Throttle({ default: { ttl: 60_000, limit: 1 } })
+  @ApiBearerAuth()
+  @UseGuards(ClientSessionGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post()
-  @ApiOperation({ summary: 'Create a guest booking (requires OTP session)' })
+  @ApiOperation({ summary: 'Create a booking (requires a logged-in client session)' })
+  @ApiCreatedResponse({
+    description: 'Booking created',
+    schema: {
+      type: 'object',
+      additionalProperties: true,
+      properties: { invoiceId: { type: 'string', format: 'uuid', nullable: true } },
+    },
+  })
   async create(
-    @Body() dto: CreateGuestBookingDto,
-    @Req() req: Request,
+    @Body() dto: CreatePublicBookingDto,
+    @ClientSession() client: { id: string },
   ) {
-    const session = (req as Request & { otpSession: OtpSessionPayload }).otpSession;
-    return this.createGuestBookingHandler.execute({
-      ...dto,
-      identifier: session.identifier,
-      sessionJti: session.jti,
-      sessionExp: session.exp ?? Math.floor(Date.now() / 1000) + 1800,
-      sessionChannel: session.channel,
+    // SECURITY: clientId comes from the verified client session, never the body.
+    return this.createBookingHandler.execute({
+      clientId: client.id,
+      branchId: dto.branchId,
+      employeeId: dto.employeeId,
+      serviceId: dto.serviceId,
+      scheduledAt: new Date(dto.startsAt),
+      durationOptionId: dto.durationOptionId,
+      bookingType: dto.bookingType,
+      deliveryType: dto.deliveryType,
+      couponCode: dto.couponCode,
+      notes: dto.notes,
     });
   }
 }

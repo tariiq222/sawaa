@@ -1,36 +1,46 @@
-import { Controller, Post, Body, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import type { Request } from 'express';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiCreatedResponse } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
-import { OtpSessionGuard } from '../../modules/identity/otp/otp-session.guard';
-import { InitGuestPaymentHandler } from '../../modules/finance/payments/public/init-guest-payment/init-guest-payment.handler';
-import { InitGuestPaymentDto } from '../../modules/finance/payments/public/init-guest-payment/init-guest-payment.dto';
-import type { OtpSessionPayload } from '../../modules/identity/otp/otp-session.service';
+import { ClientSessionGuard } from '../../common/guards/client-session.guard';
+import { ClientSession } from '../../common/auth/client-session.decorator';
+import { InitClientPaymentHandler } from '../../modules/finance/payments/client/init-client-payment/init-client-payment.handler';
+import { InitClientPaymentDto } from '../../modules/finance/payments/client/init-client-payment/init-client-payment.dto';
 
 @ApiTags('Public / Payments')
 @ApiPublicResponses()
 @Controller('public/payments')
 export class PublicPaymentsController {
-  constructor(private readonly initGuestPayment: InitGuestPaymentHandler) {}
+  constructor(private readonly initClientPayment: InitClientPaymentHandler) {}
 
   @Public()
-  @UseGuards(OtpSessionGuard)
-  @Throttle({ default: { ttl: 60_000, limit: 1 } })
+  @ApiBearerAuth()
+  @UseGuards(ClientSessionGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('init')
-  @ApiOperation({ summary: 'Initialize a Moyasar payment for a guest booking (requires OTP session)' })
+  @ApiOperation({ summary: 'Initialize a Moyasar payment for a booking invoice (requires a logged-in client session)' })
+  @ApiCreatedResponse({
+    description: 'Payment initialized',
+    schema: {
+      type: 'object',
+      required: ['paymentId', 'redirectUrl'],
+      properties: {
+        paymentId: { type: 'string', format: 'uuid' },
+        redirectUrl: { type: 'string', example: 'https://checkout.moyasar.com/pay/payment-id' },
+      },
+    },
+  })
   async initPayment(
-    @Body() dto: InitGuestPaymentDto,
-    @Req() req: Request & { otpSession?: OtpSessionPayload },
+    @Body() dto: InitClientPaymentDto,
+    @ClientSession() client: { id: string },
   ) {
-    // SECURITY (P0-9): OtpSessionGuard places the verified payload on req.otpSession.
-    const session = req.otpSession;
-    if (!session) throw new UnauthorizedException('OTP session missing');
-    return this.initGuestPayment.execute({
-      ...dto,
-      otpIdentifier: session.identifier,
-      otpJti: session.jti,
+    // SECURITY: the invoice is bound to the authenticated client by the handler
+    // (ForbiddenException if the invoice does not belong to this client).
+    return this.initClientPayment.execute({
+      clientId: client.id,
+      invoiceId: dto.invoiceId,
+      method: dto.method,
     });
   }
 }
