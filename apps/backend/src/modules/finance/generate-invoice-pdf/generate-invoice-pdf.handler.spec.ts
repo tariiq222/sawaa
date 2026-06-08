@@ -34,6 +34,9 @@ describe('GenerateInvoicePdfHandler', () => {
           sellerAddress: null,
         }),
       },
+      brandingConfig: {
+        findFirst: jest.fn().mockResolvedValue({ logoUrl: null, colorPrimary: null }),
+      },
       client: {
         findUnique: jest.fn().mockResolvedValue({ firstName: 'فاطمة', lastName: '' }),
       },

@@ -1,37 +1,26 @@
+import { PLATFORM_BRAND } from '@sawaa/shared';
 import { GetPublicBrandingHandler } from './get-public-branding.handler';
 
-const mockRow = {
-  id: 'some-uuid',
-  organizationNameAr: 'عيادتي',
-  organizationNameEn: 'My Clinic',
-  productTagline: null,
-  logoUrl: null,
-  faviconUrl: null,
-  colorPrimary: '#354FD8',
-  colorPrimaryLight: null,
-  colorPrimaryDark: null,
-  colorAccent: null,
-  colorAccentDark: null,
-  colorBackground: null,
-  fontFamily: null,
-  fontUrl: null,
-  customCss: null,
-  websiteDomain: null,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
-
-const buildPrisma = (row: typeof mockRow | null = mockRow, timeFormat = '12h') => ({
-  brandingConfig: {
-    findFirst: jest.fn().mockResolvedValue(row),
+const buildPrisma = (
+  settings: {
+    companyNameAr?: string | null;
+    companyNameEn?: string | null;
+    productTagline?: string | null;
+    timeFormat?: string;
+  } | null = {
+    companyNameAr: 'عيادتي',
+    companyNameEn: 'My Clinic',
+    productTagline: 'شعارنا',
+    timeFormat: '12h',
   },
+) => ({
   organizationSettings: {
-    findFirst: jest.fn().mockResolvedValue({ timeFormat }),
+    findFirst: jest.fn().mockResolvedValue(settings),
   },
 });
 
 describe('GetPublicBrandingHandler', () => {
-  it('maps the Prisma row to PublicBranding shape', async () => {
+  it('returns the editable identity from OrganizationSettings with fixed colors/font', async () => {
     const prisma = buildPrisma();
     const handler = new GetPublicBrandingHandler(prisma as never);
 
@@ -40,22 +29,20 @@ describe('GetPublicBrandingHandler', () => {
     expect(result).toEqual({
       organizationNameAr: 'عيادتي',
       organizationNameEn: 'My Clinic',
-      productTagline: null,
+      productTagline: 'شعارنا',
       logoUrl: null,
       faviconUrl: null,
-      colorPrimary: '#354FD8',
-      colorPrimaryLight: null,
-      colorPrimaryDark: null,
-      colorAccent: null,
-      colorAccentDark: null,
-      colorBackground: null,
-      fontFamily: null,
+      colorPrimary: PLATFORM_BRAND.colors.primary,
+      colorPrimaryLight: PLATFORM_BRAND.colors.primaryLight,
+      colorPrimaryDark: PLATFORM_BRAND.colors.primaryDark,
+      colorAccent: PLATFORM_BRAND.colors.accent,
+      colorAccentDark: PLATFORM_BRAND.colors.accentDark,
+      colorBackground: PLATFORM_BRAND.colors.background,
+      fontFamily: 'Handicrafts',
       fontUrl: null,
-      websiteDomain: null,
       timeFormat: '12h',
     });
-    expect(result).not.toHaveProperty('customCss');
-    expect(result).not.toHaveProperty('id');
+    expect(result).not.toHaveProperty('websiteDomain');
   });
 
   it('reads via findFirst (no write)', async () => {
@@ -64,19 +51,28 @@ describe('GetPublicBrandingHandler', () => {
 
     await handler.execute();
 
-    expect(prisma.brandingConfig.findFirst).toHaveBeenCalledWith({
-      orderBy: { createdAt: 'desc' },
-    });
+    expect(prisma.organizationSettings.findFirst).toHaveBeenCalled();
+    expect((prisma.organizationSettings as never as { create?: unknown }).create).toBeUndefined();
   });
 
-  it('returns safe defaults when no row exists (does not create one)', async () => {
+  it('falls back to platform defaults when settings are empty', async () => {
     const prisma = buildPrisma(null);
     const handler = new GetPublicBrandingHandler(prisma as never);
 
     const result = await handler.execute();
 
-    expect(result.organizationNameAr).toBe('منظمتي');
-    expect(result.colorPrimary).toBeNull();
-    expect((prisma.brandingConfig as any).create).toBeUndefined();
+    expect(result.organizationNameAr).toBe(PLATFORM_BRAND.nameAr);
+    expect(result.organizationNameEn).toBe(PLATFORM_BRAND.nameEn);
+    expect(result.productTagline).toBe(PLATFORM_BRAND.taglineAr);
+    expect(result.colorPrimary).toBe(PLATFORM_BRAND.colors.primary);
+  });
+
+  it('defaults timeFormat to 12h for invalid values', async () => {
+    const prisma = buildPrisma({ companyNameAr: 'x', timeFormat: 'weird' });
+    const handler = new GetPublicBrandingHandler(prisma as never);
+
+    const result = await handler.execute();
+
+    expect(result.timeFormat).toBe('12h');
   });
 });

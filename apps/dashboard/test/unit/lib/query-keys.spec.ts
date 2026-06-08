@@ -112,15 +112,6 @@ describe("queryKeys", () => {
     })
   })
 
-  describe("branding", () => {
-    it("config returns stable key", () => {
-      expect(queryKeys.branding.config()).toEqual(["branding", "config"])
-    })
-
-    it("all returns base key", () => {
-      expect(queryKeys.branding.all).toEqual(["branding"])
-    })
-  })
 
   describe("intakeForms", () => {
     it("responses includes bookingId", () => {

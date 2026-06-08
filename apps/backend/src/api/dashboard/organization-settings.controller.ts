@@ -1,13 +1,10 @@
 import {
   Controller, Get, Post, Patch, Put, Delete, Body, Param, Query,
   UseGuards, ParseUUIDPipe, HttpCode, HttpStatus,
-  UseInterceptors, UploadedFile, BadRequestException,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags, ApiBearerAuth, ApiOperation, ApiParam,
   ApiOkResponse, ApiCreatedResponse, ApiNoContentResponse, ApiResponse,
-  ApiConsumes, ApiBody,
 } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../common/swagger';
 import { PrismaService } from '../../infrastructure/database';
@@ -27,9 +24,6 @@ import { SetServiceBookingConfigsHandler } from '../../modules/org-experience/se
 import { SetServiceBookingConfigsDto } from '../../modules/org-experience/services/set-service-booking-configs.dto';
 import { GetServiceBookingConfigsHandler } from '../../modules/org-experience/services/get-service-booking-configs.handler';
 import { ListServiceEmployeesHandler } from '../../modules/org-experience/services/list-service-employees.handler';
-import { UpsertBrandingHandler } from '../../modules/org-experience/branding/upsert-branding.handler';
-import { UpsertBrandingDto } from '../../modules/org-experience/branding/upsert-branding.dto';
-import { GetBrandingHandler } from '../../modules/org-experience/branding/get-branding.handler';
 import { CreateIntakeFormHandler } from '../../modules/org-experience/intake-forms/create-intake-form.handler';
 import { CreateIntakeFormDto } from '../../modules/org-experience/intake-forms/create-intake-form.dto';
 import { GetIntakeFormHandler } from '../../modules/org-experience/intake-forms/get-intake-form.handler';
@@ -55,7 +49,6 @@ import { UpsertOrgSettingsDto } from '../../modules/org-experience/org-settings/
 import { GetBookingSettingsHandler } from '../../modules/bookings/get-booking-settings/get-booking-settings.handler';
 import { UpsertBookingSettingsHandler } from '../../modules/bookings/upsert-booking-settings/upsert-booking-settings.handler';
 import { UpsertBookingSettingsDto } from '../../modules/bookings/upsert-booking-settings/upsert-booking-settings.dto';
-import { UploadLogoHandler } from '../../modules/org-experience/branding/upload-logo/upload-logo.handler';
 import { CreateBundleHandler } from '../../modules/org-experience/bundles/create-bundle.handler';
 import { CreateBundleDto } from '../../modules/org-experience/bundles/create-bundle.dto';
 import { UpdateBundleHandler } from '../../modules/org-experience/bundles/update-bundle.handler';
@@ -77,9 +70,6 @@ export class DashboardOrganizationSettingsController {
     private readonly listServices: ListServicesHandler,
     private readonly getService: GetServiceHandler,
     private readonly archiveService: ArchiveServiceHandler,
-    private readonly upsertBranding: UpsertBrandingHandler,
-    private readonly getBranding: GetBrandingHandler,
-    private readonly uploadLogo: UploadLogoHandler,
     private readonly createIntakeForm: CreateIntakeFormHandler,
     private readonly getIntakeForm: GetIntakeFormHandler,
     private readonly listIntakeForms: ListIntakeFormsHandler,
@@ -265,45 +255,6 @@ export class DashboardOrganizationSettingsController {
   @ApiResponse({ status: 404, description: 'Bundle not found' })
   archiveBundleEndpoint(@Param('bundleId', ParseUUIDPipe) bundleId: string) {
     return this.archiveBundle.execute({ bundleId });
-  }
-
-  // ── Branding ──────────────────────────────────────────────────────────────
-
-  @Post('branding')
-  @CheckPermissions({ action: 'update', subject: 'Branding' })
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Upsert clinic branding' })
-  @ApiOkResponse({ description: 'Branding saved' })
-  upsertBrandingEndpoint(@Body() body: UpsertBrandingDto) {
-    return this.upsertBranding.execute(body);
-  }
-
-  @Get('branding')
-  @CheckPermissions({ action: 'read', subject: 'Branding' })
-  @ApiOperation({ summary: 'Get clinic branding' })
-  @ApiOkResponse({ description: 'Current branding config' })
-  getBrandingEndpoint() {
-    return this.getBranding.execute();
-  }
-
-  @Post('branding/logo')
-  @CheckPermissions({ action: 'update', subject: 'Branding' })
-  @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiOperation({ summary: 'Upload clinic logo' })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } } })
-  @ApiCreatedResponse({ description: 'Logo uploaded, URL returned' })
-  uploadLogoEndpoint(@UploadedFile() file: Express.Multer.File | undefined) {
-    if (!file) throw new BadRequestException('No file uploaded');
-    return this.uploadLogo.execute(
-      {
-        filename: file.originalname,
-        mimetype: file.mimetype,
-        size: file.size,
-      },
-      file.buffer,
-    );
   }
 
   // ── Intake Forms ──────────────────────────────────────────────────────────

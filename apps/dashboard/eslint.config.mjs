@@ -29,7 +29,6 @@ const FEATURES = [
   "ratings",
   "reports",
   "settings",
-  "branding",
   "activity-log",
   "groups",
   "contact-messages",

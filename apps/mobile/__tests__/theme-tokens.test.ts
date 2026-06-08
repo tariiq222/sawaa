@@ -26,11 +26,11 @@ describe('Theme Tokens System', () => {
     expect(SawaaText.heading).toBeDefined();
   });
 
-  it('uses Sawaa defaults for the locked Sawaa token fallback', () => {
-    expect(sawaaTokens.primary.light).toBe('#354FD8');
-    expect(sawaaTokens.primary.dark).toBe('#2438B0');
-    expect(sawaaTokens.accent.light).toBe('#82CC17');
-    expect(sawaaTokens.accent.dark).toBe('#5A9010');
+  it('uses the fixed teal + beige palette for the locked Sawa tokens', () => {
+    expect(sawaaTokens.primary.light).toBe('#55CCB0');
+    expect(sawaaTokens.primary.dark).toBe('#0E4B43');
+    expect(sawaaTokens.accent.light).toBe('#E7DBC4');
+    expect(sawaaTokens.accent.dark).toBe('#CAAF7B');
   });
 
   it('should NOT contain hardcoded hex colors in component definitions', () => {

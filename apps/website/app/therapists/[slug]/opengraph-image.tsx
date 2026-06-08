@@ -48,7 +48,7 @@ export default async function OpenGraphImage({
             left: 0,
             right: 0,
             height: '200px',
-            backgroundColor: '#354FD8',
+            backgroundColor: '#55CCB0',
           }}
         />
         <div
@@ -97,7 +97,7 @@ export default async function OpenGraphImage({
             style={{
               fontSize: '24px',
               fontWeight: 600,
-              color: '#354FD8',
+              color: '#0E4B43',
             }}
           >
             {branding.organizationNameAr}

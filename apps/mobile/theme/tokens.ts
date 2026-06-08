@@ -8,27 +8,21 @@ import {
   animations,
 } from '@sawaa/shared/tokens';
 
-function isValidColor(value: string | null | undefined): value is string {
-  return typeof value === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(value);
-}
+// Fixed brand palette (teal + beige). Branding colors are no longer dynamic —
+// these are locked in code and ignore the PublicBranding API response.
+const FIXED_PRIMARY = '#55CCB0';
+const FIXED_ACCENT = '#E7DBC4';
+const FIXED_BACKGROUND = '#EAF8F4';
 
-export function buildTheme(branding?: PublicBranding | null) {
-  const primary = isValidColor(branding?.colorPrimary)
-    ? branding.colorPrimary
-    : colors.primary[600];
-  const accent = isValidColor(branding?.colorAccent)
-    ? branding.colorAccent
-    : colors.secondary[500];
-  const background = isValidColor(branding?.colorBackground)
-    ? branding.colorBackground
-    : colors.gray[50];
-
+// `branding` is still accepted so call sites don't break, but theme colors are
+// always the fixed palette above — the argument is intentionally unused.
+export function buildTheme(_branding?: PublicBranding | null) {
   return {
     colors: {
       ...colors,
-      primary,
-      accent,
-      background,
+      primary: FIXED_PRIMARY,
+      accent: FIXED_ACCENT,
+      background: FIXED_BACKGROUND,
     },
     typography,
     spacing,

@@ -1,14 +1,14 @@
 import { buildTheme } from '../tokens';
 
 describe('buildTheme', () => {
-  it('falls back to Sawaa platform defaults when no branding is loaded', () => {
+  it('uses the fixed teal + beige palette when no branding is loaded', () => {
     const t = buildTheme();
-    expect(t.colors.primary).toBe('#354FD8');
-    expect(t.colors.accent).toBe('#82CC17');
-    expect(t.colors.background).toBe('#F7F9FB');
+    expect(t.colors.primary).toBe('#55CCB0');
+    expect(t.colors.accent).toBe('#E7DBC4');
+    expect(t.colors.background).toBe('#EAF8F4');
   });
 
-  it('overrides primary/accent/background from valid branding', () => {
+  it('ignores branding colors and keeps the fixed palette', () => {
     const t = buildTheme({
       organizationNameAr: 'م',
       organizationNameEn: null,
@@ -23,33 +23,10 @@ describe('buildTheme', () => {
       colorBackground: '#fafafa',
       fontFamily: null,
       fontUrl: null,
-      websiteDomain: null,
+      timeFormat: '24h',
     });
-    expect(t.colors.primary).toBe('#aabbcc');
-    expect(t.colors.accent).toBe('#112233');
-    expect(t.colors.background).toBe('#fafafa');
-  });
-
-  it('ignores invalid color strings and keeps defaults', () => {
-    const fallback = buildTheme();
-    const t = buildTheme({
-      organizationNameAr: 'م',
-      organizationNameEn: null,
-      productTagline: null,
-      logoUrl: null,
-      faviconUrl: null,
-      colorPrimary: 'not-a-color',
-      colorPrimaryLight: null,
-      colorPrimaryDark: null,
-      colorAccent: '',
-      colorAccentDark: null,
-      colorBackground: null,
-      fontFamily: null,
-      fontUrl: null,
-      websiteDomain: null,
-    });
-    expect(t.colors.primary).toBe(fallback.colors.primary);
-    expect(t.colors.accent).toBe(fallback.colors.accent);
-    expect(t.colors.background).toBe(fallback.colors.background);
+    expect(t.colors.primary).toBe('#55CCB0');
+    expect(t.colors.accent).toBe('#E7DBC4');
+    expect(t.colors.background).toBe('#EAF8F4');
   });
 });

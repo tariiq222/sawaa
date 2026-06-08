@@ -4,7 +4,7 @@
  * Two layers exist by design:
  *   1. `formatClinicDate(date, format)` in lib/utils.ts — used by booking
  *      tables/columns where the clinic's configured date format
- *      (Y-m-d / d/m/Y / m/d/Y from BrandingConfig) is the source of truth.
+ *      (Y-m-d / d/m/Y / m/d/Y from OrganizationSettings) is the source of truth.
  *      Wrapped by `useOrganizationConfig().formatDate` for the common case.
  *   2. `formatLocaleDate(date, locale, options?)` (this file) — used by
  *      free-form list rows / charts / detail sheets where locale matters

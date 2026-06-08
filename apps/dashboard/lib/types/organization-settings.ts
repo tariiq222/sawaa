@@ -6,6 +6,7 @@ export interface OrganizationSettings {
   id: string
   companyNameAr: string | null
   companyNameEn: string | null
+  productTagline: string | null
   businessRegistration: string | null
   vatRegistrationNumber: string | null
   vatRate: number

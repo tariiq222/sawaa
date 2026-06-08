@@ -45,29 +45,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={dir}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <BrandingStyle branding={branding} />
-        {branding.fontUrl ? (
-          <>
-            <link rel="preload" as="style" href={branding.fontUrl} />
-            <link rel="stylesheet" href={branding.fontUrl} />
-          </>
-        ) : (
-          <>
-            {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-            <link
-              rel="preload"
-              as="style"
-              href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap"
-            />
-            {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-            <link
-              rel="stylesheet"
-              href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap"
-            />
-          </>
-        )}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: medicalBusinessSchema }}

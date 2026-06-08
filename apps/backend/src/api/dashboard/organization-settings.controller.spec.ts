@@ -11,9 +11,6 @@ import { SetDurationOptionsHandler } from '../../modules/org-experience/services
 import { SetServiceBookingConfigsHandler } from '../../modules/org-experience/services/set-service-booking-configs.handler';
 import { GetServiceBookingConfigsHandler } from '../../modules/org-experience/services/get-service-booking-configs.handler';
 import { ListServiceEmployeesHandler } from '../../modules/org-experience/services/list-service-employees.handler';
-import { UpsertBrandingHandler } from '../../modules/org-experience/branding/upsert-branding.handler';
-import { GetBrandingHandler } from '../../modules/org-experience/branding/get-branding.handler';
-import { UploadLogoHandler } from '../../modules/org-experience/branding/upload-logo/upload-logo.handler';
 import { CreateIntakeFormHandler } from '../../modules/org-experience/intake-forms/create-intake-form.handler';
 import { GetIntakeFormHandler } from '../../modules/org-experience/intake-forms/get-intake-form.handler';
 import { ListIntakeFormsHandler } from '../../modules/org-experience/intake-forms/list-intake-forms.handler';
@@ -49,9 +46,6 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
   const mockSetServiceBookingConfigs = { execute: jest.fn() };
   const mockGetServiceBookingConfigs = { execute: jest.fn() };
   const mockListServiceEmployees = { execute: jest.fn() };
-  const mockUpsertBranding = { execute: jest.fn() };
-  const mockGetBranding = { execute: jest.fn() };
-  const mockUploadLogo = { execute: jest.fn() };
   const mockCreateIntakeForm = { execute: jest.fn() };
   const mockGetIntakeForm = { execute: jest.fn() };
   const mockListIntakeForms = { execute: jest.fn() };
@@ -86,9 +80,6 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
         { provide: SetServiceBookingConfigsHandler, useValue: mockSetServiceBookingConfigs },
         { provide: GetServiceBookingConfigsHandler, useValue: mockGetServiceBookingConfigs },
         { provide: ListServiceEmployeesHandler, useValue: mockListServiceEmployees },
-        { provide: UpsertBrandingHandler, useValue: mockUpsertBranding },
-        { provide: GetBrandingHandler, useValue: mockGetBranding },
-        { provide: UploadLogoHandler, useValue: mockUploadLogo },
         { provide: CreateIntakeFormHandler, useValue: mockCreateIntakeForm },
         { provide: GetIntakeFormHandler, useValue: mockGetIntakeForm },
         { provide: ListIntakeFormsHandler, useValue: mockListIntakeForms },

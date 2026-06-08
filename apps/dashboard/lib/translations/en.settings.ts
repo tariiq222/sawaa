@@ -267,6 +267,8 @@ export const enSettings: Record<string, string> = {
   "settings.entity.vatHint": "Required to show the ZATCA barcode on client invoices. If empty, invoices print without the barcode.",
   "settings.entity.companyNameAr": "Company Name (Arabic)",
   "settings.entity.companyNameEn": "Company Name (English)",
+  "settings.entity.productTagline": "Tagline",
+  "settings.entity.productTaglineHint": "Short text shown under the center name on the website and emails.",
   "settings.entity.businessRegistration": "Business Registration (CR)",
   "settings.entity.vatRegistration": "VAT Registration Number",
   "settings.entity.vatRate": "VAT Rate %",

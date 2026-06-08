@@ -1,58 +1,44 @@
 import { Injectable } from '@nestjs/common';
-import type { PublicBranding } from '@sawaa/shared';
+import { type PublicBranding, PLATFORM_BRAND } from '@sawaa/shared';
 import { PrismaService } from '../../../../infrastructure/database';
 
+/**
+ * Public branding endpoint. Colors, font, logo and favicon are now fixed in the
+ * apps — this only surfaces the editable identity (org name + tagline) and the
+ * display time format, both sourced from OrganizationSettings. The color/font
+ * fields are returned as the fixed platform values so any remaining consumer
+ * stays in sync; new code should read the static tokens directly.
+ */
 @Injectable()
 export class GetPublicBrandingHandler {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(): Promise<PublicBranding> {
-    const [row, settings] = await Promise.all([
-      this.prisma.brandingConfig.findFirst({
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.organizationSettings.findFirst({
-        select: { timeFormat: true },
-      }),
-    ]);
+    const settings = await this.prisma.organizationSettings.findFirst({
+      select: {
+        companyNameAr: true,
+        companyNameEn: true,
+        productTagline: true,
+        timeFormat: true,
+      },
+    });
 
     const timeFormat = (settings?.timeFormat === '24h' ? '24h' : '12h') as '12h' | '24h';
 
-    if (!row) {
-      return {
-        organizationNameAr: 'منظمتي',
-        organizationNameEn: null,
-        productTagline: null,
-        logoUrl: null,
-        faviconUrl: null,
-        colorPrimary: null,
-        colorPrimaryLight: null,
-        colorPrimaryDark: null,
-        colorAccent: null,
-        colorAccentDark: null,
-        colorBackground: null,
-        fontFamily: null,
-        fontUrl: null,
-        websiteDomain: null,
-        timeFormat,
-      };
-    }
-
     return {
-      organizationNameAr: row.organizationNameAr,
-      organizationNameEn: row.organizationNameEn,
-      productTagline: row.productTagline,
-      logoUrl: row.logoUrl,
-      faviconUrl: row.faviconUrl,
-      colorPrimary: row.colorPrimary,
-      colorPrimaryLight: row.colorPrimaryLight,
-      colorPrimaryDark: row.colorPrimaryDark,
-      colorAccent: row.colorAccent,
-      colorAccentDark: row.colorAccentDark,
-      colorBackground: row.colorBackground,
-      fontFamily: row.fontFamily,
-      fontUrl: row.fontUrl,
-      websiteDomain: row.websiteDomain,
+      organizationNameAr: settings?.companyNameAr?.trim() || PLATFORM_BRAND.nameAr,
+      organizationNameEn: settings?.companyNameEn?.trim() || PLATFORM_BRAND.nameEn,
+      productTagline: settings?.productTagline?.trim() || PLATFORM_BRAND.taglineAr,
+      logoUrl: null,
+      faviconUrl: null,
+      colorPrimary: PLATFORM_BRAND.colors.primary,
+      colorPrimaryLight: PLATFORM_BRAND.colors.primaryLight,
+      colorPrimaryDark: PLATFORM_BRAND.colors.primaryDark,
+      colorAccent: PLATFORM_BRAND.colors.accent,
+      colorAccentDark: PLATFORM_BRAND.colors.accentDark,
+      colorBackground: PLATFORM_BRAND.colors.background,
+      fontFamily: 'Handicrafts',
+      fontUrl: null,
       timeFormat,
     };
   }

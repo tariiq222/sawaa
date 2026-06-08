@@ -267,6 +267,8 @@ export const arSettings: Record<string, string> = {
   "settings.entity.vatHint": "مطلوب لظهور باركود ZATCA على فواتير العملاء. لو فاضي، الفاتورة تطلع بدون باركود.",
   "settings.entity.companyNameAr": "اسم الشركة (عربي)",
   "settings.entity.companyNameEn": "اسم الشركة (إنجليزي)",
+  "settings.entity.productTagline": "الشعار الفرعي",
+  "settings.entity.productTaglineHint": "نص قصير يظهر تحت اسم المركز في الموقع والإيميلات.",
   "settings.entity.businessRegistration": "السجل التجاري",
   "settings.entity.vatRegistration": "رقم التسجيل الضريبي",
   "settings.entity.vatRate": "نسبة الضريبة %",

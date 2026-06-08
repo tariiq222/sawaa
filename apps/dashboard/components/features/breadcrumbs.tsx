@@ -79,7 +79,6 @@ function generateBreadcrumbs(pathname: string, t: (key: string) => string): Brea
     "intake-forms": t("nav.intakeForms"),
     "contact-messages": t("nav.contactMessages"),
     content: t("nav.content"),
-    branding: t("nav.branding"),
     profile: t("nav.profile"),
     create: t("nav.create"),
     edit: t("nav.edit"),

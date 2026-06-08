@@ -17,23 +17,29 @@ const branding: PublicBranding = {
   colorBackground: null,
   fontFamily: null,
   fontUrl: null,
-  websiteDomain: null,
   timeFormat: '24h',
 };
 
 describe('BrandingStyle', () => {
-  it('emits the primary color as a CSS variable', () => {
+  it('emits the fixed primary color, ignoring branding values', () => {
     const { container } = render(<BrandingStyle branding={branding} />);
     const style = container.querySelector('style');
-    expect(style?.innerHTML).toContain('--primary: #FF00AA');
+    expect(style?.innerHTML).toContain('--primary: #55CCB0');
+    expect(style?.innerHTML).not.toContain('#FF00AA');
   });
 
-  it('falls back to defaults when a field is null', () => {
-    const { container } = render(
-      <BrandingStyle branding={{ ...branding, colorAccent: null }} />,
-    );
-    expect(container.querySelector('style')?.innerHTML).toContain(
-      '--accent: #82CC17',
-    );
+  it('emits the fixed accent color and Handicrafts font', () => {
+    const { container } = render(<BrandingStyle branding={branding} />);
+    const html = container.querySelector('style')?.innerHTML ?? '';
+    expect(html).toContain('--accent: #E7DBC4');
+    expect(html).toContain("--font-primary: 'Handicrafts', system-ui, sans-serif");
+  });
+
+  it('declares the local Handicrafts @font-face faces', () => {
+    const { container } = render(<BrandingStyle branding={branding} />);
+    const html = container.querySelector('style')?.innerHTML ?? '';
+    expect(html).toContain('@font-face');
+    expect(html).toContain('/fonts/Handicrafts-Regular.woff2');
+    expect(html).toContain('font-display: swap');
   });
 });

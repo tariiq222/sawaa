@@ -198,12 +198,6 @@ export const queryKeys = {
     detail: (slug: string) => ["email-templates", "detail", slug] as const,
   },
 
-  /* ─── Branding ─── */
-  branding: {
-    all: ["branding"] as const,
-    config: () => ["branding", "config"] as const,
-  },
-
   /* ─── Waitlist ─── */
   waitlist: {
     all: ["waitlist"] as const,

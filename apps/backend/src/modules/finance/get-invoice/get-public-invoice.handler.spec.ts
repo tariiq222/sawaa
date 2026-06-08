@@ -26,10 +26,10 @@ const mockInvoice = {
 describe('GetPublicInvoiceHandler', () => {
   const buildPrisma = (invoice: typeof mockInvoice | null = mockInvoice) => ({
     invoice: { findFirst: jest.fn().mockResolvedValue(invoice) },
-    brandingConfig: {
+    organizationSettings: {
       findFirst: jest.fn().mockResolvedValue({
-        organizationNameEn: 'Fallback Clinic',
-        organizationNameAr: 'عيادة احتياطية',
+        companyNameEn: 'Fallback Clinic',
+        companyNameAr: 'عيادة احتياطية',
       }),
     },
   });
@@ -49,23 +49,23 @@ describe('GetPublicInvoiceHandler', () => {
     expect(result.total).toBe(103.5);
   });
 
-  it('returns the seller name from BrandingConfig (English preferred)', async () => {
+  it('returns the seller name from OrganizationSettings (English preferred)', async () => {
     const prisma = buildPrisma();
     const handler = new GetPublicInvoiceHandler(prisma as never);
 
     const result = await handler.execute('inv-1', 'client-1');
 
-    expect(prisma.brandingConfig.findFirst).toHaveBeenCalledWith({
-      select: { organizationNameEn: true, organizationNameAr: true },
+    expect(prisma.organizationSettings.findFirst).toHaveBeenCalledWith({
+      select: { companyNameEn: true, companyNameAr: true },
     });
     expect(result.sellerName).toBe('Fallback Clinic');
   });
 
-  it('falls back to Arabic branding name when English is missing', async () => {
+  it('falls back to Arabic company name when English is missing', async () => {
     const prisma = buildPrisma();
-    prisma.brandingConfig.findFirst.mockResolvedValueOnce({
-      organizationNameEn: null,
-      organizationNameAr: 'عيادة احتياطية',
+    prisma.organizationSettings.findFirst.mockResolvedValueOnce({
+      companyNameEn: null,
+      companyNameAr: 'عيادة احتياطية',
     });
     const handler = new GetPublicInvoiceHandler(prisma as never);
 
@@ -73,11 +73,11 @@ describe('GetPublicInvoiceHandler', () => {
     expect(result.sellerName).toBe('عيادة احتياطية');
   });
 
-  it('falls back to "Sawaa" when branding has no names', async () => {
+  it('falls back to "Sawaa" when settings have no names', async () => {
     const prisma = buildPrisma();
-    prisma.brandingConfig.findFirst.mockResolvedValueOnce({
-      organizationNameEn: null,
-      organizationNameAr: null,
+    prisma.organizationSettings.findFirst.mockResolvedValueOnce({
+      companyNameEn: null,
+      companyNameAr: null,
     });
     const handler = new GetPublicInvoiceHandler(prisma as never);
 

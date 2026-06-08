@@ -26,10 +26,10 @@ const mockInvoice = {
 describe('GetBookingInvoiceHandler', () => {
   const buildPrisma = (invoice: typeof mockInvoice | null = mockInvoice) => ({
     invoice: { findFirst: jest.fn().mockResolvedValue(invoice) },
-    brandingConfig: {
+    organizationSettings: {
       findFirst: jest.fn().mockResolvedValue({
-        organizationNameEn: 'Fallback Clinic',
-        organizationNameAr: 'عيادة احتياطية',
+        companyNameEn: 'Fallback Clinic',
+        companyNameAr: 'عيادة احتياطية',
       }),
     },
   });
@@ -49,14 +49,14 @@ describe('GetBookingInvoiceHandler', () => {
     expect(result.total).toBe(103.5);
   });
 
-  it('returns the seller name from BrandingConfig', async () => {
+  it('returns the seller name from OrganizationSettings', async () => {
     const prisma = buildPrisma();
     const handler = new GetBookingInvoiceHandler(prisma as never);
 
     const result = await handler.execute('booking-1', 'client-1');
 
-    expect(prisma.brandingConfig.findFirst).toHaveBeenCalledWith({
-      select: { organizationNameEn: true, organizationNameAr: true },
+    expect(prisma.organizationSettings.findFirst).toHaveBeenCalledWith({
+      select: { companyNameEn: true, companyNameAr: true },
     });
     expect(result.sellerName).toBe('Fallback Clinic');
   });

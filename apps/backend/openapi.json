@@ -409,7 +409,8 @@
           "COMPLETED",
           "NO_SHOW",
           "EXPIRED",
-          "CANCEL_REQUESTED"
+          "CANCEL_REQUESTED",
+          "DEPOSIT_PAID"
         ],
         "type": "string"
       },
@@ -5320,89 +5321,6 @@
         },
         "type": "object"
       },
-      "UpsertBrandingDto": {
-        "properties": {
-          "colorAccent": {
-            "description": "Accent / highlight color (hex)",
-            "example": "#82CC17",
-            "type": "string"
-          },
-          "colorAccentDark": {
-            "description": "Darker shade of the accent color (hex)",
-            "example": "#5A8F0F",
-            "type": "string"
-          },
-          "colorBackground": {
-            "description": "Default background color (hex)",
-            "example": "#F8F9FF",
-            "type": "string"
-          },
-          "colorPrimary": {
-            "description": "Primary brand color (hex)",
-            "example": "#354FD8",
-            "type": "string"
-          },
-          "colorPrimaryDark": {
-            "description": "Darker shade of the primary color (hex)",
-            "example": "#1E3AB8",
-            "type": "string"
-          },
-          "colorPrimaryLight": {
-            "description": "Lighter tint of the primary color (hex)",
-            "example": "#6B7FE3",
-            "type": "string"
-          },
-          "customCss": {
-            "description": "Custom CSS injected into the clinic app",
-            "example": ":root { --radius: 8px; }",
-            "type": "string"
-          },
-          "faviconUrl": {
-            "description": "Favicon image URL",
-            "example": "https://example.com/favicon.ico",
-            "type": "string"
-          },
-          "fontFamily": {
-            "description": "Font family name",
-            "example": "IBM Plex Sans Arabic",
-            "type": "string"
-          },
-          "fontUrl": {
-            "description": "Font file or stylesheet URL",
-            "example": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic",
-            "type": "string"
-          },
-          "logoUrl": {
-            "description": "Logo image URL",
-            "example": "https://example.com/logo.png",
-            "type": "string"
-          },
-          "organizationNameAr": {
-            "description": "Organization name in Arabic",
-            "example": "عيادة الرعاية",
-            "type": "string"
-          },
-          "organizationNameEn": {
-            "description": "Organization name in English",
-            "example": "Sawaa Clinic",
-            "type": "string"
-          },
-          "productTagline": {
-            "description": "Product tagline shown under the organization name",
-            "example": "نحو رعاية أفضل",
-            "type": "string"
-          },
-          "websiteDomain": {
-            "description": "Public website domain (hostname)",
-            "example": "clinic.example.com",
-            "type": "object"
-          }
-        },
-        "required": [
-          "organizationNameAr"
-        ],
-        "type": "object"
-      },
       "UpsertChatbotConfigDto": {
         "properties": {
           "escalateToHumanAt": {
@@ -5698,6 +5616,11 @@
           },
           "privacyPolicyEn": {
             "description": "Privacy policy in English",
+            "type": "string"
+          },
+          "productTagline": {
+            "description": "Product tagline / subtitle",
+            "example": "مركز الاستشارات الأسرية",
             "type": "string"
           },
           "reminderBeforeMinutes": {
@@ -16891,210 +16814,6 @@
         "summary": "Unassign an employee from a branch",
         "tags": [
           "Dashboard / Org Config"
-        ]
-      }
-    },
-    "/api/v1/dashboard/organization/branding": {
-      "get": {
-        "operationId": "DashboardOrganizationSettingsController_getBrandingEndpoint",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Current branding config"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get clinic branding",
-        "tags": [
-          "Dashboard / Org Experience"
-        ]
-      },
-      "post": {
-        "operationId": "DashboardOrganizationSettingsController_upsertBrandingEndpoint",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpsertBrandingDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Branding saved"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Upsert clinic branding",
-        "tags": [
-          "Dashboard / Org Experience"
-        ]
-      }
-    },
-    "/api/v1/dashboard/organization/branding/logo": {
-      "post": {
-        "operationId": "DashboardOrganizationSettingsController_uploadLogoEndpoint",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "properties": {
-                  "file": {
-                    "format": "binary",
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Logo uploaded, URL returned"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Upload clinic logo",
-        "tags": [
-          "Dashboard / Org Experience"
         ]
       }
     },

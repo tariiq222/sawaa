@@ -118,32 +118,32 @@
 
 /* ─── Light Theme ─── */
 :root {
-    --primary: #14a89a;
-    --primary-foreground: #FFFFFF;
-    --primary-light: #2fc0b0;
-    --primary-dark: #098a7d;
-    --primary-ultra-light: rgba(20, 168, 154, 0.08);
-    --accent: #ef7a6b;
-    --accent-foreground: #FFFFFF;
-    --accent-ultra-light: rgba(239, 122, 107, 0.10);
-    --background: #F2F4F8;
-    --foreground: #1B2026;
+    --primary: #55CCB0;
+    --primary-foreground: #08312C;
+    --primary-light: #7CD8C2;
+    --primary-dark: #0E4B43;
+    --primary-ultra-light: rgba(85, 204, 176, 0.10);
+    --accent: #E7DBC4;
+    --accent-foreground: #2B3A39;
+    --accent-ultra-light: rgba(231, 219, 196, 0.22);
+    --background: #EAF8F4;
+    --foreground: #2B3A39;
     --surface: #FFFFFF;
     --surface-solid: #FFFFFF;
-    --surface-muted: #F7F9FC;
-    --muted: #F1F4F8;
-    --muted-foreground: #667085;
+    --surface-muted: #F4FBF8;
+    --muted: #E6F3EF;
+    --muted-foreground: #5C7872;
     /* --card is a shadcn-compat alias of --surface. Do not diverge. */
     --card: var(--surface);
-    --card-foreground: #1B2026;
+    --card-foreground: #2B3A39;
     --popover: #FFFFFF;
-    --popover-foreground: #1B2026;
-    --secondary: #F1F4F8;
-    --secondary-foreground: #1B2026;
-    --border: #E4E7EC;
-    --border-strong: #D0D5DD;
-    --input: #D0D5DD;
-    --ring: rgba(20, 168, 154, 0.28);
+    --popover-foreground: #2B3A39;
+    --secondary: #E6F3EF;
+    --secondary-foreground: #2B3A39;
+    --border: #D7E8E2;
+    --border-strong: #BDD6CE;
+    --input: #C7DDD6;
+    --ring: rgba(85, 204, 176, 0.32);
     --overlay: rgba(27, 32, 38, 0.6);
     /* State colors.
        `--error` is the semantic source of truth for destructive/error states.
@@ -160,21 +160,21 @@
     --chart-4: #7C3AED;
     --chart-5: #EC4899;
     --sidebar: #FFFFFF;
-    --sidebar-foreground: #1B2026;
-    --sidebar-primary: #14a89a;
-    --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: rgba(20, 168, 154, 0.08);
-    --sidebar-accent-foreground: #14a89a;
-    --sidebar-border: #E4E7EC;
-    --sidebar-ring: rgba(20, 168, 154, 0.28);
-    --shadow-primary-color: rgba(20, 168, 154, 0.25);
-    --shadow-primary-hover-color: rgba(20, 168, 154, 0.3);
+    --sidebar-foreground: #2B3A39;
+    --sidebar-primary: #55CCB0;
+    --sidebar-primary-foreground: #08312C;
+    --sidebar-accent: rgba(85, 204, 176, 0.10);
+    --sidebar-accent-foreground: #0E4B43;
+    --sidebar-border: #D7E8E2;
+    --sidebar-ring: rgba(85, 204, 176, 0.32);
+    --shadow-primary-color: rgba(85, 204, 176, 0.25);
+    --shadow-primary-hover-color: rgba(85, 204, 176, 0.35);
     --blob-primary: transparent;
     --blob-accent: transparent;
 
     /* Decorative avatar gradient pairs (from → to) */
-    --avatar-1-from: #14a89a;
-    --avatar-1-to: #2fc0b0;
+    --avatar-1-from: #55CCB0;
+    --avatar-1-to: #0E4B43;
     --avatar-2-from: #EC4899;
     --avatar-2-to: #F472B6;
     --avatar-3-from: #16A34A;
@@ -215,19 +215,16 @@
 
 /* ─── Dark Theme ─── */
 .dark {
-    /* Brand vars are overridden dynamically by BrandingProvider via
-       #sawaa-dark-theme <style> tag once the branding API resolves.
-       The fallbacks below must be present so the UI renders correctly
-       BEFORE branding loads (login page, slow network, API failure). */
-    --primary: #2fc0b0;
-    --primary-foreground: #0F1117;
-    --primary-light: #5cd3c5;
-    --primary-dark: #14a89a;
-    --primary-ultra-light: rgba(47, 192, 176, 0.16);
-    --accent: #ef7a6b;
-    --accent-foreground: #0F1117;
-    --accent-ultra-light: rgba(239, 122, 107, 0.18);
-    --ring: rgba(47, 192, 176, 0.45);
+    /* Fixed brand palette (teal + beige). */
+    --primary: #7CD8C2;
+    --primary-foreground: #08312C;
+    --primary-light: #9FE4D3;
+    --primary-dark: #55CCB0;
+    --primary-ultra-light: rgba(124, 216, 194, 0.16);
+    --accent: #E7DBC4;
+    --accent-foreground: #1B2522;
+    --accent-ultra-light: rgba(231, 219, 196, 0.18);
+    --ring: rgba(124, 216, 194, 0.45);
     --background: #0F1117;
     --foreground: #F1F4F8;
     --surface: rgba(27, 32, 38, 0.72);
@@ -261,14 +258,14 @@
     --chart-5: #F472B6;
     --sidebar: rgba(27, 32, 38, 0.72);
     --sidebar-foreground: #F1F4F8;
-    --sidebar-primary: #2fc0b0;
-    --sidebar-primary-foreground: #0F1117;
-    --sidebar-accent: rgba(47, 192, 176, 0.16);
-    --sidebar-accent-foreground: #2fc0b0;
+    --sidebar-primary: #7CD8C2;
+    --sidebar-primary-foreground: #08312C;
+    --sidebar-accent: rgba(124, 216, 194, 0.16);
+    --sidebar-accent-foreground: #7CD8C2;
     --sidebar-border: rgba(255, 255, 255, 0.08);
-    --sidebar-ring: rgba(47, 192, 176, 0.45);
-    --shadow-primary-color: rgba(47, 192, 176, 0.35);
-    --shadow-primary-hover-color: rgba(47, 192, 176, 0.45);
+    --sidebar-ring: rgba(124, 216, 194, 0.45);
+    --shadow-primary-color: rgba(124, 216, 194, 0.35);
+    --shadow-primary-hover-color: rgba(124, 216, 194, 0.45);
     --glass-bg: rgba(27, 32, 38, 0.72);
     --glass-bg-solid: rgba(37, 43, 51, 0.92);
     --glass-border: rgba(255, 255, 255, 0.08);
@@ -435,5 +432,5 @@
 @utility font-numeric {
     font-variant-numeric: lining-nums tabular-nums;
     font-feature-settings: "lnum" 1, "tnum" 1;
-    font-family: "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-arabic), ui-sans-serif, system-ui, sans-serif;
 }

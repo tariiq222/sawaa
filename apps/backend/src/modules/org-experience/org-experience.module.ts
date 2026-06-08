@@ -1,11 +1,7 @@
 import { Module } from '@nestjs/common';
-import { MulterModule } from '@nestjs/platform-express';
-import { memoryStorage } from 'multer';
 import { DatabaseModule } from '../../infrastructure/database';
-import { MediaModule } from '../media/media.module';
 import { MessagingModule } from '../../infrastructure/messaging.module';
 import { DashboardOrganizationSettingsController } from '../../api/dashboard/organization-settings.controller';
-import { UploadLogoHandler } from './branding/upload-logo/upload-logo.handler';
 import { CreateServiceHandler } from './services/create-service.handler';
 import { UpdateServiceHandler } from './services/update-service.handler';
 import { ListServicesHandler } from './services/list-services.handler';
@@ -17,8 +13,6 @@ import { SetEmployeeServiceOptionsHandler } from './services/set-employee-servic
 import { SetServiceBookingConfigsHandler } from './services/set-service-booking-configs.handler';
 import { GetServiceBookingConfigsHandler } from './services/get-service-booking-configs.handler';
 import { ListServiceEmployeesHandler } from './services/list-service-employees.handler';
-import { UpsertBrandingHandler } from './branding/upsert-branding.handler';
-import { GetBrandingHandler } from './branding/get-branding.handler';
 import { GetPublicBrandingHandler } from './branding/public/get-public-branding.handler';
 import { CreateIntakeFormHandler } from './intake-forms/create-intake-form.handler';
 import { GetIntakeFormHandler } from './intake-forms/get-intake-form.handler';
@@ -37,7 +31,6 @@ import { GetOrgSettingsHandler } from './org-settings/get-org-settings.handler';
 import { UpsertOrgSettingsHandler } from './org-settings/upsert-org-settings.handler';
 import { GetBookingSettingsHandler } from '../bookings/get-booking-settings/get-booking-settings.handler';
 import { UpsertBookingSettingsHandler } from '../bookings/upsert-booking-settings/upsert-booking-settings.handler';
-import { MAX_FILE_SIZE_BYTES } from '../media/files/upload-file.handler';
 import { BundlePriceService } from './bundles/bundle-price.service';
 import { CreateBundleHandler } from './bundles/create-bundle.handler';
 import { UpdateBundleHandler } from './bundles/update-bundle.handler';
@@ -68,13 +61,13 @@ const discountReasonHandlers = [
 ];
 
 @Module({
-  imports: [DatabaseModule, MediaModule, MessagingModule, MulterModule.register({ storage: memoryStorage(), limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 } })],
+  imports: [DatabaseModule, MessagingModule],
   controllers: [DashboardOrganizationSettingsController, DashboardDiscountReasonsController],
   providers: [
     ...serviceHandlers,
     ...bundleHandlers,
     ...discountReasonHandlers,
-    UpsertBrandingHandler, GetBrandingHandler, GetPublicBrandingHandler, UploadLogoHandler,
+    GetPublicBrandingHandler,
     CreateIntakeFormHandler, GetIntakeFormHandler, ListIntakeFormsHandler, DeleteIntakeFormHandler,
     UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,
     ResolveApplicableIntakeFormsHandler, SubmitIntakeResponseHandler,
@@ -86,7 +79,7 @@ const discountReasonHandlers = [
     ...serviceHandlers,
     ...bundleHandlers,
     ...discountReasonHandlers,
-    UpsertBrandingHandler, GetBrandingHandler, GetPublicBrandingHandler, UploadLogoHandler,
+    GetPublicBrandingHandler,
     CreateIntakeFormHandler, GetIntakeFormHandler, ListIntakeFormsHandler, DeleteIntakeFormHandler,
     UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,
     ResolveApplicableIntakeFormsHandler, SubmitIntakeResponseHandler,

@@ -12,6 +12,7 @@ type FormState = {
   address: string
   companyNameAr: string
   companyNameEn: string
+  productTagline: string
   businessRegistration: string
   vatRegistrationNumber: string
   sellerAddress: string
@@ -25,6 +26,7 @@ const EMPTY_FORM: FormState = {
   address: "",
   companyNameAr: "",
   companyNameEn: "",
+  productTagline: "",
   businessRegistration: "",
   vatRegistrationNumber: "",
   sellerAddress: "",
@@ -47,6 +49,7 @@ export function GeneralContactSection() {
       address: settings.address ?? "",
       companyNameAr: settings.companyNameAr ?? "",
       companyNameEn: settings.companyNameEn ?? "",
+      productTagline: settings.productTagline ?? "",
       businessRegistration: settings.businessRegistration ?? "",
       vatRegistrationNumber: settings.vatRegistrationNumber ?? "",
       sellerAddress: settings.sellerAddress ?? "",
@@ -67,6 +70,7 @@ export function GeneralContactSection() {
         address: form.address || null,
         companyNameAr: form.companyNameAr || null,
         companyNameEn: form.companyNameEn || null,
+        productTagline: form.productTagline || null,
         businessRegistration: form.businessRegistration || null,
         vatRegistrationNumber: form.vatRegistrationNumber || null,
         sellerAddress: form.sellerAddress || null,
@@ -108,6 +112,9 @@ export function GeneralContactSection() {
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t("settings.entity.companyNameAr")} value={form.companyNameAr} onChange={setField("companyNameAr")} dir="rtl" />
           <Field label={t("settings.entity.companyNameEn")} value={form.companyNameEn} onChange={setField("companyNameEn")} dir="ltr" />
+          <div className="sm:col-span-2">
+            <Field label={t("settings.entity.productTagline")} value={form.productTagline} onChange={setField("productTagline")} dir="rtl" hint={t("settings.entity.productTaglineHint")} />
+          </div>
           <Field label={t("settings.entity.businessRegistration")} value={form.businessRegistration} onChange={setField("businessRegistration")} dir="ltr" />
           <Field
             label={t("settings.entity.vatRegistration")}

@@ -1583,41 +1583,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/dashboard/organization/branding": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get clinic branding */
-        get: operations["DashboardOrganizationSettingsController_getBrandingEndpoint"];
-        put?: never;
-        /** Upsert clinic branding */
-        post: operations["DashboardOrganizationSettingsController_upsertBrandingEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/organization/branding/logo": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Upload clinic logo */
-        post: operations["DashboardOrganizationSettingsController_uploadLogoEndpoint"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/dashboard/organization/bundles": {
         parameters: {
             query?: never;
@@ -3352,7 +3317,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create a guest booking (requires OTP session) */
+        /** Create a booking (requires a logged-in client session) */
         post: operations["PublicBookingsController_create"];
         delete?: never;
         options?: never;
@@ -3811,7 +3776,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Initialize a Moyasar payment for a guest booking (requires OTP session) */
+        /** Initialize a Moyasar payment for a booking invoice (requires a logged-in client session) */
         post: operations["PublicPaymentsController_initPayment"];
         delete?: never;
         options?: never;
@@ -4212,7 +4177,7 @@ export interface components {
         /** @enum {string} */
         BookingSource: "RECEPTION" | "ONLINE";
         /** @enum {string} */
-        BookingStatus: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED";
+        BookingStatus: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED" | "DEPOSIT_PAID";
         /**
          * @description Booking type
          * @enum {string}
@@ -5090,45 +5055,6 @@ export interface components {
              */
             startDate: string;
         };
-        CreateGuestBookingDto: {
-            /**
-             * @description Booking type (legacy — prefer deliveryType)
-             * @example INDIVIDUAL
-             */
-            bookingType?: components["schemas"]["BookingType"];
-            /**
-             * @description Branch ID
-             * @example 00000000-0000-0000-0000-000000000003
-             */
-            branchId: string;
-            /** @description Client information */
-            client: components["schemas"]["GuestClientInfoDto"];
-            /**
-             * @description Delivery channel (IN_PERSON or ONLINE)
-             * @example IN_PERSON
-             */
-            deliveryType?: components["schemas"]["DeliveryType"];
-            /**
-             * @description Specific duration option to resolve price and duration
-             * @example 00000000-0000-0000-0000-000000000004
-             */
-            durationOptionId?: string;
-            /**
-             * @description Employee ID
-             * @example 00000000-0000-0000-0000-000000000002
-             */
-            employeeId: string;
-            /**
-             * @description Service ID
-             * @example 00000000-0000-0000-0000-000000000001
-             */
-            serviceId: string;
-            /**
-             * @description Booking start time (ISO 8601)
-             * @example 2026-04-20T09:00:00Z
-             */
-            startsAt: string;
-        };
         CreateIntakeFormDto: {
             /** @description Form fields (max 100) */
             fields?: components["schemas"]["IntakeFieldInputDto"][];
@@ -5239,6 +5165,53 @@ export interface components {
              * @enum {string}
              */
             type: "BUG" | "FEATURE_REQUEST" | "OTHER";
+        };
+        CreatePublicBookingDto: {
+            /**
+             * @description Booking type (legacy — prefer deliveryType)
+             * @example INDIVIDUAL
+             */
+            bookingType?: components["schemas"]["BookingType"];
+            /**
+             * @description Branch ID
+             * @example 00000000-0000-0000-0000-000000000003
+             */
+            branchId: string;
+            /**
+             * @description Discount coupon code
+             * @example SAVE10
+             */
+            couponCode?: string;
+            /**
+             * @description Delivery channel (IN_PERSON or ONLINE)
+             * @example IN_PERSON
+             */
+            deliveryType?: components["schemas"]["DeliveryType"];
+            /**
+             * @description Specific duration option to resolve price and duration
+             * @example 00000000-0000-0000-0000-000000000004
+             */
+            durationOptionId?: string;
+            /**
+             * @description Employee ID
+             * @example 00000000-0000-0000-0000-000000000002
+             */
+            employeeId: string;
+            /**
+             * @description Additional notes for the booking
+             * @example First visit
+             */
+            notes?: string;
+            /**
+             * @description Service ID
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            serviceId: string;
+            /**
+             * @description Booking start time (ISO 8601)
+             * @example 2026-04-20T09:00:00Z
+             */
+            startsAt: string;
         };
         CreateRecurringBookingDto: {
             /**
@@ -5858,33 +5831,6 @@ export interface components {
              */
             type: "REVENUE" | "ACTIVITY" | "BOOKINGS" | "EMPLOYEES" | "OVERVIEW" | "CLIENTS" | "SERVICES" | "RATINGS";
         };
-        GuestClientInfoDto: {
-            /**
-             * @description Email address
-             * @example client@example.com
-             */
-            email: string;
-            /**
-             * @description Client gender
-             * @enum {string}
-             */
-            gender?: "MALE" | "FEMALE";
-            /**
-             * @description Client full name
-             * @example أحمد محمد
-             */
-            name: string;
-            /**
-             * @description Additional notes for the booking
-             * @example First visit
-             */
-            notes?: string;
-            /**
-             * @description Phone number (any common format; normalized to E.164)
-             * @example +966501234567
-             */
-            phone: string;
-        };
         InitClientPaymentDto: {
             /**
              * @description Invoice UUID
@@ -5897,13 +5843,6 @@ export interface components {
              * @enum {string}
              */
             method?: "ONLINE_CARD" | "APPLE_PAY";
-        };
-        InitGuestPaymentDto: {
-            /**
-             * @description Booking UUID
-             * @example 00000000-0000-0000-0000-000000000000
-             */
-            bookingId: string;
         };
         IntakeFieldInputDto: {
             /**
@@ -7658,83 +7597,6 @@ export interface components {
              */
             waitlistMaxPerSlot?: number;
         };
-        UpsertBrandingDto: {
-            /**
-             * @description Accent / highlight color (hex)
-             * @example #82CC17
-             */
-            colorAccent?: string;
-            /**
-             * @description Darker shade of the accent color (hex)
-             * @example #5A8F0F
-             */
-            colorAccentDark?: string;
-            /**
-             * @description Default background color (hex)
-             * @example #F8F9FF
-             */
-            colorBackground?: string;
-            /**
-             * @description Primary brand color (hex)
-             * @example #354FD8
-             */
-            colorPrimary?: string;
-            /**
-             * @description Darker shade of the primary color (hex)
-             * @example #1E3AB8
-             */
-            colorPrimaryDark?: string;
-            /**
-             * @description Lighter tint of the primary color (hex)
-             * @example #6B7FE3
-             */
-            colorPrimaryLight?: string;
-            /**
-             * @description Custom CSS injected into the clinic app
-             * @example :root { --radius: 8px; }
-             */
-            customCss?: string;
-            /**
-             * @description Favicon image URL
-             * @example https://example.com/favicon.ico
-             */
-            faviconUrl?: string;
-            /**
-             * @description Font family name
-             * @example IBM Plex Sans Arabic
-             */
-            fontFamily?: string;
-            /**
-             * @description Font file or stylesheet URL
-             * @example https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic
-             */
-            fontUrl?: string;
-            /**
-             * @description Logo image URL
-             * @example https://example.com/logo.png
-             */
-            logoUrl?: string;
-            /**
-             * @description Organization name in Arabic
-             * @example عيادة الرعاية
-             */
-            organizationNameAr: string;
-            /**
-             * @description Organization name in English
-             * @example Sawaa Clinic
-             */
-            organizationNameEn?: string;
-            /**
-             * @description Product tagline shown under the organization name
-             * @example نحو رعاية أفضل
-             */
-            productTagline?: string;
-            /**
-             * @description Public website domain (hostname)
-             * @example clinic.example.com
-             */
-            websiteDomain?: Record<string, never>;
-        };
         UpsertChatbotConfigDto: {
             /**
              * @description Auto-escalate to human after N messages. Null disables.
@@ -7975,6 +7837,11 @@ export interface components {
             privacyPolicyAr?: string;
             /** @description Privacy policy in English */
             privacyPolicyEn?: string;
+            /**
+             * @description Product tagline / subtitle
+             * @example مركز الاستشارات الأسرية
+             */
+            productTagline?: string;
             /**
              * @description Minutes before appointment to send reminder
              * @example 60
@@ -16150,179 +16017,6 @@ export interface operations {
             };
             /** @description Branch or employee not found */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_getBrandingEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Current branding config */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_upsertBrandingEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpsertBrandingDto"];
-            };
-        };
-        responses: {
-            /** @description Branding saved */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardOrganizationSettingsController_uploadLogoEndpoint: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    /** Format: binary */
-                    file?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Logo uploaded, URL returned */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25094,15 +24788,23 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateGuestBookingDto"];
+                "application/json": components["schemas"]["CreatePublicBookingDto"];
             };
         };
         responses: {
+            /** @description Booking created */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        invoiceId?: string | null;
+                    } & {
+                        [key: string]: unknown;
+                    };
+                };
             };
             /** @description Validation failed */
             400: {
@@ -26352,15 +26054,23 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["InitGuestPaymentDto"];
+                "application/json": components["schemas"]["InitClientPaymentDto"];
             };
         };
         responses: {
+            /** @description Payment initialized */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        paymentId: string;
+                        /** @example https://checkout.moyasar.com/pay/payment-id */
+                        redirectUrl: string;
+                    };
+                };
             };
             /** @description Validation failed */
             400: {

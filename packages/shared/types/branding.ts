@@ -43,6 +43,6 @@ export const DEFAULT_BRANDING: BrandingConfig = {
   colorAccent:       PLATFORM_BRAND.colors.accent,
   colorAccentDark:   PLATFORM_BRAND.colors.accentDark,
   colorBackground:   PLATFORM_BRAND.colors.background,
-  fontFamily:        'IBM Plex Sans Arabic',
-  fontUrl:           'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700;800&display=swap',
+  fontFamily:        'Handicrafts',
+  fontUrl:           null,
 };

@@ -1,12 +1,11 @@
 import type { Metadata } from "next"
-import { IBM_Plex_Sans_Arabic } from "next/font/google"
+import localFont from "next/font/local"
 
 import "./globals.css"
 import "./toast.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@sawaa/ui"
 import { Toaster } from "@sawaa/ui"
-import { BrandingProvider } from "@/components/providers/branding-provider"
 import { AuthProvider } from "@/components/providers/auth-provider"
 import { QueryProvider } from "@/components/providers/query-provider"
 import { LocaleProvider } from "@/components/locale-provider"
@@ -20,11 +19,16 @@ export const metadata: Metadata = {
   description: "لوحة تحكم مركز سواء للاستشارات الأسرية",
 }
 
-const ibmPlexSansArabic = IBM_Plex_Sans_Arabic({
-  subsets: ["arabic"],
+const handicrafts = localFont({
   variable: "--font-arabic",
-  weight: ["400", "500", "600", "700"],
   display: "swap",
+  src: [
+    { path: "../public/fonts/Handicrafts-Regular.woff2", weight: "400", style: "normal" },
+    { path: "../public/fonts/Handicrafts-Medium.woff2", weight: "500", style: "normal" },
+    { path: "../public/fonts/Handicrafts-SemiBold.woff2", weight: "600", style: "normal" },
+    { path: "../public/fonts/Handicrafts-Bold.woff2", weight: "700", style: "normal" },
+    { path: "../public/fonts/Handicrafts-Black.woff2", weight: "900", style: "normal" },
+  ],
 })
 
 export default function RootLayout({
@@ -37,18 +41,16 @@ export default function RootLayout({
       lang="ar"
       dir="rtl"
       suppressHydrationWarning
-      className={cn("antialiased", ibmPlexSansArabic.variable)}
+      className={cn("antialiased", handicrafts.variable)}
     >
       <body className="font-sans">
           <LocaleProvider>
             <ThemeProvider>
               <QueryProvider>
                 <AuthProvider>
-                  <BrandingProvider>
-                    <TooltipProvider>
-                      {children}
-                    </TooltipProvider>
-                  </BrandingProvider>
+                  <TooltipProvider>
+                    {children}
+                  </TooltipProvider>
                 </AuthProvider>
               </QueryProvider>
             </ThemeProvider>

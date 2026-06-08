@@ -33,9 +33,6 @@ export interface PublicBranding {
   fontFamily: string | null;
   fontUrl: string | null;
 
-  // Website
-  websiteDomain: string | null;
-
   // Display preferences (from OrganizationSettings)
   timeFormat: '12h' | '24h';
 }

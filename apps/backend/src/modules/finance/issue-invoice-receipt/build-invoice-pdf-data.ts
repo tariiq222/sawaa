@@ -19,11 +19,15 @@ export async function buildInvoicePdfData(
   invoice: Invoice,
   paymentId?: string | null,
 ): Promise<InvoicePdfData> {
-  const [orgSettings, client, payment, booking] = await cls.run(async () => {
+  const [orgSettings, branding, client, payment, booking] = await cls.run(async () => {
     cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
     return Promise.all([
       prisma.organizationSettings.findFirst({
         select: { companyNameAr: true, vatRegistrationNumber: true, sellerAddress: true },
+      }),
+      prisma.brandingConfig.findFirst({
+        orderBy: { createdAt: 'desc' },
+        select: { logoUrl: true, colorPrimary: true },
       }),
       prisma.client.findUnique({
         where: { id: invoice.clientId },
@@ -56,6 +60,8 @@ export async function buildInvoicePdfData(
     sellerNameAr: orgSettings?.companyNameAr ?? 'مركز سواء',
     sellerVatNumber: orgSettings?.vatRegistrationNumber ?? null,
     sellerAddress: orgSettings?.sellerAddress ?? null,
+    logoUrl: branding?.logoUrl ?? null,
+    brandColor: branding?.colorPrimary ?? null,
     clientName: client ? `${client.firstName} ${client.lastName ?? ''}`.trim() : '—',
     serviceName: booking?.serviceNameSnapshot ?? (invoice.bundlePurchaseId ? 'باقة جلسات' : '—'),
     subtotal: Number(invoice.subtotal),

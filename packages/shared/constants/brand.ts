@@ -1,15 +1,15 @@
 export const PLATFORM_BRAND = {
   nameEn: 'Sawaa',
-  nameAr: 'دِقة',
-  taglineEn: 'Scheduling and appointment operations platform',
-  taglineAr: 'نظام إدارة المواعيد والحجوزات للمنشآت',
+  nameAr: 'سواء',
+  taglineEn: 'Family counseling center',
+  taglineAr: 'مركز الاستشارات الأسرية',
   colors: {
-    primary: '#354FD8',
-    primaryLight: '#5B72E8',
-    primaryDark: '#2438B0',
-    accent: '#82CC17',
-    accentDark: '#5A9010',
-    background: '#EEF1F8',
+    primary: '#55CCB0',
+    primaryLight: '#7CD8C2',
+    primaryDark: '#0E4B43',
+    accent: '#E7DBC4',
+    accentDark: '#CAAF7B',
+    background: '#EAF8F4',
   },
 } as const;
 

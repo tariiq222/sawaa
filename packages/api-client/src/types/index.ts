@@ -8,7 +8,6 @@ export type {
   CreateUserPayload,
   UpdateUserPayload,
 } from './user'
-export type { BrandingConfig, UpdateBrandingPayload } from './branding'
 export type { PaginationMeta, PaginatedResponse, PaginationParams } from './api'
 export { buildQueryString } from './api'
 export type {

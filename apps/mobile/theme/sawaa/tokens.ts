@@ -110,18 +110,18 @@ export const sawaaTokens = {
   // Color primitives
   colors: sawaaColors,
 
-  // Branding tokens.
+  // Branding tokens — fixed teal + beige palette.
   primary: {
-    light: '#354FD8',   // Sawaa platform blue
-    dark: '#2438B0',    // Dark variant
+    light: '#55CCB0',   // Sawa teal
+    dark: '#0E4B43',    // Dark teal
   },
   secondary: {
-    light: '#7C3AED',   // Purple
-    dark: '#5B21B6',
+    light: '#E7DBC4',   // Beige
+    dark: '#CAAF7B',    // Dark beige
   },
   accent: {
-    light: '#82CC17',   // Sawaa lime green
-    dark: '#5A9010',
+    light: '#E7DBC4',   // Beige
+    dark: '#CAAF7B',    // Dark beige
   },
 
   // Radius system
