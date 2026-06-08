@@ -36,6 +36,12 @@ const buildPrisma = () => {
       create: jest.Mock;
       update: jest.Mock;
     };
+    booking: {
+      findFirst: jest.Mock;
+    };
+    service: {
+      findFirst: jest.Mock;
+    };
     $transaction: jest.Mock;
     $queryRaw: jest.Mock;
   } = {
@@ -53,6 +59,14 @@ const buildPrisma = () => {
       findFirst: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue({ id: 'rr-1' }),
       update: jest.fn().mockResolvedValue({ id: 'rr-1' }),
+    },
+    // resolveInvoiceDeposit (VerifyPaymentHandler) loads booking → service via
+    // scalar bookingId. Default to a service with NO deposit.
+    booking: {
+      findFirst: jest.fn().mockResolvedValue({ serviceId: 'svc-1' }),
+    },
+    service: {
+      findFirst: jest.fn().mockResolvedValue({ depositEnabled: false, depositAmount: null }),
     },
     $transaction: jest.fn(async (fn) => fn(prisma)),
     $queryRaw: jest.fn().mockResolvedValue([buildPaymentRow()]),

@@ -8,6 +8,7 @@ import { DataTable } from "@/components/features/data-table"
 import { FilterBar } from "@/components/features/filter-bar"
 import { ErrorBanner } from "@/components/features/error-banner"
 import { getBookingColumns } from "@/components/features/bookings/booking-columns"
+import type { QuickStatusActionType } from "@/components/features/bookings/booking-column-cells"
 import { AdminCancelDialog } from "@/components/features/bookings/cancel-dialogs"
 import { DeleteBookingDialog } from "@/components/features/bookings/delete-booking-dialog"
 import { useBookings, useBookingMutations } from "@/hooks/use-bookings"
@@ -22,14 +23,15 @@ import type { Booking, CancellationReason } from "@/lib/types/booking"
 interface BookingsTabContentProps {
   onRowClick: (b: Booking) => void
   onEditClick: (b: Booking) => void
+  onInvoiceClick: (b: Booking) => void
 }
 
-export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabContentProps) {
+export function BookingsTabContent({ onRowClick, onEditClick, onInvoiceClick }: BookingsTabContentProps) {
   const { t, locale } = useLocale()
   const { weekStartDayNumber, dateFormat } = useOrganizationConfig()
   const queryClient = useQueryClient()
   const { bookings, meta, loading, error, filters, setFilters, resetFilters, hasFilters, setPage } = useBookings()
-  const { confirmMut, noShowMut, adminCancelMut, deleteMut } = useBookingMutations()
+  const { confirmMut, checkInMut, completeMut, noShowMut, adminCancelMut, deleteMut } = useBookingMutations()
   const { employees } = useEmployees()
   const [activeTimeTab, setActiveTimeTab] = useState("all")
   const [search, setSearch] = useState("")
@@ -77,9 +79,11 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
     }
   }
 
-  const handleStatusAction = async (booking: Booking, action: "confirm" | "noshow") => {
+  const handleStatusAction = async (booking: Booking, action: QuickStatusActionType) => {
     try {
       if (action === "confirm") await confirmMut.mutateAsync(booking.id)
+      else if (action === "checkin") await checkInMut.mutateAsync(booking.id)
+      else if (action === "complete") await completeMut.mutateAsync(booking.id)
       else await noShowMut.mutateAsync(booking.id)
       refresh()
     } catch (err) {
@@ -120,7 +124,7 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
   }
 
   const columns = useMemo(
-    () => getBookingColumns(onRowClick, onEditClick, handleStatusAction, handleDelete, t, { dateFormat, locale }),
+    () => getBookingColumns(onRowClick, onEditClick, handleStatusAction, handleDelete, onInvoiceClick, t, { dateFormat, locale }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [t, dateFormat, locale]
   )

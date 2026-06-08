@@ -1,12 +1,15 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Globe02Icon, Store01Icon } from "@hugeicons/core-free-icons"
 import { Avatar, AvatarFallback } from "@sawaa/ui"
 import { cn, formatClinicDate, formatClinicTime } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"
 import type { Booking } from "@/lib/types/booking"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { ActionsCell, PaymentStatusCell, StatusCell } from "@/components/features/bookings/booking-column-cells"
+import type { QuickStatusActionType } from "@/components/features/bookings/booking-column-cells"
 
 function getInitials(first: string, last: string): string {
   return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase()
@@ -41,13 +44,19 @@ const typeLabelKey: Record<string, string> = {
   walk_in: "bookings.col.type.walkIn",
 }
 
+const sourceIconConfig: Record<string, { icon: typeof Store01Icon; labelKey: string }> = {
+  RECEPTION: { icon: Store01Icon, labelKey: "bookings.col.source.reception" },
+  ONLINE: { icon: Globe02Icon, labelKey: "bookings.col.source.online" },
+}
+
 /* ── Column definitions ── */
 
 export function getBookingColumns(
   onRowClick: (booking: Booking) => void,
   onEditClick: (booking: Booking) => void,
-  onStatusAction: (booking: Booking, action: "confirm" | "noshow") => void,
+  onStatusAction: (booking: Booking, action: QuickStatusActionType) => void,
   onDelete: (booking: Booking) => void,
+  onInvoiceClick: (booking: Booking) => void,
   t: (key: string) => string,
   config?: { dateFormat?: DateFormat; locale?: "ar" | "en" },
 ): ColumnDef<Booking>[] {
@@ -57,11 +66,25 @@ export function getBookingColumns(
     {
       accessorKey: "id",
       header: "#",
-      cell: ({ row }) => (
-        <span className="text-[13px] font-medium font-numeric text-muted-foreground">
-          #{row.original.bookingNumber.toString().padStart(4, "0")}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const source = sourceIconConfig[row.original.source]
+        return (
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13px] font-medium font-numeric text-muted-foreground">
+              #{row.original.bookingNumber.toString().padStart(4, "0")}
+            </span>
+            {source && (
+              <span
+                className="inline-flex text-muted-foreground"
+                title={t(source.labelKey)}
+                aria-label={t(source.labelKey)}
+              >
+                <HugeiconsIcon icon={source.icon} size={14} />
+              </span>
+            )}
+          </div>
+        )
+      },
     },
     {
       id: "client",
@@ -137,20 +160,21 @@ export function getBookingColumns(
       header: t("bookings.col.header.amount"),
       cell: ({ row }) => {
         const payment = row.original.payment
-        if (!payment) return <span className="text-muted-foreground">—</span>
-        return <FormattedCurrency amount={payment.totalAmount} locale={locale} decimals={2} />
+        const amount = payment?.totalAmount ?? row.original.priceSnapshot ?? row.original.service?.price ?? null
+        if (amount == null) return <span className="text-muted-foreground">—</span>
+        return <FormattedCurrency amount={amount} locale={locale} decimals={2} className="font-numeric text-sm font-medium text-foreground" />
       },
     },
     {
       id: "paymentStatus",
       header: t("bookings.col.header.paymentStatus"),
-      cell: ({ row }) => <PaymentStatusCell payment={row.original.payment} />,
+      cell: ({ row }) => <PaymentStatusCell booking={row.original} />,
     },
     {
       accessorKey: "status",
       header: t("bookings.col.header.status"),
       cell: ({ row }) => (
-        <StatusCell booking={row.original} onStatusAction={onStatusAction} />
+        <StatusCell booking={row.original} onStatusAction={onStatusAction} onDelete={onDelete} />
       ),
     },
     {
@@ -161,6 +185,7 @@ export function getBookingColumns(
           booking={row.original}
           onView={() => onRowClick(row.original)}
           onEdit={() => onEditClick(row.original)}
+          onInvoice={() => onInvoiceClick(row.original)}
           onDelete={() => onDelete(row.original)}
           t={t}
         />

@@ -667,32 +667,33 @@ describe('CreateBookingHandler', () => {
     );
   });
 
-  it('uses provided expiresAt instead of default', async () => {
-    const customExpiry = new Date(Date.now() + 3600_000);
-    await handler.execute({ ...baseDto, expiresAt: customExpiry });
-    expect(prisma.booking.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ expiresAt: customExpiry }),
-      }),
-    );
-  });
-
-  it('computes default expiresAt when not provided and not payAtClinic', async () => {
+  it('creates a dashboard booking as CONFIRMED with confirmedAt set', async () => {
     await handler.execute(baseDto);
     expect(prisma.booking.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          expiresAt: expect.any(Date),
+          status: 'CONFIRMED',
+          confirmedAt: expect.any(Date),
         }),
       }),
     );
   });
 
-  it('does not set expiresAt when payAtClinic=true and no expiresAt provided', async () => {
+  it('does not set a payment-expiry window on a confirmed booking', async () => {
+    // CONFIRMED bookings carry no expiresAt — EXPIRE only acts on unconfirmed ones.
+    await handler.execute(baseDto);
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ expiresAt: undefined }),
+      }),
+    );
+  });
+
+  it('does not set expiresAt when payAtClinic=true', async () => {
     await handler.execute({ ...baseDto, payAtClinic: true });
     expect(prisma.booking.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.not.objectContaining({ expiresAt: expect.anything() }),
+        data: expect.objectContaining({ expiresAt: undefined }),
       }),
     );
   });

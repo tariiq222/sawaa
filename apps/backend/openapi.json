@@ -143,6 +143,29 @@
         ],
         "type": "object"
       },
+      "ApplyInvoiceDiscountDto": {
+        "properties": {
+          "discountAmt": {
+            "description": "Discount amount applied to the invoice subtotal, in integer halalas (1 SAR = 100). Send 0 to clear the discount.",
+            "example": 5000,
+            "type": "number"
+          },
+          "discountReasonId": {
+            "description": "Reason for the discount (must reference an active DiscountReason). Required when discountAmt > 0.",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          },
+          "note": {
+            "description": "Optional free-text note stored on the invoice",
+            "example": "موافقة المدير",
+            "type": "string"
+          }
+        },
+        "required": [
+          "discountAmt"
+        ],
+        "type": "object"
+      },
       "ApproveCancelBookingDto": {
         "properties": {
           "approverNotes": {
@@ -368,6 +391,13 @@
           "durationMins"
         ],
         "type": "object"
+      },
+      "BookingSource": {
+        "enum": [
+          "RECEPTION",
+          "ONLINE"
+        ],
+        "type": "string"
       },
       "BookingStatus": {
         "enum": [
@@ -1338,6 +1368,34 @@
         ],
         "type": "object"
       },
+      "CreateDiscountReasonDto": {
+        "properties": {
+          "isActive": {
+            "description": "Whether the reason is selectable",
+            "example": true,
+            "type": "boolean"
+          },
+          "labelAr": {
+            "description": "Reason label in Arabic",
+            "example": "خصم من المعالج",
+            "type": "string"
+          },
+          "labelEn": {
+            "description": "Reason label in English",
+            "example": "Therapist discount",
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Sort order (ascending)",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "labelAr"
+        ],
+        "type": "object"
+      },
       "CreateEmailTemplateDto": {
         "properties": {
           "blocks": {
@@ -1568,69 +1626,6 @@
         ],
         "type": "object"
       },
-      "CreateGuestBookingDto": {
-        "properties": {
-          "bookingType": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/BookingType"
-              }
-            ],
-            "description": "Booking type (legacy — prefer deliveryType)",
-            "example": "INDIVIDUAL"
-          },
-          "branchId": {
-            "description": "Branch ID",
-            "example": "00000000-0000-0000-0000-000000000003",
-            "type": "string"
-          },
-          "client": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/GuestClientInfoDto"
-              }
-            ],
-            "description": "Client information"
-          },
-          "deliveryType": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DeliveryType"
-              }
-            ],
-            "description": "Delivery channel (IN_PERSON or ONLINE)",
-            "example": "IN_PERSON"
-          },
-          "durationOptionId": {
-            "description": "Specific duration option to resolve price and duration",
-            "example": "00000000-0000-0000-0000-000000000004",
-            "type": "string"
-          },
-          "employeeId": {
-            "description": "Employee ID",
-            "example": "00000000-0000-0000-0000-000000000002",
-            "type": "string"
-          },
-          "serviceId": {
-            "description": "Service ID",
-            "example": "00000000-0000-0000-0000-000000000001",
-            "type": "string"
-          },
-          "startsAt": {
-            "description": "Booking start time (ISO 8601)",
-            "example": "2026-04-20T09:00:00Z",
-            "type": "string"
-          }
-        },
-        "required": [
-          "serviceId",
-          "employeeId",
-          "branchId",
-          "startsAt",
-          "client"
-        ],
-        "type": "object"
-      },
       "CreateIntakeFormDto": {
         "properties": {
           "fields": {
@@ -1784,6 +1779,70 @@
           "type",
           "title",
           "description"
+        ],
+        "type": "object"
+      },
+      "CreatePublicBookingDto": {
+        "properties": {
+          "bookingType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingType"
+              }
+            ],
+            "description": "Booking type (legacy — prefer deliveryType)",
+            "example": "INDIVIDUAL"
+          },
+          "branchId": {
+            "description": "Branch ID",
+            "example": "00000000-0000-0000-0000-000000000003",
+            "type": "string"
+          },
+          "couponCode": {
+            "description": "Discount coupon code",
+            "example": "SAVE10",
+            "type": "string"
+          },
+          "deliveryType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryType"
+              }
+            ],
+            "description": "Delivery channel (IN_PERSON or ONLINE)",
+            "example": "IN_PERSON"
+          },
+          "durationOptionId": {
+            "description": "Specific duration option to resolve price and duration",
+            "example": "00000000-0000-0000-0000-000000000004",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee ID",
+            "example": "00000000-0000-0000-0000-000000000002",
+            "type": "string"
+          },
+          "notes": {
+            "description": "Additional notes for the booking",
+            "example": "First visit",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Service ID",
+            "example": "00000000-0000-0000-0000-000000000001",
+            "type": "string"
+          },
+          "startsAt": {
+            "description": "Booking start time (ISO 8601)",
+            "example": "2026-04-20T09:00:00Z",
+            "type": "string"
+          }
+        },
+        "required": [
+          "serviceId",
+          "employeeId",
+          "branchId",
+          "startsAt"
         ],
         "type": "object"
       },
@@ -2641,44 +2700,6 @@
         ],
         "type": "object"
       },
-      "GuestClientInfoDto": {
-        "properties": {
-          "email": {
-            "description": "Email address",
-            "example": "client@example.com",
-            "type": "string"
-          },
-          "gender": {
-            "description": "Client gender",
-            "enum": [
-              "MALE",
-              "FEMALE"
-            ],
-            "type": "string"
-          },
-          "name": {
-            "description": "Client full name",
-            "example": "أحمد محمد",
-            "type": "string"
-          },
-          "notes": {
-            "description": "Additional notes for the booking",
-            "example": "First visit",
-            "type": "string"
-          },
-          "phone": {
-            "description": "Phone number (any common format; normalized to E.164)",
-            "example": "+966501234567",
-            "type": "string"
-          }
-        },
-        "required": [
-          "name",
-          "phone",
-          "email"
-        ],
-        "type": "object"
-      },
       "InitClientPaymentDto": {
         "properties": {
           "invoiceId": {
@@ -2698,19 +2719,6 @@
         },
         "required": [
           "invoiceId"
-        ],
-        "type": "object"
-      },
-      "InitGuestPaymentDto": {
-        "properties": {
-          "bookingId": {
-            "description": "Booking UUID",
-            "example": "00000000-0000-0000-0000-000000000000",
-            "type": "string"
-          }
-        },
-        "required": [
-          "bookingId"
         ],
         "type": "object"
       },
@@ -3352,7 +3360,9 @@
           "ONLINE_CARD",
           "BANK_TRANSFER",
           "CASH",
-          "COUPON"
+          "COUPON",
+          "MADA",
+          "TABBY"
         ],
         "type": "string"
       },
@@ -4751,6 +4761,31 @@
         },
         "type": "object"
       },
+      "UpdateDiscountReasonDto": {
+        "properties": {
+          "isActive": {
+            "description": "Whether the reason is selectable",
+            "example": false,
+            "type": "boolean"
+          },
+          "labelAr": {
+            "description": "Reason label in Arabic",
+            "example": "خصم خاص",
+            "type": "string"
+          },
+          "labelEn": {
+            "description": "Reason label in English",
+            "example": "Special discount",
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Sort order (ascending)",
+            "example": 1,
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
       "UpdateDocumentDto": {
         "properties": {
           "metadata": {
@@ -5621,6 +5656,26 @@
             "description": "Organization city",
             "example": "Riyadh",
             "type": "string"
+          },
+          "payMethodBankEnabled": {
+            "description": "Show \"Bank transfer\" in the record-payment dialog",
+            "example": true,
+            "type": "boolean"
+          },
+          "payMethodCashEnabled": {
+            "description": "Show \"Cash\" in the record-payment dialog",
+            "example": true,
+            "type": "boolean"
+          },
+          "payMethodMadaEnabled": {
+            "description": "Show \"Network/mada\" in the record-payment dialog",
+            "example": false,
+            "type": "boolean"
+          },
+          "payMethodTabbyEnabled": {
+            "description": "Show \"Tabby\" in the record-payment dialog",
+            "example": false,
+            "type": "boolean"
           },
           "paymentAtClinicEnabled": {
             "description": "Enable pay-at-clinic option",
@@ -7404,6 +7459,15 @@
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/DeliveryType"
+            }
+          },
+          {
+            "description": "Filter by booking origin (front desk vs public website)",
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/BookingSource"
             }
           },
           {
@@ -11472,6 +11536,325 @@
         ]
       }
     },
+    "/api/v1/dashboard/discount-reasons": {
+      "get": {
+        "operationId": "DashboardDiscountReasonsController_listEndpoint",
+        "parameters": [
+          {
+            "description": "Include deactivated reasons",
+            "in": "query",
+            "name": "includeInactive",
+            "required": false,
+            "schema": {
+              "example": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of discount reasons"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List discount reasons",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      },
+      "post": {
+        "operationId": "DashboardDiscountReasonsController_createEndpoint",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDiscountReasonDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Discount reason created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a discount reason",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      }
+    },
+    "/api/v1/dashboard/discount-reasons/{id}": {
+      "delete": {
+        "operationId": "DashboardDiscountReasonsController_deleteEndpoint",
+        "parameters": [
+          {
+            "description": "Discount reason UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discount reason deleted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Discount reason not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Reason is referenced by invoices"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a discount reason",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      },
+      "patch": {
+        "operationId": "DashboardDiscountReasonsController_updateEndpoint",
+        "parameters": [
+          {
+            "description": "Discount reason UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDiscountReasonDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Discount reason updated"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Discount reason not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a discount reason",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      }
+    },
     "/api/v1/dashboard/finance/coupons": {
       "get": {
         "operationId": "DashboardFinanceController_listCouponsEndpoint",
@@ -12219,6 +12602,97 @@
           }
         ],
         "summary": "Get an invoice by id",
+        "tags": [
+          "Dashboard / Finance"
+        ]
+      }
+    },
+    "/api/v1/dashboard/finance/invoices/{id}/discount": {
+      "patch": {
+        "operationId": "DashboardFinanceController_applyInvoiceDiscountEndpoint",
+        "parameters": [
+          {
+            "description": "Invoice UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyInvoiceDiscountDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Discount applied; invoice totals recomputed"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invoice not eligible or invalid discount"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invoice not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Apply or clear a manual discount on an unpaid invoice",
         "tags": [
           "Dashboard / Finance"
         ]
@@ -26774,6 +27248,15 @@
             }
           },
           {
+            "description": "Filter by booking origin (front desk vs public website)",
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/BookingSource"
+            }
+          },
+          {
             "description": "Return bookings on or after this date (ISO 8601)",
             "in": "query",
             "name": "fromDate",
@@ -28453,7 +28936,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateGuestBookingDto"
+                "$ref": "#/components/schemas/CreatePublicBookingDto"
               }
             }
           },
@@ -28461,7 +28944,22 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "invoiceId": {
+                      "format": "uuid",
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Booking created"
           },
           "400": {
             "content": {
@@ -28484,7 +28982,12 @@
             "description": "Unhandled server error"
           }
         },
-        "summary": "Create a guest booking (requires OTP session)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a booking (requires a logged-in client session)",
         "tags": [
           "Public / Bookings"
         ]
@@ -30150,7 +30653,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/InitGuestPaymentDto"
+                "$ref": "#/components/schemas/InitClientPaymentDto"
               }
             }
           },
@@ -30158,7 +30661,28 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "paymentId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "redirectUrl": {
+                      "example": "https://checkout.moyasar.com/pay/payment-id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "paymentId",
+                    "redirectUrl"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Payment initialized"
           },
           "400": {
             "content": {
@@ -30181,7 +30705,12 @@
             "description": "Unhandled server error"
           }
         },
-        "summary": "Initialize a Moyasar payment for a guest booking (requires OTP session)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Initialize a Moyasar payment for a booking invoice (requires a logged-in client session)",
         "tags": [
           "Public / Payments"
         ]

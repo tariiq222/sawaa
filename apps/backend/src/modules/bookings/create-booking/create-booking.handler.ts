@@ -220,8 +220,11 @@ export class CreateBookingHandler {
     const isReserveBeforePaymentGroup =
       isGroupService && !!serviceRecord?.reserveWithoutPayment;
 
-    // For reserve-before-payment group services, use PENDING_GROUP_FILL until minParticipants is reached.
-    const initialStatus = isReserveBeforePaymentGroup ? 'PENDING_GROUP_FILL' : 'PENDING';
+    // Dashboard-created bookings are confirmed on creation: a receptionist made
+    // them, so the appointment itself is settled — payment is tracked separately
+    // (CONFIRMED + unpaid is the valid "pay at clinic later" state). Group
+    // reserve-before-payment sessions still fill first (PENDING_GROUP_FILL).
+    const initialStatus = isReserveBeforePaymentGroup ? 'PENDING_GROUP_FILL' : 'CONFIRMED';
 
     // Serializable: prevents two concurrent group-session bookings from both reading slotCount=N-1 and overflowing capacity.
     const booking = await this.rlsTransaction.withTransaction(
@@ -326,13 +329,21 @@ export class CreateBookingHandler {
             currency,
             bookingType: isGroupService ? 'GROUP' : bookingType,
             deliveryType,
+            source: 'RECEPTION',
             notes: dto.notes,
-            expiresAt: dto.expiresAt ?? (!dto.payAtClinic ? new Date(Date.now() + 15 * 60 * 1000) : undefined),
+            // A confirmed booking has no payment-expiry window (EXPIRE only acts
+            // on PENDING/AWAITING_PAYMENT). Keep the window only for the group
+            // fill flow that still starts unconfirmed.
+            expiresAt:
+              initialStatus === 'CONFIRMED'
+                ? undefined
+                : dto.expiresAt ?? (!dto.payAtClinic ? new Date(Date.now() + 15 * 60 * 1000) : undefined),
             groupSessionId: dto.groupSessionId,
             payAtClinic: dto.payAtClinic ?? false,
             couponCode: dto.couponCode ?? null,
             discountedPrice: discountedPrice,
             status: initialStatus,
+            confirmedAt: initialStatus === 'CONFIRMED' ? new Date() : undefined,
             // Snapshots: denormalized at creation for stable history
             priceSnapshot: new Prisma.Decimal(price.toString()),
             durationMinutesSnapshot: durationMins,

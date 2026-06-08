@@ -50,16 +50,29 @@ export async function updateBookingFlowOrder(
 export interface PaymentSettings {
   paymentMoyasarEnabled: boolean
   paymentAtClinicEnabled: boolean
+  payMethodCashEnabled: boolean
+  payMethodBankEnabled: boolean
+  payMethodMadaEnabled: boolean
+  payMethodTabbyEnabled: boolean
+}
+
+function pickPaymentSettings(res: PaymentSettings): PaymentSettings {
+  return {
+    paymentMoyasarEnabled: res.paymentMoyasarEnabled,
+    paymentAtClinicEnabled: res.paymentAtClinicEnabled,
+    payMethodCashEnabled: res.payMethodCashEnabled,
+    payMethodBankEnabled: res.payMethodBankEnabled,
+    payMethodMadaEnabled: res.payMethodMadaEnabled,
+    payMethodTabbyEnabled: res.payMethodTabbyEnabled,
+  }
 }
 
 export async function fetchPaymentSettings(): Promise<PaymentSettings> {
-  const res = await api.get<PaymentSettings>("/dashboard/organization/settings")
-  return { paymentMoyasarEnabled: res.paymentMoyasarEnabled, paymentAtClinicEnabled: res.paymentAtClinicEnabled }
+  return pickPaymentSettings(await api.get<PaymentSettings>("/dashboard/organization/settings"))
 }
 
 export async function updatePaymentSettings(
   settings: Partial<PaymentSettings>,
 ): Promise<PaymentSettings> {
-  const res = await api.patch<PaymentSettings>("/dashboard/organization/settings", settings)
-  return { paymentMoyasarEnabled: res.paymentMoyasarEnabled, paymentAtClinicEnabled: res.paymentAtClinicEnabled }
+  return pickPaymentSettings(await api.patch<PaymentSettings>("/dashboard/organization/settings", settings))
 }

@@ -125,4 +125,16 @@ export class UpsertOrgSettingsDto {
 
   @ApiPropertyOptional({ description: 'Enable pay-at-clinic option', example: true })
   @IsOptional() @IsBoolean() paymentAtClinicEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: 'Show "Cash" in the record-payment dialog', example: true })
+  @IsOptional() @IsBoolean() payMethodCashEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: 'Show "Bank transfer" in the record-payment dialog', example: true })
+  @IsOptional() @IsBoolean() payMethodBankEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: 'Show "Network/mada" in the record-payment dialog', example: false })
+  @IsOptional() @IsBoolean() payMethodMadaEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: 'Show "Tabby" in the record-payment dialog', example: false })
+  @IsOptional() @IsBoolean() payMethodTabbyEnabled?: boolean;
 }

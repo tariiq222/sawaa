@@ -18,6 +18,8 @@ enum PaymentMethod {
   BANK_TRANSFER
   CASH
   COUPON
+  MADA
+  TABBY
 }
 
 enum PaymentStatus {
@@ -52,6 +54,11 @@ model Invoice {
   subtotal         Decimal       @db.Decimal(12, 2)
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
   discountAmt      Decimal       @default(0) @db.Decimal(12, 2)
+  // Manual-discount audit trail. discountReasonId references DiscountReason
+  // (no FK relation — cross-cluster id, kept as plain string per BC rules).
+  discountReasonId String?
+  discountAppliedBy String?
+  discountAppliedAt DateTime?
   vatRate          Decimal       @default(0.15) @db.Decimal(5, 4)
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
   vatAmt           Decimal       @db.Decimal(12, 2)

@@ -54,7 +54,7 @@ export function BookingsPageContent({
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailDefaultTab, setDetailDefaultTab] = useState<
-    "details" | "reschedule"
+    "details" | "reschedule" | "invoice"
   >("details")
 
   const handleRowClick = (booking: Booking) => {
@@ -65,6 +65,12 @@ export function BookingsPageContent({
 
   const handleEditClick = (booking: Booking) => {
     setDetailDefaultTab("reschedule")
+    setSelectedBooking(booking)
+    setDetailOpen(true)
+  }
+
+  const handleInvoiceClick = (booking: Booking) => {
+    setDetailDefaultTab("invoice")
     setSelectedBooking(booking)
     setDetailOpen(true)
   }
@@ -151,6 +157,7 @@ export function BookingsPageContent({
               <BookingsTabContent
                 onRowClick={handleRowClick}
                 onEditClick={handleEditClick}
+                onInvoiceClick={handleInvoiceClick}
               />
             </TabsContent>
 

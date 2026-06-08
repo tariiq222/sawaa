@@ -438,6 +438,12 @@ model OrganizationSettings {
   bookingFlowOrder       String    @default("service_first")
   paymentMoyasarEnabled  Boolean   @default(true)
   paymentAtClinicEnabled Boolean   @default(false)
+  // Manual payment-recording methods shown in the bookings "record payment"
+  // dialog. Cash is on by default; the rest are opt-in from settings.
+  payMethodCashEnabled   Boolean   @default(true)
+  payMethodBankEnabled   Boolean   @default(true)
+  payMethodMadaEnabled   Boolean   @default(false)
+  payMethodTabbyEnabled  Boolean   @default(false)
   customDomainGraceUntil DateTime? // set when CUSTOM_DOMAIN is revoked on downgrade; tenant keeps access until this date
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
@@ -487,4 +493,19 @@ model ServiceBundleItem {
   @@unique([bundleId, serviceId])
   @@index([bundleId])
   @@index([serviceId])
+}
+
+// ─── Discount Reasons ──────────────────────────────────────────────────────────
+// Admin-managed reasons for manual invoice discounts (e.g. "خصم من المعالج",
+// "خصم خاص", "خصم من سواء"). Referenced by Invoice.discountReasonId.
+model DiscountReason {
+  id        String   @id @default(uuid())
+  labelAr   String
+  labelEn   String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
 }

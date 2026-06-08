@@ -44,6 +44,11 @@ import { UpdateBundleHandler } from './bundles/update-bundle.handler';
 import { ListBundlesHandler } from './bundles/list-bundles.handler';
 import { GetBundleHandler } from './bundles/get-bundle.handler';
 import { ArchiveBundleHandler } from './bundles/archive-bundle.handler';
+import { DashboardDiscountReasonsController } from '../../api/dashboard/discount-reasons.controller';
+import { ListDiscountReasonsHandler } from './discount-reasons/list-discount-reasons.handler';
+import { CreateDiscountReasonHandler } from './discount-reasons/create-discount-reason.handler';
+import { UpdateDiscountReasonHandler } from './discount-reasons/update-discount-reason.handler';
+import { DeleteDiscountReasonHandler } from './discount-reasons/delete-discount-reason.handler';
 
 const serviceHandlers = [
   CreateServiceHandler, UpdateServiceHandler, ListServicesHandler, GetServiceHandler, ArchiveServiceHandler,
@@ -57,12 +62,18 @@ const bundleHandlers = [
   BundlePriceService,
 ];
 
+const discountReasonHandlers = [
+  ListDiscountReasonsHandler, CreateDiscountReasonHandler,
+  UpdateDiscountReasonHandler, DeleteDiscountReasonHandler,
+];
+
 @Module({
   imports: [DatabaseModule, MediaModule, MessagingModule, MulterModule.register({ storage: memoryStorage(), limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 } })],
-  controllers: [DashboardOrganizationSettingsController],
+  controllers: [DashboardOrganizationSettingsController, DashboardDiscountReasonsController],
   providers: [
     ...serviceHandlers,
     ...bundleHandlers,
+    ...discountReasonHandlers,
     UpsertBrandingHandler, GetBrandingHandler, GetPublicBrandingHandler, UploadLogoHandler,
     CreateIntakeFormHandler, GetIntakeFormHandler, ListIntakeFormsHandler, DeleteIntakeFormHandler,
     UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,
@@ -74,6 +85,7 @@ const bundleHandlers = [
   exports: [
     ...serviceHandlers,
     ...bundleHandlers,
+    ...discountReasonHandlers,
     UpsertBrandingHandler, GetBrandingHandler, GetPublicBrandingHandler, UploadLogoHandler,
     CreateIntakeFormHandler, GetIntakeFormHandler, ListIntakeFormsHandler, DeleteIntakeFormHandler,
     UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,

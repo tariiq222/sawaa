@@ -61,13 +61,13 @@ const getActionMeta = (t: (k: string) => string) => ({
 
 const getStatusLabels = (t: (k: string) => string): Record<string, string> => ({
   pending:              t("bookings.actions.status.pending"),
-  pending_group_fill:   t("bookings.actions.status.pending"),
-  awaiting_payment:     t("bookings.actions.status.pending"),
+  pending_group_fill:   t("bookings.actions.status.pending_group_fill"),
+  awaiting_payment:     t("bookings.actions.status.awaiting_payment"),
   confirmed:            t("bookings.actions.status.confirmed"),
   completed:            t("bookings.actions.status.completed"),
   cancelled:            t("bookings.actions.status.cancelled"),
   cancel_requested:     t("bookings.actions.status.cancel_requested"),
-  no_show:              t("bookings.actions.status.noShow"),
+  no_show:              t("bookings.actions.status.no_show"),
   expired:              t("bookings.actions.status.expired"),
 })
 

@@ -123,6 +123,7 @@ export class BookGroupSessionHandler {
           serviceId: session.serviceId,
           bookingType: 'GROUP',
           deliveryType: session.deliveryType,
+          source: 'ONLINE',
           status: price > 0 ? BookingStatus.AWAITING_PAYMENT : BookingStatus.CONFIRMED,
           scheduledAt: session.scheduledAt,
           endsAt: new Date(session.scheduledAt.getTime() + session.durationMins * 60_000),

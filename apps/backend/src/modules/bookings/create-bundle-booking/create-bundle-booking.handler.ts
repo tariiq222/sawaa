@@ -272,6 +272,7 @@ export class CreateBundleBookingHandler {
               discountedPrice: shares[i],
               bookingType: 'INDIVIDUAL',
               deliveryType,
+              source: 'RECEPTION',
               notes: dto.notes,
               payAtClinic: dto.payAtClinic ?? false,
               status: 'PENDING',

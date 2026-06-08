@@ -41,3 +41,20 @@ export async function fetchPayments(
 export async function fetchPayment(id: string): Promise<Payment | null> {
   return api.get<Payment>(`/dashboard/finance/payments/${id}`)
 }
+
+/** Record a manual payment against an invoice. amount in integer halalas. */
+export async function recordPayment(payload: {
+  invoiceId: string
+  amount: number
+  method: "CASH" | "BANK_TRANSFER" | "MADA" | "TABBY"
+}): Promise<Payment> {
+  return api.post<Payment>("/dashboard/finance/payments", payload)
+}
+
+/** Apply or clear a manual discount on an unpaid invoice. discountAmt in integer halalas (0 clears). */
+export async function applyInvoiceDiscount(
+  invoiceId: string,
+  payload: { discountAmt: number; discountReasonId?: string; note?: string },
+): Promise<unknown> {
+  return api.patch(`/dashboard/finance/invoices/${invoiceId}/discount`, payload)
+}

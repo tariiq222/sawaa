@@ -218,6 +218,7 @@ export class CreateRecurringBookingHandler {
           currency: dto.currency ?? 'SAR',
           bookingType,
           deliveryType,
+          source: 'RECEPTION',
           notes: dto.notes,
           expiresAt: dto.expiresAt,
           recurringGroupId,

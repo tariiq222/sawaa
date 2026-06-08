@@ -1,4 +1,4 @@
-import { BookingStatus, BookingType, DeliveryType } from '@prisma/client';
+import { BookingSource, BookingStatus, BookingType, DeliveryType } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsDateString, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
@@ -55,6 +55,9 @@ export class ListBookingsDto extends PaginationDto {
 
   @ApiPropertyOptional({ description: 'Filter by delivery channel', enum: DeliveryType, enumName: 'DeliveryType', example: DeliveryType.IN_PERSON })
   @IsOptional() @Transform(({ value }) => mapDeliveryType(value)) @IsEnum(DeliveryType) deliveryType?: DeliveryType;
+
+  @ApiPropertyOptional({ description: 'Filter by booking origin (front desk vs public website)', enum: BookingSource, enumName: 'BookingSource', example: BookingSource.RECEPTION })
+  @IsOptional() @IsEnum(BookingSource) source?: BookingSource;
 
   @ApiPropertyOptional({ description: 'Return bookings on or after this date (ISO 8601)', example: '2026-05-01T00:00:00.000Z' })
   @IsOptional() @IsDateString() fromDate?: string;

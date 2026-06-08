@@ -19,6 +19,9 @@ import { GetInvoiceHandler } from '../../modules/finance/get-invoice/get-invoice
 import { GenerateInvoicePdfHandler } from '../../modules/finance/generate-invoice-pdf/generate-invoice-pdf.handler';
 import { ProcessPaymentHandler } from '../../modules/finance/process-payment/process-payment.handler';
 import { ProcessPaymentDto } from '../../modules/finance/process-payment/process-payment.dto';
+import { ApplyInvoiceDiscountHandler } from '../../modules/finance/apply-invoice-discount/apply-invoice-discount.handler';
+import { ApplyInvoiceDiscountDto } from '../../modules/finance/apply-invoice-discount/apply-invoice-discount.dto';
+import { UserId } from '../../common/auth/user-id.decorator';
 import { ListPaymentsHandler } from '../../modules/finance/list-payments/list-payments.handler';
 import { GetPaymentHandler } from '../../modules/finance/get-payment/get-payment.handler';
 import { ListPaymentsDto } from '../../modules/finance/list-payments/list-payments.dto';
@@ -69,6 +72,7 @@ export class DashboardFinanceController {
     private readonly getInvoice: GetInvoiceHandler,
     private readonly generateInvoicePdf: GenerateInvoicePdfHandler,
     private readonly processPayment: ProcessPaymentHandler,
+    private readonly applyInvoiceDiscount: ApplyInvoiceDiscountHandler,
     private readonly listPayments: ListPaymentsHandler,
     private readonly getPayment: GetPaymentHandler,
     private readonly listInvoices: ListInvoicesHandler,
@@ -185,6 +189,21 @@ export class DashboardFinanceController {
   @ApiCreatedResponse({ description: 'Payment processed' })
   processPaymentEndpoint(@Body() body: ProcessPaymentDto) {
     return this.processPayment.execute({ ...body });
+  }
+
+  @Patch('invoices/:id/discount')
+  @CheckPermissions({ action: 'manage', subject: 'Invoice' })
+  @ApiOperation({ summary: 'Apply or clear a manual discount on an unpaid invoice' })
+  @ApiParam({ name: 'id', description: 'Invoice UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Discount applied; invoice totals recomputed' })
+  @ApiResponse({ status: 400, description: 'Invoice not eligible or invalid discount', type: ApiErrorDto })
+  @ApiResponse({ status: 404, description: 'Invoice not found', type: ApiErrorDto })
+  applyInvoiceDiscountEndpoint(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UserId() userId: string,
+    @Body() body: ApplyInvoiceDiscountDto,
+  ) {
+    return this.applyInvoiceDiscount.execute({ invoiceId: id, appliedBy: userId, ...body });
   }
 
   @Post('payments/bank-transfer')

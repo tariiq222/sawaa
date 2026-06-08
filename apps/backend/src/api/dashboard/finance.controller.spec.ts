@@ -13,7 +13,7 @@ describe('DashboardFinanceController', () => {
       'updateCoupon', 'deleteCoupon', 'getPaymentStats', 'refundPayment',
       'verifyPayment', 'bankTransferUpload', 'getMoyasarConfig',
       'upsertMoyasarConfig', 'testMoyasarConfig', 'generateInvoicePdf',
-      'getPayment',
+      'getPayment', 'applyInvoiceDiscount',
     ];
 
     handlers = {};
@@ -30,6 +30,7 @@ describe('DashboardFinanceController', () => {
       handlerMocks[1] as any,  // getInvoice
       handlerMocks[18] as any, // generateInvoicePdf
       handlerMocks[2] as any,  // processPayment
+      handlerMocks[20] as any, // applyInvoiceDiscount
       handlerMocks[3] as any,  // listPayments
       handlerMocks[19] as any, // getPayment
       handlerMocks[4] as any,  // listInvoices

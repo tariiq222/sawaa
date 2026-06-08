@@ -29,10 +29,14 @@ export class GetBookingHandler {
       this.prisma.invoice.findFirst({
         where: { bookingId: booking.id },
         select: {
+          id: true,
           bookingId: true,
+          subtotal: true,
+          vatRate: true,
+          total: true,
+          status: true,
           payments: {
             orderBy: { createdAt: 'desc' },
-            take: 1,
             select: {
               id: true,
               amount: true,
@@ -65,11 +69,35 @@ export class GetBookingHandler {
       });
     }
 
+    const invoicesByBookingId = new Map<string, {
+      id: string;
+      subtotal: number;
+      vatRate: number;
+      total: number;
+      outstanding: number;
+      status: string;
+    }>();
+    if (invoice) {
+      const paidHalalas = invoice.payments
+        .filter((p) => p.status === 'COMPLETED')
+        .reduce((sum, p) => sum + Math.round(Number(p.amount)), 0);
+      const total = Math.round(Number(invoice.total));
+      invoicesByBookingId.set(booking.id, {
+        id: invoice.id,
+        subtotal: Math.round(Number(invoice.subtotal)),
+        vatRate: Number(invoice.vatRate),
+        total,
+        outstanding: Math.max(0, total - paidHalalas),
+        status: invoice.status as string,
+      });
+    }
+
     const relations: BookingRelations = {
       clientsById: new Map(client ? [[client.id, client]] : []),
       employeesById: new Map(employee ? [[employee.id, employee]] : []),
       servicesById: new Map(service ? [[service.id, service]] : []),
       paymentsByBookingId,
+      invoicesByBookingId,
     };
 
     return mapBookingRow(booking, relations);

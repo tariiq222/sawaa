@@ -16,6 +16,8 @@ export type DeliveryType = "in_person" | "online"
 
 export type BookingType = "individual" | "group" | "walk_in"
 
+export type BookingSource = "RECEPTION" | "ONLINE"
+
 export type BookingStatus =
   | "pending"
   | "pending_group_fill"
@@ -66,6 +68,15 @@ export interface BookingPayment {
   totalAmount: number
 }
 
+export interface BookingInvoice {
+  id: string
+  subtotal: number    // halalas, net before VAT/discount
+  vatRate: number     // fractional rate, e.g. 0.15
+  total: number       // halalas, after discount
+  outstanding: number // halalas, total minus completed payments
+  status: string      // Prisma InvoiceStatus
+}
+
 export interface RescheduledFrom {
   id: string
   date: string
@@ -83,6 +94,7 @@ export interface Booking {
   employeeServiceId: string
   type: BookingType
   deliveryType: DeliveryType | null
+  source: BookingSource
   date: string
   startTime: string
   endTime: string
@@ -108,6 +120,7 @@ export interface Booking {
   employeeService: { id: string } | null
   rescheduledFrom: RescheduledFrom | null
   payment: BookingPayment | null
+  invoice: BookingInvoice | null
   intakeFormId: string | null
   intakeFormAlreadySubmitted: boolean
   // ─── Snapshot fields (denormalized at booking creation) ───

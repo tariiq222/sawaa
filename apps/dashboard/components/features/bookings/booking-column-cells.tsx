@@ -7,81 +7,176 @@ import {
   PencilEdit01Icon,
   Delete02Icon,
   CheckmarkCircle02Icon,
+  CheckmarkCircle01Icon,
   CancelCircleIcon,
+  Cancel01Icon,
+  UserCheck01Icon,
+  EyeIcon,
   ArrowReloadHorizontalIcon,
-  MoreVerticalIcon,
+  MoneyAdd01Icon,
+  Invoice01Icon,
 } from "@hugeicons/core-free-icons"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@sawaa/ui"
+import { useState } from "react"
 import { StatusBadge } from "@/components/features/status-badge"
 import { useLocale } from "@/components/locale-provider"
 import { useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import { usePaymentMutations } from "@/hooks/use-payments"
 import { cn } from "@/lib/utils"
-import type { Booking, BookingPayment } from "@/lib/types/booking"
+import { RecordPaymentDialog } from "@/components/features/bookings/record-payment-dialog"
+import type { Booking } from "@/lib/types/booking"
+
+export type QuickStatusActionType = "confirm" | "checkin" | "complete" | "noshow"
 
 type QuickStatusAction = {
-  action: "confirm" | "noshow"
+  action: QuickStatusActionType
   labelKey: string
   icon: typeof Tick01Icon
   destructive?: boolean
 }
 
+const confirmAction: QuickStatusAction = {
+  action: "confirm",
+  labelKey: "bookings.col.quickAction.confirm",
+  icon: Tick01Icon,
+}
+
 /* Quick status actions available per status */
 const quickStatusActions: Record<string, QuickStatusAction[]> = {
-  pending:   [{ action: "confirm", labelKey: "bookings.col.quickAction.confirm", icon: Tick01Icon }],
-  confirmed: [],
+  pending:            [confirmAction],
+  pending_group_fill: [confirmAction],
+  awaiting_payment:   [confirmAction],
+  confirmed: [
+    { action: "checkin",  labelKey: "bookings.actions.action.checkin",  icon: UserCheck01Icon },
+    { action: "complete", labelKey: "bookings.actions.action.complete", icon: CheckmarkCircle01Icon },
+    { action: "noshow",   labelKey: "bookings.actions.action.noshow",   icon: EyeIcon, destructive: true },
+  ],
 }
+
+/* Statuses that can still be cancelled from the quick menu */
+const CANCELLABLE_STATUSES = new Set([
+  "pending",
+  "pending_group_fill",
+  "awaiting_payment",
+  "confirmed",
+  "cancel_requested",
+])
+
+/* Terminal statuses — the booking is over, so it can no longer be edited */
+const TERMINAL_STATUSES = new Set([
+  "completed",
+  "cancelled",
+  "no_show",
+  "expired",
+])
 
 /* ── Actions cell — delete opens the parent's AdminCancelDialog directly ── */
 export function ActionsCell({
-  booking: _booking,
+  booking,
   onView,
   onEdit,
+  onInvoice,
   onDelete,
   t,
 }: {
   booking: Booking
   onView: () => void
   onEdit: () => void
+  onInvoice: () => void
   onDelete: () => void
   t: (key: string) => string
 }) {
-  const viewBtn = "flex size-9 items-center justify-center rounded-sm border border-transparent text-muted-foreground transition-all duration-200 hover:bg-muted hover:border-border hover:text-foreground"
+  const iconBtn = "flex size-9 items-center justify-center rounded-sm border border-transparent text-muted-foreground transition-all duration-200 hover:bg-muted hover:border-border hover:text-foreground"
+  const queryClient = useQueryClient()
+  const { verifyMut, refundMut } = usePaymentMutations()
+  const [recordOpen, setRecordOpen] = useState(false)
+
+  const payment = booking.payment
+  const hasOutstanding = (booking.invoice?.outstanding ?? 0) > 0
+  // Record/collect while a balance remains — covers unpaid and deposit/partial follow-ups.
+  const canRecordPayment = !!booking.invoice && hasOutstanding && payment?.status !== "awaiting"
+  const canVerify = payment?.status === "awaiting"
+  // Refund only once the invoice is settled in full; a partial still owes a balance.
+  const canRefund = payment?.status === "paid" && !hasOutstanding
+  const isPending = verifyMut.isPending || refundMut.isPending
+  // Terminal bookings are over: no editing. Invoice stays reachable for review.
+  const isTerminal = TERMINAL_STATUSES.has(booking.status)
+  const hasInvoice = !!booking.invoice
+
+  const invalidateBookings = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
 
   return (
     <div className="flex items-center gap-1">
-      <button className={viewBtn} aria-label={t("bookings.col.view")} onClick={onView}>
+      {canRecordPayment && (
+        <>
+          <button
+            className={cn(iconBtn, "hover:bg-success/10 hover:border-success/20 hover:text-success")}
+            aria-label={t("bookings.col.recordPayment")}
+            onClick={() => setRecordOpen(true)}
+          >
+            <HugeiconsIcon icon={MoneyAdd01Icon} size={16} />
+          </button>
+          <RecordPaymentDialog booking={booking} open={recordOpen} onOpenChange={setRecordOpen} />
+        </>
+      )}
+      {canVerify && payment && (
+        <>
+          <button
+            className={cn(iconBtn, "hover:bg-success/10 hover:border-success/20 hover:text-success")}
+            aria-label={t("bookings.payment.action.approveTransfer")}
+            disabled={isPending}
+            onClick={() => verifyMut.mutate({ id: payment.id, action: "approve" }, { onSuccess: invalidateBookings })}
+          >
+            <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} />
+          </button>
+          <button
+            className={cn(iconBtn, "hover:bg-destructive/10 hover:border-destructive/20 hover:text-destructive")}
+            aria-label={t("bookings.payment.action.rejectTransfer")}
+            disabled={isPending}
+            onClick={() => verifyMut.mutate({ id: payment.id, action: "reject" }, { onSuccess: invalidateBookings })}
+          >
+            <HugeiconsIcon icon={CancelCircleIcon} size={16} />
+          </button>
+        </>
+      )}
+      {canRefund && payment && (
+        <button
+          className={cn(iconBtn, "hover:bg-destructive/10 hover:border-destructive/20 hover:text-destructive")}
+          aria-label={t("bookings.payment.action.refund")}
+          disabled={isPending}
+          onClick={() => refundMut.mutate({ id: payment.id, reason: t("bookings.payment.refundReason") }, { onSuccess: invalidateBookings })}
+        >
+          <HugeiconsIcon icon={ArrowReloadHorizontalIcon} size={16} />
+        </button>
+      )}
+      <button className={iconBtn} aria-label={t("bookings.col.view")} onClick={onView}>
         <HugeiconsIcon icon={ViewIcon} size={16} />
       </button>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            className={cn(viewBtn, "text-muted-foreground")}
-            aria-label={t("bookings.col.actions")}
-          >
-            <HugeiconsIcon icon={MoreVerticalIcon} size={16} />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-44">
-          <DropdownMenuItem onSelect={onEdit}>
-            <HugeiconsIcon icon={PencilEdit01Icon} size={15} className="me-2 shrink-0" />
-            {t("bookings.col.edit")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={onDelete}
-            className="text-destructive focus:text-destructive focus:bg-destructive/10"
-          >
-            <HugeiconsIcon icon={Delete02Icon} size={15} className="me-2 shrink-0" />
-            {t("bookings.col.delete")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {hasInvoice && (
+        <button className={iconBtn} aria-label={t("bookings.col.invoice")} onClick={onInvoice}>
+          <HugeiconsIcon icon={Invoice01Icon} size={16} />
+        </button>
+      )}
+      {!isTerminal && (
+        <button className={iconBtn} aria-label={t("bookings.col.edit")} onClick={onEdit}>
+          <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
+        </button>
+      )}
+      <button
+        className={cn(iconBtn, "hover:bg-destructive/10 hover:border-destructive/20 hover:text-destructive")}
+        aria-label={t("bookings.col.delete")}
+        onClick={onDelete}
+      >
+        <HugeiconsIcon icon={Delete02Icon} size={16} />
+      </button>
     </div>
   )
 }
@@ -90,13 +185,16 @@ export function ActionsCell({
 export function StatusCell({
   booking,
   onStatusAction,
+  onDelete,
 }: {
   booking: Booking
-  onStatusAction: (booking: Booking, action: "confirm" | "noshow") => void
+  onStatusAction: (booking: Booking, action: QuickStatusActionType) => void
+  onDelete: (booking: Booking) => void
 }) {
   const { t } = useLocale()
-  const actions = quickStatusActions[booking.status]
-  if (!actions?.length) return <StatusBadge status={booking.status} />
+  const actions = quickStatusActions[booking.status] ?? []
+  const canCancel = CANCELLABLE_STATUSES.has(booking.status)
+  if (!actions.length && !canCancel) return <StatusBadge status={booking.status} />
 
   return (
     <DropdownMenu>
@@ -116,6 +214,18 @@ export function StatusCell({
             {t(labelKey)}
           </DropdownMenuItem>
         ))}
+        {canCancel && (
+          <>
+            {actions.length > 0 && <DropdownMenuSeparator />}
+            <DropdownMenuItem
+              onSelect={() => onDelete(booking)}
+              className="text-destructive focus:text-destructive focus:bg-destructive/10"
+            >
+              <HugeiconsIcon icon={Cancel01Icon} size={15} className="me-2 shrink-0" />
+              {t("bookings.col.quickAction.cancel")}
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -125,112 +235,35 @@ export function StatusCell({
 const paymentStatusStyles: Record<string, string> = {
   pending:  "border-warning/30 bg-warning/10 text-warning",
   awaiting: "border-warning/30 bg-warning/10 text-warning",
+  partial:  "border-warning/30 bg-warning/10 text-warning",
   paid:     "border-success/30 bg-success/10 text-success",
   refunded: "border-info/30 bg-info/10 text-info",
   failed:   "border-destructive/30 bg-destructive/10 text-destructive",
   rejected: "border-destructive/30 bg-destructive/10 text-destructive",
 }
 
-/** Statuses that have no actions — render as plain badge, no dropdown */
-const NON_INTERACTIVE_STATUSES = new Set(["pending", "failed", "refunded", "rejected"])
+/** A "paid" payment with an invoice that still has an outstanding balance is a deposit/partial. */
+export function isPartiallyPaid(booking: Booking): boolean {
+  return booking.payment?.status === "paid" && (booking.invoice?.outstanding ?? 0) > 0
+}
 
-export function PaymentStatusCell({ payment }: { payment: BookingPayment | null }) {
+export function PaymentStatusCell({ booking }: { booking: Booking }) {
   const { t } = useLocale()
-  const queryClient = useQueryClient()
-  const { verifyMut, refundMut } = usePaymentMutations()
+  const payment = booking.payment
 
-  if (!payment) return <span className="text-muted-foreground">—</span>
+  const status = isPartiallyPaid(booking) ? "partial" : payment?.status ?? "pending"
+  const label = payment
+    ? t("bookings.col.paymentStatus." + status)
+    : t("bookings.col.paymentStatus.unpaid")
 
-  const pillClass = cn(
-    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
-    paymentStatusStyles[payment.status] ?? "",
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
+        paymentStatusStyles[status] ?? "",
+      )}
+    >
+      {label}
+    </span>
   )
-  const label = t("bookings.col.paymentStatus." + payment.status)
-
-  const invalidateBookings = () =>
-    queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
-
-  // Statuses with no actions → plain non-interactive span
-  if (NON_INTERACTIVE_STATUSES.has(payment.status)) {
-    return <span className={pillClass}>{label}</span>
-  }
-
-  const isPending = verifyMut.isPending || refundMut.isPending
-
-  // awaiting → approve + reject
-  if (payment.status === "awaiting") {
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            className="rounded-md transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-            disabled={isPending}
-          >
-            <span className={pillClass}>{label}</span>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-48">
-          <DropdownMenuItem
-            onSelect={() => {
-              verifyMut.mutate(
-                { id: payment.id, action: "approve" },
-                { onSuccess: invalidateBookings },
-              )
-            }}
-            disabled={isPending}
-          >
-            <HugeiconsIcon icon={CheckmarkCircle02Icon} size={15} className="me-2 shrink-0 text-success" />
-            {t("bookings.payment.action.approveTransfer")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={() => {
-              verifyMut.mutate(
-                { id: payment.id, action: "reject" },
-                { onSuccess: invalidateBookings },
-              )
-            }}
-            disabled={isPending}
-            className="text-destructive focus:text-destructive focus:bg-destructive/10"
-          >
-            <HugeiconsIcon icon={CancelCircleIcon} size={15} className="me-2 shrink-0" />
-            {t("bookings.payment.action.rejectTransfer")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    )
-  }
-
-  // paid → refund
-  if (payment.status === "paid") {
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            className="rounded-md transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-            disabled={isPending}
-          >
-            <span className={pillClass}>{label}</span>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-48">
-          <DropdownMenuItem
-            onSelect={() => {
-              refundMut.mutate(
-                { id: payment.id, reason: t("bookings.payment.refundReason") },
-                { onSuccess: invalidateBookings },
-              )
-            }}
-            disabled={isPending}
-            className="text-destructive focus:text-destructive focus:bg-destructive/10"
-          >
-            <HugeiconsIcon icon={ArrowReloadHorizontalIcon} size={15} className="me-2 shrink-0" />
-            {t("bookings.payment.action.refund")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    )
-  }
-
-  // Fallback: plain badge for any unhandled status
-  return <span className={pillClass}>{label}</span>
 }

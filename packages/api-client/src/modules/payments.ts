@@ -64,3 +64,28 @@ export async function verifyPayment(
     },
   )
 }
+
+/** Record a manual payment (CASH / BANK_TRANSFER) against an invoice. Amount in integer halalas. */
+export async function processPayment(payload: {
+  invoiceId: string
+  amount: number
+  method: 'CASH' | 'BANK_TRANSFER' | 'COUPON'
+  gatewayRef?: string
+  idempotencyKey?: string
+}): Promise<PaymentListItem> {
+  return apiRequest<PaymentListItem>('/dashboard/finance/payments', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+/** Apply or clear a manual discount on an unpaid invoice. discountAmt in integer halalas (0 clears it). */
+export async function applyInvoiceDiscount(
+  invoiceId: string,
+  payload: { discountAmt: number; discountReasonId?: string; note?: string },
+): Promise<unknown> {
+  return apiRequest(`/dashboard/finance/invoices/${invoiceId}/discount`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}

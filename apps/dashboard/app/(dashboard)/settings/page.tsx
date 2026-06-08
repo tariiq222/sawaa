@@ -14,6 +14,8 @@ import { SettingsPaymentTab } from "@/components/features/settings/settings-paym
 import { SettingsIntegrationsTab } from "@/components/features/settings/settings-integrations-tab"
 import { EmailTemplatesTab } from "@/components/features/settings/email-templates-tab"
 import { LegalContentTab } from "@/components/features/settings/legal-content-tab"
+import { DiscountReasonsManager } from "@/components/features/settings/discount-reasons-manager"
+import { PaymentMethodsToggles } from "@/components/features/settings/payment-methods-toggles"
 import { PermissionGuard } from "@/components/features/permission-guard"
 
 export default function SettingsPage() {
@@ -33,6 +35,7 @@ export default function SettingsPage() {
               <TabsTrigger value="cancellation">{t("settings.tabs.cancellation")}</TabsTrigger>
               <TabsTrigger value="hours">{t("settings.tabs.hours")}</TabsTrigger>
               <TabsTrigger value="payment">{t("settings.tabs.payment")}</TabsTrigger>
+              <TabsTrigger value="discount-reasons">{t("settings.tabs.discountReasons")}</TabsTrigger>
               <TabsTrigger value="integrations">{t("settings.tabs.integrations")}</TabsTrigger>
               <TabsTrigger value="legal">{t("settings.tabs.legal")}</TabsTrigger>
               <TabsTrigger value="email-templates">{t("settings.tabs.emailTemplates")}</TabsTrigger>
@@ -51,8 +54,12 @@ export default function SettingsPage() {
           <TabsContent value="hours" className="mt-4">
             <WorkingHoursTab t={t} />
           </TabsContent>
-          <TabsContent value="payment" className="mt-4">
+          <TabsContent value="payment" className="mt-4 space-y-4">
             <SettingsPaymentTab />
+            <PaymentMethodsToggles />
+          </TabsContent>
+          <TabsContent value="discount-reasons" className="mt-4">
+            <DiscountReasonsManager />
           </TabsContent>
           <TabsContent value="integrations" className="mt-4">
             <SettingsIntegrationsTab />

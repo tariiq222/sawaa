@@ -171,6 +171,11 @@ export const queryKeys = {
     detail: (id: string) => ["coupons", "detail", id] as const,
   },
 
+  discountReasons: {
+    all: ["discount-reasons"] as const,
+    list: (includeInactive?: boolean) => ["discount-reasons", "list", includeInactive] as const,
+  },
+
   /* ─── Branches ─── */
   branches: {
     all: ["branches"] as const,

@@ -883,6 +883,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/discount-reasons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List discount reasons */
+        get: operations["DashboardDiscountReasonsController_listEndpoint"];
+        put?: never;
+        /** Create a discount reason */
+        post: operations["DashboardDiscountReasonsController_createEndpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/discount-reasons/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a discount reason */
+        delete: operations["DashboardDiscountReasonsController_deleteEndpoint"];
+        options?: never;
+        head?: never;
+        /** Update a discount reason */
+        patch: operations["DashboardDiscountReasonsController_updateEndpoint"];
+        trace?: never;
+    };
     "/api/v1/dashboard/finance/coupons": {
         parameters: {
             query?: never;
@@ -970,6 +1006,23 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/finance/invoices/{id}/discount": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Apply or clear a manual discount on an unpaid invoice */
+        patch: operations["DashboardFinanceController_applyInvoiceDiscountEndpoint"];
         trace?: never;
     };
     "/api/v1/dashboard/finance/invoices/{id}/pdf": {
@@ -3990,6 +4043,23 @@ export interface components {
              */
             invoiceId: string;
         };
+        ApplyInvoiceDiscountDto: {
+            /**
+             * @description Discount amount applied to the invoice subtotal, in integer halalas (1 SAR = 100). Send 0 to clear the discount.
+             * @example 5000
+             */
+            discountAmt: number;
+            /**
+             * @description Reason for the discount (must reference an active DiscountReason). Required when discountAmt > 0.
+             * @example 00000000-0000-0000-0000-000000000000
+             */
+            discountReasonId?: string;
+            /**
+             * @description Optional free-text note stored on the invoice
+             * @example موافقة المدير
+             */
+            note?: string;
+        };
         ApproveCancelBookingDto: {
             /**
              * @description Optional notes from the approver
@@ -4139,6 +4209,8 @@ export interface components {
              */
             useCustomAvailability?: boolean;
         };
+        /** @enum {string} */
+        BookingSource: "RECEPTION" | "ONLINE";
         /** @enum {string} */
         BookingStatus: "PENDING" | "PENDING_GROUP_FILL" | "AWAITING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "EXPIRED" | "CANCEL_REQUESTED";
         /**
@@ -4830,6 +4902,28 @@ export interface components {
             nameEn?: string;
             /**
              * @description Display order (0-based, lower sorts first)
+             * @example 0
+             */
+            sortOrder?: number;
+        };
+        CreateDiscountReasonDto: {
+            /**
+             * @description Whether the reason is selectable
+             * @example true
+             */
+            isActive?: boolean;
+            /**
+             * @description Reason label in Arabic
+             * @example خصم من المعالج
+             */
+            labelAr: string;
+            /**
+             * @description Reason label in English
+             * @example Therapist discount
+             */
+            labelEn?: string;
+            /**
+             * @description Sort order (ascending)
              * @example 0
              */
             sortOrder?: number;
@@ -6232,7 +6326,7 @@ export interface components {
          * @description Payment method used
          * @enum {string}
          */
-        PaymentMethod: "ONLINE_CARD" | "BANK_TRANSFER" | "CASH" | "COUPON";
+        PaymentMethod: "ONLINE_CARD" | "BANK_TRANSFER" | "CASH" | "COUPON" | "MADA" | "TABBY";
         /** @enum {string} */
         PaymentStatus: "PENDING" | "PENDING_VERIFICATION" | "COMPLETED" | "FAILED" | "PARTIALLY_REFUNDED" | "REFUNDED";
         PerformPasswordResetDto: {
@@ -7116,6 +7210,28 @@ export interface components {
              */
             sortOrder?: number;
         };
+        UpdateDiscountReasonDto: {
+            /**
+             * @description Whether the reason is selectable
+             * @example false
+             */
+            isActive?: boolean;
+            /**
+             * @description Reason label in Arabic
+             * @example خصم خاص
+             */
+            labelAr?: string;
+            /**
+             * @description Reason label in English
+             * @example Special discount
+             */
+            labelEn?: string;
+            /**
+             * @description Sort order (ascending)
+             * @example 1
+             */
+            sortOrder?: number;
+        };
         UpdateDocumentDto: {
             /**
              * @description Arbitrary JSON metadata
@@ -7820,6 +7936,26 @@ export interface components {
              * @example Riyadh
              */
             organizationCity?: string;
+            /**
+             * @description Show "Bank transfer" in the record-payment dialog
+             * @example true
+             */
+            payMethodBankEnabled?: boolean;
+            /**
+             * @description Show "Cash" in the record-payment dialog
+             * @example true
+             */
+            payMethodCashEnabled?: boolean;
+            /**
+             * @description Show "Network/mada" in the record-payment dialog
+             * @example false
+             */
+            payMethodMadaEnabled?: boolean;
+            /**
+             * @description Show "Tabby" in the record-payment dialog
+             * @example false
+             */
+            payMethodTabbyEnabled?: boolean;
             /**
              * @description Enable pay-at-clinic option
              * @example true
@@ -9037,6 +9173,8 @@ export interface operations {
                 bookingType?: components["schemas"]["BookingType"];
                 /** @description Filter by delivery channel */
                 deliveryType?: components["schemas"]["DeliveryType"];
+                /** @description Filter by booking origin (front desk vs public website) */
+                source?: components["schemas"]["BookingSource"];
                 /** @description Return bookings on or after this date (ISO 8601) */
                 fromDate?: string;
                 /** @description Return bookings on or before this date (ISO 8601) */
@@ -12022,6 +12160,266 @@ export interface operations {
             };
         };
     };
+    DashboardDiscountReasonsController_listEndpoint: {
+        parameters: {
+            query?: {
+                /** @description Include deactivated reasons */
+                includeInactive?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of discount reasons */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardDiscountReasonsController_createEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDiscountReasonDto"];
+            };
+        };
+        responses: {
+            /** @description Discount reason created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardDiscountReasonsController_deleteEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Discount reason UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Discount reason deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Discount reason not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Reason is referenced by invoices */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardDiscountReasonsController_updateEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Discount reason UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDiscountReasonDto"];
+            };
+        };
+        responses: {
+            /** @description Discount reason updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Discount reason not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     DashboardFinanceController_listCouponsEndpoint: {
         parameters: {
             query?: {
@@ -12546,6 +12944,76 @@ export interface operations {
                 content?: never;
             };
             /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Invoice not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardFinanceController_applyInvoiceDiscountEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Invoice UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyInvoiceDiscountDto"];
+            };
+        };
+        responses: {
+            /** @description Discount applied; invoice totals recomputed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invoice not eligible or invalid discount */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -23480,6 +23948,8 @@ export interface operations {
                 bookingType?: components["schemas"]["BookingType"];
                 /** @description Filter by delivery channel */
                 deliveryType?: components["schemas"]["DeliveryType"];
+                /** @description Filter by booking origin (front desk vs public website) */
+                source?: components["schemas"]["BookingSource"];
                 /** @description Return bookings on or after this date (ISO 8601) */
                 fromDate?: string;
                 /** @description Return bookings on or before this date (ISO 8601) */

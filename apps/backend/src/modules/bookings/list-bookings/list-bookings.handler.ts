@@ -87,6 +87,7 @@ export class ListBookingsHandler {
       ...(query.status ? { status: query.status } : {}),
       ...(query.bookingType ? { bookingType: query.bookingType } : {}),
       ...(query.deliveryType ? { deliveryType: query.deliveryType } : {}),
+      ...(query.source ? { source: query.source } : {}),
       ...(query.fromDate || query.toDate
         ? { scheduledAt: { gte: query.fromDate, lte: query.toDate } }
         : {}),
@@ -149,10 +150,14 @@ async function loadRelations(
       ? prisma.invoice.findMany({
           where: { bookingId: { in: bookingIds } },
           select: {
+            id: true,
             bookingId: true,
+            subtotal: true,
+            vatRate: true,
+            total: true,
+            status: true,
             payments: {
               orderBy: { createdAt: 'desc' },
-              take: 1,
               select: {
                 id: true,
                 amount: true,
@@ -187,10 +192,36 @@ async function loadRelations(
       }),
   );
 
+  // Build invoicesByBookingId: bookingId → invoice id + total + outstanding
+  // balance (halalat). The dashboard needs invoiceId to apply a discount or
+  // record a manual payment against a still-unpaid booking.
+  const invoicesByBookingId = new Map(
+    invoices
+      .filter((inv) => inv.bookingId)
+      .map((inv) => {
+        const paidHalalas = inv.payments
+          .filter((p) => p.status === 'COMPLETED')
+          .reduce((sum, p) => sum + Math.round(Number(p.amount)), 0);
+        const total = Math.round(Number(inv.total));
+        return [
+          inv.bookingId!,
+          {
+            id: inv.id,
+            subtotal: Math.round(Number(inv.subtotal)),
+            vatRate: Number(inv.vatRate),
+            total,
+            outstanding: Math.max(0, total - paidHalalas),
+            status: inv.status as string,
+          },
+        ] as const;
+      }),
+  );
+
   return {
     clientsById: new Map(clients.map((c) => [c.id, c])),
     employeesById: new Map(employees.map((e) => [e.id, e])),
     servicesById: new Map(services.map((s) => [s.id, s])),
     paymentsByBookingId,
+    invoicesByBookingId,
   };
 }

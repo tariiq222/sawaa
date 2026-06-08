@@ -8,6 +8,8 @@ import {
   fetchPaymentStats,
   refundPayment,
   verifyPayment,
+  recordPayment,
+  applyInvoiceDiscount,
 } from "@/lib/api/payments"
 import type { PaymentListQuery, PaymentStats } from "@/lib/types/payment"
 import type { PaymentStatus, PaymentMethod } from "@/lib/types/common"
@@ -42,6 +44,38 @@ export function usePaymentMutations() {
   })
 
   return { refundMut, verifyMut }
+}
+
+/* ─── Manual payment recording (from the bookings list "unpaid" cell) ─── */
+
+export function useRecordPaymentMutations() {
+  const queryClient = useQueryClient()
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
+    queryClient.invalidateQueries({ queryKey: queryKeys.payments.all })
+  }
+
+  const applyDiscountMut = useMutation({
+    mutationFn: ({
+      invoiceId,
+      discountAmt,
+      discountReasonId,
+    }: { invoiceId: string; discountAmt: number; discountReasonId?: string }) =>
+      applyInvoiceDiscount(invoiceId, { discountAmt, discountReasonId }),
+  })
+
+  const recordMut = useMutation({
+    mutationFn: ({
+      invoiceId,
+      amount,
+      method,
+    }: { invoiceId: string; amount: number; method: "CASH" | "BANK_TRANSFER" | "MADA" | "TABBY" }) =>
+      recordPayment({ invoiceId, amount, method }),
+    onSuccess: invalidate,
+  })
+
+  return { applyDiscountMut, recordMut }
 }
 
 /* ─── List Hook ─── */
