@@ -16,6 +16,9 @@ export class ListServicesDto extends PaginationDto {
   @ApiPropertyOptional({ description: 'Include hidden services', example: false })
   @IsOptional() @Type(() => String) @Transform(toBoolean) @IsBoolean() includeHidden?: boolean;
 
+  @ApiPropertyOptional({ description: 'Include archived services', example: false })
+  @IsOptional() @Type(() => String) @Transform(toBoolean) @IsBoolean() includeArchived?: boolean;
+
   @ApiPropertyOptional({ description: 'Filter by category UUID', format: 'uuid', example: '550e8400-e29b-41d4-a716-446655440000' })
   @IsOptional() @IsUUID() categoryId?: string;
 

@@ -14,7 +14,7 @@ export interface BookingPaymentRelation {
 export interface BookingInvoiceRelation {
   id: string;
   subtotal: number;    // net before VAT/discount (halalas)
-  vatRate: number;     // fractional rate, e.g. 0.15
+  vatRate: number;     // fractional rate, e.g. 0
   total: number;       // gross total after discount (halalas)
   outstanding: number; // total minus completed payments (halalas)
   status: string;      // Prisma InvoiceStatus enum string

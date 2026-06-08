@@ -54,7 +54,7 @@ export class CompleteBookingHandler {
             where: {},
             select: { vatRate: true },
           });
-          const vatRateDec = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
+          const vatRateDec = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0');
           const subtotalDec = new Prisma.Decimal(
             (booking.discountedPrice ?? booking.price).toString(),
           );

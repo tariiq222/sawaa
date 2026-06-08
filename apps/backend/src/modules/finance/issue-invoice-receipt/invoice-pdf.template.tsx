@@ -1,14 +1,5 @@
-import { Document, Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer';
-import * as path from 'path';
+import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import * as React from 'react';
-
-Font.register({
-  family: 'IBMPlexArabic',
-  fonts: [
-    { src: path.join(__dirname, '../../../../assets/fonts/IBMPlexSansArabic-Regular.ttf') },
-    { src: path.join(__dirname, '../../../../assets/fonts/IBMPlexSansArabic-Bold.ttf'), fontWeight: 'bold' },
-  ],
-});
 
 const DEFAULT_BRAND = '#55CCB0';
 const INK = '#1a1a1a';
@@ -150,6 +141,7 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
   const cur = data.currency;
   const brand = safeBrand(data.brandColor);
   const netBeforeVat = data.subtotal - data.discountAmt;
+  const hasVat = data.vatAmt > 0;
   const paymentLabel = PAYMENT_LABELS[data.paymentMethod] ?? data.paymentMethod;
 
   return (
@@ -170,8 +162,8 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
             ) : null}
           </View>
           <View style={styles.docTypeBox}>
-            <Text style={styles.docTitleAr}>فاتورة ضريبية مبسطة</Text>
-            <Text style={styles.docTitleEn}>SIMPLIFIED TAX INVOICE</Text>
+            <Text style={styles.docTitleAr}>{hasVat ? 'فاتورة ضريبية مبسطة' : 'فاتورة'}</Text>
+            <Text style={styles.docTitleEn}>{hasVat ? 'SIMPLIFIED TAX INVOICE' : 'INVOICE'}</Text>
             <Text style={styles.invoiceNo}>رقم الفاتورة</Text>
             <Text style={styles.invoiceNoVal}>#{data.invoiceNumber}</Text>
           </View>
@@ -234,12 +226,14 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
                 </Text>
               </View>
             )}
-            <View style={styles.totalRow}>
-              <Text style={styles.totalKey}>ضريبة القيمة المضافة (15%)</Text>
-              <Text style={styles.totalVal}>
-                {formatHalalas(data.vatAmt)} {cur}
-              </Text>
-            </View>
+            {hasVat && (
+              <View style={styles.totalRow}>
+                <Text style={styles.totalKey}>ضريبة القيمة المضافة</Text>
+                <Text style={styles.totalVal}>
+                  {formatHalalas(data.vatAmt)} {cur}
+                </Text>
+              </View>
+            )}
             <View style={[styles.grandRow, { backgroundColor: brand }]}>
               <Text style={styles.grandKey}>الإجمالي</Text>
               <Text style={styles.grandVal}>
@@ -260,10 +254,7 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
             <View />
           )}
           <View>
-            <Text style={styles.footerText}>
-              هذه فاتورة ضريبية مبسطة صادرة وفق متطلبات هيئة الزكاة والضريبة والجمارك (ZATCA).
-              شكراً لثقتكم بنا.
-            </Text>
+            <Text style={styles.footerText}>شكراً لكم.</Text>
             <Text style={styles.ref}>رقم المرجع: {data.invoiceId}</Text>
           </View>
         </View>

@@ -4,6 +4,7 @@ import {
   IsDefined,
   IsEnum,
   IsInt,
+  IsISO8601,
   IsNumber,
   IsNotEmpty,
   IsOptional,
@@ -15,20 +16,21 @@ import {
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { RecurringPatternDto } from './create-service.dto';
+import { SanitizeText } from './sanitize-text.decorator';
 
 export class UpdateServiceDto {
   // ─── الأساسيات ───────────────────────────────────────────────────────────
   @ApiPropertyOptional({ description: 'Service name in Arabic', example: 'قص الشعر' })
-  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(200) nameAr?: string;
+  @SanitizeText() @IsOptional() @IsString() @IsNotEmpty() @MaxLength(200) nameAr?: string;
 
   @ApiPropertyOptional({ description: 'Service name in English', example: 'Haircut' })
-  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(200) nameEn?: string;
+  @SanitizeText() @IsOptional() @IsString() @IsNotEmpty() @MaxLength(200) nameEn?: string;
 
   @ApiPropertyOptional({ description: 'Description in Arabic' })
-  @IsOptional() @IsString() descriptionAr?: string;
+  @SanitizeText() @IsOptional() @IsString() descriptionAr?: string;
 
   @ApiPropertyOptional({ description: 'Description in English' })
-  @IsOptional() @IsString() descriptionEn?: string;
+  @SanitizeText() @IsOptional() @IsString() descriptionEn?: string;
 
   @ApiPropertyOptional({ description: 'Duration in minutes', example: 30 })
   @IsOptional() @IsInt() @Min(1) durationMins?: number;
@@ -103,4 +105,8 @@ export class UpdateServiceDto {
 
   @ApiPropertyOptional({ description: 'Allow reservation without payment until minimum participants is reached', example: false })
   @IsOptional() @IsBoolean() reserveWithoutPayment?: boolean;
+
+  // ─── التزامن المتفائل ─────────────────────────────────────────────────────
+  @ApiPropertyOptional({ description: 'Expected updatedAt timestamp (ISO) for optimistic concurrency; if it does not match current state, the update is rejected with 409', example: '2026-06-08T10:00:00.000Z' })
+  @IsOptional() @IsISO8601() expectedUpdatedAt?: string;
 }

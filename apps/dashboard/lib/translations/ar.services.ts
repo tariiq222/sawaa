@@ -274,6 +274,7 @@ export const arServices: Record<string, string> = {
   "services.bookingTypes.labelAr": "الاسم (AR)",
   "services.bookingTypes.placeholderEn": "مثلاً: Standard",
   "services.bookingTypes.placeholderAr": "مثلاً: عادي",
+  "services.bookingTypes.zeroPriceWarning": "السعر صفر — تأكد أن الخدمة مجانية فعلاً",
   "services.deliveryTypes.title": "طرق التقديم والتسعير",
   "services.deliveryTypes.inPerson": "حضوري",
   "services.deliveryTypes.online": "أونلاين",

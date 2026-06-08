@@ -1958,6 +1958,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/organization/services/{serviceId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore an archived service */
+        post: operations["DashboardOrganizationSettingsController_restoreServiceEndpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/organization/settings": {
         parameters: {
             query?: never;
@@ -5139,7 +5156,7 @@ export interface components {
             subtotal: number;
             /**
              * @description VAT rate as fraction (0..1). Defaults to OrganizationSettings.vatRate.
-             * @example 0.15
+             * @example 0
              */
             vatRate?: number;
         };
@@ -5345,7 +5362,7 @@ export interface components {
              * @description Category UUID
              * @example 550e8400-e29b-41d4-a716-446655440000
              */
-            categoryId?: string;
+            categoryId: string;
             /**
              * @default SAR
              * @example SAR
@@ -5431,7 +5448,7 @@ export interface components {
             /** @example قص الشعر */
             nameAr: string;
             /** @example Haircut */
-            nameEn?: string;
+            nameEn: string;
             /**
              * @description Price in integer halalas (1 SAR = 100)
              * @example 5000
@@ -7402,6 +7419,11 @@ export interface components {
              */
             durationMins?: number;
             /**
+             * @description Expected updatedAt timestamp (ISO) for optimistic concurrency; if it does not match current state, the update is rejected with 409
+             * @example 2026-06-08T10:00:00.000Z
+             */
+            expectedUpdatedAt?: string;
+            /**
              * @description Hide duration during booking flow
              * @example false
              */
@@ -7880,7 +7902,7 @@ export interface components {
             timezone?: string;
             /**
              * @description VAT rate as fraction (0..1). Super-admin only.
-             * @example 0.15
+             * @example 0
              */
             vatRate?: number;
             /**
@@ -17878,6 +17900,8 @@ export interface operations {
                 isActive?: boolean;
                 /** @description Include hidden services */
                 includeHidden?: boolean;
+                /** @description Include archived services */
+                includeArchived?: boolean;
                 /** @description Filter by category UUID */
                 categoryId?: string;
                 /** @description Search by name */
@@ -18490,6 +18514,70 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardOrganizationSettingsController_restoreServiceEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service UUID */
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service restored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Service not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {

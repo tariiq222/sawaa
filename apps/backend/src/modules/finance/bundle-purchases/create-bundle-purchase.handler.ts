@@ -75,7 +75,7 @@ export class CreateBundlePurchaseHandler {
         where: {},
         select: { vatRate: true },
       });
-      const vatRateDec = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
+      const vatRateDec = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0');
       // All monetary arithmetic stays in Prisma.Decimal — no float intermediary
       const subtotalDec = toHalalas(subtotal);
       const finalPriceDec = toHalalas(finalPrice);

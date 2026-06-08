@@ -35,7 +35,7 @@ export class CreateInvoiceDto {
   @ApiPropertyOptional({ description: 'Flat discount amount in integer halalas (1 SAR = 100)', example: 1000 })
   @IsOptional() @IsInt() @Min(0) discountAmt?: number;
 
-  @ApiPropertyOptional({ description: 'VAT rate as fraction (0..1). Defaults to OrganizationSettings.vatRate.', example: 0.15 })
+  @ApiPropertyOptional({ description: 'VAT rate as fraction (0..1). Defaults to OrganizationSettings.vatRate.', example: 0 })
   @IsOptional() @IsNumber() @Min(0) @Max(1) vatRate?: number;
 
   @ApiPropertyOptional({ description: 'Free-form invoice notes', example: 'Includes consultation fee' })

@@ -13,6 +13,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { SanitizeText } from './sanitize-text.decorator';
 
 export enum RecurringPatternDto {
   DAILY = 'DAILY',
@@ -24,13 +25,13 @@ export enum RecurringPatternDto {
 export class CreateServiceDto {
   // ─── الأساسيات ───────────────────────────────────────────────────────────
   @ApiProperty({ example: 'قص الشعر' })
-  @IsString() @IsNotEmpty() @MaxLength(200) nameAr!: string;
+  @SanitizeText() @IsString() @IsNotEmpty() @MaxLength(200) nameAr!: string;
 
   @ApiProperty({ example: 'Haircut' })
-  @IsString() @IsNotEmpty() @MaxLength(200) nameEn!: string;
+  @SanitizeText() @IsString() @IsNotEmpty() @MaxLength(200) nameEn!: string;
 
-  @ApiPropertyOptional({ description: 'Service description in Arabic' }) @IsOptional() @IsString() descriptionAr?: string;
-  @ApiPropertyOptional({ description: 'Service description in English' }) @IsOptional() @IsString() descriptionEn?: string;
+  @ApiPropertyOptional({ description: 'Service description in Arabic' }) @SanitizeText() @IsOptional() @IsString() descriptionAr?: string;
+  @ApiPropertyOptional({ description: 'Service description in English' }) @SanitizeText() @IsOptional() @IsString() descriptionEn?: string;
 
   @ApiProperty({ example: 30, description: 'Duration in minutes' })
   @IsInt() @Min(1) durationMins!: number;

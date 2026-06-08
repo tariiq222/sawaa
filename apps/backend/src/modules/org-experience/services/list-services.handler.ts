@@ -27,13 +27,14 @@ export class ListServicesHandler {
       limit,
       isActive: dto.isActive ?? null,
       includeHidden: dto.includeHidden ?? false,
+      includeArchived: dto.includeArchived ?? false,
       categoryId: dto.categoryId ?? null,
       search: dto.search ?? null,
     });
 
     return this.cache.getOrSet(`${SERVICES_CACHE_PREFIX}${keyParams}`, async () => {
       const where = {
-        archivedAt: null,
+        ...(dto.includeArchived !== true && { archivedAt: null }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
         // إخفاء الخدمات المخفية افتراضياً ما لم يُطلب تضمينها صراحةً
         ...(dto.includeHidden !== true && { isHidden: false }),

@@ -43,4 +43,22 @@ describe('CreateServiceDto', () => {
       expect(errors.some((e) => e.property === 'depositAmount')).toBe(false);
     });
   });
+
+  describe('@SanitizeText — HTML/JS stripping', () => {
+    it('strips a script tag from nameAr', () => {
+      const dto = plainToInstance(CreateServiceDto, {
+        ...baseValid,
+        nameAr: '<script>alert(1)</script>',
+      });
+      expect(dto.nameAr).toBe('alert(1)');
+    });
+
+    it('strips tags and trims surrounding whitespace', () => {
+      const dto = plainToInstance(CreateServiceDto, {
+        ...baseValid,
+        nameEn: '  <b>Hair</b>cut  ',
+      });
+      expect(dto.nameEn).toBe('Haircut');
+    });
+  });
 });

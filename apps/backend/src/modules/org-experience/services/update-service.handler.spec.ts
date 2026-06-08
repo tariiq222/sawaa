@@ -138,4 +138,28 @@ describe('UpdateServiceHandler', () => {
     await handler.execute({ serviceId: 's1', nameAr: 'New' } as any);
     expect(prisma.service.update).toHaveBeenCalled();
   });
+
+  it('should throw ConflictException when expectedUpdatedAt does not match', async () => {
+    const updatedAt = new Date('2026-06-08T10:00:00.000Z');
+    prisma.service.findFirst.mockResolvedValue(createService({ updatedAt }));
+    await expect(
+      handler.execute({ serviceId: 's1', nameAr: 'New', expectedUpdatedAt: '2026-06-08T09:00:00.000Z' } as any),
+    ).rejects.toThrow(ConflictException);
+    expect(prisma.service.update).not.toHaveBeenCalled();
+  });
+
+  it('should proceed when expectedUpdatedAt matches', async () => {
+    const updatedAt = new Date('2026-06-08T10:00:00.000Z');
+    prisma.service.findFirst
+      .mockResolvedValueOnce(createService({ updatedAt }))
+      .mockResolvedValueOnce(null);
+    prisma.service.update.mockResolvedValue({ id: 's1', nameAr: 'New' });
+    const result = await handler.execute({
+      serviceId: 's1',
+      nameAr: 'New',
+      expectedUpdatedAt: updatedAt.toISOString(),
+    } as any);
+    expect(result.id).toBe('s1');
+    expect(prisma.service.update).toHaveBeenCalled();
+  });
 });

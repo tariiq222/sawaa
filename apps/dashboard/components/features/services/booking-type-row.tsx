@@ -1,7 +1,7 @@
 "use client"
 
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons"
+import { Add01Icon, Delete02Icon, AlertCircleIcon } from "@hugeicons/core-free-icons"
 
 import { Button } from "@sawaa/ui"
 import { Input } from "@sawaa/ui"
@@ -96,6 +96,16 @@ export function BookingTypeRow({
             onChange={(e) => onUpdate("price", Number(e.target.value))}
             className="h-8 text-sm tabular-nums"
           />
+          {draft.enabled && draft.price === 0 && (
+            <p className="flex items-center gap-1 text-xs text-warning">
+              <HugeiconsIcon
+                icon={AlertCircleIcon}
+                strokeWidth={2}
+                className="size-3.5 shrink-0"
+              />
+              <span>{t("services.bookingTypes.zeroPriceWarning")}</span>
+            </p>
+          )}
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">

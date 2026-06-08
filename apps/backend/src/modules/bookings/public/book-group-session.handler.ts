@@ -143,7 +143,7 @@ export class BookGroupSessionHandler {
           where: {},
           select: { vatRate: true },
         });
-        const vatRate = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0.15');
+        const vatRate = new Prisma.Decimal(orgSettings?.vatRate?.toString() ?? '0');
 
         const subtotalDec = new Prisma.Decimal(price.toString());
         const discountAmtDec = new Prisma.Decimal(0);

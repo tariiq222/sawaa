@@ -274,6 +274,7 @@ export const enServices: Record<string, string> = {
   "services.bookingTypes.labelAr": "Label (AR)",
   "services.bookingTypes.placeholderEn": "e.g. Standard",
   "services.bookingTypes.placeholderAr": "e.g. Standard",
+  "services.bookingTypes.zeroPriceWarning": "Price is zero — confirm this service is intentionally free",
   "services.deliveryTypes.title": "Delivery methods & pricing",
   "services.deliveryTypes.inPerson": "In person",
   "services.deliveryTypes.online": "Online",

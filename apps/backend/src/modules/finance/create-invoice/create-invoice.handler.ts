@@ -5,7 +5,7 @@ import { EventBusService } from '../../../infrastructure/events';
 import { CreateInvoiceDto } from './create-invoice.dto';
 import { computeVat } from '../money.helper';
 
-const DEFAULT_VAT_RATE = 0.15;
+const DEFAULT_VAT_RATE = 0;
 
 export type CreateInvoiceCommand = Omit<CreateInvoiceDto, 'dueAt'> & {
   dueAt?: Date;

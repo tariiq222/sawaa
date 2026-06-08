@@ -1735,7 +1735,7 @@
           },
           "vatRate": {
             "description": "VAT rate as fraction (0..1). Defaults to OrganizationSettings.vatRate.",
-            "example": 0.15,
+            "example": 0,
             "type": "number"
           }
         },
@@ -5094,6 +5094,11 @@
             "example": 30,
             "type": "number"
           },
+          "expectedUpdatedAt": {
+            "description": "Expected updatedAt timestamp (ISO) for optimistic concurrency; if it does not match current state, the update is rejected with 409",
+            "example": "2026-06-08T10:00:00.000Z",
+            "type": "string"
+          },
           "hideDurationOnBooking": {
             "description": "Hide duration during booking flow",
             "example": false,
@@ -5667,7 +5672,7 @@
           },
           "vatRate": {
             "description": "VAT rate as fraction (0..1). Super-admin only.",
-            "example": 0.15,
+            "example": 0,
             "type": "number"
           },
           "vatRegistrationNumber": {
@@ -19145,6 +19150,16 @@
             }
           },
           {
+            "description": "Include archived services",
+            "in": "query",
+            "name": "includeArchived",
+            "required": false,
+            "schema": {
+              "example": false,
+              "type": "boolean"
+            }
+          },
+          {
             "description": "Filter by category UUID",
             "in": "query",
             "name": "categoryId",
@@ -19893,6 +19908,80 @@
           }
         ],
         "summary": "List active employees who offer this service",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      }
+    },
+    "/api/v1/dashboard/organization/services/{serviceId}/restore": {
+      "post": {
+        "operationId": "DashboardOrganizationSettingsController_restoreServiceEndpoint",
+        "parameters": [
+          {
+            "description": "Service UUID",
+            "in": "path",
+            "name": "serviceId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service restored"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Service not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Restore an archived service",
         "tags": [
           "Dashboard / Org Experience"
         ]

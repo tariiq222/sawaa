@@ -21,7 +21,7 @@ export class UpsertOrgSettingsDto {
   @ApiPropertyOptional({ description: 'VAT registration number (15 digits)', example: '300000000000003' })
   @IsOptional() @IsString() vatRegistrationNumber?: string;
 
-  @ApiPropertyOptional({ description: 'VAT rate as fraction (0..1). Super-admin only.', example: 0.15 })
+  @ApiPropertyOptional({ description: 'VAT rate as fraction (0..1). Super-admin only.', example: 0 })
   @IsOptional() @Type(() => Number) @IsNumber() @Min(0) @Max(1) vatRate?: number;
 
   @ApiPropertyOptional({ description: 'Seller address for invoices', example: '123 King Fahad Rd, Riyadh' })

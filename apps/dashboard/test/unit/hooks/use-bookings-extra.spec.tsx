@@ -129,6 +129,6 @@ describe("useBookingMutations — recurringMut", () => {
       expect.objectContaining({ frequency: "weekly", count: 4 }),
       expect.anything(),
     )
-    expect(spy).toHaveBeenCalledWith({ queryKey: ["bookings"] })
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["bookings"], refetchType: "all" })
   })
 })

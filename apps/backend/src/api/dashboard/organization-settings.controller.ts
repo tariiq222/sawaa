@@ -18,6 +18,7 @@ import { ListServicesHandler } from '../../modules/org-experience/services/list-
 import { ListServicesDto } from '../../modules/org-experience/services/list-services.dto';
 import { GetServiceHandler } from '../../modules/org-experience/services/get-service.handler';
 import { ArchiveServiceHandler } from '../../modules/org-experience/services/archive-service.handler';
+import { RestoreServiceHandler } from '../../modules/org-experience/services/restore-service.handler';
 import { SetDurationOptionsHandler } from '../../modules/org-experience/services/set-duration-options.handler';
 import { SetDurationOptionsDto } from '../../modules/org-experience/services/set-duration-options.dto';
 import { SetServiceBookingConfigsHandler } from '../../modules/org-experience/services/set-service-booking-configs.handler';
@@ -70,6 +71,7 @@ export class DashboardOrganizationSettingsController {
     private readonly listServices: ListServicesHandler,
     private readonly getService: GetServiceHandler,
     private readonly archiveService: ArchiveServiceHandler,
+    private readonly restoreService: RestoreServiceHandler,
     private readonly createIntakeForm: CreateIntakeFormHandler,
     private readonly getIntakeForm: GetIntakeFormHandler,
     private readonly listIntakeForms: ListIntakeFormsHandler,
@@ -146,6 +148,16 @@ export class DashboardOrganizationSettingsController {
   @ApiResponse({ status: 404, description: 'Service not found' })
   archiveServiceEndpoint(@Param('serviceId', ParseUUIDPipe) serviceId: string) {
     return this.archiveService.execute({ serviceId });
+  }
+
+  @Post('services/:serviceId/restore')
+  @CheckPermissions({ action: 'update', subject: 'Service' })
+  @ApiOperation({ summary: 'Restore an archived service' })
+  @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Service restored' })
+  @ApiResponse({ status: 404, description: 'Service not found' })
+  restoreServiceEndpoint(@Param('serviceId', ParseUUIDPipe) serviceId: string) {
+    return this.restoreService.execute({ serviceId });
   }
 
   @Get('services/:serviceId/employees')

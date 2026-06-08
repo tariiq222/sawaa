@@ -23,6 +23,13 @@ export class UpdateServiceHandler {
     });
     if (!service) throw new NotFoundException('Service not found');
 
+    if (dto.expectedUpdatedAt !== undefined) {
+      const expected = new Date(dto.expectedUpdatedAt).getTime();
+      if (expected !== service.updatedAt.getTime()) {
+        throw new ConflictException('Service was modified by someone else. Refresh and try again.');
+      }
+    }
+
     // Merge incoming values with existing for cross-field constraint validation
     const effectivePrice = dto.price ?? Number(service.price);
     const effectiveMin = dto.minParticipants ?? service.minParticipants;
