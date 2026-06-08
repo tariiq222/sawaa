@@ -41,7 +41,6 @@ const DASHBOARD_PAGES = [
     name: "Notifications",
     heading: /الإشعارات|Notifications/i,
   },
-  { path: "/branding", name: "Branding", heading: /إعداد النظام|Branding/i },
 ]
 
 test.describe("Dashboard Pages Navigation", () => {

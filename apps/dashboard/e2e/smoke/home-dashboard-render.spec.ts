@@ -43,8 +43,9 @@ test.describe("home dashboard render", () => {
     ).toHaveCount(0)
 
     // Actual dashboard content rendered: the greeting and at least one stat.
+    // Greeting varies by hour: صباح الخير / مساء الخير / مساء النور.
     await expect(
-      page.getByText(/صباح الخير|مساء الخير|أهلاً|مرحباً/),
+      page.getByText(/صباح الخير|مساء الخير|مساء النور|أهلاً|مرحباً/),
     ).toBeVisible({ timeout: 15_000 })
     await expect(page.getByTestId("dashboard-stats")).toBeVisible({
       timeout: 15_000,
