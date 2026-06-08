@@ -214,7 +214,7 @@ describe('BookGroupSessionHandler', () => {
     );
   });
 
-  it('defaults VAT to 0.15 when organizationSettings is absent', async () => {
+  it('applies zero VAT when organizationSettings is absent (unregistered org)', async () => {
     prisma.groupSession.findFirst.mockResolvedValue(
       createSession({ price: 12000, enrolledCount: 5, maxCapacity: 10 }),
     );
@@ -238,7 +238,7 @@ describe('BookGroupSessionHandler', () => {
 
     expect(prisma.invoice.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ vatRate: 0.15, vatAmt: 1800, total: 13800 }),
+        data: expect.objectContaining({ vatRate: 0, vatAmt: 0, total: 12000 }),
       }),
     );
   });
@@ -288,7 +288,7 @@ describe('BookGroupSessionHandler', () => {
       status: 'AWAITING_PAYMENT',
     });
     prisma.invoice.create.mockResolvedValue({ id: 'inv1' });
-    prisma.organizationSettings.findFirst.mockResolvedValue(null);
+    prisma.organizationSettings.findFirst.mockResolvedValue({ vatRate: '0.15' });
     prisma.groupEnrollment.create.mockResolvedValue({});
     prisma.groupSession.updateMany.mockResolvedValue({ count: 1 });
 
