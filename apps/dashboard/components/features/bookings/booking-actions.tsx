@@ -40,6 +40,7 @@ const statusActions = {
   pending: ["confirm", "cancel"] as const,
   pending_group_fill: ["confirm", "cancel"] as const,
   awaiting_payment: ["confirm", "cancel"] as const,
+  deposit_paid: ["confirm", "cancel"] as const,
   confirmed: ["checkin", "complete", "noshow", "cancel"] as const,
   cancel_requested: ["approve_cancel", "reject_cancel"] as const,
   completed: [] as const,

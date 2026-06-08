@@ -20,6 +20,7 @@ export type BookingStatus =
   | "pending"
   | "pending_group_fill"
   | "awaiting_payment"
+  | "deposit_paid"
   | "confirmed"
   | "completed"
   | "cancelled"
