@@ -47,6 +47,11 @@ export const bookingStatusStyles = {
     text: "text-warning",
     border: "border-warning/20",
   },
+  deposit_paid: {
+    bg: "bg-accent/10",
+    text: "text-accent",
+    border: "border-accent/20",
+  },
   confirmed: {
     bg: "bg-success/10",
     text: "text-success",

@@ -297,6 +297,7 @@ export const arEmployees: Record<string, string> = {
   "employees.chart.status.completed": "مكتملة",
   "employees.chart.status.confirmed": "مؤكدة",
   "employees.chart.status.pending": "معلقة",
+  "employees.chart.status.depositPaid": "عربون مدفوع",
   "employees.chart.status.cancelled": "ملغاة",
   "employees.chart.status.pendingCancellation": "طلب إلغاء",
   "employees.chart.status.noShow": "لم يحضر",

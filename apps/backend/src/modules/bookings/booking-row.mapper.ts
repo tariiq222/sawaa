@@ -10,12 +10,24 @@ export interface BookingPaymentRelation {
   status: string;       // Prisma PaymentStatus enum string
 }
 
+/** Invoice summary per booking (amounts in halalat). */
+export interface BookingInvoiceRelation {
+  id: string;
+  subtotal: number;    // net before VAT/discount (halalas)
+  vatRate: number;     // fractional rate, e.g. 0.15
+  total: number;       // gross total after discount (halalas)
+  outstanding: number; // total minus completed payments (halalas)
+  status: string;      // Prisma InvoiceStatus enum string
+}
+
 export interface BookingRelations {
   clientsById: Map<string, Client>;
   employeesById: Map<string, Employee>;
   servicesById: Map<string, Service>;
   /** bookingId → latest payment (in halalat). Absent key means no payment. */
   paymentsByBookingId: Map<string, BookingPaymentRelation>;
+  /** bookingId → invoice summary. Absent key means no invoice yet. */
+  invoicesByBookingId?: Map<string, BookingInvoiceRelation>;
 }
 
 /**
@@ -59,6 +71,7 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
   const employeeNames = splitName(employee?.name ?? null, null, null);
 
   const pay = relations.paymentsByBookingId.get(b.id) ?? null;
+  const inv = relations.invoicesByBookingId?.get(b.id) ?? null;
 
   return {
     id: b.id,
@@ -68,6 +81,7 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
     serviceId: b.serviceId,
     employeeServiceId: '',
     type: mapTypeForUi(b.bookingType),
+    source: b.source,
     date,
     startTime,
     endTime,
@@ -127,6 +141,16 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
           totalAmount: pay.amount,
         }
       : null,
+    invoice: inv
+      ? {
+          id: inv.id,
+          subtotal: inv.subtotal,
+          vatRate: inv.vatRate,
+          total: inv.total,
+          outstanding: inv.outstanding,
+          status: inv.status,
+        }
+      : null,
     intakeFormId: null,
     intakeFormAlreadySubmitted: false,
   };
@@ -141,9 +165,12 @@ function mapTypeForUi(t: string): string {
 
 /** DB enum → dashboard BookingStatus union.
  * awaiting_payment and pending_group_fill are treated as `pending` for UX simplicity.
+ * deposit_paid is a distinct, standalone state (service deposit paid, slot reserved,
+ * a balance is still outstanding) — it is NOT folded into any other status.
  */
 function mapStatusForUi(s: string): string {
   const lower = s.toLowerCase();
+  if (lower === 'deposit_paid') return 'deposit_paid';
   if (lower === 'awaiting_payment' || lower === 'pending_group_fill') return 'pending';
   return lower;
 }

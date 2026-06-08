@@ -34,6 +34,15 @@ const buildTx = (overrides: Record<string, unknown> = {}) => ({
     create: jest.fn().mockResolvedValue(mockPayment),
     aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 230 } }),
   },
+  // resolveInvoiceDeposit loads the booking then its service via scalar bookingId.
+  // Default: a service with NO deposit, so the deposit path is inert unless a
+  // test overrides these mocks.
+  booking: {
+    findFirst: jest.fn().mockResolvedValue({ serviceId: 'svc-1' }),
+  },
+  service: {
+    findFirst: jest.fn().mockResolvedValue({ depositEnabled: false, depositAmount: null }),
+  },
   ...overrides,
 });
 
@@ -246,5 +255,190 @@ describe('ProcessPaymentHandler', () => {
         method: PaymentMethod.CASH,
       }),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it.each([PaymentMethod.MADA, PaymentMethod.TABBY])(
+    'accepts manual method %s and records the payment',
+    async (method) => {
+      const tx = buildTx({
+        invoice: { findFirst: jest.fn().mockResolvedValue(mockInvoice), update: jest.fn() },
+        payment: {
+          findFirst: jest.fn().mockResolvedValue(mockPayment),
+          create: jest.fn().mockResolvedValue(mockPayment),
+          aggregate: jest.fn()
+            .mockResolvedValueOnce({ _sum: { amount: 0 } })
+            .mockResolvedValueOnce({ _sum: { amount: 230 } }),
+        },
+      });
+      const prisma = buildPrisma(tx);
+      const handler = new ProcessPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(tx)) } as never, buildEventBus() as never);
+
+      await handler.execute({ invoiceId: 'inv-1', amount: 230, method });
+      expect(tx.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ method }) }),
+      );
+    },
+  );
+
+  it('rejects ONLINE_CARD (must come through the Moyasar webhook)', async () => {
+    const tx = buildTx({
+      invoice: { findFirst: jest.fn().mockResolvedValue(mockInvoice), update: jest.fn() },
+      payment: {
+        findFirst: jest.fn(),
+        create: jest.fn(),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
+      },
+    });
+    const prisma = buildPrisma(tx);
+    const handler = new ProcessPaymentHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(tx)) } as never, buildEventBus() as never);
+
+    await expect(
+      handler.execute({ invoiceId: 'inv-1', amount: 230, method: PaymentMethod.ONLINE_CARD }),
+    ).rejects.toThrow(BadRequestException);
+    expect(tx.payment.create).not.toHaveBeenCalled();
+  });
+
+  describe('deposit-enabled service', () => {
+    // The service requires a 5000-halala deposit; the invoice total is 23000.
+    const depositInvoice = { ...mockInvoice, total: 23000 };
+    const buildDepositTx = (overrides: Record<string, unknown> = {}) =>
+      buildTx({
+        booking: { findFirst: jest.fn().mockResolvedValue({ serviceId: 'svc-1' }) },
+        service: {
+          findFirst: jest.fn().mockResolvedValue({ depositEnabled: true, depositAmount: 5000 }),
+        },
+        ...overrides,
+      });
+
+    it('accepts the exact deposit → PARTIALLY_PAID + DepositPaidEvent (not PaymentCompletedEvent)', async () => {
+      const tx = buildDepositTx({
+        invoice: { findFirst: jest.fn().mockResolvedValue(depositInvoice), update: jest.fn() },
+        payment: {
+          findFirst: jest.fn().mockResolvedValue(mockPayment),
+          create: jest.fn().mockResolvedValue({ ...mockPayment, amount: 5000 }),
+          // (1) outstanding check: 0 paid → 23000 outstanding.
+          // (2) post-create total: 5000 paid → PARTIALLY_PAID.
+          aggregate: jest
+            .fn()
+            .mockResolvedValueOnce({ _sum: { amount: 0 } })
+            .mockResolvedValueOnce({ _sum: { amount: 5000 } }),
+        },
+      });
+      const prisma = buildPrisma(tx);
+      const eventBus = buildEventBus();
+      const handler = new ProcessPaymentHandler(
+        prisma as never,
+        { withTransaction: jest.fn((fn: any) => fn(tx)) } as never,
+        eventBus as never,
+      );
+
+      await handler.execute({ invoiceId: 'inv-1', amount: 5000, method: PaymentMethod.CASH });
+
+      expect(tx.invoice.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: InvoiceStatus.PARTIALLY_PAID }),
+        }),
+      );
+      expect(eventBus.publish).toHaveBeenCalledWith(
+        'finance.payment.deposit_paid',
+        expect.objectContaining({ payload: expect.objectContaining({ bookingId: 'booking-1' }) }),
+      );
+      expect(eventBus.publish).not.toHaveBeenCalledWith(
+        'finance.payment.completed',
+        expect.anything(),
+      );
+    });
+
+    it('rejects a payment below the deposit', async () => {
+      const tx = buildDepositTx({
+        invoice: { findFirst: jest.fn().mockResolvedValue(depositInvoice), update: jest.fn() },
+        payment: {
+          findFirst: jest.fn(),
+          create: jest.fn(),
+          aggregate: jest.fn().mockResolvedValueOnce({ _sum: { amount: 0 } }),
+        },
+      });
+      const prisma = buildPrisma(tx);
+      const handler = new ProcessPaymentHandler(
+        prisma as never,
+        { withTransaction: jest.fn((fn: any) => fn(tx)) } as never,
+        buildEventBus() as never,
+      );
+
+      await expect(
+        handler.execute({ invoiceId: 'inv-1', amount: 3000, method: PaymentMethod.CASH }),
+      ).rejects.toThrow(BadRequestException);
+      expect(tx.payment.create).not.toHaveBeenCalled();
+    });
+
+    it('accepts the full total directly → PAID + PaymentCompletedEvent', async () => {
+      const tx = buildDepositTx({
+        invoice: { findFirst: jest.fn().mockResolvedValue(depositInvoice), update: jest.fn() },
+        payment: {
+          findFirst: jest.fn().mockResolvedValue(mockPayment),
+          create: jest.fn().mockResolvedValue({ ...mockPayment, amount: 23000 }),
+          aggregate: jest
+            .fn()
+            .mockResolvedValueOnce({ _sum: { amount: 0 } })
+            .mockResolvedValueOnce({ _sum: { amount: 23000 } }),
+        },
+      });
+      const prisma = buildPrisma(tx);
+      const eventBus = buildEventBus();
+      const handler = new ProcessPaymentHandler(
+        prisma as never,
+        { withTransaction: jest.fn((fn: any) => fn(tx)) } as never,
+        eventBus as never,
+      );
+
+      await handler.execute({ invoiceId: 'inv-1', amount: 23000, method: PaymentMethod.CASH });
+
+      expect(tx.invoice.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ status: InvoiceStatus.PAID }) }),
+      );
+      expect(eventBus.publish).toHaveBeenCalledWith(
+        'finance.payment.completed',
+        expect.anything(),
+      );
+      expect(eventBus.publish).not.toHaveBeenCalledWith(
+        'finance.payment.deposit_paid',
+        expect.anything(),
+      );
+    });
+
+    it('settling the remaining balance from DEPOSIT_PAID → PAID + PaymentCompletedEvent', async () => {
+      // 5000 deposit already collected; client pays the remaining 18000.
+      const tx = buildDepositTx({
+        invoice: { findFirst: jest.fn().mockResolvedValue(depositInvoice), update: jest.fn() },
+        payment: {
+          findFirst: jest.fn().mockResolvedValue(mockPayment),
+          create: jest.fn().mockResolvedValue({ ...mockPayment, amount: 18000 }),
+          // (1) outstanding check: 5000 already paid → 18000 outstanding.
+          // (2) post-create total: 23000 paid → PAID.
+          aggregate: jest
+            .fn()
+            .mockResolvedValueOnce({ _sum: { amount: 5000 } })
+            .mockResolvedValueOnce({ _sum: { amount: 23000 } }),
+        },
+      });
+      const prisma = buildPrisma(tx);
+      const eventBus = buildEventBus();
+      const handler = new ProcessPaymentHandler(
+        prisma as never,
+        { withTransaction: jest.fn((fn: any) => fn(tx)) } as never,
+        eventBus as never,
+      );
+
+      await handler.execute({ invoiceId: 'inv-1', amount: 18000, method: PaymentMethod.CASH });
+
+      expect(eventBus.publish).toHaveBeenCalledWith(
+        'finance.payment.completed',
+        expect.anything(),
+      );
+      expect(eventBus.publish).not.toHaveBeenCalledWith(
+        'finance.payment.deposit_paid',
+        expect.anything(),
+      );
+    });
   });
 });

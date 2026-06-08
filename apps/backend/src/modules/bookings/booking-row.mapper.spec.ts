@@ -130,6 +130,13 @@ describe('mapBookingRow', () => {
     expect(result.status).toBe('pending');
   });
 
+  it('maps DEPOSIT_PAID status to its own deposit_paid status (not folded into pending)', () => {
+    const booking = { ...mockBooking, status: 'DEPOSIT_PAID' } as Booking;
+    const result = mapBookingRow(booking, relations);
+
+    expect(result.status).toBe('deposit_paid');
+  });
+
   it('maps completed status correctly', () => {
     const booking = { ...mockBooking, status: 'COMPLETED' } as Booking;
     const result = mapBookingRow(booking, relations);
@@ -296,6 +303,29 @@ describe('mapBookingRow', () => {
     };
     const result = mapBookingRow(mockBooking, relationsWithPayment);
     expect(result.payment?.status).toBe('awaiting');
+  });
+
+  it('returns null invoice when no invoice entry in map', () => {
+    const result = mapBookingRow(mockBooking, relations); // no invoicesByBookingId
+    expect(result.invoice).toBeNull();
+  });
+
+  it('returns invoice summary when entry exists in invoicesByBookingId', () => {
+    const relationsWithInvoice: BookingRelations = {
+      ...relations,
+      invoicesByBookingId: new Map([
+        ['book-1', { id: 'inv-1', subtotal: 10000, vatRate: 0.15, total: 11500, outstanding: 11500, status: 'ISSUED' }],
+      ]),
+    };
+    const result = mapBookingRow(mockBooking, relationsWithInvoice);
+
+    expect(result.invoice).not.toBeNull();
+    expect(result.invoice?.id).toBe('inv-1');
+    expect(result.invoice?.subtotal).toBe(10000);
+    expect(result.invoice?.vatRate).toBe(0.15);
+    expect(result.invoice?.total).toBe(11500);
+    expect(result.invoice?.outstanding).toBe(11500);
+    expect(result.invoice?.status).toBe('ISSUED');
   });
 
   it('maps payment method ONLINE_CARD to moyasar', () => {

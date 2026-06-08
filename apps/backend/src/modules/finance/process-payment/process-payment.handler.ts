@@ -4,6 +4,12 @@ import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { PaymentCompletedEvent } from '../events/payment-completed.event';
+import { DepositPaidEvent } from '../events/deposit-paid.event';
+import {
+  resolveInvoiceDeposit,
+  assertDepositPaymentAmount,
+  isDepositPayment,
+} from '../deposit.helper';
 import { ProcessPaymentDto } from './process-payment.dto';
 
 export type ProcessPaymentCommand = ProcessPaymentDto;
@@ -24,7 +30,7 @@ export class ProcessPaymentHandler {
     // between the aggregate and the update and produce a wrong status or stale
     // paidAt. The @unique(idempotencyKey) constraint is the final guard against
     // duplicate payments — the pre-check is kept only as a fast short-circuit.
-    const { payment, newStatus } = await this.rlsTransaction.withTransaction(async (tx) => {
+    const { payment, newStatus, depositAmount, paidAfter, total } = await this.rlsTransaction.withTransaction(async (tx) => {
       const invoice = await tx.invoice.findFirst({
         where: { id: dto.invoiceId },
       });
@@ -70,6 +76,19 @@ export class ProcessPaymentHandler {
         );
       }
 
+      // Deposit enforcement: when the booking's service requires a deposit, the
+      // first accepted payment must be EITHER the exact deposit OR the full
+      // outstanding total — never an arbitrary partial amount below the deposit.
+      const deposit = await resolveInvoiceDeposit(tx, invoice.bookingId);
+      if (deposit.enabled && deposit.depositAmount != null) {
+        assertDepositPaymentAmount({
+          amount: dto.amount,
+          depositAmount: deposit.depositAmount,
+          outstanding,
+          alreadyPaid,
+        });
+      }
+
       // SECURITY (P1): never accept a client-supplied gatewayRef for an
       // ONLINE_CARD without an out-of-band gateway re-fetch. The Moyasar
       // webhook handler is the only authoritative writer for ONLINE_CARD
@@ -104,7 +123,15 @@ export class ProcessPaymentHandler {
           const existing = await tx.payment.findFirst({
             where: { idempotencyKey: dto.idempotencyKey },
           });
-          if (existing) return { payment: existing, newStatus: null as InvoiceStatus | null };
+          if (existing) {
+            return {
+              payment: existing,
+              newStatus: null as InvoiceStatus | null,
+              depositAmount: deposit.depositAmount,
+              paidAfter: 0,
+              total: Number(invoice.total),
+            };
+          }
         }
         throw err;
       }
@@ -127,7 +154,13 @@ export class ProcessPaymentHandler {
         },
       });
 
-      return { payment: createdPayment, newStatus: status };
+      return {
+        payment: createdPayment,
+        newStatus: status,
+        depositAmount: deposit.depositAmount,
+        paidAfter: paid,
+        total,
+      };
     });
 
     // Publish the event outside the transaction so we never publish an event
@@ -139,6 +172,28 @@ export class ProcessPaymentHandler {
       });
       if (invoice) {
         const event = new PaymentCompletedEvent({
+          paymentId: payment.id,
+          invoiceId: invoice.id,
+          bookingId: invoice.bookingId,
+          amount: Number(dto.amount),
+          currency: invoice.currency,
+          organizationId: DEFAULT_ORG_ID,
+        });
+        await this.eventBus.publish(event.eventName, event.toEnvelope());
+      }
+    } else if (
+      newStatus === InvoiceStatus.PARTIALLY_PAID &&
+      isDepositPayment({ paidAfter, total, depositAmount })
+    ) {
+      // The first payment exactly matched the configured deposit and the
+      // invoice is still PARTIALLY_PAID — emit DepositPaidEvent so the booking
+      // moves to DEPOSIT_PAID (reserving staff time) without confirming.
+      const invoice = await this.prisma.invoice.findFirst({
+        where: { id: dto.invoiceId },
+        select: { id: true, bookingId: true, currency: true },
+      });
+      if (invoice) {
+        const event = new DepositPaidEvent({
           paymentId: payment.id,
           invoiceId: invoice.id,
           bookingId: invoice.bookingId,

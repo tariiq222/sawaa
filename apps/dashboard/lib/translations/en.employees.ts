@@ -297,6 +297,7 @@ export const enEmployees: Record<string, string> = {
   "employees.chart.status.completed": "Completed",
   "employees.chart.status.confirmed": "Confirmed",
   "employees.chart.status.pending": "Pending",
+  "employees.chart.status.depositPaid": "Deposit Paid",
   "employees.chart.status.cancelled": "Cancelled",
   "employees.chart.status.pendingCancellation": "Cancel Req.",
   "employees.chart.status.noShow": "No Show",

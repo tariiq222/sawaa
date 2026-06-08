@@ -69,6 +69,12 @@ describe('VerifyPaymentHandler', () => {
         findFirst: jest.fn().mockResolvedValue(invoice),
         update: jest.fn().mockResolvedValue({ ...invoice, status: InvoiceStatus.PAID }),
       },
+      // resolveInvoiceDeposit loads booking → service via scalar bookingId.
+      // Default to a service with NO deposit so the event-branch logic is inert.
+      booking: { findFirst: jest.fn().mockResolvedValue({ serviceId: 'svc-1' }) },
+      service: {
+        findFirst: jest.fn().mockResolvedValue({ depositEnabled: false, depositAmount: null }),
+      },
     };
     const rlsTransaction = {
       withTransaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prismaMock)),

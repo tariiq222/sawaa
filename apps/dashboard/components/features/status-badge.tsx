@@ -7,6 +7,7 @@ import {
   Clock02Icon,
   CheckmarkCircle02Icon,
   ArrowReloadHorizontalIcon,
+  MoneyAdd01Icon,
 } from "@hugeicons/core-free-icons"
 import { Badge } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
@@ -16,8 +17,9 @@ import type { BookingStatus, BookingType } from "@/lib/types/booking"
 
 export const statusTranslationKeys: Record<BookingStatus, string> = {
   pending: "bookings.status.pending",
-  pending_group_fill: "bookings.status.pending",
-  awaiting_payment: "bookings.status.pending",
+  pending_group_fill: "bookings.status.pending_group_fill",
+  awaiting_payment: "bookings.status.awaiting_payment",
+  deposit_paid: "bookings.status.deposit_paid",
   confirmed: "bookings.status.confirmed",
   completed: "bookings.status.completed",
   cancelled: "bookings.status.cancelled",
@@ -30,6 +32,7 @@ const statusIconMap: Record<BookingStatus, { icon: typeof Tick01Icon; iconClass:
   pending:          { icon: Clock02Icon,            iconClass: "text-warning" },
   pending_group_fill:{ icon: Clock02Icon,            iconClass: "text-warning" },
   awaiting_payment:  { icon: Clock02Icon,            iconClass: "text-warning" },
+  deposit_paid:      { icon: MoneyAdd01Icon,         iconClass: "text-accent" },
   confirmed:        { icon: Tick01Icon,             iconClass: "text-success" },
   completed:        { icon: CheckmarkCircle02Icon,  iconClass: "text-accent" },
   cancelled:        { icon: CancelCircleIcon,       iconClass: "text-destructive" },

@@ -12,6 +12,7 @@ enum BookingStatus {
   NO_SHOW
   EXPIRED
   CANCEL_REQUESTED
+  DEPOSIT_PAID
 }
 
 enum BookingType {
@@ -25,6 +26,15 @@ enum BookingType {
 // ONLINE does NOT always require Zoom.
 enum DeliveryType {
   IN_PERSON
+  ONLINE
+}
+
+// Origin of the booking — where/how it was created.
+// RECEPTION = created by staff at the front desk (dashboard/mobile-employee).
+// ONLINE    = self-service booking from the public website.
+// Existing rows backfill to RECEPTION (the @default).
+enum BookingSource {
+  RECEPTION
   ONLINE
 }
 
@@ -67,6 +77,8 @@ model Booking {
   bookingType          BookingType         @default(INDIVIDUAL)
   // DB-???: deliveryType — required delivery channel; bookingType now models appointment shape only.
   deliveryType         DeliveryType
+  // Origin of the booking (front desk vs public website). Existing rows backfill to RECEPTION.
+  source               BookingSource       @default(RECEPTION)
   status               BookingStatus       @default(PENDING)
   scheduledAt          DateTime
   endsAt               DateTime // scheduledAt + durationMins — stored for overlap index queries

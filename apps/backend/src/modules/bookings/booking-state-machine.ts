@@ -19,18 +19,28 @@
  *             │    │
  *         COMPLETED  NO_SHOW  (terminal)
  *
+ *   Deposit flow (deposit feature — structural; payment wiring lands later):
+ *     PENDING | AWAITING_PAYMENT  → DEPOSIT_CONFIRMED → DEPOSIT_PAID
+ *       (client paid the full service deposit; time reserved, balance still due)
+ *     DEPOSIT_PAID                → PAYMENT_CONFIRMED  → CONFIRMED
+ *       (client settles the remaining balance)
+ *     DEPOSIT_PAID                → EXPIRE             → EXPIRED
+ *       (balance never settled; deposit refunded by expire-booking batch-1 logic)
+ *     DEPOSIT_PAID is NOT terminal.
+ *
  *   Any cancellable state:
- *     PENDING | CONFIRMED | AWAITING_PAYMENT  → CLIENT_REQUEST_CANCEL → CANCEL_REQUESTED
- *     PENDING | CONFIRMED | CANCEL_REQUESTED  → DIRECT_CANCEL → CANCELLED
- *     PENDING | CONFIRMED | AWAITING_PAYMENT  → CLIENT_DIRECT_CANCEL → CANCELLED
- *     CANCEL_REQUESTED                        → APPROVE_CANCEL → CANCELLED
- *     CANCEL_REQUESTED                        → REJECT_CANCEL → CONFIRMED
+ *     PENDING | CONFIRMED | AWAITING_PAYMENT | DEPOSIT_PAID → CLIENT_REQUEST_CANCEL → CANCEL_REQUESTED
+ *     PENDING | CONFIRMED | CANCEL_REQUESTED | DEPOSIT_PAID → DIRECT_CANCEL → CANCELLED
+ *     PENDING | CONFIRMED | AWAITING_PAYMENT | DEPOSIT_PAID → CLIENT_DIRECT_CANCEL → CANCELLED
+ *     CANCEL_REQUESTED                                      → APPROVE_CANCEL → CANCELLED
+ *     CANCEL_REQUESTED                                      → REJECT_CANCEL → CONFIRMED
  *
  *   Group session rollback (when an enrollee cancels after min reached):
  *     AWAITING_PAYMENT  → GROUP_FILL_ROLLBACK → PENDING_GROUP_FILL
  *
  *   Terminal states: CANCELLED | COMPLETED | NO_SHOW | EXPIRED
- *   (none of these appear as a 'from' state in any transition)
+ *   (none of these appear as a 'from' state in any transition;
+ *    DEPOSIT_PAID is an active, non-terminal state)
  *
  *   Self-loops:
  *     CONFIRMED → RESCHEDULE → CONFIRMED
@@ -50,6 +60,7 @@ export type BookingTransition =
   | 'CREATE_CONFIRMED'
   | 'CONFIRM'
   | 'PAYMENT_CONFIRMED'
+  | 'DEPOSIT_CONFIRMED'
   | 'GROUP_FILL_REACHED_MIN'
   | 'CLIENT_REQUEST_CANCEL'
   | 'DIRECT_CANCEL'
@@ -102,11 +113,28 @@ export const VALID_TRANSITIONS: Record<
 
   /**
    * Payment gateway confirms payment → booking auto-confirmed.
+   * From DEPOSIT_PAID this represents the client settling the remaining balance,
+   * which confirms the appointment.
    * Handler: payment-completed-handler/payment-completed.handler.ts
    */
   PAYMENT_CONFIRMED: {
-    from: [BookingStatus.PENDING, BookingStatus.AWAITING_PAYMENT],
+    from: [
+      BookingStatus.PENDING,
+      BookingStatus.AWAITING_PAYMENT,
+      BookingStatus.DEPOSIT_PAID,
+    ],
     to: BookingStatus.CONFIRMED,
+  },
+
+  /**
+   * Client pays the configured service deposit in full → the appointment time
+   * is reserved while a remaining balance stays due. Fired only when the full
+   * deposit amount is collected (not a partial deposit).
+   * Wired in a later deposit-feature batch — structural only for now.
+   */
+  DEPOSIT_CONFIRMED: {
+    from: [BookingStatus.PENDING, BookingStatus.AWAITING_PAYMENT],
+    to: BookingStatus.DEPOSIT_PAID,
   },
 
   /**
@@ -128,6 +156,7 @@ export const VALID_TRANSITIONS: Record<
       BookingStatus.PENDING,
       BookingStatus.CONFIRMED,
       BookingStatus.AWAITING_PAYMENT,
+      BookingStatus.DEPOSIT_PAID,
     ],
     to: BookingStatus.CANCEL_REQUESTED,
   },
@@ -141,6 +170,7 @@ export const VALID_TRANSITIONS: Record<
       BookingStatus.PENDING,
       BookingStatus.CONFIRMED,
       BookingStatus.CANCEL_REQUESTED,
+      BookingStatus.DEPOSIT_PAID,
     ],
     to: BookingStatus.CANCELLED,
   },
@@ -154,6 +184,7 @@ export const VALID_TRANSITIONS: Record<
       BookingStatus.PENDING,
       BookingStatus.CONFIRMED,
       BookingStatus.AWAITING_PAYMENT,
+      BookingStatus.DEPOSIT_PAID,
     ],
     to: BookingStatus.CANCELLED,
   },
@@ -206,6 +237,9 @@ export const VALID_TRANSITIONS: Record<
 
   /**
    * Cron/system expires a non-confirmed booking whose payment window elapsed.
+   * A DEPOSIT_PAID booking expires when the client never settles the remaining
+   * balance in time; the paid deposit is refunded by the existing expire-booking
+   * batch-1 logic.
    * Handler: expire-booking/expire-booking.handler.ts
    */
   EXPIRE: {
@@ -213,6 +247,7 @@ export const VALID_TRANSITIONS: Record<
       BookingStatus.PENDING,
       BookingStatus.PENDING_GROUP_FILL,
       BookingStatus.AWAITING_PAYMENT,
+      BookingStatus.DEPOSIT_PAID,
     ],
     to: BookingStatus.EXPIRED,
   },

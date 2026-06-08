@@ -8,6 +8,7 @@ vi.mock("@/components/locale-provider", () => ({
 vi.mock("@/lib/ds", () => ({
   bookingStatusStyles: {
     pending: { bg: "bg-warning/10", text: "text-warning", border: "border-warning/20" },
+    deposit_paid: { bg: "bg-accent/10", text: "text-accent", border: "border-accent/20" },
     confirmed: { bg: "bg-success/10", text: "text-success", border: "border-success/20" },
     completed: { bg: "bg-accent/10", text: "text-accent", border: "border-accent/20" },
     cancelled: { bg: "bg-destructive/10", text: "text-destructive", border: "border-destructive/20" },
@@ -38,7 +39,7 @@ describe("StatusBadge", () => {
   })
 
   it("renders all valid statuses", () => {
-    const statuses = ["pending", "confirmed", "completed", "cancelled"] as const
+    const statuses = ["pending", "deposit_paid", "confirmed", "completed", "cancelled"] as const
     for (const status of statuses) {
       const { unmount } = render(<StatusBadge status={status} />)
       expect(screen.getByText(`bookings.status.${status}`)).toBeInTheDocument()

@@ -4,6 +4,8 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { EventBusService } from '../../../infrastructure/events';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { PaymentCompletedEvent } from '../events/payment-completed.event';
+import { DepositPaidEvent } from '../events/deposit-paid.event';
+import { resolveInvoiceDeposit, isDepositPayment } from '../deposit.helper';
 
 interface VerifyPaymentCommand {
   paymentId: string;
@@ -45,8 +47,8 @@ export class VerifyPaymentHandler {
     // invoice to PAID/PARTIALLY_PAID atomically. Without this, downstream
     // consumers (reports, booking confirmation) see a stuck
     // ISSUED invoice even though the money has been received.
-    const { updatedPayment, newInvoiceStatus } = await this.rlsTransaction.withTransaction(
-      async (tx) => {
+    const { updatedPayment, newInvoiceStatus, depositAmount, paidAfter, total } =
+      await this.rlsTransaction.withTransaction(async (tx) => {
         const updated = await tx.payment.update({
           where: { id: cmd.paymentId },
           data: {
@@ -73,6 +75,11 @@ export class VerifyPaymentHandler {
         const status: InvoiceStatus =
           paid >= total ? InvoiceStatus.PAID : InvoiceStatus.PARTIALLY_PAID;
 
+        // Resolve the configured deposit for the invoice's service so the event
+        // emission below can distinguish a deposit-sized partial payment from a
+        // plain partial top-up.
+        const deposit = await resolveInvoiceDeposit(tx, invoice.bookingId);
+
         await tx.invoice.update({
           where: { id: invoice.id },
           data: {
@@ -81,9 +88,14 @@ export class VerifyPaymentHandler {
           },
         });
 
-        return { updatedPayment: updated, newInvoiceStatus: status };
-      },
-    );
+        return {
+          updatedPayment: updated,
+          newInvoiceStatus: status,
+          depositAmount: deposit.depositAmount,
+          paidAfter: paid,
+          total,
+        };
+      });
 
     if (newInvoiceStatus === InvoiceStatus.PAID) {
       const invoice = await this.prisma.invoice.findFirst({
@@ -92,6 +104,25 @@ export class VerifyPaymentHandler {
       });
       if (invoice) {
         const event = new PaymentCompletedEvent({
+          paymentId: updatedPayment.id,
+          invoiceId: invoice.id,
+          bookingId: invoice.bookingId,
+          amount: Number(updatedPayment.amount),
+          currency: invoice.currency,
+          organizationId: DEFAULT_ORG_ID,
+        });
+        await this.eventBus.publish(event.eventName, event.toEnvelope());
+      }
+    } else if (
+      newInvoiceStatus === InvoiceStatus.PARTIALLY_PAID &&
+      isDepositPayment({ paidAfter, total, depositAmount })
+    ) {
+      const invoice = await this.prisma.invoice.findFirst({
+        where: { id: payment.invoiceId },
+        select: { id: true, bookingId: true, currency: true },
+      });
+      if (invoice) {
+        const event = new DepositPaidEvent({
           paymentId: updatedPayment.id,
           invoiceId: invoice.id,
           bookingId: invoice.bookingId,

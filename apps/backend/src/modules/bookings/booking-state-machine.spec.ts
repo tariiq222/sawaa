@@ -41,6 +41,34 @@ describe('BookingStateMachine — assertTransition', () => {
       expect(assertTransition(BookingStatus.AWAITING_PAYMENT, 'PAYMENT_CONFIRMED')).toBe(BookingStatus.CONFIRMED);
     });
 
+    it('DEPOSIT_CONFIRMED: PENDING → DEPOSIT_PAID', () => {
+      expect(assertTransition(BookingStatus.PENDING, 'DEPOSIT_CONFIRMED')).toBe(BookingStatus.DEPOSIT_PAID);
+    });
+
+    it('DEPOSIT_CONFIRMED: AWAITING_PAYMENT → DEPOSIT_PAID', () => {
+      expect(assertTransition(BookingStatus.AWAITING_PAYMENT, 'DEPOSIT_CONFIRMED')).toBe(BookingStatus.DEPOSIT_PAID);
+    });
+
+    it('PAYMENT_CONFIRMED: DEPOSIT_PAID → CONFIRMED (remaining balance settled)', () => {
+      expect(assertTransition(BookingStatus.DEPOSIT_PAID, 'PAYMENT_CONFIRMED')).toBe(BookingStatus.CONFIRMED);
+    });
+
+    it('EXPIRE: DEPOSIT_PAID → EXPIRED (balance never settled)', () => {
+      expect(assertTransition(BookingStatus.DEPOSIT_PAID, 'EXPIRE')).toBe(BookingStatus.EXPIRED);
+    });
+
+    it('DIRECT_CANCEL: DEPOSIT_PAID → CANCELLED', () => {
+      expect(assertTransition(BookingStatus.DEPOSIT_PAID, 'DIRECT_CANCEL')).toBe(BookingStatus.CANCELLED);
+    });
+
+    it('CLIENT_DIRECT_CANCEL: DEPOSIT_PAID → CANCELLED', () => {
+      expect(assertTransition(BookingStatus.DEPOSIT_PAID, 'CLIENT_DIRECT_CANCEL')).toBe(BookingStatus.CANCELLED);
+    });
+
+    it('CLIENT_REQUEST_CANCEL: DEPOSIT_PAID → CANCEL_REQUESTED', () => {
+      expect(assertTransition(BookingStatus.DEPOSIT_PAID, 'CLIENT_REQUEST_CANCEL')).toBe(BookingStatus.CANCEL_REQUESTED);
+    });
+
     it('CLIENT_REQUEST_CANCEL: PENDING → CANCEL_REQUESTED', () => {
       expect(assertTransition(BookingStatus.PENDING, 'CLIENT_REQUEST_CANCEL')).toBe(BookingStatus.CANCEL_REQUESTED);
     });
@@ -195,6 +223,24 @@ describe('BookingStateMachine — assertTransition', () => {
       ).toThrow(BadRequestException);
     });
 
+    it('DEPOSIT_CONFIRMED from CONFIRMED throws (only PENDING/AWAITING_PAYMENT are valid sources)', () => {
+      expect(() =>
+        assertTransition(BookingStatus.CONFIRMED, 'DEPOSIT_CONFIRMED'),
+      ).toThrow(BadRequestException);
+    });
+
+    it('DEPOSIT_CONFIRMED from DEPOSIT_PAID throws (cannot re-pay an already-deposited booking)', () => {
+      expect(() =>
+        assertTransition(BookingStatus.DEPOSIT_PAID, 'DEPOSIT_CONFIRMED'),
+      ).toThrow(BadRequestException);
+    });
+
+    it('DEPOSIT_CONFIRMED from PENDING_GROUP_FILL throws', () => {
+      expect(() =>
+        assertTransition(BookingStatus.PENDING_GROUP_FILL, 'DEPOSIT_CONFIRMED'),
+      ).toThrow(BadRequestException);
+    });
+
     it('error message includes transition name and from status', () => {
       const err = (() => {
         try {
@@ -255,6 +301,7 @@ describe('BookingStateMachine — isTerminalStatus', () => {
     BookingStatus.AWAITING_PAYMENT,
     BookingStatus.CONFIRMED,
     BookingStatus.CANCEL_REQUESTED,
+    BookingStatus.DEPOSIT_PAID,
   ])('%s is NOT terminal', (status) => {
     expect(isTerminalStatus(status)).toBe(false);
   });
