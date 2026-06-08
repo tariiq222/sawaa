@@ -271,41 +271,6 @@ model Holiday {
   @@index([branchId])
 }
 
-// ─── Branding Config ─────────────────────────────────────────────────────────
-
-enum WebsiteTheme {
-  SAWAA
-  PREMIUM
-}
-
-model BrandingConfig {
-  id String @id @default(uuid()) // SaaS-02c: was @default("default")
-
-  organizationNameAr String
-  organizationNameEn String?
-  productTagline     String?
-
-  logoUrl    String?
-  faviconUrl String?
-
-  colorPrimary      String?
-  colorPrimaryLight String?
-  colorPrimaryDark  String?
-  colorAccent       String?
-  colorAccentDark   String?
-  colorBackground   String?
-
-  fontFamily String?
-  fontUrl    String?
-  customCss  String?
-
-  websiteDomain      String?      @unique // kept globally unique (domain ownership)
-  activeWebsiteTheme WebsiteTheme @default(SAWAA)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 // ─── Intake Forms ─────────────────────────────────────────────────────────────
 
 enum IntakeFieldType {
@@ -400,6 +365,7 @@ model OrganizationSettings {
   id                     String    @id @default(uuid()) // SaaS-02c: was @default("default")
   companyNameAr          String?
   companyNameEn          String?
+  productTagline         String?
   businessRegistration   String?
   vatRegistrationNumber  String?
   vatRate                Decimal   @default(0.15) @db.Decimal(5, 4)

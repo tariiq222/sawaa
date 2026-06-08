@@ -21,6 +21,8 @@ export interface Service {
   isHidden: boolean;
   hidePriceOnBooking: boolean;
   hideDurationOnBooking: boolean;
+  showPrice?: boolean;
+  showDuration?: boolean;
   bufferMinutes: number;
   depositEnabled: boolean;
   depositPercent: number | null;

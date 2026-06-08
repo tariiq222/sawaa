@@ -49,7 +49,7 @@ import { ListEmployeeServicesHandler } from '../../modules/people/employees/list
 import { GetEmployeeServiceTypesHandler } from '../../modules/people/employees/get-employee-service-types.handler';
 import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
 import { Type } from 'class-transformer';
-import { IsDateString, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsDateString, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { AssignEmployeeServiceHandler } from '../../modules/people/employees/assign-employee-service.handler';
 import { UpdateEmployeeServiceHandler } from '../../modules/people/employees/update-employee-service.handler';
 import { RemoveEmployeeServiceHandler } from '../../modules/people/employees/remove-employee-service.handler';
@@ -97,6 +97,11 @@ class EmployeeAvailableDaysQuery {
   @IsOptional() @IsString() serviceId?: string;
 
   @IsOptional() @IsString() deliveryType?: string;
+}
+
+class AssignEmployeeServiceDto {
+  @IsUUID()
+  serviceId!: string;
 }
 
 function formatHHmm(d: Date): string {
@@ -626,7 +631,7 @@ export class DashboardPeopleController {
   @ApiNotFoundResponse({ description: 'Employee not found' })
   assignEmployeeServiceEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { serviceId: string },
+    @Body() body: AssignEmployeeServiceDto,
   ) {
     return this.assignEmployeeService.execute({ employeeId: id, serviceId: body.serviceId });
   }

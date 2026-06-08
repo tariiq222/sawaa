@@ -1,8 +1,10 @@
 import {
   IsArray,
   IsBoolean,
+  IsDefined,
   IsEnum,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
@@ -22,10 +24,10 @@ export enum RecurringPatternDto {
 export class CreateServiceDto {
   // ─── الأساسيات ───────────────────────────────────────────────────────────
   @ApiProperty({ example: 'قص الشعر' })
-  @IsString() @MaxLength(200) nameAr!: string;
+  @IsString() @IsNotEmpty() @MaxLength(200) nameAr!: string;
 
-  @ApiPropertyOptional({ example: 'Haircut' })
-  @IsOptional() @IsString() @MaxLength(200) nameEn?: string;
+  @ApiProperty({ example: 'Haircut' })
+  @IsString() @IsNotEmpty() @MaxLength(200) nameEn!: string;
 
   @ApiPropertyOptional({ description: 'Service description in Arabic' }) @IsOptional() @IsString() descriptionAr?: string;
   @ApiPropertyOptional({ description: 'Service description in English' }) @IsOptional() @IsString() descriptionEn?: string;
@@ -40,7 +42,7 @@ export class CreateServiceDto {
   @IsOptional() @IsString() @MaxLength(8) currency?: string;
 
   @ApiPropertyOptional({ description: 'Service image URL', example: 'https://example.com/logo.png' }) @IsOptional() @IsString() imageUrl?: string;
-  @ApiPropertyOptional({ description: 'Category UUID', format: 'uuid', example: '550e8400-e29b-41d4-a716-446655440000' }) @IsOptional() @IsUUID() categoryId?: string;
+  @ApiProperty({ description: 'Category UUID', format: 'uuid', example: '550e8400-e29b-41d4-a716-446655440000' }) @IsUUID() categoryId!: string;
 
   // ─── العرض/الإخفاء ───────────────────────────────────────────────────────
   @ApiPropertyOptional({ description: 'Whether the service is active and bookable', example: true, default: true }) @IsOptional() @IsBoolean() isActive?: boolean;
@@ -62,7 +64,7 @@ export class CreateServiceDto {
 
   @ApiPropertyOptional({ description: 'Fixed deposit amount in integer halalas — must not exceed price' })
   @ValidateIf((o: CreateServiceDto) => o.depositEnabled === true)
-  @IsInt() @Min(0) depositAmount?: number;
+  @IsDefined() @IsInt() @Min(1) depositAmount?: number;
 
   // ─── التكرار ─────────────────────────────────────────────────────────────
   @ApiPropertyOptional({ description: 'Whether recurring bookings are allowed for this service', example: false, default: false }) @IsOptional() @IsBoolean() allowRecurring?: boolean;

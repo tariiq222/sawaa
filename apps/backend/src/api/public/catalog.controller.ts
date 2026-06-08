@@ -17,7 +17,7 @@ export class PublicCatalogController {
   @ApiOperation({ summary: 'Get public service catalog (departments, categories, services)' })
   @ApiOkResponse({ description: 'Active departments, categories, and services' })
   async getCatalog() {
-    const [departments, categories, services] = await Promise.all([
+    const [departments, categories, rawServices] = await Promise.all([
       this.prisma.department.findMany({
         // isVisible is the public hide-from-booking toggle; filter at the source
         // so hidden departments never reach any client (website/mobile). (R-32)
@@ -41,7 +41,6 @@ export class PublicCatalogController {
           price: true,
           currency: true,
           imageUrl: true,
-          isActive: true,
           iconName: true,
           iconBgColor: true,
           hidePriceOnBooking: true,
@@ -71,6 +70,14 @@ export class PublicCatalogController {
         orderBy: { nameAr: 'asc' },
       }),
     ]);
+
+    const services = rawServices.map(
+      ({ hidePriceOnBooking, hideDurationOnBooking, ...service }) => ({
+        ...service,
+        showPrice: !hidePriceOnBooking,
+        showDuration: !hideDurationOnBooking,
+      }),
+    );
 
     return { departments, categories, services };
   }

@@ -60,7 +60,7 @@ export async function SawaaSupportGroupsPage() {
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((c) => {
           const categoryServiceIds = new Set(
-            catalog.services.filter((s) => s.categoryId === c.id && s.isActive).map((s) => s.id),
+            catalog.services.filter((s) => s.categoryId === c.id).map((s) => s.id),
           );
           const therapistCount = therapists.filter((th) =>
             th.serviceIds.some((id) => categoryServiceIds.has(id)),

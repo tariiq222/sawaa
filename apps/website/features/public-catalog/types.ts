@@ -32,7 +32,8 @@ export interface PublicService {
   imageUrl: string | null;
   iconName: string | null;
   iconBgColor: string | null;
-  isActive: boolean;
+  showPrice?: boolean;
+  showDuration?: boolean;
 }
 
 export interface PublicCatalog {

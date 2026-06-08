@@ -1,9 +1,11 @@
 import {
   IsArray,
   IsBoolean,
+  IsDefined,
   IsEnum,
   IsInt,
   IsNumber,
+  IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
@@ -17,10 +19,10 @@ import { RecurringPatternDto } from './create-service.dto';
 export class UpdateServiceDto {
   // ─── الأساسيات ───────────────────────────────────────────────────────────
   @ApiPropertyOptional({ description: 'Service name in Arabic', example: 'قص الشعر' })
-  @IsOptional() @IsString() @MaxLength(200) nameAr?: string;
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(200) nameAr?: string;
 
   @ApiPropertyOptional({ description: 'Service name in English', example: 'Haircut' })
-  @IsOptional() @IsString() @MaxLength(200) nameEn?: string;
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(200) nameEn?: string;
 
   @ApiPropertyOptional({ description: 'Description in Arabic' })
   @IsOptional() @IsString() descriptionAr?: string;
@@ -79,7 +81,7 @@ export class UpdateServiceDto {
 
   @ApiPropertyOptional({ description: 'Fixed deposit amount (must not exceed price)', example: 20 })
   @ValidateIf((o: UpdateServiceDto) => o.depositEnabled === true)
-  @IsOptional() @IsNumber() @Min(0) depositAmount?: number;
+  @IsDefined() @IsNumber() @Min(1) depositAmount?: number;
 
   // ─── التكرار ─────────────────────────────────────────────────────────────
   @ApiPropertyOptional({ description: 'Whether recurring bookings are allowed', example: false })

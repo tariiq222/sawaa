@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, ConflictException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
 import { AssignEmployeeServiceHandler } from './assign-employee-service.handler';
 import { PrismaService } from '../../../infrastructure/database';
 
@@ -10,6 +10,7 @@ describe('AssignEmployeeServiceHandler', () => {
   beforeEach(async () => {
     prisma = {
       employee: { findFirst: jest.fn() },
+      service: { findFirst: jest.fn() },
       employeeService: { findUnique: jest.fn(), create: jest.fn() },
     };
 
@@ -25,14 +26,29 @@ describe('AssignEmployeeServiceHandler', () => {
     await expect(handler.execute({ employeeId: 'missing', serviceId: 'svc-1' })).rejects.toThrow(NotFoundException);
   });
 
+  it('should throw BadRequestException when serviceId is missing', async () => {
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+    await expect(handler.execute({ employeeId: 'emp-1', serviceId: undefined as never })).rejects.toThrow(BadRequestException);
+    expect(prisma.employeeService.create).not.toHaveBeenCalled();
+  });
+
+  it('should throw NotFoundException when service not found or archived', async () => {
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+    prisma.service.findFirst.mockResolvedValue(null);
+    await expect(handler.execute({ employeeId: 'emp-1', serviceId: 'svc-1' })).rejects.toThrow(NotFoundException);
+    expect(prisma.employeeService.create).not.toHaveBeenCalled();
+  });
+
   it('should throw ConflictException when already assigned', async () => {
     prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+    prisma.service.findFirst.mockResolvedValue({ id: 'svc-1' });
     prisma.employeeService.findUnique.mockResolvedValue({ id: 'link-1' });
     await expect(handler.execute({ employeeId: 'emp-1', serviceId: 'svc-1' })).rejects.toThrow(ConflictException);
   });
 
   it('should create assignment when not existing', async () => {
     prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+    prisma.service.findFirst.mockResolvedValue({ id: 'svc-1' });
     prisma.employeeService.findUnique.mockResolvedValue(null);
     prisma.employeeService.create.mockResolvedValue({ id: 'link-1' });
 

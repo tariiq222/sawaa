@@ -25,10 +25,10 @@ import type { RecurringPattern } from './service'
 
 export interface CreateServicePayload {
   nameAr: string
-  nameEn?: string
+  nameEn: string
   descriptionAr?: string
   descriptionEn?: string
-  categoryId?: string
+  categoryId: string
   durationMins: number
   price: number
   currency?: string

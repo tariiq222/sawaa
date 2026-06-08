@@ -2136,8 +2136,10 @@
         },
         "required": [
           "nameAr",
+          "nameEn",
           "durationMins",
-          "price"
+          "price",
+          "categoryId"
         ],
         "type": "object"
       },

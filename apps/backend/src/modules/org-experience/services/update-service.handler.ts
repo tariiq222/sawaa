@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
 import { EventBusService } from '../../../infrastructure/events';
@@ -31,6 +31,10 @@ export class UpdateServiceHandler {
     const effectiveDepositAmount =
       dto.depositAmount !== undefined ? dto.depositAmount : service.depositAmount ? Number(service.depositAmount) : undefined;
 
+    if (effectiveDepositEnabled && (!effectiveDepositAmount || effectiveDepositAmount <= 0)) {
+      throw new BadRequestException('depositAmount must be greater than zero when deposit is enabled');
+    }
+
     if (
       effectiveDepositEnabled &&
       effectiveDepositAmount !== undefined &&
@@ -46,6 +50,23 @@ export class UpdateServiceHandler {
     const effectiveReserve = dto.reserveWithoutPayment ?? service.reserveWithoutPayment;
     if (effectiveReserve && effectiveMax <= 1) {
       throw new BadRequestException('reserveWithoutPayment requires maxParticipants > 1');
+    }
+
+    const duplicateChecks = [
+      ...(dto.nameAr !== undefined ? [{ nameAr: dto.nameAr }] : []),
+      ...(dto.nameEn !== undefined ? [{ nameEn: dto.nameEn }] : []),
+    ];
+    if (duplicateChecks.length > 0) {
+      const duplicate = await this.prisma.service.findFirst({
+        where: {
+          id: { not: dto.serviceId },
+          archivedAt: null,
+          OR: duplicateChecks,
+        },
+      });
+      if (duplicate) {
+        throw new ConflictException('Service with this Arabic or English name already exists');
+      }
     }
 
     const wasActive = service.isActive;

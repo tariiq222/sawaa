@@ -30,7 +30,7 @@ export async function SawaaSupportGroupDetailPage({ id }: Props) {
 
   const name = category ? (locale === 'en' && category.nameEn ? category.nameEn : category.nameAr) : '';
   const serviceIds = new Set(
-    category ? catalog.services.filter((s) => s.categoryId === category.id && s.isActive).map((s) => s.id) : [],
+    category ? catalog.services.filter((s) => s.categoryId === category.id).map((s) => s.id) : [],
   );
   const sessions = (allSessions ?? [])
     .filter((s) => serviceIds.has(s.serviceId))

@@ -199,8 +199,8 @@ export function ServicePicker({
           const durationOpts = extended.durationOptions ?? [];
           const fallbackDuration = extended.durationMins ?? service.duration ?? 0;
           const fallbackPrice = Number(service.price ?? 0);
-          const showPrice = !service.hidePriceOnBooking;
-          const showDuration = !service.hideDurationOnBooking;
+          const showPrice = service.showPrice ?? true;
+          const showDuration = service.showDuration ?? true;
 
           // Build the list of choices: prefer durationOptions when present,
           // otherwise fall back to bookingConfigs (one row per delivery type).

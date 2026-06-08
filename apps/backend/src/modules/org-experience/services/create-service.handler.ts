@@ -20,9 +20,12 @@ export class CreateServiceHandler {
     this.validateBusinessRules(dto);
 
     const existing = await this.prisma.service.findFirst({
-      where: { nameAr: dto.nameAr, archivedAt: null },
+      where: {
+        archivedAt: null,
+        OR: [{ nameAr: dto.nameAr }, { nameEn: dto.nameEn }],
+      },
     });
-    if (existing) throw new ConflictException('Service with this Arabic name already exists');
+    if (existing) throw new ConflictException('Service with this Arabic or English name already exists');
 
     const service = await this.prisma.service.create({
       data: {
@@ -74,6 +77,14 @@ export class CreateServiceHandler {
   }
 
   private validateBusinessRules(dto: CreateServiceCommand): void {
+    if (!dto.nameEn || !dto.categoryId) {
+      throw new BadRequestException('nameEn and categoryId are required');
+    }
+
+    if (dto.depositEnabled && (!dto.depositAmount || dto.depositAmount <= 0)) {
+      throw new BadRequestException('depositAmount must be greater than zero when deposit is enabled');
+    }
+
     if (
       dto.depositEnabled &&
       dto.depositAmount !== undefined &&

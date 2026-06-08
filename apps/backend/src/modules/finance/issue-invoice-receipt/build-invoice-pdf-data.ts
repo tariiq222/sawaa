@@ -1,5 +1,6 @@
 import type { Invoice } from '@prisma/client';
 import type { ClsService } from 'nestjs-cls';
+import { PLATFORM_BRAND } from '@sawaa/shared';
 import type { PrismaService } from '../../../infrastructure/database';
 import { SYSTEM_CONTEXT_CLS_KEY } from '../../../common/constants';
 import type { InvoicePdfData } from './invoice-pdf.template';
@@ -19,15 +20,11 @@ export async function buildInvoicePdfData(
   invoice: Invoice,
   paymentId?: string | null,
 ): Promise<InvoicePdfData> {
-  const [orgSettings, branding, client, payment, booking] = await cls.run(async () => {
+  const [orgSettings, client, payment, booking] = await cls.run(async () => {
     cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
     return Promise.all([
       prisma.organizationSettings.findFirst({
         select: { companyNameAr: true, vatRegistrationNumber: true, sellerAddress: true },
-      }),
-      prisma.brandingConfig.findFirst({
-        orderBy: { createdAt: 'desc' },
-        select: { logoUrl: true, colorPrimary: true },
       }),
       prisma.client.findUnique({
         where: { id: invoice.clientId },
@@ -60,8 +57,8 @@ export async function buildInvoicePdfData(
     sellerNameAr: orgSettings?.companyNameAr ?? 'مركز سواء',
     sellerVatNumber: orgSettings?.vatRegistrationNumber ?? null,
     sellerAddress: orgSettings?.sellerAddress ?? null,
-    logoUrl: branding?.logoUrl ?? null,
-    brandColor: branding?.colorPrimary ?? null,
+    logoUrl: null,
+    brandColor: PLATFORM_BRAND.colors.primary,
     clientName: client ? `${client.firstName} ${client.lastName ?? ''}`.trim() : '—',
     serviceName: booking?.serviceNameSnapshot ?? (invoice.bundlePurchaseId ? 'باقة جلسات' : '—'),
     subtotal: Number(invoice.subtotal),

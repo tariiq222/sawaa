@@ -89,7 +89,7 @@ describe('CreateServiceHandler', () => {
   it('creates service when name is unique', async () => {
     const prisma = buildPrisma();
     const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache);
-    const result = await handler.execute({ nameAr: 'قص الشعر', durationMins: 30, price: 50 });
+    const result = await handler.execute({ nameAr: 'قص الشعر', nameEn: 'Haircut', categoryId: 'cat-1', durationMins: 30, price: 50 });
     expect(prisma.service.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ nameAr: 'قص الشعر' }) }),
     );
@@ -101,7 +101,7 @@ describe('CreateServiceHandler', () => {
     prisma.service.findFirst = jest.fn().mockResolvedValue(mockService);
     const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache);
     await expect(
-      handler.execute({ nameAr: 'قص الشعر', durationMins: 30, price: 50 }),
+      handler.execute({ nameAr: 'قص الشعر', nameEn: 'Haircut', categoryId: 'cat-1', durationMins: 30, price: 50 }),
     ).rejects.toThrow(ConflictException);
   });
 
@@ -109,7 +109,7 @@ describe('CreateServiceHandler', () => {
     const prisma = buildPrisma();
     const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache);
     await expect(
-      handler.execute({ nameAr: 'خدمة', durationMins: 30, price: 100, depositEnabled: true, depositAmount: 150 }),
+      handler.execute({ nameAr: 'خدمة', nameEn: 'Service', categoryId: 'cat-1', durationMins: 30, price: 100, depositEnabled: true, depositAmount: 150 }),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -117,7 +117,7 @@ describe('CreateServiceHandler', () => {
     const prisma = buildPrisma();
     const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache);
     await expect(
-      handler.execute({ nameAr: 'جلسة', durationMins: 60, price: 100, minParticipants: 10, maxParticipants: 5 }),
+      handler.execute({ nameAr: 'جلسة', nameEn: 'Session', categoryId: 'cat-1', durationMins: 60, price: 100, minParticipants: 10, maxParticipants: 5 }),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -125,7 +125,7 @@ describe('CreateServiceHandler', () => {
     const prisma = buildPrisma();
     const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache);
     await expect(
-      handler.execute({ nameAr: 'خدمة فردية', durationMins: 30, price: 100, maxParticipants: 1, reserveWithoutPayment: true }),
+      handler.execute({ nameAr: 'خدمة فردية', nameEn: 'Solo service', categoryId: 'cat-1', durationMins: 30, price: 100, maxParticipants: 1, reserveWithoutPayment: true }),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -133,7 +133,7 @@ describe('CreateServiceHandler', () => {
     const prisma = buildPrisma();
     const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache);
     const result = await handler.execute({
-      nameAr: 'يوغا جماعية', durationMins: 60, price: 100, minParticipants: 3, maxParticipants: 10, reserveWithoutPayment: true,
+      nameAr: 'يوغا جماعية', nameEn: 'Group yoga', categoryId: 'cat-1', durationMins: 60, price: 100, minParticipants: 3, maxParticipants: 10, reserveWithoutPayment: true,
     });
     expect(result.id).toBe('svc-1');
   });
@@ -142,7 +142,7 @@ describe('CreateServiceHandler', () => {
     const prisma = buildPrisma();
     const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache);
     const result = await handler.execute({
-      nameAr: 'علاج أسبوعي', durationMins: 45, price: 200, allowRecurring: true,
+      nameAr: 'علاج أسبوعي', nameEn: 'Weekly therapy', categoryId: 'cat-1', durationMins: 45, price: 200, allowRecurring: true,
       allowedRecurringPatterns: [RecurringPatternDto.WEEKLY, RecurringPatternDto.BIWEEKLY], maxRecurrences: 12,
     });
     expect(result.id).toBe('svc-1');

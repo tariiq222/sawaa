@@ -40,7 +40,13 @@ describe('PublicCatalogController (e2e)', () => {
         { id: 'cat-1', nameAr: 'شعر', isActive: true },
       ]);
       mockPrisma.service.findMany.mockResolvedValue([
-        { id: 'svc-1', nameAr: 'قص الشعر', isActive: true, durationOptions: [{ id: 'do-1', durationMins: 30, price: 50 }] },
+        {
+          id: 'svc-1',
+          nameAr: 'قص الشعر',
+          hidePriceOnBooking: true,
+          hideDurationOnBooking: false,
+          durationOptions: [{ id: 'do-1', durationMins: 30, price: 50 }],
+        },
       ]);
 
       const res = await request(app.getHttpServer())
@@ -51,6 +57,10 @@ describe('PublicCatalogController (e2e)', () => {
       expect(res.body.categories).toHaveLength(1);
       expect(res.body.services).toHaveLength(1);
       expect(res.body.services[0].nameAr).toBe('قص الشعر');
+      expect(res.body.services[0].showPrice).toBe(false);
+      expect(res.body.services[0].showDuration).toBe(true);
+      expect(res.body.services[0].hidePriceOnBooking).toBeUndefined();
+      expect(res.body.services[0].hideDurationOnBooking).toBeUndefined();
     });
 
     it('calls prisma with active + non-hidden filters', async () => {
@@ -100,11 +110,8 @@ describe('PublicCatalogController (e2e)', () => {
           price: true,
           currency: true,
           imageUrl: true,
-          isActive: true,
           iconName: true,
           iconBgColor: true,
-          hidePriceOnBooking: true,
-          hideDurationOnBooking: true,
           minParticipants: true,
         }),
       );
@@ -134,7 +141,8 @@ describe('PublicCatalogController (e2e)', () => {
         }),
       );
 
-      // Sensitive internal fields must NOT be exposed.
+      // Sensitive internal fields must NOT be exposed in the public shape.
+      expect(serviceArg.select.isActive).toBeUndefined();
       expect(serviceArg.select.commissionRateOverride).toBeUndefined();
       expect(serviceArg.select.depositAmount).toBeUndefined();
     });

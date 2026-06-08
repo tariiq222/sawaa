@@ -136,7 +136,7 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
       const res = await request(app.getHttpServer())
         .post('/dashboard/organization/services')
         .set('Authorization', 'Bearer fake-jwt')
-        .send({ nameAr: 'قص الشعر', durationMins: 30, price: 50 })
+        .send({ nameAr: 'قص الشعر', nameEn: 'Haircut', categoryId: uuid(2), durationMins: 30, price: 50 })
         .expect(201);
 
       expect(res.body.nameAr).toBe('قص الشعر');
@@ -147,6 +147,37 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
         .post('/dashboard/organization/services')
         .set('Authorization', 'Bearer fake-jwt')
         .send({ nameAr: 'قص الشعر' })
+        .expect(400);
+    });
+
+    it('returns 400 when nameEn is missing', async () => {
+      return request(app.getHttpServer())
+        .post('/dashboard/organization/services')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ nameAr: 'قص الشعر', categoryId: uuid(2), durationMins: 30, price: 50 })
+        .expect(400);
+    });
+
+    it('returns 400 when categoryId is missing', async () => {
+      return request(app.getHttpServer())
+        .post('/dashboard/organization/services')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ nameAr: 'قص الشعر', nameEn: 'Haircut', durationMins: 30, price: 50 })
+        .expect(400);
+    });
+
+    it('returns 400 when enabling deposit without a positive amount', async () => {
+      return request(app.getHttpServer())
+        .post('/dashboard/organization/services')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({
+          nameAr: 'قص الشعر',
+          nameEn: 'Haircut',
+          categoryId: uuid(2),
+          durationMins: 30,
+          price: 50,
+          depositEnabled: true,
+        })
         .expect(400);
     });
 

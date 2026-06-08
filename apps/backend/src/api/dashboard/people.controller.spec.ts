@@ -631,6 +631,26 @@ describe('DashboardPeopleController (e2e)', () => {
 
       expect(res.body.serviceId).toBe(uuid(5));
     });
+
+    it('returns 400 when serviceId is missing', async () => {
+      await request(app.getHttpServer())
+        .post(`/dashboard/people/employees/${uuid(2)}/services`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({})
+        .expect(400);
+
+      expect(mockAssignEmployeeService.execute).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when serviceId is not a UUID', async () => {
+      await request(app.getHttpServer())
+        .post(`/dashboard/people/employees/${uuid(2)}/services`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ serviceId: 'not-a-uuid' })
+        .expect(400);
+
+      expect(mockAssignEmployeeService.execute).not.toHaveBeenCalled();
+    });
   });
 
   describe('GET /dashboard/people/employees/:id/slots', () => {
