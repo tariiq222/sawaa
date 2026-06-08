@@ -7,6 +7,7 @@ import { UpdateServiceHandler } from '../../modules/org-experience/services/upda
 import { ListServicesHandler } from '../../modules/org-experience/services/list-services.handler';
 import { GetServiceHandler } from '../../modules/org-experience/services/get-service.handler';
 import { ArchiveServiceHandler } from '../../modules/org-experience/services/archive-service.handler';
+import { RestoreServiceHandler } from '../../modules/org-experience/services/restore-service.handler';
 import { SetDurationOptionsHandler } from '../../modules/org-experience/services/set-duration-options.handler';
 import { SetServiceBookingConfigsHandler } from '../../modules/org-experience/services/set-service-booking-configs.handler';
 import { GetServiceBookingConfigsHandler } from '../../modules/org-experience/services/get-service-booking-configs.handler';
@@ -43,6 +44,7 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
   const mockListServices = { execute: jest.fn() };
   const mockGetService = { execute: jest.fn() };
   const mockArchiveService = { execute: jest.fn() };
+  const mockRestoreService = { execute: jest.fn() };
   const mockSetServiceBookingConfigs = { execute: jest.fn() };
   const mockGetServiceBookingConfigs = { execute: jest.fn() };
   const mockListServiceEmployees = { execute: jest.fn() };
@@ -77,6 +79,7 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
         { provide: ListServicesHandler, useValue: mockListServices },
         { provide: GetServiceHandler, useValue: mockGetService },
         { provide: ArchiveServiceHandler, useValue: mockArchiveService },
+        { provide: RestoreServiceHandler, useValue: mockRestoreService },
         { provide: SetServiceBookingConfigsHandler, useValue: mockSetServiceBookingConfigs },
         { provide: GetServiceBookingConfigsHandler, useValue: mockGetServiceBookingConfigs },
         { provide: ListServiceEmployeesHandler, useValue: mockListServiceEmployees },

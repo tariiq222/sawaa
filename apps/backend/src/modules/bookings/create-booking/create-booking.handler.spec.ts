@@ -318,14 +318,14 @@ describe('CreateBookingHandler', () => {
   // 3. Invoice creation (VAT branches)
   // ──────────────────────────────────────────────────────────────────────────
 
-  it('creates invoice with default VAT (0.15) when orgSettings is null', async () => {
+  it('creates invoice with zero VAT when orgSettings is null (unregistered org)', async () => {
     prisma.organizationSettings.findFirst = jest.fn().mockResolvedValue(null);
     await handler.execute(baseDto);
 
     const invoiceData = prisma.invoice.create.mock.calls[0][0].data;
-    expect(invoiceData.vatRate.toString()).toBe('0.15');
-    expect(invoiceData.vatAmt.toString()).toBe('30');
-    expect(invoiceData.total.toString()).toBe('230');
+    expect(invoiceData.vatRate.toString()).toBe('0');
+    expect(invoiceData.vatAmt.toString()).toBe('0');
+    expect(invoiceData.total.toString()).toBe('200');
   });
 
   it('creates invoice with custom VAT when orgSettings.vatRate is set', async () => {
@@ -347,7 +347,7 @@ describe('CreateBookingHandler', () => {
       currency: 'SAR',
       isEmployeeOverride: false,
     });
-    prisma.organizationSettings.findFirst = jest.fn().mockResolvedValue(null);
+    prisma.organizationSettings.findFirst = jest.fn().mockResolvedValue({ vatRate: '0.15' });
 
     await handler.execute(baseDto);
 
