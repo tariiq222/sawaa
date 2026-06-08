@@ -23,10 +23,9 @@ import type { Booking, CancellationReason } from "@/lib/types/booking"
 interface BookingsTabContentProps {
   onRowClick: (b: Booking) => void
   onEditClick: (b: Booking) => void
-  onInvoiceClick: (b: Booking) => void
 }
 
-export function BookingsTabContent({ onRowClick, onEditClick, onInvoiceClick }: BookingsTabContentProps) {
+export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabContentProps) {
   const { t, locale } = useLocale()
   const { weekStartDayNumber, dateFormat } = useOrganizationConfig()
   const queryClient = useQueryClient()
@@ -124,7 +123,7 @@ export function BookingsTabContent({ onRowClick, onEditClick, onInvoiceClick }: 
   }
 
   const columns = useMemo(
-    () => getBookingColumns(onRowClick, onEditClick, handleStatusAction, handleDelete, onInvoiceClick, t, { dateFormat, locale }),
+    () => getBookingColumns(onRowClick, onEditClick, handleStatusAction, handleDelete, t, { dateFormat, locale }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [t, dateFormat, locale]
   )

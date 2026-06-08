@@ -74,7 +74,7 @@ export const enBookings: Record<string, string> = {
   "bookings.col.view": "View details",
   "bookings.col.recordPayment": "Record payment",
   "bookings.col.edit": "Reschedule",
-  "bookings.col.invoice": "View invoice",
+  "bookings.col.invoice": "Download invoice",
   "bookings.col.delete": "Delete booking",
   "bookings.col.deleteTitle": "Delete Booking",
   "bookings.col.deleteDesc": "Are you sure you want to delete this booking? This action cannot be undone.",

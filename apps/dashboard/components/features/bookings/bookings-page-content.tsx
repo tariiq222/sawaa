@@ -69,12 +69,6 @@ export function BookingsPageContent({
     setDetailOpen(true)
   }
 
-  const handleInvoiceClick = (booking: Booking) => {
-    setDetailDefaultTab("invoice")
-    setSelectedBooking(booking)
-    setDetailOpen(true)
-  }
-
   return (
     <ListPageShell>
       <div className="flex flex-col gap-2">
@@ -157,7 +151,6 @@ export function BookingsPageContent({
               <BookingsTabContent
                 onRowClick={handleRowClick}
                 onEditClick={handleEditClick}
-                onInvoiceClick={handleInvoiceClick}
               />
             </TabsContent>
 

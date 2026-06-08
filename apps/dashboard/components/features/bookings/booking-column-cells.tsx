@@ -24,11 +24,14 @@ import {
   DropdownMenuTrigger,
 } from "@sawaa/ui"
 import { useState } from "react"
+import { toast } from "sonner"
 import { StatusBadge } from "@/components/features/status-badge"
 import { useLocale } from "@/components/locale-provider"
 import { useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import { usePaymentMutations } from "@/hooks/use-payments"
+import { ApiError } from "@/lib/api"
+import { generateInvoicePdf } from "@/lib/api/invoices"
 import { cn } from "@/lib/utils"
 import { RecordPaymentDialog } from "@/components/features/bookings/record-payment-dialog"
 import type { Booking } from "@/lib/types/booking"
@@ -82,14 +85,12 @@ export function ActionsCell({
   booking,
   onView,
   onEdit,
-  onInvoice,
   onDelete,
   t,
 }: {
   booking: Booking
   onView: () => void
   onEdit: () => void
-  onInvoice: () => void
   onDelete: () => void
   t: (key: string) => string
 }) {
@@ -97,6 +98,28 @@ export function ActionsCell({
   const queryClient = useQueryClient()
   const { verifyMut, refundMut } = usePaymentMutations()
   const [recordOpen, setRecordOpen] = useState(false)
+  const [invoiceLoading, setInvoiceLoading] = useState(false)
+
+  // Generate (or reuse) the invoice PDF and open it in a new tab — works for any status.
+  const handleInvoicePdf = async () => {
+    if (!booking.invoice) return
+    setInvoiceLoading(true)
+    const toastId = toast.loading(t("invoices.generatingPdf"))
+    try {
+      const { url } = await generateInvoicePdf(booking.invoice.id)
+      toast.dismiss(toastId)
+      window.open(url, "_blank")
+    } catch (err) {
+      toast.dismiss(toastId)
+      toast.error(
+        err instanceof ApiError && err.status === 404
+          ? t("invoices.noPdfYet")
+          : t("invoices.downloadPdfError"),
+      )
+    } finally {
+      setInvoiceLoading(false)
+    }
+  }
 
   const payment = booking.payment
   const hasOutstanding = (booking.invoice?.outstanding ?? 0) > 0
@@ -161,7 +184,12 @@ export function ActionsCell({
         <HugeiconsIcon icon={ViewIcon} size={16} />
       </button>
       {hasInvoice && (
-        <button className={iconBtn} aria-label={t("bookings.col.invoice")} onClick={onInvoice}>
+        <button
+          className={iconBtn}
+          aria-label={t("bookings.col.invoice")}
+          disabled={invoiceLoading}
+          onClick={handleInvoicePdf}
+        >
           <HugeiconsIcon icon={Invoice01Icon} size={16} />
         </button>
       )}

@@ -74,7 +74,7 @@ export const arBookings: Record<string, string> = {
   "bookings.col.view": "عرض التفاصيل",
   "bookings.col.recordPayment": "تسجيل دفعة",
   "bookings.col.edit": "تعديل الموعد",
-  "bookings.col.invoice": "عرض الفاتورة",
+  "bookings.col.invoice": "تحميل الفاتورة",
   "bookings.col.delete": "حذف الحجز",
   "bookings.col.deleteTitle": "حذف الحجز",
   "bookings.col.deleteDesc": "هل أنت متأكد من حذف هذا الحجز؟ لا يمكن التراجع عن هذا الإجراء.",

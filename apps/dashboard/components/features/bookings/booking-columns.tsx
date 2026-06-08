@@ -56,7 +56,6 @@ export function getBookingColumns(
   onEditClick: (booking: Booking) => void,
   onStatusAction: (booking: Booking, action: QuickStatusActionType) => void,
   onDelete: (booking: Booking) => void,
-  onInvoiceClick: (booking: Booking) => void,
   t: (key: string) => string,
   config?: { dateFormat?: DateFormat; locale?: "ar" | "en" },
 ): ColumnDef<Booking>[] {
@@ -185,7 +184,6 @@ export function getBookingColumns(
           booking={row.original}
           onView={() => onRowClick(row.original)}
           onEdit={() => onEditClick(row.original)}
-          onInvoice={() => onInvoiceClick(row.original)}
           onDelete={() => onDelete(row.original)}
           t={t}
         />

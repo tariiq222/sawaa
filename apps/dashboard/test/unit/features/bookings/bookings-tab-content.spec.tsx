@@ -128,7 +128,7 @@ describe("BookingsTabContent", () => {
   })
 
   it("includes walk_in filter option", () => {
-    render(<BookingsTabContent onRowClick={vi.fn()} onEditClick={vi.fn()} onInvoiceClick={vi.fn()} />, {
+    render(<BookingsTabContent onRowClick={vi.fn()} onEditClick={vi.fn()} />, {
       wrapper: makeWrapper(),
     })
 
