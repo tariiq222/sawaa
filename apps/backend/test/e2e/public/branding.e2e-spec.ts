@@ -15,18 +15,18 @@ describe('Public Branding (e2e)', () => {
     await app.close();
   });
 
-  it('GET /api/v1/public/branding returns branding config', async () => {
-    prisma.brandingConfig.findFirst.mockResolvedValue({
-      id: '1',
-      primaryColor: '#000000',
-      organizationNameAr: 'سوا',
-      logoUrl: 'https://cdn.example.com/logo.png',
+  it('GET /api/v1/public/branding returns the org name from settings', async () => {
+    prisma.organizationSettings.findFirst.mockResolvedValue({
+      companyNameAr: 'سواء',
+      companyNameEn: 'Sawaa',
+      productTagline: null,
+      timeFormat: '12h',
     });
 
     const res = await request(app.getHttpServer())
       .get('/api/v1/public/branding')
       .expect(200);
 
-    expect(res.body.organizationNameAr).toBe('سوا');
+    expect(res.body.organizationNameAr).toBe('سواء');
   });
 });
