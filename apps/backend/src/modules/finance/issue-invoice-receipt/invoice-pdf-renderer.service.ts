@@ -4,17 +4,27 @@ import * as QRCode from 'qrcode';
 import { InvoicePdf, type InvoicePdfData } from './invoice-pdf.template';
 import { buildZatcaQrTlv } from '../zatca/build-qr-tlv';
 
+/**
+ * ZATCA-valid placeholder VAT number (15 digits, starts and ends with 3 per
+ * the spec) used only until the org saves its real number in settings. The QR
+ * stays scannable and well-formed; swap happens automatically via DB config.
+ */
+const PLACEHOLDER_VAT_NUMBER = '300000000000003';
+
 @Injectable()
 export class InvoicePdfRendererService {
   async render(data: InvoicePdfData): Promise<Buffer> {
-    // If a QR data URL was supplied by the caller, use it as-is. Otherwise,
-    // when a seller VAT number is present, derive the ZATCA Phase 1 TLV
-    // payload and rasterize it into a PNG data URL embedded in the PDF.
+    // If a QR data URL was supplied by the caller, use it as-is. Otherwise
+    // derive the ZATCA Phase 1 TLV payload and rasterize it into a PNG data
+    // URL embedded in the PDF. When the org has not yet registered a VAT
+    // number, fall back to a placeholder so the QR is still scannable and
+    // structurally valid — it becomes the real number once configured in
+    // settings, with no code change required.
     let qrDataUrl: string | null = data.qrDataUrl;
-    if (!qrDataUrl && data.sellerVatNumber) {
+    if (!qrDataUrl) {
       const tlv = buildZatcaQrTlv({
         sellerName: data.sellerNameAr,
-        vatNumber: data.sellerVatNumber,
+        vatNumber: data.sellerVatNumber ?? PLACEHOLDER_VAT_NUMBER,
         timestamp: data.paidAt,
         totalWithVat: (data.total / 100).toFixed(2),
         vatTotal: (data.vatAmt / 100).toFixed(2),
