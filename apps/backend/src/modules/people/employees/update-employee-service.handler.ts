@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 
 export interface UpdateEmployeeServiceCommand {
@@ -18,6 +18,22 @@ export class UpdateEmployeeServiceHandler {
     if (!record) throw new NotFoundException('Employee-service assignment not found');
 
     if (cmd.isActive === undefined) return record;
+
+    // Track B — practitioner integrity: the link's effect on availability is
+    // only seen when the employee is also active. Toggling a link while the
+    // employee is inactive is a no-op from the user's perspective, but it
+    // silently mutates state that becomes visible when the employee is
+    // re-enabled. Reject the write to keep state consistent with the
+    // assign-employee-service invariant.
+    if (cmd.isActive === true) {
+      const employee = await this.prisma.employee.findFirst({
+        where: { id: cmd.employeeId },
+        select: { isActive: true },
+      });
+      if (employee && employee.isActive === false) {
+        throw new BadRequestException('Employee is not active');
+      }
+    }
 
     return this.prisma.employeeService.update({
       where: { employeeId_serviceId: { employeeId: cmd.employeeId, serviceId: cmd.serviceId } },

@@ -891,4 +891,37 @@ describe('CreateBookingHandler', () => {
       }),
     );
   });
+
+  // ─── Track B — practitioner ↔ service integrity ────────────────────────────
+  // The EmployeeService link is the "specialty match" in this codebase
+  // (no separate Specialty entity). Its isActive=false flag is the way an
+  // admin removes a practitioner's qualification for a service. A booking
+  // must never be created through a disabled link.
+
+  it('throws BadRequestException when the employee→service link is soft-disabled (isActive=false)', async () => {
+    prisma.employeeService.findUnique = jest
+      .fn()
+      .mockResolvedValue({ id: 'es-1', employeeId: 'emp-1', serviceId: 'svc-1', isActive: false });
+    await expect(handler.execute(baseDto)).rejects.toThrow('Employee does not provide this service');
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a scheduled time that falls outside business hours (no availability)', async () => {
+    // Simulate the availability check returning [] so the guard fires.
+    const availabilityHandler = {
+      execute: jest.fn().mockResolvedValue([]),
+    };
+    const guardedHandler = new CreateBookingHandler(
+      prisma as any,
+      rlsTransaction as any,
+      priceResolver as any,
+      settingsHandler as any,
+      groupMinReachedHandler as any,
+      eventBus as any,
+      couponValidator as any,
+      availabilityHandler as any,
+    );
+    await expect(guardedHandler.execute(baseDto)).rejects.toThrow('Selected booking time is not available');
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
 });

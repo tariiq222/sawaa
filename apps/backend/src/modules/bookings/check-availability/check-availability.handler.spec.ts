@@ -36,6 +36,8 @@ const makePrisma = () => {
       }),
     },
     holiday: { findFirst: jest.fn().mockResolvedValue(null) },
+    employee: { findFirst: jest.fn().mockResolvedValue({ id: 'emp-1', isActive: true }) },
+    employeeService: { findUnique: jest.fn().mockResolvedValue({ id: 'es-1', isActive: true }) },
     employeeAvailability: {
       findMany: jest.fn().mockResolvedValue([
         {
@@ -1370,7 +1372,356 @@ describe('CheckAvailabilityHandler', () => {
           }),
         }),
       );
+    });
+  });
+
+  // ─── Track B — practitioner ↔ service ↔ availability integrity ─────────────
+  // These tests document the integrity contract for the practitioner
+  // surface: an inactive employee must never produce slots, a soft-disabled
+  // employee↔service link must never produce slots, PENDING / AWAITING_PAYMENT
+  // bookings must block the slot, and a date outside business hours must
+  // never produce a slot even if a shift row exists for that day.
+
+  describe('execute — Track B: employee active filter', () => {
+    it('returns [] when the employee exists but isActive is false', async () => {
+      const prisma = makePrisma();
+      // Simulate the Employee.isActive=false lookup — the handler must read
+      // this and short-circuit before querying employeeAvailability.
+      prisma.employee.findFirst = jest.fn().mockResolvedValue({ id: 'emp-1', isActive: false });
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it('returns [] when the employee is not found', async () => {
+      const prisma = makePrisma();
+      prisma.employee.findFirst = jest.fn().mockResolvedValue(null);
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const result = await handler.execute({
+        employeeId: 'missing-emp',
+        branchId: 'branch-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+      });
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('execute — Track B: employeeService.isActive filter (specialty match)', () => {
+    it('returns [] when employee is not linked to the requested service at all', async () => {
+      const prisma = makePrisma();
+      prisma.employeeService = {
+        findUnique: jest.fn().mockResolvedValue(null),
+      };
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        serviceId: 'svc-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it('returns [] when the employee→service link is soft-disabled (isActive=false)', async () => {
+      const prisma = makePrisma();
+      prisma.employeeService = {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'es-1',
+          employeeId: 'emp-1',
+          serviceId: 'svc-1',
+          isActive: false,
+        }),
+      };
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        serviceId: 'svc-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it('returns slots when the link is active (regression baseline)', async () => {
+      const prisma = makePrisma();
+      prisma.employeeService = {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'es-1',
+          employeeId: 'emp-1',
+          serviceId: 'svc-1',
+          isActive: true,
+        }),
+      };
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        serviceId: 'svc-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+      });
+
       expect(result.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('execute — Track B: overlap detection across all blocking statuses', () => {
+    const blockingStatuses: Array<{ status: string; label: string }> = [
+      { status: 'PENDING', label: 'PENDING booking' },
+      { status: 'CONFIRMED', label: 'CONFIRMED booking' },
+      { status: 'AWAITING_PAYMENT', label: 'AWAITING_PAYMENT booking' },
+      { status: 'DEPOSIT_PAID', label: 'DEPOSIT_PAID booking' },
+      { status: 'CANCEL_REQUESTED', label: 'CANCEL_REQUESTED booking' },
+    ];
+
+    it.each(blockingStatuses)(
+      'excludes the conflicting slot for a $label at 10:00',
+      async ({ status }) => {
+        const prisma = makePrisma();
+        const slotStart = new Date(tomorrowMidnight.getTime() + 10 * 3600_000);
+        prisma.booking.findMany = jest.fn().mockResolvedValue([
+          {
+            id: 'book-1',
+            employeeId: 'emp-1',
+            status,
+            scheduledAt: slotStart,
+            durationMins: 60,
+          },
+        ]);
+        const settingsHandler = makeSettingsHandler();
+        const moduleRef = await Test.createTestingModule({
+          providers: [
+            CheckAvailabilityHandler,
+            { provide: PrismaService, useValue: prisma },
+            { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+          ],
+        }).compile();
+        handler = moduleRef.get(CheckAvailabilityHandler);
+
+        const result = await handler.execute({
+          employeeId: 'emp-1',
+          branchId: 'branch-1',
+          date: tomorrowMidnight,
+          durationMins: 60,
+        });
+
+        const tenAMSlots = result.filter(
+          (s) => hourInBusinessTz(s.startTime) === 10 && s.startTime.getMinutes() === 0,
+        );
+        expect(tenAMSlots.length).toBe(0);
+        // Sanity: the 9:00 slot is still offered.
+        const nineAMSlots = result.filter(
+          (s) => hourInBusinessTz(s.startTime) === 9 && s.startTime.getMinutes() === 0,
+        );
+        expect(nineAMSlots.length).toBeGreaterThan(0);
+      },
+    );
+
+    it('queries existing bookings with the blocking-status filter (PENDING/CONFIRMED/etc)', async () => {
+      // Defensive: the handler's conflict query must scope to
+      // STAFF_TIME_BLOCKING_BOOKING_STATUSES so CANCELLED / COMPLETED /
+      // EXPIRED terminal bookings do not block slots. Mock findMany with no
+      // rows; assert the handler called it with the right WHERE shape.
+      const prisma = makePrisma();
+      prisma.booking.findMany = jest.fn().mockResolvedValue([]);
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+      });
+
+      expect(prisma.booking.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            employeeId: 'emp-1',
+            status: expect.objectContaining({ in: expect.any(Array) }),
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('execute — Track B: business-hours rejection', () => {
+    it('returns [] when no businessHour row exists for the requested day', async () => {
+      const prisma = makePrisma();
+      prisma.businessHour.findUnique = jest.fn().mockResolvedValue(null);
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it('returns [] when the businessHour row exists but isOpen=false', async () => {
+      const prisma = makePrisma();
+      prisma.businessHour.findUnique = jest.fn().mockResolvedValue({
+        branchId: 'branch-1',
+        dayOfWeek: tomorrowMidnight.getDay(),
+        startTime: '09:00',
+        endTime: '17:00',
+        isOpen: false,
+      });
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it('returns [] when a holiday row exists for the branch on that date', async () => {
+      const prisma = makePrisma();
+      prisma.holiday.findFirst = jest.fn().mockResolvedValue({
+        id: 'hol-1',
+        branchId: 'branch-1',
+        date: tomorrowMidnight,
+      });
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it('returns [] when the branch is not configured for the day (no businessHour row) even if shifts exist', async () => {
+      // Defensive: the handler's branch-window is the intersection anchor. If
+      // businessHour is missing, the intersection is undefined → no slots.
+      const prisma = makePrisma();
+      prisma.businessHour.findUnique = jest.fn().mockResolvedValue(null);
+      // Shifts exist for the day but the branch itself is closed.
+      prisma.employeeAvailability.findMany = jest.fn().mockResolvedValue([
+        {
+          employeeId: 'emp-1',
+          dayOfWeek: tomorrowMidnight.getDay(),
+          startTime: '09:00',
+          endTime: '17:00',
+          isActive: true,
+        },
+      ]);
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+      });
+
+      expect(result).toEqual([]);
     });
   });
 });

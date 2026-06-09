@@ -156,6 +156,29 @@ export class CheckAvailabilityHandler {
     if (holiday) return [];
     if (shifts.length === 0) return [];
 
+    // Track B — practitioner integrity:
+    //   1. The Employee itself must be active. A deactivated employee must
+    //      never appear in availability, even if historical shift rows exist.
+    //   2. When a serviceId is provided, the EmployeeService link is the
+    //      "specialty match" in this codebase (no separate Specialty entity).
+    //      A soft-disabled link (isActive=false) must not produce slots, even
+    //      though the row physically exists.
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: query.employeeId },
+      select: { id: true, isActive: true },
+    });
+    if (!employee || employee.isActive === false) return [];
+
+    if (query.serviceId) {
+      const link = await this.prisma.employeeService.findUnique({
+        where: {
+          employeeId_serviceId: { employeeId: query.employeeId, serviceId: query.serviceId },
+        },
+        select: { id: true, isActive: true },
+      });
+      if (!link || link.isActive === false) return [];
+    }
+
     const employeeBranch = await this.prisma.employeeBranch.findUnique({
       where: { employeeId_branchId: { employeeId: query.employeeId, branchId: query.branchId } },
       select: { id: true },

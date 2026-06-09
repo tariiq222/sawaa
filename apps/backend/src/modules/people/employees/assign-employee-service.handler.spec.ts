@@ -58,4 +58,18 @@ describe('AssignEmployeeServiceHandler', () => {
     }));
     expect(result.id).toBe('link-1');
   });
+
+  // ─── Track B — practitioner integrity ──────────────────────────────────────
+  // The EmployeeService link is the "specialty match" for availability
+  // filtering. An inactive employee must not gain new service assignments,
+  // otherwise they would silently start appearing in service lists that
+  // re-filter on Employee.isActive.
+
+  it('rejects assignment when the employee is inactive (isActive=false)', async () => {
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1', isActive: false });
+    await expect(
+      handler.execute({ employeeId: 'emp-1', serviceId: 'svc-1' }),
+    ).rejects.toThrow('Employee is not active');
+    expect(prisma.employeeService.create).not.toHaveBeenCalled();
+  });
 });

@@ -16,6 +16,12 @@ export class AssignEmployeeServiceHandler {
       where: { id: cmd.employeeId },
     });
     if (!employee) throw new NotFoundException('Employee not found');
+    // Track B — practitioner integrity: an inactive employee must not gain
+    // new service assignments. The link would otherwise silently activate
+    // when the employee is re-enabled.
+    if (employee.isActive === false) {
+      throw new BadRequestException('Employee is not active');
+    }
 
     const service = await this.prisma.service.findFirst({
       where: { id: cmd.serviceId, archivedAt: null },

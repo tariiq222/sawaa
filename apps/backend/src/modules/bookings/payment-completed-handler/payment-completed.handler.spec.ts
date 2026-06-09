@@ -92,6 +92,89 @@ describe('PaymentCompletedEventHandler', () => {
     );
   });
 
+  it('confirms DEPOSIT_PAID booking when the remaining balance is settled', async () => {
+    // The deposit was already paid → booking is DEPOSIT_PAID. The balance
+    // settlement publishes finance.payment.completed and the booking must
+    // move to CONFIRMED.
+    const { prisma, getSubscriber } = buildHandler();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.DEPOSIT_PAID });
+
+    await getSubscriber()(makeEnvelope());
+
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'CONFIRMED' }) }),
+    );
+    expect(prisma.bookingStatusLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ fromStatus: BookingStatus.DEPOSIT_PAID, toStatus: 'CONFIRMED' }),
+      }),
+    );
+  });
+
+  it('is idempotent — a duplicate payment.completed for a CONFIRMED booking is a no-op', async () => {
+    // Simulates a Moyasar webhook replay: a second finance.payment.completed
+    // for the same bookingId. The first event already moved the booking to
+    // CONFIRMED, so the second event must skip silently (no updateMany, no
+    // status log) and never re-fire Zoom creation.
+    const { prisma, getSubscriber, zoom } = buildHandler();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.CONFIRMED,
+      deliveryType: DeliveryType.ONLINE,
+    });
+
+    await getSubscriber()(makeEnvelope());
+
+    expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
+    expect(zoom.execute).not.toHaveBeenCalled();
+  });
+
+  it('skips a CANCELLED booking (terminal status, payment event ignored)', async () => {
+    const { prisma, getSubscriber, zoom } = buildHandler();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.CANCELLED,
+      deliveryType: DeliveryType.ONLINE,
+    });
+
+    await getSubscriber()(makeEnvelope());
+
+    expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
+    expect(zoom.execute).not.toHaveBeenCalled();
+  });
+
+  it('skips a COMPLETED booking (terminal status, payment event ignored)', async () => {
+    const { prisma, getSubscriber } = buildHandler();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.COMPLETED });
+
+    await getSubscriber()(makeEnvelope());
+
+    expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
+  });
+
+  it('skips an EXPIRED booking (terminal status, payment event ignored)', async () => {
+    const { prisma, getSubscriber } = buildHandler();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.EXPIRED });
+
+    await getSubscriber()(makeEnvelope());
+
+    expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
+  });
+
+  it('skips a NO_SHOW booking (terminal status, payment event ignored)', async () => {
+    const { prisma, getSubscriber } = buildHandler();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.NO_SHOW });
+
+    await getSubscriber()(makeEnvelope());
+
+    expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+    expect(prisma.bookingStatusLog.create).not.toHaveBeenCalled();
+  });
+
   it('opens system-context CLS for booking read and tenant CLS for update', async () => {
     const setCalls: Array<[string, unknown]> = [];
     const cls = {

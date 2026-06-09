@@ -119,7 +119,10 @@ export class CreateBookingHandler {
     const employeeService = await this.prisma.employeeService.findUnique({
       where: { employeeId_serviceId: { employeeId: dto.employeeId, serviceId: dto.serviceId } },
     });
-    if (!employeeService) {
+    if (!employeeService || employeeService.isActive === false) {
+      // Track B — practitioner integrity: the EmployeeService row IS the
+      // specialty-match table. A soft-disabled link (isActive=false) must
+      // behave as if the employee no longer offers the service.
       throw new BadRequestException('Employee does not provide this service');
     }
 

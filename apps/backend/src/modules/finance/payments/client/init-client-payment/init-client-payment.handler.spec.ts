@@ -253,4 +253,76 @@ describe('InitClientPaymentHandler', () => {
     expect(moyasar.createPayment).not.toHaveBeenCalled();
     expect(prisma.payment.create).not.toHaveBeenCalled();
   });
+
+  // ─── bookingId propagation end-to-end ────────────────────────────────────────
+  // The Payment model has no bookingId column by design — the link flows via
+  // Invoice.bookingId → the published PaymentCompletedEvent payload. These
+  // tests pin that contract so a future refactor cannot silently break the
+  // path from init → invoice → payment → event → booking confirmation.
+
+  it('links the new Payment row to the invoice (which carries the bookingId)', async () => {
+    const { handler, prisma } = buildHandler();
+    prisma.invoice.findFirst.mockResolvedValue({ ...mockInvoice, bookingId });
+
+    await handler.execute({ invoiceId, clientId });
+
+    expect(prisma.payment.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ invoiceId }),
+        select: { id: true },
+      }),
+    );
+  });
+
+  it('includes the invoice.bookingId in Moyasar metadata so the webhook can route back to the booking', async () => {
+    const { handler, moyasar } = buildHandler();
+
+    await handler.execute({ invoiceId, clientId });
+
+    const moyasarCall = moyasar.createPayment.mock.calls[0][1];
+    expect(moyasarCall.metadata).toEqual(
+      expect.objectContaining({ invoiceId, bookingId, source: 'mobile-client' }),
+    );
+  });
+
+  it('embeds the invoice.bookingId in the Moyasar callbackUrl', async () => {
+    const { handler, moyasar } = buildHandler();
+
+    await handler.execute({ invoiceId, clientId });
+
+    const moyasarCall = moyasar.createPayment.mock.calls[0][1];
+    expect(moyasarCall.callbackUrl).toContain(`bookingId=${bookingId}`);
+    expect(moyasarCall.callbackUrl).toContain(`invoiceId=${invoiceId}`);
+  });
+
+  it('skips the booking status guard for bundle-purchase invoices (bookingId is null)', async () => {
+    // Bundle invoices have no bookingId — the consumer side (PaymentCompletedEventHandler)
+    // also skips booking confirmation when bookingId is null. The init handler must not
+    // block payment init by trying to validate a non-existent booking.
+    const { handler, prisma, moyasar } = buildHandler();
+    prisma.invoice.findFirst.mockResolvedValue({ ...mockInvoice, bookingId: null });
+
+    const result = await handler.execute({ invoiceId, clientId });
+
+    expect(result.paymentId).toBe('payment-1');
+    expect(prisma.booking.findFirst).not.toHaveBeenCalled();
+    expect(moyasar.createPayment).toHaveBeenCalled();
+    const moyasarCall = moyasar.createPayment.mock.calls[0][1];
+    expect(moyasarCall.metadata).toEqual(
+      expect.objectContaining({ invoiceId, bookingId: '', source: 'mobile-client' }),
+    );
+  });
+
+  it('throws BadRequestException when the linked booking is no longer in a payable status', async () => {
+    // Booking already moved on (e.g. CONFIRMED by an admin direct-confirm before the
+    // client finished paying). The init handler must reject rather than create a
+    // dangling payment row.
+    const { handler, prisma, moyasar } = buildHandler();
+    prisma.invoice.findFirst.mockResolvedValue({ ...mockInvoice, bookingId });
+    prisma.booking.findFirst.mockResolvedValue({ id: bookingId, status: BookingStatus.CONFIRMED });
+
+    await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(BadRequestException);
+    expect(moyasar.createPayment).not.toHaveBeenCalled();
+    expect(prisma.payment.create).not.toHaveBeenCalled();
+  });
 });
