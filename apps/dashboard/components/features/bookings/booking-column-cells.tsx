@@ -12,7 +12,6 @@ import {
   Cancel01Icon,
   UserCheck01Icon,
   EyeIcon,
-  ArrowReloadHorizontalIcon,
   MoneyAdd01Icon,
   Invoice01Icon,
 } from "@hugeicons/core-free-icons"
@@ -80,7 +79,17 @@ const TERMINAL_STATUSES = new Set([
   "expired",
 ])
 
-/* ── Actions cell — delete opens the parent's AdminCancelDialog directly ── */
+/* ── Actions cell — delete opens the parent's AdminCancelDialog directly ──
+   Icon buttons are colorized by intent so the user can tell at a glance which
+   action is which, even before hovering. Neutrals stay for read/edit (view,
+   edit, invoice) — those are non-destructive and don't need a hue. */
+const intentIconBtn: Record<string, string> = {
+  neutral: "flex size-9 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-all duration-200 hover:bg-primary-ultra-light hover:border-primary/30 hover:text-primary",
+  approve: "flex size-9 items-center justify-center rounded-md border border-transparent text-success transition-all duration-200 bg-success-soft hover:bg-success hover:text-white hover:border-success",
+  reject:  "flex size-9 items-center justify-center rounded-md border border-transparent text-error transition-all duration-200 bg-error-soft hover:bg-error hover:text-white hover:border-error",
+  danger:  "flex size-9 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-all duration-200 hover:bg-error-soft hover:border-error/40 hover:text-error",
+}
+
 export function ActionsCell({
   booking,
   onView,
@@ -94,9 +103,8 @@ export function ActionsCell({
   onDelete: () => void
   t: (key: string) => string
 }) {
-  const iconBtn = "flex size-9 items-center justify-center rounded-sm border border-transparent text-muted-foreground transition-all duration-200 hover:bg-muted hover:border-border hover:text-foreground"
   const queryClient = useQueryClient()
-  const { verifyMut, refundMut } = usePaymentMutations()
+  const { verifyMut } = usePaymentMutations()
   const [recordOpen, setRecordOpen] = useState(false)
   const [invoiceLoading, setInvoiceLoading] = useState(false)
 
@@ -126,9 +134,7 @@ export function ActionsCell({
   // Record/collect while a balance remains — covers unpaid and deposit/partial follow-ups.
   const canRecordPayment = !!booking.invoice && hasOutstanding && payment?.status !== "awaiting"
   const canVerify = payment?.status === "awaiting"
-  // Refund only once the invoice is settled in full; a partial still owes a balance.
-  const canRefund = payment?.status === "paid" && !hasOutstanding
-  const isPending = verifyMut.isPending || refundMut.isPending
+  const isPending = verifyMut.isPending
   // Terminal bookings are over: no editing. Invoice stays reachable for review.
   const isTerminal = TERMINAL_STATUSES.has(booking.status)
   const hasInvoice = !!booking.invoice
@@ -141,11 +147,11 @@ export function ActionsCell({
       {canRecordPayment && (
         <>
           <button
-            className={cn(iconBtn, "hover:bg-success/10 hover:border-success/20 hover:text-success")}
+            className={intentIconBtn.approve}
             aria-label={t("bookings.col.recordPayment")}
             onClick={() => setRecordOpen(true)}
           >
-            <HugeiconsIcon icon={MoneyAdd01Icon} size={16} />
+            <HugeiconsIcon icon={MoneyAdd01Icon} size={16} strokeWidth={2.2} />
           </button>
           <RecordPaymentDialog booking={booking} open={recordOpen} onOpenChange={setRecordOpen} />
         </>
@@ -153,57 +159,47 @@ export function ActionsCell({
       {canVerify && payment && (
         <>
           <button
-            className={cn(iconBtn, "hover:bg-success/10 hover:border-success/20 hover:text-success")}
+            className={intentIconBtn.approve}
             aria-label={t("bookings.payment.action.approveTransfer")}
             disabled={isPending}
             onClick={() => verifyMut.mutate({ id: payment.id, action: "approve" }, { onSuccess: invalidateBookings })}
           >
-            <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} />
+            <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} strokeWidth={2.2} />
           </button>
           <button
-            className={cn(iconBtn, "hover:bg-destructive/10 hover:border-destructive/20 hover:text-destructive")}
+            className={intentIconBtn.reject}
             aria-label={t("bookings.payment.action.rejectTransfer")}
             disabled={isPending}
             onClick={() => verifyMut.mutate({ id: payment.id, action: "reject" }, { onSuccess: invalidateBookings })}
           >
-            <HugeiconsIcon icon={CancelCircleIcon} size={16} />
+            <HugeiconsIcon icon={CancelCircleIcon} size={16} strokeWidth={2.2} />
           </button>
         </>
       )}
-      {canRefund && payment && (
-        <button
-          className={cn(iconBtn, "hover:bg-destructive/10 hover:border-destructive/20 hover:text-destructive")}
-          aria-label={t("bookings.payment.action.refund")}
-          disabled={isPending}
-          onClick={() => refundMut.mutate({ id: payment.id, reason: t("bookings.payment.refundReason") }, { onSuccess: invalidateBookings })}
-        >
-          <HugeiconsIcon icon={ArrowReloadHorizontalIcon} size={16} />
-        </button>
-      )}
-      <button className={iconBtn} aria-label={t("bookings.col.view")} onClick={onView}>
-        <HugeiconsIcon icon={ViewIcon} size={16} />
+      <button className={intentIconBtn.neutral} aria-label={t("bookings.col.view")} onClick={onView}>
+        <HugeiconsIcon icon={ViewIcon} size={16} strokeWidth={2.2} />
       </button>
       {hasInvoice && (
         <button
-          className={iconBtn}
+          className={intentIconBtn.neutral}
           aria-label={t("bookings.col.invoice")}
           disabled={invoiceLoading}
           onClick={handleInvoicePdf}
         >
-          <HugeiconsIcon icon={Invoice01Icon} size={16} />
+          <HugeiconsIcon icon={Invoice01Icon} size={16} strokeWidth={2.2} />
         </button>
       )}
       {!isTerminal && (
-        <button className={iconBtn} aria-label={t("bookings.col.edit")} onClick={onEdit}>
-          <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
+        <button className={intentIconBtn.neutral} aria-label={t("bookings.col.edit")} onClick={onEdit}>
+          <HugeiconsIcon icon={PencilEdit01Icon} size={16} strokeWidth={2.2} />
         </button>
       )}
       <button
-        className={cn(iconBtn, "hover:bg-destructive/10 hover:border-destructive/20 hover:text-destructive")}
+        className={intentIconBtn.danger}
         aria-label={t("bookings.col.delete")}
         onClick={onDelete}
       >
-        <HugeiconsIcon icon={Delete02Icon} size={16} />
+        <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2.2} />
       </button>
     </div>
   )
@@ -259,15 +255,17 @@ export function StatusCell({
   )
 }
 
-/* ── Payment status cell ── */
+/* ── Payment status cell ──
+   Chips use the new vivid soft backgrounds with a 3px left accent. The
+   label color is full saturation for clear contrast on the soft fill. */
 const paymentStatusStyles: Record<string, string> = {
-  pending:  "border-warning/30 bg-warning/10 text-warning",
-  awaiting: "border-warning/30 bg-warning/10 text-warning",
-  partial:  "border-warning/30 bg-warning/10 text-warning",
-  paid:     "border-success/30 bg-success/10 text-success",
-  refunded: "border-info/30 bg-info/10 text-info",
-  failed:   "border-destructive/30 bg-destructive/10 text-destructive",
-  rejected: "border-destructive/30 bg-destructive/10 text-destructive",
+  pending:  "border-s-warning border-warning/40 bg-warning-soft text-warning",
+  awaiting: "border-s-warning border-warning/40 bg-warning-soft text-warning",
+  partial:  "border-s-warning border-warning/40 bg-warning-soft text-warning",
+  paid:     "border-s-success border-success/40 bg-success-soft text-success",
+  refunded: "border-s-info border-info/40 bg-info-soft text-info",
+  failed:   "border-s-error border-error/40 bg-error-soft text-error",
+  rejected: "border-s-error border-error/40 bg-error-soft text-error",
 }
 
 /** A "paid" payment with an invoice that still has an outstanding balance is a deposit/partial. */
@@ -287,7 +285,7 @@ export function PaymentStatusCell({ booking }: { booking: Booking }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
+        "inline-flex items-center rounded-md border-s-[3px] border px-2 py-0.5 text-[11px] font-semibold tracking-tight",
         paymentStatusStyles[status] ?? "",
       )}
     >

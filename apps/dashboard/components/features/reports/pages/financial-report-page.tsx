@@ -25,10 +25,10 @@ const METHOD_COLORS: Record<string, string> = {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  COMPLETED: "#166534",
-  PENDING: "#B45309",
-  PENDING_VERIFICATION: "#B45309",
-  FAILED: "#B91C1C",
+  COMPLETED: "#15803D",
+  PENDING: "#C2410C",
+  PENDING_VERIFICATION: "#C2410C",
+  FAILED: "#DC2626",
   REFUNDED: "#94A3B8",
 }
 

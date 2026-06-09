@@ -74,12 +74,17 @@ They look nearly identical (2 luminance points apart) and **that's intentional**
 
 | Token | Light | Dark | Semantic |
 |-------|-------|------|----------|
-| `--success` | `#16A34A` | `#4ADE80` | Positive confirmations, active status |
-| `--warning` | `#D97706` | `#FBBF24` | Caution, pending states |
+| `--success` | `#15803D` | `#4ADE80` | Positive confirmations, active status |
+| `--success-soft` | `#DCFCE7` | `rgba(74,222,128,0.16)` | Vivid chip background for success state |
+| `--warning` | `#C2410C` | `#FB923C` | Caution, pending states |
+| `--warning-soft` | `#FFEDD5` | `rgba(251,146,60,0.16)` | Vivid chip background for warning state |
 | `--error` | `#DC2626` | `#F87171` | Errors, failures, destructive actions |
-| `--info` | `#2563EB` | `#60A5FA` | Informational callouts |
+| `--error-soft` | `#FEE2E2` | `rgba(248,113,113,0.16)` | Vivid chip background for error state |
+| `--info` | `#0369A1` | `#60A5FA` | Informational callouts |
+| `--info-soft` | `#DBEAFE` | `rgba(96,165,250,0.16)` | Vivid chip background for info state |
+| `--refunded` | `#6D28D9` | `#C4B5FD` | Refunded payments |
+| `--refunded-soft` | `#EDE9FE` | `rgba(196,181,253,0.16)` | Vivid chip background for refunded state |
 | `--destructive` | alias of `--error` | alias of `--error` | **shadcn-compat alias only** |
-| `--refunded` | `#7C3AED` | `#A78BFA` | Refunded payments |
 
 ### destructive vs error — the rule
 
@@ -90,15 +95,32 @@ They look nearly identical (2 luminance points apart) and **that's intentional**
 
 `--destructive` is wired with `var(--error)` in `globals.css` — the two will always be identical. New code should prefer the `error` name for clarity.
 
-### State Color Opacity Convention
+### State Color Background Convention
+
+Two equally-valid ways to tint a status chip, pick by contrast need:
 
 ```ts
-bg-success/10   // tinted background
-text-success    // foreground
-border-success/20   // subtle border
+// 1. Soft solid (preferred for chips/badges — vivid, hue-clear, survives the
+//    brand-tinted page background #EAF8F4).
+bg-success-soft       // tinted background, ~hue 110 chroma
+text-success          // full-saturation foreground (label)
+border-success/40     // subtle border
+border-s-success      // 3px logical-start accent for sharp color anchor
+
+// 2. Opacity tint (legacy — kept for hover/ghost states where a soft hint is wanted)
+bg-success/10
+text-success
+border-success/20
 ```
 
-Same pattern for `warning`, `error`, `info`. See [`ds.ts`](./lib/ds.ts) `stateColors` and `bookingStatusStyles`.
+The `*-soft` tokens are vivid, opaque light pastels in light mode and 16%-alpha
+glow in dark mode. Use them for any chip/badge that needs to *read* as a color
+(booking status, payment status, action intents). The opacity-tint form
+(`bg-*/10`) is best for hover ghosts, focus halos, and very large surfaces
+where a saturated fill would be too loud.
+
+Same pattern for `warning`, `error`, `info`, `refunded`. See [`ds.ts`](./lib/ds.ts)
+`stateColors` and `bookingStatusStyles`.
 
 ---
 
@@ -239,4 +261,5 @@ Each rank also has `--rank-{color}-shadow` for the badge glow.
 
 | Date | Change |
 |------|--------|
+| 2026-06-08 | State color refresh for booking-page readability. Bumped `--success`/`--warning`/`--error`/`--info`/`--refunded` to more vivid, slightly more saturated values that still pass WCAG AA on white. Added `*-soft` tokens (vivid light pastels in light mode, 16%-alpha glows in dark mode) for chip backgrounds. Migrated `bookingStatusStyles`, `bookingTypeStyles`, `paymentStatusStyles`, and `StatCard` icon tile to the `*-soft` pattern with a 3px logical-start accent (`border-s-*`). Colorized the action icon buttons in the bookings table by intent (approve=success, reject=error, view/edit/invoice=primary, delete=error-on-hover). |
 | 2026-04-11 | Initial version. Resolved `destructive`/`error` conflict (alias). Aliased `--card` → `--surface`. Added `--rank-silver-*` tokens. Fixed `bg-muted/10` → `bg-muted` in `bookingStatusStyles.expired`. Added `2xl`/`3xl` to `ds.ts` radius map. |

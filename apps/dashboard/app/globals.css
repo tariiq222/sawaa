@@ -34,6 +34,14 @@
     --color-error: var(--error);
     --color-info: var(--info);
     --color-refunded: var(--refunded);
+    /* Soft, vivid variants — used as the tinted background of status / payment chips
+       so they read clearly against the brand-tinted page (e.g. #EAF8F4). Pair with
+       the full-saturation `text-*` token for label contrast. */
+    --color-success-soft: var(--success-soft);
+    --color-warning-soft: var(--warning-soft);
+    --color-error-soft: var(--error-soft);
+    --color-info-soft: var(--info-soft);
+    --color-refunded-soft: var(--refunded-soft);
     --color-border: var(--border);
     --color-border-strong: var(--border-strong);
     --color-input: var(--input);
@@ -147,18 +155,30 @@
     --overlay: rgba(27, 32, 38, 0.6);
     /* State colors.
        `--error` is the semantic source of truth for destructive/error states.
-       `--destructive` exists as a shadcn-compat alias and MUST always mirror --error. */
-    --success: #166534;
-    --warning: #B45309;
-    --error: #B91C1C;
+       `--destructive` exists as a shadcn-compat alias and MUST always mirror --error.
+
+       Palette is intentionally vivid in light mode so the 10–12% tinted chips
+       (success/10, warning/10, error/10, info/10) read clearly against the
+       brand-tinted page background (#EAF8F4). All values still pass WCAG AA
+       for 14px text on white. The `*-soft` tokens are lighter, more chromatic
+       variants of the same hue, designed to be paired with the full-saturation
+       `*-text` token for chip backgrounds (e.g. `bg-success-soft text-success`). */
+    --success: #15803D;
+    --success-soft: #DCFCE7;
+    --warning: #C2410C;
+    --warning-soft: #FFEDD5;
+    --error: #DC2626;
+    --error-soft: #FEE2E2;
     --destructive: var(--error);
-    --info: #2563EB;
-    --refunded: #7C3AED;
-    --chart-1: #166534;
-    --chart-2: #2563EB;
-    --chart-3: #92400E;
-    --chart-4: #7C3AED;
-    --chart-5: #EC4899;
+    --info: #0369A1;
+    --info-soft: #DBEAFE;
+    --refunded: #6D28D9;
+    --refunded-soft: #EDE9FE;
+    --chart-1: #15803D;
+    --chart-2: #0369A1;
+    --chart-3: #C2410C;
+    --chart-4: #6D28D9;
+    --chart-5: #DB2777;
     --sidebar: #FFFFFF;
     --sidebar-foreground: #2B3A39;
     --sidebar-primary: #55CCB0;
@@ -246,15 +266,20 @@
     /* State colors — dark theme.
        `--destructive` alias must mirror --error (see :root for rationale). */
     --success: #4ADE80;
-    --warning: #FBBF24;
+    --success-soft: rgba(74, 222, 128, 0.16);
+    --warning: #FB923C;
+    --warning-soft: rgba(251, 146, 60, 0.16);
     --error: #F87171;
+    --error-soft: rgba(248, 113, 113, 0.16);
     --destructive: var(--error);
     --info: #60A5FA;
-    --refunded: #A78BFA;
+    --info-soft: rgba(96, 165, 250, 0.16);
+    --refunded: #C4B5FD;
+    --refunded-soft: rgba(196, 181, 253, 0.16);
     --chart-1: #4ADE80;
     --chart-2: #60A5FA;
-    --chart-3: #FBBF24;
-    --chart-4: #A78BFA;
+    --chart-3: #FB923C;
+    --chart-4: #C4B5FD;
     --chart-5: #F472B6;
     --sidebar: rgba(27, 32, 38, 0.72);
     --sidebar-foreground: #F1F4F8;

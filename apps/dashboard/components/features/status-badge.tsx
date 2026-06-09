@@ -34,10 +34,10 @@ const statusIconMap: Record<BookingStatus, { icon: typeof Tick01Icon; iconClass:
   awaiting_payment:  { icon: Clock02Icon,            iconClass: "text-warning" },
   deposit_paid:      { icon: MoneyAdd01Icon,         iconClass: "text-accent" },
   confirmed:        { icon: Tick01Icon,             iconClass: "text-success" },
-  completed:        { icon: CheckmarkCircle02Icon,  iconClass: "text-accent" },
-  cancelled:        { icon: CancelCircleIcon,       iconClass: "text-destructive" },
+  completed:        { icon: CheckmarkCircle02Icon,  iconClass: "text-primary" },
+  cancelled:        { icon: CancelCircleIcon,       iconClass: "text-error" },
   cancel_requested:  { icon: ArrowReloadHorizontalIcon, iconClass: "text-warning" },
-  no_show:          { icon: CancelCircleIcon,       iconClass: "text-destructive" },
+  no_show:          { icon: CancelCircleIcon,       iconClass: "text-error" },
   expired:          { icon: Clock02Icon,            iconClass: "text-muted-foreground" },
 }
 
@@ -68,10 +68,20 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   return (
     <Badge
       variant="outline"
-      className={cn("font-medium gap-1.5", styles.bg, styles.text, styles.border, className)}
+      className={cn(
+        // Vivid tinted background, full-saturation text, sharper 3px left
+        // accent that anchors the chip even on the brand-tinted page bg.
+        "font-semibold gap-1.5 ps-2.5 pe-2.5 py-0.5 text-[11px] tracking-tight",
+        "border-s-[3px] rounded-md",
+        styles.bg,
+        styles.text,
+        styles.border,
+        styles.accent,
+        className,
+      )}
     >
       {iconEntry && (
-        <HugeiconsIcon icon={iconEntry.icon} size={11} className={iconEntry.iconClass} />
+        <HugeiconsIcon icon={iconEntry.icon} size={12} strokeWidth={2.4} className={iconEntry.iconClass} />
       )}
       {t(translationKey)}
     </Badge>
@@ -97,7 +107,15 @@ export function BookingTypeBadge({ type, className }: BookingTypeBadgeProps) {
   return (
     <Badge
       variant="outline"
-      className={cn("font-medium", styles.bg, styles.text, styles.border, className)}
+      className={cn(
+        "font-semibold gap-1.5 ps-2.5 pe-2.5 py-0.5 text-[11px] tracking-tight",
+        "border-s-[3px] rounded-md",
+        styles.bg,
+        styles.text,
+        styles.border,
+        styles.accent,
+        className,
+      )}
     >
       {t(translationKey)}
     </Badge>

@@ -195,4 +195,133 @@ describe("BookingActions – Dialogs", () => {
       })
     })
   })
+
+  // ─── Reception dialog payload shapes (admin cancel / reject) ────────────────
+  //
+  // These tests lock in the wire-payload contract between the dashboard and the
+  // backend's reception handlers:
+  //   - PATCH /dashboard/bookings/:id/cancel         { reason, cancelNotes? }
+  //   - PATCH /dashboard/bookings/:id/reject-cancel  { rejectReason }
+  //   - PATCH /dashboard/bookings/:id/approve-cancel { approverNotes? }
+  // Drift here would mean the UI sends fields the backend's DTO rejects (or
+  // omits fields the backend requires). See
+  // apps/backend/src/modules/bookings/cancel-booking/cancel-booking.dto.ts
+  // and reject-cancel-booking/reject-cancel-booking.dto.ts.
+
+  describe("Reception dialog payload shapes", () => {
+    it("admin-cancel submission passes {id, reason, cancelNotes} to adminCancelMut", async () => {
+      const { adminCancelMut } = mockMutations()
+      adminCancelMut.mutateAsync.mockResolvedValueOnce({ id: "bk-1" })
+      render(<BookingActions booking={makeBooking("confirmed")} onAction={vi.fn()} />)
+
+      fireEvent.click(screen.getByTestId("dropdown-trigger"))
+      fireEvent.click(findDropdownItem("cancel")!)
+
+      // Pick a cancellation reason (mocked Select fires onValueChange("partial")
+      // — but the underlying value passed back to the component is treated as a
+      // CancellationReason string. The component forwards `cancelReason` as
+      // `reason` in the mutation payload).
+      fireEvent.click(screen.getByTestId("select"))
+
+      // Fill the admin notes textarea (AdminCancelDialog renders a Textarea).
+      const textarea = screen.getByTestId("sheet-body").querySelector("textarea") as HTMLTextAreaElement
+      fireEvent.change(textarea, { target: { value: "client called to cancel" } })
+
+      const sheetFooter = screen.getByTestId("sheet-footer")
+      const confirmBtn = sheetFooter.querySelector("button:last-child") as HTMLButtonElement
+      fireEvent.click(confirmBtn)
+
+      await waitFor(() => {
+        expect(adminCancelMut.mutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: "bk-1",
+            reason: "partial", // mocked Select returns "partial" — locked-in to the wire shape
+            cancelNotes: "client called to cancel",
+          }),
+        )
+      })
+    })
+
+    it("admin-cancel submission without notes still passes {id, reason, cancelNotes: undefined}", async () => {
+      const { adminCancelMut } = mockMutations()
+      adminCancelMut.mutateAsync.mockResolvedValueOnce({ id: "bk-1" })
+      render(<BookingActions booking={makeBooking("confirmed")} onAction={vi.fn()} />)
+
+      fireEvent.click(screen.getByTestId("dropdown-trigger"))
+      fireEvent.click(findDropdownItem("cancel")!)
+      fireEvent.click(screen.getByTestId("select"))
+      // No notes entered — textarea remains empty.
+
+      const sheetFooter = screen.getByTestId("sheet-footer")
+      const confirmBtn = sheetFooter.querySelector("button:last-child") as HTMLButtonElement
+      fireEvent.click(confirmBtn)
+
+      await waitFor(() => {
+        const call = adminCancelMut.mutateAsync.mock.calls[0]?.[0] as { id: string; reason: string; cancelNotes?: string }
+        expect(call).toBeTruthy()
+        expect(call.id).toBe("bk-1")
+        expect(call.reason).toBe("partial")
+        // cancelNotes may be undefined or empty string — both acceptable to the
+        // backend DTO (cancelNotes is @IsOptional). The dashboard sends
+        // `adminNotes || undefined` to keep the wire payload clean.
+        expect(call.cancelNotes === undefined || call.cancelNotes === "").toBe(true)
+      })
+    })
+
+    it("reject-cancel submission passes {id, rejectReason} to rejectCancelMut", async () => {
+      const { rejectCancelMut } = mockMutations()
+      rejectCancelMut.mutateAsync.mockResolvedValueOnce({ id: "bk-1" })
+      render(
+        <BookingActions booking={makeBooking("cancel_requested")} onAction={vi.fn()} />,
+      )
+
+      fireEvent.click(screen.getByTestId("dropdown-trigger"))
+      fireEvent.click(findDropdownItem("reject")!)
+      expect(screen.getByTestId("sheet")).toBeTruthy()
+
+      // RejectCancelDialog uses a Textarea for the reason.
+      const textarea = screen.getByTestId("sheet-body").querySelector("textarea") as HTMLTextAreaElement
+      fireEvent.change(textarea, { target: { value: "no evidence of cancellation need" } })
+
+      const sheetFooter = screen.getByTestId("sheet-footer")
+      const rejectBtn = sheetFooter.querySelector("button:last-child") as HTMLButtonElement
+      fireEvent.click(rejectBtn)
+
+      await waitFor(() => {
+        expect(rejectCancelMut.mutateAsync).toHaveBeenCalledWith({
+          id: "bk-1",
+          rejectReason: "no evidence of cancellation need",
+        })
+      })
+    })
+
+    it("approve-cancel submission passes {id, approverNotes} to approveCancelMut", async () => {
+      const { approveCancelMut } = mockMutations()
+      approveCancelMut.mutateAsync.mockResolvedValueOnce({ id: "bk-1" })
+      render(
+        <BookingActions
+          booking={makeBooking("cancel_requested", { suggestedRefundType: "full" })}
+          onAction={vi.fn()}
+        />,
+      )
+
+      fireEvent.click(screen.getByTestId("dropdown-trigger"))
+      fireEvent.click(findDropdownItem("approve")!)
+
+      // ApproveCancelDialog's first Select is the refund-type selector (defaults
+      // to "full" via suggestedRefundType). Leave the default and submit
+      // (partial-refund branch is covered above by the validation test).
+      const sheetFooter = screen.getByTestId("sheet-footer")
+      const approveBtn = sheetFooter.querySelector("button:last-child") as HTMLButtonElement
+      fireEvent.click(approveBtn)
+
+      await waitFor(() => {
+        const call = approveCancelMut.mutateAsync.mock.calls[0]?.[0] as { id: string; approverNotes?: string }
+        expect(call).toBeTruthy()
+        expect(call.id).toBe("bk-1")
+        // approverNotes is optional → undefined when no notes entered
+        expect(call.approverNotes === undefined || call.approverNotes === "").toBe(true)
+      })
+    })
+  })
 })

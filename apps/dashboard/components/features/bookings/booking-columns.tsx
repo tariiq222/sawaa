@@ -32,10 +32,12 @@ function getGradient(name: string): string {
   return avatarGradients[Math.abs(hash) % avatarGradients.length]
 }
 
+/* Type dots — colored disc with a soft halo so the column reads at a glance.
+   The dot is a real color (not an opacity wash) and the halo extends the hue. */
 const typeDotConfig: Record<string, string> = {
-  in_person: "bg-primary",
-  online: "bg-accent",
-  walk_in: "bg-success",
+  in_person: "bg-primary shadow-[0_0_0_3px_rgba(85,204,176,0.18)]",
+  online:    "bg-info shadow-[0_0_0_3px_rgba(3,105,161,0.18)]",
+  walk_in:   "bg-success shadow-[0_0_0_3px_rgba(21,128,61,0.18)]",
 }
 
 const typeLabelKey: Record<string, string> = {
@@ -44,9 +46,19 @@ const typeLabelKey: Record<string, string> = {
   walk_in: "bookings.col.type.walkIn",
 }
 
-const sourceIconConfig: Record<string, { icon: typeof Store01Icon; labelKey: string }> = {
-  RECEPTION: { icon: Store01Icon, labelKey: "bookings.col.source.reception" },
-  ONLINE: { icon: Globe02Icon, labelKey: "bookings.col.source.online" },
+/* Source icon — colored chip so the channel reads at a glance.
+   RECEPTION → primary (teal, in-clinic), ONLINE → info (blue, web). */
+const sourceIconConfig: Record<string, { icon: typeof Store01Icon; labelKey: string; tone: string }> = {
+  RECEPTION: {
+    icon: Store01Icon,
+    labelKey: "bookings.col.source.reception",
+    tone: "bg-primary-ultra-light text-primary border border-primary/20",
+  },
+  ONLINE: {
+    icon: Globe02Icon,
+    labelKey: "bookings.col.source.online",
+    tone: "bg-info-soft text-info border border-info/30",
+  },
 }
 
 /* ── Column definitions ── */
@@ -74,11 +86,14 @@ export function getBookingColumns(
             </span>
             {source && (
               <span
-                className="inline-flex text-muted-foreground"
+                className={cn(
+                  "inline-flex size-5 items-center justify-center rounded-md",
+                  source.tone,
+                )}
                 title={t(source.labelKey)}
                 aria-label={t(source.labelKey)}
               >
-                <HugeiconsIcon icon={source.icon} size={14} />
+                <HugeiconsIcon icon={source.icon} size={12} strokeWidth={2.4} />
               </span>
             )}
           </div>
@@ -135,9 +150,9 @@ export function getBookingColumns(
         const labelKey = typeLabelKey[type]
         const label = labelKey ? t(labelKey) : type
         return (
-          <div className="flex items-center gap-2">
-            <span className={cn("size-2 shrink-0 rounded-full", dot)} />
-            <span className="text-[13px] font-medium text-foreground">{label}</span>
+          <div className="flex items-center gap-2.5">
+            <span className={cn("size-2.5 shrink-0 rounded-full", dot)} />
+            <span className="text-[13px] font-semibold text-foreground">{label}</span>
           </div>
         )
       },

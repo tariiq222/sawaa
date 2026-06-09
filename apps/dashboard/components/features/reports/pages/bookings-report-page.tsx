@@ -18,13 +18,13 @@ import { useReportsPeriodCtx } from "../reports-period-context"
 import { computeDelta } from "../delta-helpers"
 
 const STATUS_COLORS: Record<string, string> = {
-  COMPLETED: "#166534",
+  COMPLETED: "#15803D",
   CONFIRMED: "#14a89a",
   PENDING: "#94A3B8",
-  CANCELLED: "#B45309",
-  NO_SHOW: "#B91C1C",
+  CANCELLED: "#C2410C",
+  NO_SHOW: "#DC2626",
   EXPIRED: "#94A3B8",
-  AWAITING_PAYMENT: "#B45309",
+  AWAITING_PAYMENT: "#C2410C",
 }
 
 const TYPE_COLORS: Record<string, string> = {

@@ -21,11 +21,14 @@ interface StatCardProps {
   className?: string
 }
 
+/* Icon tile: vivid soft background, full-saturation icon, subtle ring + colored
+   shadow so the icon reads as the visual anchor of the card. The shadow uses
+   the same hue as the icon at low alpha — depth without looking heavy. */
 const iconColorMap = {
-  primary: "bg-primary/10 text-primary",
-  accent: "bg-accent/12 text-accent",
-  warning: "bg-warning/10 text-warning",
-  success: "bg-success/10 text-success",
+  primary: "bg-primary-ultra-light text-primary ring-1 ring-primary/15 shadow-[0_4px_12px_rgba(85,204,176,0.18)]",
+  accent:  "bg-accent-ultra-light text-accent ring-1 ring-accent/20 shadow-[0_4px_12px_rgba(231,219,196,0.35)]",
+  warning: "bg-warning-soft text-warning ring-1 ring-warning/20 shadow-[0_4px_12px_rgba(194,65,12,0.15)]",
+  success: "bg-success-soft text-success ring-1 ring-success/20 shadow-[0_4px_12px_rgba(21,128,61,0.15)]",
 } as const
 
 export function StatCard({
@@ -45,12 +48,12 @@ export function StatCard({
         {icon && (
           <div
             className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-xl",
+              "flex size-11 shrink-0 items-center justify-center rounded-xl",
               tone,
             )}
             aria-hidden
           >
-            <HugeiconsIcon icon={icon} size={20} />
+            <HugeiconsIcon icon={icon} size={20} strokeWidth={2.2} />
           </div>
         )}
 
@@ -69,8 +72,10 @@ export function StatCard({
         {trend && (
           <span
             className={cn(
-              "inline-flex shrink-0 items-center gap-1 self-start rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums",
-              trend.positive ? "bg-success/10 text-success" : "bg-error/10 text-error",
+              "inline-flex shrink-0 items-center gap-1 self-start rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums border-s-[3px]",
+              trend.positive
+                ? "bg-success-soft text-success border-s-success border-success/30"
+                : "bg-error-soft text-error border-s-error border-error/30",
             )}
           >
             {trend.positive ? "↑" : "↓"}
