@@ -1,8 +1,10 @@
 import type {
   ClientProfile,
   ClientBookingListResponse,
+  ClientInvoiceListResponse,
   CancelMyBookingPayload,
   RescheduleMyBookingPayload,
+  UpdateClientProfilePayload,
 } from '@sawaa/shared';
 import { apiRequest, setApiRequestBaseUrl } from '../client';
 
@@ -12,6 +14,26 @@ export function setMeBaseUrl(url: string): void {
 
 export async function getMe(): Promise<ClientProfile> {
   return apiRequest<ClientProfile>('/public/me', { credentials: 'include' });
+}
+
+export async function updateMyProfile(
+  payload: UpdateClientProfilePayload,
+): Promise<ClientProfile> {
+  return apiRequest<ClientProfile>('/public/me', {
+    method: 'PATCH',
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getMyInvoices(
+  page = 1,
+  pageSize = 50,
+): Promise<ClientInvoiceListResponse> {
+  return apiRequest<ClientInvoiceListResponse>(
+    `/public/me/invoices?page=${page}&pageSize=${pageSize}`,
+    { credentials: 'include' },
+  );
 }
 
 export async function getMyBookings(

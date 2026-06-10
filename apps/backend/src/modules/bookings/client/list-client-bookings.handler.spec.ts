@@ -17,6 +17,8 @@ describe('ListClientBookingsHandler', () => {
     durationMins: 60,
     price: 150,
     currency: 'SAR',
+    deliveryType: 'ONLINE',
+    zoomJoinUrl: 'https://zoom.us/j/123',
     createdAt: new Date('2026-01-01T00:00:00Z'),
   };
 
@@ -84,6 +86,50 @@ describe('ListClientBookingsHandler', () => {
 
     expect(item.employeeName).toBe('John');
     expect(item.employeeNameAr).toBe('جون');
+
+    // delivery fields come straight from the booking row
+    expect(item.deliveryType).toBe('ONLINE');
+    expect(item.zoomJoinUrl).toBe('https://zoom.us/j/123');
+  });
+
+  it('exposes invoice id/status when an invoice exists for the booking', async () => {
+    mockPrisma.booking.findMany.mockResolvedValue([baseBooking]);
+    mockPrisma.booking.count.mockResolvedValue(1);
+    mockPrisma.employee.findMany.mockResolvedValue([]);
+    mockPrisma.service.findMany.mockResolvedValue([]);
+    mockPrisma.branch.findMany.mockResolvedValue([]);
+    mockPrisma.invoice.findMany.mockResolvedValue([
+      { id: 'inv-1', bookingId: 'bk-1', status: 'PAID' },
+    ]);
+    mockPrisma.payment.findMany.mockResolvedValue([
+      { id: 'pay-1', invoiceId: 'inv-1', status: 'COMPLETED' },
+    ]);
+
+    const result = await handler.execute('cl-1');
+    const item = result.items[0];
+
+    expect(item.invoiceId).toBe('inv-1');
+    expect(item.invoiceStatus).toBe('PAID');
+    expect(item.paymentStatus).toBe('COMPLETED');
+  });
+
+  it('returns null invoice fields and null zoomJoinUrl when absent', async () => {
+    mockPrisma.booking.findMany.mockResolvedValue([
+      { ...baseBooking, deliveryType: 'IN_PERSON', zoomJoinUrl: null },
+    ]);
+    mockPrisma.booking.count.mockResolvedValue(1);
+    mockPrisma.employee.findMany.mockResolvedValue([]);
+    mockPrisma.service.findMany.mockResolvedValue([]);
+    mockPrisma.branch.findMany.mockResolvedValue([]);
+    mockPrisma.invoice.findMany.mockResolvedValue([]);
+
+    const result = await handler.execute('cl-1');
+    const item = result.items[0];
+
+    expect(item.invoiceId).toBeNull();
+    expect(item.invoiceStatus).toBeNull();
+    expect(item.deliveryType).toBe('IN_PERSON');
+    expect(item.zoomJoinUrl).toBeNull();
   });
 
   it('falls back to empty string for missing EN service name', async () => {

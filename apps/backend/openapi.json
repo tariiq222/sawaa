@@ -3800,11 +3800,6 @@
             "description": "Phone (E.164) or email",
             "example": "+966501234567",
             "type": "string"
-          },
-          "organizationId": {
-            "deprecated": true,
-            "description": "Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.",
-            "type": "string"
           }
         },
         "required": [
@@ -3826,11 +3821,6 @@
           "identifier": {
             "description": "Email address or phone number (E.164 format)",
             "example": "user@example.com",
-            "type": "string"
-          },
-          "organizationId": {
-            "deprecated": true,
-            "description": "Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.",
             "type": "string"
           },
           "purpose": {
@@ -5796,11 +5786,6 @@
             "description": "Phone or email used to request the OTP",
             "type": "string"
           },
-          "organizationId": {
-            "deprecated": true,
-            "description": "Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.",
-            "type": "string"
-          },
           "purpose": {
             "description": "Whether this verifies a registration or a login OTP",
             "enum": [
@@ -5836,11 +5821,6 @@
           "identifier": {
             "description": "Email address or phone number",
             "example": "user@example.com",
-            "type": "string"
-          },
-          "organizationId": {
-            "deprecated": true,
-            "description": "Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.",
             "type": "string"
           },
           "purpose": {

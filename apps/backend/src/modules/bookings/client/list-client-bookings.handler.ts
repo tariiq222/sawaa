@@ -16,6 +16,10 @@ interface ClientBookingItem {
   branchName: string;
   branchNameAr: string | null;
   paymentStatus: string;
+  invoiceId: string | null;
+  invoiceStatus: string | null;
+  deliveryType: string;
+  zoomJoinUrl: string | null;
   createdAt: Date;
 }
 
@@ -96,6 +100,10 @@ export class ListClientBookingsHandler {
         branchName: branch?.nameEn ?? b.branchNameSnapshot ?? '',
         branchNameAr: branch?.nameAr ?? b.branchNameSnapshot ?? null,
         paymentStatus: payment?.status ?? 'UNKNOWN',
+        invoiceId: invoice?.id ?? null,
+        invoiceStatus: invoice?.status ?? null,
+        deliveryType: b.deliveryType,
+        zoomJoinUrl: b.zoomJoinUrl ?? null,
         createdAt: b.createdAt,
       };
     });

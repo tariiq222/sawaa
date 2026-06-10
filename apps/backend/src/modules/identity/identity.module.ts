@@ -41,6 +41,7 @@ import { ClientLoginHandler } from './client-auth/client-login.handler';
 import { ClientRefreshHandler } from './client-auth/client-refresh.handler';
 import { ClientLogoutHandler } from './client-auth/client-logout.handler';
 import { GetMeHandler } from './client-auth/get-me.handler';
+import { UpdateClientProfileHandler } from './client-auth/update-client-profile.handler';
 import { ResetPasswordHandler } from './client-auth/reset-password/reset-password.handler';
 import { PasswordHistoryService } from './client-auth/shared/password-history.service';
 import { MailModule } from '../../infrastructure/mail';
@@ -78,6 +79,7 @@ const handlers = [
   ClientRefreshHandler,
   ClientLogoutHandler,
   GetMeHandler,
+  UpdateClientProfileHandler,
   ResetPasswordHandler,
   RegisterMobileUserHandler,
   RequestMobileLoginOtpHandler,

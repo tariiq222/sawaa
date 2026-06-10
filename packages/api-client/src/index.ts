@@ -14,6 +14,8 @@ export {
 export {
   setMeBaseUrl,
   getMe,
+  updateMyProfile,
+  getMyInvoices,
   getMyBookings,
   cancelMyBooking,
   rescheduleMyBooking,
@@ -21,3 +23,4 @@ export {
 export * as bookingsApi from './modules/bookings'
 export * as employeesApi from './modules/employees'
 export * as paymentsApi from './modules/payments'
+export { requestRefund } from './modules/payments'

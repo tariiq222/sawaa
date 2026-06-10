@@ -17,6 +17,7 @@ import { ApplyCouponHandler } from './apply-coupon/apply-coupon.handler';
 import { GetInvoiceHandler } from './get-invoice/get-invoice.handler';
 import { GetPublicInvoiceHandler } from './get-invoice/get-public-invoice.handler';
 import { GetBookingInvoiceHandler } from './get-invoice/get-booking-invoice.handler';
+import { ListClientInvoicesHandler } from './list-client-invoices/list-client-invoices.handler';
 import { ListPaymentsHandler } from './list-payments/list-payments.handler';
 import { GetPaymentHandler } from './get-payment/get-payment.handler';
 import { ListInvoicesHandler } from './list-invoices/list-invoices.handler';
@@ -61,6 +62,7 @@ const handlers = [
   GetInvoiceHandler,
   GetPublicInvoiceHandler,
   GetBookingInvoiceHandler,
+  ListClientInvoicesHandler,
   ListPaymentsHandler,
   GetPaymentHandler,
   ListInvoicesHandler,

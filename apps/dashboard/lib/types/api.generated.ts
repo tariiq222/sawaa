@@ -6546,11 +6546,6 @@ export interface components {
              * @example +966501234567
              */
             identifier: string;
-            /**
-             * @deprecated
-             * @description Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.
-             */
-            organizationId?: string;
         };
         RequestOtpDto: {
             /**
@@ -6564,11 +6559,6 @@ export interface components {
              * @example user@example.com
              */
             identifier: string;
-            /**
-             * @deprecated
-             * @description Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.
-             */
-            organizationId?: string;
             /**
              * @description Purpose of the OTP
              * @example GUEST_BOOKING
@@ -7974,11 +7964,6 @@ export interface components {
             /** @description Phone or email used to request the OTP */
             identifier: string;
             /**
-             * @deprecated
-             * @description Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.
-             */
-            organizationId?: string;
-            /**
              * @description Whether this verifies a registration or a login OTP
              * @enum {string}
              */
@@ -8001,11 +7986,6 @@ export interface components {
              * @example user@example.com
              */
             identifier: string;
-            /**
-             * @deprecated
-             * @description Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.
-             */
-            organizationId?: string;
             /**
              * @description Purpose of the OTP
              * @example GUEST_BOOKING

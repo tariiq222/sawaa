@@ -3,6 +3,8 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { PublicMeController } from './me.controller';
 import { GetMeHandler } from '../../modules/identity/client-auth/get-me.handler';
+import { UpdateClientProfileHandler } from '../../modules/identity/client-auth/update-client-profile.handler';
+import { ListClientInvoicesHandler } from '../../modules/finance/list-client-invoices/list-client-invoices.handler';
 import { ListClientBookingsHandler } from '../../modules/bookings/client/list-client-bookings.handler';
 import { ClientCancelBookingHandler } from '../../modules/bookings/client/client-cancel-booking.handler';
 import { ClientRescheduleBookingHandler } from '../../modules/bookings/client/client-reschedule-booking.handler';
@@ -14,6 +16,8 @@ describe('PublicMeController (e2e)', () => {
   let app: INestApplication;
 
   const mockGetMe = { execute: jest.fn() };
+  const mockUpdateProfile = { execute: jest.fn() };
+  const mockListInvoices = { execute: jest.fn() };
   const mockListBookings = { execute: jest.fn() };
   const mockCancel = { execute: jest.fn() };
   const mockReschedule = { execute: jest.fn() };
@@ -25,6 +29,8 @@ describe('PublicMeController (e2e)', () => {
       controllers: [PublicMeController],
       providers: [
         { provide: GetMeHandler, useValue: mockGetMe },
+        { provide: UpdateClientProfileHandler, useValue: mockUpdateProfile },
+        { provide: ListClientInvoicesHandler, useValue: mockListInvoices },
         { provide: ListClientBookingsHandler, useValue: mockListBookings },
         { provide: ClientCancelBookingHandler, useValue: mockCancel },
         { provide: ClientRescheduleBookingHandler, useValue: mockReschedule },
@@ -67,6 +73,87 @@ describe('PublicMeController (e2e)', () => {
 
       expect(res.body.name).toBe('Sara');
       expect(mockGetMe.execute).toHaveBeenCalledWith('client-1');
+    });
+  });
+
+  describe('PATCH /public/me', () => {
+    it('returns 200 with updated profile', async () => {
+      mockUpdateProfile.execute.mockResolvedValue({ id: 'client-1', name: 'Sara Ali', phone: '+966501234567' });
+
+      const res = await request(app.getHttpServer())
+        .patch('/public/me')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ name: 'Sara Ali' })
+        .expect(200);
+
+      expect(res.body.name).toBe('Sara Ali');
+      expect(mockUpdateProfile.execute).toHaveBeenCalledWith('client-1', { name: 'Sara Ali' });
+    });
+
+    it('normalizes a local phone number to E.164 before the handler', async () => {
+      mockUpdateProfile.execute.mockResolvedValue({ id: 'client-1', phone: '+966501234567' });
+
+      await request(app.getHttpServer())
+        .patch('/public/me')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ phone: '0501234567' })
+        .expect(200);
+
+      expect(mockUpdateProfile.execute).toHaveBeenCalledWith('client-1', { phone: '+966501234567' });
+    });
+
+    it('returns 400 for a non-Saudi phone number', async () => {
+      return request(app.getHttpServer())
+        .patch('/public/me')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ phone: '+12025550123' })
+        .expect(400);
+    });
+
+    it('returns 400 for a too-short name', async () => {
+      return request(app.getHttpServer())
+        .patch('/public/me')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ name: 'a' })
+        .expect(400);
+    });
+
+    it('returns 400 for unknown fields', async () => {
+      return request(app.getHttpServer())
+        .patch('/public/me')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ email: 'new@example.com' })
+        .expect(400);
+    });
+  });
+
+  describe('GET /public/me/invoices', () => {
+    it('returns 200 with paginated invoices using defaults', async () => {
+      mockListInvoices.execute.mockResolvedValue({
+        items: [{ id: 'inv-1', total: 17250 }],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      });
+
+      const res = await request(app.getHttpServer())
+        .get('/public/me/invoices')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+
+      expect(res.body.items).toHaveLength(1);
+      expect(mockListInvoices.execute).toHaveBeenCalledWith('client-1', 1, 20);
+    });
+
+    it('passes page and pageSize query params', async () => {
+      mockListInvoices.execute.mockResolvedValue({ items: [], total: 0, page: 2, pageSize: 5 });
+
+      await request(app.getHttpServer())
+        .get('/public/me/invoices?page=2&pageSize=5')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+
+      expect(mockListInvoices.execute).toHaveBeenCalledWith('client-1', 2, 5);
     });
   });
 

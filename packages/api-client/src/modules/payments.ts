@@ -79,6 +79,21 @@ export async function processPayment(payload: {
   })
 }
 
+/**
+ * Client-facing refund request for a paid invoice. Authenticated via the
+ * client-session httpOnly cookie (`credentials: 'include'`).
+ */
+export async function requestRefund(
+  invoiceId: string,
+  reason?: string,
+): Promise<unknown> {
+  return apiRequest('/public/refunds/request', {
+    method: 'POST',
+    credentials: 'include',
+    body: JSON.stringify(reason ? { invoiceId, reason } : { invoiceId }),
+  })
+}
+
 /** Apply or clear a manual discount on an unpaid invoice. discountAmt in integer halalas (0 clears it). */
 export async function applyInvoiceDiscount(
   invoiceId: string,

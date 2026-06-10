@@ -51,6 +51,10 @@ export class GetClientBookingHandler {
       branchName: branch?.nameEn ?? branch?.nameAr ?? booking.branchNameSnapshot ?? '',
       branchNameAr: branch?.nameAr ?? booking.branchNameSnapshot ?? null,
       paymentStatus: payment?.status ?? null,
+      invoiceId: invoice?.id ?? null,
+      invoiceStatus: invoice?.status ?? null,
+      deliveryType: booking.deliveryType,
+      zoomJoinUrl: booking.zoomJoinUrl ?? null,
       createdAt: booking.createdAt.toISOString(),
     };
   }

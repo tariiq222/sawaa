@@ -4,6 +4,9 @@ import { ApiStandardResponses } from '../../common/swagger';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 import { ClientSession } from '../../common/auth/client-session.decorator';
 import { GetMeHandler } from '../../modules/identity/client-auth/get-me.handler';
+import { UpdateClientProfileHandler } from '../../modules/identity/client-auth/update-client-profile.handler';
+import { UpdateClientProfileDto } from '../../modules/identity/client-auth/update-client-profile.dto';
+import { ListClientInvoicesHandler } from '../../modules/finance/list-client-invoices/list-client-invoices.handler';
 import { ListClientBookingsHandler } from '../../modules/bookings/client/list-client-bookings.handler';
 import { ClientCancelBookingHandler } from '../../modules/bookings/client/client-cancel-booking.handler';
 import { ClientCancelBookingDto } from '../../modules/bookings/client/client-cancel-booking.dto';
@@ -22,6 +25,8 @@ import { Public } from '../../common/guards/jwt.guard';
 export class PublicMeController {
   constructor(
     private readonly getMe: GetMeHandler,
+    private readonly updateClientProfile: UpdateClientProfileHandler,
+    private readonly listClientInvoices: ListClientInvoicesHandler,
     private readonly listBookings: ListClientBookingsHandler,
     private readonly cancelBooking: ClientCancelBookingHandler,
     private readonly rescheduleBooking: ClientRescheduleBookingHandler,
@@ -34,6 +39,34 @@ export class PublicMeController {
   @ApiOkResponse({ schema: { type: 'object', description: 'Client profile with membership info' } })
   async meEndpoint(@ClientSession() session: { id: string }) {
     return this.getMe.execute(session.id);
+  }
+
+  @Patch()
+  @ApiOperation({ summary: 'Update authenticated client profile' })
+  @ApiOkResponse({ schema: { type: 'object', description: 'Updated client profile' } })
+  @ApiResponse({ status: 409, description: 'Phone number already used by another account' })
+  async updateProfileEndpoint(
+    @ClientSession() session: { id: string },
+    @Body() body: UpdateClientProfileDto,
+  ) {
+    return this.updateClientProfile.execute(session.id, body);
+  }
+
+  @Get('invoices')
+  @ApiOperation({ summary: 'List client invoices' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number })
+  @ApiOkResponse({ schema: { type: 'object', description: 'Paginated invoices list' } })
+  async invoicesEndpoint(
+    @ClientSession() session: { id: string },
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.listClientInvoices.execute(
+      session.id,
+      page ? parseInt(page, 10) : 1,
+      pageSize ? parseInt(pageSize, 10) : 20,
+    );
   }
 
   @Get('bookings')
