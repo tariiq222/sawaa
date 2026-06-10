@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Locale } from '@/features/locale/locale';
+import { halalasToSar } from '@/lib/money';
 import { t } from '@/features/locale/dictionary';
 import { useT } from '@/features/locale/locale-provider';
 import { useCurrentClient } from '@/features/auth/public';
@@ -15,6 +16,12 @@ import {
   cancelMyBookingApi,
   rescheduleMyBookingApi,
 } from '@/features/auth/auth.api';
+import { initPayment } from '@/features/booking/booking.api';
+import {
+  paymentStatusKey,
+  PAYMENT_STATUS_TOKEN,
+  isInvoicePayable,
+} from './status-labels';
 import {
   Calendar,
   Clock,
@@ -24,6 +31,7 @@ import {
   CreditCard,
   ArrowRight,
   AlertTriangle,
+  Video,
 } from 'lucide-react';
 
 function todayLocalIso(): string {
@@ -50,9 +58,16 @@ const INPUT =
 export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeatureProps) {
   const { client } = useCurrentClient();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const tt = useT();
   const [showCancel, setShowCancel] = useState(false);
   const [showReschedule, setShowReschedule] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+  // Local override so the UI reflects a cancellation immediately, without
+  // waiting for the booking query to refetch.
+  const [cancelledStatus, setCancelledStatus] = useState<'CANCELLED' | 'CANCEL_REQUESTED' | null>(null);
+  const [cancelNotice, setCancelNotice] = useState<string | null>(null);
 
   const { data: booking, isLoading } = useQuery({
     queryKey: ['client', 'bookings', 'detail', bookingId],
@@ -87,9 +102,10 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
     hour: '2-digit',
     minute: '2-digit',
   });
-  const statusKey = `booking.status.${booking.status.toLowerCase()}`;
-  const statusColor = STATUS_TOKEN[booking.status] ?? 'var(--sw-neutral-400)';
-  const canAct = booking.status === 'PENDING' || booking.status === 'CONFIRMED';
+  const displayStatus = cancelledStatus ?? booking.status;
+  const statusKey = `booking.status.${displayStatus.toLowerCase()}`;
+  const statusColor = STATUS_TOKEN[displayStatus] ?? 'var(--sw-neutral-400)';
+  const canAct = displayStatus === 'PENDING' || displayStatus === 'CONFIRMED';
   // The booking-detail payload may carry context IDs even though the shared
   // ClientBookingItem type does not declare them yet. Read them defensively;
   // IntakeFormsSection stays inert when serviceId is absent.
@@ -98,6 +114,25 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
     employeeId?: string | null;
     branchId?: string | null;
   };
+
+  const payPillKey = paymentStatusKey(booking.paymentStatus);
+  const payPillColor = PAYMENT_STATUS_TOKEN[booking.paymentStatus ?? 'UNKNOWN'] ?? 'var(--warning)';
+  const payable = !!booking.invoiceId && isInvoicePayable(booking.invoiceStatus);
+  const canJoin =
+    booking.deliveryType === 'ONLINE' && !!booking.zoomJoinUrl && booking.status === 'CONFIRMED';
+
+  async function handlePayNow() {
+    if (!booking?.invoiceId) return;
+    setPaying(true);
+    setPayError(null);
+    try {
+      const { redirectUrl } = await initPayment(booking.invoiceId);
+      window.location.assign(redirectUrl);
+    } catch {
+      setPayError(tt('account.payError'));
+      setPaying(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -133,9 +168,18 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
             </h1>
             <p className="text-sm text-[var(--sw-body)] mt-2">{booking.employeeName}</p>
           </div>
-          <StatusPill color={statusColor} label={t(locale, statusKey as never) ?? booking.status} />
+          <StatusPill color={statusColor} label={t(locale, statusKey as never) ?? displayStatus} />
         </div>
       </header>
+
+      {cancelNotice && (
+        <div
+          role="status"
+          className="px-4 py-3 rounded-xl text-sm font-semibold bg-[color-mix(in_srgb,var(--success)_10%,transparent)] border border-[color-mix(in_srgb,var(--success)_25%,transparent)] text-[var(--success)]"
+        >
+          {cancelNotice}
+        </div>
+      )}
 
       <section className="grid sm:grid-cols-2 gap-3">
         <DetailTile icon={<Calendar size={16} />} label={tt('booking.detail.date')} value={dateStr} />
@@ -165,16 +209,48 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
             <ArrowRight size={12} className="rtl:rotate-180" aria-hidden="true" />
           </Link>
         </div>
-        <div className="flex justify-between text-sm">
+        <div className="flex justify-between items-center text-sm gap-2 flex-wrap">
           <span className="text-[var(--sw-body)] inline-flex items-center gap-2">
             <CreditCard size={14} aria-hidden="true" />
-            {tt('booking.detail.payment')}: {booking.paymentStatus}
+            {tt('booking.detail.payment')}:
+            <StatusPill color={payPillColor} label={tt(payPillKey)} />
           </span>
           <span className="font-bold text-[var(--sw-secondary-700)] text-lg">
-            {booking.price}{' '}
+            {halalasToSar(Number(booking.price))}{' '}
             <span className="text-sm font-medium text-[var(--sw-neutral-500)]">{booking.currency}</span>
           </span>
         </div>
+        {(payable || canJoin) && (
+          <div className="mt-4 flex items-center gap-2 flex-wrap">
+            {payable && (
+              <button
+                type="button"
+                onClick={handlePayNow}
+                disabled={paying}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-bold bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
+              >
+                <CreditCard size={14} aria-hidden="true" />
+                {paying ? tt('account.paying') : tt('account.payNow')}
+              </button>
+            )}
+            {canJoin && (
+              <a
+                href={booking.zoomJoinUrl!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-bold border border-[color-mix(in_srgb,var(--sw-primary-500)_40%,transparent)] text-[var(--sw-primary-600)] hover:bg-[color-mix(in_srgb,var(--sw-primary-500)_6%,transparent)] transition-colors"
+              >
+                <Video size={14} aria-hidden="true" />
+                {tt('account.joinSession')}
+              </a>
+            )}
+          </div>
+        )}
+        {payError && (
+          <div className="mt-3 px-3 py-2 rounded-lg text-sm bg-[color-mix(in_srgb,var(--error)_8%,transparent)] border border-[color-mix(in_srgb,var(--error)_25%,transparent)] text-[var(--error)]">
+            {payError}
+          </div>
+        )}
       </section>
 
       <IntakeFormsSection
@@ -206,9 +282,14 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
         <CancelModal
           locale={locale}
           onClose={() => setShowCancel(false)}
-          onSuccess={() => {
+          onSuccess={(status) => {
             setShowCancel(false);
-            router.refresh();
+            setCancelledStatus(status);
+            setCancelNotice(
+              status === 'CANCELLED' ? tt('booking.cancelSuccess') : tt('booking.cancelPending'),
+            );
+            // Refresh cached bookings (list + detail) so the new status persists.
+            void queryClient.invalidateQueries({ queryKey: ['client', 'bookings'] });
           }}
           cancelApi={(reason) => cancelMyBookingApi(bookingId, reason)}
         />

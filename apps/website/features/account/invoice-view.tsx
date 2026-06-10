@@ -1,6 +1,8 @@
 'use client';
 
 import { useLocale, useT } from '@/features/locale/locale-provider';
+import { halalasToSarNumber } from '@/lib/money';
+import { invoiceStatusKey, INVOICE_STATUS_TOKEN } from './status-labels';
 import type { InvoiceDetail } from './invoice.api';
 
 interface InvoiceViewProps {
@@ -23,6 +25,9 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
   const t = useT();
   const locale = useLocale();
   const sellerName = invoice.sellerName?.trim() || 'مركز سواء';
+  const statusKey = invoiceStatusKey(invoice.status);
+  const statusLabel = statusKey ? t(statusKey) : invoice.status;
+  const statusTint = INVOICE_STATUS_TOKEN[invoice.status] ?? 'var(--muted-foreground)';
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '2rem' }}>
@@ -61,7 +66,7 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
             </div>
             <div>
               <span style={{ opacity: 0.6, display: 'block' }}>{t('invoice.status')}</span>
-              <span style={{ color: statusColor(invoice.status) }}>{invoice.status}</span>
+              <span style={{ color: statusTint }}>{statusLabel}</span>
             </div>
           </div>
 
@@ -145,15 +150,10 @@ function formatDate(dateStr: string | null, locale: string): string {
   });
 }
 
+/** `amount` is in integer halalas (backend convention) — converted to SAR before formatting. */
 function formatCurrency(amount: number, currency: string, locale: string): string {
   return new Intl.NumberFormat(locale === 'ar' ? 'ar-SA' : 'en-US', {
     style: 'currency',
     currency,
-  }).format(amount);
-}
-
-function statusColor(status: string): string {
-  if (status === 'PAID') return 'var(--success)';
-  if (status === 'PENDING') return 'var(--warning)';
-  return 'var(--muted-foreground)';
+  }).format(halalasToSarNumber(amount));
 }

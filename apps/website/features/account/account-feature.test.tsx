@@ -22,6 +22,22 @@ vi.mock('@/features/auth/client-bookings-list', () => ({
   ClientBookingsList: () => <div data-testid="client-bookings-list">bookings</div>,
 }));
 
+vi.mock('./overview-tab', () => ({
+  OverviewTab: ({ onGoToInvoices }: { onGoToInvoices: () => void }) => (
+    <div data-testid="overview-tab">
+      <button onClick={onGoToInvoices}>go-to-invoices</button>
+    </div>
+  ),
+}));
+
+vi.mock('./invoices-tab', () => ({
+  InvoicesTab: () => <div data-testid="invoices-tab">invoices</div>,
+}));
+
+vi.mock('./profile-tab', () => ({
+  ProfileTab: () => <div data-testid="profile-tab">profile</div>,
+}));
+
 import { AccountFeature } from './account-feature';
 import { LocaleProvider } from '@/features/locale/locale-provider';
 import type { Locale } from '@/features/locale/locale';
@@ -78,8 +94,55 @@ describe('AccountFeature', () => {
     expect(screen.getByText('Sara Q.')).toBeTruthy();
     expect(screen.getByText('sara@test.com')).toBeTruthy();
     expect(screen.getByText('+966500000000')).toBeTruthy();
-    expect(screen.getByTestId('client-bookings-list')).toBeTruthy();
     expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it('renders all four tabs and shows the overview tab by default', () => {
+    useCurrentClientMock.mockReturnValue({ client: fakeClient, isLoading: false, error: null, refetch: vi.fn() });
+    render(withLocale('en', <AccountFeature locale="en" />));
+
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs).toHaveLength(4);
+    expect(tabs.map((el) => el.textContent)).toEqual([
+      'Overview',
+      'My Bookings',
+      'Invoices & Payments',
+      'Profile',
+    ]);
+    expect(screen.getByTestId('overview-tab')).toBeTruthy();
+    expect(screen.queryByTestId('client-bookings-list')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Overview' }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('switches tabs: bookings, invoices, profile', () => {
+    useCurrentClientMock.mockReturnValue({ client: fakeClient, isLoading: false, error: null, refetch: vi.fn() });
+    render(withLocale('en', <AccountFeature locale="en" />));
+
+    fireEvent.click(screen.getByRole('tab', { name: 'My Bookings' }));
+    expect(screen.getByTestId('client-bookings-list')).toBeTruthy();
+    expect(screen.queryByTestId('overview-tab')).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Invoices & Payments' }));
+    expect(screen.getByTestId('invoices-tab')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Profile' }));
+    expect(screen.getByTestId('profile-tab')).toBeTruthy();
+  });
+
+  it('renders Arabic tab labels under ar locale', () => {
+    useCurrentClientMock.mockReturnValue({ client: fakeClient, isLoading: false, error: null, refetch: vi.fn() });
+    render(withLocale('ar', <AccountFeature locale="ar" />));
+    expect(screen.getByRole('tab', { name: 'نظرة عامة' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'حجوزاتي' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'الفواتير والمدفوعات' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'الملف الشخصي' })).toBeTruthy();
+  });
+
+  it('switches to the invoices tab when the overview unpaid alert callback fires', () => {
+    useCurrentClientMock.mockReturnValue({ client: fakeClient, isLoading: false, error: null, refetch: vi.fn() });
+    render(withLocale('en', <AccountFeature locale="en" />));
+    fireEvent.click(screen.getByText('go-to-invoices'));
+    expect(screen.getByTestId('invoices-tab')).toBeTruthy();
   });
 
   it('logs out: calls clientLogoutApi, clearAuth, then router.push("/login")', async () => {

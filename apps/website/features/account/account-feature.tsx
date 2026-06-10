@@ -1,24 +1,41 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Locale } from '@/features/locale/locale';
-import { t } from '@/features/locale/dictionary';
 import { useT } from '@/features/locale/locale-provider';
 import { useCurrentClient, clearAuth, clientLogoutApi } from '@/features/auth/public';
 import { ClientBookingsList } from '@/features/auth/client-bookings-list';
-import { ArrowRight, Mail, Phone, BadgeCheck, LogOut, User } from 'lucide-react';
+import { OverviewTab } from './overview-tab';
+import { InvoicesTab } from './invoices-tab';
+import { ProfileTab } from './profile-tab';
+import { Mail, Phone, BadgeCheck, LogOut, User } from 'lucide-react';
 
 interface AccountFeatureProps {
   locale: Locale;
 }
+
+type AccountTab = 'overview' | 'bookings' | 'invoices' | 'profile';
+
+const TABS: AccountTab[] = ['overview', 'bookings', 'invoices', 'profile'];
+
+const emptySubscribe = () => () => {};
 
 export function AccountFeature({ locale }: AccountFeatureProps) {
   const { client, isLoading, error } = useCurrentClient();
   const router = useRouter();
   const tt = useT();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [activeTab, setActiveTab] = useState<AccountTab>('overview');
+  // Hydration gate: the client profile is restored synchronously from the
+  // persisted auth store, so the first client render could differ from the
+  // server-rendered loading state. Render the same loading placeholder until
+  // after hydration so server and first client render always match.
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
 
   useEffect(() => {
     if (!isLoading && (error || client === null)) {
@@ -37,7 +54,7 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
     router.push('/login');
   }
 
-  if (isLoading || error || client === null) {
+  if (!mounted || isLoading || error || client === null) {
     return (
       <div className="grid place-items-center py-24 text-[var(--sw-neutral-500)]">
         {tt('common.loading')}
@@ -66,21 +83,40 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
         onLogout={handleLogout}
       />
 
-      <section>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold text-[var(--sw-secondary-700)]">
-            {t(locale, 'account.bookings')}
-          </h2>
-          <Link
-            href="/account/bookings"
-            className="text-sm font-semibold text-[var(--sw-primary-600)] hover:underline inline-flex items-center gap-1"
-          >
-            {tt('account.viewAll')}
-            <ArrowRight size={14} className="rtl:rotate-180" />
-          </Link>
-        </div>
-        <ClientBookingsList locale={locale} />
-      </section>
+      <div
+        className="flex gap-1 p-1 rounded-full self-start max-w-full overflow-x-auto"
+        style={{ background: 'var(--sw-neutral-100)' }}
+        role="tablist"
+      >
+        {TABS.map((tab) => {
+          const active = activeTab === tab;
+          return (
+            <button
+              key={tab}
+              role="tab"
+              aria-selected={active}
+              aria-controls={`account-panel-${tab}`}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors whitespace-nowrap ${
+                active
+                  ? 'bg-[var(--sw-neutral-0)] text-[var(--sw-secondary-700)] shadow-[var(--sw-shadow-sm)]'
+                  : 'text-[var(--sw-neutral-500)] hover:text-[var(--sw-secondary-700)]'
+              }`}
+            >
+              {tt(`account.tabs.${tab}`)}
+            </button>
+          );
+        })}
+      </div>
+
+      <div role="tabpanel" id={`account-panel-${activeTab}`}>
+        {activeTab === 'overview' && (
+          <OverviewTab locale={locale} onGoToInvoices={() => setActiveTab('invoices')} />
+        )}
+        {activeTab === 'bookings' && <ClientBookingsList locale={locale} />}
+        {activeTab === 'invoices' && <InvoicesTab locale={locale} />}
+        {activeTab === 'profile' && <ProfileTab />}
+      </div>
     </div>
   );
 }

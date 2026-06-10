@@ -6,10 +6,13 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import type { ClientBookingItem } from '@sawaa/shared';
 import { getMyBookingsApi } from '@/features/auth/auth.api';
+import { initPayment } from '@/features/booking/booking.api';
+import { paymentStatusKey, PAYMENT_STATUS_TOKEN, isInvoicePayable } from '@/features/account/status-labels';
+import { halalasToSar } from '@/lib/money';
 import { t } from '@/features/locale/dictionary';
 import { useT } from '@/features/locale/locale-provider';
 import type { Locale } from '@/features/locale/locale';
-import { Calendar, Clock, MapPin, ChevronRight, CalendarPlus } from 'lucide-react';
+import { Calendar, Clock, MapPin, ChevronRight, CalendarPlus, CreditCard } from 'lucide-react';
 
 interface ClientBookingsListProps {
   locale: Locale;
@@ -17,7 +20,17 @@ interface ClientBookingsListProps {
   initialTotal?: number;
 }
 
-type Tab = 'upcoming' | 'past';
+type Tab = 'upcoming' | 'past' | 'cancelled';
+
+const TAB_KEYS = {
+  upcoming: 'account.upcoming',
+  past: 'account.past',
+  cancelled: 'account.cancelled',
+} as const;
+
+function isCancelled(b: ClientBookingItem): boolean {
+  return b.status === 'CANCELLED' || b.status === 'CANCEL_REQUESTED';
+}
 
 export function ClientBookingsList({ locale, initialBookings, initialTotal }: ClientBookingsListProps) {
   const router = useRouter();
@@ -37,9 +50,11 @@ export function ClientBookingsList({ locale, initialBookings, initialTotal }: Cl
   const total = data?.total ?? 0;
 
   const now = new Date();
-  const upcoming = bookings.filter((b) => new Date(b.scheduledAt) > now);
-  const past = bookings.filter((b) => new Date(b.scheduledAt) <= now);
-  const displayed = activeTab === 'upcoming' ? upcoming : past;
+  const upcoming = bookings.filter((b) => !isCancelled(b) && new Date(b.scheduledAt) > now);
+  const past = bookings.filter((b) => !isCancelled(b) && new Date(b.scheduledAt) <= now);
+  const cancelled = bookings.filter(isCancelled);
+  const byTab: Record<Tab, ClientBookingItem[]> = { upcoming, past, cancelled };
+  const displayed = byTab[activeTab];
 
   if (isLoading && bookings.length === 0) {
     return (
@@ -66,9 +81,9 @@ export function ClientBookingsList({ locale, initialBookings, initialTotal }: Cl
         style={{ background: 'var(--sw-neutral-100)' }}
         role="tablist"
       >
-        {(['upcoming', 'past'] as const).map((tab) => {
+        {(['upcoming', 'past', 'cancelled'] as const).map((tab) => {
           const active = activeTab === tab;
-          const count = tab === 'upcoming' ? upcoming.length : past.length;
+          const count = byTab[tab].length;
           return (
             <button
               key={tab}
@@ -81,7 +96,7 @@ export function ClientBookingsList({ locale, initialBookings, initialTotal }: Cl
                   : 'text-[var(--sw-neutral-500)] hover:text-[var(--sw-secondary-700)]'
               }`}
             >
-              {tt(`account.${tab}` as never)}
+              {tt(TAB_KEYS[tab])}
               <span
                 className={`text-xs font-bold px-1.5 rounded-full min-w-[1.25rem] text-center ${
                   active
@@ -171,6 +186,9 @@ function BookingCard({
   onClick: () => void;
 }) {
   const tt = useT();
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+
   const scheduledAt = new Date(booking.scheduledAt);
   const dateStr = scheduledAt.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
     year: 'numeric',
@@ -184,12 +202,35 @@ function BookingCard({
 
   const statusKey = `booking.status.${booking.status.toLowerCase()}`;
   const statusColor = STATUS_TOKEN[booking.status] ?? 'var(--sw-neutral-400)';
+  const payKey = paymentStatusKey(booking.paymentStatus);
+  const payColor = PAYMENT_STATUS_TOKEN[booking.paymentStatus ?? 'UNKNOWN'] ?? 'var(--warning)';
+  const payable = !!booking.invoiceId && isInvoicePayable(booking.invoiceStatus) && !isCancelled(booking);
+
+  async function handlePayNow(e: React.MouseEvent) {
+    e.stopPropagation();
+    setPaying(true);
+    setPayError(null);
+    try {
+      const { redirectUrl } = await initPayment(booking.invoiceId!);
+      window.location.assign(redirectUrl);
+    } catch {
+      setPayError(tt('account.payError'));
+      setPaying(false);
+    }
+  }
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className="group text-start w-full p-5 rounded-2xl bg-[var(--sw-neutral-0)] border border-[var(--sw-neutral-100)] hover:border-[color-mix(in_srgb,var(--sw-primary-500)_30%,transparent)] hover:shadow-[var(--sw-shadow-md)] transition-all flex items-center gap-4"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="group cursor-pointer text-start w-full p-5 rounded-2xl bg-[var(--sw-neutral-0)] border border-[var(--sw-neutral-100)] hover:border-[color-mix(in_srgb,var(--sw-primary-500)_30%,transparent)] hover:shadow-[var(--sw-shadow-md)] transition-all flex items-center gap-4"
     >
       <div
         className="hidden sm:flex shrink-0 w-14 h-14 rounded-2xl flex-col items-center justify-center"
@@ -207,7 +248,10 @@ function BookingCard({
           <h3 className="font-bold text-[var(--sw-secondary-700)] truncate">
             {booking.serviceName}
           </h3>
-          <StatusPill color={statusColor} label={t(locale, statusKey as never) ?? booking.status} />
+          <div className="shrink-0 flex items-center gap-1.5 flex-wrap justify-end">
+            <StatusPill color={statusColor} label={t(locale, statusKey as never) ?? booking.status} />
+            <StatusPill color={payColor} label={tt(payKey)} />
+          </div>
         </div>
         <p className="text-sm text-[var(--sw-body)] mt-1 truncate">
           {booking.employeeName}
@@ -226,11 +270,25 @@ function BookingCard({
             </span>
           )}
         </div>
+        {payable && (
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={handlePayNow}
+              disabled={paying}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] shadow-[var(--sw-shadow-primary)] hover:-translate-y-0.5 transition-transform disabled:opacity-60 disabled:translate-y-0"
+            >
+              <CreditCard size={12} aria-hidden="true" />
+              {paying ? tt('account.paying') : tt('account.payNow')}
+            </button>
+            {payError && <span className="text-xs text-[var(--error)]">{payError}</span>}
+          </div>
+        )}
       </div>
 
       <div className="shrink-0 flex flex-col items-end gap-1">
         <span className="text-sm font-bold text-[var(--sw-primary-600)]">
-          {booking.price} <span className="text-[var(--sw-neutral-500)] font-medium">{booking.currency}</span>
+          {halalasToSar(Number(booking.price))} <span className="text-[var(--sw-neutral-500)] font-medium">{booking.currency}</span>
         </span>
         <ChevronRight
           size={16}
@@ -238,7 +296,7 @@ function BookingCard({
           aria-hidden="true"
         />
       </div>
-    </button>
+    </div>
   );
 }
 
