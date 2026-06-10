@@ -11,6 +11,7 @@ describe('PublicCatalogController (e2e)', () => {
     department: { findMany: jest.fn() },
     serviceCategory: { findMany: jest.fn() },
     service: { findMany: jest.fn() },
+    organizationSettings: { findFirst: jest.fn() },
   };
 
   beforeAll(async () => {
@@ -48,6 +49,7 @@ describe('PublicCatalogController (e2e)', () => {
           durationOptions: [{ id: 'do-1', durationMins: 30, price: 50 }],
         },
       ]);
+      mockPrisma.organizationSettings.findFirst.mockResolvedValue({ vatRate: 0.15 });
 
       const res = await request(app.getHttpServer())
         .get('/public/services')
@@ -61,6 +63,40 @@ describe('PublicCatalogController (e2e)', () => {
       expect(res.body.services[0].showDuration).toBe(true);
       expect(res.body.services[0].hidePriceOnBooking).toBeUndefined();
       expect(res.body.services[0].hideDurationOnBooking).toBeUndefined();
+      expect(res.body.vatRate).toBe(0.15);
+    });
+
+    it('exposes the org vatRate from organizationSettings (fractional)', async () => {
+      mockPrisma.department.findMany.mockResolvedValue([]);
+      mockPrisma.serviceCategory.findMany.mockResolvedValue([]);
+      mockPrisma.service.findMany.mockResolvedValue([]);
+      // Prisma returns Decimal for vatRate — anything with a toString() works.
+      mockPrisma.organizationSettings.findFirst.mockResolvedValue({
+        vatRate: { toString: () => '0.15' },
+      });
+
+      const res = await request(app.getHttpServer())
+        .get('/public/services')
+        .expect(200);
+
+      expect(mockPrisma.organizationSettings.findFirst).toHaveBeenCalledWith({
+        where: {},
+        select: { vatRate: true },
+      });
+      expect(res.body.vatRate).toBe(0.15);
+    });
+
+    it('defaults vatRate to 0 when org settings are missing', async () => {
+      mockPrisma.department.findMany.mockResolvedValue([]);
+      mockPrisma.serviceCategory.findMany.mockResolvedValue([]);
+      mockPrisma.service.findMany.mockResolvedValue([]);
+      mockPrisma.organizationSettings.findFirst.mockResolvedValue(null);
+
+      const res = await request(app.getHttpServer())
+        .get('/public/services')
+        .expect(200);
+
+      expect(res.body.vatRate).toBe(0);
     });
 
     it('calls prisma with active + non-hidden filters', async () => {

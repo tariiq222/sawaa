@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { Service } from '@sawaa/shared';
-import { halalasToSarNumber } from '@/lib/money';
+import { grossWithVat, halalasToSarNumber } from '@/lib/money';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 
 interface Category {
@@ -28,6 +28,11 @@ interface ServicePickerProps {
   onClearLockedTherapist?: () => void;
   /** Pre-select a category filter (e.g. when entering from a clinic page). */
   initialCategoryId?: string | null;
+  /**
+   * Fractional org VAT rate (0.15 = 15%). Display-only: prices are shown
+   * VAT-inclusive with an "incl. VAT" label when > 0.
+   */
+  vatRate?: number;
 }
 
 export function ServicePicker({
@@ -38,6 +43,7 @@ export function ServicePicker({
   lockedTherapistName,
   onClearLockedTherapist,
   initialCategoryId = null,
+  vatRate = 0,
 }: ServicePickerProps) {
   const t = useT();
   const locale = useLocale();
@@ -234,11 +240,13 @@ export function ServicePicker({
             numericPrices.length > 0 ? Math.min(...numericPrices) : fallbackPrice;
           const maxPrice =
             numericPrices.length > 0 ? Math.max(...numericPrices) : fallbackPrice;
+          // Display VAT-inclusive (gross) amounts — the backend charges
+          // net + VAT, so showing net here would understate the real price.
           const fmt = (halalas: number) =>
             Intl.NumberFormat(isAr ? 'ar-SA' : 'en-US', {
               style: 'decimal',
-              maximumFractionDigits: 0,
-            }).format(halalasToSarNumber(halalas));
+              maximumFractionDigits: 2,
+            }).format(halalasToSarNumber(grossWithVat(halalas, vatRate)));
           const priceLabel =
             minPrice === maxPrice
               ? fmt(minPrice)
@@ -351,6 +359,11 @@ export function ServicePicker({
                           <span className="mt-0.5 text-[0.6875rem] font-semibold" style={{ opacity: 0.85 }}>
                             {t('booking.summary.currency')}
                           </span>
+                          {vatRate > 0 && (
+                            <span className="mt-0.5 text-[0.625rem] font-medium" style={{ opacity: 0.7 }}>
+                              {t('booking.price.inclVat')}
+                            </span>
+                          )}
                         </div>
                       )}
 

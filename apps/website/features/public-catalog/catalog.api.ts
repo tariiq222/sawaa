@@ -7,6 +7,7 @@ const EMPTY_CATALOG: PublicCatalog = {
   departments: [],
   categories: [],
   services: [],
+  vatRate: 0,
 };
 
 export async function getPublicCatalog(): Promise<PublicCatalog> {

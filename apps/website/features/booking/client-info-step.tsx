@@ -6,12 +6,17 @@ import { useT, useLocale } from '@/features/locale/locale-provider';
 import { clientLoginApi, getMeApi } from '@/features/auth/auth.api';
 import { setClient as setAuthClient } from '@/features/auth/auth-store';
 import { useCurrentClient } from '@/features/auth/use-current-client';
-import { halalasToSarNumber } from '@/lib/money';
+import { grossWithVat, halalasToSarNumber } from '@/lib/money';
 
 interface ClientInfoStepProps {
   slot: AvailableSlot;
   service: Service;
   employee: EmployeeWithUser;
+  /**
+   * Fractional org VAT rate (0.15 = 15%). Display-only: the total is shown
+   * VAT-inclusive when > 0; the backend computes the real invoice.
+   */
+  vatRate?: number;
   /** @deprecated back is handled by the wizard header — kept for compatibility */
   onBack?: () => void;
   /** Confirm + pay. The client is authenticated via the session cookie; no info is passed. */
@@ -49,7 +54,7 @@ function FieldIcon({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function ClientInfoStep({ slot, service, employee, onSubmitInfo, isSubmitting }: ClientInfoStepProps) {
+export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitInfo, isSubmitting }: ClientInfoStepProps) {
   const t = useT();
   const locale = useLocale();
   const isAr = locale === 'ar';
@@ -98,10 +103,13 @@ export function ClientInfoStep({ slot, service, employee, onSubmitInfo, isSubmit
     minute: '2-digit',
   });
   const therapistName = `${employee.user.firstName} ${employee.user.lastName}`.trim();
+  // VAT-inclusive (gross) total — mirrors the backend invoice math so the
+  // amount shown here matches what the customer is actually charged.
   const priceSar = Intl.NumberFormat(dateLocale, {
     style: 'decimal',
-    maximumFractionDigits: 0,
-  }).format(halalasToSarNumber(service.price));
+    maximumFractionDigits: 2,
+  }).format(halalasToSarNumber(grossWithVat(service.price, vatRate)));
+  const vatPercent = Math.round(vatRate * 100);
 
   const isAuthed = client !== null;
 
@@ -351,19 +359,31 @@ export function ClientInfoStep({ slot, service, employee, onSubmitInfo, isSubmit
               >
                 {t('booking.summary.total')}
               </span>
-              <span className="flex items-baseline gap-1.5">
-                <span
-                  className="text-xl font-bold tabular-nums"
-                  style={{ color: 'var(--sw-secondary-700)', letterSpacing: '-0.01em' }}
-                >
-                  {priceSar}
+              <span className="flex flex-col items-end gap-0.5">
+                <span className="flex items-baseline gap-1.5">
+                  <span
+                    className="text-xl font-bold tabular-nums"
+                    style={{ color: 'var(--sw-secondary-700)', letterSpacing: '-0.01em' }}
+                  >
+                    {priceSar}
+                  </span>
+                  <span
+                    className="text-[0.6875rem] font-medium uppercase"
+                    style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 50%, transparent)', letterSpacing: '0.05em' }}
+                  >
+                    {t('booking.summary.currency')}
+                  </span>
                 </span>
-                <span
-                  className="text-[0.6875rem] font-medium uppercase"
-                  style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 50%, transparent)', letterSpacing: '0.05em' }}
-                >
-                  {t('booking.summary.currency')}
-                </span>
+                {vatRate > 0 && (
+                  <span
+                    className="text-[0.6875rem] font-medium"
+                    style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 55%, transparent)' }}
+                  >
+                    {isAr
+                      ? `شامل ضريبة القيمة المضافة (${vatPercent}%)`
+                      : `incl. VAT (${vatPercent}%)`}
+                  </span>
+                )}
               </span>
             </div>
 

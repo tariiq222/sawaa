@@ -20,3 +20,18 @@ export function halalasToSar(halalas: number): string {
 export function halalasToSarNumber(halalas: number): number {
   return halalas / 100
 }
+
+/**
+ * Compute the VAT-inclusive (gross) amount in halalas from a net amount.
+ *
+ * Mirrors the backend invoice math (apps/backend/src/modules/finance/money.helper.ts
+ * `computeVat`): vatAmt = round_half_up(net × vatRate); gross = net + vatAmt.
+ * For positive amounts `Math.round` is round-half-up, so this stays in parity
+ * with what the backend actually charges.
+ *
+ * @param halalas net amount in integer halalas
+ * @param vatRate fractional rate, e.g. 0.15 = 15% (NOT a percentage)
+ */
+export function grossWithVat(halalas: number, vatRate: number): number {
+  return halalas + Math.round(halalas * vatRate)
+}

@@ -17,7 +17,7 @@ export class PublicCatalogController {
   @ApiOperation({ summary: 'Get public service catalog (departments, categories, services)' })
   @ApiOkResponse({ description: 'Active departments, categories, and services' })
   async getCatalog() {
-    const [departments, categories, rawServices] = await Promise.all([
+    const [departments, categories, rawServices, orgSettings] = await Promise.all([
       this.prisma.department.findMany({
         // isVisible is the public hide-from-booking toggle; filter at the source
         // so hidden departments never reach any client (website/mobile). (R-32)
@@ -69,7 +69,16 @@ export class PublicCatalogController {
         },
         orderBy: { nameAr: 'asc' },
       }),
+      // Same source the booking/invoice flow uses (create-booking.handler.ts) —
+      // exposed so the website can display VAT-inclusive prices. Fractional
+      // rate (0.15 = 15%), defaults to 0 when settings are missing.
+      this.prisma.organizationSettings.findFirst({
+        where: {},
+        select: { vatRate: true },
+      }),
     ]);
+
+    const vatRate = Number(orgSettings?.vatRate?.toString() ?? '0');
 
     const services = rawServices.map(
       ({ hidePriceOnBooking, hideDurationOnBooking, ...service }) => ({
@@ -79,6 +88,6 @@ export class PublicCatalogController {
       }),
     );
 
-    return { departments, categories, services };
+    return { departments, categories, services, vatRate };
   }
 }

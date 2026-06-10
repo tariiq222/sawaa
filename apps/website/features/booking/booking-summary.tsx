@@ -1,14 +1,20 @@
 'use client';
 
 import type { Service, EmployeeWithUser, AvailableSlot } from '@sawaa/shared';
-import { halalasToSarNumber } from '@/lib/money';
+import { grossWithVat, halalasToSarNumber } from '@/lib/money';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 
 interface BookingSummaryProps {
   service: Service;
   employee: EmployeeWithUser;
   slot: AvailableSlot;
+  /** Net subtotal in halalas (pre-VAT) — the component renders the gross total. */
   totalHalalat: number;
+  /**
+   * Fractional org VAT rate (0.15 = 15%). Display-only: the total is shown
+   * VAT-inclusive when > 0; the backend computes the real invoice.
+   */
+  vatRate?: number;
   onConfirm: () => void;
   isSubmitting?: boolean;
 }
@@ -18,6 +24,7 @@ export function BookingSummary({
   employee,
   slot,
   totalHalalat,
+  vatRate = 0,
   onConfirm,
   isSubmitting,
 }: BookingSummaryProps) {
@@ -38,10 +45,11 @@ export function BookingSummary({
     minute: '2-digit',
   });
   const therapistName = `${employee.user.firstName} ${employee.user.lastName}`.trim();
+  // VAT-inclusive (gross) total — mirrors the backend invoice math.
   const priceSar = Intl.NumberFormat(dateLocale, {
     style: 'decimal',
-    maximumFractionDigits: 0,
-  }).format(halalasToSarNumber(totalHalalat));
+    maximumFractionDigits: 2,
+  }).format(halalasToSarNumber(grossWithVat(totalHalalat, vatRate)));
 
   return (
     <section
@@ -87,19 +95,29 @@ export function BookingSummary({
         >
           {t('booking.summary.total')}
         </span>
-        <span className="flex items-baseline gap-1.5">
-          <span
-            className="text-xl font-bold tabular-nums"
-            style={{ color: 'var(--sw-secondary-700)', letterSpacing: '-0.01em' }}
-          >
-            {priceSar}
+        <span className="flex flex-col items-end gap-0.5">
+          <span className="flex items-baseline gap-1.5">
+            <span
+              className="text-xl font-bold tabular-nums"
+              style={{ color: 'var(--sw-secondary-700)', letterSpacing: '-0.01em' }}
+            >
+              {priceSar}
+            </span>
+            <span
+              className="text-[0.6875rem] font-medium uppercase"
+              style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 50%, transparent)', letterSpacing: '0.05em' }}
+            >
+              {t('booking.summary.currency')}
+            </span>
           </span>
-          <span
-            className="text-[0.6875rem] font-medium uppercase"
-            style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 50%, transparent)', letterSpacing: '0.05em' }}
-          >
-            {t('booking.summary.currency')}
-          </span>
+          {vatRate > 0 && (
+            <span
+              className="text-[0.6875rem] font-medium"
+              style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 55%, transparent)' }}
+            >
+              {t('booking.price.inclVat')}
+            </span>
+          )}
         </span>
       </div>
 

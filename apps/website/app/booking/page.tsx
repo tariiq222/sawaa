@@ -303,18 +303,26 @@ function BookingWizardInner() {
     },
   });
 
-  const { data: catalog = { services: [], categories: [] }, isLoading: loadingServices, error: servicesError } = useQuery({
+  const { data: catalog = { services: [], categories: [], vatRate: 0 }, isLoading: loadingServices, error: servicesError } = useQuery({
     queryKey: ['public', 'catalog'],
     queryFn: async () => {
       type Cat = { id: string; nameAr: string; nameEn: string };
-      type CatalogShape = { services: Service[]; categories: Cat[] };
+      type CatalogShape = { services: Service[]; categories: Cat[]; vatRate?: number };
       const json = await publicFetch<{ data?: CatalogShape } | CatalogShape>('/public/services');
       const payload = 'data' in json && json.data ? json.data : (json as CatalogShape);
-      return { services: payload.services ?? [], categories: payload.categories ?? [] };
+      return {
+        services: payload.services ?? [],
+        categories: payload.categories ?? [],
+        // Tolerate older cached responses that predate the vatRate field.
+        vatRate: payload.vatRate ?? 0,
+      };
     },
   });
   const services = catalog.services;
   const categories = catalog.categories;
+  // Fractional org VAT rate (0.15 = 15%) — display-only: the backend computes
+  // the real invoice; we just show gross amounts so the customer isn't surprised.
+  const vatRate = catalog.vatRate ?? 0;
 
   const { data: branches = [], isLoading: loadingBranches } = useQuery({
     queryKey: ['public', 'branches'],
@@ -857,6 +865,7 @@ function BookingWizardInner() {
               services={filteredServices}
               categories={categories}
               selected={null}
+              vatRate={vatRate}
               onSelect={handleServiceSelect}
               lockedTherapistName={entryPoint === 'therapist' ? lockedTherapistName : null}
               onClearLockedTherapist={
@@ -909,6 +918,7 @@ function BookingWizardInner() {
           slot={slot}
           service={service}
           employee={employee}
+          vatRate={vatRate}
           onBack={() => dispatch({ type: 'SELECT_EMPLOYEE', employee })}
           onSubmitInfo={async () => {
             dispatchUi({ type: 'SUBMIT_START' });
