@@ -1,7 +1,7 @@
 import {
   Controller, Get, Post, Put, Patch, Delete, Body, Param, Query,
   UseGuards, ParseUUIDPipe, HttpCode, HttpStatus,
-  UseInterceptors, UploadedFile, BadRequestException, NotFoundException, ForbiddenException, Request,
+  UseInterceptors, UploadedFile, BadRequestException, ForbiddenException, Request,
 } from '@nestjs/common';
 import type { DeliveryType } from '@prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -11,7 +11,6 @@ import {
   ApiNotFoundResponse, ApiExtraModels, getSchemaPath,
 } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../common/swagger';
-import { PrismaService } from '../../infrastructure/database';
 import {
   ClientResponseDto, EmployeeResponseDto,
   PaginatedClientsDto, PaginatedEmployeesDto,
@@ -48,6 +47,7 @@ import { DeleteEmployeeHandler } from '../../modules/people/employees/delete-emp
 import { ListEmployeeServicesHandler } from '../../modules/people/employees/list-employee-services.handler';
 import { GetEmployeeServiceTypesHandler } from '../../modules/people/employees/get-employee-service-types.handler';
 import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
+import { GetMainBranchHandler } from '../../modules/org-config/branches/get-main-branch.handler';
 import { Type } from 'class-transformer';
 import { IsDateString, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { AssignEmployeeServiceHandler } from '../../modules/people/employees/assign-employee-service.handler';
@@ -127,7 +127,6 @@ function formatDateYmd(d: Date): string {
 @UseGuards(JwtGuard, CaslGuard)
 export class DashboardPeopleController {
   constructor(
-    private readonly prisma: PrismaService,
     private readonly createClient: CreateClientHandler,
     private readonly updateClient: UpdateClientHandler,
     private readonly listClients: ListClientsHandler,
@@ -146,6 +145,7 @@ export class DashboardPeopleController {
     private readonly listEmployeeServices: ListEmployeeServicesHandler,
     private readonly getEmployeeServiceTypes: GetEmployeeServiceTypesHandler,
     private readonly checkAvailability: CheckAvailabilityHandler,
+    private readonly getMainBranch: GetMainBranchHandler,
     private readonly assignEmployeeService: AssignEmployeeServiceHandler,
     private readonly updateEmployeeService: UpdateEmployeeServiceHandler,
     private readonly removeEmployeeService: RemoveEmployeeServiceHandler,
@@ -658,16 +658,12 @@ export class DashboardPeopleController {
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiOkResponse({ description: 'Employee service options updated' })
   @ApiNotFoundResponse({ description: 'Employee-service link not found' })
-  async setEmployeeServiceOptionsEndpoint(
+  setEmployeeServiceOptionsEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('serviceId', ParseUUIDPipe) serviceId: string,
     @Body() body: SetEmployeeServiceOptionsDto,
   ) {
-    const link = await this.prisma.employeeService.findUnique({
-      where: { employeeId_serviceId: { employeeId: id, serviceId } },
-    });
-    if (!link) throw new NotFoundException('Employee-service assignment not found');
-    return this.setEmployeeServiceOptions.execute({ employeeServiceId: link.id, ...body });
+    return this.setEmployeeServiceOptions.execute({ employeeId: id, serviceId, ...body });
   }
 
   @Get('employees/:id/slots')
@@ -697,8 +693,7 @@ export class DashboardPeopleController {
   ) {
     let branchId = q.branchId;
     if (!branchId) {
-      const mainBranch = await this.prisma.branch.findFirst({ where: { isMain: true } });
-      if (!mainBranch) throw new NotFoundException('No main branch configured');
+      const mainBranch = await this.getMainBranch.execute();
       branchId = mainBranch.id;
     }
     const slots = await this.checkAvailability.execute({
@@ -737,8 +732,7 @@ export class DashboardPeopleController {
   ) {
     let branchId = q.branchId;
     if (!branchId) {
-      const mainBranch = await this.prisma.branch.findFirst({ where: { isMain: true } });
-      if (!mainBranch) throw new NotFoundException('No main branch configured');
+      const mainBranch = await this.getMainBranch.execute();
       branchId = mainBranch.id;
     }
     const horizon = Math.min(q.days ?? 30, 90);
@@ -757,6 +751,9 @@ export class DashboardPeopleController {
           durationMins: q.duration,
           serviceId: q.serviceId,
           deliveryType: q.deliveryType as DeliveryType | undefined,
+          // Day-strip probe: a missing ServiceBookingConfig must disable the
+          // day chips, not 400 the whole strip.
+          silentOnMissingConfig: true,
         });
         return slots.length > 0 ? formatDateYmd(date) : null;
       }),

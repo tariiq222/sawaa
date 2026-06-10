@@ -35,7 +35,7 @@ import { SetEmployeeServiceOptionsHandler } from '../../modules/org-experience/s
 import { GetEmployeeAccountHandler } from '../../modules/identity/employee-account/get-employee-account.handler';
 import { CreateEmployeeAccountHandler } from '../../modules/identity/employee-account/create-employee-account.handler';
 import { UpdateEmployeeAccountHandler } from '../../modules/identity/employee-account/update-employee-account.handler';
-import { PrismaService } from '../../infrastructure/database';
+import { GetMainBranchHandler } from '../../modules/org-config/branches/get-main-branch.handler';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
@@ -61,6 +61,7 @@ describe('DashboardPeopleController (e2e)', () => {
   const mockListEmployeeServices = { execute: jest.fn() };
   const mockGetEmployeeServiceTypes = { execute: jest.fn() };
   const mockCheckAvailability = { execute: jest.fn() };
+  const mockGetMainBranch = { execute: jest.fn() };
   const mockAssignEmployeeService = { execute: jest.fn() };
   const mockRemoveEmployeeService = { execute: jest.fn() };
   const mockListEmployeeExceptions = { execute: jest.fn() };
@@ -75,10 +76,6 @@ describe('DashboardPeopleController (e2e)', () => {
   const mockGetEmployeeAccount = { execute: jest.fn() };
   const mockCreateEmployeeAccount = { execute: jest.fn() };
   const mockUpdateEmployeeAccount = { execute: jest.fn() };
-  const mockPrisma = {
-    branch: { findFirst: jest.fn() },
-    employeeService: { findUnique: jest.fn() },
-  };
 
   const jwtGuardCanActivate = (ctx: any) => {
     ctx.switchToHttp().getRequest().user = {
@@ -115,6 +112,7 @@ describe('DashboardPeopleController (e2e)', () => {
         { provide: ListEmployeeServicesHandler, useValue: mockListEmployeeServices },
         { provide: GetEmployeeServiceTypesHandler, useValue: mockGetEmployeeServiceTypes },
         { provide: CheckAvailabilityHandler, useValue: mockCheckAvailability },
+        { provide: GetMainBranchHandler, useValue: mockGetMainBranch },
         { provide: AssignEmployeeServiceHandler, useValue: mockAssignEmployeeService },
         { provide: RemoveEmployeeServiceHandler, useValue: mockRemoveEmployeeService },
         { provide: ListEmployeeExceptionsHandler, useValue: mockListEmployeeExceptions },
@@ -129,7 +127,6 @@ describe('DashboardPeopleController (e2e)', () => {
         { provide: GetEmployeeAccountHandler, useValue: mockGetEmployeeAccount },
         { provide: CreateEmployeeAccountHandler, useValue: mockCreateEmployeeAccount },
         { provide: UpdateEmployeeAccountHandler, useValue: mockUpdateEmployeeAccount },
-        { provide: PrismaService, useValue: mockPrisma },
       ],
     })
       .overrideGuard(JwtGuard)
@@ -657,7 +654,7 @@ describe('DashboardPeopleController (e2e)', () => {
     it('returns 200 with slots without duration', async () => {
       const start = new Date('2026-05-01T09:00:00Z');
       const end = new Date('2026-05-01T09:30:00Z');
-      mockPrisma.branch.findFirst.mockResolvedValue({ id: 'resolved-branch-id', isMain: true });
+      mockGetMainBranch.execute.mockResolvedValue({ id: 'resolved-branch-id', isMain: true });
       mockCheckAvailability.execute.mockResolvedValue([{ startTime: start, endTime: end }]);
 
       const res = await request(app.getHttpServer())
@@ -674,7 +671,7 @@ describe('DashboardPeopleController (e2e)', () => {
     it('returns 200 with slots including single-digit hour padding (formatHHmm branch)', async () => {
       const start = new Date('2026-05-01T08:05:00Z');
       const end = new Date('2026-05-01T10:15:00Z');
-      mockPrisma.branch.findFirst.mockResolvedValue({ id: 'resolved-branch-id', isMain: true });
+      mockGetMainBranch.execute.mockResolvedValue({ id: 'resolved-branch-id', isMain: true });
       mockCheckAvailability.execute.mockResolvedValue([{ startTime: start, endTime: end }]);
 
       const res = await request(app.getHttpServer())

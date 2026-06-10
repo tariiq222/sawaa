@@ -8,6 +8,7 @@ import { ListServicesHandler } from '../../modules/org-experience/services/list-
 import { GetServiceHandler } from '../../modules/org-experience/services/get-service.handler';
 import { ArchiveServiceHandler } from '../../modules/org-experience/services/archive-service.handler';
 import { RestoreServiceHandler } from '../../modules/org-experience/services/restore-service.handler';
+import { GetDurationOptionsHandler } from '../../modules/org-experience/services/get-duration-options.handler';
 import { SetDurationOptionsHandler } from '../../modules/org-experience/services/set-duration-options.handler';
 import { SetServiceBookingConfigsHandler } from '../../modules/org-experience/services/set-service-booking-configs.handler';
 import { GetServiceBookingConfigsHandler } from '../../modules/org-experience/services/get-service-booking-configs.handler';
@@ -32,7 +33,6 @@ import { UpdateBundleHandler } from '../../modules/org-experience/bundles/update
 import { ListBundlesHandler } from '../../modules/org-experience/bundles/list-bundles.handler';
 import { GetBundleHandler } from '../../modules/org-experience/bundles/get-bundle.handler';
 import { ArchiveBundleHandler } from '../../modules/org-experience/bundles/archive-bundle.handler';
-import { PrismaService } from '../../infrastructure/database';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
@@ -62,13 +62,13 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
   const mockUpsertOrgSettings = { execute: jest.fn() };
   const mockGetBookingSettings = { execute: jest.fn() };
   const mockUpsertBookingSettings = { execute: jest.fn() };
+  const mockGetDurationOptions = { execute: jest.fn() };
   const mockSetDurationOptions = { execute: jest.fn() };
   const mockCreateBundle = { execute: jest.fn() };
   const mockUpdateBundle = { execute: jest.fn() };
   const mockListBundles = { execute: jest.fn() };
   const mockGetBundle = { execute: jest.fn() };
   const mockArchiveBundle = { execute: jest.fn() };
-  const mockPrisma = { serviceDurationOption: { findMany: jest.fn() } };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -98,13 +98,13 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
         { provide: UpsertOrgSettingsHandler, useValue: mockUpsertOrgSettings },
         { provide: GetBookingSettingsHandler, useValue: mockGetBookingSettings },
         { provide: UpsertBookingSettingsHandler, useValue: mockUpsertBookingSettings },
+        { provide: GetDurationOptionsHandler, useValue: mockGetDurationOptions },
         { provide: SetDurationOptionsHandler, useValue: mockSetDurationOptions },
         { provide: CreateBundleHandler, useValue: mockCreateBundle },
         { provide: UpdateBundleHandler, useValue: mockUpdateBundle },
         { provide: ListBundlesHandler, useValue: mockListBundles },
         { provide: GetBundleHandler, useValue: mockGetBundle },
         { provide: ArchiveBundleHandler, useValue: mockArchiveBundle },
-        { provide: PrismaService, useValue: mockPrisma },
       ],
     })
       .overrideGuard(JwtGuard)
@@ -256,6 +256,29 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
         .delete(`/dashboard/organization/services/${uuid(1)}`)
         .set('Authorization', 'Bearer fake-jwt')
         .expect(204);
+    });
+  });
+
+  describe('GET /dashboard/organization/services/:serviceId/duration-options', () => {
+    it('returns 200 and forwards serviceId to the handler', async () => {
+      const options = [{ id: uuid(3), serviceId: uuid(1), durationMins: 30, sortOrder: 0 }];
+      mockGetDurationOptions.execute.mockResolvedValue(options);
+
+      const res = await request(app.getHttpServer())
+        .get(`/dashboard/organization/services/${uuid(1)}/duration-options`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+
+      expect(mockGetDurationOptions.execute).toHaveBeenCalledWith({ serviceId: uuid(1) });
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].id).toBe(uuid(3));
+    });
+
+    it('returns 400 for invalid UUID', async () => {
+      return request(app.getHttpServer())
+        .get('/dashboard/organization/services/not-a-uuid/duration-options')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(400);
     });
   });
 

@@ -7,6 +7,7 @@ import { MessagingModule } from '../../infrastructure/messaging.module';
 import { BookingsModule } from '../bookings/bookings.module';
 import { IdentityModule } from '../identity/identity.module';
 import { OrgExperienceModule } from '../org-experience/org-experience.module';
+import { OrgConfigModule } from '../org-config/org-config.module';
 import { UploadAvatarHandler } from './employees/upload-avatar/upload-avatar.handler';
 import { CreateClientHandler } from './clients/create-client.handler';
 import { UpdateClientHandler } from './clients/update-client.handler';
@@ -55,7 +56,7 @@ const handlers = [
 ];
 
 @Module({
-  imports: [DatabaseModule, MediaModule, MessagingModule, MulterModule.register({ storage: memoryStorage(), limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 } }), forwardRef(() => BookingsModule), forwardRef(() => IdentityModule), OrgExperienceModule],
+  imports: [DatabaseModule, MediaModule, MessagingModule, MulterModule.register({ storage: memoryStorage(), limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 } }), forwardRef(() => BookingsModule), forwardRef(() => IdentityModule), OrgExperienceModule, OrgConfigModule],
   controllers: [DashboardPeopleController],
   providers: [...handlers],
   exports: [...handlers],

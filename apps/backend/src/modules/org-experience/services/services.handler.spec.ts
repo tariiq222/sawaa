@@ -465,6 +465,7 @@ describe('SetDurationOptionsHandler', () => {
 describe('SetEmployeeServiceOptionsHandler', () => {
   const buildEsoPrisma = () => {
     const p = {
+      employeeService: { findUnique: jest.fn().mockResolvedValue({ id: 'es-1' }) },
       serviceDurationOption: { findMany: jest.fn().mockResolvedValue([{ id: 'opt-1' }]) },
       employeeServiceOption: {
         upsert: jest.fn().mockResolvedValue({ id: 'eso-1' }),
@@ -479,14 +480,24 @@ describe('SetEmployeeServiceOptionsHandler', () => {
   it('upserts employee service options', async () => {
     const prisma = buildEsoPrisma();
     const handler = new SetEmployeeServiceOptionsHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
-    await handler.execute({ employeeServiceId: 'es-1', options: [{ durationOptionId: 'opt-1', priceOverride: 300 }] });
+    await handler.execute({ employeeId: 'emp-1', serviceId: 'svc-1', options: [{ durationOptionId: 'opt-1', priceOverride: 300 }] });
+    expect(prisma.employeeService.findUnique).toHaveBeenCalledWith({
+      where: { employeeId_serviceId: { employeeId: 'emp-1', serviceId: 'svc-1' } },
+    });
     // Handler now uses rlsTransaction.withTransaction instead of prisma.$transaction
+  });
+
+  it('throws NotFoundException when the employee-service assignment is missing', async () => {
+    const prisma = buildEsoPrisma();
+    prisma.employeeService.findUnique = jest.fn().mockResolvedValue(null);
+    const handler = new SetEmployeeServiceOptionsHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
+    await expect(handler.execute({ employeeId: 'emp-1', serviceId: 'svc-1', options: [{ durationOptionId: 'opt-1' }] })).rejects.toThrow('Employee-service assignment not found');
   });
 
   it('throws NotFoundException when durationOptionId not found', async () => {
     const prisma = buildEsoPrisma();
     prisma.serviceDurationOption.findMany = jest.fn().mockResolvedValue([]);
     const handler = new SetEmployeeServiceOptionsHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never);
-    await expect(handler.execute({ employeeServiceId: 'es-1', options: [{ durationOptionId: 'bad-opt' }] })).rejects.toThrow('not found');
+    await expect(handler.execute({ employeeId: 'emp-1', serviceId: 'svc-1', options: [{ durationOptionId: 'bad-opt' }] })).rejects.toThrow('not found');
   });
 });

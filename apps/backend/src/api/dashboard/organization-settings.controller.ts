@@ -7,7 +7,6 @@ import {
   ApiOkResponse, ApiCreatedResponse, ApiNoContentResponse, ApiResponse,
 } from '@nestjs/swagger';
 import { ApiStandardResponses } from '../../common/swagger';
-import { PrismaService } from '../../infrastructure/database';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
 import { CreateServiceHandler } from '../../modules/org-experience/services/create-service.handler';
@@ -19,6 +18,7 @@ import { ListServicesDto } from '../../modules/org-experience/services/list-serv
 import { GetServiceHandler } from '../../modules/org-experience/services/get-service.handler';
 import { ArchiveServiceHandler } from '../../modules/org-experience/services/archive-service.handler';
 import { RestoreServiceHandler } from '../../modules/org-experience/services/restore-service.handler';
+import { GetDurationOptionsHandler } from '../../modules/org-experience/services/get-duration-options.handler';
 import { SetDurationOptionsHandler } from '../../modules/org-experience/services/set-duration-options.handler';
 import { SetDurationOptionsDto } from '../../modules/org-experience/services/set-duration-options.dto';
 import { SetServiceBookingConfigsHandler } from '../../modules/org-experience/services/set-service-booking-configs.handler';
@@ -65,7 +65,6 @@ import { ArchiveBundleHandler } from '../../modules/org-experience/bundles/archi
 @Controller('dashboard/organization')
 export class DashboardOrganizationSettingsController {
   constructor(
-    private readonly prisma: PrismaService,
     private readonly createService: CreateServiceHandler,
     private readonly updateService: UpdateServiceHandler,
     private readonly listServices: ListServicesHandler,
@@ -90,6 +89,7 @@ export class DashboardOrganizationSettingsController {
     private readonly setServiceBookingConfigs: SetServiceBookingConfigsHandler,
     private readonly getServiceBookingConfigs: GetServiceBookingConfigsHandler,
     private readonly listServiceEmployees: ListServiceEmployeesHandler,
+    private readonly getDurationOptions: GetDurationOptionsHandler,
     private readonly setDurationOptions: SetDurationOptionsHandler,
     private readonly createBundle: CreateBundleHandler,
     private readonly updateBundle: UpdateBundleHandler,
@@ -198,10 +198,7 @@ export class DashboardOrganizationSettingsController {
   @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiOkResponse({ description: 'Duration options for the service' })
   getDurationOptionsEndpoint(@Param('serviceId', ParseUUIDPipe) serviceId: string) {
-    return this.prisma.serviceDurationOption.findMany({
-      where: { serviceId },
-      orderBy: { sortOrder: 'asc' },
-    });
+    return this.getDurationOptions.execute({ serviceId });
   }
 
   @Put('services/:serviceId/duration-options')

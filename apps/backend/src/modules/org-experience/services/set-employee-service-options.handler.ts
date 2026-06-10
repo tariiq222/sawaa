@@ -4,7 +4,8 @@ import { SetEmployeeServiceOptionsDto } from './set-employee-service-options.dto
 import { normalizeDeliveryTypeInput } from './delivery-type-input.helper';
 
 export type SetEmployeeServiceOptionsCommand = SetEmployeeServiceOptionsDto & {
-  employeeServiceId: string;
+  employeeId: string;
+  serviceId: string;
 };
 
 @Injectable()
@@ -15,6 +16,12 @@ export class SetEmployeeServiceOptionsHandler {
   ) {}
 
   async execute(dto: SetEmployeeServiceOptionsCommand) {
+    const link = await this.prisma.employeeService.findUnique({
+      where: { employeeId_serviceId: { employeeId: dto.employeeId, serviceId: dto.serviceId } },
+    });
+    if (!link) throw new NotFoundException('Employee-service assignment not found');
+    const employeeServiceId = link.id;
+
     const optionIds = dto.options.map((o) => o.durationOptionId);
     const validOptions = await this.prisma.serviceDurationOption.findMany({
       where: { id: { in: optionIds } },
@@ -35,13 +42,13 @@ export class SetEmployeeServiceOptionsHandler {
           return tx.employeeServiceOption.upsert({
           where: {
             employeeServiceId_durationOptionId_deliveryType: {
-              employeeServiceId: dto.employeeServiceId,
+              employeeServiceId,
               durationOptionId: opt.durationOptionId,
               deliveryType,
             },
           },
           create: {
-            employeeServiceId: dto.employeeServiceId,
+            employeeServiceId,
             durationOptionId: opt.durationOptionId,
             deliveryType,
             priceOverride: opt.priceOverride ?? null,
@@ -59,7 +66,7 @@ export class SetEmployeeServiceOptionsHandler {
     );
 
     return this.prisma.employeeServiceOption.findMany({
-      where: { employeeServiceId: dto.employeeServiceId },
+      where: { employeeServiceId },
       include: { durationOption: true },
     });
   }

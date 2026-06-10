@@ -23,7 +23,7 @@ import { TestSmsConfigHandler } from '../../modules/comms/org-sms-config/test-sm
 import { GetOrgEmailConfigHandler } from '../../modules/comms/org-email-config/get-org-email-config.handler';
 import { UpsertOrgEmailConfigHandler } from '../../modules/comms/org-email-config/upsert-org-email-config.handler';
 import { TestEmailConfigHandler } from '../../modules/comms/org-email-config/test-email-config.handler';
-import { PrismaService } from '../../infrastructure/database';
+import { ListSmsDeliveriesHandler } from '../../modules/comms/list-sms-deliveries/list-sms-deliveries.handler';
 import { ListTenantDeliveryLogsHandler } from '../../modules/comms/list-tenant-delivery-logs/list-tenant-delivery-logs.handler';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
@@ -52,7 +52,7 @@ describe('DashboardCommsController (e2e)', () => {
   const mockGetOrgEmailConfig = { execute: jest.fn() };
   const mockUpsertOrgEmailConfig = { execute: jest.fn() };
   const mockTestEmailConfig = { execute: jest.fn() };
-  const mockPrisma = { smsDelivery: { findMany: jest.fn() } };
+  const mockListSmsDeliveries = { execute: jest.fn() };
   const mockListTenantDeliveryLogs = { execute: jest.fn() };
 
   beforeAll(async () => {
@@ -80,7 +80,7 @@ describe('DashboardCommsController (e2e)', () => {
         { provide: GetOrgEmailConfigHandler, useValue: mockGetOrgEmailConfig },
         { provide: UpsertOrgEmailConfigHandler, useValue: mockUpsertOrgEmailConfig },
         { provide: TestEmailConfigHandler, useValue: mockTestEmailConfig },
-        { provide: PrismaService, useValue: mockPrisma },
+        { provide: ListSmsDeliveriesHandler, useValue: mockListSmsDeliveries },
         { provide: ListTenantDeliveryLogsHandler, useValue: mockListTenantDeliveryLogs },
       ],
     })
@@ -341,13 +341,14 @@ describe('DashboardCommsController (e2e)', () => {
 
   describe('GET /dashboard/comms/settings/sms/deliveries', () => {
     it('returns 200 with delivery logs', async () => {
-      mockPrisma.smsDelivery.findMany.mockResolvedValue([{ id: uuid(5), status: 'DELIVERED' }]);
+      mockListSmsDeliveries.execute.mockResolvedValue({ items: [{ id: uuid(5), status: 'DELIVERED' }] });
 
       const res = await request(app.getHttpServer())
         .get('/dashboard/comms/settings/sms/deliveries')
         .set('Authorization', 'Bearer fake-jwt')
         .expect(200);
 
+      expect(mockListSmsDeliveries.execute).toHaveBeenCalledWith();
       expect(res.body.items).toHaveLength(1);
     });
   });

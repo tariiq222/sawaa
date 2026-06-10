@@ -46,7 +46,7 @@ import { UpsertOrgEmailConfigHandler } from '../../modules/comms/org-email-confi
 import { UpsertOrgEmailConfigDto } from '../../modules/comms/org-email-config/upsert-org-email-config.dto';
 import { TestEmailConfigHandler } from '../../modules/comms/org-email-config/test-email-config.handler';
 import { TestEmailConfigDto } from '../../modules/comms/org-email-config/test-email-config.dto';
-import { PrismaService } from '../../infrastructure/database';
+import { ListSmsDeliveriesHandler } from '../../modules/comms/list-sms-deliveries/list-sms-deliveries.handler';
 import { ListTenantDeliveryLogsHandler } from '../../modules/comms/list-tenant-delivery-logs/list-tenant-delivery-logs.handler';
 import { ListTenantDeliveryLogsDto } from '../../modules/comms/list-tenant-delivery-logs/list-tenant-delivery-logs.dto';
 
@@ -78,7 +78,7 @@ export class DashboardCommsController {
     private readonly getOrgEmailConfig: GetOrgEmailConfigHandler,
     private readonly upsertOrgEmailConfig: UpsertOrgEmailConfigHandler,
     private readonly testEmailConfig: TestEmailConfigHandler,
-    private readonly prisma: PrismaService,
+    private readonly listSmsDeliveries: ListSmsDeliveriesHandler,
     private readonly listTenantDeliveryLogs: ListTenantDeliveryLogsHandler,
   ) {}
 
@@ -139,24 +139,8 @@ export class DashboardCommsController {
   @ApiOkResponse({ description: 'Recent SmsDelivery rows (owner-scoped)' })
   @CheckPermissions({ action: 'read', subject: 'Setting' })
   @Get('settings/sms/deliveries')
-  async listSmsDeliveriesEndpoint() {
-    const rows = await this.prisma.smsDelivery.findMany({
-      where: {},
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-      select: {
-        id: true,
-        provider: true,
-        toPhone: true,
-        status: true,
-        providerMessageId: true,
-        errorMessage: true,
-        sentAt: true,
-        deliveredAt: true,
-        createdAt: true,
-      },
-    });
-    return { items: rows };
+  listSmsDeliveriesEndpoint() {
+    return this.listSmsDeliveries.execute();
   }
 
   // ── Contact Messages ───────────────────────────────────────────────────────

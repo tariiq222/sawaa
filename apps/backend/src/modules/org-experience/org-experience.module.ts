@@ -9,6 +9,7 @@ import { GetServiceHandler } from './services/get-service.handler';
 import { ArchiveServiceHandler } from './services/archive-service.handler';
 import { RestoreServiceHandler } from './services/restore-service.handler';
 import { PriceResolverService } from './services/price-resolver.service';
+import { GetDurationOptionsHandler } from './services/get-duration-options.handler';
 import { SetDurationOptionsHandler } from './services/set-duration-options.handler';
 import { SetEmployeeServiceOptionsHandler } from './services/set-employee-service-options.handler';
 import { SetServiceBookingConfigsHandler } from './services/set-service-booking-configs.handler';
@@ -47,7 +48,7 @@ import { DeleteDiscountReasonHandler } from './discount-reasons/delete-discount-
 const serviceHandlers = [
   CreateServiceHandler, UpdateServiceHandler, ListServicesHandler, GetServiceHandler, ArchiveServiceHandler,
   RestoreServiceHandler,
-  PriceResolverService, SetDurationOptionsHandler, SetEmployeeServiceOptionsHandler,
+  PriceResolverService, GetDurationOptionsHandler, SetDurationOptionsHandler, SetEmployeeServiceOptionsHandler,
   SetServiceBookingConfigsHandler, GetServiceBookingConfigsHandler,
   ListServiceEmployeesHandler,
 ];
