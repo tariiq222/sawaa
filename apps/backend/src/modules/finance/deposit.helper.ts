@@ -1,9 +1,13 @@
 import { BadRequestException } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 
 /**
  * Minimal Prisma-like surface the deposit helper needs. Accepting this narrow
  * shape (rather than the full PrismaService) lets the same logic run against a
  * `tx` transaction client, the CLS-scoped prisma proxy, or a test double.
+ *
+ * `depositAmount` is a Decimal(12,2) column of whole halalas; the real client
+ * yields Prisma.Decimal while test doubles may supply a plain number/string.
  */
 export interface DepositPrismaClient {
   booking: {
@@ -16,7 +20,10 @@ export interface DepositPrismaClient {
     findFirst(args: {
       where: { id: string };
       select?: Record<string, unknown>;
-    }): Promise<{ depositEnabled: boolean; depositAmount: unknown } | null>;
+    }): Promise<{
+      depositEnabled: boolean;
+      depositAmount: Prisma.Decimal | number | string | null;
+    } | null>;
   };
 }
 
@@ -61,11 +68,13 @@ export async function resolveInvoiceDeposit(
   }
 
   // depositAmount is a Decimal(12,2) of integer halalas — coerce via toString
-  // so a Prisma.Decimal, string, or number all normalize correctly.
+  // so a Prisma.Decimal, string, or number all normalize correctly. Kept as a
+  // tolerant Number() coercion (not decimalToHalalas) on purpose: a garbage
+  // value must degrade to "no deposit", never block a payment by throwing.
   const amount =
     service.depositAmount == null
       ? NaN
-      : Math.round(Number((service.depositAmount as { toString(): string }).toString()));
+      : Math.round(Number(service.depositAmount.toString()));
 
   if (!Number.isFinite(amount) || amount <= 0) {
     return { enabled: false, depositAmount: null };

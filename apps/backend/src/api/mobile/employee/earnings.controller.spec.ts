@@ -6,6 +6,7 @@ import { MobileEmployeeEarningsController } from './earnings.controller';
 import { PrismaService } from '../../../infrastructure/database';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
 import { CaslGuard } from '../../../common/guards/casl.guard';
+import { GetEmployeeEarningsHandler } from '../../../modules/finance/get-employee-earnings/get-employee-earnings.handler';
 
 describe('MobileEmployeeEarningsController (e2e)', () => {
   let app: INestApplication;
@@ -28,7 +29,10 @@ describe('MobileEmployeeEarningsController (e2e)', () => {
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [MobileEmployeeEarningsController],
-      providers: [{ provide: PrismaService, useValue: mockPrisma }],
+      providers: [
+        { provide: PrismaService, useValue: mockPrisma },
+        GetEmployeeEarningsHandler,
+      ],
     })
       .overrideGuard(JwtGuard)
       .useValue({

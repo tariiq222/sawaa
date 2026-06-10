@@ -257,6 +257,99 @@ describe('ProcessPaymentHandler', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
+  describe('SAR-vs-halalas tripwire (exact integer match)', () => {
+    const buildTripwireTx = (total: number, paidAfter: number) =>
+      buildTx({
+        invoice: {
+          findFirst: jest.fn().mockResolvedValue({ ...mockInvoice, total }),
+          update: jest.fn(),
+        },
+        payment: {
+          findFirst: jest.fn().mockResolvedValue(mockPayment),
+          create: jest.fn().mockResolvedValue(mockPayment),
+          aggregate: jest
+            .fn()
+            .mockResolvedValueOnce({ _sum: { amount: 0 } })
+            .mockResolvedValueOnce({ _sum: { amount: paidAfter } }),
+        },
+      });
+
+    it('accepts a legitimate small partial payment that the old ±1% band false-positived on', async () => {
+      // Invoice 1,000,000 halalas (10,000 SAR); partial payment 9,950 halalas
+      // (99.50 SAR). Old float band: |995000 − 1000000| / 1000000 = 0.005 < 0.01
+      // → rejected a perfectly valid payment. Exact match: 995000 ≠ 1000000 → accepted.
+      const tx = buildTripwireTx(1_000_000, 9_950);
+      const prisma = buildPrisma(tx);
+      const handler = new ProcessPaymentHandler(
+        prisma as never,
+        { withTransaction: jest.fn((fn: any) => fn(tx)) } as never,
+        buildEventBus() as never,
+      );
+
+      await handler.execute({ invoiceId: 'inv-1', amount: 9_950, method: PaymentMethod.CASH });
+
+      expect(tx.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ amount: 9_950 }) }),
+      );
+      expect(tx.invoice.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: InvoiceStatus.PARTIALLY_PAID }),
+        }),
+      );
+    });
+
+    it('accepts a near-total/100 partial payment the old band rejected (invoice 15000, amount 149)', async () => {
+      // Old band: |14900 − 15000| / 15000 ≈ 0.0067 < 0.01 → false positive.
+      // Exact match: 14900 ≠ 15000 → accepted.
+      const tx = buildTripwireTx(15_000, 149);
+      const prisma = buildPrisma(tx);
+      const handler = new ProcessPaymentHandler(
+        prisma as never,
+        { withTransaction: jest.fn((fn: any) => fn(tx)) } as never,
+        buildEventBus() as never,
+      );
+
+      await handler.execute({ invoiceId: 'inv-1', amount: 149, method: PaymentMethod.CASH });
+
+      expect(tx.payment.create).toHaveBeenCalled();
+    });
+
+    it('rejects SAR-typed amount on a tiny invoice via exact match (invoice 500, amount 5)', async () => {
+      // 5 SAR invoice: caller sends 5 (SAR) instead of 500 (halalas).
+      // 5 × 100 === 500 — unmistakable SAR signature, rejected.
+      const tx = buildTripwireTx(500, 0);
+      const prisma = buildPrisma(tx);
+      const handler = new ProcessPaymentHandler(
+        prisma as never,
+        { withTransaction: jest.fn((fn: any) => fn(tx)) } as never,
+        buildEventBus() as never,
+      );
+
+      await expect(
+        handler.execute({ invoiceId: 'inv-1', amount: 5, method: PaymentMethod.CASH }),
+      ).rejects.toThrow('Payment amount appears to be in SAR');
+      expect(tx.payment.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects when amount × 100 equals the invoice total exactly (invoice 10000, amount 100)', async () => {
+      // An amount of exactly total/100 is indistinguishable from SAR-unit
+      // confusion — this is the one partial-payment shape the tripwire still
+      // (intentionally) blocks. The operator must use a different split.
+      const tx = buildTripwireTx(10_000, 0);
+      const prisma = buildPrisma(tx);
+      const handler = new ProcessPaymentHandler(
+        prisma as never,
+        { withTransaction: jest.fn((fn: any) => fn(tx)) } as never,
+        buildEventBus() as never,
+      );
+
+      await expect(
+        handler.execute({ invoiceId: 'inv-1', amount: 100, method: PaymentMethod.CASH }),
+      ).rejects.toThrow('Payment amount appears to be in SAR');
+      expect(tx.payment.create).not.toHaveBeenCalled();
+    });
+  });
+
   it.each([PaymentMethod.MADA, PaymentMethod.TABBY])(
     'accepts manual method %s and records the payment',
     async (method) => {

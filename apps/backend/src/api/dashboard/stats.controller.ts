@@ -48,7 +48,7 @@ export class DashboardStatsController {
   ) {
     return this.getStats.execute({
       userId: user.sub,
-      role: user.membershipRole ?? null,
+      role: user.role ?? null,
       from: dto.from,
       to: dto.to,
     });
@@ -77,7 +77,7 @@ export class DashboardStatsController {
     @CurrentUser() user: JwtUser,
     @Query() dto: GetTopPerformersDto,
   ) {
-    if (user.membershipRole === 'ACCOUNTANT') {
+    if (user.role === 'ACCOUNTANT') {
       throw new ForbiddenException('Performance metrics are not available to this role');
     }
     return this.getTopPerformers.execute({ period: dto.period ?? 'month' });

@@ -11,6 +11,24 @@ export const toHalalas = (d: Prisma.Decimal | string | number): Prisma.Decimal =
   new Prisma.Decimal(d.toString()).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
 
 /**
+ * Convert a DB-sourced money value (Decimal(12,2) column storing whole
+ * halalas) to a plain integer `number` at the read boundary.
+ *
+ * Use this instead of scattering `Number(...)` casts wherever a Prisma-selected
+ * money field crosses into JS arithmetic. Math.round absorbs any fractional
+ * remnant; the safe-integer assert catches corrupt or overflowing values
+ * before they can feed money math. Decimal(12,2) maxes out at ~10^10, well
+ * inside Number.MAX_SAFE_INTEGER, so the assert only fires on garbage input.
+ */
+export function decimalToHalalas(d: Prisma.Decimal | string | number): number {
+  const n = Math.round(Number(d.toString()));
+  if (!Number.isSafeInteger(n)) {
+    throw new Error(`Money value "${d.toString()}" is not a safe integer halala amount`);
+  }
+  return n;
+}
+
+/**
  * Compute VAT amount and gross total from a subtotal (net, already in halalas).
  *
  * Algorithm:

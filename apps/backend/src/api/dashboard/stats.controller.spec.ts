@@ -13,14 +13,12 @@ describe('DashboardStatsController (e2e)', () => {
   const mockGetStats = { execute: jest.fn() };
   const mockGetTopPerformers = { execute: jest.fn() };
 
-  const buildUser = (role = 'ADMIN', membershipRole?: string) => ({
+  const buildUser = (role = 'ADMIN') => ({
     sub: 'user-1',
     id: 'user-1',
     email: 'admin@example.com',
     role,
-    membershipRole: membershipRole ?? role,
     isSuperAdmin: false,
-    organizationId: '00000000-0000-0000-0000-000000000001',
   });
 
   const buildApp = async (user: any) => {
@@ -119,7 +117,7 @@ describe('DashboardStatsController (e2e)', () => {
     });
 
     it('returns 403 for ACCOUNTANT role', async () => {
-      const accountantApp = await buildApp(buildUser('ADMIN', 'ACCOUNTANT'));
+      const accountantApp = await buildApp(buildUser('ACCOUNTANT'));
 
       await request(accountantApp.getHttpServer())
         .get('/dashboard/top-performers')

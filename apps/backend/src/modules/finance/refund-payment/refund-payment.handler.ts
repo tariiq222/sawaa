@@ -7,15 +7,23 @@ import { RefundCompletedEvent } from '../events/refund-completed.event';
 import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
 import { assertValidTransition } from '../payment-state-machine';
 import { computeRefundAccounting } from './refund-vat.helper';
+import { decimalToHalalas } from '../money.helper';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
+/**
+ * Money columns are Decimal(12,2) in Postgres holding whole halalas. Prisma
+ * surfaces them as Prisma.Decimal; we convert to integer `number` exactly once
+ * at the read boundary via decimalToHalalas() so everything downstream is
+ * plain integer-halala arithmetic.
+ */
 interface CreateRefundRequestInTxResult {
   refundRequestId: string;
   idempotencyKey: string;
   payment: {
     id: string;
     gatewayRef: string;
-    amount: unknown;
+    /** integer halalas (converted from Decimal at the read boundary) */
+    amount: number;
     invoice: {
       id: string;
       bookingId: string | null;
@@ -63,14 +71,17 @@ export class RefundPaymentHandler {
   async getRefundRequest(query: { id: string }): Promise<{
     id: string;
     paymentId: string;
-    amount: unknown;
+    /** integer halalas */
+    amount: number;
     status: string;
     gatewayRef: string | null;
   } | null> {
-    return this.prisma.refundRequest.findUnique({
+    const row = await this.prisma.refundRequest.findUnique({
       where: query,
       select: { id: true, paymentId: true, amount: true, status: true, gatewayRef: true },
-    }) as Promise<{ id: string; paymentId: string; amount: unknown; status: string; gatewayRef: string | null; } | null>;
+    });
+    if (!row) return null;
+    return { ...row, amount: decimalToHalalas(row.amount) };
   }
 
   /**
@@ -115,11 +126,12 @@ export class RefundPaymentHandler {
         where: { id: refundReq.invoiceId },
         select: { total: true, vatAmt: true, refundedAmount: true },
       });
+      const refundAmount = decimalToHalalas(refundReq.amount);
       const accounting = computeRefundAccounting({
         invoiceTotal: currentInvoice.total,
         invoiceVatAmt: currentInvoice.vatAmt,
         alreadyRefundedAmount: currentInvoice.refundedAmount,
-        thisRefundAmount: Number(refundReq.amount),
+        thisRefundAmount: refundAmount,
       });
       // Mirror the invoice's REFUNDED / PARTIALLY_REFUNDED outcome onto the
       // payment so a payment with an outstanding balance can be refunded again.
@@ -132,7 +144,7 @@ export class RefundPaymentHandler {
         data: {
           status: paymentStatus,
           failureReason: `Booking cancellation refund (${idempotencyKey})`,
-          refundedAmount: { increment: Number(refundReq.amount) },
+          refundedAmount: { increment: refundAmount },
         },
       });
       await tx.invoice.update({
@@ -168,8 +180,8 @@ export class RefundPaymentHandler {
         id: string;
         status: string;
         gatewayRef: string | null;
-        amount: unknown;
-        refundedAmount: unknown;
+        amount: Prisma.Decimal;
+        refundedAmount: Prisma.Decimal | null;
         invoiceId: string;
       }>
     >`SELECT id, status, "gatewayRef", amount, "refundedAmount", "invoiceId"
@@ -210,8 +222,8 @@ export class RefundPaymentHandler {
     // instead of the full paid amount, clamped to the outstanding balance so
     // we never over-refund. Math.round guards against any fractional halala
     // sneaking in from the caller's percent math.
-    const fullAmount = Number(row.amount);
-    const outstanding = fullAmount - Number(row.refundedAmount ?? 0);
+    const fullAmount = decimalToHalalas(row.amount);
+    const outstanding = fullAmount - decimalToHalalas(row.refundedAmount ?? 0);
     const requestedAmount = cmd.amount === undefined ? fullAmount : Math.round(cmd.amount);
     if (requestedAmount <= 0 || requestedAmount > outstanding) {
       throw new BadRequestException(
@@ -249,7 +261,7 @@ export class RefundPaymentHandler {
       payment: {
         id: row.id,
         gatewayRef: row.gatewayRef,
-        amount: row.amount,
+        amount: fullAmount,
         invoice,
       },
     };
@@ -280,9 +292,12 @@ export class RefundPaymentHandler {
       select: { id: true, gatewayRef: true },
     });
 
+    // Decimal → integer halalas, converted once at the read boundary.
+    const refundAmount = decimalToHalalas(refundReq.amount);
+
     const moyasarRefund = await this.moyasar.createRefund(DEFAULT_ORG_ID, {
       paymentId: payment.gatewayRef ?? '',
-      amount: Math.round(Number(refundReq.amount)), // already halalas
+      amount: refundAmount, // already halalas
       idempotencyKey: cmd.idempotencyKey,
     });
 
@@ -303,7 +318,7 @@ export class RefundPaymentHandler {
         invoiceTotal: currentInvoice.total,
         invoiceVatAmt: currentInvoice.vatAmt,
         alreadyRefundedAmount: currentInvoice.refundedAmount,
-        thisRefundAmount: Number(refundReq.amount),
+        thisRefundAmount: refundAmount,
       });
       const paymentStatus =
         accounting.newInvoiceStatus === 'REFUNDED'
@@ -314,7 +329,7 @@ export class RefundPaymentHandler {
         data: {
           status: paymentStatus,
           failureReason: `Booking cancellation refund (${cmd.idempotencyKey})`,
-          refundedAmount: { increment: Number(refundReq.amount) },
+          refundedAmount: { increment: refundAmount },
         },
       });
       await tx.invoice.update({
@@ -338,7 +353,7 @@ export class RefundPaymentHandler {
       invoiceId: refundReq.invoiceId,
       paymentId: refundReq.paymentId,
       bookingId: invoice?.bookingId ?? '',
-      amount: Number(refundReq.amount),
+      amount: refundAmount,
       currency: invoice?.currency ?? '',
     });
     await this.eventBus
@@ -358,8 +373,8 @@ export class RefundPaymentHandler {
             id: string;
             status: string;
             gatewayRef: string | null;
-            amount: unknown;
-            refundedAmount: unknown;
+            amount: Prisma.Decimal;
+            refundedAmount: Prisma.Decimal | null;
             invoiceId: string;
           }>
         >`SELECT id, status, "gatewayRef", amount, "refundedAmount", "invoiceId"
@@ -391,7 +406,8 @@ export class RefundPaymentHandler {
           id: row.id,
           status: row.status as PaymentStatus,
           gatewayRef: row.gatewayRef,
-          amount: row.amount,
+          // Decimal → integer halalas, converted once at the read boundary.
+          amount: decimalToHalalas(row.amount),
           invoice,
         };
 
@@ -406,12 +422,12 @@ export class RefundPaymentHandler {
           throw new BadRequestException('Payment refund is already processing');
         }
 
-        const refAmt = cmd.amount ?? Number(lockedPayment.amount);
+        const refAmt = cmd.amount ?? lockedPayment.amount;
         // P1 (money-safety): clamp the refund to the payment's outstanding
         // (un-refunded) balance. Without this a caller could over-refund —
         // refund more than was ever paid, or stack partial refunds past the
         // total. `refundedAmount` is read under the same FOR UPDATE lock.
-        const outstanding = Number(lockedPayment.amount) - Number(row.refundedAmount ?? 0);
+        const outstanding = lockedPayment.amount - decimalToHalalas(row.refundedAmount ?? 0);
         if (refAmt <= 0 || refAmt > outstanding) {
           throw new BadRequestException(
             `Refund amount ${refAmt} exceeds the refundable balance of ${outstanding} halalas`,

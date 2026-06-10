@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { PaymentStatus, RefundStatus } from '@prisma/client';
+import { PaymentStatus, Prisma, RefundStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { RefundCompletedEvent } from '../events/refund-completed.event';
@@ -118,6 +118,23 @@ describe('RefundPaymentHandler', () => {
       const result = await handler.getRefundRequest({ id: 'rr-1' });
 
       expect(result).toBeNull();
+    });
+
+    it('converts a Prisma.Decimal amount to an integer number at the boundary', async () => {
+      // The Decimal(12,2) column surfaces as Prisma.Decimal; the handler must
+      // hand back a plain integer-halala number, not a Decimal object.
+      prisma.refundRequest.findUnique.mockResolvedValue({
+        id: 'rr-1',
+        paymentId: 'pay-1',
+        amount: new Prisma.Decimal('12345'),
+        status: RefundStatus.PROCESSING,
+        gatewayRef: null,
+      });
+
+      const result = await handler.getRefundRequest({ id: 'rr-1' });
+
+      expect(result?.amount).toBe(12345);
+      expect(typeof result?.amount).toBe('number');
     });
   });
 
@@ -276,6 +293,34 @@ describe('RefundPaymentHandler', () => {
         }),
       );
     });
+
+    it('converts Decimal amount/refundedAmount from the raw row to integer halalas', async () => {
+      // $queryRaw surfaces the Decimal(12,2) columns as Prisma.Decimal — the
+      // handler must convert once at the boundary and return plain numbers.
+      prisma.$queryRaw.mockResolvedValue(
+        makePaymentRow({
+          amount: new Prisma.Decimal('10000') as never,
+          refundedAmount: new Prisma.Decimal('4000') as never,
+        }),
+      );
+      prisma.refundRequest.findFirst.mockResolvedValue(null);
+      prisma.invoice.findUniqueOrThrow.mockResolvedValue(makeInvoice());
+      prisma.refundRequest.create.mockResolvedValue({ id: 'rr-new' });
+
+      const result = await handler.createRefundRequestInTx(prisma as any, {
+        paymentId: 'pay-1',
+        reason: 'partial after decimal',
+        amount: 6000, // exactly the outstanding balance (10000 − 4000)
+      });
+
+      expect(result.payment.amount).toBe(10000);
+      expect(typeof result.payment.amount).toBe('number');
+      expect(prisma.refundRequest.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ amount: 6000 }),
+        }),
+      );
+    });
   });
 
   // ── finalizeRefundFromCancellation ────────────────────────────────────────
@@ -331,6 +376,38 @@ describe('RefundPaymentHandler', () => {
             paymentId: 'pay-1',
             amount: 100,
           }),
+        }),
+      );
+    });
+
+    it('sends an integer halala amount to Moyasar when the DB yields a Decimal', async () => {
+      prisma.refundRequest.findUniqueOrThrow.mockResolvedValue({
+        id: 'rr-1',
+        paymentId: 'pay-1',
+        amount: new Prisma.Decimal('15055'),
+        invoiceId: 'inv-1',
+        status: RefundStatus.PROCESSING,
+      });
+      prisma.payment.findUniqueOrThrow.mockResolvedValue({ id: 'pay-1', gatewayRef: 'gateway-ref-1' });
+      moyasar.createRefund.mockResolvedValue({ id: 'moy-ref-1' });
+      prisma.refundRequest.updateMany.mockResolvedValue({ count: 1 });
+      prisma.invoice.findUniqueOrThrow.mockResolvedValue(makeInvoice({ total: 15055, vatAmt: 1964 }));
+      prisma.invoice.findUnique.mockResolvedValue(makeInvoice({ total: 15055, vatAmt: 1964 }));
+
+      await handler.finalizeRefundFromCancellation({ refundRequestId: 'rr-1', idempotencyKey: 'idemp-1' });
+
+      const params = moyasar.createRefund.mock.calls[0][1];
+      expect(params.amount).toBe(15055);
+      expect(typeof params.amount).toBe('number');
+      expect(prisma.payment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ refundedAmount: { increment: 15055 } }),
+        }),
+      );
+      expect(eventBus.publish).toHaveBeenCalledWith(
+        'finance.refund.completed',
+        expect.objectContaining({
+          payload: expect.objectContaining({ amount: 15055 }),
         }),
       );
     });

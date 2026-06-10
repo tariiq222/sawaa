@@ -10,6 +10,7 @@ import {
   assertDepositPaymentAmount,
   isDepositPayment,
 } from '../deposit.helper';
+import { decimalToHalalas } from '../money.helper';
 import { ProcessPaymentDto } from './process-payment.dto';
 
 export type ProcessPaymentCommand = ProcessPaymentDto;
@@ -41,13 +42,18 @@ export class ProcessPaymentHandler {
         );
       }
 
-      const invoiceTotal = Number(invoice.total);
-      // Detect if amount was sent in SAR instead of halalas.
-      // Example: invoice total = 15000 halalas (150 SAR). If caller sends amount = 150,
-      // then 150 * 100 = 15000 which matches the invoice total — clear indicator of SAR unit.
+      const invoiceTotal = decimalToHalalas(invoice.total);
+      // Tripwire — detect an amount sent in SAR instead of halalas.
+      // Trigger ONLY on the exact signature: amount × 100 === invoice total
+      // (e.g. total = 15000 halalas / 150 SAR and the caller sends 150).
+      // Integer-exact on purpose: the previous ±1% float band false-positived
+      // on legitimate small partial payments near total/100; exact equality
+      // strictly narrows detection and avoids float division entirely.
+      const amountScaledFromSar = dto.amount * 100;
       if (
         invoiceTotal > 0 &&
-        Math.abs(dto.amount * 100 - invoiceTotal) / invoiceTotal < 0.01
+        Number.isSafeInteger(amountScaledFromSar) &&
+        amountScaledFromSar === invoiceTotal
       ) {
         throw new BadRequestException(
           'Payment amount appears to be in SAR. Send amount in integer halalas (1 SAR = 100 halalas). For SAR 150, send amount: 15000',
