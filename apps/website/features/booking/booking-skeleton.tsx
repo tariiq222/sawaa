@@ -11,8 +11,8 @@ export function BookingSkeleton({ count = 4 }: { count?: number }) {
       <span className="sr-only">جارٍ التحميل</span>
 
       <div
-        className="h-7 w-2/5 rounded-lg sw-skel"
-        style={{ background: 'color-mix(in srgb, var(--sw-secondary-700) 7%, transparent)' }}
+        className="h-8 w-2/5 rounded-lg sw-skel"
+        style={{ background: 'color-mix(in srgb, var(--sw-secondary-700) 8%, transparent)' }}
       />
       <div
         className="h-4 w-3/4 max-w-[44ch] mb-3 rounded-md sw-skel"
@@ -25,14 +25,14 @@ export function BookingSkeleton({ count = 4 }: { count?: number }) {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="flex items-center gap-4 p-4 sm:p-5 rounded-2xl"
+          className="flex items-center gap-4 p-4 sm:p-5 rounded-[1.25rem] bg-white"
           style={{
-            background: 'var(--sw-cream)',
-            border: '1px solid color-mix(in srgb, var(--sw-secondary-700) 8%, transparent)',
+            border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 8%, transparent)',
+            boxShadow: 'var(--sw-shadow-xs)',
           }}
         >
           <div
-            className="h-11 w-11 shrink-0 rounded-xl sw-skel"
+            className="h-11 w-11 shrink-0 rounded-full sw-skel"
             style={{
               background: 'color-mix(in srgb, var(--sw-secondary-700) 7%, transparent)',
               animationDelay: `${i * 80}ms`,
@@ -54,6 +54,13 @@ export function BookingSkeleton({ count = 4 }: { count?: number }) {
               }}
             />
           </div>
+          <div
+            className="h-6 w-14 shrink-0 rounded-md sw-skel"
+            style={{
+              background: 'color-mix(in srgb, var(--sw-secondary-700) 6%, transparent)',
+              animationDelay: `${i * 80 + 120}ms`,
+            }}
+          />
         </div>
       ))}
 

@@ -22,7 +22,9 @@ import {
 } from '@/features/booking/booking.api';
 import { PaymentRedirect } from '@/features/payment/payment-redirect';
 import { BookingSkeleton } from '@/features/booking/booking-skeleton';
-import { useT } from '@/features/locale/locale-provider';
+import { SummaryRail, SummaryChips, type SummaryScreen } from '@/features/booking/summary-rail';
+import { useT, useLocale } from '@/features/locale/locale-provider';
+import '@/themes/sawaa/theme.css';
 
 function todayLocalIso(): string {
   const d = new Date();
@@ -154,19 +156,18 @@ function IconButton({
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}
-      className="grid place-items-center h-10 w-10 rounded-full cursor-pointer transition-all"
+      className="grid place-items-center h-10 w-10 rounded-full cursor-pointer transition-all bg-white"
       style={{
-        background: 'white',
         color: 'var(--sw-secondary-700)',
-        border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 14%, transparent)',
+        border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)',
         boxShadow: 'var(--sw-shadow-xs)',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = 'var(--sw-secondary-700)';
-        e.currentTarget.style.color = 'var(--sw-secondary-900)';
+        e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--primary) 60%, transparent)';
+        e.currentTarget.style.color = 'var(--primary-dark)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--sw-secondary-700) 14%, transparent)';
+        e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)';
         e.currentTarget.style.color = 'var(--sw-secondary-700)';
       }}
     >
@@ -176,86 +177,47 @@ function IconButton({
 }
 
 function ProgressBar({ current, labels }: { current: number; labels: string[] }) {
+  const locale = useLocale();
+  const isAr = locale === 'ar';
   const total = labels.length;
-  const startPct = total > 0 ? (0.5 / total) * 100 : 0;
-  const endPct = total > 0 ? ((current + 0.5) / total) * 100 : 0;
-  const filledPct = Math.max(0, endPct - startPct);
-  const trackPct = total > 0 ? ((total - 1) / total) * 100 : 0;
+  const counter = isAr ? `${current + 1} من ${total}` : `${current + 1} of ${total}`;
   return (
-    <nav aria-label="Booking progress" className="mb-10">
+    <nav aria-label="Booking progress" className="mb-8 flex flex-col gap-2.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <span
+          className="text-sm font-extrabold tracking-tight"
+          style={{ color: 'var(--sw-secondary-700)' }}
+        >
+          {labels[current]}
+        </span>
+        <span
+          className="text-xs font-semibold tabular-nums shrink-0"
+          style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 50%, transparent)' }}
+        >
+          {counter}
+        </span>
+      </div>
       <ol
-        className="relative grid gap-2"
-        dir="rtl"
+        className="grid gap-1.5"
         style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }}
       >
-        <div
-          aria-hidden="true"
-          className="absolute top-3.5 h-px"
-          style={{
-            background: 'color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
-            insetInlineStart: `${startPct}%`,
-            width: `${trackPct}%`,
-          }}
-        />
-        <div
-          aria-hidden="true"
-          className="absolute top-3.5 h-px transition-[width] duration-500 ease-out"
-          style={{
-            background: 'var(--primary)',
-            insetInlineStart: `${startPct}%`,
-            width: `${filledPct}%`,
-          }}
-        />
         {labels.map((label, i) => {
           const done = i < current;
           const active = i === current;
           return (
             <li
               key={`step-${i}`}
-              className="relative flex flex-col items-center gap-2 min-w-0"
               aria-current={active ? 'step' : undefined}
+              className="h-1 rounded-full transition-colors duration-300"
+              style={{
+                background: done
+                  ? 'var(--primary)'
+                  : active
+                    ? 'color-mix(in srgb, var(--primary) 45%, transparent)'
+                    : 'color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
+              }}
             >
-              <span
-                className="relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-full text-[0.6875rem] font-bold tabular-nums transition-all duration-300"
-                style={{
-                  background: done ? 'var(--primary)' : '#FFFFFF',
-                  color: done
-                    ? '#fff'
-                    : active
-                      ? 'var(--primary)'
-                      : 'color-mix(in srgb, var(--sw-secondary-700) 35%, var(--sw-neutral-400))',
-                  border: active
-                    ? '2px solid var(--primary)'
-                    : done
-                      ? '2px solid var(--primary)'
-                      : '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 18%, transparent)',
-                  boxShadow: active
-                    ? `0 4px 12px -4px color-mix(in srgb, var(--primary) 40%, transparent)`
-                    : 'none',
-                }}
-              >
-                {done ? (
-                  <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M2.5 6.5l2.5 2.5 4.5-5" />
-                  </svg>
-                ) : (
-                  i + 1
-                )}
-              </span>
-              <span
-                className={`text-[0.6875rem] sm:text-xs truncate max-w-full text-center transition-colors duration-300 ${active ? 'inline' : 'hidden sm:inline'}`}
-                style={{
-                  fontWeight: active ? 700 : 600,
-                  color: active
-                    ? 'var(--sw-secondary-900)'
-                    : done
-                      ? 'var(--sw-secondary-700)'
-                      : 'var(--sw-secondary-500)',
-                  letterSpacing: '-0.005em',
-                }}
-              >
-                {label}
-              </span>
+              <span className="sr-only">{label}</span>
             </li>
           );
         })}
@@ -266,6 +228,8 @@ function ProgressBar({ current, labels }: { current: number; labels: string[] })
 
 function BookingWizardInner() {
   const t = useT();
+  const locale = useLocale();
+  const isAr = locale === 'ar';
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectEmployeeId = searchParams.get('employeeId');
@@ -672,7 +636,11 @@ function BookingWizardInner() {
       branches.length === 0);
 
   if (redirectUrl && bookingId) {
-    return <PaymentRedirect redirectUrl={redirectUrl} bookingId={bookingId} />;
+    return (
+      <div className="theme-sawaa">
+        <PaymentRedirect redirectUrl={redirectUrl} bookingId={bookingId} />
+      </div>
+    );
   }
 
   const lockedTherapistName = lockedEmployee?.user
@@ -745,275 +713,378 @@ function BookingWizardInner() {
   // wizard screen; on the first step it exits the booking flow entirely.
   const canStepBack = true;
 
+  /**
+   * Jump back to a completed step from the live summary. Reuses the exact
+   * transitions the step-back handler performs, so the state machine stays
+   * consistent. Changing the branch restarts the funnel (services and
+   * therapists vary per branch).
+   */
+  const jumpToScreen = (screen: SummaryScreen) => {
+    if (isSubmitting) return;
+    switch (screen) {
+      case 'branch':
+        dispatch({ type: 'RESET' });
+        dispatchUi({ type: 'SET_CHOICE', choice: null });
+        dispatchUi({ type: 'OPEN_INITIAL_BRANCH_PICK' });
+        break;
+      case 'service':
+        dispatch({ type: 'RESET' });
+        dispatchUi({ type: 'SET_CHOICE', choice: null });
+        break;
+      case 'therapist':
+        if (service) dispatch({ type: 'SELECT_SERVICE', service });
+        break;
+      case 'slot':
+        if (employee) dispatch({ type: 'SELECT_EMPLOYEE', employee });
+        break;
+      default:
+        break;
+    }
+  };
+
+  const isConfirmation = state.step === WizardStep.CONFIRMATION;
+  const screenKey = nothingBookable
+    ? 'dead-end'
+    : isConfirmation
+      ? 'confirmation'
+      : currentScreen;
+  // The side summary lives next to the flow on desktop. The info step renders
+  // its own receipt, so the rail bows out there to avoid saying things twice.
+  const showSummary = !nothingBookable && !isConfirmation && currentScreen !== 'info';
+  const summaryProps = {
+    branch: effectiveBranch,
+    showBranch: hasBranchStep,
+    service,
+    choice: selectedChoice,
+    employee,
+    slot,
+    pendingDateIso: state.step === WizardStep.SLOT ? selectedDate : null,
+    activeScreen: awaitingBranch
+      ? ('branch' as const)
+      : currentScreen === 'info'
+        ? null
+        : (currentScreen as SummaryScreen),
+    vatRate,
+    onEdit: jumpToScreen,
+  };
+
   return (
-    <div className="mx-auto w-full max-w-[640px] px-4 sm:px-6 pt-6 sm:pt-8 pb-16">
-      <div className="flex items-center justify-between mb-6 sm:mb-8">
-        <div className="flex items-center gap-2">
-          <IconButton onClick={handleClose} ariaLabel="إغلاق">
-            <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M4 4l8 8M12 4l-8 8" />
-            </svg>
-          </IconButton>
-          {canStepBack && (
-            <IconButton onClick={handleStepBack} ariaLabel={t('booking.back')}>
-              {/* Arrow points to the START of the inline axis (right in RTL, left in LTR) */}
-              <svg viewBox="0 0 16 16" className="h-4 w-4 rtl:scale-x-[-1]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M10 4l-4 4 4 4" />
-                <path d="M6 8h8" />
+    <div className="theme-sawaa">
+      <div className="sw-section-mint min-h-screen">
+        <div className="mx-auto w-full max-w-[1024px] px-4 sm:px-6 pt-6 sm:pt-8 pb-16">
+          <div className="flex items-center justify-between mb-6 sm:mb-8">
+            <div className="flex items-center gap-2">
+              <IconButton onClick={handleClose} ariaLabel="إغلاق">
+                <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M4 4l8 8M12 4l-8 8" />
+                </svg>
+              </IconButton>
+              {canStepBack && (
+                <IconButton onClick={handleStepBack} ariaLabel={t('booking.back')}>
+                  {/* Arrow points to the START of the inline axis (right in RTL, left in LTR) */}
+                  <svg viewBox="0 0 16 16" className="h-4 w-4 rtl:scale-x-[-1]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M10 4l-4 4 4 4" />
+                    <path d="M6 8h8" />
+                  </svg>
+                </IconButton>
+              )}
+            </div>
+            <span
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[0.6875rem] font-bold bg-white"
+              style={{
+                color: 'color-mix(in srgb, var(--sw-secondary-700) 65%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
+                boxShadow: 'var(--sw-shadow-xs)',
+              }}
+            >
+              <svg viewBox="0 0 14 14" className="h-3 w-3" fill="none" stroke="var(--primary-dark)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="2.5" y="6" width="9" height="6" rx="1.5" />
+                <path d="M4.5 6V4.5a2.5 2.5 0 1 1 5 0V6" />
               </svg>
-            </IconButton>
-          )}
-        </div>
-        <span
-          className="text-xs font-semibold uppercase tracking-wide"
-          style={{ color: 'var(--sw-secondary-500)', letterSpacing: '0.06em' }}
-        >
-          {t('booking.summary.title')}
-        </span>
-      </div>
-
-      <ProgressBar current={stepIndex} labels={stepLabels} />
-
-      {(loadError || submitError) && (
-        <div
-          role="alert"
-          className="mb-6 flex items-start gap-3 rounded-2xl px-4 py-3 text-sm"
-          style={{
-            background: 'color-mix(in srgb, var(--destructive) 8%, var(--sw-cream))',
-            color: 'color-mix(in srgb, var(--destructive) 80%, var(--sw-secondary-900))',
-            border: '1px solid color-mix(in srgb, var(--destructive) 20%, transparent)',
-          }}
-        >
-          <svg viewBox="0 0 16 16" className="h-4 w-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-            <circle cx="8" cy="8" r="6.5" />
-            <path d="M8 5v3.5M8 10.5v.5" strokeLinecap="round" />
-          </svg>
-          <span>{loadError || submitError}</span>
-        </div>
-      )}
-
-      {/* === GLOBAL DEAD-END: nothing to book === */}
-      {nothingBookable && (
-        <div
-          className="flex flex-col items-center text-center gap-4 px-6 py-14 rounded-2xl"
-          style={{
-            background: 'color-mix(in srgb, var(--primary) 4%, var(--sw-cream))',
-            border: '1px dashed color-mix(in srgb, var(--sw-secondary-700) 14%, transparent)',
-          }}
-        >
-          <span
-            aria-hidden="true"
-            className="grid place-items-center h-14 w-14 rounded-full"
-            style={{
-              background: 'color-mix(in srgb, var(--primary) 10%, transparent)',
-              color: 'var(--primary)',
-            }}
-          >
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
-              <path d="M3.5 9.5h17M8 3v4M16 3v4" />
-            </svg>
-          </span>
-          <h2 className="text-lg font-bold" style={{ color: 'var(--sw-secondary-900)' }}>
-            {t('booking.unavailable.title')}
-          </h2>
-          <p
-            className="text-sm leading-relaxed max-w-[44ch]"
-            style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 65%, transparent)' }}
-          >
-            {t('booking.unavailable.body')}
-          </p>
-          <a
-            href="/contact"
-            className="mt-2 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-colors"
-            style={{
-              background: 'var(--primary)',
-              color: 'var(--primary-foreground)',
-              boxShadow: 'var(--sw-shadow-primary)',
-            }}
-          >
-            {t('booking.unavailable.cta')}
-            <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 -scale-x-100" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M6 4l4 4-4 4" />
-            </svg>
-          </a>
-        </div>
-      )}
-
-      {/* === BRANCH SCREEN (modal-ish, shown whenever awaitingBranch) === */}
-      {!nothingBookable && awaitingBranch && (
-        <BranchStep
-          branches={(() => {
-            const emp = pendingEmployee ?? lockedEmployee;
-            const ids = emp?.branchIds;
-            if (!ids || ids.length === 0) return branches;
-            const filtered = branches.filter((b) => ids.includes(b.id));
-            return filtered.length > 0 ? filtered : branches;
-          })()}
-          onSelect={handleBranchSelect}
-          onBack={handleBranchCancel}
-        />
-      )}
-
-      {/* === SERVICE SCREEN === */}
-      {!nothingBookable && !awaitingBranch && state.step === WizardStep.SERVICE && (
-        loadingData ? (
-          <BookingSkeleton count={4} />
-        ) : (
-          <div className="flex flex-col gap-5">
-            <ServicePicker
-              services={filteredServices}
-              categories={categories}
-              selected={null}
-              vatRate={vatRate}
-              onSelect={handleServiceSelect}
-              lockedTherapistName={entryPoint === 'therapist' ? lockedTherapistName : null}
-              onClearLockedTherapist={
-                entryPoint === 'therapist'
-                  ? () => dispatchUi({ type: 'CLEAR_LOCKED_EMPLOYEE' })
-                  : undefined
-              }
-              initialCategoryId={preselectCategoryId}
-            />
+              {isAr ? 'حجز آمن وسرّي' : 'Private & secure'}
+            </span>
           </div>
-        )
-      )}
 
-      {/* === THERAPIST SCREEN === */}
-      {!nothingBookable && !awaitingBranch && state.step === WizardStep.THERAPIST && (
-        <div className="flex flex-col gap-5">
-          {loadingData ? (
-            <BookingSkeleton count={4} />
-          ) : (
-            <TherapistPicker
-              therapists={filteredTherapists}
-              selected={null}
-              onSelect={handleTherapistSelect}
-            />
-          )}
-        </div>
-      )}
-
-      {/* === SLOT SCREEN === */}
-      {!nothingBookable && !awaitingBranch && state.step === WizardStep.SLOT && service && employee && (
-        <div className="flex flex-col gap-5">
-          <DateStrip
-            value={selectedDate}
-            onChange={(iso) => dispatchUi({ type: 'SET_DATE', date: iso })}
-            allowedDaysOfWeek={employee.availableDaysOfWeek}
-            bookableDates={bookableDates}
-          />
-          <SlotPicker
-            slots={slots}
-            selected={null}
-            onSelect={(s) => dispatch({ type: 'SELECT_SLOT', slot: s })}
-            isLoading={loadingSlots}
-          />
-        </div>
-      )}
-
-      {/* === INFO + PAYMENT (merged) === */}
-      {state.step === WizardStep.INFO_OTP && service && employee && slot && (
-        <ClientInfoStep
-          slot={slot}
-          service={service}
-          employee={employee}
-          vatRate={vatRate}
-          onBack={() => dispatch({ type: 'SELECT_EMPLOYEE', employee })}
-          onSubmitInfo={async () => {
-            dispatchUi({ type: 'SUBMIT_START' });
-            try {
-              if (!effectiveBranchId) {
-                dispatchUi({ type: 'SUBMIT_ERROR', error: t('booking.errors.missingBranch') });
-                return;
-              }
-              const booking = await createBooking({
-                serviceId: service.id,
-                employeeId: employee.id,
-                branchId: effectiveBranchId,
-                startsAt: slot.startTime,
-                durationOptionId: selectedChoice?.durationOptionId,
-                deliveryType: selectedChoice?.deliveryType,
-              });
-              if (!booking.invoiceId) {
-                dispatchUi({ type: 'SUBMIT_ERROR', error: t('common.bookingFailed') });
-                return;
-              }
-              const payment = await initPayment(booking.invoiceId);
-              dispatchUi({
-                type: 'SUBMIT_DONE',
-                bookingId: booking.id,
-                redirectUrl: payment.redirectUrl,
-              });
-            } catch (err) {
-              dispatchUi({
-                type: 'SUBMIT_ERROR',
-                error: err instanceof Error ? err.message : t('common.bookingFailed'),
-              });
+          <div
+            className={
+              showSummary
+                ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-10 lg:items-start'
+                : ''
             }
-          }}
-          isSubmitting={isSubmitting}
-        />
-      )}
-
-      {/* === CONFIRMATION === */}
-      {state.step === WizardStep.CONFIRMATION && (
-        <div className="text-center py-12 px-4 flex flex-col items-center gap-5">
-          {state.status === 'success' ? (
-            <>
-              <div
-                className="inline-flex h-16 w-16 items-center justify-center rounded-full"
-                style={{
-                  background: 'color-mix(in srgb, var(--primary) 12%, var(--sw-cream))',
-                  color: 'var(--primary)',
-                }}
-              >
-                <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M5 12.5l4.5 4.5 9.5-10" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--sw-secondary-900)' }}>
-                {t('booking.confirmed')}
-              </h2>
-              <p className="text-sm max-w-[42ch]" style={{ color: 'var(--sw-secondary-500)' }}>
-                {t('booking.confirmedDesc')}
-              </p>
-            </>
-          ) : (
-            <>
-              <div
-                className="inline-flex h-16 w-16 items-center justify-center rounded-full"
-                style={{
-                  background: 'color-mix(in srgb, var(--destructive) 10%, var(--sw-cream))',
-                  color: 'var(--destructive)',
-                }}
-              >
-                <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M7 7l10 10M17 7L7 17" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--sw-secondary-900)' }}>
-                {t('booking.paymentFailed')}
-              </h2>
-              <p className="text-sm max-w-[42ch]" style={{ color: 'var(--sw-secondary-500)' }}>
-                {t('booking.paymentFailedDesc')}
-              </p>
-            </>
-          )}
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'RESET' })}
-            className="mt-2 inline-flex items-center justify-center px-7 py-3 rounded-full text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.99] cursor-pointer"
-            style={{
-              background: 'var(--primary)',
-              color: 'var(--primary-foreground)',
-              boxShadow: 'var(--sw-shadow-primary)',
-            }}
           >
-            {state.status === 'success' ? t('booking.bookAnother') : t('booking.tryAgain')}
-          </button>
+            <div
+              className={
+                showSummary
+                  ? 'mx-auto w-full max-w-[640px] lg:mx-0 lg:max-w-none'
+                  : 'mx-auto w-full max-w-[640px]'
+              }
+            >
+              {!nothingBookable && !isConfirmation && (
+                <ProgressBar current={stepIndex} labels={stepLabels} />
+              )}
+
+              {(loadError || submitError) && (
+                <div
+                  role="alert"
+                  className="mb-6 flex items-start gap-3 rounded-2xl px-4 py-3 text-sm bg-white"
+                  style={{
+                    color: 'var(--error)',
+                    border: '1px solid color-mix(in srgb, var(--error) 25%, transparent)',
+                    boxShadow: 'var(--sw-shadow-xs)',
+                  }}
+                >
+                  <svg viewBox="0 0 16 16" className="h-4 w-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <circle cx="8" cy="8" r="6.5" />
+                    <path d="M8 5v3.5M8 10.5v.5" strokeLinecap="round" />
+                  </svg>
+                  <span className="font-medium">{loadError || submitError}</span>
+                </div>
+              )}
+
+              {showSummary && (
+                <div className="mb-5">
+                  <SummaryChips {...summaryProps} />
+                </div>
+              )}
+
+              <div key={screenKey} className="sw-step-in">
+                {/* === GLOBAL DEAD-END: nothing to book === */}
+                {nothingBookable && (
+                  <div
+                    className="flex flex-col items-center text-center gap-4 px-6 py-14 rounded-[1.25rem] bg-white"
+                    style={{
+                      border: '1px dashed color-mix(in srgb, var(--sw-secondary-700) 18%, transparent)',
+                      boxShadow: 'var(--sw-shadow-xs)',
+                    }}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="sw-pop-in grid place-items-center h-14 w-14 rounded-full"
+                      style={{
+                        background: 'color-mix(in srgb, var(--primary) 12%, transparent)',
+                        color: 'var(--primary-dark)',
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
+                        <path d="M3.5 9.5h17M8 3v4M16 3v4" />
+                      </svg>
+                    </span>
+                    <h2 className="text-lg font-extrabold" style={{ color: 'var(--sw-secondary-700)' }}>
+                      {t('booking.unavailable.title')}
+                    </h2>
+                    <p
+                      className="text-sm leading-relaxed max-w-[44ch]"
+                      style={{ color: 'var(--sw-body)' }}
+                    >
+                      {t('booking.unavailable.body')}
+                    </p>
+                    <a
+                      href="/contact"
+                      className="mt-2 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.99]"
+                      style={{
+                        background: 'var(--primary)',
+                        color: '#FFFFFF',
+                        boxShadow: 'var(--sw-shadow-primary)',
+                      }}
+                    >
+                      {t('booking.unavailable.cta')}
+                      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 -scale-x-100" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M6 4l4 4-4 4" />
+                      </svg>
+                    </a>
+                  </div>
+                )}
+
+                {/* === BRANCH SCREEN (shown whenever awaitingBranch) === */}
+                {!nothingBookable && awaitingBranch && (
+                  <BranchStep
+                    branches={(() => {
+                      const emp = pendingEmployee ?? lockedEmployee;
+                      const ids = emp?.branchIds;
+                      if (!ids || ids.length === 0) return branches;
+                      const filtered = branches.filter((b) => ids.includes(b.id));
+                      return filtered.length > 0 ? filtered : branches;
+                    })()}
+                    onSelect={handleBranchSelect}
+                    onBack={handleBranchCancel}
+                  />
+                )}
+
+                {/* === SERVICE SCREEN === */}
+                {!nothingBookable && !awaitingBranch && state.step === WizardStep.SERVICE && (
+                  loadingData ? (
+                    <BookingSkeleton count={4} />
+                  ) : (
+                    <div className="flex flex-col gap-5">
+                      <ServicePicker
+                        services={filteredServices}
+                        categories={categories}
+                        selected={null}
+                        vatRate={vatRate}
+                        onSelect={handleServiceSelect}
+                        lockedTherapistName={entryPoint === 'therapist' ? lockedTherapistName : null}
+                        onClearLockedTherapist={
+                          entryPoint === 'therapist'
+                            ? () => dispatchUi({ type: 'CLEAR_LOCKED_EMPLOYEE' })
+                            : undefined
+                        }
+                        initialCategoryId={preselectCategoryId}
+                      />
+                    </div>
+                  )
+                )}
+
+                {/* === THERAPIST SCREEN === */}
+                {!nothingBookable && !awaitingBranch && state.step === WizardStep.THERAPIST && (
+                  <div className="flex flex-col gap-5">
+                    {loadingData ? (
+                      <BookingSkeleton count={4} />
+                    ) : (
+                      <TherapistPicker
+                        therapists={filteredTherapists}
+                        selected={null}
+                        onSelect={handleTherapistSelect}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* === SLOT SCREEN === */}
+                {!nothingBookable && !awaitingBranch && state.step === WizardStep.SLOT && service && employee && (
+                  <div className="flex flex-col gap-6">
+                    <DateStrip
+                      value={selectedDate}
+                      onChange={(iso) => dispatchUi({ type: 'SET_DATE', date: iso })}
+                      allowedDaysOfWeek={employee.availableDaysOfWeek}
+                      bookableDates={bookableDates}
+                    />
+                    <SlotPicker
+                      slots={slots}
+                      selected={null}
+                      onSelect={(s) => dispatch({ type: 'SELECT_SLOT', slot: s })}
+                      isLoading={loadingSlots}
+                    />
+                  </div>
+                )}
+
+                {/* === INFO + PAYMENT (merged) === */}
+                {state.step === WizardStep.INFO_OTP && service && employee && slot && (
+                  <ClientInfoStep
+                    slot={slot}
+                    service={service}
+                    employee={employee}
+                    vatRate={vatRate}
+                    onBack={() => dispatch({ type: 'SELECT_EMPLOYEE', employee })}
+                    onSubmitInfo={async () => {
+                      dispatchUi({ type: 'SUBMIT_START' });
+                      try {
+                        if (!effectiveBranchId) {
+                          dispatchUi({ type: 'SUBMIT_ERROR', error: t('booking.errors.missingBranch') });
+                          return;
+                        }
+                        const booking = await createBooking({
+                          serviceId: service.id,
+                          employeeId: employee.id,
+                          branchId: effectiveBranchId,
+                          startsAt: slot.startTime,
+                          durationOptionId: selectedChoice?.durationOptionId,
+                          deliveryType: selectedChoice?.deliveryType,
+                        });
+                        if (!booking.invoiceId) {
+                          dispatchUi({ type: 'SUBMIT_ERROR', error: t('common.bookingFailed') });
+                          return;
+                        }
+                        const payment = await initPayment(booking.invoiceId);
+                        dispatchUi({
+                          type: 'SUBMIT_DONE',
+                          bookingId: booking.id,
+                          redirectUrl: payment.redirectUrl,
+                        });
+                      } catch (err) {
+                        dispatchUi({
+                          type: 'SUBMIT_ERROR',
+                          error: err instanceof Error ? err.message : t('common.bookingFailed'),
+                        });
+                      }
+                    }}
+                    isSubmitting={isSubmitting}
+                  />
+                )}
+
+                {/* === CONFIRMATION === */}
+                {isConfirmation && (
+                  <div className="text-center py-12 px-4 flex flex-col items-center gap-5">
+                    {state.step === WizardStep.CONFIRMATION && state.status === 'success' ? (
+                      <>
+                        <div
+                          className="sw-pop-in inline-flex h-16 w-16 items-center justify-center rounded-full"
+                          style={{
+                            background: 'color-mix(in srgb, var(--primary) 14%, #FFFFFF)',
+                            color: 'var(--primary-dark)',
+                            boxShadow: '0 0 0 8px color-mix(in srgb, var(--primary) 6%, transparent)',
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M5 12.5l4.5 4.5 9.5-10" />
+                          </svg>
+                        </div>
+                        <h2 className="text-2xl font-extrabold tracking-tight" style={{ color: 'var(--sw-secondary-700)' }}>
+                          {t('booking.confirmed')}
+                        </h2>
+                        <p className="text-sm max-w-[42ch] leading-relaxed" style={{ color: 'var(--sw-body)' }}>
+                          {t('booking.confirmedDesc')}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div
+                          className="sw-pop-in inline-flex h-16 w-16 items-center justify-center rounded-full"
+                          style={{
+                            background: 'color-mix(in srgb, var(--error) 10%, #FFFFFF)',
+                            color: 'var(--error)',
+                            boxShadow: '0 0 0 8px color-mix(in srgb, var(--error) 5%, transparent)',
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M7 7l10 10M17 7L7 17" />
+                          </svg>
+                        </div>
+                        <h2 className="text-2xl font-extrabold tracking-tight" style={{ color: 'var(--sw-secondary-700)' }}>
+                          {t('booking.paymentFailed')}
+                        </h2>
+                        <p className="text-sm max-w-[42ch] leading-relaxed" style={{ color: 'var(--sw-body)' }}>
+                          {t('booking.paymentFailedDesc')}
+                        </p>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => dispatch({ type: 'RESET' })}
+                      className="mt-2 inline-flex items-center justify-center px-7 py-3 rounded-full text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.99] cursor-pointer"
+                      style={{
+                        background: 'var(--primary)',
+                        color: '#FFFFFF',
+                        boxShadow: 'var(--sw-shadow-primary)',
+                      }}
+                    >
+                      {state.step === WizardStep.CONFIRMATION && state.status === 'success'
+                        ? t('booking.bookAnother')
+                        : t('booking.tryAgain')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {showSummary && (
+              <div className="hidden lg:block">
+                <SummaryRail {...summaryProps} />
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -1022,8 +1093,12 @@ export default function BookingWizardPage() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto w-full max-w-[640px] px-4 sm:px-6 pt-8 sm:pt-12 pb-16">
-          <BookingSkeleton count={4} />
+        <div className="theme-sawaa">
+          <div className="sw-section-mint min-h-screen">
+            <div className="mx-auto w-full max-w-[640px] px-4 sm:px-6 pt-8 sm:pt-12 pb-16">
+              <BookingSkeleton count={4} />
+            </div>
+          </div>
         </div>
       }
     >

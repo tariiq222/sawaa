@@ -24,20 +24,20 @@ interface ClientInfoStepProps {
   isSubmitting: boolean;
 }
 
-const fieldLabelClass = 'block text-[0.8125rem] font-semibold mb-2';
+const fieldLabelClass = 'block text-[0.8125rem] font-bold mb-2';
 const fieldLabelStyle = {
-  color: 'var(--sw-secondary-900)',
+  color: 'var(--sw-secondary-700)',
 };
 
 const baseInputClass =
-  'w-full ps-11 pe-3.5 py-3.5 text-[0.9375rem] rounded-xl bg-white transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sw-cream)] placeholder:opacity-40';
+  'w-full ps-11 pe-3.5 py-3.5 text-[0.9375rem] rounded-xl bg-white transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 placeholder:opacity-40';
 
 function inputStyle(invalid: boolean): React.CSSProperties {
   return {
     border: invalid
-      ? '1.5px solid var(--destructive)'
-      : '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 18%, transparent)',
-    color: 'var(--sw-secondary-900)',
+      ? '1.5px solid var(--error)'
+      : '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 14%, transparent)',
+    color: 'var(--sw-secondary-700)',
     fontWeight: 500,
   };
 }
@@ -47,7 +47,7 @@ function FieldIcon({ children }: { children: React.ReactNode }) {
     <span
       aria-hidden="true"
       className="absolute top-1/2 -translate-y-1/2 start-3.5 grid place-items-center pointer-events-none"
-      style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 55%, transparent)' }}
+      style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 50%, transparent)' }}
     >
       {children}
     </span>
@@ -117,14 +117,14 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-1.5">
         <h2
-          className="text-2xl sm:text-[1.625rem] font-bold tracking-tight leading-tight"
-          style={{ color: 'var(--sw-secondary-900)', letterSpacing: '-0.015em' }}
+          className="text-[1.625rem] sm:text-[1.75rem] font-extrabold tracking-tight leading-tight"
+          style={{ color: 'var(--sw-secondary-700)', letterSpacing: '-0.015em' }}
         >
           {isAr ? 'بياناتك' : 'Your details'}
         </h2>
         <p
           className="text-sm leading-relaxed max-w-[52ch]"
-          style={{ color: 'var(--sw-secondary-500)' }}
+          style={{ color: 'var(--sw-body)' }}
         >
           {isAuthed
             ? isAr
@@ -140,7 +140,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
       {clientLoading && !isAuthed && (
         <div
           className="flex items-center justify-center gap-2 py-8 text-sm"
-          style={{ color: 'var(--sw-secondary-500)' }}
+          style={{ color: 'var(--sw-body)' }}
         >
           <span
             className="inline-block h-4 w-4 rounded-full border-2 border-transparent animate-spin"
@@ -155,10 +155,10 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
       {!clientLoading && !isAuthed && (
         <div className="flex flex-col gap-4">
           <form
-            className="flex flex-col gap-4 p-4 rounded-2xl"
+            className="flex flex-col gap-4 p-5 rounded-[1.25rem] bg-white"
             style={{
-              background: 'color-mix(in srgb, var(--primary) 4%, white)',
-              border: '1.5px solid color-mix(in srgb, var(--primary) 18%, transparent)',
+              border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
+              boxShadow: 'var(--sw-shadow-sm)',
             }}
             onSubmit={(e) => {
               e.preventDefault();
@@ -166,7 +166,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
             }}
             noValidate
           >
-            <h3 className="text-sm font-bold" style={{ color: 'var(--sw-secondary-900)' }}>
+            <h3 className="text-sm font-bold" style={{ color: 'var(--sw-secondary-700)' }}>
               {isAr ? 'تسجيل الدخول' : 'Sign in'}
             </h3>
 
@@ -223,7 +223,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
               <p
                 role="alert"
                 className="text-xs flex items-start gap-1.5 font-medium leading-relaxed"
-                style={{ color: 'var(--destructive)' }}
+                style={{ color: 'var(--error)' }}
               >
                 <svg viewBox="0 0 12 12" className="h-3 w-3 mt-0.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                   <circle cx="6" cy="6" r="4.8" />
@@ -236,17 +236,13 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
             <button
               type="submit"
               disabled={loginLoading}
-              className="self-stretch inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed enabled:hover:scale-[1.01] enabled:active:scale-[0.99]"
+              className="self-stretch inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed enabled:hover:scale-[1.01] enabled:active:scale-[0.99] enabled:cursor-pointer"
               style={{
                 background: 'var(--primary)',
                 color: '#FFFFFF',
-                boxShadow: '0 6px 16px -6px color-mix(in srgb, var(--primary) 55%, transparent)',
+                boxShadow: 'var(--sw-shadow-primary)',
               }}
             >
-              <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M9 5v-1a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3a2 2 0 0 0 2-2v-1" />
-                <path d="M14 8h-7M11.5 5l3 3-3 3" />
-              </svg>
               {loginLoading
                 ? isAr
                   ? 'جاري الدخول…'
@@ -259,18 +255,18 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
             <a
               href="/forgot-password"
               className="self-center text-xs font-semibold underline-offset-2 hover:underline"
-              style={{ color: 'var(--sw-secondary-500)' }}
+              style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 60%, transparent)' }}
             >
               {isAr ? 'نسيت كلمة المرور؟' : 'Forgot password?'}
             </a>
           </form>
 
           <div className="flex items-center gap-3" aria-hidden="true">
-            <span className="h-px flex-1" style={{ background: 'color-mix(in srgb, var(--sw-secondary-700) 14%, transparent)' }} />
-            <span className="text-xs font-medium" style={{ color: 'var(--sw-secondary-500)' }}>
+            <span className="h-px flex-1" style={{ background: 'color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)' }} />
+            <span className="text-xs font-medium" style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 55%, transparent)' }}>
               {isAr ? 'أو' : 'or'}
             </span>
-            <span className="h-px flex-1" style={{ background: 'color-mix(in srgb, var(--sw-secondary-700) 14%, transparent)' }} />
+            <span className="h-px flex-1" style={{ background: 'color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)' }} />
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2">
@@ -278,9 +274,9 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
               href="/register"
               className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-bold transition-all hover:scale-[1.01] active:scale-[0.99]"
               style={{
-                background: 'white',
-                color: 'var(--primary)',
-                border: '1.5px solid color-mix(in srgb, var(--primary) 30%, transparent)',
+                background: 'color-mix(in srgb, var(--primary) 8%, #FFFFFF)',
+                color: 'var(--primary-dark)',
+                border: '1.5px solid color-mix(in srgb, var(--primary) 32%, transparent)',
               }}
             >
               {isAr ? 'إنشاء حساب جديد' : 'Create an account'}
@@ -291,7 +287,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
               style={{
                 background: 'transparent',
                 color: 'var(--sw-secondary-700)',
-                border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 18%, transparent)',
+                border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 16%, transparent)',
               }}
             >
               {isAr ? 'صفحة تسجيل الدخول' : 'Go to sign-in page'}
@@ -305,10 +301,10 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
         <>
           <section
             aria-label={isAr ? 'بيانات الحساب' : 'Account details'}
-            className="flex flex-col gap-3 p-4 rounded-2xl"
+            className="flex flex-col gap-3 p-4 rounded-[1.25rem] bg-white"
             style={{
-              background: 'color-mix(in srgb, var(--primary) 4%, white)',
-              border: '1.5px solid color-mix(in srgb, var(--primary) 18%, transparent)',
+              border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
+              boxShadow: 'var(--sw-shadow-xs)',
             }}
           >
             <SummaryRow label={t('booking.fullName')} value={client.name || '—'} />
@@ -318,30 +314,20 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
 
           <section
             aria-label={t('booking.summary.title')}
-            className="mt-1 flex flex-col gap-4 p-5 sm:p-6 rounded-2xl"
+            className="mt-1 flex flex-col gap-4 p-5 sm:p-6 rounded-[1.25rem]"
             style={{
-              background: 'var(--sw-cream)',
-              border: '1px solid color-mix(in srgb, var(--sw-secondary-700) 8%, transparent)',
+              background:
+                'linear-gradient(180deg, color-mix(in srgb, var(--accent) 28%, #FFFDF8) 0%, color-mix(in srgb, var(--accent) 14%, #FFFDF8) 100%)',
+              border: '1px solid color-mix(in srgb, var(--accent-dark) 28%, transparent)',
               boxShadow: 'var(--sw-shadow-sm)',
             }}
           >
-            <header className="flex items-center gap-2">
-              <span
-                aria-hidden="true"
-                className="inline-flex h-5 w-5 items-center justify-center rounded-full"
-                style={{ background: 'color-mix(in srgb, var(--primary) 12%, transparent)', color: 'var(--primary)' }}
-              >
-                <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M2.5 6.5l2.5 2.5 4.5-5" />
-                </svg>
-              </span>
-              <h3
-                className="text-sm font-semibold tracking-tight"
-                style={{ color: 'var(--sw-secondary-700)' }}
-              >
-                {t('booking.summary.title')}
-              </h3>
-            </header>
+            <h3
+              className="text-sm font-extrabold tracking-tight"
+              style={{ color: 'var(--sw-secondary-700)' }}
+            >
+              {t('booking.summary.title')}
+            </h3>
 
             <dl className="flex flex-col gap-3 text-sm">
               <SummaryRow label={t('booking.summary.service')} value={isAr ? service.nameAr : service.nameEn} />
@@ -350,26 +336,26 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
             </dl>
 
             <div
-              className="flex justify-between items-baseline pt-3 mt-1"
-              style={{ borderTop: '1px dashed color-mix(in srgb, var(--sw-secondary-700) 14%, transparent)' }}
+              className="flex justify-between items-baseline pt-3.5 mt-1"
+              style={{ borderTop: '1px dashed color-mix(in srgb, var(--accent-dark) 40%, transparent)' }}
             >
               <span
-                className="text-xs font-semibold uppercase tracking-wide"
-                style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 55%, transparent)', letterSpacing: '0.04em' }}
+                className="text-[0.6875rem] font-bold"
+                style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 55%, transparent)' }}
               >
                 {t('booking.summary.total')}
               </span>
               <span className="flex flex-col items-end gap-0.5">
                 <span className="flex items-baseline gap-1.5">
                   <span
-                    className="text-xl font-bold tabular-nums"
+                    className="text-2xl font-extrabold tabular-nums"
                     style={{ color: 'var(--sw-secondary-700)', letterSpacing: '-0.01em' }}
                   >
                     {priceSar}
                   </span>
                   <span
-                    className="text-[0.6875rem] font-medium uppercase"
-                    style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 50%, transparent)', letterSpacing: '0.05em' }}
+                    className="text-[0.6875rem] font-semibold"
+                    style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 55%, transparent)' }}
                   >
                     {t('booking.summary.currency')}
                   </span>
@@ -377,7 +363,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
                 {vatRate > 0 && (
                   <span
                     className="text-[0.6875rem] font-medium"
-                    style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 55%, transparent)' }}
+                    style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 50%, transparent)' }}
                   >
                     {isAr
                       ? `شامل ضريبة القيمة المضافة (${vatPercent}%)`
@@ -391,10 +377,10 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
               type="button"
               onClick={() => onSubmitInfo()}
               disabled={isSubmitting}
-              className="mt-1 inline-flex items-center justify-center gap-2 w-full px-5 py-3 rounded-full text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed enabled:hover:scale-[1.01] enabled:active:scale-[0.99]"
+              className="mt-1 inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-full text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed enabled:hover:scale-[1.01] enabled:active:scale-[0.99]"
               style={{
                 background: 'var(--primary)',
-                color: 'var(--primary-foreground)',
+                color: '#FFFFFF',
                 boxShadow: isSubmitting ? 'none' : 'var(--sw-shadow-primary)',
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',
               }}
@@ -421,6 +407,17 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
                 </>
               )}
             </button>
+
+            <p
+              className="flex items-center justify-center gap-1.5 text-[0.6875rem] font-medium"
+              style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 48%, transparent)' }}
+            >
+              <svg viewBox="0 0 14 14" className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="2.5" y="6" width="9" height="6" rx="1.5" />
+                <path d="M4.5 6V4.5a2.5 2.5 0 1 1 5 0V6" />
+              </svg>
+              {isAr ? 'دفع آمن ومشفّر عبر ميسر' : 'Secure encrypted payment via Moyasar'}
+            </p>
           </section>
         </>
       )}
@@ -432,13 +429,13 @@ function SummaryRow({ label, value, numeric = false }: { label: string; value: s
   return (
     <div className="flex justify-between items-start gap-4">
       <dt
-        className="text-xs font-medium shrink-0 pt-0.5"
-        style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 55%, transparent)' }}
+        className="text-xs font-semibold shrink-0 pt-0.5"
+        style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 52%, transparent)' }}
       >
         {label}
       </dt>
       <dd
-        className={`text-sm font-medium text-end min-w-0 ${numeric ? 'tabular-nums' : ''}`}
+        className={`text-sm font-bold text-end min-w-0 ${numeric ? 'tabular-nums' : ''}`}
         style={{ color: 'var(--sw-secondary-700)' }}
       >
         {value}

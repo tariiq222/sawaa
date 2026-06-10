@@ -114,14 +114,14 @@ export function DateStrip({ value, onChange, days = 14, allowedDaysOfWeek, booka
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-col gap-0.5 min-w-0">
           <span
-            className="text-[0.6875rem] font-semibold uppercase tracking-wide"
-            style={{ color: 'var(--sw-secondary-500)', letterSpacing: '0.04em' }}
+            className="text-[0.6875rem] font-semibold"
+            style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 55%, transparent)' }}
           >
             {t('booking.selectDate')}
           </span>
           <span
-            className="text-base sm:text-lg font-bold tracking-tight truncate"
-            style={{ color: 'var(--sw-secondary-900)' }}
+            className="text-base sm:text-lg font-extrabold tracking-tight truncate"
+            style={{ color: 'var(--sw-secondary-700)' }}
           >
             {monthLabel}
           </span>
@@ -132,11 +132,11 @@ export function DateStrip({ value, onChange, days = 14, allowedDaysOfWeek, booka
             <button
               type="button"
               onClick={goToday}
-              className="px-3 py-1.5 text-xs font-semibold rounded-full transition-colors cursor-pointer"
+              className="px-3 py-1.5 text-xs font-bold rounded-full transition-colors cursor-pointer"
               style={{
-                background: 'color-mix(in srgb, var(--primary) 10%, white)',
-                color: 'var(--primary)',
-                border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)',
+                background: 'color-mix(in srgb, var(--primary) 9%, #FFFFFF)',
+                color: 'var(--primary-dark)',
+                border: '1px solid color-mix(in srgb, var(--primary) 28%, transparent)',
               }}
             >
               {isAr ? 'اليوم' : 'Today'}
@@ -205,46 +205,46 @@ export function DateStrip({ value, onChange, days = 14, allowedDaysOfWeek, booka
               aria-label={isUnavailable ? `${fullLabel} — ${isAr ? 'غير متاح' : 'unavailable'}` : fullLabel}
               disabled={isDisabled}
               onClick={() => onChange(iso)}
-              className="group relative shrink-0 flex flex-col items-center justify-center gap-1 w-[60px] sm:w-[68px] py-3 rounded-2xl cursor-pointer transition-all duration-150 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sw-cream)]"
+              className="group relative shrink-0 flex flex-col items-center justify-center gap-1 w-[60px] sm:w-[68px] py-3 rounded-2xl cursor-pointer transition-all duration-150 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
               style={
                 isSelected
                   ? {
                       background: 'var(--primary)',
-                      color: 'var(--primary-foreground)',
+                      color: '#FFFFFF',
                       border: '1.5px solid var(--primary)',
                       boxShadow: 'var(--sw-shadow-primary)',
                     }
                   : isUnavailable
                     ? {
-                        background: 'color-mix(in srgb, var(--sw-secondary-700) 4%, var(--sw-cream))',
-                        color: 'color-mix(in srgb, var(--sw-secondary-700) 35%, transparent)',
+                        background: 'transparent',
+                        color: 'color-mix(in srgb, var(--sw-secondary-700) 32%, transparent)',
                         border: '1.5px dashed color-mix(in srgb, var(--sw-secondary-700) 14%, transparent)',
-                        opacity: 0.7,
                       }
                     : isPast
                       ? {
-                          background: 'white',
-                          color: 'var(--sw-secondary-900)',
-                          border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 14%, transparent)',
+                          background: '#FFFFFF',
+                          color: 'var(--sw-secondary-700)',
+                          border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)',
                           opacity: 0.4,
                         }
                       : {
-                          background: 'white',
-                          color: 'var(--sw-secondary-900)',
-                          border: `1.5px solid ${isToday ? 'var(--primary)' : 'color-mix(in srgb, var(--sw-secondary-700) 14%, transparent)'}`,
+                          background: '#FFFFFF',
+                          color: 'var(--sw-secondary-700)',
+                          border: `1.5px solid ${isToday ? 'color-mix(in srgb, var(--primary) 70%, transparent)' : 'color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)'}`,
+                          boxShadow: 'var(--sw-shadow-xs)',
                         }
               }
               onMouseEnter={(e) => {
                 if (isSelected || isDisabled) return;
                 e.currentTarget.style.borderColor = 'var(--primary)';
-                e.currentTarget.style.background = 'color-mix(in srgb, var(--primary) 8%, white)';
+                e.currentTarget.style.background = 'color-mix(in srgb, var(--primary) 8%, #FFFFFF)';
               }}
               onMouseLeave={(e) => {
                 if (isSelected || isDisabled) return;
                 e.currentTarget.style.borderColor = isToday
-                  ? 'var(--primary)'
-                  : 'color-mix(in srgb, var(--sw-secondary-700) 14%, transparent)';
-                e.currentTarget.style.background = 'white';
+                  ? 'color-mix(in srgb, var(--primary) 70%, transparent)'
+                  : 'color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)';
+                e.currentTarget.style.background = '#FFFFFF';
               }}
               title={isUnavailable ? (isAr ? 'لا توجد أوقات في هذا اليوم' : 'No availability on this day') : undefined}
             >
@@ -252,10 +252,10 @@ export function DateStrip({ value, onChange, days = 14, allowedDaysOfWeek, booka
                 className="text-[0.6875rem] font-semibold leading-none"
                 style={{
                   color: isSelected
-                    ? 'color-mix(in srgb, var(--primary-foreground) 85%, transparent)'
+                    ? 'rgba(255, 255, 255, 0.85)'
                     : isUnavailable
-                      ? 'color-mix(in srgb, var(--sw-secondary-700) 30%, transparent)'
-                      : 'var(--sw-secondary-500)',
+                      ? 'color-mix(in srgb, var(--sw-secondary-700) 28%, transparent)'
+                      : 'color-mix(in srgb, var(--sw-secondary-700) 58%, transparent)',
                 }}
               >
                 {weekday}
@@ -306,9 +306,10 @@ function ArrowButton({
       aria-label={ariaLabel}
       className="grid place-items-center h-8 w-8 rounded-full transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
       style={{
-        background: 'white',
+        background: '#FFFFFF',
         color: 'var(--sw-secondary-700)',
-        border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 14%, transparent)',
+        border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 12%, transparent)',
+        boxShadow: 'var(--sw-shadow-xs)',
       }}
     >
       <svg

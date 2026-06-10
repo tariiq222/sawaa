@@ -28,14 +28,14 @@ export function TherapistPicker({ therapists, selected, onSelect }: TherapistPic
     <section className="flex flex-col gap-5">
       <header className="flex flex-col gap-1.5">
         <h2
-          className="text-2xl sm:text-[1.625rem] font-bold tracking-tight leading-tight"
-          style={{ color: 'var(--sw-secondary-900)', letterSpacing: '-0.015em' }}
+          className="text-[1.625rem] sm:text-[1.75rem] font-extrabold tracking-tight leading-tight"
+          style={{ color: 'var(--sw-secondary-700)', letterSpacing: '-0.015em' }}
         >
           {t('booking.selectTherapist')}
         </h2>
         <p
           className="text-sm leading-relaxed max-w-[52ch]"
-          style={{ color: 'var(--sw-secondary-500)' }}
+          style={{ color: 'var(--sw-body)' }}
         >
           {isAr
             ? 'كل المعالجين معتمدون ومدرّبون. اقرأ تخصّصهم واختر الأنسب لحالتك.'
@@ -47,7 +47,7 @@ export function TherapistPicker({ therapists, selected, onSelect }: TherapistPic
         <TherapistEmptyState isAr={isAr} />
       ) : (
         <ul
-          className={`grid gap-3 sm:gap-4 ${valid.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}
+          className={`grid gap-3 ${valid.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}
           role="list"
         >
           {valid.map((emp) => {
@@ -66,86 +66,98 @@ export function TherapistPicker({ therapists, selected, onSelect }: TherapistPic
                   type="button"
                   onClick={() => onSelect(emp)}
                   aria-pressed={isSelected}
-                  className="group relative w-full text-start cursor-pointer rounded-2xl bg-white transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sw-cream)]"
+                  className="group relative w-full h-full text-start cursor-pointer rounded-[1.25rem] bg-white transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
                   style={{
                     border: isSelected
                       ? '1.5px solid var(--primary)'
-                      : '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 14%, transparent)',
-                    boxShadow: isSelected
-                      ? 'var(--sw-shadow-primary)'
-                      : 'var(--sw-shadow-xs)',
+                      : '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
+                    boxShadow: isSelected ? 'var(--sw-shadow-md)' : 'var(--sw-shadow-xs)',
                     background: isSelected
-                      ? 'color-mix(in srgb, var(--primary) 6%, white)'
-                      : 'white',
+                      ? 'color-mix(in srgb, var(--primary) 5%, #FFFFFF)'
+                      : '#FFFFFF',
                   }}
                   onMouseEnter={(e) => {
                     if (isSelected) return;
-                    e.currentTarget.style.borderColor = 'var(--primary)';
-                    e.currentTarget.style.background =
-                      'color-mix(in srgb, var(--primary) 5%, white)';
-                    e.currentTarget.style.boxShadow = 'var(--sw-shadow-primary)';
+                    e.currentTarget.style.borderColor =
+                      'color-mix(in srgb, var(--primary) 55%, transparent)';
+                    e.currentTarget.style.boxShadow = 'var(--sw-shadow-md)';
                     e.currentTarget.style.transform = 'translateY(-2px)';
                   }}
                   onMouseLeave={(e) => {
                     if (isSelected) return;
                     e.currentTarget.style.borderColor =
-                      'color-mix(in srgb, var(--sw-secondary-700) 14%, transparent)';
-                    e.currentTarget.style.background = 'white';
+                      'color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)';
                     e.currentTarget.style.boxShadow = 'var(--sw-shadow-xs)';
                     e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >
-                  <div className="flex items-center gap-4 p-4 sm:p-5">
+                  <div className="flex items-center gap-4 p-4">
                     <Avatar
                       name={fullName}
                       avatarUrl={emp.user.avatarUrl}
                       initials={initialsOf(emp.user.firstName, emp.user.lastName)}
                     />
 
-                    <div className="flex flex-col min-w-0 flex-1 gap-1">
+                    <div className="flex flex-col min-w-0 flex-1 gap-0.5">
                       <span
-                        className="font-bold text-base leading-tight truncate"
-                        style={{ color: 'var(--sw-secondary-900)' }}
+                        className="font-bold text-[0.9375rem] leading-tight truncate"
+                        style={{ color: 'var(--sw-secondary-700)' }}
                       >
                         {fullName}
                       </span>
 
                       {specialty && (
                         <span
-                          className="text-[0.8125rem] font-medium leading-snug line-clamp-2"
-                          style={{ color: 'var(--primary)' }}
+                          className="text-[0.8125rem] font-semibold leading-snug line-clamp-2"
+                          style={{ color: 'var(--primary-dark)' }}
                         >
                           {specialty}
                         </span>
                       )}
 
-                      <div
-                        className="flex items-center gap-2 mt-1 text-[0.6875rem] tabular-nums font-medium"
-                        style={{ color: 'var(--sw-secondary-500)' }}
-                      >
-                        {hasRating && (
-                          <>
-                            <span className="inline-flex items-center gap-0.5">
+                      {(hasRating || emp.experience > 0) && (
+                        <span
+                          className="flex items-center gap-2 mt-1 text-xs tabular-nums font-medium"
+                          style={{ color: 'var(--sw-body)' }}
+                        >
+                          {hasRating && (
+                            <span className="inline-flex items-center gap-1">
                               <StarIcon />
-                              <span
-                                className="font-bold"
-                                style={{ color: 'var(--sw-secondary-900)' }}
-                              >
+                              <span className="font-bold" style={{ color: 'var(--sw-secondary-700)' }}>
                                 {emp.rating.toFixed(1)}
                               </span>
                             </span>
-                            {emp.experience > 0 && <Dot />}
-                          </>
-                        )}
-                        {emp.experience > 0 && (
-                          <span>
-                            {emp.experience}+ {isAr ? 'سنة خبرة' : 'yrs exp'}
-                          </span>
-                        )}
-                      </div>
+                          )}
+                          {hasRating && emp.experience > 0 && <Dot />}
+                          {emp.experience > 0 && (
+                            <span>
+                              {emp.experience}+ {isAr ? 'سنة خبرة' : 'yrs exp'}
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </div>
 
-                    <SelectionIndicator isSelected={isSelected} />
+                    <span
+                      aria-hidden="true"
+                      className="grid place-items-center h-8 w-8 shrink-0 rounded-full transition-all duration-200 group-hover:bg-[var(--primary)] group-hover:text-white"
+                      style={{
+                        background: isSelected
+                          ? 'var(--primary)'
+                          : 'color-mix(in srgb, var(--sw-secondary-700) 6%, transparent)',
+                        color: isSelected ? '#FFFFFF' : 'var(--sw-secondary-700)',
+                      }}
+                    >
+                      {isSelected ? (
+                        <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M2.5 6.5l2.5 2.5 4.5-5" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 16 16" className="h-4 w-4 -scale-x-100" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M6 4l4 4-4 4" />
+                        </svg>
+                      )}
+                    </span>
                   </div>
                 </button>
               </li>
@@ -178,6 +190,7 @@ function Avatar({
         className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 rounded-full object-cover"
         style={{
           background: 'color-mix(in srgb, var(--primary) 8%, transparent)',
+          boxShadow: '0 0 0 2px #FFFFFF, 0 0 0 3.5px color-mix(in srgb, var(--primary) 30%, transparent)',
         }}
         onError={(e) => {
           e.currentTarget.style.display = 'none';
@@ -188,11 +201,12 @@ function Avatar({
   return (
     <span
       aria-hidden="true"
-      className="grid place-items-center h-14 w-14 sm:h-16 sm:w-16 shrink-0 rounded-full font-bold text-base sm:text-lg tabular-nums"
+      className="grid place-items-center h-14 w-14 sm:h-16 sm:w-16 shrink-0 rounded-full font-bold text-base sm:text-lg"
       style={{
         background:
-          'linear-gradient(135deg, color-mix(in srgb, var(--primary) 16%, white), color-mix(in srgb, var(--primary) 6%, white))',
-        color: 'var(--primary)',
+          'linear-gradient(135deg, color-mix(in srgb, var(--primary) 18%, #FFFFFF), color-mix(in srgb, var(--primary) 7%, #FFFFFF))',
+        color: 'var(--primary-dark)',
+        boxShadow: '0 0 0 2px #FFFFFF, 0 0 0 3.5px color-mix(in srgb, var(--primary) 25%, transparent)',
       }}
       title={name}
     >
@@ -201,46 +215,14 @@ function Avatar({
   );
 }
 
-function SelectionIndicator({ isSelected }: { isSelected: boolean }) {
-  return (
-    <span
-      aria-hidden="true"
-      className="grid place-items-center shrink-0 rounded-full transition-all duration-150"
-      style={{
-        width: 22,
-        height: 22,
-        background: isSelected ? 'var(--primary)' : 'transparent',
-        border: isSelected
-          ? '2px solid var(--primary)'
-          : '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 22%, transparent)',
-        color: 'var(--primary-foreground)',
-      }}
-    >
-      {isSelected && (
-        <svg
-          viewBox="0 0 12 12"
-          className="h-2.5 w-2.5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M2.5 6.5l2.5 2.5 4.5-5" />
-        </svg>
-      )}
-    </span>
-  );
-}
-
 function StarIcon() {
   return (
     <svg
       viewBox="0 0 12 12"
-      className="h-2.5 w-2.5"
+      className="h-3 w-3"
       fill="currentColor"
       aria-hidden="true"
-      style={{ color: 'var(--primary)' }}
+      style={{ color: 'var(--accent-dark)' }}
     >
       <path d="M6 1.2l1.45 2.94 3.25.47-2.35 2.29.55 3.23L6 8.6 3.1 10.13l.55-3.23-2.35-2.29 3.25-.47z" />
     </svg>
@@ -262,16 +244,16 @@ function TherapistEmptyState({ isAr }: { isAr: boolean }) {
     <div
       className="flex flex-col items-center text-center gap-3 px-6 py-12 rounded-2xl"
       style={{
-        background: 'color-mix(in srgb, var(--primary) 4%, var(--sw-cream))',
-        border: '1px dashed color-mix(in srgb, var(--sw-secondary-700) 14%, transparent)',
+        background: 'color-mix(in srgb, var(--primary) 4%, #FFFFFF)',
+        border: '1px dashed color-mix(in srgb, var(--sw-secondary-700) 16%, transparent)',
       }}
     >
       <span
         aria-hidden="true"
         className="grid place-items-center h-12 w-12 rounded-full"
         style={{
-          background: 'color-mix(in srgb, var(--primary) 10%, transparent)',
-          color: 'var(--primary)',
+          background: 'color-mix(in srgb, var(--primary) 12%, transparent)',
+          color: 'var(--primary-dark)',
         }}
       >
         <svg
@@ -288,14 +270,14 @@ function TherapistEmptyState({ isAr }: { isAr: boolean }) {
         </svg>
       </span>
       <p
-        className="text-sm font-semibold"
-        style={{ color: 'var(--sw-secondary-900)' }}
+        className="text-sm font-bold"
+        style={{ color: 'var(--sw-secondary-700)' }}
       >
         {isAr ? 'لا يوجد معالجون متاحون حالياً' : 'No therapists available right now'}
       </p>
       <p
         className="text-xs max-w-[44ch] leading-relaxed"
-        style={{ color: 'var(--sw-secondary-500)' }}
+        style={{ color: 'var(--sw-body)' }}
       >
         {isAr
           ? 'جدول المعالجين قد يكون قيد التحديث. تواصل معنا مباشرة وراح نرتّب لك موعد.'
@@ -303,10 +285,10 @@ function TherapistEmptyState({ isAr }: { isAr: boolean }) {
       </p>
       <a
         href="/contact"
-        className="mt-1 inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-colors"
+        className="mt-1 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold transition-all hover:scale-[1.02] active:scale-[0.99]"
         style={{
           background: 'var(--primary)',
-          color: 'var(--primary-foreground)',
+          color: '#FFFFFF',
           boxShadow: 'var(--sw-shadow-primary)',
         }}
       >
