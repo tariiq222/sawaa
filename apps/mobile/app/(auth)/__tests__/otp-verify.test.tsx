@@ -41,7 +41,6 @@ jest.mock('@/stores/slices/auth-slice', () => ({
 
 const mockVerifyOtp = jest.fn().mockResolvedValue({
   tokens: { accessToken: 'access-token', refreshToken: 'refresh-token' },
-  activeMembership: null,
 });
 const mockRequestLoginOtp = jest.fn().mockResolvedValue({ maskedIdentifier: 't***@example.com' });
 const mockRefetchMe = jest.fn().mockResolvedValue({ data: { data: { id: 'u1', role: 'CLIENT' } } });
@@ -53,10 +52,6 @@ jest.mock('@/hooks/queries', () => ({
 
 jest.mock('@/services/push', () => ({
   registerForPushAsync: jest.fn(),
-}));
-
-jest.mock('@/services/tenant', () => ({
-  setCurrentOrgId: jest.fn(),
 }));
 
 jest.mock('expo-haptics', () => ({

@@ -1,18 +1,50 @@
 /**
- * Auth types — re-exports the canonical UserPayload from @sawaa/api-client
- * so the mobile screens read the same shape the backend actually returns,
- * plus mobile-only enums and form payloads.
+ * Auth types — local declarations of the auth contract the backend returns.
+ *
+ * Mobile is intentionally OUTSIDE the pnpm workspace, so these types are
+ * declared here rather than imported from @sawaa/api-client. They MUST match
+ * the backend's AuthResponseBuilder
+ * (apps/backend/src/modules/identity/shared/auth-response.builder.ts) and
+ * GET /auth/me (get-current-user.handler.ts) shapes. Update by hand when the
+ * backend contract changes.
  */
 
-import type { UserPayload, AuthResponse as CanonicalAuthResponse } from '@sawaa/api-client';
+/**
+ * Canonical user payload returned by POST /auth/login and GET /auth/me
+ * after the single-tenant cleanup (no organizationId, verticalSlug, or
+ * activeMembership).
+ */
+export interface UserPayload {
+  id: string;
+  email: string;
+  name: string;
+  /** Derived from `name` by the backend (split on first whitespace run). */
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  gender: string | null;
+  avatarUrl: string | null;
+  isActive: boolean;
+  role: string;
+  isSuperAdmin: boolean;
+  /** Flat "subject:action" strings produced by backend flattenPermissions(). */
+  permissions: string[];
+}
 
-// The canonical user payload returned by /auth/login + /auth/me, extended
-// with mobile-only fields the backend does not (yet) return. Re-exported as
-// `User` so existing mobile imports keep working without churn.
-//
-// firstName/lastName are canonical contract fields. organizationId remains a
-// deprecated compatibility field in auth state only; mobile never sends it as a
-// request header.
+/**
+ * Bare auth payload the backend returns from login/OTP-verify:
+ * `{ accessToken, refreshToken, expiresIn, user }`.
+ */
+export interface CanonicalAuthResponse {
+  accessToken: string;
+  refreshToken?: string;
+  expiresIn: number;
+  user: UserPayload;
+}
+
+// The canonical user payload extended with mobile-only fields the backend
+// does not (yet) return. Exported as `User` so existing mobile imports keep
+// working without churn.
 //
 // emailVerified + employeeId are NOT yet returned by the backend; they're
 // kept here as optional so consumers compile, but values are `undefined` at
@@ -47,21 +79,11 @@ export function getPrimaryRole(user: User): UserRole {
   return 'employee';
 }
 
-export type ActiveMembership = {
-  id: string;
-  /** @deprecated Single-tenant compatibility only; do not use for request context. */
-  organizationId: string;
-  role: string;
-};
-
 export interface AuthState {
   token: string | null;
   refreshToken: string | null;
   user: User | null;
   isLoading: boolean;
-  /** @deprecated Single-tenant compatibility only; do not use for request context. */
-  organizationId: string | null;
-  activeMembership: ActiveMembership | null;
 }
 
 export interface LoginRequest {
@@ -80,10 +102,10 @@ export interface VerifyOtpRequest {
 }
 
 /**
- * Mobile wraps the canonical AuthResponse in the legacy `{success, data}`
+ * Mobile wraps the canonical auth payload in the legacy `{success, data}`
  * envelope its callers (login screen, otp-verify, register) expect. The
- * shared @sawaa/api-client returns the unwrapped shape, so services/auth.ts
- * re-wraps it before resolving to this interface.
+ * backend returns the unwrapped shape, so services/auth.ts re-wraps it
+ * before resolving to this interface.
  */
 export interface AuthResponse {
   success: boolean;
@@ -118,7 +140,6 @@ export interface AuthUser {
   staffRole: StaffRole | null;
   isSuperAdmin: boolean;
   permissions: CaslPermission[];
-  organizationId: string | null;
 }
 
 /** Split a full name into first/last on the first whitespace. */

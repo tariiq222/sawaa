@@ -2,19 +2,6 @@ export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
 
 /**
- * Default organization id for this single-organization build.
- * Prefer EXPO_PUBLIC_ORGANIZATION_ID; EXPO_PUBLIC_TENANT_ID remains as a
- * deprecated fallback for existing mobile environments.
- */
-export const DEFAULT_ORGANIZATION_ID =
-  process.env.EXPO_PUBLIC_ORGANIZATION_ID ??
-  process.env.EXPO_PUBLIC_TENANT_ID ??
-  '00000000-0000-0000-0000-000000000001';
-
-/** @deprecated Use DEFAULT_ORGANIZATION_ID. */
-export const TENANT_ID = DEFAULT_ORGANIZATION_ID;
-
-/**
  * Vertical slug for the default organization. Drives `useTerminology()` so that
  * vertical-specific wording (e.g. "Consultants" vs "Therapists" vs "Doctors")
  * resolves from the shared terminology pack instead of being hardcoded in

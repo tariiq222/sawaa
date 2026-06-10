@@ -15,7 +15,6 @@ export function buildMockUser(role: MobileRole): AuthUser {
       staffRole: 'EMPLOYEE',
       isSuperAdmin: false,
       permissions: [],
-      organizationId: 'mock-org-1',
     };
   }
 
@@ -32,7 +31,6 @@ export function buildMockUser(role: MobileRole): AuthUser {
     staffRole: null,
     isSuperAdmin: false,
     permissions: [],
-    organizationId: 'mock-org-1',
   };
 }
 

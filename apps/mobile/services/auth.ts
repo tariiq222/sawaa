@@ -1,9 +1,5 @@
 import api from './api';
 import {
-  clearCurrentOrgId,
-  setCurrentOrgId,
-} from './tenant';
-import {
   getSecureItem,
   setSecureItem,
   deleteSecureItem,
@@ -26,15 +22,8 @@ export type RequestLoginOtpPayload = { identifier: string };
 export type RequestLoginOtpResponse = { maskedIdentifier: string };
 
 export type VerifyOtpPayload = { identifier: string; code: string; purpose: 'register' | 'login' };
-export type ActiveMembership = {
-  id: string;
-  /** @deprecated Single-tenant compatibility only; do not use for request context. */
-  organizationId: string;
-  role: string;
-};
 export type VerifyOtpResponse = {
   tokens: { accessToken: string; refreshToken: string };
-  activeMembership: ActiveMembership | null;
 };
 
 export const registerUser = (body: RegisterPayload) =>
@@ -48,9 +37,6 @@ export const verifyMobileOtp = async (body: VerifyOtpPayload): Promise<VerifyOtp
   const data = response.data;
   await setSecureItem('accessToken', data.tokens.accessToken);
   await setSecureItem('refreshToken', data.tokens.refreshToken);
-  if (data.activeMembership) {
-    await setCurrentOrgId(data.activeMembership.organizationId);
-  }
   return data;
 };
 
@@ -147,7 +133,6 @@ export const authService = {
     }
     await deleteSecureItem('accessToken');
     await deleteSecureItem('refreshToken');
-    await clearCurrentOrgId();
     store.dispatch(logoutAction());
   },
 
@@ -226,7 +211,4 @@ export const authService = {
 async function persistTokens(data: NonNullable<AuthResponse['data']>) {
   await setSecureItem('accessToken', data.accessToken);
   await setSecureItem('refreshToken', data.refreshToken ?? '');
-  if (data.user?.organizationId) {
-    await setCurrentOrgId(data.user.organizationId);
-  }
 }

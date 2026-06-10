@@ -13,7 +13,6 @@ import {
   setSecureItem,
   deleteSecureItem,
 } from '@/stores/secure-storage';
-import { clearCurrentOrgId } from './tenant';
 
 const ORG_SUSPENDED_CODE = 'ORG_SUSPENDED';
 
@@ -55,7 +54,6 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && responseCode === ORG_SUSPENDED_CODE) {
       await deleteSecureItem('accessToken');
       await deleteSecureItem('refreshToken');
-      await clearCurrentOrgId();
       store.dispatch(logout());
       router.replace('/(auth)/suspended');
       return Promise.reject(error);
@@ -93,7 +91,6 @@ api.interceptors.response.use(
         // Refresh failed — clear tokens + Redux state
         await deleteSecureItem('accessToken');
         await deleteSecureItem('refreshToken');
-        await clearCurrentOrgId();
         store.dispatch(logout());
       }
     }

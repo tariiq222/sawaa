@@ -57,7 +57,10 @@ const mockedGetProfile = authService.getProfile as jest.Mock;
 
 // ── fixtures ─────────────────────────────────────────────────────────────────
 
-const clientUser: User = {
+// Deprecated multi-tenant contract fields are intentionally omitted; the
+// double assertion keeps the fixture compiling while the API contract sheds
+// them in a staged cleanup.
+const clientUser = {
   id: 'u1',
   email: 'client@test.com',
   name: 'Test Client',
@@ -71,13 +74,10 @@ const clientUser: User = {
   customRoleId: null,
   isSuperAdmin: false,
   permissions: [],
-  organizationId: 'org-1',
-  verticalSlug: null,
   onboardingCompletedAt: null,
-  activeMembership: null,
   emailVerified: true,
   createdAt: '2026-01-01T00:00:00Z',
-};
+} as unknown as User;
 
 const employeeUser: User = {
   ...clientUser,

@@ -228,7 +228,7 @@ export default function DoctorAppointmentDetailScreen() {
               url={booking.zoomStartUrl ?? booking.zoomJoinUrl ?? null}
               scheduledAt={booking.scheduledAt}
               durationMins={booking.durationMins}
-              status={booking.zoomMeetingStatus}
+              status={booking.zoomMeetingStatus ?? null}
               isRTL={isRTL}
               variant="start"
             />

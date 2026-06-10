@@ -38,18 +38,18 @@ app/
   - Transient UI state (modals, form drafts, typing indicators) → component-level `useState`/`useReducer`.
 - **API**: Axios services in `services/` — one file per domain; `services/client/` and `services/employee/` hold role-specific endpoints.
 - **i18n**: `i18next` + `react-i18next` — translation files in `i18n/`; keys mirror dashboard/backend tokens.
-- **Theme**: Branding tokens consumed from backend `PublicBranding` (per-tenant) via the theme slice; never hardcode brand colors.
+- **Theme**: Branding tokens consumed from backend `PublicBranding` via the theme slice; never hardcode brand colors.
 - **Components**: Reusable in `components/`, feature-specific stay in `app/`.
 
 ## Service Files (`services/`)
 
-Top-level: `api.ts` (base Axios + interceptors), `auth.ts`, `branches.ts`, `chatbot.ts`, `clients.ts`, `employees.ts`, `memberships.ts` (disabled stub — see below), `notifications.ts`, `organization.ts`, `payments.ts`, `push.ts`, `query-client.ts`, `tenant.ts`, `tenant-switch.ts` (dead code — see below).
+Top-level: `api.ts` (base Axios + interceptors), `auth.ts`, `branches.ts`, `chatbot.ts`, `clients.ts`, `employees.ts`, `notifications.ts`, `organization.ts`, `payments.ts`, `push.ts`, `query-client.ts`.
 
 Subdirectories: `services/client/` (client-only endpoints), `services/employee/` (employee-only endpoints).
 
 ## Query Hooks (`hooks/queries/`)
 
-`useBooking`, `useBookingMutations`, `useBranding`, `useChat`, `useClientBookings`, `useEmployeeClients`, `useEmployeeDayBookings`, `useMe`, `useMemberships` (disabled stub), `useMobileAuth`, `useNotifications`, `usePortal`, `useSlots`, `useTherapist`, `useTherapists`, `useUpcomingBookings` — re-exported via `hooks/queries/index.ts`.
+`useBooking`, `useBookingMutations`, `useBranding`, `useChat`, `useClientBookings`, `useEmployeeClients`, `useEmployeeDayBookings`, `useMe`, `useMobileAuth`, `useNotifications`, `usePortal`, `useSlots`, `useTherapist`, `useTherapists`, `useUpcomingBookings` — re-exported via `hooks/queries/index.ts`.
 
 ## Deployment Strategy — One App Instance
 
@@ -57,9 +57,9 @@ Subdirectories: `services/client/` (client-only endpoints), `services/employee/`
 
 - **Current build:** `سواء للإرشاد الأسري` (Sawa) — bundle `sa.sawa.app`, vertical `family-consulting`. See `app.config.ts`.
 - **Request context:** Mobile sends only auth credentials. It must not send a legacy organization-selection header; the backend stamps the fixed single-tenant context from the authenticated session.
-- **No runtime tenant switching.** Do not add a tenant switcher, multi-org membership UI, or dynamic vertical hot-swap to mobile. `services/tenant.ts` is retained only for legacy auth/session compatibility.
-- **Membership/tenant-switch code is inert dead scaffolding.** `services/memberships.ts` (`switchOrganization()` throws by design), `services/tenant-switch.ts` (never imported anywhere), and `hooks/queries/useMemberships.ts` (`enabled: false`, always returns `[]`) are leftovers from the multi-tenant fork. The backend has no `/auth/memberships` endpoint. Don't wire them up, don't render a switcher — the auth slice's `organizationId`/`activeMembership` fields exist only for type compatibility and stay constant.
-- **Branding & terminology** are still fetched at runtime via `PublicBranding` + `useTerminology()` — but for the locked tenant only. Switching tenant is not a user-facing operation.
+- **No runtime organization switching.** Do not add an organization switcher, multi-org membership UI, or terminology hot-swap to mobile.
+- **Membership/organization-switch scaffolding has been removed.** The memberships service, the org-id (tenant) service, the memberships query hook, and the auth slice's organization/membership fields were deleted in the single-tenant cleanup. The backend has no `/auth/memberships` endpoint. Do not reintroduce them.
+- **Branding** is still fetched at runtime via `PublicBranding` — for this deployment only. `useTerminology()` is inert: the backend no longer exposes `/public/verticals/:slug/terminology`, so its `t()` always returns the caller-provided fallback (or the key). Switching organizations is not a user-facing operation.
 
 ### Adding a New Branded App
 
@@ -81,9 +81,8 @@ Backend, dashboard, and admin do not change.
 
 ## Terminology
 
-- `hooks/useTerminology.ts` mirrors the dashboard's hook.
-- Resolves deployment-aware labels (e.g. "Patient" vs "Client" vs "Beneficiary") from the configured terminology pack.
-- Use `t()` for static i18n, `useTerminology()` for vertical-sensitive nouns.
+- `hooks/useTerminology.ts` mirrors the dashboard's hook, but is **inert**: the `/public/verticals/:slug/terminology` endpoint it targets was removed in the single-tenant cleanup, so `t(key, fallback)` always resolves to the fallback (or the key).
+- Do not wire it to a new endpoint; prefer plain i18n keys for new screens.
 
 ## Push Notifications (FCM)
 
@@ -108,7 +107,7 @@ Backend, dashboard, and admin do not change.
 - 350-line max per file
 - Client and Employee routes must stay strictly separated
 - Expo Secure Store for sensitive data (tokens), AsyncStorage for non-sensitive preferences
-- Tenant context is mandatory on every authenticated request
+- Authenticated requests carry only the JWT; the backend derives deployment context from the session — never send an organization header
 
 ## Development
 

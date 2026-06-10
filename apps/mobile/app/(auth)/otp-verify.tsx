@@ -23,7 +23,6 @@ import { useAppDispatch } from '@/hooks/use-redux';
 import { setAuthSession, setUser } from '@/stores/slices/auth-slice';
 import { useVerifyOtp, useRequestLoginOtp, useMe } from '@/hooks/queries';
 import { registerForPushAsync } from '@/services/push';
-import { setCurrentOrgId } from '@/services/tenant';
 
 const OTP_LENGTH = 4;
 const RESEND_COOLDOWN = 60;
@@ -101,18 +100,6 @@ export default function OtpVerifyScreen() {
     [otp],
   );
 
-  const navigateAfterVerify = useCallback(
-    async (activeMembership: { id: string; organizationId: string; role: string } | null) => {
-      if (activeMembership) {
-        await setCurrentOrgId(activeMembership.organizationId);
-        router.replace('/(employee)/(tabs)/today');
-      } else {
-        router.replace('/(client)/(tabs)/home');
-      }
-    },
-    [router],
-  );
-
   const handleVerify = useCallback(async () => {
     const code = otp.join('');
     if (code.length !== OTP_LENGTH) return;
@@ -123,7 +110,7 @@ export default function OtpVerifyScreen() {
       const result = await verifyOtp.mutateAsync({ identifier, code, purpose });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      dispatch(setAuthSession({ tokens: result.tokens, activeMembership: result.activeMembership }));
+      dispatch(setAuthSession({ tokens: result.tokens }));
       void registerForPushAsync();
 
       const meResult = await refetchMe();
@@ -132,7 +119,8 @@ export default function OtpVerifyScreen() {
         dispatch(setUser(profile));
       }
 
-      await navigateAfterVerify(result.activeMembership);
+      // Group layout guards redirect staff users to the employee tabs.
+      router.replace('/(client)/(tabs)/home');
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('common.error'), t('auth.otpError'));
@@ -141,7 +129,7 @@ export default function OtpVerifyScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [otp, identifier, purpose, verifyOtp, dispatch, refetchMe, navigateAfterVerify, t]);
+  }, [otp, identifier, purpose, verifyOtp, dispatch, refetchMe, router, t]);
 
   const handleResend = useCallback(async () => {
     if (purpose !== 'login') return;

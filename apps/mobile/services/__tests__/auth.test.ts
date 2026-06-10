@@ -6,13 +6,6 @@ jest.mock('../api', () => ({
   },
 }));
 
-const mockSetCurrentOrgId = jest.fn();
-const mockClearCurrentOrgId = jest.fn();
-jest.mock('../tenant', () => ({
-  setCurrentOrgId: (...args: unknown[]) => mockSetCurrentOrgId(...args),
-  clearCurrentOrgId: (...args: unknown[]) => mockClearCurrentOrgId(...args),
-}));
-
 const mockGetSecureItem = jest.fn();
 const mockSetSecureItem = jest.fn();
 const mockDeleteSecureItem = jest.fn();
@@ -32,7 +25,10 @@ import type { User } from '@/types/auth';
 
 const mockedApi = api as unknown as { post: jest.Mock; get: jest.Mock };
 
-const baseUser: User = {
+// Deprecated multi-tenant contract fields are intentionally omitted; the
+// double assertion keeps the fixture compiling while the API contract sheds
+// them in a staged cleanup.
+const baseUser = {
   id: 'u1',
   email: 'a@b.c',
   name: 'A B',
@@ -46,20 +42,17 @@ const baseUser: User = {
   customRoleId: null,
   isSuperAdmin: false,
   permissions: [],
-  organizationId: 'org-1',
-  verticalSlug: null,
   onboardingCompletedAt: null,
-  activeMembership: null,
   emailVerified: true,
   createdAt: '2026-01-01T00:00:00Z',
-};
+} as unknown as User;
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
 describe('authService.login', () => {
-  it('persists tokens + org id on bare backend response', async () => {
+  it('persists tokens on bare backend response', async () => {
     mockedApi.post.mockResolvedValueOnce({
       data: {
         accessToken: 'access-1',
@@ -75,7 +68,6 @@ describe('authService.login', () => {
     expect(res.data?.accessToken).toBe('access-1');
     expect(mockSetSecureItem).toHaveBeenCalledWith('accessToken', 'access-1');
     expect(mockSetSecureItem).toHaveBeenCalledWith('refreshToken', 'refresh-1');
-    expect(mockSetCurrentOrgId).toHaveBeenCalledWith('org-1');
   });
 
   it('passes through legacy { success, data } envelope', async () => {
@@ -95,7 +87,6 @@ describe('authService.login', () => {
     const res = await authService.login({ email: 'a@b.c', password: 'p' });
     expect(res.success).toBe(false);
     expect(mockSetSecureItem).not.toHaveBeenCalled();
-    expect(mockSetCurrentOrgId).not.toHaveBeenCalled();
   });
 
   it('propagates API errors (e.g. 401 invalid credentials)', async () => {
@@ -150,7 +141,7 @@ describe('authService.sendOtp / verifyOtp', () => {
 });
 
 describe('authService.logout', () => {
-  it('hits /auth/logout, clears storage + org + redux', async () => {
+  it('hits /auth/logout, clears storage + redux', async () => {
     mockGetSecureItem.mockResolvedValueOnce('refresh-token-xyz');
     mockedApi.post.mockResolvedValueOnce({ data: {} });
 
@@ -161,7 +152,6 @@ describe('authService.logout', () => {
     });
     expect(mockDeleteSecureItem).toHaveBeenCalledWith('accessToken');
     expect(mockDeleteSecureItem).toHaveBeenCalledWith('refreshToken');
-    expect(mockClearCurrentOrgId).toHaveBeenCalled();
     expect(mockDispatch).toHaveBeenCalled();
   });
 
@@ -172,7 +162,6 @@ describe('authService.logout', () => {
     await authService.logout();
 
     expect(mockDeleteSecureItem).toHaveBeenCalledWith('accessToken');
-    expect(mockClearCurrentOrgId).toHaveBeenCalled();
     expect(mockDispatch).toHaveBeenCalled();
   });
 

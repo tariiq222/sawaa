@@ -18,7 +18,6 @@ import { store, persistor } from '@/stores/store';
 import { queryClient } from '@/services/query-client';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { DirContext, buildDirState } from '@/hooks/useDir';
-import { loadCurrentOrgId } from '@/services/tenant';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { useAppSelector } from '@/hooks/use-redux';
 import { registerForPushAsync } from '@/services/push';
@@ -36,19 +35,16 @@ function PushBootstrap() {
 function AuthRouter() {
   const router = useRouter();
   const token = useAppSelector((s) => s.auth.token);
-  const activeMembership = useAppSelector((s) => s.auth.activeMembership);
 
   useEffect(() => {
     if (!token) {
       router.replace('/(auth)/login');
       return;
     }
-    if (activeMembership) {
-      router.replace('/(employee)/(tabs)/today');
-      return;
-    }
+    // Role-based redirection (client vs employee tabs) is handled by the
+    // group layouts' guards via getPrimaryRole(user).
     router.replace('/(client)/(tabs)/home');
-  }, [token, activeMembership, router]);
+  }, [token, router]);
 
   return null;
 }
@@ -58,7 +54,6 @@ function RootLayout() {
     if (!I18nManager.isRTL) {
       I18nManager.allowRTL(true);
     }
-    void loadCurrentOrgId();
   }, []);
 
   const dirState = buildDirState('ar');

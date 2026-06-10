@@ -11,6 +11,5 @@ export { useEmployeeClients, employeeClientsKeys } from './useEmployeeClients';
 export { useEmployeeDayBookings, employeeDayBookingsKeys } from './useEmployeeDayBookings';
 export { useBranding, brandingKeys } from './useBranding';
 export { useHome, useSummary, useUpcoming, portalKeys } from './usePortal';
-export { useMemberships, membershipsKeys } from './useMemberships';
 export { useRegister, useRequestLoginOtp, useVerifyOtp, useRequestEmailVerification } from './useMobileAuth';
 export { useMe } from './useMe';
