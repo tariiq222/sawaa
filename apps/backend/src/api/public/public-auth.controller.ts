@@ -20,6 +20,13 @@ const ACCESS_COOKIE = 'client_access_token';
 const REFRESH_COOKIE = 'client_refresh_token';
 const isProd = process.env.NODE_ENV === 'production';
 
+// sameSite 'lax' (both cookies) is REQUIRED, not an oversight: the Moyasar 3DS
+// flow returns the client via a cross-site top-level GET redirect to the
+// website's /booking/payment-callback → /booking/confirm, and the website
+// middleware gates /booking/confirm on the client_access_token cookie. With
+// 'strict' the browser would drop the cookies on that navigation and bounce
+// the paying client to /login. 'lax' still withholds the cookies on cross-site
+// non-GET requests, which is the CSRF protection that matters here.
 function setAuthCookies(res: Response, accessToken: string, accessMaxAge: number, refreshToken: string, refreshMaxAge: number) {
   res.cookie(ACCESS_COOKIE, accessToken, {
     httpOnly: true,
