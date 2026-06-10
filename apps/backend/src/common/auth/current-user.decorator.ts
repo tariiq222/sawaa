@@ -4,9 +4,9 @@ export interface JwtUser {
   sub: string;
   clientId?: string;
   employeeId?: string;
+  role?: string | null;
   roles: string[];
   permissions: Array<{ action: string; subject: string }>;
-  membershipRole?: string | null;
   customRole?: { permissions: Array<{ action: string; subject: string }> } | null;
 }
 

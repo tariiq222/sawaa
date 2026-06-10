@@ -3,10 +3,8 @@ import { CaslAbilityFactory, type AppAbility, type AbilitySubjectUser } from './
 /**
  * Caller-supplied input for `flattenPermissions`.
  *
- * Pass `membershipRole` whenever the caller has resolved an active membership
- * (login, refresh, organization-switch). For platform-level surfaces with no
- * tenant context (super-admin /auth/me, /tenants/register) the legacy `role`
- * is acceptable as a fallback.
+ * Carries the user's built-in `role` plus any `customRole` permissions, which
+ * the CASL ability factory combines into the effective ruleset.
  */
 export type PermissionSourceUser = AbilitySubjectUser;
 
