@@ -59,6 +59,42 @@ describe('AuthenticaClient', () => {
     await expect(client.sendOtp({ channel: 'SMS', identifier: '+966501234567', code: '123456' })).rejects.toThrow(AuthenticaError);
   });
 
+  it('should use the provider message from a valid error body', async () => {
+    jest.spyOn(fetchModule, 'fetchWithTimeout').mockResolvedValue({
+      ok: false,
+      status: 422,
+      statusText: 'Unprocessable Entity',
+      json: async () => ({ errors: [{ message: 'Template id does not match channel' }] }),
+    } as any);
+    await expect(
+      client.sendOtp({ channel: 'SMS', identifier: '+966501234567', code: '123456' }),
+    ).rejects.toThrow('Template id does not match channel');
+  });
+
+  it('should warn once and fall back to statusText when the error body is malformed JSON', async () => {
+    jest.spyOn(fetchModule, 'fetchWithTimeout').mockResolvedValue({
+      ok: false,
+      status: 502,
+      statusText: 'Bad Gateway',
+      headers: { get: (name: string) => (name === 'content-type' ? 'text/html' : null) },
+      json: async () => {
+        throw new SyntaxError(`Unexpected token '<', "<html>" is not valid JSON`);
+      },
+    } as any);
+    const warnSpy = jest.spyOn((client as any).logger, 'warn').mockImplementation(() => undefined);
+
+    await expect(
+      client.sendOtp({ channel: 'SMS', identifier: '+966501234567', code: '123456' }),
+    ).rejects.toThrow('Bad Gateway');
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const logged = warnSpy.mock.calls[0][0] as string;
+    expect(logged).toContain('status=502');
+    expect(logged).toContain('content-type=text/html');
+    // Never leak the response body — SyntaxError messages embed a snippet of it.
+    expect(logged).not.toContain('<html>');
+  });
+
   it('should return balance', async () => {
     jest.spyOn(fetchModule, 'fetchWithTimeout').mockResolvedValue({
       ok: true,

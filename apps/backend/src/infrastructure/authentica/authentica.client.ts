@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { errorMessage } from '../../common/helpers/error-message.helper';
 import { fetchWithTimeout } from '../http';
 
 type AuthenticaChannel = 'EMAIL' | 'SMS';
@@ -80,11 +81,22 @@ export class AuthenticaClient {
     const res = await fetchWithTimeout(url, init, 10000);
 
     if (!res.ok) {
-      const json = await res.json().catch(() => ({}));
+      let parsed: { errors?: Array<{ message?: string }> } | undefined;
+      try {
+        parsed = (await res.json()) as { errors?: Array<{ message?: string }> };
+      } catch (parseErr) {
+        // The provider returned a non-JSON error body — leave a trace instead of
+        // silently losing it. Log status + content-type ONLY: the body/headers may
+        // contain secrets, and SyntaxError messages embed a snippet of the body,
+        // so those are reduced to a static label.
+        const reason = parseErr instanceof SyntaxError ? 'non-JSON body' : errorMessage(parseErr);
+        this.logger.warn(
+          `Authentica error response body could not be parsed (status=${res.status}, ` +
+            `content-type=${res.headers?.get('content-type') ?? 'unknown'}): ${reason} — falling back to statusText`,
+        );
+      }
       const message =
-        (json as { errors?: Array<{ message?: string }> }).errors?.[0]?.message ??
-        res.statusText ??
-        'Authentica request failed';
+        parsed?.errors?.[0]?.message ?? res.statusText ?? 'Authentica request failed';
       throw new AuthenticaError(res.status, message);
     }
 
