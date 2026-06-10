@@ -6,13 +6,18 @@ import { MoyasarCredentialsService } from '../../../infrastructure/payments/moya
 
 describe('TestMoyasarConfigHandler', () => {
   let handler: TestMoyasarConfigHandler;
-  let prisma: { organizationPaymentConfig: { findFirst: jest.Mock; update: jest.Mock } };
+  let prisma: { organizationPaymentConfig: { findUnique: jest.Mock; update: jest.Mock } };
   let creds: { decrypt: jest.Mock };
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
 
   beforeEach(async () => {
     prisma = {
       organizationPaymentConfig: {
-        findFirst: jest.fn(),
+        findUnique: jest.fn(),
         update: jest.fn().mockResolvedValue({}),
       },
     };
@@ -30,12 +35,12 @@ describe('TestMoyasarConfigHandler', () => {
   });
 
   it('throws when no config exists', async () => {
-    prisma.organizationPaymentConfig.findFirst.mockResolvedValue(null);
+    prisma.organizationPaymentConfig.findUnique.mockResolvedValue(null);
     await expect(handler.execute()).rejects.toThrow(BadRequestException);
   });
 
   it('returns OK on 200', async () => {
-    prisma.organizationPaymentConfig.findFirst.mockResolvedValue({ id: '1', secretKeyEnc: 'enc' });
+    prisma.organizationPaymentConfig.findUnique.mockResolvedValue({ id: '1', secretKeyEnc: 'enc' });
     global.fetch = jest.fn().mockResolvedValue({ status: 200 });
     const result = await handler.execute();
     expect(result.ok).toBe(true);
@@ -46,7 +51,7 @@ describe('TestMoyasarConfigHandler', () => {
   });
 
   it('returns INVALID_KEY on 401', async () => {
-    prisma.organizationPaymentConfig.findFirst.mockResolvedValue({ id: '1', secretKeyEnc: 'enc' });
+    prisma.organizationPaymentConfig.findUnique.mockResolvedValue({ id: '1', secretKeyEnc: 'enc' });
     global.fetch = jest.fn().mockResolvedValue({ status: 401 });
     const result = await handler.execute();
     expect(result.ok).toBe(false);
@@ -54,7 +59,7 @@ describe('TestMoyasarConfigHandler', () => {
   });
 
   it('returns INVALID_KEY on 403', async () => {
-    prisma.organizationPaymentConfig.findFirst.mockResolvedValue({ id: '1', secretKeyEnc: 'enc' });
+    prisma.organizationPaymentConfig.findUnique.mockResolvedValue({ id: '1', secretKeyEnc: 'enc' });
     global.fetch = jest.fn().mockResolvedValue({ status: 403 });
     const result = await handler.execute();
     expect(result.ok).toBe(false);
@@ -62,14 +67,14 @@ describe('TestMoyasarConfigHandler', () => {
   });
 
   it('returns HTTP status for other codes', async () => {
-    prisma.organizationPaymentConfig.findFirst.mockResolvedValue({ id: '1', secretKeyEnc: 'enc' });
+    prisma.organizationPaymentConfig.findUnique.mockResolvedValue({ id: '1', secretKeyEnc: 'enc' });
     global.fetch = jest.fn().mockResolvedValue({ status: 500 });
     const result = await handler.execute();
     expect(result.status).toBe('HTTP_500');
   });
 
   it('returns NETWORK_ERROR on fetch failure', async () => {
-    prisma.organizationPaymentConfig.findFirst.mockResolvedValue({ id: '1', secretKeyEnc: 'enc' });
+    prisma.organizationPaymentConfig.findUnique.mockResolvedValue({ id: '1', secretKeyEnc: 'enc' });
     global.fetch = jest.fn().mockRejectedValue(new Error('timeout'));
     const result = await handler.execute();
     expect(result.ok).toBe(false);

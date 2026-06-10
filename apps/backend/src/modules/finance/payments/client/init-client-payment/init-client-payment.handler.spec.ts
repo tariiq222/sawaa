@@ -85,13 +85,28 @@ describe('InitClientPaymentHandler', () => {
       description: `Invoice payment - ${invoiceId}`,
       callbackUrl: `http://localhost:3000/booking/payment-callback?bookingId=${bookingId}&invoiceId=${invoiceId}`,
       metadata: { invoiceId, bookingId, source: 'mobile-client' },
-      idempotencyKey: `payment:${organizationId}:${invoiceId}`,
+      givenId: expect.any(String),
     });
     expect(prisma.payment.update).toHaveBeenCalledWith({
       where: { id: 'payment-1' },
       data: { gatewayRef: 'moyasar-payment-1' },
       select: { id: true },
     });
+  });
+
+  it('sends a fresh given_id per attempt that does not pin the invoice/amount', async () => {
+    // Regression for the P0 where the gateway idempotency key was
+    // `payment:${org}:${invoiceId}` — pinned to the first amount, so a top-up
+    // after a deposit hit `400 already created`. The key must be a unique
+    // UUID-shaped value per attempt, never the static invoice-keyed string.
+    const { handler, moyasar } = buildHandler();
+
+    await handler.execute({ invoiceId, clientId });
+
+    const { givenId } = moyasar.createPayment.mock.calls[0][1];
+    expect(givenId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+    expect(givenId).not.toContain(invoiceId);
+    expect(givenId).not.toContain('payment:');
   });
 
   it('throws ForbiddenException when the invoice belongs to another client', async () => {
@@ -195,7 +210,7 @@ describe('InitClientPaymentHandler', () => {
       description: `Invoice payment - ${invoiceId}`,
       callbackUrl: `http://localhost:3000/booking/payment-callback?bookingId=${bookingId}&invoiceId=${invoiceId}`,
       metadata: { invoiceId, bookingId, source: 'mobile-client' },
-      idempotencyKey: `payment:${organizationId}:${invoiceId}`,
+      givenId: expect.any(String),
     });
     expect(prisma.payment.update).toHaveBeenCalledWith({
       where: { id: 'payment-1' },

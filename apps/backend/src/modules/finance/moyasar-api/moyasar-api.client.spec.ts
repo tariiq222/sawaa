@@ -20,7 +20,7 @@ const ORG_ID = 'org-test-123';
 function makePrisma(secretKeyEnc: string | null = 'enc-key') {
   return {
     organizationPaymentConfig: {
-      findFirst: jest.fn().mockResolvedValue(secretKeyEnc ? { secretKeyEnc } : null),
+      findUnique: jest.fn().mockResolvedValue(secretKeyEnc ? { secretKeyEnc } : null),
     },
   };
 }
@@ -60,7 +60,7 @@ describe('MoyasarApiClient', () => {
     it('returns cached key without hitting DB on cache hit', async () => {
       // Prime cache by calling once
       await (client as unknown as { getApiKeyForOrg(id: string): Promise<string> }).getApiKeyForOrg(ORG_ID);
-      expect(prisma.organizationPaymentConfig.findFirst).toHaveBeenCalledTimes(1);
+      expect(prisma.organizationPaymentConfig.findUnique).toHaveBeenCalledTimes(1);
       expect(creds.decrypt).toHaveBeenCalledTimes(1);
 
       jest.clearAllMocks();
@@ -68,19 +68,19 @@ describe('MoyasarApiClient', () => {
       // Second call should be a cache hit
       const key = await (client as unknown as { getApiKeyForOrg(id: string): Promise<string> }).getApiKeyForOrg(ORG_ID);
       expect(key).toBe('sk_live_abc');
-      expect(prisma.organizationPaymentConfig.findFirst).not.toHaveBeenCalled();
+      expect(prisma.organizationPaymentConfig.findUnique).not.toHaveBeenCalled();
       expect(creds.decrypt).not.toHaveBeenCalled();
     });
 
     it('fetches from DB + decrypts + caches on cache miss', async () => {
       const key = await (client as unknown as { getApiKeyForOrg(id: string): Promise<string> }).getApiKeyForOrg(ORG_ID);
       expect(key).toBe('sk_live_abc');
-      expect(prisma.organizationPaymentConfig.findFirst).toHaveBeenCalledTimes(1);
+      expect(prisma.organizationPaymentConfig.findUnique).toHaveBeenCalledTimes(1);
       expect(creds.decrypt).toHaveBeenCalledWith('enc-key', ORG_ID);
     });
 
     it('throws BadRequestException when DB returns no config', async () => {
-      prisma.organizationPaymentConfig.findFirst.mockResolvedValue(null);
+      prisma.organizationPaymentConfig.findUnique.mockResolvedValue(null);
       await expect(
         (client as unknown as { getApiKeyForOrg(id: string): Promise<string> }).getApiKeyForOrg('org-no-config'),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -183,7 +183,7 @@ describe('MoyasarApiClient', () => {
         description: 'Invoice #1',
         callbackUrl: 'https://example.com/callback',
         metadata: { invoiceId: 'inv_1' },
-        idempotencyKey: 'idem-123',
+        givenId: 'idem-123',
       };
 
       const result = await client.createPayment(ORG_ID, params);
@@ -211,9 +211,9 @@ describe('MoyasarApiClient', () => {
             callback_url: 'https://example.com/callback',
             metadata: { invoiceId: 'inv_1' },
             source: { type: 'card' },
+            given_id: 'idem-123',
           }),
           headers: expect.objectContaining({
-            'Idempotency-Key': 'idem-123',
             Authorization: 'Bearer sk_live_abc',
             'Content-Type': 'application/json',
           }),
@@ -392,13 +392,13 @@ describe('MoyasarApiClient', () => {
         (client as unknown as { getApiKeyForOrg(id: string): Promise<string> }).getApiKeyForOrg(id);
 
       await getKey(ORG_ID);
-      expect(prisma.organizationPaymentConfig.findFirst).toHaveBeenCalledTimes(1);
+      expect(prisma.organizationPaymentConfig.findUnique).toHaveBeenCalledTimes(1);
 
       client.invalidate(ORG_ID);
       jest.clearAllMocks();
 
       await getKey(ORG_ID);
-      expect(prisma.organizationPaymentConfig.findFirst).toHaveBeenCalledTimes(1);
+      expect(prisma.organizationPaymentConfig.findUnique).toHaveBeenCalledTimes(1);
       expect(creds.decrypt).toHaveBeenCalledTimes(1);
     });
   });

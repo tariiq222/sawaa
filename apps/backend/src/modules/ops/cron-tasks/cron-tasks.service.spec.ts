@@ -12,6 +12,7 @@ import { DataRetentionCron } from './data-retention.cron';
 import { DbRowCountCron } from './db-row-count.cron';
 import { RunOrphanAuditHandler } from '../orphan-audit/run-orphan-audit.handler';
 import { ReconcileRefundsCron } from './reconcile-refunds.cron';
+import { ReconcilePaymentsCron } from './reconcile-payments.cron';
 import { OutboxPublisherCron } from './outbox-publisher.cron';
 import { AuthenticaBalanceCheckCron } from './authentica-balance-check.cron';
 import * as Sentry from '@sentry/node';
@@ -38,6 +39,7 @@ describe('CronTasksService', () => {
   let mockDbRowCount: jest.Mocked<DbRowCountCron>;
   let mockOrphanAudit: jest.Mocked<RunOrphanAuditHandler>;
   let mockReconcileRefunds: jest.Mocked<ReconcileRefundsCron>;
+  let mockReconcilePayments: jest.Mocked<ReconcilePaymentsCron>;
   let mockOutboxPublisher: jest.Mocked<OutboxPublisherCron>;
   let mockAuthenticaBalanceCheck: jest.Mocked<AuthenticaBalanceCheckCron>;
 
@@ -97,6 +99,9 @@ describe('CronTasksService', () => {
     mockReconcileRefunds = {
       execute: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<ReconcileRefundsCron>;
+    mockReconcilePayments = {
+      execute: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<ReconcilePaymentsCron>;
     mockOutboxPublisher = {
       execute: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<OutboxPublisherCron>;
@@ -118,6 +123,7 @@ describe('CronTasksService', () => {
       mockDbRowCount,
       mockOrphanAudit,
       mockReconcileRefunds,
+      mockReconcilePayments,
       mockOutboxPublisher,
       mockAuthenticaBalanceCheck,
     );
@@ -185,11 +191,12 @@ describe('CronTasksService', () => {
           'db-row-count',
           'orphan-audit',
           'reconcile-refunds',
+          'reconcile-payments',
           'outbox-publisher',
           'authentica-balance-check',
         ]),
       );
-      expect(values).toHaveLength(12);
+      expect(values).toHaveLength(13);
     });
   });
 
@@ -198,7 +205,7 @@ describe('CronTasksService', () => {
       (service as any).registerRepeatingJobs();
 
       expect(mockBullMq.getQueue).toHaveBeenCalledWith('ops-cron');
-      expect(mockQueue.add).toHaveBeenCalledTimes(12);
+      expect(mockQueue.add).toHaveBeenCalledTimes(13);
 
       const expectedJobs = [
         { name: CRON_JOBS.BOOKING_AUTOCOMPLETE, cron: '*/15 * * * *' },
@@ -211,6 +218,7 @@ describe('CronTasksService', () => {
         { name: CRON_JOBS.DB_ROW_COUNT, cron: '0 1 * * 0' },
         { name: CRON_JOBS.ORPHAN_AUDIT, cron: '0 2 * * 0' },
         { name: CRON_JOBS.RECONCILE_REFUNDS, cron: '*/15 * * * *' },
+        { name: CRON_JOBS.RECONCILE_PAYMENTS, cron: '*/15 * * * *' },
         { name: CRON_JOBS.OUTBOX_PUBLISHER, cron: '*/1 * * * *' },
         { name: CRON_JOBS.AUTHENTICA_BALANCE_CHECK, cron: '0 8 * * *' },
       ];
@@ -309,6 +317,13 @@ describe('CronTasksService', () => {
       const processor = (mockBullMq.createWorker as jest.Mock).mock.calls[0][1];
       await processor(createJob(CRON_JOBS.RECONCILE_REFUNDS));
       expect(mockReconcileRefunds.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it('handles reconcile-payments', async () => {
+      (service as any).registerWorker();
+      const processor = (mockBullMq.createWorker as jest.Mock).mock.calls[0][1];
+      await processor(createJob(CRON_JOBS.RECONCILE_PAYMENTS));
+      expect(mockReconcilePayments.execute).toHaveBeenCalledTimes(1);
     });
 
     it('handles outbox-publisher', async () => {

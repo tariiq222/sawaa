@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ActivityAction } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { MoyasarApiClient } from '../../finance/moyasar-api/moyasar-api.client';
+import { computeRefundAccounting } from '../../finance/refund-payment/refund-vat.helper';
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
@@ -56,6 +57,7 @@ export class ReconcileRefundsCron {
           paymentId: true,
           invoiceId: true,
           gatewayRef: true,
+          amount: true,
         },
         orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
         take: BATCH_SIZE,
@@ -69,7 +71,14 @@ export class ReconcileRefundsCron {
         // gatewayRef is guaranteed non-null by the query filter above
         const gatewayRef = row.gatewayRef as string;
         try {
-          await this.processRow(row.id, DEFAULT_ORG_ID, row.paymentId, row.invoiceId, gatewayRef);
+          await this.processRow(
+            row.id,
+            DEFAULT_ORG_ID,
+            row.paymentId,
+            row.invoiceId,
+            gatewayRef,
+            Math.round(Number(row.amount)),
+          );
         } catch (err) {
           this.logger.error(
             `reconcile-refunds: failed to process RefundRequest ${row.id}`,
@@ -87,6 +96,7 @@ export class ReconcileRefundsCron {
     paymentId: string,
     invoiceId: string,
     gatewayRef: string,
+    refundAmount: number,
   ): Promise<void> {
     const { status } = await this.moyasar.getRefundStatus(organizationId, gatewayRef);
 
@@ -119,20 +129,45 @@ export class ReconcileRefundsCron {
       return;
     }
 
-    // status === 'paid' — finalize atomically
+    // status === 'paid' — finalize atomically.
+    //
+    // Mirror ApproveRefundHandler's accounting EXACTLY: a partial refund must
+    // land PARTIALLY_REFUNDED with the ledger columns (refundedAmount /
+    // refundedVatAmt) incremented — never force a blanket REFUNDED, which would
+    // hide remaining refundable balance and leave the columns stale. The row is
+    // still PROCESSING here, so this refund has NOT yet been applied to the
+    // invoice/payment (the approve transaction never committed) — apply it once.
     if (status === 'paid') {
-      await this.rlsTransaction.withTransaction(async (tx) => {
+      const newStatus = await this.rlsTransaction.withTransaction(async (tx) => {
+        const invoiceForAccounting = await tx.invoice.findUniqueOrThrow({
+          where: { id: invoiceId },
+          select: { total: true, vatAmt: true, refundedAmount: true },
+        });
+        const accounting = computeRefundAccounting({
+          invoiceTotal: invoiceForAccounting.total,
+          invoiceVatAmt: invoiceForAccounting.vatAmt,
+          alreadyRefundedAmount: invoiceForAccounting.refundedAmount,
+          thisRefundAmount: refundAmount,
+        });
+
         await tx.refundRequest.update({
           where: { id: refundRequestId },
           data: { status: 'COMPLETED' },
         });
-        await tx.payment.update({
-          where: { id: paymentId },
-          data: { status: 'REFUNDED' },
-        });
         await tx.invoice.update({
           where: { id: invoiceId },
-          data: { status: 'REFUNDED' },
+          data: {
+            status: accounting.newInvoiceStatus,
+            refundedAmount: accounting.newRefundedAmount,
+            refundedVatAmt: accounting.newRefundedVatAmt,
+          },
+        });
+        await tx.payment.update({
+          where: { id: paymentId },
+          data: {
+            status: accounting.newInvoiceStatus === 'REFUNDED' ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
+            refundedAmount: { increment: refundAmount },
+          },
         });
         await tx.activityLog.create({
           data: {
@@ -140,12 +175,14 @@ export class ReconcileRefundsCron {
             action: ActivityAction.SYSTEM,
             entity: 'RefundRequest',
             entityId: refundRequestId,
-            description: `Reconciled from Moyasar → COMPLETED (payment=${paymentId} invoice=${invoiceId})`,
+            description: `Reconciled from Moyasar → COMPLETED (${accounting.newInvoiceStatus}, amount=${refundAmount} payment=${paymentId} invoice=${invoiceId})`,
           },
         });
+        return accounting.newInvoiceStatus;
       });
       this.logger.log(
-        `reconcile-refunds: RefundRequest ${refundRequestId} → COMPLETED (reconciled from Moyasar 'paid')`,
+        `reconcile-refunds: RefundRequest ${refundRequestId} → COMPLETED ` +
+          `(reconciled from Moyasar 'paid', invoice ${newStatus})`,
       );
     }
   }

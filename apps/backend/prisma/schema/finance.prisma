@@ -204,6 +204,10 @@ model RefundRequest {
 
 model OrganizationPaymentConfig {
   id                 String    @id @default(uuid())
+  // Single-tenant: exactly one row. The @unique constant key lets reads use
+  // findUnique and writes use upsert — no findFirst/orderBy race window where
+  // two concurrent upserts could create duplicate rows with divergent secrets.
+  singletonKey       String    @unique @default("singleton")
   publishableKey     String // pk_test_… / pk_live_… — not secret, stored plain
   secretKeyEnc       String // AES-256-GCM ciphertext (base64)
   webhookSecretEnc   String // REQUIRED — AES-256-GCM, per-tenant webhook signing secret (2026-05-05)

@@ -45,7 +45,7 @@ interface MockPrisma {
     findFirst: jest.Mock;
   };
   organizationPaymentConfig: {
-    findFirst: jest.Mock;
+    findUnique: jest.Mock;
   };
   webhookEvent: {
     create: jest.Mock;
@@ -106,7 +106,7 @@ function buildPrisma(invoiceOverride?: Record<string, unknown> | null, configOve
       findFirst: jest.fn().mockResolvedValue({ depositEnabled: false, depositAmount: null }),
     },
     organizationPaymentConfig: {
-      findFirst: jest.fn().mockResolvedValue(
+      findUnique: jest.fn().mockResolvedValue(
         configOverride === null ? null : configOverride ?? buildPaymentConfig(ORG_A),
       ),
     },

@@ -24,6 +24,7 @@ import { DbMetricsService } from '../../infrastructure/telemetry/db-metrics.serv
 import { RunOrphanAuditHandler } from './orphan-audit/run-orphan-audit.handler';
 
 import { ReconcileRefundsCron } from './cron-tasks/reconcile-refunds.cron';
+import { ReconcilePaymentsCron } from './cron-tasks/reconcile-payments.cron';
 import { OutboxPublisherCron } from './cron-tasks/outbox-publisher.cron';
 import { AuthenticaBalanceCheckCron } from './cron-tasks/authentica-balance-check.cron';
 
@@ -48,6 +49,8 @@ const cronHandlers = [
 
   // CR-6 — refund reconciliation
   ReconcileRefundsCron,
+  // payment reconciliation — safety net for lost Moyasar webhooks
+  ReconcilePaymentsCron,
   // CR-5 — outbox publisher
   OutboxPublisherCron,
   // TAR-83 — Authentica daily balance monitor

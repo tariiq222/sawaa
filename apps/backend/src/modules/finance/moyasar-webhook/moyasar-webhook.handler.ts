@@ -6,7 +6,8 @@ import { PaymentMethod, PaymentStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { MoyasarCredentialsService } from '../../../infrastructure/payments/moyasar-credentials.service';
-import { DEFAULT_ORG_ID, SINGLE_TENANT_CONTEXT_ID, SYSTEM_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../../common/constants';
+import { DEFAULT_ORG_ID, PAYMENT_CONFIG_SINGLETON_KEY, SINGLE_TENANT_CONTEXT_ID, SYSTEM_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../../common/constants';
+import { errorMessage } from '../../../common/helpers/error-message.helper';
 import { PaymentCompletedEvent } from '../events/payment-completed.event';
 import { PaymentFailedEvent } from '../events/payment-failed.event';
 import { DepositPaidEvent } from '../events/deposit-paid.event';
@@ -153,7 +154,9 @@ export class MoyasarWebhookHandler {
     // STAGE 3 — fetch payment config in system context.
     const cfg = await this.cls.run(async () => {
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-      return this.prisma.organizationPaymentConfig.findFirst();
+      return this.prisma.organizationPaymentConfig.findUnique({
+        where: { singletonKey: PAYMENT_CONFIG_SINGLETON_KEY },
+      });
     });
     if (!cfg) {
       // Permanent: no Moyasar config means this deployment cannot ever verify
@@ -176,7 +179,7 @@ export class MoyasarWebhookHandler {
       // Permanent: a corrupt/unreadable secret will never decrypt on retry.
       this.logger.error(
         `Moyasar webhook rejected: failed to decrypt webhook secret for context ${SINGLE_TENANT_CONTEXT_ID} ` +
-          `(payment ${paymentId}): ${err instanceof Error ? err.message : 'unknown'}`,
+          `(payment ${paymentId}): ${errorMessage(err)}`,
       );
       return { skipped: true, reason: 'webhook_secret_decrypt_failed' };
     }

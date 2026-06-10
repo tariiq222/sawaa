@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -111,6 +112,13 @@ export class InitClientPaymentHandler {
       select: { id: true },
     });
 
+    // Fresh idempotency identity per attempt. Keying on the invoice alone would
+    // pin the FIRST amount: after a deposit, a top-up bills a smaller outstanding
+    // and Moyasar would reject the changed amount with `400 already created`,
+    // making the invoice impossible to finish by card. A unique value per
+    // attempt sidesteps that while still using the gateway's real `given_id`
+    // mechanism (vs the unsupported Idempotency-Key header).
+    const givenId = randomUUID();
     let moyasarPayment: Awaited<ReturnType<MoyasarApiClient['createPayment']>>;
     try {
       moyasarPayment = await this.moyasar.createPayment(DEFAULT_ORG_ID, {
@@ -123,7 +131,7 @@ export class InitClientPaymentHandler {
           bookingId: invoice.bookingId ?? '',
           source: 'mobile-client',
         },
-        idempotencyKey: `payment:${DEFAULT_ORG_ID}:${invoice.id}`,
+        givenId,
       });
     } catch (error) {
       await this.deleteFailedPaymentInit(payment.id);

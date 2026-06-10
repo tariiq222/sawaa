@@ -14,6 +14,7 @@ import { DbRowCountCron } from './db-row-count.cron';
 import { RunOrphanAuditHandler } from '../orphan-audit/run-orphan-audit.handler';
 
 import { ReconcileRefundsCron } from './reconcile-refunds.cron';
+import { ReconcilePaymentsCron } from './reconcile-payments.cron';
 import { OutboxPublisherCron } from './outbox-publisher.cron';
 import { AuthenticaBalanceCheckCron } from './authentica-balance-check.cron';
 import * as Sentry from '@sentry/node';
@@ -32,6 +33,7 @@ export const CRON_JOBS = {
   ORPHAN_AUDIT: 'orphan-audit',
 
   RECONCILE_REFUNDS: 'reconcile-refunds',
+  RECONCILE_PAYMENTS: 'reconcile-payments',
   OUTBOX_PUBLISHER: 'outbox-publisher',
   AUTHENTICA_BALANCE_CHECK: 'authentica-balance-check',
 } as const;
@@ -56,6 +58,7 @@ export class CronTasksService implements OnModuleInit {
     private readonly orphanAudit: RunOrphanAuditHandler,
 
     private readonly reconcileRefunds: ReconcileRefundsCron,
+    private readonly reconcilePayments: ReconcilePaymentsCron,
     private readonly outboxPublisher: OutboxPublisherCron,
     private readonly authenticaBalanceCheck: AuthenticaBalanceCheckCron,
   ) {
@@ -82,6 +85,7 @@ export class CronTasksService implements OnModuleInit {
       { name: CRON_JOBS.ORPHAN_AUDIT, cron: '0 2 * * 0' }, // weekly Sunday 02:00
 
       { name: CRON_JOBS.RECONCILE_REFUNDS, cron: '*/15 * * * *' },    // every 15 min
+      { name: CRON_JOBS.RECONCILE_PAYMENTS, cron: '*/15 * * * *' },   // every 15 min — catch lost payment webhooks
       { name: CRON_JOBS.OUTBOX_PUBLISHER, cron: '*/1 * * * *' },      // every minute (BullMQ min granularity; real tick is every 5s via worker loop)
       { name: CRON_JOBS.AUTHENTICA_BALANCE_CHECK, cron: '0 8 * * *' }, // daily at 08:00 AST
     ];
@@ -143,6 +147,9 @@ export class CronTasksService implements OnModuleInit {
 
           case CRON_JOBS.RECONCILE_REFUNDS:
             await this.reconcileRefunds.execute();
+            break;
+          case CRON_JOBS.RECONCILE_PAYMENTS:
+            await this.reconcilePayments.execute();
             break;
           case CRON_JOBS.OUTBOX_PUBLISHER:
             await this.outboxPublisher.execute();

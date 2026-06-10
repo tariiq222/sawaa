@@ -11,7 +11,7 @@ describe('GetMoyasarConfigHandler', () => {
       providers: [
         GetMoyasarConfigHandler,
         { provide: PrismaService, useValue: {
-          organizationPaymentConfig: { findFirst: jest.fn() },
+          organizationPaymentConfig: { findUnique: jest.fn() },
         } },
       ],
     }).compile();
@@ -25,13 +25,13 @@ describe('GetMoyasarConfigHandler', () => {
   });
 
   it('should return null when no config', async () => {
-    (prisma.organizationPaymentConfig.findFirst as jest.Mock).mockResolvedValue(null);
+    (prisma.organizationPaymentConfig.findUnique as jest.Mock).mockResolvedValue(null);
     const result = await handler.execute();
     expect(result).toBeNull();
   });
 
   it('should return masked config for live key', async () => {
-    (prisma.organizationPaymentConfig.findFirst as jest.Mock).mockResolvedValue({
+    (prisma.organizationPaymentConfig.findUnique as jest.Mock).mockResolvedValue({
       publishableKey: 'pk_live_abc1234',
       secretKeyEnc: 'encrypted',
       webhookSecretEnc: 'whsec',
@@ -45,7 +45,7 @@ describe('GetMoyasarConfigHandler', () => {
   });
 
   it('should return masked config for test key', async () => {
-    (prisma.organizationPaymentConfig.findFirst as jest.Mock).mockResolvedValue({
+    (prisma.organizationPaymentConfig.findUnique as jest.Mock).mockResolvedValue({
       publishableKey: 'pk_test_xyz5678',
       secretKeyEnc: 'encrypted',
       webhookSecretEnc: null,

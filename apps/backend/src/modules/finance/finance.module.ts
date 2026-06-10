@@ -26,6 +26,7 @@ import { CreateCouponHandler } from './coupons/create-coupon.handler';
 import { UpdateCouponHandler } from './coupons/update-coupon.handler';
 import { DeleteCouponHandler } from './coupons/delete-coupon.handler';
 import { GetPaymentStatsHandler } from './get-payment-stats/get-payment-stats.handler';
+import { GetEmployeeEarningsHandler } from './get-employee-earnings/get-employee-earnings.handler';
 import { RefundPaymentHandler } from './refund-payment/refund-payment.handler';
 import { VerifyPaymentHandler } from './verify-payment/verify-payment.handler';
 import { GroupSessionReadyHandler } from './group-session-ready/group-session-ready.handler';
@@ -69,6 +70,7 @@ const handlers = [
   UpdateCouponHandler,
   DeleteCouponHandler,
   GetPaymentStatsHandler,
+  GetEmployeeEarningsHandler,
   RefundPaymentHandler,
   VerifyPaymentHandler,
   GroupSessionReadyHandler,
