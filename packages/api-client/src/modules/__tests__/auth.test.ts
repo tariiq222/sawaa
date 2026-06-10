@@ -20,10 +20,7 @@ const fakeUser: UserPayload = {
   customRoleId: null,
   isSuperAdmin: false,
   permissions: ['booking:read'],
-  organizationId: 'org_1',
-  verticalSlug: null,
   onboardingCompletedAt: null,
-  activeMembership: null,
 }
 
 const fakeAuth: AuthResponse = {

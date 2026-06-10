@@ -1743,7 +1743,7 @@ git commit -m "feat(dashboard): document VAT number requirement for ZATCA QR on 
 
 ### Task 3.5: Phase 3 integration check
 
-- [ ] **Step 1: Seed a tenant with VAT number**
+- [ ] **Step 1: Seed the organization with VAT number**
 
 Open `apps/backend/prisma/seeds/*` and ensure `OrganizationSettings.companyNameAr = "مركز سواء"` and `vatRegistrationNumber = "300000000000003"` are set in the demo seed. Update if missing.
 
@@ -1794,7 +1794,7 @@ git commit -m "chore(seed): set demo seller identity for ZATCA QR rendering"
 | New Prisma columns | None — nullable additive only | Migration is forward-only and reversible. |
 | `@react-pdf/renderer` adds ~10MB | Larger image, longer cold-start | Acceptable; image stays under 500MB. |
 | QR omitted when VAT number missing | Receipts ship without QR | Phase 3 dashboard banner makes the requirement explicit; QR conditional logic verified in tests. |
-| Email delivery uses tenant `EmailProviderFactory` | If provider is unconfigured (NoOp), email silently dropped | Handler logs a warning; `NoOpEmailAdapter.sendMail` already returns a fake messageId. Acceptable for single-tenant rollout. |
+| Email delivery uses the org `EmailProviderFactory` | If provider is unconfigured (NoOp), email silently dropped | Handler logs a warning; `NoOpEmailAdapter.sendMail` already returns a fake messageId. Acceptable for single-tenant rollout. |
 | `bookings.payment-completed.handler.ts` already subscribes to the same event | Two subscribers run in parallel | Handlers are independent — booking confirm is in `bookings/`, receipt issuance is in `finance/`. No shared state. |
 | `pdfUrl` exposed in public DTO | Anyone with the URL can download | MinIO URLs in this codebase are direct (no presigned). Acceptable for a finished invoice receipt — the URL is shared with the client by email anyway. If stricter, swap `uploadFile` for `getSignedUrl` in `IssueInvoiceReceiptHandler` and don't persist a long-lived URL — generate on demand in the controller. |
 | BullMQ retry on email failure | Could spam the client if Resend flakes | The handler throws; BullMQ retries with backoff. Default retry limit (3) is acceptable. |

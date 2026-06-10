@@ -51,12 +51,20 @@ describe('GetCurrentUserHandler', () => {
     expect(result.emailVerifiedAt).toBeNull();
   });
 
-  it('returns null organizationId and activeMembership in single-tenant mode', async () => {
+  it('omits organizationId and legacy SaaS membership fields in single-tenant mode', async () => {
     prisma.user.findUnique.mockResolvedValue({ id: 'u1', email: 'a@b.com', firstName: 'A', lastName: 'B', customRole: null, lastActiveOrganizationId: null });
     const result = await handler.execute({ userId: 'u1' });
-    expect(result.organizationId).toBeNull();
-    expect(result.verticalSlug).toBeNull();
+    // Exact key set: user columns + derived names + onboardingCompletedAt only.
+    // Guards against re-introducing removed SaaS fork fields.
+    expect(Object.keys(result).sort()).toEqual([
+      'customRole',
+      'email',
+      'firstName',
+      'id',
+      'lastActiveOrganizationId',
+      'lastName',
+      'onboardingCompletedAt',
+    ]);
     expect(result.onboardingCompletedAt).toBeNull();
-    expect(result.activeMembership).toBeNull();
   });
 });

@@ -9,7 +9,6 @@ import { TokenService } from '../shared/token.service';
 
 const prismaMock = {
   user: { findFirst: jest.fn(), update: jest.fn() },
-  membership: { findFirst: jest.fn() },
   otpCode: { findFirst: jest.fn(), update: jest.fn() },
 };
 const tokensMock = { issueTokenPair: jest.fn() };
@@ -148,7 +147,6 @@ describe('VerifyMobileOtpHandler', () => {
       customRoleId: null,
       customRole: null,
     });
-    prismaMock.membership.findFirst.mockResolvedValue(null);
     tokensMock.issueTokenPair.mockResolvedValue({ accessToken: 'a', refreshToken: 'r' });
 
     const out = await handler.execute({
@@ -170,10 +168,11 @@ describe('VerifyMobileOtpHandler', () => {
       }),
     );
     expect(out.tokens.accessToken).toBe('a');
-    expect(out.activeMembership).toBeNull();
+    // Result shape is tokens-only — guards against re-introducing SaaS fork fields.
+    expect(Object.keys(out)).toEqual(['tokens']);
   });
 
-  it('login: marks consumed + returns activeMembership when present', async () => {
+  it('login: marks consumed + issues tokens', async () => {
     prismaMock.user.findFirst.mockResolvedValue({
       id: 'u1',
       email: 'a@b.com',
@@ -193,7 +192,6 @@ describe('VerifyMobileOtpHandler', () => {
       consumedAt: null,
     });
     prismaMock.otpCode.update.mockResolvedValue({});
-    prismaMock.membership.findFirst.mockResolvedValue({ id: 'm1', organizationId: 'org1', role: 'RECEPTIONIST' });
     tokensMock.issueTokenPair.mockResolvedValue({ accessToken: 'a', refreshToken: 'r' });
 
     const out = await handler.execute({
@@ -202,8 +200,15 @@ describe('VerifyMobileOtpHandler', () => {
       purpose: MobileOtpPurposeDto.LOGIN,
     });
 
-    // org scoping moved to RLS / removed in single-tenant migration — activeMembership always null
-    expect(out.activeMembership).toBeNull();
+    expect(prismaMock.otpCode.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'o1' },
+        data: expect.objectContaining({ consumedAt: expect.any(Date) }),
+      }),
+    );
+    expect(out.tokens.accessToken).toBe('a');
+    // Result shape is tokens-only — guards against re-introducing SaaS fork fields.
+    expect(Object.keys(out)).toEqual(['tokens']);
   });
 
   it('login: throws UnauthorizedException when account inactive', async () => {

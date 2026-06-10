@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { User } from '@prisma/client';
 import { flattenPermissions } from '../casl/flatten-permissions';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export interface AuthResponse {
   accessToken: string;
@@ -20,7 +19,6 @@ export interface AuthResponse {
     isSuperAdmin: boolean;
     firstName: string;
     lastName: string;
-    organizationId: string | null;
     permissions: string[];
   };
 }
@@ -51,7 +49,6 @@ export class AuthResponseBuilder {
         isSuperAdmin: user.isSuperAdmin ?? false,
         firstName,
         lastName: rest.join(' '),
-        organizationId: DEFAULT_ORG_ID,
         permissions: flattenPermissions({
           role: user.role,
           customRole: user.customRole,

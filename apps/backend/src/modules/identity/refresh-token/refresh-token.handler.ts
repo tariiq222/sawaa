@@ -3,7 +3,6 @@ import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../infrastructure/database';
 import { TokenService, TokenPair } from '../shared/token.service';
 import type { RefreshTokenCommand } from './refresh-token.command';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 @Injectable()
 export class RefreshTokenHandler {
@@ -83,12 +82,7 @@ export class RefreshTokenHandler {
 
     if (!user || !user.isActive) throw new UnauthorizedException('User not found or inactive');
 
-    // Carry the tenant through the refresh cycle. DEFAULT_ORG_ID is
-    // the safety net for tokens issued before the SaaS-02a backfill — should
-    // be zero in prod once the backfill migration runs.
-    const orgId = DEFAULT_ORG_ID;
     return this.tokens.issueTokenPair(user, {
-      organizationId: orgId,
       isSuperAdmin: user.isSuperAdmin ?? false,
     });
   }

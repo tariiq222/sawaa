@@ -41,7 +41,7 @@ Individual apps: `pnpm dev:backend`, `pnpm dev:dashboard`, `pnpm dev:website`.
 
 `pnpm install` auto-installs [lefthook](https://github.com/evilmartians/lefthook) git hooks (root `lefthook.yml`):
 
-- **pre-commit** — ESLint on your staged `.ts`/`.tsx` files only, per app (backend / dashboard / website), plus the legacy multi-tenant guard. Runs in seconds.
+- **pre-commit** — ESLint on your staged `.ts`/`.tsx` files only, per app (backend / dashboard / website), plus a guard that blocks reintroducing legacy multi-org code. Runs in seconds.
 - **pre-push** — `pnpm typecheck` (turbo-cached, fast when nothing changed).
 
 Need to bypass one? `LEFTHOOK=0 git commit` / `LEFTHOOK=0 git push`. CI runs the same checks directly — skipping locally only defers the failure.

@@ -77,7 +77,6 @@ export const TEST_TENANT: Readonly<Omit<TestTenant, 'accessToken'>> = {
 
 interface LoginResponseBody {
   accessToken: string;
-  organizationId?: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────

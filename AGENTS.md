@@ -1,6 +1,6 @@
 # Sawa Family Counseling — Monorepo
 
-Single-tenant family counseling SaaS forked from a multi-tenant base.
+Single-tenant family counseling platform for one counseling center (مركز سواء).
 
 ## Stack
 
@@ -66,9 +66,9 @@ pnpm --filter=dashboard run e2e -- path/to/spec.ts
 
 ## Single-tenant
 
-Sawa is a single-tenant deployment. The multi-tenant scaffolding from the original SaaS fork (TenantModule, CLS guard, scoped models, `$allTenants` bypass, subscription billing, verticals, memberships) has been fully removed. The codebase no longer carries `organizationId` filters in Prisma queries.
+Sawa serves exactly one counseling center. There is no organization switching and no subscription billing, and Prisma queries carry no `organizationId` filters.
 
-Some multi-tenant stubs intentionally survive in the frontend as dead code: the dashboard's `useTerminology` hook (`hooks/use-terminology.ts`) and the mobile app's `memberships`/`tenant-switch` services. They are inert — the backend endpoints they target do not exist, the membership query is `enabled: false`, and `switchOrganization()` throws by design. Do not wire them up; treat them as removed.
+A few inert stubs intentionally survive in the frontend as dead code: the dashboard's `useTerminology` hook (`hooks/use-terminology.ts`) and the mobile app's `memberships`/`tenant-switch` services. They are inert — the backend endpoints they target do not exist, the membership query is `enabled: false`, and `switchOrganization()` throws by design. Do not wire them up; treat them as removed.
 
 Provider credentials (Zoom, SMS, Email, Moyasar) are encrypted with AES-256-GCM using a static `DEFAULT_ORG_ID` constant as AAD — see [apps/backend/src/common/constants.ts](apps/backend/src/common/constants.ts).
 

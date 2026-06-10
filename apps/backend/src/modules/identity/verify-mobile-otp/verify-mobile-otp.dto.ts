@@ -1,5 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, Length, MinLength } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsEnum, IsString, Length, MinLength } from 'class-validator';
 import { NormalizePhoneOrEmail } from '../shared/normalize-phone.transform';
 
 export enum MobileOtpPurposeDto {
@@ -22,12 +22,4 @@ export class VerifyMobileOtpDto {
   @ApiProperty({ enum: MobileOtpPurposeDto, description: 'Whether this verifies a registration or a login OTP' })
   @IsEnum(MobileOtpPurposeDto)
   purpose!: MobileOtpPurposeDto;
-
-  @ApiPropertyOptional({
-    description: 'Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.',
-    deprecated: true,
-  })
-  @IsOptional()
-  @IsString()
-  organizationId?: string;
 }

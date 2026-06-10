@@ -3,7 +3,6 @@
 NestJS 11 modular monolith — **Domain Clusters + Vertical Slices** (see [CLAUDE.md](./CLAUDE.md)).
 
 - Architecture spec: [`docs/superpowers/specs/2026-04-11-backend-architecture-design.md`](../../docs/superpowers/specs/2026-04-11-backend-architecture-design.md)
-- Multi-tenancy guide: [`docs/saas-tenancy.md`](./docs/saas-tenancy.md)
 
 ## Quick start
 

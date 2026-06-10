@@ -4,7 +4,6 @@ import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../infrastructure/database';
-import { SINGLE_TENANT_CONTEXT_ID } from '../../../common/constants';
 
 export interface TokenPair {
   accessToken: string;
@@ -12,13 +11,9 @@ export interface TokenPair {
 }
 
 /**
- * Legacy tenant identity merged into the JWT payload for API compatibility.
- * Single-tenant mode ignores caller-supplied organizationId and stamps the
- * fixed deployment context while keeping the claim present for old clients.
+ * Auth-level claims merged into the JWT payload alongside the user identity.
  */
-export interface TenantClaims {
-  /** @deprecated Ignored in single-tenant mode; use SINGLE_TENANT_CONTEXT_ID internally. */
-  organizationId: string;
+export interface AuthClaims {
   isSuperAdmin?: boolean;
   scope?: string;
 }
@@ -30,7 +25,6 @@ export interface JwtPayload {
   customRoleId: string | null;
   permissions: Array<{ action: string; subject: string }>;
   features: string[];
-  organizationId?: string;
   isSuperAdmin?: boolean;
   scope?: string;
   // P0-6: Session invalidation via tokenVersion. If the JWT's tokenVersion
@@ -55,7 +49,7 @@ export class TokenService {
       customRole: { permissions: Array<{ action: string; subject: string }> } | null;
       tokenVersion: number;
     },
-    _tenantClaims: TenantClaims,
+    claims: AuthClaims,
   ): Promise<TokenPair> {
     const permissions = user.customRole?.permissions ?? [];
     const payload: JwtPayload = {
@@ -65,9 +59,8 @@ export class TokenService {
       customRoleId: user.customRoleId,
       permissions,
       features: [],
-      organizationId: SINGLE_TENANT_CONTEXT_ID,
-      isSuperAdmin: _tenantClaims.isSuperAdmin ?? false,
-      scope: _tenantClaims.scope,
+      isSuperAdmin: claims.isSuperAdmin ?? false,
+      scope: claims.scope,
       tokenVersion: user.tokenVersion,
     };
 

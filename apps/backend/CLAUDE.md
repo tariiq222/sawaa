@@ -132,7 +132,7 @@ npm run openapi:build-and-snapshot   # Rebuild openapi.json snapshot — commit 
 
 ## Conventions that catch new contributors
 
-- **Single-tenant deployment.** Sawa runs as a single-tenant deployment. The old multi-tenant CLS guard, SCOPED_MODELS list, `$allTenants` bypass, and tenant context service were removed in the SaaS cleanup phase. Handlers no longer carry an `organizationId` filter. Encryption AAD for provider credentials uses a static `DEFAULT_ORG_ID` constant (`apps/backend/src/common/constants.ts`).
+- **Single-tenant deployment.** Sawa runs as a single-tenant deployment. The old request-scoping guards and helpers from the original codebase were removed in the single-tenant cleanup. Handlers no longer carry an `organizationId` filter. Encryption AAD for provider credentials uses a static `DEFAULT_ORG_ID` constant (`apps/backend/src/common/constants.ts`).
 - **One handler = one public method (`execute`).** Don't add `executeVariant()`; create a new slice.
 - **Tests colocated as `*.handler.spec.ts`** next to the handler, not in a parallel `test/` tree.
 - **Payments, auth, and migrations are owner-only** (see root CLAUDE.md "Security Sensitivity Tiers").

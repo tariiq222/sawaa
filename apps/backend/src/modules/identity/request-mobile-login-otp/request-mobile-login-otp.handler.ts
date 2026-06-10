@@ -1,15 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { OtpChannel, OtpPurpose } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
-import { SINGLE_TENANT_CONTEXT_ID } from '../../../common/constants';
 import { RequestOtpHandler } from '../otp/request-otp.handler';
 import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
 import type { RequestMobileLoginOtpDto } from './request-mobile-login-otp.dto';
 
-export type RequestMobileLoginOtpCommand = RequestMobileLoginOtpDto & {
-  /** @deprecated Ignored in single-tenant mode. */
-  organizationId?: string;
-};
+export type RequestMobileLoginOtpCommand = RequestMobileLoginOtpDto;
 
 export type RequestMobileLoginOtpResult = {
   maskedIdentifier: string;
@@ -41,7 +37,6 @@ export class RequestMobileLoginOtpHandler {
         identifier,
         channel: channel === 'SMS' ? OtpChannel.SMS : OtpChannel.EMAIL,
         purpose: OtpPurpose.MOBILE_LOGIN,
-        organizationId: SINGLE_TENANT_CONTEXT_ID,
       });
     }
 

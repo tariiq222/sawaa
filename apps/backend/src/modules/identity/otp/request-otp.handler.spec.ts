@@ -80,11 +80,10 @@ describe('RequestOtpHandler', () => {
     expect(result).toEqual({ success: true });
   });
 
-  it('accepts optional organizationId without filtering DB by it (single-tenant: org scoping removed)', async () => {
-    // Single-tenant migration: organizationId removed from OtpCode model.
-    // The handler accepts legacy organizationId but does NOT
-    // filter the DB count or create queries by organizationId.
-    const orgId = 'org-123';
+  it('does not filter DB by organization and uses the fixed single-tenant context', async () => {
+    // Single-tenant migration: organizationId removed from OtpCode model and
+    // from the request DTO. The handler never filters the DB count or create
+    // queries by organization and always uses the fixed deployment context.
     const txMock = {
       otpCode: {
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
@@ -97,7 +96,6 @@ describe('RequestOtpHandler', () => {
       channel: OtpChannel.EMAIL,
       identifier: 'test@example.com',
       purpose: OtpPurpose.GUEST_BOOKING,
-      organizationId: orgId,
     });
 
     expect(txMock.otpCode.create).toHaveBeenCalledWith(
@@ -108,7 +106,7 @@ describe('RequestOtpHandler', () => {
     // count query does NOT filter by organizationId
     expect(otpCountMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.not.objectContaining({ organizationId: orgId }),
+        where: expect.not.objectContaining({ organizationId: expect.anything() }),
       }),
     );
     expect(redisSetMock).toHaveBeenCalledWith(
@@ -117,30 +115,6 @@ describe('RequestOtpHandler', () => {
       'EX',
       60,
       'NX',
-    );
-    expect(mockChannel.send).toHaveBeenCalledWith('test@example.com', expect.any(String), SINGLE_TENANT_CONTEXT_ID);
-  });
-
-  it('uses fixed context when legacy organizationId is omitted', async () => {
-    const txMock = {
-      otpCode: {
-        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
-        create: jest.fn().mockResolvedValue({ id: 'test-id' }),
-      },
-    };
-    prismaMock.$transaction.mockImplementationOnce(async (fn: any) => fn(txMock));
-
-    await handler.execute({
-      channel: OtpChannel.EMAIL,
-      identifier: 'test@example.com',
-      purpose: OtpPurpose.GUEST_BOOKING,
-    });
-
-    // org scoping moved to RLS / removed in single-tenant migration
-    expect(txMock.otpCode.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ identifier: 'test@example.com' }),
-      }),
     );
     expect(mockChannel.send).toHaveBeenCalledWith('test@example.com', expect.any(String), SINGLE_TENANT_CONTEXT_ID);
   });

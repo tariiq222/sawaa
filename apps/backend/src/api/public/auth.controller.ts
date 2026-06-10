@@ -20,7 +20,6 @@ import { VerifyDashboardOtpHandler } from '../../modules/identity/verify-dashboa
 import { VerifyDashboardOtpDto } from '../../modules/identity/verify-dashboard-otp/verify-dashboard-otp.dto';
 import { PrismaService } from '../../infrastructure/database';
 import { TokenService } from '../../modules/identity/shared/token.service';
-import { DEFAULT_ORG_ID } from '../../common/constants';
 import { UserId } from '../../common/auth/user-id.decorator';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { GetCurrentUserHandler } from '../../modules/identity/get-current-user/get-current-user.handler';
@@ -189,7 +188,6 @@ export class AuthController {
     if (!user || !user.isActive) throw new UnauthorizedException('User not found or inactive');
 
     const tokens = await this.tokens.issueTokenPair(user, {
-      organizationId: DEFAULT_ORG_ID,
       isSuperAdmin: user.isSuperAdmin,
     });
     this.setRefreshCookie(res, tokens.refreshToken);

@@ -38,13 +38,6 @@ export const TENANT_CLS_KEY = 'tenant' as const;
 export const SYSTEM_CONTEXT_CLS_KEY = 'systemContext' as const;
 
 /**
- * Key marking the current CLS context as super-admin. When set to `true`,
- * cross-tenant Prisma reads are permitted (e.g. refresh-token rotation, cron
- * jobs that span all data).
- */
-export const SUPER_ADMIN_CONTEXT_CLS_KEY = 'superAdminContext' as const;
-
-/**
  * Key carrying a pinned Prisma TransactionClient. When set, the PrismaService
  * proxy routes all model accessors through this transaction so every query in
  * the request reuses the same connection.

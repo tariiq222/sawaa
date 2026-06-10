@@ -10,7 +10,7 @@ e2e/
 ├── fixtures/
 │   ├── auth.ts       ← loginAs(page, persona) helper + storageState paths
 │   ├── seed.ts       ← deterministic test data helpers (stubs — TBD)
-│   └── tenant.ts     ← per-test tenant isolation helper (stubs — TBD)
+│   └── tenant.ts     ← per-test data-isolation helper (stubs — TBD)
 ├── smoke/            ← ≤7 specs, must complete in <2 min
 │   ├── login.spec.ts
 │   ├── navigation.spec.ts

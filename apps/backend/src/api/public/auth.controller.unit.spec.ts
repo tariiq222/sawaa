@@ -45,7 +45,6 @@ describe('AuthController (unit)', () => {
           ...user,
           firstName: (user.name ?? '').trim().split(/\s+/)[0] ?? '',
           lastName: (user.name ?? '').trim().split(/\s+/).slice(1).join(' '),
-          organizationId: null,
           permissions: [],
         },
       })),

@@ -7,7 +7,6 @@ import { PasswordService } from '../shared/password.service';
 import { RegisterDto } from './register.dto';
 import { OtpPurpose, OtpChannel } from '@prisma/client';
 import { maskIdentifier } from '../../../common/helpers/mask-pii.helper';
-import { SINGLE_TENANT_CONTEXT_ID } from '../../../common/constants';
 import { PRIVACY_POLICY_VERSION } from './consent.constants';
 
 @Injectable()
@@ -40,7 +39,6 @@ export class RegisterHandler {
 
     const isEmailChannel = payload.channel === OtpChannel.EMAIL;
     const identifier = payload.identifier;
-    const organizationId = SINGLE_TENANT_CONTEXT_ID;
 
     const passwordHash = await this.passwords.hash(dto.password);
 
@@ -93,10 +91,10 @@ export class RegisterHandler {
       this.logger.log(`New client registration: ${clientId} (${maskIdentifier(identifier)})`);
     }
 
-    const tokens = await this.clientTokens.issueTokenPair(
-      { id: clientId, email: isEmailChannel ? identifier : null },
-      { organizationId },
-    );
+    const tokens = await this.clientTokens.issueTokenPair({
+      id: clientId,
+      email: isEmailChannel ? identifier : null,
+    });
 
     return {
       accessToken: tokens.accessToken,

@@ -63,7 +63,6 @@ const fakeUser = {
   customRoleId: null,
   isSuperAdmin: false,
   permissions: [],
-  organizationId: "org_test",
 }
 
 describe("auth api", () => {
@@ -92,7 +91,7 @@ describe("auth api", () => {
     // PII and runtime org context are not persisted to localStorage.
     const stored = localStorage.getItem("sawaa_user")
     expect(stored).not.toContain("a@b.com")
-    expect(stored).not.toContain(fakeUser.organizationId)
+    expect(stored).not.toContain("organizationId")
     expect(stored).toContain(fakeUser.id)
     expect(stored).toContain(fakeUser.role)
     expect(localStorage.getItem("sawaa_access_token")).toBeNull()
@@ -130,7 +129,7 @@ describe("auth api", () => {
     // No PII in storage — name/email/phone must never be persisted.
     expect(stored).not.toContain("a@b.com")
     expect(stored).not.toContain(fakeUser.name)
-    expect(stored).not.toContain(fakeUser.organizationId)
+    expect(stored).not.toContain("organizationId")
     expect(stored).toContain(fakeUser.id)
     // The returned value (in-memory) still contains the full payload.
     expect(result.email).toBe("a@b.com")

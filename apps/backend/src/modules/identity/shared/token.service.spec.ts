@@ -1,5 +1,4 @@
-import { TokenService, TenantClaims } from './token.service';
-import { SINGLE_TENANT_CONTEXT_ID } from '../../../common/constants';
+import { TokenService, AuthClaims } from './token.service';
 
 const buildJwt = () => ({
   sign: jest.fn().mockReturnValue('signed.access.token'),
@@ -45,9 +44,9 @@ describe('TokenService', () => {
         customRole: null,
         tokenVersion: 1,
       };
-      const tenantClaims: TenantClaims = { organizationId: 'org-1' };
+      const claims: AuthClaims = {};
 
-      await svc.issueTokenPair(user, tenantClaims);
+      await svc.issueTokenPair(user, claims);
 
       expect(jwt.sign).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -73,9 +72,9 @@ describe('TokenService', () => {
         customRole: null,
         tokenVersion: 1,
       };
-      const tenantClaims: TenantClaims = { organizationId: 'org-1' };
+      const claims: AuthClaims = {};
 
-      const result = await svc.issueTokenPair(user, tenantClaims);
+      const result = await svc.issueTokenPair(user, claims);
 
       expect(typeof result.refreshToken).toBe('string');
       expect(result.refreshToken.length).toBeGreaterThan(10);
@@ -105,9 +104,9 @@ describe('TokenService', () => {
         customRole: null,
         tokenVersion: 1,
       };
-      const tenantClaims: TenantClaims = { organizationId: 'org-1' };
+      const claims: AuthClaims = {};
 
-      await svc.issueTokenPair(user, tenantClaims);
+      await svc.issueTokenPair(user, claims);
 
       expect(config.getOrThrow).toHaveBeenCalledWith('JWT_ACCESS_SECRET');
       expect(config.get).toHaveBeenCalledWith('JWT_ACCESS_TTL');
@@ -134,14 +133,14 @@ describe('TokenService', () => {
         customRole: null,
         tokenVersion: 1,
       };
-      const tenantClaims: TenantClaims = { organizationId: 'org-1' };
+      const claims: AuthClaims = {};
 
-      await svc.issueTokenPair(user, tenantClaims);
+      await svc.issueTokenPair(user, claims);
 
       expect(config.get).toHaveBeenCalledWith('JWT_REFRESH_TTL');
     });
 
-    it('payload includes fixed organizationId plus non-org tenantClaims fields', async () => {
+    it('payload omits organizationId and carries auth claims fields', async () => {
       const jwt = buildJwt();
       const config = buildConfig();
       const prisma = buildPrisma();
@@ -155,20 +154,22 @@ describe('TokenService', () => {
         customRole: null,
         tokenVersion: 2,
       };
-      const tenantClaims: TenantClaims = {
-        organizationId: 'org-1',
+      const claims: AuthClaims = {
         isSuperAdmin: true,
         scope: 'read:all',
       };
 
-      await svc.issueTokenPair(user, tenantClaims);
+      await svc.issueTokenPair(user, claims);
 
       expect(jwt.sign).toHaveBeenCalledWith(
         expect.objectContaining({
-          organizationId: SINGLE_TENANT_CONTEXT_ID,
           isSuperAdmin: true,
           scope: 'read:all',
         }),
+        expect.anything(),
+      );
+      expect(jwt.sign).toHaveBeenCalledWith(
+        expect.not.objectContaining({ organizationId: expect.anything() }),
         expect.anything(),
       );
     });
@@ -189,9 +190,9 @@ describe('TokenService', () => {
         },
         tokenVersion: 1,
       };
-      const tenantClaims: TenantClaims = { organizationId: 'org-1' };
+      const claims: AuthClaims = {};
 
-      await svc.issueTokenPair(user, tenantClaims);
+      await svc.issueTokenPair(user, claims);
 
       expect(jwt.sign).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -215,9 +216,9 @@ describe('TokenService', () => {
         customRole: null,
         tokenVersion: 1,
       };
-      const tenantClaims: TenantClaims = { organizationId: 'org-1' };
+      const claims: AuthClaims = {};
 
-      await svc.issueTokenPair(user, tenantClaims);
+      await svc.issueTokenPair(user, claims);
 
       expect(jwt.sign).toHaveBeenCalledWith(
         expect.objectContaining({

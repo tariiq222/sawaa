@@ -1,5 +1,5 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 import { OtpChannel, OtpPurpose } from '@prisma/client';
 import { NormalizePhoneOrEmail } from '../shared/normalize-phone.transform';
 
@@ -17,12 +17,4 @@ export class RequestOtpDto {
   @ApiProperty({ enum: OtpPurpose, description: 'Purpose of the OTP', example: 'GUEST_BOOKING' })
   @IsEnum(OtpPurpose)
   purpose!: OtpPurpose;
-
-  @ApiPropertyOptional({
-    description: 'Legacy/deprecated. Ignored in single-tenant mode; backend uses the fixed deployment context.',
-    deprecated: true,
-  })
-  @IsOptional()
-  @IsString()
-  organizationId?: string;
 }

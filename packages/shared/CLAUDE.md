@@ -46,4 +46,4 @@ This package **compiles to `dist/`** — `package.json` `main` points at `dist/i
 - API calls, data fetching, env access.
 - App-specific UI components.
 
-Some `terminology/` content is vertical-aware scaffolding from the multi-tenant fork. Sawa is single-tenant — don't build new features on the terminology packs.
+Some `terminology/` content is leftover scaffolding from the old codebase. Sawa serves one center — don't build new features on the terminology packs.

@@ -21,12 +21,10 @@ export default function DashboardPage() {
   const { user, canDo } = useAuth()
   const { locale, t } = useLocale()
 
-  // Login response doesn't include activeMembership (only /auth/me does); fall
-  // back to the legacy User.role string until the membership hydrates.
-  const membershipRole = user?.activeMembership?.role ?? user?.role ?? null
+  const userRole = user?.role ?? null
   const visible = useMemo(
-    () => getVisibleWidgets(membershipRole, canDo),
-    [membershipRole, canDo],
+    () => getVisibleWidgets(userRole, canDo),
+    [userRole, canDo],
   )
 
   const dateLabel = format(
@@ -55,8 +53,7 @@ export default function DashboardPage() {
 
   const { data: dashboardStats } = useDashboardStats(range)
 
-  const userName =
-    user?.activeMembership?.displayName || user?.name || user?.email || "—"
+  const userName = user?.name || user?.email || "—"
 
   return (
     <div className="flex flex-col">

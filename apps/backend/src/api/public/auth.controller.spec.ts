@@ -53,7 +53,6 @@ describe('AuthController (e2e)', () => {
         isSuperAdmin: user.isSuperAdmin ?? false,
         firstName: (user.name ?? '').trim().split(/\s+/)[0] ?? '',
         lastName: (user.name ?? '').trim().split(/\s+/).slice(1).join(' ') ?? '',
-        organizationId: '00000000-0000-0000-0000-000000000001',
         permissions: [],
       },
     })),

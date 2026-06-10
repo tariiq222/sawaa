@@ -74,9 +74,8 @@ pnpm dev:website    # ← terminal 3
 ## البنية التقنية
 
 ### Backend
-- **Single-tenant** — لا يوجد multi-tenancy
-- **بدون أعلام tenant** — تمت إزالة سقالة multi-tenant بالكامل؛ لا يوجد متغير `TENANT_ENFORCEMENT` ولا تصفية حسب المنظمة
-- **Prisma schema** — تم إزالة جداول SaaS (Organization, Membership, Subscription, Plan, Billing)
+- **نظام لمركز واحد** — يخدم مركز سواء فقط، بلا تبديل منظمات ولا تصفية حسب المنظمة
+- **Prisma schema** — تمت إزالة جداول التعدد المؤسسي (Organization, Membership, Subscription, Plan, Billing)
 
 ### Database Schema
 - تم الاحتفاظ بـ `organizationId` في الجداول للتوافق، لكن جميعها تشير إلى نفس المنظمة

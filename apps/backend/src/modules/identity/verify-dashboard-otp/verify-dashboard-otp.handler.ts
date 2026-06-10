@@ -7,7 +7,6 @@ import { TokenService } from '../shared/token.service';
 import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
 import { flattenPermissions } from '../casl/flatten-permissions';
 import type { VerifyDashboardOtpCommand } from './verify-dashboard-otp.command';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 const LOCKOUT_WINDOW_MINUTES = 15;
 
@@ -42,7 +41,6 @@ interface AuthResponse {
     isSuperAdmin: boolean;
     firstName: string;
     lastName: string;
-    organizationId: string | null;
     permissions: string[];
   };
 }
@@ -143,7 +141,6 @@ export class VerifyDashboardOtpHandler {
     }
 
     const tokens = await this.tokens.issueTokenPair(user, {
-      organizationId: DEFAULT_ORG_ID,
       isSuperAdmin: user.isSuperAdmin ?? false,
     });
 
@@ -164,7 +161,6 @@ export class VerifyDashboardOtpHandler {
         isSuperAdmin: user.isSuperAdmin ?? false,
         firstName,
         lastName: rest.join(' '),
-        organizationId: DEFAULT_ORG_ID,
         permissions: flattenPermissions({
           role: user.role,
           customRole: user.customRole,

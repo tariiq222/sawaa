@@ -84,7 +84,7 @@ Top-level layout/error/loading: `layout.tsx`, `error.tsx`, `loading.tsx`, `page.
   `scripts/verify-translation-parity.mjs`). It compares the key set of
   each `ar.*.ts` module against its `en.*.ts` sibling and exits non-zero
   on drift. Run it before every PR that touches translations.
-- **`useTerminology` is dead multi-tenant scaffolding — do NOT build on it.** The hook (`hooks/use-terminology.ts`) calls `GET /public/verticals/:slug/terminology`, an endpoint the single-tenant backend never implemented. It is still imported in the employees/clients/bookings pages but stays inert because `verticalSlug` is always undefined (query is `enabled: !!verticalSlug`). Don't pass it a slug, don't extend it. Sawa is single-tenant — use plain `t()` from `useLocale()` for all labels.
+- **`useTerminology` is dead scaffolding from the old codebase — do NOT build on it.** The hook (`hooks/use-terminology.ts`) calls `GET /public/verticals/:slug/terminology`, an endpoint the single-tenant backend never implemented. It is still imported in the employees/clients/bookings pages but stays inert because `verticalSlug` is always undefined (query is `enabled: !!verticalSlug`). Don't pass it a slug, don't extend it. Sawa is single-tenant — use plain `t()` from `useLocale()` for all labels.
 - **RTL/LTR direction** is already wired: `LocaleProvider` flips
   `document.documentElement.dir` *and* wraps children in
   `@radix-ui/react-direction`'s `DirectionProvider`. Never hardcode

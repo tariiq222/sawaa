@@ -20,7 +20,7 @@ This package holds **presentation-only** UI primitives (shadcn/ui derivatives). 
 
 ## Carve-outs — components intentionally kept in `apps/dashboard/components/ui/`
 
-During the SaaS-05a extraction we kept two primitives in the dashboard because they couple to dashboard-level providers and data files:
+During the UI-package extraction (phase 05a) we kept two primitives in the dashboard because they couple to dashboard-level providers and data files:
 
 | Component | Kept in dashboard because |
 |---|---|

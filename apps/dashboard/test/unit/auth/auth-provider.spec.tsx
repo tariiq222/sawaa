@@ -50,9 +50,6 @@ const mockUser = {
   gender: null,
   roles: [{ id: 'r1', name: 'Admin', slug: 'admin' }],
   permissions: ['bookings:read', 'bookings:write', 'clients:*'],
-  // SaaS-06 — backend resolves these from the user's active membership.
-  organizationId: 'org-1',
-  verticalSlug: 'clinic',
 }
 
 const mockAuthResponse = {

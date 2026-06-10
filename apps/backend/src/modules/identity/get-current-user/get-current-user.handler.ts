@@ -22,10 +22,7 @@ export class GetCurrentUserHandler {
       ...user,
       firstName,
       lastName,
-      organizationId: null,
-      verticalSlug: null,
       onboardingCompletedAt: null,
-      activeMembership: null,
     };
   }
 }

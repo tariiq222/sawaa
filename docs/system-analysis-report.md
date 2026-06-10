@@ -225,7 +225,7 @@ pnpm --dir apps/mobile typecheck
 | P2 | Website/public fetch بلا runtime response validation | إضافة Zod schemas للمسارات العامة المهمة |
 | P2 | API Client لا يزال بلا runtime validation عام | اعتماد schemas مشتركة تدريجياً |
 | P2 | Mobile لا يستخدم `@sawaa/api-client` | قرار معماري: إما توحيد client أو إبقاء Axios مع عقود اختبار أقوى |
-| P2 | Mobile يحتوي stubs متعددة tenant خاملة | إبقاؤها خاملة كما توصي AGENTS أو تنظيفها بقرار منفصل |
+| P2 | Mobile يحتوي stubs خاملة من الكود القديم | إبقاؤها خاملة كما توصي AGENTS أو تنظيفها بقرار منفصل |
 
 ---
 

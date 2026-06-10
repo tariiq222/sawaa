@@ -3,7 +3,6 @@ import { UnauthorizedException } from '@nestjs/common';
 import { RefreshTokenHandler } from './refresh-token.handler';
 import { TokenService } from '../shared/token.service';
 import { PrismaService } from '../../../infrastructure/database';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 describe('RefreshTokenHandler', () => {
   let handler: RefreshTokenHandler;
@@ -21,7 +20,6 @@ describe('RefreshTokenHandler', () => {
   const baseToken = {
     id: 'rt-1',
     userId: 'user-1',
-    organizationId: 'org-A',
     tokenHash: '$2b$10$abc',
     expiresAt: futureDate,
     revokedAt: null,
@@ -139,9 +137,9 @@ describe('RefreshTokenHandler', () => {
     expect(tokenService.issueTokenPair).not.toHaveBeenCalled();
   });
 
-  it('uses DEFAULT_ORG_ID for new token pair (single-tenant: no per-token org)', async () => {
-    // Single-tenant migration removed organizationId from RefreshToken model.
-    // Handler always uses DEFAULT_ORG_ID regardless of token source.
+  it('issues new token pair without organizationId claim (single-tenant)', async () => {
+    // Single-tenant migration removed organizationId from RefreshToken model
+    // and from the JWT claims — the handler passes auth claims only.
     prisma.refreshToken.findFirst.mockResolvedValue(baseToken);
     jest.spyOn(require('bcryptjs'), 'compare').mockResolvedValue(true);
     prisma.user.findUnique.mockResolvedValue({ id: 'user-1', email: 'a@b.com', role: 'RECEPTIONIST', customRoleId: null, customRole: null, isActive: true });
@@ -152,7 +150,11 @@ describe('RefreshTokenHandler', () => {
 
     expect(tokenService.issueTokenPair).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'user-1' }),
-      expect.objectContaining({ organizationId: DEFAULT_ORG_ID, isSuperAdmin: false }),
+      expect.objectContaining({ isSuperAdmin: false }),
+    );
+    expect(tokenService.issueTokenPair).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.not.objectContaining({ organizationId: expect.anything() }),
     );
   });
 

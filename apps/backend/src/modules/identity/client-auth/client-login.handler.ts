@@ -5,7 +5,6 @@ import { PasswordService } from '../shared/password.service';
 import { ClientTokenService } from '../shared/client-token.service';
 import { ClientLoginDto } from './client-login.dto';
 import { maskEmail } from '../../../common/helpers/mask-pii.helper';
-import { SINGLE_TENANT_CONTEXT_ID } from '../../../common/constants';
 
 const MAX_EMAIL_ATTEMPTS = 5;
 const MAX_IP_ATTEMPTS = 20;
@@ -24,8 +23,6 @@ export class ClientLoginHandler {
   ) {}
 
   async execute(dto: ClientLoginDto, ip = 'unknown') {
-    const organizationId = SINGLE_TENANT_CONTEXT_ID;
-
     const client = await this.prisma.client.findFirst({
       where: { email: dto.email, deletedAt: null },
     });
@@ -94,10 +91,7 @@ export class ClientLoginHandler {
 
     await Promise.all([redisClient.del(emailKey), redisClient.del(ipKey)]);
 
-    const tokens = await this.clientTokens.issueTokenPair(
-      { id: client.id, email: client.email },
-      { organizationId },
-    );
+    const tokens = await this.clientTokens.issueTokenPair({ id: client.id, email: client.email });
 
     this.logger.log(`Client login: ${client.id} (${maskEmail(client.email ?? '')})`);
 

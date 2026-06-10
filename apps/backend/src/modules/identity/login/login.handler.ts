@@ -6,7 +6,6 @@ import { PasswordService } from '../shared/password.service';
 import { TokenService, TokenPair } from '../shared/token.service';
 import type { User } from '@prisma/client';
 import type { LoginCommand } from './login.command';
-import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 const LOCKOUT_WINDOW_MINUTES = 15;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -110,7 +109,6 @@ export class LoginHandler {
     }
 
     const tokens = await this.tokens.issueTokenPair(user, {
-      organizationId: DEFAULT_ORG_ID,
       isSuperAdmin: user.isSuperAdmin ?? false,
     });
 

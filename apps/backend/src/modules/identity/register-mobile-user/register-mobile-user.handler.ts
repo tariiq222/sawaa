@@ -5,9 +5,7 @@ import { RequestOtpHandler } from '../otp/request-otp.handler';
 import { normalizeIdentifier } from '../shared/identifier-detector';
 import type { RegisterMobileUserDto } from './register-mobile-user.dto';
 
-export type RegisterMobileUserCommand = RegisterMobileUserDto & {
-  organizationId?: string;
-};
+export type RegisterMobileUserCommand = RegisterMobileUserDto;
 
 export type RegisterMobileUserResult = {
   userId: string;
@@ -54,7 +52,6 @@ export class RegisterMobileUserHandler {
       channel: OtpChannel.SMS,
       identifier: phone,
       purpose: OtpPurpose.MOBILE_REGISTER,
-      organizationId: cmd.organizationId,
     });
 
     return {

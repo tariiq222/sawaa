@@ -1,9 +1,6 @@
 import { ClientTokenService } from './client-token.service';
-import { SINGLE_TENANT_CONTEXT_ID } from '../../../common/constants';
 
 const mockClient = { id: 'client-1', email: 'walk-in@clinic.sa' };
-
-const tenantClaims = { organizationId: 'org-1' };
 
 const buildJwt = () => ({
   sign: jest.fn().mockReturnValue('signed.access.token'),
@@ -36,7 +33,7 @@ const buildPrisma = () => ({
 describe('ClientTokenService.issueTokenPair', () => {
   it('returns accessToken + rawRefresh + TTL metadata', async () => {
     const svc = new ClientTokenService(buildJwt() as never, buildConfig() as never, buildPrisma() as never);
-    const pair = await svc.issueTokenPair(mockClient, tenantClaims);
+    const pair = await svc.issueTokenPair(mockClient);
 
     expect(pair.accessToken).toBe('signed.access.token');
     expect(typeof pair.rawRefresh).toBe('string');
@@ -45,25 +42,28 @@ describe('ClientTokenService.issueTokenPair', () => {
     expect(pair.refreshMaxAgeMs).toBeGreaterThan(0);
   });
 
-  it('signs JWT with fixed legacy organizationId claim', async () => {
+  it('signs JWT without legacy organizationId claim', async () => {
     const jwt = buildJwt();
     const svc = new ClientTokenService(jwt as never, buildConfig() as never, buildPrisma() as never);
-    await svc.issueTokenPair(mockClient, { organizationId: 'org-2' });
+    await svc.issueTokenPair(mockClient);
 
     expect(jwt.sign).toHaveBeenCalledWith(
       expect.objectContaining({
         sub: 'client-1',
         namespace: 'client',
-        organizationId: SINGLE_TENANT_CONTEXT_ID,
       }),
       expect.objectContaining({ secret: 'client-access-secret' }),
     );
+    expect(jwt.sign).toHaveBeenCalledWith(
+      expect.not.objectContaining({ organizationId: expect.anything() }),
+      expect.anything(),
+    );
   });
 
-  it('persists organizationId on ClientRefreshToken', async () => {
+  it('persists refresh token row keyed by clientId only', async () => {
     const prisma = buildPrisma();
     const svc = new ClientTokenService(buildJwt() as never, buildConfig() as never, prisma as never);
-    await svc.issueTokenPair(mockClient, { organizationId: 'org-1' });
+    await svc.issueTokenPair(mockClient);
 
     expect(prisma.clientRefreshToken.create).toHaveBeenCalledWith(
       expect.objectContaining({

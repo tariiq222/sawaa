@@ -124,10 +124,10 @@ describe('ClientLoginHandler', () => {
         where: { id: 'cl-1' },
         data: { lastLoginAt: expect.any(Date) },
       });
-      expect(mockClientTokens.issueTokenPair).toHaveBeenCalledWith(
-        { id: 'cl-1', email: 'test@example.com' },
-        expect.objectContaining({ organizationId: expect.any(String) }),
-      );
+      expect(mockClientTokens.issueTokenPair).toHaveBeenCalledWith({
+        id: 'cl-1',
+        email: 'test@example.com',
+      });
     });
 
     it('throws Unauthorized for non-existent client', async () => {
