@@ -1,7 +1,14 @@
 import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
-import { PlatformSettingsService } from '../../modules/platform/settings/platform-settings.service';
+import { PrismaService } from '../database/prisma.service';
+import { decryptSecret } from '../crypto/secret-crypto';
+
+type PlatformSettingClient = {
+  platformSetting: {
+    findUnique: (args: { where: { key: string } }) => Promise<{ value: string } | null>;
+  };
+};
 
 interface IFcmService {
   sendPush(token: string, title: string, body: string, data?: Record<string, string>): Promise<string>;
@@ -16,21 +23,45 @@ export class FcmService implements IFcmService, OnModuleInit {
 
   constructor(
     private readonly config: ConfigService,
-    @Optional() private readonly platformSettings?: PlatformSettingsService,
+    @Optional() private readonly prisma?: PrismaService,
   ) {}
+
+  private async readSetting(key: string): Promise<string | undefined> {
+    const row = await (this.prisma as unknown as PlatformSettingClient).platformSetting.findUnique({
+      where: { key },
+    });
+    if (!row) return undefined;
+    // Mirror the old PlatformSettingsService.get<string>() shape: decrypt if
+    // possible, then unwrap a JSON-encoded string so values stored via set()
+    // (which JSON.stringifies) round-trip identically. Plain strings and
+    // non-JSON values fall through unchanged.
+    const raw = (() => {
+      try {
+        return decryptSecret(row.value);
+      } catch {
+        return row.value;
+      }
+    })();
+    try {
+      const parsed = JSON.parse(raw);
+      return typeof parsed === 'string' ? parsed : raw;
+    } catch {
+      return raw;
+    }
+  }
 
   async onModuleInit(): Promise<void> {
     let projectId: string | undefined;
     let clientEmail: string | undefined;
     let privateKey: string | undefined;
 
-    // Try DB first via PlatformSettingsService
-    if (this.platformSettings) {
+    // Try DB first via PrismaService
+    if (this.prisma) {
       try {
         const [dbProjectId, dbClientEmail, dbServerKey] = await Promise.all([
-          this.platformSettings.get<string>('notifications.fcm.projectId'),
-          this.platformSettings.get<string>('notifications.fcm.clientEmail'),
-          this.platformSettings.get<string>('notifications.fcm.serverKey'),
+          this.readSetting('notifications.fcm.projectId'),
+          this.readSetting('notifications.fcm.clientEmail'),
+          this.readSetting('notifications.fcm.serverKey'),
         ]);
         if (dbProjectId) projectId = dbProjectId;
         if (dbClientEmail) clientEmail = dbClientEmail;

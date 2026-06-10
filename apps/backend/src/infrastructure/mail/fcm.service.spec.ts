@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { FcmService } from './fcm.service';
-import { PlatformSettingsService } from '../../modules/platform/settings/platform-settings.service';
+import { PrismaService } from '../database/prisma.service';
 
 jest.mock('firebase-admin', () => {
   const mockInitializeApp = jest.fn();
@@ -28,7 +28,7 @@ jest.mock('firebase-admin', () => {
 describe('FcmService', () => {
   let service: FcmService;
   let configGet: jest.Mock;
-  let platformSettingsGet: jest.Mock;
+  let findUnique: jest.Mock;
 
   const getMocks = () => {
     const mod = jest.requireMock('firebase-admin') as {
@@ -48,13 +48,13 @@ describe('FcmService', () => {
     mocks.__mockCredentialCert.mockClear();
 
     configGet = jest.fn();
-    platformSettingsGet = jest.fn();
+    findUnique = jest.fn();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FcmService,
         { provide: ConfigService, useValue: { get: configGet } },
-        { provide: PlatformSettingsService, useValue: { get: platformSettingsGet } },
+        { provide: PrismaService, useValue: { platformSetting: { findUnique } } },
       ],
     }).compile();
 
@@ -66,23 +66,23 @@ describe('FcmService', () => {
   });
 
   describe('onModuleInit', () => {
-    it('reads credentials from platformSettings (DB) first', async () => {
-      platformSettingsGet
-        .mockResolvedValueOnce('db-project-id')
-        .mockResolvedValueOnce('db-client-email')
-        .mockResolvedValueOnce('db-private-key');
+    it('reads credentials from DB first', async () => {
+      findUnique
+        .mockResolvedValueOnce({ value: 'db-project-id' })
+        .mockResolvedValueOnce({ value: 'db-client-email' })
+        .mockResolvedValueOnce({ value: 'db-private-key' });
 
       await service.onModuleInit();
 
-      expect(platformSettingsGet).toHaveBeenCalledWith('notifications.fcm.projectId');
-      expect(platformSettingsGet).toHaveBeenCalledWith('notifications.fcm.clientEmail');
-      expect(platformSettingsGet).toHaveBeenCalledWith('notifications.fcm.serverKey');
+      expect(findUnique).toHaveBeenCalledWith({ where: { key: 'notifications.fcm.projectId' } });
+      expect(findUnique).toHaveBeenCalledWith({ where: { key: 'notifications.fcm.clientEmail' } });
+      expect(findUnique).toHaveBeenCalledWith({ where: { key: 'notifications.fcm.serverKey' } });
       expect(configGet).not.toHaveBeenCalled();
       expect(getMocks().__mockInitializeApp).toHaveBeenCalled();
     });
 
     it('falls back to env vars when DB missing', async () => {
-      platformSettingsGet.mockResolvedValue(undefined);
+      findUnique.mockResolvedValue(null);
       configGet
         .mockReturnValueOnce('env-project-id')
         .mockReturnValueOnce('env-client-email')
@@ -97,7 +97,7 @@ describe('FcmService', () => {
     });
 
     it('falls back to env vars when DB throws', async () => {
-      platformSettingsGet.mockRejectedValue(new Error('DB error'));
+      findUnique.mockRejectedValue(new Error('DB error'));
       configGet
         .mockReturnValueOnce('env-project-id')
         .mockReturnValueOnce('env-client-email')
@@ -110,7 +110,7 @@ describe('FcmService', () => {
     });
 
     it('skips initialization when no projectId', async () => {
-      platformSettingsGet.mockResolvedValue(undefined);
+      findUnique.mockResolvedValue(null);
       configGet.mockReturnValue(undefined);
 
       await service.onModuleInit();
@@ -120,10 +120,10 @@ describe('FcmService', () => {
     });
 
     it('calls admin.initializeApp with correct creds', async () => {
-      platformSettingsGet
-        .mockResolvedValueOnce('proj-1')
-        .mockResolvedValueOnce('mail@example.com')
-        .mockResolvedValueOnce('key-1');
+      findUnique
+        .mockResolvedValueOnce({ value: 'proj-1' })
+        .mockResolvedValueOnce({ value: 'mail@example.com' })
+        .mockResolvedValueOnce({ value: 'key-1' });
       getMocks().__mockCredentialCert.mockReturnValue('cred-object');
 
       await service.onModuleInit();
@@ -137,10 +137,10 @@ describe('FcmService', () => {
     });
 
     it('handles privateKey with escaped newlines from DB', async () => {
-      platformSettingsGet
-        .mockResolvedValueOnce('proj-1')
-        .mockResolvedValueOnce('mail@example.com')
-        .mockResolvedValueOnce('line-1\\nline-2');
+      findUnique
+        .mockResolvedValueOnce({ value: 'proj-1' })
+        .mockResolvedValueOnce({ value: 'mail@example.com' })
+        .mockResolvedValueOnce({ value: 'line-1\\nline-2' });
 
       await service.onModuleInit();
 
@@ -150,7 +150,7 @@ describe('FcmService', () => {
     });
 
     it('handles privateKey with escaped newlines from env', async () => {
-      platformSettingsGet.mockResolvedValue(undefined);
+      findUnique.mockResolvedValue(null);
       configGet
         .mockReturnValueOnce('proj-1')
         .mockReturnValueOnce('mail@example.com')
@@ -170,10 +170,10 @@ describe('FcmService', () => {
     });
 
     it('returns true after init', async () => {
-      platformSettingsGet
-        .mockResolvedValueOnce('proj-1')
-        .mockResolvedValueOnce('mail@example.com')
-        .mockResolvedValueOnce('key-1');
+      findUnique
+        .mockResolvedValueOnce({ value: 'proj-1' })
+        .mockResolvedValueOnce({ value: 'mail@example.com' })
+        .mockResolvedValueOnce({ value: 'key-1' });
 
       await service.onModuleInit();
 
@@ -189,10 +189,10 @@ describe('FcmService', () => {
     });
 
     it('calls admin.messaging().send and returns messageId', async () => {
-      platformSettingsGet
-        .mockResolvedValueOnce('proj-1')
-        .mockResolvedValueOnce('mail@example.com')
-        .mockResolvedValueOnce('key-1');
+      findUnique
+        .mockResolvedValueOnce({ value: 'proj-1' })
+        .mockResolvedValueOnce({ value: 'mail@example.com' })
+        .mockResolvedValueOnce({ value: 'key-1' });
       getMocks().__mockMessagingSend.mockResolvedValue('msg-123');
 
       await service.onModuleInit();
@@ -215,10 +215,10 @@ describe('FcmService', () => {
     });
 
     it('calls admin.messaging().sendEachForMulticast and returns counts', async () => {
-      platformSettingsGet
-        .mockResolvedValueOnce('proj-1')
-        .mockResolvedValueOnce('mail@example.com')
-        .mockResolvedValueOnce('key-1');
+      findUnique
+        .mockResolvedValueOnce({ value: 'proj-1' })
+        .mockResolvedValueOnce({ value: 'mail@example.com' })
+        .mockResolvedValueOnce({ value: 'key-1' });
       getMocks().__mockMessagingSendEachForMulticast.mockResolvedValue({ successCount: 2, failureCount: 1 });
 
       await service.onModuleInit();

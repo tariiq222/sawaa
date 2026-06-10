@@ -16,6 +16,13 @@ export const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
  */
 export const SINGLE_TENANT_CONTEXT_ID = DEFAULT_ORG_ID;
 
+/**
+ * Constant key for the single OrganizationPaymentConfig row. Single-tenant: the
+ * table holds exactly one row, enforced by a UNIQUE constraint on this column,
+ * so reads use findUnique({ singletonKey }) and writes use upsert — no race.
+ */
+export const PAYMENT_CONFIG_SINGLETON_KEY = 'singleton' as const;
+
 // ─── CLS keys ──────────────────────────────────────────────────────────────
 // These are carried in nestjs-cls async-local-storage to propagate context
 // without threading it through every function call.
