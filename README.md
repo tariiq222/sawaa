@@ -42,8 +42,8 @@ pnpm dev:website    # ← terminal 3
 
 الخدمات:
 - Backend:   http://localhost:5200
-- Dashboard: http://localhost:5103
-- Website:   http://localhost:5105
+- Dashboard: http://localhost:5203
+- Website:   http://localhost:5205
 
 ---
 

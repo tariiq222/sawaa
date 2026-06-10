@@ -3,6 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.10.0",
   "scripts": {
+    "prepare": "lefthook install",
     "dev:backend": "turbo run dev --filter=backend",
     "dev:dashboard": "turbo run dev --filter=dashboard -- --port 5203",
     "dev:website": "turbo run dev --filter=@sawaa/website -- --port 5205",
@@ -10,6 +11,7 @@
     "build": "turbo run build --filter=backend --filter=dashboard --filter=@sawaa/website",
     "lint": "turbo run lint && node scripts/check-legacy-multitenant.js",
     "check:legacy-multitenant": "node scripts/check-legacy-multitenant.js",
+    "check:api-client-drift": "node scripts/check-api-client-drift.mjs",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "docker:up": "docker compose -f docker/docker-compose.yml --env-file docker/.env up -d",
@@ -18,10 +20,10 @@
     "db:seed": "pnpm --filter=backend run seed",
     "db:reset": "pnpm --filter=backend run prisma:migrate:deploy && pnpm --filter=backend run seed",
     "openapi:sync": "pnpm --filter=backend run openapi:export && pnpm --filter=dashboard run openapi:generate",
-    "test:report": "py scripts/qa/generate_html_report.py",
     "e2e:dashboard": "pnpm --filter dashboard e2e"
   },
   "devDependencies": {
+    "lefthook": "^2.1.9",
     "react-test-renderer": "19.2.4",
     "turbo": "^2"
   },
@@ -46,8 +48,5 @@
       "@swc/core",
       "@biomejs/biome"
     ]
-  },
-  "dependencies": {
-    "ts-morph": "^28.0.0"
   }
 }

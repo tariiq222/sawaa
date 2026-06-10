@@ -1,0 +1,31 @@
+# Local git hooks — installed via `pnpm install` (prepare script).
+# Skip once with: LEFTHOOK=0 git commit / LEFTHOOK=0 git push
+# CI never runs these hooks; it invokes lint/typecheck commands directly.
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: backend eslint (staged)
+      root: apps/backend/
+      glob:
+        - "apps/backend/{src,test}/*.ts"
+        - "apps/backend/{src,test}/**/*.ts"
+      run: pnpm exec eslint --no-warn-ignored --no-error-on-unmatched-pattern {staged_files}
+
+    - name: dashboard eslint (staged)
+      root: apps/dashboard/
+      glob: "*.{ts,tsx}"
+      run: pnpm exec eslint --no-warn-ignored --no-error-on-unmatched-pattern {staged_files}
+
+    - name: website eslint (staged)
+      root: apps/website/
+      glob: "*.{ts,tsx}"
+      run: pnpm exec eslint --no-warn-ignored --no-error-on-unmatched-pattern {staged_files}
+
+    - name: legacy multi-tenant check
+      run: node scripts/check-legacy-multitenant.js
+
+pre-push:
+  jobs:
+    - name: typecheck (turbo cached)
+      run: pnpm typecheck
