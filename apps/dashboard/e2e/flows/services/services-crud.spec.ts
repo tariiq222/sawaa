@@ -5,8 +5,8 @@ test.describe('Services CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await devLogin(page)
     await page.goto('/services')
-    // Avoid waitForLoadState('networkidle') — this app polls (refetchInterval)
-    // so networkidle never settles. Wait on the services list GET instead.
+    // Avoid the network-idle load state — this app polls (refetchInterval)
+    // so network-idle never settles. Wait on the services list GET instead.
     await page.waitForResponse(
       r => r.url().includes('/services') && r.request().method() === 'GET' && r.ok(),
       { timeout: 15_000 },

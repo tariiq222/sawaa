@@ -5,7 +5,8 @@ test.describe('Invoices CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await devLogin(page)
     await page.goto('/invoices')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+    // network-idle never settles (TanStack Query polls) — wait for the page heading instead.
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15_000 })
   })
 
   test('should load invoices page without errors', async ({ page }) => {
@@ -16,7 +17,7 @@ test.describe('Invoices CRUD Operations', () => {
   })
 
   test('should display invoices list or empty state', async ({ page }) => {
-    await page.waitForTimeout(2000)
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
 
     const invoicesList = page.locator('[class*="table"], [class*="list"], [class*="Invoice"]')
     const emptyState = page.locator('text=/no invoice|لا يوجد فاتورة|no data/i')
@@ -32,7 +33,8 @@ test.describe('Invoices CRUD Operations', () => {
     const searchInput = page.locator('input[placeholder*="search"], input[placeholder*="بحث"]')
     if (await searchInput.isVisible()) {
       await searchInput.fill('test')
-      await page.waitForTimeout(500)
+      // Typing must not crash the page — the heading stays mounted while the list refetches.
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
       await searchInput.clear()
     }
   })
@@ -43,7 +45,7 @@ test.describe('Invoices CRUD Operations', () => {
       const options = await statusFilter.locator('option').count()
       if (options > 1) {
         await statusFilter.selectOption({ index: 1 })
-        await page.waitForTimeout(500)
+        await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
       }
     }
   })
@@ -52,7 +54,7 @@ test.describe('Invoices CRUD Operations', () => {
     const invoiceRow = page.locator('tbody tr, [class*="invoice-row"]').first()
     if (await invoiceRow.isVisible()) {
       await invoiceRow.click()
-      await page.waitForTimeout(500)
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
     }
   })
 
@@ -63,7 +65,7 @@ test.describe('Invoices CRUD Operations', () => {
       const nextButton = page.locator('button:has-text("next"), button:has-text("التالي"), [aria-label*="next"]')
       if (await nextButton.isVisible()) {
         await nextButton.click()
-        await page.waitForTimeout(500)
+        await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
       }
     }
   })
@@ -72,7 +74,7 @@ test.describe('Invoices CRUD Operations', () => {
     const sortButtons = page.locator('[aria-sort], button[class*="sort"], th')
     if (await sortButtons.first().isVisible()) {
       await sortButtons.first().click()
-      await page.waitForTimeout(300)
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
     }
   })
 })

@@ -961,7 +961,7 @@ export async function createInvoice(
   token: string,
   input: CreateInvoiceInput
 ): Promise<SeededInvoice> {
-  return apiPost<SeededInvoice>("/dashboard/finance/invoices", token, input)
+  return apiPost<SeededInvoice>("/dashboard/finance/invoices", token, { ...input })
 }
 
 export async function getInvoice(
@@ -996,6 +996,6 @@ export async function refundPayment(
   return apiPatch<SeededPayment>(
     `/dashboard/finance/payments/${paymentId}/refund`,
     token,
-    input
+    { ...input }
   )
 }

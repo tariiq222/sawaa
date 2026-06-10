@@ -4,8 +4,6 @@ test.describe('Error States', () => {
   test('should display 404 page for non-existent route', async ({ page }) => {
     await page.goto('/this-route-does-not-exist-12345')
 
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
-
     await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
 
     const notFoundText = page.locator('text=/404|Not Found|غير موجود|صفحة غير موجودة/i')
@@ -18,7 +16,8 @@ test.describe('Error States', () => {
 
   test('should have working back to home link on 404', async ({ page }) => {
     await page.goto('/this-route-does-not-exist-12345')
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
+    // The 404 page is rendered once its heading is visible.
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
 
     const homeLink = page
       .locator('a[href="/"], a:has-text("home"), a:has-text("الرئيسية"), a:has-text("dashboard")')
@@ -39,7 +38,6 @@ test.describe('Error States', () => {
     })
 
     await page.goto('/')
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
 
     await expect(page.locator('#__next, main, [data-testid]').first()).toBeVisible({ timeout: 10_000 })
 
@@ -54,7 +52,6 @@ test.describe('Error States', () => {
     })
 
     await page.goto('/bookings')
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
 
     await expect(page.locator('#__next, main, [data-testid]').first()).toBeVisible({ timeout: 10_000 })
 
@@ -72,9 +69,9 @@ test.describe('Error States', () => {
     await page.context().clearCookies()
 
     await page.goto('/')
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
 
-    await page.waitForURL(/\/login/, { timeout: 10_000 }).catch(() => {})
+    // Clearing cookies must bounce the user to /login — fail loudly if it doesn't.
+    await page.waitForURL(/\/login/, { timeout: 10_000 })
 
     const isOnLogin = page.url().includes('/login')
     expect(typeof isOnLogin).toBe('boolean')
@@ -82,7 +79,6 @@ test.describe('Error States', () => {
 
   test('should show validation errors on forms', async ({ page }) => {
     await page.goto('/login')
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
 
     // Multi-step login: fill identifier → continue → choose password → fill → submit
     const identifierInput = page.locator('#identifier')

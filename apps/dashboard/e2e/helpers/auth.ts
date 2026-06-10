@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test'
+import { expect, Page } from '@playwright/test'
 import { loginAs } from '../fixtures/auth'
 
 export async function devLogin(page: Page): Promise<void> {
@@ -11,13 +11,12 @@ export async function logout(page: Page): Promise<void> {
   const userButton = page.locator('header button').filter({ has: page.locator('svg') }).last()
   if (await userButton.isVisible()) {
     await userButton.click()
-    await page.waitForTimeout(300)
 
+    // Opening the user menu must reveal the logout entry — wait on it directly.
     const logoutButton = page.locator('text=/logout|تسجيل الخروج/i')
-    if (await logoutButton.isVisible()) {
-      await logoutButton.click()
-      await page.waitForURL('/login', { timeout: 10000 })
-    }
+    await expect(logoutButton.first()).toBeVisible({ timeout: 5_000 })
+    await logoutButton.click()
+    await page.waitForURL('/login', { timeout: 10000 })
   }
 }
 
@@ -34,5 +33,6 @@ export async function loginWithCredentials(
   await page.locator('#password').fill(password)
   await page.getByRole('button', { name: 'تسجيل الدخول' }).click()
 
-  await page.waitForTimeout(2000)
+  // Successful login navigates away from /login — wait on that concrete signal.
+  await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 15_000 })
 }

@@ -5,7 +5,8 @@ test.describe('Settings CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await devLogin(page)
     await page.goto('/settings')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+    // network-idle never settles (TanStack Query polls) — wait for the page heading instead.
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15_000 })
   })
 
   test('should load settings page without errors', async ({ page }) => {
@@ -16,10 +17,9 @@ test.describe('Settings CRUD Operations', () => {
   })
 
   test('should display settings sections', async ({ page }) => {
-    await page.waitForTimeout(2000)
-
     const settingsForm = page.locator('form, [class*="settings"]')
     const settingsHeading = page.locator('h1, h2, [class*="heading"]')
+    await expect(settingsHeading.first()).toBeVisible({ timeout: 10_000 })
 
     const hasForm = await settingsForm.first().isVisible().catch(() => false)
     const hasHeading = await settingsHeading.first().isVisible().catch(() => false)
@@ -38,7 +38,8 @@ test.describe('Settings CRUD Operations', () => {
         const tab = tabs.nth(i)
         if (await tab.isVisible()) {
           await tab.click()
-          await page.waitForTimeout(500)
+          // Clicking a tab selects it — wait on the concrete aria state change.
+          await expect(tab).toHaveAttribute('aria-selected', 'true', { timeout: 5_000 })
         }
       }
     }
@@ -55,7 +56,8 @@ test.describe('Settings CRUD Operations', () => {
 
     if (await saveButton.isVisible()) {
       await saveButton.click()
-      await page.waitForTimeout(2000)
+      // Save re-enables the submit button once the mutation settles.
+      await expect(saveButton).toBeEnabled({ timeout: 10_000 })
     }
   })
 
@@ -79,7 +81,8 @@ test.describe('Settings CRUD Operations', () => {
       const saveButton = page.locator('button[type="submit"], button:has-text("Save"), button:has-text("حفظ")')
       if (await saveButton.isVisible()) {
         await saveButton.click()
-        await page.waitForTimeout(2000)
+        // Save re-enables the submit button once the mutation settles.
+        await expect(saveButton).toBeEnabled({ timeout: 10_000 })
       }
     }
   })
@@ -92,7 +95,8 @@ test.describe('Settings CRUD Operations', () => {
       const firstSwitch = toggleSwitches.first()
       if (await firstSwitch.isVisible()) {
         await firstSwitch.click()
-        await page.waitForTimeout(500)
+        // Toggle stays interactive once its mutation settles.
+        await expect(firstSwitch).toBeEnabled({ timeout: 10_000 })
       }
     }
   })
@@ -114,7 +118,8 @@ test.describe('Settings CRUD Operations', () => {
 
     if (await saveButton.isVisible()) {
       await saveButton.click()
-      await page.waitForTimeout(2000)
+      // Save re-enables the submit button once the mutation settles.
+      await expect(saveButton).toBeEnabled({ timeout: 10_000 })
     }
   })
 
@@ -122,7 +127,8 @@ test.describe('Settings CRUD Operations', () => {
     const saveButton = page.locator('button[type="submit"], button:has-text("Save"), button:has-text("حفظ")')
     if (await saveButton.isVisible()) {
       await saveButton.click()
-      await page.waitForTimeout(2000)
+      // Save re-enables the submit button once the mutation settles.
+      await expect(saveButton).toBeEnabled({ timeout: 10_000 })
 
       const successMessage = page.locator('text=/success|saved|تم الحفظ/i')
       const hasSuccess = await successMessage.isVisible().catch(() => false)

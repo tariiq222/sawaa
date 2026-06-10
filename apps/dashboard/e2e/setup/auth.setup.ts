@@ -17,7 +17,7 @@ const OPTIONAL_AUTH_TIMEOUT_MS = 35_000
 
 interface LoginResponse {
   refreshToken?: string
-  user?: unknown
+  user?: { id: string; role: string; isSuperAdmin?: boolean }
 }
 
 async function withTimeout<T>(

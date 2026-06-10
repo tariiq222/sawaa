@@ -5,7 +5,8 @@ test.describe('Ratings CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await devLogin(page)
     await page.goto('/ratings')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+    // network-idle never settles (TanStack Query polls) — wait for the page heading instead.
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15_000 })
   })
 
   test('should load ratings page without errors', async ({ page }) => {
@@ -16,7 +17,7 @@ test.describe('Ratings CRUD Operations', () => {
   })
 
   test('should display ratings list or empty state', async ({ page }) => {
-    await page.waitForTimeout(2000)
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
 
     const ratingsList = page.locator('[class*="table"], [class*="list"], [class*="Rating"], [class*="Review"]')
     const emptyState = page.locator('text=/no rating|لا يوجد تقييم|no review|لا يوجد مراجعة|no data/i')
@@ -34,7 +35,7 @@ test.describe('Ratings CRUD Operations', () => {
       const options = await ratingFilter.locator('option').count()
       if (options > 1) {
         await ratingFilter.selectOption({ index: 1 })
-        await page.waitForTimeout(500)
+        await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
       }
     }
   })
@@ -43,7 +44,7 @@ test.describe('Ratings CRUD Operations', () => {
     const ratingRow = page.locator('tbody tr, [class*="rating-row"], [class*="review-row"]').first()
     if (await ratingRow.isVisible()) {
       await ratingRow.click()
-      await page.waitForTimeout(500)
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
     }
   })
 
@@ -54,7 +55,7 @@ test.describe('Ratings CRUD Operations', () => {
       const nextButton = page.locator('button:has-text("next"), button:has-text("التالي"), [aria-label*="next"]')
       if (await nextButton.isVisible()) {
         await nextButton.click()
-        await page.waitForTimeout(500)
+        await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
       }
     }
   })
@@ -63,7 +64,7 @@ test.describe('Ratings CRUD Operations', () => {
     const sortButtons = page.locator('[aria-sort], button[class*="sort"], th')
     if (await sortButtons.first().isVisible()) {
       await sortButtons.first().click()
-      await page.waitForTimeout(300)
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
     }
   })
 
@@ -72,7 +73,7 @@ test.describe('Ratings CRUD Operations', () => {
     const count = await sortButtons.count()
     if (count > 1 && await sortButtons.nth(1).isVisible()) {
       await sortButtons.nth(1).click()
-      await page.waitForTimeout(300)
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
     }
   })
 })

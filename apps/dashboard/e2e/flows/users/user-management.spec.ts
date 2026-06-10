@@ -11,7 +11,6 @@ test.describe('User Management', () => {
     await page.waitForResponse(
       (r) => r.url().includes('/users') && r.request().method() === 'GET' && r.ok(),
     ).catch(() => {});
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     // The page heading is always rendered once the route resolves.
     await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15_000 });
   });
@@ -21,7 +20,7 @@ test.describe('User Management', () => {
     await page.waitForResponse(
       (r) => r.url().includes('/users') && r.request().method() === 'GET' && r.ok(),
     ).catch(() => {});
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15_000 });
 
     const table = page.locator('table').first();
     if (await table.isVisible({ timeout: 5000 }).catch(() => false)) {
@@ -34,7 +33,6 @@ test.describe('User Management', () => {
     await page.waitForResponse(
       (r) => r.url().includes('/users') && r.request().method() === 'GET' && r.ok(),
     ).catch(() => {});
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
     const createBtn = page.locator('button:has-text("Create" i), button:has-text("إضافة" i)').first();
     await expect(createBtn).toBeVisible({ timeout: 10_000 });
@@ -45,7 +43,7 @@ test.describe('User Management', () => {
     await page.waitForResponse(
       (r) => r.url().includes('/users') && r.request().method() === 'GET' && r.ok(),
     ).catch(() => {});
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15_000 });
 
     const pagination = page.locator('[class*="pagination"], button:has-text("Next"), button:has-text("Previous")').first();
     if (await pagination.isVisible({ timeout: 5000 }).catch(() => false)) {
@@ -58,7 +56,6 @@ test.describe('User Management', () => {
     await page.waitForResponse(
       (r) => r.url().includes('/users') && r.request().method() === 'GET' && r.ok(),
     ).catch(() => {});
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
     const checkbox = page.locator('input[type="checkbox"]').first();
     await expect(checkbox).toBeVisible({ timeout: 10_000 });

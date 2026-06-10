@@ -5,7 +5,8 @@ test.describe('Payments CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await devLogin(page)
     await page.goto('/payments')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+    // network-idle never settles (TanStack Query polls) — wait for the page heading instead.
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15_000 })
   })
 
   test('should load payments page without errors', async ({ page }) => {
@@ -16,7 +17,7 @@ test.describe('Payments CRUD Operations', () => {
   })
 
   test('should display payments list or empty state', async ({ page }) => {
-    await page.waitForTimeout(2000)
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
 
     const paymentsList = page.locator('[class*="table"], [class*="list"], [class*="Payment"]')
     const emptyState = page.locator('text=/no payment|لا يوجد دفع|no data/i')
@@ -32,7 +33,8 @@ test.describe('Payments CRUD Operations', () => {
     const searchInput = page.locator('input[placeholder*="search"], input[placeholder*="بحث"]')
     if (await searchInput.isVisible()) {
       await searchInput.fill('test')
-      await page.waitForTimeout(500)
+      // Typing must not crash the page — the heading stays mounted while the list refetches.
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
       await searchInput.clear()
     }
   })
@@ -43,7 +45,7 @@ test.describe('Payments CRUD Operations', () => {
       const options = await statusFilter.locator('option').count()
       if (options > 1) {
         await statusFilter.selectOption({ index: 1 })
-        await page.waitForTimeout(500)
+        await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
       }
     }
   })
@@ -52,7 +54,7 @@ test.describe('Payments CRUD Operations', () => {
     const dateInput = page.locator('input[type="date"], input[placeholder*="date"], input[placeholder*="التاريخ"]')
     if (await dateInput.isVisible()) {
       await dateInput.first().click()
-      await page.waitForTimeout(300)
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
     }
   })
 
@@ -60,7 +62,7 @@ test.describe('Payments CRUD Operations', () => {
     const paymentRow = page.locator('tbody tr, [class*="payment-row"]').first()
     if (await paymentRow.isVisible()) {
       await paymentRow.click()
-      await page.waitForTimeout(500)
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
     }
   })
 
@@ -70,7 +72,7 @@ test.describe('Payments CRUD Operations', () => {
       const nextButton = page.locator('button:has-text("next"), button:has-text("التالي"), [aria-label*="next"]')
       if (await nextButton.isVisible()) {
         await nextButton.click()
-        await page.waitForTimeout(500)
+        await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
       }
     }
   })
@@ -79,7 +81,7 @@ test.describe('Payments CRUD Operations', () => {
     const sortButtons = page.locator('[aria-sort], button[class*="sort"], th')
     if (await sortButtons.first().isVisible()) {
       await sortButtons.first().click()
-      await page.waitForTimeout(300)
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
     }
   })
 

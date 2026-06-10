@@ -5,7 +5,8 @@ test.describe('Categories CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await devLogin(page)
     await page.goto('/categories')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+    // network-idle never settles (TanStack Query polls) — wait for the page heading instead.
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15_000 })
   })
 
   test('should load categories page without errors', async ({ page }) => {
@@ -64,7 +65,7 @@ test.describe('Categories CRUD Operations', () => {
 
   test('should create new category with valid data', async ({ page }) => {
     await page.goto('/categories/create')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+    // The retrying expect on the name input below is the real readiness signal.
 
     const nameInput = page.locator('input[id*="name"], input[placeholder*="name"], input[placeholder*="الاسم"]')
     const descriptionInput = page.locator('textarea[id*="description"], textarea[placeholder*="description"]')

@@ -6,7 +6,8 @@ test.describe('Employees CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await loginAs(page, 'admin')
     await page.goto('/employees')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+    // network-idle never settles (TanStack Query polls) — wait for the page heading instead.
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15_000 })
   })
 
   test('should load employees page without errors', async ({ page }) => {
@@ -17,7 +18,7 @@ test.describe('Employees CRUD Operations', () => {
   })
 
   test('should display employees list or empty state', async ({ page }) => {
-    await page.waitForTimeout(2000)
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
 
     const employeesList = page.locator('[class*="table"], [class*="list"], [class*="employee"]')
     const emptyState = page.locator('text=/no employee|لا يوجد موظف|no data/i')
@@ -42,7 +43,8 @@ test.describe('Employees CRUD Operations', () => {
     const searchInput = page.locator('input[placeholder*="search"], input[placeholder*="بحث"]')
     if (await searchInput.isVisible()) {
       await searchInput.fill('test')
-      await page.waitForTimeout(500)
+      // Typing must not crash the page — the heading stays mounted while the list refetches.
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
       await searchInput.clear()
     }
   })
@@ -53,7 +55,7 @@ test.describe('Employees CRUD Operations', () => {
       const options = await filterSelect.locator('option').count()
       if (options > 1) {
         await filterSelect.selectOption({ index: 1 })
-        await page.waitForTimeout(500)
+        await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
       }
     }
   })
@@ -64,7 +66,7 @@ test.describe('Employees CRUD Operations', () => {
       const nextButton = page.locator('button:has-text("next"), button:has-text("التالي"), [aria-label*="next"]')
       if (await nextButton.isVisible()) {
         await nextButton.click()
-        await page.waitForTimeout(500)
+        await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
       }
     }
   })
@@ -73,7 +75,7 @@ test.describe('Employees CRUD Operations', () => {
     const sortButtons = page.locator('[aria-sort], button[class*="sort"], th')
     if (await sortButtons.first().isVisible()) {
       await sortButtons.first().click()
-      await page.waitForTimeout(300)
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
     }
   })
 
@@ -81,7 +83,7 @@ test.describe('Employees CRUD Operations', () => {
     const employeeRow = page.locator('tbody tr, [class*="employee-row"]').first()
     if (await employeeRow.isVisible()) {
       await employeeRow.click()
-      await page.waitForTimeout(500)
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
     }
   })
 
@@ -132,7 +134,8 @@ test.describe('Employees CRUD Operations', () => {
       const confirmButton = page.locator('button:has-text("Confirm"), button:has-text("تأكيد")')
       if (await confirmButton.isVisible({ timeout: 3000 }).catch(() => false)) {
         await confirmButton.click()
-        await page.waitForTimeout(2000)
+        // Confirming the delete closes the dialog — wait on that concrete effect.
+        await expect(confirmButton).toBeHidden({ timeout: 10_000 })
       }
     }
   })

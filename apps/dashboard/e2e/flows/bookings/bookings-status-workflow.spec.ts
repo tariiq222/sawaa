@@ -372,7 +372,6 @@ test.describe('Reception — happy-path status workflow', () => {
     await clickReceptionAction(page, 'إلغاء الحجز')
 
     // AdminCancelDialog — select a cancellation reason, fill notes, confirm.
-    const dialog = page.locator('[role="dialog"]')
     const reasonSelect = page.getByRole('combobox').first()
     await expect(reasonSelect).toBeVisible({ timeout: 5_000 })
     await reasonSelect.click()

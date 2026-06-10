@@ -80,7 +80,11 @@ test.describe('Bookings CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await loginAs(page, 'admin');
     await page.goto('/bookings');
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+    // network-idle never settles (TanStack Query polls) — wait for the bookings
+    // table header instead, which renders once the list query resolves.
+    await expect(
+      page.getByRole('columnheader', { name: /المريض|Client/i }).first(),
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test('should load bookings page without errors', async ({ page }) => {
@@ -92,7 +96,7 @@ test.describe('Bookings CRUD Operations', () => {
 
   test('should display bookings list with seeded booking', async ({ page }) => {
     // The seeded booking guarantees the table is non-empty.
-    await page.waitForTimeout(2_000);
+    await expect(page.locator('table').first()).toBeVisible({ timeout: 15_000 });
     const firstRow = page.locator('tbody tr').first();
     if (await firstRow.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await expect(firstRow).toBeVisible();
@@ -143,8 +147,8 @@ test.describe('Bookings CRUD Operations', () => {
       );
       if (await nextButton.isVisible({ timeout: 3_000 }).catch(() => false)) {
         await nextButton.click();
-        await page.waitForTimeout(500);
-        await expect(page.locator('body')).toBeVisible();
+        // The list re-renders after the page change — wait on the table.
+        await expect(page.locator('table').first()).toBeVisible({ timeout: 10_000 });
       }
     }
     // Single-page result is fine — just confirm stability.
@@ -155,8 +159,8 @@ test.describe('Bookings CRUD Operations', () => {
     const sortButtons = page.locator('[aria-sort], button[class*="sort"]');
     if (await sortButtons.first().isVisible({ timeout: 3_000 }).catch(() => false)) {
       await sortButtons.first().click();
-      await page.waitForTimeout(300);
-      await expect(page.locator('body')).toBeVisible();
+      // The list re-renders after the sort change — wait on the table.
+      await expect(page.locator('table').first()).toBeVisible({ timeout: 10_000 });
     } else {
       await expect(page.locator('body')).toBeVisible();
     }

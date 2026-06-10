@@ -53,7 +53,6 @@ let seededService: SeededService
 let seededEmployee: SeededEmployee
 let seededBooking: SeededBooking
 let seededInvoice: SeededInvoice
-let seededPayment: SeededPayment
 let seededClientName = ""
 
 test.beforeAll(async () => {
@@ -104,7 +103,7 @@ test.beforeAll(async () => {
 
   expect(Number(seededInvoice.total)).toBe(EXPECTED_TOTAL_HALALAS)
 
-  seededPayment = await apiPost<SeededPayment>(
+  await apiPost<SeededPayment>(
     "/dashboard/finance/payments",
     token,
     {

@@ -12,7 +12,7 @@
  *
  */
 
-import { type Page } from "@playwright/test"
+import { expect, type Page } from "@playwright/test"
 import {
   expectAuthenticatedShell,
   expectCurrentPath,
@@ -142,16 +142,22 @@ export function getPersonaCredentials(persona: Persona): {
   return PERSONA_CREDENTIALS[persona]
 }
 
+interface SessionUser {
+  id: string
+  role: string
+  isSuperAdmin?: boolean
+}
+
 interface ApiLoginResponse {
   accessToken: string
   refreshToken?: string
-  user: unknown
+  user: SessionUser
 }
 
 async function apiLogin(persona: Persona): Promise<{
   accessToken: string
   refreshToken: string
-  user: unknown
+  user: SessionUser
 }> {
   const { email, password } = PERSONA_CREDENTIALS[persona]
   const res = await fetch(`${API_BASE}/api/v1/auth/login`, {

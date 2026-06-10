@@ -73,7 +73,6 @@ test.describe('Booking Create Wizard — user flow', () => {
     // 2. Navigate to bookings
     await page.goto('/bookings');
     await expect(page).toHaveURL(/\/bookings/);
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
     // 3. Click "حجز جديد" — wizard renders inline (not in a dialog)
     const addBtn = page.getByRole('button', { name: /حجز جديد/i });
@@ -85,15 +84,13 @@ test.describe('Booking Create Wizard — user flow', () => {
     const posContainer = page.locator('.rounded-2xl.border').filter({ hasText: /حجز جديد/ });
     await expect(posContainer).toBeVisible({ timeout: 10_000 });
 
-    // 4. Client section — search for the seeded client
-    await page.waitForTimeout(1_500);
+    // 4. Client section — search for the seeded client. The client step always
+    // renders a search input (placeholder "ابحث بالاسم أو رقم الجوال...").
     const searchInput = page.locator('input[placeholder*="ابحث"]').first();
-    if (await searchInput.isVisible({ timeout: 3_000 }).catch(() => false)) {
-      await searchInput.fill('حجز اختبار');
-      await page.waitForTimeout(1_000);
-    }
+    await expect(searchInput).toBeVisible({ timeout: 10_000 });
+    await searchInput.fill('حجز اختبار');
 
-    // Click the seeded client row
+    // Click the seeded client row — its appearance confirms the search resolved.
     const clientBtn = page.locator('button', { hasText: /حجز اختبار/ }).first();
     await expect(clientBtn).toBeVisible({ timeout: 10_000 });
     await clientBtn.click();
@@ -124,19 +121,22 @@ test.describe('Booking Create Wizard — user flow', () => {
       .first();
     await expect(serviceBtn).toBeVisible({ timeout: 10_000 });
     await serviceBtn.click();
-    await page.waitForTimeout(1_000);
 
-    // 6. Employee section auto-opens — select the seeded employee
+    // 6. Employee section auto-opens — select the seeded employee. Its
+    // visibility confirms the service click resolved.
     const employeeBtn = page.locator('button', { hasText: /موظف حجز/ }).first();
     await expect(employeeBtn).toBeVisible({ timeout: 10_000 });
     await employeeBtn.click();
-    await page.waitForTimeout(1_000);
 
-    // Try to select a type if options are available
+    // Try to select a type if options are available — wait up to 3s for the
+    // type section to mount instead of sleeping.
     const typeBtn = page.locator('button', { hasText: /حضوري/ }).first();
-    if (await typeBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    const hasTypeBtn = await typeBtn
+      .waitFor({ state: 'visible', timeout: 3_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (hasTypeBtn) {
       await typeBtn.click();
-      await page.waitForTimeout(500);
     }
 
     // POS container should still be visible (wizard stays inline)
@@ -146,7 +146,6 @@ test.describe('Booking Create Wizard — user flow', () => {
   test('wizard back button returns to previous step', async ({ page }) => {
     await loginAs(page, 'admin');
     await page.goto('/bookings');
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
     // Click "حجز جديد" — wizard renders inline (not in a dialog)
     const addBtn = page.getByRole('button', { name: /حجز جديد/i });
@@ -157,18 +156,19 @@ test.describe('Booking Create Wizard — user flow', () => {
     const posContainer = page.locator('.rounded-2xl.border').filter({ hasText: /حجز جديد/ });
     await expect(posContainer).toBeVisible({ timeout: 10_000 });
 
-    // Search and select a client to open the service section
-    await page.waitForTimeout(1_500);
+    // Search and select a client to open the service section. The client step
+    // always renders a search input (placeholder "ابحث بالاسم أو رقم الجوال...").
     const searchInput = page.locator('input[placeholder*="ابحث"]').first();
-    if (await searchInput.isVisible({ timeout: 3_000 }).catch(() => false)) {
-      await searchInput.fill('حجز اختبار');
-      await page.waitForTimeout(1_000);
-    }
+    await expect(searchInput).toBeVisible({ timeout: 10_000 });
+    await searchInput.fill('حجز اختبار');
 
     const clientBtn = page.locator('button', { hasText: /حجز اختبار/ }).first();
-    if (await clientBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    const hasClientBtn = await clientBtn
+      .waitFor({ state: 'visible', timeout: 5_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (hasClientBtn) {
       await clientBtn.click();
-      await page.waitForTimeout(1_000);
 
       // The POS uses collapsible sections (not a back button wizard step)
       // Clicking a filled section header re-opens it — just verify POS is still visible
@@ -181,7 +181,6 @@ test.describe('Booking Create Wizard — user flow', () => {
   test('wizard close button dismisses inline POS view', async ({ page }) => {
     await loginAs(page, 'admin');
     await page.goto('/bookings');
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
     const addBtn = page.getByRole('button', { name: /حجز جديد/i });
     await expect(addBtn).toBeVisible({ timeout: 10_000 });
@@ -196,7 +195,6 @@ test.describe('Booking Create Wizard — user flow', () => {
     const closeBtn = page.getByRole('button', { name: /إغلاق|close/i }).first();
     if (await closeBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await closeBtn.click();
-      await page.waitForTimeout(500);
       // After close, the POS container is unmounted and the list is shown again
       await expect(posContainer).not.toBeVisible({ timeout: 5_000 });
       // "حجز جديد" button should be visible again

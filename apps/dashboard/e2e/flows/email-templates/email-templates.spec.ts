@@ -8,13 +8,11 @@ test.describe('Email Templates', () => {
 
   test('email templates page loads', async ({ page }) => {
     await page.goto('/settings/email-templates', { waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
     await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('booking confirmation template is visible', async ({ page }) => {
     await page.goto('/settings/email-templates', { waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
     await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
 
     const template = page.locator('text=/booking.*confirmation|تأكيد.*الحجز/i').first();
@@ -25,7 +23,6 @@ test.describe('Email Templates', () => {
 
   test('reminder template is visible', async ({ page }) => {
     await page.goto('/settings/email-templates', { waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
     await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
 
     const template = page.locator('text=/reminder|تذكير/i').first();
@@ -36,7 +33,6 @@ test.describe('Email Templates', () => {
 
   test('cancellation template is visible', async ({ page }) => {
     await page.goto('/settings/email-templates', { waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
     await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
 
     const template = page.locator('text=/cancellation|إلغاء/i').first();
@@ -47,7 +43,6 @@ test.describe('Email Templates', () => {
 
   test('variable placeholders are displayed', async ({ page }) => {
     await page.goto('/settings/email-templates', { waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
     await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
 
     const variables = page.locator('text=/{{|\\{\\{/').first();
@@ -58,13 +53,11 @@ test.describe('Email Templates', () => {
 
   test('SMS templates page loads', async ({ page }) => {
     await page.goto('/settings/sms');
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
     await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('character count for SMS template', async ({ page }) => {
     await page.goto('/settings/sms');
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
 
     await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
 

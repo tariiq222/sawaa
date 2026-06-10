@@ -8,20 +8,17 @@ test.describe('Notifications', () => {
 
   test('notifications page loads', async ({ page }) => {
     await page.goto('/notifications');
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
     await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('notification bell icon is visible in header', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
 
     await expect(page.getByTestId('notifications-bell')).toBeVisible({ timeout: 10_000 });
   });
 
   test('notification dropdown opens on bell click', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
 
     const bell = page.getByTestId('notifications-bell');
     await expect(bell).toBeVisible({ timeout: 10_000 });
@@ -33,7 +30,6 @@ test.describe('Notifications', () => {
 
   test('unread notification count badge shows on bell', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
 
     await expect(page.getByTestId('notifications-bell')).toBeVisible({ timeout: 10_000 });
 
@@ -45,7 +41,8 @@ test.describe('Notifications', () => {
 
   test('individual notification can be marked as read', async ({ page }) => {
     await page.goto('/notifications');
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
+    // The notifications page is rendered once its heading is visible.
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15_000 });
 
     const markReadBtn = page.locator('button[aria-label*="read"]').first();
     const canMarkRead = await markReadBtn.isVisible({ timeout: 5_000 }).catch(() => false);
@@ -61,7 +58,6 @@ test.describe('Notifications', () => {
 
   test('empty state when no notifications', async ({ page }) => {
     await page.goto('/notifications');
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
 
     await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
 

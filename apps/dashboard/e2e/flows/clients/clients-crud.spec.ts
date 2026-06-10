@@ -5,7 +5,8 @@ test.describe('Clients CRUD Operations', () => {
   test.beforeEach(async ({ page }) => {
     await devLogin(page)
     await page.goto('/clients', { waitUntil: 'domcontentloaded' })
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+    // network-idle never settles (TanStack Query polls) — wait for the page heading instead.
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15_000 })
   })
 
   test('should load clients page without errors', async ({ page }) => {
@@ -16,7 +17,7 @@ test.describe('Clients CRUD Operations', () => {
   })
 
   test('should display clients list or empty state', async ({ page }) => {
-    await page.waitForTimeout(2000)
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
 
     const clientsList = page.locator('[class*="table"], [class*="list"], [class*="Client"]')
     const emptyState = page.locator('text=/no client|لا يوجد عميل|no data/i')
@@ -51,7 +52,8 @@ test.describe('Clients CRUD Operations', () => {
     const searchInput = page.locator('input[placeholder*="search"], input[placeholder*="بحث"]')
     if (await searchInput.isVisible()) {
       await searchInput.fill('test')
-      await page.waitForTimeout(500)
+      // Typing must not crash the page — the heading stays mounted while the list refetches.
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
     }
   })
 
@@ -61,7 +63,7 @@ test.describe('Clients CRUD Operations', () => {
       const nextButton = page.locator('button:has-text("next"), button:has-text("التالي"), [aria-label*="next"]')
       if (await nextButton.isVisible()) {
         await nextButton.click()
-        await page.waitForTimeout(500)
+        await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
       }
     }
   })
@@ -70,7 +72,7 @@ test.describe('Clients CRUD Operations', () => {
     const clientRow = page.locator('tbody tr, [class*="client-row"]').first()
     if (await clientRow.isVisible()) {
       await clientRow.click()
-      await page.waitForTimeout(500)
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
     }
   })
 
@@ -78,7 +80,7 @@ test.describe('Clients CRUD Operations', () => {
     const sortButtons = page.locator('[aria-sort], button[class*="sort"], th')
     if (await sortButtons.first().isVisible()) {
       await sortButtons.first().click()
-      await page.waitForTimeout(300)
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
     }
   })
 })
