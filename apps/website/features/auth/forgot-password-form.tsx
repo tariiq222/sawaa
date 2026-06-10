@@ -3,13 +3,14 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useT } from '@/features/locale/locale-provider';
-import { validateEmail } from './auth.schema';
+import { validateEmail, normalizeSaudiPhone } from './auth.schema';
 import { requestOtp } from '@/features/otp/otp.api';
 import { OtpChannel, OtpPurpose } from '@sawaa/shared';
-import { Mail } from 'lucide-react';
+import { User } from 'lucide-react';
 
 interface ForgotPasswordFormProps {
-  onSuccess?: (email: string) => void;
+  /** Called with the identifier the OTP was sent to (email or E.164 phone). */
+  onSuccess?: (identifier: string) => void;
 }
 
 const INPUT =
@@ -23,29 +24,46 @@ const PRIMARY_BTN =
 export function ForgotPasswordForm({ onSuccess }: ForgotPasswordFormProps) {
   const t = useT();
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    const emailError = validateEmail(email);
-    if (emailError) {
-      setError(emailError);
-      return;
+    // Email (contains '@') gets the code by email; otherwise treat the
+    // input as a Saudi phone and send the code by SMS.
+    const trimmed = identifier.trim();
+    let channel: OtpChannel;
+    let normalized: string;
+    if (trimmed.includes('@')) {
+      const emailError = validateEmail(trimmed);
+      if (emailError) {
+        setError(emailError);
+        return;
+      }
+      channel = OtpChannel.EMAIL;
+      normalized = trimmed;
+    } else {
+      const normalizedPhone = normalizeSaudiPhone(trimmed);
+      if (!normalizedPhone) {
+        setError(t('auth.invalidPhone'));
+        return;
+      }
+      channel = OtpChannel.SMS;
+      normalized = normalizedPhone;
     }
     setIsLoading(true);
     try {
       await requestOtp({
-        channel: OtpChannel.EMAIL,
-        identifier: email,
+        channel,
+        identifier: normalized,
         purpose: OtpPurpose.CLIENT_PASSWORD_RESET,
       });
       if (onSuccess) {
-        onSuccess(email);
+        onSuccess(normalized);
       } else {
-        router.push(`/reset-password?email=${encodeURIComponent(email)}`);
+        router.push(`/reset-password?identifier=${encodeURIComponent(normalized)}`);
       }
     } catch {
       setError(t('auth.failedToSendCode'));
@@ -65,22 +83,23 @@ export function ForgotPasswordForm({ onSuccess }: ForgotPasswordFormProps) {
         </div>
       )}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="fp-email" className={LABEL}>
-          {t('auth.email')}
+        <label htmlFor="fp-identifier" className={LABEL}>
+          {t('auth.emailOrPhone')}
         </label>
         <div className="relative">
           <span className={ICON} aria-hidden="true">
-            <Mail size={16} />
+            <User size={16} />
           </span>
           <input
-            id="fp-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="client@example.com"
-            autoComplete="email"
+            id="fp-identifier"
+            type="text"
+            dir="ltr"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            placeholder="05XXXXXXXX"
+            autoComplete="username"
             required
-            className={INPUT}
+            className={`${INPUT} text-start`}
           />
         </div>
       </div>

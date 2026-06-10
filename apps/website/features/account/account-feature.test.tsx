@@ -155,4 +155,40 @@ describe('AccountFeature', () => {
     expect(pushMock).toHaveBeenCalledWith('/login');
   });
 
+  describe('add-email notice', () => {
+    const noEmailClient: ClientProfile = { ...fakeClient, email: null, emailVerified: null };
+
+    it('does not show the notice when the client has an email', () => {
+      useCurrentClientMock.mockReturnValue({ client: fakeClient, isLoading: false, error: null, refetch: vi.fn() });
+      render(withLocale('en', <AccountFeature locale="en" />));
+      expect(
+        screen.queryByText('Add an email address to receive invoices and notifications.'),
+      ).toBeNull();
+    });
+
+    it('shows the notice on the overview tab when the client has no email', () => {
+      useCurrentClientMock.mockReturnValue({ client: noEmailClient, isLoading: false, error: null, refetch: vi.fn() });
+      render(withLocale('en', <AccountFeature locale="en" />));
+      expect(
+        screen.getByText('Add an email address to receive invoices and notifications.'),
+      ).toBeTruthy();
+    });
+
+    it('switches to the profile tab when the notice CTA is clicked', () => {
+      useCurrentClientMock.mockReturnValue({ client: noEmailClient, isLoading: false, error: null, refetch: vi.fn() });
+      render(withLocale('en', <AccountFeature locale="en" />));
+      fireEvent.click(screen.getByRole('button', { name: /add email/i }));
+      expect(screen.getByTestId('profile-tab')).toBeTruthy();
+      expect(screen.getByRole('tab', { name: 'Profile' }).getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('hides the notice for the rest of the render when dismissed', () => {
+      useCurrentClientMock.mockReturnValue({ client: noEmailClient, isLoading: false, error: null, refetch: vi.fn() });
+      render(withLocale('en', <AccountFeature locale="en" />));
+      fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+      expect(
+        screen.queryByText('Add an email address to receive invoices and notifications.'),
+      ).toBeNull();
+    });
+  });
 });

@@ -7,7 +7,7 @@ import { ClientLoginHandler } from '../../modules/identity/client-auth/client-lo
 import { ClientRefreshHandler } from '../../modules/identity/client-auth/client-refresh.handler';
 import { ClientLogoutHandler } from '../../modules/identity/client-auth/client-logout.handler';
 import { ResetPasswordHandler } from '../../modules/identity/client-auth/reset-password/reset-password.handler';
-import { JwtGuard } from '../../common/guards/jwt.guard';
+import { JwtGuard, IS_PUBLIC_KEY } from '../../common/guards/jwt.guard';
 import cookieParser from 'cookie-parser';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 
@@ -223,6 +223,23 @@ describe('PublicAuthController (e2e)', () => {
         .post('/public/auth/logout')
         .send({ refreshToken: '' })
         .expect(204);
+    });
+  });
+
+  describe('@Public() metadata (global JwtGuard exemption)', () => {
+    // Regression: refresh/logout lacked @Public(), so the global staff
+    // JwtGuard (APP_GUARD) rejected every client refresh/logout with 401
+    // before ClientSessionGuard ever ran. The guards are mocked in this
+    // suite, so assert the metadata directly.
+    it.each([
+      ['registerEndpoint'],
+      ['loginEndpoint'],
+      ['refreshEndpoint'],
+      ['logoutEndpoint'],
+      ['resetPasswordEndpoint'],
+    ])('%s is marked @Public()', (method) => {
+      const handler = PublicAuthController.prototype[method as keyof PublicAuthController];
+      expect(Reflect.getMetadata(IS_PUBLIC_KEY, handler)).toBe(true);
     });
   });
 

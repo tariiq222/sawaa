@@ -3,8 +3,10 @@
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
+import { ApiError } from '@sawaa/api-client';
 import { useCurrentClient, CURRENT_CLIENT_QUERY_KEY } from '@/features/auth/use-current-client';
 import { setClient } from '@/features/auth/auth-store';
+import { validateEmail } from '@/features/auth/auth.schema';
 import { updateMyProfileApi } from './account.api';
 import { useT } from '@/features/locale/locale-provider';
 import { BadgeCheck, Mail, KeyRound, AlertTriangle } from 'lucide-react';
@@ -24,7 +26,9 @@ export function ProfileTab() {
 
   const [name, setName] = useState(client?.name ?? '');
   const [phone, setPhone] = useState(client?.phone ?? '');
-  const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
+  // Only used while the account has no email — once one exists it is read-only.
+  const [email, setEmail] = useState('');
+  const [errors, setErrors] = useState<{ name?: string; phone?: string; email?: string }>({});
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -37,34 +41,44 @@ export function ProfileTab() {
   }
 
   const phoneChanged = phone.trim() !== (client.phone ?? '');
+  const canAddEmail = client.email === null;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setMessage(null);
 
-    const nextErrors: { name?: string; phone?: string } = {};
+    const nextErrors: { name?: string; phone?: string; email?: string } = {};
     if (name.trim().length < 2) {
       nextErrors.name = tt('account.profile.nameError');
     }
     if (phone.trim() && !validatePhoneValue(phone.trim())) {
       nextErrors.phone = tt('account.profile.phoneError');
     }
+    if (canAddEmail && email.trim() && validateEmail(email.trim()) !== null) {
+      nextErrors.email = tt('account.profile.emailError');
+    }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
     setSaving(true);
     try {
-      const payload: { name?: string; phone?: string } = {};
+      const payload: { name?: string; phone?: string; email?: string } = {};
       if (name.trim() !== client!.name) payload.name = name.trim();
       if (phoneChanged) payload.phone = phone.trim();
+      if (canAddEmail && email.trim()) payload.email = email.trim();
       const updated = await updateMyProfileApi(payload);
       setClient(updated);
       // Update the shared profile query so headers reading useCurrentClient
       // (e.g. the account ProfileCard) refresh without a full reload.
       queryClient.setQueryData(CURRENT_CLIENT_QUERY_KEY, updated);
       setMessage({ ok: true, text: tt('account.profile.saved') });
-    } catch {
-      setMessage({ ok: false, text: tt('account.profile.saveError') });
+    } catch (err) {
+      // Backend answers 409 Conflict when the email belongs to another account.
+      if (err instanceof ApiError && err.status === 409) {
+        setMessage({ ok: false, text: tt('account.profile.emailTaken') });
+      } else {
+        setMessage({ ok: false, text: tt('account.profile.saveError') });
+      }
     } finally {
       setSaving(false);
     }
@@ -111,29 +125,52 @@ export function ProfileTab() {
         )}
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-[var(--sw-secondary-700)]">
-          {tt('account.email')}
-        </span>
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--sw-neutral-50)] border border-[var(--sw-neutral-100)]">
-          <Mail size={14} className="shrink-0 text-[var(--sw-neutral-400)]" aria-hidden="true" />
-          <span className="text-sm text-[var(--sw-secondary-700)] truncate flex-1" dir="ltr">
-            {client.email ?? '—'}
-          </span>
-          {client.email && (
-            <span
-              className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.6875rem] font-semibold ${
-                client.emailVerified != null
-                  ? 'bg-[color-mix(in_srgb,var(--success)_12%,transparent)] text-[var(--success)]'
-                  : 'bg-[color-mix(in_srgb,var(--warning)_14%,transparent)] text-[var(--warning)]'
-              }`}
-            >
-              {client.emailVerified != null && <BadgeCheck size={11} aria-hidden="true" />}
-              {client.emailVerified != null ? tt('account.emailVerified') : tt('account.notVerified')}
-            </span>
-          )}
+      {canAddEmail ? (
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="profile-email"
+            className="text-sm font-medium text-[var(--sw-secondary-700)]"
+          >
+            {tt('account.email')}
+          </label>
+          <input
+            id="profile-email"
+            type="email"
+            dir="ltr"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="client@example.com"
+            autoComplete="email"
+            className={`${INPUT} text-start`}
+          />
+          {errors.email && <p className="text-sm text-[var(--error)]">{errors.email}</p>}
+          <p className="text-sm text-[var(--sw-body)]">{tt('account.profile.addEmailHint')}</p>
         </div>
-      </div>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-[var(--sw-secondary-700)]">
+            {tt('account.email')}
+          </span>
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--sw-neutral-50)] border border-[var(--sw-neutral-100)]">
+            <Mail size={14} className="shrink-0 text-[var(--sw-neutral-400)]" aria-hidden="true" />
+            <span className="text-sm text-[var(--sw-secondary-700)] truncate flex-1" dir="ltr">
+              {client.email ?? '—'}
+            </span>
+            {client.email && (
+              <span
+                className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.6875rem] font-semibold ${
+                  client.emailVerified != null
+                    ? 'bg-[color-mix(in_srgb,var(--success)_12%,transparent)] text-[var(--success)]'
+                    : 'bg-[color-mix(in_srgb,var(--warning)_14%,transparent)] text-[var(--warning)]'
+                }`}
+              >
+                {client.emailVerified != null && <BadgeCheck size={11} aria-hidden="true" />}
+                {client.emailVerified != null ? tt('account.emailVerified') : tt('account.notVerified')}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       <p className="inline-flex items-center gap-2 text-sm text-[var(--sw-body)]">
         <KeyRound size={13} className="shrink-0 text-[var(--sw-neutral-400)]" aria-hidden="true" />

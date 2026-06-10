@@ -3,11 +3,11 @@
 import { useState, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useT } from '@/features/locale/locale-provider';
-import { validateEmail } from './auth.schema';
+import { validateEmail, normalizeSaudiPhone } from './auth.schema';
 import { clientLoginApi } from './auth.api';
 import { setClient } from './auth-store';
 import { getMeApi } from './auth.api';
-import { Mail, Lock } from 'lucide-react';
+import { User, Lock } from 'lucide-react';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -18,7 +18,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect');
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,10 +27,23 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     e.preventDefault();
     setError(null);
 
-    const emailError = validateEmail(email);
-    if (emailError) {
-      setError(emailError);
-      return;
+    // The identifier is either an email (contains '@') or a Saudi phone.
+    const trimmed = identifier.trim();
+    let credentials: { email: string; password: string } | { phone: string; password: string };
+    if (trimmed.includes('@')) {
+      const emailError = validateEmail(trimmed);
+      if (emailError) {
+        setError(emailError);
+        return;
+      }
+      credentials = { email: trimmed, password };
+    } else {
+      const normalizedPhone = normalizeSaudiPhone(trimmed);
+      if (!normalizedPhone) {
+        setError(t('auth.invalidPhone'));
+        return;
+      }
+      credentials = { phone: normalizedPhone, password };
     }
 
     if (!password) {
@@ -40,7 +53,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
     setIsLoading(true);
     try {
-      await clientLoginApi({ email, password });
+      await clientLoginApi(credentials);
       const profile = await getMeApi();
       setClient(profile);
       if (onSuccess) {
@@ -87,23 +100,24 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         </div>
       )}
 
-      {/* Email field */}
+      {/* Identifier field — email or Saudi phone */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" className={labelClass}>
-          {t('auth.email')}
+        <label htmlFor="identifier" className={labelClass}>
+          {t('auth.emailOrPhone')}
         </label>
         <div className="relative">
           <span className={iconClass} aria-hidden="true">
-            <Mail size={16} />
+            <User size={16} />
           </span>
           <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="client@example.com"
-            autoComplete="email"
-            className={inputClass}
+            id="identifier"
+            type="text"
+            dir="ltr"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            placeholder="05XXXXXXXX"
+            autoComplete="username"
+            className={`${inputClass} text-start`}
           />
         </div>
       </div>

@@ -18,8 +18,8 @@ import { RequestOtpDto } from './request-otp.dto';
 import { maskIdentifier } from '../../../common/helpers/mask-pii.helper';
 
 const OTP_EXPIRY_MINUTES = 5;
-const OTP_MIN = 100_000;
-const OTP_MAX = 1_000_000; // exclusive upper bound for randomInt → yields 6 digits
+const OTP_MIN = 1000;
+const OTP_MAX = 10_000; // exclusive upper bound for randomInt → yields 4 digits
 const MAX_REQUESTS_PER_IDENTIFIER_PER_HOUR = 5;
 const OTP_COOLDOWN_SECONDS = 60;
 
@@ -75,8 +75,8 @@ export class RequestOtpHandler {
       }
 
       // Use crypto.randomInt (CSPRNG) — OTP codes must not be predictable.
-      // randomInt(min, max) returns an int in [min, max); with [100000, 1000000)
-      // every result is exactly 6 digits, so no zero-padding is needed.
+      // randomInt(min, max) returns an int in [min, max); with [1000, 10000)
+      // every result is exactly 4 digits, so no zero-padding is needed.
       const rawCode = randomInt(OTP_MIN, OTP_MAX).toString();
       const codeHash = await bcrypt.hash(rawCode, 10);
       const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);

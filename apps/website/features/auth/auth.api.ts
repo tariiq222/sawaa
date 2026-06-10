@@ -19,9 +19,9 @@ import {
   cancelMyBooking,
   rescheduleMyBooking,
 } from '@sawaa/api-client'
+import type { ClientLoginRequest } from '@sawaa/api-client'
 import type {
   ClientAuthResponse,
-  ClientLoginPayload,
   ClientRegisterPayload,
   ClientProfile,
   ClientBookingItem,
@@ -44,7 +44,7 @@ function ensureInitialised(): void {
 }
 
 export async function clientLoginApi(
-  payload: ClientLoginPayload,
+  payload: ClientLoginRequest,
 ): Promise<ClientAuthResponse> {
   ensureInitialised()
   return clientLogin(payload)

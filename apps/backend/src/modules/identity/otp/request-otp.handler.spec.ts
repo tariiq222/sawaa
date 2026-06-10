@@ -131,12 +131,12 @@ describe('RequestOtpHandler', () => {
     })).rejects.toThrow(HttpException);
   });
 
-  it('generates a 6-digit numeric code via CSPRNG (no longer Math.random / 4-digit)', async () => {
+  it('generates a 4-digit numeric code via CSPRNG (no longer Math.random)', async () => {
     mockChannel.send.mockClear();
 
-    // Run the handler 25 times and assert every code is a 6-digit string in
-    // [100000, 999999]. This proves: (a) format is 6 digits, (b) min bound is
-    // applied (no 4-digit codes leak through padding), (c) max bound is exclusive.
+    // Run the handler 25 times and assert every code is a 4-digit string in
+    // [1000, 9999]. This proves: (a) format is 4 digits, (b) min bound is
+    // applied (no 3-digit codes leak through padding), (c) max bound is exclusive.
     for (let i = 0; i < 25; i++) {
       await handler.execute({
         channel: OtpChannel.EMAIL,
@@ -148,10 +148,10 @@ describe('RequestOtpHandler', () => {
     expect(mockChannel.send).toHaveBeenCalledTimes(25);
     for (const call of mockChannel.send.mock.calls) {
       const sentCode = call[1] as string;
-      expect(sentCode).toMatch(/^\d{6}$/);
+      expect(sentCode).toMatch(/^\d{4}$/);
       const n = Number(sentCode);
-      expect(n).toBeGreaterThanOrEqual(100_000);
-      expect(n).toBeLessThanOrEqual(999_999);
+      expect(n).toBeGreaterThanOrEqual(1000);
+      expect(n).toBeLessThanOrEqual(9999);
     }
   });
 

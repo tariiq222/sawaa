@@ -19,9 +19,10 @@ export async function verifyOtp(
   identifier: string,
   code: string,
   purpose: OtpPurpose = OtpPurpose.GUEST_BOOKING,
+  channel: OtpChannel = OtpChannel.EMAIL,
 ): Promise<OtpVerifyResponse> {
   const payload: OtpVerifyPayload = {
-    channel: OtpChannel.EMAIL,
+    channel,
     identifier,
     code,
     purpose,

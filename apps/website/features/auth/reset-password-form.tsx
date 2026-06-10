@@ -6,13 +6,14 @@ import { useT } from '@/features/locale/locale-provider';
 import { validatePassword } from './auth.schema';
 import { clientResetPasswordApi } from './auth.api';
 import { verifyOtp } from '@/features/otp/otp.api';
-import { OtpPurpose } from '@sawaa/shared';
+import { OtpChannel, OtpPurpose } from '@sawaa/shared';
 import { KeyRound, Lock, CheckCircle2 } from 'lucide-react';
 
 type Step = 'otp' | 'password';
 
 interface ResetPasswordFormProps {
-  initialEmail?: string;
+  /** Email or E.164 Saudi phone the reset code was sent to. */
+  initialIdentifier?: string;
   onSuccess?: () => void;
 }
 
@@ -24,11 +25,15 @@ const LABEL = 'text-sm font-medium text-[var(--sw-secondary-700)]';
 const PRIMARY_BTN =
   'mt-1 px-6 py-3.5 rounded-full bg-[var(--sw-primary-500)] text-[var(--sw-neutral-0)] font-extrabold text-base border-0 cursor-pointer shadow-[var(--sw-shadow-primary)] w-full transition-[transform,box-shadow,background] duration-150 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:translate-y-0';
 
-export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordFormProps) {
+export function ResetPasswordForm({ initialIdentifier, onSuccess }: ResetPasswordFormProps) {
   const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = initialEmail ?? (searchParams?.get('email') ?? '');
+  // `identifier` is the canonical param; `email` is kept as a fallback for
+  // older links that predate phone-based resets.
+  const identifier =
+    initialIdentifier ?? (searchParams?.get('identifier') ?? searchParams?.get('email') ?? '');
+  const channel = identifier.includes('@') ? OtpChannel.EMAIL : OtpChannel.SMS;
 
   const [step, setStep] = useState<Step>('otp');
   const [otpCode, setOtpCode] = useState('');
@@ -39,14 +44,14 @@ export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordForm
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   async function handleOtpSubmit() {
-    if (otpCode.length !== 6) {
+    if (otpCode.length !== 4) {
       setError(t('auth.enterSixDigitCode'));
       return;
     }
     setError(null);
     setIsLoading(true);
     try {
-      const result = await verifyOtp(email, otpCode, OtpPurpose.CLIENT_PASSWORD_RESET);
+      const result = await verifyOtp(identifier, otpCode, OtpPurpose.CLIENT_PASSWORD_RESET, channel);
       setOtpToken(result.sessionToken);
       setStep('password');
     } catch {
@@ -109,7 +114,9 @@ export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordForm
         <div className="flex flex-col gap-[1.125rem]">
           <p className="text-sm text-[var(--sw-body)] leading-relaxed">
             {t('auth.codeSent')}{' '}
-            <span className="font-semibold text-[var(--sw-secondary-700)]">{email}</span>
+            <span className="font-semibold text-[var(--sw-secondary-700)]" dir="ltr">
+              {identifier}
+            </span>
           </p>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="rp-otp" className={LABEL}>
@@ -124,16 +131,16 @@ export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordForm
                 type="text"
                 inputMode="numeric"
                 value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                maxLength={6}
-                placeholder="000000"
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                maxLength={4}
+                placeholder="0000"
                 className={`${INPUT} text-2xl tracking-[0.5em] text-center font-semibold`}
               />
             </div>
           </div>
           <button
             onClick={handleOtpSubmit}
-            disabled={isLoading || otpCode.length !== 6}
+            disabled={isLoading || otpCode.length !== 4}
             className={PRIMARY_BTN}
           >
             {isLoading ? t('auth.verifying') : t('auth.verify')}
@@ -156,7 +163,7 @@ export function ResetPasswordForm({ initialEmail, onSuccess }: ResetPasswordForm
               <CheckCircle2 size={14} />
             </span>
             <p className="text-sm text-[var(--sw-secondary-700)] leading-relaxed">
-              {t('auth.emailVerifiedSetPassword')}
+              {t('auth.verifiedSetPassword')}
             </p>
           </div>
           <div className="flex flex-col gap-1.5">

@@ -9,7 +9,7 @@ import { ClientBookingsList } from '@/features/auth/client-bookings-list';
 import { OverviewTab } from './overview-tab';
 import { InvoicesTab } from './invoices-tab';
 import { ProfileTab } from './profile-tab';
-import { Mail, Phone, BadgeCheck, LogOut, User } from 'lucide-react';
+import { Mail, Phone, BadgeCheck, LogOut, User, ArrowRight, X } from 'lucide-react';
 
 interface AccountFeatureProps {
   locale: Locale;
@@ -27,6 +27,8 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
   const tt = useT();
   const [loggingOut, setLoggingOut] = useState(false);
   const [activeTab, setActiveTab] = useState<AccountTab>('overview');
+  // Dismissible per render only — reappears on the next visit to /account.
+  const [emailNoticeDismissed, setEmailNoticeDismissed] = useState(false);
   // Hydration gate: the client profile is restored synchronously from the
   // persisted auth store, so the first client render could differ from the
   // server-rendered loading state. Render the same loading placeholder until
@@ -110,6 +112,40 @@ export function AccountFeature({ locale }: AccountFeatureProps) {
       </div>
 
       <div role="tabpanel" id={`account-panel-${activeTab}`}>
+        {activeTab === 'overview' && client.email === null && !emailNoticeDismissed && (
+          <div
+            role="status"
+            className="flex items-center justify-between gap-3 px-4 py-3 mb-6 rounded-2xl text-sm"
+            style={{
+              background: 'color-mix(in srgb, var(--sw-primary-500) 8%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--sw-primary-500) 25%, transparent)',
+              color: 'var(--sw-primary-600)',
+            }}
+          >
+            <span className="inline-flex items-center gap-2 font-semibold">
+              <Mail size={16} aria-hidden="true" />
+              {tt('account.addEmail.notice')}
+            </span>
+            <span className="inline-flex items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveTab('profile')}
+                className="inline-flex items-center gap-1 font-bold hover:underline"
+              >
+                {tt('account.addEmail.cta')}
+                <ArrowRight size={13} className="rtl:rotate-180" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setEmailNoticeDismissed(true)}
+                aria-label={tt('account.addEmail.dismiss')}
+                className="inline-flex items-center hover:opacity-70"
+              >
+                <X size={15} aria-hidden="true" />
+              </button>
+            </span>
+          </div>
+        )}
         {activeTab === 'overview' && (
           <OverviewTab locale={locale} onGoToInvoices={() => setActiveTab('invoices')} />
         )}

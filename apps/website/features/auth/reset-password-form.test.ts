@@ -64,10 +64,10 @@ describe('ResetPasswordForm — API layer', () => {
 
 // Unit tests for OTP verification step
 describe('ResetPasswordForm — OTP step', () => {
-  it('requires a 6-digit code before proceeding', () => {
-    const isValid = (code: string) => code.length === 6;
+  it('requires a 4-digit code before proceeding', () => {
+    const isValid = (code: string) => code.length === 4;
     expect(isValid('123')).toBe(false);
-    expect(isValid('123456')).toBe(true);
+    expect(isValid('1234')).toBe(true);
     expect(isValid('')).toBe(false);
   });
 

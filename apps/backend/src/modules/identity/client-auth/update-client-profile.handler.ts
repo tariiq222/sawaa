@@ -20,7 +20,7 @@ export class UpdateClientProfileHandler {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(clientId: string, dto: UpdateClientProfileDto): Promise<ClientProfile> {
-    if (dto.name === undefined && dto.phone === undefined) {
+    if (dto.name === undefined && dto.phone === undefined && dto.email === undefined) {
       throw new BadRequestException('لا توجد بيانات لتحديثها');
     }
 
@@ -47,6 +47,29 @@ export class UpdateClientProfileHandler {
       data.phone = dto.phone;
       // The new number has not been verified via OTP yet.
       data.phoneVerified = null;
+    }
+
+    if (dto.email !== undefined && dto.email !== client.email) {
+      // Policy: email can only be ADDED while the account has none (clients
+      // who registered by phone). Changing an existing email requires a
+      // verification flow that does not exist yet — reject instead of
+      // silently swapping the login identifier.
+      if (client.email !== null) {
+        throw new BadRequestException('لا يمكن تغيير البريد الإلكتروني بعد تعيينه');
+      }
+      const emailDuplicate = await this.prisma.client.findFirst({
+        where: {
+          email: dto.email,
+          deletedAt: null,
+          NOT: { id: clientId },
+        },
+      });
+      if (emailDuplicate) {
+        throw new ConflictException('البريد الإلكتروني مستخدم في حساب آخر');
+      }
+      data.email = dto.email;
+      // The new email has not been verified yet.
+      data.emailVerified = null;
     }
 
     if (dto.name !== undefined) {
@@ -76,10 +99,14 @@ export class UpdateClientProfileHandler {
 
       return updated as ClientProfile;
     } catch (error) {
-      // TOCTOU guard: another request may have claimed the phone between the
-      // pre-check above and this update — map the unique-constraint violation
-      // to the same conflict error as the pre-check.
+      // TOCTOU guard: another request may have claimed the phone/email between
+      // the pre-check above and this update — map the unique-constraint
+      // violation to the same conflict error as the pre-check.
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        const target = Array.isArray(error.meta?.target) ? (error.meta.target as string[]) : [];
+        if (target.includes('email')) {
+          throw new ConflictException('البريد الإلكتروني مستخدم في حساب آخر');
+        }
         throw new ConflictException('رقم الجوال مستخدم في حساب آخر');
       }
       throw error;

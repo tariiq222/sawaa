@@ -634,7 +634,7 @@
       "ClientLoginDto": {
         "properties": {
           "email": {
-            "description": "Client email address",
+            "description": "Client email address (provide either email or phone, not both)",
             "example": "client@example.com",
             "type": "string"
           },
@@ -642,10 +642,14 @@
             "description": "Account password",
             "example": "SecurePass123",
             "type": "string"
+          },
+          "phone": {
+            "description": "Saudi mobile number (any common format; normalized to E.164). Provide either email or phone, not both.",
+            "example": "+966501234567",
+            "type": "string"
           }
         },
         "required": [
-          "email",
           "password"
         ],
         "type": "object"
@@ -4641,6 +4645,26 @@
         },
         "type": "object"
       },
+      "UpdateClientProfileDto": {
+        "properties": {
+          "email": {
+            "description": "Email address. Can only be set while the account has no email yet (phone-registered accounts adding an email later).",
+            "example": "client@example.com",
+            "type": "string"
+          },
+          "name": {
+            "description": "Full name",
+            "example": "أحمد محمد العتيبي",
+            "type": "string"
+          },
+          "phone": {
+            "description": "Saudi mobile number (any common format; normalized to E.164)",
+            "example": "+966501234567",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "UpdateContactMessageStatusDto": {
         "properties": {
           "status": {
@@ -5814,8 +5838,8 @@
             "type": "string"
           },
           "code": {
-            "description": "6-digit OTP code",
-            "example": "123456",
+            "description": "4-digit OTP code",
+            "example": "1234",
             "type": "string"
           },
           "identifier": {
@@ -28406,7 +28430,7 @@
             "description": "Unhandled server error"
           }
         },
-        "summary": "Log in with phone and password",
+        "summary": "Log in with email or phone and password",
         "tags": [
           "Public / Auth"
         ]
@@ -29912,6 +29936,85 @@
         "tags": [
           "Public / Me"
         ]
+      },
+      "patch": {
+        "operationId": "PublicMeController_updateProfileEndpoint",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateClientProfileDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Updated client profile",
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "409": {
+            "description": "Phone number already used by another account"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update authenticated client profile",
+        "tags": [
+          "Public / Me"
+        ]
       }
     },
     "/api/v1/public/me/bookings": {
@@ -30335,6 +30438,91 @@
           }
         ],
         "summary": "Reschedule a client booking",
+        "tags": [
+          "Public / Me"
+        ]
+      }
+    },
+    "/api/v1/public/me/invoices": {
+      "get": {
+        "operationId": "PublicMeController_invoicesEndpoint",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Paginated invoices list",
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List client invoices",
         "tags": [
           "Public / Me"
         ]

@@ -3,12 +3,12 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useT } from '@/features/locale/locale-provider';
-import { validatePassword, validateEmail } from './auth.schema';
+import { validatePassword, normalizeSaudiPhone } from './auth.schema';
 import { clientRegisterApi, getMeApi } from './auth.api';
 import { setClient } from './auth-store';
 import { requestOtp, verifyOtp } from '@/features/otp/otp.api';
 import { OtpChannel, OtpPurpose } from '@sawaa/shared';
-import { User, Mail, KeyRound, Lock, ArrowRight } from 'lucide-react';
+import { User, Phone, KeyRound, Lock, ArrowRight } from 'lucide-react';
 
 type Step = 'credentials' | 'otp' | 'password';
 
@@ -34,7 +34,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
   const t = useT();
   const router = useRouter();
   const [step, setStep] = useState<Step>('credentials');
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -45,18 +45,21 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
   async function handleCredentialsSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    const emailError = validateEmail(email);
-    if (emailError) {
-      setError(emailError);
+    const normalizedPhone = normalizeSaudiPhone(phone);
+    if (!normalizedPhone) {
+      setError(t('auth.invalidPhone'));
       return;
     }
     setIsLoading(true);
     try {
       await requestOtp({
-        channel: OtpChannel.EMAIL,
-        identifier: email,
+        channel: OtpChannel.SMS,
+        identifier: normalizedPhone,
         purpose: OtpPurpose.CLIENT_LOGIN,
       });
+      // Keep the normalized E.164 form so the OTP step shows exactly what
+      // the SMS was sent to, and verification matches the request.
+      setPhone(normalizedPhone);
       setStep('otp');
     } catch {
       setError(t('auth.failedToSendCode'));
@@ -66,14 +69,14 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
   }
 
   async function handleOtpSubmit() {
-    if (otpCode.length !== 6) {
+    if (otpCode.length !== 4) {
       setError(t('auth.enterSixDigitCode'));
       return;
     }
     setIsLoading(true);
     setError(null);
     try {
-      const result = await verifyOtp(email, otpCode, OtpPurpose.CLIENT_LOGIN);
+      const result = await verifyOtp(phone, otpCode, OtpPurpose.CLIENT_LOGIN, OtpChannel.SMS);
       setOtpToken(result.sessionToken);
       setStep('password');
     } catch {
@@ -143,16 +146,17 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
               className={INPUT}
             />
           </Field>
-          <Field id="reg-email" label={t('auth.email')} icon={<Mail size={16} />}>
+          <Field id="reg-phone" label={t('auth.phone')} icon={<Phone size={16} />}>
             <input
-              id="reg-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="client@example.com"
-              autoComplete="email"
+              id="reg-phone"
+              type="tel"
+              dir="ltr"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="05XXXXXXXX"
+              autoComplete="tel"
               required
-              className={INPUT}
+              className={`${INPUT} text-start`}
             />
           </Field>
           <button type="submit" disabled={isLoading} className={PRIMARY_BTN}>
@@ -164,7 +168,10 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       {step === 'otp' && (
         <div className="flex flex-col gap-[1.125rem]">
           <p className="text-sm text-[var(--sw-body)] leading-relaxed">
-            {t('auth.codeSent')} <span className="font-semibold text-[var(--sw-secondary-700)]">{email}</span>
+            {t('auth.codeSent')}{' '}
+            <span className="font-semibold text-[var(--sw-secondary-700)]" dir="ltr">
+              {phone}
+            </span>
           </p>
           <Field id="otp" label={t('auth.verificationCode')} icon={<KeyRound size={16} />}>
             <input
@@ -172,15 +179,15 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
               type="text"
               inputMode="numeric"
               value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              maxLength={6}
-              placeholder="000000"
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              maxLength={4}
+              placeholder="0000"
               className={`${INPUT} text-2xl tracking-[0.5em] text-center font-semibold`}
             />
           </Field>
           <button
             onClick={handleOtpSubmit}
-            disabled={isLoading || otpCode.length !== 6}
+            disabled={isLoading || otpCode.length !== 4}
             className={PRIMARY_BTN}
           >
             {isLoading ? t('auth.verifying') : t('auth.verify')}
@@ -194,7 +201,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
             }}
             className={`${GHOST_LINK} text-center mx-auto`}
           >
-            {t('auth.changeEmail')}
+            {t('auth.changePhone')}
           </button>
         </div>
       )}
@@ -206,7 +213,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
               <ArrowRight size={14} />
             </span>
             <p className="text-sm text-[var(--sw-secondary-700)] leading-relaxed">
-              {t('auth.emailVerifiedSetPassword')}
+              {t('auth.phoneVerifiedSetPassword')}
             </p>
           </div>
           <Field id="reg-password" label={t('auth.password')} icon={<Lock size={16} />}>
@@ -260,7 +267,7 @@ function Field({
 function Stepper({ current }: { current: Step }) {
   const t = useT();
   const steps: { key: Step; label: string }[] = [
-    { key: 'credentials', label: t('auth.step.email') },
+    { key: 'credentials', label: t('auth.step.phone') },
     { key: 'otp', label: t('auth.step.verify') },
     { key: 'password', label: t('auth.step.password') },
   ];

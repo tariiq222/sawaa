@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ClientLoginHandler } from './client-login.handler';
 import { PrismaService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
@@ -42,9 +42,9 @@ describe('ClientLoginHandler', () => {
     del: jest.fn(),
   };
 
-  /** Queue attempt counts for the next [email, ip] multi/exec pipelines. */
-  function queueAttempts(emailCount: number, ipCount: number) {
-    execResults.push([[null, emailCount], [null, 1]]);
+  /** Queue attempt counts for the next [identifier, ip] multi/exec pipelines. */
+  function queueAttempts(identifierCount: number, ipCount: number) {
+    execResults.push([[null, identifierCount], [null, 1]]);
     execResults.push([[null, ipCount], [null, 1]]);
   }
 
@@ -107,9 +107,9 @@ describe('ClientLoginHandler', () => {
 
       // Lockout counters are incremented atomically via a multi/incr/expire/exec pipeline.
       expect(mockRedisClient.multi).toHaveBeenCalled();
-      expect(multiIncr).toHaveBeenCalledWith('client_login:email:test@example.com');
+      expect(multiIncr).toHaveBeenCalledWith('client_login:id:test@example.com');
       expect(multiIncr).toHaveBeenCalledWith('client_login:ip:1.2.3.4');
-      expect(multiExpire).toHaveBeenCalledWith('client_login:email:test@example.com', 600);
+      expect(multiExpire).toHaveBeenCalledWith('client_login:id:test@example.com', 600);
       expect(multiExpire).toHaveBeenCalledWith('client_login:ip:1.2.3.4', 600);
       expect(multiExec).toHaveBeenCalled();
       // Non-atomic standalone incr must no longer be used.
@@ -118,7 +118,7 @@ describe('ClientLoginHandler', () => {
       expect(result.accessToken).toBe('mock-access-token');
       expect(result.refreshToken).toBe('mock-raw-refresh');
       expect(result.clientId).toBe('cl-1');
-      expect(mockRedisClient.del).toHaveBeenCalledWith('client_login:email:test@example.com');
+      expect(mockRedisClient.del).toHaveBeenCalledWith('client_login:id:test@example.com');
       expect(mockRedisClient.del).toHaveBeenCalledWith('client_login:ip:1.2.3.4');
       expect(mockPrisma.client.update).toHaveBeenCalledWith({
         where: { id: 'cl-1' },
@@ -283,13 +283,93 @@ describe('ClientLoginHandler', () => {
       // multi() opened once per key (email + ip).
       expect(mockRedisClient.multi).toHaveBeenCalledTimes(2);
       // Each pipeline chains incr then expire then exec.
-      expect(multiIncr).toHaveBeenCalledWith('client_login:email:test@example.com');
+      expect(multiIncr).toHaveBeenCalledWith('client_login:id:test@example.com');
       expect(multiIncr).toHaveBeenCalledWith('client_login:ip:9.9.9.9');
-      expect(multiExpire).toHaveBeenCalledWith('client_login:email:test@example.com', 600);
+      expect(multiExpire).toHaveBeenCalledWith('client_login:id:test@example.com', 600);
       expect(multiExpire).toHaveBeenCalledWith('client_login:ip:9.9.9.9', 600);
       expect(multiExec).toHaveBeenCalledTimes(2);
       // The old non-atomic standalone INCR is gone.
       expect(mockRedisClient.incr).not.toHaveBeenCalled();
+    });
+
+    it('returns tokens on successful phone login and rate-limits on the phone identifier', async () => {
+      mockPrisma.client.findFirst.mockResolvedValue({
+        id: 'cl-p1',
+        email: null,
+        phone: '+966501234567',
+        passwordHash: 'hashed_pw',
+        loginAttempts: 0,
+        lockoutUntil: null,
+      });
+      queueAttempts(1, 1);
+      mockPasswords.verify.mockResolvedValue(true);
+      mockPrisma.client.update.mockResolvedValue({ id: 'cl-p1' });
+
+      const result = await handler.execute(
+        { phone: '+966501234567', password: 'SecurePass123' },
+        '1.2.3.4',
+      );
+
+      expect(mockPrisma.client.findFirst).toHaveBeenCalledWith({
+        where: { phone: '+966501234567', deletedAt: null },
+      });
+      expect(multiIncr).toHaveBeenCalledWith('client_login:id:+966501234567');
+      expect(result.accessToken).toBe('mock-access-token');
+      expect(result.clientId).toBe('cl-p1');
+      expect(mockRedisClient.del).toHaveBeenCalledWith('client_login:id:+966501234567');
+      // Token pair still issued with the (null) email — service accepts string | null.
+      expect(mockClientTokens.issueTokenPair).toHaveBeenCalledWith({ id: 'cl-p1', email: null });
+    });
+
+    it('throws constant Invalid credentials for unknown phone', async () => {
+      mockPrisma.client.findFirst.mockResolvedValue(null);
+
+      const err = await handler
+        .execute({ phone: '+966509999999', password: 'WrongPass1' }, '1.2.3.4')
+        .catch((e) => e);
+      expect(err).toBeInstanceOf(UnauthorizedException);
+      expect(err.message).toBe('Invalid credentials');
+    });
+
+    it('throws constant Invalid credentials for wrong password on phone login and increments lockout counters', async () => {
+      mockPrisma.client.findFirst.mockResolvedValue({
+        id: 'cl-p2',
+        email: null,
+        phone: '+966501234567',
+        passwordHash: 'hashed_pw',
+        loginAttempts: 0,
+        lockoutUntil: null,
+      });
+      queueAttempts(2, 1);
+      mockPasswords.verify.mockResolvedValue(false);
+      mockPrisma.client.update.mockResolvedValue({ id: 'cl-p2' });
+
+      const err = await handler
+        .execute({ phone: '+966501234567', password: 'WrongPass1' }, '1.2.3.4')
+        .catch((e) => e);
+      expect(err).toBeInstanceOf(UnauthorizedException);
+      expect(err.message).toBe('Invalid credentials');
+      expect(mockPrisma.client.update).toHaveBeenCalledWith({
+        where: { id: 'cl-p2' },
+        data: { loginAttempts: { increment: 1 }, lockoutUntil: undefined },
+      });
+    });
+
+    it('rejects a request providing both email and phone before any lookup', async () => {
+      await expect(
+        handler.execute(
+          { email: 'a@b.com', phone: '+966501234567', password: 'SecurePass123' },
+          '1.2.3.4',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockPrisma.client.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('rejects a request providing neither email nor phone before any lookup', async () => {
+      await expect(
+        handler.execute({ password: 'SecurePass123' }, '1.2.3.4'),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockPrisma.client.findFirst).not.toHaveBeenCalled();
     });
   });
 });

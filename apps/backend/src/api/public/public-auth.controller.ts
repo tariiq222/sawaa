@@ -81,7 +81,7 @@ export class PublicAuthController {
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Log in with phone and password' })
+  @ApiOperation({ summary: 'Log in with email or phone and password' })
   @ApiOkResponse({ schema: { type: 'object', description: 'Auth tokens' } })
   async loginEndpoint(@Body() dto: ClientLoginDto, @Ip() ip: string, @Res({ passthrough: true }) res: Response) {
     const result = await this.login.execute(dto, ip);
@@ -89,6 +89,9 @@ export class PublicAuthController {
     return { clientId: result.clientId };
   }
 
+  // @Public() exempts this route from the global staff JwtGuard (APP_GUARD);
+  // ClientSessionGuard still enforces the client cookie session.
+  @Public()
   @UseGuards(ClientSessionGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
@@ -109,6 +112,9 @@ export class PublicAuthController {
     return { clientId: session.id };
   }
 
+  // @Public() exempts this route from the global staff JwtGuard (APP_GUARD);
+  // ClientSessionGuard still enforces the client cookie session.
+  @Public()
   @UseGuards(ClientSessionGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post('logout')

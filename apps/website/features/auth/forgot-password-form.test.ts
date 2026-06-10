@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { validateEmail } from './auth.schema';
+import { validateEmail, normalizeSaudiPhone } from './auth.schema';
 
 type RequestOtpMock = (payload: unknown) => Promise<void>;
 
@@ -16,6 +16,30 @@ describe('ForgotPasswordForm — validation', () => {
 
     it('accepts valid email', () => {
       expect(validateEmail('client@example.com')).toBeNull();
+    });
+  });
+
+  describe('phone identifier via auth.schema', () => {
+    it('normalizes a local Saudi phone for the SMS channel', () => {
+      expect(normalizeSaudiPhone('0501234567')).toBe('+966501234567');
+    });
+
+    it('rejects a non-Saudi phone', () => {
+      expect(normalizeSaudiPhone('+15551234567')).toBeNull();
+    });
+  });
+
+  describe('identifier channel selection', () => {
+    // The form sends EMAIL when the identifier contains '@', SMS otherwise.
+    const channelFor = (identifier: string) => (identifier.includes('@') ? 'EMAIL' : 'SMS');
+
+    it('uses EMAIL for email identifiers', () => {
+      expect(channelFor('user@example.com')).toBe('EMAIL');
+    });
+
+    it('uses SMS for phone identifiers', async () => {
+      const { OtpChannel } = await import('@sawaa/shared');
+      expect(channelFor('0501234567')).toBe(OtpChannel.SMS);
     });
   });
 });

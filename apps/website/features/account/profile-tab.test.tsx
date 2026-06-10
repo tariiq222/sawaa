@@ -20,6 +20,7 @@ vi.mock('./account.api', () => ({
 }));
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ApiError } from '@sawaa/api-client';
 import { ProfileTab } from './profile-tab';
 import { updateMyProfileApi } from './account.api';
 import { LocaleProvider } from '@/features/locale/locale-provider';
@@ -128,5 +129,69 @@ describe('ProfileTab', () => {
 
     expect(await screen.findByText('تعذر حفظ التغييرات، حاول مرة أخرى.')).toBeTruthy();
     expect(setClientMock).not.toHaveBeenCalled();
+  });
+
+  describe('adding an email when the account has none', () => {
+    const noEmailClient: ClientProfile = { ...fakeClient, email: null, emailVerified: null };
+
+    beforeEach(() => {
+      useCurrentClientMock.mockReturnValue({
+        client: noEmailClient,
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+    });
+
+    it('renders an editable email input and includes the email in the PATCH payload', async () => {
+      const updated = { ...noEmailClient, email: 'new@test.com' };
+      updateMock.mockResolvedValue(updated);
+      render(withLocale('ar', <ProfileTab />));
+
+      const emailInput = screen.getByLabelText('البريد الإلكتروني') as HTMLInputElement;
+      expect(emailInput.tagName).toBe('INPUT');
+      fireEvent.change(emailInput, { target: { value: 'new@test.com' } });
+      fireEvent.click(screen.getByRole('button', { name: 'حفظ التغييرات' }));
+
+      await waitFor(() => expect(updateMock).toHaveBeenCalledWith({ email: 'new@test.com' }));
+      expect(setClientMock).toHaveBeenCalledWith(updated);
+      expect(await screen.findByText('تم حفظ التغييرات')).toBeTruthy();
+    });
+
+    it('omits email from the payload when the field is left empty', async () => {
+      const updated = { ...noEmailClient, name: 'Sara Updated' };
+      updateMock.mockResolvedValue(updated);
+      render(withLocale('ar', <ProfileTab />));
+
+      fireEvent.change(screen.getByLabelText('الاسم'), { target: { value: 'Sara Updated' } });
+      fireEvent.click(screen.getByRole('button', { name: 'حفظ التغييرات' }));
+
+      await waitFor(() => expect(updateMock).toHaveBeenCalledWith({ name: 'Sara Updated' }));
+    });
+
+    it('rejects an invalid email without calling the API', async () => {
+      render(withLocale('ar', <ProfileTab />));
+
+      fireEvent.change(screen.getByLabelText('البريد الإلكتروني'), {
+        target: { value: 'not-an-email' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'حفظ التغييرات' }));
+
+      expect(await screen.findByText('البريد الإلكتروني غير صالح.')).toBeTruthy();
+      expect(updateMock).not.toHaveBeenCalled();
+    });
+
+    it('shows the email-taken message when the API returns 409 Conflict', async () => {
+      updateMock.mockRejectedValue(new ApiError(409, 'Conflict', {}, 'EMAIL_TAKEN'));
+      render(withLocale('ar', <ProfileTab />));
+
+      fireEvent.change(screen.getByLabelText('البريد الإلكتروني'), {
+        target: { value: 'taken@test.com' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'حفظ التغييرات' }));
+
+      expect(await screen.findByText('هذا البريد الإلكتروني مستخدم في حساب آخر.')).toBeTruthy();
+      expect(setClientMock).not.toHaveBeenCalled();
+    });
   });
 });

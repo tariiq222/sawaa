@@ -64,6 +64,25 @@ describe('clientLogin', () => {
     expect((init as RequestInit).credentials).toBe('include')
   })
 
+  it('POSTs /public/auth/login with phone credentials (E.164 Saudi)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse({ success: true, data: fakeAuth }),
+    )
+
+    const result = await clientLogin({
+      phone: '+966501234567',
+      password: 'pw',
+    })
+
+    expect(result).toEqual(fakeAuth)
+    const [url, init] = vi.mocked(fetch).mock.calls[0]!
+    expect(url).toBe('http://api.test/public/auth/login')
+    expect(JSON.parse(init?.body as string)).toEqual({
+      phone: '+966501234567',
+      password: 'pw',
+    })
+  })
+
   it('throws ApiError with central status, body, and code on failure', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       jsonResponse({ error: 'INVALID_CREDENTIALS', message: 'Bad creds' }, 401),

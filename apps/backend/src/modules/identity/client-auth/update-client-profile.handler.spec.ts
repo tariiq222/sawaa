@@ -168,4 +168,80 @@ describe('UpdateClientProfileHandler', () => {
       expect.objectContaining({ data: {} }),
     );
   });
+
+  describe('email', () => {
+    const phoneOnlyClient = { ...existingClient, email: null, emailVerified: null };
+
+    it('adds an email when the account has none, leaving emailVerified null', async () => {
+      mockPrisma.client.findFirst
+        .mockResolvedValueOnce(phoneOnlyClient) // load client
+        .mockResolvedValueOnce(null); // email duplicate check
+      mockPrisma.client.update.mockResolvedValue({
+        ...updatedProfile,
+        email: 'new@example.com',
+        emailVerified: null,
+      });
+
+      const result = await handler.execute('cl-1', { email: 'new@example.com' });
+
+      expect(mockPrisma.client.findFirst).toHaveBeenNthCalledWith(2, {
+        where: { email: 'new@example.com', deletedAt: null, NOT: { id: 'cl-1' } },
+      });
+      expect(mockPrisma.client.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { email: 'new@example.com', emailVerified: null },
+        }),
+      );
+      expect(result.email).toBe('new@example.com');
+      expect(result.emailVerified).toBeNull();
+    });
+
+    it('rejects changing an email that is already set', async () => {
+      mockPrisma.client.findFirst.mockResolvedValue(existingClient); // email: ahmed@example.com
+
+      await expect(handler.execute('cl-1', { email: 'other@example.com' })).rejects.toThrow(
+        new BadRequestException('لا يمكن تغيير البريد الإلكتروني بعد تعيينه'),
+      );
+      expect(mockPrisma.client.update).not.toHaveBeenCalled();
+    });
+
+    it('treats resubmitting the same email as a no-op', async () => {
+      mockPrisma.client.findFirst.mockResolvedValue(existingClient);
+      mockPrisma.client.update.mockResolvedValue(updatedProfile);
+
+      await handler.execute('cl-1', { email: 'ahmed@example.com' });
+
+      // only the initial client load — no duplicate lookup, no rejection
+      expect(mockPrisma.client.findFirst).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.client.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: {} }),
+      );
+    });
+
+    it('throws ConflictException when the email belongs to another client', async () => {
+      mockPrisma.client.findFirst
+        .mockResolvedValueOnce(phoneOnlyClient)
+        .mockResolvedValueOnce({ id: 'cl-2' }); // duplicate
+
+      await expect(handler.execute('cl-1', { email: 'taken@example.com' })).rejects.toThrow(
+        new ConflictException('البريد الإلكتروني مستخدم في حساب آخر'),
+      );
+      expect(mockPrisma.client.update).not.toHaveBeenCalled();
+    });
+
+    it('maps a P2002 on the email column to the email ConflictException (TOCTOU race)', async () => {
+      mockPrisma.client.findFirst
+        .mockResolvedValueOnce(phoneOnlyClient)
+        .mockResolvedValueOnce(null); // duplicate pre-check passes
+      const p2002 = Object.assign(
+        Object.create(Prisma.PrismaClientKnownRequestError.prototype),
+        { code: 'P2002', meta: { target: ['email'] }, message: 'Unique constraint failed' },
+      );
+      mockPrisma.client.update.mockRejectedValue(p2002);
+
+      await expect(handler.execute('cl-1', { email: 'taken@example.com' })).rejects.toThrow(
+        new ConflictException('البريد الإلكتروني مستخدم في حساب آخر'),
+      );
+    });
+  });
 });

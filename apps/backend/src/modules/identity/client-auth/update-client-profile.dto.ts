@@ -1,10 +1,13 @@
 import { Transform } from 'class-transformer';
-import { IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsEmail, IsOptional, IsString, Length, Matches } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { NormalizePhone } from '../shared/normalize-phone.transform';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
+
+const trimLower = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : value;
 
 // Saudi phone only: +966 then 5 then 8 digits (local number 5XXXXXXXX) —
 // same policy as the dashboard clients update DTO.
@@ -27,4 +30,14 @@ export class UpdateClientProfileDto {
   @NormalizePhone()
   @Matches(PHONE_REGEX, { message: 'رقم الجوال يجب أن يكون رقماً سعودياً بصيغة ‎+9665XXXXXXXX' })
   phone?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Email address. Can only be set while the account has no email yet (phone-registered accounts adding an email later).',
+    example: 'client@example.com',
+  })
+  @IsOptional()
+  @Transform(trimLower)
+  @IsEmail({}, { message: 'البريد الإلكتروني غير صالح' })
+  email?: string;
 }

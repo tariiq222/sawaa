@@ -1,9 +1,16 @@
 import type {
-  ClientLoginPayload,
   ClientRegisterPayload,
   ClientAuthResponse,
 } from '@sawaa/shared';
 import { apiRequest, setApiRequestBaseUrl } from '../client';
+
+/**
+ * POST /public/auth/login body — exactly one of `email` or `phone` must be
+ * provided. `phone` must be E.164 Saudi format (`+9665XXXXXXXX`).
+ */
+export type ClientLoginRequest =
+  | { email: string; phone?: never; password: string }
+  | { phone: string; email?: never; password: string };
 
 export function setClientBaseUrl(url: string): void {
   setApiRequestBaseUrl(url);
@@ -17,7 +24,7 @@ export function initClientAuth(_cfg: {
 }
 
 export async function clientLogin(
-  payload: ClientLoginPayload,
+  payload: ClientLoginRequest,
 ): Promise<ClientAuthResponse> {
   return apiRequest<ClientAuthResponse>('/public/auth/login', {
     method: 'POST',

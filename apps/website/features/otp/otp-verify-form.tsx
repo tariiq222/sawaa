@@ -17,7 +17,7 @@ export function OtpVerifyForm({ client, onVerified }: OtpVerifyFormProps) {
   const [error, setError] = useState<string | null>(null);
 
   const handleVerify = async () => {
-    if (code.length !== 6) {
+    if (code.length !== 4) {
       setError(t('auth.enterSixDigitCode'));
       return;
     }
@@ -43,9 +43,9 @@ export function OtpVerifyForm({ client, onVerified }: OtpVerifyFormProps) {
         <input
           type="text"
           value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-          maxLength={6}
-          placeholder="000000"
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+          maxLength={4}
+          placeholder="0000"
           style={{
             padding: '0.75rem',
             fontSize: '1.5rem',
@@ -64,7 +64,7 @@ export function OtpVerifyForm({ client, onVerified }: OtpVerifyFormProps) {
       )}
       <button
         onClick={handleVerify}
-        disabled={isLoading || code.length !== 6}
+        disabled={isLoading || code.length !== 4}
         style={{
           padding: '0.875rem',
           background: 'var(--primary)',
@@ -72,8 +72,8 @@ export function OtpVerifyForm({ client, onVerified }: OtpVerifyFormProps) {
           border: 'none',
           borderRadius: 'var(--radius)',
           fontWeight: 600,
-          cursor: isLoading || code.length !== 6 ? 'not-allowed' : 'pointer',
-          opacity: isLoading || code.length !== 6 ? 0.6 : 1,
+          cursor: isLoading || code.length !== 4 ? 'not-allowed' : 'pointer',
+          opacity: isLoading || code.length !== 4 ? 0.6 : 1,
         }}
       >
         {isLoading ? t('auth.verifying') : t('auth.verify')}

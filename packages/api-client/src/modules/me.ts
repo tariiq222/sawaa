@@ -16,8 +16,17 @@ export async function getMe(): Promise<ClientProfile> {
   return apiRequest<ClientProfile>('/public/me', { credentials: 'include' });
 }
 
+/**
+ * PATCH /public/me body. `email` may only be set when the account has no
+ * email yet — the backend rejects otherwise and returns 409 Conflict when
+ * the email belongs to another account.
+ */
+export type UpdateMyProfileRequest = UpdateClientProfilePayload & {
+  email?: string;
+};
+
 export async function updateMyProfile(
-  payload: UpdateClientProfilePayload,
+  payload: UpdateMyProfileRequest,
 ): Promise<ClientProfile> {
   return apiRequest<ClientProfile>('/public/me', {
     method: 'PATCH',

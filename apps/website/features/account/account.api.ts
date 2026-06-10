@@ -10,10 +10,10 @@ import {
   getMyInvoices,
   requestRefund,
 } from '@sawaa/api-client'
+import type { UpdateMyProfileRequest } from '@sawaa/api-client'
 import type {
   ClientProfile,
   ClientInvoiceListResponse,
-  UpdateClientProfilePayload,
 } from '@sawaa/shared'
 
 import { getApiBase } from '@/lib/api-base'
@@ -26,7 +26,7 @@ function ensureInitialised(): void {
 }
 
 export async function updateMyProfileApi(
-  payload: UpdateClientProfilePayload,
+  payload: UpdateMyProfileRequest,
 ): Promise<ClientProfile> {
   ensureInitialised()
   return updateMyProfile(payload)

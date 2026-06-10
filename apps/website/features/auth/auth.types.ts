@@ -8,8 +8,10 @@ export interface AuthState {
   isAuthenticated: boolean;
 }
 
+/** Exactly one of `email` or `phone` is sent to POST /public/auth/login. */
 export interface LoginCredentials {
-  email: string;
+  email?: string;
+  phone?: string;
   password: string;
 }
 

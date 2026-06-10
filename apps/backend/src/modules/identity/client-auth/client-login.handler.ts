@@ -1,12 +1,12 @@
-import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { PasswordService } from '../shared/password.service';
 import { ClientTokenService } from '../shared/client-token.service';
 import { ClientLoginDto } from './client-login.dto';
-import { maskEmail } from '../../../common/helpers/mask-pii.helper';
+import { maskIdentifier } from '../../../common/helpers/mask-pii.helper';
 
-const MAX_EMAIL_ATTEMPTS = 5;
+const MAX_IDENTIFIER_ATTEMPTS = 5;
 const MAX_IP_ATTEMPTS = 20;
 const LOCKOUT_MINUTES = 15;
 const RATE_LIMIT_WINDOW_SECONDS = 600; // 10 min
@@ -23,8 +23,18 @@ export class ClientLoginHandler {
   ) {}
 
   async execute(dto: ClientLoginDto, ip = 'unknown') {
+    // Exactly one identifier. This is a request-shape error (no account
+    // lookup has happened yet), so a descriptive message leaks nothing.
+    if ((dto.email && dto.phone) || (!dto.email && !dto.phone)) {
+      throw new BadRequestException('Provide exactly one of email or phone');
+    }
+
+    const identifier = (dto.email ?? dto.phone) as string;
+
     const client = await this.prisma.client.findFirst({
-      where: { email: dto.email, deletedAt: null },
+      where: dto.email
+        ? { email: dto.email, deletedAt: null }
+        : { phone: dto.phone, deletedAt: null },
     });
 
     if (!client || !client.passwordHash) {
@@ -36,22 +46,22 @@ export class ClientLoginHandler {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const emailKey = `client_login:email:${dto.email}`;
+    const identifierKey = `client_login:id:${identifier}`;
     const ipKey = `client_login:ip:${ip}`;
     const redisClient = this.redis.getClient();
 
     // Atomic INCR + EXPIRE via multi/exec to prevent a race where a crash
     // between incr and expire leaves a key without TTL (mirrors staff login).
-    const [emailMultiRes, ipMultiRes] = await Promise.all([
-      redisClient.multi().incr(emailKey).expire(emailKey, RATE_LIMIT_WINDOW_SECONDS).exec(),
+    const [identifierMultiRes, ipMultiRes] = await Promise.all([
+      redisClient.multi().incr(identifierKey).expire(identifierKey, RATE_LIMIT_WINDOW_SECONDS).exec(),
       redisClient.multi().incr(ipKey).expire(ipKey, RATE_LIMIT_WINDOW_SECONDS).exec(),
     ]);
 
-    const emailAttempts = (emailMultiRes?.[0]?.[1] as number | undefined) ?? 0;
+    const identifierAttempts = (identifierMultiRes?.[0]?.[1] as number | undefined) ?? 0;
     const ipAttempts = (ipMultiRes?.[0]?.[1] as number | undefined) ?? 0;
 
-    if (emailAttempts > MAX_EMAIL_ATTEMPTS || ipAttempts > MAX_IP_ATTEMPTS) {
-      await redisClient.expire(emailKey, RATE_LIMIT_WINDOW_SECONDS);
+    if (identifierAttempts > MAX_IDENTIFIER_ATTEMPTS || ipAttempts > MAX_IP_ATTEMPTS) {
+      await redisClient.expire(identifierKey, RATE_LIMIT_WINDOW_SECONDS);
       await redisClient.expire(ipKey, RATE_LIMIT_WINDOW_SECONDS);
       throw new UnauthorizedException('Too many attempts, try again later');
     }
@@ -64,7 +74,7 @@ export class ClientLoginHandler {
         data: {
           loginAttempts: { increment: 1 },
           lockoutUntil:
-            emailAttempts >= MAX_EMAIL_ATTEMPTS - 1
+            identifierAttempts >= MAX_IDENTIFIER_ATTEMPTS - 1
               ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000)
               : undefined,
         },
@@ -72,8 +82,9 @@ export class ClientLoginHandler {
 
       // Constant response on every failure path (unknown account, missing
       // password, wrong password, lockout) so the error message can't be used
-      // to enumerate which emails are registered. Lockout is still enforced
-      // server-side via lockoutUntil above. Mirrors the staff /auth/lookup fix.
+      // to enumerate which emails/phones are registered. Lockout is still
+      // enforced server-side via lockoutUntil above. Mirrors the staff
+      // /auth/lookup fix.
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -89,11 +100,11 @@ export class ClientLoginHandler {
       data: { lastLoginAt: new Date() },
     });
 
-    await Promise.all([redisClient.del(emailKey), redisClient.del(ipKey)]);
+    await Promise.all([redisClient.del(identifierKey), redisClient.del(ipKey)]);
 
     const tokens = await this.clientTokens.issueTokenPair({ id: client.id, email: client.email });
 
-    this.logger.log(`Client login: ${client.id} (${maskEmail(client.email ?? '')})`);
+    this.logger.log(`Client login: ${client.id} (${maskIdentifier(identifier)})`);
 
     return {
       accessToken: tokens.accessToken,
