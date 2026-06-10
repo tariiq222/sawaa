@@ -4,7 +4,6 @@ import type {
   BookingListQuery,
   BookingListResponse,
   CreateBookingPayload,
-  UpdateBookingPayload,
 } from '../types/booking'
 
 function buildQueryString(query: Record<string, unknown>): string {
@@ -43,16 +42,6 @@ export async function createBooking(
 ): Promise<BookingListItem> {
   return apiRequest<BookingListItem>('/dashboard/bookings', {
     method: 'POST',
-    body: JSON.stringify(payload),
-  })
-}
-
-export async function updateBooking(
-  id: string,
-  payload: UpdateBookingPayload,
-): Promise<BookingListItem> {
-  return apiRequest<BookingListItem>(`/dashboard/bookings/${id}`, {
-    method: 'PATCH',
     body: JSON.stringify(payload),
   })
 }

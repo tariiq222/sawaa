@@ -160,6 +160,14 @@ jobs:
           MINIO_BUCKET: sawaa-test
           MINIO_USE_SSL: false
 
+      - name: api-client endpoint drift
+        # packages/api-client is hand-written, so nothing rebuilds it when a
+        # backend route is renamed or removed. Cross-check the endpoints it
+        # calls (packages/api-client/endpoints.manifest.json) against the
+        # openapi.json snapshot validated by the previous step — phase 1:
+        # path+method existence only.
+        run: node scripts/check-api-client-drift.mjs
+
   # ───────────────────────────────────────────────────────────────────────────
   # Dashboard
   # ───────────────────────────────────────────────────────────────────────────

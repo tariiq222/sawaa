@@ -11,11 +11,8 @@ src/
 ├── client.ts          core fetch wrapper + auth-refresh logic
 ├── refresh-mutex.ts    serializes concurrent token refreshes
 ├── index.ts            re-exports all modules
-├── modules/<domain>.ts ~33 domain modules: auth, client-auth, me, bookings,
-│                       clients, employees, services, branches, departments,
-│                       availability, ratings, payments, invoices, coupons,
-│                       intake-forms, notifications, reports, groups, users,
-│                       branding, public-* , otp, contact-messages, zoom …
+├── modules/<domain>.ts 6 domain modules: auth, client-auth, me, bookings,
+│                       employees, payments
 └── types/              domain type definitions (mirror backend DTOs)
 ```
 

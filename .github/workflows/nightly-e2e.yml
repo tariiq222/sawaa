@@ -2,9 +2,12 @@ name: Nightly E2E
 
 # The full Playwright "flows" suite (~138 specs) is too slow to gate every PR,
 # so it runs on a nightly schedule and on-demand via workflow_dispatch. PRs are
-# still gated by the fast smoke suite in ci.yml (dashboard-smoke job). This job
-# mirrors that smoke job's environment setup (postgres + redis service
-# containers, MinIO container, seeded DB, booted backend) but runs e2e:flows.
+# still gated by the fast smoke suite in ci.yml (dashboard-smoke job). The
+# dashboard-flows job mirrors that smoke job's environment setup (postgres +
+# redis service containers, MinIO container, seeded DB, booted backend) but
+# runs e2e:flows. The backend-real-e2e job runs the *.real-e2e-spec.ts suites
+# (skipped on PR CI because REAL_E2E_DATABASE_URL is unset there) against a
+# real migrated Postgres.
 on:
   schedule:
     - cron: '0 2 * * *'
@@ -160,3 +163,105 @@ jobs:
             apps/dashboard/test-results/
             apps/backend/backend-flows.log
           if-no-files-found: ignore
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Backend real-database e2e (*.real-e2e-spec.ts)
+  # ───────────────────────────────────────────────────────────────────────────
+  # These suites boot AppModule against a real migrated Postgres (no Prisma
+  # mock) and self-skip on PR CI because REAL_E2E_DATABASE_URL is unset there.
+  # The specs seed their own data in beforeAll, so no `pnpm seed` step is
+  # needed — only migrations. --runInBand is required: the booking-scenarios
+  # suite truncates shared tables in its cleanup, which would race with the
+  # other real-e2e suites if jest ran them in parallel workers.
+  backend-real-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sawaa_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin123 \
+            quay.io/minio/minio:latest server /data
+          minio_ready=false
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:9000/minio/health/live; then
+              minio_ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$minio_ready" != "true" ]; then
+            echo "MinIO did not become healthy after 30 seconds" >&2
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter=backend prisma:generate
+
+      - name: Run migrations
+        run: pnpm --filter=backend prisma:migrate:deploy
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+
+      - name: Real-database e2e tests
+        run: pnpm --filter=backend test:e2e -- --runInBand --testPathPattern 'real-e2e-spec'
+        env:
+          REAL_E2E_DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          DATABASE_URL: postgresql://test:test@localhost:5432/sawaa_test?schema=public
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_ACCESS_SECRET: ci-jwt-access-secret-32chars-long
+          JWT_REFRESH_SECRET: ci-jwt-refresh-secret-32chars-long
+          JWT_OTP_SECRET: ci-jwt-otp-secret-32chars-long
+          JWT_CLIENT_ACCESS_SECRET: ci-jwt-client-access-secret-32chars
+          MOYASAR_ENCRYPTION_KEY: svR0uFV6QvUvZYb+qeN6cKdfMulWc3cNPkhW1QSFW5o=
+          SMS_PROVIDER_ENCRYPTION_KEY: ktgFYAKoiqfCHgScsElAu72XXxolr6nPni3dH4Tjqos=
+          ZOOM_PROVIDER_ENCRYPTION_KEY: Ac3BvEGKOIKvEvt398pj1yM8HisiuWx/mbXw1qSL0T8=
+          EMAIL_PROVIDER_ENCRYPTION_KEY: +9ndIAOzLtT3MOlBXHPF76mLdx7ADTcm+2kDT7F5VcM=
+          AUTHENTICA_API_KEY: ci-authentica-key
+          MINIO_ENDPOINT: localhost
+          MINIO_PORT: 9000
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin123
+          MINIO_BUCKET: sawaa-test
+          MINIO_USE_SSL: false

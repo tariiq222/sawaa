@@ -20,7 +20,6 @@ export type {
   BookingListResponse,
   CreateBookingPayload,
   CreateBundleBookingPayload,
-  UpdateBookingPayload,
 } from './booking'
 export type {
   ClientListItem,
@@ -49,18 +48,6 @@ export type {
   UpdateEmployeeServicePayload,
   EmployeeTypeConfigInput,
 } from './employee'
-export type {
-  ServiceCategory,
-  ServiceListItem,
-  ServiceStats,
-  ServiceListQuery,
-  ServiceListResponse,
-  CreateServicePayload,
-  UpdateServicePayload,
-  ServiceBookingConfig,
-  ServiceDurationOption,
-  EmployeeServiceOption,
-} from './service'
 export type {
   BranchListItem,
   BranchListQuery,

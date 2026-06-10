@@ -109,9 +109,4 @@ export interface CreateBundleBookingPayload {
   deliveryType?: DeliveryType
 }
 
-export interface UpdateBookingPayload {
-  status?: BookingStatus
-  adminNotes?: string
-}
-
 export type BookingListResponse = PaginatedResponse<BookingListItem>

@@ -14,10 +14,6 @@ import {
   refundPayment,
   verifyPayment,
 } from '../payments'
-import {
-  createService,
-  listServices,
-} from '../services'
 
 beforeEach(() => {
   initClient({
@@ -105,24 +101,5 @@ describe('dashboard api modules', () => {
     await verifyPayment('pay-1', { action: 'approve', transferRef: 'TRF-1' })
     expect(lastRequest()[0]).toBe('http://api.test/dashboard/finance/payments/pay-1/verify')
     expect(lastRequest()[1]?.method).toBe('PATCH')
-  })
-
-  it('builds service list query params and create mutation', async () => {
-    vi.mocked(fetch).mockImplementation(async () => mockJsonResponse({ id: 'svc-1' }))
-
-    await listServices({ page: 1, perPage: 20, categoryId: 'cat-1', includeHidden: true })
-    expect(lastRequest()[0]).toBe(
-      'http://api.test/dashboard/services?page=1&limit=20&categoryId=cat-1&includeHidden=true',
-    )
-
-    await createService({
-      nameAr: 'استشارة',
-      nameEn: 'Counseling',
-      categoryId: 'cat-1',
-      price: 200,
-      duration: 60,
-    })
-    expect(lastRequest()[0]).toBe('http://api.test/dashboard/services')
-    expect(lastRequest()[1]?.method).toBe('POST')
   })
 })

@@ -20,5 +20,4 @@ export {
 } from './modules/me'
 export * as bookingsApi from './modules/bookings'
 export * as employeesApi from './modules/employees'
-export * as servicesApi from './modules/services'
 export * as paymentsApi from './modules/payments'
