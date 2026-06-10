@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import type { BookingType, DeliveryType } from '@prisma/client';
@@ -13,6 +13,14 @@ export type CheckAvailabilityQuery = Omit<CheckAvailabilityDto, 'date' | 'durati
   bookingType?: BookingType | string | null;
   deliveryType?: DeliveryType | null;
   excludeBookingId?: string | null;
+  /**
+   * When the service has no ServiceBookingConfig row for the requested
+   * deliveryType the combination is unsupported. By default this throws a
+   * 400 so misconfiguration is surfaced instead of silently returning no
+   * slots. Day-scanning callers (date-strip probes, recurring series with
+   * skipConflicts) set this to true to keep the legacy empty-array result.
+   */
+  silentOnMissingConfig?: boolean;
 };
 
 export interface AvailableSlot {
@@ -149,9 +157,13 @@ export class CheckAvailabilityHandler {
     ]);
 
     // Gate: when a serviceId is provided, the service must have a
-    // ServiceBookingConfig row for the requested deliveryType. Otherwise
-    // the combination is unsupported and we return no slots.
-    if (query.serviceId && !serviceConfig) return [];
+    // ServiceBookingConfig row for the requested deliveryType. Otherwise the
+    // combination is unsupported — throw so the caller learns why there are
+    // no slots, unless it explicitly opted into the silent empty result.
+    if (query.serviceId && !serviceConfig) {
+      if (query.silentOnMissingConfig) return [];
+      throw new BadRequestException('Service does not support the requested delivery type');
+    }
     if (!businessHour || !businessHour.isOpen) return [];
     if (holiday) return [];
     if (shifts.length === 0) return [];

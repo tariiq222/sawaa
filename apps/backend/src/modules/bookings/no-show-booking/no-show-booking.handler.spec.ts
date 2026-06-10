@@ -3,11 +3,25 @@ import { BookingStatus } from '@prisma/client';
 import { NoShowBookingHandler } from './no-show-booking.handler';
 import { buildPrisma, buildRlsTransaction, mockBooking } from '../testing/booking-test-helpers';
 
+const buildGroupCapacity = () => ({
+  recalculateGroupStatus: jest.fn().mockResolvedValue(undefined),
+});
+
+const newHandler = (
+  prisma: ReturnType<typeof buildPrisma>,
+  groupCapacity: ReturnType<typeof buildGroupCapacity> = buildGroupCapacity(),
+) =>
+  new NoShowBookingHandler(
+    prisma as never,
+    buildRlsTransaction(prisma) as never,
+    groupCapacity as never,
+  );
+
 describe('NoShowBookingHandler', () => {
   it('marks CONFIRMED booking as NO_SHOW', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
-    await new NoShowBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+    await newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'user-42' });
     expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.NO_SHOW }) }),
     );
@@ -17,7 +31,7 @@ describe('NoShowBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.COMPLETED });
     await expect(
-      new NoShowBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'book-1', changedBy: 'user-42' }),
+      newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'user-42' }),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -25,7 +39,7 @@ describe('NoShowBookingHandler', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue(null);
     await expect(
-      new NoShowBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({ bookingId: 'bad', changedBy: 'user-42' }),
+      newHandler(prisma).execute({ bookingId: 'bad', changedBy: 'user-42' }),
     ).rejects.toThrow(NotFoundException);
   });
 });
@@ -35,7 +49,7 @@ describe('NoShowBookingHandler — status log', () => {
     const prisma = buildPrisma();
     const confirmedBooking = { ...mockBooking, status: BookingStatus.CONFIRMED };
     prisma.booking.findUnique.mockResolvedValue(confirmedBooking);
-    const handler = new NoShowBookingHandler(prisma as never, buildRlsTransaction(prisma) as never);
+    const handler = newHandler(prisma);
 
     await handler.execute({ bookingId: 'book-1', changedBy: 'system' });
 
@@ -58,7 +72,7 @@ describe('NoShowBookingHandler — financial consequence (forfeiture)', () => {
     (prisma as unknown as Record<string, unknown>).refundRequest = { create: refundCreate };
     (prisma.payment as unknown as Record<string, unknown>).update = paymentUpdate;
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
-    const handler = new NoShowBookingHandler(prisma as never, buildRlsTransaction(prisma) as never);
+    const handler = newHandler(prisma);
 
     await handler.execute({ bookingId: 'book-1', changedBy: 'system' });
 
@@ -70,7 +84,7 @@ describe('NoShowBookingHandler — financial consequence (forfeiture)', () => {
   it('records the forfeiture in the status-log reason', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique.mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
-    const handler = new NoShowBookingHandler(prisma as never, buildRlsTransaction(prisma) as never);
+    const handler = newHandler(prisma);
 
     await handler.execute({ bookingId: 'book-1', changedBy: 'system' });
 
@@ -79,5 +93,38 @@ describe('NoShowBookingHandler — financial consequence (forfeiture)', () => {
         reason: expect.stringContaining('forfeited'),
       }),
     });
+  });
+});
+
+describe('NoShowBookingHandler — group session capacity', () => {
+  it('recalculates group capacity with the tx and groupSessionId when no-showing a group booking', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.CONFIRMED,
+      groupSessionId: 'gs-1',
+    });
+    const groupCapacity = buildGroupCapacity();
+
+    await newHandler(prisma, groupCapacity).execute({ bookingId: 'book-1', changedBy: 'system' });
+
+    // buildRlsTransaction passes `prisma` itself as the tx — asserting on it
+    // proves the recalculation runs inside the same transaction as the update.
+    expect(groupCapacity.recalculateGroupStatus).toHaveBeenCalledTimes(1);
+    expect(groupCapacity.recalculateGroupStatus).toHaveBeenCalledWith(prisma, 'gs-1');
+  });
+
+  it('does NOT recalculate group capacity when the booking has no groupSessionId', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.CONFIRMED,
+      groupSessionId: null,
+    });
+    const groupCapacity = buildGroupCapacity();
+
+    await newHandler(prisma, groupCapacity).execute({ bookingId: 'book-1', changedBy: 'system' });
+
+    expect(groupCapacity.recalculateGroupStatus).not.toHaveBeenCalled();
   });
 });

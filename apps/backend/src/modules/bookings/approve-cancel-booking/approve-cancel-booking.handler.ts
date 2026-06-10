@@ -1,7 +1,9 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { RefundType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
@@ -14,6 +16,10 @@ export interface ApproveCancelBookingCommand {
   bookingId: string;
   approvedBy: string;
   approverNotes?: string;
+  /** Refund decision recorded with the approval — informational only, no refund is executed here. */
+  refundType?: RefundType;
+  /** Refund amount in halalas — required iff refundType is PARTIAL. */
+  refundAmount?: number;
 }
 
 @Injectable()
@@ -27,6 +33,13 @@ export class ApproveCancelBookingHandler {
   ) {}
 
   async execute(cmd: ApproveCancelBookingCommand) {
+    if (cmd.refundType === RefundType.PARTIAL && cmd.refundAmount === undefined) {
+      throw new BadRequestException('refundAmount is required when refundType is PARTIAL');
+    }
+    if (cmd.refundType !== RefundType.PARTIAL && cmd.refundAmount !== undefined) {
+      throw new BadRequestException('refundAmount is only allowed when refundType is PARTIAL');
+    }
+
     const booking = await this.prisma.booking.findFirst({
       where: { id: cmd.bookingId },
     });
@@ -43,6 +56,11 @@ export class ApproveCancelBookingHandler {
       'autoRefundOnCancel' in settings
         ? (settings as Record<string, unknown>).autoRefundOnCancel === true
         : true;
+
+    const refundSummary = cmd.refundType
+      ? ` — refund: ${cmd.refundType}${cmd.refundType === RefundType.PARTIAL ? ` ${cmd.refundAmount} halalas` : ''}`
+      : '';
+    const statusLogReason = `Cancel request approved${refundSummary}${cmd.approverNotes ? ` — ${cmd.approverNotes}` : ''}`;
 
     const [updated] = await this.rlsTransaction.withTransaction(async (tx) => {
       const results = await Promise.all([
@@ -61,7 +79,7 @@ export class ApproveCancelBookingHandler {
             fromStatus: booking.status,
             toStatus: nextStatus,
             changedBy: cmd.approvedBy,
-            reason: cmd.approverNotes ?? 'Cancel request approved',
+            reason: statusLogReason,
           },
         }),
       ]);
@@ -78,6 +96,8 @@ export class ApproveCancelBookingHandler {
       employeeId: booking.employeeId,
       autoRefund,
       approverNotes: cmd.approverNotes,
+      refundType: cmd.refundType,
+      refundAmount: cmd.refundAmount,
     });
     await this.eventBus.publish(event.eventName, event.toEnvelope());
 

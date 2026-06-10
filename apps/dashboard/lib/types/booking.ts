@@ -169,10 +169,14 @@ export interface ReschedulePayload {
   startTime?: string
 }
 
+/** Wire format of the backend RefundType enum (uppercase). */
+export type RefundDecision = "FULL" | "PARTIAL" | "NONE"
+
 export interface CancelApprovePayload {
-  refundType: RefundType
+  approverNotes?: string
+  refundType?: RefundDecision
+  /** Halalas — only sent when refundType is PARTIAL. */
   refundAmount?: number
-  adminNotes?: string
 }
 
 export interface CancelRejectPayload {

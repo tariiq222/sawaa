@@ -18,17 +18,8 @@ import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { computeVat } from '../../finance/money.helper';
+import { hashToInt32 } from '../booking-lifecycle.helper';
 import { GROUP_CAPACITY_BOOKING_STATUSES, STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
-
-/** FNV-1a 32-bit hash → signed int32 (Postgres int4 range). Same algorithm as create-zoom-meeting. */
-function hashToInt32(s: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
-  }
-  return h | 0;
-}
 
 /** Re-map a Postgres exclusion violation (23P01) to a domain 409 conflict. */
 function mapDbConflict(err: unknown): never {
@@ -279,6 +270,30 @@ export class CreateBookingHandler {
           });
           if (slotCount >= serviceRecord!.maxParticipants) {
             throw new ConflictException('This group session is full');
+          }
+
+          if (dto.groupSessionId) {
+            // Keep GroupSession.enrolledCount in sync with the public
+            // book-group-session path: reserve the seat with a guarded
+            // atomic increment so dashboard and public bookings serialize
+            // on the same row and the counter never drifts past capacity.
+            const groupSession = await tx.groupSession.findUnique({
+              where: { id: dto.groupSessionId },
+              select: { maxCapacity: true },
+            });
+            if (!groupSession) {
+              throw new NotFoundException('Group session not found');
+            }
+            const reserved = await tx.groupSession.updateMany({
+              where: {
+                id: dto.groupSessionId,
+                enrolledCount: { lt: groupSession.maxCapacity },
+              },
+              data: { enrolledCount: { increment: 1 } },
+            });
+            if (reserved.count === 0) {
+              throw new ConflictException('This group session is full');
+            }
           }
         }
 

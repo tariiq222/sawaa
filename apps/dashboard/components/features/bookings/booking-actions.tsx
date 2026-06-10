@@ -23,7 +23,8 @@ import {
 } from "@sawaa/ui"
 import { useBookingMutations } from "@/hooks/use-bookings"
 import { ApiError } from "@/lib/api"
-import type { Booking, CancellationReason, RefundType } from "@/lib/types/booking"
+import { sarToHalalas } from "@/lib/money"
+import type { Booking, CancellationReason, RefundDecision, RefundType } from "@/lib/types/booking"
 import { ApproveCancelDialog, RejectCancelDialog, AdminCancelDialog } from "./cancel-dialogs"
 
 interface BookingActionsProps {
@@ -212,6 +213,8 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
             () => approveCancelMut.mutateAsync({
               id: booking.id,
               approverNotes: adminNotes || undefined,
+              refundType: refundType.toUpperCase() as RefundDecision,
+              refundAmount: refundType === "partial" ? sarToHalalas(Number(refundAmount)) : undefined,
             }),
             t("bookings.actions.toast.cancelled"),
           )

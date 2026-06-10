@@ -67,6 +67,9 @@ export class GetPublicAvailabilityDaysHandler {
         branchId,
         serviceId,
         date: d,
+        // Day-strip probe: a missing ServiceBookingConfig must grey the days
+        // out, not 400 the whole strip.
+        silentOnMissingConfig: true,
       });
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, '0');

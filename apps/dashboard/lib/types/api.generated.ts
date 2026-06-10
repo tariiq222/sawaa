@@ -4048,6 +4048,17 @@ export interface components {
              * @example Approved per client request
              */
             approverNotes?: string;
+            /**
+             * @description Refund amount in halalas. Required when refundType is PARTIAL; must be omitted otherwise.
+             * @example 5000
+             */
+            refundAmount?: number;
+            /**
+             * @description Refund decision recorded with the approval (informational — refund execution is a separate manual finance flow)
+             * @example PARTIAL
+             * @enum {string}
+             */
+            refundType?: "FULL" | "PARTIAL" | "NONE";
         };
         ApproveRefundDto: {
             /**

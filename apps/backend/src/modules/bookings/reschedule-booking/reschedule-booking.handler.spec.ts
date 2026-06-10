@@ -204,6 +204,71 @@ describe('RescheduleBookingHandler', () => {
     ).rejects.toThrow('Employee already has a booking in the new time slot');
   });
 
+  it('6b. acquires pg_advisory_xact_lock before the in-transaction conflict check', async () => {
+    (fetchBookingOrFail as jest.Mock).mockResolvedValue(makeBooking());
+    const prisma = buildPrisma();
+
+    const callOrder: string[] = [];
+    (prisma.$executeRaw as jest.Mock).mockImplementation(async () => {
+      callOrder.push('$executeRaw');
+    });
+    const conflictCheck = prisma.booking.findFirst as jest.Mock;
+    prisma.booking.findFirst = jest.fn(async (args: unknown) => {
+      callOrder.push('booking.findFirst');
+      return conflictCheck(args);
+    });
+
+    const handler = new RescheduleBookingHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      buildSettingsHandler() as never,
+      buildZoomService() as never,
+    );
+
+    await handler.execute({
+      bookingId: 'book-1',
+      newScheduledAt: futureDate,
+      changedBy: 'user-1',
+    });
+
+    expect(callOrder.indexOf('$executeRaw')).toBeGreaterThanOrEqual(0);
+    expect(callOrder.indexOf('$executeRaw')).toBeLessThan(callOrder.indexOf('booking.findFirst'));
+
+    const rawCall = (prisma.$executeRaw as jest.Mock).mock.calls[0];
+    expect(rawCall[0].join('')).toMatch(/pg_advisory_xact_lock/);
+  });
+
+  it('6c. applies bufferMinutes to the conflict overlap window', async () => {
+    (fetchBookingOrFail as jest.Mock).mockResolvedValue(makeBooking({ durationMins: 60 }));
+    const prisma = buildPrisma();
+
+    const handler = new RescheduleBookingHandler(
+      prisma as never,
+      buildRlsTransaction(prisma) as never,
+      buildSettingsHandler({ bufferMinutes: 15 }) as never,
+      buildZoomService() as never,
+    );
+
+    await handler.execute({
+      bookingId: 'book-1',
+      newScheduledAt: futureDate,
+      changedBy: 'user-1',
+    });
+
+    const newEndsAt = new Date(futureDate.getTime() + 60 * 60_000);
+    const bufferMs = 15 * 60_000;
+    expect(prisma.booking.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          employeeId: 'emp-1',
+          id: { not: 'book-1' },
+          scheduledAt: { lt: new Date(newEndsAt.getTime() + bufferMs) },
+          endsAt: { gt: new Date(futureDate.getTime() - bufferMs) },
+        }),
+      }),
+    );
+  });
+
   it('7. updates booking and creates status log when no conflict', async () => {
     const updated = makeBooking({ scheduledAt: futureDate });
     (fetchBookingOrFail as jest.Mock).mockResolvedValue(makeBooking());

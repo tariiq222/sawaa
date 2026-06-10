@@ -168,6 +168,7 @@ export class DashboardBookingsController {
       fromDate: startOfDayInTz(fromDate),
       toDate: endOfDayInTz(toDate),
       userId: user.sub,
+      role: user.role ?? null,
     });
   }
 
@@ -394,6 +395,8 @@ export class DashboardBookingsController {
       bookingId: id,
       approvedBy: userId,
       approverNotes: body.approverNotes,
+      refundType: body.refundType,
+      refundAmount: body.refundAmount,
     });
   }
 

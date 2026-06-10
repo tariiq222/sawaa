@@ -10,6 +10,7 @@ import { DEFAULT_ORG_ID } from "../../../common/constants";
 import { BookingCancelledEvent } from "../events/booking-cancelled.event";
 import { fetchBookingOrFail } from "../booking-lifecycle.helper";
 import { assertTransition } from "../booking-state-machine";
+import { GroupSessionCapacityService } from "../group-session/group-session-capacity.service";
 
 export interface ExpireBookingCommand {
 	bookingId: string;
@@ -23,6 +24,7 @@ export class ExpireBookingHandler {
 		private readonly rlsTransaction: RlsTransactionService,
 		private readonly eventBus: EventBusService,
 		private readonly refundHandler: RefundPaymentHandler,
+		private readonly groupSessionCapacity: GroupSessionCapacityService,
 	) {}
 
 	async execute(cmd: ExpireBookingCommand) {
@@ -78,6 +80,16 @@ export class ExpireBookingHandler {
 				});
 				refundRequestId = created.refundRequestId;
 				idempotencyKey = created.idempotencyKey;
+			}
+
+			// EXPIRED leaves GROUP_CAPACITY_BOOKING_STATUSES, so a group enrollee
+			// must release their seat: guarded enrolledCount decrement + sibling
+			// rollback inside the same transaction (mirrors cancel-booking.handler).
+			if (booking.groupSessionId) {
+				await this.groupSessionCapacity.recalculateGroupStatus(
+					tx,
+					booking.groupSessionId,
+				);
 			}
 
 			return expiredBooking;

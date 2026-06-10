@@ -172,6 +172,21 @@
             "description": "Optional notes from the approver",
             "example": "Approved per client request",
             "type": "string"
+          },
+          "refundAmount": {
+            "description": "Refund amount in halalas. Required when refundType is PARTIAL; must be omitted otherwise.",
+            "example": 5000,
+            "type": "number"
+          },
+          "refundType": {
+            "description": "Refund decision recorded with the approval (informational — refund execution is a separate manual finance flow)",
+            "enum": [
+              "FULL",
+              "PARTIAL",
+              "NONE"
+            ],
+            "example": "PARTIAL",
+            "type": "string"
           }
         },
         "type": "object"

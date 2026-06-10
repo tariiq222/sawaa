@@ -15,7 +15,7 @@ function mapDbConflict(err: unknown): never {
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { RescheduleBookingDto } from './reschedule-booking.dto';
-import { fetchBookingOrFail, updateBookingAtomically } from '../booking-lifecycle.helper';
+import { fetchBookingOrFail, updateBookingAtomically, hashToInt32 } from '../booking-lifecycle.helper';
 import { ZoomMeetingService } from '../zoom-meeting.service';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
@@ -82,13 +82,28 @@ export class RescheduleBookingHandler {
 
     // Serialize conflict check + update + status log inside one transaction.
     const [updated] = await this.rlsTransaction.withTransaction(async (tx) => {
+        // Parity with create-booking (CR-5): acquire an advisory lock scoped to
+        // employee + new slot window BEFORE the conflict check so a concurrent
+        // create/reschedule on the same slot cannot both see "no conflict" and
+        // both proceed (TOCTOU double-booking race).
+        const lockKey1 = hashToInt32(`${booking.employeeId}`);
+        const lockKey2 = hashToInt32(`${newScheduledAt.toISOString()}:${newEndsAt.toISOString()}`);
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey1}::int, ${lockKey2}::int)`;
+
+        // Parity with create-booking: respect the branch bufferMinutes when
+        // looking for overlaps so a rescheduled booking cannot land inside
+        // another booking's buffer window.
+        const bufferMs = (settings.bufferMinutes ?? 0) * 60_000;
+        const bufferedStart = new Date(newScheduledAt.getTime() - bufferMs);
+        const bufferedEnd = new Date(newEndsAt.getTime() + bufferMs);
+
         const conflict = await tx.booking.findFirst({
           where: {
             employeeId: booking.employeeId,
             id: { not: cmd.bookingId },
             status: { in: [...STAFF_TIME_BLOCKING_BOOKING_STATUSES] },
-            scheduledAt: { lt: newEndsAt },
-            endsAt: { gt: newScheduledAt },
+            scheduledAt: { lt: bufferedEnd },
+            endsAt: { gt: bufferedStart },
           },
           select: { id: true },
         });

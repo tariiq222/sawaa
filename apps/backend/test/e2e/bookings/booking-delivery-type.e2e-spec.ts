@@ -355,7 +355,7 @@ describe('Booking DeliveryType (e2e)', () => {
       );
     });
 
-    it('returns empty array when deliveryType is not supported by service', async () => {
+    it('rejects unsupported deliveryType with 400', async () => {
       const tomorrow = new Date(Date.now() + 86400_000);
       tomorrow.setHours(0, 0, 0, 0);
 
@@ -380,7 +380,9 @@ describe('Booking DeliveryType (e2e)', () => {
       prisma.booking.findMany.mockResolvedValue([]);
       prisma.serviceDurationOption.findFirst.mockResolvedValue(null);
       // Service does not support ONLINE — handler reads serviceBookingConfig
-      // by (serviceId, deliveryType); a null row signals "unsupported".
+      // by (serviceId, deliveryType); a null row signals "unsupported" and the
+      // handler now throws BadRequestException (unless the caller opts into
+      // silentOnMissingConfig, which this endpoint does not).
       prisma.serviceBookingConfig.findUnique.mockResolvedValueOnce(null);
 
       const res = await request(app.getHttpServer())
@@ -393,9 +395,9 @@ describe('Booking DeliveryType (e2e)', () => {
           serviceId: '6b5c1a2e-23d9-4328-88a6-b4a41b9ee524',
           deliveryType: 'ONLINE',
         })
-        .expect(200);
+        .expect(400);
 
-      expect(res.body).toEqual([]);
+      expect(res.body.message).toBe('Service does not support the requested delivery type');
     });
   });
 });

@@ -167,6 +167,9 @@ export class CreateRecurringBookingHandler {
           durationMins: dto.durationMins,
           bookingType,
           deliveryType: deliveryType as DeliveryType,
+          // Series dates rely on the empty-slot result for the per-date
+          // skip/throw decision below (skipConflicts semantics).
+          silentOnMissingConfig: true,
         });
         const slotMs = scheduledAt.getTime();
         const isAvailable = slots.some((s) => s.startTime.getTime() === slotMs);

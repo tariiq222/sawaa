@@ -151,6 +151,7 @@ async function main() {
 
   // 2. Organization settings singleton
   const DEFAULT_ORG_ID = "00000000-0000-0000-0000-000000000001";
+  const PAYMENT_CONFIG_SINGLETON_KEY = "singleton";
   const settings = await prisma.organizationSettings.findFirst();
   if (!settings) {
     await prisma.organizationSettings.create({
@@ -164,25 +165,25 @@ async function main() {
 
   // 3a. Moyasar test config (singleton per org) — seeded with real test keys.
   //     Secrets are encrypted at rest using MOYASAR_ENCRYPTION_KEY.
-  const existingMoyasar = await prisma.organizationPaymentConfig.findFirst();
-  if (!existingMoyasar) {
-    const secretKeyEnc = encryptMoyasar(
-      { secretKey: "sk_test_dC1t7MVaXhJUmfwSj3QDpT2yRuRSMmdsjQB71zxo" },
-      DEFAULT_ORG_ID,
-    );
-    const webhookSecretEnc = encryptMoyasar(
-      { webhookSecret: "whsec_test_dev_webhook_secret_12345" },
-      DEFAULT_ORG_ID,
-    );
-    await prisma.organizationPaymentConfig.create({
-      data: {
-        publishableKey: "pk_test_9WmjNQjvWeKh67QscDUg7Y7YGpuvcpDY9ugi3qkv",
-        secretKeyEnc,
-        webhookSecretEnc,
-        isLive: false,
-      },
-    });
-  }
+  const secretKeyEnc = encryptMoyasar(
+    { secretKey: "sk_test_dC1t7MVaXhJUmfwSj3QDpT2yRuRSMmdsjQB71zxo" },
+    DEFAULT_ORG_ID,
+  );
+  const webhookSecretEnc = encryptMoyasar(
+    { webhookSecret: "whsec_test_dev_webhook_secret_12345" },
+    DEFAULT_ORG_ID,
+  );
+  await prisma.organizationPaymentConfig.upsert({
+    where: { singletonKey: PAYMENT_CONFIG_SINGLETON_KEY },
+    create: {
+      singletonKey: PAYMENT_CONFIG_SINGLETON_KEY,
+      publishableKey: "pk_test_9WmjNQjvWeKh67QscDUg7Y7YGpuvcpDY9ugi3qkv",
+      secretKeyEnc,
+      webhookSecretEnc,
+      isLive: false,
+    },
+    update: {},
+  });
 
   // 4. Main branch
   const DEFAULT_BRANCH_ID = "c1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5";

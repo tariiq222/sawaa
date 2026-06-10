@@ -7,16 +7,22 @@ const buildRefundHandler = () => ({
   createRefundRequestInTx: jest.fn(),
 });
 
+const buildGroupCapacity = () => ({
+  recalculateGroupStatus: jest.fn().mockResolvedValue(undefined),
+});
+
 const newHandler = (
   prisma: ReturnType<typeof buildPrisma>,
   eventBus: ReturnType<typeof buildEventBus> = buildEventBus(),
   refundHandler: ReturnType<typeof buildRefundHandler> = buildRefundHandler(),
+  groupCapacity: ReturnType<typeof buildGroupCapacity> = buildGroupCapacity(),
 ) =>
   new ExpireBookingHandler(
     prisma as never,
     buildRlsTransaction(prisma) as never,
     eventBus as never,
     refundHandler as never,
+    groupCapacity as never,
   );
 
 describe('ExpireBookingHandler', () => {
@@ -62,6 +68,41 @@ describe('ExpireBookingHandler — group booking statuses', () => {
     expect(prisma.booking.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.EXPIRED }) }),
     );
+  });
+});
+
+describe('ExpireBookingHandler — group session capacity', () => {
+  it('recalculates group capacity with the tx and groupSessionId when expiring a group booking', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.PENDING_GROUP_FILL,
+      groupSessionId: 'gs-1',
+    });
+    const groupCapacity = buildGroupCapacity();
+
+    await newHandler(prisma, buildEventBus(), buildRefundHandler(), groupCapacity)
+      .execute({ bookingId: 'book-1', changedBy: 'system' });
+
+    // buildRlsTransaction passes `prisma` itself as the tx — asserting on it
+    // proves the recalculation runs inside the same transaction as the update.
+    expect(groupCapacity.recalculateGroupStatus).toHaveBeenCalledTimes(1);
+    expect(groupCapacity.recalculateGroupStatus).toHaveBeenCalledWith(prisma, 'gs-1');
+  });
+
+  it('does NOT recalculate group capacity when the booking has no groupSessionId', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.AWAITING_PAYMENT,
+      groupSessionId: null,
+    });
+    const groupCapacity = buildGroupCapacity();
+
+    await newHandler(prisma, buildEventBus(), buildRefundHandler(), groupCapacity)
+      .execute({ bookingId: 'book-1', changedBy: 'system' });
+
+    expect(groupCapacity.recalculateGroupStatus).not.toHaveBeenCalled();
   });
 });
 

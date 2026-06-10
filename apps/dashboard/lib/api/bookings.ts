@@ -12,6 +12,7 @@ import type {
   CreateBookingPayload,
   ReschedulePayload,
   AdminCancelPayload,
+  CancelApprovePayload,
   CreateRecurringPayload,
 } from "@/lib/types/booking"
 
@@ -142,7 +143,7 @@ export async function deleteBooking(id: string): Promise<void> {
 
 export async function approveCancelBooking(
   id: string,
-  payload: { approverNotes?: string },
+  payload: CancelApprovePayload,
 ): Promise<Booking> {
   return api.patch<Booking>(`/dashboard/bookings/${id}/approve-cancel`, payload)
 }

@@ -10,7 +10,7 @@ export type ListBookingsQuery = Omit<ListBookingsDto, 'page' | 'limit' | 'fromDa
   limit: number;
   fromDate?: Date;
   toDate?: Date;
-  membershipRole?: string | null;
+  role?: string | null;
   userId?: string;
 };
 
@@ -22,7 +22,7 @@ export class ListBookingsHandler {
 
   async execute(query: ListBookingsQuery) {
     let employeeWhere: { employeeId?: string } = {};
-    if (query.membershipRole === 'EMPLOYEE' && query.userId) {
+    if (query.role === 'EMPLOYEE' && query.userId) {
       const emp = await this.prisma.employee.findFirst({
         where: { userId: query.userId },
         select: { id: true },

@@ -56,6 +56,10 @@ const buildPrisma = () => {
       count: jest.fn().mockResolvedValue(0),
     },
     invoice: { create: jest.fn().mockResolvedValue(mockInvoice) },
+    groupSession: {
+      findUnique: jest.fn().mockResolvedValue({ maxCapacity: 5 }),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
     organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: '0.15', paymentAtClinicEnabled: true }) },
     outboxEvent: { create: jest.fn().mockResolvedValue({ id: 'outbox-1' }) },
     coupon: { update: jest.fn().mockResolvedValue({}) },
@@ -530,6 +534,57 @@ describe('CreateBookingHandler', () => {
     prisma.booking.count = jest.fn().mockResolvedValue(5);
 
     await expect(handler.execute(baseDto)).rejects.toThrow('This group session is full');
+  });
+
+  it('increments GroupSession.enrolledCount with a capacity guard when groupSessionId is provided', async () => {
+    setupGroupService();
+    prisma.booking.count = jest.fn().mockResolvedValue(0);
+    prisma.groupSession.findUnique = jest.fn().mockResolvedValue({ maxCapacity: 5 });
+
+    await handler.execute({ ...baseDto, groupSessionId: 'gs-1' });
+
+    expect(prisma.groupSession.findUnique).toHaveBeenCalledWith({
+      where: { id: 'gs-1' },
+      select: { maxCapacity: true },
+    });
+    expect(prisma.groupSession.updateMany).toHaveBeenCalledWith({
+      where: { id: 'gs-1', enrolledCount: { lt: 5 } },
+      data: { enrolledCount: { increment: 1 } },
+    });
+    expect(prisma.booking.create).toHaveBeenCalled();
+  });
+
+  it('throws ConflictException and skips creation when the guarded enrolledCount increment matches no row', async () => {
+    setupGroupService();
+    prisma.booking.count = jest.fn().mockResolvedValue(0);
+    prisma.groupSession.updateMany = jest.fn().mockResolvedValue({ count: 0 });
+
+    await expect(
+      handler.execute({ ...baseDto, groupSessionId: 'gs-1' }),
+    ).rejects.toThrow('This group session is full');
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
+  it('throws NotFoundException when groupSessionId points to a missing GroupSession', async () => {
+    setupGroupService();
+    prisma.booking.count = jest.fn().mockResolvedValue(0);
+    prisma.groupSession.findUnique = jest.fn().mockResolvedValue(null);
+
+    await expect(
+      handler.execute({ ...baseDto, groupSessionId: 'gs-missing' }),
+    ).rejects.toThrow('Group session not found');
+    expect(prisma.groupSession.updateMany).not.toHaveBeenCalled();
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
+  it('does not touch GroupSession when a group booking has no groupSessionId', async () => {
+    setupGroupService();
+    prisma.booking.count = jest.fn().mockResolvedValue(0);
+
+    await handler.execute(baseDto);
+
+    expect(prisma.groupSession.findUnique).not.toHaveBeenCalled();
+    expect(prisma.groupSession.updateMany).not.toHaveBeenCalled();
   });
 
   it('does not create invoice for pending group session', async () => {

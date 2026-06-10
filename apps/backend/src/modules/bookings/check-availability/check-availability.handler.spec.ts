@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { BadRequestException } from '@nestjs/common';
 import { CheckAvailabilityHandler } from './check-availability.handler';
 import { PrismaService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
@@ -512,6 +513,72 @@ describe('CheckAvailabilityHandler', () => {
       // Branch hours are 09:00-17:00 — confirm we're using them.
       expect(result.every((s) => hourInBusinessTz(s.startTime) >= 9)).toBe(true);
       expect(result.every((s) => hourInBusinessTz(s.endTime) <= 17)).toBe(true);
+    });
+  });
+
+  describe('execute — missing ServiceBookingConfig gate', () => {
+    const buildHandler = async (prisma: ReturnType<typeof makePrisma>) => {
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: makeSettingsHandler() },
+        ],
+      }).compile();
+      return moduleRef.get(CheckAvailabilityHandler);
+    };
+
+    it('throws BadRequestException when the service has no config for the requested deliveryType', async () => {
+      const prisma = makePrisma();
+      prisma.serviceBookingConfig.findUnique = jest.fn().mockResolvedValue(null);
+      handler = await buildHandler(prisma);
+
+      await expect(
+        handler.execute({
+          employeeId: 'emp-1',
+          branchId: 'branch-1',
+          serviceId: 'svc-1',
+          date: tomorrowMidnight,
+          durationMins: 60,
+          deliveryType: 'ONLINE' as any,
+        }),
+      ).rejects.toThrow(
+        new BadRequestException('Service does not support the requested delivery type'),
+      );
+    });
+
+    it('returns [] instead of throwing when silentOnMissingConfig=true', async () => {
+      const prisma = makePrisma();
+      prisma.serviceBookingConfig.findUnique = jest.fn().mockResolvedValue(null);
+      handler = await buildHandler(prisma);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        serviceId: 'svc-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+        deliveryType: 'ONLINE' as any,
+        silentOnMissingConfig: true,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it('does not throw when no serviceId is provided even without config rows', async () => {
+      const prisma = makePrisma();
+      prisma.serviceBookingConfig.findUnique = jest.fn().mockResolvedValue(null);
+      handler = await buildHandler(prisma);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+      });
+
+      expect(result.length).toBeGreaterThan(0);
+      expect(prisma.serviceBookingConfig.findUnique).not.toHaveBeenCalled();
     });
   });
 

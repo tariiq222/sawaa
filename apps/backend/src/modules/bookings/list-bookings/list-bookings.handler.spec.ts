@@ -82,12 +82,12 @@ describe('ListBookingsHandler', () => {
     expect(result.meta.perPage).toBe(10);
   });
 
-  it('auto-filters by Employee when membershipRole=EMPLOYEE', async () => {
+  it('auto-filters by Employee when role=EMPLOYEE', async () => {
     const prisma = buildPrisma();
     prisma.employee.findFirst = jest.fn().mockResolvedValueOnce({ id: 'emp-9' });
     const handler = new ListBookingsHandler(prisma as never);
     await handler.execute({
-      membershipRole: 'EMPLOYEE',
+      role: 'EMPLOYEE',
       userId: 'user-emp',
       page: 1,
       limit: 10,
@@ -105,7 +105,7 @@ describe('ListBookingsHandler', () => {
     prisma.booking.findMany = jest.fn();
     const handler = new ListBookingsHandler(prisma as never);
     const result = await handler.execute({
-      membershipRole: 'EMPLOYEE',
+      role: 'EMPLOYEE',
       userId: 'orphan',
       page: 1,
       limit: 10,

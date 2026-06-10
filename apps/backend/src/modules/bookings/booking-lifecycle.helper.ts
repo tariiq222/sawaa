@@ -2,6 +2,20 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { BookingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/database';
 
+/**
+ * FNV-1a 32-bit hash → signed int32 (Postgres int4 range).
+ * Shared advisory-lock key helper for booking slices (create-booking,
+ * reschedule-booking, create-zoom-meeting use the same algorithm).
+ */
+export function hashToInt32(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return h | 0;
+}
+
 export async function fetchBookingOrFail(
   prisma: PrismaService,
   bookingId: string,

@@ -131,7 +131,15 @@ const buildExtendedPrisma = () => {
 	(prisma as any).integration = {
 		findFirst: jest.fn().mockResolvedValue(null),
 	};
-	return prisma;
+	return prisma as typeof prisma & {
+		organizationSettings: { findFirst: jest.Mock };
+		coupon: { update: jest.Mock; updateMany: jest.Mock };
+		outboxEvent: { create: jest.Mock };
+		serviceCategory: { findFirst: jest.Mock };
+		department: { findFirst: jest.Mock };
+		serviceBookingConfig: { findFirst: jest.Mock; findMany: jest.Mock };
+		integration: { findFirst: jest.Mock };
+	};
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -301,6 +309,7 @@ describe("Scenario 2 — Father gets distracted at payment page, booking expires
 			buildRlsTransaction(prisma) as never,
 			eventBus as never,
 			refundHandler as never,
+			buildGroupCapacity() as never,
 		);
 
 		await expireHandler.execute({ bookingId: "book-2", changedBy: "system" });
@@ -467,6 +476,7 @@ describe("Scenario 4 — Pay-at-clinic booking, client no-shows", () => {
 		const noShowHandler = new NoShowBookingHandler(
 			prisma as never,
 			buildRlsTransaction(prisma) as never,
+			buildGroupCapacity() as never,
 		);
 		await noShowHandler.execute({ bookingId: "book-4", changedBy: "emp-nora" });
 
@@ -770,7 +780,7 @@ describe("Scenario 9 — Group session participant withdraws, count drops below 
 			{ withTransaction: jest.fn((fn: any) => fn(tx)) } as never,
 		);
 
-		await service.recalculateGroupStatus(tx, "gs-9");
+		await service.recalculateGroupStatus(tx as never, "gs-9");
 
 		expect(tx.booking.updateMany).toHaveBeenCalledWith({
 			where: { id: { in: ["b1", "b2"] } },
@@ -803,6 +813,7 @@ describe("Scenario 10 — Group session never reaches min before expiry window",
 			buildRlsTransaction(prisma) as never,
 			eventBus as never,
 			refundHandler as never,
+			buildGroupCapacity() as never,
 		);
 
 		await expireHandler.execute({ bookingId: "book-g10", changedBy: "system" });
@@ -1765,6 +1776,7 @@ describe("Scenario 25 — Deposit paid, balance unpaid, booking expires, deposit
 			buildRlsTransaction(prisma) as never,
 			eventBus as never,
 			refundHandler as never,
+			buildGroupCapacity() as never,
 		);
 
 		await expireHandler.execute({ bookingId: "book-25", changedBy: "system" });
@@ -1843,7 +1855,7 @@ describe("Scenario 26 — Staff cancels all doctor sessions, full refund + resch
 
 		const result = await handler.execute({
 			bookingId: "book-26",
-			reason: CancellationReason.STAFF_EMERGENCY,
+			reason: CancellationReason.EMPLOYEE_UNAVAILABLE,
 			changedBy: "reception-1",
 			cancelNotes: "Doctor emergency — all day cancelled",
 		});
@@ -1855,7 +1867,7 @@ describe("Scenario 26 — Staff cancels all doctor sessions, full refund + resch
 			expect.objectContaining({
 				payload: expect.objectContaining({
 					bookingId: "book-26",
-					reason: CancellationReason.STAFF_EMERGENCY,
+					reason: CancellationReason.EMPLOYEE_UNAVAILABLE,
 					cancelNotes: "Doctor emergency — all day cancelled",
 				}),
 			}),
