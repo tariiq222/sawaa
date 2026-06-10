@@ -3,12 +3,12 @@ import { NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RequestEmailVerificationHandler } from './request-email-verification.handler';
 import { PrismaService } from '../../../infrastructure/database';
-import { SendEmailHandler } from '../../comms/send-email/send-email.handler';
+import { SendEmailQueueService } from '../../comms/send-email/send-email-queue.service';
 
 describe('RequestEmailVerificationHandler', () => {
   let handler: RequestEmailVerificationHandler;
   let prisma: any;
-  let sendEmail: jest.Mocked<Partial<SendEmailHandler>>;
+  let sendEmailQueue: { enqueue: jest.Mock };
   let config: { get: jest.Mock };
 
   beforeEach(async () => {
@@ -16,14 +16,14 @@ describe('RequestEmailVerificationHandler', () => {
       user: { findUnique: jest.fn() },
       emailVerificationToken: { deleteMany: jest.fn(), create: jest.fn() },
     };
-    sendEmail = { execute: jest.fn().mockResolvedValue(undefined) };
+    sendEmailQueue = { enqueue: jest.fn().mockResolvedValue(undefined) };
     config = { get: jest.fn().mockReturnValue('https://app.test') };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RequestEmailVerificationHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: SendEmailHandler, useValue: sendEmail },
+        { provide: SendEmailQueueService, useValue: sendEmailQueue },
         { provide: ConfigService, useValue: config },
       ],
     }).compile();
@@ -41,9 +41,10 @@ describe('RequestEmailVerificationHandler', () => {
     const result = await handler.execute({ userId: 'u1' });
     expect(result.success).toBe(true);
     expect(prisma.emailVerificationToken.deleteMany).not.toHaveBeenCalled();
+    expect(sendEmailQueue.enqueue).not.toHaveBeenCalled();
   });
 
-  it('should create token and send email', async () => {
+  it('should create token and enqueue the verification email', async () => {
     prisma.user.findUnique.mockResolvedValue({ id: 'u1', email: 'test@test.com', name: 'Test', emailVerifiedAt: null });
     prisma.emailVerificationToken.create.mockResolvedValue({});
 
@@ -53,7 +54,7 @@ describe('RequestEmailVerificationHandler', () => {
     expect(prisma.emailVerificationToken.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ userId: 'u1', tokenHash: expect.any(String), tokenSelector: expect.any(String) }),
     }));
-    expect(sendEmail.execute).toHaveBeenCalledWith(expect.objectContaining({
+    expect(sendEmailQueue.enqueue).toHaveBeenCalledWith(expect.objectContaining({
       to: 'test@test.com',
       templateSlug: 'user_email_verification',
       vars: expect.objectContaining({ userName: 'Test', verifyUrl: expect.stringContaining('/verify-email?token=') }),
@@ -66,7 +67,7 @@ describe('RequestEmailVerificationHandler', () => {
     prisma.emailVerificationToken.create.mockResolvedValue({});
 
     await handler.execute({ userId: 'u1' });
-    expect(sendEmail.execute).toHaveBeenCalledWith(expect.objectContaining({
+    expect(sendEmailQueue.enqueue).toHaveBeenCalledWith(expect.objectContaining({
       vars: expect.objectContaining({ verifyUrl: expect.stringContaining('https://fallback.test') }),
     }));
   });

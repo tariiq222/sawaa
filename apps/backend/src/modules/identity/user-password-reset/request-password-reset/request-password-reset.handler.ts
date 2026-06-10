@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes, createHash } from 'crypto';
 import { PrismaService } from '../../../../infrastructure/database';
-import { SendEmailHandler } from '../../../comms/send-email/send-email.handler';
+import { SendEmailQueueService } from '../../../comms/send-email/send-email-queue.service';
 import { RequestPasswordResetDto } from './request-password-reset.dto';
 import { maskEmail } from '../../../../common/helpers/mask-pii.helper';
 
@@ -14,7 +14,7 @@ export class RequestPasswordResetHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly sendEmail: SendEmailHandler,
+    private readonly sendEmailQueue: SendEmailQueueService,
     private readonly config: ConfigService,
   ) {}
 
@@ -53,7 +53,9 @@ export class RequestPasswordResetHandler {
       'http://localhost:5203';
     const resetUrl = `${baseUrl}/reset-password?token=${rawToken}`;
 
-    await this.sendEmail.execute({
+    // Enqueued (BullMQ) instead of sent inline — the request must not block
+    // on the email provider round-trip. SendEmailWorker delivers with retries.
+    await this.sendEmailQueue.enqueue({
       to: user.email,
       templateSlug: 'user_password_reset',
       vars: {
@@ -63,6 +65,6 @@ export class RequestPasswordResetHandler {
       },
     });
 
-    this.logger.log(`Password reset email sent to ${maskEmail(user.email)}`);
+    this.logger.log(`Password reset email queued for ${maskEmail(user.email)}`);
   }
 }

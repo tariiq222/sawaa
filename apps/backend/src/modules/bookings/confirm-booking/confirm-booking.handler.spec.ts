@@ -1,38 +1,57 @@
 import { BadRequestException } from '@nestjs/common';
 import { BookingStatus, DeliveryType } from '@prisma/client';
 import { ConfirmBookingHandler } from './confirm-booking.handler';
-import { buildPrisma, buildRlsTransaction, buildEventBus, buildZoomHandler, mockBooking } from '../testing/booking-test-helpers';
+import { buildPrisma, buildRlsTransaction, buildEventBus, buildZoomQueue, mockBooking } from '../testing/booking-test-helpers';
 
 describe('ConfirmBookingHandler', () => {
   it('confirms PENDING booking and emits BookingConfirmedEvent', async () => {
     const prisma = buildPrisma();
     const eb = buildEventBus();
-    await new ConfirmBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, eb as never, buildZoomHandler() as never).execute({
+    const zoomQueue = buildZoomQueue();
+    await new ConfirmBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, eb as never, zoomQueue as never).execute({
       bookingId: 'book-1', changedBy: 'user-42',
     });
     expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.CONFIRMED }) }),
     );
     expect(eb.publish).toHaveBeenCalledWith('bookings.booking.confirmed', expect.anything());
+    // IN_PERSON booking (mockBooking default) — no Zoom job enqueued
+    expect(zoomQueue.enqueue).not.toHaveBeenCalled();
   });
 
-  it('creates a Zoom meeting when the delivery type is online', async () => {
+  it('enqueues Zoom meeting creation when the delivery type is online', async () => {
     const prisma = buildPrisma();
-    const zoom = buildZoomHandler();
+    const zoomQueue = buildZoomQueue();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, deliveryType: DeliveryType.ONLINE });
 
-    await new ConfirmBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildEventBus() as never, zoom as never).execute({
+    await new ConfirmBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildEventBus() as never, zoomQueue as never).execute({
       bookingId: 'book-1', changedBy: 'user-42',
     });
 
-    expect(zoom.execute).toHaveBeenCalledWith({ bookingId: 'book-1' });
+    expect(zoomQueue.enqueue).toHaveBeenCalledWith('book-1');
+  });
+
+  it('still confirms the booking when the Zoom enqueue fails', async () => {
+    const prisma = buildPrisma();
+    const zoomQueue = buildZoomQueue();
+    zoomQueue.enqueue.mockRejectedValue(new Error('redis down'));
+    prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, deliveryType: DeliveryType.ONLINE });
+
+    const result = await new ConfirmBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildEventBus() as never, zoomQueue as never).execute({
+      bookingId: 'book-1', changedBy: 'user-42',
+    });
+
+    expect(result).toBeDefined();
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.CONFIRMED }) }),
+    );
   });
 
   it('throws BadRequestException when booking is already CONFIRMED', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.CONFIRMED });
     await expect(
-      new ConfirmBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildEventBus() as never, buildZoomHandler() as never).execute({
+      new ConfirmBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildEventBus() as never, buildZoomQueue() as never).execute({
         bookingId: 'book-1', changedBy: 'user-42',
       }),
     ).rejects.toThrow(BadRequestException);
@@ -43,7 +62,7 @@ describe('ConfirmBookingHandler — status log', () => {
   it('writes a BookingStatusLog entry on confirm', async () => {
     const prisma = buildPrisma();
     const eventBus = { publish: jest.fn() };
-    const handler = new ConfirmBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, eventBus as never, buildZoomHandler() as never);
+    const handler = new ConfirmBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, eventBus as never, buildZoomQueue() as never);
 
     await handler.execute({ bookingId: 'book-1', changedBy: 'user-42' });
 

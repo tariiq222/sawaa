@@ -31,6 +31,8 @@ import { RequestCancelBookingHandler } from './request-cancel-booking/request-ca
 import { ApproveCancelBookingHandler } from './approve-cancel-booking/approve-cancel-booking.handler';
 import { RejectCancelBookingHandler } from './reject-cancel-booking/reject-cancel-booking.handler';
 import { CreateZoomMeetingHandler } from './create-zoom-meeting/create-zoom-meeting.handler';
+import { ZoomMeetingQueueService } from './create-zoom-meeting/zoom-meeting-queue.service';
+import { ZoomMeetingWorker } from './create-zoom-meeting/zoom-meeting-worker';
 import { RetryZoomMeetingHandler } from './retry-zoom-meeting/retry-zoom-meeting.handler';
 import { ZoomMeetingService } from './zoom-meeting.service';
 import { ZoomModule } from '../integrations/zoom/zoom.module';
@@ -78,6 +80,7 @@ const handlers = [
   ApproveCancelBookingHandler,
   RejectCancelBookingHandler,
   CreateZoomMeetingHandler,
+  ZoomMeetingQueueService,
   RetryZoomMeetingHandler,
   ZoomMeetingService,
   GroupSessionMinReachedHandler,
@@ -106,7 +109,7 @@ const handlers = [
     FinanceModule,
   ],
   controllers: [DashboardBookingsController],
-  providers: [...handlers, PaymentCompletedEventHandler, DepositPaidEventHandler, RefundCompletedEventHandler, OnBookingCancelledPromoteWaitlistHandler],
+  providers: [...handlers, ZoomMeetingWorker, PaymentCompletedEventHandler, DepositPaidEventHandler, RefundCompletedEventHandler, OnBookingCancelledPromoteWaitlistHandler],
   exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CancelRecurringSeriesHandler],
 })
 export class BookingsModule implements OnModuleInit {

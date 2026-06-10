@@ -2,7 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes, createHash } from 'crypto';
 import { PrismaService } from '../../../infrastructure/database';
-import { SendEmailHandler } from '../../comms/send-email/send-email.handler';
+import { SendEmailQueueService } from '../../comms/send-email/send-email-queue.service';
 import { maskEmail } from '../../../common/helpers/mask-pii.helper';
 
 const TOKEN_TTL_MS = 30 * 60 * 1000;
@@ -23,7 +23,7 @@ export class RequestEmailVerificationHandler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly sendEmail: SendEmailHandler,
+    private readonly sendEmailQueue: SendEmailQueueService,
     private readonly config: ConfigService,
   ) {}
 
@@ -66,7 +66,9 @@ export class RequestEmailVerificationHandler {
       'http://localhost:5205';
     const verifyUrl = `${baseUrl}/verify-email?token=${rawToken}`;
 
-    await this.sendEmail.execute({
+    // Enqueued (BullMQ) instead of sent inline — the request must not block
+    // on the email provider round-trip. SendEmailWorker delivers with retries.
+    await this.sendEmailQueue.enqueue({
       to: user.email,
       templateSlug: EMAIL_TEMPLATE_SLUG,
       vars: {
@@ -76,7 +78,7 @@ export class RequestEmailVerificationHandler {
       },
     });
 
-    this.logger.log(`Email verification link sent to ${maskEmail(user.email)}`);
+    this.logger.log(`Email verification link queued for ${maskEmail(user.email)}`);
     return { success: true };
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
-import { BookingStatus, PaymentStatus, PaymentMethod } from '@prisma/client';
+import { BookingStatus, Prisma } from '@prisma/client';
 import { dateRangeInTz } from '../../../common/helpers/date-tz.helper';
 
 export interface DashboardStatsCommand {
@@ -53,24 +53,18 @@ export class GetDashboardStatsHandler {
     const baseWhere = { ...employeeFilter };
     const includePayments = PAYMENT_READ_ROLES.has(cmd.role ?? '');
 
-    const [todayBookingsCount, confirmedCount, pendingCount, cancelRequestedCount, newClientsTodayCount] =
+    // One groupBy replaces the three per-status counts that shared the same
+    // base filter (employee scope + scheduledAt window):
+    //   todayBookings  = sum of all status buckets
+    //   confirmedToday = CONFIRMED bucket
+    //   pendingToday   = PENDING bucket
+    // cancelRequests has NO scheduledAt filter, so it stays a separate count.
+    const [statusGroups, cancelRequestedCount, newClientsTodayCount] =
       await Promise.all([
-        this.prisma.booking.count({
+        this.prisma.booking.groupBy({
+          by: ['status'],
           where: { ...baseWhere, scheduledAt: { gte: rangeStart, lt: rangeEnd } },
-        }),
-        this.prisma.booking.count({
-          where: {
-            ...baseWhere,
-            scheduledAt: { gte: rangeStart, lt: rangeEnd },
-            status: BookingStatus.CONFIRMED,
-          },
-        }),
-        this.prisma.booking.count({
-          where: {
-            ...baseWhere,
-            scheduledAt: { gte: rangeStart, lt: rangeEnd },
-            status: BookingStatus.PENDING,
-          },
+          _count: { _all: true },
         }),
         this.prisma.booking.count({
           where: { ...baseWhere, status: BookingStatus.CANCEL_REQUESTED },
@@ -80,34 +74,41 @@ export class GetDashboardStatsHandler {
         }),
       ]);
 
+    const countByStatus = new Map<BookingStatus, number>(
+      statusGroups.map((g) => [g.status, g._count._all]),
+    );
+    const todayBookingsCount = statusGroups.reduce((sum, g) => sum + g._count._all, 0);
+
     const result: DashboardStats = {
       todayBookings: todayBookingsCount,
-      confirmedToday: confirmedCount,
-      pendingToday: pendingCount,
+      confirmedToday: countByStatus.get(BookingStatus.CONFIRMED) ?? 0,
+      pendingToday: countByStatus.get(BookingStatus.PENDING) ?? 0,
       cancelRequests: cancelRequestedCount,
       newClientsToday: newClientsTodayCount,
     };
 
     if (includePayments) {
-      const [pendingPaymentsCount, revenueResult] = await Promise.all([
-        this.prisma.payment.count({
-          where: {
-            invoice: {},
-            method: PaymentMethod.BANK_TRANSFER,
-            status: PaymentStatus.PENDING_VERIFICATION,
-          },
-        }),
-        this.prisma.payment.aggregate({
-          where: {
-            invoice: {},
-            status: PaymentStatus.COMPLETED,
-            processedAt: { gte: rangeStart, lt: rangeEnd },
-          },
-          _sum: { amount: true },
-        }),
-      ]);
-      result.pendingPayments = pendingPaymentsCount;
-      result.todayRevenue = Number(revenueResult._sum.amount?.toString() ?? 0);
+      // Single scan replaces the former payment.count + payment.aggregate pair.
+      // The old `invoice: {}` relation filter is a no-op: Payment.invoiceId is
+      // non-nullable with an FK (onDelete: Restrict), so every row qualifies.
+      // Enum literals + ::float cast follow get-top-performers.handler.ts.
+      const [paymentRow] = await this.prisma.$queryRaw<
+        Array<{ pendingPayments: number; todayRevenue: number }>
+      >(Prisma.sql`
+        SELECT
+          COUNT(*) FILTER (
+            WHERE p.method = 'BANK_TRANSFER'
+              AND p.status = 'PENDING_VERIFICATION'
+          )::int AS "pendingPayments",
+          COALESCE(SUM(p.amount) FILTER (
+            WHERE p.status = 'COMPLETED'
+              AND p."processedAt" >= ${rangeStart}
+              AND p."processedAt" <  ${rangeEnd}
+          ), 0)::float AS "todayRevenue"
+        FROM "Payment" p
+      `);
+      result.pendingPayments = Number(paymentRow?.pendingPayments ?? 0);
+      result.todayRevenue = Number(paymentRow?.todayRevenue ?? 0);
     }
 
     return result;

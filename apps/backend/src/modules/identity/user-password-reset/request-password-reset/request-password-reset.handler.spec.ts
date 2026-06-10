@@ -1,13 +1,13 @@
 import { Test } from '@nestjs/testing';
 import { RequestPasswordResetHandler } from './request-password-reset.handler';
 import { PrismaService } from '../../../../infrastructure/database';
-import { SendEmailHandler } from '../../../comms/send-email/send-email.handler';
+import { SendEmailQueueService } from '../../../comms/send-email/send-email-queue.service';
 import { ConfigService } from '@nestjs/config';
 
 describe('RequestPasswordResetHandler', () => {
   let handler: RequestPasswordResetHandler;
   let prisma: { user: { findUnique: jest.Mock }; passwordResetToken: { create: jest.Mock; updateMany: jest.Mock } };
-  let sendEmail: { execute: jest.Mock };
+  let sendEmailQueue: { enqueue: jest.Mock };
   let config: { get: jest.Mock };
 
   beforeEach(async () => {
@@ -15,23 +15,23 @@ describe('RequestPasswordResetHandler', () => {
       user: { findUnique: jest.fn() },
       passwordResetToken: { create: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({}) },
     };
-    sendEmail = { execute: jest.fn().mockResolvedValue(undefined) };
+    sendEmailQueue = { enqueue: jest.fn().mockResolvedValue(undefined) };
     config = { get: jest.fn().mockReturnValue('https://app.sawaa.test') };
     const moduleRef = await Test.createTestingModule({
       providers: [
         RequestPasswordResetHandler,
         { provide: PrismaService, useValue: prisma },
-        { provide: SendEmailHandler, useValue: sendEmail },
+        { provide: SendEmailQueueService, useValue: sendEmailQueue },
         { provide: ConfigService, useValue: config },
       ],
     }).compile();
     handler = moduleRef.get(RequestPasswordResetHandler);
   });
 
-  it('returns silently and sends nothing when user does not exist (enumeration safe)', async () => {
+  it('returns silently and enqueues nothing when user does not exist (enumeration safe)', async () => {
     prisma.user.findUnique.mockResolvedValue(null);
     await handler.execute({ email: 'nobody@x.com' });
-    expect(sendEmail.execute).not.toHaveBeenCalled();
+    expect(sendEmailQueue.enqueue).not.toHaveBeenCalled();
     expect(prisma.passwordResetToken.create).not.toHaveBeenCalled();
   });
 
@@ -43,16 +43,16 @@ describe('RequestPasswordResetHandler', () => {
       data: { consumedAt: expect.any(Date) },
     });
     expect(prisma.passwordResetToken.create).toHaveBeenCalled();
-    expect(sendEmail.execute).toHaveBeenCalledWith(expect.objectContaining({
+    expect(sendEmailQueue.enqueue).toHaveBeenCalledWith(expect.objectContaining({
       to: 'a@b.com',
       templateSlug: 'user_password_reset',
       vars: expect.objectContaining({ userName: 'Alice', resetUrl: expect.stringContaining('https://app.sawaa.test/reset-password?token=') }),
     }));
   });
 
-  it('skips sending when user is inactive', async () => {
+  it('skips enqueueing when user is inactive', async () => {
     prisma.user.findUnique.mockResolvedValue({ id: 'u1', email: 'a@b.com', name: 'Alice', isActive: false });
     await handler.execute({ email: 'a@b.com' });
-    expect(sendEmail.execute).not.toHaveBeenCalled();
+    expect(sendEmailQueue.enqueue).not.toHaveBeenCalled();
   });
 });

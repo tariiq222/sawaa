@@ -7,6 +7,8 @@ import { EventBusService } from '../../infrastructure/events';
 import { SendPushHandler } from './send-push/send-push.handler';
 import { SendSmsHandler } from './send-sms/send-sms.handler';
 import { SendEmailHandler } from './send-email/send-email.handler';
+import { SendEmailQueueService } from './send-email/send-email-queue.service';
+import { SendEmailWorker } from './send-email/send-email-worker';
 import { SendNotificationHandler } from './send-notification/send-notification.handler';
 import { CreateNotificationHandler } from './notifications/create-notification.handler';
 import { ListNotificationsHandler } from './notifications/list-notifications.handler';
@@ -53,11 +55,14 @@ import { OnClientEnrolledStaffHandler } from './events/on-client-enrolled-staff.
 import { ResilientNotificationDispatcher } from './resilient-notification-dispatcher/resilient-notification-dispatcher.service';
 import { NotificationRetryWorker } from './resilient-notification-dispatcher/notification-retry-worker';
 import { ListTenantDeliveryLogsHandler } from './list-tenant-delivery-logs/list-tenant-delivery-logs.handler';
+import { ListSmsDeliveriesHandler } from './list-sms-deliveries/list-sms-deliveries.handler';
 
 const handlers = [
   SendPushHandler,
   SendSmsHandler,
   SendEmailHandler,
+  SendEmailQueueService,
+  SendEmailWorker,
   GetOrgSmsConfigHandler,
   UpsertOrgSmsConfigHandler,
   TestSmsConfigHandler,
@@ -92,6 +97,7 @@ const handlers = [
   ResilientNotificationDispatcher,
   NotificationRetryWorker,
   ListTenantDeliveryLogsHandler,
+  ListSmsDeliveriesHandler,
 ];
 
 const eventHandlers = [

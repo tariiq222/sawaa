@@ -117,6 +117,6 @@ export const buildRlsTransaction = (prisma?: ReturnType<typeof buildPrisma>) => 
 
 export const buildEventBus = () => ({ publish: jest.fn().mockResolvedValue(undefined) });
 
-export const buildZoomHandler = () => ({
-  execute: jest.fn().mockResolvedValue({ joinUrl: 'https://zoom.example/join' }),
+export const buildZoomQueue = () => ({
+  enqueue: jest.fn().mockResolvedValue(undefined),
 });
