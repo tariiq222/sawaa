@@ -17,6 +17,9 @@ export interface PublicGroupSession {
   waitlistCount: number;
   employeeId: string;
   serviceId: string;
+  spotsLeft: number;
+  isFull: boolean;
+  isWaitlistOnly: boolean;
 }
 
 @Injectable()
@@ -58,9 +61,15 @@ export class ListPublicGroupSessionsHandler {
       },
     });
 
-    return sessions.map((session) => ({
-      ...session,
-      price: Number(session.price),
-    }));
+    return sessions.map((session) => {
+      const spotsLeft = session.maxCapacity - session.enrolledCount;
+      return {
+        ...session,
+        price: Number(session.price),
+        spotsLeft,
+        isFull: spotsLeft <= 0,
+        isWaitlistOnly: spotsLeft <= 0 && session.waitlistEnabled,
+      };
+    });
   }
 }
