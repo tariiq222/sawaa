@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { OtpPurpose } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
+import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { TokenService } from '../shared/token.service';
 import { VerifyDashboardOtpHandler } from './verify-dashboard-otp.handler';
 
@@ -47,8 +48,25 @@ describe('VerifyDashboardOtpHandler', () => {
   let handler: VerifyDashboardOtpHandler;
   let prisma: any;
   let tokens: any;
+  let redisClient: {
+    get: jest.Mock;
+    del: jest.Mock;
+    multi: jest.Mock;
+  };
+  let redisMulti: { incr: jest.Mock; expire: jest.Mock; exec: jest.Mock };
 
   beforeEach(async () => {
+    redisMulti = {
+      incr: jest.fn().mockReturnThis(),
+      expire: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([[null, 1], [null, 1]]),
+    };
+    redisClient = {
+      get: jest.fn().mockResolvedValue(null),
+      del: jest.fn().mockResolvedValue(1),
+      multi: jest.fn().mockReturnValue(redisMulti),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VerifyDashboardOtpHandler,
@@ -58,6 +76,9 @@ describe('VerifyDashboardOtpHandler', () => {
         } },
         { provide: TokenService, useValue: {
           issueTokenPair: jest.fn(),
+        } },
+        { provide: RedisService, useValue: {
+          getClient: jest.fn().mockReturnValue(redisClient),
         } },
       ],
     }).compile();
@@ -205,5 +226,75 @@ describe('VerifyDashboardOtpHandler', () => {
 
     const result = await handler.execute({ identifier: 'test@test.com', code: '123456' });
     expect(result.user.permissions).toContain('booking:*');
+  });
+
+  describe('identifier-level failed-verify lockout window', () => {
+    it('should reject even a fresh correct code when the window counter is at max (lockout wins)', async () => {
+      redisClient.get.mockResolvedValue('5');
+      prisma.otpCode.findFirst.mockResolvedValue(createOtpRecord());
+      (bcrypt.compare as jest.Mock).mockClear();
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      await expect(
+        handler.execute({ identifier: 'test@test.com', code: '123456' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(
+        await handler.execute({ identifier: 'test@test.com', code: '123456' }).catch((e) => e.message),
+      ).toBe('OTP_LOCKED_OUT');
+
+      // Lockout is decided before any OTP row is fetched or compared
+      expect(prisma.otpCode.findFirst).not.toHaveBeenCalled();
+      expect(bcrypt.compare).not.toHaveBeenCalled();
+    });
+
+    it('should check the counter under the normalized identifier (case-insensitive email)', async () => {
+      redisClient.get.mockResolvedValue('5');
+
+      await expect(
+        handler.execute({ identifier: 'Test@Test.COM', code: '123456' }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(redisClient.get).toHaveBeenCalledWith('dashboard_otp:failed:test@test.com');
+    });
+
+    it('should atomically increment the window counter with a 15-minute TTL on wrong code', async () => {
+      prisma.otpCode.findFirst.mockResolvedValue(createOtpRecord());
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+      prisma.otpCode.update.mockResolvedValue({});
+
+      await expect(
+        handler.execute({ identifier: 'test@test.com', code: '000000' }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(redisClient.multi).toHaveBeenCalledTimes(1);
+      expect(redisMulti.incr).toHaveBeenCalledWith('dashboard_otp:failed:test@test.com');
+      expect(redisMulti.expire).toHaveBeenCalledWith('dashboard_otp:failed:test@test.com', 900);
+      expect(redisMulti.exec).toHaveBeenCalledTimes(1);
+    });
+
+    it('should clear the window counter on successful verify', async () => {
+      prisma.otpCode.findFirst.mockResolvedValue(createOtpRecord());
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      prisma.otpCode.update.mockResolvedValue({});
+      prisma.user.findFirst.mockResolvedValue(createUser());
+      tokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', refreshToken: 'rt' });
+
+      await handler.execute({ identifier: 'test@test.com', code: '123456' });
+
+      expect(redisClient.del).toHaveBeenCalledWith('dashboard_otp:failed:test@test.com');
+    });
+
+    it('should allow attempts below the window max (counter at 4 of 5)', async () => {
+      redisClient.get.mockResolvedValue('4');
+      prisma.otpCode.findFirst.mockResolvedValue(createOtpRecord());
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      prisma.otpCode.update.mockResolvedValue({});
+      prisma.user.findFirst.mockResolvedValue(createUser());
+      tokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', refreshToken: 'rt' });
+
+      const result = await handler.execute({ identifier: 'test@test.com', code: '123456' });
+      expect(result.accessToken).toBe('at');
+      expect(redisClient.del).toHaveBeenCalledWith('dashboard_otp:failed:test@test.com');
+    });
   });
 });

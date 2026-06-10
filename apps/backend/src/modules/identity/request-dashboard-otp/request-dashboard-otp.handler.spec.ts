@@ -4,11 +4,13 @@ import { OtpChannel } from '@prisma/client';
 import { RequestDashboardOtpHandler } from './request-dashboard-otp.handler';
 import { NotificationChannelRegistry } from '../../comms/notification-channel/notification-channel-registry';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { RedisService } from '../../../infrastructure/cache/redis.service';
 
 describe('RequestDashboardOtpHandler', () => {
   let handler: RequestDashboardOtpHandler;
   let prismaMock: any;
   let channelRegistry: jest.Mocked<NotificationChannelRegistry>;
+  let redisClient: { get: jest.Mock };
 
   const mockChannelService = {
     send: jest.fn().mockResolvedValue(undefined),
@@ -16,6 +18,10 @@ describe('RequestDashboardOtpHandler', () => {
 
   beforeEach(async () => {
     mockChannelService.send.mockReset().mockResolvedValue(undefined);
+
+    redisClient = {
+      get: jest.fn().mockResolvedValue(null),
+    };
 
     prismaMock = {
       otpCode: {
@@ -50,6 +56,12 @@ describe('RequestDashboardOtpHandler', () => {
           useValue: {
             withTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => prismaMock.$transaction(fn)),
             withBypassTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => prismaMock.$transaction(fn)),
+          },
+        },
+        {
+          provide: RedisService,
+          useValue: {
+            getClient: jest.fn().mockReturnValue(redisClient),
           },
         },
       ],
@@ -109,6 +121,40 @@ describe('RequestDashboardOtpHandler', () => {
     // OTP should NOT be created when rate limited
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
     expect(mockChannelService.send).not.toHaveBeenCalled();
+  });
+
+  it('failed-verify lockout: when window counter >= max, refuses to issue a new OTP with 429', async () => {
+    redisClient.get.mockResolvedValue('5');
+
+    await expect(handler.execute({ identifier: 'user@example.com' })).rejects.toThrow(HttpException);
+
+    try {
+      await handler.execute({ identifier: 'user@example.com' });
+    } catch (err) {
+      expect(err).toBeInstanceOf(HttpException);
+      expect((err as HttpException).getStatus()).toBe(HttpStatus.TOO_MANY_REQUESTS);
+    }
+    // No OTP row is created and nothing is sent — re-requesting must not reset the guess budget
+    expect(prismaMock.otpCode.count).not.toHaveBeenCalled();
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    expect(mockChannelService.send).not.toHaveBeenCalled();
+  });
+
+  it('failed-verify lockout: counter is read under the normalized identifier', async () => {
+    redisClient.get.mockResolvedValue('5');
+
+    await expect(handler.execute({ identifier: 'User@Example.COM' })).rejects.toThrow(HttpException);
+
+    expect(redisClient.get).toHaveBeenCalledWith('dashboard_otp:failed:user@example.com');
+  });
+
+  it('failed-verify lockout: counter below max does not block issuance', async () => {
+    redisClient.get.mockResolvedValue('4');
+
+    const result = await handler.execute({ identifier: 'user@example.com' });
+
+    expect(result).toEqual({ success: true });
+    expect(mockChannelService.send).toHaveBeenCalledTimes(1);
   });
 
   it('send failure → deletes the OTP row and throws ServiceUnavailableException', async () => {
