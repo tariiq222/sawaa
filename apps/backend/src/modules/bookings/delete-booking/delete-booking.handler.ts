@@ -1,17 +1,33 @@
 import {
-  Injectable,
-  Logger,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
-import { ActivityAction, BookingStatus, PaymentStatus, Prisma } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { isTerminalStatus } from '../booking-state-machine';
+	Injectable,
+	Logger,
+	NotFoundException,
+	BadRequestException,
+} from "@nestjs/common";
+import {
+	ActivityAction,
+	PaymentStatus,
+	Prisma,
+} from "@prisma/client";
+import {
+	PrismaService,
+	RlsTransactionService,
+} from "../../../infrastructure/database";
+import { isTerminalStatus } from "../booking-state-machine";
 
 export interface DeleteBookingCommand {
-  bookingId: string;
-  changedBy: string;
+	bookingId: string;
+	changedBy: string;
 }
+
+// رسائل الحذف بالعربية — تُعرض للمستخدم النهائي عبر HttpExceptionFilter
+const DELETE_BOOKING_MESSAGES = {
+	notFound: (id: string) => `الحجز رقم ${id} غير موجود`,
+	nonTerminal: (status: string) =>
+		`لا يمكن حذف حجز بحالة "${status}". يُسمح بحذف الحجوزات المنتهية فقط (CANCELLED, COMPLETED, NO_SHOW, EXPIRED). يرجى إلغاء الحجز بدلاً من حذفه.`,
+	blockingPayment:
+		"لا يمكن حذف حجز مرتبط بعملية دفع مكتملة أو معاد صرفها أو قيد التحقق. يرجى استرداد المبلغ أولاً.",
+} as const;
 
 /**
  * Hard-deletes a booking and its dependent records.
@@ -28,103 +44,98 @@ export interface DeleteBookingCommand {
  */
 @Injectable()
 export class DeleteBookingHandler {
-  private readonly logger = new Logger(DeleteBookingHandler.name);
+	private readonly logger = new Logger(DeleteBookingHandler.name);
 
-  private static readonly BLOCKING_PAYMENT_STATUSES: PaymentStatus[] = [
-    PaymentStatus.COMPLETED,
-    PaymentStatus.REFUNDED,
-    PaymentStatus.PENDING_VERIFICATION,
-  ];
+	private static readonly BLOCKING_PAYMENT_STATUSES: PaymentStatus[] = [
+		PaymentStatus.COMPLETED,
+		PaymentStatus.REFUNDED,
+		PaymentStatus.PENDING_VERIFICATION,
+	];
 
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
-  ) {}
+	constructor(
+		private readonly prisma: PrismaService,
+		private readonly rlsTransaction: RlsTransactionService,
+	) {}
 
-  async execute(cmd: DeleteBookingCommand): Promise<void> {
-    const booking = await this.prisma.booking.findFirst({
-      where: { id: cmd.bookingId },
-      select: {
-        id: true,
-        status: true,
-        bookingNumber: true,
-        clientId: true,
-        serviceNameSnapshot: true,
-        scheduledAt: true,
-      },
-    });
-    if (!booking) {
-      throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
-    }
+	async execute(cmd: DeleteBookingCommand): Promise<void> {
+		const booking = await this.prisma.booking.findFirst({
+			where: { id: cmd.bookingId },
+			select: {
+				id: true,
+				status: true,
+				bookingNumber: true,
+				clientId: true,
+				serviceNameSnapshot: true,
+				scheduledAt: true,
+			},
+		});
+		if (!booking) {
+			throw new NotFoundException(
+				DELETE_BOOKING_MESSAGES.notFound(cmd.bookingId),
+			);
+		}
 
-    if (!isTerminalStatus(booking.status)) {
-      throw new BadRequestException(
-        `Cannot delete a booking in status '${booking.status}'. ` +
-          `Only terminal bookings (${[
-            BookingStatus.CANCELLED,
-            BookingStatus.COMPLETED,
-            BookingStatus.NO_SHOW,
-            BookingStatus.EXPIRED,
-          ].join(', ')}) can be deleted. Cancel the booking instead.`,
-      );
-    }
+		if (!isTerminalStatus(booking.status)) {
+			throw new BadRequestException(
+				DELETE_BOOKING_MESSAGES.nonTerminal(booking.status),
+			);
+		}
 
-    const blockingPayment = await this.prisma.payment.findFirst({
-      where: {
-        invoice: { bookingId: booking.id },
-        status: { in: DeleteBookingHandler.BLOCKING_PAYMENT_STATUSES },
-      },
-      select: { id: true },
-    });
-    if (blockingPayment) {
-      throw new BadRequestException(
-        'Cannot delete a booking that has a paid or pending payment. ' +
-          'Refund the payment first.',
-      );
-    }
+		const blockingPayment = await this.prisma.payment.findFirst({
+			where: {
+				invoice: { bookingId: booking.id },
+				status: { in: DeleteBookingHandler.BLOCKING_PAYMENT_STATUSES },
+			},
+			select: { id: true },
+		});
+		if (blockingPayment) {
+			throw new BadRequestException(DELETE_BOOKING_MESSAGES.blockingPayment);
+		}
 
-    await this.rlsTransaction.withTransaction(async (tx) => {
-      const invoice = await tx.invoice.findUnique({
-        where: { bookingId: booking.id },
-        select: { id: true },
-      });
-      if (invoice) {
-        await tx.refundRequest.deleteMany({ where: { invoiceId: invoice.id } });
-        await tx.payment.deleteMany({ where: { invoiceId: invoice.id } });
-        await tx.invoice.delete({ where: { id: invoice.id } });
-      }
-      await tx.bookingStatusLog.deleteMany({ where: { bookingId: booking.id } });
-      await tx.rating.deleteMany({ where: { bookingId: booking.id } });
-      await tx.intakeResponse.deleteMany({ where: { bookingId: booking.id } });
-      await tx.bundleUsage.updateMany({
-        where: { bookingId: booking.id },
-        data: { bookingId: null },
-      });
+		await this.rlsTransaction.withTransaction(async (tx) => {
+			const invoice = await tx.invoice.findUnique({
+				where: { bookingId: booking.id },
+				select: { id: true },
+			});
+			if (invoice) {
+				await tx.refundRequest.deleteMany({ where: { invoiceId: invoice.id } });
+				await tx.payment.deleteMany({ where: { invoiceId: invoice.id } });
+				await tx.invoice.delete({ where: { id: invoice.id } });
+			}
+			await tx.bookingStatusLog.deleteMany({
+				where: { bookingId: booking.id },
+			});
+			await tx.rating.deleteMany({ where: { bookingId: booking.id } });
+			await tx.intakeResponse.deleteMany({ where: { bookingId: booking.id } });
+			await tx.bundleUsage.updateMany({
+				where: { bookingId: booking.id },
+				data: { bookingId: null },
+			});
 
-      // Immutable audit row written inside the same transaction, BEFORE the
-      // booking row is removed, so a hard-delete never erases the record of who
-      // deleted what. Captures the snapshot identifiers since the row is gone
-      // after this. (R-11/R-17)
-      await tx.activityLog.create({
-        data: {
-          userId: cmd.changedBy,
-          action: ActivityAction.DELETE,
-          entity: 'Booking',
-          entityId: booking.id,
-          description: `Hard-deleted booking ${booking.bookingNumber ?? booking.id}`,
-          metadata: {
-            bookingNumber: booking.bookingNumber,
-            clientId: booking.clientId,
-            status: booking.status,
-            serviceNameSnapshot: booking.serviceNameSnapshot,
-            scheduledAt: booking.scheduledAt?.toISOString() ?? null,
-          } as Prisma.InputJsonValue,
-        },
-      });
+			// Immutable audit row written inside the same transaction, BEFORE the
+			// booking row is removed, so a hard-delete never erases the record of who
+			// deleted what. Captures the snapshot identifiers since the row is gone
+			// after this. (R-11/R-17)
+			await tx.activityLog.create({
+				data: {
+					userId: cmd.changedBy,
+					action: ActivityAction.DELETE,
+					entity: "Booking",
+					entityId: booking.id,
+					description: `Hard-deleted booking ${booking.bookingNumber ?? booking.id}`,
+					metadata: {
+						bookingNumber: booking.bookingNumber,
+						clientId: booking.clientId,
+						status: booking.status,
+						serviceNameSnapshot: booking.serviceNameSnapshot,
+						scheduledAt: booking.scheduledAt?.toISOString() ?? null,
+					} as Prisma.InputJsonValue,
+				},
+			});
 
-      await tx.booking.delete({ where: { id: booking.id } });
-    });
+			await tx.booking.delete({ where: { id: booking.id } });
+		});
 
-    this.logger.log(`Booking ${booking.id} hard-deleted by ${cmd.changedBy}`);
-  }
+		this.logger.log(`Booking ${booking.id} hard-deleted by ${cmd.changedBy}`);
+	}
 }
