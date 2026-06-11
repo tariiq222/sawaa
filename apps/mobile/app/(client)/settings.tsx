@@ -33,16 +33,14 @@ import { registerForPushAsync, unregisterPushAsync } from '@/services/push';
 
 const LANGUAGE_KEY = '@sawaa/language';
 const PUSH_KEY = '@sawaa/push-enabled';
-const DARK_KEY = '@sawaa/dark-mode';
 
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme, isRTL, language } = useTheme();
+  const { theme, isRTL, language, scheme, setThemeMode } = useTheme();
 
   const [pushEnabled, setPushEnabled] = useState(false);
-  const [darkEnabled, setDarkEnabled] = useState(false);
   const BackIcon = isRTL ? ChevronRight : ChevronLeft;
 
   const version = Constants.expoConfig?.version ?? '1.0.0';
@@ -54,9 +52,6 @@ export default function SettingsScreen() {
   useEffect(() => {
     AsyncStorage.getItem(PUSH_KEY).then((val) => {
       if (val !== null) setPushEnabled(val === 'true');
-    });
-    AsyncStorage.getItem(DARK_KEY).then((val) => {
-      if (val !== null) setDarkEnabled(val === 'true');
     });
   }, []);
 
@@ -97,15 +92,6 @@ export default function SettingsScreen() {
       } else {
         await unregisterPushAsync();
       }
-    },
-    [],
-  );
-
-  const handleToggleDark = useCallback(
-    async (val: boolean) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setDarkEnabled(val);
-      await AsyncStorage.setItem(DARK_KEY, String(val));
     },
     [],
   );
@@ -176,10 +162,10 @@ export default function SettingsScreen() {
           <View style={[styles.switchRow, { marginTop: 12 }]}>
             <ThemedText variant="body">{t('settings.darkMode')}</ThemedText>
             <Switch
-              value={darkEnabled}
-              onValueChange={handleToggleDark}
+              value={scheme === 'dark'}
+              onValueChange={(v) => setThemeMode(v ? 'dark' : 'light')}
               trackColor={{ false: '#E2E8F0', true: '#1D4ED880' }}
-              thumbColor={darkEnabled ? '#1D4ED8' : '#CBD5E1'}
+              thumbColor={scheme === 'dark' ? '#1D4ED8' : '#CBD5E1'}
             />
           </View>
         </ThemedCard>

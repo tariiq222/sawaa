@@ -14,15 +14,39 @@ const FIXED_PRIMARY = '#55CCB0';
 const FIXED_ACCENT = '#E7DBC4';
 const FIXED_BACKGROUND = '#EAF8F4';
 
+const darkColorOverrides = {
+  surface: '#0c2424',
+  surfaceElevated: '#11302f',
+  background: '#0a1f1e',
+  textPrimary: '#e8f4f2',
+  textSecondary: '#9fbcba',
+  border: 'rgba(255,255,255,0.14)',
+} as const;
+
+// Only overrides keys that actually exist in the light colors object.
+function pickExisting<T extends Record<string, unknown>>(
+  base: T,
+  overrides: Record<string, unknown>,
+): Partial<T> {
+  const result: Partial<T> = {};
+  for (const key of Object.keys(overrides) as Array<keyof T>) {
+    if (key in base) {
+      result[key] = overrides[key as string] as T[typeof key];
+    }
+  }
+  return result;
+}
+
 // `branding` is still accepted so call sites don't break, but theme colors are
 // always the fixed palette above — the argument is intentionally unused.
-export function buildTheme(_branding?: PublicBranding | null) {
+export function buildTheme(_branding?: PublicBranding | null, scheme: 'light' | 'dark' = 'light') {
   return {
     colors: {
       ...colors,
       primary: FIXED_PRIMARY,
       accent: FIXED_ACCENT,
-      background: FIXED_BACKGROUND,
+      background: scheme === 'dark' ? darkColorOverrides.background : FIXED_BACKGROUND,
+      ...(scheme === 'dark' ? pickExisting(colors, darkColorOverrides) : {}),
     },
     typography,
     spacing,
