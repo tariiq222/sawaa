@@ -17,6 +17,9 @@ export const therapistKeys = {
 export function useTherapists() {
   return useQuery<PublicEmployeeItem[]>({
     queryKey: therapistKeys.lists(),
-    queryFn: () => publicEmployeesService.list(),
+    queryFn: async () => {
+      const employees = await publicEmployeesService.list();
+      return employees.filter((employee) => employee.isBookable === true);
+    },
   });
 }

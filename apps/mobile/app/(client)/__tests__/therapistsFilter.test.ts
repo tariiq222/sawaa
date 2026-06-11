@@ -14,6 +14,8 @@ const make = (overrides: Partial<PublicEmployeeItem> = {}): PublicEmployeeItem =
   publicImageUrl: null,
   gender: 'MALE',
   employmentType: 'FULL_TIME',
+  serviceIds: [],
+  isBookable: true,
   ratingAverage: null,
   ratingCount: 0,
   minServicePrice: 400,

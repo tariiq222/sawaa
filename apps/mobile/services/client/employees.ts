@@ -15,6 +15,8 @@ export interface PublicEmployeeItem {
   publicImageUrl: string | null;
   gender: string | null;
   employmentType: string;
+  serviceIds: string[];
+  isBookable: boolean;
   ratingAverage?: number | null;
   ratingCount?: number;
   minServicePrice: number | null;
