@@ -137,9 +137,14 @@ export default function HomeScreen() {
           entering={reduceMotion ? undefined : FadeInDown.delay(520).duration(700).easing(Easing.out(Easing.cubic))}
           style={[styles.sectionHead, { flexDirection: dir.row }]}
         >
-          <Text style={[styles.sectionTitle, { fontFamily: f700 }]}>
-            {dir.isRTL ? 'جلسات الدعم' : 'Support sessions'}
+          <Text style={[styles.sectionTitle, { fontFamily: f700 }]}> 
+            {t('groups.title')}
           </Text>
+          <Pressable onPress={() => router.push('/(client)/groups')} accessibilityRole="button">
+            <Text style={[styles.sectionMeta, { fontFamily: f600, fontWeight: '600', color: sawaaColors.teal[700] }]}> 
+              {t('groups.seeAll')}
+            </Text>
+          </Pressable>
         </Animated.View>
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(580).duration(700).easing(Easing.out(Easing.cubic))}>
           <SupportSessions dir={dir} f400={f400} f700={f700} />

@@ -143,6 +143,21 @@
     "servicesCount": "{{count}} خدمة",
     "empty": "لا توجد عيادات متاحة حالياً"
   },
+  "groups": {
+    "title": "مجموعات الدعم",
+    "empty": "لا توجد جلسات جماعية متاحة حالياً",
+    "spotsLeft": "متبقي {{count}} مقاعد",
+    "full": "مكتمل",
+    "waitlist": "قائمة انتظار",
+    "join": "انضم",
+    "joinWaitlist": "انضم لقائمة الانتظار",
+    "booked": "تم تسجيلك في المجموعة بنجاح",
+    "waitlisted": "تمت إضافتك لقائمة الانتظار — ترتيبك {{position}}",
+    "bookError": "تعذر إتمام الانضمام، حاول مرة أخرى",
+    "duration": "{{count}} دقيقة",
+    "enrolled": "{{count}} / {{max}} مشارك",
+    "seeAll": "عرض الكل"
+  },
   "therapists": {
     "title": "اختاري معالجاً",
     "availableCount": "{{count}} معالج متاحين الآن",

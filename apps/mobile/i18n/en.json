@@ -143,6 +143,21 @@
     "servicesCount": "{{count}} services",
     "empty": "No clinics available right now"
   },
+  "groups": {
+    "title": "Support Groups",
+    "empty": "No group sessions are available right now",
+    "spotsLeft": "{{count}} spots left",
+    "full": "Full",
+    "waitlist": "Waitlist",
+    "join": "Join",
+    "joinWaitlist": "Join waitlist",
+    "booked": "You're in — enrollment confirmed",
+    "waitlisted": "Added to waitlist — position {{position}}",
+    "bookError": "Could not join the group. Please try again",
+    "duration": "{{count}} minutes",
+    "enrolled": "{{count}} / {{max}} enrolled",
+    "seeAll": "See all"
+  },
   "therapists": {
     "title": "Choose a therapist",
     "availableCount": "{{count}} therapists available",
