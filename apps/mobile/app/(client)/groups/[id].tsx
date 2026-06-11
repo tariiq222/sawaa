@@ -11,7 +11,7 @@ import { useDir } from '@/hooks/useDir';
 import { AquaBackground, PrimaryButton, sawaaColors, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { ThemedText } from '@/theme/components/ThemedText';
-import { concentricRadius } from '@/theme/sawaa/tokens';
+import { concentricRadius, withAlpha } from '@/theme/sawaa/tokens';
 
 const CARD_RADIUS = sawaaRadius.xl;
 const CARD_PADDING = 18;
@@ -142,7 +142,7 @@ function DetailRow({ icon, label, dir }: { icon: 'calendar' | 'duration' | 'pric
 function StateBadge({ label, tone }: { label: string; tone: 'muted' | 'open' | 'waitlist' }) {
   const color = tone === 'muted' ? sawaaColors.ink[500] : tone === 'waitlist' ? sawaaColors.accent.amber : sawaaColors.teal[700];
   return (
-    <View style={[styles.badge, { borderColor: color, backgroundColor: `${color}1e` }]}> 
+    <View style={[styles.badge, { borderColor: color, backgroundColor: withAlpha(color, 0.12) }]}> 
       <ThemedText variant="label" color={color}>{label}</ThemedText>
     </View>
   );

@@ -7,7 +7,7 @@ import { Users } from 'lucide-react-native';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { useGroupSessions } from '@/hooks/queries';
 import { sawaaColors, sawaaRadius } from '@/theme/sawaa';
-import { concentricRadius } from '@/theme/sawaa/tokens';
+import { concentricRadius, withAlpha } from '@/theme/sawaa/tokens';
 import { Glass } from '@/theme/components/Glass';
 import type { DirState } from '@/hooks/useDir';
 
@@ -46,7 +46,7 @@ export function SupportSessions({ dir, f400, f700 }: SupportSessionsProps) {
         return (
         <Glass key={s.id} variant="strong" radius={CARD_RADIUS} style={styles.supportCard}>
           <View style={[styles.supportInner, { flexDirection: dir.row }]}> 
-            <View style={[styles.supportIcon, { backgroundColor: `${color}22` }]}> 
+            <View style={[styles.supportIcon, { backgroundColor: withAlpha(color, 0.13) }]}> 
               <AppIcon sf="person.3.fill" fallback={Users} size={18} color={color} strokeWidth={1.75} />
             </View>
             <View style={styles.supportText}>

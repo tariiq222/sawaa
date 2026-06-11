@@ -153,3 +153,10 @@ export type SawaaTokens = typeof sawaaTokens;
 export function concentricRadius(outer: number, padding: number): number {
   return Math.max(4, outer - padding);
 }
+
+/** Token-layer alpha tint — keeps ad-hoc transparency out of components.
+ *  Appends an alpha byte to a 6-digit hex token color. */
+export function withAlpha(hexColor: string, alpha: number): string {
+  const byte = Math.round(Math.min(1, Math.max(0, alpha)) * 255);
+  return `${hexColor}${byte.toString(16).padStart(2, '0')}`;
+}
