@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Building2, Star } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
+import { AppIcon } from '@/components/ui/AppIcon';
 import { sawaaColors, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import type { DirState } from '@/hooks/useDir';
@@ -38,7 +39,7 @@ export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
               end={{ x: 1, y: 1 }}
               style={styles.clinicIcon}
             >
-              <Building2 size={36} color="#fff" strokeWidth={1.5} />
+              <AppIcon sf="building.2.fill" fallback={Building2} size={36} color="#fff" strokeWidth={1.5} />
             </LinearGradient>
             <Text style={[styles.clinicName, { fontFamily: f700, textAlign: dir.textAlign }]}>
               {dir.isRTL ? c.ar : c.en}

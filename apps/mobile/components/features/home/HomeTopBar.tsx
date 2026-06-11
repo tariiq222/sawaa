@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Bell, Search } from 'lucide-react-native';
 
+import { AppIcon } from '@/components/ui/AppIcon';
 import { sawaaColors } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useAppSelector } from '@/hooks/use-redux';
@@ -36,7 +37,7 @@ export function HomeTopBar({ f600 }: HomeTopBarProps) {
             onPress={() => router.push('/(client)/notifications')}
             style={styles.iconBtnInner}
           >
-            <Bell size={19} color={sawaaColors.teal[700]} strokeWidth={1.75} />
+            <AppIcon sf="bell.fill" fallback={Bell} size={19} color={sawaaColors.teal[700]} strokeWidth={1.75} />
             {unreadCount > 0 ? (
               <View
                 style={[

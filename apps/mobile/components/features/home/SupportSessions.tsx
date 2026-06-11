@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Users } from 'lucide-react-native';
 
+import { AppIcon } from '@/components/ui/AppIcon';
 import { sawaaColors, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import type { DirState } from '@/hooks/useDir';
@@ -47,7 +48,7 @@ export function SupportSessions({ dir, f400, f700 }: SupportSessionsProps) {
         <Glass key={`session-${i}`} variant="strong" radius={sawaaRadius.xl} style={styles.supportCard}>
           <View style={[styles.supportInner, { flexDirection: dir.row }]}>
             <View style={[styles.supportIcon, { backgroundColor: `${s.color}22` }]}>
-              <Users size={18} color={s.color} strokeWidth={1.75} />
+              <AppIcon sf="person.3.fill" fallback={Users} size={18} color={s.color} strokeWidth={1.75} />
             </View>
             <View style={styles.supportText}>
               <Text numberOfLines={1} style={[styles.supportTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>

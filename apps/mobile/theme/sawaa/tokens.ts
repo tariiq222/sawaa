@@ -147,3 +147,9 @@ export function getBrandingTokens(brandingConfig?: { primaryColor?: string; prim
 }
 
 export type SawaaTokens = typeof sawaaTokens;
+
+/** iOS 27 concentric radii: a nested rounded element shares the parent's center,
+ *  so its radius = outer radius − inset padding (floored at 4). */
+export function concentricRadius(outer: number, padding: number): number {
+  return Math.max(4, outer - padding);
+}
