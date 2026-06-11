@@ -28,9 +28,7 @@ export default function ClientTabsLayout() {
       <Tabs.Screen name="chat" options={{ title: t('tabs.assistant') }} />
       <Tabs.Screen name="records" options={{ title: t('tabs.records') }} />
       <Tabs.Screen name="appointments" options={{ title: t('tabs.sessions') }} />
-      {/* Hidden — still routable, absent from the bar. */}
-      <Tabs.Screen name="notifications" options={{ title: t('tabs.notifications'), href: null }} />
-      <Tabs.Screen name="profile" options={{ title: t('tabs.profile'), href: null }} />
+
     </Tabs>
   );
 }

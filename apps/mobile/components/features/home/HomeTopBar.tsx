@@ -33,7 +33,7 @@ export function HomeTopBar({ f600 }: HomeTopBarProps) {
         </Glass>
         <Glass variant="regular" radius={21} style={styles.iconBtn}>
           <Pressable
-            onPress={() => router.push('/(client)/(tabs)/notifications')}
+            onPress={() => router.push('/(client)/notifications')}
             style={styles.iconBtnInner}
           >
             <Bell size={19} color={sawaaColors.teal[700]} strokeWidth={1.75} />
@@ -54,7 +54,7 @@ export function HomeTopBar({ f600 }: HomeTopBarProps) {
       </View>
       <Glass variant="regular" radius={21} style={styles.avatarBtn}>
         <Pressable
-          onPress={() => router.push('/(client)/(tabs)/profile')}
+          onPress={() => router.push('/(client)/profile')}
           style={styles.avatarInner}
         >
           <Text style={[styles.avatarText, { fontFamily: f600 }]}>{initial}</Text>

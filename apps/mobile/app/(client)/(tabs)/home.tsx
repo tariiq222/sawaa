@@ -100,7 +100,7 @@ export default function HomeScreen() {
                 {dir.isRTL ? 'القادم' : 'Up next'}
               </Text>
               {unreadCount > 0 ? (
-                <Pressable onPress={() => router.push('/(client)/(tabs)/notifications')}>
+                <Pressable onPress={() => router.push('/(client)/notifications')}>
                   <Text style={[styles.sectionMeta, { fontFamily: f600, color: sawaaColors.teal[700] }]}>
                     {dir.isRTL
                       ? `${unreadCount.toLocaleString('ar-SA')} تنبيه جديد`
