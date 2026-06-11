@@ -24,17 +24,18 @@ const darkColorOverrides = {
 } as const;
 
 // Only overrides keys that actually exist in the light colors object.
-function pickExisting<T extends Record<string, unknown>>(
-  base: T,
-  overrides: Record<string, unknown>,
-): Partial<T> {
-  const result: Partial<T> = {};
-  for (const key of Object.keys(overrides) as Array<keyof T>) {
-    if (key in base) {
-      result[key] = overrides[key as string] as T[typeof key];
-    }
+function pickExisting<
+  TBase extends Record<string, unknown>,
+  TOverrides extends Record<string, string>,
+>(
+  base: TBase,
+  overrides: TOverrides,
+): Partial<Record<Extract<keyof TOverrides, keyof TBase>, string>> {
+  const out: Partial<Record<Extract<keyof TOverrides, keyof TBase>, string>> = {};
+  for (const key of Object.keys(overrides) as Array<Extract<keyof TOverrides, keyof TBase>>) {
+    if (key in base) out[key] = overrides[key];
   }
-  return result;
+  return out;
 }
 
 // `branding` is still accepted so call sites don't break, but theme colors are
