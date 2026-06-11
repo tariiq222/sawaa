@@ -14,3 +14,4 @@ export { useBranding, brandingKeys } from './useBranding';
 export { useHome, useSummary, useUpcoming, portalKeys } from './usePortal';
 export { useRegister, useRequestLoginOtp, useVerifyOtp, useRequestEmailVerification } from './useMobileAuth';
 export { useMe } from './useMe';
+export { useGroupSessions, useGroupSession, useBookGroupSession, groupSessionKeys } from './useGroupSessions';
