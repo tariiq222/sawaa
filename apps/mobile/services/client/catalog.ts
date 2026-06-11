@@ -16,18 +16,21 @@ export interface PublicCatalogDepartment {
   services: PublicService[];
 }
 
-interface PublicCatalogDepartmentRow {
+export interface PublicCatalogDepartmentRow {
   id: string;
   nameAr: string;
   nameEn: string | null;
 }
 
-interface PublicCatalogCategory {
+export interface PublicCatalogCategory {
   id: string;
   departmentId: string | null;
+  nameAr: string;
+  nameEn: string | null;
+  sortOrder: number;
 }
 
-interface PublicCatalogResponse {
+export interface PublicCatalogRaw {
   departments: PublicCatalogDepartmentRow[];
   categories: PublicCatalogCategory[];
   services: PublicService[];
@@ -35,7 +38,7 @@ interface PublicCatalogResponse {
 
 export const publicCatalogService = {
   async listDepartments(): Promise<PublicCatalogDepartment[]> {
-    const response = await api.get<PublicCatalogResponse>('/public/services');
+    const response = await api.get<PublicCatalogRaw>('/public/services');
     const categoryDepartmentIds = new Map(
       response.data.categories.map((category) => [
         category.id,
@@ -50,5 +53,10 @@ export const publicCatalogService = {
         return categoryDepartmentIds.get(service.categoryId) === department.id;
       }),
     }));
+  },
+
+  async getCatalog(): Promise<PublicCatalogRaw> {
+    const response = await api.get<PublicCatalogRaw>('/public/services');
+    return response.data;
   },
 };
