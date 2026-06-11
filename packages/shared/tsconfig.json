@@ -25,7 +25,8 @@
     "state-machines/**/*.ts",
     "terminology/**/*.ts",
     "money/**/*.ts",
-    "schemas/**/*.ts"
+    "schemas/**/*.ts",
+    "catalog/**/*.ts"
   ],
   "exclude": ["**/*.test.ts", "**/*.spec.ts", "node_modules", "dist"]
 }

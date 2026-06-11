@@ -10,8 +10,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': root,
-      '@sawaa/shared': path.resolve(__dirname, '../../packages/shared/index.ts'),
       '@sawaa/shared/constants': path.resolve(__dirname, '../../packages/shared/constants/index.ts'),
+      '@sawaa/shared/catalog': path.resolve(__dirname, '../../packages/shared/catalog/index.ts'),
+      '@sawaa/shared': path.resolve(__dirname, '../../packages/shared/index.ts'),
       '@sawaa/api-client': path.resolve(__dirname, '../../packages/api-client/src/index.ts'),
     },
   },
