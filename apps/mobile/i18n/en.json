@@ -137,6 +137,26 @@
     "from": "from",
     "rating": "rating"
   },
+  "clinics": {
+    "title": "Clinics",
+    "therapistsCount": "{{count}} therapists",
+    "servicesCount": "{{count}} services",
+    "empty": "No clinics available right now"
+  },
+  "therapists": {
+    "title": "Choose a therapist",
+    "availableCount": "{{count}} therapists available",
+    "searchPlaceholder": "Search by name or specialty",
+    "loading": "Loading…",
+    "empty": "No therapists yet",
+    "unknownName": "Therapist",
+    "filters": {
+      "available": "Available",
+      "women": "Women",
+      "remote": "Remote",
+      "under300": "< 300 ﷼"
+    }
+  },
   "appointments": {
     "title": "My Appointments",
     "upcoming": "Upcoming",

@@ -137,6 +137,26 @@
     "from": "من",
     "rating": "تقييم"
   },
+  "clinics": {
+    "title": "العيادات",
+    "therapistsCount": "{{count}} معالج",
+    "servicesCount": "{{count}} خدمة",
+    "empty": "لا توجد عيادات متاحة حالياً"
+  },
+  "therapists": {
+    "title": "اختاري معالجاً",
+    "availableCount": "{{count}} معالج متاحين الآن",
+    "searchPlaceholder": "اكتبي اسم المعالج أو التخصص",
+    "loading": "جاري التحميل…",
+    "empty": "لا يوجد معالجون بعد",
+    "unknownName": "معالج",
+    "filters": {
+      "available": "متاح الآن",
+      "women": "النساء",
+      "remote": "عن بُعد",
+      "under300": "< ٣٠٠ ﷼"
+    }
+  },
   "appointments": {
     "title": "مواعيدي",
     "upcoming": "القادمة",

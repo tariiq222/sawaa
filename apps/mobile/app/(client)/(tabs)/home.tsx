@@ -120,9 +120,14 @@ export default function HomeScreen() {
           entering={reduceMotion ? undefined : FadeInDown.delay(380).duration(700).easing(Easing.out(Easing.cubic))}
           style={[styles.sectionHead, { flexDirection: dir.row }]}
         >
-          <Text style={[styles.sectionTitle, { fontFamily: f700 }]}>
-            {dir.isRTL ? 'العيادات المميزة' : 'Featured Clinics'}
+          <Text style={[styles.sectionTitle, { fontFamily: f700 }]}> 
+            {t('clinics.title')}
           </Text>
+          <Pressable onPress={() => router.push('/(client)/clinics')} accessibilityRole="button">
+            <Text style={[styles.sectionMeta, { fontFamily: f600, fontWeight: '600', color: sawaaColors.teal[700] }]}> 
+              {t('home.seeAll')}
+            </Text>
+          </Pressable>
         </Animated.View>
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(440).duration(700).easing(Easing.out(Easing.cubic))}>
           <FeaturedClinics dir={dir} f600={f600} f700={f700} />
