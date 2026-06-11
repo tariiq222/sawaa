@@ -193,7 +193,7 @@ export function SplashWelcome({ onContinue }: Props) {
           <Text
             style={[
               styles.subtitle,
-              { fontFamily: f500, writingDirection: dir.writingDirection },
+              { fontFamily: f500, fontWeight: '500', writingDirection: dir.writingDirection },
             ]}
           >
             {t('splash.tagline')}
@@ -234,7 +234,7 @@ export function SplashWelcome({ onContinue }: Props) {
             <Text
               style={[
                 styles.privacyText,
-                { fontFamily: f400, writingDirection: dir.writingDirection },
+                { fontFamily: f400, fontWeight: '400', writingDirection: dir.writingDirection },
               ]}
             >
               {t('splash.privacy')}

@@ -82,7 +82,7 @@ export default function HomeScreen() {
           entering={reduceMotion ? undefined : FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}
           style={styles.greetingBlock}
         >
-          <Text style={[styles.dateLabel, { fontFamily: f600, textAlign: dir.textAlign }]}>
+          <Text style={[styles.dateLabel, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
             {today}
           </Text>
           <Text style={[styles.greeting, { fontFamily: f700, textAlign: dir.textAlign }]}>
@@ -101,7 +101,7 @@ export default function HomeScreen() {
               </Text>
               {unreadCount > 0 ? (
                 <Pressable onPress={() => router.push('/(client)/notifications')}>
-                  <Text style={[styles.sectionMeta, { fontFamily: f600, color: sawaaColors.teal[700] }]}>
+                  <Text style={[styles.sectionMeta, { fontFamily: f600, fontWeight: '600', color: sawaaColors.teal[700] }]}>
                     {dir.isRTL
                       ? `${unreadCount.toLocaleString('ar-SA')} تنبيه جديد`
                       : `${unreadCount} new alert${unreadCount === 1 ? '' : 's'}`}

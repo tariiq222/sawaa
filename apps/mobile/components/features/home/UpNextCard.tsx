@@ -48,7 +48,7 @@ export function UpNextCard({ loading, booking, dir, f600, f700 }: UpNextCardProp
   if (!booking) {
     return (
       <Glass variant="regular" radius={sawaaRadius.xl} style={[styles.sessionCard, styles.emptySession]}>
-        <Text style={[styles.emptyText, { fontFamily: f600, textAlign: dir.textAlign }]}>
+        <Text style={[styles.emptyText, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
           {dir.isRTL ? 'لا توجد جلسات قادمة' : 'No upcoming sessions'}
         </Text>
         <Pressable onPress={() => router.push('/(client)/therapists')} hitSlop={8}>
@@ -81,7 +81,7 @@ export function UpNextCard({ loading, booking, dir, f600, f700 }: UpNextCardProp
           <Video size={22} color="#fff" strokeWidth={1.75} />
         </LinearGradient>
         <View style={styles.sessionMid}>
-          <Text style={[styles.sessionTime, { fontFamily: f600, textAlign: dir.textAlign }]}>
+          <Text style={[styles.sessionTime, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
             {formatRelativeTime(when, new Date(), dir.isRTL)}
           </Text>
           <Text style={[styles.sessionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>

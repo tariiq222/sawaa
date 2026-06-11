@@ -94,13 +94,13 @@ export default function EmployeeProfileScreen() {
                 <Text style={[styles.heroName, { fontFamily: f700, textAlign: dir.textAlign }]}>
                   {employeeName}
                 </Text>
-                <Text style={[styles.heroSpec, { fontFamily: f400, textAlign: dir.textAlign }]}>
+                <Text style={[styles.heroSpec, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
                   {employeeSpec}
                 </Text>
                 <View style={[styles.rating, { flexDirection: dir.row }]}>
                   <Star size={11} color={sawaaColors.accent.amber} strokeWidth={2} fill={sawaaColors.accent.amber} />
                   <Text style={[styles.ratingVal, { fontFamily: f700 }]}>4.9</Text>
-                  <Text style={[styles.ratingCount, { fontFamily: f400 }]}>
+                  <Text style={[styles.ratingCount, { fontFamily: f400, fontWeight: '400' }]}>
                     {dir.isRTL ? '(٤١٢ تقييم)' : '(412 reviews)'}
                   </Text>
                 </View>
@@ -113,7 +113,7 @@ export default function EmployeeProfileScreen() {
                   <Text style={[styles.statN, { fontFamily: f700 }]}>
                     {dir.isRTL ? s.nAr : s.nEn}
                   </Text>
-                  <Text style={[styles.statL, { fontFamily: f400 }]}>
+                  <Text style={[styles.statL, { fontFamily: f400, fontWeight: '400' }]}>
                     {dir.isRTL ? s.ar : s.en}
                   </Text>
                 </View>
@@ -126,7 +126,7 @@ export default function EmployeeProfileScreen() {
           <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
             {dir.isRTL ? 'نبذة' : 'About'}
           </Text>
-          <Text style={[styles.aboutText, { fontFamily: f400, textAlign: dir.textAlign }]}>
+          <Text style={[styles.aboutText, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
             {employeeBio || (dir.isRTL ? '—' : '—')}
           </Text>
         </Animated.View>
@@ -144,7 +144,7 @@ export default function EmployeeProfileScreen() {
                   { backgroundColor: `${s.color}1e`, borderColor: `${s.color}33` },
                 ]}
               >
-                <Text style={[styles.tagText, { fontFamily: f600, color: s.color }]}>
+                <Text style={[styles.tagText, { fontFamily: f600, fontWeight: '600', color: s.color }]}>
                   {dir.isRTL ? s.ar : s.en}
                 </Text>
               </View>
@@ -168,7 +168,7 @@ export default function EmployeeProfileScreen() {
                   {dir.isRTL ? `${r.byAr} · ${r.whenAr}` : `${r.byEn} · ${r.whenEn}`}
                 </Text>
               </View>
-              <Text style={[styles.reviewText, { fontFamily: f400, textAlign: dir.textAlign }]}>
+              <Text style={[styles.reviewText, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
                 {dir.isRTL ? r.textAr : r.textEn}
               </Text>
             </Glass>
@@ -183,7 +183,7 @@ export default function EmployeeProfileScreen() {
         <Glass variant="strong" radius={sawaaRadius.pill} style={styles.ctaPill}>
           <View style={[styles.ctaRow, { flexDirection: dir.row }]}>
             <View style={styles.ctaPrice}>
-              <Text style={[styles.ctaPriceLabel, { fontFamily: f400 }]}>
+              <Text style={[styles.ctaPriceLabel, { fontFamily: f400, fontWeight: '400' }]}>
                 {dir.isRTL ? 'السعر لكل جلسة' : 'Per session'}
               </Text>
               <Text style={[styles.ctaPriceVal, { fontFamily: f700 }]}>

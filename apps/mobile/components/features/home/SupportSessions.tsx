@@ -54,7 +54,7 @@ export function SupportSessions({ dir, f400, f700 }: SupportSessionsProps) {
               <Text numberOfLines={1} style={[styles.supportTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
                 {dir.isRTL ? s.titleAr : s.titleEn}
               </Text>
-              <Text numberOfLines={1} style={[styles.supportMeta, { fontFamily: f400, textAlign: dir.textAlign }]}>
+              <Text numberOfLines={1} style={[styles.supportMeta, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
                 {dir.isRTL ? s.metaAr : s.metaEn}
               </Text>
             </View>

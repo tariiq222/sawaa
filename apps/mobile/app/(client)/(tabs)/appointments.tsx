@@ -145,7 +145,7 @@ export default function AppointmentsScreen() {
                   ) : (
                     <MapPin size={12} color={sawaaColors.accent.violet} strokeWidth={2} />
                   )}
-                  <Text style={[styles.metaText, { fontFamily: f500 }]}>{location}</Text>
+                  <Text style={[styles.metaText, { fontFamily: f500, fontWeight: '500' }]}>{location}</Text>
                 </View>
               </View>
               <Chevron size={16} color={sawaaColors.ink[400]} strokeWidth={2} />
@@ -155,18 +155,18 @@ export default function AppointmentsScreen() {
 
             <View style={[styles.cardBottom, { flexDirection: dir.row }]}>
               <View style={[styles.dateCol, { alignItems: dir.isRTL ? 'flex-end' : 'flex-start' }]}>
-                <Text style={[styles.dateLabel, { fontFamily: f400 }]}>
+                <Text style={[styles.dateLabel, { fontFamily: f400, fontWeight: '400' }]}>
                   {dir.isRTL ? 'التاريخ' : 'Date'}
                 </Text>
-                <Text style={[styles.dateValue, { fontFamily: f600 }]}>
+                <Text style={[styles.dateValue, { fontFamily: f600, fontWeight: '600' }]}>
                   {formatDate(b.scheduledAt, dir.isRTL)}
                 </Text>
               </View>
               <View style={[styles.dateCol, { alignItems: dir.isRTL ? 'flex-end' : 'flex-start' }]}>
-                <Text style={[styles.dateLabel, { fontFamily: f400 }]}>
+                <Text style={[styles.dateLabel, { fontFamily: f400, fontWeight: '400' }]}>
                   {dir.isRTL ? 'الوقت' : 'Time'}
                 </Text>
-                <Text style={[styles.dateValue, { fontFamily: f600 }]}>
+                <Text style={[styles.dateValue, { fontFamily: f600, fontWeight: '600' }]}>
                   {formatTime(b.scheduledAt, dir.isRTL)}
                 </Text>
               </View>
@@ -174,7 +174,7 @@ export default function AppointmentsScreen() {
                 {statusConfig[status].icon}
                 <Text style={[
                   styles.statusChipText,
-                  { fontFamily: f600, color: statusConfig[status].color },
+                  { fontFamily: f600, fontWeight: '600', color: statusConfig[status].color },
                 ]}>
                   {dir.isRTL ? TABS.find((t) => t.key === status)!.ar : TABS.find((t) => t.key === status)!.en}
                 </Text>
@@ -192,7 +192,7 @@ export default function AppointmentsScreen() {
         <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
           {dir.isRTL ? 'مواعيدي' : 'Appointments'}
         </Text>
-        <Text style={[styles.subtitle, { fontFamily: f500, textAlign: dir.textAlign }]}>
+        <Text style={[styles.subtitle, { fontFamily: f500, fontWeight: '500', textAlign: dir.textAlign }]}>
           {dir.isRTL ? 'جلساتك الحالية والسابقة' : 'Your upcoming and past sessions'}
         </Text>
       </Animated.View>
@@ -221,7 +221,7 @@ export default function AppointmentsScreen() {
                   ) : null}
                   <Text style={[
                     styles.tabBtnText,
-                    { fontFamily: f600, color: isActive ? '#fff' : sawaaColors.ink[700] },
+                    { fontFamily: f600, fontWeight: '600', color: isActive ? '#fff' : sawaaColors.ink[700] },
                   ]}>
                     {dir.isRTL ? tabItem.ar : tabItem.en}
                   </Text>
@@ -238,7 +238,7 @@ export default function AppointmentsScreen() {
     if (isLoading) {
       return (
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(200).duration(600)} style={styles.empty}>
-          <Text style={[styles.emptyText, { fontFamily: f400 }]}>
+          <Text style={[styles.emptyText, { fontFamily: f400, fontWeight: '400' }]}>
             {dir.isRTL ? 'جاري التحميل…' : 'Loading…'}
           </Text>
         </Animated.View>
@@ -247,7 +247,7 @@ export default function AppointmentsScreen() {
     return (
       <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(200).duration(600)} style={styles.empty}>
         <Calendar size={40} color={sawaaColors.ink[400]} strokeWidth={1.5} />
-        <Text style={[styles.emptyText, { fontFamily: f600 }]}>
+        <Text style={[styles.emptyText, { fontFamily: f600, fontWeight: '600' }]}>
           {dir.isRTL ? 'لا توجد مواعيد' : 'No appointments'}
         </Text>
       </Animated.View>

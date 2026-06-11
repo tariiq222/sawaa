@@ -22,7 +22,7 @@ export function TherapistsRow({ therapists, dir, f400, f600, f700 }: TherapistsR
   if (therapists.length === 0) {
     return (
       <Glass variant="regular" radius={sawaaRadius.xl} style={styles.empty}>
-        <Text style={[styles.emptyText, { fontFamily: f600, textAlign: dir.textAlign }]}>
+        <Text style={[styles.emptyText, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
           {dir.isRTL ? 'لا يوجد معالجون متاحون حالياً' : 'No therapists available right now'}
         </Text>
       </Glass>
@@ -60,7 +60,7 @@ export function TherapistsRow({ therapists, dir, f400, f600, f700 }: TherapistsR
                 {name}
               </Text>
               <Text
-                style={[styles.spec, { fontFamily: f400, textAlign: dir.textAlign }]}
+                style={[styles.spec, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}
                 numberOfLines={1}
               >
                 {specialty || (t.title ?? '')}

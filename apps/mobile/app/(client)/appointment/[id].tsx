@@ -128,12 +128,12 @@ export default function AppointmentDetailScreen() {
                 <Text style={[styles.heroName, { fontFamily: f700, textAlign: dir.textAlign }]}>
                   {therapistName}
                 </Text>
-                <Text style={[styles.heroSpec, { fontFamily: f400, textAlign: dir.textAlign }]}>
+                <Text style={[styles.heroSpec, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
                   {(dir.isRTL ? booking?.service?.nameAr : booking?.service?.nameEn) ?? ''}
                 </Text>
                 <View style={[styles.statusChip, { flexDirection: dir.row }]}>
                   <View style={styles.statusDot} />
-                  <Text style={[styles.statusText, { fontFamily: f600 }]}>
+                  <Text style={[styles.statusText, { fontFamily: f600, fontWeight: '600' }]}>
                     {dir.isRTL ? 'مؤكدة · قريباً' : 'Confirmed · Upcoming'}
                   </Text>
                 </View>
@@ -156,7 +156,7 @@ export default function AppointmentDetailScreen() {
               >
                 <View style={[styles.rowIcon, { backgroundColor: `${r.color}1e` }]}>{r.icon}</View>
                 <View style={styles.rowMid}>
-                  <Text style={[styles.rowLabel, { fontFamily: f400, textAlign: dir.textAlign }]}>
+                  <Text style={[styles.rowLabel, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
                     {dir.isRTL ? r.labelAr : r.labelEn}
                   </Text>
                   <Text style={[styles.rowValue, { fontFamily: f700, textAlign: dir.textAlign }]}>
@@ -174,7 +174,7 @@ export default function AppointmentDetailScreen() {
             {dir.isRTL ? 'ملاحظات' : 'Notes'}
           </Text>
           <Glass variant="regular" radius={sawaaRadius.xl} style={styles.notesCard}>
-            <Text style={[styles.notesText, { fontFamily: f400, textAlign: dir.textAlign }]}>
+            <Text style={[styles.notesText, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
               {dir.isRTL
                 ? 'سنتناول تقنيات الاسترخاء التدريجي. يُرجى تحضير مفكرة الأفكار التلقائية.'
                 : 'We will cover progressive relaxation. Please bring your thought log.'}
@@ -191,7 +191,7 @@ export default function AppointmentDetailScreen() {
         <Pressable onPress={() => router.push('/(client)/chat')} style={styles.secondaryBtn}>
           <Glass variant="strong" radius={sawaaRadius.pill} style={styles.secondaryGlass}>
             <MessageCircle size={18} color={sawaaColors.teal[700]} strokeWidth={1.75} />
-            <Text style={[styles.secondaryText, { fontFamily: f600 }]}>
+            <Text style={[styles.secondaryText, { fontFamily: f600, fontWeight: '600' }]}>
               {dir.isRTL ? 'محادثة' : 'Chat'}
             </Text>
           </Glass>
@@ -215,7 +215,7 @@ export default function AppointmentDetailScreen() {
       >
         <Pressable onPress={askCancel} disabled={cancelling} style={styles.cancelBtn}>
           <XCircle size={14} color={sawaaColors.accent.coral} strokeWidth={2} />
-          <Text style={[styles.cancelText, { fontFamily: f500 }]}>
+          <Text style={[styles.cancelText, { fontFamily: f500, fontWeight: '500' }]}>
             {cancelling
               ? (dir.isRTL ? 'جاري الإلغاء…' : 'Cancelling…')
               : (dir.isRTL ? 'إلغاء الحجز' : 'Cancel booking')}

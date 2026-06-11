@@ -63,7 +63,7 @@ export default function BookingTypeScreen() {
             <Glass variant="strong" radius={22} onPress={() => router.back()} interactive style={styles.backBtn}>
               <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
             </Glass>
-            <Text style={[styles.step, { fontFamily: f600 }]}>
+            <Text style={[styles.step, { fontFamily: f600, fontWeight: '600' }]}>
               {dir.isRTL ? 'خطوة ١ من ٣' : 'Step 1 of 3'}
             </Text>
           </View>
@@ -100,7 +100,7 @@ export default function BookingTypeScreen() {
                   <Text style={[styles.typeLabel, { fontFamily: f700, textAlign: dir.textAlign }]}>
                     {dir.isRTL ? item.labelAr : item.labelEn}
                   </Text>
-                  <Text style={[styles.typeDesc, { fontFamily: f400, textAlign: dir.textAlign }]}>
+                  <Text style={[styles.typeDesc, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
                     {dir.isRTL ? item.descAr : item.descEn}
                   </Text>
                 </View>

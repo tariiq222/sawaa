@@ -46,7 +46,7 @@ export function FeaturedClinics({ dir, f600, f700 }: FeaturedClinicsProps) {
             </Text>
             <View style={[styles.clinicMeta, { flexDirection: dir.row }]}>
               <View style={[styles.clinicRating, { flexDirection: dir.row }]}>
-                <Text style={[styles.clinicRatingText, { fontFamily: f600 }]}>{c.rating}</Text>
+                <Text style={[styles.clinicRatingText, { fontFamily: f600, fontWeight: '600' }]}>{c.rating}</Text>
                 <Star size={11} color={sawaaColors.accent.amber} strokeWidth={2} fill={sawaaColors.accent.amber} />
               </View>
             </View>

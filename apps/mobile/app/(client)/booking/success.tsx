@@ -127,7 +127,7 @@ export default function BookingSuccessScreen() {
           <Text style={[styles.title, { fontFamily: f700 }]}>
             {dir.isRTL ? 'تم تأكيد حجزك' : 'Booking confirmed'}
           </Text>
-          <Text style={[styles.subtitle, { fontFamily: f400 }]}>
+          <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400' }]}>
             {paymentStatusCopy}
           </Text>
         </Animated.View>
@@ -146,7 +146,7 @@ export default function BookingSuccessScreen() {
                 {therapistName ? (
                   <>
                     <View style={styles.summaryRow}>
-                      <Text style={[styles.summaryLabel, { fontFamily: f400 }]}>
+                      <Text style={[styles.summaryLabel, { fontFamily: f400, fontWeight: '400' }]}>
                         {dir.isRTL ? 'المعالج' : 'Therapist'}
                       </Text>
                       <Text style={[styles.summaryValue, { fontFamily: f700 }]}>{therapistName}</Text>
@@ -157,7 +157,7 @@ export default function BookingSuccessScreen() {
                 {booking?.scheduledAt ? (
                   <>
                     <View style={styles.summaryRow}>
-                      <Text style={[styles.summaryLabel, { fontFamily: f400 }]}>
+                      <Text style={[styles.summaryLabel, { fontFamily: f400, fontWeight: '400' }]}>
                         {dir.isRTL ? 'التاريخ والوقت' : 'Date & time'}
                       </Text>
                       <Text style={[styles.summaryValue, { fontFamily: f700 }]}>
@@ -168,7 +168,7 @@ export default function BookingSuccessScreen() {
                   </>
                 ) : null}
                 <View style={styles.summaryRow}>
-                  <Text style={[styles.summaryLabel, { fontFamily: f400 }]}>
+                  <Text style={[styles.summaryLabel, { fontFamily: f400, fontWeight: '400' }]}>
                     {dir.isRTL ? 'رقم الحجز' : 'Booking #'}
                   </Text>
                   <Text style={[styles.summaryValue, { fontFamily: f700, color: sawaaColors.teal[700] }]}>
@@ -179,7 +179,7 @@ export default function BookingSuccessScreen() {
                   <>
                     <View style={styles.divider} />
                     <View style={styles.summaryRow}>
-                      <Text style={[styles.summaryLabel, { fontFamily: f400 }]}>
+                      <Text style={[styles.summaryLabel, { fontFamily: f400, fontWeight: '400' }]}>
                         {dir.isRTL ? 'رقم الدفع' : 'Payment #'}
                       </Text>
                       <Text style={[styles.summaryValue, { fontFamily: f700 }]}>
@@ -210,7 +210,7 @@ export default function BookingSuccessScreen() {
             onPress={() => router.replace('/(client)/(tabs)/home')}
             style={styles.secondaryBtn}
           >
-            <Text style={[styles.secondaryBtnText, { fontFamily: f600 }]}>
+            <Text style={[styles.secondaryBtnText, { fontFamily: f600, fontWeight: '600' }]}>
               {dir.isRTL ? 'العودة إلى الرئيسية' : 'Back to home'}
             </Text>
           </Pressable>

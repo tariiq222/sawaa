@@ -82,7 +82,7 @@ export default function ChatTabScreen() {
       >
         {/* Swipe Hint */}
         <View style={[styles.hintWrap, { paddingTop: insets.top + 6 }]}>
-          <Text style={[styles.hintText, { fontFamily: f400 }]}>
+          <Text style={[styles.hintText, { fontFamily: f400, fontWeight: '400' }]}>
             {t('chatbot.swipeHint')}
           </Text>
         </View>
@@ -101,7 +101,7 @@ export default function ChatTabScreen() {
                 {dir.isRTL ? 'سَواء' : 'Sawaa'}
               </Text>
             </View>
-            <Text style={[styles.headerSub, { fontFamily: f400 }]}>
+            <Text style={[styles.headerSub, { fontFamily: f400, fontWeight: '400' }]}>
               {dir.isRTL ? 'دائمًا متاح · سرّي تمامًا' : 'Always here · Private'}
             </Text>
           </View>
@@ -114,7 +114,7 @@ export default function ChatTabScreen() {
 
         {error ? (
           <View style={styles.errorBanner}>
-            <Text style={[styles.errorText, { fontFamily: f500 }]}>{error}</Text>
+            <Text style={[styles.errorText, { fontFamily: f500, fontWeight: '500' }]}>{error}</Text>
           </View>
         ) : null}
 
@@ -142,7 +142,7 @@ export default function ChatTabScreen() {
                     <Text
                       style={[
                         styles.bubbleMeText,
-                        { fontFamily: f500, textAlign: dir.textAlign, writingDirection: dir.writingDirection },
+                        { fontFamily: f500, fontWeight: '500', textAlign: dir.textAlign, writingDirection: dir.writingDirection },
                       ]}
                     >
                       {m.text}
@@ -153,7 +153,7 @@ export default function ChatTabScreen() {
                     <Text
                       style={[
                         styles.bubbleThemText,
-                        { fontFamily: f500, textAlign: dir.textAlign, writingDirection: dir.writingDirection },
+                        { fontFamily: f500, fontWeight: '500', textAlign: dir.textAlign, writingDirection: dir.writingDirection },
                       ]}
                     >
                       {m.text}
@@ -167,7 +167,7 @@ export default function ChatTabScreen() {
           {isTyping ? (
             <View style={[styles.bubbleRow, styles.rowThem]}>
               <Glass variant="strong" radius={sawaaRadius.xl} style={[styles.bubble, styles.typing]}>
-                <Text style={[styles.bubbleThemText, { fontFamily: f500 }]}>…</Text>
+                <Text style={[styles.bubbleThemText, { fontFamily: f500, fontWeight: '500' }]}>…</Text>
               </Glass>
             </View>
           ) : null}
@@ -179,7 +179,7 @@ export default function ChatTabScreen() {
                 return (
                   <Pressable key={q.action} onPress={() => sendQuick(label)}>
                     <Glass variant="strong" radius={sawaaRadius.pill} style={styles.quickPill}>
-                      <Text style={[styles.quickText, { fontFamily: f600 }]}>{label}</Text>
+                      <Text style={[styles.quickText, { fontFamily: f600, fontWeight: '600' }]}>{label}</Text>
                     </Glass>
                   </Pressable>
                 );
@@ -201,6 +201,7 @@ export default function ChatTabScreen() {
                   styles.input,
                   {
                     fontFamily: f400,
+                    fontWeight: '400',
                     textAlign: dir.textAlign,
                     writingDirection: dir.writingDirection,
                     color: sawaaColors.ink[900],

@@ -78,7 +78,7 @@ function SlideView({ slide, fontHeading, fontBody }: { slide: Slide; fontHeading
 
       <Animated.View entering={FadeInUp.delay(120).duration(500)} style={styles.textBlock}>
         <Text style={[styles.title, { fontFamily: fontHeading }]}>{slide.title}</Text>
-        <Text style={[styles.body, { fontFamily: fontBody }]}>{slide.body}</Text>
+        <Text style={[styles.body, { fontFamily: fontBody, fontWeight: '500' }]}>{slide.body}</Text>
       </Animated.View>
     </View>
   );
@@ -134,7 +134,7 @@ export default function OnboardingScreen() {
       <View style={styles.container}>
         <View style={styles.skipRow}>
           <Pressable onPress={handleSkip} hitSlop={10}>
-            <Text style={[styles.skipText, { fontFamily: f500 }]}>تخطّي</Text>
+            <Text style={[styles.skipText, { fontFamily: f500, fontWeight: '500' }]}>تخطّي</Text>
           </Pressable>
         </View>
 
@@ -178,7 +178,7 @@ export default function OnboardingScreen() {
               <ArrowIcon />
             </LinearGradient>
           </Pressable>
-          <Text style={[styles.hint, { fontFamily: f600 }]}>اسحب للتنقّل</Text>
+          <Text style={[styles.hint, { fontFamily: f600, fontWeight: '600' }]}>اسحب للتنقّل</Text>
         </View>
       </View>
     </AquaBackground>

@@ -79,7 +79,7 @@ export function JoinVideoCallButton({
         style={[styles.gradient, { borderRadius: sawaaRadius.pill }]}
       >
         <Video size={18} color="#fff" strokeWidth={1.75} />
-        <Text style={[styles.text, { fontFamily: withinWindow ? f700 : f600 }]}>
+        <Text style={[styles.text, { fontFamily: withinWindow ? f700 : f600, fontWeight: withinWindow ? undefined : '600' }]}>
           {label}
         </Text>
       </LinearGradient>

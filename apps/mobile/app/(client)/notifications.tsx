@@ -125,7 +125,7 @@ export default function NotificationsScreen() {
               <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
                 {dir.isRTL ? 'الإشعارات' : 'Notifications'}
               </Text>
-              <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign }]}>
+              <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
                 {dir.isRTL
                   ? unreadCount === 0
                     ? 'لا إشعارات جديدة'
@@ -137,7 +137,7 @@ export default function NotificationsScreen() {
               <Glass variant="regular" radius={20} onPress={markAllAsRead} interactive style={styles.markAllBtn}>
                 <View style={[styles.markAllInner, { flexDirection: dir.row }]}>
                   <CheckCheck size={14} color={sawaaColors.teal[700]} strokeWidth={2} />
-                  <Text style={[styles.markAllText, { fontFamily: f600 }]}>
+                  <Text style={[styles.markAllText, { fontFamily: f600, fontWeight: '600' }]}>
                     {dir.isRTL ? 'تعليم الكل' : 'Mark all'}
                   </Text>
                 </View>
@@ -168,7 +168,7 @@ export default function NotificationsScreen() {
                   <View style={[styles.chipInner, { flexDirection: dir.row }]}>
                     <Text style={[
                       styles.chipLabel,
-                      { fontFamily: f600, color: isActive ? sawaaColors.teal[700] : sawaaColors.ink[700] },
+                      { fontFamily: f600, fontWeight: '600', color: isActive ? sawaaColors.teal[700] : sawaaColors.ink[700] },
                     ]}>
                       {dir.isRTL ? f.ar : f.en}
                     </Text>
@@ -178,7 +178,7 @@ export default function NotificationsScreen() {
                     ]}>
                       <Text style={[
                         styles.chipBadgeText,
-                        { fontFamily: f600, color: isActive ? '#fff' : sawaaColors.ink[500] },
+                        { fontFamily: f600, fontWeight: '600', color: isActive ? '#fff' : sawaaColors.ink[500] },
                       ]}>
                         {count}
                       </Text>
@@ -195,7 +195,7 @@ export default function NotificationsScreen() {
           <Animated.View entering={FadeInDown.delay(150).duration(600).easing(Easing.out(Easing.cubic))}>
             <Glass variant="regular" radius={sawaaRadius.xl} style={styles.empty}>
               <Bell size={20} color={sawaaColors.ink[400]} strokeWidth={1.75} />
-              <Text style={[styles.emptyText, { fontFamily: f400 }]}>
+              <Text style={[styles.emptyText, { fontFamily: f400, fontWeight: '400' }]}>
                 {dir.isRTL ? 'لا توجد إشعارات لعرضها' : 'No notifications yet'}
               </Text>
             </Glass>
@@ -226,9 +226,9 @@ export default function NotificationsScreen() {
                           <Text style={[styles.itemTitle, { fontFamily: f700, textAlign: dir.textAlign, flex: 1 }]}>
                             {title}
                           </Text>
-                          <Text style={[styles.when, { fontFamily: f400 }]}>{when}</Text>
+                          <Text style={[styles.when, { fontFamily: f400, fontWeight: '400' }]}>{when}</Text>
                         </View>
-                        <Text style={[styles.itemBody, { fontFamily: f400, textAlign: dir.textAlign }]}>
+                        <Text style={[styles.itemBody, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
                           {body}
                         </Text>
                       </View>

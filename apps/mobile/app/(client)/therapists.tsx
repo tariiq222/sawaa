@@ -91,13 +91,13 @@ export default function TherapistsListScreen() {
                   {name}
                 </Text>
               </View>
-              <Text style={[styles.therapistSpec, { fontFamily: f400, textAlign: dir.textAlign }]}>
+              <Text style={[styles.therapistSpec, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
                 {spec}
               </Text>
               {item.title ? (
                 <View style={[styles.therapistMeta, { flexDirection: dir.row }]}>
                   <Star size={11} color={sawaaColors.accent.amber} strokeWidth={2} fill={sawaaColors.accent.amber} />
-                  <Text style={[styles.therapistExp, { fontFamily: f500 }]}>
+                  <Text style={[styles.therapistExp, { fontFamily: f500, fontWeight: '500' }]}>
                     {item.title}
                   </Text>
                 </View>
@@ -121,7 +121,7 @@ export default function TherapistsListScreen() {
         <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
           {dir.isRTL ? 'اختاري معالجاً' : 'Choose a therapist'}
         </Text>
-        <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign }]}>
+        <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
           {dir.isRTL
             ? `${list.length} معالج متاحين الآن`
             : `${list.length} therapists available`}
@@ -141,7 +141,7 @@ export default function TherapistsListScreen() {
               testID="therapist-search"
               style={[
                 styles.searchInput,
-                { fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection, color: sawaaColors.ink[900] },
+                { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection, color: sawaaColors.ink[900] },
               ]}
             />
           </View>
@@ -171,7 +171,7 @@ export default function TherapistsListScreen() {
                 >
                   <Text style={[
                     styles.chipText,
-                    { fontFamily: f600, color: isActive ? '#fff' : sawaaColors.ink[700] },
+                    { fontFamily: f600, fontWeight: '600', color: isActive ? '#fff' : sawaaColors.ink[700] },
                   ]}>
                     {dir.isRTL ? chip.ar : chip.en}
                   </Text>
@@ -187,13 +187,13 @@ export default function TherapistsListScreen() {
   const ListEmpty = useMemo(() => {
     if (loading) {
       return (
-        <Text style={[styles.subtitle, { fontFamily: f400, paddingHorizontal: 4 }]}>
+        <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', paddingHorizontal: 4 }]}>
           {dir.isRTL ? 'جاري التحميل…' : 'Loading…'}
         </Text>
       );
     }
     return (
-      <Text style={[styles.subtitle, { fontFamily: f400, paddingHorizontal: 4 }]}>
+      <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', paddingHorizontal: 4 }]}>
         {dir.isRTL ? 'لا يوجد معالجون بعد' : 'No therapists yet'}
       </Text>
     );

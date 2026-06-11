@@ -111,7 +111,7 @@ export default function LoginScreen() {
             entering={FadeInDown.delay(250).duration(700).easing(Easing.out(Easing.cubic))}
             style={[
               styles.subtitle,
-              { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f400 }
+              { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f400, fontWeight: '400' }
             ]}
           >
             {t('auth.welcomeBackSub')}
@@ -128,7 +128,7 @@ export default function LoginScreen() {
                 <Text
                   style={[
                     styles.label,
-                    { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f600 }
+                    { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f600, fontWeight: '600' }
                   ]}
                 >
                   {t('auth.login.identifier')}
@@ -148,7 +148,7 @@ export default function LoginScreen() {
                     textContentType="emailAddress"
                     style={[
                       styles.inputText,
-                      { textAlign: 'left', writingDirection: 'ltr', fontFamily: f400 }
+                      { textAlign: 'left', writingDirection: 'ltr', fontFamily: f400, fontWeight: '400' }
                     ]}
                   />
                 </Glass>
@@ -156,7 +156,7 @@ export default function LoginScreen() {
                   <Text
                     style={[
                       styles.error,
-                      { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f400 }
+                      { textAlign: dir.textAlign, writingDirection: dir.writingDirection, fontFamily: f400, fontWeight: '400' }
                     ]}
                   >
                     {error}
@@ -179,13 +179,13 @@ export default function LoginScreen() {
                 }}
                 style={{ alignSelf: 'center', marginTop: 4 }}
               >
-                <Text style={[styles.forgotLink, { fontFamily: f600 }]}>
+                <Text style={[styles.forgotLink, { fontFamily: f600, fontWeight: '600' }]}>
                   نسيت كلمة المرور؟
                 </Text>
               </Pressable>
 
               <View style={[styles.registerRow, { flexDirection: dir.row }]}>
-                <Text style={[styles.registerText, { fontFamily: f400 }]}>{t('auth.noAccount')} </Text>
+                <Text style={[styles.registerText, { fontFamily: f400, fontWeight: '400' }]}>{t('auth.noAccount')} </Text>
                 <Pressable
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

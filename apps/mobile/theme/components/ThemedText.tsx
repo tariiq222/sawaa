@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, TextStyle } from 'react-native';
 import { useTheme } from '../useTheme';
+import { getHeadingFont, SYSTEM_FONT } from '../fonts';
 
 type TextVariant =
   | 'display'
@@ -42,18 +43,21 @@ export function ThemedText({
   style,
   numberOfLines,
 }: ThemedTextProps) {
-  const { theme, isRTL, language } = useTheme();
+  const { theme, isRTL } = useTheme();
 
-  const fontFamily =
-    language === 'ar'
-      ? theme.typography.fontFamily.arabic
-      : theme.typography.fontFamily.english;
+  const HEADING_VARIANTS: ReadonlySet<TextVariant> = new Set(['display', 'displaySm', 'heading', 'subheading']);
+
+  const fontFamily = HEADING_VARIANTS.has(variant)
+    ? getHeadingFont(variant === 'heading' || variant === 'subheading' ? '600' : '700')
+    : SYSTEM_FONT;
 
   const variantStyles: Record<TextVariant, TextStyle> = {
-    display: { fontSize: 36, fontWeight: '700', lineHeight: 45 },
-    displaySm: { fontSize: 28, fontWeight: '700', lineHeight: 35 },
-    heading: { fontSize: 20, fontWeight: '600', lineHeight: 26 },
-    subheading: { fontSize: 16, fontWeight: '600', lineHeight: 22 },
+    // Heading variants: brand font encodes weight via family name — no fontWeight needed.
+    display: { fontSize: 36, lineHeight: 45 },
+    displaySm: { fontSize: 28, lineHeight: 35 },
+    heading: { fontSize: 20, lineHeight: 26 },
+    subheading: { fontSize: 16, lineHeight: 22 },
+    // Body variants: system font uses fontWeight to select weight cut.
     body: { fontSize: 14, fontWeight: '400', lineHeight: 21 },
     bodySm: {
       fontSize: 13,

@@ -57,7 +57,7 @@ export function TimeSlotsGrid({
   if (error) {
     return (
       <View style={styles.statusBlock}>
-        <Text style={[styles.statusText, { fontFamily: f500 }]}>{error}</Text>
+        <Text style={[styles.statusText, { fontFamily: f500, fontWeight: '500' }]}>{error}</Text>
       </View>
     );
   }
@@ -65,7 +65,7 @@ export function TimeSlotsGrid({
   if (slots.length === 0) {
     return (
       <View style={styles.statusBlock}>
-        <Text style={[styles.statusText, { fontFamily: f500 }]}>
+        <Text style={[styles.statusText, { fontFamily: f500, fontWeight: '500' }]}>
           {dir.isRTL ? 'لا توجد أوقات متاحة في هذا اليوم' : 'No available times on this day'}
         </Text>
       </View>
@@ -103,7 +103,7 @@ export function TimeSlotsGrid({
               <Text
                 style={[
                   styles.slotText,
-                  { fontFamily: f600, color: isSelected ? '#fff' : sawaaColors.ink[900] },
+                  { fontFamily: f600, fontWeight: '600', color: isSelected ? '#fff' : sawaaColors.ink[900] },
                 ]}
               >
                 {formatTime(s.startTime, dir.isRTL)}

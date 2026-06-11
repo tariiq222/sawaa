@@ -67,13 +67,13 @@ export default function ChatScreen() {
           end={{ x: 1, y: 1 }}
           style={[styles.bubble, styles.bubbleMe]}
         >
-          <Text style={[styles.bubbleMeText, { fontFamily: f500, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
+          <Text style={[styles.bubbleMeText, { fontFamily: f500, fontWeight: '500', textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
             {dir.isRTL ? m.text.ar : m.text.en}
           </Text>
         </LinearGradient>
       ) : (
         <Glass variant="strong" radius={sawaaRadius.xl} style={[styles.bubble, styles.bubbleThem]}>
-          <Text style={[styles.bubbleThemText, { fontFamily: f500, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
+          <Text style={[styles.bubbleThemText, { fontFamily: f500, fontWeight: '500', textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
             {dir.isRTL ? m.text.ar : m.text.en}
           </Text>
         </Glass>
@@ -97,7 +97,7 @@ export default function ChatScreen() {
             {dir.isRTL ? 'سَواء' : 'Sawaa'}
           </Text>
         </View>
-        <Text style={[styles.headerSub, { fontFamily: f400 }]}>
+        <Text style={[styles.headerSub, { fontFamily: f400, fontWeight: '400' }]}>
           {dir.isRTL ? 'يعتمد على الذكاء الاصطناعي' : 'AI-powered'}
         </Text>
       </View>
@@ -136,7 +136,7 @@ export default function ChatScreen() {
                 testID="chat-input"
                 style={[
                   styles.input,
-                  { fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection, color: sawaaColors.ink[900] },
+                  { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection, color: sawaaColors.ink[900] },
                 ]}
                 onSubmitEditing={send}
                 returnKeyType="send"

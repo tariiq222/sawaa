@@ -68,7 +68,7 @@ export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySele
               <Text
                 style={[
                   styles.dayName,
-                  { fontFamily: f500, color: isActive ? 'rgba(255,255,255,0.9)' : sawaaColors.ink[700] },
+                  { fontFamily: f500, fontWeight: '500', color: isActive ? 'rgba(255,255,255,0.9)' : sawaaColors.ink[700] },
                 ]}
               >
                 {dir.isRTL ? DAYS_AR_SHORT[dow] : DAYS_EN_SHORT[dow]}

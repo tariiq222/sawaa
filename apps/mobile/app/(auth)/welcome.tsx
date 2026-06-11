@@ -164,7 +164,7 @@ export default function WelcomeScreen() {
           <Text style={[styles.headline, { fontFamily: f700 }]}>
             {t('welcome.headline', 'رحلتك للسواء تبدأ هنا')}
           </Text>
-          <Text style={[styles.sub, { fontFamily: f500 }]}>
+          <Text style={[styles.sub, { fontFamily: f500, fontWeight: '500' }]}>
             {t('welcome.sub', 'جلسات سرّية مع أفضل المعالجين النفسيين،\nخلال لحظات — أينما كنتِ.')}
           </Text>
           <View style={styles.dots}>
@@ -181,7 +181,7 @@ export default function WelcomeScreen() {
         <Glass variant="strong" radius={sawaaRadius.pill} style={styles.ctaInner}>
           <View style={styles.ctaRow}>
             <Pressable onPress={() => router.push('/(auth)/login')} hitSlop={8} style={styles.ctaSecondary}>
-              <Text style={[styles.ctaSecondaryText, { fontFamily: f600 }]}>
+              <Text style={[styles.ctaSecondaryText, { fontFamily: f600, fontWeight: '600' }]}>
                 {t('welcome.signIn', 'تسجيل دخول')}
               </Text>
             </Pressable>

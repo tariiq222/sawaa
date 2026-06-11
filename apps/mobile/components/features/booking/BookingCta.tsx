@@ -43,7 +43,7 @@ export function BookingCta({
       <Glass variant="strong" radius={sawaaRadius.pill} style={styles.ctaPill}>
         <View style={[styles.ctaRow, { flexDirection: dir.row }]}>
           <View style={styles.ctaSummary}>
-            <Text style={[styles.ctaSummaryTop, { fontFamily: f400 }]}>
+            <Text style={[styles.ctaSummaryTop, { fontFamily: f400, fontWeight: '400' }]}>
               {selectedSlot
                 ? `${dayLabel} ${dayNum} · ${formatTime(selectedSlot.startTime, dir.isRTL)}`
                 : dir.isRTL

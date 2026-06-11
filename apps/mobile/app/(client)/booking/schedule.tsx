@@ -161,7 +161,7 @@ export default function BookingScheduleScreen() {
             <Glass variant="strong" radius={22} onPress={() => router.back()} interactive style={styles.backBtn} accessibilityLabel={t('a11y.buttonBack')}>
               <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
             </Glass>
-            <Text style={[styles.step, { fontFamily: f600 }]}>
+            <Text style={[styles.step, { fontFamily: f600, fontWeight: '600' }]}>
               {dir.isRTL ? 'الخطوة ٢ من ٣' : 'Step 2 of 3'}
             </Text>
           </View>
@@ -174,7 +174,7 @@ export default function BookingScheduleScreen() {
           <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
             {dir.isRTL ? 'اختاري موعداً' : 'Pick a time'}
           </Text>
-          <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign }]}>
+          <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
             {dir.isRTL
               ? 'الأوقات المتاحة بحسب جدول المختصة'
               : "Available times based on the therapist's schedule"}
@@ -199,7 +199,7 @@ export default function BookingScheduleScreen() {
           <Text style={[styles.slotsTitle, { fontFamily: f700 }]}>
             {dir.isRTL ? 'الأوقات المتاحة' : 'Available times'}
           </Text>
-          <Text style={[styles.tz, { fontFamily: f400 }]}>
+          <Text style={[styles.tz, { fontFamily: f400, fontWeight: '400' }]}>
             {tzLabel}
           </Text>
         </Animated.View>

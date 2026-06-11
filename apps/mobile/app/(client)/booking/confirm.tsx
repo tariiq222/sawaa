@@ -158,7 +158,7 @@ export default function BookingConfirmScreen() {
             <Glass variant="strong" radius={22} onPress={() => router.back()} interactive style={styles.backBtn}>
               <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
             </Glass>
-            <Text style={[styles.step, { fontFamily: f600 }]}>
+            <Text style={[styles.step, { fontFamily: f600, fontWeight: '600' }]}>
               {dir.isRTL ? 'الخطوة ٣ من ٣' : 'Step 3 of 3'}
             </Text>
           </View>
@@ -171,7 +171,7 @@ export default function BookingConfirmScreen() {
           <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
             {dir.isRTL ? 'تأكيد الحجز' : 'Confirm booking'}
           </Text>
-          <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign }]}>
+          <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
             {dir.isRTL ? 'راجعي التفاصيل قبل التأكيد' : 'Review your details before confirming'}
           </Text>
         </Animated.View>
@@ -189,7 +189,7 @@ export default function BookingConfirmScreen() {
               >
                 <View style={[styles.rowIcon, { backgroundColor: `${r.color}1e` }]}>{r.icon}</View>
                 <View style={styles.rowMid}>
-                  <Text style={[styles.rowLabel, { fontFamily: f400, textAlign: dir.textAlign }]}>
+                  <Text style={[styles.rowLabel, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
                     {dir.isRTL ? r.labelAr : r.labelEn}
                   </Text>
                   <Text style={[styles.rowValue, { fontFamily: f700, textAlign: dir.textAlign }]}>
@@ -209,15 +209,15 @@ export default function BookingConfirmScreen() {
               </View>
             ) : error ? (
               <View style={styles.statusBlock}>
-                <Text style={[styles.statusText, { fontFamily: f500 }]}>{error}</Text>
+                <Text style={[styles.statusText, { fontFamily: f500, fontWeight: '500' }]}>{error}</Text>
               </View>
             ) : service ? (
               <>
                 <View style={[styles.priceRow, { flexDirection: dir.row }]}>
-                  <Text style={[styles.priceLabel, { fontFamily: f500 }]}>
+                  <Text style={[styles.priceLabel, { fontFamily: f500, fontWeight: '500' }]}>
                     {dir.isRTL ? service.nameAr : (service.nameEn ?? service.nameAr)}
                   </Text>
-                  <Text style={[styles.priceValue, { fontFamily: f600 }]}>{formatMoney(subtotal)}</Text>
+                  <Text style={[styles.priceValue, { fontFamily: f600, fontWeight: '600' }]}>{formatMoney(subtotal)}</Text>
                 </View>
                 {/* TODO(price-units): VAT/total must come from server invoice */}
                 <View style={styles.priceDivider} />

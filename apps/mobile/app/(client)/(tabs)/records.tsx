@@ -125,7 +125,7 @@ export default function RecordsScreen() {
           <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
             {dir.isRTL ? 'السجلات' : 'Records'}
           </Text>
-          <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign }]}>
+          <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
             {dir.isRTL ? 'جلساتك السابقة وملاحظاتها' : 'Your past sessions and notes'}
           </Text>
         </Animated.View>
@@ -144,9 +144,9 @@ export default function RecordsScreen() {
         ) : error ? (
           <Animated.View entering={FadeInDown.delay(100).duration(500)} style={styles.empty}>
             <ClipboardList size={40} color={sawaaColors.accent.coral} strokeWidth={1.5} />
-            <Text style={[styles.emptyText, { fontFamily: f600 }]}>{error}</Text>
+            <Text style={[styles.emptyText, { fontFamily: f600, fontWeight: '600' }]}>{error}</Text>
             <Pressable onPress={onRefresh} style={styles.retryBtn}>
-              <Text style={[styles.retryText, { fontFamily: f600 }]}>
+              <Text style={[styles.retryText, { fontFamily: f600, fontWeight: '600' }]}>
                 {dir.isRTL ? 'إعادة المحاولة' : 'Retry'}
               </Text>
             </Pressable>
@@ -154,10 +154,10 @@ export default function RecordsScreen() {
         ) : items.length === 0 ? (
           <Animated.View entering={FadeInDown.delay(100).duration(500)} style={styles.empty}>
             <CalendarCheck size={40} color={sawaaColors.ink[400]} strokeWidth={1.5} />
-            <Text style={[styles.emptyText, { fontFamily: f600 }]}>
+            <Text style={[styles.emptyText, { fontFamily: f600, fontWeight: '600' }]}>
               {dir.isRTL ? 'لا توجد جلسات سابقة بعد' : 'No past sessions yet'}
             </Text>
-            <Text style={[styles.emptyHint, { fontFamily: f400 }]}>
+            <Text style={[styles.emptyHint, { fontFamily: f400, fontWeight: '400' }]}>
               {dir.isRTL
                 ? 'ستظهر هنا الجلسات المكتملة'
                 : 'Completed sessions will appear here'}
@@ -211,7 +211,7 @@ export default function RecordsScreen() {
                           <Text
                             style={[
                               styles.service,
-                              { fontFamily: f400, textAlign: dir.textAlign },
+                              { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign },
                             ]}
                             numberOfLines={1}
                           >
@@ -231,10 +231,10 @@ export default function RecordsScreen() {
                           { alignItems: dir.isRTL ? 'flex-end' : 'flex-start' },
                         ]}
                       >
-                        <Text style={[styles.dateLabel, { fontFamily: f400 }]}>
+                        <Text style={[styles.dateLabel, { fontFamily: f400, fontWeight: '400' }]}>
                           {dir.isRTL ? 'التاريخ' : 'Date'}
                         </Text>
-                        <Text style={[styles.dateValue, { fontFamily: f600 }]}>
+                        <Text style={[styles.dateValue, { fontFamily: f600, fontWeight: '600' }]}>
                           {formatDate(b.scheduledAt, dir.isRTL)}
                         </Text>
                       </View>
@@ -244,10 +244,10 @@ export default function RecordsScreen() {
                           { alignItems: dir.isRTL ? 'flex-end' : 'flex-start' },
                         ]}
                       >
-                        <Text style={[styles.dateLabel, { fontFamily: f400 }]}>
+                        <Text style={[styles.dateLabel, { fontFamily: f400, fontWeight: '400' }]}>
                           {dir.isRTL ? 'الوقت' : 'Time'}
                         </Text>
-                        <Text style={[styles.dateValue, { fontFamily: f600 }]}>
+                        <Text style={[styles.dateValue, { fontFamily: f600, fontWeight: '600' }]}>
                           {formatTime(b.scheduledAt, dir.isRTL)}
                         </Text>
                       </View>
@@ -266,7 +266,7 @@ export default function RecordsScreen() {
                           <Text
                             style={[
                               styles.tagText,
-                              { fontFamily: f600, color: sawaaColors.teal[700] },
+                              { fontFamily: f600, fontWeight: '600', color: sawaaColors.teal[700] },
                             ]}
                           >
                             {dir.isRTL ? 'فيديو' : 'Video'}

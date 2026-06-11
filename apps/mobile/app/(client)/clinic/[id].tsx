@@ -82,7 +82,7 @@ export default function ClinicDetailScreen() {
                 <Text style={[styles.clinicName, { fontFamily: f700, textAlign: dir.textAlign }]}>
                   {dir.isRTL ? 'عيادة سواء النفسية' : 'Sawaa Wellness Clinic'}
                 </Text>
-                <Text style={[styles.clinicMeta, { fontFamily: f500, textAlign: dir.textAlign }]}>
+                <Text style={[styles.clinicMeta, { fontFamily: f500, fontWeight: '500', textAlign: dir.textAlign }]}>
                   {dir.isRTL ? 'الرياض · حي العليا · ٢.٤ كم' : 'Riyadh · Al-Olaya · 2.4 km'}
                 </Text>
               </View>
@@ -90,7 +90,7 @@ export default function ClinicDetailScreen() {
                 <View style={[styles.ratingRow, { flexDirection: dir.row }]}>
                   <Star size={12} color={sawaaColors.accent.amber} strokeWidth={2} fill={sawaaColors.accent.amber} />
                   <Text style={[styles.ratingText, { fontFamily: f700 }]}>4.7</Text>
-                  <Text style={[styles.ratingCount, { fontFamily: f400 }]}>
+                  <Text style={[styles.ratingCount, { fontFamily: f400, fontWeight: '400' }]}>
                     {dir.isRTL ? '(٢٨٤)' : '(284)'}
                   </Text>
                 </View>
@@ -107,7 +107,7 @@ export default function ClinicDetailScreen() {
                 <Text style={[styles.statN, { fontFamily: f700 }]}>
                   {dir.isRTL ? s.nAr : s.nEn}
                 </Text>
-                <Text style={[styles.statL, { fontFamily: f500 }]}>
+                <Text style={[styles.statL, { fontFamily: f500, fontWeight: '500' }]}>
                   {dir.isRTL ? s.ar : s.en}
                 </Text>
               </Glass>
@@ -120,12 +120,12 @@ export default function ClinicDetailScreen() {
           <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
             {dir.isRTL ? 'عن العيادة' : 'About'}
           </Text>
-          <Text style={[styles.aboutText, { fontFamily: f400, textAlign: dir.textAlign }]}>
+          <Text style={[styles.aboutText, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
             {aboutExpanded ? aboutFull : aboutPreview}
           </Text>
           {aboutFull.length > aboutPreview.length && (
             <Pressable onPress={() => setAboutExpanded((v) => !v)}>
-              <Text style={[styles.readMore, { fontFamily: f600, textAlign: dir.textAlign }]}>
+              <Text style={[styles.readMore, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
                 {aboutExpanded
                   ? dir.isRTL ? 'عرض أقل' : 'Show less'
                   : dir.isRTL ? 'اقرأ المزيد' : 'Read more'}
@@ -148,7 +148,7 @@ export default function ClinicDetailScreen() {
                   { backgroundColor: `${s.color}1e`, borderColor: `${s.color}33` },
                 ]}
               >
-                <Text style={[styles.tagText, { fontFamily: f600, color: s.color }]}>
+                <Text style={[styles.tagText, { fontFamily: f600, fontWeight: '600', color: s.color }]}>
                   {dir.isRTL ? s.ar : s.en}
                 </Text>
               </View>

@@ -145,7 +145,7 @@ export default function BookingPaymentScreen() {
           <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
             {dir.isRTL ? 'اختر طريقة الدفع' : 'Choose payment'}
           </Text>
-          <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign }]}>
+          <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
             {dir.isRTL ? `المبلغ الإجمالي ${formatMoney(total)}` : `Total ${formatMoney(total)}`}
           </Text>
         </Animated.View>
@@ -176,7 +176,7 @@ export default function BookingPaymentScreen() {
                     <Text style={[styles.methodLabel, { fontFamily: f700, textAlign: dir.textAlign }]}>
                       {dir.isRTL ? m.labelAr : m.labelEn}
                     </Text>
-                    <Text style={[styles.methodSub, { fontFamily: f400, textAlign: dir.textAlign }]}>
+                    <Text style={[styles.methodSub, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
                       {dir.isRTL ? m.subAr : m.subEn}
                     </Text>
                   </View>

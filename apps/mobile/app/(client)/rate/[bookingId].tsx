@@ -89,7 +89,7 @@ export default function RateScreen() {
           <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
             {dir.isRTL ? 'كيف كانت الجلسة؟' : 'How was your session?'}
           </Text>
-          <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign }]}>
+          <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
             {dir.isRTL ? 'تقييمك يساعد المعالج والآخرين' : 'Your rating helps your therapist and others'}
           </Text>
         </Animated.View>
@@ -110,7 +110,7 @@ export default function RateScreen() {
                 <Text style={[styles.therapistName, { fontFamily: f700, textAlign: dir.textAlign }]}>
                   {dir.isRTL ? 'د. فاطمة العمران' : 'Dr. Fatima Al-Omran'}
                 </Text>
-                <Text style={[styles.therapistMeta, { fontFamily: f400, textAlign: dir.textAlign }]}>
+                <Text style={[styles.therapistMeta, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
                   {dir.isRTL ? 'جلسة اليوم · ٤:٠٠ م' : "Today's session · 4:00 PM"}
                 </Text>
               </View>
@@ -163,7 +163,7 @@ export default function RateScreen() {
                   >
                     <Text style={[
                       styles.tagText,
-                      { fontFamily: f600, color: isActive ? sawaaColors.teal[700] : sawaaColors.ink[700] },
+                      { fontFamily: f600, fontWeight: '600', color: isActive ? sawaaColors.teal[700] : sawaaColors.ink[700] },
                     ]}>
                       {dir.isRTL ? t.ar : t.en}
                     </Text>
@@ -189,7 +189,7 @@ export default function RateScreen() {
               numberOfLines={4}
               style={[
                 styles.noteInput,
-                { fontFamily: f400, textAlign: dir.textAlign, writingDirection: dir.writingDirection, color: sawaaColors.ink[900] },
+                { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection, color: sawaaColors.ink[900] },
               ]}
             />
           </Glass>

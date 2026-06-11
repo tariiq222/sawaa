@@ -135,13 +135,13 @@ export default function ProfileScreen() {
                 <Text style={[styles.profileName, { fontFamily: f700, textAlign: dir.textAlign }]}>
                   {displayName}
                 </Text>
-                <Text style={[styles.profileEmail, { fontFamily: f400, textAlign: dir.textAlign }]}>
+                <Text style={[styles.profileEmail, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
                   {email}
                 </Text>
                 {summary && summary.totalBookings > 0 ? (
                   <View style={[styles.membership, { flexDirection: dir.row }]}>
                     <Leaf size={11} color={sawaaColors.teal[700]} strokeWidth={2} />
-                    <Text style={[styles.membershipText, { fontFamily: f600 }]}>
+                    <Text style={[styles.membershipText, { fontFamily: f600, fontWeight: '600' }]}>
                       {dir.isRTL
                         ? `${summary.totalBookings.toLocaleString('ar-SA')} جلسة سابقة`
                         : `${summary.totalBookings} past session${summary.totalBookings === 1 ? '' : 's'}`}
@@ -150,7 +150,7 @@ export default function ProfileScreen() {
                 ) : null}
               </View>
               <Glass variant="regular" radius={14} onPress={() => router.push('/(client)/settings')} interactive style={styles.editBtn}>
-                <Text style={[styles.editText, { fontFamily: f600 }]}>
+                <Text style={[styles.editText, { fontFamily: f600, fontWeight: '600' }]}>
                   {dir.isRTL ? 'تعديل' : 'Edit'}
                 </Text>
               </Glass>
@@ -162,7 +162,7 @@ export default function ProfileScreen() {
                   <Text style={[styles.statN, { fontFamily: f700 }]} numberOfLines={1}>
                     {s.value}
                   </Text>
-                  <Text style={[styles.statL, { fontFamily: f400 }]}>
+                  <Text style={[styles.statL, { fontFamily: f400, fontWeight: '400' }]}>
                     {dir.isRTL ? s.ar : s.en}
                   </Text>
                 </View>
@@ -186,11 +186,11 @@ export default function ProfileScreen() {
                 <View style={[styles.settingIcon, { backgroundColor: `${it.color}1e` }]}>
                   {it.icon}
                 </View>
-                <Text style={[styles.settingLabel, { fontFamily: f600, textAlign: dir.textAlign }]}>
+                <Text style={[styles.settingLabel, { fontFamily: f600, fontWeight: '600', textAlign: dir.textAlign }]}>
                   {dir.isRTL ? it.label.ar : it.label.en}
                 </Text>
                 {it.meta && (
-                  <Text style={[styles.settingMeta, { fontFamily: f400 }]}>
+                  <Text style={[styles.settingMeta, { fontFamily: f400, fontWeight: '400' }]}>
                     {dir.isRTL ? it.meta.ar : it.meta.en}
                   </Text>
                 )}
@@ -222,7 +222,7 @@ export default function ProfileScreen() {
                 <Text style={[styles.sosTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
                   {dir.isRTL ? 'دعم الأزمات · ٢٤/٧' : 'Crisis support · 24/7'}
                 </Text>
-                <Text style={[styles.sosSub, { fontFamily: f400, textAlign: dir.textAlign }]}>
+                <Text style={[styles.sosSub, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
                   {dir.isRTL ? 'اتصال فوري بمختص' : 'Instant expert call'}
                 </Text>
               </View>

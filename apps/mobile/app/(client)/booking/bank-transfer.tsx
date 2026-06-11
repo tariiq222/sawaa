@@ -108,7 +108,7 @@ export default function BankTransferScreen() {
               <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
                 {dir.isRTL ? 'التحويل البنكي' : 'Bank transfer'}
               </Text>
-              <Text style={[styles.subtitle, { fontFamily: f400, textAlign: dir.textAlign }]}>
+              <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
                 {dir.isRTL ? 'حوّل المبلغ ثم ارفع الإيصال' : 'Transfer and upload receipt'}
               </Text>
             </View>
@@ -128,7 +128,7 @@ export default function BankTransferScreen() {
                 ]}
               >
                 <View style={styles.rowMid}>
-                  <Text style={[styles.rowLabel, { fontFamily: f500, textAlign: dir.textAlign }]}>
+                  <Text style={[styles.rowLabel, { fontFamily: f500, fontWeight: '500', textAlign: dir.textAlign }]}>
                     {dir.isRTL ? d.labelAr : d.labelEn}
                   </Text>
                   <Text style={[styles.rowValue, { fontFamily: f700, textAlign: dir.textAlign }]}>
@@ -171,7 +171,7 @@ export default function BankTransferScreen() {
                   ? (dir.isRTL ? 'تم رفع الإيصال' : 'Receipt uploaded')
                   : (dir.isRTL ? 'انقر لرفع صورة الإيصال' : 'Tap to upload receipt image')}
               </Text>
-              <Text style={[styles.uploadSub, { fontFamily: f400 }]}>
+              <Text style={[styles.uploadSub, { fontFamily: f400, fontWeight: '400' }]}>
                 {dir.isRTL ? 'PNG, JPG, PDF · حتى ٥ ميجا' : 'PNG, JPG, PDF · max 5 MB'}
               </Text>
             </View>

@@ -58,7 +58,7 @@ export function HomeTopBar({ f600 }: HomeTopBarProps) {
           onPress={() => router.push('/(client)/profile')}
           style={styles.avatarInner}
         >
-          <Text style={[styles.avatarText, { fontFamily: f600 }]}>{initial}</Text>
+          <Text style={[styles.avatarText, { fontFamily: f600, fontWeight: '600' }]}>{initial}</Text>
         </Pressable>
       </Glass>
     </View>
