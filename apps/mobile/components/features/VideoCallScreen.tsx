@@ -14,6 +14,7 @@ import { clientBookingsService, type ClientBookingRow } from '@/services/client/
 import { employeeBookingsService } from '@/services/employee/bookings';
 import type { Booking } from '@/types/models';
 import { hasZoomMeetingAccess } from '@/types/booking-enums';
+import { withAlpha } from '@/theme/sawaa/tokens';
 
 interface VideoCallScreenProps {
   role: 'client' | 'employee';
@@ -220,7 +221,7 @@ function InfoRow({
   const { theme } = useTheme();
   return (
     <View style={styles.infoRow}>
-      <View style={[styles.iconCircle, { backgroundColor: `${color}1A` }]}>
+      <View style={[styles.iconCircle, { backgroundColor: withAlpha(color, 0.1) }]}>
         <Icon size={20} strokeWidth={1.5} color={color} />
       </View>
       <View style={{ flex: 1 }}>

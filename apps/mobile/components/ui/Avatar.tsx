@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Image } from 'react-native';
+import { withAlpha } from '@/theme/sawaa/tokens';
 
 interface AvatarProps {
   size?: number;
@@ -41,7 +42,7 @@ export function Avatar({
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: `${color}18`,
+        backgroundColor: withAlpha(color, 0.094),
         alignItems: 'center',
         justifyContent: 'center',
       }}

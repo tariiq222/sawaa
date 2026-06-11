@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Bell, Calendar, Check, CheckCheck, FileText, MessageCircle, Star, Video, type LucideIcon } from 'lucide-react-native';
 
-import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { AquaBackground, sawaaColors, sawaaRadius, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
@@ -217,7 +217,7 @@ export default function NotificationsScreen() {
                     <View style={[styles.row, { flexDirection: dir.row }]}>
                       <View style={[
                         styles.iconBox,
-                        { backgroundColor: `${color}22`, borderColor: `${color}33` },
+                        { backgroundColor: withAlpha(color, 0.13), borderColor: withAlpha(color, 0.2) },
                       ]}>
                         <Icon size={18} color={color} strokeWidth={1.75} />
                       </View>

@@ -9,6 +9,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { useTheme } from '@/theme/useTheme';
 import { formatHalalas } from '@/lib/money';
 import type { Booking } from '@/types/models';
+import { withAlpha } from '@/theme/sawaa/tokens';
 
 const TYPE_ICON = {
   individual: Building2,
@@ -66,7 +67,7 @@ export function AppointmentCard({ booking, onPress }: AppointmentCardProps) {
     >
       <View style={styles.row}>
         <View
-          style={[styles.iconCircle, { backgroundColor: `${color}14` }]}
+          style={[styles.iconCircle, { backgroundColor: withAlpha(color, 0.08) }]}
         >
           <Icon size={18} strokeWidth={1.5} color={color} />
         </View>

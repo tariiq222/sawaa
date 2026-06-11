@@ -23,6 +23,7 @@ import { ThemedCard } from '@/theme/components/ThemedCard';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { Avatar } from '@/components/ui/Avatar';
 import { useTheme } from '@/theme/useTheme';
+import { withAlpha } from '@/theme/sawaa/tokens';
 import { useAppSelector } from '@/hooks/use-redux';
 import { employeeBookingsService as bookingsService } from '@/services/employee/bookings';
 import { getStatusLabel } from '@/lib/status-helpers';
@@ -144,7 +145,7 @@ export default function TodayScreen() {
             >
               <ThemedCard style={styles.timelineCard}>
                 <View style={styles.timelineRow}>
-                  <View style={[styles.timelineDot, { backgroundColor: `${color}14` }]}>
+                  <View style={[styles.timelineDot, { backgroundColor: withAlpha(color, 0.08) }]}>
                     <Icon size={16} strokeWidth={1.5} color={color} />
                   </View>
                   <View style={{ flex: 1, gap: 2 }}>
