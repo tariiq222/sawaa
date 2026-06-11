@@ -9,6 +9,7 @@ import {
   GestureResponderEvent,
 } from "react-native";
 import { BlurView } from "expo-blur";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useReducedTransparency, useIncreasedContrast } from "../../hooks/useA11y";
 import { GLASS_CFG, type GlassCfg as Cfg, type GlassVariant as Variant } from "../sawaa/tokens";
 
@@ -53,6 +54,8 @@ export const Glass = ({
   const reduceTransparency = useReducedTransparency();
   const increaseContrast = useIncreasedContrast();
   const cfg = applyA11y(GLASS_CFG[variant], reduceTransparency, increaseContrast);
+  const useNativeGlass =
+    Platform.OS === 'ios' && isLiquidGlassAvailable() && !reduceTransparency;
 
   const [pressedInternal, setPressedInternal] = useState(false);
   const pressed = pressedOverride ?? pressedInternal;
@@ -79,7 +82,13 @@ export const Glass = ({
 
   const body = (
     <>
-      {Platform.OS === "web" ? null : (
+      {Platform.OS === "web" ? null : useNativeGlass ? (
+        <GlassView
+          style={[StyleSheet.absoluteFillObject, { borderRadius: radius }]}
+          glassEffectStyle={variant === 'clear' ? 'clear' : 'regular'}
+          isInteractive={Boolean(interactive || onPress)}
+        />
+      ) : (
         <>
           <BlurView
             intensity={cfg.nativeBlur}

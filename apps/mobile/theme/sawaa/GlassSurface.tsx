@@ -1,6 +1,7 @@
 import React from 'react';
 import { Platform, StyleSheet, View, ViewProps, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { LinearGradient } from 'expo-linear-gradient';
 import { sawaaBlur, sawaaColors, sawaaRadius } from './tokens';
 
@@ -55,6 +56,7 @@ export function GlassSurface({
   ...rest
 }: Props) {
   const isDark = variant === 'dark';
+  const nativeGlass = isLiquidGlassAvailable();
   const containerStyle: ViewStyle = {
     borderRadius: radius,
     borderWidth: StyleSheet.hairlineWidth,
@@ -69,22 +71,32 @@ export function GlassSurface({
 
   return (
     <View style={[containerStyle, style]} {...rest}>
-      {Platform.OS === 'ios' && (
-        <BlurView
-          intensity={intensityMap[variant]}
-          tint={tintMap[variant]}
+      {Platform.OS === 'ios' && nativeGlass ? (
+        <GlassView
           style={StyleSheet.absoluteFill}
+          glassEffectStyle={variant === 'soft' ? 'clear' : 'regular'}
+          tintColor={isDark ? sawaaColors.glass.darkBg : undefined}
         />
+      ) : (
+        <>
+          {Platform.OS === 'ios' && (
+            <BlurView
+              intensity={intensityMap[variant]}
+              tint={tintMap[variant]}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: fillMap[variant] }]} pointerEvents="none" />
+          <LinearGradient
+            colors={highlightColors}
+            locations={[0, 0.22, 0.55, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+        </>
       )}
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: fillMap[variant] }]} pointerEvents="none" />
-      <LinearGradient
-        colors={highlightColors}
-        locations={[0, 0.22, 0.55, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
       <View style={{ padding }}>{children}</View>
     </View>
   );
