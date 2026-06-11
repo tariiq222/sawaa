@@ -14,9 +14,9 @@ export class VerifyMobileOtpDto {
   @NormalizePhoneOrEmail()
   identifier!: string;
 
-  @ApiProperty({ description: '6-digit OTP code', example: '123456' })
+  @ApiProperty({ description: '4-digit OTP code', example: '1234' })
   @IsString()
-  @Length(6, 6)
+  @Length(4, 4)
   code!: string;
 
   @ApiProperty({ enum: MobileOtpPurposeDto, description: 'Whether this verifies a registration or a login OTP' })

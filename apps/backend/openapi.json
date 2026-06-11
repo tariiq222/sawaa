@@ -5802,8 +5802,8 @@
       "VerifyMobileOtpDto": {
         "properties": {
           "code": {
-            "description": "6-digit OTP code",
-            "example": "123456",
+            "description": "4-digit OTP code",
+            "example": "1234",
             "type": "string"
           },
           "identifier": {
