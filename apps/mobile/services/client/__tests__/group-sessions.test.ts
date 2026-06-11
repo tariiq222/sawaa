@@ -13,6 +13,10 @@ const mockedApi = api as unknown as { get: jest.Mock; post: jest.Mock };
 
 const session = { id: 'g1', title: 'مجموعة القلق', scheduledAt: '2026-07-01T18:00:00.000Z', maxCapacity: 10, enrolledCount: 4, spotsLeft: 6, isFull: false, isWaitlistOnly: false, waitlistEnabled: true, waitlistCount: 0, price: 10000, currency: 'SAR', durationMins: 60, status: 'SCHEDULED', employeeId: 'e1', serviceId: 's1', descriptionAr: null, descriptionEn: null };
 
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
 describe('groupSessionsService', () => {
   it('list unwraps enveloped responses', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: { success: true, data: [session] } });
@@ -22,6 +26,12 @@ describe('groupSessionsService', () => {
   it('list passes raw array responses through', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: [session] });
     await expect(groupSessionsService.list()).resolves.toEqual([session]);
+  });
+
+  it('get fetches by id from the correct URL and unwraps', async () => {
+    mockedApi.get.mockResolvedValueOnce({ data: session });
+    await expect(groupSessionsService.get('g1')).resolves.toEqual(session);
+    expect(mockedApi.get).toHaveBeenCalledWith('/public/bookings/group-sessions/g1');
   });
 
   it('book posts to the book endpoint and unwraps', async () => {
