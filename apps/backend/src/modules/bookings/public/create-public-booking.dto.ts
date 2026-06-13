@@ -32,9 +32,10 @@ export class CreatePublicBookingDto {
   @IsUUID()
   employeeId!: string;
 
-  @ApiProperty({ description: 'Branch ID', example: '00000000-0000-0000-0000-000000000003' })
+  @ApiPropertyOptional({ description: 'Branch ID — defaults to the main branch when omitted', example: '00000000-0000-0000-0000-000000000003' })
+  @IsOptional()
   @IsUUID()
-  branchId!: string;
+  branchId?: string;
 
   @ApiProperty({ description: 'Booking start time (ISO 8601)', example: '2026-04-20T09:00:00Z' })
   @IsDateString()

@@ -8,9 +8,10 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { Banknote, ChevronLeft, ChevronRight, Copy, Upload } from 'lucide-react-native';
 
-import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
+import { AquaBackground, sawaaColors, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
+import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { clientPaymentsService } from '@/services/client';
 import { formatHalalas } from '@/lib/money';
@@ -19,6 +20,7 @@ export default function BankTransferScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
+  const reduceMotion = useReduceMotion();
   const { invoiceId, amount, bookingId } = useLocalSearchParams<{
     invoiceId?: string;
     amount?: string;
@@ -90,16 +92,16 @@ export default function BankTransferScreen() {
   return (
     <AquaBackground>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 120 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={FadeInDown.duration(500)}>
-          <Glass variant="strong" radius={22} onPress={() => router.back()} interactive style={styles.backBtn}>
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
+          <Glass variant="strong" radius={sawaaRadius.pill} onPress={() => router.back()} interactive style={styles.backBtn}>
             <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
           </Glass>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
           <View style={[styles.titleRow, { flexDirection: dir.row }]}>
             <View style={styles.titleIcon}>
               <Banknote size={22} color={sawaaColors.accent.amber} strokeWidth={1.75} />
@@ -116,7 +118,7 @@ export default function BankTransferScreen() {
         </Animated.View>
 
         {/* Bank details */}
-        <Animated.View entering={FadeInDown.delay(160).duration(700).easing(Easing.out(Easing.cubic))}>
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(160).duration(700).easing(Easing.out(Easing.cubic))}>
           <Glass variant="strong" radius={sawaaRadius.xl} style={styles.card}>
             {details.map((d, i) => (
               <View
@@ -148,7 +150,7 @@ export default function BankTransferScreen() {
         </Animated.View>
 
         {/* Upload receipt */}
-        <Animated.View entering={FadeInDown.delay(240).duration(700).easing(Easing.out(Easing.cubic))}>
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(240).duration(700).easing(Easing.out(Easing.cubic))}>
           <Text style={[styles.sectionTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
             {dir.isRTL ? 'إيصال التحويل' : 'Transfer receipt'}
           </Text>
@@ -162,7 +164,7 @@ export default function BankTransferScreen() {
             <View style={styles.uploadInner}>
               <View style={[
                 styles.uploadIcon,
-                { backgroundColor: uploaded ? 'rgba(20,168,154,0.18)' : 'rgba(255,255,255,0.45)' },
+                { backgroundColor: uploaded ? withAlpha(sawaaColors.teal[500], 0.18) : sawaaColors.glass.bgStrong },
               ]}>
                 <Upload size={24} color={uploaded ? sawaaColors.teal[600] : sawaaColors.ink[500]} strokeWidth={1.75} />
               </View>
@@ -180,8 +182,8 @@ export default function BankTransferScreen() {
       </ScrollView>
 
       <Animated.View
-        entering={FadeInDown.delay(360).duration(800).easing(Easing.out(Easing.cubic))}
-        style={[styles.ctaWrap, { bottom: insets.bottom + 20 }]}
+        entering={reduceMotion ? undefined : FadeInDown.delay(360).duration(700).easing(Easing.out(Easing.cubic))}
+        style={[styles.ctaWrap, { bottom: insets.bottom + sawaaSpacing.xl }]}
       >
         <Pressable disabled={!uploaded || submitting} onPress={submitReceipt}>
           <LinearGradient
@@ -203,38 +205,95 @@ export default function BankTransferScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: 16, gap: 14 },
+  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
-  titleRow: { alignItems: 'center', gap: 12, paddingHorizontal: 4 },
+  titleRow: { alignItems: 'center', gap: sawaaSpacing.md, paddingHorizontal: sawaaSpacing.xs },
   titleIcon: {
-    width: 44, height: 44, borderRadius: 14,
-    backgroundColor: 'rgba(232,168,74,0.16)',
-    alignItems: 'center', justifyContent: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: sawaaRadius.md,
+    backgroundColor: withAlpha(sawaaColors.accent.amber, 0.16),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  title: { fontSize: 20, color: sawaaColors.ink[900] },
-  subtitle: { fontSize: 12, color: sawaaColors.ink[500], marginTop: 2 },
+  title: {
+    fontSize: sawaaType.subheading.fontSize,
+    lineHeight: sawaaType.subheading.lineHeight,
+    color: sawaaColors.ink[900],
+  },
+  subtitle: {
+    fontSize: sawaaType.caption.fontSize,
+    lineHeight: sawaaType.caption.lineHeight,
+    color: sawaaColors.ink[500],
+    marginTop: sawaaSpacing.xs,
+  },
   card: { padding: 0 },
-  row: { padding: 14, alignItems: 'center', gap: 10 },
-  rowDivider: { borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.5)' },
+  row: { padding: sawaaSpacing.lg, alignItems: 'center', gap: sawaaSpacing.md },
+  rowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: withAlpha(sawaaColors.ink[900], 0.06),
+  },
   rowMid: { flex: 1 },
-  rowLabel: { fontSize: 11, color: sawaaColors.ink[500] },
-  rowValue: { fontSize: 13.5, color: sawaaColors.ink[900], marginTop: 2 },
+  rowLabel: {
+    fontSize: sawaaType.micro.fontSize,
+    lineHeight: sawaaType.micro.lineHeight,
+    color: sawaaColors.ink[500],
+  },
+  rowValue: {
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
+    color: sawaaColors.ink[900],
+    marginTop: sawaaSpacing.xs,
+    fontVariant: ['tabular-nums'],
+  },
   copyBtn: {
-    width: 32, height: 32, borderRadius: 10,
-    backgroundColor: 'rgba(20,168,154,0.12)',
-    alignItems: 'center', justifyContent: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: sawaaRadius.sm,
+    backgroundColor: withAlpha(sawaaColors.teal[500], 0.12),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  sectionTitle: { fontSize: 14, color: sawaaColors.ink[900], marginBottom: 8, paddingHorizontal: 4 },
-  uploadCard: { padding: 24 },
-  uploadInner: { alignItems: 'center', gap: 10 },
-  uploadIcon: { width: 56, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  uploadTitle: { fontSize: 14, color: sawaaColors.ink[900] },
-  uploadSub: { fontSize: 11.5, color: sawaaColors.ink[500] },
-  ctaWrap: { position: 'absolute', left: 16, right: 16 },
+  sectionTitle: {
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
+    color: sawaaColors.ink[900],
+    marginBottom: sawaaSpacing.sm,
+    paddingHorizontal: sawaaSpacing.xs,
+  },
+  uploadCard: { padding: sawaaSpacing['2xl'] },
+  uploadInner: { alignItems: 'center', gap: sawaaSpacing.md },
+  uploadIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: sawaaRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadTitle: {
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
+    color: sawaaColors.ink[900],
+  },
+  uploadSub: {
+    fontSize: sawaaType.micro.fontSize,
+    lineHeight: sawaaType.micro.lineHeight,
+    color: sawaaColors.ink[500],
+  },
+  ctaWrap: { position: 'absolute', left: sawaaSpacing.lg, right: sawaaSpacing.lg },
   ctaBtn: {
-    borderRadius: 999, height: 52,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: sawaaColors.teal[600], shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 6 },
+    borderRadius: sawaaRadius.pill,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: sawaaColors.teal[600],
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
   },
-  ctaBtnText: { color: '#fff', fontSize: 14 },
+  ctaBtnText: {
+    color: sawaaColors.teal[50],
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
+  },
 });

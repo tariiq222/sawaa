@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { ArrowLeft, Clock, Hourglass, MapPin, Users, CalendarDays, Tag, BadgeCheck } from 'lucide-react';
-import { getPublicCatalog } from '@/features/public-catalog/public';
+import { getPublicCatalog, findDepartment } from '@/features/public-catalog/public';
 import { getPublicGroupSessions } from '@/features/support-groups/support-groups.api';
 import { getLocale } from '@/features/locale/public';
 import { t as translate, type MessageKey } from '@/features/locale/dictionary';
 import { halalasToSarNumber } from '@/lib/money';
 import { JoinGroupButton } from '@/features/support-groups/join-group-button';
 
-const GROUP_DEPARTMENT_NAMES = ['جماعية', 'Groups'];
+const GROUP_DEPARTMENT_KEYWORDS = { ar: ['جماعية'], en: ['group'] };
 
 interface Props {
   id: string;
@@ -23,7 +23,7 @@ export async function SawaaSupportGroupDetailPage({ id }: Props) {
     getPublicGroupSessions().catch(() => []),
   ]);
 
-  const groupDept = catalog.departments.find((d) => GROUP_DEPARTMENT_NAMES.includes(d.nameAr));
+  const groupDept = findDepartment(catalog.departments, GROUP_DEPARTMENT_KEYWORDS);
   const category = groupDept
     ? catalog.categories.find((c) => c.id === id && c.departmentId === groupDept.id && c.isActive)
     : undefined;

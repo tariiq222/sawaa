@@ -6,6 +6,7 @@ export interface PublicBranchSummary {
   nameEn: string;
   city: string | null;
   addressAr: string | null;
+  isMain: boolean;
 }
 
 export interface PublicBranchDetail extends PublicBranchSummary {

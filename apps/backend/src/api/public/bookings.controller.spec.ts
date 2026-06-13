@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { PublicBookingsController } from './bookings.controller';
-import { CreateBookingHandler } from '../../modules/bookings/create-booking/create-booking.handler';
+import { CreatePublicBookingHandler } from '../../modules/bookings/public/create-public-booking.handler';
 import { ListPublicGroupSessionsHandler } from '../../modules/bookings/public/list-public-group-sessions.handler';
 import { GetPublicGroupSessionHandler } from '../../modules/bookings/public/get-public-group-session.handler';
 import { BookGroupSessionHandler } from '../../modules/bookings/public/book-group-session.handler';
@@ -22,7 +22,7 @@ describe('PublicBookingsController (e2e)', () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [PublicBookingsController],
       providers: [
-        { provide: CreateBookingHandler, useValue: mockCreateBooking },
+        { provide: CreatePublicBookingHandler, useValue: mockCreateBooking },
         { provide: ListPublicGroupSessionsHandler, useValue: mockListGroup },
         { provide: GetPublicGroupSessionHandler, useValue: mockGetGroup },
         { provide: BookGroupSessionHandler, useValue: mockBookGroup },
@@ -181,6 +181,28 @@ describe('PublicBookingsController (e2e)', () => {
         .set('Authorization', 'Bearer fake-client-session')
         .send({ ...validBooking, extra: 'bad' })
         .expect(400);
+    });
+
+    it('accepts booking without branchId (defaults to main branch via handler)', async () => {
+      mockCreateBooking.execute.mockResolvedValue({ id: 'booking-2', status: 'CONFIRMED' });
+
+      const { branchId: _omitted, ...bookingWithoutBranch } = validBooking;
+
+      const res = await request(app.getHttpServer())
+        .post('/public/bookings')
+        .set('Authorization', 'Bearer fake-client-session')
+        .send(bookingWithoutBranch)
+        .expect(201);
+
+      expect(res.body.id).toBe('booking-2');
+      // Handler receives branchId as undefined — resolution happens inside CreatePublicBookingHandler
+      expect(mockCreateBooking.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientId: 'client-1',
+          serviceId: '00000000-0000-4000-a000-000000000001',
+          employeeId: '00000000-0000-4000-a000-000000000002',
+        }),
+      );
     });
   });
 });

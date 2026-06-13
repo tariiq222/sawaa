@@ -3,7 +3,7 @@ import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiParam, ApiOkResponse, ApiCreatedResponse, ApiResponse } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
-import { CreateBookingHandler } from '../../modules/bookings/create-booking/create-booking.handler';
+import { CreatePublicBookingHandler } from '../../modules/bookings/public/create-public-booking.handler';
 import { CreatePublicBookingDto } from '../../modules/bookings/public/create-public-booking.dto';
 import { ClientSessionGuard } from '../../common/guards/client-session.guard';
 import { ClientSession } from '../../common/auth/client-session.decorator';
@@ -16,7 +16,7 @@ import { GetBookingStatusHandler } from '../../modules/bookings/public/get-booki
 @Controller('public/bookings')
 export class PublicBookingsController {
   constructor(
-    private readonly createBookingHandler: CreateBookingHandler,
+    private readonly createPublicBookingHandler: CreatePublicBookingHandler,
     private readonly listGroupSessions: ListPublicGroupSessionsHandler,
     private readonly getGroupSession: GetPublicGroupSessionHandler,
     private readonly bookGroupSession: BookGroupSessionHandler,
@@ -92,7 +92,8 @@ export class PublicBookingsController {
     @ClientSession() client: { id: string },
   ) {
     // SECURITY: clientId comes from the verified client session, never the body.
-    return this.createBookingHandler.execute({
+    // branchId is optional — CreatePublicBookingHandler resolves the main branch when omitted.
+    return this.createPublicBookingHandler.execute({
       clientId: client.id,
       branchId: dto.branchId,
       employeeId: dto.employeeId,

@@ -65,6 +65,28 @@ export const sawaaBlur = {
   dark: 28,
 } as const;
 
+/**
+ * Official typography scale. `weight` is an RN `fontWeight` string —
+ * pair with `getFontName(locale, weight)` so heading weights resolve to
+ * the Handicrafts brand typeface and body weights to the system font.
+ */
+export const sawaaType = {
+  display: { fontSize: 32, lineHeight: 42, weight: '700' },
+  heading: { fontSize: 24, lineHeight: 30, weight: '700' },
+  subheading: { fontSize: 18, lineHeight: 24, weight: '600' },
+  body: { fontSize: 14, lineHeight: 20, weight: '400' },
+  caption: { fontSize: 12, lineHeight: 16, weight: '500' },
+  micro: { fontSize: 11, lineHeight: 14, weight: '600' },
+} as const;
+
+/** Semantic status colors mapped onto the fixed brand palette. */
+export const sawaaSemantic = {
+  success: sawaaColors.teal[500],
+  warning: sawaaColors.accent.amber,
+  danger: sawaaColors.accent.coral,
+  info: sawaaColors.accent.sky,
+} as const;
+
 export type SawaaColors = typeof sawaaColors;
 
 export type GlassVariant = 'regular' | 'strong' | 'clear';
@@ -132,6 +154,12 @@ export const sawaaTokens = {
 
   // Blur system
   blur: sawaaBlur,
+
+  // Typography scale
+  type: sawaaType,
+
+  // Semantic status colors
+  semantic: sawaaSemantic,
 } as const;
 
 // Branding override helper for organization-specific customization.
@@ -147,6 +175,11 @@ export function getBrandingTokens(brandingConfig?: { primaryColor?: string; prim
 }
 
 export type SawaaTokens = typeof sawaaTokens;
+
+export type SawaaType = typeof sawaaType;
+export type SawaaTypeRole = keyof SawaaType;
+export type SawaaSemantic = typeof sawaaSemantic;
+export type SawaaSemanticTone = keyof SawaaSemantic;
 
 /** iOS 27 concentric radii: a nested rounded element shares the parent's center,
  *  so its radius = outer radius − inset padding (floored at 4). */

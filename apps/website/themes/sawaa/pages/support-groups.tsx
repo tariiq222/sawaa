@@ -13,12 +13,12 @@ import {
   Sparkles,
   type LucideIcon,
 } from 'lucide-react';
-import { getPublicCatalog } from '@/features/public-catalog/public';
+import { getPublicCatalog, findDepartment } from '@/features/public-catalog/public';
 import { listPublicEmployees } from '@/features/therapists/public';
 import { getLocale } from '@/features/locale/public';
 import { t as translate, type MessageKey } from '@/features/locale/dictionary';
 
-const GROUP_DEPARTMENT_NAMES = ['جماعية', 'Groups'];
+const GROUP_DEPARTMENT_KEYWORDS = { ar: ['جماعية'], en: ['group'] };
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Sparkles,
@@ -53,7 +53,7 @@ export async function SawaaSupportGroupsPage() {
   ]);
   const t = (key: MessageKey) => translate(locale, key);
 
-  const groupDept = catalog.departments.find((d) => GROUP_DEPARTMENT_NAMES.includes(d.nameAr));
+  const groupDept = findDepartment(catalog.departments, GROUP_DEPARTMENT_KEYWORDS);
   const groups: GroupEntry[] = groupDept
     ? catalog.categories
         .filter((c) => c.departmentId === groupDept.id && c.isActive)

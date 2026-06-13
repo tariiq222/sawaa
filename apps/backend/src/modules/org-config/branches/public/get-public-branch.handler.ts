@@ -12,6 +12,7 @@ export interface PublicBranchDetail {
   latitude: number | null;
   longitude: number | null;
   timezone: string;
+  isMain: boolean;
   businessHours: Array<{
     dayOfWeek: number;
     startTime: string;
@@ -40,6 +41,7 @@ export class GetPublicBranchHandler {
         latitude: true,
         longitude: true,
         timezone: true,
+        isMain: true,
         businessHours: {
           orderBy: { dayOfWeek: 'asc' },
           select: {

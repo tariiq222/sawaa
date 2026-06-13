@@ -3232,7 +3232,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Log in with phone and password */
+        /** Log in with email or phone and password */
         post: operations["PublicAuthController_loginEndpoint"];
         delete?: never;
         options?: never;
@@ -3662,7 +3662,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update authenticated client profile */
+        patch: operations["PublicMeController_updateProfileEndpoint"];
         trace?: never;
     };
     "/api/v1/public/me/bookings": {
@@ -3748,6 +3749,23 @@ export interface paths {
         head?: never;
         /** Reschedule a client booking */
         patch: operations["PublicMeController_rescheduleBookingEndpoint"];
+        trace?: never;
+    };
+    "/api/v1/public/me/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List client invoices */
+        get: operations["PublicMeController_invoicesEndpoint"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/public/otp/request": {
@@ -4323,15 +4341,20 @@ export interface components {
         ClientGender: "MALE" | "FEMALE";
         ClientLoginDto: {
             /**
-             * @description Client email address
+             * @description Client email address (provide either email or phone, not both)
              * @example client@example.com
              */
-            email: string;
+            email?: string;
             /**
              * @description Account password
              * @example SecurePass123
              */
             password: string;
+            /**
+             * @description Saudi mobile number (any common format; normalized to E.164). Provide either email or phone, not both.
+             * @example +966501234567
+             */
+            phone?: string;
         };
         ClientRescheduleBookingDto: {
             /** @description New duration in minutes (optional — keeps existing if omitted) */
@@ -5201,10 +5224,10 @@ export interface components {
              */
             bookingType?: components["schemas"]["BookingType"];
             /**
-             * @description Branch ID
+             * @description Branch ID — defaults to the main branch when omitted
              * @example 00000000-0000-0000-0000-000000000003
              */
-            branchId: string;
+            branchId?: string;
             /**
              * @description Discount coupon code
              * @example SAVE10
@@ -7062,6 +7085,23 @@ export interface components {
              */
             source?: components["schemas"]["ClientSource"];
         };
+        UpdateClientProfileDto: {
+            /**
+             * @description Email address. Can only be set while the account has no email yet (phone-registered accounts adding an email later).
+             * @example client@example.com
+             */
+            email?: string;
+            /**
+             * @description Full name
+             * @example أحمد محمد العتيبي
+             */
+            name?: string;
+            /**
+             * @description Saudi mobile number (any common format; normalized to E.164)
+             * @example +966501234567
+             */
+            phone?: string;
+        };
         UpdateContactMessageStatusDto: {
             /**
              * @description New status
@@ -7957,8 +7997,8 @@ export interface components {
         };
         VerifyMobileOtpDto: {
             /**
-             * @description 6-digit OTP code
-             * @example 123456
+             * @description 4-digit OTP code
+             * @example 1234
              */
             code: string;
             /** @description Phone or email used to request the OTP */
@@ -7977,8 +8017,8 @@ export interface components {
              */
             channel: "EMAIL" | "SMS";
             /**
-             * @description 6-digit OTP code
-             * @example 123456
+             * @description 4-digit OTP code
+             * @example 1234
              */
             code: string;
             /**
@@ -25725,6 +25765,72 @@ export interface operations {
             };
         };
     };
+    PublicMeController_updateProfileEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateClientProfileDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Phone number already used by another account */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     PublicMeController_bookingsEndpoint: {
         parameters: {
             query?: {
@@ -25993,6 +26099,64 @@ export interface operations {
                 "application/json": components["schemas"]["ClientRescheduleBookingDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PublicMeController_invoicesEndpoint: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

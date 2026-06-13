@@ -33,6 +33,7 @@
     "seed:sawa-clinic-services": "tsx prisma/seeds/sawa-clinic-services.ts",
     "seed:therapists": "tsx prisma/seeds/demo-therapists.ts",
     "seed:support-groups": "tsx prisma/seeds/demo-support-groups.ts",
+    "seed:group-programs": "tsx prisma/seeds/sawa-group-programs.ts",
     "reset:org-suspension": "tsx scripts/reset-org-suspension.ts",
     "openapi:export": "tsx scripts/export-openapi.ts",
     "openapi:snapshot": "WRITE_OPENAPI_SPEC=1 tsx -e \"require('./dist/main.js')\"",

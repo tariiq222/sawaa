@@ -5,10 +5,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
-import { AquaBackground, sawaaColors } from '@/theme/sawaa';
-import { Glass } from '@/theme/components/Glass';
+import { AquaBackground, sawaaColors, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { BookingStepHeader } from '@/components/features/booking/BookingStepHeader';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
 import { publicEmployeesService } from '@/services/client/employees';
@@ -44,7 +43,6 @@ export default function BookingScheduleScreen() {
   const f500 = getFontName(dir.locale, '500');
   const f600 = getFontName(dir.locale, '600');
   const f700 = getFontName(dir.locale, '700');
-  const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
 
   const days = useMemo(() => {
     const out: Date[] = [];
@@ -64,8 +62,8 @@ export default function BookingScheduleScreen() {
   const [slotIdx, setSlotIdx] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const tzLabel = dir.isRTL ? 'بتوقيتك المحلي' : `Your local time`;
 
   useEffect(() => {
@@ -75,7 +73,8 @@ export default function BookingScheduleScreen() {
       try {
         const list = await branchesService.getAll();
         if (cancelled) return;
-        if (list.length > 0) setBranchId(list[0].id);
+        const main = list.find((b) => b.isMain) ?? list[0];
+        if (main) setBranchId(main.id);
         else setError(dir.isRTL ? 'لا توجد فروع متاحة' : 'No branches available');
       } catch {
         if (!cancelled) setError(dir.isRTL ? 'تعذّر تحميل الفرع' : 'Failed to load branch');
@@ -84,7 +83,7 @@ export default function BookingScheduleScreen() {
     return () => {
       cancelled = true;
     };
-  }, [branchId, dir.isRTL]);
+  }, [branchId, dir.isRTL, reloadKey]);
 
   useEffect(() => {
     const employeeId = params.employeeId;
@@ -126,10 +125,13 @@ export default function BookingScheduleScreen() {
     params.durationMins,
     params.deliveryType,
     dir.isRTL,
+    reloadKey,
   ]);
 
   const selectedSlot = slotIdx != null ? slots[slotIdx] : null;
   const selectedDay = days[dayIdx];
+
+  const handleRetry = () => setReloadKey((k) => k + 1);
 
   const handleConfirm = () => {
     if (!selectedSlot || !branchId) return;
@@ -152,29 +154,33 @@ export default function BookingScheduleScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 120 },
+          { paddingTop: insets.top + sawaaSpacing.md, paddingBottom: insets.bottom + 120 },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500)}>
-          <View style={[styles.topRow, { flexDirection: dir.row }]}>
-            <Glass variant="strong" radius={22} onPress={() => router.back()} interactive style={styles.backBtn} accessibilityLabel={t('a11y.buttonBack')}>
-              <BackIcon size={22} color={sawaaColors.ink[700]} strokeWidth={1.75} />
-            </Glass>
-            <Text style={[styles.step, { fontFamily: f600, fontWeight: '600' }]}>
-              {dir.isRTL ? 'الخطوة ٢ من ٣' : 'Step 2 of 3'}
-            </Text>
-          </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: '66%' }]} />
-          </View>
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(500).easing(Easing.out(Easing.cubic))}>
+          <BookingStepHeader
+            step={2}
+            onBack={() => router.back()}
+            backAccessibilityLabel={t('a11y.buttonBack')}
+          />
         </Animated.View>
 
         <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(600).easing(Easing.out(Easing.cubic))}>
-          <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign }]}>
+          <Text
+            style={[
+              styles.title,
+              { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection },
+            ]}
+          >
             {dir.isRTL ? 'اختاري موعداً' : 'Pick a time'}
           </Text>
-          <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
+          <Text
+            style={[
+              styles.subtitle,
+              { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection },
+            ]}
+          >
             {dir.isRTL
               ? 'الأوقات المتاحة بحسب جدول المختصة'
               : "Available times based on the therapist's schedule"}
@@ -196,10 +202,20 @@ export default function BookingScheduleScreen() {
           entering={reduceMotion ? undefined : FadeInDown.delay(240).duration(600).easing(Easing.out(Easing.cubic))}
           style={[styles.slotsHead, { flexDirection: dir.row }]}
         >
-          <Text style={[styles.slotsTitle, { fontFamily: f700 }]}>
+          <Text
+            style={[
+              styles.slotsTitle,
+              { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection },
+            ]}
+          >
             {dir.isRTL ? 'الأوقات المتاحة' : 'Available times'}
           </Text>
-          <Text style={[styles.tz, { fontFamily: f400, fontWeight: '400' }]}>
+          <Text
+            style={[
+              styles.tz,
+              { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection },
+            ]}
+          >
             {tzLabel}
           </Text>
         </Animated.View>
@@ -214,6 +230,7 @@ export default function BookingScheduleScreen() {
           f500={f500}
           f600={f600}
           reduceMotion={reduceMotion}
+          onRetry={handleRetry}
         />
       </ScrollView>
 
@@ -221,7 +238,6 @@ export default function BookingScheduleScreen() {
         selectedDay={selectedDay}
         selectedSlot={selectedSlot}
         onConfirm={handleConfirm}
-        bottomInset={insets.bottom}
         dir={dir}
         f400={f400}
         f700={f700}
@@ -231,20 +247,30 @@ export default function BookingScheduleScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: 16, gap: 14 },
-  topRow: { alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  step: { fontSize: 12, color: sawaaColors.ink[500] },
-  progressTrack: {
-    height: 4,
-    borderRadius: 2,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.4)',
+  scroll: { paddingHorizontal: sawaaSpacing.lg, gap: sawaaSpacing.lg },
+  title: {
+    fontSize: sawaaType.heading.fontSize,
+    lineHeight: sawaaType.heading.lineHeight,
+    color: sawaaColors.ink[900],
+    marginTop: sawaaSpacing.sm,
+    paddingHorizontal: sawaaSpacing.xs,
   },
-  progressFill: { height: '100%', borderRadius: 2, backgroundColor: sawaaColors.teal[600] },
-  title: { fontSize: 26, color: sawaaColors.ink[900], marginTop: 8, paddingHorizontal: 4 },
-  subtitle: { fontSize: 12.5, color: sawaaColors.ink[500], marginTop: 4, paddingHorizontal: 4 },
-  slotsHead: { justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 4 },
-  slotsTitle: { fontSize: 14, color: sawaaColors.ink[900] },
-  tz: { fontSize: 11.5, color: sawaaColors.ink[500] },
+  subtitle: {
+    fontSize: sawaaType.caption.fontSize,
+    lineHeight: sawaaType.caption.lineHeight,
+    color: sawaaColors.ink[500],
+    marginTop: sawaaSpacing.xs,
+    paddingHorizontal: sawaaSpacing.xs,
+  },
+  slotsHead: { justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: sawaaSpacing.xs },
+  slotsTitle: {
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
+    color: sawaaColors.ink[900],
+  },
+  tz: {
+    fontSize: sawaaType.micro.fontSize,
+    lineHeight: sawaaType.micro.lineHeight,
+    color: sawaaColors.ink[500],
+  },
 });

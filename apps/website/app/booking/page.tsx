@@ -131,15 +131,14 @@ function uiReducer(state: UiState, action: UiAction): UiState {
 
 /**
  * Compute the screen sequence shown in the stepper for a given entry point.
- * Branch is the first step (services + therapists vary per branch) and is only
- * included when multiple branches exist.
+ * Branch is never a numbered step — the main branch is auto-selected on load
+ * and the user can change it via the affordance without it counting as a step.
  */
-function buildFlow(entryPoint: EntryPoint, hasBranchStep: boolean): WizardScreen[] {
-  const branch: WizardScreen[] = hasBranchStep ? ['branch'] : [];
+function buildFlow(entryPoint: EntryPoint): WizardScreen[] {
   if (entryPoint === 'therapist') {
-    return [...branch, 'therapist', 'service', 'slot', 'info'];
+    return ['therapist', 'service', 'slot', 'info'];
   }
-  return [...branch, 'service', 'therapist', 'slot', 'info'];
+  return ['service', 'therapist', 'slot', 'info'];
 }
 
 function IconButton({
@@ -334,6 +333,11 @@ function BookingWizardInner() {
     if (!branch && branches.length === 1) {
       branch = branches[0];
     }
+    // Always resolve to a branch so the wizard never starts without one.
+    // Prefer the branch the API marks as main; fall back to position 0.
+    if (!branch) {
+      branch = branches.find((b) => b.isMain) ?? branches[0] ?? null;
+    }
     if (branch) {
       dispatchUi({ type: 'PICK_BRANCH', branch });
     }
@@ -361,33 +365,19 @@ function BookingWizardInner() {
     preselectBranchId,
   ]);
 
-  // Branch-first: when the user lands on the wizard with multiple branches and
-  // hasn't picked one yet, immediately show the branch picker as step 1.
-  // Skipped until the preselect pass has run (otherwise a deep-link that would
-  // auto-pick the branch flashes the branch picker first).
+  // Auto-select the main branch on the no-params entry path (URL had none of
+  // ?branchId, ?employeeId, ?serviceId, so the preselect effect exited early).
+  // The main branch is the one the API marks as isMain; we fall back to the
+  // first branch in the list if none is flagged. This runs once, after data
+  // loads and the preselect pass completes.
   useEffect(() => {
     if (loadingData) return;
     if (!preselectDone) return;
-    if (!hasBranchStep) return;
-    if (selectedBranch) return;
-    if (awaitingBranch) return;
-    if (state.step !== WizardStep.SERVICE) return;
-    if (lockedEmployee) return;
-    // Skip auto branch picker when entering via a category deep link — the user
-    // came to browse services in that clinic, branch will be inferred from the
-    // chosen therapist's branches later.
-    if (preselectCategoryId) return;
-    dispatchUi({ type: 'OPEN_INITIAL_BRANCH_PICK' });
-  }, [
-    loadingData,
-    preselectDone,
-    hasBranchStep,
-    selectedBranch,
-    awaitingBranch,
-    state,
-    lockedEmployee,
-    preselectCategoryId,
-  ]);
+    if (selectedBranch) return;      // already resolved (deep-link or prior run)
+    if (branches.length === 0) return;
+    const main = branches.find((b) => b.isMain) ?? branches[0];
+    dispatchUi({ type: 'PICK_BRANCH', branch: main });
+  }, [loadingData, preselectDone, selectedBranch, branches]);
 
   const service =
     state.step === WizardStep.THERAPIST ||
@@ -407,13 +397,15 @@ function BookingWizardInner() {
       ? state.slot
       : null;
 
-  const effectiveBranch = selectedBranch ?? (!hasBranchStep ? branches[0] ?? null : null);
+  // selectedBranch is always set by the auto-select effects above; the fallback
+  // covers the brief window before data loads.
+  const effectiveBranch = selectedBranch ?? branches.find((b) => b.isMain) ?? branches[0] ?? null;
   const effectiveBranchId = effectiveBranch?.id;
 
   // The visible flow (stepper) for the current entry point.
   const flow = useMemo(
-    () => buildFlow(entryPoint, hasBranchStep),
-    [entryPoint, hasBranchStep],
+    () => buildFlow(entryPoint),
+    [entryPoint],
   );
   const labelOf: Record<WizardScreen, string> = {
     service: t('booking.step.service'),
@@ -595,18 +587,16 @@ function BookingWizardInner() {
 
   // Auto-skip therapist step if the chosen service has exactly one offering
   // therapist — there's no choice to make. Applies only to service-first flow.
+  // Branch is always pre-selected in the new model, so we go straight to
+  // SELECT_EMPLOYEE without opening a branch picker.
   useEffect(() => {
     if (entryPoint !== 'service') return;
     if (state.step !== WizardStep.THERAPIST) return;
     if (loadingData) return;
     if (filteredTherapists.length !== 1) return;
     const only = filteredTherapists[0];
-    if (hasBranchStep) {
-      dispatchUi({ type: 'START_BRANCH_PICK', employee: only });
-    } else {
-      dispatch({ type: 'SELECT_EMPLOYEE', employee: only });
-    }
-  }, [entryPoint, state.step, loadingData, filteredTherapists, hasBranchStep]);
+    dispatch({ type: 'SELECT_EMPLOYEE', employee: only });
+  }, [entryPoint, state.step, loadingData, filteredTherapists]);
 
   // Snap selectedDate forward to the first day that actually has open slots.
   // Uses the per-day probe; falls back to the employee's weekday rules until
@@ -669,20 +659,17 @@ function BookingWizardInner() {
    */
   const handleStepBack = () => {
     if (awaitingBranch) {
-      // Branch is the first step. Pressing back from here always exits the
-      // booking flow (the branch picker is step 1, there's nothing behind it).
-      handleClose();
+      // Branch picker was opened via the change-branch affordance or summary
+      // rail edit. Pressing back cancels the change and returns to the current
+      // step — the branch that was selected before stays unchanged.
+      dispatchUi({ type: 'CANCEL_BRANCH_PICK' });
       return;
     }
     switch (state.step) {
       case WizardStep.SERVICE:
-        // First content step after branch. Re-open branch picker (multi) or
-        // exit the booking flow entirely (single-branch).
-        if (hasBranchStep) {
-          dispatchUi({ type: 'OPEN_INITIAL_BRANCH_PICK' });
-        } else {
-          handleClose();
-        }
+        // First content step. Branch is auto-selected — pressing back exits
+        // the booking flow. The user can change the branch via the affordance.
+        handleClose();
         break;
       case WizardStep.THERAPIST:
         // Back to service picker.
@@ -821,6 +808,27 @@ function BookingWizardInner() {
             >
               {!nothingBookable && !isConfirmation && (
                 <ProgressBar current={stepIndex} labels={stepLabels} />
+              )}
+
+              {/* Change-branch affordance — visible only when multiple branches exist
+                  and the branch-picker step is not already open. */}
+              {!nothingBookable && !isConfirmation && !awaitingBranch && branches.length > 1 && effectiveBranch && (
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <span
+                    className="text-xs font-medium truncate"
+                    style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 55%, transparent)' }}
+                  >
+                    {isAr ? effectiveBranch.nameAr : (effectiveBranch.nameEn ?? effectiveBranch.nameAr)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => dispatchUi({ type: 'OPEN_INITIAL_BRANCH_PICK' })}
+                    className="shrink-0 text-xs font-semibold underline underline-offset-2 cursor-pointer transition-opacity hover:opacity-70"
+                    style={{ color: 'var(--primary-dark)' }}
+                  >
+                    {t('booking.changeBranch')}
+                  </button>
+                </div>
               )}
 
               {(loadError || submitError) && (

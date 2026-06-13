@@ -15,7 +15,7 @@ import {
   RefreshCw,
   type LucideIcon,
 } from 'lucide-react';
-import { getPublicCatalog } from '@/features/public-catalog/public';
+import { getPublicCatalog, findDepartment } from '@/features/public-catalog/public';
 import { listPublicEmployees } from '@/features/therapists/public';
 import { getLocale } from '@/features/locale/public';
 import { t as translate, type MessageKey } from '@/features/locale/dictionary';
@@ -56,7 +56,7 @@ export async function SawaaClinicsPage() {
   ]);
   const t = (key: MessageKey) => translate(locale, key);
 
-  const clinicsDept = catalog.departments.find((d) => d.nameAr === 'عيادات سواء');
+  const clinicsDept = findDepartment(catalog.departments, { ar: ['عيادات'], en: ['clinic'] });
   const clinics: ClinicEntry[] = clinicsDept
     ? catalog.categories
         .filter((c) => c.departmentId === clinicsDept.id)

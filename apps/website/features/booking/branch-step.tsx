@@ -10,11 +10,8 @@ interface BranchStepProps {
   onBack?: () => void;
 }
 
-const MAIN_HINTS = ['الرئيسي', 'الرئيس', 'main', 'head', 'primary'];
-
 function isMainBranch(branch: PublicBranch): boolean {
-  const haystack = `${branch.nameAr ?? ''} ${branch.nameEn ?? ''}`.toLowerCase();
-  return MAIN_HINTS.some((hint) => haystack.includes(hint.toLowerCase()));
+  return branch.isMain === true;
 }
 
 export function BranchStep({ branches, onSelect }: BranchStepProps) {

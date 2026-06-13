@@ -11,7 +11,7 @@ import {
   UIManager,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { sawaaTokens, sawaaColors } from "@/theme/sawaa/tokens";
+import { sawaaColors, sawaaSpacing, sawaaType, withAlpha } from "@/theme/sawaa/tokens";
 import { Glass } from "@/theme";
 import { useDir } from "@/hooks/useDir";
 
@@ -70,7 +70,7 @@ export const Header = ({
               <Image source={{ uri: avatarUrl }} style={s.avatar} />
             ) : (
               <View style={[s.avatar, { backgroundColor: sawaaColors.teal[100], alignItems: 'center', justifyContent: 'center' }]}>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: sawaaColors.teal[700] }}>
+                <Text style={{ fontSize: sawaaType.subheading.fontSize, fontWeight: '700', color: sawaaColors.teal[700] }}>
                   {greeting.charAt(0)}
                 </Text>
               </View>
@@ -206,8 +206,12 @@ export const Header = ({
 };
 
 const s = StyleSheet.create({
-  wrap: { paddingHorizontal: 22, paddingTop: 6, paddingBottom: 18 },
-  topRow: { alignItems: "center", gap: 14 },
+  wrap: {
+    paddingHorizontal: sawaaSpacing.xl,
+    paddingTop: sawaaSpacing.xs,
+    paddingBottom: sawaaSpacing.lg,
+  },
+  topRow: { alignItems: "center", gap: sawaaSpacing.md },
 
   avatarBubble: {
     width: 48,
@@ -233,14 +237,14 @@ const s = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(255,255,255,0.24)",
+    backgroundColor: sawaaColors.glass.bg,
   },
 
   actions: {
     flex: 1,
     alignItems: "center",
     justifyContent: "flex-end",
-    gap: 12,
+    gap: sawaaSpacing.md,
     minWidth: 0,
   },
 
@@ -248,7 +252,7 @@ const s = StyleSheet.create({
   pill: { flex: 1, height: 44 },
   pillRow: {
     alignItems: "center",
-    paddingHorizontal: 4,
+    paddingHorizontal: sawaaSpacing.xs,
   },
   iconAnchor: {
     width: 32,
@@ -259,17 +263,17 @@ const s = StyleSheet.create({
   input: {
     flex: 1,
     minWidth: 0,
-    fontSize: 14,
+    fontSize: sawaaType.body.fontSize,
     color: sawaaColors.teal[700],
     height: 40,
-    paddingHorizontal: 4,
+    paddingHorizontal: sawaaSpacing.xs,
   },
   closeBtn: {
     height: 30,
     borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(21,79,87,0.08)",
+    backgroundColor: withAlpha(sawaaColors.teal[700], 0.08),
     overflow: "hidden",
   },
 
@@ -289,20 +293,25 @@ const s = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: sawaaColors.accent.coral,
     borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.95)",
+    borderColor: sawaaColors.teal[50],
   },
 
-  greetingBlock: { marginTop: 22, paddingHorizontal: 2, gap: 4 },
-  greetingRow: { alignItems: "center", gap: 8 },
+  greetingBlock: {
+    marginTop: sawaaSpacing.xl,
+    paddingHorizontal: sawaaSpacing.xs,
+    gap: sawaaSpacing.xs,
+  },
+  greetingRow: { alignItems: "center", gap: sawaaSpacing.sm },
   greeting: {
-    fontSize: 32,
-    fontWeight: "800",
+    fontSize: sawaaType.display.fontSize,
+    fontWeight: sawaaType.display.weight,
     color: sawaaColors.teal[700],
-    lineHeight: 42,
+    lineHeight: sawaaType.display.lineHeight,
   },
   greetingSub: {
-    fontSize: 14,
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
     color: sawaaColors.ink[500],
-    fontWeight: "400",
+    fontWeight: sawaaType.body.weight,
   },
 });

@@ -48,6 +48,7 @@ import { ListPublicGroupSessionsHandler } from './public/list-public-group-sessi
 import { GetPublicGroupSessionHandler } from './public/get-public-group-session.handler';
 import { BookGroupSessionHandler } from './public/book-group-session.handler';
 import { GetBookingStatusHandler } from './public/get-booking-status.handler';
+import { CreatePublicBookingHandler } from './public/create-public-booking.handler';
 import { CreateEmployeeBookingHandler } from './create-employee-booking/create-employee-booking.handler';
 import { ValidateCouponService } from './coupons/validate-coupon.service';
 import { CancelRecurringSeriesHandler } from './cancel-recurring-series/cancel-recurring-series.handler';
@@ -94,6 +95,7 @@ const handlers = [
   GetPublicGroupSessionHandler,
   BookGroupSessionHandler,
   GetBookingStatusHandler,
+  CreatePublicBookingHandler,
   ValidateCouponService,
   CancelRecurringSeriesHandler,
   CreateBundleBookingHandler,
@@ -110,7 +112,7 @@ const handlers = [
   ],
   controllers: [DashboardBookingsController],
   providers: [...handlers, ZoomMeetingWorker, PaymentCompletedEventHandler, DepositPaidEventHandler, RefundCompletedEventHandler, OnBookingCancelledPromoteWaitlistHandler],
-  exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CancelRecurringSeriesHandler],
+  exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CancelRecurringSeriesHandler, CreatePublicBookingHandler],
 })
 export class BookingsModule implements OnModuleInit {
   constructor(

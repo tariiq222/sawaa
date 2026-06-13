@@ -37,6 +37,8 @@ export interface PublicBranch {
   nameEn: string | null;
   city: string | null;
   addressAr: string | null;
+  /** True when the backend designates this as the centre's main branch. */
+  isMain: boolean;
 }
 
 /** Backend public endpoints sometimes return `{ data: T }`, sometimes `T` directly. */

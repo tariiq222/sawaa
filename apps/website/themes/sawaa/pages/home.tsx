@@ -1,5 +1,5 @@
 import { listPublicEmployees } from '@/features/therapists/public';
-import { getPublicCatalog } from '@/features/public-catalog/public';
+import { getPublicCatalog, findDepartment } from '@/features/public-catalog/public';
 import { listPublicTestimonials } from '@/features/testimonials/public';
 import {
   fetchSiteSettingsMap,
@@ -59,7 +59,7 @@ export async function SawaaHomePage() {
   const faqItems: FaqItem[] = resolveFaqItems(settings);
   const supportGroups: SupportGroup[] = resolveSupportGroups(settings);
 
-  const clinicsDept = catalog.departments.find((d) => d.nameAr === 'عيادات سواء');
+  const clinicsDept = findDepartment(catalog.departments, { ar: ['عيادات'], en: ['clinic'] });
   const clinics: ClinicItem[] = clinicsDept
     ? catalog.categories
         .filter((c) => c.departmentId === clinicsDept.id)

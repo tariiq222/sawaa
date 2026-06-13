@@ -3,8 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
-import { sawaaColors, sawaaRadius } from '@/theme/sawaa';
-import { Glass } from '@/theme/components/Glass';
+import { sawaaColors, sawaaRadius, sawaaSpacing, sawaaType, withAlpha } from '@/theme/sawaa';
+import { GlassSurface } from '@/theme/sawaa/GlassSurface';
 import type { DirState } from '@/hooks/useDir';
 
 const DAYS_AR_SHORT = ['أحد', 'إث', 'ثل', 'أر', 'خم', 'جم', 'سب'];
@@ -34,10 +34,17 @@ export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySele
     : `${MONTHS_EN[selectedDay.getMonth()]} ${selectedDay.getFullYear()}`;
 
   return (
-    <Glass variant="strong" radius={sawaaRadius.xl} style={styles.monthCard}>
+    <GlassSurface variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.md}>
       <View style={[styles.monthHead, { flexDirection: dir.row }]}>
         <View />
-        <Text style={[styles.monthTitle, { fontFamily: f700 }]}>{monthLabel}</Text>
+        <Text
+          style={[
+            styles.monthTitle,
+            { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection },
+          ]}
+        >
+          {monthLabel}
+        </Text>
         <View />
       </View>
       <ScrollView
@@ -55,6 +62,8 @@ export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySele
                 Haptics.selectionAsync();
                 onSelect(i);
               }}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isActive }}
               style={[styles.dayCell, !isActive && styles.dayCellInactive]}
             >
               {isActive ? (
@@ -68,7 +77,11 @@ export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySele
               <Text
                 style={[
                   styles.dayName,
-                  { fontFamily: f500, fontWeight: '500', color: isActive ? 'rgba(255,255,255,0.9)' : sawaaColors.ink[700] },
+                  {
+                    fontFamily: f500,
+                    fontWeight: '500',
+                    color: isActive ? withAlpha(sawaaColors.teal[50], 0.9) : sawaaColors.ink[700],
+                  },
                 ]}
               >
                 {dir.isRTL ? DAYS_AR_SHORT[dow] : DAYS_EN_SHORT[dow]}
@@ -76,7 +89,7 @@ export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySele
               <Text
                 style={[
                   styles.dayNum,
-                  { fontFamily: f700, color: isActive ? '#fff' : sawaaColors.ink[900] },
+                  { fontFamily: f700, color: isActive ? sawaaColors.teal[50] : sawaaColors.ink[900] },
                 ]}
               >
                 {dir.isRTL ? d.getDate().toLocaleString('ar-SA') : d.getDate()}
@@ -85,32 +98,43 @@ export function DaySelector({ days, dayIdx, onSelect, dir, f500, f700 }: DaySele
           );
         })}
       </ScrollView>
-    </Glass>
+    </GlassSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  monthCard: { padding: 12 },
   monthHead: {
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingBottom: 10,
+    paddingHorizontal: sawaaSpacing.xs,
+    paddingBottom: sawaaSpacing.md,
   },
-  monthTitle: { fontSize: 13.5, color: sawaaColors.ink[900] },
-  daysRow: { gap: 8, paddingHorizontal: 4 },
+  monthTitle: {
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
+    color: sawaaColors.ink[900],
+  },
+  daysRow: { gap: sawaaSpacing.sm, paddingHorizontal: sawaaSpacing.xs },
   dayCell: {
     width: 60,
-    paddingVertical: 10,
-    borderRadius: 16,
+    paddingVertical: sawaaSpacing.md,
+    borderRadius: sawaaRadius.md,
     alignItems: 'center',
     overflow: 'hidden',
   },
   dayCellInactive: {
-    backgroundColor: 'rgba(255,255,255,0.45)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.55)',
+    backgroundColor: sawaaColors.glass.bgStrong,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: sawaaColors.glass.border,
   },
-  dayName: { fontSize: 10.5, opacity: 0.85 },
-  dayNum: { fontSize: 17, marginTop: 2 },
+  dayName: {
+    fontSize: sawaaType.micro.fontSize,
+    lineHeight: sawaaType.micro.lineHeight,
+    opacity: 0.85,
+  },
+  dayNum: {
+    fontSize: sawaaType.subheading.fontSize,
+    lineHeight: sawaaType.subheading.lineHeight,
+    marginTop: sawaaSpacing.xs,
+  },
 });

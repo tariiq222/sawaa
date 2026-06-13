@@ -4,6 +4,7 @@ export interface PublicBranch {
   nameEn: string | null
   city: string | null
   addressAr: string | null
+  isMain: boolean
 }
 
 export interface PublicEmployee {

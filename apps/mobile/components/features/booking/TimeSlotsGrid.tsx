@@ -1,11 +1,13 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
-import { sawaaColors } from '@/theme/sawaa';
-import { Glass } from '@/theme/components/Glass';
+import { sawaaColors, sawaaRadius, sawaaSpacing, sawaaType } from '@/theme/sawaa';
+import { GlassSurface } from '@/theme/sawaa/GlassSurface';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { DirState } from '@/hooks/useDir';
 
 export interface Slot {
@@ -23,6 +25,9 @@ export function formatTime(iso: string, isRTL: boolean): string {
   return `${h12}:${mm} ${suffix}`;
 }
 
+const SKELETON_SLOTS = 6;
+const SLOT_SKELETON_HEIGHT = 48;
+
 interface TimeSlotsGridProps {
   loading: boolean;
   error: string | null;
@@ -33,6 +38,7 @@ interface TimeSlotsGridProps {
   f500: string;
   f600: string;
   reduceMotion?: boolean;
+  onRetry?: () => void;
 }
 
 export function TimeSlotsGrid({
@@ -42,33 +48,41 @@ export function TimeSlotsGrid({
   selectedIdx,
   onSelect,
   dir,
-  f500,
   f600,
   reduceMotion = false,
+  onRetry,
 }: TimeSlotsGridProps) {
   if (loading) {
     return (
-      <View style={styles.statusBlock}>
-        <ActivityIndicator color={sawaaColors.teal[600]} />
+      <View style={[styles.slotsGrid, { flexDirection: dir.row }]}>
+        {Array.from({ length: SKELETON_SLOTS }).map((_, i) => (
+          <View key={i} style={styles.slotWrap}>
+            <Skeleton height={SLOT_SKELETON_HEIGHT} radius={sawaaRadius.md} />
+          </View>
+        ))}
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.statusBlock}>
-        <Text style={[styles.statusText, { fontFamily: f500, fontWeight: '500' }]}>{error}</Text>
-      </View>
+      <EmptyState
+        icon="cloud-offline-outline"
+        tone="danger"
+        title={error}
+        actionLabel={onRetry ? (dir.isRTL ? 'إعادة المحاولة' : 'Retry') : undefined}
+        onAction={onRetry}
+      />
     );
   }
 
   if (slots.length === 0) {
     return (
-      <View style={styles.statusBlock}>
-        <Text style={[styles.statusText, { fontFamily: f500, fontWeight: '500' }]}>
-          {dir.isRTL ? 'لا توجد أوقات متاحة في هذا اليوم' : 'No available times on this day'}
-        </Text>
-      </View>
+      <EmptyState
+        icon="calendar-outline"
+        title={dir.isRTL ? 'لا مواعيد متاحة في هذا اليوم' : 'No appointments available on this day'}
+        description={dir.isRTL ? 'جرب اختيار يوم آخر من التقويم' : 'Try picking another day from the calendar'}
+      />
     );
   }
 
@@ -91,7 +105,7 @@ export function TimeSlotsGrid({
             accessibilityLabel={`${dir.isRTL ? 'وقت' : 'Time'} ${formatTime(s.startTime, dir.isRTL)}`}
             accessibilityState={{ selected: isSelected }}
           >
-            <Glass variant={isSelected ? 'strong' : 'regular'} radius={16} style={styles.slot}>
+            <GlassSurface variant={isSelected ? 'strong' : 'base'} radius={sawaaRadius.md} style={styles.slot}>
               {isSelected ? (
                 <LinearGradient
                   colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
@@ -100,15 +114,21 @@ export function TimeSlotsGrid({
                   style={StyleSheet.absoluteFill}
                 />
               ) : null}
-              <Text
-                style={[
-                  styles.slotText,
-                  { fontFamily: f600, fontWeight: '600', color: isSelected ? '#fff' : sawaaColors.ink[900] },
-                ]}
-              >
-                {formatTime(s.startTime, dir.isRTL)}
-              </Text>
-            </Glass>
+              <View style={styles.slotInner}>
+                <Text
+                  style={[
+                    styles.slotText,
+                    {
+                      fontFamily: f600,
+                      fontWeight: '600',
+                      color: isSelected ? sawaaColors.teal[50] : sawaaColors.ink[900],
+                    },
+                  ]}
+                >
+                  {formatTime(s.startTime, dir.isRTL)}
+                </Text>
+              </View>
+            </GlassSurface>
           </Pressable>
         );
       })}
@@ -117,10 +137,12 @@ export function TimeSlotsGrid({
 }
 
 const styles = StyleSheet.create({
-  slotsGrid: { flexWrap: 'wrap', gap: 8 },
+  slotsGrid: { flexWrap: 'wrap', gap: sawaaSpacing.sm },
   slotWrap: { width: '48.5%' },
-  slot: { paddingVertical: 14, alignItems: 'center', overflow: 'hidden' },
-  slotText: { fontSize: 13.5 },
-  statusBlock: { paddingVertical: 32, alignItems: 'center', justifyContent: 'center' },
-  statusText: { fontSize: 13, color: sawaaColors.ink[500] },
+  slot: { overflow: 'hidden' },
+  slotInner: { paddingVertical: sawaaSpacing.lg, alignItems: 'center' },
+  slotText: {
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
+  },
 });

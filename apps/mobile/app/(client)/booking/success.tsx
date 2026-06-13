@@ -1,14 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Check } from 'lucide-react-native';
 
-import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
-import { Glass } from '@/theme/components/Glass';
+import {
+  AquaBackground,
+  sawaaColors,
+  sawaaRadius,
+  sawaaSemantic,
+  sawaaSpacing,
+  sawaaType,
+  withAlpha,
+} from '@/theme/sawaa';
+import { GlassSurface } from '@/theme/sawaa/GlassSurface';
+import { PrimaryButton } from '@/theme/sawaa/PrimaryButton';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { useDir } from '@/hooks/useDir';
+import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { clientBookingsService, type ClientBookingRow } from '@/services/client/bookings';
 import { clientPaymentsService, type ClientInvoice } from '@/services/client/payments';
@@ -40,6 +50,7 @@ export default function BookingSuccessScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dir = useDir();
+  const reduceMotion = useReduceMotion();
   const { bookingId, invoiceId, paymentId } = useLocalSearchParams<{
     bookingId?: string;
     invoiceId?: string;
@@ -109,110 +120,114 @@ export default function BookingSuccessScreen() {
         ? (dir.isRTL ? 'بانتظار التحقق من الدفع' : 'Awaiting payment verification')
         : fallbackPaymentCopy;
 
+  const centeredText = { textAlign: 'center', writingDirection: dir.writingDirection } as const;
+  const startText = { textAlign: dir.textAlign, writingDirection: dir.writingDirection } as const;
+
+  const summaryRows: Array<{ key: string; labelAr: string; labelEn: string; value: string; accent?: boolean }> = [];
+  if (therapistName) {
+    summaryRows.push({ key: 'therapist', labelAr: 'المعالج', labelEn: 'Therapist', value: therapistName });
+  }
+  if (booking?.scheduledAt) {
+    summaryRows.push({
+      key: 'when',
+      labelAr: 'التاريخ والوقت',
+      labelEn: 'Date & time',
+      value: formatWhen(booking.scheduledAt, dir.isRTL),
+    });
+  }
+  summaryRows.push({
+    key: 'ref',
+    labelAr: 'رقم الموعد',
+    labelEn: 'Booking #',
+    value: bookingId ? shortBookingRef(bookingId) : '—',
+    accent: true,
+  });
+  if (paymentId) {
+    summaryRows.push({
+      key: 'payment',
+      labelAr: 'رقم الدفع',
+      labelEn: 'Payment #',
+      value: shortBookingRef(paymentId),
+    });
+  }
+
   return (
     <AquaBackground>
       <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-        <Animated.View entering={ZoomIn.duration(900).easing(Easing.bezier(0.22, 1, 0.36, 1))}>
-          <LinearGradient
-            colors={[sawaaColors.teal[400], sawaaColors.teal[600]]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.iconCircle}
-          >
-            <Check size={56} color="#fff" strokeWidth={3} />
-          </LinearGradient>
+        <Animated.View entering={reduceMotion ? undefined : ZoomIn.duration(600).easing(Easing.out(Easing.cubic))}>
+          <View style={styles.iconCircle}>
+            <Check size={56} color={sawaaSemantic.success} strokeWidth={2.5} />
+          </View>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(200).duration(700).easing(Easing.out(Easing.cubic))} style={styles.textBlock}>
-          <Text style={[styles.title, { fontFamily: f700 }]}>
-            {dir.isRTL ? 'تم تأكيد حجزك' : 'Booking confirmed'}
+        <Animated.View
+          entering={reduceMotion ? undefined : FadeInDown.delay(160).duration(600).easing(Easing.out(Easing.cubic))}
+          style={styles.textBlock}
+        >
+          <Text style={[styles.title, { fontFamily: f700 }, centeredText]}>
+            {dir.isRTL ? 'تم تأكيد موعدك' : 'Appointment confirmed'}
           </Text>
-          <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400' }]}>
+          <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400' }, centeredText]}>
             {paymentStatusCopy}
           </Text>
         </Animated.View>
 
         <Animated.View
-          entering={FadeInDown.delay(400).duration(800).easing(Easing.out(Easing.cubic))}
+          entering={reduceMotion ? undefined : FadeInDown.delay(320).duration(700).easing(Easing.out(Easing.cubic))}
           style={styles.summaryWrap}
         >
-          <Glass variant="strong" radius={sawaaRadius.xl} style={styles.summaryCard}>
+          <GlassSurface variant="strong" radius={sawaaRadius.xl}>
             {loading ? (
-              <View style={styles.statusBlock}>
-                <ActivityIndicator color={sawaaColors.teal[600]} />
+              <View style={styles.skeletonBlock}>
+                <Skeleton height={14} width="40%" />
+                <Skeleton height={14} width="70%" />
+                <Skeleton height={14} width="55%" />
               </View>
             ) : (
-              <>
-                {therapistName ? (
-                  <>
-                    <View style={styles.summaryRow}>
-                      <Text style={[styles.summaryLabel, { fontFamily: f400, fontWeight: '400' }]}>
-                        {dir.isRTL ? 'المعالج' : 'Therapist'}
-                      </Text>
-                      <Text style={[styles.summaryValue, { fontFamily: f700 }]}>{therapistName}</Text>
-                    </View>
-                    <View style={styles.divider} />
-                  </>
-                ) : null}
-                {booking?.scheduledAt ? (
-                  <>
-                    <View style={styles.summaryRow}>
-                      <Text style={[styles.summaryLabel, { fontFamily: f400, fontWeight: '400' }]}>
-                        {dir.isRTL ? 'التاريخ والوقت' : 'Date & time'}
-                      </Text>
-                      <Text style={[styles.summaryValue, { fontFamily: f700 }]}>
-                        {formatWhen(booking.scheduledAt, dir.isRTL)}
-                      </Text>
-                    </View>
-                    <View style={styles.divider} />
-                  </>
-                ) : null}
-                <View style={styles.summaryRow}>
-                  <Text style={[styles.summaryLabel, { fontFamily: f400, fontWeight: '400' }]}>
-                    {dir.isRTL ? 'رقم الحجز' : 'Booking #'}
-                  </Text>
-                  <Text style={[styles.summaryValue, { fontFamily: f700, color: sawaaColors.teal[700] }]}>
-                    {bookingId ? shortBookingRef(bookingId) : '—'}
-                  </Text>
+              summaryRows.map((row, i) => (
+                <View key={row.key}>
+                  {i > 0 ? <View style={styles.divider} /> : null}
+                  <View style={styles.summaryRow}>
+                    <Text style={[styles.summaryLabel, { fontFamily: f400, fontWeight: '400' }, startText]}>
+                      {dir.isRTL ? row.labelAr : row.labelEn}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.summaryValue,
+                        { fontFamily: f700 },
+                        row.accent && { color: sawaaColors.teal[700] },
+                        startText,
+                      ]}
+                    >
+                      {row.value}
+                    </Text>
+                  </View>
                 </View>
-                {paymentId ? (
-                  <>
-                    <View style={styles.divider} />
-                    <View style={styles.summaryRow}>
-                      <Text style={[styles.summaryLabel, { fontFamily: f400, fontWeight: '400' }]}>
-                        {dir.isRTL ? 'رقم الدفع' : 'Payment #'}
-                      </Text>
-                      <Text style={[styles.summaryValue, { fontFamily: f700 }]}>
-                        {shortBookingRef(paymentId)}
-                      </Text>
-                    </View>
-                  </>
-                ) : null}
-              </>
+              ))
             )}
-          </Glass>
+          </GlassSurface>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(600).duration(800).easing(Easing.out(Easing.cubic))} style={styles.actions}>
-          <Pressable onPress={() => router.replace('/(client)/(tabs)/appointments')}>
-            <LinearGradient
-              colors={[sawaaColors.teal[500], sawaaColors.teal[700]]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.primaryBtn}
-            >
-              <Text style={[styles.primaryBtnText, { fontFamily: f700 }]}>
-                {dir.isRTL ? 'عرض مواعيدي' : 'View my appointments'}
-              </Text>
-            </LinearGradient>
-          </Pressable>
+        <Animated.View
+          entering={reduceMotion ? undefined : FadeInDown.delay(480).duration(700).easing(Easing.out(Easing.cubic))}
+          style={styles.actions}
+        >
+          <PrimaryButton
+            label={dir.isRTL ? 'عرض مواعيدي' : 'View my appointments'}
+            onPress={() => router.replace('/(client)/(tabs)/appointments')}
+            fontFamily={f700}
+          />
           <Pressable
+            accessibilityRole="button"
             onPress={() => router.replace('/(client)/(tabs)/home')}
-            style={styles.secondaryBtn}
           >
-            <Text style={[styles.secondaryBtnText, { fontFamily: f600, fontWeight: '600' }]}>
-              {dir.isRTL ? 'العودة إلى الرئيسية' : 'Back to home'}
-            </Text>
+            <GlassSurface variant="base" radius={sawaaRadius.pill}>
+              <View style={styles.secondaryInner}>
+                <Text style={[styles.secondaryBtnText, { fontFamily: f600, fontWeight: '600' }, centeredText]}>
+                  {dir.isRTL ? 'العودة إلى الرئيسية' : 'Back to home'}
+                </Text>
+              </View>
+            </GlassSurface>
           </Pressable>
         </Animated.View>
       </View>
@@ -221,29 +236,63 @@ export default function BookingSuccessScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center', gap: 24 },
+  container: {
+    flex: 1,
+    paddingHorizontal: sawaaSpacing['2xl'],
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: sawaaSpacing['2xl'],
+  },
   iconCircle: {
-    width: 112, height: 112, borderRadius: 56,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: sawaaColors.teal[600], shadowOpacity: 0.4, shadowRadius: 24, shadowOffset: { width: 0, height: 12 },
+    width: 112,
+    height: 112,
+    borderRadius: sawaaRadius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: withAlpha(sawaaSemantic.success, 0.14),
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: withAlpha(sawaaSemantic.success, 0.3),
   },
-  textBlock: { alignItems: 'center', gap: 6 },
-  title: { fontSize: 26, color: sawaaColors.ink[900], textAlign: 'center' },
-  subtitle: { fontSize: 14, color: sawaaColors.ink[500], textAlign: 'center', lineHeight: 22 },
+  textBlock: { alignItems: 'center', gap: sawaaSpacing.sm },
+  title: {
+    fontSize: sawaaType.heading.fontSize,
+    lineHeight: sawaaType.heading.lineHeight,
+    color: sawaaColors.ink[900],
+  },
+  subtitle: {
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
+    color: sawaaColors.ink[500],
+  },
   summaryWrap: { width: '100%' },
-  summaryCard: { padding: 0 },
-  summaryRow: { padding: 14, gap: 2 },
-  summaryLabel: { fontSize: 11.5, color: sawaaColors.ink[500] },
-  summaryValue: { fontSize: 13.5, color: sawaaColors.ink[900] },
-  divider: { height: 0.5, backgroundColor: 'rgba(255,255,255,0.5)' },
-  statusBlock: { paddingVertical: 32, alignItems: 'center', justifyContent: 'center' },
-  actions: { width: '100%', gap: 10 },
-  primaryBtn: {
-    borderRadius: 999, height: 52,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: sawaaColors.teal[600], shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 6 },
+  summaryRow: { padding: sawaaSpacing.lg, gap: sawaaSpacing.xs },
+  summaryLabel: {
+    fontSize: sawaaType.micro.fontSize,
+    lineHeight: sawaaType.micro.lineHeight,
+    color: sawaaColors.ink[500],
   },
-  primaryBtnText: { color: '#fff', fontSize: 14 },
-  secondaryBtn: { height: 44, alignItems: 'center', justifyContent: 'center' },
-  secondaryBtnText: { color: sawaaColors.teal[700], fontSize: 13 },
+  summaryValue: {
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
+    color: sawaaColors.ink[900],
+    fontVariant: ['tabular-nums'],
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: withAlpha(sawaaColors.ink[900], 0.06),
+    marginHorizontal: sawaaSpacing.lg,
+  },
+  skeletonBlock: { padding: sawaaSpacing.lg, gap: sawaaSpacing.md },
+  actions: { width: '100%', gap: sawaaSpacing.md },
+  secondaryInner: {
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: sawaaSpacing.lg,
+  },
+  secondaryBtnText: {
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
+    color: sawaaColors.teal[700],
+  },
 });

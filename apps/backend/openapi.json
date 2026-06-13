@@ -1814,7 +1814,7 @@
             "example": "INDIVIDUAL"
           },
           "branchId": {
-            "description": "Branch ID",
+            "description": "Branch ID — defaults to the main branch when omitted",
             "example": "00000000-0000-0000-0000-000000000003",
             "type": "string"
           },
@@ -1861,7 +1861,6 @@
         "required": [
           "serviceId",
           "employeeId",
-          "branchId",
           "startsAt"
         ],
         "type": "object"

@@ -72,6 +72,20 @@ The mobile app's `memberships`/`tenant-switch` services and membership query hoo
 
 Provider credentials (Zoom, SMS, Email, Moyasar) are encrypted with AES-256-GCM using a static `DEFAULT_ORG_ID` constant as AAD — see [apps/backend/src/common/constants.ts](apps/backend/src/common/constants.ts).
 
+Do not introduce new `platform*` / `organization*` / `tenant*` / `membership*` concepts in code, schema, or env var naming. Exception: the existing required `PLATFORM_SETTINGS_KEY` env var is legacy — do not rename it; the backend fails to boot without it in prod.
+
+## Business rules (owner-confirmed invariants)
+
+Each of these was violated and corrected in past sessions — treat as hard rules:
+
+- **VAT:** the center is NOT VAT-registered. `DEFAULT_VAT_RATE = 0` ([create-invoice.handler.ts](apps/backend/src/modules/finance/create-invoice/create-invoice.handler.ts)). Never reintroduce 15% as a default, fallback, or API/Swagger example. VAT math stays supported (rate comes from `OrganizationSettings`); amount due after discount = `(subtotal − discount) × (1 + vatRate)`, never `total − discount`.
+- **Money:** all amounts are stored as integer halalas.
+- **Earnings / commission:** informational display numbers for the manager only — never implement real money distribution from them.
+- **Guest bookings:** reception staff may register guests from the dashboard; the public website requires an account (no guest checkout).
+- **Terminology:** client-facing UI says «موعد», not «حجز».
+- **Copy:** customer-facing Arabic text is plain and unexaggerated — no marketing superlatives.
+- **Branding:** single fixed brand (logo, font, colors) — never build configurable branding/theming. Image inputs are file uploads, not URL fields.
+
 ## Migrations are immutable
 
 Never edit or squash an existing Prisma migration — add a new one. The backend has CI that fails on drift.
@@ -109,6 +123,16 @@ When changing backend endpoints or DTOs:
 4. Update `packages/api-client` manually if it references the changed endpoint or shape; it is hand-written, not generated.
 5. Commit `apps/backend/openapi.json`, regenerated dashboard types, and API client changes together.
 6. Run dashboard smoke tests when dashboard consumes the endpoint.
+
+## Definition of done
+
+Passing tests are necessary but not sufficient. A change is done only after the affected app is run locally and the flow is exercised live (UI clicked / endpoint hit / SMS actually received). If live verification was not performed, say so explicitly — never report "done" on green tests alone.
+
+## Git & deploy rules
+
+- Commit only when explicitly asked, and scope the commit to the current session's work.
+- Before any deploy: merge `main` locally first (`git pull --ff-only`). Pushing `main` auto-deploys via Dokploy — a push to main IS a production deploy.
+- After every merge/deploy, verify the backend actually booted: a missing required env var fails startup silently and Docker Swarm keeps serving the old version.
 
 ## Test matrix by change surface
 

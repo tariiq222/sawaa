@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
-import { Linking, View, ScrollView, Pressable, Alert, StyleSheet } from 'react-native';
+import { Linking, View, ScrollView, Pressable, Alert, StyleSheet, Text } from 'react-native';
+import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -13,21 +14,31 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Stethoscope,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
-import { ThemedText } from '@/theme/components/ThemedText';
+import {
+  AquaBackground,
+  GlassSurface,
+  sawaaColors,
+  sawaaRadius,
+  sawaaSemantic,
+  sawaaSpacing,
+  sawaaType,
+  withAlpha,
+} from '@/theme/sawaa';
 import { Avatar } from '@/components/ui/Avatar';
-import { useTheme } from '@/theme/useTheme';
+import { useDir } from '@/hooks/useDir';
+import { useReduceMotion } from '@/hooks/useA11y';
+import { getFontName } from '@/theme/fonts';
 import { UnverifiedEmailBanner } from '@/components/features/auth/UnverifiedEmailBanner';
 import { useAppSelector, useAppDispatch } from '@/hooks/use-redux';
 import { logout, setUser } from '@/stores/slices/auth-slice';
 import { authService } from '@/services/auth';
 import { PRIVACY_POLICY_URL } from '@/constants/config';
 
-interface MenuItemProps {
+interface MenuEntry {
   icon: React.ElementType;
   label: string;
   value?: string;
@@ -35,28 +46,54 @@ interface MenuItemProps {
   onPress: () => void;
 }
 
-function MenuItem({ icon: Icon, label, value, danger, onPress }: MenuItemProps) {
-  const { theme, isRTL } = useTheme();
-  const Chevron = isRTL ? ChevronLeft : ChevronRight;
+function MenuRow({ icon: Icon, label, value, danger, onPress }: MenuEntry) {
+  const dir = useDir();
+  const f400 = getFontName(dir.locale, '400');
+  const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
+  const tint = danger ? sawaaSemantic.danger : sawaaColors.teal[600];
+
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.menuItem,
-        { backgroundColor: theme.colors.white, opacity: pressed ? 0.7 : 1 },
-      ]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [styles.menuRow, { flexDirection: dir.row, opacity: pressed ? 0.7 : 1 }]}
     >
-      <View style={styles.menuLeft}>
-        <Icon size={20} strokeWidth={1.5} color={danger ? theme.colors.error : theme.colors.textSecondary} />
-        <ThemedText variant="body" color={danger ? theme.colors.error : theme.colors.textPrimary}>
+      <View style={[styles.menuLeft, { flexDirection: dir.row }]}>
+        <View style={[styles.menuIconCircle, { backgroundColor: withAlpha(tint, 0.1) }]}>
+          <Icon size={18} strokeWidth={1.5} color={tint} />
+        </View>
+        <Text
+          style={[
+            styles.menuLabel,
+            { fontFamily: f400, fontWeight: '400', color: danger ? sawaaSemantic.danger : sawaaColors.ink[900], writingDirection: dir.writingDirection },
+          ]}
+        >
           {label}
-        </ThemedText>
+        </Text>
       </View>
-      <View style={styles.menuRight}>
-        {value && <ThemedText variant="bodySm" color={theme.colors.textSecondary}>{value}</ThemedText>}
-        {!danger && <Chevron size={16} strokeWidth={1.5} color={theme.colors.textMuted} />}
+      <View style={[styles.menuRight, { flexDirection: dir.row }]}>
+        {value ? (
+          <Text style={[styles.menuValue, { fontFamily: f400, fontWeight: '400', writingDirection: dir.writingDirection }]}>
+            {value}
+          </Text>
+        ) : null}
+        {!danger && <Chevron size={16} strokeWidth={1.5} color={sawaaColors.ink[400]} />}
       </View>
     </Pressable>
+  );
+}
+
+function MenuGroup({ entries }: { entries: MenuEntry[] }) {
+  return (
+    <GlassSurface variant="base" radius={sawaaRadius.xl} padding={sawaaSpacing.xs}>
+      {entries.map((entry, i) => (
+        <View key={entry.label}>
+          {i > 0 && <View style={styles.divider} />}
+          <MenuRow {...entry} />
+        </View>
+      ))}
+    </GlassSurface>
   );
 }
 
@@ -65,8 +102,12 @@ export default function EmployeeProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
-  const { theme } = useTheme();
+  const dir = useDir();
+  const reduceMotion = useReduceMotion();
   const user = useAppSelector((s) => s.auth.user);
+  const f400 = getFontName(dir.locale, '400');
+  const f600 = getFontName(dir.locale, '600');
+  const f700 = getFontName(dir.locale, '700');
 
   const fullName = user ? `${user.firstName} ${user.lastName}` : '';
 
@@ -106,79 +147,151 @@ export default function EmployeeProfileScreen() {
     ]);
   }, [dispatch, router, t]);
 
+  const soon = () => Alert.alert('قريباً', 'هذه الميزة قيد التطوير');
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface, paddingTop: insets.top + 16 }]}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+    <AquaBackground>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + sawaaSpacing.lg }]}
+      >
         <UnverifiedEmailBanner />
-        <ThemedText variant="displaySm" style={styles.title}>
-          {t('employee.profile')}
-        </ThemedText>
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(600).easing(Easing.out(Easing.cubic))}>
+          <Text style={[styles.title, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
+            {t('employee.profile')}
+          </Text>
+        </Animated.View>
 
-        {/* Profile Card */}
-        <View style={[styles.profileCard, { backgroundColor: theme.colors.white }]}>
-          <Avatar size={64} name={fullName} imageUrl={user?.avatarUrl} />
-          <View style={{ flex: 1, gap: 4 }}>
-            <ThemedText variant="heading">{fullName}</ThemedText>
-            <ThemedText variant="bodySm" color={theme.colors.textSecondary}>
-              {user?.email}
-            </ThemedText>
-            <View style={styles.ratingRow}>
-              <Star size={14} fill="#F59E0B" color="#F59E0B" />
-              <ThemedText variant="bodySm" style={{ fontWeight: '600' }}>
-                4.8
-              </ThemedText>
-              <ThemedText variant="caption" color={theme.colors.textMuted}>
-                (120 {t('home.rating')})
-              </ThemedText>
+        <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(100).duration(600).easing(Easing.out(Easing.cubic))}>
+          <GlassSurface variant="strong" radius={sawaaRadius.xl} padding={sawaaSpacing.lg} style={styles.profileCard}>
+            <View style={[styles.profileRow, { flexDirection: dir.row }]}>
+              <Avatar size={64} name={fullName} imageUrl={user?.avatarUrl} color={sawaaColors.teal[600]} />
+              <View style={styles.profileMid}>
+                <Text style={[styles.profileName, { fontFamily: f700, textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
+                  {fullName}
+                </Text>
+                <Text style={[styles.profileEmail, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign, writingDirection: dir.writingDirection }]}>
+                  {user?.email}
+                </Text>
+                <View style={[styles.ratingRow, { flexDirection: dir.row }]}>
+                  <Star size={14} fill={sawaaSemantic.warning} color={sawaaSemantic.warning} />
+                  <Text style={[styles.ratingValue, { fontFamily: f600, fontWeight: '600' }]}>4.8</Text>
+                  <Text style={[styles.ratingMeta, { fontFamily: f400, fontWeight: '400', writingDirection: dir.writingDirection }]}>
+                    (120 {t('home.rating')})
+                  </Text>
+                </View>
+              </View>
             </View>
-          </View>
-        </View>
+          </GlassSurface>
+        </Animated.View>
 
-        <View style={styles.menuGroup}>
-          <MenuItem icon={User} label={t('profile.personalInfo')} onPress={() => Alert.alert('قريباً', 'هذه الميزة قيد التطوير')} />
-          <MenuItem icon={Star} label={t('doctor.ratingsReviews')} onPress={() => Alert.alert('قريباً', 'هذه الميزة قيد التطوير')} />
-          <MenuItem icon={Globe} label={t('profile.language')} value={t('profile.arabic')} onPress={() => Alert.alert('قريباً', 'هذه الميزة قيد التطوير')} />
-          <MenuItem icon={Bell} label={t('profile.notifications')} onPress={() => Alert.alert('قريباً', 'هذه الميزة قيد التطوير')} />
-        </View>
+        <Animated.View
+          entering={reduceMotion ? undefined : FadeInDown.delay(180).duration(600).easing(Easing.out(Easing.cubic))}
+          style={styles.group}
+        >
+          <MenuGroup
+            entries={[
+              { icon: User, label: t('profile.personalInfo'), onPress: soon },
+              { icon: Star, label: t('doctor.ratingsReviews'), onPress: soon },
+              { icon: Globe, label: t('profile.language'), value: t('profile.arabic'), onPress: soon },
+              { icon: Bell, label: t('profile.notifications'), onPress: soon },
+            ]}
+          />
+        </Animated.View>
 
-        <View style={styles.menuGroup}>
-          <MenuItem icon={Info} label={t('profile.about')} onPress={() => Alert.alert('مركز سواء', 'نسخة 1.0.0')} />
-          <MenuItem icon={Shield} label={t('profile.privacy')} onPress={() => Linking.openURL(PRIVACY_POLICY_URL)} />
-        </View>
+        <Animated.View
+          entering={reduceMotion ? undefined : FadeInDown.delay(260).duration(600).easing(Easing.out(Easing.cubic))}
+          style={styles.group}
+        >
+          <MenuGroup
+            entries={[
+              { icon: Info, label: t('profile.about'), onPress: () => Alert.alert('مركز سواء', 'نسخة 1.0.0') },
+              { icon: Shield, label: t('profile.privacy'), onPress: () => Linking.openURL(PRIVACY_POLICY_URL) },
+            ]}
+          />
+        </Animated.View>
 
-        <View style={styles.menuGroup}>
-          <MenuItem icon={LogOut} label={t('auth.logout')} danger onPress={handleLogout} />
-        </View>
+        <Animated.View
+          entering={reduceMotion ? undefined : FadeInDown.delay(340).duration(600).easing(Easing.out(Easing.cubic))}
+          style={styles.group}
+        >
+          <MenuGroup entries={[{ icon: LogOut, label: t('auth.logout'), danger: true, onPress: handleLogout }]} />
+        </Animated.View>
 
-        <ThemedText variant="caption" color={theme.colors.textMuted} align="center" style={{ marginTop: 16 }}>
+        <Text style={[styles.version, { fontFamily: f400, fontWeight: '400', writingDirection: dir.writingDirection }]}>
           {t('doctor.appVersion')} 1.0.0
-        </ThemedText>
+        </Text>
       </ScrollView>
-    </View>
+    </AquaBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 20 },
-  title: { marginBottom: 20 },
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
+  scroll: { paddingHorizontal: sawaaSpacing.lg, paddingBottom: 140 },
+  title: {
+    fontSize: sawaaType.heading.fontSize,
+    lineHeight: sawaaType.heading.lineHeight,
+    color: sawaaColors.ink[900],
+    marginBottom: sawaaSpacing.xl,
   },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  menuGroup: { gap: 8, marginBottom: 20 },
-  menuItem: {
-    flexDirection: 'row',
+  profileCard: { marginBottom: sawaaSpacing['2xl'] },
+  profileRow: { alignItems: 'center', gap: sawaaSpacing.lg },
+  profileMid: { flex: 1, gap: sawaaSpacing.xs },
+  profileName: {
+    fontSize: sawaaType.subheading.fontSize,
+    lineHeight: sawaaType.subheading.lineHeight,
+    color: sawaaColors.ink[900],
+  },
+  profileEmail: {
+    fontSize: sawaaType.caption.fontSize,
+    lineHeight: sawaaType.caption.lineHeight,
+    color: sawaaColors.ink[500],
+  },
+  ratingRow: { alignItems: 'center', gap: sawaaSpacing.xs },
+  ratingValue: {
+    fontSize: sawaaType.caption.fontSize,
+    lineHeight: sawaaType.caption.lineHeight,
+    color: sawaaColors.ink[900],
+  },
+  ratingMeta: {
+    fontSize: sawaaType.micro.fontSize,
+    lineHeight: sawaaType.micro.lineHeight,
+    color: sawaaColors.ink[400],
+  },
+  group: { marginBottom: sawaaSpacing.xl },
+  menuRow: {
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: 12,
-    padding: 14,
-    paddingHorizontal: 16,
+    padding: sawaaSpacing.md,
   },
-  menuLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  menuRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  menuLeft: { alignItems: 'center', gap: sawaaSpacing.md, flex: 1 },
+  menuIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: sawaaRadius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuLabel: {
+    fontSize: sawaaType.body.fontSize,
+    lineHeight: sawaaType.body.lineHeight,
+  },
+  menuRight: { alignItems: 'center', gap: sawaaSpacing.sm },
+  menuValue: {
+    fontSize: sawaaType.caption.fontSize,
+    lineHeight: sawaaType.caption.lineHeight,
+    color: sawaaColors.ink[500],
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: withAlpha(sawaaColors.ink[900], 0.08),
+    marginHorizontal: sawaaSpacing.md,
+  },
+  version: {
+    fontSize: sawaaType.micro.fontSize,
+    lineHeight: sawaaType.micro.lineHeight,
+    color: sawaaColors.ink[400],
+    textAlign: 'center',
+    marginTop: sawaaSpacing.lg,
+  },
 });

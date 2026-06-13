@@ -7,6 +7,7 @@ export interface PublicBranchItem {
   nameEn: string | null;
   city: string | null;
   addressAr: string | null;
+  isMain: boolean;
 }
 
 @Injectable()
@@ -18,13 +19,14 @@ export class GetPublicBranchesHandler {
   async execute(): Promise<PublicBranchItem[]> {
     return this.prisma.branch.findMany({
       where: { isActive: true },
-      orderBy: { createdAt: 'asc' },
+      orderBy: [{ isMain: 'desc' }, { createdAt: 'asc' }],
       select: {
         id: true,
         nameAr: true,
         nameEn: true,
         city: true,
         addressAr: true,
+        isMain: true,
       },
     });
   }

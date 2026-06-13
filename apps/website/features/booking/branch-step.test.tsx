@@ -4,8 +4,8 @@ import { BranchStep } from './branch-step';
 import type { PublicBranch } from './booking.api';
 
 const branches: PublicBranch[] = [
-  { id: 'b1', nameAr: 'الفرع الرئيسي', nameEn: 'Main Branch', city: 'Riyadh', addressAr: 'الرياض' },
-  { id: 'b2', nameAr: 'فرع الشمال', nameEn: 'North Branch', city: 'Riyadh', addressAr: 'شمال الرياض' },
+  { id: 'b1', nameAr: 'الفرع الرئيسي', nameEn: 'Main Branch', city: 'Riyadh', addressAr: 'الرياض', isMain: true },
+  { id: 'b2', nameAr: 'فرع الشمال', nameEn: 'North Branch', city: 'Riyadh', addressAr: 'شمال الرياض', isMain: false },
 ];
 
 describe('BranchStep', () => {

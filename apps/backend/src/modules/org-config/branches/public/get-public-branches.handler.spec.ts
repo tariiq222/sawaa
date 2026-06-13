@@ -1,21 +1,21 @@
 import { GetPublicBranchesHandler, PublicBranchItem } from './get-public-branches.handler';
 
-const DEFAULT_ORG = '00000000-0000-0000-0000-000000000001';
-
-const activeBranch: PublicBranchItem = {
+const activeBranchMain: PublicBranchItem = {
   id: 'branch-1',
   nameAr: 'الفرع الرئيسي',
   nameEn: 'Main Branch',
   city: 'Riyadh',
   addressAr: 'شارع الملك فهد',
+  isMain: true,
 };
 
-const inactiveBranch: PublicBranchItem = {
+const activeBranchSecondary: PublicBranchItem = {
   id: 'branch-2',
-  nameAr: 'الفرع المغلق',
-  nameEn: 'Closed Branch',
+  nameAr: 'فرع آخر',
+  nameEn: 'Secondary Branch',
   city: null,
   addressAr: null,
+  isMain: false,
 };
 
 const buildPrisma = (rows: PublicBranchItem[]) => ({
@@ -27,17 +27,17 @@ const buildPrisma = (rows: PublicBranchItem[]) => ({
 
 describe('GetPublicBranchesHandler', () => {
   it('returns only active branches with public-safe projection', async () => {
-    const prisma = buildPrisma([activeBranch]);
+    const prisma = buildPrisma([activeBranchMain]);
     const handler = new GetPublicBranchesHandler(prisma as never);
 
     const result = await handler.execute();
 
     expect(result).toHaveLength(1);
-    expect(result[0]).toEqual(activeBranch);
+    expect(result[0]).toEqual(activeBranchMain);
     expect(prisma.branch.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ isActive: true }),
-        select: expect.objectContaining({ id: true, nameAr: true }),
+        select: expect.objectContaining({ id: true, nameAr: true, isMain: true }),
       }),
     );
   });
@@ -52,7 +52,7 @@ describe('GetPublicBranchesHandler', () => {
   });
 
   it('does not include inactive branch (query filters at DB level)', async () => {
-    const prisma = buildPrisma([activeBranch]);
+    const prisma = buildPrisma([activeBranchMain]);
     const handler = new GetPublicBranchesHandler(prisma as never);
 
     await handler.execute();
@@ -64,7 +64,7 @@ describe('GetPublicBranchesHandler', () => {
   });
 
   it('result items do not expose internal-only fields', async () => {
-    const prisma = buildPrisma([activeBranch]);
+    const prisma = buildPrisma([activeBranchMain]);
     const handler = new GetPublicBranchesHandler(prisma as never);
 
     const result = await handler.execute();
@@ -75,9 +75,38 @@ describe('GetPublicBranchesHandler', () => {
     expect(item).not.toHaveProperty('createdAt');
   });
 
-  it('returns multiple active branches ordered by creation', async () => {
-    const second = { ...inactiveBranch, id: 'branch-3', nameAr: 'فرع آخر' };
-    const prisma = buildPrisma([activeBranch, second]);
+  it('includes isMain flag in returned items', async () => {
+    const prisma = buildPrisma([activeBranchMain, activeBranchSecondary]);
+    const handler = new GetPublicBranchesHandler(prisma as never);
+
+    const result = await handler.execute();
+
+    expect(result[0]).toHaveProperty('isMain', true);
+    expect(result[1]).toHaveProperty('isMain', false);
+  });
+
+  it('orders main branch first (isMain: desc) via orderBy', async () => {
+    // The DB returns rows in whatever order Prisma applies — mock simulates main-first ordering.
+    const prisma = buildPrisma([activeBranchMain, activeBranchSecondary]);
+    const handler = new GetPublicBranchesHandler(prisma as never);
+
+    const result = await handler.execute();
+
+    // Verify the orderBy sent to Prisma contains isMain: 'desc' as first sort key.
+    const call = (prisma.branch.findMany as jest.Mock).mock.calls[0][0] as {
+      orderBy: Array<Record<string, string>>;
+    };
+    expect(Array.isArray(call.orderBy)).toBe(true);
+    expect(call.orderBy[0]).toEqual({ isMain: 'desc' });
+    expect(call.orderBy[1]).toEqual({ createdAt: 'asc' });
+
+    // Result order (from mock) has main branch at index 0.
+    expect(result[0].isMain).toBe(true);
+    expect(result[0].id).toBe('branch-1');
+  });
+
+  it('returns multiple active branches ordered by creation as tiebreak', async () => {
+    const prisma = buildPrisma([activeBranchMain, activeBranchSecondary]);
     const handler = new GetPublicBranchesHandler(prisma as never);
 
     const result = await handler.execute();

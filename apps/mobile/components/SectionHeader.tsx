@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, StyleProp, ViewStyle } from 'react-native';
 
-import { sawaaColors } from '@/theme/sawaa/tokens';
+import { sawaaColors, sawaaSpacing, sawaaType } from '@/theme/sawaa/tokens';
 import { useDir } from '@/hooks/useDir';
 
 type SectionHeaderProps = {
@@ -54,42 +54,43 @@ const styles = StyleSheet.create({
   row: {
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 12,
+    gap: sawaaSpacing.md,
+    marginBottom: sawaaSpacing.md,
   },
   labelWrap: {
     alignItems: 'center',
-    gap: 10,
+    gap: sawaaSpacing.sm,
     flexShrink: 1,
   },
   accentScreen: {
     width: 3,
-    height: 26,
+    height: sawaaSpacing['2xl'],
     borderRadius: 2,
     backgroundColor: sawaaColors.teal[700],
     opacity: 0.35,
   },
   accentSection: {
     width: 3,
-    height: 22,
+    height: sawaaSpacing.xl,
     borderRadius: 2,
     backgroundColor: sawaaColors.teal[700],
     opacity: 0.35,
   },
   titleScreen: {
-    fontSize: 26,
-    fontWeight: '800',
+    fontSize: sawaaType.heading.fontSize,
+    fontWeight: sawaaType.heading.weight,
     color: sawaaColors.teal[700],
-    lineHeight: 32,
+    lineHeight: sawaaType.heading.lineHeight,
   },
   titleSection: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: sawaaType.subheading.fontSize,
+    fontWeight: '700',
     color: sawaaColors.teal[700],
-    lineHeight: 26,
+    lineHeight: sawaaType.subheading.lineHeight,
   },
   action: {
-    fontSize: 13,
+    fontSize: sawaaType.caption.fontSize,
+    lineHeight: sawaaType.caption.lineHeight,
     fontWeight: '700',
     color: sawaaColors.teal[700],
   },
