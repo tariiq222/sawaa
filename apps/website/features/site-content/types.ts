@@ -1,14 +1,3 @@
-export interface SiteSettingRow {
-  key: string;
-  valueText: string | null;
-  valueAr: string | null;
-  valueEn: string | null;
-  valueJson: unknown;
-  valueMedia: string | null;
-}
-
-export type SiteSettingsMap = Map<string, SiteSettingRow>;
-
 export interface HeroContent {
   badgeText: string;
   titlePrefix: string;

@@ -2,7 +2,6 @@ import { listPublicEmployees } from '@/features/therapists/public';
 import { getPublicCatalog, findDepartment } from '@/features/public-catalog/public';
 import { listPublicTestimonials } from '@/features/testimonials/public';
 import {
-  fetchSiteSettingsMap,
   resolveFeatureCards,
   resolveHeroContent,
   resolveSectionIntros,
@@ -12,7 +11,6 @@ import {
   type FeatureCards,
   type HeroContent,
   type HomeSectionIntros,
-  type SiteSettingsMap,
   type BlogPost,
   type FaqItem,
   type SupportGroup,
@@ -42,22 +40,21 @@ async function safeFetch<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
 }
 
 export async function SawaaHomePage() {
-  const [locale, [therapists, catalog, settings, testimonials]] = await Promise.all([
+  const [locale, [therapists, catalog, testimonials]] = await Promise.all([
     getLocale(),
     Promise.all([
       safeFetch<PublicEmployee[]>(() => listPublicEmployees(), []),
       safeFetch(() => getPublicCatalog(), { departments: [], categories: [], services: [] }),
-      safeFetch<SiteSettingsMap>(() => fetchSiteSettingsMap(), new Map()),
       safeFetch(() => listPublicTestimonials(6), []),
     ]),
   ]);
 
-  const hero: HeroContent = resolveHeroContent(settings, locale);
-  const intros: HomeSectionIntros = resolveSectionIntros(settings, locale);
-  const featureCards: FeatureCards = resolveFeatureCards(settings);
-  const blogPosts: BlogPost[] = resolveBlogPosts(settings);
-  const faqItems: FaqItem[] = resolveFaqItems(settings);
-  const supportGroups: SupportGroup[] = resolveSupportGroups(settings);
+  const hero: HeroContent = resolveHeroContent(locale);
+  const intros: HomeSectionIntros = resolveSectionIntros(locale);
+  const featureCards: FeatureCards = resolveFeatureCards();
+  const blogPosts: BlogPost[] = resolveBlogPosts();
+  const faqItems: FaqItem[] = resolveFaqItems();
+  const supportGroups: SupportGroup[] = resolveSupportGroups();
 
   const clinicsDept = findDepartment(catalog.departments, { ar: ['عيادات'], en: ['clinic'] });
   const clinics: ClinicItem[] = clinicsDept

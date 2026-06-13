@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { getPublicBrandingForSsr } from '@/features/branding/public';
 import {
-  fetchSiteSettingsMap,
   resolveBlogPosts,
   resolveSectionIntros,
 } from '@/features/site-content/public';
@@ -19,9 +18,8 @@ function introTitle(intro: { titlePrefix: string; titleHighlight: string; titleS
 
 export async function generateMetadata(): Promise<Metadata> {
   const branding = await getPublicBrandingForSsr();
-  const settings = await fetchSiteSettingsMap().catch(() => new Map());
   const locale = await getLocale();
-  const intro = resolveSectionIntros(settings, locale).blog;
+  const intro = resolveSectionIntros(locale).blog;
 
   return buildPageMetadata({
     branding,
@@ -32,10 +30,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function BlogIndexRoute() {
-  const settings = await fetchSiteSettingsMap().catch(() => new Map());
   const locale = await getLocale();
-  const intro = resolveSectionIntros(settings, locale).blog;
-  const posts = resolveBlogPosts(settings);
+  const intro = resolveSectionIntros(locale).blog;
+  const posts = resolveBlogPosts();
   const Layout = theme.Layout;
 
   return (

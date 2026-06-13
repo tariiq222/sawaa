@@ -865,24 +865,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/dashboard/content/site-settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List site settings (admin view) */
-        get: operations["DashboardContentController_list"];
-        put?: never;
-        /** Upsert one or more site settings in a single transaction */
-        post: operations["DashboardContentController_upsert"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/dashboard/discount-reasons": {
         parameters: {
             query?: never;
@@ -3512,23 +3494,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/public/content/site-settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List public site settings (allowlisted key prefixes only, optionally filtered) */
-        get: operations["PublicContentController_list"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/public/employees": {
         parameters: {
             query?: never;
@@ -4245,10 +4210,6 @@ export interface components {
              * @example 12:00
              */
             startTime: string;
-        };
-        BulkUpsertSiteSettingsDto: {
-            /** @description List of settings to upsert */
-            entries: components["schemas"]["SiteSettingEntryDto"][];
         };
         BusinessHourSlotDto: {
             /**
@@ -6727,23 +6688,6 @@ export interface components {
         SetServiceBookingConfigsDto: {
             /** @description Booking type configurations (must include at least one) */
             types: components["schemas"]["BookingConfigInputDto"][];
-        };
-        SiteSettingEntryDto: {
-            /**
-             * @description Setting key (dotted path, e.g. "home.hero.title.ar")
-             * @example home.hero.title.ar
-             */
-            key: string;
-            /** @description Arabic text value */
-            valueAr?: Record<string, never>;
-            /** @description English text value */
-            valueEn?: Record<string, never>;
-            /** @description Structured JSON value (for lists, nested data) */
-            valueJson?: Record<string, never>;
-            /** @description Media URL (served from MinIO or external) */
-            valueMedia?: Record<string, never>;
-            /** @description Plain text value (lang-neutral) */
-            valueText?: Record<string, never>;
         };
         SmtpCredentialsDto: {
             /**
@@ -11911,136 +11855,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardContentController_list: {
-        parameters: {
-            query?: {
-                /** @description Filter by key prefix */
-                prefix?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Array of key/value settings */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example site.title */
-                        key?: string;
-                        valueAr?: string | null;
-                        valueEn?: string | null;
-                        valueJson?: Record<string, never> | null;
-                        valueMedia?: string | null;
-                        valueText?: string | null;
-                    }[];
-                };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardContentController_upsert: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BulkUpsertSiteSettingsDto"];
-            };
-        };
-        responses: {
-            /** @description Count of rows updated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 3 */
-                        updated?: number;
-                    };
-                };
             };
             /** @description Validation failed */
             400: {
@@ -25344,45 +25158,6 @@ export interface operations {
         responses: {
             /** @description Message accepted */
             201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    PublicContentController_list: {
-        parameters: {
-            query?: {
-                /** @description Filter by key prefix (e.g. "home.hero.") */
-                prefix?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Array of key/value settings, restricted to public-safe key prefixes */
-            200: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -17,7 +17,6 @@ import { arSettings } from "./ar.settings"
 import { arMisc } from "./ar.misc"
 import { arIntakeForms } from "./ar.intake-forms"
 import { arDepartments } from "./ar.departments"
-import { arContent } from "./ar.content"
 import { arSms } from "./ar.sms"
 import { arOps } from "./ar.ops"
 import { arZoom } from "./ar.zoom"
@@ -36,7 +35,6 @@ export const ar: Record<string, string> = {
   ...arMisc,
   ...arIntakeForms,
   ...arDepartments,
-  ...arContent,
   ...arSms,
   ...arOps,
   ...arZoom,

@@ -1,13 +1,9 @@
-import type { SiteSettingsMap } from './types';
-
 export interface FaqItem {
   q: string;
   qEn: string;
   a: string;
   aEn: string;
 }
-
-export const FAQ_ITEMS_KEY = 'content.faq.items';
 
 export const FAQ_DEFAULTS: FaqItem[] = [
   { q: 'كم تكلفة الجلسة؟', qEn: 'How much does a session cost?', a: 'تختلف تكلفة الجلسة حسب نوع الاستشارة والمعالج. للاطلاع على الأسعار التفصيلية يمكنك التواصل معنا أو زيارة صفحة الحجز.', aEn: 'Session pricing varies by consultation type and therapist. For detailed pricing, please contact us or visit the booking page.' },
@@ -18,14 +14,6 @@ export const FAQ_DEFAULTS: FaqItem[] = [
   { q: 'كيف تكون الجلسة الأولى؟', qEn: 'What is the first session like?', a: 'تقييم أولي يستمع فيه المعالج لاحتياجاتك ويبني خطة علاجية مناسبة لك. لا التزام بعدد جلسات محدد — أنت تقرر.', aEn: 'An initial assessment where the therapist listens to your needs and builds a treatment plan suited to you. No commitment to a fixed number of sessions — you decide.' },
 ];
 
-function isFaqItemArray(v: unknown): v is FaqItem[] {
-  return Array.isArray(v) && v.length > 0 && typeof v[0].q === 'string';
-}
-
-export function resolveFaqItems(map: SiteSettingsMap): FaqItem[] {
-  const row = map.get(FAQ_ITEMS_KEY);
-  if (row?.valueJson && isFaqItemArray(row.valueJson)) {
-    return row.valueJson as FaqItem[];
-  }
+export function resolveFaqItems(): FaqItem[] {
   return FAQ_DEFAULTS;
 }

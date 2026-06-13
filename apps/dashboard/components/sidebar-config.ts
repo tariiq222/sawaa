@@ -64,7 +64,6 @@ export const setupNav: NavItem[] = [
   { titleKey: "nav.branches", href: "/branches", icon: Location01Icon, permission: "branch:read" },
   { titleKey: "nav.chatbot", href: "/chatbot", icon: AiChat02Icon, permission: "setting:read" },
   { titleKey: "nav.notifications", href: "/notifications", icon: Notification03Icon, permission: "setting:read" },
-  { titleKey: "nav.content", href: "/content", icon: DocumentValidationIcon, permission: "content:read" },
   { titleKey: "nav.settings", href: "/settings", icon: Settings02Icon, permission: "setting:read" },
 ]
 

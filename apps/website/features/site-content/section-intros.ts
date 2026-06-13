@@ -1,5 +1,4 @@
 import type { Locale } from '@/features/locale/locale';
-import type { SiteSettingsMap } from './types';
 
 export interface SectionIntro {
   tag: string;
@@ -148,96 +147,6 @@ export const SECTION_INTRO_DEFAULTS_EN: HomeSectionIntros = {
   },
 };
 
-export const SECTION_INTRO_FIELDS = [
-  'tag',
-  'titlePrefix',
-  'titleHighlight',
-  'titleSuffix',
-  'subtitle',
-] as const satisfies readonly (keyof SectionIntro)[];
-
-export const SECTION_INTRO_KEYS: readonly SectionIntroKey[] = [
-  'features',
-  'clinics',
-  'supportGroups',
-  'team',
-  'testimonials',
-  'blog',
-  'faq',
-  'cta',
-];
-
-export function settingKey(
-  section: SectionIntroKey,
-  field: keyof SectionIntro,
-  locale: Locale = 'ar',
-): string {
-  return `home.${section}.${field}.${locale}`;
-}
-
-function pickText(map: SiteSettingsMap, key: string, fallback: string): string {
-  const row = map.get(key);
-  if (!row) return fallback;
-  return row.valueAr ?? row.valueText ?? row.valueEn ?? fallback;
-}
-
-/**
- * Resolve a localized section-intro field. In EN we prefer the `.en` key (and
- * the row's English value), falling back to the AR key/value, then the EN
- * default, then the AR default. In AR the behavior is byte-identical to the
- * previous `pickText(map, settingKey(section, field), default)`.
- */
-function pickLocalized(
-  map: SiteSettingsMap,
-  section: SectionIntroKey,
-  field: keyof SectionIntro,
-  fallbackAr: string,
-  fallbackEn: string,
-  locale: Locale,
-): string {
-  if (locale === 'en') {
-    const enRow = map.get(settingKey(section, field, 'en'));
-    const enValue = enRow?.valueEn ?? enRow?.valueText ?? enRow?.valueAr;
-    if (enValue) return enValue;
-    const arRow = map.get(settingKey(section, field, 'ar'));
-    const arValue = arRow?.valueEn ?? arRow?.valueText ?? arRow?.valueAr;
-    return arValue ?? fallbackEn ?? fallbackAr;
-  }
-  return pickText(map, settingKey(section, field, 'ar'), fallbackAr);
-}
-
-function resolveOne(
-  map: SiteSettingsMap,
-  section: SectionIntroKey,
-  defaultsAr: SectionIntro,
-  defaultsEn: SectionIntro,
-  locale: Locale,
-): SectionIntro {
-  const L = (field: keyof SectionIntro): string =>
-    pickLocalized(map, section, field, defaultsAr[field], defaultsEn[field], locale);
-  return {
-    tag:            L('tag'),
-    titlePrefix:    L('titlePrefix'),
-    titleHighlight: L('titleHighlight'),
-    titleSuffix:    L('titleSuffix'),
-    subtitle:       L('subtitle'),
-  };
-}
-
-export function resolveSectionIntros(
-  map: SiteSettingsMap,
-  locale: Locale = 'ar',
-): HomeSectionIntros {
-  const one = (section: SectionIntroKey): SectionIntro =>
-    resolveOne(map, section, SECTION_INTRO_DEFAULTS[section], SECTION_INTRO_DEFAULTS_EN[section], locale);
-  return {
-    features:      one('features'),
-    clinics:       one('clinics'),
-    supportGroups: one('supportGroups'),
-    team:          one('team'),
-    testimonials:  one('testimonials'),
-    blog:          one('blog'),
-    faq:           one('faq'),
-    cta:           one('cta'),
-  };
+export function resolveSectionIntros(locale: Locale = 'ar'): HomeSectionIntros {
+  return locale === 'en' ? SECTION_INTRO_DEFAULTS_EN : SECTION_INTRO_DEFAULTS;
 }

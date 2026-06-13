@@ -1,5 +1,3 @@
-import type { SiteSettingsMap } from './types';
-
 export interface SupportGroup {
   slug: string;
   name: string;
@@ -12,8 +10,6 @@ export interface SupportGroup {
   format: string;
 }
 
-export const SUPPORT_GROUPS_KEY = 'content.supportGroups.items';
-
 export const SUPPORT_GROUP_DEFAULTS: SupportGroup[] = [
   { slug: 'art-therapy', name: 'العلاج بالفن', nameEn: 'Art Therapy', desc: 'التعبير الإبداعي لمعالجة المشاعر عبر الرسم والألوان في بيئة جماعية آمنة', descEn: 'Creative expression to process emotions through drawing and color in a safe group setting', image: '/images/support-groups/art-therapy.jpg', participants: '6-10 مشاركين', sessions: '8 جلسات', format: 'حضوري' },
   { slug: 'grief-loss', name: 'الحزن والفقد', nameEn: 'Grief & Loss', desc: 'دعم جماعي لمن فقدوا عزيزاً، ومساحة آمنة للتعبير والتعافي', descEn: 'Group support for those who have lost a loved one — a safe space to express and heal', image: '/images/support-groups/grief-loss.jpg', participants: '6-10 مشاركين', sessions: '10 جلسات', format: 'مختلط' },
@@ -23,14 +19,6 @@ export const SUPPORT_GROUP_DEFAULTS: SupportGroup[] = [
   { slug: 'social-anxiety', name: 'القلق الاجتماعي', nameEn: 'Social Anxiety', desc: 'تدريب تدريجي على المواقف الاجتماعية في بيئة داعمة وآمنة', descEn: 'Gradual training on social situations in a safe and supportive environment', image: '/images/support-groups/social-anxiety.jpg', participants: '6-10 مشاركين', sessions: '10 جلسات', format: 'مختلط' },
 ];
 
-function isSupportGroupArray(v: unknown): v is SupportGroup[] {
-  return Array.isArray(v) && v.length > 0 && typeof v[0].slug === 'string';
-}
-
-export function resolveSupportGroups(map: SiteSettingsMap): SupportGroup[] {
-  const row = map.get(SUPPORT_GROUPS_KEY);
-  if (row?.valueJson && isSupportGroupArray(row.valueJson)) {
-    return row.valueJson as SupportGroup[];
-  }
+export function resolveSupportGroups(): SupportGroup[] {
   return SUPPORT_GROUP_DEFAULTS;
 }

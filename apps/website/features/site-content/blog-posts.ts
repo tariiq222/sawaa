@@ -1,5 +1,3 @@
-import type { SiteSettingsMap } from './types';
-
 export interface BlogPost {
   slug: string;
   title: string;
@@ -12,22 +10,12 @@ export interface BlogPost {
   content: string;
 }
 
-export const BLOG_POSTS_KEY = 'content.blog.posts';
-
 export const BLOG_POST_DEFAULTS: BlogPost[] = [
   { slug: 'post-1', title: 'بـ 6 خطوات استعد إيقاع حياتك بعد الإجازة', titleEn: 'In 6 Steps: Restore Your Life Rhythm After the Holiday', date: 'أبريل 2025', tag: 'علم اجتماع', tagEn: 'Sociology', author: null, image: '/images/blog/post-1.webp', content: '' },
   { slug: 'post-2', title: 'لماذا القلق والتوتر أخطر ما يمر به الإنسان؟', titleEn: 'Why Anxiety and Stress Are Among the Most Dangerous Things We Face', date: 'مارس 2025', tag: 'علم النفس', tagEn: 'Psychology', author: 'د. عهود الشلهوب', image: '/images/blog/post-2.webp', content: '' },
   { slug: 'post-3', title: 'الاحتراق الوظيفي: كيف تتعرف عليه وتتعامل معه', titleEn: 'Job Burnout: How to Recognize and Manage It', date: 'أكتوبر 2024', tag: 'علم النفس', tagEn: 'Psychology', author: 'د. عهود الشلهوب', image: '/images/blog/post-3.webp', content: '' },
 ];
 
-function isBlogPostArray(v: unknown): v is BlogPost[] {
-  return Array.isArray(v) && v.length > 0 && typeof v[0].slug === 'string';
-}
-
-export function resolveBlogPosts(map: SiteSettingsMap): BlogPost[] {
-  const row = map.get(BLOG_POSTS_KEY);
-  if (row?.valueJson && isBlogPostArray(row.valueJson)) {
-    return row.valueJson as BlogPost[];
-  }
+export function resolveBlogPosts(): BlogPost[] {
   return BLOG_POST_DEFAULTS;
 }

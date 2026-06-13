@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Calendar, Tag, User } from 'lucide-react';
 import { getPublicBrandingForSsr } from '@/features/branding/public';
-import { fetchSiteSettingsMap, resolveBlogPosts } from '@/features/site-content/public';
+import { resolveBlogPosts } from '@/features/site-content/public';
 import { getLocale } from '@/features/locale/public';
 import { t as translate, type MessageKey } from '@/features/locale/dictionary';
 import { buildPageMetadata } from '@/lib/seo/page-metadata';
@@ -17,8 +17,7 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const branding = await getPublicBrandingForSsr();
-  const settings = await fetchSiteSettingsMap().catch(() => new Map());
-  const posts = resolveBlogPosts(settings);
+  const posts = resolveBlogPosts();
   const post = posts.find((p) => p.slug === slug);
 
   return buildPageMetadata({
@@ -33,8 +32,7 @@ export default async function BlogPostRoute({ params }: Props) {
   const { slug } = await params;
   const locale = await getLocale();
   const t = (key: MessageKey) => translate(locale, key);
-  const settings = await fetchSiteSettingsMap().catch(() => new Map());
-  const posts = resolveBlogPosts(settings);
+  const posts = resolveBlogPosts();
   const post = posts.find((p) => p.slug === slug);
 
   if (!post) {

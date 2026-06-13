@@ -1,5 +1,3 @@
-import type { SiteSettingsMap } from './types';
-
 export interface FeatureCard {
   label: string;
   title: string;
@@ -7,7 +5,6 @@ export interface FeatureCard {
   icon: string;
 }
 
-export const FEATURE_CARD_COUNT = 3 as const;
 export type FeatureCardIndex = 0 | 1 | 2;
 
 export type FeatureCards = readonly [FeatureCard, FeatureCard, FeatureCard];
@@ -42,7 +39,7 @@ export const FEATURE_CARD_ICONS = [
 
 export type FeatureCardIcon = (typeof FEATURE_CARD_ICONS)[number];
 
-const DEFAULTS: FeatureCards = [
+export const FEATURE_CARD_DEFAULTS: FeatureCards = [
   {
     label: 'كوادر سعودية',
     title: 'معالج يفهم ثقافتك',
@@ -63,39 +60,6 @@ const DEFAULTS: FeatureCards = [
   },
 ];
 
-export const FEATURE_CARD_DEFAULTS: FeatureCards = DEFAULTS;
-
-export function featureCardKey(
-  index: FeatureCardIndex,
-  field: keyof FeatureCard,
-): string {
-  const slot = index + 1;
-  if (field === 'icon') return `home.features.card.${slot}.icon`;
-  return `home.features.card.${slot}.${field}.ar`;
-}
-
-function pickText(map: SiteSettingsMap, key: string, fallback: string): string {
-  const row = map.get(key);
-  if (!row) return fallback;
-  return row.valueAr ?? row.valueText ?? row.valueEn ?? fallback;
-}
-
-function pickIcon(map: SiteSettingsMap, key: string, fallback: string): string {
-  const row = map.get(key);
-  if (!row) return fallback;
-  return row.valueText ?? row.valueAr ?? row.valueEn ?? fallback;
-}
-
-function resolveCard(map: SiteSettingsMap, index: FeatureCardIndex): FeatureCard {
-  const d = DEFAULTS[index];
-  return {
-    label: pickText(map, featureCardKey(index, 'label'), d.label),
-    title: pickText(map, featureCardKey(index, 'title'), d.title),
-    desc:  pickText(map, featureCardKey(index, 'desc'),  d.desc),
-    icon:  pickIcon(map, featureCardKey(index, 'icon'),  d.icon),
-  };
-}
-
-export function resolveFeatureCards(map: SiteSettingsMap): FeatureCards {
-  return [resolveCard(map, 0), resolveCard(map, 1), resolveCard(map, 2)];
+export function resolveFeatureCards(): FeatureCards {
+  return FEATURE_CARD_DEFAULTS;
 }
