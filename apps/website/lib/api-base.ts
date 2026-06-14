@@ -10,5 +10,6 @@ export function getApiBase(): string {
       ? process.env.NEXT_PUBLIC_API_URL
       : undefined) ??
     DEFAULT_ORIGIN;
-  return `${origin.replace(/\/$/, '')}${API_PREFIX}`;
+  const trimmed = origin.replace(/\/+$/, '');
+  return trimmed.endsWith(API_PREFIX) ? trimmed : `${trimmed}${API_PREFIX}`;
 }

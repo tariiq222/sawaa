@@ -3,7 +3,7 @@
 import { useState, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useT } from '@/features/locale/locale-provider';
-import { validateEmail, normalizeSaudiPhone } from './auth.schema';
+import { normalizeSaudiPhone } from './auth.schema';
 import { clientLoginApi } from './auth.api';
 import { setClient } from './auth-store';
 import { getMeApi } from './auth.api';
@@ -27,29 +27,18 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     e.preventDefault();
     setError(null);
 
-    // The identifier is either an email (contains '@') or a Saudi phone.
-    const trimmed = identifier.trim();
-    let credentials: { email: string; password: string } | { phone: string; password: string };
-    if (trimmed.includes('@')) {
-      const emailError = validateEmail(trimmed);
-      if (emailError) {
-        setError(emailError);
-        return;
-      }
-      credentials = { email: trimmed, password };
-    } else {
-      const normalizedPhone = normalizeSaudiPhone(trimmed);
-      if (!normalizedPhone) {
-        setError(t('auth.invalidPhone'));
-        return;
-      }
-      credentials = { phone: normalizedPhone, password };
+    const normalizedPhone = normalizeSaudiPhone(identifier.trim());
+    if (!normalizedPhone) {
+      setError(t('auth.invalidPhone'));
+      return;
     }
 
     if (!password) {
       setError(t('auth.passwordRequired'));
       return;
     }
+
+    const credentials = { phone: normalizedPhone, password };
 
     setIsLoading(true);
     try {
@@ -100,10 +89,10 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         </div>
       )}
 
-      {/* Identifier field — email or Saudi phone */}
+      {/* Identifier field — Saudi phone */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="identifier" className={labelClass}>
-          {t('auth.emailOrPhone')}
+          {t('auth.phone')}
         </label>
         <div className="relative">
           <span className={iconClass} aria-hidden="true">
@@ -111,12 +100,13 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           </span>
           <input
             id="identifier"
-            type="text"
+            type="tel"
+            inputMode="tel"
             dir="ltr"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
             placeholder="05XXXXXXXX"
-            autoComplete="username"
+            autoComplete="tel"
             className={`${inputClass} text-start`}
           />
         </div>
