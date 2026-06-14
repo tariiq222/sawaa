@@ -45,7 +45,18 @@ export class MinioService implements IStorageService, OnModuleInit {
     if (publicEndpoint) {
       const publicUseSSL = this.config.get<string>('MINIO_PUBLIC_USE_SSL') === 'true';
       const publicPort = Number(this.config.get<number>('MINIO_PUBLIC_PORT') ?? (publicUseSSL ? 443 : 80));
-      this.signClient = new Client({ endPoint: publicEndpoint, port: publicPort, useSSL: publicUseSSL, accessKey, secretKey, region });
+      // Omit the port when it's the scheme default. Passing port 443 explicitly
+      // makes minio-js embed ":443" in the signed Host header, but browsers send
+      // Host without the default port — the mismatch breaks signature checks.
+      const isDefaultPort = (publicUseSSL && publicPort === 443) || (!publicUseSSL && publicPort === 80);
+      this.signClient = new Client({
+        endPoint: publicEndpoint,
+        ...(isDefaultPort ? {} : { port: publicPort }),
+        useSSL: publicUseSSL,
+        accessKey,
+        secretKey,
+        region,
+      });
     } else {
       this.signClient = this.client;
     }
