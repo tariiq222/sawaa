@@ -48,3 +48,17 @@ describe("computeBundlePrice — PERCENTAGE", () => {
     })
   })
 })
+
+describe("computeBundlePrice — string halalas (Prisma Decimal regression)", () => {
+  it("sums string prices numerically instead of concatenating them", () => {
+    // The backend serializes Decimal halalas as strings ("16000", "14000").
+    // A bare `a + b` reduce would concatenate -> 1,600,014,000 halalas.
+    expect(
+      computeBundlePrice(["16000", "14000"] as unknown as number[], "PERCENTAGE", 0),
+    ).toEqual({
+      subtotal: 30000,
+      discountAmount: 0,
+      finalPrice: 30000,
+    })
+  })
+})

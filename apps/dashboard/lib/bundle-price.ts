@@ -17,7 +17,9 @@ export function computeBundlePrice(
   discountType: BundleDiscountType,
   discountValue: number,
 ): BundlePriceBreakdown {
-  const subtotal = roundHalalas(servicePrices.reduce((a, b) => a + b, 0))
+  // Coerce each price: the backend serializes Prisma Decimal halalas as a
+  // string, so a bare `a + b` would concatenate instead of sum.
+  const subtotal = roundHalalas(servicePrices.reduce((a, b) => a + Number(b), 0))
   let discountAmount = 0
   if (discountType === 'PERCENTAGE') {
     discountAmount = roundHalalas(subtotal * Math.min(discountValue, 100) / 100)
