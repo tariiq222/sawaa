@@ -2,7 +2,7 @@ import type { Clinic, Therapist, Testimonial } from './types';
 
 export const SITE = {
   name: 'مركز سواء',
-  nameShort: 'مركز سواء للاستشارات الأسرية',
+  nameShort: 'مركز سواء للإرشاد الأسري',
   desc: 'مركز متخصص في الاستشارات النفسية والأسرية وعلاج الإدمان بسرية تامة وكوادر سعودية مؤهلة.',
   nameEn: 'Sawa Center',
   nameShortEn: 'Sawa Family Counseling Center',
