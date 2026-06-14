@@ -33,14 +33,19 @@ export class MinioService implements IStorageService, OnModuleInit {
     const useSSL = this.config.get<string>('MINIO_USE_SSL') === 'true';
     const accessKey = this.config.getOrThrow<string>('MINIO_ACCESS_KEY');
     const secretKey = this.config.getOrThrow<string>('MINIO_SECRET_KEY');
+    // Pin the region so presigned-URL generation never issues a getBucketRegion
+    // network call — that call fails against the public sign endpoint (which is
+    // only reachable for the final download, not for control-plane requests
+    // from inside the cluster). MinIO defaults to us-east-1.
+    const region = this.config.get<string>('MINIO_REGION') ?? 'us-east-1';
 
-    this.client = new Client({ endPoint: endpoint, port: Number(port), useSSL, accessKey, secretKey });
+    this.client = new Client({ endPoint: endpoint, port: Number(port), useSSL, accessKey, secretKey, region });
 
     const publicEndpoint = this.config.get<string>('MINIO_PUBLIC_ENDPOINT');
     if (publicEndpoint) {
       const publicUseSSL = this.config.get<string>('MINIO_PUBLIC_USE_SSL') === 'true';
       const publicPort = Number(this.config.get<number>('MINIO_PUBLIC_PORT') ?? (publicUseSSL ? 443 : 80));
-      this.signClient = new Client({ endPoint: publicEndpoint, port: publicPort, useSSL: publicUseSSL, accessKey, secretKey });
+      this.signClient = new Client({ endPoint: publicEndpoint, port: publicPort, useSSL: publicUseSSL, accessKey, secretKey, region });
     } else {
       this.signClient = this.client;
     }
