@@ -63,6 +63,11 @@ export const envValidationSchema = Joi.object({
   MINIO_SECRET_KEY: Joi.string().required(),
   MINIO_BUCKET: Joi.string().required(),
   MINIO_USE_SSL: Joi.boolean().default(false),
+  // Public host used only to sign presigned URLs handed to browsers (the
+  // internal MINIO_ENDPOINT is a Docker-network name the browser can't resolve).
+  MINIO_PUBLIC_ENDPOINT: Joi.string().hostname().optional(),
+  MINIO_PUBLIC_PORT: Joi.number().port().optional(),
+  MINIO_PUBLIC_USE_SSL: Joi.boolean().optional(),
 
   // JWT (Identity BC)
   JWT_ACCESS_SECRET: Joi.string().min(16).required(),

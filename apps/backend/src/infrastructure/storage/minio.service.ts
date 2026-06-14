@@ -19,6 +19,11 @@ interface IStorageService {
 export class MinioService implements IStorageService, OnModuleInit {
   private readonly logger = new Logger(MinioService.name);
   private readonly client: Client;
+  // Signs presigned URLs. Presigned links are handed to browsers, which cannot
+  // resolve the internal Docker-network hostname the in-cluster client uses, so
+  // when MINIO_PUBLIC_ENDPOINT is set we sign against the public host instead.
+  // The signature embeds the host, so it cannot be swapped after signing.
+  private readonly signClient: Client;
   private readonly defaultBucket: string;
   private readonly publicEndpoint: string;
 
@@ -26,14 +31,19 @@ export class MinioService implements IStorageService, OnModuleInit {
     const endpoint = this.config.getOrThrow<string>('MINIO_ENDPOINT');
     const port = this.config.getOrThrow<number>('MINIO_PORT');
     const useSSL = this.config.get<string>('MINIO_USE_SSL') === 'true';
+    const accessKey = this.config.getOrThrow<string>('MINIO_ACCESS_KEY');
+    const secretKey = this.config.getOrThrow<string>('MINIO_SECRET_KEY');
 
-    this.client = new Client({
-      endPoint: endpoint,
-      port: Number(port),
-      useSSL,
-      accessKey: this.config.getOrThrow<string>('MINIO_ACCESS_KEY'),
-      secretKey: this.config.getOrThrow<string>('MINIO_SECRET_KEY'),
-    });
+    this.client = new Client({ endPoint: endpoint, port: Number(port), useSSL, accessKey, secretKey });
+
+    const publicEndpoint = this.config.get<string>('MINIO_PUBLIC_ENDPOINT');
+    if (publicEndpoint) {
+      const publicUseSSL = this.config.get<string>('MINIO_PUBLIC_USE_SSL') === 'true';
+      const publicPort = Number(this.config.get<number>('MINIO_PUBLIC_PORT') ?? (publicUseSSL ? 443 : 80));
+      this.signClient = new Client({ endPoint: publicEndpoint, port: publicPort, useSSL: publicUseSSL, accessKey, secretKey });
+    } else {
+      this.signClient = this.client;
+    }
 
     this.defaultBucket = this.config.getOrThrow<string>('MINIO_BUCKET');
     const scheme = useSSL ? 'https' : 'http';
@@ -72,7 +82,7 @@ export class MinioService implements IStorageService, OnModuleInit {
   }
 
   async getSignedUrl(bucket: string, key: string, expiry = 3600): Promise<string> {
-    return this.client.presignedGetObject(bucket, key, expiry);
+    return this.signClient.presignedGetObject(bucket, key, expiry);
   }
 
   async fileExists(bucket: string, key: string): Promise<boolean> {
