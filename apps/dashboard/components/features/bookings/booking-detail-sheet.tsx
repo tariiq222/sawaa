@@ -94,7 +94,7 @@ export function BookingDetailSheet({ booking, open, onOpenChange, onAction, defa
 
         {/* Header */}
         <DialogHeader>
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3 pe-8">
             <DialogTitle className="text-base font-semibold text-foreground">
               {t("detail.bookingDetails")}
             </DialogTitle>
