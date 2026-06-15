@@ -17,8 +17,9 @@ export class AssignPermissionsHandler {
     });
     if (!role) throw new NotFoundException(`Role ${cmd.customRoleId} not found`);
 
-    // Replace permissions atomically — $allTenants.$transaction: super-admin path, no RLS context needed for permission rows
-    await this.prisma.$allTenants.$transaction([
+    // Replace permissions atomically — admin handler, no per-user RLS context required for permission rows
+    // eslint-disable-next-line no-restricted-syntax
+    await this.prisma.$transaction([
       this.prisma.permission.deleteMany({ where: { customRoleId: cmd.customRoleId } }),
       this.prisma.permission.createMany({
         data: cmd.permissions.map((p) => ({

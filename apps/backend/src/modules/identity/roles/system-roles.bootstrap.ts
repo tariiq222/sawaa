@@ -52,8 +52,9 @@ export class SystemRolesBootstrap implements OnModuleInit {
         });
         this.logger.log(`Created system role: ${roleKey}`);
       } else {
-        // Sync permissions: delete old, insert new (idempotent) — $allTenants.$transaction: bootstrap/onModuleInit, no user RLS context
-        await this.prisma.$allTenants.$transaction([
+        // Sync permissions: delete old, insert new (idempotent) — onModuleInit bootstrap, no user RLS context
+        // eslint-disable-next-line no-restricted-syntax
+        await this.prisma.$transaction([
           this.prisma.permission.deleteMany({ where: { customRoleId: existing.id } }),
           this.prisma.permission.createMany({
             data: flatPermissions.map((p) => ({ ...p, customRoleId: existing.id })),
