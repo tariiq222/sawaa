@@ -61,13 +61,12 @@ describe("createEmployeeSchema", () => {
     }
   })
 
-  it("accepts empty avatarUrl string and a valid URL", () => {
+  it("accepts empty, absolute, and relative avatarUrl values", () => {
     expect(schema.safeParse({ ...valid, avatarUrl: "" }).success).toBe(true)
     expect(schema.safeParse({ ...valid, avatarUrl: "https://cdn.test/a.jpg" }).success).toBe(true)
-  })
-
-  it("rejects a malformed avatarUrl", () => {
-    expect(schema.safeParse({ ...valid, avatarUrl: "not a url" }).success).toBe(false)
+    // stored avatars may be relative paths or raw filenames (WordPress-migrated)
+    expect(schema.safeParse({ ...valid, avatarUrl: "/uploads/a.jpg" }).success).toBe(true)
+    expect(schema.safeParse({ ...valid, avatarUrl: "df0f5b76b91c0b5d6382dcd635ac7b5b.jpg" }).success).toBe(true)
   })
 })
 

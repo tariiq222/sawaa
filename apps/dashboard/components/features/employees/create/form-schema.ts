@@ -29,7 +29,7 @@ export function createEmployeeSchema(t?: (key: string) => string) {
     experience: z.coerce.number().int().min(0).optional(),
     education: z.string().optional(),
     educationAr: z.string().optional(),
-    avatarUrl: z.string().url().optional().or(z.literal("")),
+    avatarUrl: z.string().optional().or(z.literal("")),
     avatarFile: z.instanceof(File).optional(),
     branchIds: z.array(z.string()).optional(),
     serviceIds: z.array(z.string()).optional(),
