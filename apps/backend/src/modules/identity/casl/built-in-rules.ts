@@ -19,8 +19,6 @@ const ADMIN_RULES: readonly Rule[] = [
   { action: 'manage', subject: 'Category' },
   { action: 'manage', subject: 'Service' },
   { action: 'manage', subject: 'Branch' },
-  { action: 'manage', subject: 'Branding' },
-  { action: 'manage', subject: 'Content' },
   { action: 'manage', subject: 'Integration' },
   { action: 'manage', subject: 'Coupon' },
 ];

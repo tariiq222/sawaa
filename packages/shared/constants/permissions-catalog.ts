@@ -19,10 +19,8 @@
 export const PERMISSION_SUBJECTS = [
   'Booking',
   'Branch',
-  'Branding',
   'Category',
   'Client',
-  'Content',
   'Coupon',
   'Department',
   'Employee',

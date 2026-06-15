@@ -9,23 +9,20 @@ import {
 describe('permissions catalog', () => {
   it('exposes the canonical Subject list (PascalCase, alphabetical)', () => {
     expect(PERMISSION_SUBJECTS).toEqual([
-      'Billing',
       'Booking',
       'Branch',
-      'Branding',
       'Category',
       'Client',
       'Coupon',
       'Department',
       'Employee',
+      'Integration',
       'Invoice',
       'Payment',
-      'Plan',
       'Report',
       'Role',
       'Service',
       'Setting',
-      'Subscription',
       'User',
     ]);
   });
