@@ -308,7 +308,7 @@ export class DashboardIdentityController {
   @CheckPermissions({ action: 'read', subject: 'Role' })
   @ApiOperation({ summary: 'List custom roles' })
   @ApiOkResponse({
-    description: 'List of custom roles',
+    description: 'List of roles (system and custom)',
     schema: {
       type: 'array',
       items: {
@@ -316,6 +316,8 @@ export class DashboardIdentityController {
         properties: {
           id: { type: 'string', format: 'uuid' },
           name: { type: 'string' },
+          isSystem: { type: 'boolean' },
+          systemKey: { type: 'string', nullable: true },
           permissions: { type: 'array', items: { type: 'object', properties: { action: { type: 'string' }, subject: { type: 'string' } } } },
         },
       },

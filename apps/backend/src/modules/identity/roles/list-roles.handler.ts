@@ -10,7 +10,7 @@ export class ListRolesHandler {
   async execute() {
     return this.prisma.customRole.findMany({
       include: { permissions: true },
-      orderBy: { createdAt: 'asc' },
+      orderBy: [{ isSystem: 'desc' }, { createdAt: 'asc' }],
     });
   }
 }

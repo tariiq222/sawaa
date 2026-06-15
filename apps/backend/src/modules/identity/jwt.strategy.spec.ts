@@ -6,6 +6,9 @@ const buildPrisma = () => ({
   user: {
     findUnique: jest.fn(),
   },
+  customRole: {
+    findFirst: jest.fn().mockResolvedValue(null),
+  },
 });
 
 const buildCasl = () => ({

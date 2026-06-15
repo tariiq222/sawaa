@@ -155,6 +155,8 @@ model ClientRefreshToken {
 model CustomRole {
   id          String       @id @default(uuid())
   name        String
+  isSystem    Boolean      @default(false)
+  systemKey   UserRole?    @unique
   permissions Permission[]
   users       User[]
   createdAt   DateTime     @default(now())

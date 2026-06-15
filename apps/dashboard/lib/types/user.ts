@@ -39,11 +39,8 @@ export interface User {
 export interface Role {
   id: string
   name: string
-  slug: string
-  description: string | null
-  isDefault: boolean
   isSystem: boolean
-  createdAt: string
+  systemKey: UserRole | null
   permissions: Permission[]
 }
 
@@ -78,6 +75,11 @@ export interface UpdateUserPayload {
   name?: string
   phone?: string
   gender?: UserGender
+  role?: TenantUserRole
+  customRoleId?: string | null
+}
+
+export interface UpdateUserRolePayload {
   role?: TenantUserRole
   customRoleId?: string | null
 }

@@ -11,6 +11,7 @@ import type {
   UserListQuery,
   CreateUserPayload,
   UpdateUserPayload,
+  UpdateUserRolePayload,
   AssignRolePayload,
   CreateRolePayload,
   RolePermissionPayload,
@@ -42,6 +43,13 @@ export async function updateUser(
   payload: UpdateUserPayload,
 ): Promise<User> {
   return api.patch<User>(`/dashboard/identity/users/${id}`, payload)
+}
+
+export async function updateUserRole(
+  id: string,
+  payload: UpdateUserRolePayload,
+): Promise<User> {
+  return api.patch<User>(`/dashboard/identity/users/${id}/role`, payload)
 }
 
 export async function deleteUser(id: string): Promise<void> {

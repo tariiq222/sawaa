@@ -27,25 +27,40 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: JwtPayload) {
     this.logger.debug(`systemContext bypass for JWT bootstrap (sub=${payload.sub})`);
-    const user = await this.cls.run(async () => {
+
+    // All DB queries must run inside the CLS context block for RLS bypass
+    const { user, systemRolePermissions } = await this.cls.run(async () => {
       this.cls.set(SYSTEM_CONTEXT_CLS_KEY, true);
-      return this.prisma.user.findUnique({
+
+      const foundUser = await this.prisma.user.findUnique({
         where: { id: payload.sub },
         include: { customRole: { include: { permissions: true } } },
       });
+
+      let sysRolePerms: Array<{ action: string; subject: string }> | null = null;
+      if (
+        foundUser &&
+        foundUser.role !== 'SUPER_ADMIN' &&
+        foundUser.role !== 'CLIENT'
+      ) {
+        const sysRole = await this.prisma.customRole.findFirst({
+          where: { systemKey: foundUser.role },
+          select: { permissions: { select: { action: true, subject: true } } },
+        });
+        sysRolePerms = sysRole?.permissions ?? null;
+      }
+
+      return { user: foundUser, systemRolePermissions: sysRolePerms };
     });
 
     if (!user || !user.isActive) throw new UnauthorizedException('User not found or inactive');
 
     // P0-1: admin/dashboard JwtStrategy must never accept CLIENT-role tokens.
-    // Mobile clients have their own namespace via ClientSessionGuard.
-    // This blocks privilege escalation if any path creates a User row with
-    // role=CLIENT (e.g. mobile self-registration).
     if (user.role === 'CLIENT') {
       throw new UnauthorizedException('Client tokens cannot access this surface');
     }
 
-    // P0-6: If the JWT carries a tokenVersion, verify it matches the DB value.
+    // P0-6: tokenVersion check
     if (typeof payload.tokenVersion === 'number' && user.tokenVersion !== payload.tokenVersion) {
       throw new UnauthorizedException('Session has been revoked');
     }
@@ -53,6 +68,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const ability = this.casl.buildForUser({
       role: user.role,
       customRole: user.customRole,
+      systemRolePermissions,
     });
 
     return {

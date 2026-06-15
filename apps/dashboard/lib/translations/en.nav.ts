@@ -87,6 +87,7 @@ export const enNav: Record<string, string> = {
   "common.required": "This field is required",
   "common.save": "Save",
   "common.delete": "Delete",
+  "common.deleting": "Deleting...",
   "common.edit": "Edit",
   "common.view": "View",
   "common.preview": "Preview",

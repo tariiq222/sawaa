@@ -7,6 +7,7 @@ import {
   fetchUsers,
   createUser,
   updateUser,
+  updateUserRole,
   deleteUser,
   activateUser,
   deactivateUser,
@@ -18,7 +19,7 @@ import {
   setRolePermissions,
   fetchPermissions,
 } from "@/lib/api/users"
-import type { UserListQuery, UserRole } from "@/lib/types/user"
+import type { UserListQuery, UserRole, UpdateUserRolePayload } from "@/lib/types/user"
 
 /* ─── Users List ─── */
 
@@ -75,6 +76,12 @@ export function useUserMutations() {
     onSuccess: invalidate,
   })
 
+  const updateUserRoleMut = useMutation({
+    mutationFn: ({ id, ...payload }: { id: string } & UpdateUserRolePayload) =>
+      updateUserRole(id, payload),
+    onSuccess: invalidate,
+  })
+
   const deleteMut = useMutation({ mutationFn: deleteUser, onSuccess: invalidate })
   const activateMut = useMutation({ mutationFn: activateUser, onSuccess: invalidate })
   const deactivateMut = useMutation({ mutationFn: deactivateUser, onSuccess: invalidate })
@@ -91,7 +98,7 @@ export function useUserMutations() {
     onSuccess: invalidate,
   })
 
-  return { createMut, updateMut, deleteMut, activateMut, deactivateMut, assignRoleMut, removeRoleMut }
+  return { createMut, updateMut, updateUserRoleMut, deleteMut, activateMut, deactivateMut, assignRoleMut, removeRoleMut }
 }
 
 /* ─── Roles ─── */

@@ -62,6 +62,7 @@ import { LookupUserHandler } from './lookup-user/lookup-user.handler';
 import { GetEmployeeAccountHandler } from './employee-account/get-employee-account.handler';
 import { CreateEmployeeAccountHandler } from './employee-account/create-employee-account.handler';
 import { UpdateEmployeeAccountHandler } from './employee-account/update-employee-account.handler';
+import { SystemRolesBootstrap } from './roles/system-roles.bootstrap';
 
 const handlers = [
   LoginHandler, RefreshTokenHandler, LogoutHandler,
@@ -127,6 +128,7 @@ const handlers = [
     OtpSessionGuard,
     OwnerProvisioningService,
     AuthResponseBuilder,
+    SystemRolesBootstrap,
   ],
   exports: [
     CaslAbilityFactory,

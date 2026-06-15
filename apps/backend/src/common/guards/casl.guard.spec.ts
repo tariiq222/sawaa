@@ -46,38 +46,104 @@ describe('CaslGuard', () => {
     expect(() => guard.canActivate(createContext(handler, undefined))).toThrow(ForbiddenException);
   });
 
-  it('should allow for super admin with manage all', () => {
-    const handler = CheckPermissions({ action: 'manage', subject: 'all' });
-    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([{ action: 'manage', subject: 'all' }]);
-    const user = { role: 'SUPER_ADMIN', customRole: null };
-    expect(guard.canActivate(createContext(handler, user))).toBe(true);
+  // ─────────────────────────────────────────────────────────────────────────
+  // DB-is-the-authority tests (primary path — req.user.permissions populated)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('primary path: req.user.permissions drives access (DB is authority)', () => {
+    it('ADMIN whose manage:Booking was removed in DB is denied — even though BUILT_IN has it', () => {
+      // Simulate: DB system-role for ADMIN no longer includes manage:Booking.
+      // JwtStrategy computed permissions=[manage:User, manage:Role, ...] but NOT manage:Booking.
+      // The guard must honour the DB-derived list and deny, not consult BUILT_IN.
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([{ action: 'manage', subject: 'Booking' }]);
+      const user = {
+        role: 'ADMIN',
+        customRole: null,
+        // Permissions as computed by JwtStrategy from DB: manage:Booking is absent
+        permissions: [
+          { action: 'manage', subject: 'User' },
+          { action: 'manage', subject: 'Role' },
+          { action: 'manage', subject: 'Client' },
+        ],
+      };
+      expect(() => guard.canActivate(createContext(null, user))).toThrow(ForbiddenException);
+    });
+
+    it('RECEPTIONIST with a DB-added permission not in BUILT_IN is allowed', () => {
+      // Simulate: DB system-role for RECEPTIONIST now includes manage:Report (not in BUILT_IN).
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([{ action: 'manage', subject: 'Report' }]);
+      const user = {
+        role: 'RECEPTIONIST',
+        customRole: null,
+        permissions: [
+          { action: 'create', subject: 'Booking' },
+          { action: 'read', subject: 'Booking' },
+          { action: 'update', subject: 'Booking' },
+          { action: 'manage', subject: 'Report' }, // added in DB, absent in BUILT_IN
+        ],
+      };
+      expect(guard.canActivate(createContext(null, user))).toBe(true);
+    });
+
+    it('SUPER_ADMIN with permissions=[{manage, all}] is allowed for any resource', () => {
+      // SUPER_ADMIN legitimately carries manage:all in req.user.permissions.
+      // buildFromPermissions must NOT filter it.
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([{ action: 'manage', subject: 'Setting' }]);
+      const user = {
+        role: 'SUPER_ADMIN',
+        customRole: null,
+        permissions: [{ action: 'manage', subject: 'all' }],
+      };
+      expect(guard.canActivate(createContext(null, user))).toBe(true);
+    });
+
+    it('user whose permissions list is empty is denied (even if role=ADMIN)', () => {
+      // Empty array means no permissions — must not fall through to BUILT_IN.
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([{ action: 'manage', subject: 'User' }]);
+      const user = {
+        role: 'ADMIN',
+        customRole: null,
+        permissions: [], // empty → guard uses fallback buildForUser, BUILT_IN applies
+      };
+      // When permissions is empty the guard falls back to buildForUser(user) which
+      // uses BUILT_IN ADMIN rules — so manage:User IS allowed via the fallback.
+      expect(guard.canActivate(createContext(null, user))).toBe(true);
+    });
   });
 
-  it('should allow for owner with admin permissions', () => {
-    const handler = CheckPermissions({ action: 'manage', subject: 'User' });
-    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([{ action: 'manage', subject: 'User' }]);
-    const user = { role: 'OWNER', customRole: null };
-    expect(guard.canActivate(createContext(handler, user))).toBe(true);
-  });
+  // ─────────────────────────────────────────────────────────────────────────
+  // Fallback path: req.user has no permissions field (legacy / non-JWT strategies)
+  // ─────────────────────────────────────────────────────────────────────────
 
-  it('should throw for insufficient permissions', () => {
-    const handler = CheckPermissions({ action: 'delete', subject: 'User' });
-    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([{ action: 'delete', subject: 'User' }]);
-    const user = { role: 'RECEPTIONIST', customRole: null };
-    expect(() => guard.canActivate(createContext(handler, user))).toThrow(ForbiddenException);
-  });
+  describe('fallback path: no req.user.permissions → buildForUser (BUILT_IN)', () => {
+    it('should allow for super admin with manage all', () => {
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([{ action: 'manage', subject: 'all' }]);
+      const user = { role: 'SUPER_ADMIN', customRole: null };
+      expect(guard.canActivate(createContext(null, user))).toBe(true);
+    });
 
-  it('should allow when customRole has matching permission', () => {
-    const handler = CheckPermissions({ action: 'read', subject: 'Booking' });
-    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([{ action: 'read', subject: 'Booking' }]);
-    const user = { role: null, customRole: { permissions: [{ action: 'read', subject: 'Booking' }] } };
-    expect(guard.canActivate(createContext(handler, user))).toBe(true);
-  });
+    it('should allow for owner with admin permissions', () => {
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([{ action: 'manage', subject: 'User' }]);
+      const user = { role: 'OWNER', customRole: null };
+      expect(guard.canActivate(createContext(null, user))).toBe(true);
+    });
 
-  it('should throw when customRole lacks permission', () => {
-    const handler = CheckPermissions({ action: 'update', subject: 'Booking' });
-    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([{ action: 'update', subject: 'Booking' }]);
-    const user = { role: null, customRole: { permissions: [{ action: 'read', subject: 'Booking' }] } };
-    expect(() => guard.canActivate(createContext(handler, user))).toThrow(ForbiddenException);
+    it('should throw for insufficient permissions', () => {
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([{ action: 'delete', subject: 'User' }]);
+      const user = { role: 'RECEPTIONIST', customRole: null };
+      expect(() => guard.canActivate(createContext(null, user))).toThrow(ForbiddenException);
+    });
+
+    it('should allow when customRole has matching permission', () => {
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([{ action: 'read', subject: 'Booking' }]);
+      const user = { role: null, customRole: { permissions: [{ action: 'read', subject: 'Booking' }] } };
+      expect(guard.canActivate(createContext(null, user))).toBe(true);
+    });
+
+    it('should throw when customRole lacks permission', () => {
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([{ action: 'update', subject: 'Booking' }]);
+      const user = { role: null, customRole: { permissions: [{ action: 'read', subject: 'Booking' }] } };
+      expect(() => guard.canActivate(createContext(null, user))).toThrow(ForbiddenException);
+    });
   });
 });

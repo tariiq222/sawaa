@@ -77,13 +77,13 @@ export function UserListPage() {
         title={t("users.title")}
         description={t("users.description")}
       >
-        {isUsersTab && canDo("User", "create") && (
+        {isUsersTab && canDo("user", "create") && (
           <Button className="gap-2 rounded-full px-5" onClick={() => router.push("/users/create")}>
             <HugeiconsIcon icon={Add01Icon} size={16} />
             {t("users.addUser")}
           </Button>
         )}
-        {isRolesTab && canDo("User", "create") && (
+        {isRolesTab && canDo("user", "create") && (
           <Button className="gap-2 rounded-full px-5" onClick={() => setCreateRoleOpen(true)}>
             <HugeiconsIcon icon={Add01Icon} size={16} />
             {t("users.roles.createRole")}
@@ -125,7 +125,7 @@ export function UserListPage() {
               {Array.from({ length: 5 }).map((_, i) => <Skeleton key={`row-${i}`} className="h-12 rounded-lg" />)}
             </div>
           ) : (
-            <DataTable columns={columns} data={users} emptyTitle={t("users.empty.title")} emptyDescription={t("users.empty.description")} emptyAction={canDo("User", "create") ? { label: t("users.addUser"), onClick: () => router.push("/users/create") } : undefined} />
+            <DataTable columns={columns} data={users} emptyTitle={t("users.empty.title")} emptyDescription={t("users.empty.description")} emptyAction={canDo("user", "create") ? { label: t("users.addUser"), onClick: () => router.push("/users/create") } : undefined} />
           )}
         </TabsContent>
 

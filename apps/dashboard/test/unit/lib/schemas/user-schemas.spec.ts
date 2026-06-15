@@ -4,6 +4,7 @@ import {
   userCreateSchema,
   userEditSchema,
   createRoleSchema,
+  parseRoleSelection,
 } from "@/lib/schemas/user.schema"
 
 const validBase = {
@@ -37,7 +38,10 @@ describe("userBaseSchema", () => {
 })
 
 describe("userCreateSchema", () => {
-  const validCreate = { ...validBase, password: "Password1", role: "ADMIN" as const }
+  // roleSelection is now a free-form string (min 1); the schema no longer
+  // enforces a role enum — valid options are constrained by the UI dropdown
+  // and assertCanAssignRole on the backend.
+  const validCreate = { ...validBase, password: "Password1", roleSelection: "ADMIN" }
 
   it("accepts a complete create payload", () => {
     expect(userCreateSchema.safeParse(validCreate).success).toBe(true)
@@ -47,27 +51,59 @@ describe("userCreateSchema", () => {
     expect(userCreateSchema.safeParse({ ...validCreate, password: "short" }).success).toBe(false)
   })
 
-  it("rejects an unknown role", () => {
-    expect(userCreateSchema.safeParse({ ...validCreate, role: "GOD" }).success).toBe(false)
+  it("requires a non-empty roleSelection", () => {
+    expect(userCreateSchema.safeParse({ ...validCreate, roleSelection: "" }).success).toBe(false)
   })
 
-  it("accepts each documented USER_ROLES enum value", () => {
-    for (const role of ["ADMIN", "RECEPTIONIST", "ACCOUNTANT", "EMPLOYEE"] as const) {
-      expect(userCreateSchema.safeParse({ ...validCreate, role }).success).toBe(true)
+  it("accepts system role names as roleSelection", () => {
+    for (const role of ["ADMIN", "RECEPTIONIST", "ACCOUNTANT", "EMPLOYEE"]) {
+      expect(userCreateSchema.safeParse({ ...validCreate, roleSelection: role }).success).toBe(true)
     }
   })
 
-  it("rejects platform and client-only roles from organization user creation", () => {
-    expect(userCreateSchema.safeParse({ ...validCreate, role: "SUPER_ADMIN" }).success).toBe(false)
-    expect(userCreateSchema.safeParse({ ...validCreate, role: "CLIENT" }).success).toBe(false)
+  it("accepts a custom role selection value (custom:<uuid>)", () => {
+    const customValue = "custom:550e8400-e29b-41d4-a716-446655440000"
+    expect(userCreateSchema.safeParse({ ...validCreate, roleSelection: customValue }).success).toBe(true)
+  })
+
+  it("does not enforce SUPER_ADMIN or CLIENT exclusion at schema level (backend assertCanAssignRole handles this)", () => {
+    // The schema accepts any non-empty string; role-rank validation is done
+    // server-side by assertCanAssignRole and constrained by UI option lists.
+    expect(userCreateSchema.safeParse({ ...validCreate, roleSelection: "SUPER_ADMIN" }).success).toBe(true)
+    expect(userCreateSchema.safeParse({ ...validCreate, roleSelection: "CLIENT" }).success).toBe(true)
   })
 })
 
 describe("userEditSchema", () => {
-  it("makes role optional compared to the create schema", () => {
-    const { password: _password, ...rest } = { ...validBase, password: "Password1", role: "ADMIN" as const }
-    expect(userEditSchema.safeParse(rest).success).toBe(true)
+  it("makes roleSelection optional (edit does not require re-selecting a role)", () => {
+    expect(userEditSchema.safeParse({ ...validBase, roleSelection: "ADMIN" }).success).toBe(true)
     expect(userEditSchema.safeParse({ email: "a@b.co", name: "A" }).success).toBe(true)
+  })
+})
+
+describe("parseRoleSelection", () => {
+  it("classifies a built-in role name as system", () => {
+    const result = parseRoleSelection("ADMIN")
+    expect(result).toEqual({ kind: "system", role: "ADMIN" })
+  })
+
+  it("classifies a custom:<uuid> value as custom", () => {
+    const uuid = "550e8400-e29b-41d4-a716-446655440000"
+    const result = parseRoleSelection(`custom:${uuid}`)
+    expect(result).toEqual({ kind: "custom", customRoleId: uuid })
+  })
+
+  it("extracts the UUID portion from a custom selection", () => {
+    const result = parseRoleSelection("custom:abc-123")
+    expect(result.kind).toBe("custom")
+    if (result.kind === "custom") {
+      expect(result.customRoleId).toBe("abc-123")
+    }
+  })
+
+  it("treats any non-custom: prefix as a system role", () => {
+    const result = parseRoleSelection("RECEPTIONIST")
+    expect(result).toEqual({ kind: "system", role: "RECEPTIONIST" })
   })
 })
 

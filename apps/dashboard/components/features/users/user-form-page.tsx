@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -10,9 +10,8 @@ import { useQuery } from "@tanstack/react-query"
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
-import { Button } from "@sawaa/ui"
-import { Skeleton } from "@sawaa/ui"
-import { useUserMutations } from "@/hooks/use-users"
+import { Button, Skeleton } from "@sawaa/ui"
+import { useUserMutations, useRoles } from "@/hooks/use-users"
 import { useLocale } from "@/components/locale-provider"
 import { fetchUser } from "@/lib/api/users"
 import { queryKeys } from "@/lib/query-keys"
@@ -20,10 +19,11 @@ import { UserFormFields } from "./user-form-fields"
 import {
   userCreateSchema,
   userEditSchema,
+  parseRoleSelection,
   type UserCreateFormData,
   type UserEditFormData,
 } from "@/lib/schemas/user.schema"
-import type { TenantUserRole, UserRole } from "@/lib/types/user"
+import type { UserRole } from "@/lib/types/user"
 
 /* ─── Types ─── */
 
@@ -33,15 +33,12 @@ type Props =
 
 type FormData = UserCreateFormData | UserEditFormData
 
-const TENANT_FORM_ROLES = new Set<UserRole>([
-  "ADMIN",
-  "RECEPTIONIST",
-  "ACCOUNTANT",
-  "EMPLOYEE",
-])
+const TENANT_ROLES = new Set<UserRole>(["ADMIN", "RECEPTIONIST", "ACCOUNTANT", "EMPLOYEE"])
 
-function toTenantFormRole(role: UserRole): TenantUserRole | undefined {
-  return TENANT_FORM_ROLES.has(role) ? (role as TenantUserRole) : undefined
+function computeInitialRoleSelection(role: UserRole, customRoleId: string | null): string {
+  if (customRoleId) return `custom:${customRoleId}`
+  if (TENANT_ROLES.has(role)) return role
+  return "EMPLOYEE"
 }
 
 /* ─── User Form Page ─── */
@@ -52,8 +49,12 @@ export function UserFormPage(props: Props) {
 
   const router = useRouter()
   const { t } = useLocale()
-  const { createMut, updateMut } = useUserMutations()
-  const isPending = isEdit ? updateMut.isPending : createMut.isPending
+  const { createMut, updateMut, updateUserRoleMut } = useUserMutations()
+  const { data: roles = [], isLoading: rolesLoading } = useRoles()
+
+  const isPending = isEdit
+    ? updateMut.isPending || updateUserRoleMut.isPending
+    : createMut.isPending
 
   const { data: user, isLoading } = useQuery({
     queryKey: queryKeys.users.detail(userId ?? ""),
@@ -61,9 +62,14 @@ export function UserFormPage(props: Props) {
     enabled: isEdit,
   })
 
+  const initialRoleSelection = useMemo(
+    () => (user ? computeInitialRoleSelection(user.role, user.customRoleId) : ""),
+    [user],
+  )
+
   const form = useForm<FormData>({
     resolver: zodResolver(isEdit ? userEditSchema : userCreateSchema) as never,
-    defaultValues: { email: "", password: "", name: "", phone: "", role: "RECEPTIONIST" },
+    defaultValues: { email: "", password: "", name: "", phone: "", roleSelection: "RECEPTIONIST" },
   })
 
   useEffect(() => {
@@ -73,19 +79,42 @@ export function UserFormPage(props: Props) {
       name: user.name,
       phone: user.phone ?? "",
       gender: user.gender ?? undefined,
-      role: toTenantFormRole(user.role),
+      roleSelection: initialRoleSelection,
     })
-  }, [user, form])
+  }, [user, form, initialRoleSelection])
 
   const onSubmit = form.handleSubmit(async (data) => {
     try {
       if (isEdit) {
         const editData = data as UserEditFormData
-        await updateMut.mutateAsync({ id: userId!, ...editData, phone: editData.phone || undefined })
+        const { roleSelection, ...profileFields } = editData
+        await updateMut.mutateAsync({
+          id: userId!,
+          ...profileFields,
+          phone: profileFields.phone || undefined,
+        })
+        if (roleSelection && roleSelection !== initialRoleSelection) {
+          const parsed = parseRoleSelection(roleSelection)
+          const rolePayload =
+            parsed.kind === "system"
+              ? { role: parsed.role, customRoleId: null }
+              : { customRoleId: parsed.customRoleId }
+          await updateUserRoleMut.mutateAsync({ id: userId!, ...rolePayload })
+        }
         toast.success(t("users.edit.success"))
       } else {
         const createData = data as UserCreateFormData
-        await createMut.mutateAsync({ ...createData, phone: createData.phone || undefined })
+        const { roleSelection, ...rest } = createData
+        const parsed = parseRoleSelection(roleSelection)
+        const rolePayload =
+          parsed.kind === "system"
+            ? { role: parsed.role }
+            : { role: "EMPLOYEE" as const, customRoleId: parsed.customRoleId }
+        await createMut.mutateAsync({
+          ...rest,
+          phone: rest.phone || undefined,
+          ...rolePayload,
+        })
         toast.success(t("users.create.success"))
       }
       router.push("/users")
@@ -116,7 +145,7 @@ export function UserFormPage(props: Props) {
       <Breadcrumbs />
       <PageHeader title={title} description={description} />
       <form onSubmit={onSubmit} className="flex flex-col gap-6">
-        <UserFormFields form={form} isEdit={isEdit} />
+        <UserFormFields form={form} isEdit={isEdit} roles={roles} rolesLoading={rolesLoading} />
         <div className="flex justify-end gap-3">
           <Button type="button" variant="outline" onClick={() => router.push("/users")}>
             {t(isEdit ? "users.edit.cancel" : "users.create.cancel")}

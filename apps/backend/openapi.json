@@ -13462,6 +13462,9 @@
                         "format": "uuid",
                         "type": "string"
                       },
+                      "isSystem": {
+                        "type": "boolean"
+                      },
                       "name": {
                         "type": "string"
                       },
@@ -13478,6 +13481,10 @@
                           "type": "object"
                         },
                         "type": "array"
+                      },
+                      "systemKey": {
+                        "nullable": true,
+                        "type": "string"
                       }
                     },
                     "type": "object"
@@ -13486,7 +13493,7 @@
                 }
               }
             },
-            "description": "List of custom roles"
+            "description": "List of roles (system and custom)"
           },
           "400": {
             "content": {

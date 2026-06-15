@@ -8,25 +8,40 @@ export type AssignPermissionsCommand = AssignPermissionsDto & {
 
 @Injectable()
 export class AssignPermissionsHandler {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async execute(cmd: AssignPermissionsCommand): Promise<void> {
-    // Verify the role exists before we touch its permissions.
     const role = await this.prisma.customRole.findFirst({
       where: { id: cmd.customRoleId },
-      select: { id: true },
+      select: { id: true, isSystem: true, systemKey: true },
     });
     if (!role) throw new NotFoundException(`Role ${cmd.customRoleId} not found`);
 
-    await this.prisma.permission.deleteMany({ where: { customRoleId: cmd.customRoleId } });
-    await this.prisma.permission.createMany({
-      data: cmd.permissions.map((p) => ({
-        customRoleId: cmd.customRoleId,
-        action: p.action,
-        subject: p.subject,
-      })),
-    });
+    // Replace permissions atomically — $allTenants.$transaction: super-admin path, no RLS context needed for permission rows
+    await this.prisma.$allTenants.$transaction([
+      this.prisma.permission.deleteMany({ where: { customRoleId: cmd.customRoleId } }),
+      this.prisma.permission.createMany({
+        data: cmd.permissions.map((p) => ({
+          customRoleId: cmd.customRoleId,
+          action: p.action,
+          subject: p.subject,
+        })),
+      }),
+    ]);
+
+    // Invalidate sessions for all users affected by this permission change.
+    // For system roles: bump all users with that built-in role.
+    // For custom roles: bump all users assigned this custom role.
+    if (role.isSystem && role.systemKey) {
+      await this.prisma.user.updateMany({
+        where: { role: role.systemKey },
+        data: { tokenVersion: { increment: 1 } },
+      });
+    } else {
+      await this.prisma.user.updateMany({
+        where: { customRoleId: cmd.customRoleId },
+        data: { tokenVersion: { increment: 1 } },
+      });
+    }
   }
 }

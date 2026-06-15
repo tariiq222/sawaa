@@ -1,11 +1,5 @@
 import { z } from "zod"
-
-const USER_ROLES = [
-  "ADMIN",
-  "RECEPTIONIST",
-  "ACCOUNTANT",
-  "EMPLOYEE",
-] as const
+import type { TenantUserRole } from "@/lib/types/user"
 
 /* ─── User base schema (user-form-page) ─── */
 
@@ -21,16 +15,29 @@ export const userBaseSchema = z.object({
 
 export const userCreateSchema = userBaseSchema.extend({
   password: z.string().min(8),
-  role: z.enum(USER_ROLES),
+  roleSelection: z.string().min(1, "يجب اختيار الدور"),
 })
 
 export const userEditSchema = userBaseSchema.extend({
-  role: z.enum(USER_ROLES).optional(),
+  roleSelection: z.string().optional(),
 })
 
 export type UserBaseFormData   = z.infer<typeof userBaseSchema>
 export type UserCreateFormData = z.infer<typeof userCreateSchema>
 export type UserEditFormData   = z.infer<typeof userEditSchema>
+
+/* ─── Role selection parsing ─── */
+
+export type RoleSelectionResult =
+  | { kind: "system"; role: TenantUserRole }
+  | { kind: "custom"; customRoleId: string }
+
+export function parseRoleSelection(value: string): RoleSelectionResult {
+  if (value.startsWith("custom:")) {
+    return { kind: "custom", customRoleId: value.slice(7) }
+  }
+  return { kind: "system", role: value as TenantUserRole }
+}
 
 /* ─── Create role schema (create-role-dialog) ─── */
 

@@ -1,102 +1,57 @@
 import { Injectable } from '@nestjs/common';
 import { AbilityBuilder, createMongoAbility, MongoAbility } from '@casl/ability';
-import type {
-  PermissionSubject,
-  PermissionAction,
-} from '@sawaa/shared/constants';
+import { BUILT_IN } from './built-in-rules';
 
 export type AppAbility = MongoAbility;
-
-/**
- * Built-in role → permission-rule map.
- *
- * Subjects come from `@sawaa/shared/constants` (`PERMISSION_SUBJECTS`).
- * Actions come from `@sawaa/shared/constants` (`PERMISSION_ACTIONS`),
- * with the additional CASL-only literal `'all'` reserved for SUPER_ADMIN.
- *
- * OWNER is the top-level role. It carries everything ADMIN does.
- * ADMIN handles day-to-day clinic ops.
- *
- * Super-admin platform access is gated by `User.isSuperAdmin` (boolean),
- * NOT by this map. The `SUPER_ADMIN` row here is a transitional fallback
- * for in-flight tokens that still carry the legacy `role` claim.
- */
-type Rule = {
-  action: PermissionAction | 'manage' | Array<PermissionAction | 'manage'>;
-  subject: PermissionSubject | 'all';
-};
-
-const ADMIN_RULES: readonly Rule[] = [
-  { action: 'manage', subject: 'User' },
-  { action: 'manage', subject: 'Role' },
-  { action: 'manage', subject: 'Booking' },
-  { action: 'manage', subject: 'Client' },
-  { action: 'manage', subject: 'Employee' },
-  { action: 'manage', subject: 'Invoice' },
-  { action: 'manage', subject: 'Payment' },
-  { action: 'manage', subject: 'Report' },
-  { action: 'manage', subject: 'Setting' },
-  { action: 'manage', subject: 'Department' },
-  { action: 'manage', subject: 'Category' },
-  { action: 'manage', subject: 'Service' },
-  { action: 'manage', subject: 'Branch' },
-  { action: 'manage', subject: 'Branding' },
-  { action: 'manage', subject: 'Content' },
-  { action: 'manage', subject: 'Integration' },
-  { action: 'manage', subject: 'Coupon' },
-];
-
-const BUILT_IN: Record<string, readonly Rule[]> = {
-  SUPER_ADMIN: [{ action: 'manage', subject: 'all' }],
-  // OWNER inherits everything ADMIN can do. OWNER is typically the founder /
-  // financial decision maker; ADMIN is the day-to-day operations lead.
-  OWNER: [
-    ...ADMIN_RULES,
-  ],
-  ADMIN: ADMIN_RULES,
-  RECEPTIONIST: [
-    { action: ['create', 'read', 'update'], subject: 'Booking' },
-    { action: ['create', 'read', 'update'], subject: 'Client' },
-    { action: 'read', subject: 'Employee' },
-    { action: 'read', subject: 'Invoice' },
-    { action: 'read', subject: 'Service' },
-    { action: 'read', subject: 'Category' },
-  ],
-  ACCOUNTANT: [
-    { action: 'manage', subject: 'Invoice' },
-    { action: 'manage', subject: 'Payment' },
-    { action: 'read', subject: 'Booking' },
-    { action: 'read', subject: 'Report' },
-  ],
-  EMPLOYEE: [
-    { action: 'read', subject: 'Booking' },
-    { action: 'read', subject: 'Client' },
-    { action: 'update', subject: 'Booking' },
-  ],
-  CLIENT: [
-    { action: 'read', subject: 'Booking' },
-    { action: 'create', subject: 'Booking' },
-    { action: 'read', subject: 'Invoice' },
-  ],
-};
 
 /**
  * Input shape for `buildForUser`.
  *
  * `role` is the canonical `User.role` field in single-tenant mode.
  * It is propagated from the JWT `role` claim onto `req.user` by `JwtStrategy`.
+ *
+ * `systemRolePermissions` — when present, overrides the BUILT_IN hardcoded rules
+ * for the user's built-in role, allowing DB-stored permissions to take effect.
+ * Only used for non-SUPER_ADMIN, non-CLIENT roles.
  */
 export interface AbilitySubjectUser {
   role?: string | null;
   customRole: { permissions: Array<{ action: string; subject: string }> } | null;
+  systemRolePermissions?: Array<{ action: string; subject: string }> | null;
 }
 
 @Injectable()
 export class CaslAbilityFactory {
+  /**
+   * Build an ability directly from a pre-computed flat permissions list.
+   *
+   * This is the fast path used by `CaslGuard` when `req.user.permissions` is
+   * already populated by `JwtStrategy` (which fetches system-role permissions
+   * from the DB and calls `buildForUser` with the full picture, then flattens
+   * the resulting CASL rules onto `req.user.permissions`).
+   *
+   * NOTE: We intentionally do NOT re-apply the `isWildcard` filter here.
+   * The input comes from a server-side verified JWT token; the permissions were
+   * already computed by `buildForUser` inside `JwtStrategy.validate()`, which
+   * already strips wildcards for customRole/systemRole sources and only allows
+   * `manage:all` for SUPER_ADMIN.  A SUPER_ADMIN legitimately carries
+   * `[{ action: "manage", subject: "all" }]` in `req.user.permissions`, and
+   * that must pass through unchanged so SUPER_ADMIN can access everything.
+   * Re-filtering here would break SUPER_ADMIN access.
+   */
+  buildFromPermissions(perms: Array<{ action: string; subject: string }>): AppAbility {
+    const { can, build } = new AbilityBuilder<AppAbility>(createMongoAbility);
+    for (const p of perms) {
+      can(p.action, p.subject);
+    }
+    return build();
+  }
+
   buildForUser(user: AbilitySubjectUser): AppAbility {
     const { can, build } = new AbilityBuilder<AppAbility>(createMongoAbility);
+
     // SECURITY (P0-3): defense-in-depth — refuse the wildcard `manage:all`
-    // CASL pair from customRole sources. Only the built-in SUPER_ADMIN row
+    // CASL pair from customRole/systemRole sources. Only the built-in SUPER_ADMIN row
     // (gated separately by User.isSuperAdmin) may hold that pair. Filtering
     // here closes the door if AssignPermissionsDto validation is ever bypassed.
     const isWildcard = (action: unknown, subject: unknown): boolean => {
@@ -111,8 +66,28 @@ export class CaslAbilityFactory {
         can(p.action, p.subject);
       }
     }
+
     const effectiveRole = user.role ?? '';
-    for (const p of BUILT_IN[effectiveRole] ?? []) can(p.action, p.subject);
+
+    if (effectiveRole === 'SUPER_ADMIN') {
+      // SUPER_ADMIN always gets manage:all from code — never from DB
+      can('manage', 'all');
+    } else if (user.systemRolePermissions && user.systemRolePermissions.length > 0) {
+      // System role permissions from DB override the hardcoded BUILT_IN map
+      for (const p of user.systemRolePermissions) {
+        if (isWildcard(p.action, p.subject)) continue;
+        can(p.action, p.subject);
+      }
+    } else {
+      // Fallback: use hardcoded BUILT_IN rules (before bootstrap runs or for CLIENT)
+      for (const rule of BUILT_IN[effectiveRole] ?? []) {
+        const actions = Array.isArray(rule.action) ? rule.action : [rule.action];
+        for (const action of actions) {
+          can(action, rule.subject as string);
+        }
+      }
+    }
+
     return build();
   }
 }

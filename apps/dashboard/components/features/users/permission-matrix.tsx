@@ -115,9 +115,6 @@ export function PermissionMatrix({ role, allPermissions }: Props) {
             </Badge>
           </div>
         </div>
-        {role.description && (
-          <p className="text-xs text-muted-foreground">{role.description}</p>
-        )}
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">

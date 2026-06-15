@@ -8,35 +8,39 @@ import {
   SmartPhone01Icon,
   UserCheck01Icon,
 } from "@hugeicons/core-free-icons"
-import { Input } from "@sawaa/ui"
-import { PhoneInput } from "@sawaa/ui"
-import { Label } from "@sawaa/ui"
-import { Card, CardContent } from "@sawaa/ui"
 import {
+  Input,
+  PhoneInput,
+  Label,
+  Card,
+  CardContent,
+  Skeleton,
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@sawaa/ui"
 import { SectionHeader } from "@/components/features/section-header"
 import { useLocale } from "@/components/locale-provider"
-
-const USER_ROLES = [
-  "ADMIN",
-  "RECEPTIONIST",
-  "ACCOUNTANT",
-  "EMPLOYEE",
-] as const
+import type { Role } from "@/lib/types/user"
 
 interface UserFormFieldsProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>
   isEdit: boolean
+  roles: Role[]
+  rolesLoading: boolean
 }
 
-export function UserFormFields({ form, isEdit }: UserFormFieldsProps) {
+export function UserFormFields({ form, isEdit, roles, rolesLoading }: UserFormFieldsProps) {
   const { t } = useLocale()
+
+  const systemRoles = roles.filter((r) => r.isSystem && r.systemKey)
+  const customRoles = roles.filter((r) => !r.isSystem)
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -131,25 +135,47 @@ export function UserFormFields({ form, isEdit }: UserFormFieldsProps) {
             title={t("users.create.role")}
             description={t("users.create.rolePlaceholder")}
           />
-          <Controller
-            control={form.control}
-            name="role"
-            render={({ field }) => (
-              <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                <SelectTrigger className="w-full sm:w-64">
-                  <SelectValue placeholder={t("users.create.rolePlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {USER_ROLES.map((r) => (
-                    <SelectItem key={r} value={r}>{t(`users.role.${r}`)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-          {(form.formState.errors as { role?: { message?: string } }).role && (
+          {rolesLoading ? (
+            <Skeleton className="h-10 w-full sm:w-80" />
+          ) : (
+            <Controller
+              control={form.control}
+              name="roleSelection"
+              render={({ field }) => (
+                <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-full sm:w-80">
+                    <SelectValue placeholder={t("users.create.rolePlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {systemRoles.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel>{t("users.create.roleGroupSystem")}</SelectLabel>
+                        {systemRoles.map((r) => (
+                          <SelectItem key={r.id} value={r.systemKey!}>
+                            {t(`users.role.${r.systemKey}` as Parameters<typeof t>[0])}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                    {systemRoles.length > 0 && customRoles.length > 0 && <SelectSeparator />}
+                    {customRoles.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel>{t("users.create.roleGroupCustom")}</SelectLabel>
+                        {customRoles.map((r) => (
+                          <SelectItem key={r.id} value={`custom:${r.id}`}>
+                            {r.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          )}
+          {(form.formState.errors as { roleSelection?: { message?: string } }).roleSelection && (
             <p className="text-xs text-destructive mt-1.5">
-              {(form.formState.errors as { role?: { message?: string } }).role?.message}
+              {(form.formState.errors as { roleSelection?: { message?: string } }).roleSelection?.message}
             </p>
           )}
         </CardContent>

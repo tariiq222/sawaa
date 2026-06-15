@@ -87,6 +87,7 @@ export const arNav: Record<string, string> = {
   "common.required": "هذا الحقل مطلوب",
   "common.save": "حفظ",
   "common.delete": "حذف",
+  "common.deleting": "جارٍ الحذف...",
   "common.edit": "تعديل",
   "common.view": "عرض",
   "common.preview": "معاينة",
