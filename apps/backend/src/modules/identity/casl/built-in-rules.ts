@@ -32,10 +32,13 @@ export const BUILT_IN: Record<string, readonly Rule[]> = {
   RECEPTIONIST: [
     { action: ['create', 'read', 'update'], subject: 'Booking' },
     { action: ['create', 'read', 'update'], subject: 'Client' },
+    { action: ['create', 'read'], subject: 'Payment' },
+    { action: ['create', 'read'], subject: 'Invoice' },
+    { action: 'read', subject: 'Coupon' },
     { action: 'read', subject: 'Employee' },
-    { action: 'read', subject: 'Invoice' },
     { action: 'read', subject: 'Service' },
     { action: 'read', subject: 'Category' },
+    { action: 'read', subject: 'Branch' },
   ],
   ACCOUNTANT: [
     { action: 'manage', subject: 'Invoice' },
