@@ -84,6 +84,7 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
     source: b.source,
     categoryNameSnapshot: b.categoryNameSnapshot ?? null,
     durationMinutesSnapshot: b.durationMinutesSnapshot ?? null,
+    priceSnapshot: b.priceSnapshot != null ? Number(b.priceSnapshot) : null,
     date,
     startTime,
     endTime,
