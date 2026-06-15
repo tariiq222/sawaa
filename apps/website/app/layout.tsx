@@ -45,6 +45,11 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={dir}>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "document.documentElement.classList.add('sw-js')",
+          }}
+        />
         <BrandingStyle branding={branding} />
         <script
           type="application/ld+json"

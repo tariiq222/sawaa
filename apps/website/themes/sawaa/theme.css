@@ -216,4 +216,94 @@
     animation: none;
   }
   .theme-sawaa .sw-expand { transition: none; }
+  .sw-js .theme-sawaa .sw-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .theme-sawaa .sw-section-mint::before,
+  .theme-sawaa .sw-section-mint::after,
+  .theme-sawaa .sw-section-cream::before,
+  .theme-sawaa .sw-section-cream::after,
+  .theme-sawaa .sw-section-sky::before,
+  .theme-sawaa .sw-section-sky::after {
+    animation: none;
+  }
+}
+
+/* ═══ Scroll reveal (gated on html.sw-js so no-JS keeps content visible) ═══ */
+.sw-js .theme-sawaa .sw-reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.sw-js .theme-sawaa .sw-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ═══ Animated section atmosphere (drifting aurora orbs) ═══ */
+.theme-sawaa .sw-section-mint,
+.theme-sawaa .sw-section-cream,
+.theme-sawaa .sw-section-sky {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.theme-sawaa .sw-section-mint::before,
+.theme-sawaa .sw-section-mint::after,
+.theme-sawaa .sw-section-cream::before,
+.theme-sawaa .sw-section-cream::after,
+.theme-sawaa .sw-section-sky::before,
+.theme-sawaa .sw-section-sky::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  filter: blur(72px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.theme-sawaa .sw-section-mint::before {
+  width: 460px; height: 460px; top: -140px; inset-inline-start: -110px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--primary) 26%, transparent), transparent 70%);
+  animation: sw-float-slow 24s ease-in-out infinite;
+}
+.theme-sawaa .sw-section-mint::after {
+  width: 380px; height: 380px; bottom: -120px; inset-inline-end: -90px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%);
+  animation: sw-float-slow 30s ease-in-out infinite reverse;
+}
+
+.theme-sawaa .sw-section-cream::before {
+  width: 440px; height: 440px; top: -120px; inset-inline-end: -100px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 24%, transparent), transparent 70%);
+  animation: sw-float-slow 27s ease-in-out infinite;
+}
+.theme-sawaa .sw-section-cream::after {
+  width: 360px; height: 360px; bottom: -120px; inset-inline-start: -80px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--primary) 14%, transparent), transparent 70%);
+  animation: sw-float-slow 33s ease-in-out infinite reverse;
+}
+
+.theme-sawaa .sw-section-sky {
+  background:
+    radial-gradient(ellipse 850px 480px at 75% 15%,
+      color-mix(in srgb, var(--primary) 7%, transparent) 0%, transparent 62%),
+    radial-gradient(ellipse 700px 460px at 18% 88%,
+      color-mix(in srgb, var(--sw-secondary-700) 5%, transparent) 0%, transparent 60%),
+    linear-gradient(180deg, #F4F8FB 0%, #FAFCFE 100%);
+}
+.theme-sawaa .sw-section-sky::before {
+  width: 460px; height: 460px; top: -150px; inset-inline-end: -110px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--primary) 20%, transparent), transparent 70%);
+  animation: sw-float-slow 26s ease-in-out infinite;
+}
+.theme-sawaa .sw-section-sky::after {
+  width: 400px; height: 400px; bottom: -130px; inset-inline-start: -90px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--sw-secondary-500) 12%, transparent), transparent 70%);
+  animation: sw-float-slow 31s ease-in-out infinite reverse;
 }

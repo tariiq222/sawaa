@@ -35,7 +35,7 @@ export async function SupportGroups({ intro, items }: Props) {
   const groupDesc = (g: SupportGroup): string =>
     locale === 'en' ? g.descEn?.trim() || g.desc : g.desc;
   return (
-    <section id="support-groups" className="py-20 md:py-24 relative">
+    <section id="support-groups" className="py-20 md:py-24 relative sw-section-sky">
       <div className="max-w-[1260px] mx-auto px-5 sm:px-6 md:px-8">
         <AnimatedSection>
           <SectionHeader

@@ -44,7 +44,7 @@ function resolveIcon(name: string): LucideIcon {
 
 export function Features({ intro, cards }: Props) {
   return (
-    <section id="features" className="py-20 md:py-24 relative">
+    <section id="features" className="py-20 md:py-24 relative sw-section-cream">
       <div className="max-w-[1260px] mx-auto px-5 sm:px-6 md:px-8">
         <AnimatedSection>
           <SectionHeader

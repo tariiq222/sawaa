@@ -23,7 +23,7 @@ export function FAQ({ intro, items }: Props) {
     locale === 'en' ? item.aEn?.trim() || item.a : item.a;
 
   return (
-    <section id="faq" className="py-20 md:py-24 relative">
+    <section id="faq" className="py-20 md:py-24 relative sw-section-sky">
       <div className="max-w-[860px] mx-auto px-5 sm:px-6 md:px-8">
         <AnimatedSection>
           <SectionHeader
