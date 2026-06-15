@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { forwardRef, useImperativeHandle, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Delete02Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 import { Button } from "@sawaa/ui"
 import { EmptyState } from "@/components/features/empty-state"
@@ -20,13 +21,27 @@ import { useRoles, usePermissions, useRoleMutations } from "@/hooks/use-users"
 import { useLocale } from "@/components/locale-provider"
 import { PermissionMatrix, PermissionMatrixSkeleton } from "./permission-matrix"
 
-export function RolesTab() {
+export interface RolesTabHandle {
+  highlightRole: (roleId: string) => void
+}
+
+export const RolesTab = forwardRef<RolesTabHandle>(function RolesTab(_props, ref) {
   const { t } = useLocale()
   const { data: roles, isLoading: rolesLoading } = useRoles()
   const { data: permissions, isLoading: permsLoading } = usePermissions()
   const { deleteMut } = useRoleMutations()
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [highlightedRoleId, setHighlightedRoleId] = useState<string | null>(null)
+
+  useImperativeHandle(ref, () => ({
+    highlightRole(roleId: string) {
+      setHighlightedRoleId(roleId)
+      window.setTimeout(() => {
+        setHighlightedRoleId((current) => (current === roleId ? null : current))
+      }, 2000)
+    },
+  }), [])
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -58,7 +73,14 @@ export function RolesTab() {
           description={t("users.roles.empty.description")}
         />
       ) : roles?.map((role) => (
-        <div key={role.id} className="relative">
+        <div
+          key={role.id}
+          id={`role-${role.id}`}
+          className={cn(
+            "relative rounded-lg transition-shadow",
+            highlightedRoleId === role.id && "ring-2 ring-primary",
+          )}
+        >
           <PermissionMatrix role={role} allPermissions={permissions ?? []} />
           {!role.isSystem && (
             <Button
@@ -103,4 +125,4 @@ export function RolesTab() {
       </Sheet>
     </div>
   )
-}
+})

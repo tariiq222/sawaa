@@ -48,6 +48,22 @@ export const PERMISSION_ACTIONS = [
 
 export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
 
+/**
+ * Canonical display order for permission actions in admin UIs (role editor,
+ * permission matrix, etc.). Derived from `PERMISSION_ACTIONS` so the order
+ * cannot drift from the source of truth — `satisfies` guarantees every entry
+ * is a real catalog action. If a UI needs an extra column for a legacy
+ * action (e.g. `view`, `edit`, `use` from a previous translation-key era),
+ * append it after the catalog entries rather than re-ordering this list.
+ */
+export const STANDARD_ACTION_ORDER = [
+  'manage',
+  'read',
+  'create',
+  'update',
+  'delete',
+] as const satisfies readonly PermissionAction[];
+
 /** Convenience pair used by the role-editor UI. */
 export interface PermissionDescriptor {
   subject: PermissionSubject;

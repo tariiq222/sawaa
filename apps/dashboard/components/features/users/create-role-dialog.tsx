@@ -19,21 +19,24 @@ import { Button } from "@sawaa/ui"
 
 import { useRoleMutations } from "@/hooks/use-users"
 import { useLocale } from "@/components/locale-provider"
+import { ApiError } from "@/lib/api"
 import {
   createRoleSchema,
   type CreateRoleFormData,
 } from "@/lib/schemas/user.schema"
+import type { Role } from "@/lib/types/user"
 
 /* ─── Props ─── */
 
 interface CreateRoleDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onCreated?: (role: Role) => void
 }
 
 /* ─── Component ─── */
 
-export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) {
+export function CreateRoleDialog({ open, onOpenChange, onCreated }: CreateRoleDialogProps) {
   const { t } = useLocale()
   const { createMut } = useRoleMutations()
 
@@ -44,16 +47,25 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
 
   const onSubmit = form.handleSubmit(async (data) => {
     try {
-      await createMut.mutateAsync({
+      const newRole = await createMut.mutateAsync({
         name: data.name,
       })
       toast.success(t("users.roles.create.success"))
       form.reset()
       onOpenChange(false)
+      onCreated?.(newRole)
     } catch (err) {
+      // 409 ConflictException = name already exists (most common failure).
+      // Validation errors are caught by zod on the client before we get here.
+      if (err instanceof ApiError && err.status === 409) {
+        form.setError("name", { message: t("users.roles.create.nameTaken") })
+        return
+      }
       toast.error(err instanceof Error ? err.message : t("users.roles.create.error"))
     }
   })
+
+  const nameError = form.formState.errors.name
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -72,11 +84,13 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
               <Input
                 id="role-name"
                 placeholder={t("users.roles.create.namePlaceholder")}
+                aria-invalid={nameError ? "true" : "false"}
+                aria-describedby={nameError ? "role-name-error" : undefined}
                 {...form.register("name")}
               />
-              {form.formState.errors.name && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.name.message}
+              {nameError && (
+                <p id="role-name-error" className="text-xs text-destructive">
+                  {nameError.message}
                 </p>
               )}
             </div>

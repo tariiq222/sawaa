@@ -6,6 +6,7 @@ import { Badge } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 import { useRoleMutations } from "@/hooks/use-users"
 import { useLocale } from "@/components/locale-provider"
+import { STANDARD_ACTION_ORDER } from "@sawaa/shared/constants/permissions-catalog"
 import { toast } from "sonner"
 import type { Role, Permission, RolePermissionPayload } from "@/lib/types/user"
 
@@ -28,18 +29,17 @@ export function PermissionMatrix({ role, allPermissions }: Props) {
   }
 
   // Collect all unique actions across all modules for column headers
-  const allActions = Array.from(
-    new Set(allPermissions.map((p) => p.action)),
-  ).sort((a, b) => {
-    // Standard actions first, then extras
-    const order = ["manage", "read", "view", "create", "edit", "update", "delete", "use"]
-    const ai = order.indexOf(a)
-    const bi = order.indexOf(b)
-    if (ai !== -1 && bi !== -1) return ai - bi
-    if (ai !== -1) return -1
-    if (bi !== -1) return 1
-    return a.localeCompare(b)
-  })
+  // Order columns by the canonical catalog order, then any extras alphabetically
+  const allActions = Array.from(new Set(allPermissions.map((p) => p.action))).sort(
+    (a, b) => {
+      const ai = STANDARD_ACTION_ORDER.indexOf(a as (typeof STANDARD_ACTION_ORDER)[number])
+      const bi = STANDARD_ACTION_ORDER.indexOf(b as (typeof STANDARD_ACTION_ORDER)[number])
+      if (ai !== -1 && bi !== -1) return ai - bi
+      if (ai !== -1) return -1
+      if (bi !== -1) return 1
+      return a.localeCompare(b)
+    },
+  )
 
   const modules = Array.from(moduleMap.keys()).sort()
 

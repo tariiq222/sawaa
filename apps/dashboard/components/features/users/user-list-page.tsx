@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Add01Icon, UserMultiple02Icon, UserCheck01Icon, ShieldKeyIcon } from "@hugeicons/core-free-icons"
@@ -15,7 +15,7 @@ import { DataTable } from "@/components/features/data-table"
 import { FilterBar } from "@/components/features/filter-bar"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { getUserColumns } from "@/components/features/users/user-columns"
-import { RolesTab } from "@/components/features/users/roles-tab"
+import { RolesTab, type RolesTabHandle } from "@/components/features/users/roles-tab"
 import { DeleteUserDialog } from "@/components/features/users/delete-user-dialog"
 import { CreateRoleDialog } from "@/components/features/users/create-role-dialog"
 import { Button } from "@sawaa/ui"
@@ -29,7 +29,7 @@ import type { User } from "@/lib/types/user"
 export function UserListPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const defaultTab = searchParams.get("tab") === "roles" ? "roles" : "users"
+  const activeTab = searchParams.get("tab") === "roles" ? "roles" : "users"
   const { t, locale } = useLocale()
   const { canDo } = useAuth()
   const { users, meta, isLoading, error, search, setSearch } = useUsers()
@@ -37,9 +37,13 @@ export function UserListPage() {
   const { data: roles } = useRoles({ enabled: canReadRoles })
   const { activateMut, deactivateMut } = useUserMutations()
 
-  const [activeTab, setActiveTab] = useState(defaultTab)
   const [createRoleOpen, setCreateRoleOpen] = useState(false)
   const [deleteUser, setDeleteUser] = useState<User | null>(null)
+  const rolesTabRef = useRef<RolesTabHandle>(null)
+
+  const handleTabChange = useCallback((value: string) => {
+    router.replace(`/users?tab=${value}`, { scroll: false })
+  }, [router])
 
   const handleToggleActive = useCallback(async (user: User) => {
     try {
@@ -91,7 +95,7 @@ export function UserListPage() {
         )}
       </PageHeader>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
           <TabsTrigger value="users">{t("users.tabs.users")}</TabsTrigger>
           {canReadRoles && <TabsTrigger value="roles">{t("users.tabs.roles")}</TabsTrigger>}
@@ -129,10 +133,14 @@ export function UserListPage() {
           )}
         </TabsContent>
 
-        {canReadRoles && <TabsContent value="roles" className="mt-6"><RolesTab /></TabsContent>}
+        {canReadRoles && <TabsContent value="roles" className="mt-6"><RolesTab ref={rolesTabRef} /></TabsContent>}
       </Tabs>
 
-      <CreateRoleDialog open={createRoleOpen} onOpenChange={setCreateRoleOpen} />
+      <CreateRoleDialog
+        open={createRoleOpen}
+        onOpenChange={setCreateRoleOpen}
+        onCreated={(role) => rolesTabRef.current?.highlightRole(role.id)}
+      />
       <DeleteUserDialog user={deleteUser} open={!!deleteUser} onOpenChange={(o) => !o && setDeleteUser(null)} />
     </ListPageShell>
   )
