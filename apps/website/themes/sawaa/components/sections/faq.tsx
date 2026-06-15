@@ -24,7 +24,7 @@ export function FAQ({ intro, items }: Props) {
 
   return (
     <section id="faq" className="py-20 md:py-24 relative">
-      <div className="max-w-[860px] mx-auto px-8">
+      <div className="max-w-[860px] mx-auto px-5 sm:px-6 md:px-8">
         <AnimatedSection>
           <SectionHeader
             tag={intro.tag}
@@ -50,7 +50,7 @@ export function FAQ({ intro, items }: Props) {
                     type="button"
                     onClick={() => setOpenIndex(isOpen ? null : i)}
                     aria-expanded={isOpen}
-                    className="w-full flex items-center justify-between gap-4 px-6 py-5 text-right"
+                    className="w-full flex items-center justify-between gap-4 px-6 py-5 text-start rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-inset"
                   >
                     <span
                       className="font-extrabold leading-snug flex-1"

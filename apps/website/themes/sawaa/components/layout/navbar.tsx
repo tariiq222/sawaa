@@ -14,7 +14,6 @@ const navLinks = [
   { key: 'nav.therapists', href: '/therapists' },
   { key: 'nav.clinics', href: '/clinics' },
   { key: 'nav.supportGroups', href: '/support-groups' },
-  { key: 'nav.burnout', href: '/burnout-test' },
   { key: 'nav.contact', href: '/contact' },
 ] as const;
 
@@ -130,10 +129,7 @@ export function Navbar() {
             suppressHydrationWarning
             className="inline-flex items-center gap-2 text-[0.813rem] font-semibold px-4 py-2.5 rounded-full transition-all text-[var(--sw-neutral-700)] hover:bg-[var(--sw-primary-50)] hover:text-[var(--sw-primary-700)] focus-visible:bg-[var(--sw-primary-50)] focus-visible:text-[var(--sw-primary-700)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
           >
-            <User className="w-4 h-4" aria-hidden="true" />
-            <span suppressHydrationWarning>
-              {authReady && authed ? t('nav.account') : t('nav.login')}
-            </span>
+            <User className="w-4 h-4" aria-label={authReady && authed ? t('nav.account') : t('nav.login')} />
           </Link>
           <Link
             href="/booking"

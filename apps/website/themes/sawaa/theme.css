@@ -112,6 +112,12 @@
 .theme-sawaa .sw-float-slow   { animation: sw-float-slow 20s ease-in-out infinite; }
 .theme-sawaa .sw-float-slow-r { animation: sw-float-slow 25s ease-in-out infinite reverse; }
 
+@keyframes sw-nudge {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(5px); }
+}
+.theme-sawaa .sw-nudge { animation: sw-nudge 2.4s ease-in-out infinite; }
+
 /* ═══ Section tinted backgrounds ═══ */
 .theme-sawaa .sw-section-mint {
   background:
@@ -202,7 +208,11 @@
 @media (prefers-reduced-motion: reduce) {
   .theme-sawaa .sw-step-in,
   .theme-sawaa .sw-row-in,
-  .theme-sawaa .sw-pop-in {
+  .theme-sawaa .sw-pop-in,
+  .theme-sawaa .sw-nudge,
+  .theme-sawaa .animate-bounce,
+  .theme-sawaa .animate-ping,
+  .theme-sawaa .animate-pulse {
     animation: none;
   }
   .theme-sawaa .sw-expand { transition: none; }

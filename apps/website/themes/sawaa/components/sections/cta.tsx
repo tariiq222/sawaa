@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, Calendar } from 'lucide-react';
+import { ArrowLeft, Calendar, Smartphone } from 'lucide-react';
 import { AnimatedSection } from '../ui/animated-section';
 import { getLocale } from '@/features/locale/public';
 import { t as translate, type MessageKey } from '@/features/locale/dictionary';
@@ -26,7 +26,7 @@ export async function CTA() {
                 <Calendar className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">
-                <span className="inline-flex items-center gap-1.5 text-[0.625rem] font-extrabold text-white bg-white/15 px-2.5 py-1 rounded-full mb-2 uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1.5 text-[0.625rem] font-extrabold text-white bg-white/15 px-2.5 py-1 rounded-full mb-2 uppercase">
                   <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
                   {t('cta.availableNow')}
                 </span>
@@ -90,24 +90,11 @@ export async function CTA() {
                   background: 'color-mix(in srgb, var(--primary) 20%, transparent)',
                 }}
               >
-                <svg
-                  className="w-6 h-6"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ color: 'var(--sw-primary-400)' }}
-                  aria-hidden="true"
-                >
-                  <rect x="5" y="2" width="14" height="20" rx="3" />
-                  <line x1="12" y1="18" x2="12" y2="18" />
-                </svg>
+                <Smartphone className="w-6 h-6" style={{ color: 'var(--sw-primary-400)' }} aria-hidden="true" />
               </div>
               <div className="flex-1">
                 <span
-                  className="inline-flex items-center gap-1.5 text-[0.625rem] font-extrabold px-2.5 py-1 rounded-full mb-2 uppercase tracking-wider"
+                  className="inline-flex items-center gap-1.5 text-[0.625rem] font-extrabold px-2.5 py-1 rounded-full mb-2 uppercase"
                   style={{
                     color: 'var(--sw-primary-400)',
                     background: 'color-mix(in srgb, var(--primary) 15%, transparent)',

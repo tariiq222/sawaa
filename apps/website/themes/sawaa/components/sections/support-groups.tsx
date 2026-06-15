@@ -36,7 +36,7 @@ export async function SupportGroups({ intro, items }: Props) {
     locale === 'en' ? g.descEn?.trim() || g.desc : g.desc;
   return (
     <section id="support-groups" className="py-20 md:py-24 relative">
-      <div className="max-w-[1260px] mx-auto px-8">
+      <div className="max-w-[1260px] mx-auto px-5 sm:px-6 md:px-8">
         <AnimatedSection>
           <SectionHeader
             tag={intro.tag}
@@ -117,7 +117,7 @@ export async function SupportGroups({ intro, items }: Props) {
 
                     <Link
                       href="/support-groups"
-                      className="inline-flex items-center gap-1.5 self-start text-[0.7rem] font-bold uppercase tracking-wider transition-all hover:gap-2"
+                      className="inline-flex items-center gap-1.5 self-start text-[0.7rem] font-bold uppercase transition-all hover:gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2 rounded-full"
                       style={{ color: tone.accent }}
                     >
                       {translate(locale, 'supportGroups.learnMore')}

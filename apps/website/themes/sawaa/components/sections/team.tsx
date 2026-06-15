@@ -57,7 +57,7 @@ export async function Team({ therapists, intro, totalCount }: Props) {
               <AnimatedSection key={member.id} delay={i * 30}>
                 <Link
                   href={href}
-                  className="group relative block h-full bg-white rounded-2xl transition-all duration-300 hover:-translate-y-1 px-3 pt-9 pb-7 text-center overflow-hidden"
+                  className="group relative block h-full bg-white rounded-2xl transition-all duration-300 hover:-translate-y-1 px-3 pt-9 pb-7 text-center overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
                   style={{
                     border: '1px solid var(--sw-neutral-100)',
                     boxShadow: 'var(--sw-shadow-xs)',
@@ -143,7 +143,7 @@ export async function Team({ therapists, intro, totalCount }: Props) {
           <div className="relative z-10 flex justify-center mt-8">
             <Link
               href="/therapists"
-              className="group inline-flex items-center gap-2.5 bg-white font-extrabold text-[0.813rem] ps-6 pe-5 py-3.5 rounded-full transition-all hover:-translate-y-0.5"
+              className="group inline-flex items-center gap-2.5 bg-white font-extrabold text-[0.813rem] ps-6 pe-5 py-3.5 rounded-full transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
               style={{
                 border: '1px solid var(--sw-neutral-200)',
                 color: 'var(--sw-secondary-700)',

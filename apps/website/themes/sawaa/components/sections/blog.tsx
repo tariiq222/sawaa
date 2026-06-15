@@ -36,7 +36,7 @@ export async function Blog({ intro, items }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
           {items.map((p, i) => (
             <AnimatedSection key={p.slug} delay={i * 80}>
-              <Link href={`/blog/${p.slug}`} className="block h-full">
+              <Link href={`/blog/${p.slug}`} className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2">
               <article
                 className="group h-full bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1.5"
                 style={{

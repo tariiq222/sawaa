@@ -11,7 +11,7 @@ export function SectionHeader({ tag, tagIcon, title, subtitle }: Props) {
   return (
     <div className="text-center mb-14 max-w-[640px] mx-auto">
       <span
-        className="inline-flex items-center gap-1.5 text-[0.75rem] font-extrabold px-4 py-2 rounded-full mb-5 uppercase tracking-widest ring-1"
+        className="inline-flex items-center gap-1.5 text-[0.75rem] font-extrabold px-4 py-2 rounded-full mb-5 uppercase ring-1"
         style={{
           color: 'var(--sw-primary-700)',
           background: 'var(--sw-primary-50)',

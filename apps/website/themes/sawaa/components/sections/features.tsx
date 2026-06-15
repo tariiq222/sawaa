@@ -45,7 +45,7 @@ function resolveIcon(name: string): LucideIcon {
 export function Features({ intro, cards }: Props) {
   return (
     <section id="features" className="py-20 md:py-24 relative">
-      <div className="max-w-[1260px] mx-auto px-8">
+      <div className="max-w-[1260px] mx-auto px-5 sm:px-6 md:px-8">
         <AnimatedSection>
           <SectionHeader
             tag={intro.tag}
@@ -78,7 +78,7 @@ export function Features({ intro, cards }: Props) {
                     <Icon className="w-7 h-7" style={{ color: tone.text }} strokeWidth={2} />
                   </div>
                   <span
-                    className="text-[0.75rem] font-bold uppercase tracking-widest mb-2"
+                    className="text-[0.75rem] font-bold uppercase mb-2"
                     style={{ color: tone.text }}
                   >
                     {card.label}

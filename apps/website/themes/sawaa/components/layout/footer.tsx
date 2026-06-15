@@ -270,7 +270,7 @@ export function Footer({ clinics = [], supportGroups = [] }: FooterProps) {
           style={{ borderColor: 'var(--sw-neutral-100)' }}
         >
           <span
-            className="text-[0.75rem] font-bold uppercase tracking-widest"
+            className="text-[0.75rem] font-bold uppercase"
             style={{ color: 'var(--sw-neutral-500)' }}
           >
             {t('footer.paymentMethods')}
@@ -302,7 +302,7 @@ export function Footer({ clinics = [], supportGroups = [] }: FooterProps) {
             {t('footer.allRights')}{brandName} © {new Date().getFullYear()}
           </span>
           <span className="inline-flex items-center gap-1.5" suppressHydrationWarning>
-            {t('footer.madeWith')} <span style={{ color: '#ef4444' }}>♥</span> {new Date().getFullYear()}
+            {t('footer.madeWith')} <span style={{ color: '#ef4444' }}>♥</span>
           </span>
         </div>
       </div>

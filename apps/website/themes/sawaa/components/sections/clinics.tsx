@@ -244,7 +244,7 @@ export function Clinics({ clinics, intro }: Props) {
                     </p>
 
                     <span
-                      className="inline-flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-wider"
+                      className="inline-flex items-center gap-1.5 text-[0.7rem] font-bold uppercase"
                       style={{ color: tone.accent }}
                     >
                       {t('clinics.bookCta')}
@@ -267,7 +267,7 @@ export function Clinics({ clinics, intro }: Props) {
         <div className="flex items-center gap-3 justify-center mt-6">
           <Link
             href="/clinics"
-            className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[0.8125rem] font-bold transition-all hover:-translate-y-[1px]"
+            className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[0.8125rem] font-bold transition-all hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{
               background: 'var(--sw-primary-700)',
               color: '#fff',
@@ -280,7 +280,7 @@ export function Clinics({ clinics, intro }: Props) {
           <button
             onClick={() => scroll('right')}
             disabled={!canScrollRight}
-            className="w-10 h-10 rounded-full bg-white flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="w-10 h-10 rounded-full bg-white flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{ border: '1px solid var(--sw-neutral-200)' }}
             aria-label={t('clinics.scrollNext')}
           >
@@ -292,7 +292,7 @@ export function Clinics({ clinics, intro }: Props) {
           <button
             onClick={() => scroll('left')}
             disabled={!canScrollLeft}
-            className="w-10 h-10 rounded-full bg-white flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="w-10 h-10 rounded-full bg-white flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
             style={{ border: '1px solid var(--sw-neutral-200)' }}
             aria-label={t('clinics.scrollPrev')}
           >

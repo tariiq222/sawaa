@@ -68,7 +68,7 @@ export async function Hero({ content }: Props) {
             <span style={{ color: 'var(--sw-primary-300)' }}>
               {content.titleHighlight.trim()}
             </span>{' '}
-            {content.titleSuffix.trim()}
+            <span className="block">{content.titleSuffix.trim()}</span>
           </h1>
 
           <p
@@ -81,7 +81,7 @@ export async function Hero({ content }: Props) {
           <div className="flex gap-3.5 justify-center flex-wrap">
             <Link
               href={content.ctaPrimaryHref}
-              className="group inline-flex items-center gap-2.5 font-bold px-8 py-4 rounded-full transition-all hover:-translate-y-[3px]"
+              className="group inline-flex items-center gap-2.5 font-bold px-8 py-4 rounded-full transition-all hover:-translate-y-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
               style={{
                 background: 'var(--sw-primary-500)',
                 color: '#fff',
@@ -100,11 +100,11 @@ export async function Hero({ content }: Props) {
       <a
         href="#features"
         aria-label={t('hero.discoverMore')}
-        className="group absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-white/80 transition-colors hover:text-white"
+        className="group absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-white/80 transition-colors hover:text-white rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
       >
-        <span className="text-xs font-bold tracking-wide">{t('hero.discover')}</span>
+        <span className="text-xs font-bold">{t('hero.discover')}</span>
         <span
-          className="w-9 h-9 rounded-full flex items-center justify-center animate-bounce"
+          className="w-9 h-9 rounded-full flex items-center justify-center sw-nudge"
           style={{
             background: 'rgba(255,255,255,0.14)',
             boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.3)',
