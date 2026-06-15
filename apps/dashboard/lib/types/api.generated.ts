@@ -13624,7 +13624,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description List of custom roles */
+            /** @description List of roles (system and custom) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -13633,11 +13633,13 @@ export interface operations {
                     "application/json": {
                         /** Format: uuid */
                         id?: string;
+                        isSystem?: boolean;
                         name?: string;
                         permissions?: {
                             action?: string;
                             subject?: string;
                         }[];
+                        systemKey?: string | null;
                     }[];
                 };
             };
