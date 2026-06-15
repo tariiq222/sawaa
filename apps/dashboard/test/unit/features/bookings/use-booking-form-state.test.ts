@@ -113,7 +113,7 @@ describe('useBookingFormState', () => {
       result.current.selectTime('09:00')
     })
     act(() => {
-      result.current.selectDuration('dur-45', '45 دقيقة')
+      result.current.selectDuration('dur-45', '45 دقيقة', null)
     })
     expect(result.current.state.durationOptionId).toBe('dur-45')
     expect(result.current.state.durationLabel).toBe('45 دقيقة')
@@ -126,7 +126,7 @@ describe('useBookingFormState', () => {
   it('skipDuration clears duration fields without affecting other fields', () => {
     const { result } = renderHook(() => useBookingFormState())
     act(() => {
-      result.current.selectDuration('dur-30', '30 دقيقة')
+      result.current.selectDuration('dur-30', '30 دقيقة', null)
     })
     expect(result.current.state.durationOptionId).toBe('dur-30')
     act(() => { result.current.skipDuration() })
@@ -220,7 +220,7 @@ describe('useBookingFormState', () => {
       result.current.selectTime('09:00')
     })
     act(() => {
-      result.current.selectDuration('dur-1', '60 min')
+      result.current.selectDuration('dur-1', '60 min', null)
     })
     const s = result.current.state
     expect(s.durationOptionId).toBe('dur-1')

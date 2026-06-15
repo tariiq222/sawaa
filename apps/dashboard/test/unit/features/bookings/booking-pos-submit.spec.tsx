@@ -199,6 +199,7 @@ const makeCompleteState = (overrides = {}) => ({
     type: "in_person" as const,
     durationOptionId: null,
     durationLabel: null,
+    durationPrice: null,
     date: "2026-06-01",
     startTime: "09:00",
     payAtClinic: false,

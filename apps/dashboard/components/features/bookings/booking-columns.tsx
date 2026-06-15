@@ -142,6 +142,15 @@ export function getBookingColumns(
       },
     },
     {
+      id: "clinic",
+      header: t("bookings.col.header.clinic"),
+      cell: ({ row }) => {
+        const name = row.original.categoryNameSnapshot
+        if (!name) return <span className="text-muted-foreground">—</span>
+        return <span className="text-sm font-medium text-foreground">{name}</span>
+      },
+    },
+    {
       accessorKey: "type",
       header: t("bookings.col.header.type"),
       cell: ({ row }) => {
@@ -160,14 +169,24 @@ export function getBookingColumns(
     {
       id: "datetime",
       header: t("bookings.col.header.datetime"),
-      cell: ({ row }) => (
-        <div className="font-numeric">
-          <p className="text-sm font-medium text-foreground">
-            {formatClinicDate(row.original.date, dateFormat)}
-          </p>
-          <p className="text-xs text-muted-foreground">{formatClinicTime(row.original.startTime)}</p>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const mins = row.original.durationMinutesSnapshot
+        return (
+          <div className="font-numeric">
+            <p className="text-sm font-medium text-foreground">
+              {formatClinicDate(row.original.date, dateFormat)}
+            </p>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">{formatClinicTime(row.original.startTime)}</span>
+              {mins != null && (
+                <span className="inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  {mins} {t("bookings.minutesAbbrev")}
+                </span>
+              )}
+            </div>
+          </div>
+        )
+      },
     },
     {
       id: "amount",

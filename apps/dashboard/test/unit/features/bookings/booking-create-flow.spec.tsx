@@ -414,7 +414,7 @@ describe("useBookingFormState — internal state machine", () => {
       result.current.selectTime("09:00")
     })
     act(() => {
-      result.current.selectDuration("dur-45", "45 دقيقة")
+      result.current.selectDuration("dur-45", "45 دقيقة", null)
     })
     const s = result.current.state
     expect(s.durationOptionId).toBe("dur-45")

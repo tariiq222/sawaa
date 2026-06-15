@@ -82,6 +82,8 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
     employeeServiceId: '',
     type: mapTypeForUi(b.bookingType),
     source: b.source,
+    categoryNameSnapshot: b.categoryNameSnapshot ?? null,
+    durationMinutesSnapshot: b.durationMinutesSnapshot ?? null,
     date,
     startTime,
     endTime,

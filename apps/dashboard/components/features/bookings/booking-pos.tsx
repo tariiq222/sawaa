@@ -73,7 +73,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   const handleCategorySelect = (id: string, name: string) => { selectCategory(id, name); setOpenSection("service") }
   const handleServiceSelect = (id: string, name: string) => { selectService(id, name); setOpenSection("employee") }
   const handleEmployeeSelect = (id: string, name: string) => { selectEmployee(id, name); setOpenSection("typeDuration") }
-  const handleDurationSelect = (optId: string, label: string) => { selectDuration(optId, label); setOpenSection("datetime") }
+  const handleDurationSelect = (optId: string, label: string, price: number) => { selectDuration(optId, label, price); setOpenSection("datetime") }
   const handleSkipDuration = () => { skipDuration(); setOpenSection("datetime") }
 
   // Summary strings for collapsed chips
@@ -113,6 +113,13 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     const svc = servicesData?.items.find((s) => s.id === state.serviceId)
     return svc ? Number(svc.price) : null
   }, [servicesData, state.serviceId])
+
+  // Use the selected duration's price when it is set and non-zero; fall back to
+  // the base service price so the summary always shows the correct amount.
+  const summaryPriceHalalas =
+    state.durationPrice && state.durationPrice > 0
+      ? state.durationPrice
+      : servicePriceHalalas
 
   const handleSubmit = async () => {
     if (!state.clientId || !state.serviceId || !state.employeeId || !state.deliveryType || !state.date || !state.startTime)
@@ -298,7 +305,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
             durationLabel={state.durationLabel}
             date={state.date}
             startTime={state.startTime}
-            servicePriceHalalas={servicePriceHalalas}
+            servicePriceHalalas={summaryPriceHalalas}
             payAtClinic={state.payAtClinic}
             couponCode={state.couponCode}
             submitting={createMut.isPending}

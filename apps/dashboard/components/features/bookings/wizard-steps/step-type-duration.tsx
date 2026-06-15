@@ -25,7 +25,7 @@ interface StepTypeDurationProps {
   selectedType: string | null
   selectedDurationOptionId: string | null
   onSelectType: (type: string) => void
-  onSelectDuration: (durationOptionId: string, label: string) => void
+  onSelectDuration: (durationOptionId: string, label: string, price: number) => void
   onSkipDuration: () => void
 }
 
@@ -186,7 +186,7 @@ export function StepTypeDuration({
     if (durationOptions.length === 1 && !selectedDurationOptionId) {
       const opt = durationOptions[0]
       const label = locale === "ar" && opt.labelAr ? opt.labelAr : opt.label
-      onSelectDuration(opt.id, label)
+      onSelectDuration(opt.id, label, Number(opt.price))
     }
   }, [durationOptions, selectedDurationOptionId, locale, onSelectDuration])
 
@@ -234,7 +234,7 @@ export function StepTypeDuration({
                 selected={selectedDurationOptionId === opt.id}
                 onSelect={() => {
                   const label = locale === "ar" && opt.labelAr ? opt.labelAr : opt.label
-                  onSelectDuration(opt.id, label)
+                  onSelectDuration(opt.id, label, Number(opt.price))
                 }}
                 t={t}
                 locale={locale}

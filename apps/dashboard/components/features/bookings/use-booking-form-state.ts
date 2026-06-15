@@ -16,6 +16,7 @@ export interface BookingFormState {
   type: 'in_person' | 'online' | null
   durationOptionId: string | null
   durationLabel: string | null
+  durationPrice: number | null
   date: string | null      // ISO date YYYY-MM-DD
   startTime: string | null // HH:MM
   payAtClinic: boolean
@@ -37,6 +38,7 @@ const INITIAL_STATE: BookingFormState = {
   type: null,
   durationOptionId: null,
   durationLabel: null,
+  durationPrice: null,
   date: null,
   startTime: null,
   payAtClinic: true,
@@ -75,6 +77,7 @@ export function useBookingFormState() {
       type: null,
       durationOptionId: null,
       durationLabel: null,
+      durationPrice: null,
       date: null,
       startTime: null,
     }))
@@ -96,6 +99,7 @@ export function useBookingFormState() {
       type: null,
       durationOptionId: null,
       durationLabel: null,
+      durationPrice: null,
       date: null,
       startTime: null,
     }))
@@ -115,6 +119,7 @@ export function useBookingFormState() {
       type: null,
       durationOptionId: null,
       durationLabel: null,
+      durationPrice: null,
       date: null,
       startTime: null,
     }))
@@ -132,6 +137,7 @@ export function useBookingFormState() {
       type: null,
       durationOptionId: null,
       durationLabel: null,
+      durationPrice: null,
       date: null,
       startTime: null,
     }))
@@ -147,6 +153,7 @@ export function useBookingFormState() {
       type: null,
       durationOptionId: null,
       durationLabel: null,
+      durationPrice: null,
       date: null,
       startTime: null,
     }))
@@ -160,17 +167,19 @@ export function useBookingFormState() {
       type: deliveryType,
       durationOptionId: null,
       durationLabel: null,
+      durationPrice: null,
       date: null,
       startTime: null,
     }))
   }, [])
 
   const selectDuration = useCallback(
-    (durationOptionId: string, durationLabel: string) => {
+    (durationOptionId: string, durationLabel: string, durationPrice: number | null) => {
       setState((prev) => ({
         ...prev,
         durationOptionId,
         durationLabel,
+        durationPrice,
         date: null,
         startTime: null,
       }))
@@ -183,6 +192,7 @@ export function useBookingFormState() {
       ...prev,
       durationOptionId: null,
       durationLabel: null,
+      durationPrice: null,
     }))
   }, [])
 
