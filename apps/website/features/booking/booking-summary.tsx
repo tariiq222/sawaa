@@ -3,6 +3,7 @@
 import type { Service, EmployeeWithUser, AvailableSlot } from '@sawaa/shared';
 import { grossWithVat, halalasToSarNumber } from '@/lib/money';
 import { useT, useLocale } from '@/features/locale/locale-provider';
+import { therapistDisplayName } from './therapist-name';
 
 interface BookingSummaryProps {
   service: Service;
@@ -44,7 +45,7 @@ export function BookingSummary({
     hour: '2-digit',
     minute: '2-digit',
   });
-  const therapistName = `${employee.user.firstName} ${employee.user.lastName}`.trim();
+  const therapistName = therapistDisplayName(employee, isAr);
   // VAT-inclusive (gross) total — mirrors the backend invoice math.
   const priceSar = Intl.NumberFormat(dateLocale, {
     style: 'decimal',

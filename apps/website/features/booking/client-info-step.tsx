@@ -7,6 +7,7 @@ import { clientLoginApi, getMeApi } from '@/features/auth/auth.api';
 import { setClient as setAuthClient } from '@/features/auth/auth-store';
 import { useCurrentClient } from '@/features/auth/use-current-client';
 import { grossWithVat, halalasToSarNumber } from '@/lib/money';
+import { therapistDisplayName } from './therapist-name';
 
 interface ClientInfoStepProps {
   slot: AvailableSlot;
@@ -102,7 +103,7 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
     hour: '2-digit',
     minute: '2-digit',
   });
-  const therapistName = `${employee.user.firstName} ${employee.user.lastName}`.trim();
+  const therapistName = therapistDisplayName(employee, isAr);
   // VAT-inclusive (gross) total — mirrors the backend invoice math so the
   // amount shown here matches what the customer is actually charged.
   const priceSar = Intl.NumberFormat(dateLocale, {

@@ -4,6 +4,7 @@ import type { EmployeeWithUser } from '@sawaa/shared';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import Image from 'next/image';
 import { safeImageSrc } from '@/lib/image-url';
+import { therapistDisplayName, initialsFromName } from './therapist-name';
 
 interface TherapistPickerProps {
   therapists: EmployeeWithUser[];
@@ -11,11 +12,6 @@ interface TherapistPickerProps {
   onSelect: (employee: EmployeeWithUser) => void;
 }
 
-function initialsOf(first: string, last: string): string {
-  const f = (first || '').trim().charAt(0);
-  const l = (last || '').trim().charAt(0);
-  return (f + l).toUpperCase() || '—';
-}
 
 export function TherapistPicker({ therapists, selected, onSelect }: TherapistPickerProps) {
   const t = useT();
@@ -52,9 +48,7 @@ export function TherapistPicker({ therapists, selected, onSelect }: TherapistPic
         >
           {valid.map((emp) => {
             const isSelected = selected?.id === emp.id;
-            const fullName =
-              `${emp.user.firstName ?? ''} ${emp.user.lastName ?? ''}`.trim() ||
-              (isAr ? 'معالج' : 'Therapist');
+            const fullName = therapistDisplayName(emp, isAr) || (isAr ? 'معالج' : 'Therapist');
             const specialty = isAr
               ? emp.specialtyAr ?? emp.specialty ?? null
               : emp.specialty ?? emp.specialtyAr ?? null;
@@ -95,7 +89,7 @@ export function TherapistPicker({ therapists, selected, onSelect }: TherapistPic
                     <Avatar
                       name={fullName}
                       avatarUrl={emp.user.avatarUrl}
-                      initials={initialsOf(emp.user.firstName, emp.user.lastName)}
+                      initials={initialsFromName(fullName)}
                     />
 
                     <div className="flex flex-col min-w-0 flex-1 gap-0.5">

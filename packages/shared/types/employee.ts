@@ -32,6 +32,10 @@ export interface EmployeeServicePricing {
 }
 
 export interface EmployeeWithUser extends Employee {
+  /** Arabic display name — public endpoint includes it at the top level. */
+  nameAr?: string | null;
+  /** English display name — shown on the website when locale is EN. */
+  nameEn?: string | null;
   user: {
     id: string;
     firstName: string;

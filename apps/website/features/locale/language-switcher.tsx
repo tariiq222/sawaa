@@ -19,6 +19,10 @@ export function LanguageSwitcher({ current }: Props) {
   const switchTo = (next: Locale) => {
     if (next === current) return;
     persistLocale(next);
+    // eslint-disable-next-line react-hooks/immutability
+    document.documentElement.lang = next;
+    // eslint-disable-next-line react-hooks/immutability
+    document.documentElement.dir = next === 'ar' ? 'rtl' : 'ltr';
     router.refresh();
   };
 

@@ -4,6 +4,7 @@ import type { Service, EmployeeWithUser, AvailableSlot } from '@sawaa/shared';
 import type { PublicBranch } from './booking.api';
 import { grossWithVat, halalasToSarNumber } from '@/lib/money';
 import { useT, useLocale } from '@/features/locale/locale-provider';
+import { therapistDisplayName } from './therapist-name';
 
 export type SummaryScreen = 'branch' | 'service' | 'therapist' | 'slot';
 
@@ -107,9 +108,7 @@ function useSummaryRows(sel: SummarySelection) {
     sub: serviceMeta.length > 0 ? serviceMeta.join(' · ') : null,
   });
 
-  const therapistName = sel.employee?.user
-    ? `${sel.employee.user.firstName ?? ''} ${sel.employee.user.lastName ?? ''}`.trim()
-    : null;
+  const therapistName = sel.employee ? therapistDisplayName(sel.employee, isAr) || null : null;
   rows.push({
     screen: 'therapist',
     label: t('booking.step.therapist'),
