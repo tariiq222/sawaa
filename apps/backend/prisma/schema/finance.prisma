@@ -59,7 +59,7 @@ model Invoice {
   discountReasonId String?
   discountAppliedBy String?
   discountAppliedAt DateTime?
-  vatRate          Decimal       @default(0.15) @db.Decimal(5, 4)
+  vatRate          Decimal       @default(0) @db.Decimal(5, 4)
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
   vatAmt           Decimal       @db.Decimal(12, 2)
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.

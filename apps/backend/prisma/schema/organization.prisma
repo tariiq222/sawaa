@@ -368,7 +368,7 @@ model OrganizationSettings {
   productTagline         String?
   businessRegistration   String?
   vatRegistrationNumber  String?
-  vatRate                Decimal   @default(0.15) @db.Decimal(5, 4)
+  vatRate                Decimal   @default(0) @db.Decimal(5, 4)
   sellerAddress          String?
   organizationCity       String    @default("Riyadh")
   postalCode             String?
