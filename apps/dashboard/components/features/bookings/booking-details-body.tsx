@@ -169,7 +169,7 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
             <DetailRow label={t("detail.time")} value={`${booking.startTime} — ${booking.endTime}`} numeric icon={Clock01Icon} />
             <DetailRow
               label={t("detail.duration")}
-              value={`${booking.service?.duration ?? 0} ${t("bookings.wizard.step.typeDuration.minutes")}`}
+              value={`${booking.durationMinutesSnapshot ?? booking.service?.duration ?? 0} ${t("bookings.wizard.step.typeDuration.minutes")}`}
               numeric
               icon={Timer02Icon}
             />
