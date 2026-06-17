@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { UserIcon, ArrowRight01Icon, Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons"
+import { UserIcon, ArrowRight01Icon, Add01Icon, Delete02Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons"
+import { EmployeeAvatar } from "@/components/features/shared/employee-avatar"
 
 import { Button } from "@sawaa/ui"
 import { Badge } from "@sawaa/ui"
@@ -12,22 +12,28 @@ import { Skeleton } from "@sawaa/ui"
 import { useServiceEmployees } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
 import { AssignEmployeesDialog } from "@/components/features/services/assign-employees-dialog"
+import { EditEmployeeServiceSheet } from "@/components/features/employees/edit-employee-service-sheet"
 import { useQuery } from "@tanstack/react-query"
 import { fetchEmployees } from "@/lib/api/employees"
 import { queryKeys } from "@/lib/query-keys"
+import type { ServiceEmployee } from "@/lib/types/service"
+import type { EmployeeService } from "@/lib/types/employee"
 
 interface Props {
   serviceId?: string
   isCreate?: boolean
   pendingIds?: string[]
   onPendingChange?: (ids: string[]) => void
+  serviceNameAr?: string
+  serviceNameEn?: string
 }
 
-export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPendingChange }: Props) {
+export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPendingChange, serviceNameAr, serviceNameEn }: Props) {
   const { t, locale } = useLocale()
   const router = useRouter()
   const isAr = locale === "ar"
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editing, setEditing] = useState<ServiceEmployee | null>(null)
 
   /* ── Edit mode: fetch assigned employees ── */
   const { data: employees, isLoading } = useServiceEmployees(isCreate ? "" : (serviceId ?? ""))
@@ -52,6 +58,24 @@ export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPe
 
   const handleRemovePending = (id: string) => {
     onPendingChange?.(pendingIds.filter((x) => x !== id))
+  }
+
+  function buildEmployeeService(item: ServiceEmployee): EmployeeService {
+    return {
+      id: item.id,
+      serviceId: serviceId ?? "",
+      bufferMinutes: item.bufferMinutes,
+      isActive: item.isActive,
+      availableTypes: item.availableTypes,
+      service: {
+        id: serviceId ?? "",
+        nameAr: serviceNameAr ?? "",
+        nameEn: serviceNameEn ?? "",
+        price: 0,
+        duration: 0,
+      },
+      serviceTypes: [],
+    }
   }
 
   /* ── Loading (edit only) ── */
@@ -182,21 +206,7 @@ export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPe
                 className="flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-3"
               >
                 <div className="flex items-center gap-3">
-                  <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-surface-muted">
-                    {employee.avatarUrl ? (
-                      <Image
-                        src={employee.avatarUrl}
-                        alt={displayName}
-                        fill
-                        className="object-cover"
-                        sizes="40px"
-                      />
-                    ) : (
-                      <div className="flex size-full items-center justify-center">
-                        <HugeiconsIcon icon={UserIcon} strokeWidth={1.5} className="size-5 text-muted-foreground" />
-                      </div>
-                    )}
-                  </div>
+                  <EmployeeAvatar avatarUrl={employee.avatarUrl} name={displayName} className="size-10" />
 
                   <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-2">
@@ -229,21 +239,41 @@ export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPe
                   </div>
                 </div>
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 gap-1.5 text-xs shrink-0"
-                  onClick={() => router.push(`/employees/${employee.id}/edit`)}
-                >
-                  {t("common.view")}
-                  <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3.5" />
-                </Button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs"
+                    onClick={() => setEditing(item)}
+                  >
+                    <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} className="size-3.5" />
+                    {t("common.edit")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs"
+                    onClick={() => router.push(`/employees/${employee.id}/edit`)}
+                  >
+                    {t("common.view")}
+                    <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3.5" />
+                  </Button>
+                </div>
               </div>
             )
           })}
         </div>
       )}
+
+      {/* note: useServiceEmployees list isn't force-refreshed after sheet saves — rows show no price so stale data is not visible */}
+      <EditEmployeeServiceSheet
+        employeeId={editing?.employee.id ?? ""}
+        employeeService={editing ? buildEmployeeService(editing) : null}
+        open={!!editing}
+        onOpenChange={(o) => { if (!o) setEditing(null) }}
+      />
 
       <AssignEmployeesDialog
         open={dialogOpen}

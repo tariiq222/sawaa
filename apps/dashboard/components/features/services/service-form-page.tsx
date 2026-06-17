@@ -291,6 +291,8 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
               isCreate={!isEdit}
               pendingIds={pendingEmployeeIds}
               onPendingChange={setPendingEmployeeIds}
+              serviceNameAr={service?.nameAr ?? form.watch("nameAr") ?? ""}
+              serviceNameEn={service?.nameEn ?? form.watch("nameEn") ?? ""}
             />
           </TabsContent>
 
