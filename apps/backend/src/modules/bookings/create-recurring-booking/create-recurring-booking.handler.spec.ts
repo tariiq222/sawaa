@@ -22,6 +22,16 @@ const mockBooking = (scheduledAt: Date, id = 'book-1') => ({
   recurringPattern: RecurringFrequency.WEEKLY,
 });
 
+const buildPriceResolver = (price = 20000) => ({
+  resolve: jest.fn().mockResolvedValue({
+    price,
+    durationMins: 60,
+    durationOptionId: 'dur-opt-1',
+    currency: 'SAR',
+    isEmployeeOverride: false,
+  }),
+});
+
 const buildPrisma = (overrides?: Partial<{ findFirst: jest.Mock; create: jest.Mock }>) => {
   const prisma = {
     booking: {
@@ -31,6 +41,7 @@ const buildPrisma = (overrides?: Partial<{ findFirst: jest.Mock; create: jest.Mo
       ),
     },
     service: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Service', categoryId: null, currency: 'SAR' }) },
+    employeeService: { findFirst: jest.fn().mockResolvedValue({ id: 'es-1' }) },
     employee: { findFirst: jest.fn().mockResolvedValue({ name: 'Employee' }) },
     branch: { findFirst: jest.fn().mockResolvedValue({ nameAr: 'Branch' }) },
     serviceCategory: { findFirst: jest.fn() },
@@ -68,14 +79,14 @@ const baseDto = {
 describe('CreateRecurringBookingHandler', () => {
   describe('input validation', () => {
     it('throws BadRequestException when neither occurrences nor until is provided', async () => {
-      const handler = new CreateRecurringBookingHandler(buildPrisma() as never, buildRlsTransaction(buildPrisma()) as never);
+      const handler = new CreateRecurringBookingHandler(buildPrisma() as never, buildRlsTransaction(buildPrisma()) as never, buildPriceResolver() as never);
       await expect(
         handler.execute({ ...baseDto, frequency: RecurringFrequency.WEEKLY }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('throws BadRequestException when both occurrences and until are provided', async () => {
-      const handler = new CreateRecurringBookingHandler(buildPrisma() as never, buildRlsTransaction(buildPrisma()) as never);
+      const handler = new CreateRecurringBookingHandler(buildPrisma() as never, buildRlsTransaction(buildPrisma()) as never, buildPriceResolver() as never);
       await expect(
         handler.execute({
           ...baseDto,
@@ -87,21 +98,21 @@ describe('CreateRecurringBookingHandler', () => {
     });
 
     it('throws BadRequestException for CUSTOM frequency without customDates', async () => {
-      const handler = new CreateRecurringBookingHandler(buildPrisma() as never, buildRlsTransaction(buildPrisma()) as never);
+      const handler = new CreateRecurringBookingHandler(buildPrisma() as never, buildRlsTransaction(buildPrisma()) as never, buildPriceResolver() as never);
       await expect(
         handler.execute({ ...baseDto, frequency: RecurringFrequency.CUSTOM, occurrences: 3 }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('throws BadRequestException when occurrences < 1', async () => {
-      const handler = new CreateRecurringBookingHandler(buildPrisma() as never, buildRlsTransaction(buildPrisma()) as never);
+      const handler = new CreateRecurringBookingHandler(buildPrisma() as never, buildRlsTransaction(buildPrisma()) as never, buildPriceResolver() as never);
       await expect(
         handler.execute({ ...baseDto, frequency: RecurringFrequency.WEEKLY, occurrences: 0 }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('throws BadRequestException when intervalDays is 0', async () => {
-      const handler = new CreateRecurringBookingHandler(buildPrisma() as never, buildRlsTransaction(buildPrisma()) as never);
+      const handler = new CreateRecurringBookingHandler(buildPrisma() as never, buildRlsTransaction(buildPrisma()) as never, buildPriceResolver() as never);
       await expect(
         handler.execute({
           ...baseDto,
@@ -116,7 +127,7 @@ describe('CreateRecurringBookingHandler', () => {
   describe('WEEKLY recurrence', () => {
     it('creates N bookings sharing the same recurringGroupId', async () => {
       const prisma = buildPrisma();
-      const handler = new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never);
+      const handler = new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildPriceResolver() as never);
       const result = await handler.execute({
         ...baseDto,
         frequency: RecurringFrequency.WEEKLY,
@@ -129,7 +140,7 @@ describe('CreateRecurringBookingHandler', () => {
 
     it('schedules each booking 7 days apart', async () => {
       const prisma = buildPrisma();
-      const handler = new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never);
+      const handler = new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildPriceResolver() as never);
       const calls: Date[] = [];
       prisma.booking.create = jest.fn().mockImplementation(({ data }) => {
         calls.push(data.scheduledAt);
@@ -153,7 +164,7 @@ describe('CreateRecurringBookingHandler', () => {
         calls.push(data.scheduledAt);
         return Promise.resolve(mockBooking(data.scheduledAt));
       });
-      await new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({
+      await new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildPriceResolver() as never).execute({
         ...baseDto,
         frequency: RecurringFrequency.DAILY,
         occurrences: 3,
@@ -168,7 +179,7 @@ describe('CreateRecurringBookingHandler', () => {
         calls.push(data.scheduledAt);
         return Promise.resolve(mockBooking(data.scheduledAt));
       });
-      await new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({
+      await new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildPriceResolver() as never).execute({
         ...baseDto,
         frequency: RecurringFrequency.DAILY,
         intervalDays: 2,
@@ -189,7 +200,7 @@ describe('CreateRecurringBookingHandler', () => {
         calls.push(data.scheduledAt);
         return Promise.resolve(mockBooking(data.scheduledAt));
       });
-      await new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({
+      await new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildPriceResolver() as never).execute({
         ...baseDto,
         frequency: RecurringFrequency.CUSTOM,
         customDates: [d1, d2, d3],
@@ -210,7 +221,7 @@ describe('CreateRecurringBookingHandler', () => {
         calls.push(data.scheduledAt);
         return Promise.resolve(mockBooking(data.scheduledAt));
       });
-      await new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({
+      await new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildPriceResolver() as never).execute({
         ...baseDto,
         frequency: RecurringFrequency.WEEKLY,
         until,
@@ -226,7 +237,7 @@ describe('CreateRecurringBookingHandler', () => {
       const prisma = buildPrisma({
         findFirst: jest.fn().mockResolvedValue({ id: 'existing' }),
       });
-      const handler = new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never);
+      const handler = new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildPriceResolver() as never);
       await expect(
         handler.execute({ ...baseDto, frequency: RecurringFrequency.WEEKLY, occurrences: 3 }),
       ).rejects.toThrow(ConflictException);
@@ -247,7 +258,7 @@ describe('CreateRecurringBookingHandler', () => {
         ),
       });
       await expect(
-        new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({
+        new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildPriceResolver() as never).execute({
           ...baseDto,
           frequency: RecurringFrequency.WEEKLY,
           occurrences: 3,
@@ -268,7 +279,7 @@ describe('CreateRecurringBookingHandler', () => {
           Promise.resolve(mockBooking(data.scheduledAt)),
         ),
       });
-      const result = await new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never).execute({
+      const result = await new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildPriceResolver() as never).execute({
         ...baseDto,
         frequency: RecurringFrequency.WEEKLY,
         occurrences: 3,
@@ -283,7 +294,7 @@ describe('CreateRecurringBookingHandler', () => {
   describe('advisory lock (TOCTOU hardening)', () => {
     it('acquires a pg_advisory_xact_lock before the overlap check for each occurrence', async () => {
       const prisma = buildPrisma();
-      const handler = new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never);
+      const handler = new CreateRecurringBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildPriceResolver() as never);
       await handler.execute({
         ...baseDto,
         frequency: RecurringFrequency.WEEKLY,
@@ -301,6 +312,7 @@ describe('CreateRecurringBookingHandler', () => {
       const handler = new CreateRecurringBookingHandler(
         prisma as never,
         buildRlsTransaction(prisma) as never,
+        buildPriceResolver() as never,
         undefined,
         availability as never,
       );
@@ -323,6 +335,7 @@ describe('CreateRecurringBookingHandler', () => {
       const result = await new CreateRecurringBookingHandler(
         prisma as never,
         buildRlsTransaction(prisma) as never,
+        buildPriceResolver() as never,
         undefined,
         availability as never,
       ).execute({ ...baseDto, frequency: RecurringFrequency.WEEKLY, occurrences: 3, skipConflicts: true });
@@ -339,6 +352,7 @@ describe('CreateRecurringBookingHandler', () => {
       const handler = new CreateRecurringBookingHandler(
         prisma as never,
         buildRlsTransaction(prisma) as never,
+        buildPriceResolver() as never,
       );
       await expect(
         handler.execute({ ...baseDto, frequency: RecurringFrequency.WEEKLY, occurrences: 2, payAtClinic: true }),
@@ -354,8 +368,78 @@ describe('CreateRecurringBookingHandler', () => {
       const result = await new CreateRecurringBookingHandler(
         prisma as never,
         buildRlsTransaction(prisma) as never,
+        buildPriceResolver() as never,
       ).execute({ ...baseDto, frequency: RecurringFrequency.WEEKLY, occurrences: 2, payAtClinic: true });
       expect(result).toHaveLength(2);
+    });
+  });
+
+  describe('price resolution via PriceResolverService', () => {
+    it('calls priceResolver.resolve with serviceId, employeeServiceId, durationOptionId, bookingType, deliveryType', async () => {
+      const prisma = buildPrisma();
+      const priceResolver = buildPriceResolver(30000);
+      const handler = new CreateRecurringBookingHandler(
+        prisma as never,
+        buildRlsTransaction(prisma) as never,
+        priceResolver as never,
+      );
+      await handler.execute({
+        ...baseDto,
+        frequency: RecurringFrequency.WEEKLY,
+        occurrences: 2,
+        durationOptionId: 'dur-opt-99',
+      });
+      expect(priceResolver.resolve).toHaveBeenCalledWith(
+        expect.objectContaining({
+          serviceId: 'svc-1',
+          employeeServiceId: 'es-1',
+          durationOptionId: 'dur-opt-99',
+        }),
+      );
+    });
+
+    it('uses resolved.price (from priceResolver) not service.price for booking price and priceSnapshot', async () => {
+      const prisma = buildPrisma();
+      const priceResolver = buildPriceResolver(30000); // 300 SAR in halalas
+      const handler = new CreateRecurringBookingHandler(
+        prisma as never,
+        buildRlsTransaction(prisma) as never,
+        priceResolver as never,
+      );
+      const created: Array<{ price: number; priceSnapshot: number }> = [];
+      prisma.booking.create = jest.fn().mockImplementation(({ data }) => {
+        created.push({ price: data.price, priceSnapshot: data.priceSnapshot });
+        return Promise.resolve(mockBooking(data.scheduledAt));
+      });
+      await handler.execute({
+        ...baseDto,
+        frequency: RecurringFrequency.WEEKLY,
+        occurrences: 2,
+      });
+      expect(created).toHaveLength(2);
+      created.forEach((b) => {
+        expect(b.price).toBe(30000);
+        expect(b.priceSnapshot).toBe(30000);
+      });
+    });
+
+    it('passes null employeeServiceId when employeeService link is not found (falls back to service base price)', async () => {
+      const prisma = buildPrisma();
+      prisma.employeeService.findFirst = jest.fn().mockResolvedValue(null);
+      const priceResolver = buildPriceResolver(15000);
+      const handler = new CreateRecurringBookingHandler(
+        prisma as never,
+        buildRlsTransaction(prisma) as never,
+        priceResolver as never,
+      );
+      await handler.execute({
+        ...baseDto,
+        frequency: RecurringFrequency.WEEKLY,
+        occurrences: 1,
+      });
+      expect(priceResolver.resolve).toHaveBeenCalledWith(
+        expect.objectContaining({ employeeServiceId: null }),
+      );
     });
   });
 });

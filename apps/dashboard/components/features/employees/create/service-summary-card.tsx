@@ -1,30 +1,25 @@
 "use client"
 
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Delete02Icon } from "@hugeicons/core-free-icons"
+import { Delete02Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons"
 
 import { Button } from "@sawaa/ui"
 import { Badge } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import type { DraftService } from "./services-tab"
 
-/* ─── Booking type translation keys ─── */
-
 const TYPE_KEYS: Record<string, string> = {
   in_person: "employees.services.inPerson",
   online: "employees.services.online",
 }
 
-/* ─── Props ─── */
-
 interface ServiceSummaryCardProps {
   draft: DraftService
   onRemove: () => void
+  onEdit: () => void
 }
 
-/* ─── Component ─── */
-
-export function ServiceSummaryCard({ draft, onRemove }: ServiceSummaryCardProps) {
+export function ServiceSummaryCard({ draft, onRemove, onEdit }: ServiceSummaryCardProps) {
   const { t } = useLocale()
 
   return (
@@ -46,15 +41,26 @@ export function ServiceSummaryCard({ draft, onRemove }: ServiceSummaryCardProps)
           </span>
         )}
       </div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="h-9 w-9 text-destructive hover:text-destructive"
-        onClick={onRemove}
-      >
-        <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-4" />
-      </Button>
+      <div className="flex gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-9 w-9"
+          onClick={onEdit}
+        >
+          <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} className="size-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-9 w-9 text-destructive hover:text-destructive"
+          onClick={onRemove}
+        >
+          <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-4" />
+        </Button>
+      </div>
     </div>
   )
 }

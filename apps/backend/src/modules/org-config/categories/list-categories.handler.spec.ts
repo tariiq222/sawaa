@@ -46,6 +46,9 @@ describe('ListCategoriesHandler', () => {
               services: { where: { archivedAt: null, isActive: true, isHidden: false } },
             },
           },
+          department: {
+            select: { id: true, nameAr: true, nameEn: true },
+          },
         },
       }),
     );

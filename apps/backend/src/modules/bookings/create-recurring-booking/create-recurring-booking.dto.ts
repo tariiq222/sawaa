@@ -50,6 +50,9 @@ export class CreateRecurringBookingDto {
   @ApiProperty({ description: 'Service to be performed', example: '00000000-0000-0000-0000-000000000000' })
   @IsUUID() serviceId!: string;
 
+  @ApiPropertyOptional({ description: 'Duration option to use for price resolution (3-tier: employee override → duration option → service base). When provided, enables employee-level price overrides.', example: '00000000-0000-0000-0000-000000000001' })
+  @IsOptional() @IsUUID() durationOptionId?: string;
+
   /** First occurrence */
   @ApiProperty({ description: 'ISO 8601 datetime of the first occurrence', example: '2026-05-01T09:00:00.000Z' })
   @IsDateString() scheduledAt!: string;
@@ -57,8 +60,8 @@ export class CreateRecurringBookingDto {
   @ApiProperty({ description: 'Duration of each session in minutes', example: 60 })
   @IsInt() @Min(1) durationMins!: number;
 
-  @ApiProperty({ description: 'Price per session', example: 150 })
-  @IsNumber() @Min(0) price!: number;
+  @ApiPropertyOptional({ description: 'Ignored — price is resolved server-side via PriceResolverService (3-tier: employee override → duration option → service base). Kept for backward compatibility.', example: 150 })
+  @IsOptional() @IsNumber() @Min(0) price?: number;
 
   @ApiPropertyOptional({ description: 'Currency code (ISO 4217)', example: 'SAR' })
   @IsOptional() @IsString() currency?: string;

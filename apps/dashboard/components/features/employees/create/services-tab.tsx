@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -16,8 +16,13 @@ import {
 } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useServiceBookingTypes, useServices } from "@/hooks/use-services"
-import type { EmployeeTypeConfigPayload } from "@/lib/types/employee"
-import { makeDefaultEmployeeTypeConfigs } from "../employee-service-option-overrides"
+import { useEmployeeServiceTypes } from "@/hooks/use-employees"
+import type { EmployeeServiceType, EmployeeTypeConfigPayload } from "@/lib/types/employee"
+import { halalasToSarNumber } from "@/lib/money"
+import {
+  makeDefaultEmployeeTypeConfigs,
+  hasCustomEmployeeServiceOptions,
+} from "../employee-service-option-overrides"
 import {
   addServiceSchema,
   nextDraftKey,
@@ -28,6 +33,27 @@ import { ServiceSummaryCard } from "./service-summary-card"
 
 export type { DraftService } from "./draft-service.types"
 
+/* ─── Helper (module scope) ─── */
+
+function convertSavedTypes(types: EmployeeServiceType[]): EmployeeTypeConfigPayload[] {
+  return types.map((st) => ({
+    deliveryType: st.deliveryType,
+    price: st.price != null ? halalasToSarNumber(st.price) : undefined,
+    duration: st.duration ?? undefined,
+    useCustomOptions: st.useCustomOptions,
+    isActive: st.isActive,
+    durationOptions: st.durationOptions.map((o) => ({
+      id: o.id,
+      label: o.label,
+      labelAr: o.labelAr ?? undefined,
+      durationMinutes: o.durationMinutes,
+      isDefault: o.isDefault,
+      sortOrder: o.sortOrder,
+      price: halalasToSarNumber(o.price),
+    })),
+  }))
+}
+
 /* ─── Props ─── */
 
 interface ServicesTabProps {
@@ -35,6 +61,7 @@ interface ServicesTabProps {
   onDraftServicesChange: (
     services: import("./draft-service.types").DraftService[],
   ) => void
+  employeeId?: string
 }
 
 /* ─── Component ─── */
@@ -42,6 +69,7 @@ interface ServicesTabProps {
 export function ServicesTab({
   draftServices,
   onDraftServicesChange,
+  employeeId,
 }: ServicesTabProps) {
   const { t, locale } = useLocale()
   const isAr = locale === "ar"
@@ -49,14 +77,21 @@ export function ServicesTab({
   const [isAdding, setIsAdding] = useState(false)
   const [typeConfigs, setTypeConfigs] = useState<EmployeeTypeConfigPayload[]>([])
   const [useCustomPricing, setUseCustomPricing] = useState(false)
+  const [editingKey, setEditingKey] = useState<string | null>(null)
+  const isEditingRef = useRef(false)
 
-  /* Filter out already-added services */
+  // Derived from editingKey
+  const editingDraft = editingKey ? draftServices.find((ds) => ds.key === editingKey) ?? null : null
+  const editingServiceId = editingDraft?.serviceId ?? null
+
+  /* Filter out already-added services (allow the editing one back in) */
   const availableServices = useMemo(
     () => {
       const addedServiceIds = new Set(draftServices.map((ds) => ds.serviceId))
+      if (editingDraft) addedServiceIds.delete(editingDraft.serviceId)
       return (services ?? []).filter((s) => !addedServiceIds.has(s.id))
     },
-    [services, draftServices],
+    [services, draftServices, editingDraft],
   )
 
   const form = useForm<AddServiceFormData>({
@@ -73,7 +108,13 @@ export function ServicesTab({
     [serviceBookingTypesData],
   )
 
+  // Fetch saved per-practitioner types when editing
+  const { data: savedEmployeeServiceTypes, isLoading: savedTypesLoading } =
+    useEmployeeServiceTypes(employeeId ?? null, editingServiceId)
+
+  // Reset typeConfigs to defaults when service changes (but not while editing)
   useEffect(() => {
+    if (isEditingRef.current) return
     if (!selectedServiceId) {
       setTypeConfigs([])
       setUseCustomPricing(false)
@@ -82,28 +123,57 @@ export function ServicesTab({
     setTypeConfigs(makeDefaultEmployeeTypeConfigs(serviceBookingTypes))
   }, [selectedServiceId, serviceBookingTypes])
 
+  // Prefill from saved types once the query resolves
+  useEffect(() => {
+    if (!editingKey || savedTypesLoading) return
+    if (!savedEmployeeServiceTypes || savedEmployeeServiceTypes.length === 0) {
+      setTypeConfigs(makeDefaultEmployeeTypeConfigs(serviceBookingTypes))
+      setUseCustomPricing(false)
+      return
+    }
+    const converted = convertSavedTypes(savedEmployeeServiceTypes)
+    const hasCustom = hasCustomEmployeeServiceOptions(savedEmployeeServiceTypes, serviceBookingTypes)
+    setTypeConfigs(converted.map((tc) => ({ ...tc, useCustomOptions: hasCustom })))
+    setUseCustomPricing(hasCustom)
+  }, [editingKey, savedEmployeeServiceTypes, savedTypesLoading, serviceBookingTypes])
+
+  const handleEditService = (ds: import("./draft-service.types").DraftService) => {
+    isEditingRef.current = true
+    setEditingKey(ds.key)
+    form.setValue("serviceId", ds.serviceId)
+    form.setValue("bufferMinutes", ds.bufferMinutes)
+    form.setValue("isActive", ds.isActive)
+    setIsAdding(true)
+  }
+
   const handleAddService = form.handleSubmit((data) => {
     const svc = services?.find((s) => s.id === data.serviceId)
     if (!svc) return
 
-    onDraftServicesChange([
-      ...draftServices,
-      {
-        key: nextDraftKey(),
-        serviceId: data.serviceId,
-        serviceName: isAr ? svc.nameAr : (svc.nameEn ?? svc.nameAr),
-        bufferMinutes: data.bufferMinutes,
-        isActive: data.isActive,
-        availableTypes: typeConfigs.map((tc) => tc.deliveryType),
-        types: typeConfigs,
-        useCustomPricing,
-        serviceBookingTypes,
-      },
-    ])
+    const updatedDraft = {
+      key: editingKey ?? nextDraftKey(),
+      serviceId: data.serviceId,
+      serviceName: isAr ? svc.nameAr : (svc.nameEn ?? svc.nameAr),
+      bufferMinutes: data.bufferMinutes,
+      isActive: data.isActive,
+      availableTypes: typeConfigs.map((tc) => tc.deliveryType),
+      types: typeConfigs,
+      useCustomPricing,
+      serviceBookingTypes,
+    }
+
+    if (editingKey) {
+      onDraftServicesChange(draftServices.map((ds) => ds.key === editingKey ? updatedDraft : ds))
+    } else {
+      onDraftServicesChange([...draftServices, updatedDraft])
+    }
+
     form.reset()
     setTypeConfigs([])
     setUseCustomPricing(false)
     setIsAdding(false)
+    isEditingRef.current = false
+    setEditingKey(null)
   })
 
   const removeService = (key: string) => {
@@ -115,6 +185,8 @@ export function ServicesTab({
     form.reset()
     setTypeConfigs([])
     setUseCustomPricing(false)
+    isEditingRef.current = false
+    setEditingKey(null)
   }
 
   const handleCustomPricingChange = (enabled: boolean) => {
@@ -147,6 +219,7 @@ export function ServicesTab({
             key={ds.key}
             draft={ds}
             onRemove={() => removeService(ds.key)}
+            onEdit={() => handleEditService(ds)}
           />
         ))}
 
@@ -163,6 +236,8 @@ export function ServicesTab({
             onCancel={handleCancel}
             t={t}
             locale={locale}
+            isEditing={!!editingKey}
+            editingServiceName={editingDraft?.serviceName}
           />
         ) : (
           <Button

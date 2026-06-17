@@ -17,8 +17,6 @@ import { EmployeeServiceTypesEditor } from "../employee-service-types-editor"
 import type { EmployeeTypeConfigPayload } from "@/lib/types/employee"
 import type { AddServiceFormData } from "./draft-service.types"
 
-/* ─── Props ─── */
-
 interface AddServiceFormProps {
   form: ReturnType<typeof useForm<AddServiceFormData>>
   availableServices: { id: string; nameAr: string; nameEn: string }[]
@@ -31,9 +29,9 @@ interface AddServiceFormProps {
   onCancel: () => void
   t: (key: string) => string
   locale: string
+  isEditing?: boolean
+  editingServiceName?: string
 }
-
-/* ─── Component ─── */
 
 export function AddServiceForm({
   form,
@@ -47,52 +45,63 @@ export function AddServiceForm({
   onCancel,
   t,
   locale,
+  isEditing = false,
+  editingServiceName,
 }: AddServiceFormProps) {
   const isAr = locale === "ar"
   const selectedServiceId = form.watch("serviceId")
+  const showPricingSection = isEditing ? true : !!selectedServiceId
 
   return (
     <div className="rounded-lg border border-border p-4 space-y-4">
       <Label className="text-sm font-semibold">
-        {t("employees.create.addService")}
+        {isEditing ? t("common.edit") : t("employees.create.addService")}
       </Label>
 
-      {/* Service Select */}
+      {/* Service — read-only when editing, select when adding */}
       <div className="flex flex-col gap-1.5">
         <Label className="text-xs">{t("employees.services.serviceLabel")}</Label>
-        <Controller
-          control={form.control}
-          name="serviceId"
-          render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger>
-                <SelectValue
-                  placeholder={t("employees.services.selectService")}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {availableServices.map((s) => {
-                  const name = (isAr ? s.nameAr : s.nameEn) || s.nameAr || s.nameEn
-                  if (!name) return null
-                  return (
-                    <SelectItem key={s.id} value={s.id}>
-                      {name}
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
-          )}
-        />
-        {form.formState.errors.serviceId && (
-          <p className="text-xs text-destructive">
-            {form.formState.errors.serviceId.message}
-          </p>
+        {isEditing ? (
+          <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-foreground">
+            {editingServiceName ?? ""}
+          </div>
+        ) : (
+          <>
+            <Controller
+              control={form.control}
+              name="serviceId"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={t("employees.services.selectService")}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableServices.map((s) => {
+                      const name = (isAr ? s.nameAr : s.nameEn) || s.nameAr || s.nameEn
+                      if (!name) return null
+                      return (
+                        <SelectItem key={s.id} value={s.id}>
+                          {name}
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {form.formState.errors.serviceId && (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.serviceId.message}
+              </p>
+            )}
+          </>
         )}
       </div>
 
       {/* Custom pricing toggle */}
-      {selectedServiceId && (
+      {showPricingSection && (
         <div className="space-y-3">
           <div className="flex items-center justify-between rounded-lg border border-border p-3">
             <div className="space-y-1">
@@ -155,7 +164,7 @@ export function AddServiceForm({
           {t("common.cancel")}
         </Button>
         <Button type="button" size="sm" onClick={onSubmit}>
-          {t("employees.create.addService")}
+          {isEditing ? t("common.save") : t("employees.create.addService")}
         </Button>
       </div>
     </div>

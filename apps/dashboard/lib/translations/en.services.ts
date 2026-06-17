@@ -116,6 +116,7 @@ export const enServices: Record<string, string> = {
   "services.categories.empty.title": "No categories found",
   "services.categories.empty.description": "Create a category to start organizing your services.",
   "services.categories.col.name": "Category",
+  "services.categories.col.department": "Department",
   "services.categories.col.services": "Services",
   "services.categories.col.order": "Sort Order",
   "services.categories.col.status": "Status",

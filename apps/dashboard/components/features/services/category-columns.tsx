@@ -45,6 +45,20 @@ export function getCategoryColumns(
       },
     },
     {
+      id: "department",
+      header: label("services.categories.col.department", "Department"),
+      enableSorting: false,
+      cell: ({ row }) => {
+        const dept = row.original.department
+        const name = locale === "ar"
+          ? (dept?.nameAr ?? dept?.nameEn ?? null)
+          : (dept?.nameEn ?? dept?.nameAr ?? null)
+        return (
+          <span className="text-sm text-muted-foreground">{name ?? "—"}</span>
+        )
+      },
+    },
+    {
       id: "services",
       header: label("services.categories.col.services", "Services"),
       cell: ({ row }) => (

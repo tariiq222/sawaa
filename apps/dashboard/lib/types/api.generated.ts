@@ -6301,7 +6301,7 @@ export interface components {
              * @example Booking
              * @enum {string}
              */
-            subject: "Booking" | "Branch" | "Branding" | "Category" | "Client" | "Content" | "Coupon" | "Department" | "Employee" | "Integration" | "Invoice" | "Payment" | "Report" | "Role" | "Service" | "Setting" | "User";
+            subject: "Booking" | "Branch" | "Category" | "Client" | "Coupon" | "Department" | "Employee" | "Integration" | "Invoice" | "Payment" | "Report" | "Role" | "Service" | "Setting" | "User";
         };
         PreviewEmailTemplateDto: {
             /**

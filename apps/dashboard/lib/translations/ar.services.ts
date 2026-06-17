@@ -116,6 +116,7 @@ export const arServices: Record<string, string> = {
   "services.categories.empty.title": "لا توجد عيادات",
   "services.categories.empty.description": "أنشئ عيادة لتبدأ في تنظيم خدماتك.",
   "services.categories.col.name": "العيادة",
+  "services.categories.col.department": "القسم",
   "services.categories.col.services": "الخدمات",
   "services.categories.col.order": "الترتيب",
   "services.categories.col.status": "الحالة",

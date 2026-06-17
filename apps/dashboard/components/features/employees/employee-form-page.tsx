@@ -177,7 +177,11 @@ export function EmployeeFormPage(props: Props) {
           </TabsContent>
 
           <TabsContent value="services" className="pt-4">
-            <ServicesTab draftServices={draftServices} onDraftServicesChange={setDraftServices} />
+            <ServicesTab
+              draftServices={draftServices}
+              onDraftServicesChange={setDraftServices}
+              employeeId={employeeId}
+            />
           </TabsContent>
         </Tabs>
 

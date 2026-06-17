@@ -15,6 +15,7 @@ import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
+import { PriceResolverService } from '../../org-experience/services/price-resolver.service';
 
 /** FNV-1a 32-bit hash → signed int32 (Postgres int4 range). Same algorithm as create-booking. */
 function hashToInt32(s: string): number {
@@ -45,6 +46,7 @@ export class CreateRecurringBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
+    private readonly priceResolver: PriceResolverService,
     @Optional() private readonly settingsHandler?: GetBookingSettingsHandler,
     @Optional() private readonly availabilityHandler?: CheckAvailabilityHandler,
   ) {}
@@ -75,15 +77,28 @@ export class CreateRecurringBookingHandler {
     // Resolve snapshot data once for the series
     const service = await this.prisma.service.findFirst({
       where: { id: dto.serviceId },
-      select: { nameAr: true, categoryId: true, currency: true, price: true },
+      select: { nameAr: true, categoryId: true, currency: true },
     });
 
-    // Money is stored as integer halalas (see money-stored-as-integer-halalas memory).
-    // Prefer the service's authoritative price (already halalas) over the dto.price,
-    // which legacy callers may send in SAR units, leading to 100x-too-small invoices.
-    const resolvedPrice = service?.price != null
-      ? Number(service.price)
-      : dto.price;
+    const employeeService = await this.prisma.employeeService.findFirst({
+      where: { employeeId: dto.employeeId, serviceId: dto.serviceId },
+      select: { id: true },
+    });
+    const employeeServiceId = employeeService?.id ?? null;
+
+    // Price is resolved via PriceResolverService (3-tier precedence):
+    //   1. EmployeeServiceOption.priceOverride (scoped by employeeServiceId + durationOptionId + deliveryType, isActive=true)
+    //   2. ServiceDurationOption.price (scoped by deliveryType)
+    //   3. Service.price (base fallback)
+    // All values are in integer halalas. Resolved once for the entire series (price is constant).
+    const resolvedPriceResult = await this.priceResolver.resolve({
+      serviceId: dto.serviceId,
+      employeeServiceId,
+      durationOptionId: dto.durationOptionId ?? null,
+      bookingType: bookingType ?? null,
+      deliveryType: deliveryType ?? null,
+    });
+    const resolvedPrice = resolvedPriceResult.price;
     const employee = await this.prisma.employee.findFirst({
       where: { id: dto.employeeId },
       select: { name: true },
