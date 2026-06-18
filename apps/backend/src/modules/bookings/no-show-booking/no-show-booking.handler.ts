@@ -58,6 +58,11 @@ export class NoShowBookingHandler {
       // cancel-booking.handler). Money handling above is unaffected — the
       // forfeiture rule stands.
       if (booking.groupSessionId) {
+        // Remove the GroupEnrollment row so the client can re-enroll after
+        // their seat is freed. deleteMany is safe: a booking has at most one
+        // enrollment (@@unique on bookingId) and returns count=0 silently if
+        // there is none (individual bookings without a groupSessionId).
+        await tx.groupEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
         await this.groupSessionCapacity.recalculateGroupStatus(tx, booking.groupSessionId);
       }
 

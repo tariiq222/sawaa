@@ -137,6 +137,11 @@ export class CancelBookingHandler {
       // Roll back sibling AWAITING_PAYMENT bookings for group sessions
       // when the cancellation drops the enrolled count below the threshold.
       if (booking.groupSessionId) {
+        // Remove the GroupEnrollment row so the client can re-enroll after
+        // their seat is freed. deleteMany is safe: a booking has at most one
+        // enrollment (@@unique on bookingId) and returns count=0 silently if
+        // there is none.
+        await tx.groupEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
         await this.groupSessionCapacity.recalculateGroupStatus(tx, booking.groupSessionId);
       }
       return cancelledBooking;
