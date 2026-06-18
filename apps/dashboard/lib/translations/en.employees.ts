@@ -212,6 +212,10 @@ export const enEmployees: Record<string, string> = {
   "employees.services.useCustomPricingTimes": "Use custom prices and times",
   "employees.services.defaultsUsedHint": "When off, this employee uses the service's default prices and durations.",
   "employees.services.usingServiceDefaults": "The service default prices and durations will be used. Turn this on to customize them for this employee.",
+  "employees.services.inlineBufferEmpty": "Add buffer",
+  "employees.services.inlineBufferAria": "Edit buffer minutes",
+  "employees.services.inlineActiveAria": "Toggle service active",
+  "employees.services.inlineUpdateError": "Couldn't save",
 
   // — Status Dialog —
   "employees.action.deactivate": "Deactivate",
@@ -246,6 +250,7 @@ export const enEmployees: Record<string, string> = {
 
   // — Profile Sections —
   "employees.detail.workingHours": "Working Hours",
+  "employees.detail.editSchedule": "Edit Schedule",
   "employees.detail.noWorkingHours": "No working hours set yet",
   "employees.detail.upcomingVacations": "Upcoming Vacations",
   "employees.detail.noVacations": "No upcoming vacations",

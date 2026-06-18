@@ -352,6 +352,22 @@ export class CheckAvailabilityHandler {
       select: { durationMins: true },
     });
     if (any) return any;
+    // Fallback to ServiceBookingConfig.durationMins — this is set for services
+    // that use ServiceBookingConfig rows (e.g. direct-clinic hidden services)
+    // without any ServiceDurationOption rows configured.
+    if (deliveryType) {
+      const config = await this.prisma.serviceBookingConfig.findUnique({
+        where: { serviceId_deliveryType: { serviceId, deliveryType } },
+        select: { durationMins: true, isActive: true },
+      });
+      if (config && config.isActive && config.durationMins > 0) return { durationMins: config.durationMins };
+    }
+    // Try any active config when no deliveryType was given
+    const anyConfig = await this.prisma.serviceBookingConfig.findFirst({
+      where: { serviceId, isActive: true },
+      select: { durationMins: true },
+    });
+    if (anyConfig && anyConfig.durationMins > 0) return { durationMins: anyConfig.durationMins };
     // Final fallback: services that don't configure ServiceDurationOption rows
     // still carry the base duration on the Service row itself. Use it so the
     // availability check has a non-zero duration to grid against.

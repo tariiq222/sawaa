@@ -12,7 +12,6 @@ export interface DraftService {
   isActive: boolean
   availableTypes: string[]
   types: EmployeeTypeConfigPayload[]
-  useCustomPricing?: boolean
   serviceBookingTypes?: ServiceBookingType[]
 }
 

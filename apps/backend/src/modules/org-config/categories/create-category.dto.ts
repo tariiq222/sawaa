@@ -1,5 +1,6 @@
-import { IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { CategoryBookingMode } from '@prisma/client';
 
 export class CreateCategoryDto {
   @ApiProperty({ description: 'Category name in Arabic', example: 'طب الأسنان' })
@@ -13,4 +14,11 @@ export class CreateCategoryDto {
 
   @ApiPropertyOptional({ description: 'Display order (0-based, lower sorts first)', example: 0 })
   @IsOptional() @IsInt() @Min(0) sortOrder?: number;
+
+  @ApiPropertyOptional({
+    description: 'Booking mode: DIRECT (category is the booking unit) or SERVICES (container for multiple services)',
+    enum: CategoryBookingMode,
+    example: CategoryBookingMode.SERVICES,
+  })
+  @IsOptional() @IsEnum(CategoryBookingMode) bookingMode?: CategoryBookingMode;
 }

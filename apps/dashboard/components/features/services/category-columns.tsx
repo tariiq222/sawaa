@@ -68,6 +68,29 @@ export function getCategoryColumns(
       ),
     },
     {
+      id: "bookingMode",
+      header: label("services.categories.col.bookingMode", "Type"),
+      enableSorting: false,
+      cell: ({ row }) => {
+        const mode = row.original.bookingMode
+        if (!mode) return <span className="text-sm text-muted-foreground">—</span>
+        return (
+          <Badge
+            variant="outline"
+            className={
+              mode === "SERVICES"
+                ? "border-primary/30 bg-primary/10 text-primary"
+                : ""
+            }
+          >
+            {mode === "DIRECT"
+              ? label("services.categories.bookingMode.direct", "Direct")
+              : label("services.categories.bookingMode.services", "With Services")}
+          </Badge>
+        )
+      },
+    },
+    {
       accessorKey: "sortOrder",
       header: label("services.categories.col.order", "Sort Order"),
       cell: ({ row }) => (

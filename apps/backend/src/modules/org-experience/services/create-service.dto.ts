@@ -1,8 +1,6 @@
 import {
-  IsArray,
   IsBoolean,
   IsDefined,
-  IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -14,13 +12,6 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SanitizeText } from './sanitize-text.decorator';
-
-export enum RecurringPatternDto {
-  DAILY = 'DAILY',
-  WEEKLY = 'WEEKLY',
-  BIWEEKLY = 'BIWEEKLY',
-  MONTHLY = 'MONTHLY',
-}
 
 export class CreateServiceDto {
   // ─── الأساسيات ───────────────────────────────────────────────────────────
@@ -66,15 +57,6 @@ export class CreateServiceDto {
   @ApiPropertyOptional({ description: 'Fixed deposit amount in integer halalas — must not exceed price' })
   @ValidateIf((o: CreateServiceDto) => o.depositEnabled === true)
   @IsDefined() @IsInt() @Min(1) depositAmount?: number;
-
-  // ─── التكرار ─────────────────────────────────────────────────────────────
-  @ApiPropertyOptional({ description: 'Whether recurring bookings are allowed for this service', example: false, default: false }) @IsOptional() @IsBoolean() allowRecurring?: boolean;
-
-  @ApiPropertyOptional({ description: 'Allowed recurrence patterns when allowRecurring is true', example: ['WEEKLY'], enum: RecurringPatternDto, isArray: true })
-  @IsOptional() @IsArray() @IsEnum(RecurringPatternDto, { each: true })
-  allowedRecurringPatterns?: RecurringPatternDto[];
-
-  @ApiPropertyOptional({ description: 'Maximum number of occurrences for a recurring booking', example: 12 }) @IsOptional() @IsInt() @Min(1) maxRecurrences?: number;
 
   // ─── الجلسات الجماعية ────────────────────────────────────────────────────
   @ApiPropertyOptional({ description: 'Minimum participants required for the session to proceed', example: 1, default: 1 }) @IsOptional() @IsInt() @Min(1) minParticipants?: number;

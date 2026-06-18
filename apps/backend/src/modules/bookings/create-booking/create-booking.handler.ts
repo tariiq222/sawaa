@@ -100,12 +100,22 @@ export class CreateBookingHandler {
 
     const service = await this.prisma.service.findFirst({
       where: { id: dto.serviceId },
-      select: { id: true, nameAr: true, categoryId: true, isActive: true, archivedAt: true, isHidden: true },
+      select: {
+        id: true,
+        nameAr: true,
+        categoryId: true,
+        isActive: true,
+        archivedAt: true,
+        isHidden: true,
+        category: { select: { bookingMode: true } },
+      },
     });
     if (!service) throw new NotFoundException('Service not found');
     if (service.isActive === false) throw new BadRequestException('Service is not active');
     if (service.archivedAt != null) throw new BadRequestException('Service is archived');
-    if (service.isHidden === true) throw new BadRequestException('Service is hidden');
+    if (service.isHidden === true && service.category?.bookingMode !== 'DIRECT') {
+      throw new BadRequestException('Service is hidden');
+    }
 
     const employeeService = await this.prisma.employeeService.findUnique({
       where: { employeeId_serviceId: { employeeId: dto.employeeId, serviceId: dto.serviceId } },

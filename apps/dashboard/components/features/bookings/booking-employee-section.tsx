@@ -5,7 +5,6 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Stethoscope02Icon,
   MedicineBottle01Icon,
-  Timer02Icon,
 } from "@hugeicons/core-free-icons"
 import {
   Select,
@@ -17,7 +16,7 @@ import {
 import { useLocale } from "@/components/locale-provider"
 import type { UseFormReturn } from "react-hook-form"
 import type { BookingCreateFormData } from "@/lib/schemas/booking.schema"
-import type { Employee, EmployeeDurationOption, EmployeeService } from "@/lib/types/employee"
+import type { Employee, EmployeeService } from "@/lib/types/employee"
 import type { ProgressiveVisibility } from "@/components/features/bookings/use-progressive-disclosure"
 import { ProgressiveField } from "@/components/features/bookings/progressive-field"
 
@@ -55,10 +54,6 @@ interface BookingEmployeeSectionProps {
   employeesLoading: boolean
   employeeServicesLoading: boolean
   availableTypes: string[]
-  canFetchServiceTypes: boolean
-  serviceTypesLoading: boolean
-  hasDurationOptions: boolean
-  durationOptions: EmployeeDurationOption[]
   visibility: ProgressiveVisibility
 }
 
@@ -69,13 +64,9 @@ export function BookingEmployeeSection({
   employeesLoading,
   employeeServicesLoading,
   availableTypes,
-  canFetchServiceTypes,
-  serviceTypesLoading,
-  hasDurationOptions: _hasDurationOptions,
-  durationOptions,
   visibility,
 }: BookingEmployeeSectionProps) {
-  const { t, locale } = useLocale()
+  const { t } = useLocale()
 
   return (
     <div className="px-4 py-4 flex flex-col gap-3">
@@ -139,24 +130,6 @@ export function BookingEmployeeSection({
                 {(!availableTypes.length || availableTypes.includes("walk_in")) && (
                   <SelectItem value="walk_in">{t("bookings.form.type.walkIn")}</SelectItem>
                 )}
-              </SelectContent>
-            </Select>
-          )} />
-        </FormField>
-      </ProgressiveField>
-
-      {/* Duration — conditional on service types */}
-      <ProgressiveField show={visibility.showDuration && canFetchServiceTypes && !serviceTypesLoading}>
-        <FormField label={t("bookings.form.label.sessionDuration")} icon={<HugeiconsIcon icon={Timer02Icon} size={13} className="shrink-0" />}>
-          <Controller control={form.control} name="durationOptionId" render={({ field }) => (
-            <Select value={field.value ?? ""} onValueChange={field.onChange}>
-              <SelectTrigger className="bg-surface-muted border-border"><SelectValue placeholder={t("bookings.form.placeholder.selectDuration")} /></SelectTrigger>
-              <SelectContent>
-                {durationOptions.sort((a, b) => a.sortOrder - b.sortOrder).map((opt) => (
-                  <SelectItem key={opt.id} value={opt.id} className="font-numeric">
-                    {(locale === "ar" ? opt.labelAr : opt.label) || opt.label} ({opt.durationMinutes} {t("bookings.minutesAbbrev")})
-                  </SelectItem>
-                ))}
               </SelectContent>
             </Select>
           )} />

@@ -60,6 +60,9 @@ export const arServices: Record<string, string> = {
   "services.create.pageTitle": "إنشاء خدمة جديدة",
   "services.create.pageDescription": "أضف خدمة جديدة للكتالوج مع تحديد التسعير وطرق التقديم",
   "services.create.isActive": "نشطة",
+  "services.create.isActiveDesc": "عند التفعيل تظهر الخدمة في الكتالوج وقائمة الحجز، وعند الإيقاف تختفي من العملاء مع بقائها محفوظة.",
+  "services.create.isHidden": "مخفية",
+  "services.create.isHiddenDesc": "إخفاء الخدمة من الظهور العام مع إبقائها متاحة للحجز من قِبَل الإدارة فقط.",
   "services.create.avatarHint": "اختر أيقونة أو ارفع صورة للخدمة",
   "services.create.tabs.basic": "المعلومات الأساسية",
   "services.create.tabs.basicDesc": "الاسم والوصف والفئة والحالة",
@@ -208,7 +211,7 @@ export const arServices: Record<string, string> = {
   "services.booking.dayUnit": " يوم",
   "services.booking.disabledDefault": "معطّل افتراضياً",
   "services.booking.deposit.label": "مقدم الحجز (عربون)",
-  "services.booking.deposit.desc": "مبلغ عربون ثابت يُحصَّل عند الحجز — يقلل الغيابات ويضمن جدية الحجز",
+  "services.booking.deposit.desc": "مبلغ عربون ثابت يُحصَّل عند الحجز لهذه الخدمة — يقلل الغيابات ويضمن جدية الحجز. مغلق افتراضياً، ولكل خدمة قيمة مستقلة.",
   "services.booking.recurring.label": "السماح بالحجز المتكرر",
   "services.booking.recurring.desc": "يتيح للمستفيد حجز سلسلة مواعيد بنمط ثابت — مثل جلسة أسبوعية لمدة 3 أشهر",
   "services.booking.recurring.patterns": "أنماط التكرار المسموحة لهذه الخدمة",
@@ -323,7 +326,9 @@ export const arServices: Record<string, string> = {
   /* ── Display Settings (basic-info-tab) ── */
   "services.display.hideService": "إخفاء الخدمة",
   "services.display.hidePrice": "إخفاء السعر عند الحجز",
+  "services.display.hidePriceDesc": "إخفاء السعر من واجهة الحجز مع إبقائه ظاهراً للإدارة والتقارير.",
   "services.display.hideDuration": "إخفاء المدة عند الحجز",
+  "services.display.hideDurationDesc": "إخفاء مدة الخدمة من واجهة الحجز مع إبقائها محفوظة في التقويم والمواعيد.",
   "services.display.clear": "إزالة",
 
   /* ── Employees Tab ── */
@@ -339,6 +344,7 @@ export const arServices: Record<string, string> = {
   "services.employees.createModeDesc": "أنشئ الخدمة أولاً، ثم عد لإضافة الممارسين إليها.",
   "services.employees.customPricing": "تسعير مخصص",
   "services.employees.customPricingHint": "فعّل لتخصيص سعر ومدة لهذا الممارس بدلاً من الأسعار الأساسية للخدمة",
+  "services.employees.noTypesForPricing": "أضف نوع تقديم وسعراً للخدمة أولاً من تبويب «المدة والتسعير»",
   "services.employees.usingBasePrice": "بالأسعار الأساسية",
   "services.employees.customPricingSaveError": "فشل حفظ التسعير المخصص",
   "services.employees.priceLabel": "السعر (ر.س)",

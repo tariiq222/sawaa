@@ -4565,6 +4565,12 @@ export interface components {
         };
         CreateCategoryDto: {
             /**
+             * @description Booking mode: DIRECT (category is the booking unit) or SERVICES (container for multiple services)
+             * @example SERVICES
+             * @enum {string}
+             */
+            bookingMode?: "DIRECT" | "SERVICES";
+            /**
              * @description UUID of the parent department
              * @example 00000000-0000-0000-0000-000000000000
              */
@@ -6834,6 +6840,12 @@ export interface components {
             sortOrder?: number;
         };
         UpdateCategoryDto: {
+            /**
+             * @description Booking mode: DIRECT (category is the booking unit) or SERVICES (container for multiple services)
+             * @example SERVICES
+             * @enum {string}
+             */
+            bookingMode?: "DIRECT" | "SERVICES";
             /**
              * @description UUID of the parent department, or null to unlink
              * @example 00000000-0000-0000-0000-000000000000

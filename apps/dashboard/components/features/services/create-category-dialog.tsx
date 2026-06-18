@@ -1,6 +1,6 @@
 "use client"
 
-import { useForm, Controller } from "react-hook-form"
+import { useForm, Controller, type Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 
@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@sawaa/ui"
+import { RadioGroup, RadioGroupItem } from "@sawaa/ui"
 import { useCategoryMutations } from "@/hooks/use-services"
 import { useDepartmentOptions } from "@/hooks/use-departments"
 import { useLocale } from "@/components/locale-provider"
@@ -44,8 +45,8 @@ export function CreateCategoryDialog({ open, onOpenChange }: Props) {
   const { options: departments } = useDepartmentOptions()
 
   const form = useForm<CreateCategoryFormData>({
-    resolver: zodResolver(createCategorySchema),
-    defaultValues: { nameAr: "", nameEn: "", sortOrder: 0, departmentId: undefined },
+    resolver: zodResolver(createCategorySchema) as Resolver<CreateCategoryFormData>,
+    defaultValues: { nameAr: "", nameEn: "", sortOrder: 0, departmentId: undefined, bookingMode: "DIRECT" as const },
   })
 
   const translateError = (msg?: string) => (msg ? t(msg) : undefined)
@@ -57,6 +58,7 @@ export function CreateCategoryDialog({ open, onOpenChange }: Props) {
         nameEn: data.nameEn || undefined,
         sortOrder: data.sortOrder,
         departmentId: data.departmentId || undefined,
+        bookingMode: data.bookingMode,
       })
       toast.success(t("services.categories.create.success"))
       form.reset()
@@ -90,6 +92,34 @@ export function CreateCategoryDialog({ open, onOpenChange }: Props) {
                 <Label>{t("services.categories.create.nameEn")}</Label>
                 <Input {...form.register("nameEn")} />
               </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label>{t("services.categories.bookingMode.label")}</Label>
+              <Controller
+                control={form.control}
+                name="bookingMode"
+                render={({ field }) => (
+                  <RadioGroup
+                    value={field.value ?? "DIRECT"}
+                    onValueChange={field.onChange}
+                    className="flex flex-row gap-6"
+                  >
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="DIRECT" id="mode-direct" />
+                      <label htmlFor="mode-direct" className="text-sm cursor-pointer">
+                        {t("services.categories.bookingMode.direct")}
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="SERVICES" id="mode-services" />
+                      <label htmlFor="mode-services" className="text-sm cursor-pointer">
+                        {t("services.categories.bookingMode.services")}
+                      </label>
+                    </div>
+                  </RadioGroup>
+                )}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

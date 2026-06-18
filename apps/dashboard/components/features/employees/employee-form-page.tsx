@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -62,6 +62,12 @@ export function EmployeeFormPage(props: Props) {
 
   const router = useRouter()
   const { t } = useLocale()
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get("tab")
+  const initialTab =
+    tabParam === "basic" || tabParam === "schedule" || tabParam === "services"
+      ? tabParam
+      : "basic"
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const { data: employee, isLoading } = useEmployee(employeeId ?? null)
@@ -146,7 +152,7 @@ export function EmployeeFormPage(props: Props) {
       <PageHeader title={title} description={description} />
 
       <form onSubmit={onSubmit} className="flex flex-col gap-6">
-        <Tabs defaultValue="basic">
+        <Tabs defaultValue={initialTab} key={initialTab}>
           <TabsList>
             <TabsTrigger value="basic">{t("employees.create.tabs.basic")}</TabsTrigger>
             <TabsTrigger value="schedule">{t("employees.create.tabs.schedule")}</TabsTrigger>

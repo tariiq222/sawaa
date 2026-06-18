@@ -102,7 +102,6 @@ const draftService = {
   bufferMinutes: 10,
   isActive: true,
   availableTypes: ["in_person"],
-  useCustomPricing: true,
   serviceBookingTypes: [
     {
       id: "bt-1",
@@ -144,28 +143,7 @@ const draftService = {
       deliveryType: "in_person",
       price: 150,
       duration: 45,
-      useCustomOptions: true,
       isActive: true,
-      durationOptions: [
-        {
-          id: "opt-45",
-          label: "45 minutes",
-          labelAr: "٤٥ دقيقة",
-          durationMinutes: 45,
-          price: 150,
-          isDefault: true,
-          sortOrder: 0,
-        },
-        {
-          id: "opt-90",
-          label: "90 minutes",
-          labelAr: "٩٠ دقيقة",
-          durationMinutes: 90,
-          price: 300,
-          isDefault: false,
-          sortOrder: 1,
-        },
-      ],
     },
   ],
 }
@@ -202,7 +180,7 @@ describe("useEmployeeForm service price units", () => {
     mocks.fetchBranches.mockResolvedValue({ items: [{ id: "main-branch", isMain: true }], meta: {} })
   })
 
-  it("converts create employee service prices and duration option prices from SAR to halalas", async () => {
+  it("creates employee service by assigning serviceId — no options payload (durationOptions UI removed)", async () => {
     const form = makeForm(employeeFormData)
     const { result } = renderHook(() =>
       useEmployeeForm({
@@ -216,31 +194,15 @@ describe("useEmployeeForm service price units", () => {
       await result.current.onSubmit()
     })
 
-    // The create path no longer sends types/availableTypes/customDuration on the
-    // assign call — assignService just links the service by id. Price-unit
-    // conversion (SAR -> halalas) happens in the separate options payload below.
+    // assignService links the service by id
     expect(mocks.assignService).toHaveBeenCalledWith("emp-new", {
       serviceId: "svc-1",
     })
-    expect(mocks.setEmployeeServiceOptions).toHaveBeenCalledWith("emp-new", "svc-1", {
-      options: [
-        expect.objectContaining({
-          durationOptionId: "opt-45",
-          priceOverride: 15000,
-          durationOverride: 45,
-          isActive: true,
-        }),
-        expect.objectContaining({
-          durationOptionId: "opt-90",
-          priceOverride: 30000,
-          durationOverride: 90,
-          isActive: true,
-        }),
-      ],
-    })
+    // buildEmployeeServiceOptionsPayload always returns null — no options call
+    expect(mocks.setEmployeeServiceOptions).not.toHaveBeenCalled()
   })
 
-  it("converts edit employee service prices and duration option prices from SAR to halalas", async () => {
+  it("converts edit employee service price from SAR to halalas — no options payload (durationOptions UI removed)", async () => {
     const form = makeForm(employeeFormData)
     const { result } = renderHook(() =>
       useEmployeeForm({
@@ -280,20 +242,12 @@ describe("useEmployeeForm service price units", () => {
           expect.objectContaining({
             deliveryType: "in_person",
             price: 15000,
-            durationOptions: [
-              expect.objectContaining({ price: 15000 }),
-              expect.objectContaining({ price: 30000 }),
-            ],
           }),
         ],
       }),
     })
-    expect(mocks.setEmployeeServiceOptions).toHaveBeenCalledWith("emp-1", "svc-1", {
-      options: [
-        expect.objectContaining({ durationOptionId: "opt-45", priceOverride: 15000 }),
-        expect.objectContaining({ durationOptionId: "opt-90", priceOverride: 30000 }),
-      ],
-    })
+    // buildEmployeeServiceOptionsPayload always returns null — no options call
+    expect(mocks.setEmployeeServiceOptions).not.toHaveBeenCalled()
   })
 
   it("rolls back the created employee when a create follow-up step fails", async () => {

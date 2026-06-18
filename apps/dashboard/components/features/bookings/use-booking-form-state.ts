@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react'
 
+export type CategoryBookingMode = 'DIRECT' | 'SERVICES'
+
 export interface BookingFormState {
   clientId: string | null
   clientName: string | null
@@ -7,6 +9,7 @@ export interface BookingFormState {
   departmentName: string | null
   categoryId: string | null
   categoryName: string | null
+  categoryBookingMode: CategoryBookingMode | null
   serviceId: string | null
   serviceName: string | null
   employeeId: string | null
@@ -14,9 +17,6 @@ export interface BookingFormState {
   deliveryType: 'in_person' | 'online' | null
   /** @deprecated Use deliveryType. Kept as a read-compatible alias during the refactor. */
   type: 'in_person' | 'online' | null
-  durationOptionId: string | null
-  durationLabel: string | null
-  durationPrice: number | null
   date: string | null      // ISO date YYYY-MM-DD
   startTime: string | null // HH:MM
   payAtClinic: boolean
@@ -30,15 +30,13 @@ const INITIAL_STATE: BookingFormState = {
   departmentName: null,
   categoryId: null,
   categoryName: null,
+  categoryBookingMode: null,
   serviceId: null,
   serviceName: null,
   employeeId: null,
   employeeName: null,
   deliveryType: null,
   type: null,
-  durationOptionId: null,
-  durationLabel: null,
-  durationPrice: null,
   date: null,
   startTime: null,
   payAtClinic: true,
@@ -69,15 +67,13 @@ export function useBookingFormState() {
       departmentName: null,
       categoryId: null,
       categoryName: null,
+      categoryBookingMode: null,
       serviceId: null,
       serviceName: null,
       employeeId: null,
       employeeName: null,
       deliveryType: null,
       type: null,
-      durationOptionId: null,
-      durationLabel: null,
-      durationPrice: null,
       date: null,
       startTime: null,
     }))
@@ -91,15 +87,13 @@ export function useBookingFormState() {
       departmentName,
       categoryId: null,
       categoryName: null,
+      categoryBookingMode: null,
       serviceId: null,
       serviceName: null,
       employeeId: null,
       employeeName: null,
       deliveryType: null,
       type: null,
-      durationOptionId: null,
-      durationLabel: null,
-      durationPrice: null,
       date: null,
       startTime: null,
     }))
@@ -107,28 +101,33 @@ export function useBookingFormState() {
 
   /**
    * Selecting a category (clinic) resets service and everything downstream.
-   * Pass `autoService` when the category has exactly one active service so
-   * the service step can be skipped automatically.
+   * `bookingMode` controls whether the service step is skipped:
+   *   - 'DIRECT'  → `autoService` is required; the hidden internal service is
+   *                 pre-selected and the wizard jumps straight to the employee
+   *                 step.
+   *   - 'SERVICES' (or omitted for legacy clinics) → the user always picks a
+   *                 service; `autoService` is ignored even if provided.
    */
   const selectCategory = useCallback(
     (
       categoryId: string,
       categoryName: string,
+      bookingMode: CategoryBookingMode | null,
       autoService?: { serviceId: string; serviceName: string },
     ) => {
+      const effectiveMode: CategoryBookingMode | null = bookingMode ?? null
+      const shouldAutoSelect = effectiveMode === 'DIRECT' && !!autoService
       setState((prev) => ({
         ...prev,
         categoryId,
         categoryName,
-        serviceId: autoService?.serviceId ?? null,
-        serviceName: autoService?.serviceName ?? null,
+        categoryBookingMode: effectiveMode,
+        serviceId: shouldAutoSelect ? autoService!.serviceId : null,
+        serviceName: shouldAutoSelect ? autoService!.serviceName : null,
         employeeId: null,
         employeeName: null,
         deliveryType: null,
         type: null,
-        durationOptionId: null,
-        durationLabel: null,
-        durationPrice: null,
         date: null,
         startTime: null,
       }))
@@ -136,7 +135,7 @@ export function useBookingFormState() {
     [],
   )
 
-  /** Selecting a service resets employee/type/duration/datetime */
+  /** Selecting a service resets employee/type/datetime */
   const selectService = useCallback((serviceId: string, serviceName: string) => {
     setState((prev) => ({
       ...prev,
@@ -146,15 +145,12 @@ export function useBookingFormState() {
       employeeName: null,
       deliveryType: null,
       type: null,
-      durationOptionId: null,
-      durationLabel: null,
-      durationPrice: null,
       date: null,
       startTime: null,
     }))
   }, [])
 
-  /** Selecting an employee resets type/duration/datetime */
+  /** Selecting an employee resets type/datetime */
   const selectEmployee = useCallback((employeeId: string, employeeName: string) => {
     setState((prev) => ({
       ...prev,
@@ -162,48 +158,19 @@ export function useBookingFormState() {
       employeeName,
       deliveryType: null,
       type: null,
-      durationOptionId: null,
-      durationLabel: null,
-      durationPrice: null,
       date: null,
       startTime: null,
     }))
   }, [])
 
-  /** Selecting a delivery type resets duration/datetime */
+  /** Selecting a delivery type resets datetime */
   const selectDeliveryType = useCallback((deliveryType: 'in_person' | 'online') => {
     setState((prev) => ({
       ...prev,
       deliveryType,
       type: deliveryType,
-      durationOptionId: null,
-      durationLabel: null,
-      durationPrice: null,
       date: null,
       startTime: null,
-    }))
-  }, [])
-
-  const selectDuration = useCallback(
-    (durationOptionId: string, durationLabel: string, durationPrice: number | null) => {
-      setState((prev) => ({
-        ...prev,
-        durationOptionId,
-        durationLabel,
-        durationPrice,
-        date: null,
-        startTime: null,
-      }))
-    },
-    [],
-  )
-
-  const skipDuration = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      durationOptionId: null,
-      durationLabel: null,
-      durationPrice: null,
     }))
   }, [])
 
@@ -236,8 +203,6 @@ export function useBookingFormState() {
     selectDeliveryType,
     /** @deprecated Use selectDeliveryType. */
     selectType: selectDeliveryType,
-    selectDuration,
-    skipDuration,
     selectDate,
     selectTime,
     setPayAtClinic,

@@ -5,6 +5,7 @@ import { Add01Icon } from "@hugeicons/core-free-icons"
 
 import { Button } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
+import { SurfaceRow } from "@sawaa/ui"
 import type { ServiceBookingType } from "@/lib/types/service"
 import type { EmployeeTypeConfigPayload } from "@/lib/types/employee"
 import { EmployeeTypeRow } from "./employee-type-row"
@@ -68,9 +69,7 @@ export function EmployeeServiceTypesEditor({
         deliveryType,
         price: serviceDef ? null : undefined,
         duration: serviceDef ? null : undefined,
-        useCustomOptions: false,
         isActive: true,
-        durationOptions: [],
       },
     ])
   }
@@ -82,12 +81,14 @@ export function EmployeeServiceTypesEditor({
       </Label>
 
       {value.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-          {t("services.bookingTypes.noTypes")}
-        </p>
+        <SurfaceRow variant="dashed" size="sm">
+          <p className="text-xs text-muted-foreground">
+            {t("services.bookingTypes.noTypes")}
+          </p>
+        </SurfaceRow>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
-          <div className="grid grid-cols-[7rem_minmax(0,1fr)_minmax(0,1fr)_auto_2rem] items-center gap-x-3 gap-y-2 px-3 py-2">
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <div className="grid min-w-[480px] grid-cols-[7rem_minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-x-3 gap-y-2 px-3 py-2">
             {/* Header */}
             <span className="text-[11px] font-medium text-muted-foreground">
               {t("employees.services.types")}
@@ -97,9 +98,6 @@ export function EmployeeServiceTypesEditor({
             </span>
             <span className="text-[11px] font-medium text-muted-foreground">
               {t("services.bookingTypes.duration")} ({t("employees.services.min")})
-            </span>
-            <span className="text-[11px] font-medium text-muted-foreground">
-              {t("employees.services.useCustomOptions")}
             </span>
             <span aria-hidden />
 

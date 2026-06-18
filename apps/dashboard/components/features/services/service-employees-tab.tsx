@@ -3,16 +3,16 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { UserIcon, ArrowRight01Icon, Add01Icon, Delete02Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons"
-import { EmployeeAvatar } from "@/components/features/shared/employee-avatar"
+import { UserIcon, Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons"
 
 import { Button } from "@sawaa/ui"
-import { Badge } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
+import { SurfaceRow } from "@sawaa/ui"
 import { useServiceEmployees } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
 import { AssignEmployeesDialog } from "@/components/features/services/assign-employees-dialog"
 import { EditEmployeeServiceSheet } from "@/components/features/employees/edit-employee-service-sheet"
+import { AssignedEmployeeRow } from "@/components/features/services/assigned-employee-row"
 import { useQuery } from "@tanstack/react-query"
 import { fetchEmployees } from "@/lib/api/employees"
 import { queryKeys } from "@/lib/query-keys"
@@ -117,9 +117,11 @@ export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPe
               const fullName = `${p.user.firstName} ${p.user.lastName}`
               const displayName = isAr && p.nameAr ? p.nameAr : fullName
               return (
-                <div
+                <SurfaceRow
                   key={p.id}
-                  className="flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-3"
+                  variant="default"
+                  size="md"
+                  className="flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-surface-muted">
@@ -145,7 +147,7 @@ export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPe
                   >
                     <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-4" />
                   </Button>
-                </div>
+                </SurfaceRow>
               )
             })}
           </div>
@@ -194,76 +196,18 @@ export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPe
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {employees.map((item) => {
-            const { employee } = item
-            const fullName = `${employee.user.firstName} ${employee.user.lastName}`
-            const displayName = isAr && employee.nameAr ? employee.nameAr : fullName
-
-            return (
-              <div
-                key={item.id}
-                className="flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-3"
-              >
-                <div className="flex items-center gap-3">
-                  <EmployeeAvatar avatarUrl={employee.avatarUrl} name={displayName} className="size-10" />
-
-                  <div className="flex flex-col gap-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-foreground">{displayName}</span>
-                      {!item.isActive && (
-                        <Badge variant="outline" className="text-xs text-muted-foreground">
-                          {t("common.inactive")}
-                        </Badge>
-                      )}
-                      {!employee.isActive && (
-                        <Badge variant="outline" className="text-xs text-warning border-warning/20 bg-warning/10">
-                          {t("services.employees.employeeInactive")}
-                        </Badge>
-                      )}
-                    </div>
-                    {employee.title && (
-                      <span className="text-xs text-muted-foreground">{employee.title}</span>
-                    )}
-                    {item.availableTypes.length > 0 && (
-                      <div className="flex gap-1 mt-0.5">
-                        {item.availableTypes.map((type) => (
-                          <Badge key={type} variant="secondary" className="text-xs">
-                            {type === "in_person"
-                              ? t("services.bookingTypes.clinic")
-                              : t("services.bookingTypes.online")}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 gap-1.5 text-xs"
-                    onClick={() => setEditing(item)}
-                  >
-                    <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} className="size-3.5" />
-                    {t("common.edit")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 gap-1.5 text-xs"
-                    onClick={() => router.push(`/employees/${employee.id}/edit`)}
-                  >
-                    {t("common.view")}
-                    <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3.5" />
-                  </Button>
-                </div>
-              </div>
-            )
-          })}
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-stretch">
+          {employees.map((item) => (
+            <AssignedEmployeeRow
+              key={item.id}
+              item={item}
+              serviceId={serviceId ?? ""}
+              isAr={isAr}
+              t={t}
+              onEdit={() => setEditing(item)}
+              onView={() => router.push(`/employees/${item.employee.id}/edit`)}
+            />
+          ))}
         </div>
       )}
 

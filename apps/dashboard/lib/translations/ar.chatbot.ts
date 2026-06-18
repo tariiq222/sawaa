@@ -61,7 +61,6 @@ export const arChatbot: Record<string, string> = {
   // ─── Tab Keys ───
   "employees.tabs.list": "الممارسون",
   "employees.tabs.ratings": "التقييمات والمراجعات",
-  "bookings.tabs.list": "الحجوزات",
   "invoices.tabs.list": "الفواتير",
   "users.tabs.activityLog": "سجل النشاط",
 

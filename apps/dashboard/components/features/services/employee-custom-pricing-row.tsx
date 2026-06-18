@@ -100,6 +100,7 @@ function InlineNumberField({ value, suffix, isSaving, min = 0, step = 1, ariaLab
 
 export function EmployeeCustomPricingRow({ item, serviceId: _serviceId, t, isSaving, onSave }: Props) {
   const activeTypes = item.serviceTypes.filter((st) => st.isActive)
+  const hasTypes = item.serviceTypes.length > 0
 
   const handleToggle = (enabled: boolean) => {
     if (enabled) {
@@ -166,11 +167,18 @@ export function EmployeeCustomPricingRow({ item, serviceId: _serviceId, t, isSav
         <Switch
           checked={item.hasCustomPricing}
           onCheckedChange={handleToggle}
-          disabled={isSaving}
+          disabled={isSaving || !hasTypes}
           aria-label={t("services.employees.customPricing")}
         />
-        <span className="text-sm text-foreground">{t("services.employees.customPricing")}</span>
+        <span className={hasTypes ? "text-sm text-foreground" : "text-sm text-muted-foreground"}>
+          {t("services.employees.customPricing")}
+        </span>
       </div>
+      {!hasTypes && (
+        <p className="text-xs text-muted-foreground/70">
+          {t("services.employees.noTypesForPricing")}
+        </p>
+      )}
 
       {/* Custom pricing rows */}
       {item.hasCustomPricing && activeTypes.length > 0 && (

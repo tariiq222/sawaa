@@ -21,7 +21,6 @@ import type { EmployeeServiceType, EmployeeTypeConfigPayload } from "@/lib/types
 import { halalasToSarNumber } from "@/lib/money"
 import {
   makeDefaultEmployeeTypeConfigs,
-  hasCustomEmployeeServiceOptions,
 } from "../employee-service-option-overrides"
 import {
   addServiceSchema,
@@ -76,7 +75,6 @@ export function ServicesTab({
   const { services } = useServices()
   const [isAdding, setIsAdding] = useState(false)
   const [typeConfigs, setTypeConfigs] = useState<EmployeeTypeConfigPayload[]>([])
-  const [useCustomPricing, setUseCustomPricing] = useState(false)
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const isEditingRef = useRef(false)
 
@@ -133,7 +131,6 @@ export function ServicesTab({
     if (isEditingRef.current) return
     if (!selectedServiceId) {
       setTypeConfigs([])
-      setUseCustomPricing(false)
       return
     }
     setTypeConfigs(makeDefaultEmployeeTypeConfigs(serviceBookingTypes))
@@ -144,13 +141,9 @@ export function ServicesTab({
     if (!editingKey || savedTypesLoading) return
     if (!savedEmployeeServiceTypes || savedEmployeeServiceTypes.length === 0) {
       setTypeConfigs(makeDefaultEmployeeTypeConfigs(serviceBookingTypes))
-      setUseCustomPricing(false)
       return
     }
-    const converted = convertSavedTypes(savedEmployeeServiceTypes)
-    const hasCustom = hasCustomEmployeeServiceOptions(savedEmployeeServiceTypes, serviceBookingTypes)
-    setTypeConfigs(converted.map((tc) => ({ ...tc, useCustomOptions: hasCustom })))
-    setUseCustomPricing(hasCustom)
+    setTypeConfigs(convertSavedTypes(savedEmployeeServiceTypes))
   }, [editingKey, savedEmployeeServiceTypes, savedTypesLoading, serviceBookingTypes])
 
   const handleEditService = (ds: import("./draft-service.types").DraftService) => {
@@ -174,7 +167,6 @@ export function ServicesTab({
       isActive: data.isActive,
       availableTypes: typeConfigs.map((tc) => tc.deliveryType),
       types: typeConfigs,
-      useCustomPricing,
       serviceBookingTypes,
     }
 
@@ -186,7 +178,6 @@ export function ServicesTab({
 
     form.reset()
     setTypeConfigs([])
-    setUseCustomPricing(false)
     setIsAdding(false)
     isEditingRef.current = false
     setEditingKey(null)
@@ -200,19 +191,8 @@ export function ServicesTab({
     setIsAdding(false)
     form.reset()
     setTypeConfigs([])
-    setUseCustomPricing(false)
     isEditingRef.current = false
     setEditingKey(null)
-  }
-
-  const handleCustomPricingChange = (enabled: boolean) => {
-    setUseCustomPricing(enabled)
-    setTypeConfigs((current) =>
-      current.map((typeConfig) => ({
-        ...typeConfig,
-        useCustomOptions: enabled,
-      })),
-    )
   }
 
   return (
@@ -239,8 +219,6 @@ export function ServicesTab({
               serviceBookingTypes={serviceBookingTypes}
               typeConfigs={typeConfigs}
               onTypeConfigsChange={setTypeConfigs}
-              useCustomPricing={useCustomPricing}
-              onUseCustomPricingChange={handleCustomPricingChange}
               onSubmit={handleAddService}
               onCancel={handleCancel}
               t={t}
@@ -267,8 +245,6 @@ export function ServicesTab({
             serviceBookingTypes={serviceBookingTypes}
             typeConfigs={typeConfigs}
             onTypeConfigsChange={setTypeConfigs}
-            useCustomPricing={useCustomPricing}
-            onUseCustomPricingChange={handleCustomPricingChange}
             onSubmit={handleAddService}
             onCancel={handleCancel}
             t={t}

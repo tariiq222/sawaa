@@ -60,6 +60,9 @@ export const enServices: Record<string, string> = {
   "services.create.pageTitle": "Create New Service",
   "services.create.pageDescription": "Add a new service to the catalog with pricing and delivery methods",
   "services.create.isActive": "Active",
+  "services.create.isActiveDesc": "When active, the service appears in the catalog and booking list. When inactive, it is hidden from clients but stays saved.",
+  "services.create.isHidden": "Hidden",
+  "services.create.isHiddenDesc": "Hide the service from public view while keeping it bookable by staff only.",
   "services.create.avatarHint": "Choose an icon or upload a service image",
   "services.create.tabs.basic": "Basic Info",
   "services.create.tabs.basicDesc": "Name, description, clinic, and status",
@@ -208,7 +211,7 @@ export const enServices: Record<string, string> = {
   "services.booking.dayUnit": " days",
   "services.booking.disabledDefault": "Off by default",
   "services.booking.deposit.label": "Booking deposit",
-  "services.booking.deposit.desc": "Fixed deposit amount collected at booking — reduces no-shows and confirms booking intent",
+  "services.booking.deposit.desc": "Fixed deposit collected at booking for this service — reduces no-shows and confirms booking intent. Off by default; each service has its own value.",
   "services.booking.recurring.label": "Allow recurring bookings",
   "services.booking.recurring.desc": "Clients can book a fixed series of appointments — e.g. weekly sessions for 3 months",
   "services.booking.recurring.patterns": "Allowed recurrence patterns",
@@ -323,7 +326,9 @@ export const enServices: Record<string, string> = {
   /* ── Display Settings (basic-info-tab) ── */
   "services.display.hideService": "Hide Service",
   "services.display.hidePrice": "Hide Price",
+  "services.display.hidePriceDesc": "Hide the price from the booking flow while keeping it visible in admin and reports.",
   "services.display.hideDuration": "Hide Duration",
+  "services.display.hideDurationDesc": "Hide the duration from the booking flow while keeping it in the calendar and appointments.",
   "services.display.clear": "Clear",
 
   /* ── Employees Tab ── */
@@ -339,6 +344,7 @@ export const enServices: Record<string, string> = {
   "services.employees.createModeDesc": "Create the service, then come back to assign employees to it.",
   "services.employees.customPricing": "Custom pricing",
   "services.employees.customPricingHint": "Enable to set a custom price and duration for this employee instead of the service's base prices",
+  "services.employees.noTypesForPricing": "Add a delivery type and price for the service first, from the “Duration & Pricing” tab",
   "services.employees.usingBasePrice": "Using base prices",
   "services.employees.customPricingSaveError": "Failed to save custom pricing",
   "services.employees.priceLabel": "Price (SAR)",

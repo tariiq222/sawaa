@@ -31,7 +31,6 @@ const baseOpts = {
   serviceId: "svc-1",
   deliveryType: "in_person",
   date: "2026-03-27",
-  durationOptionId: "",
 }
 
 const mockEmployeeServices = [
@@ -106,7 +105,7 @@ describe("useCreateBookingSlots", () => {
     expect(fetchEmployeeServiceTypes).not.toHaveBeenCalled()
   })
 
-  it("fetches slots with fallback service duration when no duration options exist", async () => {
+  it("fetches slots with fallback service duration when no service types returned", async () => {
     fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
     fetchEmployeeServiceTypes.mockResolvedValue([])
     fetchSlots.mockResolvedValue([{ startTime: "09:00", endTime: "09:30" }])
@@ -122,7 +121,7 @@ describe("useCreateBookingSlots", () => {
     expect(result.current.slots).toHaveLength(1)
   })
 
-  it("falls back to service type duration when duration options are empty", async () => {
+  it("uses service type duration when service type exists for deliveryType", async () => {
     fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
     fetchEmployeeServiceTypes.mockResolvedValue([
       { deliveryType: "in_person", isActive: true, duration: 45, durationOptions: [] },
@@ -140,7 +139,7 @@ describe("useCreateBookingSlots", () => {
     expect(result.current.slots).toHaveLength(1)
   })
 
-  it("returns undefined selectedDuration and empty slots when no duration options and no fallback duration exist", async () => {
+  it("returns undefined selectedDuration when no duration available", async () => {
     fetchEmployeeServices.mockResolvedValue([])
     fetchEmployeeServiceTypes.mockResolvedValue([
       { deliveryType: "in_person", isActive: true, duration: null, durationOptions: [] },
@@ -153,7 +152,6 @@ describe("useCreateBookingSlots", () => {
 
     await waitFor(() => expect(result.current.slotsLoading).toBe(false))
 
-    expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", undefined, { serviceId: "svc-1", deliveryType: "in_person" })
     expect(result.current.selectedDuration).toBeUndefined()
     expect(result.current.slots).toEqual([])
   })
@@ -170,100 +168,25 @@ describe("useCreateBookingSlots", () => {
     expect(fetchSlots).not.toHaveBeenCalled()
   })
 
-  it("returns duration options from matching active service type", async () => {
-    const durationOptions = [{ id: "d-1", durationMinutes: 30, label: "30m", labelAr: "٣٠", price: null, isDefault: true, sortOrder: 0 }]
-    fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
+  it("does not fetch slots when selectedDuration is undefined and no fallback", async () => {
+    fetchEmployeeServices.mockResolvedValue([])
     fetchEmployeeServiceTypes.mockResolvedValue([
-      { deliveryType: "in_person", isActive: true, durationOptions },
+      { deliveryType: "in_person", isActive: true, duration: null },
     ])
     fetchSlots.mockResolvedValue([])
 
-    const { result } = renderHook(
-      () => useCreateBookingSlots({ ...baseOpts, durationOptionId: "d-1" }),
-      { wrapper: makeWrapper() },
-    )
+    const { result } = renderHook(() => useCreateBookingSlots(baseOpts), {
+      wrapper: makeWrapper(),
+    })
 
     await waitFor(() => expect(result.current.serviceTypesLoading).toBe(false))
 
-    expect(result.current.durationOptions).toEqual(durationOptions)
-    expect(result.current.hasDurationOptions).toBe(true)
-    expect(result.current.selectedDuration).toBe(30)
-  })
-
-  it("returns empty duration options for inactive service type", async () => {
-    fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
-    fetchEmployeeServiceTypes.mockResolvedValue([
-      { deliveryType: "in_person", isActive: false, durationOptions: [{ id: "d-1", durationMinutes: 30 }] },
-    ])
-    fetchSlots.mockResolvedValue([])
-
-    const { result } = renderHook(() => useCreateBookingSlots(baseOpts), { wrapper: makeWrapper() })
-
-    await waitFor(() => expect(result.current.serviceTypesLoading).toBe(false))
-
-    expect(result.current.hasDurationOptions).toBe(false)
-    expect(result.current.durationOptions).toHaveLength(0)
-  })
-
-  it("returns empty duration options when deliveryType has no matching service type", async () => {
-    fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
-    fetchEmployeeServiceTypes.mockResolvedValue([
-      { deliveryType: "in_person", isActive: true, durationOptions: [] },
-    ])
-    fetchSlots.mockResolvedValue([])
-
-    const { result } = renderHook(
-      () => useCreateBookingSlots({ ...baseOpts, deliveryType: "online" }),
-      { wrapper: makeWrapper() },
-    )
-
-    await waitFor(() => expect(result.current.serviceTypesLoading).toBe(false))
-
-    expect(result.current.hasDurationOptions).toBe(false)
-  })
-
-  it("blocks slot fetching when duration options exist but none selected", async () => {
-    fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
-    fetchEmployeeServiceTypes.mockResolvedValue([
-      {
-        deliveryType: "in_person",
-        isActive: true,
-        durationOptions: [{ id: "d-1", durationMinutes: 30 }],
-      },
-    ])
-    fetchSlots.mockResolvedValue([])
-
-    const { result } = renderHook(
-      () => useCreateBookingSlots({ ...baseOpts, durationOptionId: "" }),
-      { wrapper: makeWrapper() },
-    )
-
-    await waitFor(() => expect(result.current.serviceTypesLoading).toBe(false))
-
-    expect(result.current.hasDurationOptions).toBe(true)
     expect(result.current.canFetchSlots).toBe(false)
+    expect(fetchSlots).not.toHaveBeenCalled()
   })
 
-  it("fetches slots with correct duration when option is selected", async () => {
-    fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
-    fetchEmployeeServiceTypes.mockResolvedValue([
-      { deliveryType: "in_person", isActive: true, durationOptions: [{ id: "d-1", durationMinutes: 45 }] },
-    ])
-    fetchSlots.mockResolvedValue([{ startTime: "09:00", endTime: "09:45" }])
-
-    const { result } = renderHook(
-      () => useCreateBookingSlots({ ...baseOpts, durationOptionId: "d-1" }),
-      { wrapper: makeWrapper() },
-    )
-
-    await waitFor(() => expect(result.current.slotsLoading).toBe(false))
-
-    expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", 45, { serviceId: "svc-1", deliveryType: "in_person" })
-    expect(result.current.canFetchSlots).toBe(true)
-  })
-
-  it("handles fetchEmployeeServiceTypes error gracefully — returns empty types", async () => {
-    fetchEmployeeServices.mockResolvedValue(mockEmployeeServices)
+  it("handles fetchEmployeeServiceTypes error gracefully — returns undefined duration from fallback", async () => {
+    fetchEmployeeServices.mockResolvedValue([])
     fetchEmployeeServiceTypes.mockRejectedValue(Object.assign(new Error("Not Found"), { status: 404 }))
 
     const { result } = renderHook(
@@ -273,8 +196,8 @@ describe("useCreateBookingSlots", () => {
 
     await waitFor(() => expect(result.current.serviceTypesLoading).toBe(false))
 
-    expect(result.current.durationOptions).toEqual([])
-    expect(result.current.hasDurationOptions).toBe(false)
+    expect(result.current.selectedDuration).toBeUndefined()
+    expect(result.current.canFetchSlots).toBe(false)
   })
 
   it("uses act to verify state stabilizes", async () => {

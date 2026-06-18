@@ -43,7 +43,7 @@ export class ListCategoriesHandler {
         }),
       };
 
-      const [items, total] = await this.rlsTransaction.withTransaction((tx) =>
+      const [rawItems, total] = await this.rlsTransaction.withTransaction((tx) =>
         Promise.all([
           tx.serviceCategory.findMany({
             where,
@@ -67,6 +67,16 @@ export class ListCategoriesHandler {
           tx.serviceCategory.count({ where }),
         ]),
       );
+
+      // DIRECT categories have one hidden internal service. Override the bookable-
+      // service count so the wizard never disables them for having zero visible services.
+      const items = rawItems.map((cat) => ({
+        ...cat,
+        _count: {
+          ...cat._count,
+          services: cat.bookingMode === 'DIRECT' ? Math.max(cat._count.services, 1) : cat._count.services,
+        },
+      }));
 
       return toListResponse(items, total, page, limit);
     });

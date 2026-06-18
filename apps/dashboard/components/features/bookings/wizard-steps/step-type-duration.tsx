@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo } from "react"
+import { useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -14,7 +14,7 @@ import { useLocale } from "@/components/locale-provider"
 import { formatPrice } from "@/lib/money"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchEmployeeServiceTypes } from "@/lib/api/employees-schedule"
-import type { EmployeeServiceType, EmployeeDurationOption } from "@/lib/types/employee"
+import type { EmployeeServiceType } from "@/lib/types/employee"
 import type { DeliveryType } from "@/lib/types/booking"
 
 /* ─── Types ─── */
@@ -23,10 +23,7 @@ interface StepTypeDurationProps {
   employeeId: string
   serviceId: string
   selectedType: string | null
-  selectedDurationOptionId: string | null
   onSelectType: (type: string) => void
-  onSelectDuration: (durationOptionId: string, label: string, price: number) => void
-  onSkipDuration: () => void
 }
 
 /* ─── Helpers ─── */
@@ -98,54 +95,15 @@ function TypeCard({
   )
 }
 
-/* ─── Duration card ─── */
-
-function DurationCard({
-  option,
-  selected,
-  onSelect,
-  t,
-  locale,
-}: {
-  option: EmployeeDurationOption
-  selected: boolean
-  onSelect: () => void
-  t: (key: string) => string
-  locale: string
-}) {
-  const label = locale === "ar" && option.labelAr ? option.labelAr : option.label
-
-  return (
-    <WizardCard onClick={onSelect} selected={selected} className="py-5">
-      <div className="flex flex-col items-center gap-1">
-        <span className="text-base font-bold text-foreground">
-          {label}
-        </span>
-        <span className="text-sm text-muted-foreground">
-          {option.durationMinutes} {t("bookings.wizard.step.typeDuration.minutes")}
-        </span>
-        {option.price > 0 && (
-          <span className="text-sm text-primary font-semibold">
-            {formatPrice(Number(option.price))} {t("bookings.wizard.step.service.currency")}
-          </span>
-        )}
-      </div>
-    </WizardCard>
-  )
-}
-
 /* ─── Main step ─── */
 
 export function StepTypeDuration({
   employeeId,
   serviceId,
   selectedType,
-  selectedDurationOptionId,
   onSelectType,
-  onSelectDuration,
-  onSkipDuration,
 }: StepTypeDurationProps) {
-  const { t, locale } = useLocale()
+  const { t } = useLocale()
   const { data: serviceTypes = [], isLoading } = useQuery<EmployeeServiceType[]>({
     queryKey: queryKeys.employees.serviceTypes(employeeId, serviceId),
     queryFn: () => fetchEmployeeServiceTypes(employeeId, serviceId),
@@ -168,27 +126,6 @@ export function StepTypeDuration({
   const selectedServiceType = selectedType
     ? activeTypes.find((st) => st.deliveryType === selectedType)
     : undefined
-
-  const durationOptions: EmployeeDurationOption[] = useMemo(
-    () => selectedServiceType?.durationOptions ?? [],
-    [selectedServiceType]
-  )
-
-  // Auto-select when no duration options → skip
-  useEffect(() => {
-    if (selectedType && durationOptions.length === 0 && !isLoading) {
-      onSkipDuration()
-    }
-  }, [selectedType, durationOptions.length, isLoading, onSkipDuration])
-
-  // Auto-select when only one duration option
-  useEffect(() => {
-    if (durationOptions.length === 1 && !selectedDurationOptionId) {
-      const opt = durationOptions[0]
-      const label = locale === "ar" && opt.labelAr ? opt.labelAr : opt.label
-      onSelectDuration(opt.id, label, Number(opt.price))
-    }
-  }, [durationOptions, selectedDurationOptionId, locale, onSelectDuration])
 
   if (isLoading) return <StepTypeDurationSkeleton />
 
@@ -220,28 +157,11 @@ export function StepTypeDuration({
         )}
       </div>
 
-      {/* Duration section — only after type selected and options exist */}
-      {selectedType && durationOptions.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
-            {t("bookings.wizard.step.typeDuration.durationTitle")}
-          </p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {durationOptions.map((opt) => (
-              <DurationCard
-                key={opt.id}
-                option={opt}
-                selected={selectedDurationOptionId === opt.id}
-                onSelect={() => {
-                  const label = locale === "ar" && opt.labelAr ? opt.labelAr : opt.label
-                  onSelectDuration(opt.id, label, Number(opt.price))
-                }}
-                t={t}
-                locale={locale}
-              />
-            ))}
-          </div>
-        </div>
+      {/* Price + duration info line — shown when a type is selected */}
+      {selectedServiceType && (
+        <p className="text-sm text-muted-foreground">
+          {formatPrice(Number(selectedServiceType.price))} {t("bookings.wizard.step.service.currency")} · {selectedServiceType.duration} {t("bookings.wizard.step.typeDuration.minutes")}
+        </p>
       )}
     </div>
   )

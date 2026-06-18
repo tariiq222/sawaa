@@ -25,7 +25,12 @@ const makePrisma = () => {
     service: { findFirst: jest.fn().mockResolvedValue(null) },
     // Default: service supports the requested delivery type. Tests that
     // assert "unsupported" must override this to mockResolvedValue(null).
-    serviceBookingConfig: { findUnique: jest.fn().mockResolvedValue({ useCustomAvailability: false }) },
+    // findFirst returns null by default (no active config found); tests that
+    // need a duration fallback from ServiceBookingConfig override this.
+    serviceBookingConfig: {
+      findUnique: jest.fn().mockResolvedValue({ useCustomAvailability: false }),
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
     serviceAvailabilityWindow: { findMany: jest.fn().mockResolvedValue([]) },
     businessHour: {
       findUnique: jest.fn().mockResolvedValue({
@@ -1789,6 +1794,75 @@ describe('CheckAvailabilityHandler', () => {
       });
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('execute — duration resolution from ServiceBookingConfig (direct-clinic fix)', () => {
+    it('resolves durationMins from ServiceBookingConfig when no ServiceDurationOption exists', async () => {
+      const prisma = makePrisma();
+      // No ServiceDurationOption rows (direct-clinic hidden service)
+      prisma.serviceDurationOption.findFirst = jest.fn().mockResolvedValue(null);
+      // No Service.durationMins (or 0)
+      prisma.service.findFirst = jest.fn().mockResolvedValue({ id: 'svc-hidden', durationMins: 0, isActive: true, bufferMinutes: 0, minLeadMinutes: 0, maxAdvanceDays: null });
+      // ServiceBookingConfig has durationMins=30, isActive=true
+      prisma.serviceBookingConfig.findUnique = jest.fn().mockResolvedValue({
+        useCustomAvailability: false,
+        durationMins: 30,
+        isActive: true,
+      });
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        serviceId: 'svc-hidden',
+        date: tomorrowMidnight,
+        deliveryType: 'IN_PERSON' as any,
+      });
+
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0].endTime.getTime() - result[0].startTime.getTime()).toBe(30 * 60_000);
+    });
+
+    it('resolves durationMins from ServiceBookingConfig when no deliveryType provided and no options exist', async () => {
+      const prisma = makePrisma();
+      prisma.serviceDurationOption.findFirst = jest.fn().mockResolvedValue(null);
+      prisma.service.findFirst = jest.fn().mockResolvedValue({ id: 'svc-hidden', durationMins: 0, isActive: true, bufferMinutes: 0, minLeadMinutes: 0, maxAdvanceDays: null });
+      prisma.serviceBookingConfig.findUnique = jest.fn().mockResolvedValue({
+        useCustomAvailability: false,
+        durationMins: 30,
+        isActive: true,
+      });
+      // findFirst for "any active config" — return the same
+      prisma.serviceBookingConfig.findFirst = jest.fn().mockResolvedValue({ durationMins: 30, isActive: true });
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        serviceId: 'svc-hidden',
+        date: tomorrowMidnight,
+        // No deliveryType — falls through to findFirst
+      });
+
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0].endTime.getTime() - result[0].startTime.getTime()).toBe(30 * 60_000);
     });
   });
 });

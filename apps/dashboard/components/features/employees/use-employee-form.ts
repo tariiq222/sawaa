@@ -43,17 +43,7 @@ function toDisplayTypeConfigs(types: EmployeeService["serviceTypes"] = []) {
     deliveryType: st.deliveryType,
     price: st.price != null ? halalasToSarNumber(st.price) : undefined,
     duration: st.duration ?? undefined,
-    useCustomOptions: st.useCustomOptions,
     isActive: st.isActive,
-    durationOptions: st.durationOptions.map((o) => ({
-      id: o.id,
-      label: o.label,
-      labelAr: o.labelAr ?? undefined,
-      durationMinutes: o.durationMinutes,
-      isDefault: o.isDefault,
-      sortOrder: o.sortOrder,
-      price: halalasToSarNumber(o.price),
-    })),
   }))
 }
 
@@ -61,10 +51,6 @@ function toStorageTypeConfigs(types: DraftService["types"] = []) {
   return types.map((tc) => ({
     ...tc,
     price: tc.price != null ? sarToHalalas(tc.price) : tc.price,
-    durationOptions: (tc.durationOptions ?? []).map((o) => ({
-      ...o,
-      price: sarToHalalas(o.price),
-    })),
   }))
 }
 
@@ -317,10 +303,8 @@ export function useEmployeeForm({
         }
         const optionsPayload = buildEmployeeServiceOptionsPayload({
           typeConfigs: ds.types,
-          serviceBookingTypes: ds.serviceBookingTypes,
-          useCustomPricing: ds.useCustomPricing ?? false,
         })
-        if (ds.useCustomPricing !== undefined && optionsPayload) {
+        if (optionsPayload) {
           await setEmployeeServiceOptions(id, ds.serviceId, optionsPayload)
         }
       } catch {
@@ -430,10 +414,8 @@ export function useEmployeeForm({
             })
             const optionsPayload = buildEmployeeServiceOptionsPayload({
               typeConfigs: ds.types,
-              serviceBookingTypes: ds.serviceBookingTypes,
-              useCustomPricing: ds.useCustomPricing ?? false,
             })
-            if (ds.useCustomPricing !== undefined && optionsPayload) {
+            if (optionsPayload) {
               await setEmployeeServiceOptions(newId, ds.serviceId, optionsPayload)
             }
           })

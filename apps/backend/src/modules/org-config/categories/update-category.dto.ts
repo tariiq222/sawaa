@@ -1,5 +1,6 @@
-import { IsBoolean, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min, ValidateIf } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min, ValidateIf } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { CategoryBookingMode } from '@prisma/client';
 
 export class UpdateCategoryDto {
   @ApiPropertyOptional({ description: 'Category name in Arabic', example: 'طب الأسنان' })
@@ -16,4 +17,11 @@ export class UpdateCategoryDto {
 
   @ApiPropertyOptional({ description: 'Whether the category is active', example: true })
   @IsOptional() @IsBoolean() isActive?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Booking mode: DIRECT (category is the booking unit) or SERVICES (container for multiple services)',
+    enum: CategoryBookingMode,
+    example: CategoryBookingMode.SERVICES,
+  })
+  @IsOptional() @IsEnum(CategoryBookingMode) bookingMode?: CategoryBookingMode;
 }

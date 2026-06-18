@@ -5,7 +5,7 @@ const mockDurationOption = { id: 'opt-1', serviceId: 'svc-1', price: 250, durati
 const mockEmployeeServiceOption = { employeeServiceId: 'es-1', durationOptionId: 'opt-1', priceOverride: 300, durationOverride: 50, isActive: true };
 
 const buildPrisma = (overrides: Partial<{
-  service: unknown; durationOption: unknown; employeeServiceOption: unknown;
+  service: unknown; durationOption: unknown; employeeServiceOption: unknown; serviceBookingConfig: unknown;
 }> = {}) => ({
   service: {
     findUniqueOrThrow: jest.fn().mockResolvedValue(overrides.service ?? mockService),
@@ -15,6 +15,9 @@ const buildPrisma = (overrides: Partial<{
   },
   employeeServiceOption: {
     findFirst: jest.fn().mockResolvedValue(overrides.employeeServiceOption ?? null),
+  },
+  serviceBookingConfig: {
+    findFirst: jest.fn().mockResolvedValue(overrides.serviceBookingConfig ?? null),
   },
 });
 
@@ -198,5 +201,66 @@ describe('PriceResolverService', () => {
     expect(result.price).toBe(250);
     expect(result.durationMins).toBe(45);
     expect(result.isEmployeeOverride).toBe(false);
+  });
+
+  // ─── ServiceBookingConfig priority (P0 bug fix) ───
+
+  it('uses ServiceBookingConfig price when no duration option exists but config is active', async () => {
+    const mockBookingConfig = { price: 300, durationMins: 50 };
+    const prisma = buildPrisma({ serviceBookingConfig: mockBookingConfig });
+    prisma.serviceDurationOption.findFirst = jest.fn().mockResolvedValue(null);
+    const service = new PriceResolverService(prisma as never);
+
+    const result = await service.resolve({
+      serviceId: 'svc-1',
+      employeeServiceId: null,
+      durationOptionId: null,
+      deliveryType: 'IN_PERSON',
+    });
+
+    expect(prisma.serviceBookingConfig.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ serviceId: 'svc-1', deliveryType: 'IN_PERSON', isActive: true }),
+      }),
+    );
+    expect(result.price).toBe(300);
+    expect(result.durationMins).toBe(50);
+    expect(result.isEmployeeOverride).toBe(false);
+    expect(result.durationOptionId).toBe('');
+    expect(result.currency).toBe('SAR');
+  });
+
+  it('falls back to Service.price when no duration option and no booking config', async () => {
+    const prisma = buildPrisma({ serviceBookingConfig: null });
+    prisma.serviceDurationOption.findFirst = jest.fn().mockResolvedValue(null);
+    const service = new PriceResolverService(prisma as never);
+
+    const result = await service.resolve({
+      serviceId: 'svc-1',
+      employeeServiceId: null,
+      durationOptionId: null,
+      deliveryType: 'IN_PERSON',
+    });
+
+    expect(result.price).toBe(200); // from mockService
+    expect(result.durationMins).toBe(60);
+    expect(result.isEmployeeOverride).toBe(false);
+  });
+
+  it('skips ServiceBookingConfig lookup when deliveryType is not provided', async () => {
+    const prisma = buildPrisma({ serviceBookingConfig: { price: 999, durationMins: 99 } });
+    prisma.serviceDurationOption.findFirst = jest.fn().mockResolvedValue(null);
+    const service = new PriceResolverService(prisma as never);
+
+    const result = await service.resolve({
+      serviceId: 'svc-1',
+      employeeServiceId: null,
+      durationOptionId: null,
+      // deliveryType intentionally omitted
+    });
+
+    expect(prisma.serviceBookingConfig.findFirst).not.toHaveBeenCalled();
+    expect(result.price).toBe(200); // falls straight to Service.price
+    expect(result.durationMins).toBe(60);
   });
 });

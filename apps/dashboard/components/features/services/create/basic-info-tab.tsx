@@ -13,6 +13,16 @@ import {
   CardDescription,
 } from "@sawaa/ui"
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverDescription,
+} from "@sawaa/ui"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { AlertCircleIcon } from "@hugeicons/core-free-icons"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -86,40 +96,42 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
 
   return (
     <Card className="border-s-2 border-s-primary/40">
-      <CardHeader>
-        {/* Avatar sits beside the card title — profile-style header */}
-        <div className="flex items-center gap-4">
-          <ServiceAvatarPicker
-            iconName={iconName}
-            iconBgColor={iconBgColor}
-            imageUrl={imageUrl}
-            serviceName={form.watch("nameAr") || form.watch("nameEn")}
-            onIconChange={(name, color) => {
-              form.setValue("iconName", name)
-              form.setValue("iconBgColor", color)
-              form.setValue("imageUrl", null)
-            }}
-            onImageChange={(file) => {
-              const url = URL.createObjectURL(file)
-              form.setValue("imageUrl", url)
-              form.setValue("iconName", null)
-              form.setValue("iconBgColor", null)
-              onImageSelect?.(file)
-            }}
-            onClear={() => {
-              form.setValue("iconName", null)
-              form.setValue("iconBgColor", null)
-              form.setValue("imageUrl", null)
-            }}
-          />
-          <div className="flex flex-col gap-1">
-            <CardTitle>{t("services.create.tabs.basic")}</CardTitle>
-            <CardDescription>
-              {t("services.create.tabs.basicDesc")} &mdash;{" "}
-              <span className="text-destructive">*</span>{" "}
-              {t("services.create.requiredFields")}
-            </CardDescription>
-            <p className="text-xs text-muted-foreground">{t("services.create.avatarHint")}</p>
+      <CardHeader className="pb-4">
+        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+          {/* Left: avatar + title block */}
+          <div className="flex items-center gap-4 min-w-0">
+            <ServiceAvatarPicker
+              iconName={iconName}
+              iconBgColor={iconBgColor}
+              imageUrl={imageUrl}
+              serviceName={form.watch("nameAr") || form.watch("nameEn")}
+              onIconChange={(name, color) => {
+                form.setValue("iconName", name)
+                form.setValue("iconBgColor", color)
+                form.setValue("imageUrl", null)
+              }}
+              onImageChange={(file) => {
+                const url = URL.createObjectURL(file)
+                form.setValue("imageUrl", url)
+                form.setValue("iconName", null)
+                form.setValue("iconBgColor", null)
+                onImageSelect?.(file)
+              }}
+              onClear={() => {
+                form.setValue("iconName", null)
+                form.setValue("iconBgColor", null)
+                form.setValue("imageUrl", null)
+              }}
+            />
+            <div className="flex flex-col gap-1 min-w-0">
+              <CardTitle>{t("services.create.tabs.basic")}</CardTitle>
+              <CardDescription>
+                {t("services.create.tabs.basicDesc")} &mdash;{" "}
+                <span className="text-destructive">*</span>{" "}
+                {t("services.create.requiredFields")}
+              </CardDescription>
+              <p className="text-xs text-muted-foreground">{t("services.create.avatarHint")}</p>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -159,8 +171,153 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
           </div>
         </div>
 
-        {/* ── Row 2: Department (optional) + Category + Active ── */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_1fr_auto]">
+        {/* ── Display & Visibility — unified card with info popovers ── */}
+        <div className="rounded-lg border border-border bg-surface-muted/40 px-4 py-3 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-foreground">
+              {t("services.create.tabs.display")}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {t("services.create.tabs.displayDesc")}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Active */}
+            <div className="flex items-center justify-between rounded-md border border-border bg-surface px-3 py-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Label htmlFor="basic-is-active" className="cursor-pointer text-xs">
+                  {t("services.create.isActive")}
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={t("services.create.isActive")}
+                    >
+                      <HugeiconsIcon icon={AlertCircleIcon} size={14} strokeWidth={2} />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="start" className="w-64">
+                    <PopoverHeader>
+                      <PopoverTitle>{t("services.create.isActive")}</PopoverTitle>
+                      <PopoverDescription>
+                        {t("services.create.isActiveDesc")}
+                      </PopoverDescription>
+                    </PopoverHeader>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Switch
+                id="basic-is-active"
+                checked={isActive}
+                onCheckedChange={(v) => form.setValue("isActive", v)}
+              />
+            </div>
+
+            {/* Hidden */}
+            <div className="flex items-center justify-between rounded-md border border-border bg-surface px-3 py-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Label htmlFor="basic-is-hidden" className="cursor-pointer text-xs">
+                  {t("services.create.isHidden")}
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={t("services.create.isHidden")}
+                    >
+                      <HugeiconsIcon icon={AlertCircleIcon} size={14} strokeWidth={2} />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="start" className="w-64">
+                    <PopoverHeader>
+                      <PopoverTitle>{t("services.create.isHidden")}</PopoverTitle>
+                      <PopoverDescription>
+                        {t("services.create.isHiddenDesc")}
+                      </PopoverDescription>
+                    </PopoverHeader>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Switch
+                id="basic-is-hidden"
+                checked={isHidden}
+                onCheckedChange={(v) => form.setValue("isHidden", v)}
+              />
+            </div>
+
+            {/* Hide price */}
+            <div className="flex items-center justify-between rounded-md border border-border bg-surface px-3 py-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Label htmlFor="basic-hide-price" className="cursor-pointer text-xs">
+                  {t("services.display.hidePrice")}
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={t("services.display.hidePrice")}
+                    >
+                      <HugeiconsIcon icon={AlertCircleIcon} size={14} strokeWidth={2} />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="start" className="w-64">
+                    <PopoverHeader>
+                      <PopoverTitle>{t("services.display.hidePrice")}</PopoverTitle>
+                      <PopoverDescription>
+                        {t("services.display.hidePriceDesc")}
+                      </PopoverDescription>
+                    </PopoverHeader>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Switch
+                id="basic-hide-price"
+                checked={hidePriceOnBooking}
+                onCheckedChange={(v) => form.setValue("hidePriceOnBooking", v)}
+              />
+            </div>
+
+            {/* Hide duration */}
+            <div className="flex items-center justify-between rounded-md border border-border bg-surface px-3 py-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Label htmlFor="basic-hide-duration" className="cursor-pointer text-xs">
+                  {t("services.display.hideDuration")}
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={t("services.display.hideDuration")}
+                    >
+                      <HugeiconsIcon icon={AlertCircleIcon} size={14} strokeWidth={2} />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="start" className="w-64">
+                    <PopoverHeader>
+                      <PopoverTitle>{t("services.display.hideDuration")}</PopoverTitle>
+                      <PopoverDescription>
+                        {t("services.display.hideDurationDesc")}
+                      </PopoverDescription>
+                    </PopoverHeader>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Switch
+                id="basic-hide-duration"
+                checked={hideDurationOnBooking}
+                onCheckedChange={(v) => form.setValue("hideDurationOnBooking", v)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ── Row 2: Department (optional) + Category ── */}
+        <div className={`grid grid-cols-1 gap-4 ${hasDepts ? "sm:grid-cols-2" : ""}`}>
           {/* Department filter — only shown when departments exist */}
           {hasDepts && (
             <div className="flex flex-col gap-1.5">
@@ -192,7 +349,7 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
           )}
 
           {/* Category */}
-          <div className={`flex flex-col gap-1.5 ${!hasDepts ? "sm:col-span-2" : ""}`}>
+          <div className="flex flex-col gap-1.5">
             <Label>{t("services.create.category")} *</Label>
             <Select
               key={`${selectedDeptId}-${watchedCategoryId || "empty"}`}
@@ -222,21 +379,6 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
                 {t(form.formState.errors.categoryId.message ?? "services.create.categoryRequired")}
               </p>
             )}
-          </div>
-
-          {/* Active */}
-          <div className="flex flex-col gap-1.5">
-            <Label>&nbsp;</Label>
-            <div className="flex h-9 items-center gap-2 rounded-lg border border-border px-3 whitespace-nowrap">
-              <Switch
-                id="create-service-active"
-                checked={isActive}
-                onCheckedChange={(v) => form.setValue("isActive", v)}
-              />
-              <Label htmlFor="create-service-active" className="cursor-pointer text-sm">
-                {t("services.create.isActive")}
-              </Label>
-            </div>
           </div>
         </div>
 
@@ -270,45 +412,6 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
               )}
             </div>
           )}
-
-          {/* Display Settings */}
-          <div className="rounded-lg border border-border bg-surface-muted px-4 py-3 flex flex-col gap-3">
-            <p className="text-sm font-medium text-foreground">
-              {t("services.create.tabs.display")}
-            </p>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between rounded-lg border border-border bg-surface p-3">
-                <Label htmlFor="create-hidden" className="cursor-pointer text-xs">
-                  {t("services.display.hideService")}
-                </Label>
-                <Switch
-                  id="create-hidden"
-                  checked={isHidden}
-                  onCheckedChange={(v) => form.setValue("isHidden", v)}
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-border bg-surface p-3">
-                <Label htmlFor="create-hide-price" className="cursor-pointer text-xs">
-                  {t("services.display.hidePrice")}
-                </Label>
-                <Switch
-                  id="create-hide-price"
-                  checked={hidePriceOnBooking}
-                  onCheckedChange={(v) => form.setValue("hidePriceOnBooking", v)}
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-border bg-surface p-3">
-                <Label htmlFor="create-hide-duration" className="cursor-pointer text-xs">
-                  {t("services.display.hideDuration")}
-                </Label>
-                <Switch
-                  id="create-hide-duration"
-                  checked={hideDurationOnBooking}
-                  onCheckedChange={(v) => form.setValue("hideDurationOnBooking", v)}
-                />
-              </div>
-            </div>
-          </div>
         </div>
 
       </CardContent>

@@ -224,6 +224,7 @@ export interface AssignServicePayload {
 
 export interface UpdateServicePayload {
   isActive?: boolean
+  bufferMinutes?: number
 }
 
 export interface OnboardEmployeePayload {

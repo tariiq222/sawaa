@@ -35,16 +35,17 @@ const buildPrisma = () => {
     service: {
       count: jest.fn().mockResolvedValue(0),
     },
-    $transaction: jest.fn(),
   };
-  prisma.$transaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(prisma));
   return prisma;
 };
+
+const buildRlsTransaction = (prisma: ReturnType<typeof buildPrisma>) =>
+  ({ withTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(prisma)) }) as any;
 
 describe('CreateCategoryHandler', () => {
   it('creates a category scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new CreateCategoryHandler(prisma as never, buildCache());
+    const handler = new CreateCategoryHandler(prisma as never, buildRlsTransaction(prisma), buildCache());
     const result = await handler.execute({ nameAr: 'فحص', nameEn: 'Checkup' });
     // org scoping moved to RLS / removed in single-tenant migration
     expect(prisma.serviceCategory.create).toHaveBeenCalledWith(
@@ -89,7 +90,7 @@ describe('ListCategoriesHandler', () => {
 describe('UpdateCategoryHandler', () => {
   it('updates category fields scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new UpdateCategoryHandler(prisma as never, buildCache());
+    const handler = new UpdateCategoryHandler(prisma as never, buildRlsTransaction(prisma), buildCache());
     await handler.execute({ categoryId: 'cat-1', nameEn: 'Updated' });
     expect(prisma.serviceCategory.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'cat-1' } }),
@@ -100,7 +101,7 @@ describe('UpdateCategoryHandler', () => {
   it('throws NotFoundException when category not found', async () => {
     const prisma = buildPrisma();
     prisma.serviceCategory.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new UpdateCategoryHandler(prisma as never, buildCache());
+    const handler = new UpdateCategoryHandler(prisma as never, buildRlsTransaction(prisma), buildCache());
     await expect(handler.execute({ categoryId: 'bad', nameEn: 'x' })).rejects.toThrow(NotFoundException);
   });
 });

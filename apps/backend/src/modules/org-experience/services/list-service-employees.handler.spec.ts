@@ -8,6 +8,7 @@ const buildPrisma = () => ({
   employeeService: { findMany: jest.fn() },
   employee: { findMany: jest.fn() },
   serviceBookingConfig: { findMany: jest.fn() },
+  employeeServiceOption: { findMany: jest.fn().mockResolvedValue([]) },
 });
 
 describe('ListServiceEmployeesHandler', () => {
@@ -37,8 +38,8 @@ describe('ListServiceEmployeesHandler', () => {
   it('should return shaped employees with service types', async () => {
     prisma.service.findFirst.mockResolvedValue({ id: 'svc-1' });
     prisma.employeeService.findMany.mockResolvedValue([
-      { id: 'link-1', employeeId: 'emp-1', serviceId: 'svc-1' },
-      { id: 'link-2', employeeId: 'emp-2', serviceId: 'svc-1' },
+      { id: 'link-1', employeeId: 'emp-1', serviceId: 'svc-1', isActive: true },
+      { id: 'link-2', employeeId: 'emp-2', serviceId: 'svc-1', isActive: false },
     ]);
     prisma.employee.findMany.mockResolvedValue([
       { id: 'emp-1', name: 'Ahmed Ali', nameAr: 'أحمد علي', nameEn: null, title: 'Dr', avatarUrl: null, isActive: true },
@@ -56,6 +57,9 @@ describe('ListServiceEmployeesHandler', () => {
     expect(result[1].employee.user.lastName).toBe('Smith');
     expect(result[0].serviceTypes).toHaveLength(1);
     expect(result[0].availableTypes).toContain('ONLINE');
+    // Reflects the per-assignment isActive column, not a hardcoded true.
+    expect(result[0].isActive).toBe(true);
+    expect(result[1].isActive).toBe(false);
   });
 
   it('should use full name when ar and en are null', async () => {

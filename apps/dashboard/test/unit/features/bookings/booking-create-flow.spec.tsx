@@ -403,7 +403,7 @@ describe("useBookingFormState — internal state machine", () => {
     expect(s.startTime).toBeNull()
   })
 
-  it("selectDuration resets downstream fields", () => {
+  it("selectDeliveryType resets date and time but preserves client/service/employee", () => {
     const { result } = renderHook(() => useBookingFormState())
     act(() => {
       result.current.selectClient("cli-1", "Sara")
@@ -414,13 +414,15 @@ describe("useBookingFormState — internal state machine", () => {
       result.current.selectTime("09:00")
     })
     act(() => {
-      result.current.selectDuration("dur-45", "45 دقيقة", null)
+      result.current.selectDeliveryType("online")
     })
     const s = result.current.state
-    expect(s.durationOptionId).toBe("dur-45")
-    expect(s.durationLabel).toBe("45 دقيقة")
+    expect(s.deliveryType).toBe("online")
     expect(s.date).toBeNull()
     expect(s.startTime).toBeNull()
+    expect(s.clientId).toBe("cli-1")
+    expect(s.serviceId).toBe("svc-1")
+    expect(s.employeeId).toBe("emp-1")
   })
 
   it("reset returns all fields to initial state", () => {

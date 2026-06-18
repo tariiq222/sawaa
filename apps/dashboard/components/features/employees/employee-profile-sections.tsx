@@ -5,6 +5,7 @@
  * (Availability, Vacations, Services card wrapper)
  */
 
+import { useRouter } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Calendar03Icon,
@@ -12,10 +13,10 @@ import {
   Building04Icon,
   CheckmarkCircle02Icon,
   Cancel01Icon,
+  PencilEdit01Icon,
 } from "@hugeicons/core-free-icons"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@sawaa/ui"
-import { Skeleton } from "@sawaa/ui"
+import { Button, Card, CardAction, CardContent, CardHeader, CardTitle, Skeleton } from "@sawaa/ui"
 import {
   useEmployeeAvailability,
   useEmployeeVacations,
@@ -34,6 +35,7 @@ interface WithId { employeeId: string }
 
 export function EmployeeAvailabilitySection({ employeeId }: WithId) {
   const { t } = useLocale()
+  const router = useRouter()
   const { data: schedule, isLoading } = useEmployeeAvailability(employeeId)
 
   const activeSlots = schedule?.filter((s) => s.isActive) ?? []
@@ -48,6 +50,16 @@ export function EmployeeAvailabilitySection({ employeeId }: WithId) {
           </div>
           {t("employees.detail.workingHours")}
         </CardTitle>
+        <CardAction>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push(`/employees/${employeeId}/edit`)}
+          >
+            <HugeiconsIcon icon={PencilEdit01Icon} size={14} />
+            {t("employees.detail.editSchedule")}
+          </Button>
+        </CardAction>
       </CardHeader>
       <CardContent>
         {isLoading ? (

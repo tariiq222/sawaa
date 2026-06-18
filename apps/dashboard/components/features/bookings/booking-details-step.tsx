@@ -91,7 +91,6 @@ export function BookingStep({ clientName, onSubmit: onSubmitProp, submitting }: 
       employeeId: "",
       serviceId: "",
       type: "in_person" as const,
-      durationOptionId: "",
       date: "",
       startTime: "",
       payAtClinic: false,
@@ -102,20 +101,18 @@ export function BookingStep({ clientName, onSubmit: onSubmitProp, submitting }: 
     watchedEmployeeId,
     watchedServiceId,
     watchedType,
-    watchedDurationOptionId,
     watchedDate,
     watchedStartTime,
-  ] = form.watch(["employeeId", "serviceId", "type", "durationOptionId", "date", "startTime"])
+  ] = form.watch(["employeeId", "serviceId", "type", "date", "startTime"])
 
   useBookingCreateResets(form, watchedEmployeeId, watchedServiceId, watchedType, watchedDate)
 
-  const { employeeServices, employeeServicesLoading, durationOptions, hasDurationOptions, canFetchSlots, serviceTypesLoading, canFetchServiceTypes, slots, slotsLoading } =
+  const { employeeServices, employeeServicesLoading, canFetchSlots, slots, slotsLoading } =
     useCreateBookingSlots({
       employeeId: watchedEmployeeId,
       serviceId: watchedServiceId,
       deliveryType: watchedType,
       date: watchedDate,
-      durationOptionId: watchedDurationOptionId ?? "",
     })
 
   const availableTypes = React.useMemo(() => {
@@ -137,15 +134,12 @@ export function BookingStep({ clientName, onSubmit: onSubmitProp, submitting }: 
     employeeId: watchedEmployeeId,
     serviceId: watchedServiceId,
     type: watchedType,
-    durationOptionId: watchedDurationOptionId ?? "",
     date: watchedDate,
     startTime: watchedStartTime,
-    hasDurationOptions,
   })
 
   const slotPlaceholder = (() => {
     if (!watchedEmployeeId || !watchedDate) return t("bookings.form.slot.selectEmployeeAndDate")
-    if (hasDurationOptions && !watchedDurationOptionId) return t("bookings.form.slot.selectDurationFirst")
     if (slotsLoading) return t("bookings.form.slot.loadingSlots")
     return t("bookings.form.placeholder.selectTime")
   })()
@@ -162,7 +156,7 @@ export function BookingStep({ clientName, onSubmit: onSubmitProp, submitting }: 
       {/* Unified card: all booking fields */}
       <div className={card}>
 
-        {/* Section 1: Employee + Service + Type + Duration */}
+        {/* Section 1: Employee + Service + Type */}
         <div className={sectionHeader}>
           <HugeiconsIcon icon={Stethoscope02Icon} size={13} className="text-muted-foreground shrink-0" />
           <p className={sectionTitle}>{t("bookings.form.section.employeeService")}</p>
@@ -174,10 +168,6 @@ export function BookingStep({ clientName, onSubmit: onSubmitProp, submitting }: 
           employeesLoading={employeesLoading}
           employeeServicesLoading={employeeServicesLoading}
           availableTypes={availableTypes}
-          canFetchServiceTypes={canFetchServiceTypes}
-          serviceTypesLoading={serviceTypesLoading}
-          hasDurationOptions={hasDurationOptions}
-          durationOptions={durationOptions}
           visibility={visibility}
         />
 

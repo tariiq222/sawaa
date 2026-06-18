@@ -649,7 +649,7 @@ export class DashboardPeopleController {
   updateEmployeeServiceEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('serviceId', ParseUUIDPipe) serviceId: string,
-    @Body() body: { isActive?: boolean },
+    @Body() body: { isActive?: boolean; bufferMinutes?: number },
   ) {
     return this.updateEmployeeService.execute({ employeeId: id, serviceId, ...body });
   }

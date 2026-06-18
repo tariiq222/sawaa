@@ -212,6 +212,10 @@ export const arEmployees: Record<string, string> = {
   "employees.services.useCustomPricingTimes": "تفعيل أسعار وأوقات مختلفة عن الخدمة",
   "employees.services.defaultsUsedHint": "بدون التفعيل سيستخدم الممارس أسعار ومدد الخدمة الأساسية.",
   "employees.services.usingServiceDefaults": "سيتم استخدام الأسعار والمدد الافتراضية للخدمة. فعّل الخيار أعلاه لتخصيصها لهذا الممارس.",
+  "employees.services.inlineBufferEmpty": "إضافة فاصل",
+  "employees.services.inlineBufferAria": "تعديل دقائق الفاصل",
+  "employees.services.inlineActiveAria": "تبديل حالة الخدمة",
+  "employees.services.inlineUpdateError": "تعذّر الحفظ",
 
   // — Status Dialog —
   "employees.action.deactivate": "تعطيل",
@@ -246,6 +250,7 @@ export const arEmployees: Record<string, string> = {
 
   // — Profile Sections —
   "employees.detail.workingHours": "أوقات العمل",
+  "employees.detail.editSchedule": "تعديل الجدول",
   "employees.detail.noWorkingHours": "لم يتم تحديد أوقات العمل بعد",
   "employees.detail.upcomingVacations": "الإجازات القادمة",
   "employees.detail.noVacations": "لا إجازات مجدولة",

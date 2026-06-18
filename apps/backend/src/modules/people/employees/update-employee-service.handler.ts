@@ -5,6 +5,7 @@ export interface UpdateEmployeeServiceCommand {
   employeeId: string;
   serviceId: string;
   isActive?: boolean;
+  bufferMinutes?: number;
 }
 
 @Injectable()
@@ -17,7 +18,7 @@ export class UpdateEmployeeServiceHandler {
     });
     if (!record) throw new NotFoundException('Employee-service assignment not found');
 
-    if (cmd.isActive === undefined) return record;
+    if (cmd.isActive === undefined && cmd.bufferMinutes === undefined) return record;
 
     // Track B — practitioner integrity: the link's effect on availability is
     // only seen when the employee is also active. Toggling a link while the
@@ -35,9 +36,16 @@ export class UpdateEmployeeServiceHandler {
       }
     }
 
+    if (cmd.bufferMinutes !== undefined && (cmd.bufferMinutes < 0 || !Number.isInteger(cmd.bufferMinutes))) {
+      throw new BadRequestException('bufferMinutes must be a non-negative integer');
+    }
+
     return this.prisma.employeeService.update({
       where: { employeeId_serviceId: { employeeId: cmd.employeeId, serviceId: cmd.serviceId } },
-      data: { isActive: cmd.isActive },
+      data: {
+        ...(cmd.isActive !== undefined ? { isActive: cmd.isActive } : {}),
+        ...(cmd.bufferMinutes !== undefined ? { bufferMinutes: cmd.bufferMinutes } : {}),
+      },
     });
   }
 }

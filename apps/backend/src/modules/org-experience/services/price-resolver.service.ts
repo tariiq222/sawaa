@@ -22,7 +22,9 @@ export class PriceResolverService {
    *    scoped by employeeServiceId + deliveryType + durationOptionId
    * 2. ServiceDurationOption.price / durationMins (catalog option)
    *    scoped by deliveryType
-   * 3. Service.price / durationMins (service-level fallback)
+   * 3. ServiceBookingConfig.price / durationMins (config-level price per deliveryType)
+   *    scoped by serviceId + deliveryType + isActive=true
+   * 4. Service.price / durationMins (final fallback)
    *
    * @param serviceId   - the service being booked
    * @param employeeServiceId - EmployeeService join-table id (null for unassigned)
@@ -75,12 +77,31 @@ export class PriceResolverService {
       });
     }
 
-    // --- Step 3: fall back to Service base values if no duration option ---
+    // --- Step 3: fall back to ServiceBookingConfig or Service base values if no duration option ---
     if (!durationOption) {
       const service = await this.prisma.service.findUniqueOrThrow({
         where: { id: serviceId },
         select: { price: true, durationMins: true, currency: true, id: true },
       });
+
+      // Step 3a: check ServiceBookingConfig for a config-level price scoped by deliveryType
+      if (deliveryType) {
+        const bookingConfig = await this.prisma.serviceBookingConfig.findFirst({
+          where: { serviceId, deliveryType, isActive: true },
+          select: { price: true, durationMins: true },
+        });
+        if (bookingConfig) {
+          return {
+            price: Number(bookingConfig.price),
+            durationMins: bookingConfig.durationMins,
+            durationOptionId: '',
+            currency: service.currency,
+            isEmployeeOverride: false,
+          };
+        }
+      }
+
+      // Step 3b: final fallback to Service.price / durationMins
       return {
         price: Number(service.price),
         durationMins: service.durationMins,

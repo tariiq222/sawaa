@@ -37,6 +37,11 @@ const mockService = {
   durationMins: 60,
   price: 200,
   currency: 'SAR',
+  isActive: true,
+  archivedAt: null,
+  isHidden: false,
+  categoryId: 'cat-1',
+  category: { bookingMode: 'SERVICES' },
 };
 
 const buildPrisma = () => {
@@ -225,8 +230,14 @@ describe('CreateBookingHandler', () => {
     await expect(handler.execute(baseDto)).rejects.toThrow('Service is archived');
   });
 
-  it('throws BadRequestException when service is hidden', async () => {
-    prisma.service.findFirst = jest.fn().mockResolvedValue({ ...mockService, isActive: true, archivedAt: null, isHidden: true });
+  it('throws BadRequestException when service is hidden and category is SERVICES mode', async () => {
+    prisma.service.findFirst = jest.fn().mockResolvedValue({
+      ...mockService,
+      isActive: true,
+      archivedAt: null,
+      isHidden: true,
+      category: { bookingMode: 'SERVICES' },
+    });
     await expect(handler.execute(baseDto)).rejects.toThrow('Service is hidden');
   });
 
@@ -889,6 +900,36 @@ describe('CreateBookingHandler', () => {
         }),
       }),
     );
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 11. DIRECT category — hidden service booking guard
+  // ──────────────────────────────────────────────────────────────────────────
+
+  it('allows booking a hidden service when category bookingMode is DIRECT', async () => {
+    prisma.service.findFirst = jest.fn().mockResolvedValue({
+      ...mockService,
+      isActive: true,
+      archivedAt: null,
+      isHidden: true,
+      categoryId: 'cat-direct',
+      category: { bookingMode: 'DIRECT' },
+    });
+    await expect(handler.execute(baseDto)).resolves.toBeDefined();
+    expect(prisma.booking.create).toHaveBeenCalled();
+  });
+
+  it('rejects booking a hidden service when category bookingMode is SERVICES', async () => {
+    prisma.service.findFirst = jest.fn().mockResolvedValue({
+      ...mockService,
+      isActive: true,
+      archivedAt: null,
+      isHidden: true,
+      categoryId: 'cat-services',
+      category: { bookingMode: 'SERVICES' },
+    });
+    await expect(handler.execute(baseDto)).rejects.toThrow('Service is hidden');
+    expect(prisma.booking.create).not.toHaveBeenCalled();
   });
 
   it('rejects duration option mismatch with deliveryType', async () => {

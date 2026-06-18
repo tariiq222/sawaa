@@ -1,8 +1,6 @@
 import {
-  IsArray,
   IsBoolean,
   IsDefined,
-  IsEnum,
   IsInt,
   IsISO8601,
   IsNumber,
@@ -15,7 +13,6 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { RecurringPatternDto } from './create-service.dto';
 import { SanitizeText } from './sanitize-text.decorator';
 
 export class UpdateServiceDto {
@@ -84,17 +81,6 @@ export class UpdateServiceDto {
   @ApiPropertyOptional({ description: 'Fixed deposit amount (must not exceed price)', example: 20 })
   @ValidateIf((o: UpdateServiceDto) => o.depositEnabled === true)
   @IsDefined() @IsNumber() @Min(1) depositAmount?: number;
-
-  // ─── التكرار ─────────────────────────────────────────────────────────────
-  @ApiPropertyOptional({ description: 'Whether recurring bookings are allowed', example: false })
-  @IsOptional() @IsBoolean() allowRecurring?: boolean;
-
-  @ApiPropertyOptional({ description: 'Allowed recurring patterns', enum: RecurringPatternDto, isArray: true })
-  @IsOptional() @IsArray() @IsEnum(RecurringPatternDto, { each: true })
-  allowedRecurringPatterns?: RecurringPatternDto[];
-
-  @ApiPropertyOptional({ description: 'Maximum number of recurrences', example: 12 })
-  @IsOptional() @IsInt() @Min(1) maxRecurrences?: number;
 
   // ─── الجلسات الجماعية ────────────────────────────────────────────────────
   @ApiPropertyOptional({ description: 'Minimum participants for a group session', example: 1 })

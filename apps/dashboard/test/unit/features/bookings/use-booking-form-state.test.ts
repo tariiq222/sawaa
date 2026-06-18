@@ -102,7 +102,7 @@ describe('useBookingFormState', () => {
     expect(result.current.state.couponCode).toBeNull()
   })
 
-  it('selectDuration resets date/time but preserves other fields', () => {
+  it('selectDeliveryType resets date and time but preserves other fields', () => {
     const { result } = renderHook(() => useBookingFormState())
     act(() => {
       result.current.selectClient('cli-1', 'Sara')
@@ -113,25 +113,13 @@ describe('useBookingFormState', () => {
       result.current.selectTime('09:00')
     })
     act(() => {
-      result.current.selectDuration('dur-45', '45 دقيقة', null)
+      result.current.selectDeliveryType('online')
     })
-    expect(result.current.state.durationOptionId).toBe('dur-45')
-    expect(result.current.state.durationLabel).toBe('45 دقيقة')
+    expect(result.current.state.deliveryType).toBe('online')
     expect(result.current.state.date).toBeNull()
     expect(result.current.state.startTime).toBeNull()
     expect(result.current.state.clientId).toBe('cli-1')
     expect(result.current.state.serviceId).toBe('svc-1')
-  })
-
-  it('skipDuration clears duration fields without affecting other fields', () => {
-    const { result } = renderHook(() => useBookingFormState())
-    act(() => {
-      result.current.selectDuration('dur-30', '30 دقيقة', null)
-    })
-    expect(result.current.state.durationOptionId).toBe('dur-30')
-    act(() => { result.current.skipDuration() })
-    expect(result.current.state.durationOptionId).toBeNull()
-    expect(result.current.state.durationLabel).toBeNull()
   })
 
   it('selectTime sets startTime without resetting other fields', () => {
@@ -204,32 +192,11 @@ describe('useBookingFormState', () => {
     })
     const s = result.current.state
     expect(s.type).toBe('online')
-    expect(s.durationOptionId).toBeNull()
     expect(s.date).toBeNull()
     expect(s.startTime).toBeNull()
   })
 
-  it('selectDuration sets duration and resets downstream', () => {
-    const { result } = renderHook(() => useBookingFormState())
-    act(() => {
-      result.current.selectClient('cli-1', 'Sara')
-      result.current.selectService('svc-1', 'Counseling')
-      result.current.selectEmployee('emp-1', 'Ahmad')
-      result.current.selectType('in_person')
-      result.current.selectDate('2026-06-01')
-      result.current.selectTime('09:00')
-    })
-    act(() => {
-      result.current.selectDuration('dur-1', '60 min', null)
-    })
-    const s = result.current.state
-    expect(s.durationOptionId).toBe('dur-1')
-    expect(s.durationLabel).toBe('60 min')
-    expect(s.date).toBeNull()
-    expect(s.startTime).toBeNull()
-  })
-
-  it('isComplete is true when all required fields are set, even without durationOptionId', () => {
+  it('isComplete is true when all required fields are set', () => {
     const { result } = renderHook(() => useBookingFormState())
     act(() => {
       result.current.selectClient('cli-1', 'Sara')

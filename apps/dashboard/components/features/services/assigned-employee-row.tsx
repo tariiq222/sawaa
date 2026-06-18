@@ -78,9 +78,10 @@ export function AssignedEmployeeRow({
     <SurfaceRow
       variant="default"
       size="md"
-      className="flex flex-col gap-2"
+      className="flex h-full flex-col gap-3"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+      {/* Header: avatar + name + active switch */}
+      <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
           <EmployeeAvatar avatarUrl={employee.avatarUrl} name={displayName} className="size-10" />
 
@@ -110,66 +111,65 @@ export function AssignedEmployeeRow({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {/* Inline buffer */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground">
-              {t("employees.services.bufferMinutes")}:
-            </span>
-            <BufferCell
-              value={item.bufferMinutes ?? 0}
-              isSaving={isSaving}
-              ariaLabel={t("employees.services.inlineBufferAria")}
-              unitLabel={minUnit}
-              emptyHintLabel={t("employees.services.inlineBufferEmpty")}
-              onCommit={(next) => patchAssignment({ bufferMinutes: next })}
-            />
-          </div>
-
-          {/* Inline active switch */}
-          <ActiveCell
-            checked={displayedIsActive}
-            isSaving={isSaving}
-            ariaLabel={t("employees.services.inlineActiveAria")}
-            onChange={handlePatchActive}
-          />
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-            onClick={onEdit}
-          >
-            <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} className="size-3.5" />
-            {t("common.edit")}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-            onClick={onView}
-          >
-            {t("common.view")}
-            <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3.5" />
-          </Button>
-        </div>
+        <ActiveCell
+          checked={displayedIsActive}
+          isSaving={isSaving}
+          ariaLabel={t("employees.services.inlineActiveAria")}
+          onChange={handlePatchActive}
+        />
       </div>
 
-      <div className="w-full ps-12">
-        <EmployeeCustomPricingRow
-          item={item}
-          serviceId={serviceId}
-          t={t}
-          isSaving={customPricingMut.isPending && customPricingMut.variables?.serviceId === serviceId}
-          onSave={(payload: SetCustomPricingPayload) =>
-            customPricingMut.mutate(
-              { serviceId, payload },
-              { onError: () => toast.error(t("services.employees.customPricingSaveError")) },
-            )
-          }
+      {/* Buffer */}
+      <div className="flex items-center justify-between gap-2 rounded-lg bg-surface-muted/40 px-3 py-2">
+        <span className="text-xs text-muted-foreground">
+          {t("employees.services.bufferMinutes")}:
+        </span>
+        <BufferCell
+          value={item.bufferMinutes ?? 0}
+          isSaving={isSaving}
+          ariaLabel={t("employees.services.inlineBufferAria")}
+          unitLabel={minUnit}
+          emptyHintLabel={t("employees.services.inlineBufferEmpty")}
+          onCommit={(next) => patchAssignment({ bufferMinutes: next })}
         />
+      </div>
+
+      {/* Custom pricing */}
+      <EmployeeCustomPricingRow
+        item={item}
+        serviceId={serviceId}
+        t={t}
+        isSaving={customPricingMut.isPending && customPricingMut.variables?.serviceId === serviceId}
+        onSave={(payload: SetCustomPricingPayload) =>
+          customPricingMut.mutate(
+            { serviceId, payload },
+            { onError: () => toast.error(t("services.employees.customPricingSaveError")) },
+          )
+        }
+      />
+
+      {/* Footer actions */}
+      <div className="mt-auto flex items-center justify-end gap-2 border-t border-border/60 pt-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-1.5 text-xs"
+          onClick={onEdit}
+        >
+          <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} className="size-3.5" />
+          {t("common.edit")}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-1.5 text-xs"
+          onClick={onView}
+        >
+          {t("common.view")}
+          <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3.5" />
+        </Button>
       </div>
     </SurfaceRow>
   )

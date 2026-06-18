@@ -33,40 +33,33 @@ const serviceBookingTypes: ServiceBookingType[] = [
 ]
 
 describe("employee service option overrides", () => {
-  it("initializes configs from service defaults in SAR-major units", () => {
+  it("initializes configs from service defaults — flat price/duration, no durationOptions", () => {
     expect(makeDefaultEmployeeTypeConfigs(serviceBookingTypes)).toEqual([
-      expect.objectContaining({
+      {
         deliveryType: "in_person",
         price: null,
         duration: null,
-        durationOptions: [
-          expect.objectContaining({ id: "opt-45", price: 150, durationMinutes: 45 }),
-        ],
-      }),
+        isActive: true,
+      },
     ])
   })
 
-  it("sends inactive null overrides when custom pricing is disabled", () => {
+  it("always returns null — durationOptions UI removed", () => {
     expect(
       buildEmployeeServiceOptionsPayload({
-        typeConfigs: [],
-        serviceBookingTypes,
-        useCustomPricing: false,
+        typeConfigs: [
+          {
+            deliveryType: "in_person",
+            price: null,
+            duration: null,
+            isActive: true,
+          },
+        ],
       }),
-    ).toEqual({
-      options: [
-        {
-          durationOptionId: "opt-45",
-          priceOverride: null,
-          durationOverride: null,
-          deliveryType: "IN_PERSON",
-          isActive: false,
-        },
-      ],
-    })
+    ).toBeNull()
   })
 
-  it("sends active custom option overrides in integer halalas", () => {
+  it("always returns null even when typeConfigs have custom options", () => {
     expect(
       buildEmployeeServiceOptionsPayload({
         typeConfigs: [
@@ -75,6 +68,7 @@ describe("employee service option overrides", () => {
             price: 160,
             duration: 55,
             useCustomOptions: true,
+            isActive: true,
             durationOptions: [
               {
                 id: "opt-45",
@@ -82,28 +76,12 @@ describe("employee service option overrides", () => {
                 durationMinutes: 50,
                 price: 175.5,
                 isDefault: true,
-              },
-              {
-                label: "No id",
-                durationMinutes: 60,
-                price: 200,
+                sortOrder: 0,
               },
             ],
           },
         ],
-        serviceBookingTypes,
-        useCustomPricing: true,
       }),
-    ).toEqual({
-      options: [
-        {
-          durationOptionId: "opt-45",
-          priceOverride: 16000,
-          durationOverride: 55,
-          deliveryType: "IN_PERSON",
-          isActive: true,
-        },
-      ],
-    })
+    ).toBeNull()
   })
 })

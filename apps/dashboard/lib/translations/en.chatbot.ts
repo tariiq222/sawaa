@@ -61,7 +61,6 @@ export const enChatbot: Record<string, string> = {
   // ─── Tab Keys ───
   "employees.tabs.list": "Employees",
   "employees.tabs.ratings": "Ratings & Reviews",
-  "bookings.tabs.list": "Bookings",
   "invoices.tabs.list": "Invoices",
   "users.tabs.activityLog": "Activity Log",
 

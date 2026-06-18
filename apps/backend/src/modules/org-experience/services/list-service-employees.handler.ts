@@ -103,9 +103,9 @@ export class ListServiceEmployeesHandler {
           serviceTypes,
           hasCustomPricing,
           customDuration: null,
-          bufferMinutes: 0,
+          bufferMinutes: l.bufferMinutes,
           availableTypes,
-          isActive: true,
+          isActive: l.isActive,
         };
       });
   }

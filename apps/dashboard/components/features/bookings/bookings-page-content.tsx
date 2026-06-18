@@ -7,7 +7,6 @@ import { Add01Icon } from "@hugeicons/core-free-icons"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { Button } from "@sawaa/ui"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@sawaa/ui"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { PageHeader } from "@/components/features/page-header"
 import { BookingDetailSheet } from "@/components/features/bookings/booking-detail-sheet"
@@ -21,7 +20,6 @@ import type { Booking } from "@/lib/types/booking"
 export function BookingsPageContent() {
   const searchParams = useSearchParams()
   const newParam = searchParams.get("new")
-  const defaultTab = "bookings"
   const { t } = useLocale()
   const titleLabel = t("nav.bookings")
   const queryClient = useQueryClient()
@@ -76,18 +74,10 @@ export function BookingsPageContent() {
           onCancel={() => setCreating(false)}
         />
       ) : (
-        <Tabs defaultValue={defaultTab}>
-          <TabsList>
-            <TabsTrigger value="bookings">{t("bookings.tabs.list")}</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="bookings" className="mt-4">
-            <BookingsTabContent
-              onRowClick={handleRowClick}
-              onEditClick={handleEditClick}
-            />
-          </TabsContent>
-        </Tabs>
+        <BookingsTabContent
+          onRowClick={handleRowClick}
+          onEditClick={handleEditClick}
+        />
       )}
 
       <BookingDetailSheet

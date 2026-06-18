@@ -9,7 +9,7 @@ import {
 } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { BookingTypeRow } from "../booking-type-row"
-import type { DraftBookingType, DraftDurationOption } from "../booking-types-editor"
+import type { DraftBookingType } from "../booking-types-editor"
 import type { ServiceDeliveryType } from "@/lib/types/service"
 
 /* ─── Constants ─── */
@@ -56,19 +56,6 @@ export function PricingTab({
     )
   }
 
-  const updateOptions = (
-    deliveryType: string,
-    opts: DraftDurationOption[],
-  ) => {
-    onBookingTypesChange(
-      bookingTypes.map((d) =>
-        d.deliveryType === deliveryType
-          ? { ...d, durationOptions: opts }
-          : d,
-      ),
-    )
-  }
-
   return (
     <Card>
       <CardHeader>
@@ -78,7 +65,7 @@ export function PricingTab({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 items-start">
         {bookingTypes.map((draft) => (
           <BookingTypeRow
             key={draft.deliveryType}
@@ -92,9 +79,6 @@ export function PricingTab({
             onToggle={() => toggleType(draft.deliveryType)}
             onUpdate={(field, value) =>
               updateType(draft.deliveryType, field, value)
-            }
-            onUpdateOptions={(opts) =>
-              updateOptions(draft.deliveryType, opts)
             }
           />
         ))}

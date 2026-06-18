@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
 import { CreateCategoryHandler } from './create-category.handler';
 
@@ -13,6 +13,9 @@ describe('CreateCategoryHandler', () => {
         CreateCategoryHandler,
         { provide: PrismaService, useValue: {
     serviceCategory: { create: jest.fn() }
+        } },
+        { provide: RlsTransactionService, useValue: {
+    withTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn({ serviceCategory: { create: jest.fn().mockResolvedValue({ id: 'test-id' }) }, service: { create: jest.fn() } }))
         } },
         { provide: CacheService, useValue: { getOrSet: (_k: string, l: () => Promise<unknown>) => l(), invalidatePrefix: jest.fn() } },
       ],

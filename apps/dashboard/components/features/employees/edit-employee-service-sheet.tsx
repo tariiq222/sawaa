@@ -26,7 +26,6 @@ import { EmployeeServiceTypesEditor } from "./employee-service-types-editor"
 import { halalasToSarNumber } from "@/lib/money"
 import {
   buildEmployeeServiceOptionsPayload,
-  hasCustomEmployeeServiceOptions,
   makeDefaultEmployeeTypeConfigs,
 } from "./employee-service-option-overrides"
 import type {
@@ -62,7 +61,6 @@ export function EditEmployeeServiceSheet({
   const [typeConfigs, setTypeConfigs] = useState<EmployeeTypeConfigPayload[]>(
     []
   )
-  const [useCustomPricing, setUseCustomPricing] = useState(false)
 
   const serviceId = ps?.serviceId ?? null
   const { data: serviceBookingTypes } = useServiceBookingTypes(serviceId)
@@ -95,25 +93,10 @@ export function EditEmployeeServiceSheet({
         // Server stores price in halalas; the editor inputs collect SAR.
         price: et.price != null ? halalasToSarNumber(et.price) : null,
         duration: et.duration,
-        useCustomOptions: et.useCustomOptions,
         isActive: et.isActive,
-        durationOptions: et.durationOptions.map((o) => ({
-          id: o.id,
-          label: o.label,
-          labelAr: o.labelAr ?? undefined,
-          durationMinutes: o.durationMinutes,
-          price: o.price != null ? halalasToSarNumber(o.price) : 0,
-          isDefault: o.isDefault,
-          sortOrder: o.sortOrder,
-        })),
       }))
     )
-    setUseCustomPricing(
-      serviceBookingTypes
-        ? hasCustomEmployeeServiceOptions(existingTypes, serviceBookingTypes)
-        : false,
-    )
-  }, [existingTypes, serviceBookingTypes, open])
+  }, [existingTypes, open])
 
   /* Fallback: if no existing types but we have service booking types, init from those */
   useEffect(() => {
@@ -121,18 +104,7 @@ export function EditEmployeeServiceSheet({
     if (!ps || !serviceBookingTypes || !open) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTypeConfigs(makeDefaultEmployeeTypeConfigs(serviceBookingTypes))
-    setUseCustomPricing(false)
   }, [existingTypes, serviceBookingTypes, ps, open])
-
-  const handleCustomPricingChange = (enabled: boolean) => {
-    setUseCustomPricing(enabled)
-    setTypeConfigs((current) =>
-      current.map((typeConfig) => ({
-        ...typeConfig,
-        useCustomOptions: enabled,
-      })),
-    )
-  }
 
   const serviceName = ps
     ? locale === "ar"
@@ -152,8 +124,6 @@ export function EditEmployeeServiceSheet({
         })
         const optionsPayload = buildEmployeeServiceOptionsPayload({
           typeConfigs,
-          serviceBookingTypes,
-          useCustomPricing,
         })
         if (optionsPayload) {
           await optionsMut.mutateAsync({
@@ -164,9 +134,8 @@ export function EditEmployeeServiceSheet({
         toast.success(t("employees.services.updateSuccess"))
         onOpenChange(false)
       } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "Failed to update service"
-        )
+        console.error(err)
+        toast.error(t("employees.services.updateError"))
       }
     }
   )
@@ -187,37 +156,14 @@ export function EditEmployeeServiceSheet({
             onSubmit={onSubmit}
             className="flex flex-col gap-5"
           >
-            {/* Custom pricing */}
             {serviceBookingTypes && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs cursor-pointer">
-                      {t("employees.services.useCustomPricingTimes")}
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      {t("employees.services.defaultsUsedHint")}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={useCustomPricing}
-                    onCheckedChange={handleCustomPricingChange}
-                  />
-                </div>
-                {useCustomPricing ? (
-                  <EmployeeServiceTypesEditor
-                    serviceBookingTypes={serviceBookingTypes}
-                    value={typeConfigs}
-                    onChange={setTypeConfigs}
-                    t={t}
-                    locale={locale}
-                  />
-                ) : (
-                  <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-                    {t("employees.services.usingServiceDefaults")}
-                  </p>
-                )}
-              </div>
+              <EmployeeServiceTypesEditor
+                serviceBookingTypes={serviceBookingTypes}
+                value={typeConfigs}
+                onChange={setTypeConfigs}
+                t={t}
+                locale={locale}
+              />
             )}
 
             {/* Buffer */}

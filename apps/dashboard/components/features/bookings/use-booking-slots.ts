@@ -7,7 +7,7 @@ import {
   fetchSlots,
 } from "@/lib/api/employees-schedule"
 import { queryKeys } from "@/lib/query-keys"
-import type { EmployeeDurationOption, EmployeeService } from "@/lib/types/employee"
+import type { EmployeeService } from "@/lib/types/employee"
 import { utcTimeToRiyadhHHMM } from "@/lib/utils"
 
 interface UseBookingSlotsOptions {
@@ -15,7 +15,6 @@ interface UseBookingSlotsOptions {
   serviceId: string
   deliveryType?: string
   date: string
-  durationOptionId: string
 }
 
 export function useCreateBookingSlots({
@@ -23,7 +22,6 @@ export function useCreateBookingSlots({
   serviceId,
   deliveryType,
   date,
-  durationOptionId,
 }: UseBookingSlotsOptions) {
   // Fetch services that belong to this employee
   const { data: employeeServices = [], isLoading: employeeServicesLoading } = useQuery<EmployeeService[]>({
@@ -40,33 +38,16 @@ export function useCreateBookingSlots({
     enabled: canFetchServiceTypes,
   })
 
-  const durationOptions = React.useMemo((): EmployeeDurationOption[] => {
-    if (!serviceTypes.length || !deliveryType) return []
-    const pst = serviceTypes.find(
-      (st) => st.deliveryType === deliveryType,
-    )
-    if (!pst || !pst.isActive) return []
-    return pst.durationOptions ?? []
-  }, [serviceTypes, deliveryType])
-
-  const hasDurationOptions = durationOptions.length > 0
-
   const selectedDuration = React.useMemo((): number | undefined => {
-    if (hasDurationOptions) {
-      const opt = durationOptions.find((d) => d.id === durationOptionId)
-      return opt?.durationMinutes
-    }
-
-    // Fallback: when no duration options, use service type duration or service duration
+    // Use service type duration directly from the selected delivery type
     const pst = serviceTypes.find((st) => st.deliveryType === deliveryType)
     if (pst?.isActive && pst?.duration != null) return pst.duration
 
     const es = employeeServices.find((s) => s.serviceId === serviceId)
     return es?.service?.duration
-  }, [hasDurationOptions, durationOptions, durationOptionId, serviceTypes, deliveryType, employeeServices, serviceId])
+  }, [serviceTypes, deliveryType, employeeServices, serviceId])
 
-  const canFetchSlots = !!employeeId && !!date &&
-    (!hasDurationOptions || !!selectedDuration)
+  const canFetchSlots = !!employeeId && !!date && !!selectedDuration
 
   const { data: rawSlots = [], isLoading: slotsLoading } = useQuery({
     queryKey: [...queryKeys.employees.slots(employeeId, date), selectedDuration, serviceId, deliveryType],
@@ -92,8 +73,6 @@ export function useCreateBookingSlots({
   return {
     employeeServices,
     employeeServicesLoading,
-    durationOptions,
-    hasDurationOptions,
     selectedDuration,
     canFetchSlots,
     serviceTypesLoading,

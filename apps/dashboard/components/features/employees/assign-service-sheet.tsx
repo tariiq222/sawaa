@@ -67,7 +67,6 @@ export function AssignServiceSheet({
   const [typeConfigs, setTypeConfigs] = useState<EmployeeTypeConfigPayload[]>(
     []
   )
-  const [useCustomPricing, setUseCustomPricing] = useState(false)
 
   const availableServices = useMemo(() => {
     const assignedIds = new Set(
@@ -89,7 +88,6 @@ export function AssignServiceSheet({
     if (open) {
       form.reset()
       setTypeConfigs([])
-      setUseCustomPricing(false)
     }
   }, [open, form])
 
@@ -100,18 +98,7 @@ export function AssignServiceSheet({
 
   useEffect(() => {
     setTypeConfigs(makeDefaultEmployeeTypeConfigs(serviceBookingTypes))
-    setUseCustomPricing(false)
   }, [selectedServiceId, serviceBookingTypes])
-
-  const handleCustomPricingChange = (enabled: boolean) => {
-    setUseCustomPricing(enabled)
-    setTypeConfigs((current) =>
-      current.map((typeConfig) => ({
-        ...typeConfig,
-        useCustomOptions: enabled,
-      })),
-    )
-  }
 
   const onSubmit = form.handleSubmit(async (data) => {
     try {
@@ -122,8 +109,6 @@ export function AssignServiceSheet({
       })
       const optionsPayload = buildEmployeeServiceOptionsPayload({
         typeConfigs,
-        serviceBookingTypes,
-        useCustomPricing,
       })
       if (optionsPayload) {
         await optionsMut.mutateAsync({
@@ -193,37 +178,15 @@ export function AssignServiceSheet({
               )}
             </div>
 
-            {/* Custom pricing */}
+            {/* Custom pricing — per-row via EmployeeTypeRow */}
             {selectedServiceId && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs cursor-pointer">
-                      {t("employees.services.useCustomPricingTimes")}
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      {t("employees.services.defaultsUsedHint")}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={useCustomPricing}
-                    onCheckedChange={handleCustomPricingChange}
-                  />
-                </div>
-                {useCustomPricing ? (
-                  <EmployeeServiceTypesEditor
-                    serviceBookingTypes={serviceBookingTypes}
-                    value={typeConfigs}
-                    onChange={setTypeConfigs}
-                    t={t}
-                    locale={locale}
-                  />
-                ) : (
-                  <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-                    {t("employees.services.usingServiceDefaults")}
-                  </p>
-                )}
-              </div>
+              <EmployeeServiceTypesEditor
+                serviceBookingTypes={serviceBookingTypes}
+                value={typeConfigs}
+                onChange={setTypeConfigs}
+                t={t}
+                locale={locale}
+              />
             )}
 
             {/* Buffer */}

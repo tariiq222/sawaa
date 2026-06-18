@@ -45,19 +45,27 @@ model Department {
   @@index([isActive])
 }
 
+// ─── Category Booking Mode ────────────────────────────────────────────────────
+
+enum CategoryBookingMode {
+  DIRECT   // The category itself is the booking unit (one hidden internal service)
+  SERVICES // The category is a container for multiple visible services
+}
+
 // ─── Service Categories ──────────────────────────────────────────────────────
 
 // departmentId nullable لدعم فئات بلا قسم (hierarchy مسطح).
 model ServiceCategory {
-  id           String      @id @default(uuid())
+  id           String              @id @default(uuid())
   departmentId String?
-  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  department   Department?         @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   nameAr       String
   nameEn       String?
-  sortOrder    Int         @default(0)
-  isActive     Boolean     @default(true)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  sortOrder    Int                 @default(0)
+  isActive     Boolean             @default(true)
+  bookingMode  CategoryBookingMode @default(SERVICES)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
 
   services Service[]
 
@@ -140,6 +148,9 @@ model Service {
 
   @@index([isActive])
   @@index([isHidden])
+  // Partial unique index enforced at DB level (migration 20260618000001):
+  // CREATE UNIQUE INDEX "Service_categoryId_hidden_unique" ON "Service"("categoryId") WHERE "isHidden" = true
+  // One hidden service per category maximum; enforced via raw SQL (Prisma does not support partial indexes in schema).
   @@index([categoryId])
 }
 

@@ -15,17 +15,18 @@ import { Skeleton } from "@sawaa/ui"
 
 import { getCategoryColumns } from "./category-columns"
 import { CreateCategoryDialog } from "./create-category-dialog"
-import { EditCategoryDialog } from "./edit-category-dialog"
 import { DeleteCategoryDialog } from "./delete-category-dialog"
 
 import { useCategoriesList } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
+import { useRouter } from "next/navigation"
 import type { ServiceCategory } from "@/lib/types/service"
 
 export function CategoryListPage() {
   const { t, locale } = useLocale()
   const { canDo } = useAuth()
+  const router = useRouter()
   const {
     categories, meta, isLoading, error,
     search, setSearch, isActive, setIsActive,
@@ -33,13 +34,12 @@ export function CategoryListPage() {
   } = useCategoriesList()
 
   const [createOpen, setCreateOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<ServiceCategory | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ServiceCategory | null>(null)
 
   const columns = getCategoryColumns(
     locale,
     t,
-    canDo("category", "update") ? (c) => setEditTarget(c) : undefined,
+    canDo("category", "update") ? (c) => router.push(`/categories/${c.id}/edit`) : undefined,
     canDo("category", "delete") ? (c) => setDeleteTarget(c) : undefined,
   )
 
@@ -106,7 +106,6 @@ export function CategoryListPage() {
       )}
 
       <CreateCategoryDialog open={createOpen} onOpenChange={setCreateOpen} />
-      <EditCategoryDialog category={editTarget} open={!!editTarget} onOpenChange={(o) => { if (!o) setEditTarget(null) }} />
       <DeleteCategoryDialog category={deleteTarget} open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null) }} />
     </ListPageShell>
   )

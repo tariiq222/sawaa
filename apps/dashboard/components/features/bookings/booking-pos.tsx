@@ -12,6 +12,8 @@ import { useBookingSettings } from "@/hooks/use-organization-settings"
 import { useBookingMutations } from "@/hooks/use-bookings"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchServices } from "@/lib/api/services"
+import { fetchEmployeeServiceTypes } from "@/lib/api/employees-schedule"
+import type { EmployeeServiceType } from "@/lib/types/employee"
 import { ApiError } from "@/lib/api"
 import { bookingPosPayloadSchema } from "@/lib/schemas/booking.schema"
 
@@ -56,8 +58,6 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     selectService,
     selectEmployee,
     selectDeliveryType,
-    selectDuration,
-    skipDuration,
     selectDate,
     selectTime,
     setPayAtClinic,
@@ -66,6 +66,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
 
   const handleSelectDeliveryType = (deliveryType: string) => {
     selectDeliveryType(deliveryType as "in_person" | "online")
+    setOpenSection("datetime")
   }
 
   // Auto-advance wrapped handlers
@@ -73,12 +74,21 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   const handleDepartmentSelect = (id: string, name: string) => { selectDepartment(id, name); setOpenSection("category") }
 
   /**
-   * When a category (clinic) is selected, fetch its active services.
-   * If exactly one service exists, auto-select it and skip to the employee
-   * step. Otherwise advance to the service selection step as usual.
+   * When a category (clinic) is selected, branch on `category.bookingMode`:
+   *   - DIRECT   → the hidden internal service is auto-selected and the
+   *                wizard skips straight to the employee step.
+   *   - SERVICES → the user always picks a service, even when the category
+   *                has only one.
+   *   - null (legacy clinics with no `bookingMode`) → behave like SERVICES.
+   * If a DIRECT category has no hidden service in the cache (data drift),
+   * we fall back to the service step rather than blocking the wizard.
    */
-  const handleCategorySelect = useCallback(async (id: string, name: string) => {
-    const filters = { categoryId: id, isActive: true, perPage: 100 }
+  const handleCategorySelect = useCallback(async (
+    id: string,
+    name: string,
+    bookingMode: "DIRECT" | "SERVICES" | null,
+  ) => {
+    const filters = { categoryId: id, isActive: true, perPage: 100, includeHidden: true }
     const qKey = queryKeys.services.list(filters)
 
     // Prefer cached data; fall back to a network fetch (TanStack Query dedupes).
@@ -89,36 +99,35 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
       staleTime: 5 * 60 * 1000,
     })
 
-    const items = data?.items ?? []
-    if (items.length === 1) {
-      const svc = items[0]
-      const svcName = locale === "ar" ? svc.nameAr : (svc.nameEn ?? svc.nameAr)
-      selectCategory(id, name, { serviceId: svc.id, serviceName: svcName })
-      setOpenSection("employee")
-    } else {
-      selectCategory(id, name)
-      setOpenSection("service")
+    if (bookingMode === "DIRECT") {
+      const hidden = (data?.items ?? []).find((s) => s.isHidden)
+      if (hidden) {
+        const svcName = locale === "ar" ? hidden.nameAr : (hidden.nameEn ?? hidden.nameAr)
+        selectCategory(id, name, "DIRECT", { serviceId: hidden.id, serviceName: svcName })
+        setOpenSection("employee")
+        return
+      }
+      // Defensive: DIRECT clinic without a hidden service — fall back to the
+      // service step so the operator can still book rather than getting stuck.
+      // (Backend should always seed a hidden service for DIRECT clinics.)
     }
+
+    selectCategory(id, name, bookingMode)
+    setOpenSection("service")
   }, [queryClient, selectCategory, locale])
 
   const handleServiceSelect = (id: string, name: string) => { selectService(id, name); setOpenSection("employee") }
   const handleEmployeeSelect = (id: string, name: string) => { selectEmployee(id, name); setOpenSection("typeDuration") }
-  const handleDurationSelect = (optId: string, label: string, price: number) => { selectDuration(optId, label, price); setOpenSection("datetime") }
-  const handleSkipDuration = () => { skipDuration(); setOpenSection("datetime") }
 
   /**
    * True when the service was pre-selected automatically because the chosen
-   * category has exactly one active service. In this case the service step
-   * is hidden from the wizard — changing the category resets it.
+   * category is a DIRECT clinic. In this case the service step is hidden from
+   * the wizard — changing the category clears `serviceId` via `selectCategory`.
    */
-  const isServiceAutoSelected = useMemo(() => {
-    if (!state.categoryId || !state.serviceId) return false
-    const filters = { categoryId: state.categoryId, isActive: true, perPage: 100 }
-    const cached = queryClient.getQueryData<Awaited<ReturnType<typeof fetchServices>>>(
-      queryKeys.services.list(filters),
-    )
-    return (cached?.items?.length ?? 0) === 1
-  }, [queryClient, state.categoryId, state.serviceId])
+  const isServiceAutoSelected = useMemo(
+    () => state.categoryBookingMode === "DIRECT" && !!state.serviceId,
+    [state.categoryBookingMode, state.serviceId],
+  )
 
   // Summary strings for collapsed chips
   const deliveryTypeLabels: Record<string, string> = {
@@ -132,7 +141,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     service: state.serviceName,
     employee: state.employeeName,
     typeDuration: state.deliveryType
-      ? [deliveryTypeLabels[state.deliveryType], state.durationLabel].filter(Boolean).join(" · ")
+      ? deliveryTypeLabels[state.deliveryType] ?? null
       : null,
     datetime: state.date
       ? state.date + (state.startTime ? ` · ${state.startTime}` : "")
@@ -142,28 +151,23 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   const canShowTypeDuration = Boolean(state.serviceId && state.employeeId)
   const canShowDatetime = Boolean(state.serviceId && state.employeeId && state.deliveryType)
 
-  // Selected service price (halalas) for the summary. Reuses the same query
-  // StepService issues (same filters → same cache key), so TanStack Query
-  // serves it from cache — no extra fetch.
-  const serviceFilters = { isActive: true, perPage: 100, categoryId: state.categoryId ?? "" }
-  const { data: servicesData } = useQuery({
-    queryKey: queryKeys.services.list(serviceFilters),
-    queryFn: () => fetchServices(serviceFilters),
-    enabled: !!state.categoryId,
-    staleTime: 5 * 60 * 1000,
+  // Selected service price (halalas) for the summary. Reuses the same cache
+  // key as StepTypeDuration so TanStack Query serves it from cache — no extra
+  // fetch. EmployeeServiceType.price reflects per-employee overrides and is
+  // correct for DIRECT clinics where Service.price is always 0.
+  const { data: serviceTypes = [] } = useQuery<EmployeeServiceType[]>({
+    queryKey: queryKeys.employees.serviceTypes(state.employeeId ?? "", state.serviceId ?? ""),
+    queryFn: () => fetchEmployeeServiceTypes(state.employeeId!, state.serviceId!),
+    enabled: !!state.employeeId && !!state.serviceId,
+    staleTime: 0,
   })
   const servicePriceHalalas = useMemo(() => {
-    if (!state.serviceId) return null
-    const svc = servicesData?.items.find((s) => s.id === state.serviceId)
-    return svc ? Number(svc.price) : null
-  }, [servicesData, state.serviceId])
-
-  // Use the selected duration's price when it is set and non-zero; fall back to
-  // the base service price so the summary always shows the correct amount.
-  const summaryPriceHalalas =
-    state.durationPrice && state.durationPrice > 0
-      ? state.durationPrice
-      : servicePriceHalalas
+    if (!state.deliveryType || serviceTypes.length === 0) return null
+    const match = serviceTypes.find(
+      (st) => st.deliveryType.toLowerCase() === state.deliveryType?.toLowerCase() && st.isActive,
+    )
+    return match?.price != null ? Number(match.price) : null
+  }, [serviceTypes, state.deliveryType])
 
   const handleSubmit = async () => {
     if (!state.clientId || !state.serviceId || !state.employeeId || !state.deliveryType || !state.date || !state.startTime)
@@ -174,7 +178,6 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
       serviceId: state.serviceId,
       type: "individual" as const,
       deliveryType: state.deliveryType.toLowerCase() as "in_person" | "online",
-      durationOptionId: state.durationOptionId ?? undefined,
       date: state.date,
       startTime: state.startTime,
       payAtClinic: state.payAtClinic,
@@ -278,7 +281,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
             </CollapsibleSection>
           )}
 
-          {/* 5. Employee */}
+          {/* Employee */}
           <CollapsibleSection
             id="employee"
             label={t("bookings.pos.section.employee")}
@@ -290,7 +293,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
             <StepEmployee serviceId={state.serviceId ?? ""} onSelect={handleEmployeeSelect} />
           </CollapsibleSection>
 
-          {/* 4. Type & Duration */}
+          {/* Type & Duration */}
           <CollapsibleSection
             id="typeDuration"
             label={t("bookings.pos.section.typeDuration")}
@@ -304,17 +307,14 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
                 employeeId={state.employeeId!}
                 serviceId={state.serviceId!}
                 selectedType={state.deliveryType}
-                selectedDurationOptionId={state.durationOptionId}
                 onSelectType={handleSelectDeliveryType}
-                onSelectDuration={handleDurationSelect}
-                onSkipDuration={handleSkipDuration}
               />
             ) : (
               <PosSectionHint hint={t("bookings.pos.hint.needService")} />
             )}
           </CollapsibleSection>
 
-          {/* 5. Date & Time */}
+          {/* Date & Time */}
           <CollapsibleSection
             id="datetime"
             label={t("bookings.pos.section.datetime")}
@@ -328,7 +328,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
                 employeeId={state.employeeId!}
                 serviceId={state.serviceId!}
                 deliveryType={state.deliveryType!}
-                durationOptionId={state.durationOptionId}
+                durationOptionId={null}
                 selectedDate={state.date}
                 selectedTime={state.startTime}
                 onSelectDate={selectDate}
@@ -348,10 +348,10 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
             serviceName={state.serviceName}
             employeeName={state.employeeName}
             type={state.deliveryType}
-            durationLabel={state.durationLabel}
+            durationLabel={null}
             date={state.date}
             startTime={state.startTime}
-            servicePriceHalalas={summaryPriceHalalas}
+            servicePriceHalalas={servicePriceHalalas}
             payAtClinic={state.payAtClinic}
             couponCode={state.couponCode}
             submitting={createMut.isPending}

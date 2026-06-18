@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from '../../../infrastructure/database';
+import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
 import { UpdateCategoryHandler } from './update-category.handler';
 
@@ -13,6 +13,9 @@ describe('UpdateCategoryHandler', () => {
         UpdateCategoryHandler,
         { provide: PrismaService, useValue: {
     serviceCategory: { findFirst: jest.fn(), update: jest.fn() }
+        } },
+        { provide: RlsTransactionService, useValue: {
+    withTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn({ serviceCategory: { update: jest.fn().mockResolvedValue({ id: 'test', bookingMode: 'SERVICES' }) }, service: { findFirst: jest.fn(), create: jest.fn() } }))
         } },
         { provide: CacheService, useValue: { getOrSet: (_k: string, l: () => Promise<unknown>) => l(), invalidatePrefix: jest.fn() } },
       ],

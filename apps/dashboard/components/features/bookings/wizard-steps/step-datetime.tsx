@@ -51,7 +51,6 @@ export function StepDatetime({
     serviceId,
     deliveryType,
     date: selectedDate ?? '',
-    durationOptionId: durationOptionId ?? '',
   })
 
   const { availableDates, loading: daysLoading, enabled: daysEnabled } = useAvailableDays({

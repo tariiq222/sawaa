@@ -71,7 +71,7 @@ export class ListDepartmentsHandler {
       // service. The wizard disables a department when this is 0.
       const items = rawItems.map((dept) => {
         const bookableCategoriesCount = dept.categories.filter(
-          (c) => c._count.services > 0,
+          (c) => c.bookingMode === 'DIRECT' || c._count.services > 0,
         ).length;
         const categories = dept.categories.map(({ _count, ...rest }) => rest);
         return { ...dept, categories, bookableCategoriesCount };

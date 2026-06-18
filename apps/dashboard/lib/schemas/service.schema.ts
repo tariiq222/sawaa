@@ -19,6 +19,7 @@ export const createCategorySchema = z.object({
     .union([z.string().uuid(), z.literal("")])
     .optional()
     .transform((v) => (v ? v : undefined)),
+  bookingMode: z.enum(["DIRECT", "SERVICES"]).default("DIRECT"),
 })
 
 export type CreateCategoryFormData = z.infer<typeof createCategorySchema>
@@ -33,6 +34,7 @@ export const editCategorySchema = z.object({
   departmentId: z
     .union([z.string().uuid(), z.literal(""), z.null()])
     .optional(),
+  bookingMode: z.enum(["DIRECT", "SERVICES"]).optional(),
 })
 
 export type EditCategoryFormData = z.infer<typeof editCategorySchema>

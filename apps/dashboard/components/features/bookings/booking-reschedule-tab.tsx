@@ -48,7 +48,6 @@ export function BookingRescheduleTab({ booking, onSuccess }: BookingRescheduleTa
     serviceId:        booking.serviceId,
     deliveryType:     booking.deliveryType ?? "",
     date:             watchedDate,
-    durationOptionId: ((booking as unknown as Record<string, unknown>).durationOptionId as string) ?? "",
   })
 
   const onSubmit = form.handleSubmit(async (data) => {

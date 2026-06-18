@@ -9,15 +9,12 @@ describe("useProgressiveDisclosure", () => {
         employeeId: "",
         serviceId: "svc-1",
         type: "in_person",
-        durationOptionId: "d-1",
         date: "2026-06-01",
         startTime: "09:00",
-        hasDurationOptions: true,
       }),
     )
     expect(result.current.showService).toBe(false)
     expect(result.current.showType).toBe(false)
-    expect(result.current.showDuration).toBe(false)
     expect(result.current.showDatetime).toBe(false)
     expect(result.current.showTime).toBe(false)
     expect(result.current.showPayAtClinic).toBe(false)
@@ -30,10 +27,8 @@ describe("useProgressiveDisclosure", () => {
         employeeId: "emp-1",
         serviceId: "",
         type: "",
-        durationOptionId: "",
         date: "",
         startTime: "",
-        hasDurationOptions: false,
       }),
     )
     expect(result.current.showService).toBe(true)
@@ -47,60 +42,24 @@ describe("useProgressiveDisclosure", () => {
         employeeId: "emp-1",
         serviceId: "svc-1",
         type: "",
-        durationOptionId: "",
         date: "",
         startTime: "",
-        hasDurationOptions: false,
       }),
     )
     expect(result.current.showService).toBe(true)
     expect(result.current.showType).toBe(true)
-    expect(result.current.showDuration).toBe(false)
+    expect(result.current.showDatetime).toBe(false)
     expect(result.current.canSubmit).toBe(false)
   })
 
-  it("shows duration step when type is set and hasDurationOptions is true", () => {
+  it("shows datetime directly when type is set (no duration gate)", () => {
     const { result } = renderHook(() =>
       useProgressiveDisclosure({
         employeeId: "emp-1",
         serviceId: "svc-1",
         type: "in_person",
-        durationOptionId: "",
         date: "",
         startTime: "",
-        hasDurationOptions: true,
-      }),
-    )
-    expect(result.current.showDuration).toBe(true)
-    expect(result.current.showDatetime).toBe(false)
-  })
-
-  it("skips duration step when hasDurationOptions is false", () => {
-    const { result } = renderHook(() =>
-      useProgressiveDisclosure({
-        employeeId: "emp-1",
-        serviceId: "svc-1",
-        type: "in_person",
-        durationOptionId: "",
-        date: "",
-        startTime: "",
-        hasDurationOptions: false,
-      }),
-    )
-    expect(result.current.showDuration).toBe(false)
-    expect(result.current.showDatetime).toBe(true)
-  })
-
-  it("shows datetime when type is set and durationOptionId is selected", () => {
-    const { result } = renderHook(() =>
-      useProgressiveDisclosure({
-        employeeId: "emp-1",
-        serviceId: "svc-1",
-        type: "in_person",
-        durationOptionId: "d-1",
-        date: "",
-        startTime: "",
-        hasDurationOptions: true,
       }),
     )
     expect(result.current.showDatetime).toBe(true)
@@ -113,10 +72,8 @@ describe("useProgressiveDisclosure", () => {
         employeeId: "emp-1",
         serviceId: "svc-1",
         type: "in_person",
-        durationOptionId: "d-1",
         date: "2026-06-01",
         startTime: "",
-        hasDurationOptions: true,
       }),
     )
     expect(result.current.showTime).toBe(true)
@@ -129,43 +86,53 @@ describe("useProgressiveDisclosure", () => {
         employeeId: "emp-1",
         serviceId: "svc-1",
         type: "in_person",
-        durationOptionId: "d-1",
         date: "2026-06-01",
         startTime: "09:00",
-        hasDurationOptions: true,
       }),
     )
     expect(result.current.showPayAtClinic).toBe(true)
     expect(result.current.canSubmit).toBe(true)
   })
 
-  it("canSubmit is true when all required fields are set with no duration options", () => {
+  it("canSubmit is false when startTime is missing", () => {
     const { result } = renderHook(() =>
       useProgressiveDisclosure({
         employeeId: "emp-1",
         serviceId: "svc-1",
         type: "in_person",
-        durationOptionId: "",
         date: "2026-06-01",
+        startTime: "",
+      }),
+    )
+    expect(result.current.canSubmit).toBe(false)
+  })
+
+  it("canSubmit is true when all required fields are filled", () => {
+    const { result } = renderHook(() =>
+      useProgressiveDisclosure({
+        employeeId: "emp-1",
+        serviceId: "svc-1",
+        type: "in_person",
+        date: "2026-03-17",
         startTime: "09:00",
-        hasDurationOptions: false,
       }),
     )
     expect(result.current.canSubmit).toBe(true)
   })
 
-  it("canSubmit is false when durationOptionId is missing even with all other fields", () => {
+  it("when employee cleared — all downstream hidden", () => {
     const { result } = renderHook(() =>
       useProgressiveDisclosure({
-        employeeId: "emp-1",
-        serviceId: "svc-1",
+        employeeId: "",
+        serviceId: "s1",
         type: "in_person",
-        durationOptionId: "",
-        date: "2026-06-01",
+        date: "2026-03-17",
         startTime: "09:00",
-        hasDurationOptions: true,
-      }),
+      })
     )
+    expect(result.current.showService).toBe(false)
+    expect(result.current.showType).toBe(false)
+    expect(result.current.showDatetime).toBe(false)
     expect(result.current.canSubmit).toBe(false)
   })
 })

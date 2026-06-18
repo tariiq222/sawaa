@@ -191,6 +191,7 @@ const makeCompleteState = (overrides = {}) => ({
     departmentName: "Family",
     categoryId: "cat-1",
     categoryName: "Marriage Clinic",
+    categoryBookingMode: "SERVICES" as const,
     serviceId: "svc-1",
     serviceName: "Counseling",
     employeeId: "emp-1",

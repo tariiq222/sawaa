@@ -157,11 +157,12 @@ model EmployeeBranch {
 }
 
 model EmployeeService {
-  id         String   @id @default(uuid())
-  employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  serviceId  String
-  isActive   Boolean  @default(true)
+  id            String   @id @default(uuid())
+  employeeId    String
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  serviceId     String
+  isActive      Boolean  @default(true)
+  bufferMinutes Int      @default(0)
 
   // NOTE: (employeeId, serviceId) unique constraint already exists — no migration needed.
   @@unique([employeeId, serviceId])

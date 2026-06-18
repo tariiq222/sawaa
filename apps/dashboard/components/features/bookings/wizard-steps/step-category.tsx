@@ -25,7 +25,11 @@ function StepCategorySkeleton() {
 
 interface StepCategoryProps {
   departmentId: string
-  onSelect: (categoryId: string, categoryName: string) => void
+  onSelect: (
+    categoryId: string,
+    categoryName: string,
+    bookingMode: "DIRECT" | "SERVICES" | null,
+  ) => void
 }
 
 export function StepCategory({ departmentId, onSelect }: StepCategoryProps) {
@@ -48,14 +52,21 @@ export function StepCategory({ departmentId, onSelect }: StepCategoryProps) {
       {categories.map((category) => {
         const name =
           locale === "ar" ? category.nameAr : (category.nameEn || category.nameAr)
-        // _count.services now counts only bookable services (backend-narrowed).
+        // Legacy categories (no bookingMode on the response) are treated as
+        // SERVICES — the wizard always shows the service step.
+        const bookingMode: "DIRECT" | "SERVICES" | null =
+          category.bookingMode ?? null
+
+        // _count.services counts only bookable (non-hidden) services.
+        // DIRECT categories always have a single hidden internal service, so
+        // their count is 0 — but they are never "empty" in the booking sense.
         const count = category._count?.services
-        const isEmpty = count === 0
+        const isEmpty = bookingMode !== "DIRECT" && count === 0
 
         return (
           <WizardCard
             key={category.id}
-            onClick={() => onSelect(category.id, name)}
+            onClick={() => onSelect(category.id, name, bookingMode)}
             disabled={isEmpty}
             disabledReason={t("bookings.pos.disabled.category")}
             className="px-4 py-3.5"
