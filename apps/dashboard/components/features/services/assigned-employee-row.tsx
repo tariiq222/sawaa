@@ -62,6 +62,7 @@ export function AssignedEmployeeRow({
       { serviceId, payload: patch },
       {
         onSettled: clearOptimistic,
+        onSuccess: () => toast.success(t("employees.services.inlineUpdateSuccess")),
         onError: () => toast.error(t("employees.services.inlineUpdateError")),
       },
     )
@@ -143,7 +144,10 @@ export function AssignedEmployeeRow({
         onSave={(payload: SetCustomPricingPayload) =>
           customPricingMut.mutate(
             { serviceId, payload },
-            { onError: () => toast.error(t("services.employees.customPricingSaveError")) },
+            {
+              onSuccess: () => toast.success(t("services.employees.customPricingSaved")),
+              onError: () => toast.error(t("services.employees.customPricingSaveError")),
+            },
           )
         }
       />

@@ -26,8 +26,6 @@ const mockService: Service = {
   bufferMinutes: 0,
   depositEnabled: false,
   depositPercent: null,
-  allowRecurring: false,
-  allowedRecurringPatterns: [],
   maxParticipants: 1,
   minLeadMinutes: null,
   maxAdvanceDays: null,

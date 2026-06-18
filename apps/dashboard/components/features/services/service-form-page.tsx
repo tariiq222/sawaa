@@ -114,9 +114,6 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
       bufferMinutes: service.bufferMinutes ?? undefined,
       depositEnabled: service.depositEnabled,
       depositAmount: service.depositAmount != null ? halalasToSar(service.depositAmount) : null,
-      allowRecurring: service.allowRecurring,
-      allowedRecurringPatterns: service.allowedRecurringPatterns ?? [],
-      maxRecurrences: service.maxRecurrences ?? 12,
       maxParticipants: service.maxParticipants ?? 1,
       minLeadMinutes: service.minLeadMinutes ?? null,
       maxAdvanceDays: service.maxAdvanceDays ?? null,
@@ -157,6 +154,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
         }
 
         toast.success(t("services.edit.success"))
+        return
       } else {
         const firstEnabled = bookingTypes.find((bt) => bt.enabled)
         const created = await createMut.mutateAsync({

@@ -53,10 +53,6 @@ export class CreateServiceHandler {
         // العربون
         depositEnabled: dto.depositEnabled ?? false,
         depositAmount: dto.depositAmount,
-        // التكرار
-        allowRecurring: dto.allowRecurring ?? false,
-        allowedRecurringPatterns: dto.allowedRecurringPatterns ?? [],
-        maxRecurrences: dto.maxRecurrences,
         // الجلسات الجماعية
         minParticipants: dto.minParticipants ?? 1,
         maxParticipants: dto.maxParticipants ?? 1,

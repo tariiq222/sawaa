@@ -297,23 +297,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/dashboard/bookings/recurring": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Create a recurring booking series */
-        post: operations["DashboardBookingsController_createRecurringBooking"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/dashboard/bookings/stats": {
         parameters: {
             query?: never;
@@ -2057,6 +2040,23 @@ export interface paths {
         put?: never;
         /** Upload an avatar image for an employee */
         post: operations["DashboardPeopleController_uploadAvatarEndpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/people/employees/{employeeId}/services/{serviceId}/custom-pricing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set custom pricing for an employee on a service */
+        put: operations["DashboardPeopleController_setEmployeeCustomPricingEndpoint"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5164,111 +5164,6 @@ export interface components {
              */
             startsAt: string;
         };
-        CreateRecurringBookingDto: {
-            /**
-             * @description Booking type
-             * @example INDIVIDUAL
-             */
-            bookingType?: components["schemas"]["BookingType"];
-            /**
-             * @description Branch where bookings take place
-             * @example 00000000-0000-0000-0000-000000000000
-             */
-            branchId: string;
-            /**
-             * @description Client being booked
-             * @example 00000000-0000-0000-0000-000000000000
-             */
-            clientId: string;
-            /**
-             * @description Currency code (ISO 4217)
-             * @example SAR
-             */
-            currency?: string;
-            /**
-             * @description Exact list of dates for CUSTOM frequency
-             * @example [
-             *       "2026-05-01T09:00:00.000Z",
-             *       "2026-05-15T09:00:00.000Z"
-             *     ]
-             */
-            customDates?: string[];
-            /**
-             * @description Delivery channel (IN_PERSON or ONLINE)
-             * @example IN_PERSON
-             */
-            deliveryType?: components["schemas"]["DeliveryType"];
-            /**
-             * @description Duration of each session in minutes
-             * @example 60
-             */
-            durationMins: number;
-            /**
-             * @description Duration option to use for price resolution (3-tier: employee override → duration option → service base). When provided, enables employee-level price overrides.
-             * @example 00000000-0000-0000-0000-000000000001
-             */
-            durationOptionId?: string;
-            /**
-             * @description Employee performing the service
-             * @example 00000000-0000-0000-0000-000000000000
-             */
-            employeeId: string;
-            /**
-             * @description Expiry datetime for each booking (ISO 8601)
-             * @example 2026-05-01T12:00:00.000Z
-             */
-            expiresAt?: string;
-            /**
-             * @description Recurrence frequency
-             * @example WEEKLY
-             */
-            frequency: components["schemas"]["RecurringFrequency"];
-            /**
-             * @description Interval in days between bookings (DAILY/WEEKLY only)
-             * @example 7
-             */
-            intervalDays?: number;
-            /**
-             * @description Notes applied to each booking in the series
-             * @example Weekly follow-up
-             */
-            notes?: string;
-            /**
-             * @description Number of bookings to create (mutually exclusive with until)
-             * @example 8
-             */
-            occurrences?: number;
-            /**
-             * @description Pay at clinic (no invoice/payment generated upfront)
-             * @example true
-             */
-            payAtClinic?: boolean;
-            /**
-             * @description Ignored — price is resolved server-side via PriceResolverService (3-tier: employee override → duration option → service base). Kept for backward compatibility.
-             * @example 150
-             */
-            price?: number;
-            /**
-             * @description ISO 8601 datetime of the first occurrence
-             * @example 2026-05-01T09:00:00.000Z
-             */
-            scheduledAt: string;
-            /**
-             * @description Service to be performed
-             * @example 00000000-0000-0000-0000-000000000000
-             */
-            serviceId: string;
-            /**
-             * @description Skip conflicting slots silently instead of aborting the series
-             * @example false
-             */
-            skipConflicts?: boolean;
-            /**
-             * @description Last possible date for the series, inclusive (mutually exclusive with occurrences)
-             * @example 2026-07-01T00:00:00.000Z
-             */
-            until?: string;
-        };
         CreateRoleDto: {
             /**
              * @description Display name for the custom role (min 2 characters)
@@ -5277,19 +5172,6 @@ export interface components {
             name: string;
         };
         CreateServiceDto: {
-            /**
-             * @description Whether recurring bookings are allowed for this service
-             * @default false
-             * @example false
-             */
-            allowRecurring: boolean;
-            /**
-             * @description Allowed recurrence patterns when allowRecurring is true
-             * @example [
-             *       "WEEKLY"
-             *     ]
-             */
-            allowedRecurringPatterns?: ("DAILY" | "WEEKLY" | "BIWEEKLY" | "MONTHLY")[];
             /**
              * @description Buffer in minutes between consecutive bookings
              * @default 0
@@ -5369,11 +5251,6 @@ export interface components {
              */
             maxParticipants: number;
             /**
-             * @description Maximum number of occurrences for a recurring booking
-             * @example 12
-             */
-            maxRecurrences?: number;
-            /**
              * @description Minimum lead time before booking, in minutes
              * @example 60
              */
@@ -5433,6 +5310,23 @@ export interface components {
              * @example RECEPTIONIST
              */
             role: components["schemas"]["UserRole"];
+        };
+        CustomPricingTypeDto: {
+            /**
+             * @description Delivery type (IN_PERSON or ONLINE)
+             * @example IN_PERSON
+             */
+            deliveryType: string;
+            /**
+             * @description Duration in minutes (≥ 1)
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * @description Price in halalas (integer, ≥ 0)
+             * @example 30000
+             */
+            price: number;
         };
         /**
          * @description Delivery channel for this service
@@ -6378,11 +6272,6 @@ export interface components {
              */
             title?: Record<string, never> | null;
         };
-        /**
-         * @description Recurrence frequency
-         * @enum {string}
-         */
-        RecurringFrequency: "DAILY" | "WEEKLY" | "CUSTOM";
         RefreshTokenDto: {
             /**
              * @description Client refresh token (optional when sent as httpOnly cookie)
@@ -6620,6 +6509,15 @@ export interface components {
         SetEmployeeBreaksDto: {
             /** @description Break windows to set */
             breaks: components["schemas"]["BreakWindowDto"][];
+        };
+        SetEmployeeCustomPricingDto: {
+            /**
+             * @description Enable custom pricing for this employee
+             * @example true
+             */
+            enabled: boolean;
+            /** @description Pricing entries per delivery type */
+            types: components["schemas"]["CustomPricingTypeDto"][];
         };
         SetEmployeeServiceOptionsDto: {
             /** @description Employee service option overrides (at least one required) */
@@ -7312,13 +7210,6 @@ export interface components {
         };
         UpdateServiceDto: {
             /**
-             * @description Whether recurring bookings are allowed
-             * @example false
-             */
-            allowRecurring?: boolean;
-            /** @description Allowed recurring patterns */
-            allowedRecurringPatterns?: ("DAILY" | "WEEKLY" | "BIWEEKLY" | "MONTHLY")[];
-            /**
              * @description Buffer time in minutes after the service
              * @example 10
              */
@@ -7403,11 +7294,6 @@ export interface components {
              * @example 1
              */
             maxParticipants?: number;
-            /**
-             * @description Maximum number of recurrences
-             * @example 12
-             */
-            maxRecurrences?: number;
             /**
              * @description Minimum lead time in minutes before booking
              * @example 60
@@ -9214,75 +9100,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardBookingsController_createRecurringBooking: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateRecurringBookingDto"];
-            };
-        };
-        responses: {
-            /** @description Recurring booking series created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        id?: string;
-                        /** Format: uuid */
-                        recurringGroupId?: string | null;
-                        /** Format: date-time */
-                        scheduledAt?: string;
-                        /** @example PENDING */
-                        status?: string;
-                    }[];
-                };
             };
             /** @description Validation failed */
             400: {
@@ -18995,6 +18812,97 @@ export interface operations {
                 };
             };
             /** @description Employee not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardPeopleController_setEmployeeCustomPricingEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Employee UUID */
+                employeeId: string;
+                /** @description Service UUID */
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetEmployeeCustomPricingDto"];
+            };
+        };
+        responses: {
+            /** @description Custom pricing updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example true */
+                        hasCustomPricing?: boolean;
+                        serviceTypes?: {
+                            /** @example 50 */
+                            baseDurationMins?: number;
+                            /** @example 25000 */
+                            basePrice?: number;
+                            /** @example IN_PERSON */
+                            deliveryType?: string;
+                            /** @example 60 */
+                            durationMins?: number;
+                            /** @example link-uuid:IN_PERSON */
+                            id?: string;
+                            /** @example true */
+                            isCustom?: boolean;
+                            /** @example 30000 */
+                            price?: number;
+                        }[];
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Employee-service assignment not found */
             404: {
                 headers: {
                     [name: string]: unknown;

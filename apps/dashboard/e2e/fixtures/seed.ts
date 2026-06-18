@@ -95,9 +95,6 @@ export interface SeedServiceInput {
   durationMins?: number
   price?: number
   currency?: string
-  allowRecurring?: boolean
-  allowedRecurringPatterns?: string[]
-  maxRecurrences?: number
   minParticipants?: number
   maxParticipants?: number
   reserveWithoutPayment?: boolean
@@ -138,23 +135,6 @@ export interface CreateDashboardBookingInput {
   deliveryType?: "IN_PERSON" | "ONLINE"
   payAtClinic?: boolean
   notes?: string
-}
-
-export interface CreateRecurringDashboardBookingInput {
-  branchId: string
-  clientId: string
-  employeeId: string
-  serviceId: string
-  scheduledAt: string
-  durationMins: number
-  price: number
-  frequency: "DAILY" | "WEEKLY" | "CUSTOM"
-  occurrences?: number
-  intervalDays?: number
-  bookingType?: "INDIVIDUAL" | "WALK_IN" | "GROUP"
-  deliveryType?: "IN_PERSON" | "ONLINE"
-  notes?: string
-  skipConflicts?: boolean
 }
 
 // ─── Seeded entity shapes ────────────────────────────────────────────────
@@ -469,9 +449,6 @@ export async function seedService(
     currency: overrides.currency ?? "SAR",
     isActive: true,
     categoryId,
-    allowRecurring: overrides.allowRecurring,
-    allowedRecurringPatterns: overrides.allowedRecurringPatterns,
-    maxRecurrences: overrides.maxRecurrences,
     minParticipants: overrides.minParticipants,
     maxParticipants: overrides.maxParticipants,
     reserveWithoutPayment: overrides.reserveWithoutPayment,
@@ -891,46 +868,6 @@ export async function createDashboardBooking(
     scheduledAt: created.scheduledAt,
     status: created.status,
   }
-}
-
-export async function createRecurringDashboardBookings(
-  token: string,
-  input: CreateRecurringDashboardBookingInput
-): Promise<SeededBooking[]> {
-  const created = await apiPost<
-    Array<{
-      id: string
-      clientId: string
-      employeeId: string
-      serviceId: string
-      scheduledAt: string
-      status: string
-    }>
-  >("/dashboard/bookings/recurring", token, {
-    branchId: input.branchId,
-    clientId: input.clientId,
-    employeeId: input.employeeId,
-    serviceId: input.serviceId,
-    scheduledAt: input.scheduledAt,
-    durationMins: input.durationMins,
-    price: input.price,
-    frequency: input.frequency,
-    occurrences: input.occurrences,
-    intervalDays: input.intervalDays,
-    bookingType: input.bookingType ?? "INDIVIDUAL",
-    deliveryType: input.deliveryType ?? "IN_PERSON",
-    notes: input.notes,
-    skipConflicts: input.skipConflicts,
-  })
-
-  return created.map((booking) => ({
-    id: booking.id,
-    clientId: booking.clientId,
-    employeeId: booking.employeeId,
-    serviceId: booking.serviceId,
-    scheduledAt: booking.scheduledAt,
-    status: booking.status,
-  }))
 }
 
 export async function cleanupBooking(id: string, token: string): Promise<void> {

@@ -216,6 +216,7 @@ export const enEmployees: Record<string, string> = {
   "employees.services.inlineBufferAria": "Edit buffer minutes",
   "employees.services.inlineActiveAria": "Toggle service active",
   "employees.services.inlineUpdateError": "Couldn't save",
+  "employees.services.inlineUpdateSuccess": "Saved",
 
   // — Status Dialog —
   "employees.action.deactivate": "Deactivate",

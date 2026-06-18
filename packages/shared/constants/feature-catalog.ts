@@ -19,13 +19,6 @@ export type FeatureCatalogEntry = {
 };
 
 export const FEATURE_CATALOG: Record<FeatureKey, FeatureCatalogEntry> = {
-  [FeatureKey.RECURRING_BOOKINGS]: {
-    key: FeatureKey.RECURRING_BOOKINGS,
-    kind: "boolean", tier: "PRO", group: "Booking & Scheduling",
-    nameAr: "الحجوزات المتكررة", nameEn: "Recurring Bookings",
-    descAr: "إنشاء سلاسل مواعيد أسبوعية أو شهرية بنقرة واحدة",
-    descEn: "Create weekly or monthly appointment series in one click",
-  },
   [FeatureKey.GROUP_SESSIONS]: {
     key: FeatureKey.GROUP_SESSIONS,
     kind: "boolean", tier: "PRO", group: "Booking & Scheduling",

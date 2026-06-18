@@ -216,6 +216,7 @@ export const arEmployees: Record<string, string> = {
   "employees.services.inlineBufferAria": "تعديل دقائق الفاصل",
   "employees.services.inlineActiveAria": "تبديل حالة الخدمة",
   "employees.services.inlineUpdateError": "تعذّر الحفظ",
+  "employees.services.inlineUpdateSuccess": "تم الحفظ",
 
   // — Status Dialog —
   "employees.action.deactivate": "تعطيل",

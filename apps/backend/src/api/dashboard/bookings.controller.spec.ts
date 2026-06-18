@@ -3,7 +3,6 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { DashboardBookingsController } from './bookings.controller';
 import { CreateBookingHandler } from '../../modules/bookings/create-booking/create-booking.handler';
-import { CreateRecurringBookingHandler } from '../../modules/bookings/create-recurring-booking/create-recurring-booking.handler';
 import { ListBookingsHandler } from '../../modules/bookings/list-bookings/list-bookings.handler';
 import { BookingsStatsHandler } from '../../modules/bookings/bookings-stats/bookings-stats.handler';
 import { GetBookingHandler } from '../../modules/bookings/get-booking/get-booking.handler';
@@ -27,7 +26,6 @@ describe('DashboardBookingsController (e2e)', () => {
   let app: INestApplication;
 
   const mockCreateBooking = { execute: jest.fn() };
-  const mockCreateRecurring = { execute: jest.fn() };
   const mockListBookings = { execute: jest.fn() };
   const mockStats = { execute: jest.fn() };
   const mockGetBooking = { execute: jest.fn() };
@@ -50,7 +48,6 @@ describe('DashboardBookingsController (e2e)', () => {
       controllers: [DashboardBookingsController],
       providers: [
         { provide: CreateBookingHandler, useValue: mockCreateBooking },
-        { provide: CreateRecurringBookingHandler, useValue: mockCreateRecurring },
         { provide: ListBookingsHandler, useValue: mockListBookings },
         { provide: BookingsStatsHandler, useValue: mockStats },
         { provide: GetBookingHandler, useValue: mockGetBooking },

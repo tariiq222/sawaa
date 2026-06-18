@@ -8,7 +8,6 @@ const cache = {
   getOrSet: jest.fn((_k: string, loader: () => Promise<unknown>) => loader()),
   invalidatePrefix: jest.fn(),
 } as never;
-import { RecurringPatternDto } from './create-service.dto';
 import { UpdateServiceHandler } from './update-service.handler';
 import { ListServicesHandler } from './list-services.handler';
 import { GetServiceHandler } from './get-service.handler';
@@ -40,9 +39,6 @@ const mockService = {
   maxAdvanceDays: null,
   depositEnabled: false,
   depositAmount: null,
-  allowRecurring: false,
-  allowedRecurringPatterns: [],
-  maxRecurrences: null,
   minParticipants: 1,
   maxParticipants: 1,
   reserveWithoutPayment: false,
@@ -134,16 +130,6 @@ describe('CreateServiceHandler', () => {
     const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache);
     const result = await handler.execute({
       nameAr: 'يوغا جماعية', nameEn: 'Group yoga', categoryId: 'cat-1', durationMins: 60, price: 100, minParticipants: 3, maxParticipants: 10, reserveWithoutPayment: true,
-    });
-    expect(result.id).toBe('svc-1');
-  });
-
-  it('creates recurring service successfully', async () => {
-    const prisma = buildPrisma();
-    const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache);
-    const result = await handler.execute({
-      nameAr: 'علاج أسبوعي', nameEn: 'Weekly therapy', categoryId: 'cat-1', durationMins: 45, price: 200, allowRecurring: true,
-      allowedRecurringPatterns: [RecurringPatternDto.WEEKLY, RecurringPatternDto.BIWEEKLY], maxRecurrences: 12,
     });
     expect(result.id).toBe('svc-1');
   });

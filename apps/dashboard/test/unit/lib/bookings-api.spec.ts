@@ -20,7 +20,6 @@ import {
   markNoShow,
   checkInBooking,
   adminCancelBooking,
-  createRecurringBooking,
 } from "@/lib/api/bookings"
 
 describe("bookings api", () => {
@@ -105,11 +104,4 @@ describe("bookings api", () => {
     await adminCancelBooking("bk-1", {} as Parameters<typeof adminCancelBooking>[1])
     expect(patchMock).toHaveBeenCalledWith("/dashboard/bookings/bk-1/cancel", expect.anything())
   })
-
-  it("createRecurringBooking posts to /dashboard/bookings/recurring", async () => {
-    postMock.mockResolvedValueOnce([])
-    await createRecurringBooking({} as Parameters<typeof createRecurringBooking>[0])
-    expect(postMock).toHaveBeenCalledWith("/dashboard/bookings/recurring", expect.anything())
-  })
-
 })

@@ -46,12 +46,6 @@ enum CancellationReason {
   OTHER
 }
 
-enum RecurringFrequency {
-  DAILY
-  WEEKLY
-  CUSTOM
-}
-
 enum ZoomMeetingStatus {
   PENDING
   CREATED
@@ -91,8 +85,6 @@ model Booking {
   durationOptionId     String? // cross-BC ref to ServiceDurationOption — plain string, no FK
   groupSessionId       String?
   groupSession         GroupSession?       @relation(fields: [groupSessionId], references: [id], onDelete: SetNull)
-  recurringGroupId     String?
-  recurringPattern     RecurringFrequency?
   bundleId             String?
   bundleGroupId        String?
   payAtClinic          Boolean             @default(false)
@@ -136,7 +128,6 @@ model Booking {
   @@index([employeeId, status, endsAt])
   @@index([branchId, scheduledAt])
   @@index([serviceId, scheduledAt])
-  @@index([recurringGroupId])
   @@index([bundleGroupId])
 }
 

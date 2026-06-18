@@ -57,7 +57,9 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
     mode === "edit" && categoryId ? allCategories?.find((c) => c.id === categoryId) : undefined
 
   const form = useForm<EditCategoryFormData>({
-    resolver: zodResolver(mode === "edit" ? editCategorySchema : createCategorySchema) as Resolver<EditCategoryFormData>,
+    resolver: zodResolver(
+      (mode === "edit" ? editCategorySchema : createCategorySchema) as typeof editCategorySchema,
+    ) as Resolver<EditCategoryFormData>,
     defaultValues: { nameAr: "", nameEn: "", sortOrder: undefined, isActive: true, departmentId: "", bookingMode: "DIRECT" as const },
   })
   const { register, handleSubmit, control, reset, formState: { errors } } = form

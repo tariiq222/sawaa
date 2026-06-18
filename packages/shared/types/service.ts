@@ -26,9 +26,6 @@ export interface Service {
   bufferMinutes: number;
   depositEnabled: boolean;
   depositPercent: number | null;
-  allowRecurring: boolean;
-  allowedRecurringPatterns: string[];
-  maxRecurrences: number | null;
   maxParticipants: number;
   minLeadMinutes: number | null;
   maxAdvanceDays: number | null;

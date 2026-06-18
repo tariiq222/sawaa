@@ -104,10 +104,6 @@ export class UpdateServiceHandler {
         // العربون
         depositEnabled: dto.depositEnabled,
         depositAmount: dto.depositAmount,
-        // التكرار
-        allowRecurring: dto.allowRecurring,
-        allowedRecurringPatterns: dto.allowedRecurringPatterns,
-        maxRecurrences: dto.maxRecurrences,
         // الجلسات الجماعية
         minParticipants: dto.minParticipants,
         maxParticipants: dto.maxParticipants,

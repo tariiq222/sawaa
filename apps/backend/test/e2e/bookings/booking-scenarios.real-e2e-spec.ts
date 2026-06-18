@@ -185,13 +185,6 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 		return res;
 	};
 
-	const createRecurring = async (body: Record<string, unknown>) => {
-		const res = await withAuth(
-			api().post("/api/v1/dashboard/bookings/recurring"),
-		).send(body);
-		return res;
-	};
-
 	// ── Setup ─────────────────────────────────────────────────────────────────
 
 	beforeAll(async () => {
@@ -1373,10 +1366,10 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 	});
 
 	// ═══════════════════════════════════════════════════════════════════════════
-	// SCENARIOS 28–30: Snapshot, Recurring, Manual Complete
+	// SCENARIOS 28 & 30: Snapshot, Manual Complete
 	// ═══════════════════════════════════════════════════════════════════════════
 
-	describe("Scenarios 28–30: snapshot, recurring, manual complete", () => {
+	describe("Scenarios 28 & 30: snapshot, manual complete", () => {
 		it("Scenario 28 — Service price changes, snapshot preserves original price", async () => {
 			const scheduledAt = tomorrow(10, 0);
 			const res = await createBooking({
@@ -1406,35 +1399,6 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 				where: { id: ctx.serviceId },
 				data: { price: 30000 },
 			});
-		});
-
-		it("Scenario 29 — Recurring booking series: 6 weekly sessions", async () => {
-			const baseDate = await getFirstAvailableSlot(
-				ctx.employeeId,
-				ctx.serviceId,
-				tomorrow(),
-			);
-			const res = await createRecurring({
-				branchId: ctx.branchId,
-				clientId: ctx.clientId,
-				employeeId: ctx.employeeId,
-				serviceId: ctx.serviceId,
-				scheduledAt: baseDate.toISOString(),
-				durationMins: 60,
-				price: 300,
-				frequency: "WEEKLY",
-				occurrences: 6,
-			});
-
-			expect(res.status).toBe(201);
-			expect(res.body).toHaveLength(6);
-
-			// Verify each booking exists in DB
-			const groupId = res.body[0].recurringGroupId;
-			const bookings = await prisma.booking.findMany({
-				where: { recurringGroupId: groupId },
-			});
-			expect(bookings).toHaveLength(6);
 		});
 
 		it("Scenario 30 — Forgot to mark complete, staff completes manually later", async () => {

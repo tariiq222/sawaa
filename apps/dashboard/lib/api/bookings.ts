@@ -13,7 +13,6 @@ import type {
   ReschedulePayload,
   AdminCancelPayload,
   CancelApprovePayload,
-  CreateRecurringPayload,
 } from "@/lib/types/booking"
 
 /**
@@ -85,12 +84,6 @@ export async function createBooking(
   payload: CreateBookingPayload,
 ): Promise<Booking> {
   return api.post<Booking>("/dashboard/bookings", adaptCreatePayload(payload))
-}
-
-export async function createRecurringBooking(
-  payload: CreateRecurringPayload,
-): Promise<Booking[]> {
-  return api.post<Booking[]>("/dashboard/bookings/recurring", payload)
 }
 
 export async function rescheduleBooking(

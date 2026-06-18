@@ -11,7 +11,7 @@ export const enNav: Record<string, string> = {
   "nav.overview": "Overview",
   "nav.operations": "Daily Operations",
   "nav.people": "People",
-  "nav.catalog": "Catalog & Structure",
+  "nav.catalog": "Catalog",
   "nav.system": "Customization & System",
   "nav.reception": "Reception",
   "nav.practice": "Practice",

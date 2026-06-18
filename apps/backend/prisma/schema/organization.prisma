@@ -75,13 +75,6 @@ model ServiceCategory {
 
 // ─── Services ────────────────────────────────────────────────────────────────
 
-enum RecurringPattern {
-  DAILY
-  WEEKLY
-  BIWEEKLY
-  MONTHLY
-}
-
 model Service {
   id            String           @id @default(uuid())
   categoryId    String?
@@ -131,11 +124,6 @@ model Service {
   // "service_min_le_max_participants" (migration 20260605120100).
   minParticipants Int @default(1)
   maxParticipants Int @default(1)
-
-  // ─── التكرار ─────────────────────────────────────────────────────────────
-  allowRecurring           Boolean            @default(false)
-  allowedRecurringPatterns RecurringPattern[] @default([])
-  maxRecurrences           Int?
 
   // ─── الجلسات الجماعية ────────────────────────────────────────────────────
   // reserveWithoutPayment: payment deferred until minParticipants is reached (24h window)

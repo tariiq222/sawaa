@@ -15,7 +15,6 @@ const apiMocks = vi.hoisted(() => ({
   deleteBooking: vi.fn(),
   approveCancelBooking: vi.fn(),
   rejectCancelBooking: vi.fn(),
-  createRecurringBooking: vi.fn(),
 }))
 
 vi.mock("@/lib/api/bookings", () => apiMocks)
@@ -107,28 +106,5 @@ describe("useBookings — hasFilters + page management", () => {
     expect(firstCall.status).toBeUndefined()
     expect(firstCall.type).toBeUndefined()
     expect(firstCall.isGuest).toBeUndefined()
-  })
-})
-
-describe("useBookingMutations — recurringMut", () => {
-  beforeEach(() => { Object.values(apiMocks).forEach((m) => m.mockReset()) })
-
-  it("calls createRecurringBooking with the payload and invalidates the bookings cache", async () => {
-    apiMocks.createRecurringBooking.mockResolvedValue({ id: "bk-r-1" })
-    const { Wrapper, qc } = makeWrapper()
-    const spy = vi.spyOn(qc, "invalidateQueries")
-    const { result } = renderHook(() => useBookingMutations(), { wrapper: Wrapper })
-    await result.current.recurringMut.mutateAsync({
-      serviceId: "s-1",
-      employeeId: "e-1",
-      startDate: "2026-05-01",
-      frequency: "weekly",
-      count: 4,
-    } as never)
-    expect(apiMocks.createRecurringBooking).toHaveBeenCalledWith(
-      expect.objectContaining({ frequency: "weekly", count: 4 }),
-      expect.anything(),
-    )
-    expect(spy).toHaveBeenCalledWith({ queryKey: ["bookings"], refetchType: "all" })
   })
 })

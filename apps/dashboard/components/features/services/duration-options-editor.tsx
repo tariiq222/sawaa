@@ -14,6 +14,7 @@ interface DurationOptionsEditorProps {
   onUpdate: (field: keyof DraftBookingType, value: unknown) => void
   t: (key: string) => string
   useClinicTerminology?: boolean
+  readOnly?: boolean
 }
 
 export function DurationOptionsEditor({
@@ -21,6 +22,7 @@ export function DurationOptionsEditor({
   onUpdate,
   t,
   useClinicTerminology = false,
+  readOnly = false,
 }: DurationOptionsEditorProps) {
   const options = draft.durationOptions
 
@@ -71,6 +73,7 @@ export function DurationOptionsEditor({
             min={1}
             value={draft.durationMins}
             onChange={(e) => onUpdate("durationMins", Number(e.target.value))}
+            disabled={readOnly}
             className="h-8 text-sm tabular-nums"
             aria-label={t("services.bookingTypes.duration")}
           />
@@ -80,6 +83,7 @@ export function DurationOptionsEditor({
             step="0.01"
             value={draft.price}
             onChange={(e) => onUpdate("price", Number(e.target.value))}
+            disabled={readOnly}
             className="h-8 text-sm tabular-nums"
             aria-label={t("services.bookingTypes.price")}
           />
@@ -97,6 +101,7 @@ export function DurationOptionsEditor({
               min={1}
               value={opt.durationMins}
               onChange={(e) => updateOption(opt.key, "durationMins", Number(e.target.value))}
+              disabled={readOnly}
               className="h-8 text-sm tabular-nums"
               aria-label={t("services.bookingTypes.duration")}
             />
@@ -106,32 +111,39 @@ export function DurationOptionsEditor({
               step="0.01"
               value={opt.price}
               onChange={(e) => updateOption(opt.key, "price", Number(e.target.value))}
+              disabled={readOnly}
               className="h-8 text-sm tabular-nums"
               aria-label={t("services.bookingTypes.price")}
             />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-7 shrink-0 text-destructive hover:text-destructive"
-              onClick={() => removeOption(opt.key)}
-              aria-label={t("common.delete")}
-            >
-              <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-4" />
-            </Button>
+            {readOnly ? (
+              <span className="w-7" aria-hidden />
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7 shrink-0 text-destructive hover:text-destructive"
+                onClick={() => removeOption(opt.key)}
+                aria-label={t("common.delete")}
+              >
+                <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-4" />
+              </Button>
+            )}
           </div>
         ))}
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="w-full gap-1.5"
-        onClick={addOption}
-      >
-        <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4" />
-        {t("services.bookingTypes.addDuration")}
-      </Button>
+      {!readOnly && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full gap-1.5"
+          onClick={addOption}
+        >
+          <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4" />
+          {t("services.bookingTypes.addDuration")}
+        </Button>
+      )}
     </div>
   )
 }

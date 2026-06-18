@@ -25,8 +25,6 @@ export interface CategoryListQuery extends PaginatedQuery {
   departmentId?: string
 }
 
-export type RecurringPattern = 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY'
-
 export interface Service {
   id: string
   nameEn: string | null
@@ -49,9 +47,6 @@ export interface Service {
   maxAdvanceDays: number | null
   depositEnabled: boolean
   depositAmount: number | null
-  allowRecurring: boolean
-  allowedRecurringPatterns: RecurringPattern[]
-  maxRecurrences: number | null
   minParticipants: number
   maxParticipants: number
   reserveWithoutPayment: boolean

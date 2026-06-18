@@ -203,17 +203,6 @@ export interface CancelRequestPayload {
   reason?: string
 }
 
-export interface CreateRecurringPayload {
-  employeeId: string
-  serviceId: string
-  type: BookingType
-  date: string
-  startTime: string
-  notes?: string
-  repeatEvery: "weekly" | "biweekly"
-  repeatCount: number
-}
-
 export interface ClientReschedulePayload {
   date?: string
   startTime?: string

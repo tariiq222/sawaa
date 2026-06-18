@@ -16,8 +16,6 @@ import { ApiErrorDto } from '../../common/swagger';
 import { endOfDayInTz, startOfDayInTz } from '../../common/helpers/date-tz.helper';
 import { CreateBookingHandler } from '../../modules/bookings/create-booking/create-booking.handler';
 import { CreateBookingDto } from '../../modules/bookings/create-booking/create-booking.dto';
-import { CreateRecurringBookingHandler } from '../../modules/bookings/create-recurring-booking/create-recurring-booking.handler';
-import { CreateRecurringBookingDto } from '../../modules/bookings/create-recurring-booking/create-recurring-booking.dto';
 import { ListBookingsHandler } from '../../modules/bookings/list-bookings/list-bookings.handler';
 import { ListBookingsDto } from '../../modules/bookings/list-bookings/list-bookings.dto';
 import { BookingsStatsHandler } from '../../modules/bookings/bookings-stats/bookings-stats.handler';
@@ -51,7 +49,6 @@ import { RejectCancelBookingDto } from '../../modules/bookings/reject-cancel-boo
 export class DashboardBookingsController {
   constructor(
     private readonly createHandler: CreateBookingHandler,
-    private readonly createRecurringHandler: CreateRecurringBookingHandler,
     private readonly listHandler: ListBookingsHandler,
     private readonly statsHandler: BookingsStatsHandler,
     private readonly getHandler: GetBookingHandler,
@@ -103,37 +100,6 @@ export class DashboardBookingsController {
   createBundleBooking(@Body() body: CreateBundleBookingDto) {
     const { scheduledAt, ...rest } = body;
     return this.createBundleHandler.execute({ ...rest, scheduledAt: new Date(scheduledAt) });
-  }
-
-  @Post('recurring')
-  @CheckPermissions({ action: 'manage', subject: 'Booking' })
-  @ApiOperation({ summary: 'Create a recurring booking series' })
-  @ApiCreatedResponse({
-    description: 'Recurring booking series created',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          status: { type: 'string', example: 'PENDING' },
-          scheduledAt: { type: 'string', format: 'date-time' },
-          recurringGroupId: { type: 'string', format: 'uuid', nullable: true },
-        },
-      },
-    },
-  })
-  createRecurringBooking(
-    @Body() body: CreateRecurringBookingDto,
-  ) {
-    const { scheduledAt, expiresAt, until, customDates, ...rest } = body;
-    return this.createRecurringHandler.execute({
-      ...rest,
-      scheduledAt: new Date(scheduledAt),
-      expiresAt: expiresAt ? new Date(expiresAt) : undefined,
-      until: until ? new Date(until) : undefined,
-      customDates: customDates?.map((d) => new Date(d)),
-    });
   }
 
   @Get()

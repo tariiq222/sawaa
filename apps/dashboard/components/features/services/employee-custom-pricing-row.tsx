@@ -4,6 +4,7 @@ import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { PencilEdit01Icon, Tick01Icon } from "@hugeicons/core-free-icons"
 import { Switch } from "@sawaa/ui"
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@sawaa/ui"
 import { halalasToSarNumber, sarToHalalas } from "@/lib/money"
 import type { ServiceEmployee, ServiceEmployeeServiceType } from "@/lib/types/service"
 import type { SetCustomPricingPayload } from "@/lib/api/employees"
@@ -84,7 +85,7 @@ function InlineNumberField({ value, suffix, isSaving, min = 0, step = 1, ariaLab
   return (
     <button
       type="button"
-      className="flex items-center gap-1 text-sm tabular-nums text-foreground hover:text-primary disabled:opacity-50"
+      className="inline-flex items-center gap-1 text-sm tabular-nums text-foreground hover:text-primary disabled:opacity-50"
       disabled={isSaving}
       onClick={() => {
         setDraft(String(value))
@@ -180,56 +181,73 @@ export function EmployeeCustomPricingRow({ item, serviceId: _serviceId, t, isSav
         </p>
       )}
 
-      {/* Custom pricing rows */}
+      {/* Pricing table — shown when custom pricing is on */}
       {item.hasCustomPricing && activeTypes.length > 0 && (
-        <div className="space-y-1.5 ps-7">
-          {activeTypes.map((st) => (
-            <div key={st.id} className="flex flex-wrap items-center gap-3 text-sm">
-              <span className="w-20 shrink-0 text-muted-foreground text-xs">{typeLabel(st.deliveryType)}</span>
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-muted-foreground">{t("services.employees.priceLabel")}:</span>
-                <InlineNumberField
-                  value={halalasToSarNumber(st.price ?? st.basePrice)}
-                  suffix={t("services.bookingTypes.priceCurrency")}
-                  isSaving={isSaving}
-                  min={0}
-                  step={0.01}
-                  ariaLabel={t("services.employees.priceLabel")}
-                  onCommit={(sarVal) => handlePriceCommit(st, sarVal)}
-                />
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-muted-foreground">{t("services.employees.durationLabel")}:</span>
-                <InlineNumberField
-                  value={st.durationMins ?? st.baseDurationMins}
-                  suffix={t("employees.services.minutes")}
-                  isSaving={isSaving}
-                  min={1}
-                  step={1}
-                  ariaLabel={t("services.employees.durationLabel")}
-                  onCommit={(mins) => handleDurationCommit(st, mins)}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
+        <Table className="rounded-md border border-border bg-surface-muted/30">
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="h-7 px-2 text-[10px]">
+                {t("services.employees.typeHeader")}
+              </TableHead>
+              <TableHead className="h-7 px-2 text-[10px]">
+                {t("services.employees.priceHeader")}
+              </TableHead>
+              <TableHead className="h-7 px-2 text-[10px]">
+                {t("services.employees.durationHeader")}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {activeTypes.map((st) => (
+              <TableRow key={st.id} className="hover:bg-transparent even:bg-transparent">
+                <TableCell className="px-2 py-1.5 text-xs">
+                  {typeLabel(st.deliveryType)}
+                </TableCell>
+                <TableCell className="px-2 py-1.5">
+                  <InlineNumberField
+                    value={halalasToSarNumber(st.price ?? st.basePrice)}
+                    suffix={t("services.bookingTypes.priceCurrency")}
+                    isSaving={isSaving}
+                    min={0}
+                    step={0.01}
+                    ariaLabel={t("services.employees.priceLabel")}
+                    onCommit={(sarVal) => handlePriceCommit(st, sarVal)}
+                  />
+                </TableCell>
+                <TableCell className="px-2 py-1.5">
+                  <InlineNumberField
+                    value={st.durationMins ?? st.baseDurationMins}
+                    suffix={t("employees.services.minutes")}
+                    isSaving={isSaving}
+                    min={1}
+                    step={1}
+                    ariaLabel={t("services.employees.durationLabel")}
+                    onCommit={(mins) => handleDurationCommit(st, mins)}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
 
       {/* Base prices (when custom pricing is off) */}
       {!item.hasCustomPricing && activeTypes.length > 0 && (
-        <div className="space-y-1 ps-7">
-          {activeTypes.map((st) => (
-            <div key={st.id} className="flex flex-wrap items-center gap-3">
-              <span className="text-xs text-muted-foreground w-20 shrink-0">{typeLabel(st.deliveryType)}</span>
-              <span className="text-xs tabular-nums text-muted-foreground">
-                {halalasToSarNumber(st.basePrice)} {t("services.bookingTypes.priceCurrency")}
-              </span>
-              <span className="text-xs tabular-nums text-muted-foreground">
-                {st.baseDurationMins} {t("employees.services.minutes")}
-              </span>
-            </div>
-          ))}
-          <p className="text-xs text-muted-foreground">{t("services.employees.usingBasePrice")}</p>
+        <div className="rounded-md border border-dashed border-border bg-surface-muted/30 px-3 py-2 space-y-1">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            {t("services.employees.usingBasePrice")}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {activeTypes.map((st) => (
+              <div key={st.id} className="flex items-center justify-between gap-2 text-xs">
+                <span className="text-muted-foreground">{typeLabel(st.deliveryType)}</span>
+                <span className="tabular-nums text-foreground">
+                  {halalasToSarNumber(st.basePrice)} {t("services.bookingTypes.priceCurrency")} ·{" "}
+                  {st.baseDurationMins} {t("employees.services.minutes")}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

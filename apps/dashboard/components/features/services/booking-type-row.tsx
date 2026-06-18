@@ -22,6 +22,7 @@ interface BookingTypeRowProps {
   onToggle: () => void
   onUpdate: (field: keyof DraftBookingType, value: unknown) => void
   useClinicTerminology?: boolean
+  readOnly?: boolean
 }
 
 /* ─── Component ─── */
@@ -33,6 +34,7 @@ export function BookingTypeRow({
   onToggle,
   onUpdate,
   useClinicTerminology = false,
+  readOnly = false,
 }: BookingTypeRowProps) {
 
   const Icon = TYPE_ICON[draft.deliveryType] ?? Building01Icon
@@ -62,6 +64,7 @@ export function BookingTypeRow({
       <Switch
         checked={draft.enabled}
         onCheckedChange={onToggle}
+        disabled={readOnly}
         aria-label={label}
       />
     </div>
@@ -84,6 +87,7 @@ export function BookingTypeRow({
         onUpdate={onUpdate}
         t={t}
         useClinicTerminology={useClinicTerminology}
+        readOnly={readOnly}
       />
     </div>
   )

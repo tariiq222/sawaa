@@ -3,7 +3,7 @@
  *
  * The dashboard POS covers the main individual booking flow. This spec covers
  * the remaining dashboard booking contracts and verifies they surface in the
- * bookings list: individual, walk-in, group, and recurring series.
+ * bookings list: individual, walk-in, and group.
  */
 import { expect, test, type Page } from "@playwright/test"
 import { expectCurrentPath, expectNoAppCrash } from "../../fixtures/assertions"
@@ -17,7 +17,6 @@ import {
   cleanupEmployee,
   cleanupService,
   createDashboardBooking,
-  createRecurringDashboardBookings,
   dashboardApiRequest,
   ensureValidMainBranchId,
   prepareBookableSchedule,
@@ -37,13 +36,11 @@ let client: SeededClient
 let individualService: SeededService
 let walkInService: SeededService
 let groupService: SeededService
-let recurringService: SeededService
 let employee: SeededEmployee
 let bookings: SeededBooking[] = []
 let individualBooking: SeededBooking
 let walkInBooking: SeededBooking
 let groupBooking: SeededBooking
-let recurringBookings: SeededBooking[] = []
 
 test.beforeAll(async () => {
   const organization = await getTestTenant()
@@ -69,11 +66,6 @@ test.beforeAll(async () => {
     minParticipants: 2,
     maxParticipants: 5,
     reserveWithoutPayment: true,
-  })
-  recurringService = await createBookableService("حجز متكرر تعدد", {
-    allowRecurring: true,
-    allowedRecurringPatterns: ["WEEKLY"],
-    maxRecurrences: 5,
   })
 
   individualBooking = await createDashboardBooking(token, {
@@ -112,25 +104,10 @@ test.beforeAll(async () => {
     notes: "e2e group booking type",
   })
 
-  recurringBookings = await createRecurringDashboardBookings(token, {
-    branchId,
-    clientId: client.id,
-    employeeId: employee.id,
-    serviceId: recurringService.id,
-    scheduledAt: slotIso(3, 12),
-    durationMins: recurringService.durationMins,
-    price: recurringService.price,
-    frequency: "WEEKLY",
-    occurrences: 3,
-    bookingType: "INDIVIDUAL",
-    deliveryType: "IN_PERSON",
-    notes: "e2e recurring booking series",
-  })
   bookings = [
     individualBooking,
     walkInBooking,
     groupBooking,
-    ...recurringBookings,
   ]
 })
 
@@ -143,7 +120,6 @@ test.afterAll(async () => {
     individualService,
     walkInService,
     groupService,
-    recurringService,
   ]) {
     if (service?.id) await cleanupService(service.id, token).catch(() => undefined)
   }
@@ -152,7 +128,7 @@ test.afterAll(async () => {
 })
 
 test.describe("Booking types and multiplicity", () => {
-  test("surfaces individual, walk-in, group, and a 3-booking recurring series", async ({
+  test("surfaces individual, walk-in, and group booking types", async ({
     page,
   }) => {
     await loginAs(page, "admin")
@@ -172,15 +148,10 @@ test.describe("Booking types and multiplicity", () => {
       serviceId: groupService.id,
       type: "group",
     })
-    await expectRecurringSeriesContract()
 
     await expectSeededBookingRow(page, individualBooking, /زيارة حضورية|In-person/i)
     await expectSeededBookingRow(page, walkInBooking, /زيارة مباشرة|Walk-in/i)
     await expectSeededBookingRow(page, groupBooking, /group|جماعي/i)
-
-    for (const booking of recurringBookings) {
-      await expectSeededBookingRow(page, booking, /زيارة حضورية|In-person/i)
-    }
   })
 })
 
@@ -236,29 +207,6 @@ async function expectBookingContract(
     bookingType: expected.type,
   })
   expect(filtered.items.map((item) => item.id)).toContain(booking.id)
-}
-
-async function expectRecurringSeriesContract() {
-  expect(recurringBookings).toHaveLength(3)
-
-  const sorted = [...recurringBookings].sort(
-    (a, b) => Date.parse(a.scheduledAt) - Date.parse(b.scheduledAt)
-  )
-  expect(Date.parse(sorted[1].scheduledAt) - Date.parse(sorted[0].scheduledAt)).toBe(
-    7 * 24 * 60 * 60 * 1000
-  )
-  expect(Date.parse(sorted[2].scheduledAt) - Date.parse(sorted[1].scheduledAt)).toBe(
-    7 * 24 * 60 * 60 * 1000
-  )
-
-  const filtered = await listDashboardBookings({
-    serviceId: recurringService.id,
-    bookingType: "in_person",
-  })
-  expect(filtered.meta.total).toBe(3)
-  expect(filtered.items.map((item) => item.id).sort()).toEqual(
-    recurringBookings.map((booking) => booking.id).sort()
-  )
 }
 
 async function getDashboardBooking(id: string): Promise<DashboardBookingRow> {

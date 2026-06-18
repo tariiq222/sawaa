@@ -1,9 +1,6 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { Input } from "@sawaa/ui"
-import { Label } from "@sawaa/ui"
-import { Switch } from "@sawaa/ui"
 import {
   Card,
   CardContent,
@@ -12,11 +9,10 @@ import {
   CardDescription,
 } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
-import { fetchBookingSettings, RECURRING_PATTERNS } from "@/lib/api/booking-settings"
+import { fetchBookingSettings } from "@/lib/api/booking-settings"
 
 import { queryKeys } from "@/lib/query-keys"
 import { OverrideField } from "../booking-settings-fields"
-import { cn } from "@/lib/utils"
 import type { UseFormReturn } from "react-hook-form"
 import type { CreateServiceFormData } from "./form-schema"
 
@@ -38,9 +34,6 @@ export function BookingSettingsTab({ form }: BookingSettingsTabProps) {
     depositEnabled,
     depositAmount,
     maxParticipants,
-    allowRecurring,
-    allowedRecurringPatterns,
-    maxRecurrences,
   } = form.watch()
 
   const { data: globalSettings } = useQuery({
@@ -126,108 +119,21 @@ export function BookingSettingsTab({ form }: BookingSettingsTabProps) {
           />
         </div>
 
-        {/* Row 3: Max Participants + Recurring toggle (with inline pattern expansion) */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <OverrideField
-            id="create-max-participants"
-            label={t("services.booking.maxParticipants.label")}
-            description={t("services.booking.maxParticipants.desc")}
-            value={(maxParticipants ?? 1) > 1 ? maxParticipants : null}
-            defaultValue={1}
-            unit=""
-            globalHint={t("services.booking.maxParticipants.hint")}
-            min={1}
-            max={100}
-            onEnable={() => form.setValue("maxParticipants", 2)}
-            onDisable={() => form.setValue("maxParticipants", 1)}
-            onChange={(v) => form.setValue("maxParticipants", v ?? 1)}
-          />
-
-          {/* Recurring: switch card + pattern picker expand inside the same visual container */}
-          <div className={cn(
-              "space-y-3 rounded-lg border p-3 transition-colors duration-200",
-              allowRecurring
-                ? "border-primary/30 bg-primary/[0.03]"
-                : "border-border bg-background",
-            )}>
-              {/* Toggle header */}
-              <div className="flex items-center justify-between gap-2">
-                <Label htmlFor="create-recurring-toggle" className="cursor-pointer text-sm">
-                  {t("services.booking.recurring.label")}
-                </Label>
-                <Switch
-                  id="create-recurring-toggle"
-                  checked={allowRecurring ?? false}
-                  onCheckedChange={(v) => form.setValue("allowRecurring", v)}
-                />
-              </div>
-              {allowRecurring !== false && (
-                <p className="text-xs text-muted-foreground/70">
-                  {t("services.booking.recurring.desc")}
-                </p>
-              )}
-
-              {/* Pattern picker — shown when recurring is enabled */}
-              {allowRecurring && (
-                <div className="space-y-3 border-t border-primary/20 pt-3">
-                  <p className="text-xs text-muted-foreground">
-                    {t("services.booking.recurring.patterns")}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {RECURRING_PATTERNS.map((p) => {
-                      const selected = (allowedRecurringPatterns ?? []).includes(p.value)
-                      const togglePattern = () => {
-                        // Single-select: replace the array with only this pattern.
-                        // Once a pattern is selected it cannot be deselected (radio behaviour).
-                        if (!selected) {
-                          form.setValue("allowedRecurringPatterns", [p.value])
-                        }
-                      }
-                      return (
-                        <button
-                          key={p.value}
-                          type="button"
-                          onClick={togglePattern}
-                          className={cn(
-                            "rounded-full px-3 py-1.5 text-xs font-medium transition-all",
-                            selected
-                              ? "bg-primary text-primary-foreground shadow-sm"
-                              : "bg-muted/60 text-muted-foreground hover:bg-muted cursor-pointer",
-                          )}
-                        >
-                          {t(p.labelKey)}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  {(allowedRecurringPatterns ?? []).length > 0 && (
-                    <div className="space-y-1.5 border-t border-primary/20 pt-3">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="create-max-recurrences" className="text-xs">
-                          {t("services.booking.recurring.maxLabel")}
-                        </Label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            id="create-max-recurrences"
-                            type="number"
-                            value={maxRecurrences ?? 12}
-                            onChange={(e) => form.setValue("maxRecurrences", Number(e.target.value) || 12)}
-                            className="w-20 tabular-nums"
-                            min={1}
-                            max={52}
-                          />
-                          <span className="text-xs text-muted-foreground">{t("services.booking.recurring.appts")}</span>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {t("services.booking.recurring.example")}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-          </div>
-        </div>
+        {/* Row 3: Max Participants */}
+        <OverrideField
+          id="create-max-participants"
+          label={t("services.booking.maxParticipants.label")}
+          description={t("services.booking.maxParticipants.desc")}
+          value={(maxParticipants ?? 1) > 1 ? maxParticipants : null}
+          defaultValue={1}
+          unit=""
+          globalHint={t("services.booking.maxParticipants.hint")}
+          min={1}
+          max={100}
+          onEnable={() => form.setValue("maxParticipants", 2)}
+          onDisable={() => form.setValue("maxParticipants", 1)}
+          onChange={(v) => form.setValue("maxParticipants", v ?? 1)}
+        />
 
       </CardContent>
     </Card>

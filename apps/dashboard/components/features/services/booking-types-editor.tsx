@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
 
+import { HugeiconsIcon } from "@hugeicons/react"
+import { PencilEdit02Icon } from "@hugeicons/core-free-icons"
+
 import { Button } from "@sawaa/ui"
 import { Separator } from "@sawaa/ui"
 import {
@@ -96,6 +99,7 @@ export function BookingTypesEditor({ serviceId, useClinicTerminology = false }: 
   const { t, locale } = useLocale()
   const isAr = locale === "ar"
   const [dirty, setDirty] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [types, setTypes] = useState<DraftBookingType[]>(buildEmptyDrafts())
 
   const { data: existing, isLoading } = useServiceBookingTypes(serviceId)
@@ -104,8 +108,12 @@ export function BookingTypesEditor({ serviceId, useClinicTerminology = false }: 
   /* Sync server data into local state */
   useEffect(() => {
     if (!existing || dirty) return
+    const drafts = mergeDraftsFromServer(existing)
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTypes(mergeDraftsFromServer(existing))
+    setTypes(drafts)
+    // Locked by default once something is saved; unlocked for a fresh service.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setEditing(!drafts.some((d) => d.enabled))
   }, [existing, dirty])
 
   const toggleType = (deliveryType: string) => {
@@ -151,6 +159,7 @@ export function BookingTypesEditor({ serviceId, useClinicTerminology = false }: 
         })),
       })
       setDirty(false)
+      setEditing(false)
       toast.success(t("services.bookingTypes.saved"))
     } catch {
       toast.error(t("services.deliveryTypes.saveFailed"))
@@ -160,9 +169,23 @@ export function BookingTypesEditor({ serviceId, useClinicTerminology = false }: 
   return (
     <div className="space-y-3">
       <Separator />
-      <p className="text-sm font-medium text-foreground">
-        {t("services.deliveryTypes.title")}
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium text-foreground">
+          {t("services.deliveryTypes.title")}
+        </p>
+        {!editing && !isLoading && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setEditing(true)}
+          >
+            <HugeiconsIcon icon={PencilEdit02Icon} strokeWidth={2} className="size-4" />
+            {t("common.edit")}
+          </Button>
+        )}
+      </div>
 
       {isLoading && (
         <p className="text-sm text-muted-foreground">
@@ -182,6 +205,7 @@ export function BookingTypesEditor({ serviceId, useClinicTerminology = false }: 
             isAr={isAr}
             t={t}
             useClinicTerminology={useClinicTerminology}
+            readOnly={!editing}
             onToggle={() => toggleType(draft.deliveryType)}
             onUpdate={(field, value) =>
               updateType(draft.deliveryType, field, value)
@@ -190,7 +214,7 @@ export function BookingTypesEditor({ serviceId, useClinicTerminology = false }: 
         ))}
       </div>
 
-      {dirty && (
+      {editing && (
         <Button
           type="button"
           size="sm"

@@ -56,6 +56,12 @@ export class ListServiceEmployeesHandler {
 
     return links
       .filter((l) => empById.has(l.employeeId))
+      .sort((a, b) =>
+        (empById.get(a.employeeId)!.name ?? '').localeCompare(
+          empById.get(b.employeeId)!.name ?? '',
+          'ar',
+        ),
+      )
       .map((l) => {
         const e = empById.get(l.employeeId)!;
         const { firstName, lastName } = splitName(e.name, e.nameAr, e.nameEn);

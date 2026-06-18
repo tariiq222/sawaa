@@ -12,7 +12,6 @@
  */
 export const FeatureKey = {
   // ── On/Off — PRO+ ────────────────────────────────────────────────
-  RECURRING_BOOKINGS: "recurring_bookings",
   GROUP_SESSIONS: "group_sessions",
   AI_CHATBOT: "ai_chatbot",
   EMAIL_TEMPLATES: "email_templates",

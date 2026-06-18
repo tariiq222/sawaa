@@ -47,7 +47,6 @@ export interface FeatureEntry {
  *   "planSlug": "PRO",
  *   "status": "ACTIVE",
  *   "features": {
- *     "recurring_bookings": { "enabled": true },
  *     "branches": { "enabled": true, "limit": 3, "currentCount": 1 }
  *   }
  * }

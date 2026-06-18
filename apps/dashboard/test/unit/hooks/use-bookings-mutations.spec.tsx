@@ -19,7 +19,6 @@ const {
   deleteBooking,
   employeeCancelBooking,
   requestCancellation,
-  createRecurringBooking,
   clientReschedule,
 } = vi.hoisted(() => ({
   fetchBookings: vi.fn(),
@@ -37,7 +36,6 @@ const {
   deleteBooking: vi.fn(),
   employeeCancelBooking: vi.fn(),
   requestCancellation: vi.fn(),
-  createRecurringBooking: vi.fn(),
   clientReschedule: vi.fn(),
 }))
 
@@ -57,7 +55,6 @@ vi.mock("@/lib/api/bookings", () => ({
   deleteBooking,
   employeeCancelBooking,
   requestCancellation,
-  createRecurringBooking,
   clientReschedule,
 }))
 

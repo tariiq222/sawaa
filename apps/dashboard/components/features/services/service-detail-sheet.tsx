@@ -193,16 +193,6 @@ export function ServiceDetailSheet({
                     : <StatusPill active={false} yes="" no={t("common.disabled")} />
                 }
               />
-              <Field
-                label={t("services.detail.recurring")}
-                value={
-                  <StatusPill
-                    active={service.allowRecurring}
-                    yes={t("common.enabled")}
-                    no={t("common.disabled")}
-                  />
-                }
-              />
               {service.bufferMinutes > 0 && (
                 <Field
                   label={t("services.detail.buffer")}

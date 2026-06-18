@@ -17,8 +17,8 @@ export type CheckAvailabilityQuery = Omit<CheckAvailabilityDto, 'date' | 'durati
    * When the service has no ServiceBookingConfig row for the requested
    * deliveryType the combination is unsupported. By default this throws a
    * 400 so misconfiguration is surfaced instead of silently returning no
-   * slots. Day-scanning callers (date-strip probes, recurring series with
-   * skipConflicts) set this to true to keep the legacy empty-array result.
+   * slots. Day-scanning callers (date-strip probes) set this to true to keep
+   * the legacy empty-array result.
    */
   silentOnMissingConfig?: boolean;
 };

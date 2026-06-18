@@ -15,7 +15,6 @@ import {
   deleteBooking,
   approveCancelBooking,
   rejectCancelBooking,
-  createRecurringBooking,
 } from "@/lib/api/bookings"
 import type {
   BookingStatus,
@@ -186,11 +185,6 @@ export function useBookingMutations() {
     onSuccess: invalidate,
   })
 
-  const recurringMut = useMutation({
-    mutationFn: createRecurringBooking,
-    onSuccess: invalidate,
-  })
-
   return {
     createMut,
     rescheduleMut,
@@ -202,6 +196,5 @@ export function useBookingMutations() {
     deleteMut,
     approveCancelMut,
     rejectCancelMut,
-    recurringMut,
   }
 }

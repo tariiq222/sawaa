@@ -90,8 +90,6 @@ describe('CreateZoomMeetingHandler', () => {
     cancelledAt: null,
     cancelledBy: null,
     cancellationReason: null,
-    isRecurring: false,
-    recurringGroupId: null,
     groupSessionId: null,
     isGroup: false,
     rescheduledCount: 0,

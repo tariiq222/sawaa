@@ -29,7 +29,7 @@ src/
 |---|---|
 | `identity/` | login, logout, refresh-token, get-current-user, client-auth, otp, users, roles, casl |
 | `people/` | clients, employees, specialties |
-| `bookings/` | create-/cancel-/confirm-/check-in-/reschedule-/complete-/no-show-/expire-booking, check-availability, create-recurring-booking, waitlist, walk-in, create-zoom-meeting, retry-zoom-meeting |
+| `bookings/` | create-/cancel-/confirm-/check-in-/reschedule-/complete-/no-show-/expire-booking, check-availability, waitlist, walk-in, create-zoom-meeting, retry-zoom-meeting |
 | `finance/` | payments, moyasar-api, moyasar-webhook, refunds, coupons, bank-transfer-upload |
 | `comms/` | notifications, fcm-tokens, email-templates, send-email, send-sms, send-push, org-sms-config, sms-dlr, contact-messages, chat |
 | `ai/` | chatbot RAG (streaming), knowledge-base, pgvector embeddings, semantic-search |

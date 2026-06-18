@@ -23,8 +23,6 @@ export interface UpdateCategoryPayload {
 
 /* ─── Service DTOs ─── */
 
-import type { RecurringPattern } from './service'
-
 export interface CreateServicePayload {
   nameAr: string
   nameEn: string
@@ -46,9 +44,6 @@ export interface CreateServicePayload {
   maxAdvanceDays?: number | null
   depositEnabled?: boolean
   depositAmount?: number
-  allowRecurring?: boolean
-  allowedRecurringPatterns?: RecurringPattern[]
-  maxRecurrences?: number | null
   minParticipants?: number
   maxParticipants?: number
   reserveWithoutPayment?: boolean
@@ -75,9 +70,6 @@ export interface UpdateServicePayload {
   maxAdvanceDays?: number | null
   depositEnabled?: boolean
   depositAmount?: number
-  allowRecurring?: boolean
-  allowedRecurringPatterns?: RecurringPattern[]
-  maxRecurrences?: number | null
   minParticipants?: number
   maxParticipants?: number
   reserveWithoutPayment?: boolean

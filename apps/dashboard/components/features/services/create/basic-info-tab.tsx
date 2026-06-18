@@ -133,6 +133,79 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
               <p className="text-xs text-muted-foreground">{t("services.create.avatarHint")}</p>
             </div>
           </div>
+
+          {/* Right: compact visibility & display card */}
+          <div className="shrink-0 rounded-lg border border-border bg-surface-muted/60 p-3 w-full sm:w-auto">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-2">
+              {t("services.create.tabs.display")}
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+              {[
+                {
+                  id: "hdr-is-active",
+                  label: t("services.create.isActive"),
+                  desc: t("services.create.isActiveDesc"),
+                  checked: isActive,
+                  onChange: (v: boolean) => form.setValue("isActive", v),
+                },
+                {
+                  id: "hdr-is-hidden",
+                  label: t("services.create.isHidden"),
+                  desc: t("services.create.isHiddenDesc"),
+                  checked: isHidden,
+                  onChange: (v: boolean) => form.setValue("isHidden", v),
+                },
+                {
+                  id: "hdr-hide-price",
+                  label: t("services.display.hidePrice"),
+                  desc: t("services.display.hidePriceDesc"),
+                  checked: hidePriceOnBooking,
+                  onChange: (v: boolean) => form.setValue("hidePriceOnBooking", v),
+                },
+                {
+                  id: "hdr-hide-duration",
+                  label: t("services.display.hideDuration"),
+                  desc: t("services.display.hideDurationDesc"),
+                  checked: hideDurationOnBooking,
+                  onChange: (v: boolean) => form.setValue("hideDurationOnBooking", v),
+                },
+              ].map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-1.5 rounded-md border border-border bg-surface px-2 py-1.5"
+                >
+                  <div className="flex items-center gap-1 min-w-0">
+                    <Label htmlFor={item.id} className="cursor-pointer text-[11px] leading-none truncate">
+                      {item.label}
+                    </Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                          aria-label={item.label}
+                        >
+                          <HugeiconsIcon icon={AlertCircleIcon} size={12} strokeWidth={2} />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent side="bottom" align="end" className="w-64">
+                        <PopoverHeader>
+                          <PopoverTitle>{item.label}</PopoverTitle>
+                          <PopoverDescription>{item.desc}</PopoverDescription>
+                        </PopoverHeader>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <Switch
+                    id={item.id}
+                    checked={item.checked}
+                    onCheckedChange={item.onChange}
+                    className="scale-90"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </CardHeader>
 
@@ -168,151 +241,6 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
             {form.formState.errors[secondaryName] && (
               <p className="text-xs text-destructive">{t(form.formState.errors[secondaryName]?.message ?? "")}</p>
             )}
-          </div>
-        </div>
-
-        {/* ── Display & Visibility — unified card with info popovers ── */}
-        <div className="rounded-lg border border-border bg-surface-muted/40 px-4 py-3 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-foreground">
-              {t("services.create.tabs.display")}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {t("services.create.tabs.displayDesc")}
-            </p>
-          </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {/* Active */}
-            <div className="flex items-center justify-between rounded-md border border-border bg-surface px-3 py-2">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <Label htmlFor="basic-is-active" className="cursor-pointer text-xs">
-                  {t("services.create.isActive")}
-                </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label={t("services.create.isActive")}
-                    >
-                      <HugeiconsIcon icon={AlertCircleIcon} size={14} strokeWidth={2} />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent side="top" align="start" className="w-64">
-                    <PopoverHeader>
-                      <PopoverTitle>{t("services.create.isActive")}</PopoverTitle>
-                      <PopoverDescription>
-                        {t("services.create.isActiveDesc")}
-                      </PopoverDescription>
-                    </PopoverHeader>
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <Switch
-                id="basic-is-active"
-                checked={isActive}
-                onCheckedChange={(v) => form.setValue("isActive", v)}
-              />
-            </div>
-
-            {/* Hidden */}
-            <div className="flex items-center justify-between rounded-md border border-border bg-surface px-3 py-2">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <Label htmlFor="basic-is-hidden" className="cursor-pointer text-xs">
-                  {t("services.create.isHidden")}
-                </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label={t("services.create.isHidden")}
-                    >
-                      <HugeiconsIcon icon={AlertCircleIcon} size={14} strokeWidth={2} />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent side="top" align="start" className="w-64">
-                    <PopoverHeader>
-                      <PopoverTitle>{t("services.create.isHidden")}</PopoverTitle>
-                      <PopoverDescription>
-                        {t("services.create.isHiddenDesc")}
-                      </PopoverDescription>
-                    </PopoverHeader>
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <Switch
-                id="basic-is-hidden"
-                checked={isHidden}
-                onCheckedChange={(v) => form.setValue("isHidden", v)}
-              />
-            </div>
-
-            {/* Hide price */}
-            <div className="flex items-center justify-between rounded-md border border-border bg-surface px-3 py-2">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <Label htmlFor="basic-hide-price" className="cursor-pointer text-xs">
-                  {t("services.display.hidePrice")}
-                </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label={t("services.display.hidePrice")}
-                    >
-                      <HugeiconsIcon icon={AlertCircleIcon} size={14} strokeWidth={2} />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent side="top" align="start" className="w-64">
-                    <PopoverHeader>
-                      <PopoverTitle>{t("services.display.hidePrice")}</PopoverTitle>
-                      <PopoverDescription>
-                        {t("services.display.hidePriceDesc")}
-                      </PopoverDescription>
-                    </PopoverHeader>
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <Switch
-                id="basic-hide-price"
-                checked={hidePriceOnBooking}
-                onCheckedChange={(v) => form.setValue("hidePriceOnBooking", v)}
-              />
-            </div>
-
-            {/* Hide duration */}
-            <div className="flex items-center justify-between rounded-md border border-border bg-surface px-3 py-2">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <Label htmlFor="basic-hide-duration" className="cursor-pointer text-xs">
-                  {t("services.display.hideDuration")}
-                </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label={t("services.display.hideDuration")}
-                    >
-                      <HugeiconsIcon icon={AlertCircleIcon} size={14} strokeWidth={2} />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent side="top" align="start" className="w-64">
-                    <PopoverHeader>
-                      <PopoverTitle>{t("services.display.hideDuration")}</PopoverTitle>
-                      <PopoverDescription>
-                        {t("services.display.hideDurationDesc")}
-                      </PopoverDescription>
-                    </PopoverHeader>
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <Switch
-                id="basic-hide-duration"
-                checked={hideDurationOnBooking}
-                onCheckedChange={(v) => form.setValue("hideDurationOnBooking", v)}
-              />
-            </div>
           </div>
         </div>
 

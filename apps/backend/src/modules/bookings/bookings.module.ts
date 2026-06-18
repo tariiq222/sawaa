@@ -4,7 +4,6 @@ import { MessagingModule } from '../../infrastructure/messaging.module';
 import { OrgExperienceModule } from '../org-experience/org-experience.module';
 import { FinanceModule } from '../finance/finance.module';
 import { CreateBookingHandler } from './create-booking/create-booking.handler';
-import { CreateRecurringBookingHandler } from './create-recurring-booking/create-recurring-booking.handler';
 import { CancelBookingHandler } from './cancel-booking/cancel-booking.handler';
 import { DeleteBookingHandler } from './delete-booking/delete-booking.handler';
 import { RescheduleBookingHandler } from './reschedule-booking/reschedule-booking.handler';
@@ -47,14 +46,12 @@ import { GetBookingStatusHandler } from './public/get-booking-status.handler';
 import { CreatePublicBookingHandler } from './public/create-public-booking.handler';
 import { CreateEmployeeBookingHandler } from './create-employee-booking/create-employee-booking.handler';
 import { ValidateCouponService } from './coupons/validate-coupon.service';
-import { CancelRecurringSeriesHandler } from './cancel-recurring-series/cancel-recurring-series.handler';
 import { CreateBundleBookingHandler } from './create-bundle-booking/create-bundle-booking.handler';
 import { GroupSessionCapacityService } from './group-session/group-session-capacity.service';
 
 const handlers = [
   CreateBookingHandler,
   CreateEmployeeBookingHandler,
-  CreateRecurringBookingHandler,
   CancelBookingHandler,
   DeleteBookingHandler,
   RescheduleBookingHandler,
@@ -90,7 +87,6 @@ const handlers = [
   GetBookingStatusHandler,
   CreatePublicBookingHandler,
   ValidateCouponService,
-  CancelRecurringSeriesHandler,
   CreateBundleBookingHandler,
   GroupSessionCapacityService,
 ];
@@ -105,7 +101,7 @@ const handlers = [
   ],
   controllers: [DashboardBookingsController],
   providers: [...handlers, ZoomMeetingWorker, PaymentCompletedEventHandler, DepositPaidEventHandler, RefundCompletedEventHandler],
-  exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CancelRecurringSeriesHandler, CreatePublicBookingHandler],
+  exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CreatePublicBookingHandler],
 })
 export class BookingsModule implements OnModuleInit {
   constructor(

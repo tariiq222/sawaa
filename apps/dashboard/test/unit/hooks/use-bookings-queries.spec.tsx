@@ -12,7 +12,6 @@ const {
   markNoShow,
   checkInBooking,
   adminCancelBooking,
-  createRecurringBooking,
 } = vi.hoisted(() => ({
   fetchBookings: vi.fn(),
   createBooking: vi.fn(),
@@ -22,7 +21,6 @@ const {
   markNoShow: vi.fn(),
   checkInBooking: vi.fn(),
   adminCancelBooking: vi.fn(),
-  createRecurringBooking: vi.fn(),
 }))
 
 vi.mock("@/lib/api/bookings", () => ({
@@ -34,7 +32,6 @@ vi.mock("@/lib/api/bookings", () => ({
   markNoShow,
   checkInBooking,
   adminCancelBooking,
-  createRecurringBooking,
 }))
 
 import { useBookings, useTodayBookings } from "@/hooks/use-bookings"
