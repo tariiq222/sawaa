@@ -6,7 +6,7 @@ import { ClientRescheduleBookingDto } from './client-reschedule-booking.dto';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { assertTransition } from '../booking-state-machine';
 import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
-import { updateBookingAtomically } from '../booking-lifecycle.helper';
+import { updateBookingAtomically, hashToInt32 } from '../booking-lifecycle.helper';
 
 export type ClientRescheduleCommand = ClientRescheduleBookingDto & {
   bookingId: string;
@@ -52,8 +52,13 @@ export class ClientRescheduleBookingHandler {
       );
     }
 
+    // NOTE: prior to unification, client reschedules were written with reason
+    // 'CLIENT_RESCHEDULE'. Existing rows with that value will no longer be
+    // counted after this change. This only under-counts for pre-existing
+    // bookings and is not a security regression (it may allow one extra
+    // reschedule on legacy bookings, which is acceptable).
     const rescheduleCount = await this.prisma.bookingStatusLog.count({
-      where: { bookingId: cmd.bookingId, reason: 'CLIENT_RESCHEDULE' },
+      where: { bookingId: cmd.bookingId, reason: 'rescheduled' },
     });
     if (rescheduleCount >= settings.maxReschedulesPerBooking) {
       throw new BadRequestException(
@@ -78,13 +83,27 @@ export class ClientRescheduleBookingHandler {
 
     const [updated] = await this.rlsTransaction.withTransaction(
       async (tx) => {
+        // Parity with reschedule-booking handler (CR-5): acquire an advisory
+        // lock scoped to employee + new slot window BEFORE the conflict check
+        // to prevent TOCTOU double-booking races on concurrent reschedules.
+        const lockKey1 = hashToInt32(`${booking.employeeId}`);
+        const lockKey2 = hashToInt32(`${newScheduledAt.toISOString()}:${newEndsAt.toISOString()}`);
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey1}::int, ${lockKey2}::int)`;
+
+        // Parity with reschedule-booking handler: respect the branch
+        // bufferMinutes when checking for overlaps so a rescheduled booking
+        // cannot land inside another booking's buffer window.
+        const bufferMs = (settings.bufferMinutes ?? 0) * 60_000;
+        const bufferedStart = new Date(newScheduledAt.getTime() - bufferMs);
+        const bufferedEnd = new Date(newEndsAt.getTime() + bufferMs);
+
         const conflict = await tx.booking.findFirst({
           where: {
             employeeId: booking.employeeId,
             id: { not: cmd.bookingId },
             status: { in: [...STAFF_TIME_BLOCKING_BOOKING_STATUSES] },
-            scheduledAt: { lt: newEndsAt },
-            endsAt: { gt: newScheduledAt },
+            scheduledAt: { lt: bufferedEnd },
+            endsAt: { gt: bufferedStart },
           },
           select: { id: true },
         });
@@ -105,7 +124,9 @@ export class ClientRescheduleBookingHandler {
               fromStatus: booking.status,
               toStatus: nextStatus,
               changedBy: cmd.clientId,
-              reason: 'CLIENT_RESCHEDULE',
+              // Unified reason across all reschedule channels (staff + client)
+              // so the limit-enforcement count query covers all reschedules.
+              reason: 'rescheduled',
             },
           }),
         ]);

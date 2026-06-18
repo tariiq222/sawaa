@@ -47,7 +47,7 @@ describe('ClientRescheduleBookingHandler', () => {
     expect(prisma.bookingStatusLog.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         bookingId: 'book-1',
-        reason: 'CLIENT_RESCHEDULE',
+        reason: 'rescheduled',
         changedBy: 'client-1',
       }),
     });
