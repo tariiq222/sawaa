@@ -139,6 +139,21 @@ export interface ServiceEmployeeServiceType {
   isCustom: boolean         // true when this employee has a price override
 }
 
+export interface PractitionerDurationItem {
+  id: string
+  deliveryType: 'IN_PERSON' | 'ONLINE'
+  label: string
+  labelAr: string
+  durationMins: number
+  price: number  // integer halalas
+  isInherited: boolean
+}
+
+export interface PractitionerDurationGroup {
+  deliveryType: 'IN_PERSON' | 'ONLINE'
+  durations: PractitionerDurationItem[]
+}
+
 export interface ServiceEmployee {
   id: string // EmployeeService.id
   employee: {
@@ -147,6 +162,7 @@ export interface ServiceEmployee {
     title: string | null
     avatarUrl: string | null
     isActive: boolean
+    branchIds?: string[]
     user: {
       firstName: string
       lastName: string
@@ -158,4 +174,5 @@ export interface ServiceEmployee {
   availableTypes: string[]
   isActive: boolean
   hasCustomPricing: boolean
+  effectiveDurations?: PractitionerDurationGroup[]
 }
