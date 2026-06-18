@@ -8,6 +8,7 @@ export interface ListServiceEmployeesQuery {
 /**
  * Returns the active employees who offer the given service, shaped to match the
  * dashboard's `ServiceEmployee` contract (EmployeeService row + nested employee + serviceTypes).
+ * Each employee's serviceTypes reflects their per-employee price/duration overrides when set.
  */
 @Injectable()
 export class ListServiceEmployeesHandler {
@@ -24,7 +25,9 @@ export class ListServiceEmployeesHandler {
     });
     if (links.length === 0) return [];
 
-    const [employees, configs] = await Promise.all([
+    const linkIds = links.map((l) => l.id);
+
+    const [employees, configs, allOptions] = await Promise.all([
       this.prisma.employee.findMany({
         where: { id: { in: links.map((l) => l.employeeId) }, isActive: true },
         orderBy: { name: 'asc' },
@@ -33,25 +36,60 @@ export class ListServiceEmployeesHandler {
         where: { serviceId: query.serviceId, isActive: true },
         orderBy: { deliveryType: 'asc' },
       }),
+      this.prisma.employeeServiceOption.findMany({
+        where: { employeeServiceId: { in: linkIds }, isActive: true },
+        include: { durationOption: true },
+      }),
     ]);
 
-    const serviceTypes = configs.map((c) => ({
-      id: `${query.serviceId}:${c.deliveryType}`,
-      deliveryType: c.deliveryType,
-      /** @deprecated deliveryType is the source of truth. */
-      bookingType: c.deliveryType,
-      price: Number(c.price),
-      durationMins: c.durationMins,
-      isActive: c.isActive,
-    }));
-    const availableTypes = serviceTypes.map((s) => s.deliveryType);
+    // Build map: employeeServiceId -> deliveryType -> option
+    const optionsByLink = new Map<string, Map<string, (typeof allOptions)[0]>>();
+    for (const opt of allOptions) {
+      if (!optionsByLink.has(opt.employeeServiceId)) {
+        optionsByLink.set(opt.employeeServiceId, new Map());
+      }
+      optionsByLink.get(opt.employeeServiceId)!.set(String(opt.deliveryType), opt);
+    }
 
+    const availableTypes = configs.map((c) => c.deliveryType);
     const empById = new Map(employees.map((e) => [e.id, e]));
+
     return links
       .filter((l) => empById.has(l.employeeId))
       .map((l) => {
         const e = empById.get(l.employeeId)!;
         const { firstName, lastName } = splitName(e.name, e.nameAr, e.nameEn);
+        const empOptions = optionsByLink.get(l.id) ?? new Map<string, (typeof allOptions)[0]>();
+
+        const serviceTypes = configs.map((c) => {
+          const basePrice = Number(c.price);
+          const baseDuration = c.durationMins;
+          const ov = empOptions.get(String(c.deliveryType));
+          const isCustom = !!ov && (ov.priceOverride !== null || ov.durationOverride !== null);
+          const price =
+            ov && ov.priceOverride !== null && ov.priceOverride !== undefined
+              ? Number(ov.priceOverride)
+              : basePrice;
+          const durationMins =
+            ov && ov.durationOverride !== null && ov.durationOverride !== undefined
+              ? ov.durationOverride
+              : baseDuration;
+          return {
+            id: `${l.id}:${c.deliveryType}`,
+            deliveryType: c.deliveryType,
+            /** @deprecated deliveryType is the source of truth. */
+            bookingType: c.deliveryType,
+            price,
+            durationMins,
+            basePrice,
+            baseDurationMins: baseDuration,
+            isCustom,
+            isActive: true,
+          };
+        });
+
+        const hasCustomPricing = serviceTypes.some((t) => t.isCustom);
+
         return {
           id: l.id,
           employee: {
@@ -63,6 +101,7 @@ export class ListServiceEmployeesHandler {
             user: { firstName, lastName },
           },
           serviceTypes,
+          hasCustomPricing,
           customDuration: null,
           bufferMinutes: 0,
           availableTypes,

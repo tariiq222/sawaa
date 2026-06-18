@@ -3,7 +3,7 @@
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ViewIcon, PencilEdit01Icon, Delete02Icon } from "@hugeicons/core-free-icons"
+import { ViewIcon, PencilEdit01Icon, Delete02Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -157,23 +157,44 @@ export function getServiceColumns(
     },
     {
       id: "category",
-      accessorFn: (row) => row.category?.nameAr || row.category?.nameEn || "",
-      header: label("services.col.category", "Category"),
+      accessorFn: (row) => {
+        const dept = locale === "ar" ? (row.category?.department?.nameAr ?? "") : (row.category?.department?.nameEn ?? "")
+        const cat = locale === "ar" ? (row.category?.nameAr ?? "") : (row.category?.nameEn ?? "")
+        return `${dept} ${cat}`.trim()
+      },
+      header: label("services.col.category", "Clinic"),
       enableSorting: true,
       sortingFn: (a, b) => {
         const nameA = locale === "ar" ? (a.original.category?.nameAr ?? "") : (a.original.category?.nameEn ?? "")
         const nameB = locale === "ar" ? (b.original.category?.nameAr ?? "") : (b.original.category?.nameEn ?? "")
         return nameA.localeCompare(nameB, locale === "ar" ? "ar" : "en")
       },
-      cell: ({ row }) => (
-        <span className="text-sm text-foreground">
-          {row.original.category
-            ? locale === "ar"
-              ? row.original.category.nameAr
-              : row.original.category.nameEn
-            : <span className="text-muted-foreground">&mdash;</span>}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const cat = row.original.category
+        if (!cat) return <span className="text-muted-foreground">&mdash;</span>
+
+        const dept = cat.department
+        const deptName = dept
+          ? (locale === "ar" ? dept.nameAr : (dept.nameEn ?? dept.nameAr))
+          : null
+        const catName = locale === "ar" ? cat.nameAr : (cat.nameEn ?? cat.nameAr)
+
+        return (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            {deptName && (
+              <>
+                <span>{deptName}</span>
+                <HugeiconsIcon
+                  icon={ArrowRight01Icon}
+                  size={10}
+                  className={locale === "ar" ? "rotate-180" : ""}
+                />
+              </>
+            )}
+            <span className="text-foreground">{catName}</span>
+          </div>
+        )
+      },
     },
     {
       accessorKey: "price",

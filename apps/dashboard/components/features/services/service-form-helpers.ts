@@ -2,6 +2,7 @@ import { setServiceBookingTypes } from "@/lib/api/services"
 import { sarToHalalas } from "@/lib/money"
 import type { CreateServiceFormData } from "@/components/features/services/create/form-schema"
 import type { DraftBookingType } from "@/components/features/services/booking-types-editor"
+import { buildDurationOptionsPayload } from "@/components/features/services/booking-types-editor"
 
 export function buildPayload(data: CreateServiceFormData) {
   return {
@@ -35,23 +36,9 @@ export function buildBookingTypesPayload(bookingTypes: DraftBookingType[]) {
     price: sarToHalalas(d.price),
     durationMins: d.durationMins,
     isActive: true,
-    useCustomAvailability: d.useCustomAvailability,
-    durationOptions: d.durationOptions.map((option, index) => ({
-      label: option.label,
-      labelAr: option.labelAr || undefined,
-      durationMins: option.durationMins,
-      price: sarToHalalas(option.price),
-      isDefault: option.isDefault,
-      sortOrder: index,
-    })),
-    availabilityWindows: d.useCustomAvailability
-      ? d.availabilityWindows.map((window) => ({
-          dayOfWeek: window.dayOfWeek,
-          startTime: window.startTime,
-          endTime: window.endTime,
-          isActive: window.isActive,
-        }))
-      : [],
+    useCustomAvailability: false,
+    durationOptions: buildDurationOptionsPayload(d),
+    availabilityWindows: [],
   }))
 }
 

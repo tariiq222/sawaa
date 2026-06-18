@@ -16,9 +16,11 @@ import {
   removeEmployeeService,
   createEmployeeAccount,
   updateEmployeeAccount,
+  setEmployeeCustomPricing,
 } from "@/lib/api/employees"
 import type {
   EmployeeAccountRole,
+  SetCustomPricingPayload,
 } from "@/lib/api/employees"
 import type {
   AssignServicePayload,
@@ -121,6 +123,10 @@ export function useEmployeeServiceMutations(employeeId: string) {
     queryClient.invalidateQueries({
       queryKey: queryKeys.employees.services(employeeId),
     })
+  const invalidateServiceList = (serviceId: string) =>
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.services.employees(serviceId),
+    })
 
   const assignMut = useMutation({
     mutationFn: (payload: AssignServicePayload) =>
@@ -136,7 +142,10 @@ export function useEmployeeServiceMutations(employeeId: string) {
       serviceId: string
       payload: UpdateServicePayload
     }) => updateEmployeeService(employeeId, serviceId, payload),
-    onSuccess: invalidate,
+    onSuccess: (_data, vars) => {
+      invalidate()
+      invalidateServiceList(vars.serviceId)
+    },
   })
 
   const optionsMut = useMutation({
@@ -149,6 +158,7 @@ export function useEmployeeServiceMutations(employeeId: string) {
     }) => setEmployeeServiceOptions(employeeId, serviceId, payload),
     onSuccess: (_data, vars) => {
       invalidate()
+      invalidateServiceList(vars.serviceId)
       queryClient.invalidateQueries({
         queryKey: queryKeys.employees.serviceTypes(employeeId, vars.serviceId),
       })
@@ -161,7 +171,19 @@ export function useEmployeeServiceMutations(employeeId: string) {
     onSuccess: invalidate,
   })
 
-  return { assignMut, updateMut, optionsMut, removeMut }
+  const customPricingMut = useMutation({
+    mutationFn: ({ serviceId, payload }: { serviceId: string; payload: SetCustomPricingPayload }) =>
+      setEmployeeCustomPricing(employeeId, serviceId, payload),
+    onSuccess: (_d, vars) => {
+      invalidate()
+      invalidateServiceList(vars.serviceId)
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.employees.serviceTypes(employeeId, vars.serviceId),
+      })
+    },
+  })
+
+  return { assignMut, updateMut, optionsMut, removeMut, customPricingMut }
 }
 
 /* ─── Employee Account Mutations ─── */

@@ -15,6 +15,7 @@ import { SetEmployeeServiceOptionsHandler } from './services/set-employee-servic
 import { SetServiceBookingConfigsHandler } from './services/set-service-booking-configs.handler';
 import { GetServiceBookingConfigsHandler } from './services/get-service-booking-configs.handler';
 import { ListServiceEmployeesHandler } from './services/list-service-employees.handler';
+import { SetEmployeeCustomPricingHandler } from './services/set-employee-custom-pricing/set-employee-custom-pricing.handler';
 import { GetPublicBrandingHandler } from './branding/public/get-public-branding.handler';
 import { CreateIntakeFormHandler } from './intake-forms/create-intake-form.handler';
 import { GetIntakeFormHandler } from './intake-forms/get-intake-form.handler';
@@ -51,6 +52,7 @@ const serviceHandlers = [
   PriceResolverService, GetDurationOptionsHandler, SetDurationOptionsHandler, SetEmployeeServiceOptionsHandler,
   SetServiceBookingConfigsHandler, GetServiceBookingConfigsHandler,
   ListServiceEmployeesHandler,
+  SetEmployeeCustomPricingHandler,
 ];
 
 const bundleHandlers = [

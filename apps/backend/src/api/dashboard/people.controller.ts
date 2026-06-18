@@ -55,6 +55,8 @@ import { UpdateEmployeeServiceHandler } from '../../modules/people/employees/upd
 import { RemoveEmployeeServiceHandler } from '../../modules/people/employees/remove-employee-service.handler';
 import { SetEmployeeServiceOptionsHandler } from '../../modules/org-experience/services/set-employee-service-options.handler';
 import { SetEmployeeServiceOptionsDto } from '../../modules/org-experience/services/set-employee-service-options.dto';
+import { SetEmployeeCustomPricingHandler } from '../../modules/org-experience/services/set-employee-custom-pricing/set-employee-custom-pricing.handler';
+import { SetEmployeeCustomPricingDto } from '../../modules/org-experience/services/set-employee-custom-pricing/set-employee-custom-pricing.dto';
 import { ListEmployeeExceptionsHandler } from '../../modules/people/employees/list-employee-exceptions.handler';
 import { CreateEmployeeExceptionHandler } from '../../modules/people/employees/create-employee-exception.handler';
 import { CreateEmployeeExceptionDto } from '../../modules/people/employees/create-employee-exception.dto';
@@ -150,6 +152,7 @@ export class DashboardPeopleController {
     private readonly updateEmployeeService: UpdateEmployeeServiceHandler,
     private readonly removeEmployeeService: RemoveEmployeeServiceHandler,
     private readonly setEmployeeServiceOptions: SetEmployeeServiceOptionsHandler,
+    private readonly setEmployeeCustomPricing: SetEmployeeCustomPricingHandler,
     private readonly listEmployeeExceptions: ListEmployeeExceptionsHandler,
     private readonly createEmployeeException: CreateEmployeeExceptionHandler,
     private readonly deleteEmployeeException: DeleteEmployeeExceptionHandler,
@@ -664,6 +667,45 @@ export class DashboardPeopleController {
     @Body() body: SetEmployeeServiceOptionsDto,
   ) {
     return this.setEmployeeServiceOptions.execute({ employeeId: id, serviceId, ...body });
+  }
+
+  @Put('employees/:employeeId/services/:serviceId/custom-pricing')
+  @CheckPermissions({ action: 'update', subject: 'Employee' })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Set custom pricing for an employee on a service' })
+  @ApiParam({ name: 'employeeId', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({
+    description: 'Custom pricing updated',
+    schema: {
+      type: 'object',
+      properties: {
+        hasCustomPricing: { type: 'boolean', example: true },
+        serviceTypes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: 'link-uuid:IN_PERSON' },
+              deliveryType: { type: 'string', example: 'IN_PERSON' },
+              price: { type: 'integer', example: 30000 },
+              durationMins: { type: 'integer', example: 60 },
+              basePrice: { type: 'integer', example: 25000 },
+              baseDurationMins: { type: 'integer', example: 50 },
+              isCustom: { type: 'boolean', example: true },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'Employee-service assignment not found' })
+  setEmployeeCustomPricingEndpoint(
+    @Param('employeeId', ParseUUIDPipe) employeeId: string,
+    @Param('serviceId', ParseUUIDPipe) serviceId: string,
+    @Body() body: SetEmployeeCustomPricingDto,
+  ) {
+    return this.setEmployeeCustomPricing.execute({ employeeId, serviceId, ...body });
   }
 
   @Get('employees/:id/slots')

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import type { DraftDurationOption, DraftBookingType } from "@/components/features/services/booking-types-editor"
+import type { DraftBookingType } from "@/components/features/services/booking-types-editor"
 
 vi.mock("@/components/locale-provider", () => ({
   useLocale: () => ({
@@ -9,13 +9,11 @@ vi.mock("@/components/locale-provider", () => ({
     t: (k: string) => {
       const map: Record<string, string> = {
         "services.bookingTypes.default": "افتراضي",
-        "services.bookingTypes.removeOption": "حذف",
-        "services.bookingTypes.durationMinLabel": "المدة (دقيقة)",
-        "services.bookingTypes.priceSARLabel": "السعر (ر.س)",
-        "services.bookingTypes.labelEn": "التسمية (EN)",
-        "services.bookingTypes.labelAr": "التسمية (AR)",
-        "services.bookingTypes.placeholderEn": "e.g. Standard",
-        "services.bookingTypes.placeholderAr": "مثال: عادي",
+        "services.bookingTypes.price": "السعر",
+        "services.bookingTypes.priceCurrency": "ر.س",
+        "services.bookingTypes.duration": "المدة",
+        "services.bookingTypes.durationUnit": "دقيقة",
+        "services.bookingTypes.zeroPriceWarning": "السعر صفر",
         "services.availability.custom": "Custom service availability",
         "services.availability.inheritHint": "Inherits branch hours",
         "services.availability.day": "Day",
@@ -32,162 +30,87 @@ vi.mock("@/components/locale-provider", () => ({
 
 import { BookingTypeRow } from "@/components/features/services/booking-type-row"
 
-function makeDraft(option: DraftDurationOption): DraftBookingType {
+function makeDraft(overrides: Partial<DraftBookingType> = {}): DraftBookingType {
   return {
-    deliveryType: "IN_PERSON", // DB-10: enum value is now uppercase
+    deliveryType: "IN_PERSON",
     enabled: true,
     price: 100,
     durationMins: 30,
-    durationOptions: [option],
     useCustomAvailability: false,
     availabilityWindows: [],
+    durationOptions: [],
+    ...overrides,
   }
 }
 
-describe("DurationOptionMiniRow (via BookingTypeRow) — labelEn + labelAr", () => {
-  const baseOption: DraftDurationOption = {
-    key: "opt-1",
-    label: "",
-    labelAr: "",
-    durationMins: 30,
-    price: 0,
-    isDefault: false,
-    sortOrder: 0,
-  }
-
-  it("renders labelEn input", () => {
+describe("BookingTypeRow — price & duration fields", () => {
+  it("renders price and duration inputs when enabled", () => {
     render(
       <BookingTypeRow
-        draft={makeDraft(baseOption)}
+        draft={makeDraft()}
         label="In-Person"
         isAr={false}
         t={(k: string) => k}
         onToggle={vi.fn()}
         onUpdate={vi.fn()}
-        onUpdateOptions={vi.fn()}
       />,
     )
-    expect(screen.getByPlaceholderText(/placeholderEn/i)).toBeInTheDocument()
+    // Two number inputs should be present (price + duration)
+    const inputs = screen.getAllByRole("spinbutton")
+    expect(inputs.length).toBeGreaterThanOrEqual(2)
   })
 
-  it("renders labelAr input", () => {
+  it("calls onUpdate with price when price input changes", async () => {
+    const onUpdate = vi.fn()
     render(
       <BookingTypeRow
-        draft={makeDraft(baseOption)}
+        draft={makeDraft()}
         label="In-Person"
         isAr={false}
         t={(k: string) => k}
         onToggle={vi.fn()}
-        onUpdate={vi.fn()}
-        onUpdateOptions={vi.fn()}
+        onUpdate={onUpdate}
       />,
     )
-    expect(screen.getByPlaceholderText(/placeholderAr/i)).toBeInTheDocument()
-  })
-
-  it("editing labelEn calls onUpdateOptions with label field and new value", async () => {
-    const onUpdateOptions = vi.fn()
-    const opt = { ...baseOption }
-
-    render(
-      <BookingTypeRow
-        draft={makeDraft(opt)}
-        label="In-Person"
-        isAr={false}
-        t={(k: string) => k}
-        onToggle={vi.fn()}
-        onUpdate={vi.fn()}
-        onUpdateOptions={onUpdateOptions}
-      />,
-    )
-
-    const labelEnInput = screen.getByPlaceholderText(/placeholderEn/i)
-
-    // Use act + fireEvent to properly trigger React's onChange
+    const inputs = screen.getAllByRole("spinbutton")
     await act(async () => {
-      fireEvent.change(labelEnInput, { target: { value: "Standard" } })
+      fireEvent.change(inputs[0], { target: { value: "200" } })
     })
-
-    expect(onUpdateOptions).toHaveBeenCalled()
-    const calls = onUpdateOptions.mock.calls
-    const lastCall = calls[calls.length - 1]?.[0] as DraftDurationOption[]
-    const updated = lastCall?.find((o) => o.key === "opt-1")
-    expect(updated?.label).toBe("Standard")
+    expect(onUpdate).toHaveBeenCalledWith("price", 200)
   })
 
-  it("editing labelAr calls onUpdateOptions with labelAr field and new value", async () => {
-    const onUpdateOptions = vi.fn()
-    const opt = { ...baseOption }
-
+  it("calls onUpdate with durationMins when duration input changes", async () => {
+    const onUpdate = vi.fn()
     render(
       <BookingTypeRow
-        draft={makeDraft(opt)}
+        draft={makeDraft()}
         label="In-Person"
         isAr={false}
         t={(k: string) => k}
         onToggle={vi.fn()}
-        onUpdate={vi.fn()}
-        onUpdateOptions={onUpdateOptions}
+        onUpdate={onUpdate}
       />,
     )
-
-    const labelArInput = screen.getByPlaceholderText(/placeholderAr/i)
-
+    const inputs = screen.getAllByRole("spinbutton")
     await act(async () => {
-      fireEvent.change(labelArInput, { target: { value: "عادي" } })
+      fireEvent.change(inputs[1], { target: { value: "60" } })
     })
-
-    expect(onUpdateOptions).toHaveBeenCalled()
-    const calls = onUpdateOptions.mock.calls
-    const lastCall = calls[calls.length - 1]?.[0] as DraftDurationOption[]
-    const updated = lastCall?.find((o) => o.key === "opt-1")
-    expect(updated?.labelAr).toBe("عادي")
+    expect(onUpdate).toHaveBeenCalledWith("durationMins", 60)
   })
 
-  it("renders both labelEn and labelAr inputs simultaneously", () => {
+  it("renders disabled card when draft.enabled is false", () => {
     render(
       <BookingTypeRow
-        draft={makeDraft(baseOption)}
+        draft={makeDraft({ enabled: false })}
         label="In-Person"
         isAr={false}
         t={(k: string) => k}
         onToggle={vi.fn()}
         onUpdate={vi.fn()}
-        onUpdateOptions={vi.fn()}
       />,
     )
-    expect(screen.getByPlaceholderText(/placeholderEn/i)).toBeInTheDocument()
-    expect(screen.getByPlaceholderText(/placeholderAr/i)).toBeInTheDocument()
-  })
-
-  it("pre-fills labelEn from option.label value", () => {
-    render(
-      <BookingTypeRow
-        draft={makeDraft({ ...baseOption, label: "Premium" })}
-        label="In-Person"
-        isAr={false}
-        t={(k: string) => k}
-        onToggle={vi.fn()}
-        onUpdate={vi.fn()}
-        onUpdateOptions={vi.fn()}
-      />,
-    )
-    expect(screen.getByDisplayValue("Premium")).toBeInTheDocument()
-  })
-
-  it("pre-fills labelAr from option.labelAr value", () => {
-    render(
-      <BookingTypeRow
-        draft={makeDraft({ ...baseOption, labelAr: "مميز" })}
-        label="In-Person"
-        isAr={false}
-        t={(k: string) => k}
-        onToggle={vi.fn()}
-        onUpdate={vi.fn()}
-        onUpdateOptions={vi.fn()}
-      />,
-    )
-    expect(screen.getByDisplayValue("مميز")).toBeInTheDocument()
+    // No spinbutton inputs in the disabled state
+    expect(screen.queryAllByRole("spinbutton")).toHaveLength(0)
   })
 
   it("enables custom availability and adds a weekly window", async () => {
@@ -195,13 +118,12 @@ describe("DurationOptionMiniRow (via BookingTypeRow) — labelEn + labelAr", () 
 
     render(
       <BookingTypeRow
-        draft={{ ...makeDraft(baseOption), useCustomAvailability: true }}
+        draft={makeDraft({ useCustomAvailability: true })}
         label="In-Person"
         isAr={false}
         t={(k: string) => k}
         onToggle={vi.fn()}
         onUpdate={onUpdate}
-        onUpdateOptions={vi.fn()}
       />,
     )
 

@@ -167,6 +167,7 @@ export const enOps: Record<string, string> = {
   "employees.services.noServices": "No services linked",
   "employees.services.assignSuccess": "Service linked successfully",
   "employees.services.updateSuccess": "Service updated successfully",
+  "employees.services.updateError": "Failed to update service",
   "employees.services.removeSuccess": "Service removed successfully",
   "employees.services.selectService": "Select a service",
   "employees.services.inPerson": "In Person",
@@ -178,11 +179,9 @@ export const enOps: Record<string, string> = {
   "employees.services.assignDesc": "Link a service to this employee with custom pricing and duration.",
   "employees.services.editDesc": "Update pricing, duration, and availability for this service.",
   "employees.services.types": "Delivery Methods",
-  "employees.services.useCustomOptions": "Use custom duration options",
   "employees.services.overridePrice": "Override price",
   "employees.services.overrideDuration": "Override duration",
   "employees.services.enableType": "Enable additional type",
-  "employees.services.customOptionsHint": "Toggle to set custom duration options for this employee",
 
   // ─── Settings — Notifications ───
   "settings.notificationsHint": "Control which notification types are sent to staff and clients",
@@ -234,8 +233,6 @@ export const enOps: Record<string, string> = {
   "services.bookingTypes.duration": "Duration",
   "services.bookingTypes.enabled": "Enabled",
   "services.bookingTypes.disabled": "Disabled",
-  "services.bookingTypes.durationOptions": "Duration Options",
-  "services.bookingTypes.addOption": "Add Duration Option",
   "services.bookingTypes.default": "Default",
   "services.bookingTypes.label": "Label",
   "services.bookingTypes.save": "Save Pricing",
@@ -273,7 +270,7 @@ export const enOps: Record<string, string> = {
 
   // ─── Departments ───
   "nav.departments": "Departments",
-  "nav.categories": "Categories",
+  "nav.categories": "Clinics",
   "departments.title": "Departments",
   "departments.description": "Manage clinic departments and service organization",
   "departments.addDepartment": "Add Department",
@@ -284,7 +281,7 @@ export const enOps: Record<string, string> = {
   "departments.empty.title": "No departments",
   "departments.empty.description": "Create a department to organize your services.",
   "departments.col.name": "Name",
-  "departments.col.categories": "Categories",
+  "departments.col.categories": "Clinics",
   "departments.col.status": "Status",
   "departments.status.active": "Active",
   "departments.status.inactive": "Inactive",

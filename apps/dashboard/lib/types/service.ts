@@ -13,6 +13,7 @@ export interface ServiceCategory {
   sortOrder: number
   isActive: boolean
   departmentId: string | null
+  bookingMode?: "DIRECT" | "SERVICES"
   department?: { id: string; nameEn: string | null; nameAr: string } | null
   createdAt: string
   _count?: { services: number }
@@ -138,6 +139,9 @@ export interface ServiceEmployeeServiceType {
   price: number | null
   durationMins: number | null
   isActive: boolean
+  basePrice: number         // halalas — service's base price for this type
+  baseDurationMins: number  // base duration from service
+  isCustom: boolean         // true when this employee has a price override
 }
 
 export interface ServiceEmployee {
@@ -158,4 +162,5 @@ export interface ServiceEmployee {
   bufferMinutes: number
   availableTypes: string[]
   isActive: boolean
+  hasCustomPricing: boolean
 }

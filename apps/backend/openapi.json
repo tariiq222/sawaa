@@ -1024,6 +1024,15 @@
       },
       "CreateCategoryDto": {
         "properties": {
+          "bookingMode": {
+            "description": "Booking mode: DIRECT (category is the booking unit) or SERVICES (container for multiple services)",
+            "enum": [
+              "DIRECT",
+              "SERVICES"
+            ],
+            "example": "SERVICES",
+            "type": "string"
+          },
           "departmentId": {
             "description": "UUID of the parent department",
             "example": "00000000-0000-0000-0000-000000000000",
@@ -2161,6 +2170,31 @@
           "password",
           "name",
           "role"
+        ],
+        "type": "object"
+      },
+      "CustomPricingTypeDto": {
+        "properties": {
+          "deliveryType": {
+            "description": "Delivery type (IN_PERSON or ONLINE)",
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Duration in minutes (≥ 1)",
+            "example": 60,
+            "type": "number"
+          },
+          "price": {
+            "description": "Price in halalas (integer, ≥ 0)",
+            "example": 30000,
+            "type": "number"
+          }
+        },
+        "required": [
+          "deliveryType",
+          "price",
+          "durationMins"
         ],
         "type": "object"
       },
@@ -4019,6 +4053,27 @@
         ],
         "type": "object"
       },
+      "SetEmployeeCustomPricingDto": {
+        "properties": {
+          "enabled": {
+            "description": "Enable custom pricing for this employee",
+            "example": true,
+            "type": "boolean"
+          },
+          "types": {
+            "description": "Pricing entries per delivery type",
+            "items": {
+              "$ref": "#/components/schemas/CustomPricingTypeDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "enabled",
+          "types"
+        ],
+        "type": "object"
+      },
       "SetEmployeeServiceOptionsDto": {
         "properties": {
           "options": {
@@ -4387,6 +4442,15 @@
       },
       "UpdateCategoryDto": {
         "properties": {
+          "bookingMode": {
+            "description": "Booking mode: DIRECT (category is the booking unit) or SERVICES (container for multiple services)",
+            "enum": [
+              "DIRECT",
+              "SERVICES"
+            ],
+            "example": "SERVICES",
+            "type": "string"
+          },
           "departmentId": {
             "description": "UUID of the parent department, or null to unlink",
             "example": "00000000-0000-0000-0000-000000000000",
@@ -20586,6 +20650,149 @@
           }
         ],
         "summary": "Upload an avatar image for an employee",
+        "tags": [
+          "Dashboard / People"
+        ]
+      }
+    },
+    "/api/v1/dashboard/people/employees/{employeeId}/services/{serviceId}/custom-pricing": {
+      "put": {
+        "operationId": "DashboardPeopleController_setEmployeeCustomPricingEndpoint",
+        "parameters": [
+          {
+            "description": "Employee UUID",
+            "in": "path",
+            "name": "employeeId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Service UUID",
+            "in": "path",
+            "name": "serviceId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetEmployeeCustomPricingDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "hasCustomPricing": {
+                      "example": true,
+                      "type": "boolean"
+                    },
+                    "serviceTypes": {
+                      "items": {
+                        "properties": {
+                          "baseDurationMins": {
+                            "example": 50,
+                            "type": "integer"
+                          },
+                          "basePrice": {
+                            "example": 25000,
+                            "type": "integer"
+                          },
+                          "deliveryType": {
+                            "example": "IN_PERSON",
+                            "type": "string"
+                          },
+                          "durationMins": {
+                            "example": 60,
+                            "type": "integer"
+                          },
+                          "id": {
+                            "example": "link-uuid:IN_PERSON",
+                            "type": "string"
+                          },
+                          "isCustom": {
+                            "example": true,
+                            "type": "boolean"
+                          },
+                          "price": {
+                            "example": 30000,
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Custom pricing updated"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Employee-service assignment not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Set custom pricing for an employee on a service",
         "tags": [
           "Dashboard / People"
         ]

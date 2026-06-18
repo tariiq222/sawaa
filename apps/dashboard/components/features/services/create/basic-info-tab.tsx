@@ -49,8 +49,16 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
   const hasDepts = departments.length > 0
   const hasAnyCategories = (categories ?? []).length > 0
   const visibleCategories = selectedDeptId
-    ? (categories ?? []).filter((c) => c.departmentId === selectedDeptId)
+    ? (categories ?? []).filter((c) => c.departmentId === selectedDeptId || !c.departmentId)
     : (categories ?? [])
+
+  const handleCategoryChange = (categoryId: string) => {
+    form.setValue("categoryId", categoryId, { shouldValidate: true })
+    const cat = categories?.find((c) => c.id === categoryId)
+    if (cat?.departmentId && cat.departmentId !== selectedDeptId) {
+      setSelectedDeptId(cat.departmentId)
+    }
+  }
 
   const {
     isActive,
@@ -189,7 +197,7 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
             <Select
               key={`${selectedDeptId}-${watchedCategoryId || "empty"}`}
               value={watchedCategoryId || ""}
-              onValueChange={(v) => form.setValue("categoryId", v, { shouldValidate: true })}
+              onValueChange={handleCategoryChange}
               disabled={loadingCategories}
             >
               <SelectTrigger className="w-full">

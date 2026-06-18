@@ -24,24 +24,15 @@ const DELIVERY_TYPES: { value: ServiceDeliveryType; labelKey: string }[] = [
 
 /* ─── Draft Types ─── */
 
-export interface DraftDurationOption {
-  key: string
-  label: string
-  labelAr: string
-  durationMins: number
-  price: number // SAR display
-  isDefault: boolean
-  sortOrder: number
-}
-
 export interface DraftBookingType {
   deliveryType: ServiceDeliveryType
   enabled: boolean
   price: number // SAR display
   durationMins: number // minutes
-  durationOptions: DraftDurationOption[]
   useCustomAvailability: boolean
   availabilityWindows: DraftAvailabilityWindow[]
+  durationOptions: DraftDurationOption[]
+  defaultOptionId?: string
 }
 
 export interface DraftAvailabilityWindow {
@@ -52,22 +43,56 @@ export interface DraftAvailabilityWindow {
   isActive: boolean
 }
 
-/* ─── Key counter ─── */
+export interface DraftDurationOption {
+  key: string
+  id?: string
+  durationMins: number
+  price: number // SAR display value
+}
 
-let optionKeyCounter = 0
+/* ─── Key counter (used by ServiceAvailabilityWindowsEditor and DurationOptionsEditor) ─── */
+
+let windowKeyCounter = 0
 export function nextOptionKey() {
-  return `opt-${++optionKeyCounter}`
+  return `win-${++windowKeyCounter}`
+}
+
+/* ─── Duration options payload builder ─── */
+
+export function buildDurationOptionsPayload(draft: DraftBookingType) {
+  if (draft.durationOptions.length === 0 && !draft.defaultOptionId) return []
+  return [
+    {
+      ...(draft.defaultOptionId ? { id: draft.defaultOptionId } : {}),
+      label: `${draft.durationMins} min`,
+      labelAr: `${draft.durationMins} دقيقة`,
+      durationMins: draft.durationMins,
+      price: sarToHalalas(draft.price),
+      isDefault: true,
+      sortOrder: 0,
+    },
+    ...draft.durationOptions.map((o, i) => ({
+      ...(o.id ? { id: o.id } : {}),
+      label: `${o.durationMins} min`,
+      labelAr: `${o.durationMins} دقيقة`,
+      durationMins: o.durationMins,
+      price: sarToHalalas(o.price),
+      isDefault: false,
+      sortOrder: i + 1,
+    })),
+  ]
 }
 
 /* ─── Props ─── */
 
 interface BookingTypesEditorProps {
   serviceId: string
+  useClinicTerminology?: boolean
 }
 
 /* ─── Component ─── */
 
-export function BookingTypesEditor({ serviceId }: BookingTypesEditorProps) {
+export function BookingTypesEditor({ serviceId, useClinicTerminology = false }: BookingTypesEditorProps) {
   const { t, locale } = useLocale()
   const isAr = locale === "ar"
   const [dirty, setDirty] = useState(false)
@@ -120,23 +145,9 @@ export function BookingTypesEditor({ serviceId }: BookingTypesEditorProps) {
           price: sarToHalalas(d.price),
           durationMins: d.durationMins,
           isActive: true,
-          useCustomAvailability: d.useCustomAvailability,
-          durationOptions: d.durationOptions.map((o, i) => ({
-            label: o.label,
-            labelAr: o.labelAr || undefined,
-            durationMins: o.durationMins,
-            price: sarToHalalas(o.price),
-            isDefault: o.isDefault,
-            sortOrder: i,
-          })),
-          availabilityWindows: d.useCustomAvailability
-            ? d.availabilityWindows.map((window) => ({
-                dayOfWeek: window.dayOfWeek,
-                startTime: window.startTime,
-                endTime: window.endTime,
-                isActive: window.isActive,
-              }))
-            : [],
+          useCustomAvailability: false,
+          durationOptions: buildDurationOptionsPayload(d),
+          availabilityWindows: [],
         })),
       })
       setDirty(false)
@@ -170,13 +181,11 @@ export function BookingTypesEditor({ serviceId }: BookingTypesEditorProps) {
             )}
             isAr={isAr}
             t={t}
+            useClinicTerminology={useClinicTerminology}
             onToggle={() => toggleType(draft.deliveryType)}
             onUpdate={(field, value) =>
               updateType(draft.deliveryType, field, value)
             }
-            onUpdateOptions={(opts) => {
-              updateType(draft.deliveryType, "durationOptions", opts)
-            }}
           />
         ))}
       </div>
@@ -203,8 +212,8 @@ export function BookingTypesEditor({ serviceId }: BookingTypesEditorProps) {
 function buildEmptyDrafts(): DraftBookingType[] {
   // DB-10: enum values are now uppercase
   return [
-    { deliveryType: "IN_PERSON", enabled: false, price: 0, durationMins: 30, durationOptions: [], useCustomAvailability: false, availabilityWindows: [] },
-    { deliveryType: "ONLINE", enabled: false, price: 0, durationMins: 30, durationOptions: [], useCustomAvailability: false, availabilityWindows: [] },
+    { deliveryType: "IN_PERSON", enabled: false, price: 0, durationMins: 30, useCustomAvailability: false, availabilityWindows: [], durationOptions: [], defaultOptionId: undefined },
+    { deliveryType: "ONLINE", enabled: false, price: 0, durationMins: 30, useCustomAvailability: false, availabilityWindows: [], durationOptions: [], defaultOptionId: undefined },
   ]
 }
 
@@ -217,30 +226,19 @@ export function mergeDraftsFromServer(
     (dt) => {
       const server = map.get(dt)
       if (!server) {
-        return { deliveryType: dt, enabled: false, price: 0, durationMins: 30, durationOptions: [], useCustomAvailability: false, availabilityWindows: [] }
+        return { deliveryType: dt, enabled: false, price: 0, durationMins: 30, useCustomAvailability: false, availabilityWindows: [], durationOptions: [], defaultOptionId: undefined }
       }
       return {
         deliveryType: dt,
         enabled: server.isActive,
         price: halalasToSarNumber(server.price),
         durationMins: server.durationMins,
-        durationOptions: (server.durationOptions ?? []).map((o) => ({
-          key: o.id,
-          label: o.label,
-          labelAr: o.labelAr ?? "",
-          durationMins: o.durationMins,
-          price: halalasToSarNumber(o.price),
-          isDefault: o.isDefault,
-          sortOrder: o.sortOrder,
-        })),
-        useCustomAvailability: server.useCustomAvailability ?? false,
-        availabilityWindows: (server.availabilityWindows ?? []).map((window) => ({
-          key: window.id,
-          dayOfWeek: window.dayOfWeek,
-          startTime: window.startTime,
-          endTime: window.endTime,
-          isActive: window.isActive,
-        })),
+        useCustomAvailability: false,
+        availabilityWindows: [],
+        durationOptions: (server.durationOptions ?? [])
+          .filter((o) => !o.isDefault)
+          .map((o) => ({ key: o.id, id: o.id, durationMins: o.durationMins, price: halalasToSarNumber(o.price) })),
+        defaultOptionId: server.durationOptions?.find((o) => o.isDefault)?.id,
       }
     },
   )

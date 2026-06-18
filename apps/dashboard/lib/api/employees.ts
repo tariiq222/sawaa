@@ -14,6 +14,7 @@ import type {
   OnboardEmployeePayload,
   OnboardEmployeeResponse,
 } from "@/lib/types/employee"
+import type { ServiceEmployeeServiceType } from "@/lib/types/service"
 
 /* ─── Queries ─── */
 
@@ -144,8 +145,6 @@ export async function uploadEmployeeAvatar(
   )
 }
 
-
-
 /* ─── Employee Account ─── */
 
 export type EmployeeAccountRole = 'SUPER_ADMIN' | 'ADMIN' | 'RECEPTIONIST' | 'ACCOUNTANT' | 'EMPLOYEE' | 'CLIENT'
@@ -179,4 +178,22 @@ export async function updateEmployeeAccount(
   payload: { role?: EmployeeAccountRole; isActive?: boolean },
 ): Promise<EmployeeAccount> {
   return api.patch<EmployeeAccount>(`/dashboard/people/employees/${id}/account`, payload)
+}
+
+/* ─── Custom Pricing ─── */
+
+export interface SetCustomPricingPayload {
+  enabled: boolean
+  types: { deliveryType: 'IN_PERSON' | 'ONLINE'; price: number; durationMins: number }[]
+}
+
+export async function setEmployeeCustomPricing(
+  employeeId: string,
+  serviceId: string,
+  payload: SetCustomPricingPayload,
+): Promise<{ hasCustomPricing: boolean; serviceTypes: ServiceEmployeeServiceType[] }> {
+  return api.put(
+    `/dashboard/people/employees/${employeeId}/services/${serviceId}/custom-pricing`,
+    payload,
+  )
 }
