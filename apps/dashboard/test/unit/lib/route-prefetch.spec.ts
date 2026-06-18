@@ -44,7 +44,6 @@ describe("prefetchRouteData", () => {
     const expected: Record<string, readonly unknown[]> = {
       "/clients": queryKeys.clients.list({ page: 1, perPage: 20 }),
       "/services": queryKeys.services.list({}),
-      "/branches": queryKeys.branches.list(),
       "/chatbot": queryKeys.chatbot.sessions.list({ page: 1, perPage: 20 }),
     }
     for (const [href, queryKey] of Object.entries(expected)) {

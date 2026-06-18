@@ -12,7 +12,6 @@ import {
   fetchVacations,
   fetchEmployeeServices,
   fetchEmployeeServiceTypes,
-  fetchEmployeeStats,
   fetchEmployeeAccount,
 } from "@/lib/api/employees"
 import type { EmployeeListQuery, EmployeeSortField } from "@/lib/types/employee"

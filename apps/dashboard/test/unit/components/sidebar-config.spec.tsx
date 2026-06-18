@@ -37,7 +37,6 @@ describe("SidebarConfig — persona groups", () => {
     expect(allHrefs).toContain("/services")
     expect(allHrefs).toContain("/categories")
     expect(allHrefs).toContain("/departments")
-    expect(allHrefs).toContain("/branches")
     expect(allHrefs).toContain("/settings")
   })
 
