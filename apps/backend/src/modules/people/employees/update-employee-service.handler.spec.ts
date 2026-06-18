@@ -36,6 +36,32 @@ describe('UpdateEmployeeServiceHandler', () => {
     expect(result).toEqual({ id: 'link-1', isActive: false });
   });
 
+  it('persists bufferMinutes without touching isActive', async () => {
+    const prisma = buildPrisma();
+    prisma.employeeService.findUnique.mockResolvedValue({ id: 'link-1', isActive: true, bufferMinutes: 0 });
+    prisma.employeeService.update.mockResolvedValue({ id: 'link-1', isActive: true, bufferMinutes: 20 });
+    const handler = new UpdateEmployeeServiceHandler(prisma as never);
+
+    const result = await handler.execute({ employeeId: 'emp-1', serviceId: 'svc-1', bufferMinutes: 20 });
+
+    expect(prisma.employeeService.update).toHaveBeenCalledWith({
+      where: { employeeId_serviceId: { employeeId: 'emp-1', serviceId: 'svc-1' } },
+      data: { bufferMinutes: 20 },
+    });
+    expect(result).toEqual({ id: 'link-1', isActive: true, bufferMinutes: 20 });
+  });
+
+  it('rejects a negative or non-integer bufferMinutes', async () => {
+    const prisma = buildPrisma();
+    prisma.employeeService.findUnique.mockResolvedValue({ id: 'link-1', isActive: true, bufferMinutes: 0 });
+    const handler = new UpdateEmployeeServiceHandler(prisma as never);
+
+    await expect(
+      handler.execute({ employeeId: 'emp-1', serviceId: 'svc-1', bufferMinutes: -5 }),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.employeeService.update).not.toHaveBeenCalled();
+  });
+
   // ─── Track B — practitioner integrity ──────────────────────────────────────
   // Toggling a link for an inactive employee is silently accepted today.
   // The link state has no effect on availability (the employee is filtered
