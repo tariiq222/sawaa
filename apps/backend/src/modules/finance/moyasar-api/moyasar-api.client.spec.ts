@@ -248,12 +248,12 @@ describe('MoyasarApiClient', () => {
       (fetchWithTimeout as jest.Mock).mockResolvedValue({
         ok: true,
         json: async () => ({
-          id: 'ref_123',
-          amount: 500,
+          id: 'pay_123',
+          amount: 1000,
           currency: 'SAR',
           status: 'refunded',
-          payment_id: 'pay_123',
-          created_at: '2024-01-02T00:00:00Z',
+          refunded: 500,
+          updated_at: '2024-01-02T00:00:00Z',
         }),
       });
 
@@ -264,7 +264,7 @@ describe('MoyasarApiClient', () => {
       });
 
       expect(result).toEqual({
-        id: 'ref_123',
+        id: 'pay_123',
         amount: 500,
         currency: 'SAR',
         status: 'refunded',
@@ -273,13 +273,10 @@ describe('MoyasarApiClient', () => {
       });
 
       expect(fetchWithTimeout).toHaveBeenCalledWith(
-        'https://api.moyasar.com/v1/refunds',
+        'https://api.moyasar.com/v1/payments/pay_123/refund',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({
-            payment_id: 'pay_123',
-            amount: 500,
-          }),
+          body: JSON.stringify({ amount: 500 }),
           headers: expect.objectContaining({
             'Idempotency-Key': 'idem-refund-123',
             Authorization: 'Bearer sk_live_abc',

@@ -251,19 +251,16 @@ export class MoyasarApiClient {
 		organizationId: string,
 		params: { paymentId: string; amount: number; idempotencyKey: string },
 	): Promise<MoyasarRefund> {
-		const body = {
-			payment_id: params.paymentId,
-			amount: params.amount,
-		};
+		const body = { amount: params.amount };
 
 		const data = await this.request<{
 			id: string;
 			amount: number;
 			currency: string;
 			status: string;
-			payment_id: string;
-			created_at: string;
-		}>(organizationId, "/refunds", {
+			refunded: number;
+			updated_at: string;
+		}>(organizationId, `/payments/${params.paymentId}/refund`, {
 			method: "POST",
 			body: JSON.stringify(body),
 			headers: { "Idempotency-Key": params.idempotencyKey },
@@ -271,11 +268,11 @@ export class MoyasarApiClient {
 
 		return {
 			id: data.id,
-			amount: data.amount,
+			amount: data.refunded,
 			currency: data.currency,
 			status: "refunded",
-			paymentId: data.payment_id,
-			createdAt: data.created_at,
+			paymentId: data.id,
+			createdAt: data.updated_at,
 		};
 	}
 
