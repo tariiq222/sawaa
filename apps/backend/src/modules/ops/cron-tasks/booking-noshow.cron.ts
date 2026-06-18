@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService } from '../../../infrastructure/database';
 import { DEFAULT_BOOKING_SETTINGS } from '../../bookings/get-booking-settings/get-booking-settings.handler';
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
+import { NoShowBookingHandler } from '../../bookings/no-show-booking/no-show-booking.handler';
 
 const CRON_ACTOR = 'system:booking-noshow-cron';
-const NOSHOW_REASON = 'Auto no-show: client did not check in within the configured window';
 const BATCH_SIZE = 100;
 
 @Injectable()
@@ -14,7 +14,7 @@ export class BookingNoShowCron {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly noShowHandler: NoShowBookingHandler,
   ) {}
 
   async execute(): Promise<void> {
@@ -27,45 +27,30 @@ export class BookingNoShowCron {
         settings?.autoNoShowAfterMinutes ?? DEFAULT_BOOKING_SETTINGS.autoNoShowAfterMinutes;
       const cutoff = new Date(Date.now() - minutes * 60_000);
 
-      // Snapshot the matching ids first so we can write a status-log row per
-      // booking. updateMany is fast but skips per-row audit; the two-step
-      // pattern (select-then-update-each) gives us a proper audit trail.
+      // Snapshot the matching ids first so we can process each one through
+      // NoShowBookingHandler, which handles the full lifecycle including group
+      // session capacity recalculation and GroupEnrollment cleanup.
       const targets = await this.prisma.booking.findMany({
         where: {
           status: BookingStatus.CONFIRMED,
           scheduledAt: { lte: cutoff },
           checkedInAt: null,
         },
-        select: { id: true, status: true },
+        select: { id: true },
         orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }],
         take: BATCH_SIZE,
       });
 
       if (targets.length === 0) return;
 
-      const now = new Date();
       let succeeded = 0;
       for (const target of targets) {
         try {
-          await this.rlsTransaction.withTransaction(async (tx) => {
-            await tx.booking.update({
-              where: { id: target.id, status: BookingStatus.CONFIRMED },
-              data: { status: BookingStatus.NO_SHOW, noShowAt: now },
-            });
-            await tx.bookingStatusLog.create({
-              data: {
-                bookingId: target.id,
-                fromStatus: target.status,
-                toStatus: BookingStatus.NO_SHOW,
-                changedBy: CRON_ACTOR,
-                reason: NOSHOW_REASON,
-              },
-            });
-          });
+          await this.noShowHandler.execute({ bookingId: target.id, changedBy: CRON_ACTOR });
           succeeded += 1;
         } catch (err) {
           // Booking may have transitioned (e.g., late check-in) between select
-          // and update — skip and continue.
+          // and the handler's fetchBookingOrFail — skip and continue.
           this.logger.warn(
             `booking-noshow: skipped ${target.id} (already transitioned): ${err instanceof Error ? err.message : String(err)}`,
           );
