@@ -1020,4 +1020,147 @@ describe('CreateBookingHandler', () => {
     await expect(guardedHandler.execute(baseDto)).rejects.toThrow('Selected booking time is not available');
     expect(prisma.booking.create).not.toHaveBeenCalled();
   });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 12. Channel gate — serviceBookingConfig isActive filter (#11)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  it('rejects deliveryType blocked only by an INACTIVE config (channel gate only counts active configs)', async () => {
+    // Active config for IN_PERSON only; ONLINE config exists but is inactive.
+    prisma.serviceBookingConfig.findMany = jest.fn().mockResolvedValue([
+      { deliveryType: 'IN_PERSON' },
+    ]);
+
+    await expect(
+      handler.execute({ ...baseDto, deliveryType: 'ONLINE' as any }),
+    ).rejects.toThrow('Service does not support ONLINE delivery type');
+  });
+
+  it('allows deliveryType when its config is active (channel gate passes)', async () => {
+    prisma.serviceBookingConfig.findMany = jest.fn().mockResolvedValue([
+      { deliveryType: 'IN_PERSON' },
+      { deliveryType: 'ONLINE' },
+    ]);
+
+    await expect(
+      handler.execute({ ...baseDto, deliveryType: 'ONLINE' as any }),
+    ).resolves.toBeDefined();
+  });
+
+  it('passes findMany with isActive: true to channel gate query', async () => {
+    await handler.execute({ ...baseDto, bookingType: 'APPOINTMENT' as any, deliveryType: 'IN_PERSON' as any });
+
+    expect(prisma.serviceBookingConfig.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ isActive: true }),
+      }),
+    );
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 13. Source field + ONLINE booking status/expiry/invoice (#7 + #6)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  it('persists source=RECEPTION when no source is provided (dashboard default)', async () => {
+    await handler.execute(baseDto);
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ source: 'RECEPTION' }),
+      }),
+    );
+  });
+
+  it('persists source=ONLINE when source=ONLINE is passed', async () => {
+    await handler.execute({ ...baseDto, source: 'ONLINE' });
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ source: 'ONLINE' }),
+      }),
+    );
+  });
+
+  it('creates ONLINE paid booking as AWAITING_PAYMENT with expiresAt when price > 0 and no payAtClinic', async () => {
+    // price > 0, no payAtClinic, not group, source=ONLINE → AWAITING_PAYMENT
+    prisma.booking.create = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: 'AWAITING_PAYMENT',
+      source: 'ONLINE',
+    });
+
+    await handler.execute({ ...baseDto, source: 'ONLINE' });
+
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'AWAITING_PAYMENT',
+          expiresAt: expect.any(Date),
+        }),
+      }),
+    );
+  });
+
+  it('does not set confirmedAt for AWAITING_PAYMENT ONLINE booking', async () => {
+    await handler.execute({ ...baseDto, source: 'ONLINE' });
+
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          confirmedAt: undefined,
+        }),
+      }),
+    );
+  });
+
+  it('does not create invoice for AWAITING_PAYMENT ONLINE booking', async () => {
+    await handler.execute({ ...baseDto, source: 'ONLINE' });
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
+  });
+
+  it('creates ONLINE booking as CONFIRMED when payAtClinic=true (no payment needed)', async () => {
+    prisma.organizationSettings.findFirst = jest.fn().mockResolvedValue({ paymentAtClinicEnabled: true, vatRate: '0' });
+    await handler.execute({ ...baseDto, source: 'ONLINE', payAtClinic: true });
+
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'CONFIRMED',
+          confirmedAt: expect.any(Date),
+        }),
+      }),
+    );
+  });
+
+  it('creates ONLINE booking as CONFIRMED when price=0 (free service)', async () => {
+    priceResolver.resolve = jest.fn().mockResolvedValue({
+      price: 0,
+      durationMins: 60,
+      durationOptionId: '',
+      currency: 'SAR',
+      isEmployeeOverride: false,
+    });
+    prisma.booking.create = jest.fn().mockResolvedValue({ ...mockBooking, price: 0, status: 'CONFIRMED' });
+
+    await handler.execute({ ...baseDto, source: 'ONLINE' });
+
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'CONFIRMED',
+        }),
+      }),
+    );
+  });
+
+  it('creates dashboard booking (no source) as CONFIRMED regardless of price', async () => {
+    // This is the original dashboard path — must not regress.
+    await handler.execute(baseDto); // no source field
+    expect(prisma.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'CONFIRMED',
+          source: 'RECEPTION',
+        }),
+      }),
+    );
+  });
 });

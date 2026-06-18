@@ -38,6 +38,8 @@ export type CreateBookingCommand = Omit<CreateBookingDto, 'scheduledAt' | 'expir
   expiresAt?: Date;
   bookingType?: string;
   deliveryType?: string;
+  /** Booking source channel. Defaults to 'RECEPTION' when omitted. */
+  source?: 'RECEPTION' | 'ONLINE';
 };
 
 @Injectable()
@@ -149,7 +151,7 @@ export class CreateBookingHandler {
 
     if (bookingType && bookingType !== 'WALK_IN') {
       const allowedConfigs = await this.prisma.serviceBookingConfig.findMany({
-        where: { serviceId: dto.serviceId },
+        where: { serviceId: dto.serviceId, isActive: true },
         select: { deliveryType: true },
       });
       const allowedDeliveryTypes = allowedConfigs.map(c => c.deliveryType);
@@ -224,11 +226,25 @@ export class CreateBookingHandler {
     const isReserveBeforePaymentGroup =
       isGroupService && !!serviceRecord?.reserveWithoutPayment;
 
-    // Dashboard-created bookings are confirmed on creation: a receptionist made
-    // them, so the appointment itself is settled — payment is tracked separately
-    // (CONFIRMED + unpaid is the valid "pay at clinic later" state). Group
-    // reserve-before-payment sessions still fill first (PENDING_GROUP_FILL).
-    const initialStatus = isReserveBeforePaymentGroup ? 'PENDING_GROUP_FILL' : 'CONFIRMED';
+    // RECEPTION bookings (dashboard/employee) are confirmed immediately —
+    // a staff member created them, so the appointment itself is settled.
+    // ONLINE bookings (mobile client / public website) are confirmed immediately
+    // only when: payAtClinic=true (no payment needed), or service is free (price=0),
+    // or service is a group fill (PENDING_GROUP_FILL handles its own flow).
+    // Otherwise ONLINE bookings start as AWAITING_PAYMENT with a 15-minute expiry
+    // so the payment step can complete before the slot is released.
+    const resolvedSource = dto.source ?? 'RECEPTION';
+    const needsOnlinePayment =
+      resolvedSource === 'ONLINE' &&
+      !dto.payAtClinic &&
+      !isGroupService &&
+      price > 0;
+
+    const initialStatus = isReserveBeforePaymentGroup
+      ? 'PENDING_GROUP_FILL'
+      : needsOnlinePayment
+        ? 'AWAITING_PAYMENT'
+        : 'CONFIRMED';
 
     // Serializable: prevents two concurrent group-session bookings from both reading slotCount=N-1 and overflowing capacity.
     const booking = await this.rlsTransaction.withTransaction(
@@ -357,15 +373,15 @@ export class CreateBookingHandler {
             currency,
             bookingType: isGroupService ? 'GROUP' : bookingType,
             deliveryType,
-            source: 'RECEPTION',
+            source: resolvedSource,
             notes: dto.notes,
-            // A confirmed booking has no payment-expiry window (EXPIRE only acts
-            // on PENDING/AWAITING_PAYMENT). Keep the window only for the group
-            // fill flow that still starts unconfirmed.
+            // CONFIRMED bookings carry no expiry window — EXPIRE only acts on
+            // unconfirmed states. PENDING_GROUP_FILL and AWAITING_PAYMENT both
+            // get a 15-minute window (or the caller-supplied expiresAt).
             expiresAt:
               initialStatus === 'CONFIRMED'
                 ? undefined
-                : dto.expiresAt ?? (!dto.payAtClinic ? new Date(Date.now() + 15 * 60 * 1000) : undefined),
+                : dto.expiresAt ?? new Date(Date.now() + 15 * 60 * 1000),
             groupSessionId: dto.groupSessionId,
             payAtClinic: dto.payAtClinic ?? false,
             couponCode: dto.couponCode ?? null,
@@ -385,7 +401,10 @@ export class CreateBookingHandler {
         });
 
         let invoice: { id: string } | null = null;
-        if (!dto.payAtClinic && !isGroupService) {
+        // Do not create invoice for AWAITING_PAYMENT bookings — invoice is
+        // created when payment is confirmed (payment-completed-handler).
+        // Similarly skip for group fill and pay-at-clinic.
+        if (!dto.payAtClinic && !isGroupService && initialStatus !== 'AWAITING_PAYMENT') {
           const orgSettings = await tx.organizationSettings.findFirst({
             where: {},
             select: { vatRate: true },
