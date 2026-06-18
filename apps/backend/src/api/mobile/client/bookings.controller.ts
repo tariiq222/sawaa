@@ -124,6 +124,7 @@ export class MobileClientBookingsController {
       scheduledAt: new Date(body.scheduledAt),
       durationOptionId: body.durationOptionId,
       notes: body.notes,
+      source: 'ONLINE',
     });
   }
 

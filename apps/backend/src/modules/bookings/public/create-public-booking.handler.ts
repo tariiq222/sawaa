@@ -45,6 +45,7 @@ export class CreatePublicBookingHandler {
       deliveryType: command.deliveryType,
       couponCode: command.couponCode,
       notes: command.notes,
+      source: 'ONLINE',
     };
 
     return this.createBookingHandler.execute(delegateCommand);
