@@ -278,3 +278,13 @@ export async function updateRatingVisibility(
 ): Promise<void> {
   await api.patch(`/dashboard/organization/ratings/${id}/visibility`, { isPublic })
 }
+
+export async function updateEmployeeSchedule(
+  employeeId: string,
+  schedule: AvailabilitySlot[],
+): Promise<{ schedule: AvailabilitySlot[] }> {
+  return api.put<{ schedule: AvailabilitySlot[] }>(
+    `/dashboard/employees/${employeeId}/availability/schedule`,
+    { schedule },
+  )
+}

@@ -29,6 +29,8 @@ export const queryKeys = {
     list: (filters?: object) => ["employees", "list", filters] as const,
     detail: (id: string) => ["employees", "detail", id] as const,
     availability: (id: string) => ["employees", "availability", id] as const,
+    schedule: (employeeId: string) =>
+      [...queryKeys.employees.all, "schedule", employeeId] as const,
     slots: (id: string, date: string) =>
       ["employees", "slots", id, date] as const,
     breaks: (id: string) => ["employees", "breaks", id] as const,
@@ -43,6 +45,8 @@ export const queryKeys = {
       ] as const,
     ratings: (id: string) => ["employees", "ratings", id] as const,
     account: (id: string) => ["employees", "account", id] as const,
+    practitionerDurations: (employeeId: string, serviceId: string) =>
+      ['employees', employeeId, 'practitioner-durations', serviceId] as const,
   },
 
   /* ─── Services ─── */
