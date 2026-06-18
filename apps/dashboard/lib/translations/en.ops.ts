@@ -1,6 +1,6 @@
 /**
  * English translations — Extended B
- * (coupons, branches employees.services, waitlist,
+ * (coupons, branches employees.services,
  *  settings.notifications, settings.emailTemplates, services.bookingTypes,
  *  employees.create, common)
  */
@@ -184,28 +184,6 @@ export const enOps: Record<string, string> = {
   "employees.services.enableType": "Enable additional type",
   "employees.services.customOptionsHint": "Toggle to set custom duration options for this employee",
 
-  // ─── Waitlist ───
-  "waitlist.allStatuses": "All Statuses",
-  "waitlist.status.waiting": "Waiting",
-  "waitlist.status.notified": "Notified",
-  "waitlist.status.booked": "Booked",
-  "waitlist.status.expired": "Expired",
-  "waitlist.status.cancelled": "Cancelled",
-  "waitlist.doctor": "Doctor",
-  "waitlist.preferredDate": "Preferred Date",
-  "waitlist.preferredTime": "Preferred Time",
-  "waitlist.time.morning": "Morning",
-  "waitlist.time.afternoon": "Afternoon",
-  "waitlist.time.any": "Any",
-  "waitlist.joined": "Joined",
-  "waitlist.notifiedAt": "Notified",
-  "waitlist.phone": "Phone",
-  "waitlist.clear": "Clear",
-  "waitlist.removed": "Removed from waitlist",
-  "waitlist.removeError": "Failed to remove from waitlist",
-  "waitlist.empty.title": "No Waitlist Entries",
-  "waitlist.empty.description": "The waitlist is empty. Clients are added here when a slot they'd like is fully booked.",
-
   // ─── Settings — Notifications ───
   "settings.notificationsHint": "Control which notification types are sent to staff and clients",
   "settings.notifyCategory.bookings": "Bookings",
@@ -214,8 +192,6 @@ export const enOps: Record<string, string> = {
   "settings.notifyCategory.other": "Other",
   "settings.notifyReminders": "Appointment Reminders",
   "settings.notifyRemindersDesc": "Send reminders before upcoming appointments",
-  "settings.notifyWaitlist": "Waitlist Notifications",
-  "settings.notifyWaitlistDesc": "Notify clients when a waitlist slot becomes available",
 
   // ─── Settings — Email Templates ───
   "settings.tabs.emailTemplates": "Email Templates",

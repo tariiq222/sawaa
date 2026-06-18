@@ -171,7 +171,6 @@ export interface Notification {
     | 'payment_received'
     | 'new_rating'
     | 'problem_report'
-    | 'waitlist_slot_available'
     | 'system_alert';
   titleAr: string;
   titleEn: string;

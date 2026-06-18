@@ -1,23 +1,17 @@
-// EXCEPTION: dashboard range filter state, approved 2026-05-17
 "use client"
 
-import { Suspense, useMemo, useState } from "react"
-import { format, startOfWeek, startOfMonth } from "date-fns"
+import { Suspense, useMemo } from "react"
+import { format } from "date-fns"
 import { ar } from "date-fns/locale"
 import { FlashIcon } from "@hugeicons/core-free-icons"
 import { GreetingHeader } from "@/components/features/dashboard/greeting-header"
-import { DashboardStats } from "@/components/features/dashboard/dashboard-stats"
-import { AttentionAlerts } from "@/components/features/dashboard/attention-alerts"
 import { QuickActions } from "@/components/features/dashboard/quick-actions"
 import { SectionHeader } from "@/components/features/section-header"
-import { useDashboardStats } from "@/hooks/use-dashboard-stats"
 import { useAuth } from "@/components/providers/auth-provider"
 import { useLocale } from "@/components/locale-provider"
 import { getVisibleWidgets } from "@/lib/dashboard-widgets"
-import { StatsRangeFilter, type StatsRangePreset } from "@/components/features/dashboard/stats-range-filter"
 
 export default function DashboardPage() {
-  const today = format(new Date(), "yyyy-MM-dd")
   const { user, canDo } = useAuth()
   const { locale, t } = useLocale()
 
@@ -33,26 +27,6 @@ export default function DashboardPage() {
     locale === "ar" ? { locale: ar } : undefined,
   )
 
-  const [preset, setPreset] = useState<StatsRangePreset>("today")
-  const [customFrom, setCustomFrom] = useState("")
-  const [customTo, setCustomTo] = useState("")
-
-  const range = useMemo(() => {
-    const now = new Date()
-    if (preset === "today") return { from: today, to: today }
-    if (preset === "week")
-      return { from: format(startOfWeek(now, { weekStartsOn: 6 }), "yyyy-MM-dd"), to: today }
-    if (preset === "month")
-      return { from: format(startOfMonth(now), "yyyy-MM-dd"), to: today }
-    return { from: customFrom || today, to: customTo || today }
-  }, [preset, customFrom, customTo, today])
-
-  const handleFromChange = (v: string) => { setCustomFrom(v); setPreset("custom") }
-  const handleToChange = (v: string) => { setCustomTo(v); setPreset("custom") }
-  const handleReset = () => { setPreset("today"); setCustomFrom(""); setCustomTo("") }
-
-  const { data: dashboardStats } = useDashboardStats(range)
-
   const userName = user?.name || user?.email || "—"
 
   return (
@@ -62,22 +36,7 @@ export default function DashboardPage() {
           <GreetingHeader
             userName={userName}
             dateLabel={dateLabel}
-            bookingsCount={dashboardStats?.todayBookings ?? 0}
-          />
-          <StatsRangeFilter
-            preset={preset}
-            from={range.from}
-            to={range.to}
-            onPresetChange={setPreset}
-            onFromChange={handleFromChange}
-            onToChange={handleToChange}
-            onReset={handleReset}
-          />
-          <DashboardStats stats={dashboardStats} visibleStats={visible.stats} />
-          <AttentionAlerts
-            pendingPayments={dashboardStats?.pendingPayments ?? 0}
-            cancelRequests={dashboardStats?.cancelRequests ?? 0}
-            visible={visible.attentionAlerts}
+            bookingsCount={0}
           />
         </section>
       </Suspense>

@@ -165,16 +165,6 @@ export function useEmployees() {
   }
 }
 
-/* ─── Stats Hook ─── */
-
-export function useEmployeeStats() {
-  return useQuery({
-    queryKey: queryKeys.employees.stats(),
-    queryFn: fetchEmployeeStats,
-    staleTime: 60 * 1000,
-  })
-}
-
 /* ─── Detail Hook ─── */
 
 export function useEmployee(id: string | null) {

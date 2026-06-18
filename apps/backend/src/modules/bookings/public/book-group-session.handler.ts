@@ -17,9 +17,8 @@ interface BookGroupSessionCommand {
 }
 
 export interface BookGroupSessionResult {
-  type: 'BOOKED' | 'WAITLISTED';
-  bookingId?: string;
-  waitlistPosition?: number;
+  type: 'BOOKED';
+  bookingId: string;
 }
 
 @Injectable()
@@ -59,27 +58,11 @@ export class BookGroupSessionHandler {
       throw new ConflictException('Already enrolled in this group session');
     }
 
-    const existingWaitlist = await this.prisma.groupSessionWaitlist.findUnique({
-      where: {
-        groupSessionId_clientId: {
-          groupSessionId: cmd.groupSessionId,
-          clientId: cmd.clientId,
-        },
-      },
-    });
-
-    if (existingWaitlist) {
-      throw new ConflictException('Already on the waitlist for this group session');
+    if (session.enrolledCount >= session.maxCapacity) {
+      throw new ConflictException('الجلسة مكتملة العدد');
     }
 
-    if (session.enrolledCount < session.maxCapacity) {
-      return this.createBooking(cmd.clientId, session);
-    }
-    if (session.waitlistEnabled) {
-      return this.addToWaitlist(cmd.clientId, session);
-    }
-
-    throw new BadRequestException('Group session is full and waitlist is not enabled');
+    return this.createBooking(cmd.clientId, session);
   }
 
   private async createBooking(
@@ -103,7 +86,7 @@ export class BookGroupSessionHandler {
         data: { enrolledCount: { increment: 1 } },
       });
       if (reserved.count !== 1) {
-        throw new ConflictException('Group session is full');
+        throw new ConflictException('الجلسة مكتملة العدد');
       }
 
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('booking_number'), 0)`;
@@ -189,36 +172,6 @@ export class BookGroupSessionHandler {
     return {
       type: 'BOOKED',
       bookingId: booking.id,
-    };
-  }
-
-  private async addToWaitlist(
-    clientId: string,
-    session: { id: string },
-  ): Promise<BookGroupSessionResult> {
-    const lastEntry = await this.prisma.groupSessionWaitlist.findFirst({
-      where: { groupSessionId: session.id },
-      orderBy: { position: 'desc' },
-    });
-
-    const position = (lastEntry?.position ?? 0) + 1;
-
-    await this.prisma.groupSessionWaitlist.create({
-      data: {
-        groupSessionId: session.id,
-        clientId,
-        position,
-      },
-    });
-
-    await this.prisma.groupSession.update({
-      where: { id: session.id },
-      data: { waitlistCount: { increment: 1 } },
-    });
-
-    return {
-      type: 'WAITLISTED',
-      waitlistPosition: position,
     };
   }
 }

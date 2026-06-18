@@ -3,13 +3,11 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Add01Icon, Building06Icon, CheckmarkCircle02Icon, Cancel01Icon, StarIcon } from "@hugeicons/core-free-icons"
+import { Add01Icon } from "@hugeicons/core-free-icons"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
-import { StatsGrid } from "@/components/features/stats-grid"
-import { StatCard } from "@/components/features/stat-card"
 import { DataTable } from "@/components/features/data-table"
 import { ErrorBanner } from "@/components/features/error-banner"
 import { getBranchColumns } from "@/components/features/branches/branch-columns"
@@ -33,10 +31,6 @@ export function BranchListPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<Branch | null>(null)
   const [employeesTarget, setEmployeesTarget] = useState<Branch | null>(null)
-
-  const activeCount = branches.filter((b) => b.isActive).length
-  const inactiveCount = branches.filter((b) => !b.isActive).length
-  const mainCount = branches.filter((b) => b.isMain).length
 
   const handleToggleActive = async (b: Branch) => {
     try {
@@ -81,19 +75,6 @@ export function BranchListPage() {
           </Button>
         )}
       </PageHeader>
-
-      {isLoading && !meta ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={`skeleton-${i}`} className="h-24 rounded-lg" />)}
-        </div>
-      ) : (
-        <StatsGrid>
-          <StatCard title={t("branches.stats.total")} value={meta?.total ?? 0} icon={Building06Icon} iconColor="primary" />
-          <StatCard title={t("branches.stats.active")} value={activeCount} icon={CheckmarkCircle02Icon} iconColor="success" />
-          <StatCard title={t("branches.stats.inactive")} value={inactiveCount} icon={Cancel01Icon} iconColor="warning" />
-          <StatCard title={t("branches.stats.main")} value={mainCount} icon={StarIcon} iconColor="accent" />
-        </StatsGrid>
-      )}
 
       <FilterBar
         search={{ value: search, onChange: setSearch, placeholder: t("branches.searchPlaceholder") }}

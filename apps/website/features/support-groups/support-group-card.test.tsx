@@ -15,13 +15,10 @@ const base: SupportGroup = {
   price: 50,
   currency: 'SAR',
   status: 'SCHEDULED',
-  waitlistEnabled: true,
-  waitlistCount: 0,
   employeeId: 'e1',
   serviceId: 's1',
   spotsLeft: 7,
   isFull: false,
-  isWaitlistOnly: false,
 };
 
 describe('SupportGroupCard', () => {
@@ -38,15 +35,10 @@ describe('SupportGroupCard', () => {
     expect(screen.getByText('Free')).toBeTruthy();
   });
 
-  it('shows "Full" pill when the session is full and waitlist is not allowed', () => {
-    render(<SupportGroupCard group={{ ...base, isFull: true, isWaitlistOnly: false }} />);
+  it('shows "Full" pill when the session is full', () => {
+    render(<SupportGroupCard group={{ ...base, isFull: true }} />);
     expect(screen.getByText('Full')).toBeTruthy();
     expect(screen.queryByText(/spots left/)).toBeNull();
-  });
-
-  it('shows "Waitlist Only" pill when waitlistOnly is true', () => {
-    render(<SupportGroupCard group={{ ...base, isFull: true, isWaitlistOnly: true }} />);
-    expect(screen.getByText(/Waitlist Only/i)).toBeTruthy();
   });
 
   it('calls onSelect when the card is clicked and when Enter is pressed', () => {

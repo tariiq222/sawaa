@@ -9,9 +9,6 @@ import { CancelBookingHandler } from './cancel-booking/cancel-booking.handler';
 import { DeleteBookingHandler } from './delete-booking/delete-booking.handler';
 import { RescheduleBookingHandler } from './reschedule-booking/reschedule-booking.handler';
 import { ConfirmBookingHandler } from './confirm-booking/confirm-booking.handler';
-import { AddToWaitlistHandler } from './add-to-waitlist/add-to-waitlist.handler';
-import { ListWaitlistHandler } from './list-waitlist/list-waitlist.handler';
-import { RemoveWaitlistEntryHandler } from './remove-waitlist-entry/remove-waitlist-entry.handler';
 import { GetBookingHandler } from './get-booking/get-booking.handler';
 import { ListBookingsHandler } from './list-bookings/list-bookings.handler';
 import { BookingsStatsHandler } from './bookings-stats/bookings-stats.handler';
@@ -24,7 +21,6 @@ import { ListBookingStatusLogHandler } from './list-booking-status-log/list-book
 import { PaymentCompletedEventHandler } from './payment-completed-handler/payment-completed.handler';
 import { DepositPaidEventHandler } from './deposit-paid-handler/deposit-paid.handler';
 import { RefundCompletedEventHandler } from './refund-completed-handler/refund-completed.handler';
-import { OnBookingCancelledPromoteWaitlistHandler } from './waitlist/on-booking-cancelled-promote-waitlist.handler';
 import { GetBookingSettingsHandler } from './get-booking-settings/get-booking-settings.handler';
 import { UpsertBookingSettingsHandler } from './upsert-booking-settings/upsert-booking-settings.handler';
 import { RequestCancelBookingHandler } from './request-cancel-booking/request-cancel-booking.handler';
@@ -63,9 +59,6 @@ const handlers = [
   DeleteBookingHandler,
   RescheduleBookingHandler,
   ConfirmBookingHandler,
-  AddToWaitlistHandler,
-  ListWaitlistHandler,
-  RemoveWaitlistEntryHandler,
   GetBookingHandler,
   ListBookingsHandler,
   BookingsStatsHandler,
@@ -111,7 +104,7 @@ const handlers = [
     FinanceModule,
   ],
   controllers: [DashboardBookingsController],
-  providers: [...handlers, ZoomMeetingWorker, PaymentCompletedEventHandler, DepositPaidEventHandler, RefundCompletedEventHandler, OnBookingCancelledPromoteWaitlistHandler],
+  providers: [...handlers, ZoomMeetingWorker, PaymentCompletedEventHandler, DepositPaidEventHandler, RefundCompletedEventHandler],
   exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CancelRecurringSeriesHandler, CreatePublicBookingHandler],
 })
 export class BookingsModule implements OnModuleInit {
@@ -119,13 +112,11 @@ export class BookingsModule implements OnModuleInit {
     private readonly paymentCompletedHandler: PaymentCompletedEventHandler,
     private readonly depositPaidHandler: DepositPaidEventHandler,
     private readonly refundCompletedHandler: RefundCompletedEventHandler,
-    private readonly promoteWaitlist: OnBookingCancelledPromoteWaitlistHandler,
   ) {}
 
   onModuleInit(): void {
     this.paymentCompletedHandler.register();
     this.depositPaidHandler.register();
     this.refundCompletedHandler.register();
-    this.promoteWaitlist.register();
   }
 }

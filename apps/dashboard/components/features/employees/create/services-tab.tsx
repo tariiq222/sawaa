@@ -94,6 +94,22 @@ export function ServicesTab({
     [services, draftServices, editingDraft],
   )
 
+  const serviceLineage = (serviceId: string) => {
+    const cat = services?.find((s) => s.id === serviceId)?.category
+    const dep = cat?.department
+    return {
+      categoryName: cat ? (isAr ? cat.nameAr : cat.nameEn ?? cat.nameAr) : null,
+      departmentName: dep ? (isAr ? dep.nameAr : dep.nameEn ?? dep.nameAr) : null,
+    }
+  }
+
+  const availableServiceOptions = availableServices.map((s) => ({
+    id: s.id,
+    nameAr: s.nameAr,
+    nameEn: s.nameEn ?? s.nameAr,
+    ...serviceLineage(s.id),
+  }))
+
   const form = useForm<AddServiceFormData>({
     resolver: zodResolver(addServiceSchema),
     defaultValues: { serviceId: "", bufferMinutes: 0, isActive: true },
@@ -214,19 +230,40 @@ export function ServicesTab({
           </p>
         )}
 
-        {draftServices.map((ds) => (
-          <ServiceSummaryCard
-            key={ds.key}
-            draft={ds}
-            onRemove={() => removeService(ds.key)}
-            onEdit={() => handleEditService(ds)}
-          />
-        ))}
+        {draftServices.map((ds) =>
+          editingKey === ds.key ? (
+            <AddServiceForm
+              key={ds.key}
+              form={form}
+              availableServices={availableServiceOptions}
+              serviceBookingTypes={serviceBookingTypes}
+              typeConfigs={typeConfigs}
+              onTypeConfigsChange={setTypeConfigs}
+              useCustomPricing={useCustomPricing}
+              onUseCustomPricingChange={handleCustomPricingChange}
+              onSubmit={handleAddService}
+              onCancel={handleCancel}
+              t={t}
+              locale={locale}
+              isEditing
+              editingServiceName={ds.serviceName}
+            />
+          ) : (
+            <ServiceSummaryCard
+              key={ds.key}
+              draft={ds}
+              departmentName={serviceLineage(ds.serviceId).departmentName}
+              categoryName={serviceLineage(ds.serviceId).categoryName}
+              onRemove={() => removeService(ds.key)}
+              onEdit={() => handleEditService(ds)}
+            />
+          )
+        )}
 
-        {isAdding ? (
+        {isAdding && !editingKey ? (
           <AddServiceForm
             form={form}
-            availableServices={availableServices.map((s) => ({ id: s.id, nameAr: s.nameAr, nameEn: s.nameEn ?? s.nameAr }))}
+            availableServices={availableServiceOptions}
             serviceBookingTypes={serviceBookingTypes}
             typeConfigs={typeConfigs}
             onTypeConfigsChange={setTypeConfigs}
@@ -236,10 +273,9 @@ export function ServicesTab({
             onCancel={handleCancel}
             t={t}
             locale={locale}
-            isEditing={!!editingKey}
-            editingServiceName={editingDraft?.serviceName}
+            isEditing={false}
           />
-        ) : (
+        ) : !isAdding && !editingKey ? (
           <Button
             type="button"
             variant="outline"
@@ -249,7 +285,7 @@ export function ServicesTab({
             <HugeiconsIcon icon={Add01Icon} size={16} />
             {t("employees.create.addService")}
           </Button>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   )

@@ -1,12 +1,12 @@
 import React from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { CalendarDays, ChevronLeft, ChevronRight, CircleDollarSign, Clock3, Users } from 'lucide-react-native';
 
 import { AppIcon } from '@/components/ui/AppIcon';
-import { useBookGroupSession, useGroupSession } from '@/hooks/queries';
+import { useBranding, useBookGroupSession, useGroupSession } from '@/hooks/queries';
 import { useDir } from '@/hooks/useDir';
 import { AquaBackground, PrimaryButton, sawaaColors, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
@@ -34,24 +34,28 @@ export default function GroupDetailScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const { t } = useTranslation();
+  const brandingQuery = useBranding();
+  const contactPhone = brandingQuery.data?.contactPhone ?? null;
   const groupQuery = useGroupSession(id);
   const book = useBookGroupSession();
   const group = groupQuery.data;
   const BackIcon = dir.isRTL ? ChevronRight : ChevronLeft;
   const backSymbol = (dir.isRTL ? 'chevron.right' : 'chevron.left') as React.ComponentProps<typeof AppIcon>['sf'];
 
-  const isWaitlist = Boolean(group?.isFull && group.waitlistEnabled);
-  const isClosed = Boolean(group?.isFull && !group.waitlistEnabled);
-  const ctaLabel = isWaitlist ? t('groups.joinWaitlist') : isClosed ? t('groups.full') : t('groups.join');
+  const isClosed = Boolean(group?.isFull);
+  const ctaLabel = isClosed ? t('groups.contactUs') : t('groups.join');
   const description = group ? (dir.isRTL ? group.descriptionAr : group.descriptionEn ?? group.descriptionAr) : null;
+
+  const onContactUs = () => {
+    if (contactPhone) {
+      void Linking.openURL(`tel:${contactPhone}`);
+    }
+  };
 
   const onJoin = () => {
     if (!id) return;
     book.mutate(id, {
-      onSuccess: (res) => {
-        if (res.type === 'BOOKED') Alert.alert(t('groups.title'), t('groups.booked'));
-        else Alert.alert(t('groups.title'), t('groups.waitlisted', { position: res.waitlistPosition ?? '-' }));
-      },
+      onSuccess: () => Alert.alert(t('groups.title'), t('groups.booked')),
       onError: () => Alert.alert(t('groups.title'), t('groups.bookError')),
     });
   };
@@ -99,8 +103,7 @@ export default function GroupDetailScreen() {
               <DetailRow icon="price" label={formatPrice(group.price, dir.isRTL, t('home.sar'))} dir={dir} />
             </View>
 
-            <View style={[styles.badgeRow, { flexDirection: dir.row }]}> 
-              {isWaitlist ? <StateBadge label={t('groups.waitlist')} tone="waitlist" /> : null}
+            <View style={[styles.badgeRow, { flexDirection: dir.row }]}>
               {isClosed ? <StateBadge label={t('groups.full')} tone="muted" /> : null}
               {!group.isFull ? <StateBadge label={t('groups.spotsLeft', { count: group.spotsLeft })} tone="open" /> : null}
             </View>
@@ -109,12 +112,12 @@ export default function GroupDetailScreen() {
       </ScrollView>
 
       {group ? (
-        <View style={[styles.ctaWrap, { bottom: insets.bottom + 20 }]}> 
+        <View style={[styles.ctaWrap, { bottom: insets.bottom + 20 }]}>
           <Glass variant="strong" radius={sawaaRadius.pill} style={styles.ctaPill}>
             <PrimaryButton
               label={ctaLabel}
-              onPress={onJoin}
-              disabled={book.isPending || isClosed}
+              onPress={isClosed ? onContactUs : onJoin}
+              disabled={book.isPending || (isClosed && !contactPhone)}
               height={50}
             />
           </Glass>
@@ -139,8 +142,8 @@ function DetailRow({ icon, label, dir }: { icon: 'calendar' | 'duration' | 'pric
   );
 }
 
-function StateBadge({ label, tone }: { label: string; tone: 'muted' | 'open' | 'waitlist' }) {
-  const color = tone === 'muted' ? sawaaColors.ink[500] : tone === 'waitlist' ? sawaaColors.accent.amber : sawaaColors.teal[700];
+function StateBadge({ label, tone }: { label: string; tone: 'muted' | 'open' }) {
+  const color = tone === 'muted' ? sawaaColors.ink[500] : sawaaColors.teal[700];
   return (
     <View style={[styles.badge, { borderColor: color, backgroundColor: withAlpha(color, 0.12) }]}> 
       <ThemedText variant="label" color={color}>{label}</ThemedText>

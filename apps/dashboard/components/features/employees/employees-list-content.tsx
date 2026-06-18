@@ -2,16 +2,8 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import {
-  Stethoscope02Icon,
-  UserCheck01Icon,
-  UserBlock01Icon,
-  StarIcon,
-} from "@hugeicons/core-free-icons"
 
 import { ErrorBanner } from "@/components/features/error-banner"
-import { StatsGrid } from "@/components/features/stats-grid"
-import { StatCard } from "@/components/features/stat-card"
 import { DataTable } from "@/components/features/data-table"
 import { FilterBar } from "@/components/features/filter-bar"
 import { Skeleton } from "@sawaa/ui"
@@ -20,7 +12,6 @@ import { DeleteEmployeeDialog } from "@/components/features/employees/delete-emp
 import { EmployeeStatusDialog } from "@/components/features/employees/employee-status-dialog"
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
-import { useEmployeeStats } from "@/hooks/use-employees"
 import { useEmployeeMutations } from "@/hooks/use-employee-mutations"
 import type { Employee, EmployeeSortField } from "@/lib/types/employee"
 import type { SortingState } from "@tanstack/react-table"
@@ -61,7 +52,6 @@ export function EmployeesListContent({
   const router = useRouter()
   const { t, locale } = useLocale()
   const { canDo } = useAuth()
-  const { data: stats } = useEmployeeStats()
 
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null)
   const [statusTarget, setStatusTarget] = useState<Employee | null>(null)
@@ -72,16 +62,6 @@ export function EmployeesListContent({
   const handleDelete = (p: Employee) => setDeleteTarget(p)
   const handlePreview = (p: Employee) => router.push(`/employees/${p.id}`)
   const handleToggleActive = (p: Employee) => setStatusTarget(p)
-
-  const totalCount = stats?.total ?? meta?.total ?? employees.length
-  const activeCount = stats?.active ?? employees.filter((p) => p.isActive).length
-  const inactiveCount = stats?.inactive ?? employees.filter((p) => !p.isActive).length
-  const avgRating = (() => {
-    if (stats?.avgRating != null) return stats.avgRating.toFixed(1)
-    const rated = employees.filter((p) => p.averageRating != null)
-    if (rated.length === 0) return null
-    return (rated.reduce((sum, p) => sum + (p.averageRating ?? 0), 0) / rated.length).toFixed(1)
-  })()
 
   const statusFilter = isActive === true ? "active" : isActive === false ? "inactive" : "all"
   const handleStatusChange = (v: string) => {
@@ -97,42 +77,6 @@ export function EmployeesListContent({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Stats */}
-      {isLoading && !meta ? (
-        <StatsGrid>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={`skeleton-${i}`} className="h-[100px] rounded-lg" />
-          ))}
-        </StatsGrid>
-      ) : (
-        <StatsGrid>
-          <StatCard
-            title={t("employees.stats.total")}
-            value={totalCount}
-            icon={Stethoscope02Icon}
-            iconColor="primary"
-          />
-          <StatCard
-            title={t("employees.stats.active")}
-            value={activeCount}
-            icon={UserCheck01Icon}
-            iconColor="success"
-          />
-          <StatCard
-            title={t("employees.status.suspended")}
-            value={inactiveCount}
-            icon={UserBlock01Icon}
-            iconColor="warning"
-          />
-          <StatCard
-            title={t("employees.stats.avgRating")}
-            value={avgRating ?? "—"}
-            icon={StarIcon}
-            iconColor="accent"
-          />
-        </StatsGrid>
-      )}
-
       {/* Filter bar */}
       <FilterBar
         search={{ value: search, onChange: setSearch, placeholder: t("employees.searchPlaceholder") }}

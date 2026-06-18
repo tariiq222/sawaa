@@ -1880,48 +1880,6 @@ describe("Scenario 26 — Staff cancels all doctor sessions, full refund + resch
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 27. عميل يدخل قائمة الانتظار لموعد ممتلئ
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe("Scenario 27 — Client joins waitlist for full slot", () => {
-	it("creates waitlist entry when slot is full", async () => {
-		const {
-			AddToWaitlistHandler,
-		} = require("../add-to-waitlist/add-to-waitlist.handler");
-		const prisma = buildPrisma();
-
-		prisma.booking.count.mockResolvedValue(1); // slot full
-		prisma.waitlistEntry.findFirst.mockResolvedValue(null); // not already waiting
-		prisma.waitlistEntry.create.mockResolvedValue({
-			id: "wl-27",
-			clientId: "client-salma",
-			employeeId: "emp-nora",
-			serviceId: "svc-1",
-			status: "WAITING",
-		});
-
-		const handler = new AddToWaitlistHandler(prisma as never);
-
-		prisma.employee.findFirst.mockResolvedValue({
-			id: "emp-nora",
-			isActive: true,
-		});
-		prisma.service.findFirst.mockResolvedValue({ id: "svc-1", isActive: true });
-		prisma.client.findFirst.mockResolvedValue({ id: "client-salma" });
-
-		const result = await handler.execute({
-			clientId: "client-salma",
-			employeeId: "emp-nora",
-			serviceId: "svc-1",
-			preferredDate: futureDate(),
-			notes: "أبي أي وقت يفضل",
-		});
-
-		expect(result.status).toBe("WAITING");
-	});
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
 // 28. تغيير سعر الخدمة بعد الحجز
 // ─────────────────────────────────────────────────────────────────────────────
 

@@ -16,7 +16,6 @@ import {
   approveCancelBooking,
   rejectCancelBooking,
   createRecurringBooking,
-  fetchBookingsStats,
 } from "@/lib/api/bookings"
 import type {
   BookingStatus,
@@ -115,15 +114,6 @@ export function useBookings() {
 }
 
 /* ─── Today's Bookings Hook ─── */
-
-export function useBookingsStats() {
-  return useQuery({
-    queryKey: queryKeys.bookings.stats(),
-    queryFn: fetchBookingsStats,
-    staleTime: 30_000,
-    refetchInterval: 30_000,
-  })
-}
 
 export function useTodayBookings(date: string) {
   const query: BookingListQuery = { dateFrom: date, dateTo: date, perPage: 10 }

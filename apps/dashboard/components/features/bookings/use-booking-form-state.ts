@@ -105,25 +105,36 @@ export function useBookingFormState() {
     }))
   }, [])
 
-  /** Selecting a category (clinic) resets service and everything downstream */
-  const selectCategory = useCallback((categoryId: string, categoryName: string) => {
-    setState((prev) => ({
-      ...prev,
-      categoryId,
-      categoryName,
-      serviceId: null,
-      serviceName: null,
-      employeeId: null,
-      employeeName: null,
-      deliveryType: null,
-      type: null,
-      durationOptionId: null,
-      durationLabel: null,
-      durationPrice: null,
-      date: null,
-      startTime: null,
-    }))
-  }, [])
+  /**
+   * Selecting a category (clinic) resets service and everything downstream.
+   * Pass `autoService` when the category has exactly one active service so
+   * the service step can be skipped automatically.
+   */
+  const selectCategory = useCallback(
+    (
+      categoryId: string,
+      categoryName: string,
+      autoService?: { serviceId: string; serviceName: string },
+    ) => {
+      setState((prev) => ({
+        ...prev,
+        categoryId,
+        categoryName,
+        serviceId: autoService?.serviceId ?? null,
+        serviceName: autoService?.serviceName ?? null,
+        employeeId: null,
+        employeeName: null,
+        deliveryType: null,
+        type: null,
+        durationOptionId: null,
+        durationLabel: null,
+        durationPrice: null,
+        date: null,
+        startTime: null,
+      }))
+    },
+    [],
+  )
 
   /** Selecting a service resets employee/type/duration/datetime */
   const selectService = useCallback((serviceId: string, serviceName: string) => {

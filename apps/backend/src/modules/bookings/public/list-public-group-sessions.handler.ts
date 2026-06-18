@@ -13,13 +13,10 @@ export interface PublicGroupSession {
   price: number;
   currency: string;
   status: string;
-  waitlistEnabled: boolean;
-  waitlistCount: number;
   employeeId: string;
   serviceId: string;
   spotsLeft: number;
   isFull: boolean;
-  isWaitlistOnly: boolean;
 }
 
 @Injectable()
@@ -54,8 +51,6 @@ export class ListPublicGroupSessionsHandler {
         price: true,
         currency: true,
         status: true,
-        waitlistEnabled: true,
-        waitlistCount: true,
         employeeId: true,
         serviceId: true,
       },
@@ -68,7 +63,6 @@ export class ListPublicGroupSessionsHandler {
         price: Number(session.price),
         spotsLeft,
         isFull: spotsLeft <= 0,
-        isWaitlistOnly: spotsLeft <= 0 && session.waitlistEnabled,
       };
     });
   }

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, LogIn, Users } from 'lucide-react';
+import { Check, LogIn, Phone, Users } from 'lucide-react';
+import Link from 'next/link';
 import { useT } from '@/features/locale/locale-provider';
 import { useCurrentClient } from '@/features/auth/public';
 import { bookGroupSession } from './support-groups.api';
@@ -11,19 +12,17 @@ interface Props {
   sessionId: string;
   categoryId: string;
   isFull: boolean;
-  waitlistEnabled: boolean;
 }
 
-type Status = 'idle' | 'joining' | 'joined' | 'waitlisted' | 'error';
+type Status = 'idle' | 'joining' | 'joined' | 'full-error' | 'error';
 
-export function JoinGroupButton({ sessionId, categoryId, isFull, waitlistEnabled }: Props) {
+export function JoinGroupButton({ sessionId, categoryId, isFull }: Props) {
   const t = useT();
   const router = useRouter();
   const { client, isLoading } = useCurrentClient();
   const [status, setStatus] = useState<Status>('idle');
 
-  const disabled = isLoading || status === 'joining' || status === 'joined' || status === 'waitlisted';
-  const showWaitlist = isFull && waitlistEnabled;
+  const disabled = isLoading || status === 'joining' || status === 'joined';
 
   async function handleClick() {
     if (!client) {
@@ -32,21 +31,45 @@ export function JoinGroupButton({ sessionId, categoryId, isFull, waitlistEnabled
     }
     setStatus('joining');
     try {
-      const res = await bookGroupSession(sessionId);
-      setStatus(res.type === 'WAITLISTED' ? 'waitlisted' : 'joined');
-    } catch {
-      setStatus('error');
+      await bookGroupSession(sessionId);
+      setStatus('joined');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      // Backend throws "الجلسة مكتملة العدد" or similar when full
+      if (msg.includes('مكتمل') || msg.includes('full') || msg.includes('capacity')) {
+        setStatus('full-error');
+      } else {
+        setStatus('error');
+      }
     }
   }
 
-  if (status === 'joined' || status === 'waitlisted') {
+  if (status === 'joined') {
     return (
       <div
         className="inline-flex items-center justify-center gap-2 w-full rounded-full px-5 py-3 text-[0.875rem] font-bold"
         style={{ background: 'color-mix(in srgb, var(--sw-primary-500) 12%, transparent)', color: 'var(--sw-primary-700)' }}
       >
         <Check className="w-4 h-4" />
-        {status === 'joined' ? t('supportGroups.detail.joined') : t('supportGroups.detail.waitlisted')}
+        {t('supportGroups.detail.joined')}
+      </div>
+    );
+  }
+
+  if (isFull || status === 'full-error') {
+    return (
+      <div className="w-full space-y-2 text-center">
+        <p className="text-[0.875rem]" style={{ color: 'var(--muted-foreground, #6b7280)' }}>
+          {t('supportGroups.detail.sessionFull')}
+        </p>
+        <Link
+          href="/contact"
+          className="inline-flex items-center justify-center gap-2 w-full rounded-full px-5 py-3 text-[0.875rem] font-bold transition-all hover:-translate-y-[2px]"
+          style={{ background: 'var(--sw-secondary-700)', color: '#fff', boxShadow: 'var(--sw-shadow-md)' }}
+        >
+          <Phone className="w-4 h-4" />
+          {t('supportGroups.detail.contactUs')}
+        </Link>
       </div>
     );
   }
@@ -55,9 +78,7 @@ export function JoinGroupButton({ sessionId, categoryId, isFull, waitlistEnabled
     ? t('supportGroups.detail.loginToJoin')
     : status === 'joining'
       ? t('supportGroups.detail.joining')
-      : showWaitlist
-        ? t('supportGroups.joinWaitlist')
-        : t('supportGroups.detail.join');
+      : t('supportGroups.detail.join');
 
   return (
     <div className="w-full">
@@ -66,11 +87,7 @@ export function JoinGroupButton({ sessionId, categoryId, isFull, waitlistEnabled
         onClick={handleClick}
         disabled={disabled}
         className="inline-flex items-center justify-center gap-2 w-full rounded-full px-5 py-3 text-[0.875rem] font-bold transition-all hover:-translate-y-[2px] disabled:opacity-60 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
-        style={
-          showWaitlist
-            ? { background: 'var(--sw-secondary-700)', color: '#fff', boxShadow: 'var(--sw-shadow-md)' }
-            : { background: 'var(--sw-primary-500)', color: '#fff', boxShadow: 'var(--sw-shadow-primary)' }
-        }
+        style={{ background: 'var(--sw-primary-500)', color: '#fff', boxShadow: 'var(--sw-shadow-primary)' }}
       >
         {!client ? <LogIn className="w-4 h-4" /> : <Users className="w-4 h-4" />}
         {label}

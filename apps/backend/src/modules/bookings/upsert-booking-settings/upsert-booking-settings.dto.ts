@@ -37,12 +37,6 @@ export class UpsertBookingSettingsDto {
   @ApiPropertyOptional({ description: 'Maximum days in advance a booking can be made', example: 90 })
   @IsOptional() @IsInt() @Min(1) maxAdvanceBookingDays?: number;
 
-  @ApiPropertyOptional({ description: 'Whether the waitlist is enabled', example: true })
-  @IsOptional() @IsBoolean() waitlistEnabled?: boolean;
-
-  @ApiPropertyOptional({ description: 'Maximum waitlist entries per slot', example: 5 })
-  @IsOptional() @IsInt() @Min(1) waitlistMaxPerSlot?: number;
-
   @ApiPropertyOptional({ description: 'Whether pay-at-clinic option is enabled', example: true })
   @IsOptional() @IsBoolean() payAtClinicEnabled?: boolean;
 

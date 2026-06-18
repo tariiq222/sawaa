@@ -65,7 +65,7 @@ export async function createTestApp(): Promise<{ app: INestApplication; prisma: 
     'bookingSettings', 'bookingStatusLog', 'bookingClient', 'serviceBundle', 'serviceBundleItem',
     'intakeForm', 'intakeField', 'intakeResponse', 'organizationSettings',
     'contactMessage', 'file', 'platformSetting', 'emailTemplate', 'rating',
-    'waitlistEntry', 'clientRefreshToken', 'customRole', 'permission', 'coupon',
+    'clientRefreshToken', 'customRole', 'permission', 'coupon',
     'department', 'category', 'serviceCategory', 'conversation', 'chatMessage', 'fcmToken',
     'outboxEvent', 'activityLog',
   );

@@ -7,11 +7,15 @@ const buildPrisma = (
     companyNameEn?: string | null;
     productTagline?: string | null;
     timeFormat?: string;
+    contactPhone?: string | null;
+    contactEmail?: string | null;
   } | null = {
     companyNameAr: 'عيادتي',
     companyNameEn: 'My Clinic',
     productTagline: 'شعارنا',
     timeFormat: '12h',
+    contactPhone: '0558446605',
+    contactEmail: null,
   },
 ) => ({
   organizationSettings: {
@@ -41,6 +45,8 @@ describe('GetPublicBrandingHandler', () => {
       fontFamily: 'Handicrafts',
       fontUrl: null,
       timeFormat: '12h',
+      contactPhone: '0558446605',
+      contactEmail: null,
     });
     expect(result).not.toHaveProperty('websiteDomain');
   });
@@ -74,5 +80,28 @@ describe('GetPublicBrandingHandler', () => {
     const result = await handler.execute();
 
     expect(result.timeFormat).toBe('12h');
+  });
+
+  it('returns contactPhone and contactEmail when set', async () => {
+    const prisma = buildPrisma({
+      companyNameAr: 'عيادتي',
+      companyNameEn: 'My Clinic',
+      productTagline: 'شعارنا',
+      timeFormat: '12h',
+      contactPhone: '0558446605',
+      contactEmail: 'support@sawaa.sa',
+    });
+    const handler = new GetPublicBrandingHandler(prisma as never);
+    const result = await handler.execute();
+    expect(result.contactPhone).toBe('0558446605');
+    expect(result.contactEmail).toBe('support@sawaa.sa');
+  });
+
+  it('returns null contactPhone and contactEmail when not set', async () => {
+    const prisma = buildPrisma({ companyNameAr: 'x' });
+    const handler = new GetPublicBrandingHandler(prisma as never);
+    const result = await handler.execute();
+    expect(result.contactPhone).toBeNull();
+    expect(result.contactEmail).toBeNull();
   });
 });

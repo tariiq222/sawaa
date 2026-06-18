@@ -15,19 +15,11 @@ describe("queryKeys", () => {
     it("detail includes id", () => {
       expect(queryKeys.bookings.detail("b-1")).toEqual(["bookings", "detail", "b-1"])
     })
-
-    it("stats returns stable key", () => {
-      expect(queryKeys.bookings.stats()).toEqual(["bookings", "stats"])
-    })
   })
 
   describe("clients", () => {
     it("detail includes id", () => {
       expect(queryKeys.clients.detail("p-1")).toEqual(["clients", "detail", "p-1"])
-    })
-
-    it("stats includes client id", () => {
-      expect(queryKeys.clients.stats("p-1")).toEqual(["clients", "stats", "p-1"])
     })
   })
 

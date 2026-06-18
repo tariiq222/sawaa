@@ -23,7 +23,7 @@ import { useAppSelector, useAppDispatch } from '@/hooks/use-redux';
 import { logout } from '@/stores/slices/auth-slice';
 import { unregisterPushAsync } from '@/services/push';
 import { getFontName } from '@/theme/fonts';
-import { useSummary } from '@/hooks/queries';
+import { useBranding, useSummary } from '@/hooks/queries';
 import { PRIVACY_POLICY_URL } from '@/constants/config';
 
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -49,6 +49,8 @@ export default function ProfileScreen() {
   const [darkMode, setDarkMode] = useState(false);
   const summaryQuery = useSummary();
   const summary = summaryQuery.data ?? null;
+  const brandingQuery = useBranding();
+  const contactPhone = brandingQuery.data?.contactPhone ?? null;
   const [refreshing, setRefreshing] = useState(false);
   const Chevron = dir.isRTL ? ChevronLeft : ChevronRight;
 
@@ -212,24 +214,32 @@ export default function ProfileScreen() {
           </Glass>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(340).duration(700).easing(Easing.out(Easing.cubic))}>
-          <Glass variant="strong" radius={sawaaRadius.xl} style={styles.sosCard}>
-            <View style={[styles.sosRow, { flexDirection: dir.row }]}>
-              <View style={styles.sosIcon}>
-                <PhoneIcon size={16} color="#fff" strokeWidth={2} />
+        {contactPhone ? (
+          <Animated.View entering={FadeInDown.delay(340).duration(700).easing(Easing.out(Easing.cubic))}>
+            <Glass
+              variant="strong"
+              radius={sawaaRadius.xl}
+              style={styles.sosCard}
+              onPress={() => void Linking.openURL(`tel:${contactPhone}`)}
+              interactive
+            >
+              <View style={[styles.sosRow, { flexDirection: dir.row }]}>
+                <View style={styles.sosIcon}>
+                  <PhoneIcon size={16} color="#fff" strokeWidth={2} />
+                </View>
+                <View style={styles.sosMid}>
+                  <Text style={[styles.sosTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
+                    {dir.isRTL ? 'دعم الأزمات · ٢٤/٧' : 'Crisis support · 24/7'}
+                  </Text>
+                  <Text style={[styles.sosSub, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
+                    {dir.isRTL ? 'اتصال فوري بمختص' : 'Instant expert call'}
+                  </Text>
+                </View>
+                <Text style={[styles.sosPhone, { fontFamily: f700 }]}>{contactPhone}</Text>
               </View>
-              <View style={styles.sosMid}>
-                <Text style={[styles.sosTitle, { fontFamily: f700, textAlign: dir.textAlign }]}>
-                  {dir.isRTL ? 'دعم الأزمات · ٢٤/٧' : 'Crisis support · 24/7'}
-                </Text>
-                <Text style={[styles.sosSub, { fontFamily: f400, fontWeight: '400', textAlign: dir.textAlign }]}>
-                  {dir.isRTL ? 'اتصال فوري بمختص' : 'Instant expert call'}
-                </Text>
-              </View>
-              <Text style={[styles.sosPhone, { fontFamily: f700 }]}>920 00 00</Text>
-            </View>
-          </Glass>
-        </Animated.View>
+            </Glass>
+          </Animated.View>
+        ) : null}
 
         <Animated.View entering={FadeInDown.delay(420).duration(700).easing(Easing.out(Easing.cubic))}>
           <Glass variant="regular" radius={sawaaRadius.pill} onPress={async () => {

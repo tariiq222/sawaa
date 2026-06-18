@@ -42,14 +42,11 @@ test.describe("home dashboard render", () => {
       page.getByRole("heading", { name: /^حدث خطأ$/ }),
     ).toHaveCount(0)
 
-    // Actual dashboard content rendered: the greeting and at least one stat.
+    // Actual dashboard content rendered: the greeting header is the main content.
     // Greeting varies by hour: صباح الخير / مساء الخير / مساء النور.
     await expect(
       page.getByText(/صباح الخير|مساء الخير|مساء النور|أهلاً|مرحباً/),
     ).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByTestId("dashboard-stats")).toBeVisible({
-      timeout: 15_000,
-    })
 
     // Guard against the specific failure mode: a raw image key in next/image.
     const imageKeyError = consoleErrors.find(
@@ -68,17 +65,11 @@ test.describe("home dashboard render", () => {
   }) => {
     await loginAs(page, "admin")
     await page.goto("/", { waitUntil: "domcontentloaded" })
-    await expect(page.getByTestId("dashboard-stats")).toBeVisible({
-      timeout: 15_000,
-    })
 
     await page.reload({ waitUntil: "domcontentloaded" })
     await expectNoAppCrash(page)
     await expect(
       page.getByRole("heading", { name: /^حدث خطأ$/ }),
     ).toHaveCount(0)
-    await expect(page.getByTestId("dashboard-stats")).toBeVisible({
-      timeout: 15_000,
-    })
   })
 })

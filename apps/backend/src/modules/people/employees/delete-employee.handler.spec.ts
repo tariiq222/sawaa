@@ -10,7 +10,6 @@ const buildPrisma = () => ({
   booking: { count: jest.fn() },
   groupSession: { count: jest.fn() },
   invoice: { count: jest.fn() },
-  waitlistEntry: { count: jest.fn() },
   rating: { count: jest.fn() },
 });
 
@@ -60,21 +59,11 @@ describe('DeleteEmployeeHandler', () => {
     await expect(handler.execute({ employeeId: 'emp-1' })).rejects.toThrow(ConflictException);
   });
 
-  it('should throw ConflictException when waitlist entries exist', async () => {
-    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
-    prisma.booking.count.mockResolvedValue(0);
-    prisma.groupSession.count.mockResolvedValue(0);
-    prisma.invoice.count.mockResolvedValue(0);
-    prisma.waitlistEntry.count.mockResolvedValue(5);
-    await expect(handler.execute({ employeeId: 'emp-1' })).rejects.toThrow(ConflictException);
-  });
-
   it('should throw ConflictException when ratings exist', async () => {
     prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
     prisma.booking.count.mockResolvedValue(0);
     prisma.groupSession.count.mockResolvedValue(0);
     prisma.invoice.count.mockResolvedValue(0);
-    prisma.waitlistEntry.count.mockResolvedValue(0);
     prisma.rating.count.mockResolvedValue(2);
     await expect(handler.execute({ employeeId: 'emp-1' })).rejects.toThrow(ConflictException);
   });
@@ -84,7 +73,6 @@ describe('DeleteEmployeeHandler', () => {
     prisma.booking.count.mockResolvedValue(0);
     prisma.groupSession.count.mockResolvedValue(0);
     prisma.invoice.count.mockResolvedValue(0);
-    prisma.waitlistEntry.count.mockResolvedValue(0);
     prisma.rating.count.mockResolvedValue(0);
     prisma.employee.delete.mockResolvedValue({ id: 'emp-1' });
 

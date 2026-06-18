@@ -56,7 +56,7 @@ export class ListServicesHandler {
               take: limit,
               orderBy: { createdAt: 'desc' },
               include: {
-                category: true,
+                category: { include: { department: true } },
                 durationOptions: { orderBy: { sortOrder: 'asc' } },
               },
             }),

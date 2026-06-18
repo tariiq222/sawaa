@@ -121,74 +121,62 @@ export function EmployeeTypeRow({
   }
 
   return (
-    <div className="rounded-lg border border-border p-3 space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-foreground">{label}</span>
-          {hasDefault && (
-            <span className="text-[10px] text-muted-foreground tabular-nums">
-              ({t("employees.services.defaultLabel")}: {defaultPrice} {t("employees.services.sar")} / {defaultDuration} {t("employees.services.min")})
-            </span>
-          )}
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-6 text-destructive hover:text-destructive"
-          onClick={onRemove}
-          aria-label={t("common.delete")}
-        >
-          <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-3.5" />
-        </Button>
+    <>
+      {/* Type label + default hint */}
+      <div className="flex flex-col">
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        {hasDefault && (
+          <span className="text-[10px] text-muted-foreground tabular-nums">
+            {defaultPrice} {t("employees.services.sar")} · {defaultDuration} {t("employees.services.min")}
+          </span>
+        )}
       </div>
 
-      {/* Price & Duration */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs">
-            {t("services.bookingTypes.price")} ({t("employees.services.sar")})
-          </Label>
-          <Input
-            type="number"
-            min={0}
-            step="0.01"
-            value={priceDisplay}
-            onChange={(e) => handlePriceChange(e.target.value)}
-            placeholder={pricePlaceholder}
-            className="h-9 text-sm tabular-nums"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs">
-            {t("services.bookingTypes.duration")} ({t("employees.services.min")})
-          </Label>
-          <Input
-            type="number"
-            min={1}
-            value={durationDisplay}
-            onChange={(e) => handleDurationChange(e.target.value)}
-            placeholder={durationPlaceholder}
-            className="h-9 text-sm tabular-nums"
-          />
-        </div>
-      </div>
+      {/* Price */}
+      <Input
+        type="number"
+        min={0}
+        step="0.01"
+        value={priceDisplay}
+        onChange={(e) => handlePriceChange(e.target.value)}
+        placeholder={pricePlaceholder}
+        className="h-9 text-sm tabular-nums"
+      />
 
-      {/* Custom duration options toggle */}
-      <div className="flex items-center justify-between rounded border border-border p-2">
-        <Label className="text-xs cursor-pointer">
-          {t("employees.services.useCustomOptions")}
-        </Label>
+      {/* Duration */}
+      <Input
+        type="number"
+        min={1}
+        value={durationDisplay}
+        onChange={(e) => handleDurationChange(e.target.value)}
+        placeholder={durationPlaceholder}
+        className="h-9 text-sm tabular-nums"
+      />
+
+      {/* Custom options toggle */}
+      <div className="flex justify-center">
         <Switch
           checked={config.useCustomOptions ?? false}
           onCheckedChange={toggleCustomOptions}
+          aria-label={t("employees.services.useCustomOptions")}
         />
       </div>
 
-      {/* Duration options repeater */}
+      {/* Remove */}
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+        onClick={onRemove}
+        aria-label={t("common.delete")}
+      >
+        <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-3.5" />
+      </Button>
+
+      {/* Duration options repeater — spans full width under the row */}
       {config.useCustomOptions && (
-        <div className="space-y-2 ps-3 border-s-2 border-border">
+        <div className="col-span-full space-y-2 ps-3 border-s-2 border-border">
           {(config.durationOptions ?? []).map((opt, i) => (
             <EmployeeDurationOptionRow
               key={`${config.deliveryType}-opt-${i}`}
@@ -210,7 +198,7 @@ export function EmployeeTypeRow({
           </Button>
         </div>
       )}
-    </div>
+    </>
   )
 }
 

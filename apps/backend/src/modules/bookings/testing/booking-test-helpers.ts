@@ -29,12 +29,6 @@ const buildPrismaRaw = () => ({
     create: jest.fn().mockResolvedValue({ id: 'log-1' }),
     count: jest.fn().mockResolvedValue(0),
   },
-  waitlistEntry: {
-    findFirst: jest.fn().mockResolvedValue(null),
-    create: jest.fn().mockResolvedValue({ id: 'wl-1', status: 'WAITING' }),
-    findMany: jest.fn().mockResolvedValue([]),
-    deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
-  },
   businessHour: {
     findUnique: jest.fn().mockResolvedValue({
       branchId: 'branch-1', dayOfWeek: future.getDay(),

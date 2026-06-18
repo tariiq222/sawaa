@@ -1,6 +1,6 @@
 /**
  * Arabic translations — Extended B
- * (coupons, branches employees.services, waitlist,
+ * (coupons, branches employees.services,
  *  settings.notifications, settings.emailTemplates, services.bookingTypes,
  *  employees.create, common)
  */
@@ -184,28 +184,6 @@ export const arOps: Record<string, string> = {
   "employees.services.enableType": "تفعيل نوع إضافي",
   "employees.services.customOptionsHint": "فعّل لتحديد خيارات مدة مخصصة لهذا الممارس",
 
-  // ─── Waitlist ───
-  "waitlist.allStatuses": "جميع الحالات",
-  "waitlist.status.waiting": "بانتظار",
-  "waitlist.status.notified": "تم الإبلاغ",
-  "waitlist.status.booked": "تم الحجز",
-  "waitlist.status.expired": "منتهي",
-  "waitlist.status.cancelled": "ملغي",
-  "waitlist.doctor": "الممارس",
-  "waitlist.preferredDate": "التاريخ المفضّل",
-  "waitlist.preferredTime": "الوقت المفضّل",
-  "waitlist.time.morning": "صباحاً",
-  "waitlist.time.afternoon": "مساءً",
-  "waitlist.time.any": "أي وقت",
-  "waitlist.joined": "تاريخ الانضمام",
-  "waitlist.notifiedAt": "تم الإبلاغ",
-  "waitlist.phone": "الهاتف",
-  "waitlist.clear": "مسح",
-  "waitlist.removed": "تمت الإزالة من قائمة الانتظار",
-  "waitlist.removeError": "فشل في الإزالة من قائمة الانتظار",
-  "waitlist.empty.title": "لا يوجد في قائمة الانتظار",
-  "waitlist.empty.description": "قائمة الانتظار فارغة. يُضاف المستفيدون هنا عند اكتمال الحجوزات على الموعد الذي يفضلونه.",
-
   // ─── Settings — Notifications ───
   "settings.notificationsHint": "تحكم في أنواع الإشعارات المرسلة للموظفين والمستفيدين",
   "settings.notifyCategory.bookings": "الحجوزات",
@@ -214,8 +192,6 @@ export const arOps: Record<string, string> = {
   "settings.notifyCategory.other": "أخرى",
   "settings.notifyReminders": "تذكيرات المواعيد",
   "settings.notifyRemindersDesc": "إرسال تذكيرات قبل المواعيد القادمة",
-  "settings.notifyWaitlist": "إشعارات قائمة الانتظار",
-  "settings.notifyWaitlistDesc": "إشعار المستفيدين عند توفر موعد في قائمة الانتظار",
 
   // ─── Settings — Email Templates ───
   "settings.tabs.emailTemplates": "قوالب البريد",

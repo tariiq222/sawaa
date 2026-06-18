@@ -158,17 +158,17 @@ describe("useBookingSettingsMutation", () => {
   beforeEach(() => vi.clearAllMocks())
 
   it("calls updateBookingSettings with payload", async () => {
-    updateBookingSettings.mockResolvedValueOnce({ waitlistEnabled: false })
+    updateBookingSettings.mockResolvedValueOnce({ bufferMinutes: 10 })
 
     const { result } = renderHook(() => useBookingSettingsMutation(), { wrapper: makeWrapper() })
 
     act(() => {
-      result.current.mutate({ waitlistEnabled: false } as Parameters<typeof updateBookingSettings>[0])
+      result.current.mutate({ bufferMinutes: 10 } as Parameters<typeof updateBookingSettings>[0])
     })
 
     await waitFor(() => expect(updateBookingSettings).toHaveBeenCalled())
     expect(updateBookingSettings.mock.calls[0][0]).toEqual(
-      expect.objectContaining({ waitlistEnabled: false }),
+      expect.objectContaining({ bufferMinutes: 10 }),
     )
   })
 })

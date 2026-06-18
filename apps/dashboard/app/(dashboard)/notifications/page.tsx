@@ -4,11 +4,9 @@ import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
-import { StatsGrid } from "@/components/features/stats-grid"
-import { StatCard } from "@/components/features/stat-card"
 import { EmptyState } from "@/components/features/empty-state"
 import { Skeleton, Button } from "@sawaa/ui"
-import { Notification03Icon, CheckmarkCircle02Icon } from "@hugeicons/core-free-icons"
+import { Notification03Icon } from "@hugeicons/core-free-icons"
 import { ErrorBanner } from "@/components/features/error-banner"
 import { NotificationCard } from "@/components/features/notifications/notification-card"
 import {
@@ -64,15 +62,13 @@ function NotificationsContent() {
 
   const notifications = useMemo(() => data?.items ?? [], [data])
   const meta = useMemo(() => data?.meta ?? null, [data])
-  const { data: unreadCount, isLoading: unreadLoading } = useUnreadCount()
+  const { data: unreadCount } = useUnreadCount()
   const { markAllMut, markOneMut } = useNotificationMutations()
 
   const groups = useMemo(
     () => groupByDay(notifications, t),
     [notifications, t],
   )
-
-  const totalCount = meta?.total ?? notifications.length
 
   return (
     <ListPageShell>
@@ -92,28 +88,6 @@ function NotificationsContent() {
           {t("notifications.markAllRead")}
         </Button>
       </PageHeader>
-
-      {unreadLoading ? (
-        <StatsGrid className="lg:grid-cols-2">
-          <Skeleton className="h-24 rounded-lg" />
-          <Skeleton className="h-24 rounded-lg" />
-        </StatsGrid>
-      ) : (
-        <StatsGrid className="lg:grid-cols-2">
-          <StatCard
-            title={t("notifications.unread")}
-            value={unreadCount ?? 0}
-            icon={Notification03Icon}
-            iconColor="warning"
-          />
-          <StatCard
-            title={t("notifications.total")}
-            value={totalCount}
-            icon={CheckmarkCircle02Icon}
-            iconColor="primary"
-          />
-        </StatsGrid>
-      )}
 
       {error && <ErrorBanner message={error.message} />}
 

@@ -31,47 +31,6 @@
         ],
         "type": "object"
       },
-      "AddToWaitlistDto": {
-        "properties": {
-          "branchId": {
-            "description": "Branch where the service should be performed",
-            "example": "00000000-0000-0000-0000-000000000000",
-            "type": "string"
-          },
-          "clientId": {
-            "description": "Client to add to the waitlist",
-            "example": "00000000-0000-0000-0000-000000000000",
-            "type": "string"
-          },
-          "employeeId": {
-            "description": "Preferred employee for the session",
-            "example": "00000000-0000-0000-0000-000000000000",
-            "type": "string"
-          },
-          "notes": {
-            "description": "Additional notes for the waitlist entry",
-            "example": "Morning slot preferred",
-            "type": "string"
-          },
-          "preferredDate": {
-            "description": "Client-preferred date (ISO 8601)",
-            "example": "2026-05-15T00:00:00.000Z",
-            "type": "string"
-          },
-          "serviceId": {
-            "description": "Service the client wants",
-            "example": "00000000-0000-0000-0000-000000000000",
-            "type": "string"
-          }
-        },
-        "required": [
-          "clientId",
-          "employeeId",
-          "serviceId",
-          "branchId"
-        ],
-        "type": "object"
-      },
       "ApiErrorDto": {
         "properties": {
           "error": {
@@ -1901,6 +1860,11 @@
             "example": 60,
             "type": "number"
           },
+          "durationOptionId": {
+            "description": "Duration option to use for price resolution (3-tier: employee override → duration option → service base). When provided, enables employee-level price overrides.",
+            "example": "00000000-0000-0000-0000-000000000001",
+            "type": "string"
+          },
           "employeeId": {
             "description": "Employee performing the service",
             "example": "00000000-0000-0000-0000-000000000000",
@@ -1941,7 +1905,7 @@
             "type": "boolean"
           },
           "price": {
-            "description": "Price per session",
+            "description": "Ignored — price is resolved server-side via PriceResolverService (3-tier: employee override → duration option → service base). Kept for backward compatibility.",
             "example": 150,
             "type": "number"
           },
@@ -1973,7 +1937,6 @@
           "serviceId",
           "scheduledAt",
           "durationMins",
-          "price",
           "frequency"
         ],
         "type": "object"
@@ -5292,16 +5255,6 @@
             "description": "Whether cancellations require approval",
             "example": false,
             "type": "boolean"
-          },
-          "waitlistEnabled": {
-            "description": "Whether the waitlist is enabled",
-            "example": true,
-            "type": "boolean"
-          },
-          "waitlistMaxPerSlot": {
-            "description": "Maximum waitlist entries per slot",
-            "example": 5,
-            "type": "number"
           }
         },
         "type": "object"
@@ -5839,15 +5792,6 @@
           "action"
         ],
         "type": "object"
-      },
-      "WaitlistStatus": {
-        "enum": [
-          "WAITING",
-          "PROMOTED",
-          "EXPIRED",
-          "REMOVED"
-        ],
-        "type": "string"
       }
     },
     "securitySchemes": {
@@ -7998,300 +7942,6 @@
           }
         ],
         "summary": "Today's booking counters + revenue for the dashboard StatsGrid",
-        "tags": [
-          "Dashboard / Bookings"
-        ]
-      }
-    },
-    "/api/v1/dashboard/bookings/waitlist": {
-      "get": {
-        "operationId": "DashboardBookingsController_listWaitlist",
-        "parameters": [
-          {
-            "description": "Filter by employee",
-            "in": "query",
-            "name": "employeeId",
-            "required": false,
-            "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
-              "type": "string"
-            }
-          },
-          {
-            "description": "Filter by waitlist entry status",
-            "in": "query",
-            "name": "status",
-            "required": false,
-            "schema": {
-              "$ref": "#/components/schemas/WaitlistStatus"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "properties": {
-                      "clientId": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "createdAt": {
-                        "format": "date-time",
-                        "type": "string"
-                      },
-                      "id": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "preferredDate": {
-                        "format": "date-time",
-                        "nullable": true,
-                        "type": "string"
-                      },
-                      "serviceId": {
-                        "format": "uuid",
-                        "nullable": true,
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "type": "array"
-                }
-              }
-            },
-            "description": "List of waitlist entries"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List waitlist entries",
-        "tags": [
-          "Dashboard / Bookings"
-        ]
-      },
-      "post": {
-        "operationId": "DashboardBookingsController_addToWaitlist",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddToWaitlistDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "clientId": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "createdAt": {
-                      "format": "date-time",
-                      "type": "string"
-                    },
-                    "id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "preferredDate": {
-                      "format": "date-time",
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "serviceId": {
-                      "format": "uuid",
-                      "nullable": true,
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Waitlist entry created"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Add a client to the waitlist",
-        "tags": [
-          "Dashboard / Bookings"
-        ]
-      }
-    },
-    "/api/v1/dashboard/bookings/waitlist/{id}": {
-      "delete": {
-        "operationId": "DashboardBookingsController_removeWaitlistEntry",
-        "parameters": [
-          {
-            "description": "Waitlist entry ID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Waitlist entry removed"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Waitlist entry not found"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Remove a waitlist entry",
         "tags": [
           "Dashboard / Bookings"
         ]
@@ -28723,19 +28373,13 @@
                 "schema": {
                   "properties": {
                     "bookingId": {
-                      "nullable": true,
                       "type": "string"
                     },
                     "type": {
                       "enum": [
-                        "BOOKED",
-                        "WAITLISTED"
+                        "BOOKED"
                       ],
                       "type": "string"
-                    },
-                    "waitlistPosition": {
-                      "nullable": true,
-                      "type": "number"
                     }
                   },
                   "type": "object"
@@ -28773,7 +28417,7 @@
             "bearer": []
           }
         ],
-        "summary": "Book or join waitlist for a group session",
+        "summary": "Book a group session",
         "tags": [
           "Public / Bookings"
         ]

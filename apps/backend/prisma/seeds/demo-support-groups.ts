@@ -172,7 +172,6 @@ async function main() {
         status: 'OPEN',
         deliveryType: d.deliveryType,
         isPublic: true,
-        waitlistEnabled: true,
       },
       create: {
         id: d.id,
@@ -193,8 +192,6 @@ async function main() {
         status: 'OPEN',
         deliveryType: d.deliveryType,
         isPublic: true,
-        waitlistEnabled: true,
-        waitlistCount: 0,
       },
     });
     console.log(`upserted: ${d.title}`);

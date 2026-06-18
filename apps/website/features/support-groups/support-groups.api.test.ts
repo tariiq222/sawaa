@@ -18,13 +18,10 @@ const sample: SupportGroup = {
   price: 50,
   currency: 'SAR',
   status: 'SCHEDULED',
-  waitlistEnabled: true,
-  waitlistCount: 0,
   employeeId: 'e1',
   serviceId: 's1',
   spotsLeft: 7,
   isFull: false,
-  isWaitlistOnly: false,
 };
 
 describe('support-groups.api', () => {

@@ -36,7 +36,6 @@ export function DeleteEmployeeDialog({
     mutationFn: (id: string) => deleteEmployee(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.employees.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.employees.stats() })
       toast.success(t("employees.delete.success"))
       onOpenChange(false)
     },

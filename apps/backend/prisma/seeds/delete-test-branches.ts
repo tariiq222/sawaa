@@ -16,16 +16,15 @@ async function main() {
 
   let totalRefs = 0;
   for (const b of toDelete) {
-    const [bookings, empBranches, invoices, waitlist, settings] = await Promise.all([
+    const [bookings, empBranches, invoices, settings] = await Promise.all([
       prisma.booking.count({ where: { branchId: b.id } }),
       prisma.employeeBranch.count({ where: { branchId: b.id } }),
       prisma.invoice.count({ where: { branchId: b.id } }),
-      prisma.waitlistEntry.count({ where: { branchId: b.id } }),
       prisma.bookingSettings.count({ where: { branchId: b.id } }),
     ]);
-    const sum = bookings + empBranches + invoices + waitlist + settings;
+    const sum = bookings + empBranches + invoices + settings;
     if (sum > 0) {
-      console.log(`  REFS in ${b.nameAr}: bookings=${bookings} empBranches=${empBranches} invoices=${invoices} waitlist=${waitlist} settings=${settings}`);
+      console.log(`  REFS in ${b.nameAr}: bookings=${bookings} empBranches=${empBranches} invoices=${invoices} settings=${settings}`);
       totalRefs += sum;
     }
   }

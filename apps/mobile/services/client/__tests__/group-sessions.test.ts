@@ -11,7 +11,7 @@ import api from '../../api';
 
 const mockedApi = api as unknown as { get: jest.Mock; post: jest.Mock };
 
-const session = { id: 'g1', title: 'مجموعة القلق', scheduledAt: '2026-07-01T18:00:00.000Z', maxCapacity: 10, enrolledCount: 4, spotsLeft: 6, isFull: false, isWaitlistOnly: false, waitlistEnabled: true, waitlistCount: 0, price: 10000, currency: 'SAR', durationMins: 60, status: 'SCHEDULED', employeeId: 'e1', serviceId: 's1', descriptionAr: null, descriptionEn: null };
+const session = { id: 'g1', title: 'مجموعة القلق', scheduledAt: '2026-07-01T18:00:00.000Z', maxCapacity: 10, enrolledCount: 4, spotsLeft: 6, isFull: false, price: 10000, currency: 'SAR', durationMins: 60, status: 'SCHEDULED', employeeId: 'e1', serviceId: 's1', descriptionAr: null, descriptionEn: null };
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -35,8 +35,8 @@ describe('groupSessionsService', () => {
   });
 
   it('book posts to the book endpoint and unwraps', async () => {
-    mockedApi.post.mockResolvedValueOnce({ data: { type: 'WAITLISTED', waitlistPosition: 2 } });
-    await expect(groupSessionsService.book('g1')).resolves.toEqual({ type: 'WAITLISTED', waitlistPosition: 2 });
+    mockedApi.post.mockResolvedValueOnce({ data: { type: 'BOOKED', bookingId: 'b1' } });
+    await expect(groupSessionsService.book('g1')).resolves.toEqual({ type: 'BOOKED', bookingId: 'b1' });
     expect(mockedApi.post).toHaveBeenCalledWith('/public/bookings/group-sessions/g1/book');
   });
 });

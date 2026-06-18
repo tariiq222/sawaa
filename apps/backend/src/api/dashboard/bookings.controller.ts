@@ -33,11 +33,6 @@ import { CheckInBookingHandler } from '../../modules/bookings/check-in-booking/c
 import { CompleteBookingHandler } from '../../modules/bookings/complete-booking/complete-booking.handler';
 import { CompleteBookingDto } from '../../modules/bookings/complete-booking/complete-booking.dto';
 import { NoShowBookingHandler } from '../../modules/bookings/no-show-booking/no-show-booking.handler';
-import { AddToWaitlistHandler } from '../../modules/bookings/add-to-waitlist/add-to-waitlist.handler';
-import { AddToWaitlistDto } from '../../modules/bookings/add-to-waitlist/add-to-waitlist.dto';
-import { ListWaitlistHandler } from '../../modules/bookings/list-waitlist/list-waitlist.handler';
-import { ListWaitlistDto } from '../../modules/bookings/list-waitlist/list-waitlist.dto';
-import { RemoveWaitlistEntryHandler } from '../../modules/bookings/remove-waitlist-entry/remove-waitlist-entry.handler';
 import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
 import { CheckAvailabilityDto } from '../../modules/bookings/check-availability/check-availability.dto';
 import { ListBookingStatusLogHandler } from '../../modules/bookings/list-booking-status-log/list-booking-status-log.handler';
@@ -68,9 +63,6 @@ export class DashboardBookingsController {
     private readonly checkInHandler: CheckInBookingHandler,
     private readonly completeHandler: CompleteBookingHandler,
     private readonly noShowHandler: NoShowBookingHandler,
-    private readonly waitlistHandler: AddToWaitlistHandler,
-    private readonly listWaitlistHandler: ListWaitlistHandler,
-    private readonly removeWaitlistHandler: RemoveWaitlistEntryHandler,
     private readonly availabilityHandler: CheckAvailabilityHandler,
     private readonly statusLogHandler: ListBookingStatusLogHandler,
     private readonly createBundleHandler: CreateBundleBookingHandler,
@@ -238,66 +230,6 @@ export class DashboardBookingsController {
   })
   getBookingStatusLog(@Param('id', ParseUUIDPipe) id: string) {
     return this.statusLogHandler.execute({ bookingId: id });
-  }
-
-  @Post('waitlist')
-  @CheckPermissions({ action: 'manage', subject: 'Booking' })
-  @ApiOperation({ summary: 'Add a client to the waitlist' })
-  @ApiCreatedResponse({
-    description: 'Waitlist entry created',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        clientId: { type: 'string', format: 'uuid' },
-        serviceId: { type: 'string', format: 'uuid', nullable: true },
-        preferredDate: { type: 'string', format: 'date-time', nullable: true },
-        createdAt: { type: 'string', format: 'date-time' },
-      },
-    },
-  })
-  addToWaitlist(@Body() body: AddToWaitlistDto) {
-    const { preferredDate, ...rest } = body;
-    return this.waitlistHandler.execute({
-      ...rest,
-      preferredDate: preferredDate ? new Date(preferredDate) : undefined,
-    });
-  }
-
-  @Get('waitlist')
-  @CheckPermissions({ action: 'read', subject: 'Booking' })
-  @ApiOperation({ summary: 'List waitlist entries' })
-  @ApiOkResponse({
-    description: 'List of waitlist entries',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          clientId: { type: 'string', format: 'uuid' },
-          serviceId: { type: 'string', format: 'uuid', nullable: true },
-          preferredDate: { type: 'string', format: 'date-time', nullable: true },
-          createdAt: { type: 'string', format: 'date-time' },
-        },
-      },
-    },
-  })
-  listWaitlist(@Query() query: ListWaitlistDto) {
-    return this.listWaitlistHandler.execute({ ...query });
-  }
-
-  @Delete('waitlist/:id')
-  @CheckPermissions({ action: 'manage', subject: 'Booking' })
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Remove a waitlist entry' })
-  @ApiParam({ name: 'id', description: 'Waitlist entry ID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiNoContentResponse({ description: 'Waitlist entry removed' })
-  @ApiResponse({ status: 404, description: 'Waitlist entry not found', type: ApiErrorDto })
-  removeWaitlistEntry(
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
-    return this.removeWaitlistHandler.execute({ id });
   }
 
   @Get(':id')

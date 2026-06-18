@@ -10,7 +10,6 @@ describe("DeleteClientHandler", () => {
 		booking: { count: jest.Mock };
 		invoice: { count: jest.Mock };
 		groupEnrollment: { count: jest.Mock };
-		waitlistEntry: { count: jest.Mock };
 		rating: { count: jest.Mock };
 	};
 
@@ -20,7 +19,6 @@ describe("DeleteClientHandler", () => {
 			booking: { count: jest.fn().mockResolvedValue(0) },
 			invoice: { count: jest.fn().mockResolvedValue(0) },
 			groupEnrollment: { count: jest.fn().mockResolvedValue(0) },
-			waitlistEntry: { count: jest.fn().mockResolvedValue(0) },
 			rating: { count: jest.fn().mockResolvedValue(0) },
 		};
 
@@ -73,16 +71,6 @@ describe("DeleteClientHandler", () => {
 		await expect(handler.execute({ clientId: "c1" })).rejects.toThrow(
 			"3 تسجيل",
 		);
-	});
-
-	it("blocks when waitlist entries exist", async () => {
-		prisma.client.findFirst.mockResolvedValue({
-			id: "c1",
-			phone: "+966500000000",
-			notes: "",
-		});
-		prisma.waitlistEntry.count.mockResolvedValue(1);
-		await expect(handler.execute({ clientId: "c1" })).rejects.toThrow("1 طلب");
 	});
 
 	it("blocks when ratings exist", async () => {

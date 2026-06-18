@@ -3,14 +3,12 @@
 import { useState, useCallback, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Add01Icon, UserMultiple02Icon, UserCheck01Icon, ShieldKeyIcon } from "@hugeicons/core-free-icons"
+import { Add01Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { ErrorBanner } from "@/components/features/error-banner"
 import { PageHeader } from "@/components/features/page-header"
-import { StatsGrid } from "@/components/features/stats-grid"
-import { StatCard } from "@/components/features/stat-card"
 import { DataTable } from "@/components/features/data-table"
 import { FilterBar } from "@/components/features/filter-bar"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
@@ -21,7 +19,7 @@ import { CreateRoleDialog } from "@/components/features/users/create-role-dialog
 import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@sawaa/ui"
-import { useUsers, useRoles, useUserMutations } from "@/hooks/use-users"
+import { useUsers, useUserMutations } from "@/hooks/use-users"
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
 import type { User } from "@/lib/types/user"
@@ -34,7 +32,6 @@ export function UserListPage() {
   const { canDo } = useAuth()
   const { users, meta, isLoading, error, search, setSearch } = useUsers()
   const canReadRoles = canDo("role", "read")
-  const { data: roles } = useRoles({ enabled: canReadRoles })
   const { activateMut, deactivateMut } = useUserMutations()
 
   const [createRoleOpen, setCreateRoleOpen] = useState(false)
@@ -102,19 +99,6 @@ export function UserListPage() {
         </TabsList>
 
         <TabsContent value="users" className="mt-6 flex flex-col gap-6">
-          {isLoading && !meta ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={`skeleton-${i}`} className="h-24 rounded-lg" />)}
-            </div>
-          ) : (
-            <StatsGrid>
-              <StatCard title={t("users.stats.total")} value={meta?.total ?? 0} icon={UserMultiple02Icon} iconColor="primary" />
-              <StatCard title={t("users.stats.active")} value={users.filter((u) => u.isActive).length} icon={UserCheck01Icon} iconColor="success" />
-              <StatCard title={t("users.stats.roles")} value={roles?.length ?? 0} icon={ShieldKeyIcon} iconColor="accent" />
-              <StatCard title={t("users.stats.inactive")} value={users.filter((u) => !u.isActive).length} icon={UserCheck01Icon} iconColor="warning" />
-            </StatsGrid>
-          )}
-
           {error && <ErrorBanner message={error} />}
 
           <FilterBar

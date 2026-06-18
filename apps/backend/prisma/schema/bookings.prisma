@@ -1,4 +1,4 @@
-// Bookings BC — appointments, waitlist, group sessions.
+// Bookings BC — appointments, group sessions.
 // Models added in Phase 8 (p8-t*). Cross-BC IDs (clientId, employeeId, serviceId, branchId)
 // are plain strings — no Prisma FK relations. Referential integrity is event-driven.
 
@@ -44,13 +44,6 @@ enum CancellationReason {
   NO_SHOW
   SYSTEM_EXPIRED
   OTHER
-}
-
-enum WaitlistStatus {
-  WAITING
-  PROMOTED
-  EXPIRED
-  REMOVED
 }
 
 enum RecurringFrequency {
@@ -147,29 +140,6 @@ model Booking {
   @@index([bundleGroupId])
 }
 
-// ─── Waitlist ─────────────────────────────────────────────────────────────────
-
-// Partial unique index on (clientId, employeeId, serviceId) WHERE status = 'WAITING'
-// is enforced via migration 20260506110000_waitlist_unique_waiting (Prisma can't express partial uniques).
-model WaitlistEntry {
-  id            String         @id @default(uuid())
-  clientId      String
-  employeeId    String
-  serviceId     String
-  branchId      String
-  preferredDate DateTime?
-  status        WaitlistStatus @default(WAITING)
-  promotedAt    DateTime?
-  expiresAt     DateTime?
-  notes         String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  @@index([clientId])
-  @@index([employeeId])
-  @@index([status])
-}
-
 // ─── Group Session ────────────────────────────────────────────────────────────
 
 enum GroupSessionStatus {
@@ -200,15 +170,12 @@ model GroupSession {
   isPublic            Boolean            @default(false)
   publicDescriptionAr String?
   publicDescriptionEn String?
-  waitlistEnabled     Boolean            @default(true)
-  waitlistCount       Int                @default(0)
   cancelReason        String?
   cancelledAt         DateTime?
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 
   enrollments     GroupEnrollment[]
-  waitlistEntries GroupSessionWaitlist[]
   bookings        Booking[]
 
   @@index([employeeId])
@@ -226,19 +193,6 @@ model GroupEnrollment {
   enrolledAt     DateTime     @default(now())
 
   @@unique([groupSessionId, clientId])
-  @@index([clientId])
-}
-
-model GroupSessionWaitlist {
-  id             String       @id @default(uuid())
-  groupSessionId String
-  groupSession   GroupSession @relation(fields: [groupSessionId], references: [id], onDelete: Cascade)
-  clientId       String
-  position       Int
-  createdAt      DateTime     @default(now())
-
-  @@unique([groupSessionId, clientId])
-  @@index([groupSessionId])
   @@index([clientId])
 }
 
@@ -281,9 +235,6 @@ model BookingSettings {
 
   minBookingLeadMinutes Int @default(60)
   maxAdvanceBookingDays Int @default(90)
-
-  waitlistEnabled    Boolean @default(true)
-  waitlistMaxPerSlot Int     @default(5)
 
   payAtClinicEnabled    Boolean @default(false)
   requireCancelApproval Boolean @default(false)

@@ -28,7 +28,6 @@ function iconForType(type: Notification['type']): IconConfig {
     case 'reminder':
       return { Icon: Video, color: sawaaColors.teal[600] };
     case 'booking_rescheduled':
-    case 'waitlist_slot_available':
       return { Icon: Calendar, color: sawaaColors.accent.violet };
     case 'new_rating':
       return { Icon: Star, color: sawaaColors.accent.amber };

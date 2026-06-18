@@ -22,8 +22,6 @@ const DELETE_EMPLOYEE_MESSAGES = {
 		`لا يمكن حذف الموظف لأنه يستضيف ${n} جلسة جماعية${n === 1 ? "" : "ات"} قادمة. يرجى إلغاؤها أولاً.`,
 	hasUnpaidInvoices: (n: number) =>
 		`لا يمكن حذف الموظف لوجود ${n} فاتورة${n === 1 ? "" : " غير"} مدفوعة. يرجى تسويتها أولاً.`,
-	hasWaitlistEntries: (n: number) =>
-		`لا يمكن حذف الموظف لوجود ${n} طلب${n === 1 ? "" : "ات"} في قائمة الانتظار. يرجى إزالتها أولاً.`,
 	hasRatings: (n: number) =>
 		`لا يمكن حذف الموظف لوجود ${n} تقييم${n === 1 ? "" : "ات"}. يجب الحفاظ على التقييمات لأغراض التدقيق.`,
 } as const;
@@ -91,16 +89,6 @@ export class DeleteEmployeeHandler {
 				if (unpaidInvoices > 0) {
 					throw new ConflictException(
 						DELETE_EMPLOYEE_MESSAGES.hasUnpaidInvoices(unpaidInvoices),
-					);
-				}
-
-				// Waitlist (people → bookings)
-				const waitlistEntries = await tx.waitlistEntry.count({
-					where: { employeeId: cmd.employeeId, status: "WAITING" },
-				});
-				if (waitlistEntries > 0) {
-					throw new ConflictException(
-						DELETE_EMPLOYEE_MESSAGES.hasWaitlistEntries(waitlistEntries),
 					);
 				}
 

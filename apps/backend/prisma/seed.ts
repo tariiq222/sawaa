@@ -155,11 +155,19 @@ async function main() {
   const settings = await prisma.organizationSettings.findFirst();
   if (!settings) {
     await prisma.organizationSettings.create({
-      data: { paymentMoyasarEnabled: true },
+      data: {
+        paymentMoyasarEnabled: true,
+        contactPhone: '0558446605',
+        contactEmail: 'support@sawaa.sa',
+      },
     });
   } else {
     await prisma.organizationSettings.updateMany({
-      data: { paymentMoyasarEnabled: true },
+      data: {
+        paymentMoyasarEnabled: true,
+        contactPhone: '0558446605',
+        contactEmail: 'support@sawaa.sa',
+      },
     });
   }
 

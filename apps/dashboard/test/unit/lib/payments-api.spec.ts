@@ -14,7 +14,6 @@ vi.mock("@/lib/api", () => ({
 
 import {
   fetchPayment,
-  fetchPaymentStats,
   fetchPayments,
   refundPayment,
   verifyPayment,
@@ -51,26 +50,6 @@ describe("payments api", () => {
         "/dashboard/finance/payments",
         expect.objectContaining({ fromDate: "2026-01-01", toDate: "2026-01-31" }),
       )
-    })
-  })
-
-  describe("fetchPaymentStats", () => {
-    it("fetches from the stats endpoint", async () => {
-      getMock.mockResolvedValueOnce({
-        total: 0,
-        totalAmount: 0,
-        pending: 0,
-        pendingAmount: 0,
-        pendingVerification: 0,
-        pendingVerificationAmount: 0,
-        completed: 0,
-        completedAmount: 0,
-        refunded: 0,
-        refundedAmount: 0,
-        failed: 0,
-      })
-      await fetchPaymentStats()
-      expect(getMock).toHaveBeenCalledWith("/dashboard/finance/payments/stats")
     })
   })
 

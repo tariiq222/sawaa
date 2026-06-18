@@ -40,13 +40,10 @@ export default function GroupsScreen() {
   const backSymbol = (dir.isRTL ? 'chevron.right' : 'chevron.left') as React.ComponentProps<typeof AppIcon>['sf'];
 
   const renderItem = useCallback(({ item }: { item: GroupSession }) => {
-    const isWaitlist = item.isFull && item.waitlistEnabled;
-    const isClosed = item.isFull && !item.waitlistEnabled;
-    const stateLabel = isWaitlist
-      ? t('groups.waitlist')
-      : isClosed
-        ? t('groups.full')
-        : t('groups.spotsLeft', { count: item.spotsLeft });
+    const isClosed = item.isFull;
+    const stateLabel = isClosed
+      ? t('groups.full')
+      : t('groups.spotsLeft', { count: item.spotsLeft });
 
     return (
       <Glass
@@ -74,10 +71,10 @@ export default function GroupsScreen() {
             <MetaLine icon="price" text={formatPrice(item.price, dir.isRTL, t('home.sar'))} dir={dir} />
           </View>
 
-          <View style={[styles.footerRow, { flexDirection: dir.row }]}> 
-            <StateBadge label={stateLabel} tone={isClosed ? 'muted' : isWaitlist ? 'waitlist' : 'open'} />
+          <View style={[styles.footerRow, { flexDirection: dir.row }]}>
+            <StateBadge label={stateLabel} tone={isClosed ? 'muted' : 'open'} />
             <ThemedText variant="label" color={isClosed ? sawaaColors.ink[400] : sawaaColors.teal[700]}>
-              {isWaitlist ? t('groups.joinWaitlist') : isClosed ? t('groups.full') : t('groups.join')}
+              {isClosed ? t('groups.contactUs') : t('groups.join')}
             </ThemedText>
           </View>
         </View>
@@ -130,8 +127,8 @@ function MetaLine({ icon, text, dir }: { icon: 'calendar' | 'price' | 'users'; t
   );
 }
 
-function StateBadge({ label, tone }: { label: string; tone: 'muted' | 'open' | 'waitlist' }) {
-  const color = tone === 'muted' ? sawaaColors.ink[500] : tone === 'waitlist' ? sawaaColors.accent.amber : sawaaColors.teal[700];
+function StateBadge({ label, tone }: { label: string; tone: 'muted' | 'open' }) {
+  const color = tone === 'muted' ? sawaaColors.ink[500] : sawaaColors.teal[700];
   return (
     <View style={[styles.badge, { borderColor: color, backgroundColor: withAlpha(color, 0.12) }]}> 
       <ThemedText variant="label" color={color}>{label}</ThemedText>

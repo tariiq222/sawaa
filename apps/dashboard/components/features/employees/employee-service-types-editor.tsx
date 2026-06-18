@@ -81,31 +81,50 @@ export function EmployeeServiceTypesEditor({
         {t("employees.services.types")}
       </Label>
 
-      {value.length === 0 && (
-        <p className="text-xs text-muted-foreground">
+      {value.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
           {t("services.bookingTypes.noTypes")}
         </p>
-      )}
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-border">
+          <div className="grid grid-cols-[7rem_minmax(0,1fr)_minmax(0,1fr)_auto_2rem] items-center gap-x-3 gap-y-2 px-3 py-2">
+            {/* Header */}
+            <span className="text-[11px] font-medium text-muted-foreground">
+              {t("employees.services.types")}
+            </span>
+            <span className="text-[11px] font-medium text-muted-foreground">
+              {t("services.bookingTypes.price")} ({t("employees.services.sar")})
+            </span>
+            <span className="text-[11px] font-medium text-muted-foreground">
+              {t("services.bookingTypes.duration")} ({t("employees.services.min")})
+            </span>
+            <span className="text-[11px] font-medium text-muted-foreground">
+              {t("employees.services.useCustomOptions")}
+            </span>
+            <span aria-hidden />
 
-      {value.map((typeConfig) => {
-        const serviceDef = serviceTypeMap.get(typeConfig.deliveryType)
-        const typeLabel = ALL_DELIVERY_TYPES.find(
-          (bt) => bt.value === typeConfig.deliveryType,
-        )
-        return (
-          <EmployeeTypeRow
-            key={typeConfig.deliveryType}
-            config={typeConfig}
-            serviceDefault={serviceDef ?? null}
-            label={typeLabel ? t(typeLabel.labelKey) : typeConfig.deliveryType}
-            t={t}
-            onUpdate={(updates) =>
-              updateType(typeConfig.deliveryType, updates)
-            }
-            onRemove={() => removeType(typeConfig.deliveryType)}
-          />
-        )
-      })}
+            {value.map((typeConfig) => {
+              const serviceDef = serviceTypeMap.get(typeConfig.deliveryType)
+              const typeLabel = ALL_DELIVERY_TYPES.find(
+                (bt) => bt.value === typeConfig.deliveryType,
+              )
+              return (
+                <EmployeeTypeRow
+                  key={typeConfig.deliveryType}
+                  config={typeConfig}
+                  serviceDefault={serviceDef ?? null}
+                  label={typeLabel ? t(typeLabel.labelKey) : typeConfig.deliveryType}
+                  t={t}
+                  onUpdate={(updates) =>
+                    updateType(typeConfig.deliveryType, updates)
+                  }
+                  onRemove={() => removeType(typeConfig.deliveryType)}
+                />
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Add additional type */}
       {additionalTypes.length > 0 && (

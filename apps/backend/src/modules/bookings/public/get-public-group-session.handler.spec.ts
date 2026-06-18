@@ -28,13 +28,12 @@ describe('GetPublicGroupSessionHandler', () => {
       id: 'gs-1', title: 'Yoga', descriptionAr: null, descriptionEn: 'Yoga class',
       scheduledAt: new Date(), durationMins: 60, maxCapacity: 10, enrolledCount: 5,
       price: 100, currency: 'SAR', status: 'OPEN', isPublic: true,
-      waitlistEnabled: true, waitlistCount: 0, employeeId: 'emp-1', serviceId: 'svc-1', branchId: 'branch-1',
+      employeeId: 'emp-1', serviceId: 'svc-1', branchId: 'branch-1',
     });
 
     const result = await handler.execute('gs-1');
     expect(result.spotsLeft).toBe(5);
     expect(result.isFull).toBe(false);
-    expect(result.isWaitlistOnly).toBe(false);
     expect(result.price).toBe(100);
     expect(prisma.groupSession.findFirst).toHaveBeenCalledWith({
       where: {
@@ -46,30 +45,28 @@ describe('GetPublicGroupSessionHandler', () => {
     });
   });
 
-  it('should return open capacity-full session with waitlist only', async () => {
+  it('should return full session', async () => {
     prisma.groupSession.findFirst.mockResolvedValue({
       id: 'gs-1', title: 'Yoga', descriptionAr: null, descriptionEn: null,
       scheduledAt: new Date(), durationMins: 60, maxCapacity: 10, enrolledCount: 10,
       price: 100, currency: 'SAR', status: 'OPEN', isPublic: true,
-      waitlistEnabled: true, waitlistCount: 2, employeeId: 'emp-1', serviceId: 'svc-1', branchId: 'branch-1',
+      employeeId: 'emp-1', serviceId: 'svc-1', branchId: 'branch-1',
     });
 
     const result = await handler.execute('gs-1');
     expect(result.spotsLeft).toBe(0);
     expect(result.isFull).toBe(true);
-    expect(result.isWaitlistOnly).toBe(true);
   });
 
-  it('should return full session without waitlist', async () => {
+  it('should return full session when enrollment equals capacity', async () => {
     prisma.groupSession.findFirst.mockResolvedValue({
       id: 'gs-1', title: 'Yoga', descriptionAr: null, descriptionEn: null,
       scheduledAt: new Date(), durationMins: 60, maxCapacity: 10, enrolledCount: 10,
       price: 100, currency: 'SAR', status: 'OPEN', isPublic: true,
-      waitlistEnabled: false, waitlistCount: 0, employeeId: 'emp-1', serviceId: 'svc-1', branchId: 'branch-1',
+      employeeId: 'emp-1', serviceId: 'svc-1', branchId: 'branch-1',
     });
 
     const result = await handler.execute('gs-1');
     expect(result.isFull).toBe(true);
-    expect(result.isWaitlistOnly).toBe(false);
   });
 });

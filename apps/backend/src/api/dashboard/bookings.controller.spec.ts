@@ -15,9 +15,6 @@ import { RetryZoomMeetingHandler } from '../../modules/bookings/retry-zoom-meeti
 import { CheckInBookingHandler } from '../../modules/bookings/check-in-booking/check-in-booking.handler';
 import { CompleteBookingHandler } from '../../modules/bookings/complete-booking/complete-booking.handler';
 import { NoShowBookingHandler } from '../../modules/bookings/no-show-booking/no-show-booking.handler';
-import { AddToWaitlistHandler } from '../../modules/bookings/add-to-waitlist/add-to-waitlist.handler';
-import { ListWaitlistHandler } from '../../modules/bookings/list-waitlist/list-waitlist.handler';
-import { RemoveWaitlistEntryHandler } from '../../modules/bookings/remove-waitlist-entry/remove-waitlist-entry.handler';
 import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
 import { ListBookingStatusLogHandler } from '../../modules/bookings/list-booking-status-log/list-booking-status-log.handler';
 import { CreateBundleBookingHandler } from '../../modules/bookings/create-bundle-booking/create-bundle-booking.handler';
@@ -42,9 +39,6 @@ describe('DashboardBookingsController (e2e)', () => {
   const mockCheckIn = { execute: jest.fn() };
   const mockComplete = { execute: jest.fn() };
   const mockNoShow = { execute: jest.fn() };
-  const mockAddWaitlist = { execute: jest.fn() };
-  const mockListWaitlist = { execute: jest.fn() };
-  const mockRemoveWaitlist = { execute: jest.fn() };
   const mockAvailability = { execute: jest.fn() };
   const mockStatusLog = { execute: jest.fn() };
   const mockCreateBundleBooking = { execute: jest.fn() };
@@ -68,9 +62,6 @@ describe('DashboardBookingsController (e2e)', () => {
         { provide: CheckInBookingHandler, useValue: mockCheckIn },
         { provide: CompleteBookingHandler, useValue: mockComplete },
         { provide: NoShowBookingHandler, useValue: mockNoShow },
-        { provide: AddToWaitlistHandler, useValue: mockAddWaitlist },
-        { provide: ListWaitlistHandler, useValue: mockListWaitlist },
-        { provide: RemoveWaitlistEntryHandler, useValue: mockRemoveWaitlist },
         { provide: CheckAvailabilityHandler, useValue: mockAvailability },
         { provide: ListBookingStatusLogHandler, useValue: mockStatusLog },
         { provide: CreateBundleBookingHandler, useValue: mockCreateBundleBooking },

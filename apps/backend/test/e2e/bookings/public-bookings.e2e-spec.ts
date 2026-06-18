@@ -65,8 +65,6 @@ describe('Public Bookings (e2e)', () => {
         price: 50,
         currency: 'SAR',
         status: 'OPEN',
-        waitlistEnabled: false,
-        waitlistCount: 0,
         employeeId: 'e1',
         serviceId: 's1',
       },

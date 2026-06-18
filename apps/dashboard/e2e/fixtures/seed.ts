@@ -679,7 +679,7 @@ export async function cleanupBranch(
   }
 
   // Delete the branch. A 409 here means the branch is still referenced by
-  // bookings/waitlist/group sessions seeded during the test — that's correct
+  // bookings/group sessions seeded during the test — that's correct
   // app behavior (you can't delete a branch with live bookings), and a leftover
   // test branch in the dev DB is harmless. Tolerate it so teardown doesn't fail
   // an otherwise-passing test; surface any other error.

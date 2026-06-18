@@ -170,9 +170,6 @@ export function EmployeeFormPage(props: Props) {
               onBreaksChange={setBreaksState}
               vacation={vacation}
               onVacationChange={setVacation}
-              branchIds={branchIds}
-              onBranchIdsChange={setBranchIds}
-              autoSelectMainBranch={!isEdit}
             />
           </TabsContent>
 

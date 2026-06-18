@@ -19,7 +19,7 @@ import type { AddServiceFormData } from "./draft-service.types"
 
 interface AddServiceFormProps {
   form: ReturnType<typeof useForm<AddServiceFormData>>
-  availableServices: { id: string; nameAr: string; nameEn: string }[]
+  availableServices: { id: string; nameAr: string; nameEn: string; departmentName?: string | null; categoryName?: string | null }[]
   serviceBookingTypes: import("@/lib/types/service").ServiceBookingType[]
   typeConfigs: EmployeeTypeConfigPayload[]
   onTypeConfigsChange: (types: EmployeeTypeConfigPayload[]) => void
@@ -81,9 +81,15 @@ export function AddServiceForm({
                     {availableServices.map((s) => {
                       const name = (isAr ? s.nameAr : s.nameEn) || s.nameAr || s.nameEn
                       if (!name) return null
+                      const breadcrumb = [s.departmentName, s.categoryName].filter(Boolean).join(" › ")
                       return (
                         <SelectItem key={s.id} value={s.id}>
-                          {name}
+                          <span className="flex flex-col gap-0.5">
+                            {breadcrumb && (
+                              <span className="text-[11px] text-muted-foreground">{breadcrumb}</span>
+                            )}
+                            <span>{name}</span>
+                          </span>
                         </SelectItem>
                       )
                     })}
@@ -133,29 +139,30 @@ export function AddServiceForm({
         </div>
       )}
 
-      {/* Buffer */}
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs">
-          {t("employees.services.bufferMinutes")}
-        </Label>
-        <Input
-          type="number"
-          min="0"
-          className="tabular-nums"
-          {...form.register("bufferMinutes")}
-        />
-      </div>
+      {/* Buffer + Active — side by side */}
+      <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-xs">
+            {t("employees.services.bufferMinutes")}
+          </Label>
+          <Input
+            type="number"
+            min="0"
+            className="tabular-nums"
+            {...form.register("bufferMinutes")}
+          />
+        </div>
 
-      {/* Active Toggle */}
-      <div className="flex items-center justify-between rounded-lg border border-border p-2">
-        <Label className="text-xs cursor-pointer">{t("common.active")}</Label>
-        <Controller
-          control={form.control}
-          name="isActive"
-          render={({ field }) => (
-            <Switch checked={field.value} onCheckedChange={field.onChange} />
-          )}
-        />
+        <div className="flex h-10 items-center justify-between rounded-lg border border-border px-3">
+          <Label className="text-xs cursor-pointer">{t("common.active")}</Label>
+          <Controller
+            control={form.control}
+            name="isActive"
+            render={({ field }) => (
+              <Switch checked={field.value} onCheckedChange={field.onChange} />
+            )}
+          />
+        </div>
       </div>
 
       {/* Actions */}

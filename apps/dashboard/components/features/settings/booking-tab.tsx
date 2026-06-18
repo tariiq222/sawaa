@@ -12,7 +12,7 @@ import {
   useBookingSettingsMutation,
 } from "@/hooks/use-organization-settings"
 
-type TabId = "limits" | "waitlist" | "floworder"
+type TabId = "limits" | "floworder"
 
 function NumberRow({
   label,
@@ -85,8 +85,6 @@ export function BookingTab({ t }: Props) {
   const [leadMinutes, setLeadMinutes] = useState("60")
   const [bufferMin, setBufferMin] = useState("0")
   const [maxAdvanceDays, setMaxAdvanceDays] = useState("90")
-  const [waitlistEnabled, setWaitlistEnabled] = useState(true)
-  const [waitlistMaxPerSlot, setWaitlistMaxPerSlot] = useState("5")
   const [flowOrderVal, setFlowOrderVal] = useState<BookingFlowOrder>("service_first")
 
   useEffect(() => {
@@ -96,8 +94,6 @@ export function BookingTab({ t }: Props) {
     setLeadMinutes(String(settings.minBookingLeadMinutes ?? 60))
     setBufferMin(String(settings.bufferMinutes ?? 0))
     setMaxAdvanceDays(String(settings.maxAdvanceBookingDays ?? 90))
-    setWaitlistEnabled(settings.waitlistEnabled ?? true)
-    setWaitlistMaxPerSlot(String(settings.waitlistMaxPerSlot ?? 5))
   }, [settings])
 
   useEffect(() => {
@@ -125,7 +121,6 @@ export function BookingTab({ t }: Props) {
 
   const tabs: { id: TabId; label: string; desc: string }[] = [
     { id: "limits", label: t("settings.bookingPolicies"), desc: t("settings.minBookingLeadDesc") },
-    { id: "waitlist", label: t("settings.waitlist"), desc: t("settings.waitlistEnabledDesc") },
     { id: "floworder", label: t("settings.booking.flowOrder.title"), desc: t("settings.booking.flowOrder.serviceFirstDesc") },
   ]
 
@@ -184,29 +179,6 @@ export function BookingTab({ t }: Props) {
                   minBookingLeadMinutes: Number(leadMinutes) || 60,
                   bufferMinutes: Number(bufferMin) || 0,
                   maxAdvanceBookingDays: Number(maxAdvanceDays) || 90,
-                })}>
-                  {t("settings.save")}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "waitlist" && (
-            <div className="flex h-full flex-col gap-3">
-              <div className="grid grid-cols-2 gap-3">
-                <Card className="bg-surface shadow-sm"><CardContent className="pt-2 pb-2">
-                  <SwitchRow label={t("settings.waitlistEnabled")} desc={t("settings.waitlistEnabledDesc")} checked={waitlistEnabled} onChange={setWaitlistEnabled} />
-                </CardContent></Card>
-                {waitlistEnabled && (
-                  <Card className="bg-surface shadow-sm"><CardContent className="pt-2 pb-2">
-                    <NumberRow label={t("settings.waitlistMaxPerSlot")} desc={t("settings.waitlistMaxPerSlotDesc")} value={waitlistMaxPerSlot} onChange={setWaitlistMaxPerSlot} unit="x" min={1} />
-                  </CardContent></Card>
-                )}
-              </div>
-              <div className="mt-auto flex justify-end pt-2">
-                <Button size="sm" disabled={isSaving} onClick={() => handleSettingsSave({
-                  waitlistEnabled,
-                  waitlistMaxPerSlot: Number(waitlistMaxPerSlot) || 5,
                 })}>
                   {t("settings.save")}
                 </Button>

@@ -1,17 +1,4 @@
-import api from './api';
-import type { ApiResponse } from '@/types/api';
-
-export interface OrganizationSettings {
-  bankName: string | null;
-  bankIban: string | null;
-  accountHolder: string | null;
-}
-
-export const organizationService = {
-  async getSettings(): Promise<ApiResponse<OrganizationSettings>> {
-    const response = await api.get<ApiResponse<OrganizationSettings>>(
-      '/organization/settings/public',
-    );
-    return response.data;
-  },
-};
+// Organization public data is served by the /public/branding endpoint.
+// Use publicBrandingService from @/services/client and the useBranding hook instead.
+// The old /organization/settings/public endpoint does not exist on the backend.
+export {};

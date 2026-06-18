@@ -521,10 +521,8 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 				prisma.payment.deleteMany({}),
 				prisma.invoice.deleteMany({}),
 				prisma.booking.deleteMany({}),
-				prisma.groupSessionWaitlist.deleteMany({}),
 				prisma.groupEnrollment.deleteMany({}),
 				prisma.groupSession.deleteMany({}),
-				prisma.waitlistEntry.deleteMany({}),
 				prisma.couponRedemption.deleteMany({}),
 				prisma.coupon.deleteMany({}),
 			])
@@ -1375,41 +1373,10 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 	});
 
 	// ═══════════════════════════════════════════════════════════════════════════
-	// SCENARIOS 27–30: Waitlist, Snapshot, Recurring, Manual Complete
+	// SCENARIOS 28–30: Snapshot, Recurring, Manual Complete
 	// ═══════════════════════════════════════════════════════════════════════════
 
-	describe("Scenarios 27–30: Waitlist, snapshot, recurring, manual complete", () => {
-		it("Scenario 27 — Client joins waitlist for full slot", async () => {
-			// Book the only slot
-			const slot = tomorrow(10, 0);
-			const res1 = await createBooking({
-				clientId: ctx.clientId,
-				scheduledAt: slot.toISOString(),
-			});
-			expect(res1.status).toBe(201);
-
-			// Another client tries same slot → should fail
-			const res2 = await createBooking({
-				clientId: ctx.client2Id,
-				scheduledAt: slot.toISOString(),
-			});
-			expect(res2.status).toBe(400); // slot not available
-
-			// Add to waitlist
-			const waitlistRes = await withAuth(
-				api().post("/api/v1/dashboard/bookings/waitlist"),
-			).send({
-				clientId: ctx.client2Id,
-				employeeId: ctx.employeeId,
-				serviceId: ctx.serviceId,
-				branchId: ctx.branchId,
-				preferredDate: slot.toISOString(),
-				notes: "Waiting for slot",
-			});
-			expect(waitlistRes.status).toBe(201);
-			expect(waitlistRes.body.status).toBe("WAITING");
-		});
-
+	describe("Scenarios 28–30: snapshot, recurring, manual complete", () => {
 		it("Scenario 28 — Service price changes, snapshot preserves original price", async () => {
 			const scheduledAt = tomorrow(10, 0);
 			const res = await createBooking({

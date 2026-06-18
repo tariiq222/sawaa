@@ -18,8 +18,6 @@ const DELETE_CLIENT_MESSAGES = {
 		`لا يمكن حذف العميل لوجود ${n} فاتورة${n === 1 ? "" : " غير"} مدفوعة. يرجى تسويتها أولاً.`,
 	hasActiveEnrollments: (n: number) =>
 		`لا يمكن حذف العميل لوجود ${n} تسجيل${n === 1 ? "" : "ات"} نشط${n === 1 ? "" : "ة"} في جلسات جماعية. يرجى إلغاؤها أولاً.`,
-	hasWaitlistEntries: (n: number) =>
-		`لا يمكن حذف العميل لوجود ${n} طلب${n === 1 ? "" : "ات"} في قائمة الانتظار. يرجى إزالتها أولاً.`,
 	hasRatings: (n: number) =>
 		`لا يمكن حذف العميل لوجود ${n} تقييم${n === 1 ? "" : "ات"}. يجب الحفاظ على التقييمات لأغراض التدقيق.`,
 } as const;
@@ -89,16 +87,6 @@ export class DeleteClientHandler {
 		if (activeEnrollments > 0) {
 			throw new ConflictException(
 				DELETE_CLIENT_MESSAGES.hasActiveEnrollments(activeEnrollments),
-			);
-		}
-
-		// Waitlist (people → bookings)
-		const waitlistEntries = await this.prisma.waitlistEntry.count({
-			where: { clientId: cmd.clientId, status: "WAITING" },
-		});
-		if (waitlistEntries > 0) {
-			throw new ConflictException(
-				DELETE_CLIENT_MESSAGES.hasWaitlistEntries(waitlistEntries),
 			);
 		}
 

@@ -25,9 +25,6 @@ const buildPrisma = () => ({
   passwordResetToken: {
     deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
   },
-  waitlistEntry: {
-    findMany: jest.fn().mockResolvedValue([]),
-  },
 });
 
 // Lightweight mock — invokes the callback with a tx mirror so update + log

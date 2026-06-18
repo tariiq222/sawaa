@@ -2,19 +2,11 @@
 
 import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  Add01Icon,
-  Tag01Icon,
-  CheckmarkCircle02Icon,
-  Cancel01Icon,
-  CalendarAdd02Icon,
-} from "@hugeicons/core-free-icons"
+import { Add01Icon } from "@hugeicons/core-free-icons"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
-import { StatsGrid } from "@/components/features/stats-grid"
-import { StatCard } from "@/components/features/stat-card"
 import { DataTable } from "@/components/features/data-table"
 import { FilterBar } from "@/components/features/filter-bar"
 import { ErrorBanner } from "@/components/features/error-banner"
@@ -44,14 +36,6 @@ export function CategoryListPage() {
   const [editTarget, setEditTarget] = useState<ServiceCategory | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ServiceCategory | null>(null)
 
-  const activeCount = categories.filter((c) => c.isActive).length
-  const inactiveCount = categories.filter((c) => !c.isActive).length
-  const now = new Date()
-  const newThisMonth = categories.filter((c) => {
-    const created = new Date(c.createdAt)
-    return created.getFullYear() === now.getFullYear() && created.getMonth() === now.getMonth()
-  }).length
-
   const columns = getCategoryColumns(
     locale,
     t,
@@ -74,19 +58,6 @@ export function CategoryListPage() {
           {t("services.categories.addCategory")}
         </Button>
       </PageHeader>
-
-      {isLoading && !meta ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={`skeleton-${i}`} className="h-24 rounded-lg" />)}
-        </div>
-      ) : (
-        <StatsGrid className="sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard title={t("services.categories.stats.total")} value={meta?.total ?? 0} icon={Tag01Icon} iconColor="primary" />
-          <StatCard title={t("services.categories.stats.active")} value={activeCount} icon={CheckmarkCircle02Icon} iconColor="success" />
-          <StatCard title={t("services.categories.stats.inactive")} value={inactiveCount} icon={Cancel01Icon} iconColor="warning" />
-          <StatCard title={t("services.categories.stats.newThisMonth")} value={newThisMonth} icon={CalendarAdd02Icon} iconColor="accent" />
-        </StatsGrid>
-      )}
 
       <FilterBar
         search={{ value: search, onChange: setSearch, placeholder: t("services.categories.searchPlaceholder") }}

@@ -58,38 +58,6 @@ export function useClients() {
   }
 }
 
-/* ─── Stats Hook (unfiltered — for StatsGrid) ─── */
-
-export function useClientStats() {
-  const allQuery: ClientListQuery = { page: 1, perPage: 1 }
-  const activeQuery: ClientListQuery = { page: 1, perPage: 1, isActive: true }
-  const inactiveQuery: ClientListQuery = { page: 1, perPage: 1, isActive: false }
-
-  const { data: allData, isLoading: l1 } = useQuery({
-    queryKey: queryKeys.clients.list(allQuery),
-    queryFn: () => fetchClients(allQuery),
-    staleTime: 5 * 60 * 1000,
-  })
-  const { data: activeData, isLoading: l2 } = useQuery({
-    queryKey: queryKeys.clients.list(activeQuery),
-    queryFn: () => fetchClients(activeQuery),
-    staleTime: 5 * 60 * 1000,
-  })
-  const { data: inactiveData, isLoading: l3 } = useQuery({
-    queryKey: queryKeys.clients.list(inactiveQuery),
-    queryFn: () => fetchClients(inactiveQuery),
-    staleTime: 5 * 60 * 1000,
-  })
-
-  return {
-    isLoading: l1 || l2 || l3,
-    total: allData?.meta?.total ?? 0,
-    active: activeData?.meta?.total ?? 0,
-    inactive: inactiveData?.meta?.total ?? 0,
-    newThisMonth: 0, // requires backend stats endpoint
-  }
-}
-
 /* ─── Detail Hook ─── */
 
 export function useClient(id: string | null) {

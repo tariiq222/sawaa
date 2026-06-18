@@ -42,7 +42,8 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
   const { t, locale } = useLocale()
   const { data: categories, isLoading: loadingCategories } = useCategories()
   const { options: departments } = useDepartmentOptions()
-  const isMultiBranch = true
+  // Single-branch center: branch restrictions UI is hidden; services apply to the only branch.
+  const isMultiBranch = false
   const [selectedDeptId, setSelectedDeptId] = useState<string>("")
 
   const hasDepts = departments.length > 0

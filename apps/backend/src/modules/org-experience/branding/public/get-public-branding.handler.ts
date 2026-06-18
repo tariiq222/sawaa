@@ -20,6 +20,8 @@ export class GetPublicBrandingHandler {
         companyNameEn: true,
         productTagline: true,
         timeFormat: true,
+        contactPhone: true,
+        contactEmail: true,
       },
     });
 
@@ -40,6 +42,8 @@ export class GetPublicBrandingHandler {
       fontFamily: 'Handicrafts',
       fontUrl: null,
       timeFormat,
+      contactPhone: settings?.contactPhone ?? null,
+      contactEmail: settings?.contactEmail ?? null,
     };
   }
 }

@@ -2,19 +2,11 @@
 
 import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  Add01Icon,
-  Package01Icon,
-  CheckmarkCircle02Icon,
-  Cancel01Icon,
-  CalendarAdd02Icon,
-} from "@hugeicons/core-free-icons"
+import { Add01Icon } from "@hugeicons/core-free-icons"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
-import { StatsGrid } from "@/components/features/stats-grid"
-import { StatCard } from "@/components/features/stat-card"
 import { DataTable } from "@/components/features/data-table"
 import { FilterBar } from "@/components/features/filter-bar"
 import { ErrorBanner } from "@/components/features/error-banner"
@@ -44,14 +36,6 @@ export function BundleListPage() {
   const [editTarget, setEditTarget] = useState<ServiceBundle | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ServiceBundle | null>(null)
 
-  const activeCount = bundles.filter((b) => b.isActive).length
-  const inactiveCount = bundles.filter((b) => !b.isActive).length
-  const now = new Date()
-  const newThisMonth = bundles.filter((b) => {
-    const created = new Date(b.createdAt)
-    return created.getFullYear() === now.getFullYear() && created.getMonth() === now.getMonth()
-  }).length
-
   const columns = getBundleColumns(
     locale,
     t,
@@ -76,19 +60,6 @@ export function BundleListPage() {
           </Button>
         )}
       </PageHeader>
-
-      {isLoading && !meta ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={`skeleton-${i}`} className="h-24 rounded-lg" />)}
-        </div>
-      ) : (
-        <StatsGrid className="sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard title={t("bundles.stats.total")} value={meta?.total ?? 0} icon={Package01Icon} iconColor="primary" />
-          <StatCard title={t("bundles.stats.active")} value={activeCount} icon={CheckmarkCircle02Icon} iconColor="success" />
-          <StatCard title={t("bundles.stats.inactive")} value={inactiveCount} icon={Cancel01Icon} iconColor="warning" />
-          <StatCard title={t("bundles.stats.newThisMonth")} value={newThisMonth} icon={CalendarAdd02Icon} iconColor="accent" />
-        </StatsGrid>
-      )}
 
       <FilterBar
         search={{ value: search, onChange: setSearch, placeholder: t("bundles.searchPlaceholder") }}

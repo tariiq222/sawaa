@@ -48,9 +48,9 @@ export class PublicBookingsController {
   @ApiBearerAuth()
   @UseGuards(ClientSessionGuard)
   @Post('group-sessions/:id/book')
-  @ApiOperation({ summary: 'Book or join waitlist for a group session' })
+  @ApiOperation({ summary: 'Book a group session' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiCreatedResponse({ schema: { type: 'object', properties: { type: { type: 'string', enum: ['BOOKED', 'WAITLISTED'] }, bookingId: { type: 'string', nullable: true }, waitlistPosition: { type: 'number', nullable: true } } } })
+  @ApiCreatedResponse({ schema: { type: 'object', properties: { type: { type: 'string', enum: ['BOOKED'] }, bookingId: { type: 'string' } } } })
   @ApiResponse({ status: 409, description: 'Session full' })
   async bookGroupSessionEndpoint(
     @Param('id', ParseUUIDPipe) id: string,

@@ -38,7 +38,6 @@ export function resolveNotificationHref(notification: Notification): Href | null
     case 'cancellation_requested':
     case 'no_show_review':
     case 'client_arrived':
-    case 'waitlist_slot_available':
       return '/(client)/(tabs)/appointments' as Href;
     default:
       return null;

@@ -36,8 +36,6 @@ export interface BookingSettings {
   autoNoShowAfterMinutes: number
   minBookingLeadMinutes: number
   maxAdvanceBookingDays: number
-  waitlistEnabled: boolean
-  waitlistMaxPerSlot: number
   payAtClinicEnabled: boolean
   requireCancelApproval: boolean
   autoRefundOnCancel: boolean

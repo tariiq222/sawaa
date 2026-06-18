@@ -26,13 +26,6 @@ export const FEATURE_CATALOG: Record<FeatureKey, FeatureCatalogEntry> = {
     descAr: "إنشاء سلاسل مواعيد أسبوعية أو شهرية بنقرة واحدة",
     descEn: "Create weekly or monthly appointment series in one click",
   },
-  [FeatureKey.WAITLIST]: {
-    key: FeatureKey.WAITLIST,
-    kind: "boolean", tier: "PRO", group: "Booking & Scheduling",
-    nameAr: "قائمة الانتظار", nameEn: "Waitlist",
-    descAr: "إدارة قائمة عملاء بانتظار شواغر في الجدول",
-    descEn: "Manage a queue of clients waiting for openings",
-  },
   [FeatureKey.GROUP_SESSIONS]: {
     key: FeatureKey.GROUP_SESSIONS,
     kind: "boolean", tier: "PRO", group: "Booking & Scheduling",

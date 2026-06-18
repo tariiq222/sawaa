@@ -193,7 +193,7 @@ export async function SawaaSupportGroupDetailPage({ id }: Props) {
 
                         {/* Action */}
                         <div className="shrink-0 flex sm:flex-col sm:justify-center sm:w-[180px]">
-                          <JoinGroupButton sessionId={s.id} categoryId={category.id} isFull={isFull} waitlistEnabled={s.waitlistEnabled} />
+                          <JoinGroupButton sessionId={s.id} categoryId={category.id} isFull={isFull} />
                         </div>
                       </article>
                     );

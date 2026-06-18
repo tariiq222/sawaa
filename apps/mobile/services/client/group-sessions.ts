@@ -12,19 +12,15 @@ export interface GroupSession {
   price: number;
   currency: string;
   status: string;
-  waitlistEnabled: boolean;
-  waitlistCount: number;
   employeeId: string;
   serviceId: string;
   spotsLeft: number;
   isFull: boolean;
-  isWaitlistOnly: boolean;
 }
 
 export interface BookGroupSessionResponse {
-  type: 'BOOKED' | 'WAITLISTED';
+  type: 'BOOKED';
   bookingId?: string;
-  waitlistPosition?: number;
 }
 
 /** Public endpoints answer raw or `{ success, data }`-enveloped depending on

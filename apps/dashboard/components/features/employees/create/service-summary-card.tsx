@@ -15,16 +15,22 @@ const TYPE_KEYS: Record<string, string> = {
 
 interface ServiceSummaryCardProps {
   draft: DraftService
+  departmentName?: string | null
+  categoryName?: string | null
   onRemove: () => void
   onEdit: () => void
 }
 
-export function ServiceSummaryCard({ draft, onRemove, onEdit }: ServiceSummaryCardProps) {
+export function ServiceSummaryCard({ draft, departmentName, categoryName, onRemove, onEdit }: ServiceSummaryCardProps) {
   const { t } = useLocale()
+  const breadcrumb = [departmentName, categoryName].filter(Boolean).join(" › ")
 
   return (
     <div className="flex items-start justify-between rounded-lg border border-border p-3">
       <div className="flex flex-col gap-1.5">
+        {breadcrumb && (
+          <span className="text-[11px] text-muted-foreground">{breadcrumb}</span>
+        )}
         <span className="text-sm font-medium text-foreground">
           {draft.serviceName}
         </span>

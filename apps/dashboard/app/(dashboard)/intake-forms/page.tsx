@@ -2,18 +2,11 @@
 
 import { useRouter } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  Add01Icon,
-  DocumentValidationIcon,
-  CheckmarkCircle01Icon,
-  FileEditIcon,
-} from "@hugeicons/core-free-icons"
+import { Add01Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { PageHeader } from "@/components/features/page-header"
-import { StatsGrid } from "@/components/features/stats-grid"
-import { StatCard } from "@/components/features/stat-card"
 import { DataTable } from "@/components/features/data-table"
 import { FilterBar } from "@/components/features/filter-bar"
 import { Button } from "@sawaa/ui"
@@ -41,10 +34,6 @@ export default function IntakeFormsPage() {
   const { update, delete: deleteFn } = useIntakeFormMutations()
 
   const forms = rawForms.map(mapApiForm)
-
-  const totalForms = forms.length
-  const activeForms = forms.filter((f) => f.isActive).length
-  const totalSubmissions = forms.reduce((sum, f) => sum + f.submissionsCount, 0)
 
   const columns = getIntakeFormsColumns({
     isAr,
@@ -110,27 +99,6 @@ export default function IntakeFormsPage() {
         hasFilters={hasFilters}
         onReset={resetFilters}
       />
-
-      <StatsGrid>
-        <StatCard
-          title={t("intakeForms.stats.total")}
-          value={totalForms}
-          icon={DocumentValidationIcon}
-          iconColor="primary"
-        />
-        <StatCard
-          title={t("intakeForms.stats.active")}
-          value={activeForms}
-          icon={CheckmarkCircle01Icon}
-          iconColor="success"
-        />
-        <StatCard
-          title={t("intakeForms.stats.submissions")}
-          value={totalSubmissions.toLocaleString("en-US")}
-          icon={FileEditIcon}
-          iconColor="accent"
-        />
-      </StatsGrid>
 
       <DataTable
         columns={columns}

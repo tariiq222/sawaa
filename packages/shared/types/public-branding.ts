@@ -35,4 +35,8 @@ export interface PublicBranding {
 
   // Display preferences (from OrganizationSettings)
   timeFormat: '12h' | '24h';
+
+  // Contact
+  contactPhone: string | null;
+  contactEmail: string | null;
 }

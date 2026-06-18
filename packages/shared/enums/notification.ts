@@ -17,7 +17,6 @@ export enum NotificationType {
   PAYMENT_RECEIVED = 'payment_received',
   NEW_RATING = 'new_rating',
   PROBLEM_REPORT = 'problem_report',
-  WAITLIST_SLOT_AVAILABLE = 'waitlist_slot_available',
   SYSTEM_ALERT = 'system_alert',
 }
 

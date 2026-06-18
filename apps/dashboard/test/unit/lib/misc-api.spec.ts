@@ -16,11 +16,6 @@ import {
   fetchActivityLogs,
 } from "@/lib/api/activity-log"
 
-import {
-  fetchWaitlist,
-  removeWaitlistEntry,
-} from "@/lib/api/waitlist"
-
 describe("activity-log api", () => {
   beforeEach(() => { vi.clearAllMocks() })
 
@@ -32,19 +27,5 @@ describe("activity-log api", () => {
 
 })
 
-describe("waitlist api", () => {
-  beforeEach(() => { vi.clearAllMocks() })
 
-  it("fetchWaitlist calls /bookings/waitlist", async () => {
-    getMock.mockResolvedValueOnce([])
-    await fetchWaitlist()
-    expect(getMock).toHaveBeenCalledWith("/dashboard/bookings/waitlist", undefined)
-  })
-
-  it("removeWaitlistEntry deletes /bookings/waitlist/:id", async () => {
-    deleteMock.mockResolvedValueOnce(undefined)
-    await removeWaitlistEntry("wl-1")
-    expect(deleteMock).toHaveBeenCalledWith("/dashboard/bookings/waitlist/wl-1")
-  })
-})
 

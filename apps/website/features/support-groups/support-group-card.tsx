@@ -72,15 +72,9 @@ export function SupportGroupCard({ group, onSelect, isSelected }: SupportGroupCa
       <div className="flex items-center justify-between">
         <span className="text-lg font-bold">{formatPrice(group.price, group.currency)}</span>
         {group.isFull ? (
-          group.isWaitlistOnly ? (
-            <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-800">
-              Waitlist Only
-            </span>
-          ) : (
-            <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-              Full
-            </span>
-          )
+          <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+            Full
+          </span>
         ) : (
           <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
             {group.spotsLeft} spots left

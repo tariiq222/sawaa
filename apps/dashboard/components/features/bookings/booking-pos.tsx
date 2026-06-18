@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Cancel01Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { useLocale } from "@/components/locale-provider"
 import { useBranches } from "@/hooks/use-branches"
@@ -36,13 +36,14 @@ interface BookingPosProps {
 /* ─── Main component ─── */
 
 export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const [openSection, setOpenSection] = useState<SectionId>("client")
 
   const { branches } = useBranches()
   const mainBranch = branches.find((b) => b.isMain) ?? branches[0]
   const { data: bookingSettings } = useBookingSettings()
   const maxAdvanceDays = bookingSettings?.maxAdvanceBookingDays ?? 90
+  const queryClient = useQueryClient()
   const { createMut } = useBookingMutations()
 
   const {
@@ -70,11 +71,54 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   // Auto-advance wrapped handlers
   const handleClientSelect = (id: string, name: string) => { selectClient(id, name); setOpenSection("department") }
   const handleDepartmentSelect = (id: string, name: string) => { selectDepartment(id, name); setOpenSection("category") }
-  const handleCategorySelect = (id: string, name: string) => { selectCategory(id, name); setOpenSection("service") }
+
+  /**
+   * When a category (clinic) is selected, fetch its active services.
+   * If exactly one service exists, auto-select it and skip to the employee
+   * step. Otherwise advance to the service selection step as usual.
+   */
+  const handleCategorySelect = useCallback(async (id: string, name: string) => {
+    const filters = { categoryId: id, isActive: true, perPage: 100 }
+    const qKey = queryKeys.services.list(filters)
+
+    // Prefer cached data; fall back to a network fetch (TanStack Query dedupes).
+    const cached = queryClient.getQueryData<Awaited<ReturnType<typeof fetchServices>>>(qKey)
+    const data = cached ?? await queryClient.fetchQuery({
+      queryKey: qKey,
+      queryFn: () => fetchServices(filters),
+      staleTime: 5 * 60 * 1000,
+    })
+
+    const items = data?.items ?? []
+    if (items.length === 1) {
+      const svc = items[0]
+      const svcName = locale === "ar" ? svc.nameAr : (svc.nameEn ?? svc.nameAr)
+      selectCategory(id, name, { serviceId: svc.id, serviceName: svcName })
+      setOpenSection("employee")
+    } else {
+      selectCategory(id, name)
+      setOpenSection("service")
+    }
+  }, [queryClient, selectCategory, locale])
+
   const handleServiceSelect = (id: string, name: string) => { selectService(id, name); setOpenSection("employee") }
   const handleEmployeeSelect = (id: string, name: string) => { selectEmployee(id, name); setOpenSection("typeDuration") }
   const handleDurationSelect = (optId: string, label: string, price: number) => { selectDuration(optId, label, price); setOpenSection("datetime") }
   const handleSkipDuration = () => { skipDuration(); setOpenSection("datetime") }
+
+  /**
+   * True when the service was pre-selected automatically because the chosen
+   * category has exactly one active service. In this case the service step
+   * is hidden from the wizard — changing the category resets it.
+   */
+  const isServiceAutoSelected = useMemo(() => {
+    if (!state.categoryId || !state.serviceId) return false
+    const filters = { categoryId: state.categoryId, isActive: true, perPage: 100 }
+    const cached = queryClient.getQueryData<Awaited<ReturnType<typeof fetchServices>>>(
+      queryKeys.services.list(filters),
+    )
+    return (cached?.items?.length ?? 0) === 1
+  }, [queryClient, state.categoryId, state.serviceId])
 
   // Summary strings for collapsed chips
   const deliveryTypeLabels: Record<string, string> = {
@@ -216,21 +260,23 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
             )}
           </CollapsibleSection>
 
-          {/* 4. Service */}
-          <CollapsibleSection
-            id="service"
-            label={t("bookings.pos.section.service")}
-            summary={summaries.service}
-            isOpen={openSection === "service"}
-            isFilled={summaries.service !== null}
-            onToggle={() => setOpenSection("service")}
-          >
-            {state.categoryId ? (
-              <StepService categoryId={state.categoryId} onSelect={handleServiceSelect} />
-            ) : (
-              <PosSectionHint hint={t("bookings.pos.hint.needCategory")} />
-            )}
-          </CollapsibleSection>
+          {/* 4. Service — hidden when auto-selected from a single-service category */}
+          {!isServiceAutoSelected && (
+            <CollapsibleSection
+              id="service"
+              label={t("bookings.pos.section.service")}
+              summary={summaries.service}
+              isOpen={openSection === "service"}
+              isFilled={summaries.service !== null}
+              onToggle={() => setOpenSection("service")}
+            >
+              {state.categoryId ? (
+                <StepService categoryId={state.categoryId} onSelect={handleServiceSelect} />
+              ) : (
+                <PosSectionHint hint={t("bookings.pos.hint.needCategory")} />
+              )}
+            </CollapsibleSection>
+          )}
 
           {/* 5. Employee */}
           <CollapsibleSection

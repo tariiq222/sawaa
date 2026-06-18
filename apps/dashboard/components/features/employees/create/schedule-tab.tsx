@@ -15,7 +15,6 @@ import type { LocalBreak, LocalVacation } from "./schedule-types"
 import { nextBreakKey } from "./schedule-types"
 import { VacationCard } from "./vacation-card"
 import { DayScheduleCard } from "./day-schedule-card"
-import { EmployeeBranchesPicker } from "./employee-branches-picker"
 
 export type { LocalBreak, LocalVacation }
 
@@ -28,10 +27,6 @@ interface ScheduleTabProps {
   onBreaksChange: (breaks: LocalBreak[]) => void
   vacation: LocalVacation
   onVacationChange: (vacation: LocalVacation) => void
-  branchIds: string[]
-  onBranchIdsChange: (ids: string[]) => void
-  /** When true, picker auto-selects the main branch if no branches are chosen yet. */
-  autoSelectMainBranch?: boolean
 }
 
 /* ─── Component ─── */
@@ -43,9 +38,6 @@ export function ScheduleTab({
   onBreaksChange,
   vacation,
   onVacationChange,
-  branchIds,
-  onBranchIdsChange,
-  autoSelectMainBranch = false,
 }: ScheduleTabProps) {
   const { t, locale } = useLocale()
   const isAr = locale === "ar"
@@ -115,28 +107,10 @@ export function ScheduleTab({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">
-              {t("employees.branches.sectionTitle")}
-            </CardTitle>
-            <CardDescription>{t("employees.branches.sectionDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <EmployeeBranchesPicker
-              value={branchIds}
-              onChange={onBranchIdsChange}
-              autoSelectMain={autoSelectMainBranch}
-            />
-          </CardContent>
-        </Card>
-
-        <VacationCard
-          vacation={vacation}
-          onVacationChange={onVacationChange}
-        />
-      </div>
+      <VacationCard
+        vacation={vacation}
+        onVacationChange={onVacationChange}
+      />
 
       <Card
         className={vacation.enabled ? "opacity-40 pointer-events-none" : ""}

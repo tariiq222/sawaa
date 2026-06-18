@@ -7,7 +7,6 @@ const dbSettings = {
   lateCancelRefundPercent: 0, maxReschedulesPerBooking: 3,
   autoCompleteAfterHours: 2, autoNoShowAfterMinutes: 30,
   minBookingLeadMinutes: 60, maxAdvanceBookingDays: 90,
-  waitlistEnabled: true, waitlistMaxPerSlot: 5,
   createdAt: new Date(), updatedAt: new Date(),
 };
 

@@ -4,13 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  Add01Icon,
-  UserMultiple02Icon,
-  CheckmarkCircle02Icon,
-  Cancel01Icon,
-  CalendarAdd02Icon,
-} from "@hugeicons/core-free-icons"
+import { Add01Icon } from "@hugeicons/core-free-icons"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { DataTable } from "@/components/features/data-table"
@@ -18,13 +12,11 @@ import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { PageHeader } from "@/components/features/page-header"
 import { ErrorBanner } from "@/components/features/error-banner"
 import { FilterBar } from "@/components/features/filter-bar"
-import { StatsGrid } from "@/components/features/stats-grid"
-import { StatCard } from "@/components/features/stat-card"
 import { getClientColumns } from "@/components/features/clients/client-columns"
 import { DeleteClientDialog } from "@/components/features/clients/delete-client-dialog"
 import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
-import { useClients, useClientMutations, useClientStats } from "@/hooks/use-clients"
+import { useClients, useClientMutations } from "@/hooks/use-clients"
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
 import type { Client } from "@/lib/types/client"
@@ -36,7 +28,6 @@ export function ClientListPage() {
   const titleLabel = t("nav.clients")
   const { clients, meta, isLoading, error, search, setSearch, isActive, setIsActive, resetSearch, page, setPage } = useClients()
   const { toggleActiveMut } = useClientMutations()
-  const stats = useClientStats()
 
   const [pendingDelete, setPendingDelete] = useState<Client | null>(null)
 
@@ -77,19 +68,6 @@ export function ClientListPage() {
           </Button>
         )}
       </PageHeader>
-
-      {stats.isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={`skeleton-${i}`} className="h-[100px] rounded-lg" />)}
-        </div>
-      ) : (
-        <StatsGrid className="sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard title={t("clients.stats.total")} value={stats.total} icon={UserMultiple02Icon} iconColor="primary" />
-          <StatCard title={t("clients.stats.active")} value={stats.active} icon={CheckmarkCircle02Icon} iconColor="success" />
-          <StatCard title={t("clients.stats.inactive")} value={stats.inactive} icon={Cancel01Icon} iconColor="warning" />
-          <StatCard title={t("clients.stats.newThisMonth")} value={stats.newThisMonth} icon={CalendarAdd02Icon} iconColor="accent" />
-        </StatsGrid>
-      )}
 
       {error && <ErrorBanner message={error} />}
 

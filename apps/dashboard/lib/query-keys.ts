@@ -11,7 +11,6 @@ export const queryKeys = {
     all: ["bookings"] as const,
     list: (filters?: object) => ["bookings", "list", filters] as const,
     detail: (id: string) => ["bookings", "detail", id] as const,
-    stats: () => ["bookings", "stats"] as const,
     statusLog: (id: string) => ["bookings", "status-log", id] as const,
   },
 
@@ -21,7 +20,6 @@ export const queryKeys = {
     list: (filters?: object) => ["clients", "list", filters] as const,
     listStats: () => ["clients", "list-stats"] as const,
     detail: (id: string) => ["clients", "detail", id] as const,
-    stats: (id: string) => ["clients", "stats", id] as const,
     bookings: (id: string) => ["clients", "detail", id, "bookings"] as const,
   },
 
@@ -44,7 +42,6 @@ export const queryKeys = {
         serviceId,
       ] as const,
     ratings: (id: string) => ["employees", "ratings", id] as const,
-    stats: () => ["employees", "stats"] as const,
     account: (id: string) => ["employees", "account", id] as const,
   },
 
@@ -73,7 +70,6 @@ export const queryKeys = {
     all: ["payments"] as const,
     list: (filters?: object) => ["payments", "list", filters] as const,
     detail: (id: string) => ["payments", "detail", id] as const,
-    stats: () => ["payments", "stats"] as const,
     byBooking: (bookingId: string) =>
       ["payments", "booking", bookingId] as const,
   },
@@ -83,7 +79,6 @@ export const queryKeys = {
     all: ["invoices"] as const,
     list: (filters?: object) => ["invoices", "list", filters] as const,
     detail: (id: string) => ["invoices", "detail", id] as const,
-    stats: () => ["invoices", "stats"] as const,
     html: (id: string) => ["invoices", "html", id] as const,
   },
 
@@ -198,12 +193,6 @@ export const queryKeys = {
     detail: (slug: string) => ["email-templates", "detail", slug] as const,
   },
 
-  /* ─── Waitlist ─── */
-  waitlist: {
-    all: ["waitlist"] as const,
-    list: (filters?: object) => ["waitlist", "list", filters] as const,
-  },
-
   /* ─── Intake Forms ─── */
   intakeForms: {
     all: ["intake-forms"] as const,
@@ -243,8 +232,6 @@ export const queryKeys = {
   /* ─── Dashboard ─── */
   dashboard: {
     all: ["dashboard"] as const,
-    stats: (range?: { from?: string; to?: string }) =>
-      ["dashboard", "stats", range ?? {}] as const,
     topPerformers: () => ["dashboard", "top-performers"] as const,
   },
 

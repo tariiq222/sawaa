@@ -69,17 +69,6 @@ export async function fetchBooking(id: string): Promise<Booking> {
   return api.get<Booking>(`/dashboard/bookings/${id}`)
 }
 
-export interface BookingsStats {
-  todayCount: number
-  pendingCount: number
-  completedToday: number
-  revenueToday: number
-}
-
-export async function fetchBookingsStats(): Promise<BookingsStats> {
-  return api.get<BookingsStats>("/dashboard/bookings/stats")
-}
-
 export interface BookingStatusLogEntry {
   id: string
   fromStatus: string | null

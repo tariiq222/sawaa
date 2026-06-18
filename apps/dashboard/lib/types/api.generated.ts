@@ -331,41 +331,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/dashboard/bookings/waitlist": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List waitlist entries */
-        get: operations["DashboardBookingsController_listWaitlist"];
-        put?: never;
-        /** Add a client to the waitlist */
-        post: operations["DashboardBookingsController_addToWaitlist"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/bookings/waitlist/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Remove a waitlist entry */
-        delete: operations["DashboardBookingsController_removeWaitlistEntry"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/dashboard/bookings/{id}": {
         parameters: {
             query?: never;
@@ -3367,7 +3332,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Book or join waitlist for a group session */
+        /** Book a group session */
         post: operations["PublicBookingsController_bookGroupSessionEndpoint"];
         delete?: never;
         options?: never;
@@ -3931,38 +3896,6 @@ export interface components {
              * @example National Day
              */
             nameEn?: string;
-        };
-        AddToWaitlistDto: {
-            /**
-             * @description Branch where the service should be performed
-             * @example 00000000-0000-0000-0000-000000000000
-             */
-            branchId: string;
-            /**
-             * @description Client to add to the waitlist
-             * @example 00000000-0000-0000-0000-000000000000
-             */
-            clientId: string;
-            /**
-             * @description Preferred employee for the session
-             * @example 00000000-0000-0000-0000-000000000000
-             */
-            employeeId: string;
-            /**
-             * @description Additional notes for the waitlist entry
-             * @example Morning slot preferred
-             */
-            notes?: string;
-            /**
-             * @description Client-preferred date (ISO 8601)
-             * @example 2026-05-15T00:00:00.000Z
-             */
-            preferredDate?: string;
-            /**
-             * @description Service the client wants
-             * @example 00000000-0000-0000-0000-000000000000
-             */
-            serviceId: string;
         };
         ApiErrorDto: {
             /**
@@ -5265,6 +5198,11 @@ export interface components {
              */
             durationMins: number;
             /**
+             * @description Duration option to use for price resolution (3-tier: employee override → duration option → service base). When provided, enables employee-level price overrides.
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            durationOptionId?: string;
+            /**
              * @description Employee performing the service
              * @example 00000000-0000-0000-0000-000000000000
              */
@@ -5300,10 +5238,10 @@ export interface components {
              */
             payAtClinic?: boolean;
             /**
-             * @description Price per session
+             * @description Ignored — price is resolved server-side via PriceResolverService (3-tier: employee override → duration option → service base). Kept for backward compatibility.
              * @example 150
              */
-            price: number;
+            price?: number;
             /**
              * @description ISO 8601 datetime of the first occurrence
              * @example 2026-05-01T09:00:00.000Z
@@ -7593,16 +7531,6 @@ export interface components {
              * @example false
              */
             requireCancelApproval?: boolean;
-            /**
-             * @description Whether the waitlist is enabled
-             * @example true
-             */
-            waitlistEnabled?: boolean;
-            /**
-             * @description Maximum waitlist entries per slot
-             * @example 5
-             */
-            waitlistMaxPerSlot?: number;
         };
         UpsertChatbotConfigDto: {
             /**
@@ -7990,8 +7918,6 @@ export interface components {
              */
             transferRef?: string;
         };
-        /** @enum {string} */
-        WaitlistStatus: "WAITING" | "PROMOTED" | "EXPIRED" | "REMOVED";
     };
     responses: never;
     parameters: never;
@@ -9431,215 +9357,6 @@ export interface operations {
             };
             /** @description Action denied by permission policy */
             403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardBookingsController_listWaitlist: {
-        parameters: {
-            query?: {
-                /** @description Filter by employee */
-                employeeId?: string;
-                /** @description Filter by waitlist entry status */
-                status?: components["schemas"]["WaitlistStatus"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of waitlist entries */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        clientId?: string;
-                        /** Format: date-time */
-                        createdAt?: string;
-                        /** Format: uuid */
-                        id?: string;
-                        /** Format: date-time */
-                        preferredDate?: string | null;
-                        /** Format: uuid */
-                        serviceId?: string | null;
-                    }[];
-                };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardBookingsController_addToWaitlist: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AddToWaitlistDto"];
-            };
-        };
-        responses: {
-            /** @description Waitlist entry created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        clientId?: string;
-                        /** Format: date-time */
-                        createdAt?: string;
-                        /** Format: uuid */
-                        id?: string;
-                        /** Format: date-time */
-                        preferredDate?: string | null;
-                        /** Format: uuid */
-                        serviceId?: string | null;
-                    };
-                };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Unhandled server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    DashboardBookingsController_removeWaitlistEntry: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Waitlist entry ID */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Waitlist entry removed */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing or invalid authentication */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Action denied by permission policy */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Waitlist entry not found */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24863,10 +24580,9 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        bookingId?: string | null;
+                        bookingId?: string;
                         /** @enum {string} */
-                        type?: "BOOKED" | "WAITLISTED";
-                        waitlistPosition?: number | null;
+                        type?: "BOOKED";
                     };
                 };
             };

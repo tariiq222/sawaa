@@ -3,49 +3,28 @@
 import { useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  Add01Icon,
-  Calendar03Icon,
-  Clock01Icon,
-  CheckmarkCircle02Icon,
-  Money02Icon,
-} from "@hugeicons/core-free-icons"
+import { Add01Icon } from "@hugeicons/core-free-icons"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { Button } from "@sawaa/ui"
-import { Skeleton } from "@sawaa/ui"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@sawaa/ui"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { PageHeader } from "@/components/features/page-header"
-import { StatsGrid } from "@/components/features/stats-grid"
-import { StatCard } from "@/components/features/stat-card"
 import { BookingDetailSheet } from "@/components/features/bookings/booking-detail-sheet"
 import { BookingCreateView } from "@/components/features/bookings/booking-create-view"
-import { WaitlistTab } from "@/components/features/bookings/waitlist-tab"
 import { BookingsTabContent } from "@/components/features/bookings/bookings-tab-content"
 import { useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import { useLocale } from "@/components/locale-provider"
-import { formatPrice } from "@/lib/money"
-import { useBookingsStats } from "@/hooks/use-bookings"
 import type { Booking } from "@/lib/types/booking"
-import type { BookingSettings } from "@/lib/api/booking-settings"
 
-interface BookingsPageContentProps {
-  bookingSettings: BookingSettings | null
-}
-
-export function BookingsPageContent({
-  bookingSettings,
-}: BookingsPageContentProps) {
+export function BookingsPageContent() {
   const searchParams = useSearchParams()
-  const tabParam = searchParams.get("tab")
   const newParam = searchParams.get("new")
-  const defaultTab = tabParam === "waitlist" ? "waitlist" : "bookings"
+  const defaultTab = "bookings"
   const { t } = useLocale()
   const titleLabel = t("nav.bookings")
   const queryClient = useQueryClient()
-  const { data: stats, isLoading: statsLoading } = useBookingsStats()
 
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all, refetchType: "all" })
@@ -97,70 +76,18 @@ export function BookingsPageContent({
           onCancel={() => setCreating(false)}
         />
       ) : (
-        <>
-          {statsLoading ? (
-            <StatsGrid>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={`skeleton-${i}`} className="h-[88px] w-full rounded-xl" />
-              ))}
-            </StatsGrid>
-          ) : (
-            <StatsGrid>
-              <StatCard
-                title={t("bookings.stats.today")}
-                value={stats?.todayCount ?? 0}
-                description={t("bookings.stats.todayDesc")}
-                icon={Calendar03Icon}
-                iconColor="primary"
-              />
-              <StatCard
-                title={t("bookings.stats.pending")}
-                value={stats?.pendingCount ?? 0}
-                description={t("bookings.stats.pendingDesc")}
-                icon={Clock01Icon}
-                iconColor="warning"
-              />
-              <StatCard
-                title={t("bookings.stats.completedToday")}
-                value={stats?.completedToday ?? 0}
-                description={t("bookings.stats.completedTodayDesc")}
-                icon={CheckmarkCircle02Icon}
-                iconColor="success"
-              />
-              <StatCard
-                title={t("bookings.stats.revenueToday")}
-                value={`${formatPrice(stats?.revenueToday ?? 0)} ${t("bookings.wizard.step.service.currency")}`}
-                description={t("bookings.stats.revenueTodayDesc")}
-                icon={Money02Icon}
-                iconColor="accent"
-              />
-            </StatsGrid>
-          )}
+        <Tabs defaultValue={defaultTab}>
+          <TabsList>
+            <TabsTrigger value="bookings">{t("bookings.tabs.list")}</TabsTrigger>
+          </TabsList>
 
-          <Tabs defaultValue={defaultTab}>
-            <TabsList>
-              <TabsTrigger value="bookings">{t("bookings.tabs.list")}</TabsTrigger>
-              {bookingSettings?.waitlistEnabled && (
-                <TabsTrigger value="waitlist">
-                  {t("bookings.tabs.waitlist")}
-                </TabsTrigger>
-              )}
-            </TabsList>
-
-            <TabsContent value="bookings" className="mt-4">
-              <BookingsTabContent
-                onRowClick={handleRowClick}
-                onEditClick={handleEditClick}
-              />
-            </TabsContent>
-
-            {bookingSettings?.waitlistEnabled && (
-              <TabsContent value="waitlist" className="mt-4">
-                <WaitlistTab />
-              </TabsContent>
-            )}
-          </Tabs>
-        </>
+          <TabsContent value="bookings" className="mt-4">
+            <BookingsTabContent
+              onRowClick={handleRowClick}
+              onEditClick={handleEditClick}
+            />
+          </TabsContent>
+        </Tabs>
       )}
 
       <BookingDetailSheet

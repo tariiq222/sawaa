@@ -17,8 +17,6 @@ export const DEFAULT_BOOKING_SETTINGS = {
   autoNoShowAfterMinutes: 30,
   minBookingLeadMinutes: 60,
   maxAdvanceBookingDays: 90,
-  waitlistEnabled: true,
-  waitlistMaxPerSlot: 5,
   payAtClinicEnabled: false,
   requireCancelApproval: false,
   autoRefundOnCancel: true,

@@ -14,19 +14,15 @@ export interface SupportGroup {
   price: number;
   currency: string;
   status: string;
-  waitlistEnabled: boolean;
-  waitlistCount: number;
   employeeId: string;
   serviceId: string;
   spotsLeft: number;
   isFull: boolean;
-  isWaitlistOnly: boolean;
 }
 
 export interface BookGroupSessionResponse {
-  type: 'BOOKED' | 'WAITLISTED';
+  type: 'BOOKED';
   bookingId?: string;
-  waitlistPosition?: number;
 }
 
 export async function getPublicGroupSessions(

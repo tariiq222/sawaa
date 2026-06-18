@@ -2,9 +2,6 @@
 
 import { useMemo } from "react"
 import { useQueries, useQuery } from "@tanstack/react-query"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { UserIcon } from "@hugeicons/core-free-icons"
-import Image from "next/image"
 
 import { WizardCard } from "@/components/features/bookings/wizard-card"
 import { useLocale } from "@/components/locale-provider"
@@ -14,6 +11,9 @@ import { fetchAvailability } from "@/lib/api/employees-schedule"
 import { fetchServiceEmployees } from "@/lib/api/services"
 import type { Employee } from "@/lib/types/employee"
 import type { ServiceEmployee } from "@/lib/types/service"
+
+import { EmployeeAvatar, normalizeEmployeeAvatarSrc } from "@/components/features/shared/employee-avatar"
+export { EmployeeAvatar, normalizeEmployeeAvatarSrc }
 
 /* ─── Helpers ─── */
 
@@ -30,62 +30,6 @@ function StepEmployeeSkeleton() {
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={`skeleton-${i}`} className="h-28 animate-pulse rounded-2xl bg-muted" />
       ))}
-    </div>
-  )
-}
-
-/* ─── Avatar ─── */
-
-interface EmployeeAvatarProps {
-  avatarUrl: string | null | undefined
-  name: string
-}
-
-export function normalizeEmployeeAvatarSrc(
-  avatarUrl: unknown,
-): string | null {
-  if (typeof avatarUrl !== "string") return null
-  const trimmed = avatarUrl.trim()
-  if (!trimmed) return null
-
-  try {
-    const url = new URL(trimmed, "http://localhost")
-    if (url.protocol !== "http:" && url.protocol !== "https:") return null
-    if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return url.pathname + url.search + url.hash
-    return /^https?:\/\//i.test(trimmed) ? trimmed : null
-  } catch {
-    return null
-  }
-}
-
-export function EmployeeAvatar({ avatarUrl, name }: EmployeeAvatarProps) {
-  const safeAvatarUrl = normalizeEmployeeAvatarSrc(avatarUrl)
-
-  if (safeAvatarUrl) {
-    const isRemote = /^https?:\/\//i.test(safeAvatarUrl)
-    return (
-      <div className="relative size-9 shrink-0 overflow-hidden rounded-full">
-        {isRemote ? (
-          // Remote avatars (e.g. migrated WordPress media) bypass next/image:
-          // no remotePatterns are configured, so next/image would throw on them.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={safeAvatarUrl} alt={name} className="size-full object-cover" />
-        ) : (
-          <Image
-            src={safeAvatarUrl}
-            alt={name}
-            fill
-            className="object-cover"
-            sizes="36px"
-          />
-        )}
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
-      <HugeiconsIcon icon={UserIcon} size={18} className="text-primary" />
     </div>
   )
 }

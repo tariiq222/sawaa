@@ -5,24 +5,13 @@ import { useState, useCallback } from "react"
 import { queryKeys } from "@/lib/query-keys"
 import {
   fetchPayments,
-  fetchPaymentStats,
   refundPayment,
   verifyPayment,
   recordPayment,
   applyInvoiceDiscount,
 } from "@/lib/api/payments"
-import type { PaymentListQuery, PaymentStats } from "@/lib/types/payment"
+import type { PaymentListQuery } from "@/lib/types/payment"
 import type { PaymentStatus, PaymentMethod } from "@/lib/types/common"
-
-export type { PaymentStats }
-
-export function usePaymentStats() {
-  return useQuery({
-    queryKey: queryKeys.payments.stats(),
-    queryFn: fetchPaymentStats,
-    staleTime: 5 * 60 * 1000,
-  })
-}
 
 export function usePaymentMutations() {
   const queryClient = useQueryClient()

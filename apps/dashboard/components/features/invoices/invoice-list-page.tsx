@@ -1,17 +1,8 @@
 "use client"
 
-import {
-  DocumentAttachmentIcon,
-  CheckmarkCircle02Icon,
-  TimeQuarterPassIcon,
-  Cancel01Icon,
-} from "@hugeicons/core-free-icons"
-
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
-import { StatsGrid } from "@/components/features/stats-grid"
-import { StatCard } from "@/components/features/stat-card"
 import { FilterBar } from "@/components/features/filter-bar"
 import { DataTable } from "@/components/features/data-table"
 import { getInvoiceColumns } from "@/components/features/invoices/invoice-columns"
@@ -30,14 +21,6 @@ export function InvoiceListPage() {
 
   const columns = getInvoiceColumns(undefined, t)
 
-  const paid = invoices.filter((i) => i.status === "PAID").length
-  const pending = invoices.filter(
-    (i) => i.status === "ISSUED" || i.status === "DRAFT" || i.status === "PARTIALLY_PAID",
-  ).length
-  const voided = invoices.filter(
-    (i) => i.status === "VOID" || i.status === "REFUNDED" || i.status === "PARTIALLY_REFUNDED",
-  ).length
-
   return (
     <ListPageShell>
       <Breadcrumbs />
@@ -46,39 +29,6 @@ export function InvoiceListPage() {
         title={t("invoices.title")}
         description={t("invoices.description")}
       />
-
-      {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={`skeleton-${i}`} className="h-24 rounded-lg" />)}
-        </div>
-      ) : (
-        <StatsGrid>
-          <StatCard
-            title={t("invoices.stats.total")}
-            value={invoices.length}
-            icon={DocumentAttachmentIcon}
-            iconColor="primary"
-          />
-          <StatCard
-            title={t("invoices.stats.paid")}
-            value={paid}
-            icon={CheckmarkCircle02Icon}
-            iconColor="success"
-          />
-          <StatCard
-            title={t("invoices.stats.pending")}
-            value={pending}
-            icon={TimeQuarterPassIcon}
-            iconColor="warning"
-          />
-          <StatCard
-            title={t("invoices.stats.voided")}
-            value={voided}
-            icon={Cancel01Icon}
-            iconColor="accent"
-          />
-        </StatsGrid>
-      )}
 
       <FilterBar
         search={{

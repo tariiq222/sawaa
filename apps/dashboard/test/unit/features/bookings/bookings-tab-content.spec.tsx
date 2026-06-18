@@ -68,14 +68,6 @@ vi.mock("@/components/features/data-table", () => ({
     <div data-testid="data-table">{emptyTitle}</div>
   ),
 }))
-vi.mock("@/components/features/stats-grid", () => ({
-  StatsGrid: ({ children }: { children: ReactNode }) => (
-    <div data-testid="stats-grid">{children}</div>
-  ),
-}))
-vi.mock("@/components/features/stat-card", () => ({
-  StatCard: () => <div data-testid="stat-card" />,
-}))
 vi.mock("@/components/features/filter-bar", () => ({
   FilterBar: ({
     selects,

@@ -3,13 +3,11 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Add01Icon, Coupon01Icon, CheckmarkCircle02Icon, Cancel01Icon, PercentCircleIcon } from "@hugeicons/core-free-icons"
+import { Add01Icon } from "@hugeicons/core-free-icons"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
-import { StatsGrid } from "@/components/features/stats-grid"
-import { StatCard } from "@/components/features/stat-card"
 import { DataTable } from "@/components/features/data-table"
 import { ErrorBanner } from "@/components/features/error-banner"
 import { getCouponColumns } from "@/components/features/coupons/coupon-columns"
@@ -31,11 +29,6 @@ export function CouponListPage() {
   const { updateMut } = useCouponMutations()
 
   const [deleteTarget, setDeleteTarget] = useState<Coupon | null>(null)
-
-  const now = new Date()
-  const activeCount = coupons.filter((c) => c.isActive && (!c.expiresAt || new Date(c.expiresAt) > now)).length
-  const inactiveCount = coupons.filter((c) => !c.isActive).length
-  const expiredCount = coupons.filter((c) => c.expiresAt && new Date(c.expiresAt) < now).length
 
   const columns = getCouponColumns(
     locale,
@@ -60,19 +53,6 @@ export function CouponListPage() {
           </Button>
         )}
       </PageHeader>
-
-      {isLoading && !meta ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={`skeleton-${i}`} className="h-24 rounded-lg" />)}
-        </div>
-      ) : (
-        <StatsGrid>
-          <StatCard title={t("coupons.stats.total")} value={meta?.total ?? 0} icon={Coupon01Icon} iconColor="primary" />
-          <StatCard title={t("coupons.stats.active")} value={activeCount} icon={CheckmarkCircle02Icon} iconColor="success" />
-          <StatCard title={t("coupons.stats.inactive")} value={inactiveCount} icon={Cancel01Icon} iconColor="warning" />
-          <StatCard title={t("coupons.stats.expired")} value={expiredCount} icon={PercentCircleIcon} iconColor="accent" />
-        </StatsGrid>
-      )}
 
       <FilterBar
         search={{ value: search, onChange: setSearch, placeholder: t("coupons.searchPlaceholder") }}
@@ -99,7 +79,9 @@ export function CouponListPage() {
 
       {isLoading && coupons.length === 0 ? (
         <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={`row-${i}`} className="h-12 rounded-lg" />)}
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={`row-${i}`} className="h-12 rounded-lg" />
+          ))}
         </div>
       ) : (
         <DataTable columns={columns} data={coupons} emptyTitle={t("coupons.empty.title")} emptyDescription={t("coupons.empty.description")} emptyAction={canDo("Coupon", "create") ? { label: t("coupons.addCoupon"), onClick: () => router.push("/coupons/create") } : undefined} />

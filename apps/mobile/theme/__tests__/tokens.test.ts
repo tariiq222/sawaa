@@ -24,6 +24,8 @@ describe('buildTheme', () => {
       fontFamily: null,
       fontUrl: null,
       timeFormat: '24h',
+      contactPhone: null,
+      contactEmail: null,
     });
     expect(t.colors.primary).toBe('#55CCB0');
     expect(t.colors.accent).toBe('#E7DBC4');

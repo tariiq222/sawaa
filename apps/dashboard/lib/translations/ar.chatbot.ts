@@ -62,7 +62,6 @@ export const arChatbot: Record<string, string> = {
   "employees.tabs.list": "الممارسون",
   "employees.tabs.ratings": "التقييمات والمراجعات",
   "bookings.tabs.list": "الحجوزات",
-  "bookings.tabs.waitlist": "قائمة الانتظار",
   "invoices.tabs.list": "الفواتير",
   "users.tabs.activityLog": "سجل النشاط",
 

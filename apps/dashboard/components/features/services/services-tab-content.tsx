@@ -2,16 +2,8 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import {
-  GridIcon,
-  CheckmarkCircle02Icon,
-  Cancel01Icon,
-  Layers01Icon,
-} from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 
-import { StatsGrid } from "@/components/features/stats-grid"
-import { StatCard } from "@/components/features/stat-card"
 import { DataTable } from "@/components/features/data-table"
 import { ErrorBanner } from "@/components/features/error-banner"
 import { FilterBar } from "@/components/features/filter-bar"
@@ -21,7 +13,7 @@ import { Skeleton } from "@sawaa/ui"
 import { getServiceColumns } from "./service-columns"
 import { ServiceDetailSheet } from "./service-detail-sheet"
 
-import { useServices, useServicesListStats, useCategories, useServiceMutations } from "@/hooks/use-services"
+import { useServices, useCategories, useServiceMutations } from "@/hooks/use-services"
 import { useBranches } from "@/hooks/use-branches"
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
@@ -42,7 +34,6 @@ export function ServicesTabContent() {
   const branchId: string | undefined = undefined
   const setBranchId = (_v: string | undefined) => { /* branch filter not supported */ }
   const { data: categories } = useCategories()
-  const { data: listStats } = useServicesListStats()
   const { branches } = useBranches()
   const { deleteMut } = useServiceMutations()
   const isMultiBranch = true
@@ -80,42 +71,6 @@ export function ServicesTabContent() {
 
   return (
     <>
-      {/* Stats */}
-      {isLoading && !meta ? (
-        <StatsGrid>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={`skeleton-${i}`} className="h-[100px] rounded-lg" />
-          ))}
-        </StatsGrid>
-      ) : (
-        <StatsGrid>
-          <StatCard
-            title={t("services.stats.total")}
-            value={listStats?.total ?? 0}
-            icon={GridIcon}
-            iconColor="primary"
-          />
-          <StatCard
-            title={t("services.stats.active")}
-            value={listStats?.active ?? 0}
-            icon={CheckmarkCircle02Icon}
-            iconColor="success"
-          />
-          <StatCard
-            title={t("services.stats.inactive")}
-            value={listStats?.inactive ?? 0}
-            icon={Cancel01Icon}
-            iconColor="warning"
-          />
-          <StatCard
-            title={t("services.stats.categories")}
-            value={categories?.length ?? 0}
-            icon={Layers01Icon}
-            iconColor="accent"
-          />
-        </StatsGrid>
-      )}
-
       {/* Filter bar */}
       <FilterBar
         search={{ value: search, onChange: setSearch, placeholder: t("services.searchPlaceholder") }}

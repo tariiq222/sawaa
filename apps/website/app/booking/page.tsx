@@ -294,7 +294,9 @@ function BookingWizardInner() {
 
   const loadingData = loadingEmployees || loadingServices || loadingBranches;
   const loadError = employeesError?.message ?? servicesError?.message ?? null;
-  const hasBranchStep = branches.length > 1;
+  // Single-branch center: the branch step is never shown; the main branch is
+  // auto-selected by the effects below and submitted transparently.
+  const hasBranchStep = false;
 
   // Deep-link handling
   //
@@ -508,18 +510,8 @@ function BookingWizardInner() {
       dispatchUi({ type: 'LOCK_EMPLOYEE', employee: emp });
       return;
     }
-    // If we still don't have a branch (category deep link that skipped branch
-    // step), infer it from the therapist: their only branch, or open picker if
-    // they work at multiple.
-    if (!selectedBranch && emp.branchIds && emp.branchIds.length >= 1) {
-      if (emp.branchIds.length === 1) {
-        const onlyBranch = branches.find((b) => b.id === emp.branchIds![0]);
-        if (onlyBranch) dispatchUi({ type: 'PICK_BRANCH', branch: onlyBranch });
-      } else {
-        dispatchUi({ type: 'START_BRANCH_PICK', employee: emp });
-        return;
-      }
-    }
+    // Single-branch center: the branch is already auto-selected, so just
+    // finalize the therapist selection.
     dispatch({ type: 'SELECT_EMPLOYEE', employee: emp });
   };
 
@@ -808,27 +800,6 @@ function BookingWizardInner() {
             >
               {!nothingBookable && !isConfirmation && (
                 <ProgressBar current={stepIndex} labels={stepLabels} />
-              )}
-
-              {/* Change-branch affordance — visible only when multiple branches exist
-                  and the branch-picker step is not already open. */}
-              {!nothingBookable && !isConfirmation && !awaitingBranch && branches.length > 1 && effectiveBranch && (
-                <div className="mb-5 flex items-center justify-between gap-3">
-                  <span
-                    className="text-xs font-medium truncate"
-                    style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 55%, transparent)' }}
-                  >
-                    {isAr ? effectiveBranch.nameAr : (effectiveBranch.nameEn ?? effectiveBranch.nameAr)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => dispatchUi({ type: 'OPEN_INITIAL_BRANCH_PICK' })}
-                    className="shrink-0 text-xs font-semibold underline underline-offset-2 cursor-pointer transition-opacity hover:opacity-70"
-                    style={{ color: 'var(--primary-dark)' }}
-                  >
-                    {t('booking.changeBranch')}
-                  </button>
-                </div>
               )}
 
               {(loadError || submitError) && (

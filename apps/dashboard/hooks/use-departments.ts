@@ -64,28 +64,6 @@ export function useDepartments() {
   }
 }
 
-/** Unfiltered stats for the StatsGrid — never changes with search/filter */
-export function useDepartmentStats() {
-  const query: DepartmentListQuery = { page: 1, perPage: 100 }
-  const { data, isLoading } = useQuery({
-    queryKey: queryKeys.departments.list(query),
-    queryFn: () => fetchDepartments(query),
-    staleTime: 5 * 60 * 1000,
-  })
-  const items = data?.items ?? []
-  const now = new Date()
-  return {
-    isLoading,
-    total: data?.meta?.total ?? 0,
-    active: items.filter((d) => d.isActive).length,
-    inactive: items.filter((d) => !d.isActive).length,
-    newThisMonth: items.filter((d) => {
-      const c = new Date(d.createdAt)
-      return c.getFullYear() === now.getFullYear() && c.getMonth() === now.getMonth()
-    }).length,
-  }
-}
-
 /** Flat list of active departments for use in dropdowns/selects */
 export function useDepartmentOptions() {
   const query: DepartmentListQuery = { page: 1, perPage: 100, isActive: true }

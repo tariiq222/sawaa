@@ -5,18 +5,12 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   PencilEdit01Icon,
   StarIcon,
-  Calendar03Icon,
   ArrowLeft01Icon,
-  Stethoscope02Icon,
-  CheckmarkCircle02Icon,
-  Cancel01Icon,
 } from "@hugeicons/core-free-icons"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
-import { StatsGrid } from "@/components/features/stats-grid"
-import { StatCard } from "@/components/features/stat-card"
 import { ErrorBanner } from "@/components/features/error-banner"
 import { Button } from "@sawaa/ui"
 import { Card, CardContent } from "@sawaa/ui"
@@ -157,35 +151,6 @@ export function EmployeeDetailPage({ employeeId }: Props) {
           </div>
         </CardContent>
       </Card>
-
-      <StatsGrid>
-        <StatCard
-          title={t("employees.detail.stats.avgRating")}
-          value={p.averageRating != null ? p.averageRating.toFixed(1) : "—"}
-          description={`${p.ratingCount ?? 0} ${t("employees.detail.reviews")}`}
-          icon={StarIcon}
-          iconColor="warning"
-        />
-        <StatCard
-          title={t("employees.detail.stats.totalBookings")}
-          value={p.bookingCount ?? 0}
-          icon={Calendar03Icon}
-          iconColor="primary"
-        />
-        <StatCard
-          title={t("employees.detail.stats.experience")}
-          value={p.experience != null ? String(p.experience) : "—"}
-          description={t("employees.detail.stats.years")}
-          icon={Stethoscope02Icon}
-          iconColor="accent"
-        />
-        <StatCard
-          title={t("employees.detail.stats.status")}
-          value={p.isActive ? t("employees.detail.status.active") : t("employees.detail.inactive")}
-          icon={p.isActive ? CheckmarkCircle02Icon : Cancel01Icon}
-          iconColor={p.isActive ? "success" : "warning"}
-        />
-      </StatsGrid>
 
       <Tabs defaultValue="overview">
         <TabsList>

@@ -14,8 +14,8 @@ const DELETE_BRANCH_MESSAGES = {
 	notFound: "الفرع غير موجود",
 	hasAssignedEmployees: (n: number) =>
 		`لا يمكن حذف الفرع لوجود ${n} موظف${n === 1 ? "" : "ين"} مرتبطين به. يرجى فصلهم أولاً.`,
-	hasBookingsAndWaitlist: (b: number, w: number, g: number) =>
-		`لا يمكن حذف الفرع لوجود ${b} حجز${b === 1 ? "" : "اً"} و ${w} طلب${w === 1 ? "" : "ات"} في قائمة الانتظار و ${g} جلسة جماعية${g === 1 ? "" : "ات"} مرتبطة به.`,
+	hasBookingsAndGroupSessions: (b: number, g: number) =>
+		`لا يمكن حذف الفرع لوجود ${b} حجز${b === 1 ? "" : "اً"} و ${g} جلسة جماعية${g === 1 ? "" : "ات"} مرتبطة به.`,
 } as const;
 
 @Injectable()
@@ -40,20 +40,18 @@ export class DeleteBranchHandler {
 			);
 		}
 
-		// Booking/WaitlistEntry/GroupSession carry branchId as a plain cross-BC
-		// string with no FK, so the DB will not block deletion — guard manually to
-		// avoid leaving rows pointing at a non-existent branch.
-		const [linkedBookings, linkedWaitlist, linkedGroupSessions] =
+		// Booking/GroupSession carry branchId as a plain cross-BC string with no FK,
+		// so the DB will not block deletion — guard manually to avoid leaving rows
+		// pointing at a non-existent branch.
+		const [linkedBookings, linkedGroupSessions] =
 			await Promise.all([
 				this.prisma.booking.count({ where: { branchId: dto.branchId } }),
-				this.prisma.waitlistEntry.count({ where: { branchId: dto.branchId } }),
 				this.prisma.groupSession.count({ where: { branchId: dto.branchId } }),
 			]);
-		if (linkedBookings > 0 || linkedWaitlist > 0 || linkedGroupSessions > 0) {
+		if (linkedBookings > 0 || linkedGroupSessions > 0) {
 			throw new ConflictException(
-				DELETE_BRANCH_MESSAGES.hasBookingsAndWaitlist(
+				DELETE_BRANCH_MESSAGES.hasBookingsAndGroupSessions(
 					linkedBookings,
-					linkedWaitlist,
 					linkedGroupSessions,
 				),
 			);

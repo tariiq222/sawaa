@@ -57,44 +57,38 @@ describe('ListPublicGroupSessionsHandler', () => {
         price: 100,
         maxCapacity: 10,
         enrolledCount: 4,
-        waitlistEnabled: true,
       },
     ]);
     const result = await handler.execute();
     expect(result[0].spotsLeft).toBe(6);
     expect(result[0].isFull).toBe(false);
-    expect(result[0].isWaitlistOnly).toBe(false);
   });
 
-  it('marks a full session with waitlist enabled as waitlist-only', async () => {
+  it('marks a full session as full', async () => {
     prisma.groupSession.findMany.mockResolvedValue([
       {
         id: '1',
         price: 100,
         maxCapacity: 10,
         enrolledCount: 10,
-        waitlistEnabled: true,
       },
     ]);
     const result = await handler.execute();
     expect(result[0].spotsLeft).toBe(0);
     expect(result[0].isFull).toBe(true);
-    expect(result[0].isWaitlistOnly).toBe(true);
   });
 
-  it('marks a full session without waitlist as full but not waitlist-only', async () => {
+  it('marks a full session as full when enrollment equals capacity', async () => {
     prisma.groupSession.findMany.mockResolvedValue([
       {
         id: '1',
         price: 100,
         maxCapacity: 10,
         enrolledCount: 10,
-        waitlistEnabled: false,
       },
     ]);
     const result = await handler.execute();
     expect(result[0].spotsLeft).toBe(0);
     expect(result[0].isFull).toBe(true);
-    expect(result[0].isWaitlistOnly).toBe(false);
   });
 });

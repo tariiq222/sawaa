@@ -18,6 +18,8 @@ const branding: PublicBranding = {
   fontFamily: null,
   fontUrl: null,
   timeFormat: '24h',
+  contactPhone: null,
+  contactEmail: null,
 };
 
 describe('BrandingStyle', () => {
