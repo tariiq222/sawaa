@@ -25,8 +25,8 @@ import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/lis
 import { GetBookingHandler } from '../../../modules/bookings/get-booking/get-booking.handler';
 import { CreateBookingHandler } from '../../../modules/bookings/create-booking/create-booking.handler';
 import { CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
-import { RescheduleBookingHandler } from '../../../modules/bookings/reschedule-booking/reschedule-booking.handler';
-import { RescheduleBookingDto } from '../../../modules/bookings/reschedule-booking/reschedule-booking.dto';
+import { ClientRescheduleBookingHandler } from '../../../modules/bookings/client/client-reschedule-booking.handler';
+import { ClientRescheduleBookingDto } from '../../../modules/bookings/client/client-reschedule-booking.dto';
 import { SubmitRatingHandler } from '../../../modules/org-experience/ratings/submit-rating.handler';
 import { CreateZoomMeetingHandler } from '../../../modules/bookings/create-zoom-meeting/create-zoom-meeting.handler';
 import { IsBoolean, Max, MaxLength } from 'class-validator';
@@ -94,7 +94,7 @@ export class MobileClientBookingsController {
     private readonly get: GetBookingHandler,
     private readonly create: CreateBookingHandler,
     private readonly cancel: CancelBookingHandler,
-    private readonly reschedule: RescheduleBookingHandler,
+    private readonly reschedule: ClientRescheduleBookingHandler,
     private readonly rate: SubmitRatingHandler,
     private readonly prisma: PrismaService,
     private readonly zoom: CreateZoomMeetingHandler,
@@ -234,14 +234,13 @@ export class MobileClientBookingsController {
   rescheduleBooking(
     @ClientSession() user: ClientSession,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: RescheduleBookingDto,
+    @Body() body: ClientRescheduleBookingDto,
   ) {
     return this.reschedule.execute({
       bookingId: id,
-      newScheduledAt: new Date(body.newScheduledAt),
-      newDurationMins: body.newDurationMins,
-      changedBy: user.id,
       clientId: user.id,
+      newScheduledAt: body.newScheduledAt,
+      newDurationMins: body.newDurationMins,
     });
   }
 }
