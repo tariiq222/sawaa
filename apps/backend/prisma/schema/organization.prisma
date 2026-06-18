@@ -205,10 +205,12 @@ model ServiceDurationOption {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  employeeOptions EmployeeServiceOption[]
+  employeeServiceId String? // FK to people.EmployeeService (plain string, cross-BC, nullable)
+  employeeOptions   EmployeeServiceOption[]
 
   @@index([serviceId])
   @@index([serviceId, deliveryType])
+  @@index([employeeServiceId])
 }
 
 // ─── Employee Service Options ────────────────────────────────────────────────

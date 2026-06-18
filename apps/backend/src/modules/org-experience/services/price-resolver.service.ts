@@ -46,6 +46,7 @@ export class PriceResolverService {
       serviceId,
       durationOptionId,
       deliveryType,
+      employeeServiceId,
     });
 
     // Validate that the explicitly-provided duration option matches the service and delivery type
@@ -131,13 +132,34 @@ export class PriceResolverService {
     };
   }
 
+  /**
+   * Resolves a ServiceDurationOption for the booking, applying two-tier precedence:
+   *
+   * TIER 1 — Employee-owned rows (employeeServiceId IS NOT NULL):
+   *   If the employee has their own active ServiceDurationOption rows for this
+   *   (service, deliveryType), those rows REPLACE the service defaults entirely.
+   *   These are distinct from EmployeeServiceOption overrides — they are separate
+   *   option rows, not price/duration tweaks on a shared catalog option.
+   *
+   * TIER 2 — Service-default rows (employeeServiceId IS NULL):
+   *   Standard catalog rows shared across all employees offering the service.
+   *   Only used when the employee has no owned rows for the deliveryType.
+   *
+   * NOTE ON NON-COMPETITION: EmployeeServiceOption (price/duration override on a
+   * specific catalog option) and employee-owned ServiceDurationOption rows (TIER 1)
+   * do NOT compete. An EmployeeServiceOption always references a specific
+   * durationOptionId. If the resolver picks up a TIER 1 owned row, that row's ID
+   * will not match any EmployeeServiceOption linked to the service defaults,
+   * so the override lookup in Step 2 of resolve() will correctly return null.
+   */
   private async resolveDurationOption(params: {
     serviceId: string;
     durationOptionId: string | null;
+    employeeServiceId?: string | null;
     bookingType?: BookingType | null;
     deliveryType?: DeliveryType | null;
   }) {
-    const { serviceId, durationOptionId, deliveryType } = params;
+    const { serviceId, durationOptionId, deliveryType, employeeServiceId } = params;
 
     if (durationOptionId) {
       return this.prisma.serviceDurationOption.findFirst({
@@ -146,10 +168,33 @@ export class PriceResolverService {
       });
     }
 
+    // TIER 1: prefer employee-owned rows when available.
+    // An employee can define their own ServiceDurationOption rows (employeeServiceId = link.id).
+    // When own active rows exist for the requested deliveryType, use them exclusively —
+    // they replace service defaults for this employee.
+    if (employeeServiceId) {
+      if (deliveryType) {
+        const ownedScoped = await this.prisma.serviceDurationOption.findFirst({
+          where: { serviceId, deliveryType, employeeServiceId, isActive: true },
+          orderBy: [{ sortOrder: 'asc' }],
+          select: { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true },
+        });
+        if (ownedScoped) return ownedScoped;
+      }
+
+      const ownedGlobal = await this.prisma.serviceDurationOption.findFirst({
+        where: { serviceId, employeeServiceId, isActive: true },
+        orderBy: [{ deliveryType: 'asc' }, { sortOrder: 'asc' }],
+        select: { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true },
+      });
+      if (ownedGlobal) return ownedGlobal;
+    }
+
+    // TIER 2: service-default rows (employeeServiceId IS NULL).
     // Try: default option scoped to this deliveryType.
     if (deliveryType) {
       const scoped = await this.prisma.serviceDurationOption.findFirst({
-        where: { serviceId, deliveryType, isDefault: true, isActive: true },
+        where: { serviceId, deliveryType, isDefault: true, isActive: true, employeeServiceId: null },
         select: { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true },
       });
       if (scoped) return scoped;
@@ -157,14 +202,14 @@ export class PriceResolverService {
 
     // Try: any default option for the service.
     const global = await this.prisma.serviceDurationOption.findFirst({
-      where: { serviceId, isDefault: true, isActive: true },
+      where: { serviceId, isDefault: true, isActive: true, employeeServiceId: null },
       select: { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true },
     });
     if (global) return global;
 
-    // Last resort: first active option regardless of defaults
+    // Last resort: first active service-default option regardless of defaults
     return this.prisma.serviceDurationOption.findFirst({
-      where: { serviceId, isActive: true },
+      where: { serviceId, isActive: true, employeeServiceId: null },
       orderBy: [{ deliveryType: 'asc' }, { sortOrder: 'asc' }],
       select: { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true },
     });
