@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
-import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
+import { PrismaService } from '../../../infrastructure/database';
 import { DEFAULT_BOOKING_SETTINGS } from '../../bookings/get-booking-settings/get-booking-settings.handler';
 import { withCronLeader } from '../../../common/helpers/cron-leader.helper';
+import { CompleteBookingHandler } from '../../bookings/complete-booking/complete-booking.handler';
 
 const CRON_ACTOR = 'system:booking-autocomplete-cron';
-const COMPLETE_REASON = 'Auto-complete: booking end-time passed after check-in';
 const BATCH_SIZE = 100;
 
 @Injectable()
@@ -14,7 +14,7 @@ export class BookingAutocompleteCron {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rlsTransaction: RlsTransactionService,
+    private readonly completeHandler: CompleteBookingHandler,
   ) {}
 
   async execute(): Promise<void> {
@@ -27,42 +27,30 @@ export class BookingAutocompleteCron {
         settings?.autoCompleteAfterHours ?? DEFAULT_BOOKING_SETTINGS.autoCompleteAfterHours;
       const cutoff = new Date(Date.now() - hours * 3_600_000);
 
-      // Snapshot the matching ids first so we can audit each transition via
-      // BookingStatusLog (updateMany skips per-row history).
+      // Snapshot the matching ids first so we can process each one through
+      // CompleteBookingHandler, which handles the full lifecycle including
+      // invoice creation for pay-at-clinic bookings.
       const targets = await this.prisma.booking.findMany({
         where: {
           status: BookingStatus.CONFIRMED,
           endsAt: { lte: cutoff },
           checkedInAt: { not: null },
         },
-        select: { id: true, status: true },
+        select: { id: true },
         orderBy: [{ endsAt: 'asc' }, { id: 'asc' }],
         take: BATCH_SIZE,
       });
 
       if (targets.length === 0) return;
 
-      const now = new Date();
       let succeeded = 0;
       for (const target of targets) {
         try {
-          await this.rlsTransaction.withTransaction(async (tx) => {
-            await tx.booking.update({
-              where: { id: target.id, status: BookingStatus.CONFIRMED },
-              data: { status: BookingStatus.COMPLETED, completedAt: now },
-            });
-            await tx.bookingStatusLog.create({
-              data: {
-                bookingId: target.id,
-                fromStatus: target.status,
-                toStatus: BookingStatus.COMPLETED,
-                changedBy: CRON_ACTOR,
-                reason: COMPLETE_REASON,
-              },
-            });
-          });
+          await this.completeHandler.execute({ bookingId: target.id, changedBy: CRON_ACTOR });
           succeeded += 1;
         } catch (err) {
+          // Booking may have transitioned between select and the handler's
+          // fetchBookingOrFail — skip and continue.
           this.logger.warn(
             `booking-autocomplete: skipped ${target.id} (already transitioned): ${err instanceof Error ? err.message : String(err)}`,
           );

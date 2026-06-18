@@ -40,15 +40,19 @@ const buildRlsTx = (prisma: ReturnType<typeof buildPrisma>) => ({
 });
 
 describe('BookingAutocompleteCron', () => {
+  const buildCompleteHandler = () => ({ execute: jest.fn().mockResolvedValue(undefined) });
+
   it('executes without throwing', async () => {
     const prisma = buildPrisma();
-    const cron = new BookingAutocompleteCron(prisma as never, buildRlsTx(prisma) as never);
+    const completeHandler = buildCompleteHandler();
+    const cron = new BookingAutocompleteCron(prisma as never, completeHandler as never);
     await expect(cron.execute()).resolves.not.toThrow();
   });
 
   it('selects CONFIRMED bookings past cutoff with checkedInAt set', async () => {
     const prisma = buildPrisma();
-    const cron = new BookingAutocompleteCron(prisma as never, buildRlsTx(prisma) as never);
+    const completeHandler = buildCompleteHandler();
+    const cron = new BookingAutocompleteCron(prisma as never, completeHandler as never);
     await cron.execute();
     expect(prisma.booking.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -62,22 +66,30 @@ describe('BookingAutocompleteCron', () => {
     );
   });
 
-  it('writes a BookingStatusLog entry for each completed booking', async () => {
+  it('delegates each autocomplete to CompleteBookingHandler', async () => {
     const prisma = buildPrisma();
     prisma.booking.findMany = jest.fn().mockResolvedValue([
       { id: 'b-1', status: BookingStatus.CONFIRMED },
       { id: 'b-2', status: BookingStatus.CONFIRMED },
     ]);
-    const rls = buildRlsTx(prisma);
-    const cron = new BookingAutocompleteCron(prisma as never, rls as never);
+    const completeHandler = buildCompleteHandler();
+    const cron = new BookingAutocompleteCron(prisma as never, completeHandler as never);
     await cron.execute();
-    expect(rls.withTransaction).toHaveBeenCalledTimes(2);
-    expect(prisma.bookingStatusLog.create).toHaveBeenCalledTimes(2);
+    expect(completeHandler.execute).toHaveBeenCalledTimes(2);
+    expect(completeHandler.execute).toHaveBeenCalledWith({
+      bookingId: 'b-1',
+      changedBy: 'system:booking-autocomplete-cron',
+    });
+    expect(completeHandler.execute).toHaveBeenCalledWith({
+      bookingId: 'b-2',
+      changedBy: 'system:booking-autocomplete-cron',
+    });
   });
 
   it('reads bookingSettings once for default org', async () => {
     const prisma = buildPrisma();
-    const cron = new BookingAutocompleteCron(prisma as never, buildRlsTx(prisma) as never);
+    const completeHandler = buildCompleteHandler();
+    const cron = new BookingAutocompleteCron(prisma as never, completeHandler as never);
     await cron.execute();
     expect(prisma.bookingSettings.findFirst).toHaveBeenCalledTimes(1);
   });
@@ -111,15 +123,17 @@ describe('BookingExpiryCron', () => {
 });
 
 describe('BookingNoShowCron', () => {
+  const buildNoShowHandler = () => ({ execute: jest.fn().mockResolvedValue(undefined) });
+
   it('executes without throwing', async () => {
     const prisma = buildPrisma();
-    const cron = new BookingNoShowCron(prisma as never, buildRlsTx(prisma) as never);
+    const cron = new BookingNoShowCron(prisma as never, buildNoShowHandler() as never);
     await expect(cron.execute()).resolves.not.toThrow();
   });
 
   it('selects confirmed bookings past cutoff (no check-in)', async () => {
     const prisma = buildPrisma();
-    const cron = new BookingNoShowCron(prisma as never, buildRlsTx(prisma) as never);
+    const cron = new BookingNoShowCron(prisma as never, buildNoShowHandler() as never);
     await cron.execute();
     expect(prisma.booking.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -133,21 +147,24 @@ describe('BookingNoShowCron', () => {
     );
   });
 
-  it('writes a BookingStatusLog entry for each NO_SHOW booking', async () => {
+  it('delegates each no-show to NoShowBookingHandler', async () => {
     const prisma = buildPrisma();
     prisma.booking.findMany = jest.fn().mockResolvedValue([
       { id: 'b-1', status: BookingStatus.CONFIRMED },
     ]);
-    const rls = buildRlsTx(prisma);
-    const cron = new BookingNoShowCron(prisma as never, rls as never);
+    const noShowHandler = buildNoShowHandler();
+    const cron = new BookingNoShowCron(prisma as never, noShowHandler as never);
     await cron.execute();
-    expect(rls.withTransaction).toHaveBeenCalledTimes(1);
-    expect(prisma.bookingStatusLog.create).toHaveBeenCalledTimes(1);
+    expect(noShowHandler.execute).toHaveBeenCalledTimes(1);
+    expect(noShowHandler.execute).toHaveBeenCalledWith({
+      bookingId: 'b-1',
+      changedBy: 'system:booking-noshow-cron',
+    });
   });
 
   it('reads bookingSettings once', async () => {
     const prisma = buildPrisma();
-    const cron = new BookingNoShowCron(prisma as never, buildRlsTx(prisma) as never);
+    const cron = new BookingNoShowCron(prisma as never, buildNoShowHandler() as never);
     await cron.execute();
     expect(prisma.bookingSettings.findFirst).toHaveBeenCalledTimes(1);
   });
