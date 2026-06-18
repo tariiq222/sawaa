@@ -289,21 +289,36 @@ describe('MoyasarApiClient', () => {
   });
 
   describe('getRefundStatus', () => {
-    const cases: Array<{ rawStatus: string; expected: MoyasarRefundStatus }> = [
-      { rawStatus: 'paid', expected: 'paid' },
-      { rawStatus: 'failed', expected: 'failed' },
-      { rawStatus: 'pending', expected: 'pending' },
-      { rawStatus: 'invalid', expected: 'pending' },
+    // After the fix, getRefundStatus re-fetches GET /payments/:id and derives
+    // refund status from the payment object's status field.
+    const cases: Array<{ paymentStatus: string; expected: MoyasarRefundStatus }> = [
+      { paymentStatus: 'refunded', expected: 'paid' },
+      { paymentStatus: 'failed', expected: 'failed' },
+      { paymentStatus: 'voided', expected: 'failed' },
+      { paymentStatus: 'initiated', expected: 'pending' },
+      { paymentStatus: 'paid', expected: 'pending' },
+      { paymentStatus: 'unknown', expected: 'pending' },
     ];
 
-    it.each(cases)('maps raw status "$rawStatus" to "$expected"', async ({ rawStatus, expected }) => {
+    it.each(cases)('maps payment status "$paymentStatus" to refund status "$expected"', async ({ paymentStatus, expected }) => {
       (fetchWithTimeout as jest.Mock).mockResolvedValue({
         ok: true,
-        json: async () => ({ id: 'ref_123', status: rawStatus }),
+        json: async () => ({
+          id: 'ref_123',
+          status: paymentStatus,
+          amount: 1000,
+          currency: 'SAR',
+        }),
       });
 
       const result = await client.getRefundStatus(ORG_ID, 'ref_123');
       expect(result).toEqual({ id: 'ref_123', status: expected });
+
+      expect(fetchWithTimeout).toHaveBeenCalledWith(
+        'https://api.moyasar.com/v1/payments/ref_123',
+        expect.objectContaining({ method: 'GET' }),
+        15_000,
+      );
     });
   });
 

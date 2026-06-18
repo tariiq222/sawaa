@@ -281,21 +281,33 @@ export class MoyasarApiClient {
 	 * Used by the reconcile-refunds cron to finalize PROCESSING rows that
 	 * stalled after the gateway round-trip succeeded but our DB write failed.
 	 *
-	 * GET /v1/refunds/:id → { status: 'paid' | 'failed' | 'pending' }
+	 * Because `createRefund` stores the Moyasar **payment** ID as the gateway
+	 * reference (the refund endpoint returns the full payment object, not a
+	 * separate refund resource), `moyasarRefundId` here is actually the payment
+	 * ID. We re-fetch `GET /v1/payments/:id` and derive the refund status from
+	 * the payment's `status` field.
+	 *
+	 * Derivation:
+	 *   - payment.status === 'refunded'             → 'paid'
+	 *   - payment.status === 'failed' | 'voided'    → 'failed'
+	 *   - anything else                             → 'pending'
 	 */
 	async getRefundStatus(
 		organizationId: string,
 		moyasarRefundId: string,
 	): Promise<MoyasarRefundStatusResult> {
-		const data = await this.request<{ id: string; status: string }>(
-			organizationId,
-			`/refunds/${moyasarRefundId}`,
-			{ method: "GET" },
-		);
-		const raw = data.status;
-		const status: MoyasarRefundStatus =
-			raw === "paid" || raw === "failed" || raw === "pending" ? raw : "pending";
-		return { id: data.id, status };
+		const payment = await this.getPaymentStatus(organizationId, moyasarRefundId);
+
+		let status: MoyasarRefundStatus;
+		if (payment.status === "refunded") {
+			status = "paid";
+		} else if (payment.status === "failed" || payment.status === "voided") {
+			status = "failed";
+		} else {
+			status = "pending";
+		}
+
+		return { id: payment.id, status };
 	}
 
 	/**
