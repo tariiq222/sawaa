@@ -109,7 +109,9 @@ export class CheckAvailabilityHandler {
       if (dateOnly > svcMaxDate) return [];
     }
 
-    const dayOfWeek = dateOnly.getDay();
+    const riyadhYmd = formatToBusinessYmd(dateOnly);
+    const [ryear, rmonth, rday] = riyadhYmd.split('-').map(Number);
+    const dayOfWeek = new Date(Date.UTC(ryear, rmonth - 1, rday)).getUTCDay();
 
     const [businessHour, holiday, shifts, exception, breaks, serviceConfig, serviceWindows] = await Promise.all([
       this.prisma.businessHour.findUnique({
