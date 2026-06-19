@@ -2171,6 +2171,63 @@
         },
         "type": "object"
       },
+      "EmployeeDurationItemDto": {
+        "properties": {
+          "durationMins": {
+            "description": "Duration in minutes (≥ 1)",
+            "example": 60,
+            "type": "number"
+          },
+          "id": {
+            "description": "Existing row ID to update (omit to create)",
+            "example": "uuid",
+            "type": "string"
+          },
+          "label": {
+            "description": "English label",
+            "example": "60 min session",
+            "type": "string"
+          },
+          "labelAr": {
+            "description": "Arabic label",
+            "example": "جلسة 60 دقيقة",
+            "type": "string"
+          },
+          "price": {
+            "description": "Price in halalas (integer, ≥ 0)",
+            "example": 30000,
+            "type": "number"
+          }
+        },
+        "required": [
+          "label",
+          "labelAr",
+          "durationMins",
+          "price"
+        ],
+        "type": "object"
+      },
+      "EmployeeDurationsByTypeDto": {
+        "properties": {
+          "deliveryType": {
+            "description": "Delivery type",
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "items": {
+            "description": "Duration items for this delivery type",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeDurationItemDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "deliveryType",
+          "items"
+        ],
+        "type": "object"
+      },
       "EmployeeGender": {
         "description": "Gender",
         "enum": [
@@ -3903,6 +3960,21 @@
         "required": [
           "enabled",
           "types"
+        ],
+        "type": "object"
+      },
+      "SetEmployeeDurationsDto": {
+        "properties": {
+          "durations": {
+            "description": "Duration rows grouped by delivery type",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeDurationsByTypeDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "durations"
         ],
         "type": "object"
       },
@@ -10826,7 +10898,7 @@
           }
         ],
         "responses": {
-          "200": {
+          "204": {
             "description": "Discount reason deleted"
           },
           "400": {
@@ -22644,6 +22716,100 @@
         ]
       }
     },
+    "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/durations": {
+      "put": {
+        "operationId": "DashboardPeopleController_setEmployeeDurationsEndpoint",
+        "parameters": [
+          {
+            "description": "Employee UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Service UUID",
+            "in": "path",
+            "name": "serviceId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetEmployeeDurationsDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Effective durations after update, grouped by delivery type"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Employee-service assignment not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Set practitioner-owned duration options for an employee on a service",
+        "tags": [
+          "Dashboard / People"
+        ]
+      }
+    },
     "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/options": {
       "put": {
         "operationId": "DashboardPeopleController_setEmployeeServiceOptionsEndpoint",
@@ -24088,6 +24254,9 @@
           "required": true
         },
         "responses": {
+          "200": {
+            "description": "User registered, OTP sent"
+          },
           "400": {
             "content": {
               "application/json": {
@@ -24140,6 +24309,9 @@
         "operationId": "MobileClientAuthController_requestEmail",
         "parameters": [],
         "responses": {
+          "200": {
+            "description": "Verification email sent"
+          },
           "400": {
             "content": {
               "application/json": {
@@ -24202,6 +24374,9 @@
           "required": true
         },
         "responses": {
+          "200": {
+            "description": "Login OTP sent"
+          },
           "400": {
             "content": {
               "application/json": {
@@ -24264,6 +24439,9 @@
           "required": true
         },
         "responses": {
+          "200": {
+            "description": "OTP verified, tokens issued"
+          },
           "400": {
             "content": {
               "application/json": {
