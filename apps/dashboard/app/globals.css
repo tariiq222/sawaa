@@ -126,11 +126,11 @@
 
 /* ─── Light Theme ─── */
 :root {
-    --primary: #55CCB0;
-    --primary-foreground: #08312C;
+    --primary: #1E9E83;
+    --primary-foreground: #FFFFFF;
     --primary-light: #7CD8C2;
     --primary-dark: #0E4B43;
-    --primary-ultra-light: rgba(85, 204, 176, 0.10);
+    --primary-ultra-light: rgba(30, 158, 131, 0.10);
     --accent: #E7DBC4;
     --accent-foreground: #2B3A39;
     --accent-ultra-light: rgba(231, 219, 196, 0.22);
@@ -151,7 +151,7 @@
     --border: #D7E8E2;
     --border-strong: #BDD6CE;
     --input: #C7DDD6;
-    --ring: rgba(85, 204, 176, 0.32);
+    --ring: rgba(30, 158, 131, 0.32);
     --overlay: rgba(27, 32, 38, 0.6);
     /* State colors.
        `--error` is the semantic source of truth for destructive/error states.
@@ -181,14 +181,14 @@
     --chart-5: #DB2777;
     --sidebar: #FFFFFF;
     --sidebar-foreground: #2B3A39;
-    --sidebar-primary: #55CCB0;
-    --sidebar-primary-foreground: #08312C;
-    --sidebar-accent: rgba(85, 204, 176, 0.10);
+    --sidebar-primary: #1E9E83;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: rgba(30, 158, 131, 0.10);
     --sidebar-accent-foreground: #0E4B43;
     --sidebar-border: #D7E8E2;
-    --sidebar-ring: rgba(85, 204, 176, 0.32);
-    --shadow-primary-color: rgba(85, 204, 176, 0.25);
-    --shadow-primary-hover-color: rgba(85, 204, 176, 0.35);
+    --sidebar-ring: rgba(30, 158, 131, 0.32);
+    --shadow-primary-color: rgba(30, 158, 131, 0.25);
+    --shadow-primary-hover-color: rgba(30, 158, 131, 0.35);
     --blob-primary: transparent;
     --blob-accent: transparent;
 

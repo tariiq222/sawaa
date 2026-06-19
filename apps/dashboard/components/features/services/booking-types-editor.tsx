@@ -193,7 +193,7 @@ export function BookingTypesEditor({ serviceId, useClinicTerminology = false }: 
         </p>
       )}
 
-      <div className="space-y-3">
+      <div className="grid items-start gap-3 sm:grid-cols-2">
         {types.map((draft) => (
           <BookingTypeRow
             key={draft.deliveryType}
