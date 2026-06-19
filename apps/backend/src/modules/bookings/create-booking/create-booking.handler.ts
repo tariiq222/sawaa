@@ -109,6 +109,7 @@ export class CreateBookingHandler {
         isActive: true,
         archivedAt: true,
         isHidden: true,
+        bufferMinutes: true,
         category: { select: { bookingMode: true } },
       },
     });
@@ -259,7 +260,8 @@ export class CreateBookingHandler {
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey1}::int, ${lockKey2}::int)`;
 
           // Now that the lock is held, check for an overlap with statuses that occupy staff time.
-          const bufferMs = bookingSettings.bufferMinutes * 60_000;
+          const effectiveBufferMins = service.bufferMinutes ?? bookingSettings.bufferMinutes;
+          const bufferMs = effectiveBufferMins * 60_000;
           const bufferedStart = new Date(scheduledAt.getTime() - bufferMs);
           const bufferedEnd = new Date(endsAt.getTime() + bufferMs);
 
