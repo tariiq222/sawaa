@@ -35,6 +35,7 @@ export class OnboardEmployeeHandler {
             experience: dto.experience,
             avatarUrl: dto.avatarUrl ?? undefined,
             isActive: dto.isActive ?? true,
+            isPublic: dto.isPublic ?? false,
           },
           include: { branches: true, services: true },
         }),

@@ -13,6 +13,7 @@ import { EmployeeStatusDialog } from "@/components/features/employees/employee-s
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
 import { useEmployeeMutations } from "@/hooks/use-employee-mutations"
+import { formatRef } from "@/lib/utils"
 import type { Employee, EmployeeSortField } from "@/lib/types/employee"
 import type { SortingState } from "@tanstack/react-table"
 
@@ -58,9 +59,9 @@ export function EmployeesListContent({
 
   const { updateMutation } = useEmployeeMutations()
 
-  const handleEdit = (p: Employee) => router.push(`/employees/${p.id}/edit`)
+  const handleEdit = (p: Employee) => router.push(`/employees/${formatRef("EMP", p.ref)}/edit`)
   const handleDelete = (p: Employee) => setDeleteTarget(p)
-  const handlePreview = (p: Employee) => router.push(`/employees/${p.id}`)
+  const handlePreview = (p: Employee) => router.push(`/employees/${formatRef("EMP", p.ref)}`)
   const handleToggleActive = (p: Employee) => setStatusTarget(p)
 
   const statusFilter = isActive === true ? "active" : isActive === false ? "inactive" : "all"

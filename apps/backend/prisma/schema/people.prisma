@@ -33,6 +33,7 @@ enum ClientBloodType {
 
 model Client {
   id                String            @id @default(uuid())
+  ref               Int               @unique @default(autoincrement())
   userId            String?
   // Legacy single-name field kept in sync with first/middle/last on write.
   // Downstream readers that still key off `name` keep working; new code reads the components.
@@ -105,6 +106,7 @@ enum EmploymentType {
 // no Prisma FK relations to Clinic BC. Referential integrity is event-driven.
 model Employee {
   id               String           @id @default(uuid())
+  ref              Int              @unique @default(autoincrement())
   userId           String?
   name             String
   nameEn           String?

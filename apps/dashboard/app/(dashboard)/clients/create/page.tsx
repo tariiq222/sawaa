@@ -67,10 +67,10 @@ export default function CreateClientPage() {
         />
 
         <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button type="button" variant="ghost" size="lg" className="rounded-full" onClick={() => router.push("/clients")}>
+          <Button type="button" variant="ghost" size="lg" className="rounded-lg" onClick={() => router.push("/clients")}>
             {t("clients.create.cancel")}
           </Button>
-          <Button type="submit" size="lg" className="rounded-full" disabled={createMut.isPending}>
+          <Button type="submit" size="lg" className="rounded-lg" disabled={createMut.isPending}>
             {createMut.isPending
               ? t("clients.create.saving")
               : t("clients.create.submit")}

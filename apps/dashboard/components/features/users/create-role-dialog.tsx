@@ -101,11 +101,12 @@ export function CreateRoleDialog({ open, onOpenChange, onCreated }: CreateRoleDi
           <Button
             type="button"
             variant="outline"
+            size="sm"
             onClick={() => onOpenChange(false)}
           >
             {t("users.roles.create.cancel")}
           </Button>
-          <Button type="submit" form="create-role-form" disabled={createMut.isPending}>
+          <Button type="submit" size="sm" form="create-role-form" disabled={createMut.isPending}>
             {createMut.isPending ? t("users.roles.create.submitting") : t("users.roles.create.submit")}
           </Button>
         </DialogFooter>

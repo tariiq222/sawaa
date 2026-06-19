@@ -55,7 +55,7 @@ export function GreetingHeader({ userName, dateLabel, bookingsCount }: GreetingH
           <Input
             placeholder={t("header.search")}
             aria-label={t("header.search")}
-            className="h-10 w-full max-w-[260px] rounded-full bg-muted/60 ps-10 focus-visible:bg-card"
+            className="h-10 w-full max-w-[260px] rounded-lg bg-muted/60 ps-10 focus-visible:bg-card"
           />
         </div>
 

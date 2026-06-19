@@ -107,10 +107,10 @@ export function ChangePasswordDialog({ open, onOpenChange }: Props) {
         </DialogBody>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             {t("changePassword.cancel")}
           </Button>
-          <Button type="submit" form="change-password-form" disabled={loading}>
+          <Button type="submit" size="sm" form="change-password-form" disabled={loading}>
             {loading ? t("changePassword.submitting") : t("changePassword.submit")}
           </Button>
         </DialogFooter>

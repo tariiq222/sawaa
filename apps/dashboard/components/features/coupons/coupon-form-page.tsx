@@ -109,7 +109,7 @@ export function CouponFormPage(props: Props) {
     try {
       if (isEdit) {
         // code is immutable on update — omit it from the payload.
-        await updateMut.mutateAsync({ id: couponId!, ...payload })
+        await updateMut.mutateAsync({ id: coupon!.id, ...payload })
         toast.success(t("coupons.edit.success"))
       } else {
         await createMut.mutateAsync({ code: data.code.toUpperCase(), ...payload })

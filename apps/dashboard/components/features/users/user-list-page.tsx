@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@sawaa/ui"
 import { useUsers, useUserMutations } from "@/hooks/use-users"
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
+import { formatRef } from "@/lib/utils"
 import type { User } from "@/lib/types/user"
 
 export function UserListPage() {
@@ -60,7 +61,7 @@ export function UserListPage() {
   const canDeleteUser = canDo("user", "delete")
   const columns = getUserColumns(
     (canEditUser || canDeleteUser) ? {
-      onEdit: canEditUser ? (u) => router.push(`/users/${u.id}/edit`) : undefined,
+      onEdit: canEditUser ? (u) => router.push(`/users/${formatRef("USR", u.ref)}/edit`) : undefined,
       onDelete: canDeleteUser ? setDeleteUser : undefined,
       onToggleActive: canEditUser ? handleToggleActive : undefined,
     } : undefined,

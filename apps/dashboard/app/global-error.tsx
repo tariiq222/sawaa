@@ -71,7 +71,7 @@ export default function GlobalError({
           </div>
           <button
             onClick={() => reset()}
-            className="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="rounded-sm h-8 px-2.5 text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {s.retry}
           </button>

@@ -44,11 +44,11 @@ export function DonutList({
               endAngle={-270}
               isAnimationActive={false}
             >
-              {(items.length > 0 ? items : [{ color: "#F1F4F8" }]).map(
+              {(items.length > 0 ? items : [{ color: "var(--muted)" }]).map(
                 (item, i) => (
                   <Cell
                     key={i}
-                    fill={(item as DonutItem).color ?? "#F1F4F8"}
+                    fill={(item as DonutItem).color ?? "var(--muted)"}
                   />
                 ),
               )}

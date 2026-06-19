@@ -227,7 +227,7 @@ export function EmployeeBranchesPicker({
             <span
               key={branch.id}
               className={cn(
-                "group inline-flex items-center gap-1.5 rounded-full border bg-surface ps-2.5 pe-1 py-1 text-xs",
+                "group inline-flex items-center gap-1.5 rounded-lg border bg-surface ps-2.5 pe-1 py-1 text-xs",
                 branch.isMain
                   ? "border-primary/30 bg-primary/5 text-primary"
                   : "border-border text-foreground",

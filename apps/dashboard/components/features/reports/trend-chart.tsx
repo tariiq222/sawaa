@@ -78,17 +78,17 @@ export function TrendChart({
               </linearGradient>
             ))}
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E4E7EC" />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
           <XAxis
             dataKey={xKey}
             reversed={isRTL}
-            tick={{ fontSize: 11, fill: "#667085" }}
+            tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
             axisLine={false}
             tickLine={false}
           />
           <YAxis
             orientation={isRTL ? "right" : "left"}
-            tick={{ fontSize: 11, fill: "#667085" }}
+            tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
             axisLine={false}
             tickLine={false}
             width={50}
@@ -96,7 +96,7 @@ export function TrendChart({
           <Tooltip
             contentStyle={{
               borderRadius: 8,
-              border: "1px solid #E4E7EC",
+              border: "1px solid var(--border)",
               fontSize: 12,
             }}
           />
@@ -130,7 +130,7 @@ export function TrendChart({
                 key={`${s.key}-prev`}
                 type="monotone"
                 dataKey={`${s.key}_prev`}
-                stroke="#D0D5DD"
+                stroke="var(--muted-foreground)"
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 dot={false}

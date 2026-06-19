@@ -57,6 +57,7 @@ enum CategoryBookingMode {
 // departmentId nullable لدعم فئات بلا قسم (hierarchy مسطح).
 model ServiceCategory {
   id           String              @id @default(uuid())
+  ref          Int                 @unique @default(autoincrement())
   departmentId String?
   department   Department?         @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   nameAr       String
@@ -80,6 +81,7 @@ model ServiceCategory {
 
 model Service {
   id            String           @id @default(uuid())
+  ref           Int              @unique @default(autoincrement())
   categoryId    String?
   category      ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   nameAr        String
@@ -303,6 +305,7 @@ enum IntakeFormScope {
 
 model IntakeForm {
   id        String          @id @default(uuid())
+  ref       Int             @unique @default(autoincrement())
   nameAr    String
   nameEn    String?
   type      IntakeFormType  @default(PRE_SESSION)

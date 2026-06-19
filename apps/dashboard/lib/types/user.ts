@@ -24,6 +24,7 @@ export type UserGender = "MALE" | "FEMALE"
 
 export interface User {
   id: string
+  ref: number
   email: string
   name: string
   phone: string | null

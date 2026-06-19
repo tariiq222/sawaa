@@ -6266,6 +6266,12 @@ export interface components {
              */
             isActive?: boolean;
             /**
+             * @description Whether the employee appears in the public directory
+             * @default false
+             * @example false
+             */
+            isPublic: boolean;
+            /**
              * @description Full name in Arabic
              * @example خالد العتيبي
              */
@@ -12097,7 +12103,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Coupon UUID */
+                /** @description Coupon UUID or reference (e.g. CPN-1024) */
                 id: string;
             };
             cookie?: never;
@@ -13455,7 +13461,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Group session UUID */
+                /** @description Group session UUID or reference (e.g. GS-1024) */
                 id: string;
             };
             cookie?: never;
@@ -14080,7 +14086,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description User UUID */
+                /** @description User UUID or reference (e.g. USR-1024) */
                 id: string;
             };
             cookie?: never;
@@ -17343,7 +17349,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Intake form UUID */
+                /** @description Intake form UUID or reference (e.g. FRM-1024) */
                 formId: string;
             };
             cookie?: never;
@@ -17908,7 +17914,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Service UUID */
+                /** @description Service UUID or reference (e.g. SVC-1024) */
                 serviceId: string;
             };
             cookie?: never;
@@ -18723,7 +18729,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Client UUID */
+                /** @description Client UUID or reference (e.g. CL-1024) */
                 id: string;
             };
             cookie?: never;
@@ -19419,7 +19425,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Employee UUID */
+                /** @description Employee UUID or reference (e.g. EMP-1024) */
                 id: string;
             };
             cookie?: never;

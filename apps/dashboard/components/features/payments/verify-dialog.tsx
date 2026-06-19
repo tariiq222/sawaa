@@ -137,12 +137,14 @@ export function VerifyDialog({
           <Button
             type="button"
             variant="outline"
+            size="sm"
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
           <Button
             type="submit"
+            size="sm"
             form="verify-transfer-form"
             disabled={verifyMut.isPending}
           >

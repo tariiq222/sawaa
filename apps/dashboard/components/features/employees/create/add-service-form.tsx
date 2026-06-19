@@ -49,11 +49,13 @@ export function AddServiceForm({
   const showPricingSection = isEditing ? true : !!selectedServiceId
 
   return (
-    <div className="rounded-lg border border-border p-4 space-y-4">
-      <Label className="text-sm font-semibold">
-        {isEditing ? t("common.edit") : t("employees.create.addService")}
-      </Label>
-
+    <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+      <div className="px-4 py-2.5 bg-muted/50 border-b border-border">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          {isEditing ? t("common.edit") : t("employees.create.addService")}
+        </p>
+      </div>
+      <div className="px-4 py-4 space-y-4">
       {/* Service — read-only when editing, select when adding */}
       <div className="flex flex-col gap-1.5">
         <Label className="text-xs">{t("employees.services.serviceLabel")}</Label>
@@ -146,6 +148,7 @@ export function AddServiceForm({
         <Button type="button" size="sm" onClick={onSubmit}>
           {isEditing ? t("common.save") : t("employees.create.addService")}
         </Button>
+      </div>
       </div>
     </div>
   )

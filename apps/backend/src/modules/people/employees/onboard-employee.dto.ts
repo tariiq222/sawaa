@@ -50,4 +50,7 @@ export class OnboardEmployeeDto {
 
   @ApiPropertyOptional({ description: 'Whether the employee is active', example: true })
   @IsOptional() @IsBoolean() isActive?: boolean;
+
+  @ApiPropertyOptional({ description: 'Whether the employee appears in the public directory', example: false, default: false })
+  @IsOptional() @IsBoolean() isPublic?: boolean;
 }

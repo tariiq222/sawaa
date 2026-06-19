@@ -32,14 +32,14 @@ function formatPrice(halalas: number): string {
   })
 }
 
-type StatusVariant = "default" | "secondary" | "destructive" | "outline"
+type StatusVariant = "default" | "secondary" | "destructive" | "outline" | "success"
 
 function statusBadgeVariant(status: GroupSessionStatus): StatusVariant {
   switch (status) {
     case "OPEN": return "default"
     case "FULL": return "secondary"
     case "CANCELLED": return "destructive"
-    case "COMPLETED": return "outline"
+    case "COMPLETED": return "success"
   }
 }
 

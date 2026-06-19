@@ -16,8 +16,8 @@ export function DetailSection({
 }) {
   return (
     <div className={cn("bg-surface rounded-xl border border-border shadow-sm overflow-hidden", className)}>
-      <div className="px-4 py-2.5 bg-muted/50 border-b border-border">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+      <div className="px-4 py-2.5 bg-accent-ultra-light border-b border-border">
+        <p className="text-xs font-semibold text-accent-foreground uppercase tracking-wider">
           {title}
         </p>
       </div>

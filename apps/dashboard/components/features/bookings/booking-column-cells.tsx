@@ -263,7 +263,7 @@ const paymentStatusStyles: Record<string, string> = {
   awaiting: "border-s-warning border-warning/40 bg-warning-soft text-warning",
   partial:  "border-s-warning border-warning/40 bg-warning-soft text-warning",
   paid:     "border-s-success border-success/40 bg-success-soft text-success",
-  refunded: "border-s-info border-info/40 bg-info-soft text-info",
+  refunded: "border-s-refunded border-refunded/40 bg-refunded-soft text-refunded",
   failed:   "border-s-error border-error/40 bg-error-soft text-error",
   rejected: "border-s-error border-error/40 bg-error-soft text-error",
 }

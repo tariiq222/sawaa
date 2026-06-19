@@ -3,7 +3,6 @@
 import { useQueryClient } from "@tanstack/react-query"
 import {
   Button,
-  Badge,
   Table,
   TableBody,
   TableCell,
@@ -12,14 +11,11 @@ import {
   TableRow,
 } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
+import { StatusBadge } from "@/components/features/status-badge"
+import type { BookingStatus } from "@/lib/types/booking"
 import { useBookingMutations } from "@/hooks/use-bookings"
 import { queryKeys } from "@/lib/query-keys"
 import type { GroupSessionEnrollment } from "@/lib/types/group-session"
-
-function bookingStatusLabel(status: string, t: (key: string) => string): string {
-  const key = `bookings.status.${status}`
-  return t(key) !== key ? t(key) : status
-}
 
 interface EnrollmentsTableProps {
   enrollments: GroupSessionEnrollment[]
@@ -82,9 +78,7 @@ export function EnrollmentsTable({ enrollments, sessionId }: EnrollmentsTablePro
                 <TableCell className="tabular-nums text-sm text-muted-foreground">{phone}</TableCell>
                 <TableCell>
                   {status ? (
-                    <Badge variant="outline" className="text-xs">
-                      {bookingStatusLabel(status, t)}
-                    </Badge>
+                    <StatusBadge status={status as BookingStatus} />
                   ) : (
                     "—"
                   )}

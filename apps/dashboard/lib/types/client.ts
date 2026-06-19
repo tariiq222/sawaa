@@ -17,6 +17,7 @@ export interface ClientBookingPreview {
 
 export interface Client {
   id: string
+  ref: number
   email: string | null
   firstName: string
   middleName?: string | null

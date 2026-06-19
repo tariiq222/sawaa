@@ -3294,6 +3294,12 @@
             "example": true,
             "type": "boolean"
           },
+          "isPublic": {
+            "default": false,
+            "description": "Whether the employee appears in the public directory",
+            "example": false,
+            "type": "boolean"
+          },
           "nameAr": {
             "description": "Full name in Arabic",
             "example": "خالد العتيبي",
@@ -11530,12 +11536,12 @@
         "operationId": "DashboardFinanceController_getCouponEndpoint",
         "parameters": [
           {
-            "description": "Coupon UUID",
+            "description": "Coupon UUID or reference (e.g. CPN-1024)",
             "in": "path",
             "name": "id",
             "required": true,
             "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
+              "example": "CPN-1024",
               "type": "string"
             }
           }
@@ -13219,12 +13225,11 @@
         "operationId": "DashboardGroupSessionsController_getOne",
         "parameters": [
           {
-            "description": "Group session UUID",
+            "description": "Group session UUID or reference (e.g. GS-1024)",
             "in": "path",
             "name": "id",
             "required": true,
             "schema": {
-              "format": "uuid",
               "type": "string"
             }
           }
@@ -14183,12 +14188,12 @@
         "operationId": "DashboardIdentityController_getUserEndpoint",
         "parameters": [
           {
-            "description": "User UUID",
+            "description": "User UUID or reference (e.g. USR-1024)",
             "in": "path",
             "name": "id",
             "required": true,
             "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
+              "example": "USR-1024",
               "type": "string"
             }
           }
@@ -18485,12 +18490,12 @@
         "operationId": "DashboardOrganizationSettingsController_getIntakeFormEndpoint",
         "parameters": [
           {
-            "description": "Intake form UUID",
+            "description": "Intake form UUID or reference (e.g. FRM-1024)",
             "in": "path",
             "name": "formId",
             "required": true,
             "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
+              "example": "FRM-1024",
               "type": "string"
             }
           }
@@ -19209,12 +19214,12 @@
         "operationId": "DashboardOrganizationSettingsController_getServiceEndpoint",
         "parameters": [
           {
-            "description": "Service UUID",
+            "description": "Service UUID or reference (e.g. SVC-1024)",
             "in": "path",
             "name": "serviceId",
             "required": true,
             "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
+              "example": "SVC-1024",
               "type": "string"
             }
           }
@@ -20218,12 +20223,12 @@
         "operationId": "DashboardPeopleController_getClientEndpoint",
         "parameters": [
           {
-            "description": "Client UUID",
+            "description": "Client UUID or reference (e.g. CL-1024)",
             "in": "path",
             "name": "id",
             "required": true,
             "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
+              "example": "CL-1024",
               "type": "string"
             }
           }
@@ -21200,12 +21205,12 @@
         "operationId": "DashboardPeopleController_getEmployeeEndpoint",
         "parameters": [
           {
-            "description": "Employee UUID",
+            "description": "Employee UUID or reference (e.g. EMP-1024)",
             "in": "path",
             "name": "id",
             "required": true,
             "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
+              "example": "EMP-1024",
               "type": "string"
             }
           }

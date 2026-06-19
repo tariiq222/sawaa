@@ -50,6 +50,7 @@ import type { Client } from "@/lib/types/client"
 function makeClient(overrides: Partial<Client> = {}): Client {
   return {
     id: "c-1",
+    ref: 1,
     firstName: "Ahmed",
     lastName: "Ali",
     email: "a@b.com",

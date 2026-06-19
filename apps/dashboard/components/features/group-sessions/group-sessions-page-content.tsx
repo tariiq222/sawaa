@@ -21,8 +21,11 @@ import {
   Switch,
   Label,
 } from "@sawaa/ui"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Cancel01Icon } from "@hugeicons/core-free-icons"
 import { CreateGroupSessionDialog } from "./create-group-session-dialog"
 import { CancelGroupSessionDialog } from "./cancel-group-session-dialog"
+import { formatRef } from "@/lib/utils"
 import type { GroupSessionListItem, GroupSessionStatus } from "@/lib/types/group-session"
 
 function formatDateTime(iso: string, locale: string): string {
@@ -42,14 +45,14 @@ function formatPrice(halalas: number): string {
   })
 }
 
-type StatusVariant = "default" | "secondary" | "destructive" | "outline"
+type StatusVariant = "success" | "warning" | "secondary" | "destructive"
 
 function statusBadgeVariant(status: GroupSessionStatus): StatusVariant {
   switch (status) {
-    case "OPEN": return "default"
-    case "FULL": return "secondary"
+    case "OPEN": return "success"
+    case "FULL": return "warning"
+    case "COMPLETED": return "secondary"
     case "CANCELLED": return "destructive"
-    case "COMPLETED": return "outline"
   }
 }
 
@@ -154,7 +157,7 @@ export function GroupSessionsPageContent() {
               {sessions.map((session) => (
                 <TableRow key={session.id}>
                   <TableCell className="font-medium">
-                    <Link href={`/group-sessions/${session.id}`} className="hover:text-primary transition-colors">
+                    <Link href={`/group-sessions/${formatRef("GS", session.ref)}`} className="hover:text-primary transition-colors">
                       {session.title}
                       {session.isPublic && (
                         <span className="ms-2 text-xs text-muted-foreground">
@@ -199,6 +202,7 @@ export function GroupSessionsPageContent() {
                         className="text-destructive hover:text-destructive"
                         onClick={() => setCancelSession(session)}
                       >
+                        <HugeiconsIcon icon={Cancel01Icon} size={14} />
                         {t("groupSessions.action.cancel")}
                       </Button>
                     )}

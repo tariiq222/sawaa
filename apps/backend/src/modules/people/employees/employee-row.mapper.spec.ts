@@ -5,6 +5,7 @@ describe('mapEmployeeRow', () => {
   it('maps employee with all relations', () => {
     const employee = {
       id: 'e1',
+      ref: 1,
       userId: 'u1',
       name: 'John',
       nameAr: 'جون',
@@ -51,6 +52,7 @@ describe('mapEmployeeRow', () => {
   it('maps employee with missing relations using defaults', () => {
     const employee = {
       id: 'e2',
+      ref: 2,
       userId: null,
       name: 'Jane',
       nameAr: null,

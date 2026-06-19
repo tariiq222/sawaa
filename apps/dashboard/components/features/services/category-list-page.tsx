@@ -20,6 +20,7 @@ import { useCategoriesList } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
 import { useRouter } from "next/navigation"
+import { formatRef } from "@/lib/utils"
 import type { ServiceCategory } from "@/lib/types/service"
 
 export function CategoryListPage() {
@@ -37,7 +38,7 @@ export function CategoryListPage() {
   const columns = getCategoryColumns(
     locale,
     t,
-    canDo("category", "update") ? (c) => router.push(`/categories/${c.id}/edit`) : undefined,
+    canDo("category", "update") ? (c) => router.push(`/categories/${formatRef("CAT", c.ref)}/edit`) : undefined,
     canDo("category", "delete") ? (c) => setDeleteTarget(c) : undefined,
   )
 

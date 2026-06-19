@@ -18,19 +18,19 @@ import { useReportsPeriodCtx } from "../reports-period-context"
 import { computeDelta } from "../delta-helpers"
 
 const STATUS_COLORS: Record<string, string> = {
-  COMPLETED: "#15803D",
-  CONFIRMED: "#14a89a",
-  PENDING: "#94A3B8",
-  CANCELLED: "#C2410C",
-  NO_SHOW: "#DC2626",
-  EXPIRED: "#94A3B8",
-  AWAITING_PAYMENT: "#C2410C",
+  COMPLETED: "var(--success)",
+  CONFIRMED: "var(--primary)",
+  PENDING: "var(--muted-foreground)",
+  CANCELLED: "var(--error)",
+  NO_SHOW: "var(--error)",
+  EXPIRED: "var(--muted-foreground)",
+  AWAITING_PAYMENT: "var(--warning)",
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  INDIVIDUAL: "#14a89a",
-  GROUP: "#ef7a6b",
-  WALK_IN: "#F59E0B",
+  INDIVIDUAL: "var(--chart-1)",
+  GROUP: "var(--chart-3)",
+  WALK_IN: "var(--chart-5)",
 }
 
 export function BookingsReportPage() {
@@ -107,7 +107,7 @@ export function BookingsReportPage() {
                   key: s.status,
                   label: t(`reports.bookingStatus.${s.status}`),
                   value: s.count,
-                  color: STATUS_COLORS[s.status] ?? "#94A3B8",
+                  color: STATUS_COLORS[s.status] ?? "var(--muted-foreground)",
                   amount: s.count,
                 }))}
                 centerLabel={t("reports.bookings.bookingsLabel")}
@@ -120,7 +120,7 @@ export function BookingsReportPage() {
                   key: tp.type,
                   label: t(`reports.bookingType.${tp.type}`),
                   value: tp.count,
-                  color: TYPE_COLORS[tp.type] ?? "#94A3B8",
+                  color: TYPE_COLORS[tp.type] ?? "var(--muted-foreground)",
                   amount: tp.count,
                 }))}
                 centerLabel={t("reports.bookings.bookingsLabel")}

@@ -8,6 +8,7 @@ import type { PaginatedQuery } from "./common"
 
 export interface Coupon {
   id: string
+  ref: number
   code: string
   descriptionAr: string | null
   descriptionEn: string | null

@@ -30,11 +30,12 @@ interface BasicInfoTabProps {
   employeeName?: string
   /** Existing email shown read-only on edit mode. */
   readOnlyEmail?: string | null
+  showPublicToggle?: boolean
 }
 
 /* ─── Component ─── */
 
-export function BasicInfoTab({ form, showEmail = false, employeeName, readOnlyEmail }: BasicInfoTabProps) {
+export function BasicInfoTab({ form, showEmail = false, employeeName, readOnlyEmail, showPublicToggle = false }: BasicInfoTabProps) {
   const { t } = useLocale()
   const [pendingValue, setPendingValue] = useState<boolean | null>(null)
 
@@ -83,6 +84,19 @@ export function BasicInfoTab({ form, showEmail = false, employeeName, readOnlyEm
                   onCheckedChange={handleSwitchChange}
                 />
               </div>
+
+              {showPublicToggle && (
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="employee-public" className="cursor-pointer text-xs text-muted-foreground">
+                    {t("employees.public.showInDirectory")}
+                  </Label>
+                  <Switch
+                    id="employee-public"
+                    checked={form.watch("isPublic") ?? false}
+                    onCheckedChange={(v) => form.setValue("isPublic", v)}
+                  />
+                </div>
+              )}
 
             </div>
           </AvatarUpload>

@@ -7,6 +7,8 @@ import { Badge } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useContactMessages, useUpdateContactMessageStatus } from "@/hooks/use-contact-messages"
 import { ErrorBanner } from "@/components/features/error-banner"
+import { contactMessageStatusStyles } from "@/lib/ds"
+import { cn } from "@/lib/utils"
 import { formatLocaleDate } from "@/lib/date"
 import type { ContactMessageStatus } from "@/lib/api/contact-messages"
 import { useState } from "react"
@@ -70,15 +72,24 @@ export function ContactMessagesTable() {
           )}
           {!isLoading &&
             data?.items?.map((msg) => (
-              <TableRow key={msg.id}>
-                <TableCell className="font-medium">{msg.name}</TableCell>
+              <TableRow key={msg.id} className={msg.status === "NEW" ? "bg-primary/5" : undefined}>
+                <TableCell className={msg.status === "NEW" ? "font-semibold" : "font-medium"}>{msg.name}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {msg.email ?? msg.phone ?? "—"}
                 </TableCell>
                 <TableCell>{msg.subject ?? "—"}</TableCell>
                 <TableCell className="max-w-xs truncate">{msg.body}</TableCell>
                 <TableCell>
-                  <Badge variant={msg.status === "NEW" ? "default" : "secondary"}>{msg.status}</Badge>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      contactMessageStatusStyles[msg.status]?.bg,
+                      contactMessageStatusStyles[msg.status]?.text,
+                      contactMessageStatusStyles[msg.status]?.border,
+                    )}
+                  >
+                    {t(`contactMessages.status.${msg.status.toLowerCase()}`)}
+                  </Badge>
                 </TableCell>
                 <TableCell className="text-sm tabular-nums">
                   {formatLocaleDate(msg.createdAt, locale, {

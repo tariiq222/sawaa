@@ -18,6 +18,7 @@ import { FilterBar } from "@/components/features/filter-bar"
 import { useCoupons, useCouponMutations } from "@/hooks/use-coupons"
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
+import { formatRef } from "@/lib/utils"
 import type { Coupon } from "@/lib/types/coupon"
 
 export function CouponListPage() {
@@ -32,7 +33,7 @@ export function CouponListPage() {
 
   const columns = getCouponColumns(
     locale,
-    canDo("coupon", "update") ? (c) => router.push(`/coupons/${c.id}/edit`) : undefined,
+    canDo("coupon", "update") ? (c) => router.push(`/coupons/${formatRef("CPN", c.ref)}/edit`) : undefined,
     canDo("coupon", "delete") ? (c) => setDeleteTarget(c) : undefined,
     t,
     canDo("coupon", "update") ? (c) => updateMut.mutate({ id: c.id, isActive: !c.isActive }) : undefined,

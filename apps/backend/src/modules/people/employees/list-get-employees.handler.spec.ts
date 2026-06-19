@@ -100,7 +100,7 @@ describe('List/Get Employees handlers', () => {
     it('returns employee with full projection', async () => {
       prisma.employee.findFirst.mockResolvedValue(mockEmployee);
 
-      const result = (await getHandler.execute({ employeeId: 'e1' })) as unknown as {
+      const result = (await getHandler.execute({ employeeId: '00000000-0000-0000-0000-0000000000e1' })) as unknown as {
         id: string;
         availability: unknown[];
       };
@@ -112,7 +112,7 @@ describe('List/Get Employees handlers', () => {
     it('throws NotFoundException when not found', async () => {
       prisma.employee.findFirst.mockResolvedValue(null);
 
-      await expect(getHandler.execute({ employeeId: 'e1' })).rejects.toThrow(NotFoundException);
+      await expect(getHandler.execute({ employeeId: '00000000-0000-0000-0000-0000000000e1' })).rejects.toThrow(NotFoundException);
     });
   });
 });

@@ -18,18 +18,18 @@ import { useReportsPeriodCtx } from "../reports-period-context"
 import { computeDelta } from "../delta-helpers"
 
 const METHOD_COLORS: Record<string, string> = {
-  ONLINE_CARD: "#14a89a",
-  BANK_TRANSFER: "#F59E0B",
-  CASH: "#94A3B8",
-  COUPON: "#ef7a6b",
+  ONLINE_CARD: "var(--chart-1)",
+  BANK_TRANSFER: "var(--chart-2)",
+  CASH: "var(--muted-foreground)",
+  COUPON: "var(--chart-3)",
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  COMPLETED: "#15803D",
-  PENDING: "#C2410C",
-  PENDING_VERIFICATION: "#C2410C",
-  FAILED: "#DC2626",
-  REFUNDED: "#94A3B8",
+  COMPLETED: "var(--success)",
+  PENDING: "var(--warning)",
+  PENDING_VERIFICATION: "var(--warning)",
+  FAILED: "var(--error)",
+  REFUNDED: "var(--refunded)",
 }
 
 export function FinancialReportPage() {
@@ -105,7 +105,7 @@ export function FinancialReportPage() {
                   {
                     key: "revenue",
                     label: t("reports.financial.revenueSeries"),
-                    color: "#14a89a",
+                    color: "var(--chart-1)",
                     type: "area",
                   },
                 ]}
@@ -124,7 +124,7 @@ export function FinancialReportPage() {
                   key: m.method,
                   label: t(`reports.paymentMethod.${m.method}`),
                   value: m.count,
-                  color: METHOD_COLORS[m.method] ?? "#94A3B8",
+                  color: METHOD_COLORS[m.method] ?? "var(--muted-foreground)",
                   amount: (
                     <FormattedCurrency amount={m.amount} locale={locale} />
                   ),
@@ -143,7 +143,7 @@ export function FinancialReportPage() {
                   display: (
                     <FormattedCurrency amount={s.amount} locale={locale} />
                   ),
-                  color: STATUS_COLORS[s.status] ?? "#94A3B8",
+                  color: STATUS_COLORS[s.status] ?? "var(--muted-foreground)",
                 }))}
               />
             </Section>

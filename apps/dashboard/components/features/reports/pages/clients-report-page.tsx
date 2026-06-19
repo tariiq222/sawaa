@@ -17,9 +17,9 @@ import { useReportsPeriodCtx } from "../reports-period-context"
 import { computeDelta } from "../delta-helpers"
 
 const GENDER_COLORS: Record<string, string> = {
-  MALE: "#14a89a",
-  FEMALE: "#ef7a6b",
-  UNKNOWN: "#94A3B8",
+  MALE: "var(--chart-1)",
+  FEMALE: "var(--chart-5)",
+  UNKNOWN: "var(--muted-foreground)",
 }
 
 export function ClientsReportPage() {
@@ -92,7 +92,7 @@ export function ClientsReportPage() {
                   key: g.gender,
                   label: t(`reports.gender.${g.gender}`),
                   value: g.count,
-                  color: GENDER_COLORS[g.gender] ?? "#94A3B8",
+                  color: GENDER_COLORS[g.gender] ?? "var(--muted-foreground)",
                   amount: g.count,
                 }))}
                 centerLabel={t("reports.clients.clientsLabel")}

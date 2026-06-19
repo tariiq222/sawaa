@@ -77,13 +77,13 @@ export class DashboardGroupSessionsController {
   @Get(':id')
   @CheckPermissions({ action: 'read', subject: 'Booking' })
   @ApiOperation({ summary: 'Get a group session by ID' })
-  @ApiParam({ name: 'id', description: 'Group session UUID', type: 'string', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'Group session UUID or reference (e.g. GS-1024)', type: 'string' })
   @ApiOkResponse({
     description: 'Group session details including enrollments',
     schema: { type: 'object' },
   })
   @ApiResponse({ status: 404, description: 'Group session not found' })
-  getOne(@Param('id', ParseUUIDPipe) id: string) {
+  getOne(@Param('id') id: string) {
     return this.getHandler.execute({ groupSessionId: id });
   }
 

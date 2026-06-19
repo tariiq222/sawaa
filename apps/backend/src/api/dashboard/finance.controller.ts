@@ -330,10 +330,10 @@ export class DashboardFinanceController {
   @Get('coupons/:id')
   @CheckPermissions({ action: 'read', subject: 'Coupon' })
   @ApiOperation({ summary: 'Get a coupon by id' })
-  @ApiParam({ name: 'id', description: 'Coupon UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiParam({ name: 'id', description: 'Coupon UUID or reference (e.g. CPN-1024)', example: 'CPN-1024' })
   @ApiOkResponse({ description: 'Coupon found' })
   @ApiResponse({ status: 404, description: 'Coupon not found', type: ApiErrorDto })
-  getCouponEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+  getCouponEndpoint(@Param('id') id: string) {
     return this.getCoupon.execute({ couponId: id });
   }
 

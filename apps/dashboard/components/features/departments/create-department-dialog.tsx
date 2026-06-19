@@ -198,11 +198,12 @@ export function CreateDepartmentDialog({
           <Button
             type="button"
             variant="outline"
+            size="sm"
             onClick={() => onOpenChange(false)}
           >
             {t("departments.create.cancel")}
           </Button>
-          <Button type="submit" form="create-dept-form" disabled={createMut.isPending}>
+          <Button type="submit" form="create-dept-form" size="sm" disabled={createMut.isPending}>
             {createMut.isPending ? t("departments.create.submitting") : t("departments.create.submit")}
           </Button>
         </DialogFooter>

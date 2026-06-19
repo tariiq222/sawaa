@@ -211,10 +211,10 @@ export function CreateBundleDialog({ open, onOpenChange }: Props) {
         </DialogBody>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             {t("bundles.create.cancel")}
           </Button>
-          <Button type="submit" form="create-bundle-form" disabled={createMut.isPending}>
+          <Button type="submit" form="create-bundle-form" size="sm" disabled={createMut.isPending}>
             {createMut.isPending
               ? t("bundles.create.submitting")
               : t("bundles.create.submit")}

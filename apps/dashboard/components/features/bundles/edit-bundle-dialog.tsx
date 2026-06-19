@@ -257,10 +257,10 @@ export function EditBundleDialog({ bundle, open, onOpenChange }: Props) {
         </DialogBody>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             {t("bundles.edit.cancel")}
           </Button>
-          <Button type="submit" form="edit-bundle-form" disabled={updateMut.isPending}>
+          <Button type="submit" form="edit-bundle-form" size="sm" disabled={updateMut.isPending}>
             {updateMut.isPending
               ? t("bundles.edit.submitting")
               : t("bundles.edit.submit")}

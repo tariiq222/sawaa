@@ -26,12 +26,12 @@ import type { DateFormat } from "@/lib/utils"
 
 const statusStyles: Record<InvoiceStatus, string> = {
   DRAFT: "border-muted-foreground/30 bg-muted text-muted-foreground",
-  ISSUED: "border-info/30 bg-info/10 text-info",
-  PAID: "border-success/30 bg-success/10 text-success",
-  PARTIALLY_PAID: "border-warning/30 bg-warning/10 text-warning",
-  PARTIALLY_REFUNDED: "border-warning/30 bg-warning/10 text-warning",
-  VOID: "border-destructive/30 bg-destructive/10 text-destructive",
-  REFUNDED: "border-info/30 bg-info/10 text-info",
+  ISSUED: "border-info/40 bg-info-soft text-info",
+  PAID: "border-success/40 bg-success-soft text-success",
+  PARTIALLY_PAID: "border-warning/40 bg-warning-soft text-warning",
+  PARTIALLY_REFUNDED: "border-refunded/40 bg-refunded-soft text-refunded",
+  VOID: "border-error/40 bg-error-soft text-error",
+  REFUNDED: "border-refunded/40 bg-refunded-soft text-refunded",
 }
 
 async function handleGeneratePdf(id: string, t: (key: string) => string) {

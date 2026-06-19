@@ -231,7 +231,6 @@ export function ServiceDetailSheet({
           {onEdit && (
             <Button
               size="sm"
-              className="gap-1.5"
               onClick={() => { onOpenChange(false); onEdit(service) }}
             >
               <HugeiconsIcon icon={PencilEdit01Icon} size={14} />

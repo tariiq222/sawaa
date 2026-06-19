@@ -50,7 +50,7 @@ export default function EditClientPage() {
       const { fullName, ...rest } = data
       const { firstName, middleName, lastName } = splitFullName(fullName)
       const payload = { ...rest, firstName, middleName, lastName }
-      await updateMut.mutateAsync({ id: params.id, payload })
+      await updateMut.mutateAsync({ id: client!.id, payload })
       toast.success(t("clients.edit.changesSaved"))
       router.push("/clients")
     } catch (err) {
@@ -98,10 +98,10 @@ export default function EditClientPage() {
         />
 
         <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button type="button" variant="ghost" size="lg" className="rounded-full" onClick={() => router.push("/clients")}>
+          <Button type="button" variant="ghost" size="lg" className="rounded-lg" onClick={() => router.push("/clients")}>
             {t("clients.edit.cancel")}
           </Button>
-          <Button type="submit" size="lg" className="rounded-full" disabled={updateMut.isPending}>
+          <Button type="submit" size="lg" className="rounded-lg" disabled={updateMut.isPending}>
             {updateMut.isPending
               ? t("clients.edit.saving")
               : t("clients.edit.saveChanges")}

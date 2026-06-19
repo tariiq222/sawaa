@@ -52,7 +52,7 @@ export function CategoryServicesTab({ categoryId }: Props) {
       <div className="flex justify-end">
         <Button
           type="button"
-          className="gap-2 rounded-full px-5"
+          className="gap-2 rounded-lg px-5"
           onClick={() => router.push("/services/create")}
         >
           <HugeiconsIcon icon={Add01Icon} size={16} />

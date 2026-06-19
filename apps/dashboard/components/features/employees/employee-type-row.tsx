@@ -37,10 +37,10 @@ export function EmployeeTypeRow({
   const hasDefault = !!serviceDefault
 
   const pricePlaceholder = hasDefault
-    ? `${t("employees.services.defaultPrice")}: ${defaultPrice} ${t("employees.services.sar")}`
+    ? `${t("employees.services.defaultPrice")} ${defaultPrice}`
     : t("employees.services.required")
   const durationPlaceholder = hasDefault
-    ? `${t("employees.services.defaultDuration")}: ${defaultDuration} ${t("employees.services.min")}`
+    ? `${t("employees.services.defaultDuration")} ${defaultDuration}`
     : t("employees.services.required")
 
   const priceDisplay =
@@ -65,49 +65,66 @@ export function EmployeeTypeRow({
   }
 
   return (
-    <>
-      {/* Type label + default hint */}
-      <div className="flex flex-col">
-        <span className="text-sm font-medium text-foreground">{label}</span>
-        {hasDefault && (
-          <span className="text-[10px] text-muted-foreground tabular-nums">
-            {defaultPrice} {t("employees.services.sar")} · {defaultDuration} {t("employees.services.min")}
-          </span>
-        )}
+    <div className="group rounded-lg border border-border bg-surface px-3.5 py-3 transition-colors hover:border-primary/30">
+      <div className="mb-2.5 flex items-center justify-between gap-3">
+        <span className="text-sm font-semibold text-foreground">{label}</span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="text-muted-foreground/60 opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+          onClick={onRemove}
+          aria-label={t("common.delete")}
+        >
+          <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-3.5" />
+        </Button>
       </div>
 
-      {/* Price */}
-      <Input
-        type="number"
-        min={0}
-        step="0.01"
-        value={priceDisplay}
-        onChange={(e) => handlePriceChange(e.target.value)}
-        placeholder={pricePlaceholder}
-        className="h-9 text-sm tabular-nums"
-      />
+      <div className="grid grid-cols-2 gap-2.5">
+        <Field label={t("services.bookingTypes.price")} unit={t("employees.services.sar")}>
+          <Input
+            type="number"
+            min={0}
+            step="0.01"
+            value={priceDisplay}
+            onChange={(e) => handlePriceChange(e.target.value)}
+            placeholder={pricePlaceholder}
+            className="h-9 text-sm tabular-nums"
+          />
+        </Field>
 
-      {/* Duration */}
-      <Input
-        type="number"
-        min={1}
-        value={durationDisplay}
-        onChange={(e) => handleDurationChange(e.target.value)}
-        placeholder={durationPlaceholder}
-        className="h-9 text-sm tabular-nums"
-      />
+        <Field label={t("services.bookingTypes.duration")} unit={t("employees.services.min")}>
+          <Input
+            type="number"
+            min={1}
+            value={durationDisplay}
+            onChange={(e) => handleDurationChange(e.target.value)}
+            placeholder={durationPlaceholder}
+            className="h-9 text-sm tabular-nums"
+          />
+        </Field>
+      </div>
+    </div>
+  )
+}
 
-      {/* Remove */}
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-        onClick={onRemove}
-        aria-label={t("common.delete")}
-      >
-        <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-3.5" />
-      </Button>
-    </>
+/* ─── Field ─── */
+
+function Field({
+  label,
+  unit,
+  children,
+}: {
+  label: string
+  unit: string
+  children: React.ReactNode
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-[11px] text-muted-foreground">
+        {label} <span className="text-muted-foreground/50">({unit})</span>
+      </span>
+      {children}
+    </label>
   )
 }

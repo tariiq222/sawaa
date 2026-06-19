@@ -16,11 +16,11 @@ import { useReportsPeriodCtx } from "../reports-period-context"
 import { computeDelta } from "../delta-helpers"
 
 const STAR_COLORS: Record<number, string> = {
-  5: "#166534",
-  4: "#14a89a",
-  3: "#F59E0B",
-  2: "#B45309",
-  1: "#B91C1C",
+  5: "var(--success)",
+  4: "var(--chart-1)",
+  3: "var(--warning)",
+  2: "var(--chart-3)",
+  1: "var(--error)",
 }
 
 export function RatingsReportPage() {
@@ -120,7 +120,7 @@ export function RatingsReportPage() {
                     {
                       key: "average",
                       label: t("reports.ratings.averageSeries"),
-                      color: "#F59E0B",
+                      color: "var(--warning)",
                       type: "line",
                     },
                   ]}

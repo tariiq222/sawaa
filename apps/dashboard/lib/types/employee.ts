@@ -8,6 +8,7 @@ import type { SearchableQuery } from "./common"
 
 export interface Employee {
   id: string
+  ref: number
   userId: string
   title: string | null
   nameAr: string | null
@@ -244,6 +245,7 @@ export interface OnboardEmployeePayload {
   educationAr?: string
   avatarUrl?: string | null
   isActive?: boolean
+  isPublic?: boolean
 }
 
 export interface OnboardEmployeeResponse {

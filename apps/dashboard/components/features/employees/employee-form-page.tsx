@@ -70,10 +70,13 @@ export function EmployeeFormPage(props: Props) {
       : "basic"
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // useEmployee resolves the route param (which may be a readable ref like
+  // EMP-12) to the full record; all other endpoints need the canonical UUID.
   const { data: employee, isLoading } = useEmployee(employeeId ?? null)
-  const { data: availability } = useEmployeeAvailability(employeeId ?? null)
-  const { data: existingBreaks } = useEmployeeBreaks(employeeId ?? null)
-  const { data: existingServices } = useEmployeeServices(employeeId ?? null)
+  const resolvedEmployeeId = employee?.id ?? null
+  const { data: availability } = useEmployeeAvailability(resolvedEmployeeId)
+  const { data: existingBreaks } = useEmployeeBreaks(resolvedEmployeeId)
+  const { data: existingServices } = useEmployeeServices(resolvedEmployeeId)
 
   const [schedule, setSchedule] = useState<AvailabilitySlot[]>(defaultSchedule)
   const [breaks, setBreaksState] = useState<LocalBreak[]>([])
@@ -91,7 +94,7 @@ export function EmployeeFormPage(props: Props) {
 
   const { onSubmit } = useEmployeeForm({
     isEdit,
-    employeeId,
+    employeeId: resolvedEmployeeId ?? undefined,
     employee,
     availability,
     existingBreaks,
@@ -165,6 +168,7 @@ export function EmployeeFormPage(props: Props) {
               showEmail={!isEdit}
               employeeName={isEdit ? employeeDisplayName : undefined}
               readOnlyEmail={isEdit ? employee?.user.email ?? null : null}
+              showPublicToggle={!isEdit}
             />
           </TabsContent>
 
@@ -183,16 +187,16 @@ export function EmployeeFormPage(props: Props) {
             <ServicesTab
               draftServices={draftServices}
               onDraftServicesChange={setDraftServices}
-              employeeId={employeeId}
+              employeeId={resolvedEmployeeId ?? undefined}
             />
           </TabsContent>
         </Tabs>
 
         <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button type="button" variant="ghost" size="lg" className="rounded-full" onClick={() => router.push("/employees")}>
+          <Button type="button" variant="ghost" size="lg" className="rounded-lg" onClick={() => router.push("/employees")}>
             {t("common.cancel")}
           </Button>
-          <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting}>
+          <Button type="submit" size="lg" className="rounded-lg" disabled={isSubmitting}>
             {isSubmitting
               ? t(isEdit ? "employees.edit.submitting" : "employees.create.submitting")
               : t(isEdit ? "employees.edit.submit" : "employees.create.submit")}

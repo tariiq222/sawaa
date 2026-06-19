@@ -26,6 +26,7 @@ import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import { useClient } from "@/hooks/use-clients"
 import { ClientAccountToggle } from "@/components/features/clients/client-account-toggle"
+import { StatusBadge } from "@/components/features/status-badge"
 import { BLOOD_LABELS, type BloodType } from "@/lib/schemas/client.schema"
 import { useQuery } from "@tanstack/react-query"
 import { fetchBookings } from "@/lib/api/bookings"
@@ -229,7 +230,7 @@ export function ClientDetailPage({ clientId }: Props) {
 
         {/* ── Tab 2: المواعيد ── */}
         <TabsContent value="bookings" className="pt-4">
-          <ClientBookingsPanel clientId={clientId} t={t} formatDate={formatDate} />
+          <ClientBookingsPanel clientId={client.id} t={t} formatDate={formatDate} />
         </TabsContent>
 
         {/* ── Tab 3: الفواتير ── */}
@@ -304,12 +305,7 @@ function ClientBookingsPanel({
                   {formatDate(b.date)} {b.startTime}
                 </span>
               </div>
-              <Badge
-                variant="outline"
-                className="text-xs"
-              >
-                {b.status}
-              </Badge>
+              <StatusBadge status={b.status} />
             </div>
           ))}
         </div>

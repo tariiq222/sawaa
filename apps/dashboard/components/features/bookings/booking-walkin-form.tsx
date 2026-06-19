@@ -322,7 +322,7 @@ export function BookingWalkInForm({ onSelect }: BookingWalkInFormProps) {
             )}
           </DialogBody>
           <DialogFooter>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setDuplicate(null)}>
+            <Button type="button" variant="outline" size="sm" onClick={() => setDuplicate(null)}>
               {t("bookings.walkin.duplicate.cancel")}
             </Button>
             <Button

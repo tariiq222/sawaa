@@ -33,6 +33,7 @@ export class ListGroupSessionsHandler {
 
     const items = sessions.map((s) => ({
       id: s.id,
+      ref: s.ref,
       title: s.title,
       scheduledAt: s.scheduledAt,
       durationMins: s.durationMins,

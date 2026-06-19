@@ -66,10 +66,10 @@ export function CancelGroupSessionDialog({ session, open, onOpenChange }: Props)
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               {t("common.cancel")}
             </Button>
-            <Button type="submit" variant="destructive" disabled={cancelMut.isPending}>
+            <Button type="submit" variant="destructive" size="sm" disabled={cancelMut.isPending}>
               {cancelMut.isPending ? t("groupSessions.cancel.submitting") : t("groupSessions.cancel.button")}
             </Button>
           </DialogFooter>

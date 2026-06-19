@@ -208,10 +208,10 @@ export class DashboardPeopleController {
   @Get('clients/:id')
   @CheckPermissions({ action: 'read', subject: 'Client' })
   @ApiOperation({ summary: 'Get a client by ID' })
-  @ApiParam({ name: 'id', description: 'Client UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiParam({ name: 'id', description: 'Client UUID or reference (e.g. CL-1024)', example: 'CL-1024' })
   @ApiOkResponse({ type: ClientResponseDto, description: 'Client record' })
   @ApiNotFoundResponse({ description: 'Client not found' })
-  getClientEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+  getClientEndpoint(@Param('id') id: string) {
     return this.getClient.execute({ clientId: id });
   }
 
@@ -327,10 +327,10 @@ export class DashboardPeopleController {
   @Get('employees/:id')
   @CheckPermissions({ action: 'read', subject: 'Employee' })
   @ApiOperation({ summary: 'Get an employee by ID' })
-  @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiParam({ name: 'id', description: 'Employee UUID or reference (e.g. EMP-1024)', example: 'EMP-1024' })
   @ApiOkResponse({ type: EmployeeResponseDto, description: 'Employee record' })
   @ApiNotFoundResponse({ description: 'Employee not found' })
-  getEmployeeEndpoint(@Param('id', ParseUUIDPipe) id: string) {
+  getEmployeeEndpoint(@Param('id') id: string) {
     return this.getEmployee.execute({ employeeId: id });
   }
 

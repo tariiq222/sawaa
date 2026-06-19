@@ -196,3 +196,10 @@ export function parseClinicTimeInput(input: string, format: TimeFormat = "24h"):
 export function getWeekStartDay(weekStartDay: "sunday" | "monday" = "sunday"): 0 | 1 {
   return weekStartDay === "monday" ? 1 : 0
 }
+
+/**
+ * Format a readable reference code, e.g. formatRef("GS", 1024) → "GS-1024".
+ */
+export function formatRef(prefix: string, ref: number): string {
+  return `${prefix}-${ref}`
+}

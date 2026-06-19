@@ -7,6 +7,7 @@ export type GroupSessionDeliveryType = 'IN_PERSON' | 'ONLINE'
 
 export interface GroupSessionListItem {
   id: string
+  ref: number
   title: string
   scheduledAt: string
   durationMins: number

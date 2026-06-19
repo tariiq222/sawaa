@@ -241,11 +241,12 @@ export function AssignEmployeesDialog({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button type="button" variant="outline" onClick={handleClose}>
+          <Button type="button" variant="outline" size="sm" onClick={handleClose}>
             {t("common.cancel")}
           </Button>
           <Button
             type="button"
+            size="sm"
             disabled={selected.length === 0 || assignMut.isPending}
             onClick={handleSave}
           >

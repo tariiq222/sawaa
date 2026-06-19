@@ -156,11 +156,12 @@ export function RefundDialog({
           <Button
             type="button"
             variant="outline"
+            size="sm"
             onClick={() => onOpenChange(false)}
           >
             {t("refund.cancel")}
           </Button>
-          <Button type="submit" form="refund-form" disabled={refundMut.isPending}>
+          <Button type="submit" size="sm" form="refund-form" disabled={refundMut.isPending}>
             {refundMut.isPending ? t("refund.submitting") : t("refund.submit")}
           </Button>
         </DialogFooter>

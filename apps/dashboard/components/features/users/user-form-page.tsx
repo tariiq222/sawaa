@@ -89,7 +89,7 @@ export function UserFormPage(props: Props) {
         const editData = data as UserEditFormData
         const { roleSelection, ...profileFields } = editData
         await updateMut.mutateAsync({
-          id: userId!,
+          id: user!.id,
           ...profileFields,
           phone: profileFields.phone || undefined,
         })
@@ -99,7 +99,7 @@ export function UserFormPage(props: Props) {
             parsed.kind === "system"
               ? { role: parsed.role, customRoleId: null }
               : { customRoleId: parsed.customRoleId }
-          await updateUserRoleMut.mutateAsync({ id: userId!, ...rolePayload })
+          await updateUserRoleMut.mutateAsync({ id: user!.id, ...rolePayload })
         }
         toast.success(t("users.edit.success"))
       } else {

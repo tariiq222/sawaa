@@ -9,6 +9,7 @@ import { Badge } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 import { useIntakeForms } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
+import { formatRef } from "@/lib/utils"
 
 interface Props {
   serviceId: string
@@ -73,7 +74,7 @@ export function IntakeFormsTab({ serviceId }: Props) {
             variant="ghost"
             size="sm"
             className="h-8 gap-1.5 text-xs"
-            onClick={() => router.push(`/intake-forms/${form.id}/edit`)}
+            onClick={() => router.push(`/intake-forms/${formatRef("FRM", form.ref)}/edit`)}
           >
             <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} className="size-3.5" />
             {t("common.edit")}

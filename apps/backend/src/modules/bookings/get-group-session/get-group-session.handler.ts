@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
+import { parseEntityRef } from '../../../common/parse-entity-ref';
 
 export interface GetGroupSessionQuery {
   groupSessionId: string;
@@ -44,8 +45,11 @@ export class GetGroupSessionHandler {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(query: GetGroupSessionQuery) {
+    const ref = parseEntityRef(query.groupSessionId, 'GS');
+    const where = ref.kind === 'uuid' ? { id: ref.id } : { ref: ref.ref };
+
     const session = await this.prisma.groupSession.findUnique({
-      where: { id: query.groupSessionId },
+      where,
       include: {
         enrollments: {
           select: {

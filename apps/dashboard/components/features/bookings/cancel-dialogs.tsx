@@ -93,8 +93,8 @@ export function ApproveCancelDialog({
           <AdminNotesField value={adminNotes} onChange={setAdminNotes} />
         </DialogBody>
         <DialogFooter>
-          <Button variant="outline" onClick={onReset}>{t("bookings.cancel.button.dismiss")}</Button>
-          <Button onClick={onApprove} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={onReset}>{t("bookings.cancel.button.dismiss")}</Button>
+          <Button size="sm" onClick={onApprove} disabled={loading}>
             {loading ? t("bookings.cancel.button.processing") : t("bookings.cancel.approve.button")}
           </Button>
         </DialogFooter>
@@ -134,8 +134,8 @@ export function RejectCancelDialog({
           <AdminNotesField value={adminNotes} onChange={setAdminNotes} placeholder={t("bookings.cancel.reject.reasonPlaceholder")} />
         </DialogBody>
         <DialogFooter>
-          <Button variant="outline" onClick={onReset}>{t("bookings.cancel.button.dismiss")}</Button>
-          <Button onClick={onReject} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={onReset}>{t("bookings.cancel.button.dismiss")}</Button>
+          <Button size="sm" onClick={onReject} disabled={loading}>
             {loading ? t("bookings.cancel.button.processing") : t("bookings.cancel.reject.button")}
           </Button>
         </DialogFooter>
@@ -197,8 +197,8 @@ export function AdminCancelDialog({
           <AdminNotesField value={adminNotes} onChange={setAdminNotes} />
         </DialogBody>
         <DialogFooter>
-          <Button variant="outline" onClick={onReset}>{t("bookings.cancel.button.dismiss")}</Button>
-          <Button variant="destructive" onClick={onCancel} disabled={loading || !cancelReason}>
+          <Button variant="outline" size="sm" onClick={onReset}>{t("bookings.cancel.button.dismiss")}</Button>
+          <Button variant="destructive" size="sm" onClick={onCancel} disabled={loading || !cancelReason}>
             {loading ? t("bookings.cancel.button.processing") : t("bookings.cancel.admin.button")}
           </Button>
         </DialogFooter>

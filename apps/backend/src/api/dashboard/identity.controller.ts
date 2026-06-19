@@ -140,7 +140,7 @@ export class DashboardIdentityController {
   @Get('users/:id')
   @CheckPermissions({ action: 'read', subject: 'User' })
   @ApiOperation({ summary: 'Get a user' })
-  @ApiParam({ name: 'id', description: 'User UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiParam({ name: 'id', description: 'User UUID or reference (e.g. USR-1024)', example: 'USR-1024' })
   @ApiOkResponse({
     description: 'User details',
     schema: {
@@ -159,7 +159,7 @@ export class DashboardIdentityController {
     },
   })
   @ApiResponse({ status: 404, description: 'User not found', type: ApiErrorDto })
-  async getUserEndpoint(@Param('id', ParseUUIDPipe) userId: string) {
+  async getUserEndpoint(@Param('id') userId: string) {
     return this.getUserHandler.execute({ userId });
   }
 

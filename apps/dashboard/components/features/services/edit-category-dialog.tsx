@@ -171,10 +171,10 @@ export function EditCategoryDialog({ category, open, onOpenChange }: Props) {
         </DialogBody>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             {t("services.categories.edit.cancel")}
           </Button>
-          <Button type="submit" form="edit-category-form" disabled={updateMut.isPending}>
+          <Button type="submit" form="edit-category-form" size="sm" disabled={updateMut.isPending}>
             {updateMut.isPending
               ? t("services.categories.edit.submitting")
               : t("services.categories.edit.submit")}

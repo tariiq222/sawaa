@@ -222,11 +222,12 @@ export function EditDepartmentDialog({
           <Button
             type="button"
             variant="outline"
+            size="sm"
             onClick={() => onOpenChange(false)}
           >
             {t("departments.edit.cancel")}
           </Button>
-          <Button type="submit" form="edit-dept-form" disabled={updateMut.isPending}>
+          <Button type="submit" form="edit-dept-form" size="sm" disabled={updateMut.isPending}>
             {updateMut.isPending ? t("departments.edit.submitting") : t("departments.edit.submit")}
           </Button>
         </DialogFooter>

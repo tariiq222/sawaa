@@ -98,13 +98,13 @@ export function OverviewReportPage() {
                   {
                     key: "revenue",
                     label: t("reports.overview.revenueSeries"),
-                    color: "#14a89a",
+                    color: "var(--chart-1)",
                     type: "area",
                   },
                   {
                     key: "bookings",
                     label: t("reports.overview.bookingsSeries"),
-                    color: "#ef7a6b",
+                    color: "var(--chart-3)",
                     type: "line",
                   },
                 ]}

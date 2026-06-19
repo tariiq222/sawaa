@@ -34,6 +34,7 @@ export function createEmployeeSchema(t?: (key: string) => string) {
     branchIds: z.array(z.string()).optional(),
     serviceIds: z.array(z.string()).optional(),
     isActive: z.boolean(),
+    isPublic: z.boolean(),
   })
 }
 
@@ -64,4 +65,5 @@ export const createEmployeeDefaults: CreateEmployeeFormData = {
   branchIds: [],
   serviceIds: [],
   isActive: true,
+  isPublic: false,
 }

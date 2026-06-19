@@ -34,6 +34,7 @@ import {
   useCategories,
 } from "@/hooks/use-services"
 import { fetchService } from "@/lib/api/services"
+import { formatRef } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
 import { useDepartmentOptions } from "@/hooks/use-departments"
 import { queryKeys } from "@/lib/query-keys"
@@ -75,13 +76,17 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
     retry: false,
   })
 
-  const { data: existingBookingTypes } = useServiceBookingTypes(isEdit ? serviceId! : "")
+  // Canonical UUID resolved from the fetched record — the route param may be a
+  // readable ref (e.g. SVC-12), but all downstream endpoints expect the UUID.
+  const apiServiceId = service?.id ?? ""
+
+  const { data: existingBookingTypes } = useServiceBookingTypes(apiServiceId)
   const { data: allCategories } = useCategories()
   const { options: allDepartments } = useDepartmentOptions()
 
   /* ── Mutations ── */
   const { createMut, updateMut } = useServiceMutations()
-  const bookingTypesMutation = useServiceBookingTypesMutation(serviceId ?? "")
+  const bookingTypesMutation = useServiceBookingTypesMutation(apiServiceId)
 
   /* ── Local state ── */
   const [bookingTypes, setBookingTypes] = useState<DraftBookingType[]>(EMPTY_BOOKING_TYPES)
@@ -138,22 +143,22 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
   const handleSubmit = async (data: CreateServiceFormData) => {
     setIsSubmitting(true)
     try {
-      if (isEdit && serviceId) {
+      if (isEdit && service) {
         const firstEnabled = bookingTypes.find((bt) => bt.enabled)
         await updateMut.mutateAsync({
-          id: serviceId,
+          id: service.id,
           ...buildPayload(data),
           price: firstEnabled ? sarToHalalas(firstEnabled.price) : undefined,
           durationMins: firstEnabled ? firstEnabled.durationMins : undefined,
         })
 
         if (pendingAvatarFile.current) {
-          await uploadServiceImage(serviceId, pendingAvatarFile.current)
+          await uploadServiceImage(service.id, pendingAvatarFile.current)
           pendingAvatarFile.current = null
         }
 
         if (bookingTypesDirty) {
-          await saveBookingTypesMutation(serviceId, bookingTypes, bookingTypesMutation)
+          await saveBookingTypesMutation(service.id, bookingTypes, bookingTypesMutation)
         }
 
         toast.success(t("services.edit.success"))
@@ -232,7 +237,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
 
   /* ── Breadcrumbs ── */
   const breadcrumbItems = isEdit && service
-    ? [{ label: t("nav.dashboard"), href: "/" }, { label: t("nav.services"), href: "/services" }, { label: isAr ? (service.nameAr ?? "…") : (service.nameEn ?? service.nameAr ?? "…"), href: `/services/${serviceId}/edit` }, { label: t("nav.edit") }]
+    ? [{ label: t("nav.dashboard"), href: "/" }, { label: t("nav.services"), href: "/services" }, { label: isAr ? (service.nameAr ?? "…") : (service.nameEn ?? service.nameAr ?? "…"), href: `/services/${formatRef("SVC", service.ref)}/edit` }, { label: t("nav.edit") }]
     : undefined
   const watchedCategoryId = form.watch("categoryId")
   const selectedCategory = allCategories?.find(
@@ -289,7 +294,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
             <BasicInfoTab
               form={form}
               onImageSelect={(file) => { pendingAvatarFile.current = file }}
-              serviceId={serviceId}
+              serviceId={service?.id}
             />
           </TabsContent>
 
@@ -306,7 +311,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
 
           <TabsContent value="employees" className="pt-4">
             <ServiceEmployeesTab
-              serviceId={serviceId}
+              serviceId={service?.id}
               isCreate={!isEdit}
               pendingIds={pendingEmployeeIds}
               onPendingChange={setPendingEmployeeIds}
@@ -316,8 +321,8 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
           </TabsContent>
 
           <TabsContent value="intake" className="pt-4">
-            {isEdit && serviceId ? (
-              <IntakeFormsTab serviceId={serviceId} />
+            {isEdit && service ? (
+              <IntakeFormsTab serviceId={service.id} />
             ) : (
               <div className="rounded-lg border border-border bg-surface-muted p-6 flex flex-col gap-4">
                 <p className="text-sm font-semibold text-foreground">{t("services.intake.createHint.title")}</p>
@@ -340,10 +345,10 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
         </Tabs>
 
         <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button type="button" variant="ghost" size="lg" className="rounded-full" onClick={() => router.push("/services")}>
+          <Button type="button" variant="ghost" size="lg" className="rounded-lg" onClick={() => router.push("/services")}>
             {t(isEdit ? "services.edit.cancel" : "services.create.cancel")}
           </Button>
-          <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting}>
+          <Button type="submit" size="lg" className="rounded-lg" disabled={isSubmitting}>
             {submitLabel}
           </Button>
         </div>

@@ -119,10 +119,10 @@ export class DashboardOrganizationSettingsController {
   @Get('services/:serviceId')
   @CheckPermissions({ action: 'read', subject: 'Service' })
   @ApiOperation({ summary: 'Get a service by id' })
-  @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiParam({ name: 'serviceId', description: 'Service UUID or reference (e.g. SVC-1024)', example: 'SVC-1024' })
   @ApiOkResponse({ description: 'Service details' })
   @ApiResponse({ status: 404, description: 'Service not found' })
-  getServiceEndpoint(@Param('serviceId', ParseUUIDPipe) serviceId: string) {
+  getServiceEndpoint(@Param('serviceId') serviceId: string) {
     return this.getService.execute({ serviceId });
   }
 
@@ -316,10 +316,10 @@ export class DashboardOrganizationSettingsController {
   @Get('intake-forms/:formId')
   @CheckPermissions({ action: 'read', subject: 'Setting' })
   @ApiOperation({ summary: 'Get an intake form by ID' })
-  @ApiParam({ name: 'formId', description: 'Intake form UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiParam({ name: 'formId', description: 'Intake form UUID or reference (e.g. FRM-1024)', example: 'FRM-1024' })
   @ApiOkResponse({ description: 'Intake form detail' })
   @ApiResponse({ status: 404, description: 'Intake form not found' })
-  getIntakeFormEndpoint(@Param('formId', ParseUUIDPipe) formId: string) {
+  getIntakeFormEndpoint(@Param('formId') formId: string) {
     return this.getIntakeForm.execute({ formId });
   }
 

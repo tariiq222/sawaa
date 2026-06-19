@@ -230,10 +230,10 @@ function RecordPaymentForm({ booking, onClose }: { booking: Booking; onClose: ()
       </DialogBody>
 
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onClose}>
+        <Button type="button" variant="outline" size="sm" onClick={onClose}>
           {t("bookings.recordPayment.cancel")}
         </Button>
-        <Button type="button" disabled={!canSubmit} onClick={onSubmit}>
+        <Button type="button" size="sm" disabled={!canSubmit} onClick={onSubmit}>
           {recordMut.isPending || applyDiscountMut.isPending
             ? t("bookings.recordPayment.submitting")
             : t("bookings.recordPayment.submit")}

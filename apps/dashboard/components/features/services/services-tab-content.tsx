@@ -17,6 +17,7 @@ import { useServices, useCategories, useServiceMutations } from "@/hooks/use-ser
 import { useBranches } from "@/hooks/use-branches"
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
+import { formatRef } from "@/lib/utils"
 import type { Service } from "@/lib/types/service"
 
 export function ServicesTabContent() {
@@ -40,7 +41,7 @@ export function ServicesTabContent() {
 
   const [detailTarget, setDetailTarget] = useState<Service | null>(null)
 
-  const handleEdit = (s: Service) => router.push(`/services/${s.id}/edit`)
+  const handleEdit = (s: Service) => router.push(`/services/${formatRef("SVC", s.ref)}/edit`)
   const handleDelete = async (s: Service) => {
     try {
       await deleteMut.mutateAsync(s.id)

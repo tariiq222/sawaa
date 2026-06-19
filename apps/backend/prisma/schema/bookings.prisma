@@ -142,6 +142,7 @@ enum GroupSessionStatus {
 
 model GroupSession {
   id                  String             @id @default(uuid())
+  ref                 Int                @unique @default(autoincrement())
   branchId            String
   employeeId          String
   serviceId           String

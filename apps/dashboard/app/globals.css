@@ -119,8 +119,8 @@
 
     /* Glassmorphism — light mode uses solid white for maximum contrast */
     --glass-blur: 0px;
-    --glass-bg: #FFFFFF;
-    --glass-bg-solid: #FFFFFF;
+    --glass-bg: #FBF8F2;
+    --glass-bg-solid: #FBF8F2;
     --glass-border: #E4E7EC;
 }
 
@@ -136,15 +136,15 @@
     --accent-ultra-light: rgba(231, 219, 196, 0.22);
     --background: #EAF8F4;
     --foreground: #2B3A39;
-    --surface: #FFFFFF;
-    --surface-solid: #FFFFFF;
-    --surface-muted: #F4FBF8;
+    --surface: #FBF8F2;
+    --surface-solid: #FBF8F2;
+    --surface-muted: #F3EEE5;
     --muted: #E6F3EF;
     --muted-foreground: #5C7872;
     /* --card is a shadcn-compat alias of --surface. Do not diverge. */
     --card: var(--surface);
     --card-foreground: #2B3A39;
-    --popover: #FFFFFF;
+    --popover: #FBF8F2;
     --popover-foreground: #2B3A39;
     --secondary: #E6F3EF;
     --secondary-foreground: #2B3A39;
@@ -179,7 +179,7 @@
     --chart-3: #C2410C;
     --chart-4: #6D28D9;
     --chart-5: #DB2777;
-    --sidebar: #FFFFFF;
+    --sidebar: #FBF8F2;
     --sidebar-foreground: #2B3A39;
     --sidebar-primary: #1E9E83;
     --sidebar-primary-foreground: #FFFFFF;

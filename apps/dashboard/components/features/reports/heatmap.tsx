@@ -89,8 +89,8 @@ function Row({
             style={{
               background:
                 count > 0
-                  ? `rgba(20, 168, 154, ${0.1 + intensity * 0.9})`
-                  : "rgba(20, 168, 154, 0.05)",
+                  ? `color-mix(in srgb, var(--primary) ${Math.round((0.1 + intensity * 0.9) * 100)}%, transparent)`
+                  : "color-mix(in srgb, var(--primary) 5%, transparent)",
             }}
           >
             {count > 0 ? count : "—"}

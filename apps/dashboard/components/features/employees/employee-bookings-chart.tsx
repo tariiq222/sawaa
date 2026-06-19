@@ -18,21 +18,21 @@ import {
 /* ─── Constants ─── */
 
 const STATUS_HEX: Record<BookingStatus, string> = {
-  completed: "hsl(var(--success))",
-  confirmed: "hsl(var(--primary))",
-  pending: "hsl(var(--warning))",
-  pending_group_fill: "hsl(var(--warning))",
-  awaiting_payment: "hsl(var(--warning))",
-  deposit_paid: "hsl(var(--accent))",
-  cancelled: "hsl(var(--error))",
-  cancel_requested: "hsl(var(--warning))",
-  no_show: "hsl(var(--muted-foreground))",
-  expired: "hsl(var(--muted))",
+  completed: "var(--success)",
+  confirmed: "var(--primary)",
+  pending: "var(--warning)",
+  pending_group_fill: "var(--warning)",
+  awaiting_payment: "var(--warning)",
+  deposit_paid: "var(--accent)",
+  cancelled: "var(--error)",
+  cancel_requested: "var(--warning)",
+  no_show: "var(--muted-foreground)",
+  expired: "var(--muted)",
 }
 const TYPE_HEX: Record<BookingType, string> = {
-  individual: "hsl(var(--primary))",
-  walk_in: "hsl(var(--accent))",
-  group: "hsl(var(--accent))",
+  individual: "var(--primary)",
+  walk_in: "var(--accent)",
+  group: "var(--chart-1)",
 }
 const STATUS_KEY: Record<BookingStatus, string> = {
   completed: "employees.chart.status.completed",
@@ -267,7 +267,7 @@ export function EmployeeBookingsChart({ employeeId }: Props) {
               <>
                 <LineChart
                   points={linePoints}
-                  color="hsl(var(--success))"
+                  color="var(--success)"
                   height={100}
                   formatValue={(v) => `${fmtRevenue(v, locale)} ${t("employees.chart.sar")}`}
                 />

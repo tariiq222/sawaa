@@ -126,6 +126,7 @@ model Payment {
 
 model Coupon {
   id             String       @id @default(uuid())
+  ref            Int          @unique @default(autoincrement())
   code           String       @unique
   discountType   DiscountType
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.

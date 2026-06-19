@@ -8,6 +8,7 @@ import type { PaginatedQuery } from "./common"
 
 export interface ServiceCategory {
   id: string
+  ref: number
   nameEn: string | null
   nameAr: string
   sortOrder: number
@@ -30,6 +31,7 @@ export interface CategoryListQuery extends PaginatedQuery {
 
 export interface Service {
   id: string
+  ref: number
   nameEn: string | null
   nameAr: string
   descriptionEn: string | null
@@ -101,6 +103,7 @@ export interface ServiceDurationOption {
 
 export interface IntakeForm {
   id: string
+  ref: number
   nameAr: string
   nameEn: string | null
   isActive: boolean

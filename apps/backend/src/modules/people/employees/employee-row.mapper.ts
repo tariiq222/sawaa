@@ -8,6 +8,7 @@ type EmployeeWithRelations = Employee & {
 
 export interface EmployeeListItem {
   id: string;
+  ref: number;
   userId: string | null;
   name: string;
   nameAr: string | null;
@@ -49,6 +50,7 @@ export function mapEmployeeRow(
 ): EmployeeListItem {
   return {
     id: e.id,
+    ref: e.ref,
     userId: e.userId,
     name: e.name,
     nameAr: e.nameAr,

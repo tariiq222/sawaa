@@ -3,6 +3,8 @@
 import { Button } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
+import { AlertCircleIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 
 interface ErrorBannerProps {
   message: string
@@ -22,17 +24,21 @@ export function ErrorBanner({
 
   return (
     <div
+      role="alert"
       className={cn(
-        "rounded-lg border border-border bg-card p-4",
+        "rounded-lg border border-error/30 bg-error-soft p-4 flex items-start gap-3",
         className
       )}
     >
-      <p className="text-sm text-error">{message}</p>
-      {onRetry && (
-        <Button variant="outline" size="sm" className="mt-2" onClick={onRetry}>
-          {label}
-        </Button>
-      )}
+      <HugeiconsIcon icon={AlertCircleIcon} size={16} className="mt-0.5 shrink-0 text-error" aria-hidden />
+      <div className="flex flex-col gap-2">
+        <p className="text-sm text-error">{message}</p>
+        {onRetry && (
+          <Button variant="outline" size="sm" onClick={onRetry}>
+            {label}
+          </Button>
+        )}
+      </div>
     </div>
   )
 }

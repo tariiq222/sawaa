@@ -268,10 +268,10 @@ export function CreateGroupSessionDialog({ open, onOpenChange }: Props) {
                 {t("groupSessions.create.branchLoading")}
               </p>
             )}
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               {t("common.cancel")}
             </Button>
-            <Button type="submit" disabled={createMut.isPending || !branchReady}>
+            <Button type="submit" size="sm" disabled={createMut.isPending || !branchReady}>
               {createMut.isPending ? t("groupSessions.create.submitting") : t("groupSessions.create.submit")}
             </Button>
           </DialogFooter>

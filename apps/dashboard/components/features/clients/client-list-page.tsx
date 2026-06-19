@@ -19,6 +19,7 @@ import { Skeleton } from "@sawaa/ui"
 import { useClients, useClientMutations } from "@/hooks/use-clients"
 import { useLocale } from "@/components/locale-provider"
 import { useAuth } from "@/components/providers/auth-provider"
+import { formatRef } from "@/lib/utils"
 import type { Client } from "@/lib/types/client"
 
 export function ClientListPage() {
@@ -34,9 +35,9 @@ export function ClientListPage() {
   const hasFilters = isActive !== undefined || search.length > 0
 
   const columns = getClientColumns({
-    onRowClick: (p) => router.push(`/clients/${p.id}`),
-    onViewClick: (p) => router.push(`/clients/${p.id}`),
-    onEditClick: canDo("client", "update") ? (p) => router.push(`/clients/${p.id}/edit`) : undefined,
+    onRowClick: (p) => router.push(`/clients/${formatRef("CL", p.ref)}`),
+    onViewClick: (p) => router.push(`/clients/${formatRef("CL", p.ref)}`),
+    onEditClick: canDo("client", "update") ? (p) => router.push(`/clients/${formatRef("CL", p.ref)}/edit`) : undefined,
     onToggleActive: canDo("client", "update") ? (p) => {
       toggleActiveMut.mutate(
         { id: p.id, isActive: !p.isActive },

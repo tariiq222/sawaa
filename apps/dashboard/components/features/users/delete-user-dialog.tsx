@@ -56,11 +56,12 @@ export function DeleteUserDialog({ user, open, onOpenChange }: DeleteUserDialogP
         </DialogHeader>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             {t("users.delete.cancel")}
           </Button>
           <Button
             variant="destructive"
+            size="sm"
             onClick={handleDelete}
             disabled={deleteMut.isPending}
           >

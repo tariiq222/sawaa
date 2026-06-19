@@ -24,11 +24,11 @@ import { PaymentActions } from "./payment-actions"
 /* ─── Status Styles ─── */
 
 const statusStyles: Record<string, string> = {
-  PENDING: "border-warning/30 bg-warning/10 text-warning",
-  PENDING_VERIFICATION: "border-warning/30 bg-warning/10 text-warning",
-  COMPLETED: "border-success/30 bg-success/10 text-success",
-  REFUNDED: "border-info/30 bg-info/10 text-info",
-  FAILED: "border-destructive/30 bg-destructive/10 text-destructive",
+  PENDING: "border-warning/40 bg-warning-soft text-warning",
+  PENDING_VERIFICATION: "border-warning/40 bg-warning-soft text-warning",
+  COMPLETED: "border-success/40 bg-success-soft text-success",
+  REFUNDED: "border-refunded/40 bg-refunded-soft text-refunded",
+  FAILED: "border-error/40 bg-error-soft text-error",
 }
 
 /** Prisma PaymentStatus enum → existing `detail.paymentStatus.*` UI keys. */

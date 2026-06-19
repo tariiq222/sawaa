@@ -358,6 +358,7 @@ export function useEmployeeForm({
         educationAr: data.educationAr || undefined,
         avatarUrl: data.avatarUrl || undefined,
         isActive: data.isActive,
+        isPublic: data.isPublic,
       })
       newId = result.employee.id
     } catch (err) {
