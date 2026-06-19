@@ -1,41 +1,22 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useForm, Controller } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { toast } from "sonner"
-
-import { Button } from "@sawaa/ui"
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetBody,
-  SheetFooter,
   SheetHeader,
   SheetTitle,
+  Skeleton,
 } from "@sawaa/ui"
-import { Label } from "@sawaa/ui"
-import { Input } from "@sawaa/ui"
-import { Switch } from "@sawaa/ui"
+import { toast } from "sonner"
+
 import { useLocale } from "@/components/locale-provider"
-import { useServiceBookingTypes } from "@/hooks/use-services"
-import { useEmployeeServiceTypes } from "@/hooks/use-employees"
+import { useServiceEmployees } from "@/hooks/use-services"
 import { useEmployeeServiceMutations } from "@/hooks/use-employee-mutations"
-import { EmployeeServiceTypesEditor } from "./employee-service-types-editor"
-import { halalasToSarNumber } from "@/lib/money"
-import {
-  buildEmployeeServiceOptionsPayload,
-  makeDefaultEmployeeTypeConfigs,
-} from "./employee-service-option-overrides"
-import type {
-  EmployeeService,
-  EmployeeTypeConfigPayload,
-} from "@/lib/types/employee"
-import {
-  editEmployeeServiceSchema,
-  type EditEmployeeServiceFormData,
-} from "@/lib/schemas/employee.schema"
+import { EmployeeServiceToggles } from "@/components/features/services/employee-service-toggles"
+import { EmployeeCustomPricingRow } from "@/components/features/services/employee-custom-pricing-row"
+import type { EmployeeService } from "@/lib/types/employee"
 
 /* ─── Props ─── */
 
@@ -49,96 +30,29 @@ interface EditEmployeeServiceSheetProps {
 /* ─── Component ─── */
 
 export function EditEmployeeServiceSheet({
-  employeeId,
+  employeeId: _employeeId,
   employeeService: ps,
   open,
   onOpenChange,
 }: EditEmployeeServiceSheetProps) {
   const { locale, t } = useLocale()
-  const { updateMut, optionsMut } = useEmployeeServiceMutations(employeeId)
 
-  /* Types state managed outside react-hook-form */
-  const [typeConfigs, setTypeConfigs] = useState<EmployeeTypeConfigPayload[]>(
-    []
+  const serviceId = ps?.serviceId ?? ""
+  const { data: serviceEmployees, isLoading } = useServiceEmployees(serviceId)
+
+  // Find the ServiceEmployee record for this specific EmployeeService assignment
+  // (matched by EmployeeService.id which equals ServiceEmployee.id)
+  const serviceEmployee = serviceEmployees?.find((se) => se.id === ps?.id)
+
+  const { durationsMut } = useEmployeeServiceMutations(
+    serviceEmployee?.employee.id ?? "",
   )
-
-  const serviceId = ps?.serviceId ?? null
-  const { data: serviceBookingTypes } = useServiceBookingTypes(serviceId)
-  const { data: existingTypes } = useEmployeeServiceTypes(employeeId, serviceId)
-
-  const form = useForm<EditEmployeeServiceFormData>({
-    resolver: zodResolver(editEmployeeServiceSchema),
-    defaultValues: {
-      bufferMinutes: 0,
-      isActive: true,
-    },
-  })
-
-  /* Populate from current data */
-  useEffect(() => {
-    if (!ps || !open) return
-    form.reset({
-      bufferMinutes: ps.bufferMinutes,
-      isActive: ps.isActive,
-    })
-  }, [ps, open, form])
-
-  /* Populate type configs from existing employee service types */
-  useEffect(() => {
-    if (!existingTypes || !open) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTypeConfigs(
-      existingTypes.map((et) => ({
-        deliveryType: et.deliveryType,
-        // Server stores price in halalas; the editor inputs collect SAR.
-        price: et.price != null ? halalasToSarNumber(et.price) : null,
-        duration: et.duration,
-        isActive: et.isActive,
-      }))
-    )
-  }, [existingTypes, open])
-
-  /* Fallback: if no existing types but we have service booking types, init from those */
-  useEffect(() => {
-    if (existingTypes && existingTypes.length > 0) return
-    if (!ps || !serviceBookingTypes || !open) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTypeConfigs(makeDefaultEmployeeTypeConfigs(serviceBookingTypes))
-  }, [existingTypes, serviceBookingTypes, ps, open])
 
   const serviceName = ps
     ? locale === "ar"
       ? ps.service.nameAr
       : ps.service.nameEn
     : ""
-
-  const onSubmit = form.handleSubmit(
-    async (data: EditEmployeeServiceFormData) => {
-      if (!ps) return
-      try {
-        await updateMut.mutateAsync({
-          serviceId: ps.serviceId,
-          payload: {
-            isActive: data.isActive,
-          },
-        })
-        const optionsPayload = buildEmployeeServiceOptionsPayload({
-          typeConfigs,
-        })
-        if (optionsPayload) {
-          await optionsMut.mutateAsync({
-            serviceId: ps.serviceId,
-            payload: optionsPayload,
-          })
-        }
-        toast.success(t("employees.services.updateSuccess"))
-        onOpenChange(false)
-      } catch (err) {
-        console.error(err)
-        toast.error(t("employees.services.updateError"))
-      }
-    }
-  )
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -151,69 +65,42 @@ export function EditEmployeeServiceSheet({
         </SheetHeader>
 
         <SheetBody>
-          <form
-            id="edit-employee-service-form"
-            onSubmit={onSubmit}
-            className="flex flex-col gap-5"
-          >
-            {serviceBookingTypes && (
-              <EmployeeServiceTypesEditor
-                serviceBookingTypes={serviceBookingTypes}
-                value={typeConfigs}
-                onChange={setTypeConfigs}
+          {isLoading || !serviceEmployee ? (
+            <div className="flex flex-col gap-3">
+              <Skeleton className="h-24 w-full rounded-lg" />
+              <Skeleton className="h-32 w-full rounded-lg" />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <EmployeeServiceToggles
+                item={serviceEmployee}
+                serviceId={serviceId}
+                isSaving={false}
                 t={t}
-                locale={locale}
               />
-            )}
-
-            {/* Buffer */}
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">
-                {t("employees.services.bufferMinutes")}
-              </Label>
-              <Input
-                type="number"
-                min="0"
-                className="tabular-nums"
-                {...form.register("bufferMinutes")}
-              />
-            </div>
-
-            {/* Active Toggle */}
-            <div className="flex items-center justify-between">
-              <Label>{t("common.active")}</Label>
-              <Controller
-                control={form.control}
-                name="isActive"
-                render={({ field }) => (
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                )}
+              <EmployeeCustomPricingRow
+                item={serviceEmployee}
+                serviceId={serviceId}
+                employeeId={serviceEmployee.employee.id}
+                t={t}
+                isSaving={durationsMut.isPending}
+                onSave={(payload) =>
+                  durationsMut.mutate(
+                    { serviceId, payload },
+                    {
+                      onSuccess: () =>
+                        toast.success(t("services.employees.durations.saved")),
+                      onError: () =>
+                        toast.error(
+                          t("services.employees.durations.saveError"),
+                        ),
+                    },
+                  )
+                }
               />
             </div>
-          </form>
+          )}
         </SheetBody>
-
-        <SheetFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
-            {t("common.cancel")}
-          </Button>
-          <Button
-            type="submit"
-            form="edit-employee-service-form"
-            disabled={updateMut.isPending || optionsMut.isPending}
-          >
-            {updateMut.isPending || optionsMut.isPending
-              ? t("employees.services.saving")
-              : t("common.save")}
-          </Button>
-        </SheetFooter>
       </SheetContent>
     </Sheet>
   )
