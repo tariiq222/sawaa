@@ -1,5 +1,6 @@
 "use client"
 
+import type { ReactNode } from "react"
 import { useEffect } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -109,172 +110,154 @@ export function CreateGroupSessionDialog({ open, onOpenChange }: Props) {
         <DialogHeader>
           <DialogTitle>{t("groupSessions.create.title")}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Employee */}
-          <div className="flex flex-col gap-1.5">
-            <Label>{t("groupSessions.form.employee")}</Label>
-            <Controller
-              control={control}
-              name="employeeId"
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("groupSessions.form.selectEmployee")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {employees.map((emp) => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.user.firstName} {emp.user.lastName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.employeeId && (
-              <p className="text-xs text-destructive">{errors.employeeId.message as string}</p>
-            )}
-          </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-8">
+          <section className="flex flex-col gap-4">
+            <SectionHeader>{t("groupSessions.section.basics")}</SectionHeader>
 
-          {/* Service */}
-          <div className="flex flex-col gap-1.5">
-            <Label>{t("groupSessions.form.service")}</Label>
-            <Controller
-              control={control}
-              name="serviceId"
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("groupSessions.form.selectService")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {services.map((svc) => (
-                      <SelectItem key={svc.id} value={svc.id}>
-                        {svc.nameAr}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.serviceId && (
-              <p className="text-xs text-destructive">{errors.serviceId.message as string}</p>
-            )}
-          </div>
-
-          {/* Title */}
-          <div className="flex flex-col gap-1.5">
-            <Label>{t("groupSessions.form.title")}</Label>
-            <Input {...register("title")} />
-            {errors.title && (
-              <p className="text-xs text-destructive">{errors.title.message as string}</p>
-            )}
-          </div>
-
-          {/* scheduledAt */}
-          <div className="flex flex-col gap-1.5">
-            <Label>{t("groupSessions.form.scheduledAt")}</Label>
-            <Controller
-              control={control}
-              name="scheduledAt"
-              render={({ field }) => (
-                <DateTimeInput
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  error={!!errors.scheduledAt}
-                />
-              )}
-            />
-            {errors.scheduledAt && (
-              <p className="text-xs text-destructive">{errors.scheduledAt.message as string}</p>
-            )}
-          </div>
-
-          {/* durationMins + maxCapacity */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label>{t("groupSessions.form.durationMins")}</Label>
-              <Input type="number" min={1} {...register("durationMins")} />
-              {errors.durationMins && (
-                <p className="text-xs text-destructive">{errors.durationMins.message as string}</p>
-              )}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>{t("groupSessions.form.maxCapacity")}</Label>
-              <Input type="number" min={1} {...register("maxCapacity")} />
-              {errors.maxCapacity && (
-                <p className="text-xs text-destructive">{errors.maxCapacity.message as string}</p>
-              )}
-            </div>
-          </div>
-
-          {/* price + deliveryType */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label>{t("groupSessions.form.price")}</Label>
-              <Input type="number" min={0} step="0.01" {...register("priceInSar")} />
-              {errors.priceInSar && (
-                <p className="text-xs text-destructive">{errors.priceInSar.message as string}</p>
-              )}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>{t("groupSessions.form.deliveryType")}</Label>
+            <Field label={t("groupSessions.form.employee")} error={errors.employeeId?.message as string}>
               <Controller
                 control={control}
-                name="deliveryType"
+                name="employeeId"
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder={t("groupSessions.form.selectEmployee")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="IN_PERSON">{t("groupSessions.deliveryType.inPerson")}</SelectItem>
-                      <SelectItem value="ONLINE">{t("groupSessions.deliveryType.online")}</SelectItem>
+                      {employees.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.user.firstName} {emp.user.lastName}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 )}
               />
-            </div>
-          </div>
+            </Field>
 
-          {/* isPublic switch */}
-          <div className="flex items-center gap-3">
-            <Controller
-              control={control}
-              name="isPublic"
-              render={({ field }) => (
-                <Switch
-                  checked={field.value ?? false}
-                  onCheckedChange={field.onChange}
+            <Field label={t("groupSessions.form.service")} error={errors.serviceId?.message as string}>
+              <Controller
+                control={control}
+                name="serviceId"
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("groupSessions.form.selectService")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {services.map((svc) => (
+                        <SelectItem key={svc.id} value={svc.id}>
+                          {svc.nameAr}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </Field>
+
+            <Field label={t("groupSessions.form.title")} error={errors.title?.message as string}>
+              <Input {...register("title")} />
+            </Field>
+          </section>
+
+          <section className="flex flex-col gap-4">
+            <SectionHeader>{t("groupSessions.section.schedule")}</SectionHeader>
+
+            <div className="grid grid-cols-[1fr_auto] gap-4">
+              <Field label={t("groupSessions.form.scheduledAt")} error={errors.scheduledAt?.message as string}>
+                <Controller
+                  control={control}
+                  name="scheduledAt"
+                  render={({ field }) => (
+                    <DateTimeInput
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      error={!!errors.scheduledAt}
+                    />
+                  )}
                 />
-              )}
-            />
-            <Label className="cursor-pointer">{t("groupSessions.form.isPublic")}</Label>
-          </div>
+              </Field>
+              <Field label={t("groupSessions.form.durationMins")} error={errors.durationMins?.message as string}>
+                <Input type="number" min={1} className="w-32 tabular-nums" {...register("durationMins")} />
+              </Field>
+            </div>
+          </section>
 
-          {/* Descriptions */}
-          <div className="flex flex-col gap-1.5">
-            <Label>{t("groupSessions.form.descriptionAr")}</Label>
-            <Textarea rows={2} {...register("descriptionAr")} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>{t("groupSessions.form.descriptionEn")}</Label>
-            <Textarea rows={2} {...register("descriptionEn")} />
-          </div>
+          <section className="flex flex-col gap-4">
+            <SectionHeader>{t("groupSessions.section.capacityPrice")}</SectionHeader>
 
-          {/* Public descriptions (only when isPublic=true) */}
-          {isPublic && (
-            <>
-              <div className="flex flex-col gap-1.5">
-                <Label>{t("groupSessions.form.publicDescriptionAr")}</Label>
-                <Textarea rows={2} {...register("publicDescriptionAr")} />
+            <div className="grid grid-cols-3 gap-4">
+              <Field label={t("groupSessions.form.maxCapacity")} error={errors.maxCapacity?.message as string}>
+                <Input type="number" min={1} className="tabular-nums" {...register("maxCapacity")} />
+              </Field>
+              <Field label={t("groupSessions.form.price")} error={errors.priceInSar?.message as string}>
+                <Input type="number" min={0} step="0.01" className="tabular-nums" {...register("priceInSar")} />
+              </Field>
+              <Field label={t("groupSessions.form.deliveryType")}>
+                <Controller
+                  control={control}
+                  name="deliveryType"
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="IN_PERSON">{t("groupSessions.deliveryType.inPerson")}</SelectItem>
+                        <SelectItem value="ONLINE">{t("groupSessions.deliveryType.online")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
+            </div>
+          </section>
+
+          <section className="flex flex-col gap-4">
+            <SectionHeader>{t("groupSessions.section.details")}</SectionHeader>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Field label={t("groupSessions.form.descriptionAr")}>
+                <Textarea rows={2} {...register("descriptionAr")} />
+              </Field>
+              <Field label={t("groupSessions.form.descriptionEn")}>
+                <Textarea rows={2} {...register("descriptionEn")} />
+              </Field>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 px-4 py-3">
+              <div className="flex flex-col gap-0.5">
+                <Label htmlFor="gs-public" className="cursor-pointer">
+                  {t("groupSessions.form.isPublic")}
+                </Label>
+                <p className="text-xs text-muted-foreground">{t("groupSessions.form.isPublicHint")}</p>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>{t("groupSessions.form.publicDescriptionEn")}</Label>
-                <Textarea rows={2} {...register("publicDescriptionEn")} />
+              <Controller
+                control={control}
+                name="isPublic"
+                render={({ field }) => (
+                  <Switch id="gs-public" checked={field.value ?? false} onCheckedChange={field.onChange} />
+                )}
+              />
+            </div>
+
+            <div
+              className="grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none"
+              style={{ gridTemplateRows: isPublic ? "1fr" : "0fr" }}
+            >
+              <div className="overflow-hidden">
+                <div className="grid grid-cols-2 gap-4 pt-1">
+                  <Field label={t("groupSessions.form.publicDescriptionAr")}>
+                    <Textarea rows={2} {...register("publicDescriptionAr")} />
+                  </Field>
+                  <Field label={t("groupSessions.form.publicDescriptionEn")}>
+                    <Textarea rows={2} {...register("publicDescriptionEn")} />
+                  </Field>
+                </div>
               </div>
-            </>
-          )}
+            </div>
+          </section>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -287,5 +270,29 @@ export function CreateGroupSessionDialog({ open, onOpenChange }: Props) {
         </form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function SectionHeader({ children }: { children: ReactNode }) {
+  return (
+    <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{children}</h3>
+  )
+}
+
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string
+  error?: string
+  children: ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label>{label}</Label>
+      {children}
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
   )
 }
