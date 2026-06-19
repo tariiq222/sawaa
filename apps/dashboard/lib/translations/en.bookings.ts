@@ -262,6 +262,8 @@ export const enBookings: Record<string, string> = {
   "bookings.wizard.step.datetime.dayTitle": "Day",
   "bookings.wizard.step.datetime.timeTitle": "Available Times",
   "bookings.wizard.step.datetime.noSlots": "No available slots",
+  "bookings.wizard.step.datetime.slotsError": "Could not load available slots, please try again",
+  "bookings.wizard.step.datetime.daysError": "Could not load available days",
   "bookings.wizard.step.confirm.title": "Confirm Booking",
   "bookings.wizard.step.confirm.summaryTitle": "Booking Summary",
   "bookings.wizard.step.confirm.client": "Client",

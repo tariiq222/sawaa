@@ -46,14 +46,14 @@ export function StepDatetime({
 
   const days = useMemo(() => generateDays(Math.min(maxAdvanceDays, 90)), [maxAdvanceDays])
 
-  const { slots = [], slotsLoading, selectedDuration } = useCreateBookingSlots({
+  const { slots = [], slotsLoading, slotsError, selectedDuration } = useCreateBookingSlots({
     employeeId,
     serviceId,
     deliveryType,
     date: selectedDate ?? '',
   })
 
-  const { availableDates, loading: daysLoading, enabled: daysEnabled } = useAvailableDays({
+  const { availableDates, loading: daysLoading, enabled: daysEnabled, daysError } = useAvailableDays({
     employeeId,
     serviceId,
     deliveryType,
@@ -103,6 +103,11 @@ export function StepDatetime({
             )
           })}
         </div>
+        {daysError && !daysLoading && (
+          <p className="mt-1 text-xs text-destructive">
+            {t('bookings.wizard.step.datetime.daysError')}
+          </p>
+        )}
       </div>
 
       {selectedDate && (
@@ -117,6 +122,10 @@ export function StepDatetime({
                 <div key={`skeleton-${i}`} className="h-10 animate-pulse rounded-lg bg-muted" />
               ))}
             </div>
+          ) : slotsError ? (
+            <p className="text-sm text-destructive">
+              {t('bookings.wizard.step.datetime.slotsError')}
+            </p>
           ) : slots.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               {t('bookings.wizard.step.datetime.noSlots')}

@@ -49,7 +49,7 @@ export function useCreateBookingSlots({
 
   const canFetchSlots = !!employeeId && !!date && !!selectedDuration
 
-  const { data: rawSlots = [], isLoading: slotsLoading } = useQuery({
+  const { data: rawSlots = [], isLoading: slotsLoading, isError: slotsError } = useQuery({
     queryKey: [...queryKeys.employees.slots(employeeId, date), selectedDuration, serviceId, deliveryType],
     queryFn: () =>
       fetchSlots(employeeId, date, selectedDuration, {
@@ -79,6 +79,7 @@ export function useCreateBookingSlots({
     canFetchServiceTypes,
     slots,
     slotsLoading,
+    slotsError,
   }
 }
 
@@ -104,7 +105,7 @@ export function useAvailableDays({
   days = 30,
 }: UseAvailableDaysOptions) {
   const enabled = !!employeeId && !!serviceId && !!deliveryType && !!startDate && !!duration
-  const { data = [], isLoading } = useQuery({
+  const { data = [], isLoading, isError: daysError } = useQuery({
     queryKey: ["available-days", employeeId, serviceId, deliveryType, startDate, days, duration],
     queryFn: () =>
       fetchAvailableDays(employeeId, startDate, {
@@ -117,5 +118,5 @@ export function useAvailableDays({
     staleTime: 60 * 1000,
   })
   const set = React.useMemo(() => new Set(data), [data])
-  return { availableDates: set, loading: isLoading, enabled }
+  return { availableDates: set, loading: isLoading, enabled, daysError }
 }

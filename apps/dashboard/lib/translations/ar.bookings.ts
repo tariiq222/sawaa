@@ -262,6 +262,8 @@ export const arBookings: Record<string, string> = {
   "bookings.wizard.step.datetime.dayTitle": "اليوم",
   "bookings.wizard.step.datetime.timeTitle": "الوقت المتاح",
   "bookings.wizard.step.datetime.noSlots": "لا توجد مواعيد متاحة",
+  "bookings.wizard.step.datetime.slotsError": "تعذّر تحميل المواعيد، يرجى المحاولة مرة أخرى",
+  "bookings.wizard.step.datetime.daysError": "تعذّر تحميل الأيام المتاحة",
   "bookings.wizard.step.confirm.title": "تأكيد الحجز",
   "bookings.wizard.step.confirm.summaryTitle": "ملخص الحجز",
   "bookings.wizard.step.confirm.client": "المستفيد",
