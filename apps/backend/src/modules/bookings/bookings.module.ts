@@ -48,6 +48,11 @@ import { CreateEmployeeBookingHandler } from './create-employee-booking/create-e
 import { ValidateCouponService } from './coupons/validate-coupon.service';
 import { CreateBundleBookingHandler } from './create-bundle-booking/create-bundle-booking.handler';
 import { GroupSessionCapacityService } from './group-session/group-session-capacity.service';
+import { CreateGroupSessionHandler } from './create-group-session/create-group-session.handler';
+import { ListGroupSessionsHandler } from './list-group-sessions/list-group-sessions.handler';
+import { GetGroupSessionHandler } from './get-group-session/get-group-session.handler';
+import { CancelGroupSessionHandler } from './cancel-group-session/cancel-group-session.handler';
+import { DashboardGroupSessionsController } from '../../api/dashboard/group-sessions.controller';
 
 const handlers = [
   CreateBookingHandler,
@@ -89,6 +94,10 @@ const handlers = [
   ValidateCouponService,
   CreateBundleBookingHandler,
   GroupSessionCapacityService,
+  CreateGroupSessionHandler,
+  ListGroupSessionsHandler,
+  GetGroupSessionHandler,
+  CancelGroupSessionHandler,
 ];
 
 @Module({
@@ -99,7 +108,7 @@ const handlers = [
     ZoomModule,
     FinanceModule,
   ],
-  controllers: [DashboardBookingsController],
+  controllers: [DashboardBookingsController, DashboardGroupSessionsController],
   providers: [...handlers, ZoomMeetingWorker, PaymentCompletedEventHandler, DepositPaidEventHandler, RefundCompletedEventHandler],
   exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CreatePublicBookingHandler, NoShowBookingHandler],
 })

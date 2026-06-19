@@ -486,6 +486,16 @@
         ],
         "type": "object"
       },
+      "CancelGroupSessionDto": {
+        "properties": {
+          "cancelReason": {
+            "description": "Reason for cancelling the session",
+            "example": "Counselor unavailable",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "CancellationReason": {
         "description": "Reason for cancellation",
         "enum": [
@@ -1599,6 +1609,96 @@
         ],
         "type": "object"
       },
+      "CreateGroupSessionDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch where session takes place",
+            "example": "00000000-...",
+            "type": "string"
+          },
+          "deliveryType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryType"
+              }
+            ],
+            "description": "Delivery channel",
+            "example": "IN_PERSON"
+          },
+          "descriptionAr": {
+            "description": "Arabic description",
+            "example": "وصف الجلسة",
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English description",
+            "example": "Session description",
+            "type": "string"
+          },
+          "durationMins": {
+            "description": "Duration in minutes",
+            "example": 90,
+            "type": "number"
+          },
+          "employeeId": {
+            "description": "Employee leading the session",
+            "example": "00000000-...",
+            "type": "string"
+          },
+          "isPublic": {
+            "description": "Make session visible on public website",
+            "example": false,
+            "type": "boolean"
+          },
+          "maxCapacity": {
+            "description": "Maximum number of attendees",
+            "example": 20,
+            "type": "number"
+          },
+          "price": {
+            "description": "Price in integer halalas",
+            "example": 30000,
+            "type": "number"
+          },
+          "publicDescriptionAr": {
+            "description": "Public Arabic description",
+            "example": "وصف عام",
+            "type": "string"
+          },
+          "publicDescriptionEn": {
+            "description": "Public English description",
+            "example": "Public description",
+            "type": "string"
+          },
+          "scheduledAt": {
+            "description": "ISO 8601 start datetime",
+            "example": "2026-07-01T10:00:00.000Z",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Service linked to this session",
+            "example": "00000000-...",
+            "type": "string"
+          },
+          "title": {
+            "description": "Session title",
+            "example": "Family Communication Workshop",
+            "type": "string"
+          }
+        },
+        "required": [
+          "branchId",
+          "employeeId",
+          "serviceId",
+          "title",
+          "scheduledAt",
+          "durationMins",
+          "maxCapacity",
+          "price",
+          "deliveryType"
+        ],
+        "type": "object"
+      },
       "CreateIntakeFormDto": {
         "properties": {
           "fields": {
@@ -2600,6 +2700,15 @@
           "to"
         ],
         "type": "object"
+      },
+      "GroupSessionStatus": {
+        "enum": [
+          "OPEN",
+          "FULL",
+          "CANCELLED",
+          "COMPLETED"
+        ],
+        "type": "string"
       },
       "InitClientPaymentDto": {
         "properties": {
@@ -12858,6 +12967,389 @@
         "summary": "Approve or reject a pending bank transfer payment",
         "tags": [
           "Dashboard / Finance"
+        ]
+      }
+    },
+    "/api/v1/dashboard/group-sessions": {
+      "get": {
+        "operationId": "DashboardGroupSessionsController_list",
+        "parameters": [
+          {
+            "description": "Filter by session status",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/GroupSessionStatus"
+            }
+          },
+          {
+            "description": "Return only upcoming sessions (scheduledAt >= now)",
+            "in": "query",
+            "name": "upcoming",
+            "required": false,
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "limit": {
+                      "type": "number"
+                    },
+                    "page": {
+                      "type": "number"
+                    },
+                    "total": {
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Paginated list of group sessions"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List group sessions",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      },
+      "post": {
+        "operationId": "DashboardGroupSessionsController_create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGroupSessionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "scheduledAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "status": {
+                      "example": "OPEN",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Group session created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a group session",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/group-sessions/{id}": {
+      "get": {
+        "operationId": "DashboardGroupSessionsController_getOne",
+        "parameters": [
+          {
+            "description": "Group session UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Group session details including enrollments"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Group session not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a group session by ID",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/group-sessions/{id}/cancel": {
+      "patch": {
+        "operationId": "DashboardGroupSessionsController_cancel",
+        "parameters": [
+          {
+            "description": "Group session UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelGroupSessionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "cancelReason": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "cancelledAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "status": {
+                      "example": "CANCELLED",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Group session cancelled"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Group session not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel a group session",
+        "tags": [
+          "Dashboard / Bookings"
         ]
       }
     },
