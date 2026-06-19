@@ -42,8 +42,8 @@ describe('ListServiceEmployeesHandler', () => {
       { id: 'link-2', employeeId: 'emp-2', serviceId: 'svc-1', isActive: false },
     ]);
     prisma.employee.findMany.mockResolvedValue([
-      { id: 'emp-1', name: 'Ahmed Ali', nameAr: 'أحمد علي', nameEn: null, title: 'Dr', avatarUrl: null, isActive: true },
-      { id: 'emp-2', name: 'Sara', nameAr: null, nameEn: 'Sara Smith', title: 'Nurse', avatarUrl: 'url', isActive: true },
+      { id: 'emp-1', name: 'Ahmed Ali', nameAr: 'أحمد علي', nameEn: null, title: 'Dr', avatarUrl: null, isActive: true, branches: [{ branchId: 'branch-1' }, { branchId: 'branch-2' }] },
+      { id: 'emp-2', name: 'Sara', nameAr: null, nameEn: 'Sara Smith', title: 'Nurse', avatarUrl: 'url', isActive: true, branches: [] },
     ]);
     prisma.serviceBookingConfig.findMany.mockResolvedValue([
       { serviceId: 'svc-1', deliveryType: 'ONLINE', price: 100, durationMins: 30, isActive: true },
@@ -60,13 +60,16 @@ describe('ListServiceEmployeesHandler', () => {
     // Reflects the per-assignment isActive column, not a hardcoded true.
     expect(result[0].isActive).toBe(true);
     expect(result[1].isActive).toBe(false);
+    // branchIds populated from EmployeeBranch relations — no N+1 fallback needed.
+    expect(result[0].employee.branchIds).toEqual(['branch-1', 'branch-2']);
+    expect(result[1].employee.branchIds).toEqual([]);
   });
 
   it('should use full name when ar and en are null', async () => {
     prisma.service.findFirst.mockResolvedValue({ id: 'svc-1' });
     prisma.employeeService.findMany.mockResolvedValue([{ id: 'link-1', employeeId: 'emp-1', serviceId: 'svc-1' }]);
     prisma.employee.findMany.mockResolvedValue([
-      { id: 'emp-1', name: 'John Doe', nameAr: null, nameEn: null, title: null, avatarUrl: null, isActive: true },
+      { id: 'emp-1', name: 'John Doe', nameAr: null, nameEn: null, title: null, avatarUrl: null, isActive: true, branches: [] },
     ]);
     prisma.serviceBookingConfig.findMany.mockResolvedValue([]);
 
@@ -79,7 +82,7 @@ describe('ListServiceEmployeesHandler', () => {
     prisma.service.findFirst.mockResolvedValue({ id: 'svc-1' });
     prisma.employeeService.findMany.mockResolvedValue([{ id: 'link-1', employeeId: 'emp-1', serviceId: 'svc-1' }]);
     prisma.employee.findMany.mockResolvedValue([
-      { id: 'emp-1', name: 'Mononym', nameAr: null, nameEn: null, title: null, avatarUrl: null, isActive: true },
+      { id: 'emp-1', name: 'Mononym', nameAr: null, nameEn: null, title: null, avatarUrl: null, isActive: true, branches: [] },
     ]);
     prisma.serviceBookingConfig.findMany.mockResolvedValue([]);
 

@@ -31,6 +31,7 @@ export class ListServiceEmployeesHandler {
       this.prisma.employee.findMany({
         where: { id: { in: links.map((l) => l.employeeId) }, isActive: true },
         orderBy: { name: 'asc' },
+        include: { branches: true },
       }),
       this.prisma.serviceBookingConfig.findMany({
         where: { serviceId: query.serviceId, isActive: true },
@@ -104,6 +105,7 @@ export class ListServiceEmployeesHandler {
             title: e.title,
             avatarUrl: e.avatarUrl,
             isActive: e.isActive,
+            branchIds: (e.branches ?? []).map((b) => b.branchId),
             user: { firstName, lastName },
           },
           serviceTypes,
