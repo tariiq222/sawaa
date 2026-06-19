@@ -95,7 +95,7 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
   const secondaryDir = locale === "ar" ? "ltr" : "rtl"
 
   return (
-    <Card className="border-s-2 border-s-primary/40">
+    <Card>
       <CardHeader className="pb-4">
         <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
           {/* Left: avatar + title block */}
@@ -135,8 +135,8 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
           </div>
 
           {/* Right: compact visibility & display card */}
-          <div className="shrink-0 rounded-lg border border-border bg-surface-muted/60 p-3 w-full sm:w-auto">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-2">
+          <div className="shrink-0 rounded-lg border border-border bg-surface-muted p-3 w-full sm:w-auto">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
               {t("services.create.tabs.display")}
             </p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
@@ -175,7 +175,7 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
                   className="flex items-center justify-between gap-1.5 rounded-md border border-border bg-surface px-2 py-1.5"
                 >
                   <div className="flex items-center gap-1 min-w-0">
-                    <Label htmlFor={item.id} className="cursor-pointer text-[11px] leading-none truncate">
+                    <Label htmlFor={item.id} className="cursor-pointer text-xs leading-none truncate">
                       {item.label}
                     </Label>
                     <Popover>
@@ -200,7 +200,7 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
                     id={item.id}
                     checked={item.checked}
                     onCheckedChange={item.onChange}
-                    className="scale-90"
+                    size="sm"
                   />
                 </div>
               ))}

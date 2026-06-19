@@ -47,7 +47,7 @@ export function BookingTypeRow({
             "flex size-9 shrink-0 items-center justify-center rounded-lg " +
             (draft.enabled
               ? "bg-primary/10 text-primary"
-              : "bg-muted text-muted-foreground/60")
+              : "bg-muted text-muted-foreground")
           }
         >
           <HugeiconsIcon icon={Icon} strokeWidth={2} className="size-5" />
@@ -72,7 +72,7 @@ export function BookingTypeRow({
 
   if (!draft.enabled) {
     return (
-      <div className="rounded-xl border border-dashed border-border bg-surface/30 p-4">
+      <div className="rounded-xl border border-dashed border-border bg-surface-muted p-4">
         {SectionHeader}
       </div>
     )

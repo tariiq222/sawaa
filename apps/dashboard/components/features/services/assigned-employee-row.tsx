@@ -100,7 +100,7 @@ export function AssignedEmployeeRow({
           checked={displayedActive}
           onCheckedChange={toggleActive}
           disabled={isSaving}
-          className="scale-90"
+          size="sm"
           aria-label={t("employees.services.inlineActiveAria")}
         />
       </div>
@@ -123,13 +123,14 @@ export function AssignedEmployeeRow({
         }
       />
 
-      {/* Footer actions */}
-      <div className="mt-auto flex items-center justify-end gap-2 border-t border-border/60 pt-2">
+      {/* Footer actions — primary "edit" carries the in-context weight,
+          secondary "view" stays quiet and jumps to the full profile */}
+      <div className="mt-auto flex items-center gap-2 border-t border-border pt-3">
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="h-8 gap-1.5 text-xs"
+          className="h-8 flex-1 gap-1.5 text-xs"
           onClick={onEdit}
         >
           <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} className="size-3.5" />
@@ -139,11 +140,15 @@ export function AssignedEmployeeRow({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-8 gap-1.5 text-xs"
+          className="h-8 shrink-0 gap-1 px-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
           onClick={onView}
         >
           {t("common.view")}
-          <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3.5" />
+          <HugeiconsIcon
+            icon={ArrowRight01Icon}
+            strokeWidth={2}
+            className="size-3.5 rtl:rotate-180"
+          />
         </Button>
       </div>
     </SurfaceRow>

@@ -58,16 +58,16 @@ export function DurationOptionsEditor({
           <span>{t(useClinicTerminology ? "services.bookingTypes.clinicZeroPriceWarning" : "services.bookingTypes.zeroPriceWarning")}</span>
         </p>
       )}
-      <div className="overflow-hidden rounded-lg border border-border/60">
+      <div className="overflow-hidden rounded-lg border border-border">
         {/* Header */}
-        <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground">
+        <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 bg-muted px-3 py-2 text-xs font-medium text-muted-foreground">
           <span>{t("services.bookingTypes.duration")} ({t("services.bookingTypes.durationUnit")})</span>
           <span>{t("services.bookingTypes.price")} ({t("services.bookingTypes.priceCurrency")})</span>
           <span className="w-7" aria-hidden />
         </div>
 
         {/* Base (default) row */}
-        <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 border-t border-border/60 px-3 py-2">
+        <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 border-t border-border px-3 py-2">
           <Input
             type="number"
             min={1}
@@ -94,7 +94,7 @@ export function DurationOptionsEditor({
         {options.map((opt) => (
           <div
             key={opt.key}
-            className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 border-t border-border/60 px-3 py-2"
+            className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 border-t border-border px-3 py-2"
           >
             <Input
               type="number"

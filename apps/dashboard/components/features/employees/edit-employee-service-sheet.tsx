@@ -14,6 +14,7 @@ import { toast } from "sonner"
 import { useLocale } from "@/components/locale-provider"
 import { useServiceEmployees } from "@/hooks/use-services"
 import { useEmployeeServiceMutations } from "@/hooks/use-employee-mutations"
+import { EmployeeAvatar } from "@/components/features/shared/employee-avatar"
 import { EmployeeServiceToggles } from "@/components/features/services/employee-service-toggles"
 import { EmployeeCustomPricingRow } from "@/components/features/services/employee-custom-pricing-row"
 import type { EmployeeService } from "@/lib/types/employee"
@@ -48,20 +49,45 @@ export function EditEmployeeServiceSheet({
     serviceEmployee?.employee.id ?? "",
   )
 
-  const serviceName = ps
-    ? locale === "ar"
-      ? ps.service.nameAr
-      : ps.service.nameEn
+  const isAr = locale === "ar"
+
+  const serviceName = ps ? (isAr ? ps.service.nameAr : ps.service.nameEn) : ""
+
+  // Identity of the practitioner whose pricing this sheet edits — resolved
+  // once the ServiceEmployee record loads. Same display logic as the row.
+  const emp = serviceEmployee?.employee
+  const employeeName = emp
+    ? isAr && emp.nameAr
+      ? emp.nameAr
+      : `${emp.user.firstName} ${emp.user.lastName}`
     : ""
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="end">
         <SheetHeader>
-          <SheetTitle>{serviceName}</SheetTitle>
-          <SheetDescription>
-            {t("employees.services.editDesc")}
-          </SheetDescription>
+          {emp ? (
+            <div className="flex items-center gap-3">
+              <EmployeeAvatar
+                avatarUrl={emp.avatarUrl}
+                name={employeeName}
+                className="size-10"
+              />
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <SheetTitle className="truncate">{employeeName}</SheetTitle>
+                <SheetDescription className="truncate">
+                  {serviceName}
+                </SheetDescription>
+              </div>
+            </div>
+          ) : (
+            <>
+              <SheetTitle>{serviceName}</SheetTitle>
+              <SheetDescription>
+                {t("employees.services.editDesc")}
+              </SheetDescription>
+            </>
+          )}
         </SheetHeader>
 
         <SheetBody>

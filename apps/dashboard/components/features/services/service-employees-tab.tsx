@@ -168,7 +168,7 @@ export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPe
 
   /* ── Edit mode ── */
   return (
-    <Card className="border-s-2 border-s-primary/40">
+    <Card>
       <CardHeader className="pb-4">
         <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
           <div className="flex flex-col gap-1 min-w-0">

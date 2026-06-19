@@ -59,7 +59,7 @@ export function SwitchField({ id, label, description, checked, onCheckedChange }
     <div className={cn(
       "space-y-2 rounded-lg border p-3 transition-colors duration-200",
       checked
-        ? "border-primary/30 bg-primary/[0.03]"
+        ? "border-primary/30 bg-primary-ultra-light"
         : "border-border bg-background",
     )}>
       <div className="flex items-center justify-between gap-2">
@@ -69,7 +69,7 @@ export function SwitchField({ id, label, description, checked, onCheckedChange }
         <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
       </div>
       {description && (
-        <p className="text-xs text-muted-foreground/70">{description}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
       )}
     </div>
   )
@@ -97,7 +97,7 @@ export function OverrideField({ id, label, description, value, defaultValue: _de
     <div className={cn(
       "space-y-2 rounded-lg border p-3 transition-colors duration-200",
       isCustom
-        ? "border-primary/30 bg-primary/[0.03]"
+        ? "border-primary/30 bg-primary-ultra-light"
         : "border-border bg-background",
     )}>
       {/* Header: label + switch (consistent with SwitchField) */}
@@ -117,7 +117,7 @@ export function OverrideField({ id, label, description, value, defaultValue: _de
 
       {/* Description */}
       {description && (
-        <p className="text-xs text-muted-foreground/70">{description}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
       )}
 
       {/* Value input when active, global hint when inactive */}

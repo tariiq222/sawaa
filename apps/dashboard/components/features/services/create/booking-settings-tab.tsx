@@ -12,7 +12,7 @@ import { useLocale } from "@/components/locale-provider"
 import { fetchBookingSettings } from "@/lib/api/booking-settings"
 
 import { queryKeys } from "@/lib/query-keys"
-import { OverrideField } from "../booking-settings-fields"
+import { OverrideField, NumberField, SwitchField } from "../booking-settings-fields"
 import type { UseFormReturn } from "react-hook-form"
 import type { CreateServiceFormData } from "./form-schema"
 
@@ -34,6 +34,8 @@ export function BookingSettingsTab({ form }: BookingSettingsTabProps) {
     depositEnabled,
     depositAmount,
     maxParticipants,
+    minParticipants,
+    reserveWithoutPayment,
   } = form.watch()
 
   const { data: globalSettings } = useQuery({
@@ -54,9 +56,9 @@ export function BookingSettingsTab({ form }: BookingSettingsTabProps) {
           {t("services.create.tabs.bookingDesc")}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-4">
         {/* Row 1: Buffer + Min Lead */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <OverrideField
             id="create-buffer"
             label={t("services.booking.buffer.label")}
@@ -88,7 +90,7 @@ export function BookingSettingsTab({ form }: BookingSettingsTabProps) {
         </div>
 
         {/* Row 2: Max Advance + Deposit */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <OverrideField
             id="create-max-advance"
             label={t("services.booking.maxAdvance.label")}
@@ -134,6 +136,28 @@ export function BookingSettingsTab({ form }: BookingSettingsTabProps) {
           onDisable={() => form.setValue("maxParticipants", 1)}
           onChange={(v) => form.setValue("maxParticipants", v ?? 1)}
         />
+
+        {(maxParticipants ?? 1) > 1 && (
+          <div className="space-y-4 ps-1">
+            <NumberField
+              id="create-min-participants"
+              label={t("services.booking.minParticipants.label")}
+              value={minParticipants ?? 1}
+              onChange={(v) => form.setValue("minParticipants", v ?? undefined)}
+              unit=""
+              min={1}
+              max={maxParticipants ?? 100}
+              hint={t("services.booking.minParticipants.desc")}
+            />
+            <SwitchField
+              id="create-reserve-without-payment"
+              label={t("services.booking.reserveWithoutPayment.label")}
+              description={t("services.booking.reserveWithoutPayment.desc")}
+              checked={reserveWithoutPayment ?? false}
+              onCheckedChange={(v) => form.setValue("reserveWithoutPayment", v)}
+            />
+          </div>
+        )}
 
       </CardContent>
     </Card>
