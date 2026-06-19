@@ -194,6 +194,12 @@ export function useEmployeeServiceMutations(employeeId: string) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.employees.serviceTypes(employeeId, vars.serviceId),
       })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.employees.practitionerDurations(employeeId, vars.serviceId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.services.bookingTypes(vars.serviceId),
+      })
     },
   })
 

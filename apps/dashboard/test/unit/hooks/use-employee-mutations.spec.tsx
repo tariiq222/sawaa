@@ -15,6 +15,7 @@ const {
   assignService,
   updateEmployeeService,
   removeEmployeeService,
+  setEmployeeDurations,
 } = vi.hoisted(() => ({
   createEmployee: vi.fn(),
   onboardEmployee: vi.fn(),
@@ -27,6 +28,7 @@ const {
   assignService: vi.fn(),
   updateEmployeeService: vi.fn(),
   removeEmployeeService: vi.fn(),
+  setEmployeeDurations: vi.fn(),
 }))
 
 vi.mock("@/lib/api/employees", () => ({
@@ -41,6 +43,7 @@ vi.mock("@/lib/api/employees", () => ({
   assignService,
   updateEmployeeService,
   removeEmployeeService,
+  setEmployeeDurations,
   fetchEmployees: vi.fn(),
   fetchEmployee: vi.fn(),
   fetchAvailability: vi.fn(),
@@ -49,6 +52,10 @@ vi.mock("@/lib/api/employees", () => ({
   fetchEmployeeServices: vi.fn(),
   fetchEmployeeServiceTypes: vi.fn(),
   fetchSlots: vi.fn(),
+  setEmployeeCustomPricing: vi.fn(),
+  setEmployeeServiceOptions: vi.fn(),
+  createEmployeeAccount: vi.fn(),
+  updateEmployeeAccount: vi.fn(),
 }))
 
 import {
@@ -269,6 +276,50 @@ describe("useEmployeeServiceMutations", () => {
         "svc-1",
         expect.objectContaining({ isActive: false }),
       ),
+    )
+  })
+})
+
+describe("useEmployeeServiceMutations — durationsMut invalidation", () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it("invalidates employees.services, services.employees, employees.serviceTypes, employees.practitionerDurations, and services.bookingTypes on success", async () => {
+    setEmployeeDurations.mockResolvedValueOnce([])
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+
+    function TestWrapper({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    }
+    TestWrapper.displayName = "TestWrapper"
+
+    const { result } = renderHook(
+      () => useEmployeeServiceMutations("emp-1"),
+      { wrapper: TestWrapper },
+    )
+
+    act(() => {
+      result.current.durationsMut.mutate({
+        serviceId: "svc-1",
+        payload: { durations: [] },
+      })
+    })
+
+    await waitFor(() => expect(result.current.durationsMut.isSuccess).toBe(true))
+
+    const calledKeys = invalidateSpy.mock.calls.map(
+      ([arg]) => (arg as { queryKey: unknown }).queryKey,
+    )
+
+    // employees.practitionerDurations(emp-1, svc-1)
+    expect(calledKeys).toContainEqual(
+      expect.arrayContaining(["employees", "emp-1", "practitioner-durations", "svc-1"]),
+    )
+
+    // services.bookingTypes(svc-1)
+    expect(calledKeys).toContainEqual(
+      expect.arrayContaining(["services", "svc-1", "booking-types"]),
     )
   })
 })
