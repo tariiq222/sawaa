@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
+import { resolveEffectiveDurations } from './set-employee-durations/set-employee-durations.handler';
 
 export interface ListServiceEmployeesQuery {
   serviceId: string;
@@ -27,7 +28,7 @@ export class ListServiceEmployeesHandler {
 
     const linkIds = links.map((l) => l.id);
 
-    const [employees, configs, allOptions] = await Promise.all([
+    const [employees, configs, allOptions, allDurationOptions] = await Promise.all([
       this.prisma.employee.findMany({
         where: { id: { in: links.map((l) => l.employeeId) }, isActive: true },
         orderBy: { name: 'asc' },
@@ -41,7 +42,19 @@ export class ListServiceEmployeesHandler {
         where: { employeeServiceId: { in: linkIds }, isActive: true },
         include: { durationOption: true },
       }),
+      this.prisma.serviceDurationOption.findMany({
+        where: { serviceId: query.serviceId, isActive: true },
+        orderBy: [{ deliveryType: 'asc' }, { sortOrder: 'asc' }],
+      }),
     ]);
+
+    const serviceDefaults = allDurationOptions.filter((o) => o.employeeServiceId === null);
+    const ownedByLink = new Map<string, typeof allDurationOptions>();
+    for (const o of allDurationOptions) {
+      if (o.employeeServiceId === null) continue;
+      if (!ownedByLink.has(o.employeeServiceId)) ownedByLink.set(o.employeeServiceId, []);
+      ownedByLink.get(o.employeeServiceId)!.push(o);
+    }
 
     // Build map: employeeServiceId -> deliveryType -> option
     const optionsByLink = new Map<string, Map<string, (typeof allOptions)[0]>>();
@@ -114,6 +127,7 @@ export class ListServiceEmployeesHandler {
           bufferMinutes: l.bufferMinutes,
           availableTypes,
           isActive: l.isActive,
+          effectiveDurations: resolveEffectiveDurations(serviceDefaults, ownedByLink.get(l.id) ?? []),
         };
       });
   }

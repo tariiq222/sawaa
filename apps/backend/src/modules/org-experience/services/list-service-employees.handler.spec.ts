@@ -9,6 +9,7 @@ const buildPrisma = () => ({
   employee: { findMany: jest.fn() },
   serviceBookingConfig: { findMany: jest.fn() },
   employeeServiceOption: { findMany: jest.fn().mockResolvedValue([]) },
+  serviceDurationOption: { findMany: jest.fn().mockResolvedValue([]) },
 });
 
 describe('ListServiceEmployeesHandler', () => {
@@ -89,5 +90,35 @@ describe('ListServiceEmployeesHandler', () => {
     const result = await handler.execute({ serviceId: 'svc-1' });
     expect(result[0].employee.user.firstName).toBe('Mononym');
     expect(result[0].employee.user.lastName).toBe('');
+  });
+
+  it('should include effectiveDurations with inherited service defaults when employee has no owned rows', async () => {
+    prisma.service.findFirst.mockResolvedValue({ id: 'svc-1' });
+    prisma.employeeService.findMany.mockResolvedValue([
+      { id: 'link-1', employeeId: 'emp-1', serviceId: 'svc-1', isActive: true, bufferMinutes: 0 },
+    ]);
+    prisma.employee.findMany.mockResolvedValue([
+      { id: 'emp-1', name: 'Ahmed Ali', nameAr: 'أحمد علي', nameEn: null, title: 'Dr', avatarUrl: null, isActive: true, branches: [] },
+    ]);
+    prisma.serviceBookingConfig.findMany.mockResolvedValue([
+      { serviceId: 'svc-1', deliveryType: 'IN_PERSON', price: 200, durationMins: 45, isActive: true },
+    ]);
+    // Two service-default duration options for IN_PERSON (employeeServiceId === null)
+    prisma.serviceDurationOption.findMany.mockResolvedValue([
+      { id: 'opt-1', serviceId: 'svc-1', deliveryType: 'IN_PERSON', employeeServiceId: null, label: '45 min', labelAr: '٤٥ د', durationMins: 45, price: 200, isActive: true, sortOrder: 0 },
+      { id: 'opt-2', serviceId: 'svc-1', deliveryType: 'IN_PERSON', employeeServiceId: null, label: '60 min', labelAr: '٦٠ د', durationMins: 60, price: 250, isActive: true, sortOrder: 1 },
+    ]);
+
+    const result = await handler.execute({ serviceId: 'svc-1' });
+
+    expect(result).toHaveLength(1);
+    const emp = result[0];
+    expect(emp.effectiveDurations).toBeDefined();
+    const inPersonGroup = emp.effectiveDurations.find((g: { deliveryType: string }) => g.deliveryType === 'IN_PERSON');
+    expect(inPersonGroup).toBeDefined();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    expect(inPersonGroup!.durations).toHaveLength(2);
+    expect(inPersonGroup!.durations[0].isInherited).toBe(true);
+    expect(inPersonGroup!.durations[1].isInherited).toBe(true);
   });
 });
