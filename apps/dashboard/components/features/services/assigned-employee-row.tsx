@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowRight01Icon,
@@ -8,14 +9,14 @@ import {
 
 import { Badge } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
+import { Label } from "@sawaa/ui"
+import { Switch } from "@sawaa/ui"
 import { SurfaceRow } from "@sawaa/ui"
 import { useEmployeeServiceMutations } from "@/hooks/use-employee-mutations"
 import { EmployeeAvatar } from "@/components/features/shared/employee-avatar"
 import { toast } from "sonner"
 import type { ServiceEmployee } from "@/lib/types/service"
 import { EmployeeCustomPricingRow } from "./employee-custom-pricing-row"
-import { EmployeeServiceToggles } from "./employee-service-toggles"
-import { EmployeeWorkingInfo } from "./employee-working-info"
 
 /* ─── Props ─── */
 
@@ -42,10 +43,24 @@ export function AssignedEmployeeRow({
   const fullName = `${employee.user.firstName} ${employee.user.lastName}`
   const displayName = isAr && employee.nameAr ? employee.nameAr : fullName
 
-  const { updateMut, durationsMut } = useEmployeeServiceMutations(employee.id)
+  const { updateMut, customPricingMut } = useEmployeeServiceMutations(employee.id)
   const isSaving =
-    updateMut.isPending &&
-    updateMut.variables?.serviceId === serviceId
+    updateMut.isPending && updateMut.variables?.serviceId === serviceId
+
+  const [optimisticActive, setOptimisticActive] = useState<boolean | null>(null)
+  const displayedActive = optimisticActive ?? item.isActive
+
+  const toggleActive = (next: boolean) => {
+    setOptimisticActive(next)
+    updateMut.mutate(
+      { serviceId, payload: { isActive: next } },
+      {
+        onSettled: () => setOptimisticActive(null),
+        onSuccess: () => toast.success(t("employees.services.inlineUpdateSuccess")),
+        onError: () => toast.error(t("employees.services.inlineUpdateError")),
+      },
+    )
+  }
 
   return (
     <SurfaceRow
@@ -53,61 +68,52 @@ export function AssignedEmployeeRow({
       size="md"
       className="flex h-full flex-col gap-3"
     >
-      {/* Header: avatar + name */}
-      <div className="flex items-start gap-2">
-        <div className="flex items-center gap-3 min-w-0">
-          <EmployeeAvatar avatarUrl={employee.avatarUrl} name={displayName} className="size-10" />
+      {/* Header: avatar + name + available types */}
+      <div className="flex items-start gap-3 min-w-0">
+        <EmployeeAvatar avatarUrl={employee.avatarUrl} name={displayName} className="size-10" />
 
-          <div className="flex flex-col gap-0.5 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-foreground">{displayName}</span>
-              {!employee.isActive && (
-                <Badge variant="outline" className="text-xs text-warning border-warning/20 bg-warning/10">
-                  {t("services.employees.employeeInactive")}
-                </Badge>
-              )}
-            </div>
-            {employee.title && (
-              <span className="text-xs text-muted-foreground">{employee.title}</span>
-            )}
-            {item.availableTypes.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-0.5">
-                {item.availableTypes.map((type) => (
-                  <Badge key={type} variant="secondary" className="text-xs">
-                    {type === "in_person"
-                      ? t("services.bookingTypes.clinic")
-                      : t("services.bookingTypes.online")}
-                  </Badge>
-                ))}
-              </div>
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-foreground">{displayName}</span>
+            {!employee.isActive && (
+              <Badge variant="outline" className="text-xs text-warning border-warning/20 bg-warning/10">
+                {t("services.employees.employeeInactive")}
+              </Badge>
             )}
           </div>
+          {employee.title && (
+            <span className="text-xs text-muted-foreground">{employee.title}</span>
+          )}
         </div>
       </div>
 
-      {/* Working info: branches + schedule */}
-      <EmployeeWorkingInfo
-        employeeId={employee.id}
-        branchIds={employee.branchIds}
-      />
+      {/* Active toggle */}
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-2">
+        <Label
+          htmlFor={`active-${employee.id}`}
+          className="cursor-pointer text-xs leading-none"
+        >
+          {t("services.create.isActive")}
+        </Label>
+        <Switch
+          id={`active-${employee.id}`}
+          checked={displayedActive}
+          onCheckedChange={toggleActive}
+          disabled={isSaving}
+          className="scale-90"
+          aria-label={t("employees.services.inlineActiveAria")}
+        />
+      </div>
 
-      {/* Settings toggles card */}
-      <EmployeeServiceToggles
-        item={item}
-        serviceId={serviceId}
-        isSaving={isSaving}
-        t={t}
-      />
-
-      {/* Practitioner durations editor */}
+      {/* Custom price + duration per delivery type */}
       <EmployeeCustomPricingRow
         item={item}
         serviceId={serviceId}
         employeeId={employee.id}
         t={t}
-        isSaving={durationsMut.isPending && durationsMut.variables?.serviceId === serviceId}
+        isSaving={customPricingMut.isPending && customPricingMut.variables?.serviceId === serviceId}
         onSave={(payload) =>
-          durationsMut.mutate(
+          customPricingMut.mutate(
             { serviceId, payload },
             {
               onSuccess: () => toast.success(t("services.employees.durations.saved")),
