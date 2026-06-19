@@ -23,7 +23,7 @@ interface EmployeeWorkingInfoProps {
   branchIds?: string[]
 }
 
-const DAY_KEYS = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"] as const
+const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const
 
 export function EmployeeWorkingInfo({ employeeId, branchIds: propBranchIds }: EmployeeWorkingInfoProps) {
   const { t, locale } = useLocale()
@@ -271,5 +271,7 @@ function summariseSchedule(schedule: AvailabilitySlot[], t: (k: string) => strin
   const days = active.map((s) => s.dayOfWeek).sort((a, b) => a - b)
   const isContiguous = days.every((d, i) => i === 0 || d === days[i - 1] + 1)
   if (!isContiguous) return t("services.employees.workingInfo.scheduleVaried")
-  return `${days.length} ${t("services.employees.workingInfo.day.sat")}–${first.startTime}–${first.endTime}`
+  const firstDay = days[0]
+  const DAY_LABEL_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const
+  return `${days.length} ${t(`services.employees.workingInfo.day.${DAY_LABEL_KEYS[firstDay]}`)}–${first.startTime}–${first.endTime}`
 }
