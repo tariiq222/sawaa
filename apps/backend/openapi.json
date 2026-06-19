@@ -24882,7 +24882,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RescheduleBookingDto"
+                "$ref": "#/components/schemas/ClientRescheduleBookingDto"
               }
             }
           },

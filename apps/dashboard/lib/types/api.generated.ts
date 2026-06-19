@@ -22096,7 +22096,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RescheduleBookingDto"];
+                "application/json": components["schemas"]["ClientRescheduleBookingDto"];
             };
         };
         responses: {
