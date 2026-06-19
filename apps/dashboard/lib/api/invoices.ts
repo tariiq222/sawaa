@@ -15,6 +15,7 @@ export async function fetchInvoices(
   return api.get<PaginatedResponse<InvoiceListRow>>("/dashboard/finance/invoices", {
     page: query.page,
     limit: query.limit,
+    search: query.search,
     status: query.status,
     clientId: query.clientId,
     bookingId: query.bookingId,

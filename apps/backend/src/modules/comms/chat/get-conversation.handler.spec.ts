@@ -11,7 +11,8 @@ describe('GetConversationHandler', () => {
       providers: [
         GetConversationHandler,
         { provide: PrismaService, useValue: {
-    chatConversation: { findFirst: jest.fn() }
+    chatConversation: { findFirst: jest.fn() },
+    client: { findFirst: jest.fn().mockResolvedValue(null) },
         } },
       ],
     }).compile();
@@ -25,7 +26,7 @@ describe('GetConversationHandler', () => {
   });
 
   it('should execute successfully', async () => {
-    (prisma.chatConversation.findFirst as jest.Mock).mockResolvedValue({ id: 'test-id' });
+    (prisma.chatConversation.findFirst as jest.Mock).mockResolvedValue({ id: 'test-id', clientId: 'c1', status: 'OPEN', messages: [] });
     const result = await handler.execute({conversationId:"00000000-0000-0000-0000-000000000001"});
     expect(result).toBeDefined();
     

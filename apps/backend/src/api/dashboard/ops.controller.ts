@@ -41,7 +41,7 @@ export class DashboardOpsController {
       },
     },
   })
-  @CheckPermissions({ action: 'manage', subject: 'Report' })
+  @CheckPermissions({ action: 'read', subject: 'Report' })
   async generateReportEndpoint(
     @Body() body: GenerateReportDto,
     @Res({ passthrough: true }) res: Response,

@@ -9,6 +9,7 @@ describe('ListConversationsHandler', () => {
   beforeEach(async () => {
     prisma = {
       chatConversation: { findMany: jest.fn(), count: jest.fn() },
+      client: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
     const module: TestingModule = await Test.createTestingModule({

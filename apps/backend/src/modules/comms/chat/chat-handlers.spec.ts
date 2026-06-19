@@ -12,6 +12,9 @@ const buildPrisma = () => ({
   commsChatMessage: {
     create: jest.fn(),
   },
+  client: {
+    findFirst: jest.fn().mockResolvedValue(null),
+  },
 });
 
 const conversationId = 'conv-1';
@@ -25,13 +28,29 @@ describe('GetConversationHandler', () => {
     handler = new GetConversationHandler(prisma as never);
   });
 
-  it('returns conversation with messages', async () => {
-    const conv = { id: conversationId, messages: [{ id: 'msg-1' }] };
+  it('returns conversation with reshaped messages', async () => {
+    const conv = {
+      id: conversationId,
+      clientId: 'client-1',
+      employeeId: null,
+      status: ConversationStatus.OPEN,
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      updatedAt: new Date('2026-01-02T00:00:00Z'),
+      lastMessageAt: null,
+      messages: [
+        { id: 'msg-1', conversationId, senderType: MessageSenderType.CLIENT, body: 'hi', createdAt: new Date('2026-01-01T00:01:00Z') },
+      ],
+    };
     prisma.chatConversation.findFirst.mockResolvedValue(conv);
+    prisma.client.findFirst.mockResolvedValue({ id: 'client-1', firstName: 'Sara', lastName: 'A' });
 
     const result = await handler.execute({ conversationId });
 
-    expect(result).toEqual(conv);
+    expect(result.id).toBe(conversationId);
+    expect(result.handedOff).toBe(false);
+    expect(result.endedAt).toBeNull();
+    expect(result.user).toEqual({ id: 'client-1', firstName: 'Sara', lastName: 'A' });
+    expect(result.messages[0]).toMatchObject({ id: 'msg-1', role: 'user', content: 'hi' });
     expect(prisma.chatConversation.findFirst).toHaveBeenCalledWith({
       where: { id: conversationId },
       include: { messages: { orderBy: { createdAt: 'asc' } } },

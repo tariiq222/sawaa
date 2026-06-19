@@ -106,14 +106,16 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
     setIsSubmitting(true)
     try {
       if (mode === "create") {
-        await createMut.mutateAsync(buildCreatePayload(data))
+        const created = await createMut.mutateAsync(buildCreatePayload(data))
         toast.success(t("services.categories.create.success"))
+        const secondTab = (data.bookingMode ?? "DIRECT") === "SERVICES" ? "services" : "settings"
+        router.push(`/categories/${created.id}/edit?tab=${secondTab}`)
       } else {
         const deptId = !data.departmentId || data.departmentId === "__none__" ? undefined : data.departmentId
         await updateMut.mutateAsync({ id: categoryId!, nameAr: data.nameAr, nameEn: data.nameEn || undefined, sortOrder: data.sortOrder, isActive: data.isActive, departmentId: deptId ?? null, bookingMode: data.bookingMode, iconName: data.iconName ?? undefined, iconBgColor: data.iconBgColor ?? undefined, imageUrl: data.imageUrl ?? undefined })
         toast.success(t("services.categories.edit.success"))
+        router.push("/categories")
       }
-      router.push("/categories")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t(mode === "create" ? "services.categories.create.error" : "services.categories.edit.error"))
     } finally { setIsSubmitting(false) }

@@ -2,7 +2,10 @@ import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { GetGroupSessionHandler } from './get-group-session.handler';
 import { PrismaService } from '../../../infrastructure/database';
-import { GroupSessionStatus, DeliveryType } from '@prisma/client';
+import { GroupSessionStatus, DeliveryType, BookingStatus, BookingType } from '@prisma/client';
+
+const enrolledAt = new Date('2026-07-01T09:00:00Z');
+const checkedInAt = new Date('2026-07-01T10:05:00Z');
 
 const mockSession = {
   id: 'session-1',
@@ -28,12 +31,46 @@ const mockSession = {
   createdAt: new Date(),
   updatedAt: new Date(),
   enrollments: [
-    { clientId: 'client-1', bookingId: 'booking-1', enrolledAt: new Date() },
+    {
+      clientId: 'client-1',
+      bookingId: 'booking-1',
+      enrolledAt,
+      booking: {
+        id: 'booking-1',
+        status: BookingStatus.CONFIRMED,
+        bookingType: BookingType.GROUP,
+        deliveryType: DeliveryType.IN_PERSON,
+        checkedInAt,
+        completedAt: null,
+        cancelledAt: null,
+        confirmedAt: new Date('2026-06-30T12:00:00Z'),
+      },
+    },
   ],
 };
 
+const mockClient = {
+  id: 'client-1',
+  name: 'أحمد محمد',
+  firstName: 'أحمد',
+  lastName: 'محمد',
+  phone: '+966501234567',
+};
+
+const mockService = { nameAr: 'جلسة جماعية', nameEn: 'Group Session' };
+const mockEmployee = { name: 'Dr. Ahmed', nameAr: 'د. أحمد', nameEn: 'Dr. Ahmed' };
+
 const mockPrisma = {
   groupSession: {
+    findUnique: jest.fn(),
+  },
+  client: {
+    findMany: jest.fn(),
+  },
+  service: {
+    findUnique: jest.fn(),
+  },
+  employee: {
     findUnique: jest.fn(),
   },
 };
@@ -50,14 +87,60 @@ describe('GetGroupSessionHandler', () => {
     }).compile();
     handler = module.get(GetGroupSessionHandler);
     jest.clearAllMocks();
+    mockPrisma.service.findUnique.mockResolvedValue(mockService);
+    mockPrisma.employee.findUnique.mockResolvedValue(mockEmployee);
   });
 
-  it('returns session with enrollments', async () => {
+  it('returns session with enriched enrollments (client + booking details)', async () => {
     mockPrisma.groupSession.findUnique.mockResolvedValue(mockSession);
+    mockPrisma.client.findMany.mockResolvedValue([mockClient]);
+
     const result = await handler.execute({ groupSessionId: 'session-1' });
+
     expect(result.id).toBe('session-1');
     expect(result.enrollments).toHaveLength(1);
-    expect(result.enrollments[0].clientId).toBe('client-1');
+
+    const enrollment = result.enrollments[0];
+    expect(enrollment.clientId).toBe('client-1');
+    expect(enrollment.bookingId).toBe('booking-1');
+    expect(enrollment.enrolledAt).toBe(enrolledAt);
+
+    // Client data
+    expect(enrollment.client).not.toBeNull();
+    expect(enrollment.client?.id).toBe('client-1');
+    expect(enrollment.client?.name).toBe('أحمد محمد');
+    expect(enrollment.client?.phone).toBe('+966501234567');
+
+    // Booking data
+    expect(enrollment.booking).not.toBeNull();
+    expect(enrollment.booking?.status).toBe(BookingStatus.CONFIRMED);
+    expect(enrollment.booking?.bookingType).toBe(BookingType.GROUP);
+    expect(enrollment.booking?.checkedInAt).toBe(checkedInAt);
+    expect(enrollment.booking?.completedAt).toBeNull();
+
+    // Service and employee
+    expect(result.service).toEqual(mockService);
+    expect(result.employee).toEqual(mockEmployee);
+
+    // spotsLeft = maxCapacity(10) - enrolledCount(2)
+    expect(result.spotsLeft).toBe(8);
+  });
+
+  it('returns null client when client is not found', async () => {
+    mockPrisma.groupSession.findUnique.mockResolvedValue(mockSession);
+    mockPrisma.client.findMany.mockResolvedValue([]);
+
+    const result = await handler.execute({ groupSessionId: 'session-1' });
+    expect(result.enrollments[0].client).toBeNull();
+  });
+
+  it('skips client query when there are no enrollments', async () => {
+    const emptySession = { ...mockSession, enrollments: [] };
+    mockPrisma.groupSession.findUnique.mockResolvedValue(emptySession);
+
+    const result = await handler.execute({ groupSessionId: 'session-1' });
+    expect(result.enrollments).toHaveLength(0);
+    expect(mockPrisma.client.findMany).not.toHaveBeenCalled();
   });
 
   it('throws NotFoundException when not found', async () => {

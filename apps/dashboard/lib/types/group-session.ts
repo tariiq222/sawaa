@@ -22,11 +22,20 @@ export interface GroupSessionListItem {
 }
 
 export interface GroupSessionEnrollment {
-  id: string
   clientId: string
-  client: { id: string; firstName: string; lastName: string; phone: string | null }
+  bookingId: string
   enrolledAt: string
-  status: string
+  client: { id: string; name: string; firstName: string; lastName: string; phone: string | null } | null
+  booking: {
+    id: string
+    status: string
+    bookingType: string
+    deliveryType: string
+    checkedInAt: string | null
+    completedAt: string | null
+    cancelledAt: string | null
+    confirmedAt: string | null
+  } | null
 }
 
 export interface GroupSessionDetail extends GroupSessionListItem {
@@ -37,8 +46,8 @@ export interface GroupSessionDetail extends GroupSessionListItem {
   branchId: string
   createdAt: string
   enrollments: GroupSessionEnrollment[]
-  employee: { id: string; user: { firstName: string; lastName: string } }
-  service: { id: string; nameAr: string; nameEn: string }
+  service: { nameAr: string; nameEn: string | null } | null
+  employee: { name: string; nameAr: string | null; nameEn: string | null } | null
 }
 
 export interface GroupSessionListQuery {

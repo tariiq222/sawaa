@@ -105,6 +105,7 @@ export class DashboardFinanceController {
       clientId: query.clientId,
       bookingId: query.bookingId,
       status: query.status,
+      search: query.search,
       fromDate: startOfDayInTz(query.fromDate),
       toDate: endOfDayInTz(query.toDate),
     });
@@ -260,6 +261,7 @@ export class DashboardFinanceController {
       clientId: query.clientId,
       method: query.method,
       status: query.status,
+      search: query.search,
       fromDate: startOfDayInTz(query.fromDate),
       toDate: endOfDayInTz(query.toDate),
     });

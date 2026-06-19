@@ -45,6 +45,13 @@ export const arFinance: Record<string, string> = {
   "payments.status.waiting": "في الانتظار",
   "payments.status.rejected": "مرفوض",
 
+  // — Verify Transfer Dialog —
+  "payments.verify.title": "التحقق من التحويل البنكي",
+  "payments.verify.description": "راجِع تفاصيل التحويل البنكي ثم اعتمده أو ارفضه.",
+  "payments.verify.actionLabel": "الإجراء",
+  "payments.verify.approve": "اعتماد التحويل",
+  "payments.verify.reject": "رفض التحويل",
+
   // — Refund Dialog —
   "refund.title": "استرجاع الدفعة",
   "refund.description": "معالجة استرجاع لهذه الدفعة. اترك المبلغ فارغاً لاسترجاع كامل.",

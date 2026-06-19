@@ -4,7 +4,7 @@
  * Imports are preserved for backward compatibility.
  * Each domain is implemented in its own focused file:
  *   - use-chat-sessions.ts     → useChatSessions, useChatSession
- *   - use-chatbot-config.ts    → useChatbotConfig, useKnowledgeBase, useKnowledgeFiles
+ *   - use-chatbot-config.ts    → useChatbotConfig, useKnowledgeBase
  *   - use-chatbot-mutations.ts → useChatbotMutations
  *
  * Note: analytics stubs (`useChatbotAnalytics`, `useTopQuestions`) were

@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@sawaa/ui"
 import { useBundleMutations } from "@/hooks/use-bundles"
-import { useServices } from "@/hooks/use-services"
+import { useAllServices } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
 import { sarToHalalas, halalasToSarNumber } from "@/lib/money"
 import {
@@ -56,7 +56,7 @@ function toStorageValue(value: number, type: "PERCENTAGE" | "FIXED") {
 export function EditBundleDialog({ bundle, open, onOpenChange }: Props) {
   const { t } = useLocale()
   const { updateMut } = useBundleMutations()
-  const { services } = useServices()
+  const { services } = useAllServices()
 
   const form = useForm<EditBundleFormData>({
     resolver: zodResolver(editBundleSchema),
@@ -86,11 +86,21 @@ export function EditBundleDialog({ bundle, open, onOpenChange }: Props) {
   const selectedPrices = useMemo(
     () => {
       const serviceIds = watchedServiceIds ?? []
-      return services
-        .filter((s) => serviceIds.includes(s.id))
-        .map((s) => s.price)
+      // Resolve prices from the full services list, falling back to the prices
+      // the backend already returned on bundle.items — so a selected service
+      // that is missing from the fetched list is never undercounted.
+      const priceById = new Map<string, number>()
+      for (const s of services) priceById.set(s.id, s.price)
+      for (const item of bundle?.items ?? []) {
+        if (!priceById.has(item.serviceId)) {
+          priceById.set(item.serviceId, item.service.price)
+        }
+      }
+      return serviceIds
+        .map((id) => priceById.get(id))
+        .filter((p): p is number => p != null)
     },
-    [services, watchedServiceIds],
+    [services, watchedServiceIds, bundle],
   )
 
   const translateError = (msg?: string) => (msg ? t(msg) : undefined)

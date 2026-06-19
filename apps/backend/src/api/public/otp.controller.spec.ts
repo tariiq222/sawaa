@@ -93,7 +93,7 @@ describe('PublicOtpController (e2e)', () => {
     const validVerify = {
       channel: 'EMAIL',
       identifier: 'user@example.com',
-      code: '123456',
+      code: '1234',
       purpose: 'GUEST_BOOKING',
     };
 

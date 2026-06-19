@@ -73,24 +73,32 @@ export function BookingDetailSheet({ booking, open, onOpenChange, onAction, defa
         t={t}
         locale={locale}
       />
-      <div className="flex flex-col gap-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {t("intakeForms.responses.title")}
-        </p>
-        <BookingIntakeResponses bookingId={booking.id} />
+      <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+        <div className="px-4 py-2.5 bg-muted/50 border-b border-border">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            {t("intakeForms.responses.title")}
+          </p>
+        </div>
+        <div className="px-4 py-3">
+          <BookingIntakeResponses bookingId={booking.id} />
+        </div>
       </div>
-      <div className="flex flex-col gap-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {t("bookings.statusLog.title")}
-        </p>
-        <BookingStatusLog bookingId={booking.id} />
+      <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+        <div className="px-4 py-2.5 bg-muted/50 border-b border-border">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            {t("bookings.statusLog.title")}
+          </p>
+        </div>
+        <div className="px-4 py-3">
+          <BookingStatusLog bookingId={booking.id} />
+        </div>
       </div>
     </>
   )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden flex flex-col">
+      <DialogContent className="overflow-hidden flex flex-col sm:max-w-3xl">
 
         {/* Header */}
         <DialogHeader>

@@ -4651,6 +4651,15 @@ export interface components {
              * @example 00000000-0000-0000-0000-000000000000
              */
             departmentId?: string;
+            /** @example #F0F4FF */
+            iconBgColor?: string;
+            /** @example scissors-01 */
+            iconName?: string;
+            /**
+             * @description Category image URL
+             * @example https://example.com/logo.png
+             */
+            imageUrl?: string;
             /**
              * @description Category name in Arabic
              * @example طب الأسنان
@@ -6939,6 +6948,15 @@ export interface components {
              * @example 00000000-0000-0000-0000-000000000000
              */
             departmentId?: Record<string, never> | null;
+            /** @example #F0F4FF */
+            iconBgColor?: string;
+            /** @example scissors-01 */
+            iconName?: string;
+            /**
+             * @description Category image URL
+             * @example https://example.com/logo.png
+             */
+            imageUrl?: string;
             /**
              * @description Whether the category is active
              * @example true
@@ -7582,6 +7600,11 @@ export interface components {
              * @example 15
              */
             bufferMinutes?: number;
+            /**
+             * @description Minimum hours before booking start that a client may reschedule
+             * @example 24
+             */
+            clientRescheduleMinHoursBefore?: number;
             /**
              * @description Hours before booking start that free cancellation is allowed
              * @example 24
@@ -12284,6 +12307,8 @@ export interface operations {
                 fromDate?: string;
                 /** @description Include invoices created on or before this ISO date */
                 toDate?: string;
+                /** @description Search by invoice number or client name */
+                search?: string;
             };
             header?: never;
             path?: never;
@@ -12843,6 +12868,8 @@ export interface operations {
                 fromDate?: string;
                 /** @description Include payments on or before this ISO date */
                 toDate?: string;
+                /** @description Search by client name or invoice number */
+                search?: string;
             };
             header?: never;
             path?: never;
@@ -25066,6 +25093,9 @@ export interface operations {
                 content: {
                     "application/json": {
                         bookingId?: string;
+                        /** Format: uuid */
+                        invoiceId?: string | null;
+                        status?: string;
                         /** @enum {string} */
                         type?: "BOOKED";
                     };

@@ -40,19 +40,38 @@ const RULE_GUIDANCE: Record<DebtRuleId, string> = {
 }
 
 const BASELINE_FINGERPRINTS_B64 = [
-  "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",
+  "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",
 ]
 
 function decodeBaselineFingerprints() {
@@ -303,11 +322,11 @@ describe("dashboard e2e contract", () => {
       {
         "budget": {
           "bodyVisibleFallback": 31,
-          "optionalRequiredClick": 35,
-          "unjustifiedWaitForTimeout": 0,
+          "optionalRequiredClick": 38,
+          "unjustifiedWaitForTimeout": 23,
           "vacuousTrueFallback": 8,
         },
-        "fingerprintCount": 74,
+        "fingerprintCount": 100,
       }
     `)
   })

@@ -139,11 +139,6 @@ export const queryKeys = {
       list: (filters?: object) =>
         ["chatbot", "knowledge-base", "list", filters] as const,
     },
-    files: {
-      all: ["chatbot", "files"] as const,
-      list: (filters?: object) =>
-        ["chatbot", "files", "list", filters] as const,
-    },
     config: {
       all: ["chatbot", "config"] as const,
       list: () => ["chatbot", "config", "singleton"] as const,

@@ -17,16 +17,15 @@ function makeForm(): UseFormReturn<FieldValues> {
 describe("useBookingCreateResets", () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it("clears durationOptionId and startTime on initial mount", () => {
+  it("clears startTime on initial mount", () => {
     const form = makeForm()
     renderHook(() =>
       useBookingCreateResets(form, "prac-1", "svc-1", "SINGLE", "2026-03-27"),
     )
-    expect(form.setValue).toHaveBeenCalledWith("durationOptionId", "")
     expect(form.setValue).toHaveBeenCalledWith("startTime", "")
   })
 
-  it("resets durationOptionId and startTime when serviceId changes", () => {
+  it("resets startTime when serviceId changes", () => {
     const form = makeForm()
     const { rerender } = renderHook(
       ({ serviceId }: { serviceId: string }) =>
@@ -38,11 +37,10 @@ describe("useBookingCreateResets", () => {
 
     rerender({ serviceId: "svc-2" })
 
-    expect(form.setValue).toHaveBeenCalledWith("durationOptionId", "")
     expect(form.setValue).toHaveBeenCalledWith("startTime", "")
   })
 
-  it("resets startTime (only) when date changes", () => {
+  it("resets startTime when date changes", () => {
     const form = makeForm()
     const { rerender } = renderHook(
       ({ date }: { date: string }) =>
@@ -56,11 +54,6 @@ describe("useBookingCreateResets", () => {
 
     // startTime reset fired from the date effect
     expect(form.setValue).toHaveBeenCalledWith("startTime", "")
-    // durationOptionId NOT reset by the date effect alone
-    const durationCalls = (form.setValue as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([field]) => field === "durationOptionId",
-    )
-    expect(durationCalls).toHaveLength(0)
   })
 })
 

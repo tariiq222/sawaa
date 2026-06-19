@@ -27,6 +27,7 @@ export async function fetchPayments(
   return api.get<PaginatedResponse<Payment>>("/dashboard/finance/payments", {
     page: query.page,
     limit: query.perPage,
+    search: query.search,
     status: query.status,
     method: query.method,
     fromDate: query.dateFrom,

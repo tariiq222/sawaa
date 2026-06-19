@@ -137,7 +137,7 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
   const card = "bg-surface rounded-xl border border-border shadow-sm overflow-hidden"
   const cardHeader = "px-4 py-2.5 bg-muted/50 border-b border-border"
   const cardTitle = "text-xs font-semibold text-muted-foreground uppercase tracking-wider"
-  const cardBody = "px-4 py-3 flex flex-col gap-2.5"
+  const cardBody = "px-4 py-3 flex flex-col gap-2"
 
   return (
     <div className="flex flex-col gap-3">
@@ -163,7 +163,7 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
       <div className={`grid gap-3 ${booking.payment ? "grid-cols-2" : "grid-cols-1"}`}>
         <div className={card}>
           <div className={cardHeader}><p className={cardTitle}>{t("detail.appointment")}</p></div>
-          <div className={cardBody}>
+          <div className="px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-4">
             <DetailRow label={t("detail.service")} value={serviceName} icon={MedicineBottle01Icon} />
             <DetailRow label={t("detail.date")} value={appointmentDate} numeric icon={Calendar03Icon} />
             <DetailRow label={t("detail.time")} value={`${booking.startTime} — ${booking.endTime}`} numeric icon={Clock01Icon} />

@@ -23,6 +23,10 @@ export interface SupportGroup {
 export interface BookGroupSessionResponse {
   type: 'BOOKED';
   bookingId?: string;
+  /** Booking lifecycle status — AWAITING_PAYMENT for paid sessions, CONFIRMED for free ones. */
+  status?: string;
+  /** Invoice to pay for paid sessions (price > 0); null/undefined for free sessions. */
+  invoiceId?: string | null;
 }
 
 export async function getPublicGroupSessions(

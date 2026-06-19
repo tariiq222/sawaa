@@ -3,20 +3,19 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
-import { fetchKnowledgeBase, fetchKnowledgeFiles } from "@/lib/api/chatbot-kb"
+import { fetchKnowledgeBase } from "@/lib/api/chatbot-kb"
 import { fetchChatbotConfig } from "@/lib/api/chatbot"
 import type {
   KnowledgeBaseQuery,
-  KbSource,
+  KbDocumentStatus,
   ChatbotConfig,
 } from "@/lib/types/chatbot"
 
 export function useKnowledgeBase() {
   const [page, setPage] = useState(1)
-  const [source, setSource] = useState<KbSource | undefined>()
-  const [category, setCategory] = useState<string | undefined>()
+  const [status, setStatus] = useState<KbDocumentStatus | undefined>()
 
-  const filters: KnowledgeBaseQuery = { page, perPage: 20, source, category }
+  const filters: KnowledgeBaseQuery = { page, perPage: 20, status }
 
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.chatbot.knowledgeBase.list(filters),
@@ -24,47 +23,26 @@ export function useKnowledgeBase() {
     staleTime: 30 * 1000,
   })
 
-  const setFilters = (f: { source?: KbSource; category?: string }) => {
-    setSource(f.source)
-    setCategory(f.category)
+  const setFilters = (f: { status?: KbDocumentStatus }) => {
+    setStatus(f.status)
     setPage(1)
   }
 
   const resetFilters = () => {
-    setSource(undefined)
-    setCategory(undefined)
+    setStatus(undefined)
     setPage(1)
   }
 
   return {
-    entries: data?.items ?? [],
+    entries: data?.data ?? [],
     meta: data?.meta ?? null,
     loading: isLoading,
     error: error?.message ?? null,
-    filters: { source, category },
+    filters: { status },
     setFilters,
     resetFilters,
     setPage,
-    hasFilters: !!(source ?? category),
-  }
-}
-
-export function useKnowledgeFiles() {
-  const [page, setPage] = useState(1)
-  const filters = { page, perPage: 20 }
-
-  const { data, isLoading, error } = useQuery({
-    queryKey: queryKeys.chatbot.files.list(filters),
-    queryFn: () => fetchKnowledgeFiles(filters),
-    staleTime: 30 * 1000,
-  })
-
-  return {
-    files: data?.items ?? [],
-    meta: data?.meta ?? null,
-    loading: isLoading,
-    error: error?.message ?? null,
-    setPage,
+    hasFilters: !!status,
   }
 }
 

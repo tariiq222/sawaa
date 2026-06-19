@@ -41,6 +41,7 @@ export function CouponFormFields({ form, isEdit, mode }: CouponFormFieldsProps) 
               {...form.register("code")}
               placeholder={isEdit ? undefined : "SUMMER20"}
               className="uppercase"
+              disabled={isEdit}
               onChange={(e) => form.setValue("code", e.target.value.toUpperCase())}
             />
           </FormField>

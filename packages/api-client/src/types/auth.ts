@@ -22,9 +22,6 @@ export interface UserPayload {
   // Null until completed; the dashboard layout uses it to redirect new
   // organizations to /onboarding.
   onboardingCompletedAt: string | null
-  // Last organization selected by the user. Kept in the contract for auth flows
-  // that need to restore a valid organization after login.
-  lastActiveOrganizationId?: string | null
   createdAt?: string
   updatedAt?: string
 }

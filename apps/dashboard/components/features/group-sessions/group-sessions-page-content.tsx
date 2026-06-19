@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useLocale } from "@/components/locale-provider"
 import { useGroupSessions } from "@/hooks/use-group-sessions"
 import {
@@ -153,14 +154,14 @@ export function GroupSessionsPageContent() {
               {sessions.map((session) => (
                 <TableRow key={session.id}>
                   <TableCell className="font-medium">
-                    <div>
+                    <Link href={`/group-sessions/${session.id}`} className="hover:text-primary transition-colors">
                       {session.title}
                       {session.isPublic && (
                         <span className="ms-2 text-xs text-muted-foreground">
                           ({t("groupSessions.badge.public")})
                         </span>
                       )}
-                    </div>
+                    </Link>
                   </TableCell>
                   <TableCell className="tabular-nums text-sm">
                     {formatDateTime(session.scheduledAt, locale)}

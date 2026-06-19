@@ -25,6 +25,9 @@ export class UpsertBookingSettingsDto {
   @ApiPropertyOptional({ description: 'Maximum number of reschedules allowed per booking', example: 2 })
   @IsOptional() @IsInt() @Min(0) maxReschedulesPerBooking?: number;
 
+  @ApiPropertyOptional({ description: 'Minimum hours before booking start that a client may reschedule', example: 24 })
+  @IsOptional() @IsInt() @Min(0) clientRescheduleMinHoursBefore?: number;
+
   @ApiPropertyOptional({ description: 'Hours after booking start to auto-complete the booking', example: 1 })
   @IsOptional() @IsInt() @Min(0) autoCompleteAfterHours?: number;
 

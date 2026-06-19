@@ -11,7 +11,6 @@ import {
   DialogDescription,
 } from "@sawaa/ui"
 import { Badge } from "@sawaa/ui"
-import { Separator } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 import { DetailSection, DetailRow } from "@/components/features/detail-sheet-parts"
 import { fetchPayment } from "@/lib/api/payments"
@@ -134,7 +133,7 @@ function PaymentDetailBody({
   return (
     <>
       <DialogBody>
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-3">
           {/* Amount */}
           <DetailSection title={t("detail.payment")}>
             <DetailRow
@@ -156,8 +155,6 @@ function PaymentDetailBody({
             )}
           </DetailSection>
 
-          <Separator />
-
           {/* Invoice */}
           <DetailSection title={t("nav.bookings")}>
             <DetailRow label={t("detail.invoiceId")} value={payment.invoiceId?.slice(0, 12) ?? "—"} numeric />
@@ -166,7 +163,6 @@ function PaymentDetailBody({
           {/* Bank Transfer Receipts */}
           {payment.receipts && payment.receipts.length > 0 && (
             <>
-              <Separator />
               <DetailSection title={t("detail.receipts")}>
                 {payment.receipts.map((receipt) => (
                   <div

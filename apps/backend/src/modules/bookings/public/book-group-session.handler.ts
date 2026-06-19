@@ -19,6 +19,10 @@ interface BookGroupSessionCommand {
 export interface BookGroupSessionResult {
   type: 'BOOKED';
   bookingId: string;
+  /** Booking lifecycle status — AWAITING_PAYMENT for paid sessions, CONFIRMED for free ones. */
+  status: BookingStatus;
+  /** Invoice to pay for paid sessions (price > 0); null for free sessions. */
+  invoiceId: string | null;
 }
 
 @Injectable()
@@ -74,7 +78,7 @@ export class BookGroupSessionHandler {
     // Wrap booking + invoice + enrollment + capacity increment in one
     // transaction so a paid group booking never exists without its Invoice
     // (the payment-init handlers require an Invoice to start a Moyasar payment).
-    const booking = await this.rlsTransaction.withTransaction(async (tx) => {
+    const { booking, invoiceId } = await this.rlsTransaction.withTransaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "GroupSession" WHERE id = ${session.id} FOR UPDATE`;
 
       const reserved = await tx.groupSession.updateMany({
@@ -121,6 +125,7 @@ export class BookGroupSessionHandler {
 
       // Paid group bookings need an Invoice for the payment-init flow.
       // Group sessions have no coupon/discount: discountAmt = 0, subtotal = price.
+      let invoiceId: string | null = null;
       if (price > 0) {
         const orgSettings = await tx.organizationSettings.findFirst({
           where: {},
@@ -134,7 +139,7 @@ export class BookGroupSessionHandler {
         const vatAmt = roundMoney(vatBaseDec.mul(vatRate));
         const total = roundMoney(vatBaseDec.add(vatAmt));
 
-        await tx.invoice.create({
+        const invoice = await tx.invoice.create({
           data: {
             branchId: booking.branchId,
             clientId: booking.clientId,
@@ -151,6 +156,7 @@ export class BookGroupSessionHandler {
           },
           select: { id: true },
         });
+        invoiceId = invoice.id;
       }
 
       await tx.groupEnrollment.create({
@@ -161,7 +167,7 @@ export class BookGroupSessionHandler {
         },
       });
 
-      return booking;
+      return { booking, invoiceId };
     }).catch((err) => {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new ConflictException('Already enrolled in this group session');
@@ -172,6 +178,8 @@ export class BookGroupSessionHandler {
     return {
       type: 'BOOKED',
       bookingId: booking.id,
+      status: booking.status,
+      invoiceId,
     };
   }
 }

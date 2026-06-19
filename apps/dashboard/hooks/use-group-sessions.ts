@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { useState, useCallback } from "react"
 import { queryKeys } from "@/lib/query-keys"
+import { toastApiError } from "@/lib/mutation-helpers"
 import {
   fetchGroupSessions,
   fetchGroupSession,
@@ -95,12 +96,14 @@ export function useGroupSessionMutations() {
   const createMut = useMutation({
     mutationFn: createGroupSession,
     onSuccess: invalidate,
+    onError: toastApiError("فشل إنشاء الجلسة الجماعية"),
   })
 
   const cancelMut = useMutation({
     mutationFn: ({ id, ...payload }: { id: string; cancelReason?: string }) =>
       cancelGroupSession(id, payload),
     onSuccess: invalidate,
+    onError: toastApiError("فشل إلغاء الجلسة الجماعية"),
   })
 
   return { createMut, cancelMut }

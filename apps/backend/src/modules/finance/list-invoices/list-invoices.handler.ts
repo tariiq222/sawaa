@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { toListResponse } from '../../../common/dto';
 import { ListInvoicesDto } from './list-invoices.dto';
@@ -25,12 +26,55 @@ export class ListInvoicesHandler {
   async execute(query: ListInvoicesQuery) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+
+    // Invoice has no `client` relation (only a clientId column), so resolve the
+    // matching client IDs first (by name), then constrain invoices to them and
+    // OR with the numeric invoice number — same pattern as list-bookings.
+    const searchTerm = query.search?.trim();
+    let searchClientIds: string[] = [];
+    if (searchTerm) {
+      const tokens = searchTerm.split(/\s+/).filter(Boolean);
+      const orConditions: Prisma.ClientWhereInput[] = [
+        { firstName: { contains: searchTerm, mode: 'insensitive' } },
+        { lastName: { contains: searchTerm, mode: 'insensitive' } },
+      ];
+      // Full name spanning firstName + lastName: require every token to appear
+      // in either name field.
+      if (tokens.length > 1) {
+        orConditions.push({
+          AND: tokens.map((tok) => ({
+            OR: [
+              { firstName: { contains: tok, mode: 'insensitive' } },
+              { lastName: { contains: tok, mode: 'insensitive' } },
+            ],
+          })),
+        });
+      }
+      const matched = await this.prisma.client.findMany({
+        where: { OR: orConditions },
+        select: { id: true },
+      });
+      searchClientIds = matched.map((c) => c.id);
+    }
+
     const where = {
       ...(query.clientId ? { clientId: query.clientId } : {}),
       ...(query.bookingId ? { bookingId: query.bookingId } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.fromDate || query.toDate
         ? { createdAt: { gte: query.fromDate, lte: query.toDate } }
+        : {}),
+      ...(searchTerm
+        ? {
+            OR: [
+              ...(searchClientIds.length
+                ? [{ clientId: { in: searchClientIds } }]
+                : []),
+              ...(/^\d+$/.test(searchTerm)
+                ? [{ number: Number(searchTerm) }]
+                : []),
+            ],
+          }
         : {}),
     };
 

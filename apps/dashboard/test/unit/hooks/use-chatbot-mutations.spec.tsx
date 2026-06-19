@@ -4,33 +4,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { ReactNode } from "react"
 
 const {
-  createKnowledgeEntry,
   updateKnowledgeEntry,
   deleteKnowledgeEntry,
-  syncKnowledgeBase,
-  uploadKnowledgeFile,
-  processKnowledgeFile,
-  deleteKnowledgeFile,
 } = vi.hoisted(() => ({
-  createKnowledgeEntry: vi.fn(),
   updateKnowledgeEntry: vi.fn(),
   deleteKnowledgeEntry: vi.fn(),
-  syncKnowledgeBase: vi.fn(),
-  uploadKnowledgeFile: vi.fn(),
-  processKnowledgeFile: vi.fn(),
-  deleteKnowledgeFile: vi.fn(),
 }))
 
 vi.mock("@/lib/api/chatbot-kb", () => ({
-  createKnowledgeEntry,
   updateKnowledgeEntry,
   deleteKnowledgeEntry,
-  syncKnowledgeBase,
-  uploadKnowledgeFile,
-  processKnowledgeFile,
-  deleteKnowledgeFile,
   fetchKnowledgeBase: vi.fn(),
-  fetchKnowledgeFiles: vi.fn(),
+}))
+
+vi.mock("@/lib/api/chatbot", () => ({
+  endChatSession: vi.fn(),
+  sendStaffMessage: vi.fn(),
+  upsertChatbotConfig: vi.fn(),
 }))
 
 import { useChatbotMutations } from "@/hooks/use-chatbot-mutations"
@@ -46,24 +36,6 @@ function makeWrapper() {
 
 describe("useChatbotMutations", () => {
   beforeEach(() => { vi.clearAllMocks() })
-
-  it("createKbEntryMut calls createKnowledgeEntry", async () => {
-    createKnowledgeEntry.mockResolvedValueOnce({ id: "kb-new" })
-
-    const { result } = renderHook(() => useChatbotMutations(), { wrapper: makeWrapper() })
-
-    act(() => {
-      result.current.createKbEntryMut.mutate(
-        { title: "FAQ", content: "..." } as Parameters<typeof createKnowledgeEntry>[0],
-      )
-    })
-
-    await waitFor(() =>
-      expect(createKnowledgeEntry).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "FAQ" }),
-      ),
-    )
-  })
 
   it("deleteKbEntryMut calls deleteKnowledgeEntry with id", async () => {
     deleteKnowledgeEntry.mockResolvedValueOnce(undefined)
@@ -85,37 +57,15 @@ describe("useChatbotMutations", () => {
     act(() => {
       result.current.updateKbEntryMut.mutate({
         id: "kb-1",
-        payload: { content: "updated" },
+        payload: { title: "updated" },
       })
     })
 
     await waitFor(() =>
       expect(updateKnowledgeEntry).toHaveBeenCalledWith(
         "kb-1",
-        expect.objectContaining({ content: "updated" }),
+        expect.objectContaining({ title: "updated" }),
       ),
-    )
-  })
-
-  it("syncKbMut calls syncKnowledgeBase", async () => {
-    syncKnowledgeBase.mockResolvedValueOnce({ synced: 3 })
-
-    const { result } = renderHook(() => useChatbotMutations(), { wrapper: makeWrapper() })
-
-    act(() => { result.current.syncKbMut.mutate(undefined) })
-
-    await waitFor(() => expect(syncKnowledgeBase).toHaveBeenCalled())
-  })
-
-  it("deleteFileMut calls deleteKnowledgeFile with id", async () => {
-    deleteKnowledgeFile.mockResolvedValueOnce({ deleted: true })
-
-    const { result } = renderHook(() => useChatbotMutations(), { wrapper: makeWrapper() })
-
-    act(() => { result.current.deleteFileMut.mutate("file-1") })
-
-    await waitFor(() =>
-      expect(deleteKnowledgeFile).toHaveBeenCalledWith("file-1"),
     )
   })
 })

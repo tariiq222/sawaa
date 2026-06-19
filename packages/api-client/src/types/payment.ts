@@ -70,6 +70,7 @@ export interface PaymentStats {
 }
 
 export interface PaymentListQuery extends PaginationParams {
+  search?: string
   status?: PaymentStatus
   method?: PaymentMethod
   dateFrom?: string

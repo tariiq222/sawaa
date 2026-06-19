@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@sawaa/ui"
 import { useBundleMutations } from "@/hooks/use-bundles"
-import { useServices } from "@/hooks/use-services"
+import { useAllServices } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
 import { sarToHalalas } from "@/lib/money"
 import {
@@ -49,7 +49,7 @@ function toStorageValue(value: number, type: "PERCENTAGE" | "FIXED") {
 export function CreateBundleDialog({ open, onOpenChange }: Props) {
   const { t } = useLocale()
   const { createMut } = useBundleMutations()
-  const { services } = useServices()
+  const { services } = useAllServices()
 
   const form = useForm<CreateBundleFormData>({
     resolver: zodResolver(createBundleSchema),

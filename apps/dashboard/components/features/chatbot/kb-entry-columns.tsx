@@ -87,31 +87,33 @@ export function getEntryColumns(
       ),
     },
     {
-      accessorKey: "category",
-      header: t("chatbot.kb.col.category"),
+      accessorKey: "sourceRef",
+      header: t("chatbot.kb.col.source"),
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">
-          {row.original.category ?? "—"}
+          {row.original.sourceRef ?? "—"}
         </span>
       ),
     },
     {
-      accessorKey: "source",
-      header: t("chatbot.kb.col.source"),
+      accessorKey: "sourceType",
+      header: t("chatbot.kb.col.sourceType"),
       cell: ({ row }) => (
         <Badge variant="outline" className="text-xs">
-          {row.original.source ?? "manual"}
+          {row.original.sourceType}
         </Badge>
       ),
     },
     {
-      accessorKey: "isActive",
+      accessorKey: "status",
       header: t("chatbot.kb.col.status"),
       cell: ({ row }) =>
-        row.original.isActive ? (
-          <Badge variant="default">{t("chatbot.kb.status.active")}</Badge>
+        row.original.status === "EMBEDDED" ? (
+          <Badge variant="default">{t("chatbot.kb.status.embedded")}</Badge>
+        ) : row.original.status === "FAILED" ? (
+          <Badge variant="destructive">{t("chatbot.kb.status.failed")}</Badge>
         ) : (
-          <Badge variant="secondary">{t("chatbot.kb.status.inactive")}</Badge>
+          <Badge variant="secondary">{t("chatbot.kb.status.pending")}</Badge>
         ),
     },
     {

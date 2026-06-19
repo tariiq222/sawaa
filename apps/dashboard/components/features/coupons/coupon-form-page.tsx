@@ -96,7 +96,6 @@ export function CouponFormPage(props: Props) {
 
   const onSubmit = form.handleSubmit(async (data) => {
     const payload = {
-      code: data.code.toUpperCase(),
       descriptionEn: data.descriptionEn || undefined,
       descriptionAr: data.descriptionAr || undefined,
       discountType: data.discountType,
@@ -109,10 +108,11 @@ export function CouponFormPage(props: Props) {
     }
     try {
       if (isEdit) {
+        // code is immutable on update — omit it from the payload.
         await updateMut.mutateAsync({ id: couponId!, ...payload })
         toast.success(t("coupons.edit.success"))
       } else {
-        await createMut.mutateAsync(payload)
+        await createMut.mutateAsync({ code: data.code.toUpperCase(), ...payload })
         toast.success(t("coupons.create.success"))
       }
       router.push("/coupons")

@@ -14,7 +14,6 @@ describe("use-chatbot barrel", () => {
   it("re-exports chatbot-config hooks", () => {
     expect(typeof barrel.useChatbotConfig).toBe("function")
     expect(typeof barrel.useKnowledgeBase).toBe("function")
-    expect(typeof barrel.useKnowledgeFiles).toBe("function")
   })
 
   it("re-exports chatbot-mutations hook", () => {

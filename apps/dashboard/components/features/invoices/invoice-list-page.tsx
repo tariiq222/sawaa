@@ -12,7 +12,7 @@ import { useLocale } from "@/components/locale-provider"
 
 export function InvoiceListPage() {
   const { t } = useLocale()
-  const { invoices, isLoading, error: _error, search, setSearch } = useInvoices()
+  const { invoices, meta, isLoading, error: _error, search, setSearch, page, setPage } = useInvoices()
 
   const hasFilters = search !== ""
   const resetFilters = () => {
@@ -50,6 +50,12 @@ export function InvoiceListPage() {
           data={invoices}
           emptyTitle={t("invoices.empty.title")}
           emptyDescription={t("invoices.empty.description")}
+          serverPaginated
+          page={meta?.page ?? page}
+          totalPages={meta?.totalPages ?? 1}
+          hasPreviousPage={meta?.hasPreviousPage ?? false}
+          hasNextPage={meta?.hasNextPage ?? false}
+          onPageChange={setPage}
         />
       )}
     </ListPageShell>

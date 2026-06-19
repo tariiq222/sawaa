@@ -24,9 +24,11 @@ export function useInvoices() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
 
+  const trimmedSearch = search.trim()
   const { data, isLoading, error } = useQuery({
-    queryKey: queryKeys.invoices.list({ page }),
-    queryFn: () => fetchInvoices({ page, limit: 20 }),
+    queryKey: queryKeys.invoices.list({ page, search: trimmedSearch }),
+    queryFn: () =>
+      fetchInvoices({ page, limit: 20, search: trimmedSearch || undefined }),
     staleTime: 5 * 60 * 1000,
   })
 

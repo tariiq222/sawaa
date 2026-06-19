@@ -15,9 +15,9 @@ export type SessionLanguage = "ar" | "en"
 
 export type HandoffType = "live_chat" | "contact_number"
 
-export type KbFileStatus = "pending" | "processing" | "completed" | "failed"
+export type KbDocumentStatus = "PENDING" | "EMBEDDED" | "FAILED"
 
-export type KbSource = "manual" | "auto_sync" | "file_upload"
+export type KbSourceType = "manual" | "url" | "file"
 
 /* ─── Chat Session ─── */
 
@@ -29,30 +29,28 @@ export interface ChatSessionUser {
 
 export interface ChatSession {
   id: string
-  userId: string
+  clientId: string
+  employeeId: string | null
   startedAt: string
   endedAt: string | null
   handedOff: boolean
-  handoffType: HandoffType | null
-  language: SessionLanguage | null
-  metadata: Record<string, unknown> | null
-  createdAt: string
-  updatedAt: string
+  handoffType?: HandoffType | null
+  language?: SessionLanguage | null
+  lastMessageAt: string | null
   user: ChatSessionUser
   _count: { messages: number }
 }
 
 export interface ChatSessionDetail {
   id: string
-  userId: string
+  clientId: string
+  employeeId: string | null
   startedAt: string
   endedAt: string | null
   handedOff: boolean
-  handoffType: HandoffType | null
-  language: SessionLanguage | null
-  metadata: Record<string, unknown> | null
-  createdAt: string
-  updatedAt: string
+  handoffType?: HandoffType | null
+  language?: SessionLanguage | null
+  lastMessageAt: string | null
   user: ChatSessionUser
   messages: ChatMessage[]
 }
@@ -61,13 +59,9 @@ export interface ChatSessionDetail {
 
 export interface ChatMessage {
   id: string
-  sessionId: string
+  conversationId: string
   role: ChatRole
   content: string
-  functionCall: Record<string, unknown> | null
-  intent: string | null
-  toolName: string | null
-  tokenCount: number | null
   createdAt: string
 }
 
@@ -99,31 +93,23 @@ export interface HandleMessageResult {
 export interface KnowledgeBaseEntry {
   id: string
   title: string
-  content: string
-  category: string | null
-  source: KbSource | null
-  fileId: string | null
-  chunkIndex: number | null
-  isActive: boolean
+  sourceType: KbSourceType
+  sourceRef: string | null
+  status: KbDocumentStatus
+  metadata: Record<string, unknown> | null
   createdAt: string
   updatedAt: string
 }
 
-/* ─── Knowledge Base File ─── */
-
-export interface KnowledgeBaseFile {
-  id: string
-  fileName: string
-  fileUrl: string
-  fileType: string
-  fileSize: number
-  chunksCount: number
-  status: KbFileStatus
-  error: string | null
-  uploadedBy: string
-  createdAt: string
-  updatedAt: string
-  user: { firstName: string; lastName: string }
+/** Backend `ManageKnowledgeBaseHandler.listDocuments` returns `{ data, meta }`. */
+export interface KnowledgeBaseResponse {
+  data: KnowledgeBaseEntry[]
+  meta: {
+    total: number
+    page: number
+    limit: number
+    totalPages: number
+  }
 }
 
 /* ─── Chatbot Config ─── */
@@ -167,8 +153,7 @@ export interface ChatSessionListQuery extends PaginatedQuery {
 }
 
 export interface KnowledgeBaseQuery extends PaginatedQuery {
-  source?: KbSource
-  category?: string
+  status?: KbDocumentStatus
 }
 
 export interface AnalyticsQuery {
@@ -186,17 +171,9 @@ export interface SendMessagePayload {
   content: string
 }
 
-export interface CreateKbEntryPayload {
-  title: string
-  content: string
-  category?: string
-}
-
 export interface UpdateKbEntryPayload {
   title?: string
-  content?: string
-  category?: string
-  isActive?: boolean
+  metadata?: Record<string, unknown>
 }
 
 export interface ConfigItemPayload {

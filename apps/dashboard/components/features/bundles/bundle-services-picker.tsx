@@ -8,7 +8,7 @@ import { Input } from "@sawaa/ui"
 import { Badge } from "@sawaa/ui"
 import { Checkbox } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
-import { useServices } from "@/hooks/use-services"
+import { useAllServices } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
 import { formatPrice } from "@/lib/money"
 
@@ -20,7 +20,7 @@ interface Props {
 export function BundleServicesPicker({ value, onChange }: Props) {
   const { t, locale } = useLocale()
   const [localSearch, setLocalSearch] = useState("")
-  const { services, isLoading } = useServices()
+  const { services, isLoading } = useAllServices()
 
   const filtered = useMemo(() => {
     const q = localSearch.trim().toLowerCase()

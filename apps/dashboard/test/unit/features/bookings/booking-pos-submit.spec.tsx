@@ -5,9 +5,12 @@
  *
  * Verifies that when the confirm button is clicked, the real handleSubmit
  * in BookingPos calls createMut.mutateAsync with the expected create-booking
- * DTO fields (clientId, serviceId, employeeId, type, date, startTime,
- * payAtClinic, couponCode, durationOptionId) — checked via toMatchObject
- * so additional fields beyond those listed do not cause test failure.
+ * DTO fields (clientId, serviceId, employeeId, type, deliveryType, date,
+ * startTime, payAtClinic, couponCode) — checked via toMatchObject so
+ * additional fields beyond those listed do not cause test failure.
+ *
+ * Note: the POS flow derives session duration from service bookingConfigs,
+ * not a user-selected durationOptionId, so no durationOptionId is sent.
  *
  * Lives in its own file to avoid vi.mock hoisting conflicts with the
  * pure state-machine / BookingSummary tests in booking-create-flow.spec.tsx.
@@ -198,9 +201,6 @@ const makeCompleteState = (overrides = {}) => ({
     employeeName: "Ahmad",
     deliveryType: "in_person" as const,
     type: "in_person" as const,
-    durationOptionId: null,
-    durationLabel: null,
-    durationPrice: null,
     date: "2026-06-01",
     startTime: "09:00",
     payAtClinic: false,
@@ -216,8 +216,6 @@ const makeCompleteState = (overrides = {}) => ({
   selectEmployee: vi.fn(),
   selectDeliveryType: vi.fn(),
   selectType: vi.fn(),
-  selectDuration: vi.fn(),
-  skipDuration: vi.fn(),
   selectDate: vi.fn(),
   selectTime: vi.fn(),
   setPayAtClinic: vi.fn(),
@@ -343,28 +341,6 @@ describe("BookingPos — real handleSubmit → createMut.mutateAsync payload", (
       Record<string, unknown>,
     ]
     expect(payload).toMatchObject({ payAtClinic: true })
-  })
-
-  it("submit payload includes durationOptionId when a duration is selected", async () => {
-    renderBookingPos(
-      makeCompleteState({
-        durationOptionId: "dur-45",
-        durationLabel: "45 دقيقة",
-      })
-    )
-
-    fireEvent.click(
-      screen.getByRole("button", { name: /bookings\.pos\.confirm/ })
-    )
-
-    await waitFor(() => {
-      expect(createMut.mutateAsync).toHaveBeenCalledTimes(1)
-    })
-
-    const [payload] = createMut.mutateAsync.mock.calls[0] as [
-      Record<string, unknown>,
-    ]
-    expect(payload).toMatchObject({ durationOptionId: "dur-45" })
   })
 
   it("normalizes backend uppercase deliveryType (IN_PERSON) to lowercase so the POS payload validates", async () => {

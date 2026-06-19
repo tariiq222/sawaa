@@ -121,7 +121,7 @@ describe('MobileClientAuthController (e2e)', () => {
   describe('POST /mobile/auth/verify-otp', () => {
     const validVerify = {
       identifier: '+966501234567',
-      code: '123456',
+      code: '1234',
       purpose: 'login',
     };
 

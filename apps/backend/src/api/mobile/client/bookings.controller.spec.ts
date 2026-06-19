@@ -6,7 +6,7 @@ import { ListBookingsHandler } from '../../../modules/bookings/list-bookings/lis
 import { GetBookingHandler } from '../../../modules/bookings/get-booking/get-booking.handler';
 import { CreateBookingHandler } from '../../../modules/bookings/create-booking/create-booking.handler';
 import { CancelBookingHandler } from '../../../modules/bookings/cancel-booking/cancel-booking.handler';
-import { RescheduleBookingHandler } from '../../../modules/bookings/reschedule-booking/reschedule-booking.handler';
+import { ClientRescheduleBookingHandler } from '../../../modules/bookings/client/client-reschedule-booking.handler';
 import { SubmitRatingHandler } from '../../../modules/org-experience/ratings/submit-rating.handler';
 import { CreateZoomMeetingHandler } from '../../../modules/bookings/create-zoom-meeting/create-zoom-meeting.handler';
 import { PrismaService } from '../../../infrastructure/database';
@@ -38,7 +38,7 @@ describe('MobileClientBookingsController (e2e)', () => {
         { provide: GetBookingHandler, useValue: mockGet },
         { provide: CreateBookingHandler, useValue: mockCreate },
         { provide: CancelBookingHandler, useValue: mockCancel },
-        { provide: RescheduleBookingHandler, useValue: mockReschedule },
+        { provide: ClientRescheduleBookingHandler, useValue: mockReschedule },
         { provide: SubmitRatingHandler, useValue: mockRate },
         { provide: CreateZoomMeetingHandler, useValue: mockZoom },
         { provide: PrismaService, useValue: mockPrisma },
@@ -62,7 +62,7 @@ describe('MobileClientBookingsController (e2e)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) await app.close();
   });
 
   afterEach(() => {

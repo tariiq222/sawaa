@@ -95,6 +95,30 @@ export function useServices() {
   }
 }
 
+/**
+ * Flat list of all services — used by pickers/selects that must show every
+ * service, not a paginated page. Backend PaginationDto caps `limit` at 200.
+ */
+export function useAllServices() {
+  const query: ServiceListQuery = {
+    page: 1,
+    perPage: 200,
+    includeHidden: true,
+  }
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: queryKeys.services.list(query),
+    queryFn: () => fetchServices(query),
+    staleTime: 5 * 60 * 1000, // 5 min
+  })
+
+  return {
+    services: data?.items ?? [],
+    isLoading,
+    error: error?.message ?? null,
+  }
+}
+
 /* ─── Services List Stats ─── */
 
 export function useServicesListStats() {
@@ -172,7 +196,7 @@ export function useCategoriesList() {
 export function useServiceMutations() {
   const queryClient = useQueryClient()
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: queryKeys.services.all })
+    queryClient.invalidateQueries({ queryKey: queryKeys.services.all, refetchType: "all" })
 
   const createMut = useMutation({
     mutationFn: createService,
@@ -198,7 +222,7 @@ export function useServiceMutations() {
 export function useCategoryMutations() {
   const queryClient = useQueryClient()
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ["services", "categories"] })
+    queryClient.invalidateQueries({ queryKey: ["services", "categories"], refetchType: "all" })
 
   const createMut = useMutation({
     mutationFn: createCategory,

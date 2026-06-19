@@ -23,6 +23,7 @@ export async function listPayments(
   const qs = buildQueryString({
     page: query.page,
     limit: query.perPage,
+    search: query.search,
     status: query.status,
     method: query.method,
     dateFrom: query.dateFrom,

@@ -299,7 +299,11 @@ export function useEmployeeForm({
             payload,
           })
         } else {
-          await assignService(id, { serviceId: ds.serviceId, ...payload })
+          // The assign endpoint whitelists only `serviceId` (global
+          // forbidNonWhitelisted ValidationPipe); sending the extra option
+          // fields 400s. availableTypes/types persist via the
+          // setEmployeeServiceOptions call below, matching the create path.
+          await assignService(id, { serviceId: ds.serviceId })
         }
         const optionsPayload = buildEmployeeServiceOptionsPayload({
           typeConfigs: ds.types,

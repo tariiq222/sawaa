@@ -1,4 +1,4 @@
-import { IsDateString, IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { IsDateString, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { InvoiceStatus } from '@prisma/client';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationDto } from '../../../common/dto';
@@ -18,4 +18,7 @@ export class ListInvoicesDto extends PaginationDto {
 
   @ApiPropertyOptional({ description: 'Include invoices created on or before this ISO date', example: '2026-05-31T23:59:59.000Z' })
   @IsOptional() @IsDateString() toDate?: string;
+
+  @ApiPropertyOptional({ description: 'Search by invoice number or client name', example: '1024' })
+  @IsOptional() @IsString() @MaxLength(120) search?: string;
 }

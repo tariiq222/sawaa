@@ -165,7 +165,7 @@ function NotificationsContent() {
 
 export default function NotificationsPage() {
   return (
-    <PermissionGuard module="setting" action="read">
+    <PermissionGuard module="booking" action="read">
       <NotificationsContent />
     </PermissionGuard>
   )

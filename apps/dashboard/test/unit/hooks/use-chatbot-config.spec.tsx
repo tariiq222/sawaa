@@ -5,31 +5,24 @@ import type { ReactNode } from "react"
 
 const {
   fetchKnowledgeBase,
-  fetchKnowledgeFiles,
   fetchChatbotConfig,
-  fetchChatbotConfigByCategory,
 } = vi.hoisted(() => ({
   fetchKnowledgeBase: vi.fn(),
-  fetchKnowledgeFiles: vi.fn(),
   fetchChatbotConfig: vi.fn(),
-  fetchChatbotConfigByCategory: vi.fn(),
 }))
 
 vi.mock("@/lib/api/chatbot-kb", () => ({
   fetchKnowledgeBase,
-  fetchKnowledgeFiles,
 }))
 
 vi.mock("@/lib/api/chatbot", () => ({
   fetchChatbotConfig,
-  fetchChatbotConfigByCategory,
   fetchChatSessions: vi.fn(),
   fetchChatSession: vi.fn(),
 }))
 
 import {
   useKnowledgeBase,
-  useKnowledgeFiles,
   useChatbotConfig,
 } from "@/hooks/use-chatbot-config"
 
@@ -47,7 +40,7 @@ describe("useKnowledgeBase", () => {
 
   it("fetches knowledge base entries", async () => {
     const items = [{ id: "kb-1", title: "FAQ" }]
-    fetchKnowledgeBase.mockResolvedValueOnce({ items, meta: { total: 1 } })
+    fetchKnowledgeBase.mockResolvedValueOnce({ data: items, meta: { total: 1 } })
 
     const { result } = renderHook(() => useKnowledgeBase(), { wrapper: makeWrapper() })
 
@@ -60,7 +53,7 @@ describe("useKnowledgeBase", () => {
   })
 
   it("returns empty entries and hasFilters false by default", async () => {
-    fetchKnowledgeBase.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
+    fetchKnowledgeBase.mockResolvedValueOnce({ data: [], meta: { total: 0 } })
 
     const { result } = renderHook(() => useKnowledgeBase(), { wrapper: makeWrapper() })
 
@@ -68,29 +61,6 @@ describe("useKnowledgeBase", () => {
 
     expect(result.current.entries).toEqual([])
     expect(result.current.hasFilters).toBe(false)
-  })
-})
-
-describe("useKnowledgeFiles", () => {
-  beforeEach(() => vi.clearAllMocks())
-
-  it("fetches knowledge files", async () => {
-    const items = [{ id: "f-1", filename: "manual.pdf" }]
-    fetchKnowledgeFiles.mockResolvedValueOnce({ items, meta: { total: 1 } })
-
-    const { result } = renderHook(() => useKnowledgeFiles(), { wrapper: makeWrapper() })
-
-    await waitFor(() => expect(result.current.loading).toBe(false))
-
-    expect(fetchKnowledgeFiles).toHaveBeenCalledWith(expect.objectContaining({ page: 1 }))
-    expect(result.current.files).toEqual(items)
-  })
-
-  it("returns empty files while loading", () => {
-    fetchKnowledgeFiles.mockReturnValueOnce(new Promise(() => undefined))
-    const { result } = renderHook(() => useKnowledgeFiles(), { wrapper: makeWrapper() })
-    expect(result.current.loading).toBe(true)
-    expect(result.current.files).toEqual([])
   })
 })
 

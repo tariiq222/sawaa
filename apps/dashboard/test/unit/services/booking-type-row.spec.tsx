@@ -74,7 +74,7 @@ describe("BookingTypeRow — price & duration fields", () => {
     )
     const inputs = screen.getAllByRole("spinbutton")
     await act(async () => {
-      fireEvent.change(inputs[0], { target: { value: "200" } })
+      fireEvent.change(inputs[1], { target: { value: "200" } })
     })
     expect(onUpdate).toHaveBeenCalledWith("price", 200)
   })
@@ -93,7 +93,7 @@ describe("BookingTypeRow — price & duration fields", () => {
     )
     const inputs = screen.getAllByRole("spinbutton")
     await act(async () => {
-      fireEvent.change(inputs[1], { target: { value: "60" } })
+      fireEvent.change(inputs[0], { target: { value: "60" } })
     })
     expect(onUpdate).toHaveBeenCalledWith("durationMins", 60)
   })
@@ -128,13 +128,13 @@ describe("BookingTypeRow — price & duration fields", () => {
     )
 
     await act(async () => {
-      fireEvent.click(screen.getByText("services.availability.addWindow"))
+      fireEvent.click(screen.getByText("services.bookingTypes.addDuration"))
     })
 
     expect(onUpdate).toHaveBeenCalledWith(
-      "availabilityWindows",
+      "durationOptions",
       expect.arrayContaining([
-        expect.objectContaining({ dayOfWeek: 0, startTime: "09:00", endTime: "17:00" }),
+        expect.objectContaining({ durationMins: 30, price: 100 }),
       ]),
     )
   })

@@ -45,6 +45,13 @@ export const enFinance: Record<string, string> = {
   "payments.status.waiting": "Waiting",
   "payments.status.rejected": "Rejected",
 
+  // — Verify Transfer Dialog —
+  "payments.verify.title": "Verify Bank Transfer",
+  "payments.verify.description": "Review the bank transfer details, then approve or reject it.",
+  "payments.verify.actionLabel": "Action",
+  "payments.verify.approve": "Approve Transfer",
+  "payments.verify.reject": "Reject Transfer",
+
   // — Refund Dialog —
   "refund.title": "Refund Payment",
   "refund.description": "Process a refund for this payment. Leave amount empty for full refund.",

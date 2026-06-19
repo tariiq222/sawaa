@@ -114,11 +114,13 @@ describe("useCreateBookingSlots", () => {
       wrapper: makeWrapper(),
     })
 
-    await waitFor(() => expect(result.current.slotsLoading).toBe(false))
+    // The slots query stays disabled (and slotsLoading=false) until the
+    // upstream duration resolves; wait for the actual fetch instead.
+    await waitFor(() => expect(fetchSlots).toHaveBeenCalled())
 
     expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", 30, { serviceId: "svc-1", deliveryType: "in_person" })
     expect(result.current.selectedDuration).toBe(30)
-    expect(result.current.slots).toHaveLength(1)
+    await waitFor(() => expect(result.current.slots).toHaveLength(1))
   })
 
   it("uses service type duration when service type exists for deliveryType", async () => {
@@ -132,11 +134,11 @@ describe("useCreateBookingSlots", () => {
       wrapper: makeWrapper(),
     })
 
-    await waitFor(() => expect(result.current.slotsLoading).toBe(false))
+    await waitFor(() => expect(fetchSlots).toHaveBeenCalled())
 
     expect(fetchSlots).toHaveBeenCalledWith("p-1", "2026-03-27", 45, { serviceId: "svc-1", deliveryType: "in_person" })
     expect(result.current.selectedDuration).toBe(45)
-    expect(result.current.slots).toHaveLength(1)
+    await waitFor(() => expect(result.current.slots).toHaveLength(1))
   })
 
   it("returns undefined selectedDuration when no duration available", async () => {
@@ -230,7 +232,9 @@ describe("useCreateBookingSlots", () => {
       wrapper: makeWrapper(),
     })
 
-    expect(result.current.slotsLoading).toBe(true)
+    // slotsLoading only flips true once the upstream duration resolves and
+    // the (still-pending) slots fetch is in flight.
+    await waitFor(() => expect(result.current.slotsLoading).toBe(true))
     expect(result.current.slots).toEqual([])
 
     await waitFor(() => expect(result.current.slotsLoading).toBe(false))

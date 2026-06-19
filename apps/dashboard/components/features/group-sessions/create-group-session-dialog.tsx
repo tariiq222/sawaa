@@ -78,6 +78,9 @@ export function CreateGroupSessionDialog({ open, onOpenChange }: Props) {
   }, [branches, getValues, setValue])
 
   const isPublic = watch("isPublic")
+  // Single implicit branch is auto-set from branches[0] (no visible picker).
+  // Guard submit until it resolves so the form never stalls silently on zod.
+  const branchReady = !!watch("branchId")
 
   const onSubmit = async (data: CreateGroupSessionFormData) => {
     const payload = {
@@ -259,11 +262,16 @@ export function CreateGroupSessionDialog({ open, onOpenChange }: Props) {
             </div>
           </section>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+            {!branchReady && (
+              <p className="text-xs text-muted-foreground sm:me-auto">
+                {t("groupSessions.create.branchLoading")}
+              </p>
+            )}
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t("common.cancel")}
             </Button>
-            <Button type="submit" disabled={createMut.isPending}>
+            <Button type="submit" disabled={createMut.isPending || !branchReady}>
               {createMut.isPending ? t("groupSessions.create.submitting") : t("groupSessions.create.submit")}
             </Button>
           </DialogFooter>

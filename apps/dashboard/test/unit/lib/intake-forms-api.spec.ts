@@ -33,19 +33,19 @@ describe("intake-forms api", () => {
   })
 
   it("fetchIntakeForm calls /intake-forms/:id", async () => {
-    getMock.mockResolvedValueOnce({})
+    getMock.mockResolvedValueOnce({ id: "form-1", type: "PRE_BOOKING", scope: "GLOBAL", fields: [] })
     await fetchIntakeForm("form-1")
     expect(getMock).toHaveBeenCalledWith("/dashboard/organization/intake-forms/form-1")
   })
 
   it("createIntakeForm posts to /intake-forms", async () => {
-    postMock.mockResolvedValueOnce({})
-    await createIntakeForm({ nameAr: "نموذج", nameEn: "Form" } as Parameters<typeof createIntakeForm>[0])
+    postMock.mockResolvedValueOnce({ id: "form-1", type: "PRE_BOOKING", scope: "GLOBAL", fields: [] })
+    await createIntakeForm({ nameAr: "نموذج", nameEn: "Form", type: "pre_booking", scope: "global" } as Parameters<typeof createIntakeForm>[0])
     expect(postMock).toHaveBeenCalledWith("/dashboard/organization/intake-forms", expect.anything())
   })
 
   it("updateIntakeForm patches /intake-forms/:id", async () => {
-    patchMock.mockResolvedValueOnce({})
+    patchMock.mockResolvedValueOnce({ id: "form-1", type: "PRE_BOOKING", scope: "GLOBAL", fields: [] })
     await updateIntakeForm("form-1", { nameEn: "Updated Form" } as Parameters<typeof updateIntakeForm>[1])
     expect(patchMock).toHaveBeenCalledWith("/dashboard/organization/intake-forms/form-1", expect.anything())
   })
@@ -57,7 +57,7 @@ describe("intake-forms api", () => {
   })
 
   it("setIntakeFields puts to /intake-forms/:id/fields", async () => {
-    putMock.mockResolvedValueOnce([])
+    putMock.mockResolvedValueOnce({ id: "form-1", type: "PRE_BOOKING", scope: "GLOBAL", fields: [] })
     await setIntakeFields("form-1", { fields: [] } as Parameters<typeof setIntakeFields>[1])
     expect(putMock).toHaveBeenCalledWith("/dashboard/organization/intake-forms/form-1/fields", expect.anything())
   })

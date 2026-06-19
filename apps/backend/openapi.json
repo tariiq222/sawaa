@@ -1048,6 +1048,19 @@
             "example": "00000000-0000-0000-0000-000000000000",
             "type": "string"
           },
+          "iconBgColor": {
+            "example": "#F0F4FF",
+            "type": "string"
+          },
+          "iconName": {
+            "example": "scissors-01",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Category image URL",
+            "example": "https://example.com/logo.png",
+            "type": "string"
+          },
           "nameAr": {
             "description": "Category name in Arabic",
             "example": "طب الأسنان",
@@ -4470,6 +4483,19 @@
             "nullable": true,
             "type": "object"
           },
+          "iconBgColor": {
+            "example": "#F0F4FF",
+            "type": "string"
+          },
+          "iconName": {
+            "example": "scissors-01",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Category image URL",
+            "example": "https://example.com/logo.png",
+            "type": "string"
+          },
           "isActive": {
             "description": "Whether the category is active",
             "example": true,
@@ -5265,6 +5291,11 @@
           "bufferMinutes": {
             "description": "Buffer time between bookings in minutes",
             "example": 15,
+            "type": "number"
+          },
+          "clientRescheduleMinHoursBefore": {
+            "description": "Minimum hours before booking start that a client may reschedule",
+            "example": 24,
             "type": "number"
           },
           "freeCancelBeforeHours": {
@@ -11716,6 +11747,16 @@
               "example": "2026-05-31T23:59:59.000Z",
               "type": "string"
             }
+          },
+          {
+            "description": "Search by invoice number or client name",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "example": "1024",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -12421,6 +12462,16 @@
             "required": false,
             "schema": {
               "example": "2026-05-31T23:59:59.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Search by client name or invoice number",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "example": "1024",
               "type": "string"
             }
           }
@@ -28960,6 +29011,14 @@
                 "schema": {
                   "properties": {
                     "bookingId": {
+                      "type": "string"
+                    },
+                    "invoiceId": {
+                      "format": "uuid",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "status": {
                       "type": "string"
                     },
                     "type": {

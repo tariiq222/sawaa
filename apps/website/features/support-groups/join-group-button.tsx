@@ -6,6 +6,7 @@ import { Check, LogIn, Phone, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useT } from '@/features/locale/locale-provider';
 import { useCurrentClient } from '@/features/auth/public';
+import { initPayment } from '@/features/booking/booking.api';
 import { bookGroupSession } from './support-groups.api';
 
 interface Props {
@@ -14,7 +15,7 @@ interface Props {
   isFull: boolean;
 }
 
-type Status = 'idle' | 'joining' | 'joined' | 'full-error' | 'error';
+type Status = 'idle' | 'joining' | 'joined' | 'redirecting' | 'full-error' | 'error';
 
 export function JoinGroupButton({ sessionId, categoryId, isFull }: Props) {
   const t = useT();
@@ -22,7 +23,8 @@ export function JoinGroupButton({ sessionId, categoryId, isFull }: Props) {
   const { client, isLoading } = useCurrentClient();
   const [status, setStatus] = useState<Status>('idle');
 
-  const disabled = isLoading || status === 'joining' || status === 'joined';
+  const disabled =
+    isLoading || status === 'joining' || status === 'joined' || status === 'redirecting';
 
   async function handleClick() {
     if (!client) {
@@ -31,7 +33,20 @@ export function JoinGroupButton({ sessionId, categoryId, isFull }: Props) {
     }
     setStatus('joining');
     try {
-      await bookGroupSession(sessionId);
+      const result = await bookGroupSession(sessionId);
+      // Paid sessions return an invoiceId — send the client into the same
+      // Moyasar payment flow the regular booking uses. Free sessions (no
+      // invoice) are confirmed immediately.
+      if (result.invoiceId) {
+        setStatus('redirecting');
+        const payment = await initPayment(result.invoiceId);
+        if (payment.redirectUrl) {
+          window.location.href = payment.redirectUrl;
+          return;
+        }
+        setStatus('error');
+        return;
+      }
       setStatus('joined');
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
@@ -76,9 +91,11 @@ export function JoinGroupButton({ sessionId, categoryId, isFull }: Props) {
 
   const label = !client
     ? t('supportGroups.detail.loginToJoin')
-    : status === 'joining'
-      ? t('supportGroups.detail.joining')
-      : t('supportGroups.detail.join');
+    : status === 'redirecting'
+      ? t('payment.redirecting')
+      : status === 'joining'
+        ? t('supportGroups.detail.joining')
+        : t('supportGroups.detail.join');
 
   return (
     <div className="w-full">

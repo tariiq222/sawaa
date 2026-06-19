@@ -13,7 +13,7 @@ import {
 } from "@sawaa/ui"
 import { Badge } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
-import { Separator } from "@sawaa/ui"
+import { DetailSection } from "@/components/features/detail-sheet-parts"
 import { useLocale } from "@/components/locale-provider"
 import { ar } from "date-fns/locale"
 import { formatDatePattern } from "@/lib/date"
@@ -23,14 +23,6 @@ import type { Service } from "@/lib/types/service"
 import { ServiceAvatar } from "./service-avatar"
 
 /* ─── Sub-components ─── */
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2">
-      {children}
-    </p>
-  )
-}
 
 function Field({
   label,
@@ -111,7 +103,7 @@ export function ServiceDetailSheet({
           </div>
         </DialogHeader>
 
-        <div className="overflow-y-auto max-h-[calc(80dvh-8rem)] px-6 py-5 flex flex-col gap-5">
+        <div className="overflow-y-auto max-h-[calc(80dvh-8rem)] px-6 py-5 flex flex-col gap-3">
 
           {/* Status row */}
           <div className="flex flex-wrap gap-2">
@@ -137,11 +129,8 @@ export function ServiceDetailSheet({
             )}
           </div>
 
-          <Separator />
-
           {/* Basic info */}
-          <div>
-            <SectionLabel>{t("services.create.tabs.basic")}</SectionLabel>
+          <DetailSection title={t("services.create.tabs.basic")}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
               <Field label={t("services.detail.nameEn")} value={service.nameEn} />
               <Field label={t("services.detail.nameAr")} value={service.nameAr} />
@@ -160,13 +149,10 @@ export function ServiceDetailSheet({
                 className="col-span-2"
               />
             </div>
-          </div>
-
-          <Separator />
+          </DetailSection>
 
           {/* Pricing */}
-          <div>
-            <SectionLabel>{t("services.create.tabs.pricing")}</SectionLabel>
+          <DetailSection title={t("services.create.tabs.pricing")}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
               <Field
                 label={t("services.detail.price")}
@@ -177,13 +163,10 @@ export function ServiceDetailSheet({
                 value={<span className="tabular-nums">{service.durationMins} {t("services.detail.min")}</span>}
               />
             </div>
-          </div>
-
-          <Separator />
+          </DetailSection>
 
           {/* Booking settings */}
-          <div>
-            <SectionLabel>{t("services.detail.bookingSettings")}</SectionLabel>
+          <DetailSection title={t("services.detail.bookingSettings")}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
               <Field
                 label={t("services.detail.deposit")}
@@ -218,32 +201,29 @@ export function ServiceDetailSheet({
                 />
               )}
             </div>
-          </div>
-
-          <Separator />
+          </DetailSection>
 
           {/* Dates */}
-          <div className="flex flex-col gap-3">
-            <SectionLabel>{t("services.detail.dates")}</SectionLabel>
+          <DetailSection title={t("services.detail.dates")}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-            <Field
-              label={t("services.detail.created")}
-              value={
-                <span className="tabular-nums text-muted-foreground">
-                  {formatDatePattern(service.createdAt, "PP", { locale: dateFnsLocale })}
-                </span>
-              }
-            />
-            <Field
-              label={t("services.detail.updated")}
-              value={
-                <span className="tabular-nums text-muted-foreground">
-                  {formatDatePattern(service.updatedAt, "PP", { locale: dateFnsLocale })}
-                </span>
-              }
-            />
+              <Field
+                label={t("services.detail.created")}
+                value={
+                  <span className="tabular-nums text-muted-foreground">
+                    {formatDatePattern(service.createdAt, "PP", { locale: dateFnsLocale })}
+                  </span>
+                }
+              />
+              <Field
+                label={t("services.detail.updated")}
+                value={
+                  <span className="tabular-nums text-muted-foreground">
+                    {formatDatePattern(service.updatedAt, "PP", { locale: dateFnsLocale })}
+                  </span>
+                }
+              />
             </div>
-          </div>
+          </DetailSection>
 
         </div>
 

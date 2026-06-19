@@ -9,6 +9,7 @@ export interface UpsertBookingSettingsCommand {
   freeCancelRefundType?: RefundType;
   lateCancelRefundPercent?: number;
   maxReschedulesPerBooking?: number;
+  clientRescheduleMinHoursBefore?: number;
   autoCompleteAfterHours?: number;
   autoNoShowAfterMinutes?: number;
   minBookingLeadMinutes?: number;

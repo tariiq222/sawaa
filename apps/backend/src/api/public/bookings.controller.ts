@@ -50,7 +50,7 @@ export class PublicBookingsController {
   @Post('group-sessions/:id/book')
   @ApiOperation({ summary: 'Book a group session' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiCreatedResponse({ schema: { type: 'object', properties: { type: { type: 'string', enum: ['BOOKED'] }, bookingId: { type: 'string' } } } })
+  @ApiCreatedResponse({ schema: { type: 'object', properties: { type: { type: 'string', enum: ['BOOKED'] }, bookingId: { type: 'string' }, status: { type: 'string' }, invoiceId: { type: 'string', format: 'uuid', nullable: true } } } })
   @ApiResponse({ status: 409, description: 'Session full' })
   async bookGroupSessionEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
