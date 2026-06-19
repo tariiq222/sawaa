@@ -13,14 +13,12 @@ import type { UpdateServicePayload } from "@/lib/types/employee"
 interface EmployeeServiceTogglesProps {
   item: ServiceEmployee
   serviceId: string
-  isSaving: boolean
   t: (key: string) => string
 }
 
 export function EmployeeServiceToggles({
   item,
   serviceId,
-  isSaving,
   t,
 }: EmployeeServiceTogglesProps) {
   const { employee } = item
@@ -74,7 +72,7 @@ export function EmployeeServiceToggles({
             id={`active-${employee.id}`}
             checked={displayedIsActive}
             onCheckedChange={handlePatchActive}
-            disabled={isSaving}
+            disabled={updateMut.isPending}
             className="scale-90"
             aria-label={t("employees.services.inlineActiveAria")}
           />
@@ -125,7 +123,7 @@ export function EmployeeServiceToggles({
           </Label>
           <BufferCell
             value={item.bufferMinutes ?? 0}
-            isSaving={isSaving}
+            isSaving={updateMut.isPending}
             ariaLabel={t("employees.services.inlineBufferAria")}
             unitLabel={minUnit}
             emptyHintLabel={t("employees.services.inlineBufferEmpty")}

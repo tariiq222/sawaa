@@ -75,7 +75,6 @@ export function EditEmployeeServiceSheet({
               <EmployeeServiceToggles
                 item={serviceEmployee}
                 serviceId={serviceId}
-                isSaving={false}
                 t={t}
               />
               <EmployeeCustomPricingRow

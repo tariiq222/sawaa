@@ -487,6 +487,7 @@ export const enServices: Record<string, string> = {
   "services.employees.durations.saveError": "Failed to save durations",
   "services.employees.durations.remove": "Remove",
   "services.employees.durations.noDurations": "No durations defined",
+  "services.employees.durations.customizeHint": "Editing durations creates practitioner-specific overrides that are no longer updated when the service defaults change.",
 
   /* ── Employees Tab — Working Info ── */
   "services.employees.workingInfo.title": "Working info",

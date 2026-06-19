@@ -487,6 +487,7 @@ export const arServices: Record<string, string> = {
   "services.employees.durations.saveError": "فشل حفظ المدد",
   "services.employees.durations.remove": "حذف",
   "services.employees.durations.noDurations": "لا توجد مدد محددة",
+  "services.employees.durations.customizeHint": "تعديل المدد ينشئ إعدادات خاصة بالمعالج لن تتأثر بتغييرات الخدمة مستقبلاً.",
 
   /* ── Employees Tab — Working Info ── */
   "services.employees.workingInfo.title": "بيانات العمل",

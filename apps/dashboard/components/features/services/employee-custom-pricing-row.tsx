@@ -118,8 +118,17 @@ export function EmployeeCustomPricingRow({
     setDirty(false)
   }
 
+  const hasInheritedRows = Object.values(rowsByType).some((rows) =>
+    rows.some((r) => r.isInherited),
+  )
+
   return (
     <div className="flex flex-col gap-3">
+      {hasInheritedRows && (
+        <p className="text-[11px] text-muted-foreground leading-snug">
+          {t("services.employees.durations.customizeHint")}
+        </p>
+      )}
       {supported.map((s) => {
         const rows = rowsByType[s.dt] ?? []
         return (
@@ -136,9 +145,12 @@ export function EmployeeCustomPricingRow({
                     className="h-8 w-20 tabular-nums"
                     aria-label={t("services.employees.durations.durationCol")}
                     value={r.durationMins}
-                    onChange={(e) =>
-                      editRow(s.dt, r.rid, { durationMins: Number(e.target.value) })
-                    }
+                    onChange={(e) => {
+                      const v = Number(e.target.value)
+                      editRow(s.dt, r.rid, {
+                        durationMins: Number.isFinite(v) && v >= 1 ? v : r.durationMins,
+                      })
+                    }}
                   />
                   <Input
                     type="number"
