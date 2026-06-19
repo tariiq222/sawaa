@@ -22,6 +22,8 @@ export function buildPayload(data: CreateServiceFormData) {
     depositEnabled: data.depositEnabled,
     depositAmount: data.depositEnabled && data.depositAmount != null ? sarToHalalas(data.depositAmount) : undefined,
     maxParticipants: data.maxParticipants,
+    minParticipants: data.minParticipants,
+    reserveWithoutPayment: data.reserveWithoutPayment,
     minLeadMinutes: data.minLeadMinutes,
     maxAdvanceDays: data.maxAdvanceDays,
   }

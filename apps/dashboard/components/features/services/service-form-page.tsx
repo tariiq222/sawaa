@@ -116,6 +116,8 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
       depositEnabled: service.depositEnabled,
       depositAmount: service.depositAmount != null ? halalasToSar(service.depositAmount) : null,
       maxParticipants: service.maxParticipants ?? 1,
+      minParticipants: service.minParticipants ?? undefined,
+      reserveWithoutPayment: service.reserveWithoutPayment ?? false,
       minLeadMinutes: service.minLeadMinutes ?? null,
       maxAdvanceDays: service.maxAdvanceDays ?? null,
     })
