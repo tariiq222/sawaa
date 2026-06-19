@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowDown01Icon, ArrowUp01Icon, Add01Icon, Cancel01Icon, Search01Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
@@ -15,6 +16,7 @@ import { useBranches } from "@/hooks/use-branches"
 import { useEmployeeSchedule, useUpdateEmployeeSchedule } from "@/hooks/use-employee-schedule"
 import { useEmployee } from "@/hooks/use-employees"
 import { assignEmployeeToBranch, unassignEmployeeFromBranch } from "@/lib/api/branches"
+import { queryKeys } from "@/lib/query-keys"
 import type { AvailabilitySlot } from "@/lib/types/employee"
 import { useLocale } from "@/components/locale-provider"
 
@@ -28,6 +30,7 @@ const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const
 export function EmployeeWorkingInfo({ employeeId, branchIds: propBranchIds }: EmployeeWorkingInfoProps) {
   const { t, locale } = useLocale()
   const isAr = locale === "ar"
+  const queryClient = useQueryClient()
   const [isExpanded, setIsExpanded] = useState(false)
   const [isAddingBranch, setIsAddingBranch] = useState(false)
   const [branchSearch, setBranchSearch] = useState("")
@@ -87,6 +90,8 @@ export function EmployeeWorkingInfo({ employeeId, branchIds: propBranchIds }: Em
   const handleRemoveBranch = async (branchId: string) => {
     try {
       await unassignEmployeeFromBranch(branchId, employeeId)
+      await queryClient.invalidateQueries({ queryKey: queryKeys.employees.all })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.employees.detail(employeeId) })
       toast.success(t("services.employees.workingInfo.branchRemovedToast"))
     } catch {
       toast.error(t("services.employees.workingInfo.branchErrorToast"))
@@ -96,6 +101,8 @@ export function EmployeeWorkingInfo({ employeeId, branchIds: propBranchIds }: Em
   const handleAddBranch = async (branchId: string) => {
     try {
       await assignEmployeeToBranch(branchId, employeeId)
+      await queryClient.invalidateQueries({ queryKey: queryKeys.employees.all })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.employees.detail(employeeId) })
       toast.success(t("services.employees.workingInfo.branchAddedToast"))
       setIsAddingBranch(false)
       setBranchSearch("")
