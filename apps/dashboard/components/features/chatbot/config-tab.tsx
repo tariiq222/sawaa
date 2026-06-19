@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@sawaa/ui"
 import { Input } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
@@ -65,89 +64,84 @@ export function ConfigTab() {
   }
 
   return (
-    <div className="flex flex-col gap-4 pt-4">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold">
-            {t("chatbot.config.category.personality") || "System Prompts"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs text-muted-foreground">
-              {t("chatbot.config.systemPromptAr") || "System Prompt (Arabic)"}
-            </Label>
-            <Textarea
-              value={systemPromptAr}
-              onChange={(e) => setSystemPromptAr(e.target.value)}
-              rows={4}
-              dir="rtl"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs text-muted-foreground">
-              {t("chatbot.config.systemPromptEn") || "System Prompt (English)"}
-            </Label>
-            <Textarea
-              value={systemPromptEn}
-              onChange={(e) => setSystemPromptEn(e.target.value)}
-              rows={4}
-              dir="ltr"
-            />
-          </div>
-        </CardContent>
-      </Card>
+    <div className="flex flex-col gap-6 pt-4">
+      {/* ─── System Prompts ─── */}
+      <section className="flex flex-col gap-4">
+        <p className="text-sm font-semibold text-foreground">
+          {t("chatbot.config.category.personality")}
+        </p>
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-xs text-muted-foreground">
+            {t("chatbot.config.systemPromptAr")}
+          </Label>
+          <Textarea
+            value={systemPromptAr}
+            onChange={(e) => setSystemPromptAr(e.target.value)}
+            rows={4}
+            dir="rtl"
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-xs text-muted-foreground">
+            {t("chatbot.config.systemPromptEn")}
+          </Label>
+          <Textarea
+            value={systemPromptEn}
+            onChange={(e) => setSystemPromptEn(e.target.value)}
+            rows={4}
+            dir="ltr"
+          />
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold">
-            {t("chatbot.config.category.general") || "Greetings"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs text-muted-foreground">
-              {t("chatbot.config.greetingAr") || "Greeting (Arabic)"}
-            </Label>
-            <Input
-              value={greetingAr}
-              onChange={(e) => setGreetingAr(e.target.value)}
-              dir="rtl"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs text-muted-foreground">
-              {t("chatbot.config.greetingEn") || "Greeting (English)"}
-            </Label>
-            <Input
-              value={greetingEn}
-              onChange={(e) => setGreetingEn(e.target.value)}
-              dir="ltr"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="h-px bg-border/60" />
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold">
-            {t("chatbot.config.category.handoff") || "Handoff"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs text-muted-foreground">
-              {t("chatbot.config.escalateToHumanAt") || "Auto-escalate after N messages"}
-            </Label>
-            <Input
-              type="number"
-              min={1}
-              value={escalateToHumanAt}
-              onChange={(e) => setEscalateToHumanAt(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* ─── Greetings ─── */}
+      <section className="flex flex-col gap-4">
+        <p className="text-sm font-semibold text-foreground">
+          {t("chatbot.config.category.general")}
+        </p>
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-xs text-muted-foreground">
+            {t("chatbot.config.greetingAr")}
+          </Label>
+          <Input
+            value={greetingAr}
+            onChange={(e) => setGreetingAr(e.target.value)}
+            dir="rtl"
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-xs text-muted-foreground">
+            {t("chatbot.config.greetingEn")}
+          </Label>
+          <Input
+            value={greetingEn}
+            onChange={(e) => setGreetingEn(e.target.value)}
+            dir="ltr"
+          />
+        </div>
+      </section>
+
+      <div className="h-px bg-border/60" />
+
+      {/* ─── Handoff ─── */}
+      <section className="flex flex-col gap-4">
+        <p className="text-sm font-semibold text-foreground">
+          {t("chatbot.config.category.handoff")}
+        </p>
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-xs text-muted-foreground">
+            {t("chatbot.config.escalateToHumanAt")}
+          </Label>
+          <Input
+            type="number"
+            min={1}
+            value={escalateToHumanAt}
+            onChange={(e) => setEscalateToHumanAt(e.target.value)}
+          />
+        </div>
+      </section>
 
       <div className="flex justify-end pt-2">
         <Button onClick={handleSave} disabled={updateConfigMut.isPending}>

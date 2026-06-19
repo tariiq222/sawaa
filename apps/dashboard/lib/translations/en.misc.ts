@@ -93,6 +93,18 @@ export const enMisc: Record<string, string> = {
   "reports.bookings.cancelReasons": "Cancellation Reasons",
   "reports.bookings.insightNoShowHigh": "No-show rate is high this period. Review reminder policy.",
 
+  // Heatmap labels
+  "reports.heatmap.dow.0": "Sun",
+  "reports.heatmap.dow.1": "Mon",
+  "reports.heatmap.dow.2": "Tue",
+  "reports.heatmap.dow.3": "Wed",
+  "reports.heatmap.dow.4": "Thu",
+  "reports.heatmap.dow.5": "Fri",
+  "reports.heatmap.dow.6": "Sat",
+  "reports.heatmap.hour.am": "AM",
+  "reports.heatmap.hour.noon": "12 noon",
+  "reports.heatmap.hour.pm": "PM",
+
   // Clients report
   "reports.clients.title": "Clients Report",
   "reports.clients.description": "New vs returning clients, age and gender breakdown",

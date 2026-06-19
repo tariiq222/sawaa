@@ -336,6 +336,8 @@ export const arOps: Record<string, string> = {
   "contactMessages.table.actions": "إجراءات",
   "contactMessages.loading": "جاري التحميل...",
   "contactMessages.empty": "لا توجد رسائل",
+  "contactMessages.empty.description": "لم يتم استلام أي رسائل تواصل بعد.",
+  "contactMessages.resultCount": "{n} رسالة",
   "contactMessages.actions.markRead": "مقروء",
   "contactMessages.actions.markReplied": "تم الرد",
   "contactMessages.actions.archive": "أرشفة",

@@ -119,6 +119,9 @@ export const arUsers: Record<string, string> = {
   "users.toast.activated": "تم تفعيل المستخدم",
   "users.toast.deactivated": "تم إلغاء تفعيل المستخدم",
   "users.toast.actionFailed": "فشل تنفيذ الإجراء",
+  "users.section.personal": "المعلومات الشخصية",
+  "users.section.account": "معلومات الحساب",
+  "users.section.role": "الدور والصلاحيات",
 
   // — Activity Log Columns —
   "activityLog.col.user": "المستخدم",

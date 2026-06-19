@@ -48,6 +48,7 @@ export const enEmployees: Record<string, string> = {
   "employees.empty.filteredDescription": "No employees match the current filters. Try adjusting them.",
   "employees.create.phoneLabel": "Phone",
   "employees.create.genderLabel": "Gender",
+  "employees.create.genderUnspecified": "—",
   "employees.create.genderMale": "Male",
   "employees.create.genderFemale": "Female",
   "employees.create.employmentTypeLabel": "Employment type",

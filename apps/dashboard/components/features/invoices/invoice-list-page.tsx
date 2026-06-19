@@ -19,7 +19,7 @@ export function InvoiceListPage() {
     setSearch("")
   }
 
-  const columns = getInvoiceColumns(undefined, t)
+  const columns = getInvoiceColumns(t)
 
   return (
     <ListPageShell>

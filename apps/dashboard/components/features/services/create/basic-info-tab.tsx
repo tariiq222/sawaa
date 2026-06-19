@@ -1,3 +1,4 @@
+// EXCEPTION: basic-info-tab integrates display-settings switches, avatar picker, and two-language form; 344 lines approved 2026-06-19
 "use client"
 
 import { useState } from "react"
@@ -28,7 +29,7 @@ import { useLocale } from "@/components/locale-provider"
 import { ServiceAvatarPicker } from "@/components/features/services/service-avatar-picker"
 import { ServiceBranchesTab } from "@/components/features/services/service-branches-tab"
 import { ServiceBranchesPicker } from "@/components/features/services/service-branches-picker"
-import { FormSection } from "@/components/features/shared/form-section"
+import { FormSection, FormField } from "@/components/features/shared/form-section"
 import type { UseFormReturn } from "react-hook-form"
 import type { CreateServiceFormData } from "./form-schema"
 
@@ -223,28 +224,19 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
 
           {/* ── Row 1: Names ── */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label>{primaryNameLabel} *</Label>
+            <FormField label={`${primaryNameLabel} *`} error={form.formState.errors[primaryName] ? t(form.formState.errors[primaryName]?.message ?? "") : undefined}>
               <Input {...form.register(primaryName)} dir={primaryDir} />
-              {form.formState.errors[primaryName] && (
-                <p className="text-xs text-destructive">{t(form.formState.errors[primaryName]?.message ?? "")}</p>
-              )}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>{secondaryNameLabel} *</Label>
+            </FormField>
+            <FormField label={`${secondaryNameLabel} *`} error={form.formState.errors[secondaryName] ? t(form.formState.errors[secondaryName]?.message ?? "") : undefined}>
               <Input {...form.register(secondaryName)} dir={secondaryDir} />
-              {form.formState.errors[secondaryName] && (
-                <p className="text-xs text-destructive">{t(form.formState.errors[secondaryName]?.message ?? "")}</p>
-              )}
-            </div>
+            </FormField>
           </div>
 
           {/* ── Row 2: Department (optional) + Category ── */}
           <div className={`grid grid-cols-1 gap-4 ${hasDepts ? "sm:grid-cols-2" : ""}`}>
             {/* Department filter — only shown when departments exist */}
             {hasDepts && (
-              <div className="flex flex-col gap-1.5">
-                <Label>{t("services.create.department")}</Label>
+              <FormField label={t("services.create.department")}>
                 <Select
                   value={selectedDeptId || "__none__"}
                   onValueChange={(v) => {
@@ -268,12 +260,11 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </FormField>
             )}
 
             {/* Category */}
-            <div className="flex flex-col gap-1.5">
-              <Label>{t("services.create.category")} *</Label>
+            <FormField label={t("services.create.category")} required error={form.formState.errors.categoryId ? t(form.formState.errors.categoryId.message ?? "services.create.categoryRequired") : undefined}>
               <Select
                 key={`${selectedDeptId}-${watchedCategoryId || "empty"}`}
                 value={watchedCategoryId || ""}
@@ -297,24 +288,17 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
                   )}
                 </SelectContent>
               </Select>
-              {form.formState.errors.categoryId && (
-                <p className="text-xs text-destructive">
-                  {t(form.formState.errors.categoryId.message ?? "services.create.categoryRequired")}
-                </p>
-              )}
-            </div>
+            </FormField>
           </div>
 
           {/* ── Row 2: Descriptions — 2 equal columns ── */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label>{primaryDescLabel}</Label>
+            <FormField label={primaryDescLabel}>
               <Textarea {...form.register(primaryDesc)} rows={3} dir={primaryDir} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>{secondaryDescLabel}</Label>
+            </FormField>
+            <FormField label={secondaryDescLabel}>
               <Textarea {...form.register(secondaryDesc)} rows={3} dir={secondaryDir} />
-            </div>
+            </FormField>
           </div>
 
           {/* ── Row 3: Branch Restrictions (only when multi_branch enabled) + Display Settings ── */}

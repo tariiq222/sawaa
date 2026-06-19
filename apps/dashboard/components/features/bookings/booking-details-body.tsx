@@ -15,6 +15,7 @@ import {
 } from "@hugeicons/core-free-icons"
 
 import { Badge, Button } from "@sawaa/ui"
+import { PaymentStatusBadge } from "@/components/features/status-badge"
 import { DetailRow } from "@/components/features/detail-sheet-parts"
 import { cn } from "@/lib/utils"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
@@ -24,10 +25,10 @@ import type { Booking, CancelledBy } from "@/lib/types/booking"
 /* ── CancelledByBadge ── */
 
 const cancelledByStyles: Record<CancelledBy, string> = {
-  client:      "border-warning/30 bg-warning/10 text-warning",
-  employee: "border-success/30 bg-success/10 text-success",
-  admin:        "border-primary/30 bg-primary/10 text-primary",
-  system:       "border-border bg-surface-muted text-muted-foreground",
+  client:   "border-warning/30 bg-warning-soft text-warning",
+  employee: "border-success/30 bg-success-soft text-success",
+  admin:    "border-primary/30 bg-primary/10 text-primary",
+  system:   "border-border bg-surface-muted text-muted-foreground",
 }
 
 export function CancelledByBadge({ cancelledBy, t }: { cancelledBy: CancelledBy; t: (key: string) => string }) {
@@ -38,26 +39,7 @@ export function CancelledByBadge({ cancelledBy, t }: { cancelledBy: CancelledBy;
   )
 }
 
-/* ── PaymentStatusBadge + PaymentMethodBadge ── */
-
-const paymentStatusClasses: Record<string, string> = {
-  pending:  "border-warning/30 bg-warning/10 text-warning",
-  awaiting: "border-info/20 bg-info/10 text-info",
-  paid:     "border-success/30 bg-success/10 text-success",
-  failed:   "border-destructive/30 bg-destructive/10 text-destructive",
-  refunded: "border-refunded/30 bg-refunded/10 text-refunded",
-  rejected: "border-destructive/30 bg-destructive/10 text-destructive",
-}
-
-function PaymentStatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
-  const className = paymentStatusClasses[status] ?? "border-border bg-muted text-muted-foreground"
-  const label = t(`detail.paymentStatus.${status}`) || status
-  return (
-    <Badge variant="outline" className={cn("text-xs", className)}>
-      {label}
-    </Badge>
-  )
-}
+/* ── PaymentMethodBadge ── */
 
 function PaymentMethodBadge({ method, t }: { method: string; t: (key: string) => string }) {
   const label = t(`detail.paymentMethod.${method}`) || method
@@ -134,10 +116,10 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
   const serviceName = locale === "ar"
     ? (booking.service?.nameAr ?? booking.service?.nameEn ?? "—")
     : (booking.service?.nameEn ?? booking.service?.nameAr ?? "—")
-  const card = "bg-surface rounded-xl border border-border shadow-sm overflow-hidden"
-  const cardHeader = "px-4 py-2.5 bg-muted/50 border-b border-border"
-  const cardTitle = "text-xs font-semibold text-muted-foreground uppercase tracking-wider"
-  const cardBody = "px-4 py-3 flex flex-col gap-2"
+  const card = "shrink-0 bg-surface rounded-2xl border border-border shadow-sm overflow-hidden"
+  const cardHeader = "px-5 py-3 bg-accent-ultra-light border-b border-border"
+  const cardTitle = "text-xs font-semibold text-accent-foreground uppercase tracking-wider"
+  const cardBody = "px-5 py-3 flex flex-col gap-2"
 
   return (
     <div className="flex flex-col gap-3">
@@ -163,7 +145,7 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
       <div className={`grid gap-3 ${booking.payment ? "grid-cols-2" : "grid-cols-1"}`}>
         <div className={card}>
           <div className={cardHeader}><p className={cardTitle}>{t("detail.appointment")}</p></div>
-          <div className="px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-4">
+          <div className="px-5 py-3 grid grid-cols-2 gap-x-6 gap-y-4">
             <DetailRow label={t("detail.service")} value={serviceName} icon={MedicineBottle01Icon} />
             <DetailRow label={t("detail.date")} value={appointmentDate} numeric icon={Calendar03Icon} />
             <DetailRow label={t("detail.time")} value={`${booking.startTime} — ${booking.endTime}`} numeric icon={Clock01Icon} />
@@ -188,7 +170,7 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
               />
               <DetailRow
                 label={t("detail.status")}
-                value={<PaymentStatusBadge status={booking.payment.status} t={t} />}
+                value={<PaymentStatusBadge status={booking.payment.status} label={t(`bookings.col.paymentStatus.${booking.payment.status}`)} />}
                 icon={CheckmarkCircle02Icon}
               />
               <DetailRow

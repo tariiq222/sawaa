@@ -24,6 +24,7 @@ import {
 import type { User } from "@/lib/types/user"
 import type { Locale } from "@/lib/translations"
 import type { UserRole } from "@/lib/types/user"
+import { ActiveBadge } from "@/components/features/status-badge"
 
 interface UserColumnCallbacks {
   onEdit?: (user: User) => void
@@ -82,16 +83,10 @@ export function getUserColumns(
       id: "status",
       header: t("users.col.status"),
       cell: ({ row }) => (
-        <Badge
-          variant="outline"
-          className={
-            row.original.isActive
-              ? "border-success/30 bg-success/10 text-success"
-              : "border-muted-foreground/30 bg-muted text-muted-foreground"
-          }
-        >
-          {row.original.isActive ? t("users.status.active") : t("users.status.inactive")}
-        </Badge>
+        <ActiveBadge
+          active={row.original.isActive}
+          label={row.original.isActive ? t("users.status.active") : t("users.status.inactive")}
+        />
       ),
     },
     {

@@ -59,6 +59,25 @@ export async function deleteCategory(id: string): Promise<void> {
   await api.delete(`/dashboard/organization/categories/${id}`)
 }
 
+/* ─── Category Image ─── */
+
+export async function uploadCategoryImage(categoryId: string, file: File): Promise<ServiceCategory> {
+  const formData = new FormData()
+  formData.append("file", file)
+
+  // Step 1: upload file to media storage (via api client for refresh handling)
+  const uploaded = await api.postForm<{ id: string; storageKey: string }>("/dashboard/media/upload", formData)
+
+  // Step 2: get presigned URL — backend max expiry is 900s (15 min)
+  const presignedData = await api.get<{ url: string }>(
+    `/dashboard/media/${uploaded.id}/presigned-url`,
+    { expirySeconds: 900 },
+  )
+
+  // Step 3: attach the image URL to the category
+  return api.patch<ServiceCategory>(`/dashboard/organization/categories/${categoryId}`, { imageUrl: presignedData.url })
+}
+
 /* ─── Services ─── */
 
 export async function fetchServices(

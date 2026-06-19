@@ -14,11 +14,11 @@ import {
   AlertDialogTitle,
 } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
-import { Badge } from "@sawaa/ui"
 import { Textarea } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useSetClientActiveWithToast } from "@/hooks/use-set-client-active"
+import { ActiveBadge } from "@/components/features/status-badge"
 import type { Client } from "@/lib/types/client"
 
 /* ─── Props ─── */
@@ -70,16 +70,11 @@ export function ClientAccountToggle({ client }: Props) {
           <span className="text-sm font-medium text-foreground">
             {t("clients.account.status")}
           </span>
-          <Badge
-            variant="outline"
-            className={
-              isActive
-                ? "border-success/30 bg-success/10 text-success w-fit"
-                : "border-destructive/30 bg-destructive/10 text-destructive w-fit"
-            }
-          >
-            {isActive ? t("clients.account.active") : t("clients.account.disabled")}
-          </Badge>
+          <ActiveBadge
+            active={isActive}
+            label={isActive ? t("clients.account.active") : t("clients.account.disabled")}
+            className="w-fit"
+          />
         </div>
 
         <Button

@@ -7,7 +7,6 @@ import {
   ViewIcon,
   ArrowTurnBackwardIcon,
 } from "@hugeicons/core-free-icons"
-import { Badge } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
 import {
   DropdownMenu,
@@ -15,17 +14,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@sawaa/ui"
+import { PaymentStatusBadge } from "@/components/features/status-badge"
 import type { Payment } from "@/lib/types/payment"
 import { formatPrice } from "@/lib/money"
 import { formatClinicDate } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"
 
-const statusStyles: Record<string, string> = {
-  PENDING: "border-warning/40 bg-warning-soft text-warning",
-  PENDING_VERIFICATION: "border-warning/40 bg-warning-soft text-warning",
-  COMPLETED: "border-success/40 bg-success-soft text-success",
-  REFUNDED: "border-refunded/40 bg-refunded-soft text-refunded",
-  FAILED: "border-error/40 bg-error-soft text-error",
+const PAYMENT_STATUS_KEYS: Record<string, string> = {
+  PENDING: "payments.status.pending",
+  PENDING_VERIFICATION: "payments.status.waiting",
+  COMPLETED: "payments.status.paid",
+  REFUNDED: "payments.status.refunded",
+  FAILED: "payments.status.failed",
 }
 
 const METHOD_KEYS: Record<string, string> = {
@@ -107,14 +107,11 @@ export function getPaymentColumns(
     {
       accessorKey: "status",
       header: t("payments.col.status"),
-      cell: ({ row }) => (
-        <Badge
-          variant="outline"
-          className={statusStyles[row.original.status] ?? ""}
-        >
-          {row.original.status}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        const status = row.original.status
+        const labelKey = PAYMENT_STATUS_KEYS[status] ?? "payments.status.pending"
+        return <PaymentStatusBadge status={status} label={t(labelKey)} />
+      },
     },
     {
       accessorKey: "createdAt",

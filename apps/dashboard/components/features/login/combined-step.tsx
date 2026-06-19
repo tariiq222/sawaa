@@ -65,7 +65,7 @@ export function CombinedStep({ loading, error, onSubmit, onBack, onClearError }:
           </button>
         </div>
         {fieldError && (
-          <p className="text-sm text-destructive">{fieldError}</p>
+          <p className="text-sm text-error">{fieldError}</p>
         )}
       </div>
 

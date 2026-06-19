@@ -99,17 +99,13 @@ export function DepartmentListPage() {
               ? { label: t("departments.filters.reset"), onClick: resetFilters }
               : { label: t("departments.addDepartment"), onClick: () => setCreateOpen(true) }
           }
+          serverPaginated
+          page={page}
+          totalPages={meta?.totalPages}
+          hasPreviousPage={meta?.hasPreviousPage}
+          hasNextPage={meta?.hasNextPage}
+          onPageChange={setPage}
         />
-      )}
-
-      {meta && meta.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground tabular-nums">{page} / {meta.totalPages}</p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>{t("table.previous")}</Button>
-            <Button variant="outline" size="sm" disabled={page >= meta.totalPages} onClick={() => setPage(page + 1)}>{t("table.next")}</Button>
-          </div>
-        </div>
       )}
 
       <CreateDepartmentDialog open={createOpen} onOpenChange={setCreateOpen} />

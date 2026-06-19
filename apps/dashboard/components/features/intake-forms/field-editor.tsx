@@ -96,7 +96,7 @@ export function FieldEditor({
   const needsOptions = OPTIONS_FIELD_TYPES.includes(field.type)
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 flex flex-col gap-4">
+    <div className="rounded-lg border border-border bg-surface-solid p-4 flex flex-col gap-4">
       {/* Header row */}
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-semibold text-muted-foreground tabular-nums">

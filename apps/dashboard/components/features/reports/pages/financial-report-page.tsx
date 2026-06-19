@@ -16,6 +16,7 @@ import { DistributionBars } from "../distribution-bars"
 import { ReportsEmptyState } from "../empty-state"
 import { useReportsPeriodCtx } from "../reports-period-context"
 import { computeDelta } from "../delta-helpers"
+import { ReportTable } from "../report-table"
 
 const METHOD_COLORS: Record<string, string> = {
   ONLINE_CARD: "var(--chart-1)",
@@ -151,93 +152,91 @@ export function FinancialReportPage() {
 
           {data.couponsUsed.length > 0 && (
             <Section title={t("reports.financial.couponsUsed")}>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b border-border text-xs text-muted-foreground">
-                    <tr>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.financial.couponCode")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.financial.couponUses")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.financial.couponDiscount")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.status")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.couponsUsed.map((c) => (
-                      <tr key={c.code} className="border-b border-border last:border-b-0">
-                        <td className="px-3 py-2 font-medium">{c.code}</td>
-                        <td className="px-3 py-2 tabular-nums">{c.uses}</td>
-                        <td className="px-3 py-2 tabular-nums">
-                          <FormattedCurrency amount={c.discountAmount} locale={locale} />
-                        </td>
-                        <td className="px-3 py-2">
-                          {c.isActive ? (
-                            <span className="rounded-sm bg-success/15 px-2 py-0.5 text-xs text-success">
-                              {t("reports.financial.couponActive")}
-                            </span>
-                          ) : (
-                            <span className="rounded-sm bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                              {t("reports.financial.couponExpired")}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ReportTable
+                columns={[
+                  {
+                    key: "code",
+                    header: t("reports.financial.couponCode"),
+                    render: (c) => <span className="font-medium">{c.code}</span>,
+                  },
+                  {
+                    key: "uses",
+                    header: t("reports.financial.couponUses"),
+                    render: (c) => <span className="tabular-nums">{c.uses}</span>,
+                  },
+                  {
+                    key: "discount",
+                    header: t("reports.financial.couponDiscount"),
+                    render: (c) => (
+                      <span className="tabular-nums">
+                        <FormattedCurrency amount={c.discountAmount} locale={locale} />
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "status",
+                    header: t("reports.status"),
+                    render: (c) =>
+                      c.isActive ? (
+                        <span className="rounded-sm bg-success/15 px-2 py-0.5 text-xs text-success">
+                          {t("reports.financial.couponActive")}
+                        </span>
+                      ) : (
+                        <span className="rounded-sm bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                          {t("reports.financial.couponExpired")}
+                        </span>
+                      ),
+                  },
+                ]}
+                rows={data.couponsUsed}
+                getRowKey={(c) => c.code}
+              />
             </Section>
           )}
 
           {data.recentPayments.length > 0 && (
             <Section title={t("reports.financial.recentPayments")}>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b border-border text-xs text-muted-foreground">
-                    <tr>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.date")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.client")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.service")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.method")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.amount")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.recentPayments.map((p) => (
-                      <tr key={p.id} className="border-b border-border last:border-b-0">
-                        <td className="px-3 py-2 text-xs text-muted-foreground">
-                          {new Date(p.date).toLocaleDateString(locale)}
-                        </td>
-                        <td className="px-3 py-2">{p.clientName || "—"}</td>
-                        <td className="px-3 py-2">{p.serviceName || "—"}</td>
-                        <td className="px-3 py-2 text-xs">
-                          {t(`reports.paymentMethod.${p.method}`)}
-                        </td>
-                        <td className="px-3 py-2 tabular-nums">
-                          <FormattedCurrency amount={p.amount} locale={locale} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ReportTable
+                columns={[
+                  {
+                    key: "date",
+                    header: t("reports.date"),
+                    render: (p) => (
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(p.date).toLocaleDateString(locale)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "client",
+                    header: t("reports.client"),
+                    render: (p) => p.clientName || "—",
+                  },
+                  {
+                    key: "service",
+                    header: t("reports.service"),
+                    render: (p) => p.serviceName || "—",
+                  },
+                  {
+                    key: "method",
+                    header: t("reports.method"),
+                    render: (p) => (
+                      <span className="text-xs">{t(`reports.paymentMethod.${p.method}`)}</span>
+                    ),
+                  },
+                  {
+                    key: "amount",
+                    header: t("reports.amount"),
+                    render: (p) => (
+                      <span className="tabular-nums">
+                        <FormattedCurrency amount={p.amount} locale={locale} />
+                      </span>
+                    ),
+                  },
+                ]}
+                rows={data.recentPayments}
+                getRowKey={(p) => p.id}
+              />
             </Section>
           )}
         </>

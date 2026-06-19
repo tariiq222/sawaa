@@ -3,6 +3,8 @@
 import { useQuery } from "@tanstack/react-query"
 import { useLocale } from "@/components/locale-provider"
 import { Skeleton } from "@sawaa/ui"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Alert01Icon } from "@hugeicons/core-free-icons"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchBookingReport } from "@/lib/api/reports"
 import { ReportPageShell } from "../report-page-shell"
@@ -152,7 +154,10 @@ export function BookingsReportPage() {
 
           {data.noShowRate > 0.1 && (
             <InsightBanner tone="warning">
-              ⚠️ {t("reports.bookings.insightNoShowHigh")}
+              <span className="inline-flex items-center gap-2">
+                <HugeiconsIcon icon={Alert01Icon} size={16} />
+                {t("reports.bookings.insightNoShowHigh")}
+              </span>
             </InsightBanner>
           )}
         </>

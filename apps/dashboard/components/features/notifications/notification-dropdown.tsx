@@ -70,7 +70,7 @@ function NotificationRow({
         <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
           {body}
         </p>
-        <p className="mt-1 text-xs text-muted-foreground font-numeric">
+        <p className="mt-1 text-xs text-muted-foreground tabular-nums">
           {formatRelativeTime(notification.createdAt, {
             addSuffix: true,
             locale: locale === "ar" ? ar : undefined,
@@ -101,13 +101,13 @@ export function NotificationDropdown() {
           size="icon"
           aria-label="Notifications"
           data-testid="notifications-bell"
-          className="relative size-9 hover:text-primary hover:bg-primary/8"
+          className="relative size-9 hover:text-primary hover:bg-primary/10"
         >
           <HugeiconsIcon icon={Notification03Icon} size={18} />
           {hasUnread && (
             <span
               data-testid="notifications-badge"
-              className="absolute -top-0.5 -end-0.5 flex size-4 items-center justify-center rounded-full bg-error text-[9px] font-bold tabular-nums text-white ring-2 ring-background"
+              className="absolute -top-0.5 -end-0.5 flex size-4 items-center justify-center rounded-full bg-error text-[9px] font-bold tabular-nums text-error-foreground ring-2 ring-background"
             >
               {unreadCount! > 9 ? "9+" : unreadCount}
             </span>

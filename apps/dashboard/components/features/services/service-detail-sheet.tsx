@@ -13,7 +13,7 @@ import {
 } from "@sawaa/ui"
 import { Badge } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
-import { DetailSection } from "@/components/features/detail-sheet-parts"
+import { DetailSection, DetailRow } from "@/components/features/detail-sheet-parts"
 import { useLocale } from "@/components/locale-provider"
 import { ar } from "date-fns/locale"
 import { formatDatePattern } from "@/lib/date"
@@ -24,26 +24,21 @@ import { ServiceAvatar } from "./service-avatar"
 
 /* ─── Sub-components ─── */
 
-function Field({
-  label,
-  value,
-  className,
-}: {
-  label: string
-  value: React.ReactNode
-  className?: string
-}) {
+/** Stacked field for long-form text (descriptions) that needs the full width.
+ *  DetailRow does not support stacked layout — kept as a local helper. */
+function StackedField({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className={cn("flex flex-col gap-0.5", className)}>
-      <span className="text-[11px] text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-foreground break-words">
+    <div className="flex flex-col gap-1 py-2.5">
+      <span className="text-[13px] text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium leading-relaxed text-foreground break-words">
         {value ?? <span className="text-muted-foreground/50">—</span>}
       </span>
     </div>
   )
 }
 
-function StatusPill({ active, yes, no }: { active: boolean; yes: string; no: string }) {
+/** Shared status badge — mirrors the badge pattern in service-columns. */
+export function ServiceStatusBadge({ active, yes, no }: { active: boolean; yes: string; no: string }) {
   return (
     <Badge
       variant="outline"
@@ -84,7 +79,7 @@ export function ServiceDetailSheet({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <div className="flex items-start gap-3 pe-6">
             <ServiceAvatar
@@ -103,11 +98,11 @@ export function ServiceDetailSheet({
           </div>
         </DialogHeader>
 
-        <div className="overflow-y-auto max-h-[calc(80dvh-8rem)] px-6 py-5 flex flex-col gap-3">
+        <div className="overflow-y-auto max-h-[calc(80dvh-8rem)] px-6 py-5 flex flex-col gap-4">
 
           {/* Status row */}
           <div className="flex flex-wrap gap-2">
-            <StatusPill
+            <ServiceStatusBadge
               active={service.isActive}
               yes={t("services.status.active")}
               no={t("services.status.inactive")}
@@ -129,75 +124,83 @@ export function ServiceDetailSheet({
             )}
           </div>
 
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-start">
+
           {/* Basic info */}
           <DetailSection title={t("services.create.tabs.basic")}>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              <Field label={t("services.detail.nameEn")} value={service.nameEn} />
-              <Field label={t("services.detail.nameAr")} value={service.nameAr} />
-              {(service.descriptionEn || service.descriptionAr) && (
-                <>
-                  <Field label={t("services.detail.descEn")} value={service.descriptionEn} />
-                  <Field
-                    label={t("services.detail.descAr")}
-                    value={service.descriptionAr ? <span dir="rtl">{service.descriptionAr}</span> : null}
-                  />
-                </>
-              )}
-              <Field
+            <div className="flex flex-col gap-1.5 py-1.5">
+              <DetailRow label={t("services.detail.nameEn")} value={service.nameEn ?? "—"} />
+              <DetailRow label={t("services.detail.nameAr")} value={service.nameAr} />
+              <DetailRow
                 label={t("services.detail.category")}
-                value={service.category ? (isAr ? service.category.nameAr : service.category.nameEn) : null}
-                className="col-span-2"
+                value={service.category ? (isAr ? service.category.nameAr : (service.category.nameEn ?? service.category.nameAr)) : "—"}
               />
+              {service.descriptionEn && (
+                <StackedField label={t("services.detail.descEn")} value={service.descriptionEn} />
+              )}
+              {service.descriptionAr && (
+                <StackedField
+                  label={t("services.detail.descAr")}
+                  value={<span dir="rtl">{service.descriptionAr}</span>}
+                />
+              )}
             </div>
           </DetailSection>
 
           {/* Pricing */}
           <DetailSection title={t("services.create.tabs.pricing")}>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              <Field
+            <div className="flex flex-col gap-1.5 py-1.5">
+              <DetailRow
                 label={t("services.detail.price")}
-                value={<span className="tabular-nums">{formatPrice(Number(service.price))} {t("services.bookingTypes.priceCurrency")}</span>}
+                value={`${formatPrice(Number(service.price))} ${t("services.bookingTypes.priceCurrency")}`}
+                numeric
               />
-              <Field
+              <DetailRow
                 label={t("services.detail.duration")}
-                value={<span className="tabular-nums">{service.durationMins} {t("services.detail.min")}</span>}
+                value={`${service.durationMins} ${t("services.detail.min")}`}
+                numeric
               />
             </div>
           </DetailSection>
 
           {/* Booking settings */}
           <DetailSection title={t("services.detail.bookingSettings")}>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              <Field
+            <div className="flex flex-col gap-1.5 py-1.5">
+              <DetailRow
                 label={t("services.detail.deposit")}
                 value={
                   service.depositEnabled
-                    ? <span className="tabular-nums">{service.depositAmount != null ? formatPrice(Number(service.depositAmount)) : "—"}</span>
-                    : <StatusPill active={false} yes="" no={t("common.disabled")} />
+                    ? `${service.depositAmount != null ? formatPrice(Number(service.depositAmount)) : "—"}`
+                    : <ServiceStatusBadge active={false} yes="" no={t("common.disabled")} />
                 }
+                numeric={service.depositEnabled}
               />
               {service.bufferMinutes > 0 && (
-                <Field
+                <DetailRow
                   label={t("services.detail.buffer")}
-                  value={<span className="tabular-nums">{service.bufferMinutes} {t("services.detail.min")}</span>}
+                  value={`${service.bufferMinutes} ${t("services.detail.min")}`}
+                  numeric
                 />
               )}
               {service.minLeadMinutes != null && (
-                <Field
+                <DetailRow
                   label={t("services.detail.minLead")}
-                  value={<span className="tabular-nums">{service.minLeadMinutes} {t("services.detail.min")}</span>}
+                  value={`${service.minLeadMinutes} ${t("services.detail.min")}`}
+                  numeric
                 />
               )}
               {service.maxAdvanceDays != null && (
-                <Field
+                <DetailRow
                   label={t("services.detail.maxAdvance")}
-                  value={<span className="tabular-nums">{service.maxAdvanceDays} {t("services.booking.days")}</span>}
+                  value={`${service.maxAdvanceDays} ${t("services.booking.days")}`}
+                  numeric
                 />
               )}
               {service.maxParticipants > 1 && (
-                <Field
+                <DetailRow
                   label={t("services.detail.maxParticipants")}
-                  value={<span className="tabular-nums">{service.maxParticipants}</span>}
+                  value={`${service.maxParticipants}`}
+                  numeric
                 />
               )}
             </div>
@@ -205,25 +208,21 @@ export function ServiceDetailSheet({
 
           {/* Dates */}
           <DetailSection title={t("services.detail.dates")}>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              <Field
+            <div className="flex flex-col gap-1.5 py-1.5">
+              <DetailRow
                 label={t("services.detail.created")}
-                value={
-                  <span className="tabular-nums text-muted-foreground">
-                    {formatDatePattern(service.createdAt, "PP", { locale: dateFnsLocale })}
-                  </span>
-                }
+                value={formatDatePattern(service.createdAt, "PP", { locale: dateFnsLocale })}
+                numeric
               />
-              <Field
+              <DetailRow
                 label={t("services.detail.updated")}
-                value={
-                  <span className="tabular-nums text-muted-foreground">
-                    {formatDatePattern(service.updatedAt, "PP", { locale: dateFnsLocale })}
-                  </span>
-                }
+                value={formatDatePattern(service.updatedAt, "PP", { locale: dateFnsLocale })}
+                numeric
               />
             </div>
           </DetailSection>
+
+          </div>
 
         </div>
 

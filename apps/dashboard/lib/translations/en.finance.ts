@@ -49,8 +49,27 @@ export const enFinance: Record<string, string> = {
   "payments.verify.title": "Verify Bank Transfer",
   "payments.verify.description": "Review the bank transfer details, then approve or reject it.",
   "payments.verify.actionLabel": "Action",
+  "payments.verify.selectAction": "Select action",
   "payments.verify.approve": "Approve Transfer",
   "payments.verify.reject": "Reject Transfer",
+  "payments.verify.transferRef": "Transfer Reference (optional)",
+  "payments.verify.transferRefPlaceholder": "Bank transfer reference number...",
+  "payments.verify.cancel": "Cancel",
+  "payments.verify.processing": "Processing...",
+  "payments.verify.confirm": "Confirm",
+  "payments.verify.approvedToast": "Transfer approved",
+  "payments.verify.rejectedToast": "Transfer rejected",
+  "payments.verify.failedToast": "Verification failed",
+
+  // — AI Verification Status —
+  "payments.verification.pending": "Pending review",
+  "payments.verification.matched": "Matched",
+  "payments.verification.approved": "Approved",
+  "payments.verification.rejected": "Rejected",
+  "payments.verification.amountDiffers": "Amount mismatch",
+  "payments.verification.suspicious": "Suspicious",
+  "payments.verification.oldDate": "Old date",
+  "payments.verification.unreadable": "Unreadable",
 
   // — Refund Dialog —
   "refund.title": "Refund Payment",

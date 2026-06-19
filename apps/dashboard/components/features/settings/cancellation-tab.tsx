@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Card, CardContent, Button, Input, Skeleton, Switch } from "@sawaa/ui"
+import { Card, CardContent, Button, Skeleton } from "@sawaa/ui"
 import {
   Select,
   SelectContent,
@@ -13,71 +13,13 @@ import {
 import { cn } from "@/lib/utils"
 import { useBookingSettings, useBookingSettingsMutation } from "@/hooks/use-organization-settings"
 import type { RefundType } from "@/lib/api/booking-settings"
+import { SettingsTabSidebar } from "./settings-tab-sidebar"
+import { NumberRow, SwitchRow } from "./setting-row"
 
 type TabId = "refunds" | "rescheduling" | "automation"
 
 interface Props {
   t: (key: string) => string
-}
-
-function NumberRow({
-  label,
-  desc,
-  value,
-  onChange,
-  unit,
-  min = 0,
-  max,
-}: {
-  label: string
-  desc: string
-  value: string
-  onChange: (v: string) => void
-  unit: string
-  min?: number
-  max?: number
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 py-3">
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{desc}</p>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <Input
-          type="number"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-20 tabular-nums"
-          min={min}
-          max={max}
-        />
-        <span className="w-8 text-xs text-muted-foreground">{unit}</span>
-      </div>
-    </div>
-  )
-}
-
-function SwitchRow({
-  label,
-  desc,
-  checked,
-  onChange,
-}: {
-  label: string
-  desc: string
-  checked: boolean
-  onChange: (v: boolean) => void
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 py-3">
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{desc}</p>
-      </div>
-      <Switch checked={checked} onCheckedChange={onChange} />
-    </div>
-  )
 }
 
 function RefundSelect({
@@ -163,36 +105,12 @@ export function CancellationTab({ t }: Props) {
   return (
     <Card className="overflow-hidden p-0">
       <div className="flex min-h-[420px]">
-        <div className="flex w-64 shrink-0 flex-col border-e border-border bg-surface-muted">
-          <div className="border-b border-border px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {t("settings.cancellationPolicy")}
-            </p>
-          </div>
-          <div role="tablist" className="flex-1 space-y-1.5 p-3">
-            {tabs.map((tab) => (
-              <div
-                key={tab.id}
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                tabIndex={0}
-                onClick={() => setActiveTab(tab.id)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setActiveTab(tab.id) }}
-                className={cn(
-                  "w-full cursor-pointer select-none rounded-lg px-3 py-2.5 transition-all",
-                  activeTab === tab.id
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
-                )}
-              >
-                <p className="truncate text-sm font-medium leading-tight">{tab.label}</p>
-                {activeTab === tab.id && (
-                  <p className="mt-0.5 line-clamp-2 text-xs leading-tight opacity-80">{tab.desc}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+        <SettingsTabSidebar
+          title={t("settings.cancellationPolicy")}
+          items={tabs.map(tab => ({ id: tab.id, label: tab.label, desc: tab.desc }))}
+          activeId={activeTab}
+          onSelect={(id) => setActiveTab(id as TabId)}
+        />
 
         <div className="flex flex-1 flex-col overflow-y-auto bg-surface-muted/50 p-5">
           {activeTab === "refunds" && (

@@ -24,6 +24,7 @@ import { HolidaysSection } from "./holidays-section"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import { useLocale } from "@/components/locale-provider"
 import { useBranches } from "@/hooks/use-branches"
+import { SettingsTabSidebar } from "./settings-tab-sidebar"
 
 /* ─── Constants ─── */
 
@@ -268,39 +269,13 @@ export function WorkingHoursTab({ t }: Props) {
     <Card className="overflow-hidden p-0">
       <div className="flex min-h-[420px]">
         {/* ── Sidebar ── */}
-        <div className="w-64 shrink-0 border-e border-border bg-surface-muted flex flex-col">
-          <div className="px-4 py-3 border-b border-border">
-            <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Clock01Icon} size={14} className="text-muted-foreground" />
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                {t("settings.tabs.hours")}
-              </p>
-            </div>
-          </div>
-          <div role="tablist" className="flex-1 p-3 space-y-1.5">
-            {tabs.map((tab) => (
-              <div
-                key={tab.id}
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                tabIndex={0}
-                onClick={() => setActiveTab(tab.id)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setActiveTab(tab.id) }}
-                className={cn(
-                  "w-full rounded-lg px-3 py-2.5 cursor-pointer select-none transition-all",
-                  activeTab === tab.id
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
-                )}
-              >
-                <p className="text-sm font-medium truncate leading-tight">{tab.label}</p>
-                {activeTab === tab.id && (
-                  <p className="text-xs mt-0.5 line-clamp-2 leading-tight opacity-80">{tab.desc}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+        <SettingsTabSidebar
+          title={t("settings.tabs.hours")}
+          icon={<HugeiconsIcon icon={Clock01Icon} size={14} className="text-muted-foreground" />}
+          items={tabs.map(tab => ({ id: tab.id, label: tab.label, desc: tab.desc }))}
+          activeId={activeTab}
+          onSelect={(id) => setActiveTab(id as TabId)}
+        />
 
         {/* ── Content ── */}
         <div className="flex-1 p-5 overflow-y-auto bg-surface-muted/50 flex flex-col gap-4">

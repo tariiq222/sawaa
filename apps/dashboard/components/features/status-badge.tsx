@@ -11,7 +11,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { Badge } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
-import { bookingStatusStyles, bookingTypeStyles } from "@/lib/ds"
+import { bookingStatusStyles, bookingTypeStyles, paymentStatusStyles, invoiceStatusStyles, activeBadgeStyles } from "@/lib/ds"
 import { cn } from "@/lib/utils"
 import type { BookingStatus, BookingType } from "@/lib/types/booking"
 
@@ -69,14 +69,11 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
     <Badge
       variant="outline"
       className={cn(
-        // Vivid tinted background, full-saturation text, sharper 3px left
-        // accent that anchors the chip even on the brand-tinted page bg.
         "font-semibold gap-1.5 ps-2.5 pe-2.5 py-0.5 text-[11px] tracking-tight",
-        "border-s-[3px] rounded-md",
+        "rounded-md",
         styles.bg,
         styles.text,
         styles.border,
-        styles.accent,
         className,
       )}
     >
@@ -109,15 +106,94 @@ export function BookingTypeBadge({ type, className }: BookingTypeBadgeProps) {
       variant="outline"
       className={cn(
         "font-semibold gap-1.5 ps-2.5 pe-2.5 py-0.5 text-[11px] tracking-tight",
-        "border-s-[3px] rounded-md",
+        "rounded-md",
         styles.bg,
         styles.text,
         styles.border,
-        styles.accent,
         className,
       )}
     >
       {t(translationKey)}
     </Badge>
   )
+}
+
+// ─── Shared chip base ───────────────────────────────────────────────────────
+
+function ChipBadge({
+  bg,
+  text,
+  border,
+  label,
+  className,
+}: {
+  bg: string
+  text: string
+  border: string
+  label: string
+  className?: string
+}) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "font-semibold ps-2.5 pe-2.5 py-0.5 text-[11px] tracking-tight rounded-md",
+        bg,
+        text,
+        border,
+        className,
+      )}
+    >
+      {label}
+    </Badge>
+  )
+}
+
+// ─── PaymentStatusBadge ──────────────────────────────────────────────────────
+
+export function PaymentStatusBadge({
+  status,
+  label,
+  className,
+}: {
+  status: string
+  label: string
+  className?: string
+}) {
+  const styles =
+    paymentStatusStyles[status as keyof typeof paymentStatusStyles] ??
+    paymentStatusStyles._fallback
+  return <ChipBadge bg={styles.bg} text={styles.text} border={styles.border} label={label} className={className} />
+}
+
+// ─── InvoiceStatusBadge ──────────────────────────────────────────────────────
+
+export function InvoiceStatusBadge({
+  status,
+  label,
+  className,
+}: {
+  status: string
+  label: string
+  className?: string
+}) {
+  const styles =
+    invoiceStatusStyles[status as keyof typeof invoiceStatusStyles] ??
+    invoiceStatusStyles._fallback
+  return <ChipBadge bg={styles.bg} text={styles.text} border={styles.border} label={label} className={className} />
+}
+
+// ─── ActiveBadge ─────────────────────────────────────────────────────────────
+
+export function ActiveBadge({
+  active,
+  label,
+  className,
+}: {
+  active: boolean
+  label: string
+  className?: string
+}) {
+  const styles = active ? activeBadgeStyles.active : activeBadgeStyles.inactive
+  return <ChipBadge bg={styles.bg} text={styles.text} border={styles.border} label={label} className={className} />
 }

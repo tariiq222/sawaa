@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useLocale } from "@/components/locale-provider"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
-import { Skeleton } from "@sawaa/ui"
+import { Input, Skeleton } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchPractitionersReport } from "@/lib/api/reports"
@@ -16,6 +16,7 @@ import { DistributionBars } from "../distribution-bars"
 import { ReportsEmptyState } from "../empty-state"
 import { useReportsPeriodCtx } from "../reports-period-context"
 import { computeDelta } from "../delta-helpers"
+import { ReportTable } from "../report-table"
 
 export function PractitionersReportPage() {
   const { t, locale } = useLocale()
@@ -108,87 +109,86 @@ export function PractitionersReportPage() {
           <Section
             title={t("reports.practitioners.fullTable")}
             actions={
-              <input
-                type="text"
+              <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t("reports.practitioners.searchPlaceholder")}
-                className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm"
+                className="h-8 w-48 text-sm"
                 data-testid="practitioners-search"
               />
             }
           >
-            {filtered && filtered.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b border-border text-xs text-muted-foreground">
-                    <tr>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.practitioners.name")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.practitioners.bookings")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.practitioners.completed")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.practitioners.completion")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.practitioners.revenue")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.practitioners.utilization")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.practitioners.rating")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((r) => (
-                      <tr
-                        key={r.employeeId}
-                        className="border-b border-border last:border-b-0"
-                      >
-                        <td className="px-3 py-2">
-                          <div className="font-medium">{r.name}</div>
-                          {r.role && (
-                            <div className="text-xs text-muted-foreground">{r.role}</div>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 tabular-nums">{r.bookings}</td>
-                        <td className="px-3 py-2 tabular-nums font-medium">{r.completedBookings}</td>
-                        <td className="px-3 py-2">
-                          <span
-                            className={cn(
-                              "rounded-sm px-2 py-0.5 text-xs",
-                              r.completionRate >= 0.85
-                                ? "bg-success/15 text-success"
-                                : "bg-warning/15 text-warning",
-                            )}
-                          >
-                            {(r.completionRate * 100).toFixed(0)}٪
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 tabular-nums font-medium">
-                          <FormattedCurrency amount={r.revenue} locale={locale} />
-                        </td>
-                        <td className="px-3 py-2 tabular-nums">
-                          {(r.utilization * 100).toFixed(0)}٪
-                        </td>
-                        <td className="px-3 py-2 tabular-nums">
-                          {r.averageRating > 0 ? `★ ${r.averageRating.toFixed(1)}` : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">—</p>
-            )}
+            <ReportTable
+              columns={[
+                {
+                  key: "name",
+                  header: t("reports.practitioners.name"),
+                  render: (r) => (
+                    <div>
+                      <div className="font-medium">{r.name}</div>
+                      {r.role && (
+                        <div className="text-xs text-muted-foreground">{r.role}</div>
+                      )}
+                    </div>
+                  ),
+                },
+                {
+                  key: "bookings",
+                  header: t("reports.practitioners.bookings"),
+                  render: (r) => <span className="tabular-nums">{r.bookings}</span>,
+                },
+                {
+                  key: "completed",
+                  header: t("reports.practitioners.completed"),
+                  render: (r) => (
+                    <span className="tabular-nums font-medium">{r.completedBookings}</span>
+                  ),
+                },
+                {
+                  key: "completion",
+                  header: t("reports.practitioners.completion"),
+                  render: (r) => (
+                    <span
+                      className={cn(
+                        "rounded-sm px-2 py-0.5 text-xs",
+                        r.completionRate >= 0.85
+                          ? "bg-success/15 text-success"
+                          : "bg-warning/15 text-warning",
+                      )}
+                    >
+                      {(r.completionRate * 100).toFixed(0)}٪
+                    </span>
+                  ),
+                },
+                {
+                  key: "revenue",
+                  header: t("reports.practitioners.revenue"),
+                  render: (r) => (
+                    <span className="tabular-nums font-medium">
+                      <FormattedCurrency amount={r.revenue} locale={locale} />
+                    </span>
+                  ),
+                },
+                {
+                  key: "utilization",
+                  header: t("reports.practitioners.utilization"),
+                  render: (r) => (
+                    <span className="tabular-nums">{(r.utilization * 100).toFixed(0)}٪</span>
+                  ),
+                },
+                {
+                  key: "rating",
+                  header: t("reports.practitioners.rating"),
+                  render: (r) => (
+                    <span className="tabular-nums">
+                      {r.averageRating > 0 ? `★ ${r.averageRating.toFixed(1)}` : "—"}
+                    </span>
+                  ),
+                },
+              ]}
+              rows={filtered ?? []}
+              getRowKey={(r) => r.employeeId}
+            />
           </Section>
         </>
       )}

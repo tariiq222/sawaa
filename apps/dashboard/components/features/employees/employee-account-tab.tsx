@@ -7,6 +7,7 @@ import { Button } from "@sawaa/ui"
 import { Input } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { Switch } from "@sawaa/ui"
+import { Skeleton } from "@sawaa/ui"
 import {
   Select,
   SelectTrigger,
@@ -76,9 +77,9 @@ export function EmployeeAccountTab({ employeeId }: Props) {
       <Card>
         <CardContent className="p-6">
           <div className="space-y-3">
-            <div className="h-4 w-48 animate-pulse rounded bg-muted" />
-            <div className="h-4 w-64 animate-pulse rounded bg-muted" />
-            <div className="h-8 w-32 animate-pulse rounded bg-muted" />
+            <Skeleton className="h-4 w-48 rounded" />
+            <Skeleton className="h-4 w-64 rounded" />
+            <Skeleton className="h-8 w-32 rounded" />
           </div>
         </CardContent>
       </Card>

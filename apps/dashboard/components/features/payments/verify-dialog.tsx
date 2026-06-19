@@ -64,13 +64,15 @@ export function VerifyDialog({
         transferRef: data.transferRef || undefined,
       })
       toast.success(
-        data.action === "approve" ? "Transfer approved" : "Transfer rejected"
+        data.action === "approve"
+          ? t("payments.verify.approvedToast")
+          : t("payments.verify.rejectedToast"),
       )
       form.reset()
       onOpenChange(false)
       onSuccess()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Verification failed")
+      toast.error(err instanceof Error ? err.message : t("payments.verify.failedToast"))
     }
   })
 
@@ -101,7 +103,7 @@ export function VerifyDialog({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select action" />
+                  <SelectValue placeholder={t("payments.verify.selectAction")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="approve">
@@ -113,7 +115,7 @@ export function VerifyDialog({
                 </SelectContent>
               </Select>
               {form.formState.errors.action && (
-                <p className="text-xs text-destructive">
+                <p className="text-xs text-error">
                   {form.formState.errors.action.message}
                 </p>
               )}
@@ -121,11 +123,11 @@ export function VerifyDialog({
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="verify-notes">
-                Transfer Reference (optional)
+                {t("payments.verify.transferRef")}
               </Label>
               <Textarea
                 id="verify-notes"
-                placeholder="Bank transfer reference number..."
+                placeholder={t("payments.verify.transferRefPlaceholder")}
                 rows={3}
                 {...form.register("transferRef")}
               />
@@ -140,7 +142,7 @@ export function VerifyDialog({
             size="sm"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {t("payments.verify.cancel")}
           </Button>
           <Button
             type="submit"
@@ -148,7 +150,7 @@ export function VerifyDialog({
             form="verify-transfer-form"
             disabled={verifyMut.isPending}
           >
-            {verifyMut.isPending ? "Processing..." : "Confirm"}
+            {verifyMut.isPending ? t("payments.verify.processing") : t("payments.verify.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

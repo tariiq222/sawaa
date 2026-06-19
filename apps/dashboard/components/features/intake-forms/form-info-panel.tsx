@@ -1,23 +1,10 @@
 "use client"
 
-import { Input } from "@sawaa/ui"
-import { Label } from "@sawaa/ui"
-import { Switch } from "@sawaa/ui"
-import { Card, CardContent, CardHeader, CardTitle } from "@sawaa/ui"
-import { Separator } from "@sawaa/ui"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@sawaa/ui"
+import { Input, Switch, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Separator } from "@sawaa/ui"
+import { FormSection, FormField } from "@/components/features/shared/form-section"
 import { useLocale } from "@/components/locale-provider"
 import type { IntakeFormDraft, FormType, FormScope } from "@/lib/types/intake-form"
-import {
-  FORM_TYPE_LABELS,
-  FORM_SCOPE_LABELS,
-} from "@/lib/types/intake-form"
+import { FORM_TYPE_LABELS, FORM_SCOPE_LABELS } from "@/lib/types/intake-form"
 
 const FORM_TYPES: FormType[] = ["pre_booking", "pre_session", "post_session", "registration"]
 const ALL_FORM_SCOPES: FormScope[] = ["global", "service", "employee", "branch"]
@@ -32,40 +19,39 @@ interface FormInfoPanelProps {
   isAr: boolean
 }
 
-export function FormInfoPanel({ draft, scopeOptions, availableScopes, onUpdate, onScopeChange, isAr }: FormInfoPanelProps) {
+export function FormInfoPanel({
+  draft,
+  scopeOptions,
+  availableScopes,
+  onUpdate,
+  onScopeChange,
+  isAr,
+}: FormInfoPanelProps) {
   const { t } = useLocale()
   const formScopes = availableScopes ?? ALL_FORM_SCOPES
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm font-semibold">
-          {t("intakeForms.info.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label>{t("intakeForms.info.nameArShort")} *</Label>
+    <FormSection title={t("intakeForms.info.title")}>
+      <div className="flex flex-col gap-4">
+        <FormField label={t("intakeForms.info.nameArShort")} required>
           <Input
             value={draft.nameAr}
             onChange={(e) => onUpdate({ nameAr: e.target.value })}
             placeholder={t("intakeForms.info.nameArPlaceholder")}
             dir="rtl"
           />
-        </div>
+        </FormField>
 
-        <div className="flex flex-col gap-1.5">
-          <Label>{t("intakeForms.info.nameEnShort")} *</Label>
+        <FormField label={t("intakeForms.info.nameEnShort")} required>
           <Input
             value={draft.nameEn}
             onChange={(e) => onUpdate({ nameEn: e.target.value })}
             placeholder={t("intakeForms.info.nameEnPlaceholder")}
             dir="ltr"
           />
-        </div>
+        </FormField>
 
-        <div className="flex flex-col gap-1.5">
-          <Label>{t("intakeForms.info.formType")}</Label>
+        <FormField label={t("intakeForms.info.formType")}>
           <Select
             value={draft.type}
             onValueChange={(v) => onUpdate({ type: v as FormType })}
@@ -81,10 +67,9 @@ export function FormInfoPanel({ draft, scopeOptions, availableScopes, onUpdate, 
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </FormField>
 
-        <div className="flex flex-col gap-1.5">
-          <Label>{t("intakeForms.info.scope")}</Label>
+        <FormField label={t("intakeForms.info.scope")}>
           <Select
             value={draft.scope}
             onValueChange={(v) => onScopeChange(v as FormScope)}
@@ -100,18 +85,17 @@ export function FormInfoPanel({ draft, scopeOptions, availableScopes, onUpdate, 
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </FormField>
 
         {draft.scope !== "global" && (
-          <div className="flex flex-col gap-1.5">
-            <Label>
-              {t("intakeForms.info.selectScope").replace(
-                "{scope}",
-                isAr
-                  ? FORM_SCOPE_LABELS[draft.scope].ar
-                  : FORM_SCOPE_LABELS[draft.scope].en,
-              )}
-            </Label>
+          <FormField
+            label={t("intakeForms.info.selectScope").replace(
+              "{scope}",
+              isAr
+                ? FORM_SCOPE_LABELS[draft.scope].ar
+                : FORM_SCOPE_LABELS[draft.scope].en,
+            )}
+          >
             <Select
               value={draft.scopeId}
               onValueChange={(v) => onUpdate({ scopeId: v })}
@@ -127,22 +111,22 @@ export function FormInfoPanel({ draft, scopeOptions, availableScopes, onUpdate, 
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </FormField>
         )}
 
         <Separator />
 
         <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
-          <Label htmlFor="form-active" className="cursor-pointer text-sm">
+          <span className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
             {t("intakeForms.info.activeShort")}
-          </Label>
+          </span>
           <Switch
             id="form-active"
             checked={draft.isActive}
             onCheckedChange={(v) => onUpdate({ isActive: v })}
           />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </FormSection>
   )
 }

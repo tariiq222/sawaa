@@ -7,9 +7,9 @@ import { Label } from "@sawaa/ui"
 import { Textarea } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
-import { cn } from "@/lib/utils"
 import { useOrganizationSettings, useUpdateOrganizationSettings } from "@/hooks/use-organization-settings"
 import { useLocale } from "@/components/locale-provider"
+import { SettingsTabSidebar } from "./settings-tab-sidebar"
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -128,40 +128,13 @@ export function LegalContentTab() {
       <div className="flex min-h-[520px]">
 
         {/* ── Sidebar ─────────────────────────────────────────── */}
-        <div className="flex w-56 shrink-0 flex-col border-e border-border bg-surface-muted">
-          <div className="border-b border-border px-4 py-3">
-            <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-              {t("settings.tabs.legal")}
-            </p>
-          </div>
-          <div role="tablist" className="flex-1 space-y-1.5 p-3">
-            {sections.map((section) => {
-              const isActive = activeSection === section.id
-              return (
-                <div
-                  key={section.id}
-                  role="tab"
-                  aria-selected={isActive}
-                  tabIndex={0}
-                  onClick={() => setActiveSection(section.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") setActiveSection(section.id)
-                  }}
-                  className={cn(
-                    "w-full cursor-pointer rounded-lg px-3 py-2.5 transition-all select-none",
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
-                  )}
-                >
-                  <p className="truncate text-sm leading-tight font-medium">
-                    {section.label}
-                  </p>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        <SettingsTabSidebar
+          title={t("settings.tabs.legal")}
+          items={sections.map(s => ({ id: s.id, label: s.label }))}
+          activeId={activeSection}
+          onSelect={(id) => setActiveSection(id as SectionId)}
+          width="w-56"
+        />
 
         {/* ── Content panel ────────────────────────────────────── */}
         <div className="flex flex-1 flex-col overflow-y-auto bg-surface-muted/50 p-5">

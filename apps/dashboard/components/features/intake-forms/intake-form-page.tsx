@@ -10,6 +10,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Add01Icon, FloppyDiskIcon } from "@hugeicons/core-free-icons"
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
+import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { Button } from "@sawaa/ui"
 import { FieldEditor } from "@/components/features/intake-forms/field-editor"
 import { FormSection } from "@/components/features/shared/form-section"
@@ -146,6 +147,7 @@ export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoading
 
   return (
     <ListPageShell>
+      <Breadcrumbs />
       <PageHeader
         title={isEdit ? t("intakeForms.page.editTitle") : t("intakeForms.page.newTitle")}
         description={t("intakeForms.page.description")}
@@ -202,7 +204,7 @@ export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoading
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+      <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background/95 backdrop-blur-sm px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Button type="button" variant="ghost" size="lg" className="rounded-lg" onClick={() => router.push("/intake-forms")}>
           {t("intakeForms.page.cancel")}
         </Button>

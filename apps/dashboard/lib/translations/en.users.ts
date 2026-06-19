@@ -119,6 +119,9 @@ export const enUsers: Record<string, string> = {
   "users.toast.activated": "User activated",
   "users.toast.deactivated": "User deactivated",
   "users.toast.actionFailed": "Action failed",
+  "users.section.personal": "Personal Information",
+  "users.section.account": "Account Details",
+  "users.section.role": "Role & Permissions",
 
   // — Activity Log Columns —
   "activityLog.col.user": "User",

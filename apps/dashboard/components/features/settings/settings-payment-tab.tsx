@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Card, CardContent, Button, Input, Label, Skeleton, Switch } from "@sawaa/ui"
-import { cn } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
+import { SettingsTabSidebar } from "./settings-tab-sidebar"
 import { usePaymentSettings, usePaymentSettingsMutation } from "@/hooks/use-organization-settings"
 import {
   useMoyasarConfig,
@@ -133,46 +133,24 @@ export function SettingsPaymentTab() {
   return (
     <Card className="overflow-hidden p-0">
       <div className="flex min-h-[420px]">
-        <div className="flex w-64 shrink-0 flex-col border-e border-border bg-surface-muted">
-          <div className="border-b border-border p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {t("settings.payment.methods")}
-            </p>
-          </div>
-          <div className="flex-1 space-y-1 p-2">
-            {tabs.map((tab) => (
-              <div
-                key={tab.id}
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                tabIndex={0}
-                onClick={() => setActiveTab(tab.id)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setActiveTab(tab.id) }}
-                className={cn(
-                  "flex w-full cursor-pointer select-none items-center justify-between gap-3 rounded-lg px-3 py-3 transition-colors",
-                  activeTab === tab.id
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
-                )}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium leading-tight">{tab.label}</p>
-                  {activeTab === tab.id && (
-                    <p className="mt-0.5 line-clamp-2 text-xs leading-tight opacity-80">{tab.desc}</p>
-                  )}
-                </div>
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => e.stopPropagation()}
-                  className="flex shrink-0 flex-col items-center gap-0.5"
-                  title={tab.toggleHint}
-                >
-                  <Switch checked={tab.enabled} onCheckedChange={tab.onToggle} disabled={paymentMut.isPending} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <SettingsTabSidebar
+          title={t("settings.payment.methods")}
+          items={tabs.map(tab => ({
+            id: tab.id,
+            label: tab.label,
+            desc: tab.desc,
+            extra: (
+              <Switch
+                checked={tab.enabled}
+                onCheckedChange={tab.onToggle}
+                disabled={paymentMut.isPending}
+                title={tab.toggleHint}
+              />
+            ),
+          }))}
+          activeId={activeTab}
+          onSelect={(id) => setActiveTab(id as TabId)}
+        />
 
         <div className="flex-1 p-6">
           {!activeTabDef.enabled && !activeTabDef.alwaysAvailable ? (

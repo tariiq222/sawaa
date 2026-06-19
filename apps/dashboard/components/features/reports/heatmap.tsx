@@ -9,11 +9,6 @@ interface HeatmapProps {
 
 const HOUR_BUCKETS = [9, 11, 13, 16, 19] as const
 
-const DOW_LABELS_AR = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"]
-const DOW_LABELS_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-const HOUR_LABEL_AR = (h: number) => (h < 12 ? `${h} ص` : h === 12 ? "١٢ ظ" : `${h - 12} م`)
-const HOUR_LABEL_EN = (h: number) => `${h}:00`
-
 /** Buckets actual hour count into the nearest displayed slot (within ±1h). */
 function bucketByHour(
   cells: HeatmapProps["data"],
@@ -36,10 +31,18 @@ function bucketByHour(
 }
 
 export function Heatmap({ data }: HeatmapProps) {
-  const { locale } = useLocale()
+  const { locale, t } = useLocale()
   const isAr = locale === "ar"
-  const dowLabels = isAr ? DOW_LABELS_AR : DOW_LABELS_EN
-  const hourLabel = isAr ? HOUR_LABEL_AR : HOUR_LABEL_EN
+
+  const dowLabels = [0, 1, 2, 3, 4, 5, 6].map((i) => t(`reports.heatmap.dow.${i}`))
+  const hourLabel = isAr
+    ? (h: number) =>
+        h < 12
+          ? `${h} ${t("reports.heatmap.hour.am")}`
+          : h === 12
+            ? t("reports.heatmap.hour.noon")
+            : `${h - 12} ${t("reports.heatmap.hour.pm")}`
+    : (h: number) => `${h}:00`
 
   const bucketed = bucketByHour(data)
   const maxCount = Math.max(0, ...bucketed.values())

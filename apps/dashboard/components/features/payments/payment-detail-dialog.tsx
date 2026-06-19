@@ -20,24 +20,17 @@ import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import type { Payment } from "@/lib/types/payment"
 import { PaymentActions } from "./payment-actions"
+import { PaymentStatusBadge } from "@/components/features/status-badge"
+import { cn } from "@/lib/utils"
 
-/* ─── Status Styles ─── */
+/* ─── Status key maps ─── */
 
-const statusStyles: Record<string, string> = {
-  PENDING: "border-warning/40 bg-warning-soft text-warning",
-  PENDING_VERIFICATION: "border-warning/40 bg-warning-soft text-warning",
-  COMPLETED: "border-success/40 bg-success-soft text-success",
-  REFUNDED: "border-refunded/40 bg-refunded-soft text-refunded",
-  FAILED: "border-error/40 bg-error-soft text-error",
-}
-
-/** Prisma PaymentStatus enum → existing `detail.paymentStatus.*` UI keys. */
-const statusUiKey: Record<string, string> = {
-  PENDING: "pending",
-  PENDING_VERIFICATION: "awaiting",
-  COMPLETED: "paid",
-  REFUNDED: "refunded",
-  FAILED: "failed",
+const PAYMENT_STATUS_KEYS: Record<string, string> = {
+  PENDING: "payments.status.pending",
+  PENDING_VERIFICATION: "payments.status.waiting",
+  COMPLETED: "payments.status.paid",
+  REFUNDED: "payments.status.refunded",
+  FAILED: "payments.status.failed",
 }
 
 const methodKey: Record<string, string> = {
@@ -46,13 +39,24 @@ const methodKey: Record<string, string> = {
   CASH: "detail.paymentMethod.cash",
 }
 
+const VERIFICATION_STATUS_KEYS: Record<string, string> = {
+  pending: "payments.verification.pending",
+  matched: "payments.verification.matched",
+  approved: "payments.verification.approved",
+  rejected: "payments.verification.rejected",
+  amount_differs: "payments.verification.amountDiffers",
+  suspicious: "payments.verification.suspicious",
+  old_date: "payments.verification.oldDate",
+  unreadable: "payments.verification.unreadable",
+}
+
 const verificationStyles: Record<string, string> = {
   pending: "border-warning/30 bg-warning/10 text-warning",
   matched: "border-success/30 bg-success/10 text-success",
   approved: "border-success/30 bg-success/10 text-success",
-  rejected: "border-destructive/30 bg-destructive/10 text-destructive",
+  rejected: "border-error/30 bg-error/10 text-error",
   amount_differs: "border-warning/30 bg-warning/10 text-warning",
-  suspicious: "border-destructive/30 bg-destructive/10 text-destructive",
+  suspicious: "border-error/30 bg-error/10 text-error",
   old_date: "border-muted-foreground/30 bg-muted text-muted-foreground",
   unreadable: "border-muted-foreground/30 bg-muted text-muted-foreground",
 }
@@ -83,19 +87,15 @@ export function PaymentDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>{t("detail.paymentDetails")}</DialogTitle>
           <DialogDescription asChild>
             {payment ? (
-              <Badge
-                variant="outline"
-                className={statusStyles[payment.status] ?? ""}
-              >
-                {statusUiKey[payment.status]
-                  ? t(`detail.paymentStatus.${statusUiKey[payment.status]}`)
-                  : payment.status}
-              </Badge>
+              <PaymentStatusBadge
+                status={payment.status}
+                label={t(PAYMENT_STATUS_KEYS[payment.status] ?? "payments.status.pending")}
+              />
             ) : (
               <span>{t("common.loading")}</span>
             )}
@@ -133,7 +133,7 @@ function PaymentDetailBody({
   return (
     <>
       <DialogBody>
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:items-start">
           {/* Amount */}
           <DetailSection title={t("detail.payment")}>
             <DetailRow
@@ -156,14 +156,14 @@ function PaymentDetailBody({
           </DetailSection>
 
           {/* Invoice */}
-          <DetailSection title={t("nav.bookings")}>
+          <DetailSection title={t("detail.invoice.title")}>
             <DetailRow label={t("detail.invoiceId")} value={payment.invoiceId?.slice(0, 12) ?? "—"} numeric />
           </DetailSection>
 
           {/* Bank Transfer Receipts */}
           {payment.receipts && payment.receipts.length > 0 && (
             <>
-              <DetailSection title={t("detail.receipts")}>
+              <DetailSection title={t("detail.receipts")} className="sm:col-span-2">
                 {payment.receipts.map((receipt) => (
                   <div
                     key={receipt.id}
@@ -172,11 +172,12 @@ function PaymentDetailBody({
                     <div className="flex items-center justify-between">
                       <Badge
                         variant="outline"
-                        className={
-                          verificationStyles[receipt.aiVerificationStatus] ?? ""
-                        }
+                        className={cn(
+                          "font-semibold ps-2.5 pe-2.5 py-0.5 text-[11px] tracking-tight rounded-md",
+                          verificationStyles[receipt.aiVerificationStatus] ?? "",
+                        )}
                       >
-                        {receipt.aiVerificationStatus}
+                        {t(VERIFICATION_STATUS_KEYS[receipt.aiVerificationStatus] ?? "payments.verification.pending")}
                       </Badge>
                       <span className="tabular-nums text-xs text-muted-foreground">
                         {formatDate(receipt.createdAt)}

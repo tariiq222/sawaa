@@ -13,6 +13,8 @@ import { Section } from "../section"
 import { DistributionBars } from "../distribution-bars"
 import { ReportsEmptyState } from "../empty-state"
 import { useReportsPeriodCtx } from "../reports-period-context"
+import { computeDelta } from "../delta-helpers"
+import { ReportTable } from "../report-table"
 
 export function ServicesReportPage() {
   const { t, locale } = useLocale()
@@ -21,6 +23,7 @@ export function ServicesReportPage() {
     dateFrom: period.normalizedFrom,
     dateTo: period.apiDateTo,
     branchId: period.branchId,
+    compareWithPrevious: true,
   }
 
   const { data, isLoading } = useQuery({
@@ -57,14 +60,17 @@ export function ServicesReportPage() {
             <KpiCard
               label={t("reports.services.totalServices")}
               value={data.rows.length.toLocaleString(locale)}
+              delta={computeDelta(data.rows.length, data.previous?.rows?.length, { format: "count" })}
             />
             <KpiCard
               label={t("reports.services.totalBookings")}
               value={totalBookings.toLocaleString(locale)}
+              delta={computeDelta(totalBookings, data.previous?.rows?.reduce((s: number, r: { bookings: number }) => s + r.bookings, 0), { format: "count" })}
             />
             <KpiCard
               label={t("reports.services.totalRevenue")}
               value={<FormattedCurrency amount={totalRevenue} locale={locale} />}
+              delta={computeDelta(totalRevenue, data.previous?.rows?.reduce((s: number, r: { revenue: number }) => s + r.revenue, 0))}
             />
             <KpiCard
               label={t("reports.services.avgRating")}
@@ -90,56 +96,56 @@ export function ServicesReportPage() {
           )}
 
           <Section title={t("reports.services.fullTable")}>
-            {data.rows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">—</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b border-border text-xs text-muted-foreground">
-                    <tr>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.services.service")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.services.bookings")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.services.completed")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.services.revenue")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.services.cancelRate")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.services.rating")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.rows.map((r) => (
-                      <tr key={r.serviceId} className="border-b border-border last:border-b-0">
-                        <td className="px-3 py-2 font-medium">
-                          {r.nameAr || r.nameEn || r.serviceId}
-                        </td>
-                        <td className="px-3 py-2 tabular-nums">{r.bookings}</td>
-                        <td className="px-3 py-2 tabular-nums font-medium">{r.completedBookings}</td>
-                        <td className="px-3 py-2 tabular-nums">
-                          <FormattedCurrency amount={r.revenue} locale={locale} />
-                        </td>
-                        <td className="px-3 py-2 tabular-nums">
-                          {(r.cancelRate * 100).toFixed(0)}٪
-                        </td>
-                        <td className="px-3 py-2 tabular-nums">
-                          {r.averageRating > 0 ? `★ ${r.averageRating.toFixed(1)}` : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <ReportTable
+              columns={[
+                {
+                  key: "service",
+                  header: t("reports.services.service"),
+                  render: (r) => (
+                    <span className="font-medium">{r.nameAr || r.nameEn || r.serviceId}</span>
+                  ),
+                },
+                {
+                  key: "bookings",
+                  header: t("reports.services.bookings"),
+                  render: (r) => <span className="tabular-nums">{r.bookings}</span>,
+                },
+                {
+                  key: "completed",
+                  header: t("reports.services.completed"),
+                  render: (r) => (
+                    <span className="tabular-nums font-medium">{r.completedBookings}</span>
+                  ),
+                },
+                {
+                  key: "revenue",
+                  header: t("reports.services.revenue"),
+                  render: (r) => (
+                    <span className="tabular-nums">
+                      <FormattedCurrency amount={r.revenue} locale={locale} />
+                    </span>
+                  ),
+                },
+                {
+                  key: "cancelRate",
+                  header: t("reports.services.cancelRate"),
+                  render: (r) => (
+                    <span className="tabular-nums">{(r.cancelRate * 100).toFixed(0)}٪</span>
+                  ),
+                },
+                {
+                  key: "rating",
+                  header: t("reports.services.rating"),
+                  render: (r) => (
+                    <span className="tabular-nums">
+                      {r.averageRating > 0 ? `★ ${r.averageRating.toFixed(1)}` : "—"}
+                    </span>
+                  ),
+                },
+              ]}
+              rows={data.rows}
+              getRowKey={(r) => r.serviceId}
+            />
           </Section>
         </>
       )}

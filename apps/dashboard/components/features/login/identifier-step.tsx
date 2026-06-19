@@ -47,11 +47,11 @@ export function IdentifierStep({ loading, error, onSubmit, onClearError }: Props
           disabled={loading}
         />
         {fieldError && (
-          <p className="text-sm text-destructive">{fieldError}</p>
+          <p className="text-sm text-error">{fieldError}</p>
         )}
       </div>
       {!!error && (
-        <p className="text-sm text-destructive">
+        <p className="text-sm text-error">
           {error instanceof Error ? error.message : String(error)}
         </p>
       )}

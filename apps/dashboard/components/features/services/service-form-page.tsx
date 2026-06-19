@@ -1,4 +1,4 @@
-// EXCEPTION: service create/edit form with tightly coupled tab state; all tabs mutate the same draft, approved 2026-04-24
+// EXCEPTION: service create/edit form with tightly coupled tab state; all tabs mutate the same draft; 358 lines approved 2026-06-19
 "use client"
 
 import { useState, useEffect, useRef, startTransition } from "react"

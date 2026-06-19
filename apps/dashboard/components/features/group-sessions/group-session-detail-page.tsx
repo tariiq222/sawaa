@@ -10,8 +10,6 @@ import {
   TabsTrigger,
   Button,
   Badge,
-  Card,
-  CardContent,
   Skeleton,
 } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
@@ -21,7 +19,7 @@ import { ListPageShell } from "@/components/features/list-page-shell"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { DetailSection, DetailRow } from "@/components/features/detail-sheet-parts"
 import { EnrollmentsTable } from "@/components/features/group-sessions/group-session-enrollments"
-import type { GroupSessionStatus } from "@/lib/types/group-session"
+import { groupSessionStatusVariant } from "@/components/features/group-sessions/group-session-status"
 
 /* ─── Helpers ─── */
 
@@ -30,17 +28,6 @@ function formatPrice(halalas: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   })
-}
-
-type StatusVariant = "default" | "secondary" | "destructive" | "outline" | "success"
-
-function statusBadgeVariant(status: GroupSessionStatus): StatusVariant {
-  switch (status) {
-    case "OPEN": return "default"
-    case "FULL": return "secondary"
-    case "CANCELLED": return "destructive"
-    case "COMPLETED": return "success"
-  }
 }
 
 /* ─── Props ─── */
@@ -122,7 +109,7 @@ export function GroupSessionDetailPage({ sessionId }: Props) {
           {t("groupSessions.detail.backToList")}
         </Button>
         <h1 className="text-xl font-semibold text-foreground">{session.title}</h1>
-        <Badge variant={statusBadgeVariant(session.status)}>
+        <Badge variant={groupSessionStatusVariant(session.status)}>
           {t(`groupSessions.status.${session.status}`)}
         </Badge>
       </div>
@@ -134,57 +121,55 @@ export function GroupSessionDetailPage({ sessionId }: Props) {
         </TabsList>
 
         <TabsContent value="info" className="pt-4">
-          <Card>
-            <CardContent className="pt-6">
-              <DetailSection title={t("groupSessions.detail.session")}>
-                <DetailRow label={t("groupSessions.detail.service")} value={serviceName} />
-                <DetailRow label={t("groupSessions.detail.practitioner")} value={practitionerName} />
-                <DetailRow
-                  label={t("groupSessions.detail.scheduledAt")}
-                  value={`${scheduledDate} — ${scheduledTime}`}
-                  numeric
-                />
-                <DetailRow
-                  label={t("groupSessions.detail.duration")}
-                  value={`${session.durationMins} ${t("common.min")}`}
-                  numeric
-                />
-                <DetailRow
-                  label={t("groupSessions.detail.capacity")}
-                  value={`${session.enrolledCount} / ${session.maxCapacity}`}
-                  numeric
-                />
-                <DetailRow
-                  label={t("groupSessions.detail.spotsLeft")}
-                  value={String(session.spotsLeft)}
-                  numeric
-                />
-                <DetailRow
-                  label={t("groupSessions.detail.price")}
-                  value={`${formatPrice(session.price)} ${t("groupSessions.currency")}`}
-                  numeric
-                />
-                <DetailRow
-                  label={t("groupSessions.detail.deliveryType")}
-                  value={
-                    <Badge variant="outline" className="text-xs">
-                      {session.deliveryType === "IN_PERSON"
-                        ? t("groupSessions.deliveryType.inPerson")
-                        : t("groupSessions.deliveryType.online")}
-                    </Badge>
-                  }
-                />
-                <DetailRow
-                  label={t("groupSessions.detail.isPublic")}
-                  value={session.isPublic ? t("groupSessions.detail.yes") : t("groupSessions.detail.no")}
-                />
-                <DetailRow
-                  label={t("groupSessions.detail.description")}
-                  value={description ?? t("groupSessions.detail.noDescription")}
-                />
-              </DetailSection>
-            </CardContent>
-          </Card>
+          <DetailSection title={t("groupSessions.detail.session")}>
+            <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+              <DetailRow label={t("groupSessions.detail.service")} value={serviceName} />
+              <DetailRow label={t("groupSessions.detail.practitioner")} value={practitionerName} />
+              <DetailRow
+                label={t("groupSessions.detail.scheduledAt")}
+                value={`${scheduledDate} — ${scheduledTime}`}
+                numeric
+              />
+              <DetailRow
+                label={t("groupSessions.detail.duration")}
+                value={`${session.durationMins} ${t("common.min")}`}
+                numeric
+              />
+              <DetailRow
+                label={t("groupSessions.detail.capacity")}
+                value={`${session.enrolledCount} / ${session.maxCapacity}`}
+                numeric
+              />
+              <DetailRow
+                label={t("groupSessions.detail.spotsLeft")}
+                value={String(session.spotsLeft)}
+                numeric
+              />
+              <DetailRow
+                label={t("groupSessions.detail.price")}
+                value={`${formatPrice(session.price)} ${t("groupSessions.currency")}`}
+                numeric
+              />
+              <DetailRow
+                label={t("groupSessions.detail.deliveryType")}
+                value={
+                  <Badge variant="outline" className="text-xs">
+                    {session.deliveryType === "IN_PERSON"
+                      ? t("groupSessions.deliveryType.inPerson")
+                      : t("groupSessions.deliveryType.online")}
+                  </Badge>
+                }
+              />
+              <DetailRow
+                label={t("groupSessions.detail.isPublic")}
+                value={session.isPublic ? t("groupSessions.detail.yes") : t("groupSessions.detail.no")}
+              />
+            </div>
+            <DetailRow
+              label={t("groupSessions.detail.description")}
+              value={description ?? t("groupSessions.detail.noDescription")}
+            />
+          </DetailSection>
         </TabsContent>
 
         <TabsContent value="bookings" className="pt-4">

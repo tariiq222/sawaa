@@ -17,6 +17,20 @@ export const enChatbotExtended: Record<string, string> = {
   "chatbot.config.saved": "Configuration saved",
   "chatbot.config.saveError": "Failed to save",
   "chatbot.config.empty": "No configuration entries found.",
+  "chatbot.config.systemPromptAr": "System Prompt (Arabic)",
+  "chatbot.config.systemPromptEn": "System Prompt (English)",
+  "chatbot.config.greetingAr": "Greeting (Arabic)",
+  "chatbot.config.greetingEn": "Greeting (English)",
+  "chatbot.config.escalateToHumanAt": "Auto-escalate after N messages",
+
+  // ─── Knowledge Base Columns ───
+  "chatbot.kb.col.title": "Title",
+  "chatbot.kb.col.source": "Source",
+  "chatbot.kb.col.sourceType": "Type",
+  "chatbot.kb.col.status": "Status",
+  "chatbot.kb.status.embedded": "Embedded",
+  "chatbot.kb.status.failed": "Failed",
+  "chatbot.kb.status.pending": "Pending",
 
   // ─── Chatbot Knowledge Base (extended) ───
   "chatbot.kb.entryDeleted": "Entry deleted",

@@ -15,6 +15,13 @@ import { Label } from "@sawaa/ui"
 import { Textarea } from "@sawaa/ui"
 import { Switch } from "@sawaa/ui"
 import { AvatarUpload } from "@sawaa/ui"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { SectionHeader } from "@/components/features/section-header"
 import { FormSection, FormField } from "@/components/features/shared/form-section"
@@ -167,28 +174,36 @@ export function BasicInfoTab({ form, showEmail = false, employeeName, readOnlyEm
 
             {/* Gender + employment type */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <Label>{t("employees.create.genderLabel")}</Label>
-                <select
-                  {...form.register("gender")}
-                  className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+              <FormField label={t("employees.create.genderLabel")}>
+                <Select
+                  value={form.watch("gender") ?? ""}
+                  onValueChange={(v) => form.setValue("gender", (v || undefined) as "MALE" | "FEMALE" | undefined)}
                 >
-                  <option value="">—</option>
-                  <option value="MALE">{t("employees.create.genderMale")}</option>
-                  <option value="FEMALE">{t("employees.create.genderFemale")}</option>
-                </select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>{t("employees.create.employmentTypeLabel")}</Label>
-                <select
-                  {...form.register("employmentType")}
-                  className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">{t("employees.create.genderUnspecified")}</SelectItem>
+                    <SelectItem value="MALE">{t("employees.create.genderMale")}</SelectItem>
+                    <SelectItem value="FEMALE">{t("employees.create.genderFemale")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormField>
+              <FormField label={t("employees.create.employmentTypeLabel")}>
+                <Select
+                  value={form.watch("employmentType") ?? "FULL_TIME"}
+                  onValueChange={(v) => form.setValue("employmentType", v as "FULL_TIME" | "PART_TIME" | "CONTRACT")}
                 >
-                  <option value="FULL_TIME">{t("employees.create.employmentFullTime")}</option>
-                  <option value="PART_TIME">{t("employees.create.employmentPartTime")}</option>
-                  <option value="CONTRACT">{t("employees.create.employmentContract")}</option>
-                </select>
-              </div>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FULL_TIME">{t("employees.create.employmentFullTime")}</SelectItem>
+                    <SelectItem value="PART_TIME">{t("employees.create.employmentPartTime")}</SelectItem>
+                    <SelectItem value="CONTRACT">{t("employees.create.employmentContract")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormField>
             </div>
 
             {/* Full Name EN */}

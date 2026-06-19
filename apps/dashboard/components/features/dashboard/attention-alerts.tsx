@@ -21,16 +21,16 @@ const sevStyles: Record<
   { surface: string; ring: string; iconBg: string; iconText: string; count: string }
 > = {
   warning: {
-    surface: "bg-warning/[0.06]",
+    surface: "bg-warning/10",
     ring: "ring-warning/15",
-    iconBg: "bg-warning/12",
+    iconBg: "bg-warning/10",
     iconText: "text-warning",
     count: "text-warning",
   },
   error: {
-    surface: "bg-error/[0.05]",
+    surface: "bg-error/10",
     ring: "ring-error/15",
-    iconBg: "bg-error/12",
+    iconBg: "bg-error/10",
     iconText: "text-error",
     count: "text-error",
   },
@@ -102,7 +102,7 @@ export function AttentionAlerts({ pendingPayments, cancelRequests, visible }: At
   if (!showPayments && !showCancels) return null
 
   return (
-    <div data-testid="attention-alerts" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div data-testid="attention-alerts" className="grid gap-3 sm:grid-cols-2">
       {showPayments && (
         <AlertTile
           href="/payments"

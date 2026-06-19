@@ -12,6 +12,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@sawaa/ui"
 
 import { StatusBadge, BookingTypeBadge } from "@/components/features/status-badge"
+import { DetailSection } from "@/components/features/detail-sheet-parts"
 import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import type { Booking } from "@/lib/types/booking"
@@ -73,26 +74,12 @@ export function BookingDetailSheet({ booking, open, onOpenChange, onAction, defa
         t={t}
         locale={locale}
       />
-      <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/50 border-b border-border">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            {t("intakeForms.responses.title")}
-          </p>
-        </div>
-        <div className="px-4 py-3">
-          <BookingIntakeResponses bookingId={booking.id} />
-        </div>
-      </div>
-      <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
-        <div className="px-4 py-2.5 bg-muted/50 border-b border-border">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            {t("bookings.statusLog.title")}
-          </p>
-        </div>
-        <div className="px-4 py-3">
-          <BookingStatusLog bookingId={booking.id} />
-        </div>
-      </div>
+      <DetailSection title={t("intakeForms.responses.title")}>
+        <BookingIntakeResponses bookingId={booking.id} />
+      </DetailSection>
+      <DetailSection title={t("bookings.statusLog.title")}>
+        <BookingStatusLog bookingId={booking.id} />
+      </DetailSection>
     </>
   )
 

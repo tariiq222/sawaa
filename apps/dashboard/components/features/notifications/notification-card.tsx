@@ -108,7 +108,7 @@ export function NotificationCard({
           )}
         </div>
         {!isLast && (
-          <div className="mt-1 w-px flex-1 bg-gradient-to-b from-border to-border/40" />
+          <div className="mt-1 w-px flex-1 bg-border/60" />
         )}
       </div>
 

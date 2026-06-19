@@ -41,17 +41,18 @@ export function LoginForm() {
         <div aria-hidden className="login-blob pointer-events-none absolute inset-x-0 top-0 h-[60vh] opacity-90 lg:opacity-50" />
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-primary/[0.04] via-transparent to-accent/[0.03]" />
 
+        {/* Brand header — matches AuthShell */}
         <div className="relative z-10 flex items-center gap-3 px-6 pt-8 lg:px-12">
           <SawaaMark size={40} />
           <div className="leading-tight">
             <p className="text-sm font-semibold tracking-tight text-foreground">{t("brand.name")}</p>
-            <p className="text-[11px] text-muted-foreground">{t("app.tagline")}</p>
+            <p className="text-xs text-muted-foreground">{t("app.tagline")}</p>
           </div>
         </div>
 
         <div className="relative z-10 flex flex-1 items-center justify-center px-6 py-12 lg:px-12">
           <div className="w-full max-w-[400px]">
-            <h1 className="mb-1.5 text-[28px] font-semibold tracking-tight text-foreground">
+            <h1 className="mb-1.5 text-2xl font-semibold tracking-tight text-foreground">
               {getTitle()}
             </h1>
             <p className="mb-6 text-sm text-muted-foreground">
@@ -59,7 +60,7 @@ export function LoginForm() {
             </p>
 
             {notice && (
-              <div className="mb-4 rounded-lg bg-warning/10 px-4 py-3 text-sm text-warning">
+              <div className="mb-4 rounded-lg bg-error/10 px-4 py-3 text-sm text-error">
                 {notice}
               </div>
             )}

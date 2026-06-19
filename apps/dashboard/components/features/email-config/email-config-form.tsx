@@ -22,6 +22,8 @@ import {
   useTestEmail,
 } from "@/hooks/use-email-config"
 import type { EmailProviderName, UpsertEmailConfigInput } from "@/lib/types/email-config"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Tick01Icon, CancelCircleIcon } from "@hugeicons/core-free-icons"
 
 const PROVIDERS: { value: EmailProviderName; label: string }[] = [
   { value: "NONE", label: "—" },
@@ -152,11 +154,11 @@ export function EmailConfigForm() {
                 {t("emailConfig.configured")} — {config.provider}
               </span>
               {config.lastTestAt && (
-                <span className="text-xs text-muted-foreground ms-auto">
+                <span className="ms-auto flex items-center gap-1 text-xs text-muted-foreground">
                   {t("emailConfig.lastTest")}:{" "}
                   {config.lastTestOk
-                    ? <span className="text-success">✓</span>
-                    : <span className="text-destructive">✗</span>
+                    ? <HugeiconsIcon icon={Tick01Icon} size={13} className="text-success" />
+                    : <HugeiconsIcon icon={CancelCircleIcon} size={13} className="text-destructive" />
                   }
                 </span>
               )}

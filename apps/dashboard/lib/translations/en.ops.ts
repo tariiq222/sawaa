@@ -336,6 +336,8 @@ export const enOps: Record<string, string> = {
   "contactMessages.table.actions": "Actions",
   "contactMessages.loading": "Loading...",
   "contactMessages.empty": "No messages",
+  "contactMessages.empty.description": "No contact messages have been received yet.",
+  "contactMessages.resultCount": "{n} messages",
   "contactMessages.actions.markRead": "Read",
   "contactMessages.actions.markReplied": "Replied",
   "contactMessages.actions.archive": "Archive",

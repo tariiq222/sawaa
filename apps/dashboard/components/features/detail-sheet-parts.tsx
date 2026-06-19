@@ -15,13 +15,13 @@ export function DetailSection({
   className?: string
 }) {
   return (
-    <div className={cn("bg-surface rounded-xl border border-border shadow-sm overflow-hidden", className)}>
-      <div className="px-4 py-2.5 bg-accent-ultra-light border-b border-border">
+    <div className={cn("shrink-0 bg-surface-solid rounded-2xl border border-border shadow-sm overflow-hidden", className)}>
+      <div className="px-5 py-3 bg-accent-ultra-light border-b border-border">
         <p className="text-xs font-semibold text-accent-foreground uppercase tracking-wider">
           {title}
         </p>
       </div>
-      <div className="px-4 py-3 flex flex-col gap-2">{children}</div>
+      <div className="px-5 py-1.5 flex flex-col gap-2">{children}</div>
     </div>
   )
 }

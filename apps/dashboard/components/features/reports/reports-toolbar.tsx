@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Button } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
-import { useBranches } from "@/hooks/use-branches"
 import { cn } from "@/lib/utils"
 import type { ReportsPeriodPreset } from "@/hooks/use-reports-period"
 import { DatePicker } from "@/components/ui/date-picker"
@@ -53,7 +52,6 @@ export function ReportsToolbar({
   filenameDateTo,
 }: ReportsToolbarProps) {
   const { t } = useLocale()
-  const { branches } = useBranches()
   const [exporting, setExporting] = useState(false)
 
   const handleExport = async () => {
@@ -112,21 +110,6 @@ export function ReportsToolbar({
       </div>
 
       <div className="flex items-center gap-2">
-        {branches && branches.length > 0 && (
-          <select
-            value={branchId ?? ""}
-            onChange={(e) => onBranchIdChange(e.target.value || undefined)}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-            data-testid="reports-branch-select"
-          >
-            <option value="">{t("reports.allBranches")}</option>
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.nameAr ?? b.nameEn ?? ""}
-              </option>
-            ))}
-          </select>
-        )}
         <Button
           variant="outline"
           size="sm"

@@ -1,17 +1,14 @@
 "use client"
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@sawaa/ui"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@sawaa/ui"
-import { Button } from "@sawaa/ui"
-import { Badge } from "@sawaa/ui"
+import { useState } from "react"
+import { Skeleton } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useContactMessages, useUpdateContactMessageStatus } from "@/hooks/use-contact-messages"
 import { ErrorBanner } from "@/components/features/error-banner"
-import { contactMessageStatusStyles } from "@/lib/ds"
-import { cn } from "@/lib/utils"
-import { formatLocaleDate } from "@/lib/date"
+import { DataTable } from "@/components/features/data-table"
+import { FilterBar } from "@/components/features/filter-bar"
+import { getContactMessageColumns } from "./contact-message-columns"
 import type { ContactMessageStatus } from "@/lib/api/contact-messages"
-import { useState } from "react"
 
 const STATUS_OPTIONS: { value: ContactMessageStatus | "ALL"; labelKey: string }[] = [
   { value: "ALL", labelKey: "contactMessages.status.all" },
@@ -31,103 +28,54 @@ export function ContactMessagesTable() {
   })
   const update = useUpdateContactMessageStatus()
 
+  const columns = getContactMessageColumns({
+    locale,
+    t,
+    onUpdate: (id, status) => update.mutate({ id, status }),
+  })
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-12 w-full rounded-2xl" />
+        <Skeleton className="h-64 w-full rounded-lg" />
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {error && <ErrorBanner message={(error as Error).message} />}
 
-      <div className="flex gap-2">
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ContactMessageStatus | "ALL")}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {t(opt.labelKey)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <FilterBar
+        selects={[
+          {
+            key: "status",
+            value: statusFilter,
+            placeholder: t("contactMessages.status.all"),
+            options: STATUS_OPTIONS.map((opt) => ({
+              value: opt.value,
+              label: t(opt.labelKey),
+            })),
+            onValueChange: (v) => setStatusFilter(v as ContactMessageStatus | "ALL"),
+            width: "w-44",
+          },
+        ]}
+        hasFilters={statusFilter !== "ALL"}
+        onReset={() => setStatusFilter("ALL")}
+        resultCount={
+          data?.items != null
+            ? t("contactMessages.resultCount").replace("{n}", String(data.items.length))
+            : undefined
+        }
+      />
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{t("contactMessages.table.name")}</TableHead>
-            <TableHead>{t("contactMessages.table.contact")}</TableHead>
-            <TableHead>{t("contactMessages.table.subject")}</TableHead>
-            <TableHead>{t("contactMessages.table.body")}</TableHead>
-            <TableHead>{t("contactMessages.table.status")}</TableHead>
-            <TableHead>{t("contactMessages.table.date")}</TableHead>
-            <TableHead>{t("contactMessages.table.actions")}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {isLoading && (
-            <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
-                {t("contactMessages.loading")}
-              </TableCell>
-            </TableRow>
-          )}
-          {!isLoading &&
-            data?.items?.map((msg) => (
-              <TableRow key={msg.id} className={msg.status === "NEW" ? "bg-primary/5" : undefined}>
-                <TableCell className={msg.status === "NEW" ? "font-semibold" : "font-medium"}>{msg.name}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {msg.email ?? msg.phone ?? "—"}
-                </TableCell>
-                <TableCell>{msg.subject ?? "—"}</TableCell>
-                <TableCell className="max-w-xs truncate">{msg.body}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      contactMessageStatusStyles[msg.status]?.bg,
-                      contactMessageStatusStyles[msg.status]?.text,
-                      contactMessageStatusStyles[msg.status]?.border,
-                    )}
-                  >
-                    {t(`contactMessages.status.${msg.status.toLowerCase()}`)}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-sm tabular-nums">
-                  {formatLocaleDate(msg.createdAt, locale, {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    {msg.status === "NEW" && (
-                      <Button size="sm" variant="outline" onClick={() => update.mutate({ id: msg.id, status: "READ" })}>
-                        {t("contactMessages.actions.markRead")}
-                      </Button>
-                    )}
-                    {msg.status !== "REPLIED" && msg.status !== "ARCHIVED" && (
-                      <Button size="sm" variant="outline" onClick={() => update.mutate({ id: msg.id, status: "REPLIED" })}>
-                        {t("contactMessages.actions.markReplied")}
-                      </Button>
-                    )}
-                    {msg.status !== "ARCHIVED" && (
-                      <Button size="sm" variant="ghost" onClick={() => update.mutate({ id: msg.id, status: "ARCHIVED" })}>
-                        {t("contactMessages.actions.archive")}
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          {!isLoading && (data?.items?.length ?? 0) === 0 && (
-            <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
-                {t("contactMessages.empty")}
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+      <DataTable
+        columns={columns}
+        data={data?.items ?? []}
+        emptyTitle={t("contactMessages.empty")}
+        emptyDescription={t("contactMessages.empty.description")}
+      />
     </div>
   )
 }

@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Card, CardContent, Button, Input, Label, Skeleton } from "@sawaa/ui"
+import { Card, CardContent, Button, Input, Skeleton } from "@sawaa/ui"
 import { useOrganizationSettings, useUpdateOrganizationSettings } from "@/hooks/use-organization-settings"
 import { useLocale } from "@/components/locale-provider"
+import { FormField } from "@/components/features/shared/form-section"
 
 type FormState = {
   contactEmail: string
@@ -98,10 +99,16 @@ export function GeneralContactSection() {
     <Card className="shadow-sm bg-surface">
       <CardContent className="space-y-6 p-6">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t("settings.organizationEmail")} value={form.contactEmail} onChange={setField("contactEmail")} type="email" dir="ltr" />
-          <Field label={t("settings.organizationPhone")} value={form.contactPhone} onChange={setField("contactPhone")} dir="ltr" />
+          <FormField label={t("settings.organizationEmail")}>
+            <Input value={form.contactEmail} onChange={setField("contactEmail")} type="email" dir="ltr" />
+          </FormField>
+          <FormField label={t("settings.organizationPhone")}>
+            <Input value={form.contactPhone} onChange={setField("contactPhone")} dir="ltr" />
+          </FormField>
           <div className="sm:col-span-2">
-            <Field label={t("settings.organizationAddress")} value={form.address} onChange={setField("address")} dir="rtl" />
+            <FormField label={t("settings.organizationAddress")}>
+              <Input value={form.address} onChange={setField("address")} dir="rtl" />
+            </FormField>
           </div>
         </div>
 
@@ -110,23 +117,35 @@ export function GeneralContactSection() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t("settings.entity.companyNameAr")} value={form.companyNameAr} onChange={setField("companyNameAr")} dir="rtl" />
-          <Field label={t("settings.entity.companyNameEn")} value={form.companyNameEn} onChange={setField("companyNameEn")} dir="ltr" />
+          <FormField label={t("settings.entity.companyNameAr")}>
+            <Input value={form.companyNameAr} onChange={setField("companyNameAr")} dir="rtl" />
+          </FormField>
+          <FormField label={t("settings.entity.companyNameEn")}>
+            <Input value={form.companyNameEn} onChange={setField("companyNameEn")} dir="ltr" />
+          </FormField>
           <div className="sm:col-span-2">
-            <Field label={t("settings.entity.productTagline")} value={form.productTagline} onChange={setField("productTagline")} dir="rtl" hint={t("settings.entity.productTaglineHint")} />
+            <FormField label={t("settings.entity.productTagline")}>
+              <Input value={form.productTagline} onChange={setField("productTagline")} dir="rtl" />
+              <p className="text-xs text-muted-foreground">{t("settings.entity.productTaglineHint")}</p>
+            </FormField>
           </div>
-          <Field label={t("settings.entity.businessRegistration")} value={form.businessRegistration} onChange={setField("businessRegistration")} dir="ltr" />
-          <Field
-            label={t("settings.entity.vatRegistration")}
-            value={form.vatRegistrationNumber}
-            onChange={setField("vatRegistrationNumber")}
-            dir="ltr"
-            hint={t("settings.entity.vatHint")}
-          />
-          <Field label={t("settings.entity.organizationCity")} value={form.organizationCity} onChange={setField("organizationCity")} dir="rtl" />
-          <Field label={t("settings.entity.postalCode")} value={form.postalCode} onChange={setField("postalCode")} dir="ltr" />
+          <FormField label={t("settings.entity.businessRegistration")}>
+            <Input value={form.businessRegistration} onChange={setField("businessRegistration")} dir="ltr" />
+          </FormField>
+          <FormField label={t("settings.entity.vatRegistration")}>
+            <Input value={form.vatRegistrationNumber} onChange={setField("vatRegistrationNumber")} dir="ltr" />
+            <p className="text-xs text-muted-foreground">{t("settings.entity.vatHint")}</p>
+          </FormField>
+          <FormField label={t("settings.entity.organizationCity")}>
+            <Input value={form.organizationCity} onChange={setField("organizationCity")} dir="rtl" />
+          </FormField>
+          <FormField label={t("settings.entity.postalCode")}>
+            <Input value={form.postalCode} onChange={setField("postalCode")} dir="ltr" />
+          </FormField>
           <div className="sm:col-span-2">
-            <Field label={t("settings.entity.sellerAddress")} value={form.sellerAddress} onChange={setField("sellerAddress")} dir="rtl" />
+            <FormField label={t("settings.entity.sellerAddress")}>
+              <Input value={form.sellerAddress} onChange={setField("sellerAddress")} dir="rtl" />
+            </FormField>
           </div>
         </div>
 
@@ -140,19 +159,3 @@ export function GeneralContactSection() {
   )
 }
 
-function Field({ label, value, onChange, dir, type, hint }: {
-  label: string
-  value: string
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-  dir: "ltr" | "rtl"
-  type?: string
-  hint?: string
-}) {
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <Input value={value} onChange={onChange} dir={dir} type={type} />
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-    </div>
-  )
-}

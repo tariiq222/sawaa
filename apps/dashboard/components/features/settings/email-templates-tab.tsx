@@ -12,6 +12,7 @@ import { EmailLayoutForm } from "./email-layout-form"
 import { EmailTemplateInlineEditor } from "./email-template-inline-editor"
 import { BlockPreview } from "./email-builder/block-preview"
 import type { EmailTemplate } from "@/lib/types/email-template"
+import { SettingsTabSidebar } from "./settings-tab-sidebar"
 
 const EMAIL_LAYOUT_ID = "__email-layout__"
 
@@ -102,63 +103,42 @@ export function EmailTemplatesTab() {
     <Card className="overflow-hidden p-0">
       <div className="flex min-h-[520px]">
         {/* Sidebar */}
-        <div className="w-56 shrink-0 border-e border-border bg-surface-muted flex flex-col">
-          <div className="px-4 py-3 border-b border-border">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              {t("settings.emailTemplates.title")}
-            </p>
-          </div>
-          <div role="tablist" className="flex-1 p-3 space-y-1.5 overflow-y-auto">
-            {/* Email Layout entry */}
-            <div
-              role="tab"
-              aria-selected={isLayoutSelected}
-              tabIndex={0}
-              onClick={() => { setActiveId(EMAIL_LAYOUT_ID); setEditingId(null) }}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { setActiveId(EMAIL_LAYOUT_ID); setEditingId(null) } }}
-              className={cn(
-                "w-full rounded-lg px-3 py-2.5 cursor-pointer select-none transition-all",
-                isLayoutSelected
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
-              )}
-            >
-              <p className="text-sm font-medium truncate leading-tight">
-                {t("settings.emailLayout.title")}
-              </p>
-            </div>
-            <div className="border-b border-border mx-1 my-1" />
-            {/* Template list */}
-            {list.map((tmpl: EmailTemplate) => {
-              const isActive = !isLayoutSelected && (activeId ?? list[0]?.id) === tmpl.id
-              return (
-                <div
-                  key={tmpl.id}
-                  role="tab"
-                  aria-selected={isActive}
-                  tabIndex={0}
-                  onClick={() => { setActiveId(tmpl.id); setEditingId(null) }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { setActiveId(tmpl.id); setEditingId(null) } }}
-                  className={cn(
-                    "w-full rounded-lg px-3 py-2.5 cursor-pointer select-none transition-all",
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
-                  )}
-                >
-                  <p className="text-sm font-medium truncate leading-tight">
-                    {tmpl.name}
-                  </p>
-                  {isActive && (
-                    <p className="text-xs mt-0.5 line-clamp-1 leading-tight opacity-80 font-mono">
-                      {tmpl.slug}
-                    </p>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        <SettingsTabSidebar
+          title={t("settings.emailTemplates.title")}
+          items={[{ id: EMAIL_LAYOUT_ID, label: t("settings.emailLayout.title") }]}
+          activeId={activeId ?? list[0]?.id ?? ""}
+          onSelect={(id) => { setActiveId(id); setEditingId(null) }}
+          width="w-56"
+          footer={
+            <>
+              <div className="mx-1 my-1 border-b border-border" />
+              {list.map((tmpl: EmailTemplate) => {
+                const isActive = !isLayoutSelected && (activeId ?? list[0]?.id) === tmpl.id
+                return (
+                  <div
+                    key={tmpl.id}
+                    role="tab"
+                    aria-selected={isActive}
+                    tabIndex={0}
+                    onClick={() => { setActiveId(tmpl.id); setEditingId(null) }}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { setActiveId(tmpl.id); setEditingId(null) } }}
+                    className={cn(
+                      "w-full cursor-pointer select-none rounded-lg px-3 py-2.5 transition-all",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
+                    )}
+                  >
+                    <p className="truncate text-sm font-medium leading-tight">{tmpl.name}</p>
+                    {isActive && (
+                      <p className="mt-0.5 line-clamp-1 font-mono text-xs leading-tight opacity-80">{tmpl.slug}</p>
+                    )}
+                  </div>
+                )
+              })}
+            </>
+          }
+        />
 
         {/* Content Panel */}
         <div className="flex-1 min-w-0 p-5 overflow-y-auto overflow-x-hidden bg-surface-muted/50 flex flex-col">

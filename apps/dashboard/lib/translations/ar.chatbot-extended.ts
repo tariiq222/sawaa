@@ -17,6 +17,20 @@ export const arChatbotExtended: Record<string, string> = {
   "chatbot.config.saved": "تم حفظ الإعدادات",
   "chatbot.config.saveError": "فشل الحفظ",
   "chatbot.config.empty": "لا توجد إعدادات.",
+  "chatbot.config.systemPromptAr": "رسالة النظام (عربي)",
+  "chatbot.config.systemPromptEn": "رسالة النظام (إنجليزي)",
+  "chatbot.config.greetingAr": "رسالة الترحيب (عربي)",
+  "chatbot.config.greetingEn": "رسالة الترحيب (إنجليزي)",
+  "chatbot.config.escalateToHumanAt": "التحويل التلقائي بعد عدد الرسائل",
+
+  // ─── أعمدة قاعدة المعرفة ───
+  "chatbot.kb.col.title": "العنوان",
+  "chatbot.kb.col.source": "المصدر",
+  "chatbot.kb.col.sourceType": "النوع",
+  "chatbot.kb.col.status": "الحالة",
+  "chatbot.kb.status.embedded": "مُدمَج",
+  "chatbot.kb.status.failed": "فشل",
+  "chatbot.kb.status.pending": "قيد المعالجة",
 
   // ─── قاعدة معرفة الشات بوت (موسّعة) ───
   "chatbot.kb.entryDeleted": "تم حذف المدخل",

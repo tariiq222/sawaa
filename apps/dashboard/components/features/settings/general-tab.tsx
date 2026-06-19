@@ -14,10 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@sawaa/ui"
-import { cn } from "@/lib/utils"
 import { useOrganizationSettings, useUpdateOrganizationSettings } from "@/hooks/use-organization-settings"
 import { useLocale } from "@/components/locale-provider"
 import { GeneralContactSection } from "@/components/features/settings/general-contact-section"
+import { SettingsTabSidebar } from "./settings-tab-sidebar"
 
 type TabId = "contact" | "regional" | "notifications"
 
@@ -140,36 +140,12 @@ export function GeneralTab() {
   return (
     <Card className="overflow-hidden p-0">
       <div className="flex min-h-[420px]">
-        <div className="w-64 shrink-0 border-e border-border bg-surface-muted flex flex-col">
-          <div className="px-4 py-3 border-b border-border">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              {t("settings.tabs.general")}
-            </p>
-          </div>
-          <div role="tablist" className="flex-1 p-3 space-y-1.5">
-            {tabs.map((tab) => (
-              <div
-                key={tab.id}
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                tabIndex={0}
-                onClick={() => setActiveTab(tab.id)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setActiveTab(tab.id) }}
-                className={cn(
-                  "w-full rounded-lg px-3 py-2.5 cursor-pointer select-none transition-all",
-                  activeTab === tab.id
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
-                )}
-              >
-                <p className="text-sm font-medium truncate leading-tight">{tab.label}</p>
-                {activeTab === tab.id && (
-                  <p className="text-xs mt-0.5 line-clamp-2 leading-tight opacity-80">{tab.desc}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+        <SettingsTabSidebar
+          title={t("settings.tabs.general")}
+          items={tabs.map(tab => ({ id: tab.id, label: tab.label, desc: tab.desc }))}
+          activeId={activeTab}
+          onSelect={(id) => setActiveTab(id as TabId)}
+        />
 
         <div className="flex-1 p-5 overflow-y-auto bg-surface-muted/50 flex flex-col">
           {activeTab === "contact" && <GeneralContactSection />}

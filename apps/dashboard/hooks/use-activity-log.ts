@@ -24,7 +24,7 @@ export function useActivityLogs() {
     dateTo: dateTo || undefined,
   }
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: [...QUERY_KEY, "list", query],
     queryFn: () => fetchActivityLogs(query),
   })
@@ -54,6 +54,7 @@ export function useActivityLogs() {
     meta: data?.meta ?? null,
     isLoading,
     error: errorMessage,
+    refetch,
     page,
     setPage,
     module,

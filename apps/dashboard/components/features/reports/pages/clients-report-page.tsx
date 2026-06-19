@@ -15,6 +15,7 @@ import { DistributionBars } from "../distribution-bars"
 import { ReportsEmptyState } from "../empty-state"
 import { useReportsPeriodCtx } from "../reports-period-context"
 import { computeDelta } from "../delta-helpers"
+import { ReportTable } from "../report-table"
 
 const GENDER_COLORS: Record<string, string> = {
   MALE: "var(--chart-1)",
@@ -112,34 +113,31 @@ export function ClientsReportPage() {
 
           {data.topByRevenue.length > 0 && (
             <Section title={t("reports.clients.topByRevenue")}>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b border-border text-xs text-muted-foreground">
-                    <tr>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.client")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.clients.bookings")}
-                      </th>
-                      <th className="px-3 py-2 text-start font-medium">
-                        {t("reports.clients.revenue")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.topByRevenue.map((c) => (
-                      <tr key={c.clientId} className="border-b border-border last:border-b-0">
-                        <td className="px-3 py-2 font-medium">{c.name || "—"}</td>
-                        <td className="px-3 py-2 tabular-nums">{c.bookings}</td>
-                        <td className="px-3 py-2 tabular-nums">
-                          <FormattedCurrency amount={c.revenue} locale={locale} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ReportTable
+                columns={[
+                  {
+                    key: "client",
+                    header: t("reports.client"),
+                    render: (c) => <span className="font-medium">{c.name || "—"}</span>,
+                  },
+                  {
+                    key: "bookings",
+                    header: t("reports.clients.bookings"),
+                    render: (c) => <span className="tabular-nums">{c.bookings}</span>,
+                  },
+                  {
+                    key: "revenue",
+                    header: t("reports.clients.revenue"),
+                    render: (c) => (
+                      <span className="tabular-nums">
+                        <FormattedCurrency amount={c.revenue} locale={locale} />
+                      </span>
+                    ),
+                  },
+                ]}
+                rows={data.topByRevenue}
+                getRowKey={(c) => c.clientId}
+              />
             </Section>
           )}
         </>

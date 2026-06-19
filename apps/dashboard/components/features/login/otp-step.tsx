@@ -55,12 +55,12 @@ export function OtpStep({ identifier, loading, error, otpSentAt, onSubmit, onRes
           maxLength={6}
           value={code}
           onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-          className="text-center text-2xl tracking-[0.5em] font-mono"
+          className="text-center text-2xl tracking-[0.5em] font-numeric tabular-nums"
           disabled={loading}
         />
       </div>
       {error ? (
-        <p className="text-sm text-destructive">{loginErrorMessage(error)}</p>
+        <p className="text-sm text-error">{loginErrorMessage(error)}</p>
       ) : null}
       <Button type="submit" disabled={loading || code.length !== 6} className="w-full">
         {loading ? t("login.signingIn") : t("login.signIn")}

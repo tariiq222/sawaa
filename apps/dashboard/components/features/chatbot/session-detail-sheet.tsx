@@ -47,7 +47,7 @@ function MessageBubble({
     user: { label: t("chatbot.role.client"), variant: "default" },
     assistant: { label: t("chatbot.role.bot"), variant: "secondary" },
     system: { label: t("chatbot.role.system"), variant: "outline" },
-    staff: { label: t("chatbot.role.staff"), variant: "destructive" },
+    staff: { label: t("chatbot.role.staff"), variant: "secondary" },
   }
 
   const badge = roleBadge[message.role] ?? roleBadge.system
@@ -144,7 +144,7 @@ export function SessionDetailSheet({
             <SheetDescription className="flex items-center gap-2">
               <span>{session.user.firstName} {session.user.lastName}</span>
               {isLiveChat && (
-                <Badge variant="destructive" className="text-[10px]">
+                <Badge variant="outline" className="text-[10px]">
                   {t("chatbot.liveChat")}
                 </Badge>
               )}

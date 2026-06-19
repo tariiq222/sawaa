@@ -24,14 +24,13 @@ import {
 } from "@sawaa/ui"
 import { useState } from "react"
 import { toast } from "sonner"
-import { StatusBadge } from "@/components/features/status-badge"
+import { StatusBadge, PaymentStatusBadge } from "@/components/features/status-badge"
 import { useLocale } from "@/components/locale-provider"
 import { useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import { usePaymentMutations } from "@/hooks/use-payments"
 import { ApiError } from "@/lib/api"
 import { generateInvoicePdf } from "@/lib/api/invoices"
-import { cn } from "@/lib/utils"
 import { RecordPaymentDialog } from "@/components/features/bookings/record-payment-dialog"
 import type { Booking } from "@/lib/types/booking"
 
@@ -255,19 +254,6 @@ export function StatusCell({
   )
 }
 
-/* ── Payment status cell ──
-   Chips use the new vivid soft backgrounds with a 3px left accent. The
-   label color is full saturation for clear contrast on the soft fill. */
-const paymentStatusStyles: Record<string, string> = {
-  pending:  "border-s-warning border-warning/40 bg-warning-soft text-warning",
-  awaiting: "border-s-warning border-warning/40 bg-warning-soft text-warning",
-  partial:  "border-s-warning border-warning/40 bg-warning-soft text-warning",
-  paid:     "border-s-success border-success/40 bg-success-soft text-success",
-  refunded: "border-s-refunded border-refunded/40 bg-refunded-soft text-refunded",
-  failed:   "border-s-error border-error/40 bg-error-soft text-error",
-  rejected: "border-s-error border-error/40 bg-error-soft text-error",
-}
-
 /** A "paid" payment with an invoice that still has an outstanding balance is a deposit/partial. */
 export function isPartiallyPaid(booking: Booking): boolean {
   return booking.payment?.status === "paid" && (booking.invoice?.outstanding ?? 0) > 0
@@ -282,14 +268,5 @@ export function PaymentStatusCell({ booking }: { booking: Booking }) {
     ? t("bookings.col.paymentStatus." + status)
     : t("bookings.col.paymentStatus.unpaid")
 
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-md border-s-[3px] border px-2 py-0.5 text-[11px] font-semibold tracking-tight",
-        paymentStatusStyles[status] ?? "",
-      )}
-    >
-      {label}
-    </span>
-  )
+  return <PaymentStatusBadge status={status} label={label} />
 }

@@ -36,7 +36,7 @@ export function UserFormFields({ form, isEdit, roles, rolesLoading }: UserFormFi
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {/* ── Personal Info ── */}
-      <FormSection title={t("users.create.fullName")}>
+      <FormSection title={t("users.section.personal")}>
         <div className="space-y-4">
           <FormField
             label={t("users.create.fullName")}
@@ -66,7 +66,7 @@ export function UserFormFields({ form, isEdit, roles, rolesLoading }: UserFormFi
       </FormSection>
 
       {/* ── Account Info ── */}
-      <FormSection title={t("users.create.email")}>
+      <FormSection title={t("users.section.account")}>
         <div className="space-y-4">
           <FormField
             label={t("users.create.email")}
@@ -101,50 +101,49 @@ export function UserFormFields({ form, isEdit, roles, rolesLoading }: UserFormFi
       </FormSection>
 
       {/* ── Role (create required / edit optional) ── */}
-      <FormSection title={t("users.create.role")} className="lg:col-span-2">
-        {rolesLoading ? (
-          <Skeleton className="h-10 w-full sm:w-80" />
-        ) : (
-          <Controller
-            control={form.control}
-            name="roleSelection"
-            render={({ field }) => (
-              <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                <SelectTrigger className="w-full sm:w-80">
-                  <SelectValue placeholder={t("users.create.rolePlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {systemRoles.length > 0 && (
-                    <SelectGroup>
-                      <SelectLabel>{t("users.create.roleGroupSystem")}</SelectLabel>
-                      {systemRoles.map((r) => (
-                        <SelectItem key={r.id} value={r.systemKey!}>
-                          {t(`users.role.${r.systemKey}` as Parameters<typeof t>[0])}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  )}
-                  {systemRoles.length > 0 && customRoles.length > 0 && <SelectSeparator />}
-                  {customRoles.length > 0 && (
-                    <SelectGroup>
-                      <SelectLabel>{t("users.create.roleGroupCustom")}</SelectLabel>
-                      {customRoles.map((r) => (
-                        <SelectItem key={r.id} value={`custom:${r.id}`}>
-                          {r.name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  )}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        )}
-        {(form.formState.errors as { roleSelection?: { message?: string } }).roleSelection && (
-          <p className="text-xs text-destructive mt-1.5">
-            {(form.formState.errors as { roleSelection?: { message?: string } }).roleSelection?.message}
-          </p>
-        )}
+      <FormSection title={t("users.section.role")} className="lg:col-span-2">
+        <FormField
+          error={(form.formState.errors as { roleSelection?: { message?: string } }).roleSelection?.message}
+        >
+          {rolesLoading ? (
+            <Skeleton className="h-10 w-full rounded-2xl sm:w-80" />
+          ) : (
+            <Controller
+              control={form.control}
+              name="roleSelection"
+              render={({ field }) => (
+                <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-full sm:w-80">
+                    <SelectValue placeholder={t("users.create.rolePlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {systemRoles.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel>{t("users.create.roleGroupSystem")}</SelectLabel>
+                        {systemRoles.map((r) => (
+                          <SelectItem key={r.id} value={r.systemKey!}>
+                            {t(`users.role.${r.systemKey}` as Parameters<typeof t>[0])}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                    {systemRoles.length > 0 && customRoles.length > 0 && <SelectSeparator />}
+                    {customRoles.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel>{t("users.create.roleGroupCustom")}</SelectLabel>
+                        {customRoles.map((r) => (
+                          <SelectItem key={r.id} value={`custom:${r.id}`}>
+                            {r.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          )}
+        </FormField>
       </FormSection>
     </div>
   )

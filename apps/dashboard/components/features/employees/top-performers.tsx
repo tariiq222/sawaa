@@ -5,28 +5,19 @@ import { StarIcon, Award01Icon } from "@hugeicons/core-free-icons"
 
 import { Card } from "@sawaa/ui"
 import { Avatar, AvatarFallback } from "@sawaa/ui"
-import { cn } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
+import { getAvatarGradientStyle } from "@/lib/utils"
 import type { Employee } from "@/lib/types/employee"
 
 interface TopPerformersProps {
   employees: Employee[]
 }
 
-/* Rank decorative colors — gold/silver/bronze (exception: these are decorative, not semantic) */
-const rankStyles = [
-  {
-    card: "bg-gradient-to-br from-rank-gold-from to-rank-gold-to border-rank-gold-border",
-    badge: "bg-gradient-to-br from-rank-gold-badge-from to-rank-gold-badge-to text-rank-gold-badge-text shadow-[0_2px_8px_var(--rank-gold-shadow)]",
-  },
-  {
-    card: "bg-gradient-to-br from-rank-silver-from to-rank-silver-to border-rank-silver-border",
-    badge: "bg-gradient-to-br from-rank-silver-badge-from to-rank-silver-badge-to text-rank-silver-badge-text shadow-[0_2px_8px_var(--rank-silver-shadow)]",
-  },
-  {
-    card: "bg-gradient-to-br from-rank-bronze-from to-rank-bronze-to border-rank-bronze-border",
-    badge: "bg-gradient-to-br from-rank-bronze-badge-from to-rank-bronze-badge-to text-primary-foreground shadow-[0_2px_8px_var(--rank-bronze-shadow)]",
-  },
+/* Rank prefix labels — decorative numerals only; first rank gets a subtle tint */
+const rankBadgeClass = [
+  "bg-warning/15 text-warning border border-warning/30",
+  "bg-surface-muted text-muted-foreground border border-border",
+  "bg-surface-muted text-muted-foreground border border-border",
 ]
 
 export function TopPerformers({ employees }: TopPerformersProps) {
@@ -55,29 +46,25 @@ export function TopPerformers({ employees }: TopPerformersProps) {
           const name = `${p.user.firstName} ${p.user.lastName}`
           const initials = `${p.user.firstName?.[0] ?? ""}${p.user.lastName?.[0] ?? ""}`.toUpperCase()
           const specialty = locale === "ar" ? (p.specialtyAr || p.specialty) : p.specialty
-          const style = rankStyles[i]
 
           return (
             <div
               key={p.id}
-              className={cn(
-                "relative flex items-center gap-4 rounded-md border p-5 transition-all hover:-translate-y-0.5 hover:shadow-sm",
-                style.card
-              )}
+              className="relative flex items-center gap-4 rounded-md border border-border bg-surface p-5 transition-all hover:-translate-y-0.5 hover:shadow-sm"
             >
               {/* Rank badge */}
               <div
-                className={cn(
-                  "absolute start-3 top-3 flex size-7 items-center justify-center rounded-full text-[13px] font-bold tabular-nums shadow-md",
-                  style.badge
-                )}
+                className={`absolute start-3 top-3 flex size-7 items-center justify-center rounded-full text-[13px] font-bold tabular-nums ${rankBadgeClass[i]}`}
               >
                 {i + 1}
               </div>
 
-              {/* Avatar */}
+              {/* Avatar — consistent gradient per employee id */}
               <Avatar className="size-12 shrink-0">
-                <AvatarFallback className="bg-gradient-to-br from-avatar-1-from to-avatar-1-to text-lg font-bold text-primary-foreground">
+                <AvatarFallback
+                  style={getAvatarGradientStyle(p.id)}
+                  className="text-lg font-bold text-white"
+                >
                   {initials}
                 </AvatarFallback>
               </Avatar>

@@ -42,7 +42,7 @@ function getColumns(
         <button
           type="button"
           onClick={() => onRowClick(row.original.id)}
-          className="font-mono text-xs text-primary hover:underline tabular-nums"
+          className="text-xs text-primary hover:underline tabular-nums"
         >
           {shortId(row.original.id)}
         </button>
@@ -67,7 +67,7 @@ function getColumns(
         const active = !row.original.endedAt
         const handedOff = row.original.handedOff
         if (handedOff) {
-          return <Badge variant="destructive">{t("chatbot.status.handedOff")}</Badge>
+          return <Badge variant="outline">{t("chatbot.status.handedOff")}</Badge>
         }
         return active ? (
           <Badge variant="default">{t("chatbot.status.active")}</Badge>

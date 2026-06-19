@@ -158,6 +158,12 @@ export const queryKeys = {
     holidays: (branchId?: string, year?: number) => ["organization-holidays", branchId, year] as const,
   },
 
+  /* ─── Ratings (org-level) ─── */
+  ratings: {
+    all: ["ratings"] as const,
+    list: (filters?: object) => ["ratings", "list", filters] as const,
+  },
+
   /* ─── Coupons ─── */
   coupons: {
     all: ["coupons"] as const,

@@ -6,20 +6,25 @@ import { Badge } from "@sawaa/ui"
 import { Avatar, AvatarFallback } from "@sawaa/ui"
 import { getInitials } from "@/lib/utils"
 import { formatDatePattern } from "@/lib/date"
+import { stateColors } from "@/lib/ds"
 import type { ActivityLog } from "@/lib/types/activity-log"
 
+const _s = stateColors
+const _muted = "border-muted-foreground/30 bg-muted text-muted-foreground"
+const _primary = "border-primary/30 bg-primary/10 text-primary"
+
 const actionStyles: Record<string, string> = {
-  created: "border-success/30 bg-success/10 text-success",
-  CREATE: "border-success/30 bg-success/10 text-success",
-  updated: "border-info/30 bg-info/10 text-info",
-  UPDATE: "border-info/30 bg-info/10 text-info",
-  deleted: "border-destructive/30 bg-destructive/10 text-destructive",
-  DELETE: "border-destructive/30 bg-destructive/10 text-destructive",
-  login: "border-primary/30 bg-primary/10 text-primary",
-  logout: "border-muted-foreground/30 bg-muted text-muted-foreground",
-  approved: "border-success/30 bg-success/10 text-success",
-  rejected: "border-destructive/30 bg-destructive/10 text-destructive",
-  SYSTEM: "border-muted-foreground/30 bg-muted text-muted-foreground",
+  created:  `${_s.success.border} ${_s.success.bg} ${_s.success.text}`,
+  CREATE:   `${_s.success.border} ${_s.success.bg} ${_s.success.text}`,
+  updated:  `${_s.info.border} ${_s.info.bg} ${_s.info.text}`,
+  UPDATE:   `${_s.info.border} ${_s.info.bg} ${_s.info.text}`,
+  deleted:  `${_s.error.border} ${_s.error.bg} ${_s.error.text}`,
+  DELETE:   `${_s.error.border} ${_s.error.bg} ${_s.error.text}`,
+  login:    _primary,
+  logout:   _muted,
+  approved: `${_s.success.border} ${_s.success.bg} ${_s.success.text}`,
+  rejected: `${_s.error.border} ${_s.error.bg} ${_s.error.text}`,
+  SYSTEM:   _muted,
 }
 
 function humanizeModule(raw: string | null | undefined): string {

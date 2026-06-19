@@ -58,7 +58,7 @@ export function LoginErrorAlert({ error }: Props) {
 
   const containerTone =
     variant.tone === "destructive"
-      ? "bg-destructive/10 border-destructive/30 text-destructive"
+      ? "bg-error/10 border-error/30 text-error"
       : "bg-muted/40 border-border text-foreground"
 
   return (

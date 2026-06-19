@@ -33,17 +33,19 @@ function getGradient(name: string): string {
 }
 
 /* Type dots — colored disc with a soft halo so the column reads at a glance.
-   The dot is a real color (not an opacity wash) and the halo extends the hue. */
+   The dot is a real color (not an opacity wash) and the halo extends the hue.
+   Ring uses token opacity so both light/dark themes stay consistent. */
 const typeDotConfig: Record<string, string> = {
-  in_person: "bg-primary shadow-[0_0_0_3px_rgba(85,204,176,0.18)]",
-  online:    "bg-info shadow-[0_0_0_3px_rgba(3,105,161,0.18)]",
-  walk_in:   "bg-success shadow-[0_0_0_3px_rgba(21,128,61,0.18)]",
+  in_person: "bg-primary ring-2 ring-primary/20",
+  online:    "bg-info ring-2 ring-info/20",
+  walk_in:   "bg-success ring-2 ring-success/20",
 }
 
 const typeLabelKey: Record<string, string> = {
   in_person: "bookings.col.type.inPerson",
   online: "bookings.col.type.online",
   walk_in: "bookings.col.type.walkIn",
+  group: "bookings.col.type.group",
 }
 
 /* Source icon — colored chip so the channel reads at a glance.

@@ -12,6 +12,7 @@ import {
 import { Badge } from "@sawaa/ui"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
+import { activeBadgeStyles } from "@/lib/ds"
 import type { Department } from "@/lib/types/department"
 
 const iconBtnBase =
@@ -67,20 +68,21 @@ export function getDepartmentColumns(
     {
       id: "status",
       header: label("departments.col.status", "Status"),
-      cell: ({ row }) => (
-        <Badge
-          variant="outline"
-          className={
-            row.original.isActive
-              ? "border-success/30 bg-success/10 text-success"
-              : "border-muted-foreground/30 bg-muted text-muted-foreground"
-          }
-        >
-          {row.original.isActive
-            ? label("departments.status.active", "Active")
-            : label("departments.status.inactive", "Inactive")}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        const style = row.original.isActive
+          ? activeBadgeStyles.active
+          : activeBadgeStyles.inactive
+        return (
+          <Badge
+            variant="outline"
+            className={`${style.border} ${style.bg} ${style.text}`}
+          >
+            {row.original.isActive
+              ? label("departments.status.active", "Active")
+              : label("departments.status.inactive", "Inactive")}
+          </Badge>
+        )
+      },
     },
     {
       id: "actions",

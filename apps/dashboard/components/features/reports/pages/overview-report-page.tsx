@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query"
 import { useLocale } from "@/components/locale-provider"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { Skeleton } from "@sawaa/ui"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { InformationCircleIcon } from "@hugeicons/core-free-icons"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchOverviewReport } from "@/lib/api/reports"
 import { ReportPageShell } from "../report-page-shell"
@@ -164,11 +166,11 @@ export function OverviewReportPage() {
 
           {data.previous && data.totalRevenue > data.previous.totalRevenue && (
             <InsightBanner>
-              💡 {t("reports.overview.insightRevenueUp")} {" "}
-              <FormattedCurrency
-                amount={data.totalRevenue - data.previous.totalRevenue}
-                locale={locale}
-              />
+              <span className="inline-flex items-center gap-2">
+                <HugeiconsIcon icon={InformationCircleIcon} size={16} />
+                {t("reports.overview.insightRevenueUp")}{" "}
+                <FormattedCurrency amount={data.totalRevenue - data.previous.totalRevenue} locale={locale} />
+              </span>
             </InsightBanner>
           )}
         </>

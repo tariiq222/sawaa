@@ -18,7 +18,7 @@ type ActionConfig = {
   hintKey: string
   icon: IconSvgElement
   href: string
-  color: "primary" | "success" | "info"
+  color: "primary" | "success" | "warning"
 }
 
 const ACTION_CONFIG: Record<QuickActionKey, ActionConfig> = {
@@ -41,14 +41,14 @@ const ACTION_CONFIG: Record<QuickActionKey, ActionConfig> = {
     hintKey: "actions.recordPayment.hint",
     icon: MoneyBag02Icon,
     href: "/payments?new=1",
-    color: "info",
+    color: "warning",
   },
 }
 
 const colorMap = {
   primary: "bg-primary/10 text-primary",
   success: "bg-success/10 text-success",
-  info: "bg-info/10 text-info",
+  warning: "bg-warning/10 text-warning",
 } as const
 
 interface Props {
@@ -63,7 +63,7 @@ export function QuickActions({ actions }: Props) {
   return (
     <div
       data-testid="quick-actions"
-      className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-card sm:flex-row sm:divide-x sm:divide-y-0 rtl:sm:divide-x-reverse"
+      className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-surface-solid sm:flex-row sm:divide-x sm:divide-y-0 rtl:sm:divide-x-reverse"
     >
       {actions.map((key) => {
         const cfg = ACTION_CONFIG[key]

@@ -1,3 +1,4 @@
+// EXCEPTION: 306 lines — mutation handlers (handleStatusAction, handleDelete, handleHardDelete) share local dialog state and cannot be split without a dedicated hook. Approved 2026-06-19.
 "use client"
 
 import { useEffect, useMemo, useState } from "react"

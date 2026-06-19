@@ -1,6 +1,8 @@
 "use client"
 
 import { ReactNode } from "react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowUp01Icon, ArrowDown01Icon, MinusSignIcon } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
 
 export type KpiDeltaTone = "up" | "down" | "flat"
@@ -20,12 +22,6 @@ const TONE_CLASS: Record<KpiDeltaTone, string> = {
   up: "bg-success/15 text-success",
   down: "bg-error/15 text-error",
   flat: "bg-muted text-muted-foreground",
-}
-
-const TONE_ICON: Record<KpiDeltaTone, string> = {
-  up: "↑",
-  down: "↓",
-  flat: "—",
 }
 
 export function KpiCard({ label, value, delta, className }: KpiCardProps) {
@@ -48,7 +44,9 @@ export function KpiCard({ label, value, delta, className }: KpiCardProps) {
             TONE_CLASS[delta.tone],
           )}
         >
-          <span aria-hidden>{TONE_ICON[delta.tone]}</span>
+          {delta.tone === "up" && <HugeiconsIcon icon={ArrowUp01Icon} size={12} aria-hidden />}
+          {delta.tone === "down" && <HugeiconsIcon icon={ArrowDown01Icon} size={12} aria-hidden />}
+          {delta.tone === "flat" && <HugeiconsIcon icon={MinusSignIcon} size={12} aria-hidden />}
           {delta.text}
         </span>
       )}

@@ -18,6 +18,7 @@ import { Separator } from "@sawaa/ui"
 import { Avatar, AvatarFallback, AvatarImage } from "@sawaa/ui"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
+import { ActiveBadge } from "@/components/features/status-badge"
 import { useEmployee } from "@/hooks/use-employees"
 import {
   EmployeeRatingsSection,
@@ -104,25 +105,17 @@ export function EmployeeDetailPage({ employeeId }: Props) {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium ${
-                  p.isActive ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
-                }`}
-              >
-                <span className={`size-1.5 rounded-full ${p.isActive ? "bg-success" : "bg-muted-foreground"}`} />
-                {p.isActive ? t("employees.detail.status.active") : t("employees.detail.inactive")}
-              </span>
+              <ActiveBadge
+                active={p.isActive}
+                label={p.isActive ? t("employees.detail.status.active") : t("employees.detail.status.inactive")}
+              />
               {p.isAcceptingBookings !== undefined && (
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium ${
-                    p.isAcceptingBookings ? "bg-primary/8 text-primary" : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  <span className={`size-1.5 rounded-full ${p.isAcceptingBookings ? "bg-primary" : "bg-muted-foreground"}`} />
-                  {p.isAcceptingBookings
+                <ActiveBadge
+                  active={p.isAcceptingBookings}
+                  label={p.isAcceptingBookings
                     ? t("employees.detail.acceptingBookings")
                     : t("employees.detail.notAccepting")}
-                </span>
+                />
               )}
             </div>
 

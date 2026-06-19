@@ -49,8 +49,27 @@ export const arFinance: Record<string, string> = {
   "payments.verify.title": "التحقق من التحويل البنكي",
   "payments.verify.description": "راجِع تفاصيل التحويل البنكي ثم اعتمده أو ارفضه.",
   "payments.verify.actionLabel": "الإجراء",
+  "payments.verify.selectAction": "اختر إجراء",
   "payments.verify.approve": "اعتماد التحويل",
   "payments.verify.reject": "رفض التحويل",
+  "payments.verify.transferRef": "مرجع التحويل (اختياري)",
+  "payments.verify.transferRefPlaceholder": "رقم مرجع التحويل البنكي...",
+  "payments.verify.cancel": "إلغاء",
+  "payments.verify.processing": "جاري المعالجة...",
+  "payments.verify.confirm": "تأكيد",
+  "payments.verify.approvedToast": "تم اعتماد التحويل",
+  "payments.verify.rejectedToast": "تم رفض التحويل",
+  "payments.verify.failedToast": "فشل التحقق",
+
+  // — AI Verification Status —
+  "payments.verification.pending": "قيد المراجعة",
+  "payments.verification.matched": "متطابق",
+  "payments.verification.approved": "معتمد",
+  "payments.verification.rejected": "مرفوض",
+  "payments.verification.amountDiffers": "مبلغ مختلف",
+  "payments.verification.suspicious": "مشبوه",
+  "payments.verification.oldDate": "تاريخ قديم",
+  "payments.verification.unreadable": "غير مقروء",
 
   // — Refund Dialog —
   "refund.title": "استرجاع الدفعة",

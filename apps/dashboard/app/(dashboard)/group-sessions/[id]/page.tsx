@@ -4,7 +4,7 @@ import { GroupSessionDetailPage } from "@/components/features/group-sessions/gro
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading...</div>}>
+    <Suspense fallback={<div className="h-48 animate-pulse rounded-xl bg-muted" />}>
       <GroupSessionDetailPage sessionId={id} />
     </Suspense>
   )

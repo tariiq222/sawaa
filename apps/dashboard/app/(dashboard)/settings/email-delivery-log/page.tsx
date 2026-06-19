@@ -5,17 +5,12 @@ import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { Badge } from "@sawaa/ui"
-import { Button } from "@sawaa/ui"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@sawaa/ui"
-import { Skeleton } from "@sawaa/ui"
+import { DataTable } from "@/components/features/data-table"
+import { FilterBar } from "@/components/features/filter-bar"
 import { useDeliveryLogs } from "@/hooks/use-delivery-logs"
 import { useLocale } from "@/components/locale-provider"
+import type { ColumnDef } from "@tanstack/react-table"
+import type { DeliveryLogItem } from "@/lib/api/delivery-logs"
 
 const STATUS_OPTIONS = ["PENDING", "SENT", "FAILED", "SKIPPED"]
 const CHANNEL_OPTIONS = ["EMAIL", "SMS", "PUSH"]
@@ -38,11 +33,64 @@ export default function EmailDeliveryLogPage() {
 
   const { data, isLoading } = useDeliveryLogs({ status, channel, page, perPage: 20 })
 
+  const hasFilters = !!(status || channel)
+
   const resetFilters = () => {
     setStatus(undefined)
     setChannel(undefined)
     setPage(1)
   }
+
+  const columns: ColumnDef<DeliveryLogItem>[] = [
+    {
+      accessorKey: "channel",
+      header: t("settings.deliveryLog.colChannel"),
+    },
+    {
+      accessorKey: "status",
+      header: t("settings.deliveryLog.colStatus"),
+      cell: ({ row }) => (
+        <Badge variant={statusVariant(row.original.status)} className="text-xs">
+          {row.original.status}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "toAddress",
+      header: t("settings.deliveryLog.colTo"),
+      cell: ({ row }) => (
+        <span className="block max-w-[180px] truncate text-muted-foreground">
+          {row.original.toAddress ?? "—"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "providerName",
+      header: t("settings.deliveryLog.colProvider"),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.original.providerName ?? "—"}</span>
+      ),
+    },
+    {
+      accessorKey: "attempts",
+      header: t("settings.deliveryLog.colAttempts"),
+    },
+    {
+      accessorKey: "sentAt",
+      header: t("settings.deliveryLog.colSentAt"),
+      cell: ({ row }) => (
+        <span className="text-xs text-muted-foreground">
+          {row.original.sentAt
+            ? new Date(row.original.sentAt).toLocaleDateString("ar-SA", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })
+            : "—"}
+        </span>
+      ),
+    },
+  ]
 
   return (
     <ListPageShell>
@@ -52,162 +100,53 @@ export default function EmailDeliveryLogPage() {
         description={t("settings.deliveryLog.description")}
       />
 
-      {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl border border-border bg-surface mb-4">
-        <Select
-          value={status ?? ALL}
-          onValueChange={(v) => {
-            setStatus(v === ALL ? undefined : v)
-            setPage(1)
-          }}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder={t("settings.deliveryLog.filterStatus")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>{t("settings.deliveryLog.filterStatus")}</SelectItem>
-            {STATUS_OPTIONS.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <FilterBar
+        selects={[
+          {
+            key: "status",
+            value: status ?? ALL,
+            placeholder: t("settings.deliveryLog.filterStatus"),
+            options: [
+              { value: ALL, label: t("settings.deliveryLog.filterStatus") },
+              ...STATUS_OPTIONS.map((s) => ({ value: s, label: s })),
+            ],
+            onValueChange: (v) => {
+              setStatus(v === ALL ? undefined : v)
+              setPage(1)
+            },
+            width: "w-40",
+          },
+          {
+            key: "channel",
+            value: channel ?? ALL,
+            placeholder: t("settings.deliveryLog.filterChannel"),
+            options: [
+              { value: ALL, label: t("settings.deliveryLog.filterChannel") },
+              ...CHANNEL_OPTIONS.map((c) => ({ value: c, label: c })),
+            ],
+            onValueChange: (v) => {
+              setChannel(v === ALL ? undefined : v)
+              setPage(1)
+            },
+            width: "w-40",
+          },
+        ]}
+        hasFilters={hasFilters}
+        onReset={resetFilters}
+        className="mb-4"
+      />
 
-        <Select
-          value={channel ?? ALL}
-          onValueChange={(v) => {
-            setChannel(v === ALL ? undefined : v)
-            setPage(1)
-          }}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder={t("settings.deliveryLog.filterChannel")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>{t("settings.deliveryLog.filterChannel")}</SelectItem>
-            {CHANNEL_OPTIONS.map((c) => (
-              <SelectItem key={c} value={c}>
-                {c}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {(status || channel) && (
-          <Button variant="ghost" size="sm" onClick={resetFilters}>
-            {t("pagination.reset")}
-          </Button>
-        )}
-      </div>
-
-      {/* Table */}
-      <div className="rounded-xl border border-border/60 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/40">
-            <tr>
-              <th className="px-4 py-3 text-start font-medium text-muted-foreground">
-                {t("settings.deliveryLog.colChannel")}
-              </th>
-              <th className="px-4 py-3 text-start font-medium text-muted-foreground">
-                {t("settings.deliveryLog.colStatus")}
-              </th>
-              <th className="px-4 py-3 text-start font-medium text-muted-foreground">
-                {t("settings.deliveryLog.colTo")}
-              </th>
-              <th className="px-4 py-3 text-start font-medium text-muted-foreground">
-                {t("settings.deliveryLog.colProvider")}
-              </th>
-              <th className="px-4 py-3 text-start font-medium text-muted-foreground">
-                {t("settings.deliveryLog.colAttempts")}
-              </th>
-              <th className="px-4 py-3 text-start font-medium text-muted-foreground">
-                {t("settings.deliveryLog.colSentAt")}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading
-              ? Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={`row-${i}`} className="border-t border-border/40">
-                    <td colSpan={6} className="px-4 py-3">
-                      <Skeleton className="h-5 w-full" />
-                    </td>
-                  </tr>
-                ))
-              : data?.items.length === 0
-                ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-4 py-8 text-center text-muted-foreground"
-                    >
-                      {t("settings.deliveryLog.noLogs")}
-                    </td>
-                  </tr>
-                )
-                : data?.items.map((log) => (
-                  <tr
-                    key={log.id}
-                    className="border-t border-border/40 hover:bg-muted/20 transition-colors"
-                  >
-                    <td className="px-4 py-3">{log.channel}</td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        variant={statusVariant(log.status)}
-                        className="text-xs"
-                      >
-                        {log.status}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground truncate max-w-[180px]">
-                      {log.toAddress ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {log.providerName ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-center">{log.attempts}</td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">
-                      {log.sentAt
-                        ? new Date(log.sentAt).toLocaleDateString("ar-SA", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })
-                        : "—"}
-                    </td>
-                  </tr>
-                ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {data && data.meta.totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-          <span>
-            {data.meta.page} / {data.meta.totalPages}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              {t("pagination.prev")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page >= data.meta.totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              {t("pagination.next")}
-            </Button>
-          </div>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={isLoading ? [] : (data?.items ?? [])}
+        emptyTitle={t("settings.deliveryLog.noLogs")}
+        serverPaginated
+        page={page}
+        totalPages={data?.meta.totalPages ?? 1}
+        hasPreviousPage={page > 1}
+        hasNextPage={page < (data?.meta.totalPages ?? 1)}
+        onPageChange={setPage}
+      />
     </ListPageShell>
   )
 }

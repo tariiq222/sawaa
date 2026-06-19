@@ -4,9 +4,11 @@ import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { LockPasswordIcon } from "@hugeicons/core-free-icons"
 
-import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from "@sawaa/ui"
+import { Avatar, AvatarFallback, AvatarImage, Button } from "@sawaa/ui"
 
 import { ChangePasswordDialog } from "@/components/features/change-password-dialog"
+import { ActiveBadge } from "@/components/features/status-badge"
+import { FormSection } from "@/components/features/shared/form-section"
 import { useAuth } from "@/components/providers/auth-provider"
 import { useLocale } from "@/components/locale-provider"
 
@@ -34,7 +36,7 @@ export function AccountTab() {
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="rounded-xl border border-border bg-surface p-6">
+      <FormSection title={t("profile.section.account")}>
         <div className="mb-6 flex items-center gap-4">
           <Avatar className="size-16">
             {user?.avatarUrl ? <AvatarImage src={user.avatarUrl} alt={user.name ?? ""} /> : null}
@@ -46,23 +48,14 @@ export function AccountTab() {
             <h2 className="text-lg font-semibold text-foreground">{user?.name || empty}</h2>
             <span className="text-sm text-muted-foreground">{user?.email || empty}</span>
             <div className="mt-1">
-              <Badge
-                variant="outline"
-                className={
-                  user?.isActive
-                    ? "border-success/30 bg-success/10 text-success"
-                    : "border-muted-foreground/30 bg-muted text-muted-foreground"
-                }
-              >
-                {user?.isActive ? t("common.active") : t("common.inactive")}
-              </Badge>
+              <ActiveBadge
+                active={!!user?.isActive}
+                label={user?.isActive ? t("users.status.active") : t("users.status.inactive")}
+              />
             </div>
           </div>
         </div>
 
-        <h3 className="mb-3 text-sm font-semibold text-foreground">
-          {t("profile.section.account")}
-        </h3>
         <dl className="grid gap-4 sm:grid-cols-2">
           {fields.map((f) => (
             <div key={f.label} className="flex flex-col gap-1">
@@ -71,12 +64,9 @@ export function AccountTab() {
             </div>
           ))}
         </dl>
-      </section>
+      </FormSection>
 
-      <section className="rounded-xl border border-border bg-surface p-6">
-        <h3 className="mb-1 text-sm font-semibold text-foreground">
-          {t("profile.section.security")}
-        </h3>
+      <FormSection title={t("profile.section.security")}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-1">
             <span className="text-sm font-medium text-foreground">
@@ -91,7 +81,7 @@ export function AccountTab() {
             {t("profile.changePassword.button")}
           </Button>
         </div>
-      </section>
+      </FormSection>
 
       <ChangePasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} />
     </div>

@@ -31,7 +31,7 @@ export function GreetingHeader({ userName, dateLabel, bookingsCount }: GreetingH
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
       <div className="min-w-0 max-w-[64ch]">
-        <h1 className="truncate text-[28px] font-semibold leading-tight tracking-tight text-foreground sm:text-[32px]">
+        <h1 className="truncate text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-3xl">
           {t("dashboard.greeting.hello")
             .replace("{greeting}", greeting)
             .replace("{name}", userName)}
@@ -55,7 +55,7 @@ export function GreetingHeader({ userName, dateLabel, bookingsCount }: GreetingH
           <Input
             placeholder={t("header.search")}
             aria-label={t("header.search")}
-            className="h-10 w-full max-w-[260px] rounded-lg bg-muted/60 ps-10 focus-visible:bg-card"
+            className="h-10 w-full max-w-[260px] rounded-lg border-border bg-surface ps-10 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:bg-surface-solid"
           />
         </div>
 

@@ -111,7 +111,7 @@ export function getEntryColumns(
         row.original.status === "EMBEDDED" ? (
           <Badge variant="default">{t("chatbot.kb.status.embedded")}</Badge>
         ) : row.original.status === "FAILED" ? (
-          <Badge variant="destructive">{t("chatbot.kb.status.failed")}</Badge>
+          <Badge variant="outline" className="border-error/30 bg-error/10 text-error">{t("chatbot.kb.status.failed")}</Badge>
         ) : (
           <Badge variant="secondary">{t("chatbot.kb.status.pending")}</Badge>
         ),

@@ -1,3 +1,4 @@
+// EXCEPTION: 381 lines — multi-tab wizard with avatar upload, booking mode, and edit/create modes; approved 2026-06-19
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -11,10 +12,11 @@ import { useDepartmentOptions } from "@/hooks/use-departments"
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
+import { FormSection, FormField } from "@/components/features/shared/form-section"
 import {
   Button, Skeleton, Tabs, TabsList, TabsTrigger, TabsContent,
-  Input, Label, Switch, Select, SelectContent, SelectItem,
-  SelectTrigger, SelectValue, RadioGroup, RadioGroupItem,
+  Input, Switch, Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue, RadioGroup, RadioGroupItem, Label,
 } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import {
@@ -23,6 +25,7 @@ import {
 } from "@/lib/schemas/service.schema"
 import type { ServiceCategory } from "@/lib/types/service"
 import { formatRef } from "@/lib/utils"
+import { uploadCategoryImage } from "@/lib/api/services"
 import { CategorySettingsTab } from "./category-settings-tab"
 import { CategoryServicesTab } from "./category-services-tab"
 import { CategoryEmployeesTab } from "./category-employees-tab"
@@ -32,18 +35,6 @@ import { CategoryWizardNav } from "./category-wizard-nav"
 interface CategoryFormPageProps {
   mode: "create" | "edit"
   categoryId?: string
-}
-
-function Field({ label, required, children, error, className }: {
-  label: string; required?: boolean; children: React.ReactNode; error?: string; className?: string
-}) {
-  return (
-    <div className={`flex flex-col gap-1.5${className ? ` ${className}` : ""}`}>
-      <Label>{label}{required && <span className="ms-0.5 text-destructive">*</span>}</Label>
-      {children}
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
-  )
 }
 
 export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
@@ -56,6 +47,8 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false)
   const pendingExit = useRef<(() => void) | null>(null)
   const pendingNextTab = useRef<string | null>(null)
+  const pendingAvatarFile = useRef<File | null>(null)
+  const [localAvatarPreview, setLocalAvatarPreview] = useState<string | null>(null)
 
   const { data: allCategories, isLoading: categoriesLoading } = useCategories()
   const { createMut, updateMut } = useCategoryMutations()
@@ -93,6 +86,8 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
         iconBgColor: category.iconBgColor ?? undefined,
         imageUrl: category.imageUrl ?? undefined,
       })
+      pendingAvatarFile.current = null
+      setLocalAvatarPreview(null)
     }
   }, [mode, category, reset])
 
@@ -105,7 +100,8 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
 
   const buildCreatePayload = (data: EditCategoryFormData): CreateCategoryFormData => {
     const deptId = !data.departmentId || data.departmentId === "__none__" ? undefined : data.departmentId
-    return { nameAr: data.nameAr!, nameEn: data.nameEn || undefined, sortOrder: data.sortOrder, departmentId: deptId, bookingMode: data.bookingMode ?? "DIRECT", iconName: data.iconName ?? undefined, iconBgColor: data.iconBgColor ?? undefined, imageUrl: data.imageUrl ?? undefined }
+    // imageUrl is NOT included in create payload — uploaded separately after entity creation
+    return { nameAr: data.nameAr!, nameEn: data.nameEn || undefined, sortOrder: data.sortOrder, departmentId: deptId, bookingMode: data.bookingMode ?? "DIRECT", iconName: data.iconName ?? undefined, iconBgColor: data.iconBgColor ?? undefined }
   }
 
   const saveAndGoToTab = async (target: string) => {
@@ -113,6 +109,13 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
     setIsSubmitting(true)
     try {
       const created = await createMut.mutateAsync(buildCreatePayload(form.getValues()))
+
+      if (pendingAvatarFile.current) {
+        await uploadCategoryImage(created.id, pendingAvatarFile.current)
+        pendingAvatarFile.current = null
+        setLocalAvatarPreview(null)
+      }
+
       toast.success(t("services.categories.create.success"))
       router.push(`/categories/${formatRef("CAT", created.ref)}/edit?tab=${target}`)
     } catch (err) {
@@ -125,12 +128,28 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
     try {
       if (mode === "create") {
         const created = await createMut.mutateAsync(buildCreatePayload(data))
+
+        if (pendingAvatarFile.current) {
+          await uploadCategoryImage(created.id, pendingAvatarFile.current)
+          pendingAvatarFile.current = null
+          setLocalAvatarPreview(null)
+        }
+
         toast.success(t("services.categories.create.success"))
         const secondTab = (data.bookingMode ?? "DIRECT") === "SERVICES" ? "services" : "settings"
         router.push(`/categories/${formatRef("CAT", created.ref)}/edit?tab=${secondTab}`)
       } else {
         const deptId = !data.departmentId || data.departmentId === "__none__" ? undefined : data.departmentId
-        await updateMut.mutateAsync({ id: categoryId!, nameAr: data.nameAr, nameEn: data.nameEn || undefined, sortOrder: data.sortOrder, isActive: data.isActive, departmentId: deptId ?? null, bookingMode: data.bookingMode, iconName: data.iconName ?? undefined, iconBgColor: data.iconBgColor ?? undefined, imageUrl: data.imageUrl ?? undefined })
+        // imageUrl in payload only when set from the server (not a pending file upload)
+        const imageUrlValue = pendingAvatarFile.current ? undefined : (data.imageUrl ?? undefined)
+        await updateMut.mutateAsync({ id: categoryId!, nameAr: data.nameAr, nameEn: data.nameEn || undefined, sortOrder: data.sortOrder, isActive: data.isActive, departmentId: deptId ?? null, bookingMode: data.bookingMode, iconName: data.iconName ?? undefined, iconBgColor: data.iconBgColor ?? undefined, imageUrl: imageUrlValue })
+
+        if (pendingAvatarFile.current) {
+          await uploadCategoryImage(categoryId!, pendingAvatarFile.current)
+          pendingAvatarFile.current = null
+          setLocalAvatarPreview(null)
+        }
+
         toast.success(t("services.categories.edit.success"))
         if (pendingNextTab.current !== null) {
           reset({ ...data, departmentId: data.departmentId ?? "" })
@@ -213,18 +232,34 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
             ))}
           </TabsList>
           <TabsContent value="info" className="mt-6 flex flex-col gap-6">
-            <section className="rounded-2xl border border-border bg-surface-solid p-6 shadow-sm">
-              <h2 className="mb-5 text-xs font-bold uppercase tracking-wide text-muted-foreground">{t("services.categories.page.tabs.info")}</h2>
+            <FormSection title={t("services.categories.page.tabs.info")}>
               {/* Avatar picker */}
               <div className="mb-5 flex items-center gap-4">
                 <ServiceAvatarPicker
                   iconName={form.watch("iconName")}
                   iconBgColor={form.watch("iconBgColor")}
-                  imageUrl={form.watch("imageUrl")}
+                  imageUrl={localAvatarPreview ?? form.watch("imageUrl")}
                   serviceName={form.watch("nameAr") || form.watch("nameEn")}
-                  onIconChange={(name, color) => { form.setValue("iconName", name); form.setValue("iconBgColor", color); form.setValue("imageUrl", null) }}
-                  onImageChange={(file) => { const url = URL.createObjectURL(file); form.setValue("imageUrl", url); form.setValue("iconName", null); form.setValue("iconBgColor", null) }}
-                  onClear={() => { form.setValue("iconName", null); form.setValue("iconBgColor", null); form.setValue("imageUrl", null) }}
+                  onIconChange={(name, color) => {
+                    form.setValue("iconName", name)
+                    form.setValue("iconBgColor", color)
+                    form.setValue("imageUrl", null)
+                    pendingAvatarFile.current = null
+                    setLocalAvatarPreview(null)
+                  }}
+                  onImageChange={(file) => {
+                    pendingAvatarFile.current = file
+                    setLocalAvatarPreview(URL.createObjectURL(file))
+                    form.setValue("iconName", null)
+                    form.setValue("iconBgColor", null)
+                  }}
+                  onClear={() => {
+                    form.setValue("iconName", null)
+                    form.setValue("iconBgColor", null)
+                    form.setValue("imageUrl", null)
+                    pendingAvatarFile.current = null
+                    setLocalAvatarPreview(null)
+                  }}
                 />
                 <div className="flex flex-col gap-0.5">
                   <p className="text-sm font-medium text-foreground">{t("services.categories.avatar.label")}</p>
@@ -232,9 +267,9 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                <Field label={t("services.categories.create.nameAr")} required error={errors.nameAr ? t(errors.nameAr.message ?? "common.required") : undefined}><Input id="nameAr" {...register("nameAr")} placeholder={t("services.categories.create.nameAr")} /></Field>
-                <Field label={t("services.categories.create.nameEn")}><Input id="nameEn" {...register("nameEn")} placeholder={t("services.categories.create.nameEn")} /></Field>
-                <Field label={t("services.categories.create.department")}>
+                <FormField label={t("services.categories.create.nameAr")} required error={errors.nameAr ? t(errors.nameAr.message ?? "common.required") : undefined}><Input id="nameAr" {...register("nameAr")} placeholder={t("services.categories.create.nameAr")} /></FormField>
+                <FormField label={t("services.categories.create.nameEn")}><Input id="nameEn" {...register("nameEn")} placeholder={t("services.categories.create.nameEn")} /></FormField>
+                <FormField label={t("services.categories.create.department")}>
                   <Controller
                     name="departmentId"
                     control={control}
@@ -252,13 +287,12 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
                       </Select>
                     )}
                   />
-                </Field>
-                <Field label={t("services.categories.create.sortOrder")}><Input id="sortOrder" type="number" min={0} max={999} {...register("sortOrder")} placeholder="0" /></Field>
+                </FormField>
+                <FormField label={t("services.categories.create.sortOrder")}><Input id="sortOrder" type="number" min={0} max={999} {...register("sortOrder")} placeholder="0" /></FormField>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="rounded-2xl border border-border bg-surface-solid p-6 shadow-sm">
-              <h2 className="mb-5 text-xs font-bold uppercase tracking-wide text-muted-foreground">{t("services.categories.bookingMode.label")}</h2>
+            <FormSection title={t("services.categories.bookingMode.label")}>
               <Controller
                 control={control}
                 name="bookingMode"
@@ -283,10 +317,10 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
               {mode === "edit" && (
                 <p className="mt-3 text-xs text-muted-foreground">{t("services.categories.bookingMode.editHint")}</p>
               )}
-            </section>
+            </FormSection>
 
             {mode === "edit" && (
-              <section className="rounded-2xl border border-border bg-surface-solid p-6 shadow-sm">
+              <FormSection>
                 <div className="flex items-center gap-3">
                   <Controller
                     name="isActive"
@@ -297,7 +331,7 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
                   />
                   <Label htmlFor="isActive">{t("services.categories.edit.isActive")}</Label>
                 </div>
-              </section>
+              </FormSection>
             )}
           </TabsContent>
 

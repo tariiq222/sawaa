@@ -7,6 +7,8 @@ import { z } from "zod"
 import { Button } from "@sawaa/ui"
 import { Input } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { CheckmarkCircle01Icon } from "@hugeicons/core-free-icons"
 import { useLocale } from "@/components/locale-provider"
 import { requestStaffPasswordReset } from "@/lib/api/auth"
 
@@ -47,22 +49,12 @@ export function ForgotPasswordForm() {
       <div className="text-center">
         <div className="mb-4 flex justify-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-hidden
+            <HugeiconsIcon
+              icon={CheckmarkCircle01Icon}
+              size={24}
               className="text-success"
-            >
-              <path
-                d="M20 6L9 17l-5-5"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+              aria-hidden
+            />
           </div>
         </div>
         <h2 className="mb-2 text-xl font-semibold text-foreground">
@@ -85,7 +77,7 @@ export function ForgotPasswordForm() {
     <div>
       {/* Heading */}
       <div className="mb-6 text-center">
-        <h1 className="mb-1 text-2xl font-semibold">
+        <h1 className="mb-1 text-2xl font-semibold tracking-tight">
           {t("forgotPassword.title")}
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -95,7 +87,7 @@ export function ForgotPasswordForm() {
 
       {/* Error */}
       {error && (
-        <div className="mb-4 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="mb-4 rounded-lg bg-error/10 px-4 py-3 text-sm text-error">
           {error}
         </div>
       )}
@@ -120,7 +112,7 @@ export function ForgotPasswordForm() {
             disabled={loading}
           />
           {fieldError && (
-            <p className="text-sm text-destructive">{fieldError}</p>
+            <p className="text-sm text-error">{fieldError}</p>
           )}
         </div>
 
@@ -137,7 +129,7 @@ export function ForgotPasswordForm() {
       <div className="mt-6 text-center">
         <Link
           href="/"
-          className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+          className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
           {t("forgotPassword.back")}
         </Link>

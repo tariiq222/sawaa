@@ -93,6 +93,18 @@ export const arMisc: Record<string, string> = {
   "reports.bookings.cancelReasons": "أسباب الإلغاء",
   "reports.bookings.insightNoShowHigh": "نسبة عدم الحضور مرتفعة هذه الفترة. راجع سياسة التذكير.",
 
+  // Heatmap labels
+  "reports.heatmap.dow.0": "الأحد",
+  "reports.heatmap.dow.1": "الاثنين",
+  "reports.heatmap.dow.2": "الثلاثاء",
+  "reports.heatmap.dow.3": "الأربعاء",
+  "reports.heatmap.dow.4": "الخميس",
+  "reports.heatmap.dow.5": "الجمعة",
+  "reports.heatmap.dow.6": "السبت",
+  "reports.heatmap.hour.am": "ص",
+  "reports.heatmap.hour.noon": "١٢ ظ",
+  "reports.heatmap.hour.pm": "م",
+
   // Clients report
   "reports.clients.title": "تقرير العملاء",
   "reports.clients.description": "العملاء الجدد والعائدون، الفئات العمرية، والتوزيع الجنسي",

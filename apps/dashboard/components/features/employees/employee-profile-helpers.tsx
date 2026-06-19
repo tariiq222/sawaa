@@ -98,6 +98,26 @@ export function PricingRow({ icon, label, value, color, bg }: PricingRowProps) {
   )
 }
 
+/* ─── CardSectionTitle — icon chip + label used inside CombinedInfoCard sections ─── */
+
+interface CardSectionTitleProps {
+  icon: IconSvgElement
+  label: string
+  iconBg?: string
+  iconColor?: string
+}
+
+function CardSectionTitle({ icon, label, iconBg = "bg-surface-muted", iconColor = "text-muted-foreground" }: CardSectionTitleProps) {
+  return (
+    <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+      <div className={`flex size-6 items-center justify-center rounded-md ${iconBg}`}>
+        <HugeiconsIcon icon={icon} size={13} className={iconColor} />
+      </div>
+      {label}
+    </span>
+  )
+}
+
 /* ─── CombinedInfoCard — Contact + Professional + Account ─── */
 
 interface CombinedInfoCardProps {
@@ -124,24 +144,14 @@ export function CombinedInfoCard({
 
         {/* Contact */}
         <div className="flex flex-col gap-3 p-4">
-          <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <div className="flex size-6 items-center justify-center rounded-md bg-primary/10">
-              <HugeiconsIcon icon={UserIcon} size={13} className="text-primary" />
-            </div>
-            {t("employees.detail.contactInfo")}
-          </span>
+          <CardSectionTitle icon={UserIcon} label={t("employees.detail.contactInfo")} iconBg="bg-primary/10" iconColor="text-primary" />
           <InfoRow icon={Mail01Icon} label={t("employees.detail.email")} value={email ?? "—"} />
           <InfoRow icon={SmartPhone01Icon} label={t("employees.detail.phone")} value={phone ?? "—"} numeric />
         </div>
 
         {/* Professional */}
         <div className="flex flex-col gap-3 p-4">
-          <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <div className="flex size-6 items-center justify-center rounded-md bg-accent/10">
-              <HugeiconsIcon icon={Stethoscope02Icon} size={13} className="text-accent" />
-            </div>
-            {t("employees.detail.professional")}
-          </span>
+          <CardSectionTitle icon={Stethoscope02Icon} label={t("employees.detail.professional")} iconBg="bg-accent/10" iconColor="text-accent" />
           <InfoRow icon={Stethoscope02Icon} label={t("employees.detail.specialty")} value={specialty ?? "—"} />
           <InfoRow
             icon={BookOpen01Icon}
@@ -154,12 +164,7 @@ export function CombinedInfoCard({
 
         {/* Account */}
         <div className="flex flex-col gap-3 p-4">
-          <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <div className="flex size-6 items-center justify-center rounded-md bg-surface-muted">
-              <HugeiconsIcon icon={Calendar03Icon} size={13} className="text-muted-foreground" />
-            </div>
-            {t("employees.detail.accountInfo")}
-          </span>
+          <CardSectionTitle icon={Calendar03Icon} label={t("employees.detail.accountInfo")} />
           <InfoRow
             icon={Calendar03Icon}
             label={t("employees.detail.registered")}

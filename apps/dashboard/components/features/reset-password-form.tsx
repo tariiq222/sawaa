@@ -8,6 +8,8 @@ import { z } from "zod"
 import { Button } from "@sawaa/ui"
 import { Input } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { CheckmarkCircle01Icon } from "@hugeicons/core-free-icons"
 import { useLocale } from "@/components/locale-provider"
 import { performStaffPasswordReset } from "@/lib/api/auth"
 
@@ -75,7 +77,7 @@ function ResetPasswordFormInner() {
   if (!token) {
     return (
       <div className="text-center">
-        <p className="mb-4 text-sm text-destructive">
+        <p className="mb-4 text-sm text-error">
           {t("resetPassword.invalidToken")}
         </p>
         <Link
@@ -93,22 +95,12 @@ function ResetPasswordFormInner() {
       <div className="space-y-3 text-center">
         <div className="mb-4 flex justify-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-hidden
+            <HugeiconsIcon
+              icon={CheckmarkCircle01Icon}
+              size={24}
               className="text-success"
-            >
-              <path
-                d="M20 6L9 17l-5-5"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+              aria-hidden
+            />
           </div>
         </div>
         <h2 className="text-xl font-semibold text-foreground">
@@ -125,7 +117,7 @@ function ResetPasswordFormInner() {
     <div>
       {/* Heading */}
       <div className="mb-6 text-center">
-        <h1 className="mb-1 text-2xl font-semibold">
+        <h1 className="mb-1 text-2xl font-semibold tracking-tight">
           {t("resetPassword.title")}
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -135,7 +127,7 @@ function ResetPasswordFormInner() {
 
       {/* Error */}
       {error && (
-        <div className="mb-4 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="mb-4 rounded-lg bg-error/10 px-4 py-3 text-sm text-error">
           {error}
         </div>
       )}

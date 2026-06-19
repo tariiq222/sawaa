@@ -63,6 +63,10 @@
     --color-primary-ultra-light: var(--primary-ultra-light);
     --color-accent-ultra-light: var(--accent-ultra-light);
     --color-surface-solid: var(--surface-solid);
+    /* Warm secondary brand accent (coral/terracotta) — used sparingly in the
+       10% slot to break the teal monotony. NOT a semantic state color. */
+    --color-brand-warm: var(--brand-warm);
+    --color-brand-warm-soft: var(--brand-warm-soft);
 
     /* Avatar gradient colors */
     --color-avatar-1-from: var(--avatar-1-from);
@@ -134,7 +138,9 @@
     --accent: #E7DBC4;
     --accent-foreground: #2B3A39;
     --accent-ultra-light: rgba(231, 219, 196, 0.22);
-    --background: #EAF8F4;
+    --brand-warm: #C75D52;
+    --brand-warm-soft: #FBE7E2;
+    --background: #F3F1EA;
     --foreground: #2B3A39;
     --surface: #FBF8F2;
     --surface-solid: #FBF8F2;
@@ -179,7 +185,7 @@
     --chart-3: #C2410C;
     --chart-4: #6D28D9;
     --chart-5: #DB2777;
-    --sidebar: #FBF8F2;
+    --sidebar: #F3F1EA;
     --sidebar-foreground: #2B3A39;
     --sidebar-primary: #1E9E83;
     --sidebar-primary-foreground: #FFFFFF;
@@ -189,8 +195,8 @@
     --sidebar-ring: rgba(30, 158, 131, 0.32);
     --shadow-primary-color: rgba(30, 158, 131, 0.25);
     --shadow-primary-hover-color: rgba(30, 158, 131, 0.35);
-    --blob-primary: transparent;
-    --blob-accent: transparent;
+    --blob-primary: var(--primary-ultra-light);
+    --blob-accent: var(--accent-ultra-light);
 
     /* Decorative avatar gradient pairs (from → to) */
     --avatar-1-from: #55CCB0;
@@ -244,21 +250,25 @@
     --accent: #E7DBC4;
     --accent-foreground: #1B2522;
     --accent-ultra-light: rgba(231, 219, 196, 0.18);
+    --brand-warm: #E89A88;
+    --brand-warm-soft: rgba(232, 154, 136, 0.16);
     --ring: rgba(124, 216, 194, 0.45);
-    --background: #0F1117;
-    --foreground: #F1F4F8;
-    --surface: rgba(27, 32, 38, 0.72);
-    --surface-solid: #252B33;
-    --surface-muted: #2E3540;
-    --muted: #2E3540;
+    /* Neutrals tilted toward the teal brand hue (low chroma) so dark surfaces
+       feel warm-cohesive instead of cold blue-grey. */
+    --background: #0E1413;
+    --foreground: #F1F5F2;
+    --surface: rgba(24, 32, 29, 0.72);
+    --surface-solid: #1E2723;
+    --surface-muted: #27302C;
+    --muted: #27302C;
     --muted-foreground: #98A2B3;
     /* --card is a shadcn-compat alias of --surface. Do not diverge. */
     --card: var(--surface);
-    --card-foreground: #F1F4F8;
-    --popover: rgba(27, 32, 38, 0.92);
-    --popover-foreground: #F1F4F8;
-    --secondary: #252B33;
-    --secondary-foreground: #F1F4F8;
+    --card-foreground: #F1F5F2;
+    --popover: rgba(24, 32, 29, 0.92);
+    --popover-foreground: #F1F5F2;
+    --secondary: #1E2723;
+    --secondary-foreground: #F1F5F2;
     --border: rgba(255, 255, 255, 0.12);
     --border-strong: rgba(255, 255, 255, 0.24);
     --input: rgba(255, 255, 255, 0.14);
@@ -281,8 +291,8 @@
     --chart-3: #FB923C;
     --chart-4: #C4B5FD;
     --chart-5: #F472B6;
-    --sidebar: rgba(27, 32, 38, 0.72);
-    --sidebar-foreground: #F1F4F8;
+    --sidebar: rgba(24, 32, 29, 0.72);
+    --sidebar-foreground: #F1F5F2;
     --sidebar-primary: #7CD8C2;
     --sidebar-primary-foreground: #08312C;
     --sidebar-accent: rgba(124, 216, 194, 0.16);
@@ -291,8 +301,8 @@
     --sidebar-ring: rgba(124, 216, 194, 0.45);
     --shadow-primary-color: rgba(124, 216, 194, 0.35);
     --shadow-primary-hover-color: rgba(124, 216, 194, 0.45);
-    --glass-bg: rgba(27, 32, 38, 0.72);
-    --glass-bg-solid: rgba(37, 43, 51, 0.92);
+    --glass-bg: rgba(24, 32, 29, 0.72);
+    --glass-bg-solid: rgba(30, 39, 35, 0.92);
     --glass-border: rgba(255, 255, 255, 0.08);
 
     /* Decorative avatar gradient pairs (dark) */
@@ -428,7 +438,7 @@
 
 /* ─── Login Form Decoratives ─── */
 .login-card {
-    box-shadow: 0 8px 40px rgba(16, 24, 40, 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.06));
 }
 
 .login-grid-pattern {
@@ -442,11 +452,6 @@
 
 .login-blob {
     background: radial-gradient(ellipse 90% 100% at 50% 0%, color-mix(in srgb, var(--primary) 10%, transparent) 0%, transparent 100%);
-}
-
-.login-brand-icon {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-    box-shadow: var(--shadow-primary);
 }
 
 

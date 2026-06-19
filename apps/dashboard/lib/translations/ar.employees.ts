@@ -48,6 +48,7 @@ export const arEmployees: Record<string, string> = {
   "employees.empty.filteredDescription": "لا يوجد ممارسون يطابقون معايير البحث. جرّب تعديل الفلاتر.",
   "employees.create.phoneLabel": "رقم الجوال",
   "employees.create.genderLabel": "الجنس",
+  "employees.create.genderUnspecified": "—",
   "employees.create.genderMale": "ذكر",
   "employees.create.genderFemale": "أنثى",
   "employees.create.employmentTypeLabel": "نوع التوظيف",

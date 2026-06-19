@@ -13,8 +13,8 @@ import {
   Delete02Icon,
 } from "@hugeicons/core-free-icons"
 import { Avatar, AvatarFallback, AvatarImage } from "@sawaa/ui"
-import { Badge } from "@sawaa/ui"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sawaa/ui"
+import { ActiveBadge } from "@/components/features/status-badge"
 import type { Client } from "@/lib/types/client"
 
 interface ClientColumnOptions {
@@ -157,16 +157,10 @@ export function getClientColumns({
       enableSorting: true,
       sortingFn: (a, b) => Number(b.original.isActive) - Number(a.original.isActive),
       cell: ({ row }) => (
-        <Badge
-          variant="outline"
-          className={
-            row.original.isActive
-              ? "border-success/30 bg-success/10 text-success"
-              : "border-muted-foreground/30 bg-muted text-muted-foreground"
-          }
-        >
-          {row.original.isActive ? t("clients.status.active") : t("clients.status.inactive")}
-        </Badge>
+        <ActiveBadge
+          active={row.original.isActive}
+          label={row.original.isActive ? t("clients.status.active") : t("clients.status.inactive")}
+        />
       ),
     },
     {

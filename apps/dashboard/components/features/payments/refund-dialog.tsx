@@ -119,7 +119,7 @@ export function RefundDialog({
                 {...form.register("reason")}
               />
               {form.formState.errors.reason && (
-                <p className="text-xs text-destructive">
+                <p className="text-xs text-error">
                   {form.formState.errors.reason.message}
                 </p>
               )}
@@ -144,7 +144,7 @@ export function RefundDialog({
                 {...form.register("amount")}
               />
               {form.formState.errors.amount && (
-                <p className="text-xs text-destructive">
+                <p className="text-xs text-error">
                   {form.formState.errors.amount.message}
                 </p>
               )}
