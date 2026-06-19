@@ -69,7 +69,7 @@ export function BranchListPage() {
         description={t("branches.description")}
       >
         {canDo("Branch", "create") && (
-          <Button className="gap-2 rounded-full px-5" onClick={() => router.push("/branches/create")}>
+          <Button className="gap-2 rounded-lg px-5" onClick={() => router.push("/branches/create")}>
             <HugeiconsIcon icon={Add01Icon} size={16} />
             {t("branches.addBranch")}
           </Button>

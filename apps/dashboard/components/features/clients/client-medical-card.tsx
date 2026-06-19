@@ -2,12 +2,10 @@
 
 import { Controller } from "react-hook-form"
 import type { UseFormReturn } from "react-hook-form"
-import { HeartCheckIcon } from "@hugeicons/core-free-icons"
-import { Card, CardContent } from "@sawaa/ui"
 import { Textarea } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
-import { SectionHeader } from "@/components/features/section-header"
+import { FormSection } from "@/components/features/shared/form-section"
 import { BLOOD_TYPES, BLOOD_LABELS, type CreateClientFormData, type EditClientFormData } from "@/lib/schemas/client.schema"
 import { Field } from "@/components/features/clients/client-form"
 
@@ -21,16 +19,11 @@ export function ClientMedicalCard({ form, isCreate }: ClientMedicalCardProps) {
   const { t } = useLocale()
 
   return (
-    <Card>
-      <CardContent className="pt-6 space-y-4">
-        <SectionHeader
-          icon={HeartCheckIcon}
-          title={isCreate
-            ? t("clients.form.medicalBasics")
-            : t("clients.form.medicalInfo")}
-          description={isCreate ? t("clients.form.medicalBasicsDesc") : undefined}
-        />
-
+    <FormSection
+      title={isCreate ? t("clients.form.medicalBasics") : t("clients.form.medicalInfo")}
+      description={isCreate ? t("clients.form.medicalBasicsDesc") : undefined}
+    >
+      <div className="space-y-4">
         <Field label={t("clients.form.bloodType")}>
           <Controller
             control={control}
@@ -74,7 +67,7 @@ export function ClientMedicalCard({ form, isCreate }: ClientMedicalCardProps) {
             rows={3}
           />
         </Field>
-      </CardContent>
-    </Card>
+      </div>
+    </FormSection>
   )
 }

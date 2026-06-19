@@ -1,16 +1,10 @@
 "use client"
 
 import { Input } from "@sawaa/ui"
-import { Label } from "@sawaa/ui"
 import { Switch } from "@sawaa/ui"
 import { DatePicker } from "@/components/ui/date-picker"
-import {
-  Card,
-  CardContent,
-  CardTitle,
-  CardDescription,
-} from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
+import { FormSection, FormField } from "@/components/features/shared/form-section"
 import type { LocalVacation } from "./schedule-types"
 
 interface VacationCardProps {
@@ -22,17 +16,16 @@ export function VacationCard({ vacation, onVacationChange }: VacationCardProps) 
   const { t } = useLocale()
 
   return (
-    <Card>
-      <CardContent className="pt-6">
+    <FormSection>
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base">
+              <p className="text-base font-semibold text-foreground">
                 {t("vacation.employeeVacation")}
-              </CardTitle>
-              <CardDescription className="mt-1">
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
                 {t("vacation.vacationDescription")}
-              </CardDescription>
+              </p>
             </div>
             <Switch
               checked={vacation.enabled}
@@ -44,10 +37,7 @@ export function VacationCard({ vacation, onVacationChange }: VacationCardProps) 
 
           {vacation.enabled && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs">
-                  {t("vacation.startDateLabel")}
-                </Label>
+              <FormField label={t("vacation.startDateLabel")}>
                 <DatePicker
                   value={vacation.startDate}
                   onChange={(v) =>
@@ -56,11 +46,8 @@ export function VacationCard({ vacation, onVacationChange }: VacationCardProps) 
                   placeholder={t("vacation.pickDate")}
                   className="w-full"
                 />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs">
-                  {t("vacation.endDateLabel")}
-                </Label>
+              </FormField>
+              <FormField label={t("vacation.endDateLabel")}>
                 <DatePicker
                   value={vacation.endDate}
                   onChange={(v) =>
@@ -69,11 +56,8 @@ export function VacationCard({ vacation, onVacationChange }: VacationCardProps) 
                   placeholder={t("vacation.pickDate")}
                   className="w-full"
                 />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs">
-                  {t("vacation.reasonLabel")}
-                </Label>
+              </FormField>
+              <FormField label={t("vacation.reasonLabel")}>
                 <Input
                   className="h-9 text-xs"
                   placeholder={t("vacation.reasonPlaceholder")}
@@ -82,11 +66,10 @@ export function VacationCard({ vacation, onVacationChange }: VacationCardProps) 
                     onVacationChange({ ...vacation, reason: e.target.value })
                   }
                 />
-              </div>
+              </FormField>
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+    </FormSection>
   )
 }

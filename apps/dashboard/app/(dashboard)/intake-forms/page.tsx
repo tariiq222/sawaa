@@ -68,7 +68,7 @@ export default function IntakeFormsPage() {
         description={t("intakeForms.description")}
       >
         <Button
-          className="gap-2 rounded-full px-5"
+          className="gap-2 rounded-lg px-5"
           onClick={() => router.push("/intake-forms/create")}
         >
           <HugeiconsIcon icon={Add01Icon} size={16} />

@@ -59,7 +59,7 @@ export function GreetingHeader({ userName, dateLabel, bookingsCount }: GreetingH
           />
         </div>
 
-        <Button asChild size="default" className="h-10 gap-2 rounded-full px-5">
+        <Button asChild size="default" className="h-10 gap-2 rounded-lg px-5">
           <Link href="/bookings">
             <HugeiconsIcon icon={Add01Icon} size={16} />
             <span>{t("actions.newBooking")}</span>

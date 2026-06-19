@@ -11,8 +11,8 @@ import { Add01Icon, FloppyDiskIcon } from "@hugeicons/core-free-icons"
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { PageHeader } from "@/components/features/page-header"
 import { Button } from "@sawaa/ui"
-import { Card, CardContent, CardHeader, CardTitle } from "@sawaa/ui"
 import { FieldEditor } from "@/components/features/intake-forms/field-editor"
+import { FormSection } from "@/components/features/shared/form-section"
 import { FormInfoPanel } from "@/components/features/intake-forms/form-info-panel"
 import { useLocale } from "@/components/locale-provider"
 import type {
@@ -149,23 +149,10 @@ export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoading
       <PageHeader
         title={isEdit ? t("intakeForms.page.editTitle") : t("intakeForms.page.newTitle")}
         description={t("intakeForms.page.description")}
-      >
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => router.push("/intake-forms")}>
-            {t("intakeForms.page.cancel")}
-          </Button>
-          <Button className="gap-2" onClick={() => onSave(draft)} disabled={isSaving || isLoadingDraft}>
-            <HugeiconsIcon icon={FloppyDiskIcon} size={16} />
-            {isSaving
-              ? t("intakeForms.page.saving")
-              : isEdit
-              ? t("intakeForms.page.saveChanges")
-              : t("intakeForms.page.createForm")}
-          </Button>
-        </div>
-      </PageHeader>
+      />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="flex flex-col gap-6 pb-24">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
 
         {/* ─── Left: Form Info ─── */}
         <div className="lg:col-span-1 flex flex-col gap-4">
@@ -184,13 +171,8 @@ export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoading
 
         {/* ─── Right: Fields Builder ─── */}
         <div className="lg:col-span-2 flex flex-col gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold">
-                {t("intakeForms.page.fieldsCount")} ({draft.fields.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
+          <FormSection title={`${t("intakeForms.page.fieldsCount")} (${draft.fields.length})`}>
+            <div className="flex flex-col gap-3">
               {draft.fields.map((field, i) => (
                 <FieldEditor
                   key={field.id}
@@ -204,7 +186,6 @@ export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoading
                   onMoveDown={() => moveField(i, "down")}
                 />
               ))}
-
               <Button
                 type="button"
                 variant="outline"
@@ -214,10 +195,25 @@ export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoading
                 <HugeiconsIcon icon={Add01Icon} size={16} />
                 {t("intakeForms.page.addField")}
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </FormSection>
         </div>
 
+        </div>
+      </div>
+
+      <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <Button type="button" variant="ghost" size="lg" className="rounded-lg" onClick={() => router.push("/intake-forms")}>
+          {t("intakeForms.page.cancel")}
+        </Button>
+        <Button size="lg" className="rounded-lg gap-2" onClick={() => onSave(draft)} disabled={isSaving || isLoadingDraft}>
+          <HugeiconsIcon icon={FloppyDiskIcon} size={16} />
+          {isSaving
+            ? t("intakeForms.page.saving")
+            : isEdit
+            ? t("intakeForms.page.saveChanges")
+            : t("intakeForms.page.createForm")}
+        </Button>
       </div>
     </ListPageShell>
   )

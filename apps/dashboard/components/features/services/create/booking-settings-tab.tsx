@@ -1,16 +1,9 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { fetchBookingSettings } from "@/lib/api/booking-settings"
-
+import { FormSection } from "@/components/features/shared/form-section"
 import { queryKeys } from "@/lib/query-keys"
 import { OverrideField, NumberField, SwitchField } from "../booking-settings-fields"
 import type { UseFormReturn } from "react-hook-form"
@@ -49,14 +42,9 @@ export function BookingSettingsTab({ form }: BookingSettingsTabProps) {
   const globalMaxAdvanceDays = globalSettings?.maxAdvanceBookingDays ?? 60
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("services.create.tabs.booking")}</CardTitle>
-        <CardDescription>
-          {t("services.create.tabs.bookingDesc")}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <FormSection title={t("services.create.tabs.booking")}>
+      <p className="mb-4 text-sm text-muted-foreground">{t("services.create.tabs.bookingDesc")}</p>
+      <div className="space-y-4">
         {/* Row 1: Buffer + Min Lead */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <OverrideField
@@ -159,7 +147,7 @@ export function BookingSettingsTab({ form }: BookingSettingsTabProps) {
           </div>
         )}
 
-      </CardContent>
-    </Card>
+      </div>
+    </FormSection>
   )
 }

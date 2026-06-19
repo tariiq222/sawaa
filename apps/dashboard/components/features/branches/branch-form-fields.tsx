@@ -2,24 +2,8 @@
 
 import { Controller } from "react-hook-form"
 import type { UseFormReturn } from "react-hook-form"
-import {
-  Building06Icon,
-  Location01Icon,
-  Settings01Icon,
-} from "@hugeicons/core-free-icons"
-import { Input } from "@sawaa/ui"
-import { PhoneInput } from "@sawaa/ui"
-import { Label } from "@sawaa/ui"
-import { Switch } from "@sawaa/ui"
-import { Card, CardContent } from "@sawaa/ui"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@sawaa/ui"
-import { SectionHeader } from "@/components/features/section-header"
+import { Input, PhoneInput, Switch, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@sawaa/ui"
+import { FormSection, FormField } from "@/components/features/shared/form-section"
 import { useLocale } from "@/components/locale-provider"
 import type { BranchFormData } from "@/lib/schemas/branch.schema"
 
@@ -40,96 +24,82 @@ export function BranchFormFields({ form, isEdit, mode }: BranchFormFieldsProps) 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {/* ── Branch Name ── */}
-      <Card>
-        <CardContent className="pt-6">
-          <SectionHeader
-            icon={Building06Icon}
-            title={t("branches.section.names")}
-            description={t("branches.section.namesDescription")}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label>{t("branches.field.nameEn")} *</Label>
-              <Input {...form.register("nameEn")} placeholder={isEdit ? undefined : "Main Branch"} />
-              {form.formState.errors.nameEn && (
-                <p className="text-xs text-destructive">{form.formState.errors.nameEn.message as string}</p>
-              )}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>{t("branches.field.nameAr")} *</Label>
-              <Input {...form.register("nameAr")} dir="rtl" placeholder={isEdit ? undefined : t("settings.branches.examplePlaceholder")} />
-              {form.formState.errors.nameAr && (
-                <p className="text-xs text-destructive">{form.formState.errors.nameAr.message as string}</p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <FormSection
+        title={t("branches.section.names")}
+        description={t("branches.section.namesDescription")}
+      >
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            label={t("branches.field.nameEn")}
+            required
+            error={form.formState.errors.nameEn?.message as string | undefined}
+          >
+            <Input {...form.register("nameEn")} placeholder={isEdit ? undefined : "Main Branch"} />
+          </FormField>
+          <FormField
+            label={t("branches.field.nameAr")}
+            required
+            error={form.formState.errors.nameAr?.message as string | undefined}
+          >
+            <Input {...form.register("nameAr")} dir="rtl" placeholder={isEdit ? undefined : t("settings.branches.examplePlaceholder")} />
+          </FormField>
+        </div>
+      </FormSection>
 
       {/* ── Settings ── */}
-      <Card>
-        <CardContent className="pt-6">
-          <SectionHeader
-            icon={Settings01Icon}
-            title={t("branches.section.settings")}
-            description={t("branches.section.settingsDescription")}
-          />
-          <div className="space-y-4">
-            <div className="flex flex-col gap-1.5">
-              <Label>{t("branches.field.timezone")}</Label>
-              <Select value={form.watch("timezone")} onValueChange={(v) => form.setValue("timezone", v)}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {TIMEZONES.map((tz) => <SelectItem key={tz} value={tz}>{tz}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border border-border p-3">
-              <Label htmlFor={`${mode}-branch-main`} className="cursor-pointer text-sm">
-                {t("branches.field.isMain")}
-              </Label>
-              <Switch id={`${mode}-branch-main`} checked={form.watch("isMain")} onCheckedChange={(v) => form.setValue("isMain", v)} />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border border-border p-3">
-              <Label htmlFor={`${mode}-branch-active`} className="cursor-pointer text-sm">
-                {t("branches.field.isActive")}
-              </Label>
-              <Switch id={`${mode}-branch-active`} checked={form.watch("isActive")} onCheckedChange={(v) => form.setValue("isActive", v)} />
-            </div>
+      <FormSection
+        title={t("branches.section.settings")}
+        description={t("branches.section.settingsDescription")}
+      >
+        <div className="space-y-4">
+          <FormField label={t("branches.field.timezone")}>
+            <Select value={form.watch("timezone")} onValueChange={(v) => form.setValue("timezone", v)}>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {TIMEZONES.map((tz) => <SelectItem key={tz} value={tz}>{tz}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </FormField>
+          <div className="flex items-center justify-between rounded-lg border border-border p-3">
+            <Label htmlFor={`${mode}-branch-main`} className="cursor-pointer text-sm">
+              {t("branches.field.isMain")}
+            </Label>
+            <Switch id={`${mode}-branch-main`} checked={form.watch("isMain")} onCheckedChange={(v) => form.setValue("isMain", v)} />
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex items-center justify-between rounded-lg border border-border p-3">
+            <Label htmlFor={`${mode}-branch-active`} className="cursor-pointer text-sm">
+              {t("branches.field.isActive")}
+            </Label>
+            <Switch id={`${mode}-branch-active`} checked={form.watch("isActive")} onCheckedChange={(v) => form.setValue("isActive", v)} />
+          </div>
+        </div>
+      </FormSection>
 
       {/* ── Contact Info (full width) ── */}
-      <Card className="lg:col-span-2">
-        <CardContent className="pt-6">
-          <SectionHeader
-            icon={Location01Icon}
-            title={t("branches.section.contact")}
-            description={t("branches.section.contactDescription")}
-          />
-          <div className="space-y-4">
-            <div className="flex flex-col gap-1.5">
-              <Label>{t("branches.field.address")}</Label>
-              <Input {...form.register("address")} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>{t("branches.field.phone")}</Label>
-              <Controller
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <PhoneInput
-                    value={field.value ?? ""}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                  />
-                )}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <FormSection
+        title={t("branches.section.contact")}
+        description={t("branches.section.contactDescription")}
+        className="lg:col-span-2"
+      >
+        <div className="space-y-4">
+          <FormField label={t("branches.field.address")}>
+            <Input {...form.register("address")} />
+          </FormField>
+          <FormField label={t("branches.field.phone")}>
+            <Controller
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <PhoneInput
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
+              )}
+            />
+          </FormField>
+        </div>
+      </FormSection>
     </div>
   )
 }

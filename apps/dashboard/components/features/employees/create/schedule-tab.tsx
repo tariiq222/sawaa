@@ -1,13 +1,7 @@
 "use client"
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
+import { FormSection } from "@/components/features/shared/form-section"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import type { AvailabilitySlot } from "@/lib/types/employee"
 import { DAY_NAME_KEYS } from "./schedule-types"
@@ -112,20 +106,15 @@ export function ScheduleTab({
         onVacationChange={onVacationChange}
       />
 
-      <Card
+      <div
         className={vacation.enabled ? "opacity-40 pointer-events-none" : ""}
         aria-disabled={vacation.enabled || undefined}
         {...(vacation.enabled ? { inert: true } : {})}
       >
-        <CardHeader>
-          <CardTitle>{t("employees.create.scheduleSection")}</CardTitle>
-          <CardDescription>
-            {vacation.enabled
-              ? t("schedule.suspended")
-              : t("schedule.setHours")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <FormSection
+          title={t("employees.create.scheduleSection")}
+          description={vacation.enabled ? t("schedule.suspended") : t("schedule.setHours")}
+        >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {dayOrder.map((day) => {
               const entries = slotsByDay(day)
@@ -151,8 +140,8 @@ export function ScheduleTab({
               )
             })}
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
+      </div>
     </div>
   )
 }

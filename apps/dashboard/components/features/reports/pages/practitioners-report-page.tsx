@@ -163,7 +163,7 @@ export function PractitionersReportPage() {
                         <td className="px-3 py-2">
                           <span
                             className={cn(
-                              "rounded-full px-2 py-0.5 text-xs",
+                              "rounded-sm px-2 py-0.5 text-xs",
                               r.completionRate >= 0.85
                                 ? "bg-success/15 text-success"
                                 : "bg-warning/15 text-warning",

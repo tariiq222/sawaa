@@ -54,7 +54,7 @@ export function DepartmentListPage() {
         title={t("departments.title")}
         description={t("departments.description")}
       >
-        <Button className="gap-2 rounded-full px-5" onClick={() => setCreateOpen(true)}>
+        <Button className="gap-2 rounded-lg px-5" onClick={() => setCreateOpen(true)}>
           <HugeiconsIcon icon={Add01Icon} size={16} />
           {t("departments.addDepartment")}
         </Button>

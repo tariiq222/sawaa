@@ -62,7 +62,7 @@ export function ClientListPage() {
         description={t("clients.description")}
       >
         {canDo("Client", "create") && (
-          <Button className="gap-2 rounded-full px-5" onClick={() => router.push("/clients/create")}>
+          <Button className="gap-2 rounded-lg px-5" onClick={() => router.push("/clients/create")}>
             <HugeiconsIcon icon={Add01Icon} size={16} />
             {t("clients.addClient")}
           </Button>

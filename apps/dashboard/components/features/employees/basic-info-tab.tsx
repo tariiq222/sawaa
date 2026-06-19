@@ -14,10 +14,10 @@ import { Input } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { Textarea } from "@sawaa/ui"
 import { Switch } from "@sawaa/ui"
-import { Card, CardContent } from "@sawaa/ui"
 import { AvatarUpload } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { SectionHeader } from "@/components/features/section-header"
+import { FormSection, FormField } from "@/components/features/shared/form-section"
 import { EmployeeStatusDialog } from "@/components/features/employees/employee-status-dialog"
 import type { UseFormReturn } from "react-hook-form"
 import type { CreateEmployeeFormData } from "./create/form-schema"
@@ -59,8 +59,7 @@ export function BasicInfoTab({ form, showEmail = false, employeeName, readOnlyEm
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 
       {/* ── Column 1 (1/3): Personal Info ── */}
-      <Card className="md:row-span-2 lg:row-span-2">
-        <CardContent className="pt-6">
+      <FormSection className="md:row-span-2 lg:row-span-2">
           {/* Avatar + switch in same row */}
           <AvatarUpload
             value={form.watch("avatarUrl") || undefined}
@@ -179,48 +178,28 @@ export function BasicInfoTab({ form, showEmail = false, employeeName, readOnlyEm
             </div>
 
             {/* Full Name EN */}
-            <div className="flex flex-col gap-1.5">
-              <Label>
-                {t("employees.create.nameEn")}
-                {showEmail && " *"}
-              </Label>
+            <FormField label={t("employees.create.nameEn")} required={showEmail} error={form.formState.errors.nameEn ? String(form.formState.errors.nameEn.message ?? "") : undefined}>
               <Input
                 {...form.register("nameEn")}
                 placeholder="e.g. Ahmed Al-Shammari"
                 dir="ltr"
               />
-              {form.formState.errors.nameEn && (
-                <p className="text-xs text-destructive">
-                  {String(form.formState.errors.nameEn.message ?? "")}
-                </p>
-              )}
-            </div>
+            </FormField>
 
             {/* Full Name AR */}
-            <div className="flex flex-col gap-1.5">
-              <Label>
-                {t("employees.create.nameAr")}
-                {showEmail && " *"}
-              </Label>
+            <FormField label={t("employees.create.nameAr")} required={showEmail} error={form.formState.errors.nameAr ? String(form.formState.errors.nameAr.message ?? "") : undefined}>
               <Input
                 {...form.register("nameAr")}
                 placeholder={t("employees.create.placeholderNameAr")}
                 dir="rtl"
               />
-              {form.formState.errors.nameAr && (
-                <p className="text-xs text-destructive">
-                  {String(form.formState.errors.nameAr.message ?? "")}
-                </p>
-              )}
-            </div>
+            </FormField>
 
           </div>
-        </CardContent>
-      </Card>
+      </FormSection>
 
       {/* ── Column 2-3 (2/3): Specialty + Qualifications + Bio ── */}
-      <Card className="md:col-span-2 md:row-span-2 lg:col-span-2 lg:row-span-2">
-        <CardContent className="pt-6 space-y-6">
+      <FormSection className="md:col-span-2 md:row-span-2 lg:col-span-2 lg:row-span-2"><div className="space-y-6">
           {/* Specialty */}
           <div className="flex flex-col gap-3">
             <SectionHeader
@@ -229,29 +208,19 @@ export function BasicInfoTab({ form, showEmail = false, employeeName, readOnlyEm
               description={t("employees.create.specialtyDescription")}
             />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label className="truncate">
-                  {t("employees.create.specialty")} (EN)
-                  {showEmail && " *"}
-                </Label>
+              <FormField label={`${t("employees.create.specialty")} (EN)`} required={showEmail} error={form.formState.errors.specialty ? String(form.formState.errors.specialty.message ?? "") : undefined}>
                 <Input
                   {...form.register("specialty")}
                   placeholder="e.g. Addiction Counselor"
                 />
-                {form.formState.errors.specialty && (
-                  <p className="text-xs text-destructive">
-                    {String(form.formState.errors.specialty.message ?? "")}
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="truncate">{t("employees.create.specialty")} (AR)</Label>
+              </FormField>
+              <FormField label={`${t("employees.create.specialty")} (AR)`}>
                 <Input
                   {...form.register("specialtyAr")}
                   placeholder={t("employees.create.placeholderSpecialtyAr")}
                   dir="rtl"
                 />
-              </div>
+              </FormField>
             </div>
           </div>
 
@@ -265,8 +234,7 @@ export function BasicInfoTab({ form, showEmail = false, employeeName, readOnlyEm
               description={t("employees.create.qualificationsDesc")}
             />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <div className="flex flex-col gap-1.5">
-                <Label className="truncate">{t("employees.create.experience")}</Label>
+              <FormField label={t("employees.create.experience")}>
                 <Input
                   type="number"
                   min={0}
@@ -274,15 +242,13 @@ export function BasicInfoTab({ form, showEmail = false, employeeName, readOnlyEm
                   {...form.register("experience")}
                   placeholder="e.g. 5"
                 />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="truncate">{t("employees.create.educationEn")}</Label>
+              </FormField>
+              <FormField label={t("employees.create.educationEn")}>
                 <Input {...form.register("education")} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="truncate">{t("employees.create.educationAr")}</Label>
+              </FormField>
+              <FormField label={t("employees.create.educationAr")}>
                 <Input {...form.register("educationAr")} dir="rtl" />
-              </div>
+              </FormField>
             </div>
           </div>
 
@@ -296,18 +262,15 @@ export function BasicInfoTab({ form, showEmail = false, employeeName, readOnlyEm
               description={t("employees.create.bioDescription")}
             />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label>{t("employees.create.bioEn")}</Label>
+              <FormField label={t("employees.create.bioEn")}>
                 <Textarea {...form.register("bio")} rows={4} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>{t("employees.create.bioAr")}</Label>
+              </FormField>
+              <FormField label={t("employees.create.bioAr")}>
                 <Textarea {...form.register("bioAr")} rows={4} dir="rtl" />
-              </div>
+              </FormField>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div></FormSection>
 
       <EmployeeStatusDialog
         open={pendingValue !== null}

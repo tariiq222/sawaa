@@ -81,7 +81,7 @@ export function EmployeeDetailPage({ employeeId }: Props) {
 
       <PageHeader title={fullName} description={specialty ?? ""}>
         <Button
-          className="gap-2 rounded-full px-5"
+          className="gap-2 rounded-lg px-5"
           onClick={() => router.push(`/employees/${employeeId}/edit`)}
         >
           <HugeiconsIcon icon={PencilEdit01Icon} size={16} />

@@ -55,14 +55,14 @@ function EmployeesPageInner() {
       >
         <Button
           variant="outline"
-          className="gap-2 rounded-full px-5"
+          className="gap-2 rounded-lg px-5"
           onClick={() => router.push("/ratings")}
         >
           <HugeiconsIcon icon={StarIcon} size={16} />
           {t("employees.tabs.ratings")}
         </Button>
         {canDo("Employee", "create") && (
-          <Button className="gap-2 rounded-full px-5" onClick={() => router.push("/employees/create")}>
+          <Button className="gap-2 rounded-lg px-5" onClick={() => router.push("/employees/create")}>
             <HugeiconsIcon icon={Add01Icon} size={16} />
             {t("employees.addEmployee")}
           </Button>

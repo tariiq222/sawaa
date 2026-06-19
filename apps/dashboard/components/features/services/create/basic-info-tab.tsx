@@ -6,13 +6,6 @@ import { Label } from "@sawaa/ui"
 import { Textarea } from "@sawaa/ui"
 import { Switch } from "@sawaa/ui"
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@sawaa/ui"
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -35,6 +28,7 @@ import { useLocale } from "@/components/locale-provider"
 import { ServiceAvatarPicker } from "@/components/features/services/service-avatar-picker"
 import { ServiceBranchesTab } from "@/components/features/services/service-branches-tab"
 import { ServiceBranchesPicker } from "@/components/features/services/service-branches-picker"
+import { FormSection } from "@/components/features/shared/form-section"
 import type { UseFormReturn } from "react-hook-form"
 import type { CreateServiceFormData } from "./form-schema"
 
@@ -95,11 +89,11 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
   const secondaryDir = locale === "ar" ? "ltr" : "rtl"
 
   return (
-    <Card>
-      <CardHeader className="pb-4">
+    <div className="flex flex-col gap-6">
+      <FormSection>
         <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
           {/* Left: avatar + title block */}
-          <div className="flex items-center gap-4 min-w-0">
+          <div className="flex items-start gap-4 min-w-0">
             <ServiceAvatarPicker
               iconName={iconName}
               iconBgColor={iconBgColor}
@@ -124,12 +118,12 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
               }}
             />
             <div className="flex flex-col gap-1 min-w-0">
-              <CardTitle>{t("services.create.tabs.basic")}</CardTitle>
-              <CardDescription>
+              <p className="text-sm font-semibold text-foreground">{t("services.create.tabs.basic")}</p>
+              <p className="text-xs text-muted-foreground">
                 {t("services.create.tabs.basicDesc")} &mdash;{" "}
                 <span className="text-destructive">*</span>{" "}
                 {t("services.create.requiredFields")}
-              </CardDescription>
+              </p>
               <p className="text-xs text-muted-foreground">{t("services.create.avatarHint")}</p>
             </div>
           </div>
@@ -207,142 +201,144 @@ export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabPro
             </div>
           </div>
         </div>
-      </CardHeader>
+      </FormSection>
 
-      <CardContent className="space-y-6">
+      <FormSection title={t("services.create.tabs.basic")}>
+        <div className="space-y-6">
 
-        {/* First-run guidance: category is required but none exist yet */}
-        {!loadingCategories && !hasAnyCategories && (
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3">
-            <p className="text-sm text-warning-foreground">
-              {t("services.create.noCategoriesBanner")}
-            </p>
-            <a
-              href="/categories"
-              className="shrink-0 rounded-md border border-warning/40 bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-warning/20"
-            >
-              {t("services.create.noCategoriesCta")}
-            </a>
-          </div>
-        )}
-
-        {/* ── Row 1: Names ── */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label>{primaryNameLabel} *</Label>
-            <Input {...form.register(primaryName)} dir={primaryDir} />
-            {form.formState.errors[primaryName] && (
-              <p className="text-xs text-destructive">{t(form.formState.errors[primaryName]?.message ?? "")}</p>
-            )}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>{secondaryNameLabel} *</Label>
-            <Input {...form.register(secondaryName)} dir={secondaryDir} />
-            {form.formState.errors[secondaryName] && (
-              <p className="text-xs text-destructive">{t(form.formState.errors[secondaryName]?.message ?? "")}</p>
-            )}
-          </div>
-        </div>
-
-        {/* ── Row 2: Department (optional) + Category ── */}
-        <div className={`grid grid-cols-1 gap-4 ${hasDepts ? "sm:grid-cols-2" : ""}`}>
-          {/* Department filter — only shown when departments exist */}
-          {hasDepts && (
-            <div className="flex flex-col gap-1.5">
-              <Label>{t("services.create.department")}</Label>
-              <Select
-                value={selectedDeptId || "__none__"}
-                onValueChange={(v) => {
-                  const val = v === "__none__" ? "" : v
-                  setSelectedDeptId(val)
-                  const current = categories?.find((c) => c.id === watchedCategoryId)
-                  if (current && val && current.departmentId !== val) {
-                    form.setValue("categoryId", "", { shouldValidate: false })
-                  }
-                }}
+          {/* First-run guidance: category is required but none exist yet */}
+          {!loadingCategories && !hasAnyCategories && (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3">
+              <p className="text-sm text-warning-foreground">
+                {t("services.create.noCategoriesBanner")}
+              </p>
+              <a
+                href="/categories"
+                className="shrink-0 rounded-md border border-warning/40 bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-warning/20"
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t("services.create.allDepartments")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">{t("services.create.allDepartments")}</SelectItem>
-                  {departments.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {locale === "ar" ? d.nameAr : d.nameEn}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {t("services.create.noCategoriesCta")}
+              </a>
             </div>
           )}
 
-          {/* Category */}
-          <div className="flex flex-col gap-1.5">
-            <Label>{t("services.create.category")} *</Label>
-            <Select
-              key={`${selectedDeptId}-${watchedCategoryId || "empty"}`}
-              value={watchedCategoryId || ""}
-              onValueChange={handleCategoryChange}
-              disabled={loadingCategories}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={t("services.create.categoryPlaceholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                {visibleCategories.length === 0 ? (
-                  <div className="py-6 text-center text-sm text-muted-foreground">
-                    {t("services.create.noCategories")}
-                  </div>
-                ) : (
-                  visibleCategories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {locale === "ar" ? c.nameAr : c.nameEn}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-            {form.formState.errors.categoryId && (
-              <p className="text-xs text-destructive">
-                {t(form.formState.errors.categoryId.message ?? "services.create.categoryRequired")}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* ── Row 2: Descriptions — 2 equal columns ── */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label>{primaryDescLabel}</Label>
-            <Textarea {...form.register(primaryDesc)} rows={3} dir={primaryDir} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>{secondaryDescLabel}</Label>
-            <Textarea {...form.register(secondaryDesc)} rows={3} dir={secondaryDir} />
-          </div>
-        </div>
-
-        {/* ── Row 3: Branch Restrictions (only when multi_branch enabled) + Display Settings ── */}
-        <div className={`grid gap-4 ${isMultiBranch ? "grid-cols-2" : "grid-cols-1"}`}>
-          {isMultiBranch && (
-            <div className="rounded-lg border border-border bg-surface-muted px-4 py-3 flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-medium text-foreground">{t("services.branches.title")}</p>
-              </div>
-              <p className="text-xs text-muted-foreground">{t("services.branches.cardDesc")}</p>
-              {serviceId ? (
-                <ServiceBranchesTab serviceId={serviceId} />
-              ) : (
-                <ServiceBranchesPicker
-                  value={branchIds ?? []}
-                  onChange={(ids) => form.setValue("branchIds", ids)}
-                />
+          {/* ── Row 1: Names ── */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label>{primaryNameLabel} *</Label>
+              <Input {...form.register(primaryName)} dir={primaryDir} />
+              {form.formState.errors[primaryName] && (
+                <p className="text-xs text-destructive">{t(form.formState.errors[primaryName]?.message ?? "")}</p>
               )}
             </div>
-          )}
-        </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>{secondaryNameLabel} *</Label>
+              <Input {...form.register(secondaryName)} dir={secondaryDir} />
+              {form.formState.errors[secondaryName] && (
+                <p className="text-xs text-destructive">{t(form.formState.errors[secondaryName]?.message ?? "")}</p>
+              )}
+            </div>
+          </div>
 
-      </CardContent>
-    </Card>
+          {/* ── Row 2: Department (optional) + Category ── */}
+          <div className={`grid grid-cols-1 gap-4 ${hasDepts ? "sm:grid-cols-2" : ""}`}>
+            {/* Department filter — only shown when departments exist */}
+            {hasDepts && (
+              <div className="flex flex-col gap-1.5">
+                <Label>{t("services.create.department")}</Label>
+                <Select
+                  value={selectedDeptId || "__none__"}
+                  onValueChange={(v) => {
+                    const val = v === "__none__" ? "" : v
+                    setSelectedDeptId(val)
+                    const current = categories?.find((c) => c.id === watchedCategoryId)
+                    if (current && val && current.departmentId !== val) {
+                      form.setValue("categoryId", "", { shouldValidate: false })
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={t("services.create.allDepartments")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t("services.create.allDepartments")}</SelectItem>
+                    {departments.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {locale === "ar" ? d.nameAr : d.nameEn}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Category */}
+            <div className="flex flex-col gap-1.5">
+              <Label>{t("services.create.category")} *</Label>
+              <Select
+                key={`${selectedDeptId}-${watchedCategoryId || "empty"}`}
+                value={watchedCategoryId || ""}
+                onValueChange={handleCategoryChange}
+                disabled={loadingCategories}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("services.create.categoryPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {visibleCategories.length === 0 ? (
+                    <div className="py-6 text-center text-sm text-muted-foreground">
+                      {t("services.create.noCategories")}
+                    </div>
+                  ) : (
+                    visibleCategories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {locale === "ar" ? c.nameAr : c.nameEn}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.categoryId && (
+                <p className="text-xs text-destructive">
+                  {t(form.formState.errors.categoryId.message ?? "services.create.categoryRequired")}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ── Row 2: Descriptions — 2 equal columns ── */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label>{primaryDescLabel}</Label>
+              <Textarea {...form.register(primaryDesc)} rows={3} dir={primaryDir} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>{secondaryDescLabel}</Label>
+              <Textarea {...form.register(secondaryDesc)} rows={3} dir={secondaryDir} />
+            </div>
+          </div>
+
+          {/* ── Row 3: Branch Restrictions (only when multi_branch enabled) + Display Settings ── */}
+          <div className={`grid gap-4 ${isMultiBranch ? "grid-cols-2" : "grid-cols-1"}`}>
+            {isMultiBranch && (
+              <div className="rounded-lg border border-border bg-surface-muted px-4 py-3 flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-foreground">{t("services.branches.title")}</p>
+                </div>
+                <p className="text-xs text-muted-foreground">{t("services.branches.cardDesc")}</p>
+                {serviceId ? (
+                  <ServiceBranchesTab serviceId={serviceId} />
+                ) : (
+                  <ServiceBranchesPicker
+                    value={branchIds ?? []}
+                    onChange={(ids) => form.setValue("branchIds", ids)}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
+        </div>
+      </FormSection>
+    </div>
   )
 }

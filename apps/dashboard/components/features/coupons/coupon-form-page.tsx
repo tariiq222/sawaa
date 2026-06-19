@@ -144,13 +144,13 @@ export function CouponFormPage(props: Props) {
     <ListPageShell>
       <Breadcrumbs />
       <PageHeader title={title} description={description} />
-      <form onSubmit={onSubmit} className="flex flex-col gap-6">
+      <form onSubmit={onSubmit} className="flex flex-col gap-6 pb-24">
         <CouponFormFields form={form} isEdit={isEdit} mode={props.mode} />
-        <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => router.push("/coupons")}>
+        <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button type="button" variant="ghost" size="lg" className="rounded-lg" onClick={() => router.push("/coupons")}>
             {t(isEdit ? "coupons.edit.cancel" : "coupons.create.cancel")}
           </Button>
-          <Button type="submit" disabled={isPending}>{submitLabel}</Button>
+          <Button type="submit" size="lg" className="rounded-lg" disabled={isPending}>{submitLabel}</Button>
         </div>
       </form>
     </ListPageShell>

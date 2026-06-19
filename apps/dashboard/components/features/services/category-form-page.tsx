@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useForm, Controller, type Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
@@ -31,11 +31,11 @@ interface CategoryFormPageProps {
   categoryId?: string
 }
 
-function Field({ label, required, children, error }: {
-  label: string; required?: boolean; children: React.ReactNode; error?: string
+function Field({ label, required, children, error, className }: {
+  label: string; required?: boolean; children: React.ReactNode; error?: string; className?: string
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className={`flex flex-col gap-1.5${className ? ` ${className}` : ""}`}>
       <Label>{label}{required && <span className="ms-0.5 text-destructive">*</span>}</Label>
       {children}
       {error && <p className="text-xs text-destructive">{error}</p>}
@@ -46,8 +46,10 @@ function Field({ label, required, children, error }: {
 export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
   const { t, locale } = useLocale()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const isAr = locale === "ar"
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [activeTab, setActiveTab] = useState<string>(searchParams.get("tab") ?? "info")
 
   const { data: allCategories, isLoading: categoriesLoading } = useCategories()
   const { createMut, updateMut } = useCategoryMutations()
@@ -79,23 +81,38 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
     }
   }, [mode, category, reset])
 
+  const buildCreatePayload = (data: EditCategoryFormData): CreateCategoryFormData => {
+    const deptId = !data.departmentId || data.departmentId === "__none__" ? undefined : data.departmentId
+    return { nameAr: data.nameAr!, nameEn: data.nameEn || undefined, sortOrder: data.sortOrder, departmentId: deptId, bookingMode: data.bookingMode ?? "DIRECT" }
+  }
+
+  const saveAndGoToTab = async (target: string) => {
+    if (!(await form.trigger())) return
+    setIsSubmitting(true)
+    try {
+      const created = await createMut.mutateAsync(buildCreatePayload(form.getValues()))
+      toast.success(t("services.categories.create.success"))
+      router.push(`/categories/${created.id}/edit?tab=${target}`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("services.categories.create.error"))
+    } finally { setIsSubmitting(false) }
+  }
+
   const onSubmit = async (data: EditCategoryFormData) => {
     setIsSubmitting(true)
     try {
-      const deptId = !data.departmentId || data.departmentId === "__none__" ? undefined : data.departmentId
       if (mode === "create") {
-        await createMut.mutateAsync({ nameAr: data.nameAr!, nameEn: data.nameEn || undefined, sortOrder: data.sortOrder, departmentId: deptId, bookingMode: data.bookingMode } as CreateCategoryFormData)
+        await createMut.mutateAsync(buildCreatePayload(data))
         toast.success(t("services.categories.create.success"))
       } else {
+        const deptId = !data.departmentId || data.departmentId === "__none__" ? undefined : data.departmentId
         await updateMut.mutateAsync({ id: categoryId!, nameAr: data.nameAr, nameEn: data.nameEn || undefined, sortOrder: data.sortOrder, isActive: data.isActive, departmentId: deptId ?? null, bookingMode: data.bookingMode })
         toast.success(t("services.categories.edit.success"))
       }
       router.push("/categories")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t(mode === "create" ? "services.categories.create.error" : "services.categories.edit.error"))
-    } finally {
-      setIsSubmitting(false)
-    }
+    } finally { setIsSubmitting(false) }
   }
 
   if (mode === "edit" && categoriesLoading) {
@@ -110,7 +127,6 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
       </ListPageShell>
     )
   }
-
   if (mode === "edit" && !categoriesLoading && !category) {
     return (
       <ListPageShell>
@@ -143,32 +159,66 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
         title={mode === "edit" ? t("services.categories.edit.title") : t("services.categories.create.title")}
         description={mode === "edit" ? t("services.categories.edit.description") : t("services.categories.create.description")}
       />
-
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 pb-24">
-        <Tabs defaultValue="info">
+        <Tabs
+          value={activeTab}
+          onValueChange={(val) => {
+            if (mode === "create" && val !== "info") {
+              saveAndGoToTab(val)
+            } else {
+              setActiveTab(val)
+            }
+          }}
+        >
           {effectiveMode === "SERVICES" ? (
             <TabsList>
               <TabsTrigger value="info">{t("services.categories.page.tabs.info")}</TabsTrigger>
-              <TabsTrigger value="services" disabled={mode === "create"}>{t("services.categories.page.tabs.services")}</TabsTrigger>
+              <TabsTrigger value="services">{t("services.categories.page.tabs.services")}</TabsTrigger>
             </TabsList>
           ) : (
             <TabsList>
               <TabsTrigger value="info">{t("services.categories.page.tabs.info")}</TabsTrigger>
-              <TabsTrigger value="settings" disabled={mode === "create"}>{t("services.categories.page.tabs.settings")}</TabsTrigger>
-              <TabsTrigger value="employees" disabled={mode === "create"}>{t("services.categories.page.tabs.employees")}</TabsTrigger>
+              <TabsTrigger value="settings">{t("services.categories.page.tabs.settings")}</TabsTrigger>
+              <TabsTrigger value="employees">{t("services.categories.page.tabs.employees")}</TabsTrigger>
             </TabsList>
           )}
+          <TabsContent value="info" className="mt-6 flex flex-col gap-6">
+            <section className="rounded-2xl border border-border bg-surface-solid p-6 shadow-sm">
+              <h2 className="mb-5 text-xs font-bold uppercase tracking-wide text-muted-foreground">{t("services.categories.page.tabs.info")}</h2>
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                <Field label={t("services.categories.create.nameAr")} required error={errors.nameAr ? t(errors.nameAr.message ?? "common.required") : undefined}>
+                  <Input id="nameAr" {...register("nameAr")} placeholder={t("services.categories.create.nameAr")} />
+                </Field>
+                <Field label={t("services.categories.create.nameEn")}>
+                  <Input id="nameEn" {...register("nameEn")} placeholder={t("services.categories.create.nameEn")} />
+                </Field>
+                <Field label={t("services.categories.create.department")}>
+                  <Controller
+                    name="departmentId"
+                    control={control}
+                    render={({ field }) => (
+                      <Select value={field.value ?? ""} onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}>
+                        <SelectTrigger className="w-full"><SelectValue placeholder={t("services.categories.create.departmentPlaceholder")} /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">{t("services.categories.create.departmentPlaceholder")}</SelectItem>
+                          {departmentOptions.map((dept) => (
+                            <SelectItem key={dept.id} value={dept.id}>
+                              {isAr ? dept.nameAr : (dept.nameEn ?? dept.nameAr)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </Field>
+                <Field label={t("services.categories.create.sortOrder")}>
+                  <Input id="sortOrder" type="number" min={0} max={999} {...register("sortOrder")} placeholder="0" />
+                </Field>
+              </div>
+            </section>
 
-          <TabsContent value="info" className="mt-6 flex flex-col gap-5">
-            <Field label={t("services.categories.create.nameAr")} required error={errors.nameAr ? t(errors.nameAr.message ?? "common.required") : undefined}>
-              <Input id="nameAr" {...register("nameAr")} placeholder={t("services.categories.create.nameAr")} />
-            </Field>
-
-            <Field label={t("services.categories.create.nameEn")}>
-              <Input id="nameEn" {...register("nameEn")} placeholder={t("services.categories.create.nameEn")} />
-            </Field>
-
-            <Field label={t("services.categories.bookingMode.label")}>
+            <section className="rounded-2xl border border-border bg-surface-solid p-6 shadow-sm">
+              <h2 className="mb-5 text-xs font-bold uppercase tracking-wide text-muted-foreground">{t("services.categories.bookingMode.label")}</h2>
               <Controller
                 control={control}
                 name="bookingMode"
@@ -176,65 +226,43 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
                   <RadioGroup
                     value={field.value ?? "DIRECT"}
                     onValueChange={field.onChange}
-                    className="flex flex-col gap-3"
+                    className="grid grid-cols-1 gap-3 sm:grid-cols-2"
                   >
-                    <div className="flex items-start gap-3 rounded-lg border border-border p-3 cursor-pointer has-[:checked]:border-primary">
+                    <label htmlFor="page-mode-direct" className="flex cursor-pointer items-start gap-3 rounded-sm border border-border bg-surface p-4 transition-colors has-[:checked]:border-primary has-[:checked]:bg-surface-muted/40">
                       <RadioGroupItem value="DIRECT" id="page-mode-direct" className="mt-0.5" />
-                      <label htmlFor="page-mode-direct" className="flex flex-col gap-0.5 cursor-pointer">
-                        <span className="text-sm font-medium">{t("services.categories.bookingMode.direct")}</span>
+                      <span className="flex flex-col gap-1">
+                        <span className="text-sm font-semibold text-foreground">{t("services.categories.bookingMode.direct")}</span>
                         <span className="text-xs text-muted-foreground">{t("services.categories.bookingMode.directDesc")}</span>
-                      </label>
-                    </div>
-                    <div className="flex items-start gap-3 rounded-lg border border-border p-3 cursor-pointer has-[:checked]:border-primary">
+                      </span>
+                    </label>
+                    <label htmlFor="page-mode-services" className="flex cursor-pointer items-start gap-3 rounded-sm border border-border bg-surface p-4 transition-colors has-[:checked]:border-primary has-[:checked]:bg-surface-muted/40">
                       <RadioGroupItem value="SERVICES" id="page-mode-services" className="mt-0.5" />
-                      <label htmlFor="page-mode-services" className="flex flex-col gap-0.5 cursor-pointer">
-                        <span className="text-sm font-medium">{t("services.categories.bookingMode.services")}</span>
+                      <span className="flex flex-col gap-1">
+                        <span className="text-sm font-semibold text-foreground">{t("services.categories.bookingMode.services")}</span>
                         <span className="text-xs text-muted-foreground">{t("services.categories.bookingMode.servicesDesc")}</span>
-                      </label>
-                    </div>
+                      </span>
+                    </label>
                   </RadioGroup>
                 )}
               />
               {mode === "edit" && (
-                <p className="text-xs text-muted-foreground mt-1">{t("services.categories.bookingMode.editHint")}</p>
+                <p className="mt-3 text-xs text-muted-foreground">{t("services.categories.bookingMode.editHint")}</p>
               )}
-            </Field>
-
-            <Field label={t("services.categories.create.department")}>
-              <Controller
-                name="departmentId"
-                control={control}
-                render={({ field }) => (
-                  <Select value={field.value ?? ""} onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder={t("services.categories.create.departmentPlaceholder")} /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">{t("services.categories.create.departmentPlaceholder")}</SelectItem>
-                      {departmentOptions.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id}>
-                          {isAr ? dept.nameAr : (dept.nameEn ?? dept.nameAr)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </Field>
-
-            <Field label={t("services.categories.create.sortOrder")}>
-              <Input id="sortOrder" type="number" min={0} max={999} {...register("sortOrder")} placeholder="0" className="w-32" />
-            </Field>
+            </section>
 
             {mode === "edit" && (
-              <div className="flex items-center gap-3">
-                <Controller
-                  name="isActive"
-                  control={control}
-                  render={({ field }) => (
-                    <Switch id="isActive" checked={field.value ?? true} onCheckedChange={field.onChange} />
-                  )}
-                />
-                <Label htmlFor="isActive">{t("services.categories.edit.isActive")}</Label>
-              </div>
+              <section className="rounded-2xl border border-border bg-surface-solid p-6 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <Controller
+                    name="isActive"
+                    control={control}
+                    render={({ field }) => (
+                      <Switch id="isActive" checked={field.value ?? true} onCheckedChange={field.onChange} />
+                    )}
+                  />
+                  <Label htmlFor="isActive">{t("services.categories.edit.isActive")}</Label>
+                </div>
+              </section>
             )}
           </TabsContent>
 
@@ -258,12 +286,11 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
             </>
           )}
         </Tabs>
-
         <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" onClick={() => router.push("/categories")}>
+          <Button type="button" variant="ghost" size="lg" className="rounded-lg" onClick={() => router.push("/categories")}>
             {t("services.categories.edit.cancel")}
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" size="lg" className="rounded-lg" disabled={isSubmitting}>
             {isSubmitting ? t("services.categories.edit.submitting") : mode === "edit" ? t("services.categories.edit.submit") : t("services.categories.create.submit")}
           </Button>
         </div>

@@ -143,7 +143,7 @@ export function EmployeeWorkingInfo({ employeeId, branchIds: propBranchIds }: Em
             ) : (
               <>
                 {visibleBranches.map((id) => (
-                  <span key={id} className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                  <span key={id} className="rounded-sm bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
                     {branchName(id)}
                   </span>
                 ))}
@@ -178,7 +178,7 @@ export function EmployeeWorkingInfo({ employeeId, branchIds: propBranchIds }: Em
                   <span
                     key={id}
                     data-testid="branch-row"
-                    className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
+                    className="inline-flex items-center gap-1 rounded-sm bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
                   >
                     {branchName(id)}
                     <button

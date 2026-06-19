@@ -8,12 +8,12 @@ import { UserIcon, Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 import { SurfaceRow } from "@sawaa/ui"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@sawaa/ui"
 import { useServiceEmployees } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
 import { AssignEmployeesDialog } from "@/components/features/services/assign-employees-dialog"
 import { EditEmployeeServiceSheet } from "@/components/features/employees/edit-employee-service-sheet"
 import { AssignedEmployeeRow } from "@/components/features/services/assigned-employee-row"
+import { FormSection } from "@/components/features/shared/form-section"
 import { useQuery } from "@tanstack/react-query"
 import { fetchEmployees } from "@/lib/api/employees"
 import { queryKeys } from "@/lib/query-keys"
@@ -168,34 +168,29 @@ export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPe
 
   /* ── Edit mode ── */
   return (
-    <Card>
-      <CardHeader className="pb-4">
-        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-          <div className="flex flex-col gap-1 min-w-0">
-            <CardTitle>{t("services.tabs.employees")}</CardTitle>
-            <CardDescription>
-              {t("services.employees.editHint")}
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-              <HugeiconsIcon icon={UserIcon} strokeWidth={2} className="size-3" />
-              {`${employees?.length ?? 0} ${t("services.employees.countLabel")}`}
-            </span>
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 gap-1.5 text-xs"
-              onClick={() => setDialogOpen(true)}
-            >
-              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-3.5" />
-              {t("services.employees.add")}
-            </Button>
-          </div>
+    <FormSection>
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 mb-5">
+        <div className="flex flex-col gap-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground">{t("services.tabs.employees")}</p>
+          <p className="text-xs text-muted-foreground">{t("services.employees.editHint")}</p>
         </div>
-      </CardHeader>
-
-      <CardContent className="space-y-3">
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="inline-flex items-center gap-1.5 rounded-sm border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+            <HugeiconsIcon icon={UserIcon} strokeWidth={2} className="size-3" />
+            {`${employees?.length ?? 0} ${t("services.employees.countLabel")}`}
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+            onClick={() => setDialogOpen(true)}
+          >
+            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-3.5" />
+            {t("services.employees.add")}
+          </Button>
+        </div>
+      </div>
+      <div className="space-y-3">
         {!employees || employees.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
             <div className="flex size-12 items-center justify-center rounded-full bg-muted">
@@ -238,7 +233,7 @@ export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPe
           serviceId={serviceId ?? ""}
           excludeIds={assignedEmployeeIds}
         />
-      </CardContent>
-    </Card>
+      </div>
+    </FormSection>
   )
 }

@@ -151,7 +151,7 @@ export function EmployeeFormPage(props: Props) {
       <Breadcrumbs items={breadcrumbItems} />
       <PageHeader title={title} description={description} />
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-6">
+      <form onSubmit={onSubmit} className="flex flex-col gap-6 pb-24">
         <Tabs defaultValue={initialTab} key={initialTab}>
           <TabsList>
             <TabsTrigger value="basic">{t("employees.create.tabs.basic")}</TabsTrigger>
@@ -188,11 +188,11 @@ export function EmployeeFormPage(props: Props) {
           </TabsContent>
         </Tabs>
 
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" onClick={() => router.push("/employees")}>
+        <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button type="button" variant="ghost" size="lg" className="rounded-full" onClick={() => router.push("/employees")}>
             {t("common.cancel")}
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting}>
             {isSubmitting
               ? t(isEdit ? "employees.edit.submitting" : "employees.create.submitting")
               : t(isEdit ? "employees.edit.submit" : "employees.create.submit")}

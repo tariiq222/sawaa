@@ -1,14 +1,8 @@
 "use client"
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { BookingTypeRow } from "../booking-type-row"
+import { FormSection } from "@/components/features/shared/form-section"
 import type { DraftBookingType } from "../booking-types-editor"
 import type { ServiceDeliveryType } from "@/lib/types/service"
 
@@ -57,15 +51,9 @@ export function PricingTab({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("services.create.tabs.pricing")}</CardTitle>
-        <CardDescription>
-          {t("services.create.tabs.pricingDesc")}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 items-start">
+    <FormSection title={t("services.create.tabs.pricing")}>
+      <p className="mb-4 text-sm text-muted-foreground">{t("services.create.tabs.pricingDesc")}</p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 items-start">
         {bookingTypes.map((draft) => (
           <BookingTypeRow
             key={draft.deliveryType}
@@ -82,8 +70,7 @@ export function PricingTab({
             }
           />
         ))}
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </FormSection>
   )
 }

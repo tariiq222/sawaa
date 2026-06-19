@@ -59,18 +59,18 @@ export default function CreateClientPage() {
         description={t("clients.create.pageDescription")}
       />
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <form onSubmit={onSubmit} className="flex flex-col gap-4 pb-24">
         <ClientFormFields
           form={form}
           errors={form.formState.errors}
           mode="create"
         />
 
-        <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => router.push("/clients")}>
+        <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button type="button" variant="ghost" size="lg" className="rounded-full" onClick={() => router.push("/clients")}>
             {t("clients.create.cancel")}
           </Button>
-          <Button type="submit" disabled={createMut.isPending}>
+          <Button type="submit" size="lg" className="rounded-full" disabled={createMut.isPending}>
             {createMut.isPending
               ? t("clients.create.saving")
               : t("clients.create.submit")}

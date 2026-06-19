@@ -58,7 +58,7 @@ export function BookingsPageContent() {
             <Button
               variant="accent"
               size="lg"
-              className="gap-2 rounded-full px-6 shadow-md"
+              className="gap-2 rounded-lg px-6 shadow-md"
               onClick={() => setCreating(true)}
             >
               <HugeiconsIcon icon={Add01Icon} size={18} strokeWidth={2.5} />

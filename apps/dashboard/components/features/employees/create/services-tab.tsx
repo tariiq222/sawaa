@@ -7,14 +7,8 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Add01Icon } from "@hugeicons/core-free-icons"
 
 import { Button } from "@sawaa/ui"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
+import { FormSection } from "@/components/features/shared/form-section"
 import { useServiceBookingTypes, useServices } from "@/hooks/use-services"
 import { useEmployeeServiceTypes } from "@/hooks/use-employees"
 import type { EmployeeServiceType, EmployeeTypeConfigPayload } from "@/lib/types/employee"
@@ -196,14 +190,8 @@ export function ServicesTab({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("employees.create.tabs.services")}</CardTitle>
-        <CardDescription>
-          {t("employees.create.servicesDescription")}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <FormSection title={t("employees.create.tabs.services")} description={t("employees.create.servicesDescription")}>
+      <div className="space-y-4">
         {draftServices.length === 0 && !isAdding && (
           <p className="text-sm text-muted-foreground">
             {t("employees.create.noServices")}
@@ -262,7 +250,7 @@ export function ServicesTab({
             {t("employees.create.addService")}
           </Button>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </FormSection>
   )
 }

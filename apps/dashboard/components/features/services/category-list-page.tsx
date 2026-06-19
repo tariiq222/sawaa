@@ -14,7 +14,6 @@ import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 
 import { getCategoryColumns } from "./category-columns"
-import { CreateCategoryDialog } from "./create-category-dialog"
 import { DeleteCategoryDialog } from "./delete-category-dialog"
 
 import { useCategoriesList } from "@/hooks/use-services"
@@ -33,7 +32,6 @@ export function CategoryListPage() {
     page, setPage, resetFilters, refetch,
   } = useCategoriesList()
 
-  const [createOpen, setCreateOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<ServiceCategory | null>(null)
 
   const columns = getCategoryColumns(
@@ -53,7 +51,7 @@ export function CategoryListPage() {
         title={t("services.categories.title")}
         description={t("services.categories.description")}
       >
-        <Button className="gap-2 rounded-full px-5" onClick={() => setCreateOpen(true)}>
+        <Button className="gap-2 rounded-lg px-5" onClick={() => router.push("/categories/create")}>
           <HugeiconsIcon icon={Add01Icon} size={16} />
           {t("services.categories.addCategory")}
         </Button>
@@ -91,7 +89,7 @@ export function CategoryListPage() {
           data={categories}
           emptyTitle={hasFilters ? t("services.categories.empty.searchTitle") : t("services.categories.empty.title")}
           emptyDescription={hasFilters ? t("services.categories.empty.searchDescription") : t("services.categories.empty.description")}
-          emptyAction={hasFilters ? undefined : { label: t("services.categories.addCategory"), onClick: () => setCreateOpen(true) }}
+          emptyAction={hasFilters ? undefined : { label: t("services.categories.addCategory"), onClick: () => router.push("/categories/create") }}
         />
       )}
 
@@ -105,7 +103,6 @@ export function CategoryListPage() {
         </div>
       )}
 
-      <CreateCategoryDialog open={createOpen} onOpenChange={setCreateOpen} />
       <DeleteCategoryDialog category={deleteTarget} open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null) }} />
     </ListPageShell>
   )

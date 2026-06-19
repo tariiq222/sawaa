@@ -79,13 +79,13 @@ export function UserListPage() {
         description={t("users.description")}
       >
         {isUsersTab && canDo("user", "create") && (
-          <Button className="gap-2 rounded-full px-5" onClick={() => router.push("/users/create")}>
+          <Button className="gap-2 rounded-lg px-5" onClick={() => router.push("/users/create")}>
             <HugeiconsIcon icon={Add01Icon} size={16} />
             {t("users.addUser")}
           </Button>
         )}
         {isRolesTab && canDo("user", "create") && (
-          <Button className="gap-2 rounded-full px-5" onClick={() => setCreateRoleOpen(true)}>
+          <Button className="gap-2 rounded-lg px-5" onClick={() => setCreateRoleOpen(true)}>
             <HugeiconsIcon icon={Add01Icon} size={16} />
             {t("users.roles.createRole")}
           </Button>

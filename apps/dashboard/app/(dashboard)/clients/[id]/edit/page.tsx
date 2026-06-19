@@ -90,18 +90,18 @@ export default function EditClientPage() {
         description={`${t("clients.edit.descriptionPrefix")} ${clientName}`}
       />
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <form onSubmit={onSubmit} className="flex flex-col gap-4 pb-24">
         <ClientFormFields
           form={form}
           errors={form.formState.errors}
           mode="edit"
         />
 
-        <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => router.push("/clients")}>
+        <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button type="button" variant="ghost" size="lg" className="rounded-full" onClick={() => router.push("/clients")}>
             {t("clients.edit.cancel")}
           </Button>
-          <Button type="submit" disabled={updateMut.isPending}>
+          <Button type="submit" size="lg" className="rounded-full" disabled={updateMut.isPending}>
             {updateMut.isPending
               ? t("clients.edit.saving")
               : t("clients.edit.saveChanges")}

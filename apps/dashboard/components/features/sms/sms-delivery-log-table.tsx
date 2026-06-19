@@ -35,7 +35,7 @@ function StatusBadge({ status }: { status: SmsDeliveryStatus }) {
   })()
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${cls}`}
+      className={`inline-flex items-center rounded-sm border px-2 py-0.5 text-xs ${cls}`}
     >
       {status}
     </span>

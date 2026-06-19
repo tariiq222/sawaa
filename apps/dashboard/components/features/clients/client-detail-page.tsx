@@ -108,7 +108,7 @@ export function ClientDetailPage({ clientId }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            className="gap-2 rounded-full px-5"
+            className="gap-2 rounded-lg px-5"
             onClick={() => router.push(`/clients/${clientId}/edit`)}
           >
             <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
@@ -116,7 +116,7 @@ export function ClientDetailPage({ clientId }: Props) {
           </Button>
           <Button
             variant="outline"
-            className="gap-2 rounded-full px-5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            className="gap-2 rounded-lg px-5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={() => setDeleteOpen(true)}
           >
             <HugeiconsIcon icon={Delete02Icon} size={16} />

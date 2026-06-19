@@ -47,7 +47,7 @@ export function CouponListPage() {
         description={t("coupons.description")}
       >
         {canDo("Coupon", "create") && (
-          <Button className="gap-2 rounded-full px-5" onClick={() => router.push("/coupons/create")}>
+          <Button className="gap-2 rounded-lg px-5" onClick={() => router.push("/coupons/create")}>
             <HugeiconsIcon icon={Add01Icon} size={16} />
             {t("coupons.addCoupon")}
           </Button>

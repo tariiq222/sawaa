@@ -28,7 +28,7 @@ export default function ServicesPage() {
           description={t("services.description")}
         >
           {canDo("Service", "create") && (
-            <Button className="gap-2 rounded-full px-5" onClick={() => router.push("/services/create")}>
+            <Button className="gap-2 rounded-lg px-5" onClick={() => router.push("/services/create")}>
               <HugeiconsIcon icon={Add01Icon} size={16} />
               {t("services.addService")}
             </Button>

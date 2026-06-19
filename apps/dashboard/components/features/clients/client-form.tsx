@@ -2,22 +2,15 @@
 
 import { useId, isValidElement, cloneElement } from "react"
 import { UseFormReturn, Controller, FieldErrors } from "react-hook-form"
-import {
-  UserIcon,
-  SmartPhone01Icon,
-  Alert02Icon,
-} from "@hugeicons/core-free-icons"
-
 import { Input } from "@sawaa/ui"
 import { NationalitySelect } from "@/components/ui/nationality-select"
 import { PhoneInput } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
-import { Card, CardContent } from "@sawaa/ui"
 import { Switch } from "@sawaa/ui"
 import { DatePicker } from "@/components/ui/date-picker"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/components/locale-provider"
-import { SectionHeader } from "@/components/features/section-header"
+import { FormSection } from "@/components/features/shared/form-section"
 import {
   type CreateClientFormData,
   type EditClientFormData,
@@ -68,15 +61,12 @@ export function ClientFormFields({ form, errors, mode }: ClientFormFieldsProps) 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
 
-      {/* ── Card 1: Personal ── */}
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          <SectionHeader
-            icon={UserIcon}
-            title={t("clients.form.personalInfo")}
-            description={t("clients.form.personalInfoDesc")}
-          />
-
+      {/* ── Section 1: Personal ── */}
+      <FormSection
+        title={t("clients.form.personalInfo")}
+        description={t("clients.form.personalInfoDesc")}
+      >
+        <div className="space-y-4">
           <Field
             label={t("clients.form.fullName")}
             error={errors.fullName?.message}
@@ -172,18 +162,15 @@ export function ClientFormFields({ form, errors, mode }: ClientFormFieldsProps) 
               )}
             />
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </FormSection>
 
-      {/* ── Card 2: Contact + Emergency ── */}
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          <SectionHeader
-            icon={SmartPhone01Icon}
-            title={t("clients.form.contactInfo")}
-            description={isCreate ? t("clients.form.phoneDesc") : undefined}
-          />
-
+      {/* ── Section 2: Contact + Emergency ── */}
+      <FormSection
+        title={t("clients.form.contactInfo")}
+        description={isCreate ? t("clients.form.phoneDesc") : undefined}
+      >
+        <div className="space-y-4">
           <Field
             label={t("clients.form.phone")}
             error={errors.phone?.message}
@@ -208,11 +195,14 @@ export function ClientFormFields({ form, errors, mode }: ClientFormFieldsProps) 
             </p>
           )}
 
-          <SectionHeader
-            icon={Alert02Icon}
-            title={t("clients.form.emergencyContact")}
-            description={isCreate ? t("clients.form.emergencyContactDesc") : undefined}
-          />
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground pt-2">
+            {t("clients.form.emergencyContact")}
+          </h3>
+          {isCreate && (
+            <p className="text-xs text-muted-foreground">
+              {t("clients.form.emergencyContactDesc")}
+            </p>
+          )}
 
           <Field label={t("clients.form.name")}>
             <Input {...register("emergencyName")} />
@@ -230,8 +220,8 @@ export function ClientFormFields({ form, errors, mode }: ClientFormFieldsProps) 
               )}
             />
           </Field>
-        </CardContent>
-      </Card>
+        </div>
+      </FormSection>
 
       {/* ── Card 3: Medical ── */}
       <ClientMedicalCard form={form} isCreate={isCreate} />

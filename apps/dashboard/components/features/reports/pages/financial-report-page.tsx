@@ -179,11 +179,11 @@ export function FinancialReportPage() {
                         </td>
                         <td className="px-3 py-2">
                           {c.isActive ? (
-                            <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs text-success">
+                            <span className="rounded-sm bg-success/15 px-2 py-0.5 text-xs text-success">
                               {t("reports.financial.couponActive")}
                             </span>
                           ) : (
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                            <span className="rounded-sm bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                               {t("reports.financial.couponExpired")}
                             </span>
                           )}
