@@ -43,6 +43,7 @@ import {
   saveBookingTypesMutation,
 } from "@/components/features/services/service-form-helpers"
 import { uploadServiceImage } from "@/lib/api/services"
+import { assignService } from "@/lib/api/employees-schedule"
 import { ServiceBreadcrumb } from "@/components/features/services/service-breadcrumb"
 import { sarToHalalas, halalasToSar } from "@/lib/money"
 
@@ -170,6 +171,13 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
         }
 
         await saveBookingTypesApi(created.id, bookingTypes)
+        if (pendingEmployeeIds.length > 0) {
+          await Promise.all(
+            pendingEmployeeIds.map((employeeId) =>
+              assignService(employeeId, { serviceId: created.id })
+            )
+          )
+        }
         toast.success(t("services.create.success"))
       }
 
