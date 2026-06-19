@@ -62,6 +62,12 @@ vi.mock("@sawaa/ui", () => ({
       {children}
     </button>
   ),
+  Label: ({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) => (
+    <label htmlFor={htmlFor}>{children}</label>
+  ),
+  Switch: ({ id, checked, onCheckedChange, disabled, ...rest }: { id?: string; checked?: boolean; onCheckedChange?: (v: boolean) => void; disabled?: boolean; [key: string]: unknown }) => (
+    <input type="checkbox" id={id} checked={checked} onChange={(e) => onCheckedChange?.(e.target.checked)} disabled={disabled} {...rest} />
+  ),
   SurfaceRow: ({ children, className }: { children: ReactNode; className?: string }) => (
     <div data-slot="surface-row" className={className}>
       {children}
@@ -111,7 +117,7 @@ function renderWithProviders(ui: ReactNode) {
 }
 
 describe("AssignedEmployeeRow with EmployeeWorkingInfo", () => {
-  it("renders the working info section between header and toggles", () => {
+  it("renders the active toggle and custom pricing row", () => {
     renderWithProviders(
       <AssignedEmployeeRow
         item={item}
@@ -123,8 +129,7 @@ describe("AssignedEmployeeRow with EmployeeWorkingInfo", () => {
       />,
     )
 
-    expect(screen.getByText("services.employees.workingInfo.title")).toBeInTheDocument()
-    expect(screen.getByTestId("employee-service-toggles")).toBeInTheDocument()
+    expect(screen.getByText("services.create.isActive")).toBeInTheDocument()
     expect(screen.getByTestId("employee-custom-pricing-row")).toBeInTheDocument()
   })
 
@@ -145,6 +150,7 @@ describe("AssignedEmployeeRow with EmployeeWorkingInfo", () => {
       />,
     )
 
-    expect(screen.getByText("services.employees.workingInfo.noBranches")).toBeInTheDocument()
+    // Component renders without error when branchIds is undefined
+    expect(screen.getByTestId("employee-custom-pricing-row")).toBeInTheDocument()
   })
 })

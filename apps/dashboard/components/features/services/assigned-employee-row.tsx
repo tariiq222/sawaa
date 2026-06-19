@@ -43,7 +43,7 @@ export function AssignedEmployeeRow({
   const fullName = `${employee.user.firstName} ${employee.user.lastName}`
   const displayName = isAr && employee.nameAr ? employee.nameAr : fullName
 
-  const { updateMut, customPricingMut } = useEmployeeServiceMutations(employee.id)
+  const { updateMut, durationsMut } = useEmployeeServiceMutations(employee.id)
   const isSaving =
     updateMut.isPending && updateMut.variables?.serviceId === serviceId
 
@@ -111,9 +111,9 @@ export function AssignedEmployeeRow({
         serviceId={serviceId}
         employeeId={employee.id}
         t={t}
-        isSaving={customPricingMut.isPending && customPricingMut.variables?.serviceId === serviceId}
+        isSaving={durationsMut.isPending && durationsMut.variables?.serviceId === serviceId}
         onSave={(payload) =>
-          customPricingMut.mutate(
+          durationsMut.mutate(
             { serviceId, payload },
             {
               onSuccess: () => toast.success(t("services.employees.durations.saved")),
