@@ -44,7 +44,11 @@ export class BookingConfirmedHandler {
             clientId,
             employeeId,
             bookingId,
-            subtotal: discountedPrice ?? price,
+            subtotal: price,
+            discountAmt:
+              discountedPrice !== null && discountedPrice !== undefined
+                ? price - discountedPrice
+                : undefined,
           });
         } catch (err) {
           // ConflictException = idempotent re-delivery — safe to ignore

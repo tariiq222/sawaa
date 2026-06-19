@@ -41,6 +41,60 @@ describe('BookingConfirmedHandler', () => {
     );
   });
 
+  it('passes subtotal=price and discountAmt=price-discountedPrice when discountedPrice is set', async () => {
+    const eb = buildEventBus();
+    const createInvoice = buildCreateInvoice();
+    const handler = new BookingConfirmedHandler(eb as never, createInvoice as never);
+    handler.register();
+
+    const envelope = {
+      payload: {
+        bookingId: 'book-1',
+        clientId: 'c-1',
+        employeeId: 'e-1',
+        branchId: 'branch-1',
+        price: 300,
+        discountedPrice: 240,
+        currency: 'SAR',
+      },
+    };
+    await eb.getSubscriber()(envelope);
+
+    expect(createInvoice.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subtotal: 300,
+        discountAmt: 60,
+      }),
+    );
+  });
+
+  it('passes subtotal=price and no discountAmt when discountedPrice is null', async () => {
+    const eb = buildEventBus();
+    const createInvoice = buildCreateInvoice();
+    const handler = new BookingConfirmedHandler(eb as never, createInvoice as never);
+    handler.register();
+
+    const envelope = {
+      payload: {
+        bookingId: 'book-1',
+        clientId: 'c-1',
+        employeeId: 'e-1',
+        branchId: 'branch-1',
+        price: 300,
+        discountedPrice: null,
+        currency: 'SAR',
+      },
+    };
+    await eb.getSubscriber()(envelope);
+
+    expect(createInvoice.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subtotal: 300,
+        discountAmt: undefined,
+      }),
+    );
+  });
+
   it('does not throw on 409 ConflictException (idempotent re-delivery)', async () => {
     const eb = buildEventBus();
     const createInvoice = buildCreateInvoice();
