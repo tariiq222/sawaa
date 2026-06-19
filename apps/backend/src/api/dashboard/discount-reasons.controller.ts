@@ -1,10 +1,10 @@
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
-  UseGuards, ParseUUIDPipe, ParseBoolPipe,
+  UseGuards, ParseUUIDPipe, ParseBoolPipe, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiQuery,
-  ApiOkResponse, ApiCreatedResponse, ApiResponse,
+  ApiOkResponse, ApiCreatedResponse, ApiResponse, ApiNoContentResponse,
 } from '@nestjs/swagger';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
@@ -64,10 +64,11 @@ export class DashboardDiscountReasonsController {
   }
 
   @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @CheckPermissions({ action: 'manage', subject: 'Setting' })
   @ApiOperation({ summary: 'Delete a discount reason' })
   @ApiParam({ name: 'id', description: 'Discount reason UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Discount reason deleted' })
+  @ApiNoContentResponse({ description: 'Discount reason deleted' })
   @ApiResponse({ status: 404, description: 'Discount reason not found', type: ApiErrorDto })
   @ApiResponse({ status: 409, description: 'Reason is referenced by invoices', type: ApiErrorDto })
   deleteEndpoint(@Param('id', ParseUUIDPipe) id: string) {
