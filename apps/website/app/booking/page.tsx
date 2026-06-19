@@ -954,6 +954,17 @@ function BookingWizardInner() {
                     service={service}
                     employee={employee}
                     vatRate={vatRate}
+                    selectedPriceHalalas={(() => {
+                      if (!selectedChoice) return undefined;
+                      const ext = service as Service & {
+                        durationOptions?: Array<{ id: string; price: number | string }>;
+                        bookingConfigs?: Array<{ id: string; price: number | string }>;
+                      };
+                      const opt =
+                        ext.durationOptions?.find((o) => o.id === selectedChoice.durationOptionId) ??
+                        ext.bookingConfigs?.find((c) => c.id === selectedChoice.durationOptionId);
+                      return opt != null ? Number(opt.price) : undefined;
+                    })()}
                     onBack={() => dispatch({ type: 'SELECT_EMPLOYEE', employee })}
                     onSubmitInfo={async () => {
                       dispatchUi({ type: 'SUBMIT_START' });

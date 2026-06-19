@@ -18,6 +18,13 @@ interface ClientInfoStepProps {
    * VAT-inclusive when > 0; the backend computes the real invoice.
    */
   vatRate?: number;
+  /**
+   * Pre-tax price in halalas for the chosen duration option. When provided,
+   * this overrides service.price so the displayed total matches what the
+   * backend derives from durationOptionId. Falls back to service.price when
+   * absent (e.g. services with no duration options).
+   */
+  selectedPriceHalalas?: number;
   /** @deprecated back is handled by the wizard header — kept for compatibility */
   onBack?: () => void;
   /** Confirm + pay. The client is authenticated via the session cookie; no info is passed. */
@@ -55,7 +62,7 @@ function FieldIcon({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitInfo, isSubmitting }: ClientInfoStepProps) {
+export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedPriceHalalas, onSubmitInfo, isSubmitting }: ClientInfoStepProps) {
   const t = useT();
   const locale = useLocale();
   const isAr = locale === 'ar';
@@ -106,10 +113,11 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, onSubmitI
   const therapistName = therapistDisplayName(employee, isAr);
   // VAT-inclusive (gross) total — mirrors the backend invoice math so the
   // amount shown here matches what the customer is actually charged.
+  const effectivePrice = selectedPriceHalalas ?? service.price;
   const priceSar = Intl.NumberFormat(dateLocale, {
     style: 'decimal',
     maximumFractionDigits: 2,
-  }).format(halalasToSarNumber(grossWithVat(service.price, vatRate)));
+  }).format(halalasToSarNumber(grossWithVat(effectivePrice, vatRate)));
   const vatPercent = Math.round(vatRate * 100);
 
   const isAuthed = client !== null;
