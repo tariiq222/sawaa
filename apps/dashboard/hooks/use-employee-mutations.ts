@@ -17,10 +17,12 @@ import {
   createEmployeeAccount,
   updateEmployeeAccount,
   setEmployeeCustomPricing,
+  setEmployeeDurations,
 } from "@/lib/api/employees"
 import type {
   EmployeeAccountRole,
   SetCustomPricingPayload,
+  SetPractitionerDurationsPayload,
 } from "@/lib/api/employees"
 import type {
   AssignServicePayload,
@@ -183,7 +185,19 @@ export function useEmployeeServiceMutations(employeeId: string) {
     },
   })
 
-  return { assignMut, updateMut, optionsMut, removeMut, customPricingMut }
+  const durationsMut = useMutation({
+    mutationFn: ({ serviceId, payload }: { serviceId: string; payload: SetPractitionerDurationsPayload }) =>
+      setEmployeeDurations(employeeId, serviceId, payload),
+    onSuccess: (_d, vars) => {
+      invalidate()
+      invalidateServiceList(vars.serviceId)
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.employees.serviceTypes(employeeId, vars.serviceId),
+      })
+    },
+  })
+
+  return { assignMut, updateMut, optionsMut, removeMut, customPricingMut, durationsMut }
 }
 
 /* ─── Employee Account Mutations ─── */

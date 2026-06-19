@@ -197,3 +197,33 @@ export async function setEmployeeCustomPricing(
     payload,
   )
 }
+
+/* ─── Practitioner Durations ─── */
+
+export interface PractitionerDurationItemPayload {
+  id?: string
+  label: string
+  labelAr: string
+  durationMins: number
+  price: number  // integer halalas
+}
+
+export interface PractitionerDurationsByTypePayload {
+  deliveryType: string
+  items: PractitionerDurationItemPayload[]
+}
+
+export interface SetPractitionerDurationsPayload {
+  durations: PractitionerDurationsByTypePayload[]
+}
+
+export async function setEmployeeDurations(
+  employeeId: string,
+  serviceId: string,
+  payload: SetPractitionerDurationsPayload,
+): Promise<unknown> {
+  return api.put(
+    `/dashboard/people/employees/${employeeId}/services/${serviceId}/durations`,
+    payload,
+  )
+}

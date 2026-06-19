@@ -12,6 +12,7 @@ import type { SetCustomPricingPayload } from "@/lib/api/employees"
 interface Props {
   item: ServiceEmployee
   serviceId: string
+  employeeId: string
   t: (key: string) => string
   isSaving: boolean
   onSave: (payload: SetCustomPricingPayload) => void
@@ -99,7 +100,7 @@ function InlineNumberField({ value, suffix, isSaving, min = 0, step = 1, ariaLab
   )
 }
 
-export function EmployeeCustomPricingRow({ item, serviceId: _serviceId, t, isSaving, onSave }: Props) {
+export function EmployeeCustomPricingRow({ item, serviceId: _serviceId, employeeId: _employeeId, t, isSaving, onSave }: Props) {
   const activeTypes = item.serviceTypes.filter((st) => st.isActive)
   const hasTypes = item.serviceTypes.length > 0
 
