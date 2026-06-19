@@ -2,12 +2,11 @@
 
 import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { PencilEdit01Icon, Tick01Icon } from "@hugeicons/core-free-icons"
-import { Switch } from "@sawaa/ui"
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@sawaa/ui"
+import { Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons"
+import { Badge, Button, Input } from "@sawaa/ui"
 import { halalasToSarNumber, sarToHalalas } from "@/lib/money"
-import type { ServiceEmployee, ServiceEmployeeServiceType } from "@/lib/types/service"
-import type { SetCustomPricingPayload } from "@/lib/api/employees"
+import type { ServiceEmployee } from "@/lib/types/service"
+import type { SetPractitionerDurationsPayload } from "@/lib/api/employees"
 
 interface Props {
   item: ServiceEmployee
@@ -15,241 +14,189 @@ interface Props {
   employeeId: string
   t: (key: string) => string
   isSaving: boolean
-  onSave: (payload: SetCustomPricingPayload) => void
+  onSave: (payload: SetPractitionerDurationsPayload) => void
 }
 
-// Local inline-edit field
-interface FieldProps {
-  value: number
-  suffix: string
-  isSaving: boolean
-  min?: number
-  step?: number
-  ariaLabel: string
-  onCommit: (next: number) => void
+const SUPPORTED = [
+  { key: "in_person", dt: "IN_PERSON" as const, labelKey: "services.employees.durations.inPerson" },
+  { key: "online", dt: "ONLINE" as const, labelKey: "services.employees.durations.online" },
+]
+
+interface Row {
+  rid: string
+  id?: string
+  durationMins: number
+  priceHalalas: number
+  isInherited: boolean
+  originalIsInherited: boolean
 }
 
-function InlineNumberField({ value, suffix, isSaving, min = 0, step = 1, ariaLabel, onCommit }: FieldProps) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState("")
+let RID = 0
+const nextRid = () => `r${RID++}`
 
-  if (editing) {
-    return (
-      <span className="flex items-center gap-1">
-        <input
-          type="number"
-          className="w-20 rounded border border-border bg-background px-1.5 py-0.5 text-sm tabular-nums text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-          value={draft}
-          min={min}
-          step={step}
-          autoFocus
-          disabled={isSaving}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              const parsed = parseFloat(draft)
-              if (!isNaN(parsed) && parsed >= min) {
-                onCommit(parsed)
-                setEditing(false)
-              }
-            } else if (e.key === "Escape") {
-              setEditing(false)
-            }
-          }}
-          onBlur={() => {
-            const parsed = parseFloat(draft)
-            if (!isNaN(parsed) && parsed >= min) {
-              onCommit(parsed)
-            }
-            setEditing(false)
-          }}
-          aria-label={ariaLabel}
-        />
-        <button
-          type="button"
-          className="text-success hover:opacity-80"
-          onClick={() => {
-            const parsed = parseFloat(draft)
-            if (!isNaN(parsed) && parsed >= min) {
-              onCommit(parsed)
-              setEditing(false)
-            }
-          }}
-          aria-label="confirm"
-        >
-          <HugeiconsIcon icon={Tick01Icon} strokeWidth={2} className="size-3.5" />
-        </button>
-      </span>
-    )
-  }
-
-  return (
-    <button
-      type="button"
-      className="inline-flex items-center gap-1 text-sm tabular-nums text-foreground hover:text-primary disabled:opacity-50"
-      disabled={isSaving}
-      onClick={() => {
-        setDraft(String(value))
-        setEditing(true)
-      }}
-      aria-label={ariaLabel}
-    >
-      <span>{value} {suffix}</span>
-      <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} className="size-3 text-muted-foreground" />
-    </button>
+function rowsForType(item: ServiceEmployee, dt: "IN_PERSON" | "ONLINE"): Row[] {
+  const group = (item.effectiveDurations ?? []).find(
+    (g) => g.deliveryType.toUpperCase() === dt,
   )
+  return (group?.durations ?? []).map((d) => ({
+    rid: nextRid(),
+    id: d.id,
+    durationMins: d.durationMins,
+    priceHalalas: d.price,
+    isInherited: d.isInherited,
+    originalIsInherited: d.isInherited,
+  }))
 }
 
-export function EmployeeCustomPricingRow({ item, serviceId: _serviceId, employeeId: _employeeId, t, isSaving, onSave }: Props) {
-  const activeTypes = item.serviceTypes.filter((st) => st.isActive)
-  const hasTypes = item.serviceTypes.length > 0
+export function EmployeeCustomPricingRow({
+  item,
+  serviceId: _serviceId,
+  employeeId: _employeeId,
+  t,
+  isSaving,
+  onSave,
+}: Props) {
+  const supported = SUPPORTED.filter((s) =>
+    (item.availableTypes ?? []).some((a) => a.toLowerCase() === s.key),
+  )
 
-  const handleToggle = (enabled: boolean) => {
-    if (enabled) {
-      onSave({
-        enabled: true,
-        types: item.serviceTypes.map((st) => ({
-          deliveryType: st.deliveryType as 'IN_PERSON' | 'ONLINE',
-          price: st.price ?? st.basePrice,
-          durationMins: st.durationMins ?? st.baseDurationMins,
-        })),
-      })
-    } else {
-      onSave({ enabled: false, types: [] })
-    }
+  const [rowsByType, setRowsByType] = useState<Record<string, Row[]>>(() => {
+    const init: Record<string, Row[]> = {}
+    for (const s of supported) init[s.dt] = rowsForType(item, s.dt)
+    return init
+  })
+
+  const [dirty, setDirty] = useState(false)
+
+  const update = (dt: string, next: Row[]) => {
+    setRowsByType((p) => ({ ...p, [dt]: next }))
+    setDirty(true)
   }
 
-  const handlePriceCommit = (st: ServiceEmployeeServiceType, sarValue: number) => {
-    onSave({
-      enabled: true,
-      types: item.serviceTypes.map((s) =>
-        s.id === st.id
-          ? {
-              deliveryType: s.deliveryType as 'IN_PERSON' | 'ONLINE',
-              price: sarToHalalas(sarValue),
-              durationMins: s.durationMins ?? s.baseDurationMins,
-            }
-          : {
-              deliveryType: s.deliveryType as 'IN_PERSON' | 'ONLINE',
-              price: s.price ?? s.basePrice,
-              durationMins: s.durationMins ?? s.baseDurationMins,
-            },
+  const addRow = (dt: string) =>
+    update(dt, [
+      ...(rowsByType[dt] ?? []),
+      {
+        rid: nextRid(),
+        durationMins: 60,
+        priceHalalas: 0,
+        isInherited: false,
+        originalIsInherited: false,
+      },
+    ])
+
+  const removeRow = (dt: string, rid: string) =>
+    update(
+      dt,
+      (rowsByType[dt] ?? []).filter((r) => r.rid !== rid),
+    )
+
+  const editRow = (dt: string, rid: string, patch: Partial<Row>) =>
+    update(
+      dt,
+      (rowsByType[dt] ?? []).map((r) =>
+        r.rid === rid ? { ...r, ...patch, isInherited: false } : r,
       ),
-    })
-  }
+    )
 
-  const handleDurationCommit = (st: ServiceEmployeeServiceType, mins: number) => {
-    onSave({
-      enabled: true,
-      types: item.serviceTypes.map((s) =>
-        s.id === st.id
-          ? {
-              deliveryType: s.deliveryType as 'IN_PERSON' | 'ONLINE',
-              price: s.price ?? s.basePrice,
-              durationMins: mins,
-            }
-          : {
-              deliveryType: s.deliveryType as 'IN_PERSON' | 'ONLINE',
-              price: s.price ?? s.basePrice,
-              durationMins: s.durationMins ?? s.baseDurationMins,
-            },
-      ),
-    })
+  const handleSave = () => {
+    const durations = supported
+      .map((s) => ({
+        deliveryType: s.dt,
+        items: (rowsByType[s.dt] ?? []).map((r) => {
+          const base = {
+            label: `${r.durationMins} min`,
+            labelAr: `${r.durationMins} دقيقة`,
+            durationMins: r.durationMins,
+            price: r.priceHalalas,
+          }
+          return r.originalIsInherited || !r.id ? base : { id: r.id, ...base }
+        }),
+      }))
+      .filter((g) => g.items.length > 0)
+    onSave({ durations })
+    setDirty(false)
   }
-
-  const typeLabel = (deliveryType: string) =>
-    deliveryType === 'IN_PERSON'
-      ? t("services.bookingTypes.clinic")
-      : t("services.bookingTypes.online")
 
   return (
-    <div className="space-y-2">
-      {/* Toggle row */}
-      <div className="flex items-center gap-2">
-        <Switch
-          checked={item.hasCustomPricing}
-          onCheckedChange={handleToggle}
-          disabled={isSaving || !hasTypes}
-          aria-label={t("services.employees.customPricing")}
-        />
-        <span className={hasTypes ? "text-sm text-foreground" : "text-sm text-muted-foreground"}>
-          {t("services.employees.customPricing")}
-        </span>
-      </div>
-      {!hasTypes && (
-        <p className="text-xs text-muted-foreground/70">
-          {t("services.employees.noTypesForPricing")}
-        </p>
-      )}
-
-      {/* Pricing table — shown when custom pricing is on */}
-      {item.hasCustomPricing && activeTypes.length > 0 && (
-        <Table className="rounded-md border border-border bg-surface-muted/30">
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="h-7 px-2 text-[10px]">
-                {t("services.employees.typeHeader")}
-              </TableHead>
-              <TableHead className="h-7 px-2 text-[10px]">
-                {t("services.employees.priceHeader")}
-              </TableHead>
-              <TableHead className="h-7 px-2 text-[10px]">
-                {t("services.employees.durationHeader")}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {activeTypes.map((st) => (
-              <TableRow key={st.id} className="hover:bg-transparent even:bg-transparent">
-                <TableCell className="px-2 py-1.5 text-xs">
-                  {typeLabel(st.deliveryType)}
-                </TableCell>
-                <TableCell className="px-2 py-1.5">
-                  <InlineNumberField
-                    value={halalasToSarNumber(st.price ?? st.basePrice)}
-                    suffix={t("services.bookingTypes.priceCurrency")}
-                    isSaving={isSaving}
+    <div className="flex flex-col gap-3">
+      {supported.map((s) => {
+        const rows = rowsByType[s.dt] ?? []
+        return (
+          <div key={s.dt} className="rounded-lg border border-border bg-surface p-2">
+            <div className="mb-1.5 text-xs font-medium text-foreground">
+              {t(s.labelKey)}
+            </div>
+            <div className="flex flex-col gap-1">
+              {rows.map((r) => (
+                <div key={r.rid} className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    className="h-8 w-20 tabular-nums"
+                    aria-label={t("services.employees.durations.durationCol")}
+                    value={r.durationMins}
+                    onChange={(e) =>
+                      editRow(s.dt, r.rid, { durationMins: Number(e.target.value) })
+                    }
+                  />
+                  <Input
+                    type="number"
                     min={0}
                     step={0.01}
-                    ariaLabel={t("services.employees.priceLabel")}
-                    onCommit={(sarVal) => handlePriceCommit(st, sarVal)}
+                    className="h-8 w-24 tabular-nums"
+                    aria-label={t("services.employees.durations.priceCol")}
+                    value={halalasToSarNumber(r.priceHalalas)}
+                    onChange={(e) =>
+                      editRow(s.dt, r.rid, {
+                        priceHalalas: sarToHalalas(Number(e.target.value)),
+                      })
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") (e.target as HTMLInputElement).blur()
+                    }}
                   />
-                </TableCell>
-                <TableCell className="px-2 py-1.5">
-                  <InlineNumberField
-                    value={st.durationMins ?? st.baseDurationMins}
-                    suffix={t("employees.services.minutes")}
-                    isSaving={isSaving}
-                    min={1}
-                    step={1}
-                    ariaLabel={t("services.employees.durationLabel")}
-                    onCommit={(mins) => handleDurationCommit(st, mins)}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-
-      {/* Base prices (when custom pricing is off) */}
-      {!item.hasCustomPricing && activeTypes.length > 0 && (
-        <div className="rounded-md border border-dashed border-border bg-surface-muted/30 px-3 py-2 space-y-1">
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            {t("services.employees.usingBasePrice")}
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {activeTypes.map((st) => (
-              <div key={st.id} className="flex items-center justify-between gap-2 text-xs">
-                <span className="text-muted-foreground">{typeLabel(st.deliveryType)}</span>
-                <span className="tabular-nums text-foreground">
-                  {halalasToSarNumber(st.basePrice)} {t("services.bookingTypes.priceCurrency")} ·{" "}
-                  {st.baseDurationMins} {t("employees.services.minutes")}
-                </span>
-              </div>
-            ))}
+                  {r.isInherited && (
+                    <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                      {t("services.employees.durations.inherited")}
+                    </Badge>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    aria-label={t("services.employees.durations.remove")}
+                    onClick={() => removeRow(s.dt, r.rid)}
+                  >
+                    <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-3.5" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 justify-start gap-1.5 text-xs"
+                onClick={() => addRow(s.dt)}
+              >
+                <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-3.5" />
+                {t("services.employees.durations.addRow")}
+              </Button>
+            </div>
           </div>
-        </div>
+        )
+      })}
+      {dirty && (
+        <Button
+          type="button"
+          size="sm"
+          className="mt-1 h-7 self-end text-xs"
+          disabled={isSaving}
+          onClick={handleSave}
+        >
+          {t("services.employees.durations.save")}
+        </Button>
       )}
     </div>
   )
