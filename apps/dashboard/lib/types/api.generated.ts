@@ -1111,6 +1111,58 @@ export interface paths {
         patch: operations["DashboardFinanceController_verifyPaymentEndpoint"];
         trace?: never;
     };
+    "/api/v1/dashboard/group-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List group sessions */
+        get: operations["DashboardGroupSessionsController_list"];
+        put?: never;
+        /** Create a group session */
+        post: operations["DashboardGroupSessionsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/group-sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a group session by ID */
+        get: operations["DashboardGroupSessionsController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/group-sessions/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Cancel a group session */
+        patch: operations["DashboardGroupSessionsController_cancel"];
+        trace?: never;
+    };
     "/api/v1/dashboard/identity/permissions": {
         parameters: {
             query?: never;
@@ -2257,6 +2309,23 @@ export interface paths {
         head?: never;
         /** Update an employee-service assignment */
         patch: operations["DashboardPeopleController_updateEmployeeServiceEndpoint"];
+        trace?: never;
+    };
+    "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/durations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set practitioner-owned duration options for an employee on a service */
+        put: operations["DashboardPeopleController_setEmployeeDurationsEndpoint"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/options": {
@@ -4184,6 +4253,13 @@ export interface components {
              */
             source?: "client" | "admin" | "employee" | "system";
         };
+        CancelGroupSessionDto: {
+            /**
+             * @description Reason for cancelling the session
+             * @example Counselor unavailable
+             */
+            cancelReason?: string;
+        };
         /**
          * @description Reason for cancellation
          * @enum {string}
@@ -5006,6 +5082,78 @@ export interface components {
              */
             startDate: string;
         };
+        CreateGroupSessionDto: {
+            /**
+             * @description Branch where session takes place
+             * @example 00000000-...
+             */
+            branchId: string;
+            /**
+             * @description Delivery channel
+             * @example IN_PERSON
+             */
+            deliveryType: components["schemas"]["DeliveryType"];
+            /**
+             * @description Arabic description
+             * @example وصف الجلسة
+             */
+            descriptionAr?: string;
+            /**
+             * @description English description
+             * @example Session description
+             */
+            descriptionEn?: string;
+            /**
+             * @description Duration in minutes
+             * @example 90
+             */
+            durationMins: number;
+            /**
+             * @description Employee leading the session
+             * @example 00000000-...
+             */
+            employeeId: string;
+            /**
+             * @description Make session visible on public website
+             * @example false
+             */
+            isPublic?: boolean;
+            /**
+             * @description Maximum number of attendees
+             * @example 20
+             */
+            maxCapacity: number;
+            /**
+             * @description Price in integer halalas
+             * @example 30000
+             */
+            price: number;
+            /**
+             * @description Public Arabic description
+             * @example وصف عام
+             */
+            publicDescriptionAr?: string;
+            /**
+             * @description Public English description
+             * @example Public description
+             */
+            publicDescriptionEn?: string;
+            /**
+             * @description ISO 8601 start datetime
+             * @example 2026-07-01T10:00:00.000Z
+             */
+            scheduledAt: string;
+            /**
+             * @description Service linked to this session
+             * @example 00000000-...
+             */
+            serviceId: string;
+            /**
+             * @description Session title
+             * @example Family Communication Workshop
+             */
+            title: string;
+        };
         CreateIntakeFormDto: {
             /** @description Form fields (max 100) */
             fields?: components["schemas"]["IntakeFieldInputDto"][];
@@ -5423,6 +5571,42 @@ export interface components {
              */
             reason?: components["schemas"]["CancellationReason"];
         };
+        EmployeeDurationItemDto: {
+            /**
+             * @description Duration in minutes (≥ 1)
+             * @example 60
+             */
+            durationMins: number;
+            /**
+             * @description Existing row ID to update (omit to create)
+             * @example uuid
+             */
+            id?: string;
+            /**
+             * @description English label
+             * @example 60 min session
+             */
+            label: string;
+            /**
+             * @description Arabic label
+             * @example جلسة 60 دقيقة
+             */
+            labelAr: string;
+            /**
+             * @description Price in halalas (integer, ≥ 0)
+             * @example 30000
+             */
+            price: number;
+        };
+        EmployeeDurationsByTypeDto: {
+            /**
+             * @description Delivery type
+             * @example IN_PERSON
+             */
+            deliveryType: string;
+            /** @description Duration items for this delivery type */
+            items: components["schemas"]["EmployeeDurationItemDto"][];
+        };
         /**
          * @description Gender
          * @enum {string}
@@ -5681,6 +5865,8 @@ export interface components {
              */
             type: "REVENUE" | "ACTIVITY" | "BOOKINGS" | "EMPLOYEES" | "OVERVIEW" | "CLIENTS" | "SERVICES" | "RATINGS";
         };
+        /** @enum {string} */
+        GroupSessionStatus: "OPEN" | "FULL" | "CANCELLED" | "COMPLETED";
         InitClientPaymentDto: {
             /**
              * @description Invoice UUID
@@ -6518,6 +6704,10 @@ export interface components {
             enabled: boolean;
             /** @description Pricing entries per delivery type */
             types: components["schemas"]["CustomPricingTypeDto"][];
+        };
+        SetEmployeeDurationsDto: {
+            /** @description Duration rows grouped by delivery type */
+            durations: components["schemas"]["EmployeeDurationsByTypeDto"][];
         };
         SetEmployeeServiceOptionsDto: {
             /** @description Employee service option overrides (at least one required) */
@@ -11568,7 +11758,7 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Discount reason deleted */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13088,6 +13278,283 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardGroupSessionsController_list: {
+        parameters: {
+            query?: {
+                /** @description Filter by session status */
+                status?: components["schemas"]["GroupSessionStatus"];
+                /** @description Return only upcoming sessions (scheduledAt >= now) */
+                upcoming?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated list of group sessions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items?: Record<string, never>[];
+                        limit?: number;
+                        page?: number;
+                        total?: number;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardGroupSessionsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateGroupSessionDto"];
+            };
+        };
+        responses: {
+            /** @description Group session created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** Format: date-time */
+                        scheduledAt?: string;
+                        /** @example OPEN */
+                        status?: string;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardGroupSessionsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Group session UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Group session details including enrollments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Group session not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardGroupSessionsController_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Group session UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelGroupSessionDto"];
+            };
+        };
+        responses: {
+            /** @description Group session cancelled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        cancelReason?: string | null;
+                        /** Format: date-time */
+                        cancelledAt?: string;
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example CANCELLED */
+                        status?: string;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Group session not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {
@@ -20447,6 +20914,76 @@ export interface operations {
             };
         };
     };
+    DashboardPeopleController_setEmployeeDurationsEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Employee UUID */
+                id: string;
+                /** @description Service UUID */
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetEmployeeDurationsDto"];
+            };
+        };
+        responses: {
+            /** @description Effective durations after update, grouped by delivery type */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Employee-service assignment not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     DashboardPeopleController_setEmployeeServiceOptionsEndpoint: {
         parameters: {
             query?: never;
@@ -21489,6 +22026,13 @@ export interface operations {
             };
         };
         responses: {
+            /** @description User registered, OTP sent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation failed */
             400: {
                 headers: {
@@ -21536,6 +22080,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Verification email sent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation failed */
             400: {
                 headers: {
@@ -21587,6 +22138,13 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Login OTP sent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation failed */
             400: {
                 headers: {
@@ -21638,6 +22196,13 @@ export interface operations {
             };
         };
         responses: {
+            /** @description OTP verified, tokens issued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation failed */
             400: {
                 headers: {

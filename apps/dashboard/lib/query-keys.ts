@@ -251,4 +251,11 @@ export const queryKeys = {
     all: ["delivery-logs"] as const,
     list: (filters?: object) => ["delivery-logs", "list", filters] as const,
   },
+
+  /* ─── Group Sessions ─── */
+  groupSessions: {
+    all: ["group-sessions"] as const,
+    list: (filters?: object) => ["group-sessions", "list", filters] as const,
+    detail: (id: string) => ["group-sessions", "detail", id] as const,
+  },
 } as const

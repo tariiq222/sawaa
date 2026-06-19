@@ -52,6 +52,7 @@ export const catalogNav: NavItem[] = [
   { titleKey: "nav.categories", href: "/categories", icon: Layers01Icon, permission: "category:read" },
   { titleKey: "nav.departments", href: "/departments", icon: Building06Icon, permission: "department:read" },
   { titleKey: "nav.employees", href: "/employees", icon: Stethoscope02Icon, permission: "employee:read" },
+  { titleKey: "nav.groupSessions", href: "/group-sessions", icon: UserMultiple02Icon, permission: "booking:read" },
 ]
 
 export const managementNav: NavItem[] = [

@@ -32,6 +32,7 @@ const FEATURES = [
   "activity-log",
   "groups",
   "contact-messages",
+  "group-sessions",
 ]
 
 /**

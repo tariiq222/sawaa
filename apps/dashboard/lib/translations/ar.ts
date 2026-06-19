@@ -21,6 +21,7 @@ import { arSms } from "./ar.sms"
 import { arOps } from "./ar.ops"
 import { arZoom } from "./ar.zoom"
 import { arRegister } from "./ar.register"
+import { arGroupSessions } from "./ar.group-sessions"
 
 export const ar: Record<string, string> = {
   ...arNav,
@@ -39,4 +40,5 @@ export const ar: Record<string, string> = {
   ...arOps,
   ...arZoom,
   ...arRegister,
+  ...arGroupSessions,
 }
