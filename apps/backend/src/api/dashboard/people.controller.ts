@@ -57,6 +57,8 @@ import { SetEmployeeServiceOptionsHandler } from '../../modules/org-experience/s
 import { SetEmployeeServiceOptionsDto } from '../../modules/org-experience/services/set-employee-service-options.dto';
 import { SetEmployeeCustomPricingHandler } from '../../modules/org-experience/services/set-employee-custom-pricing/set-employee-custom-pricing.handler';
 import { SetEmployeeCustomPricingDto } from '../../modules/org-experience/services/set-employee-custom-pricing/set-employee-custom-pricing.dto';
+import { SetEmployeeDurationsHandler } from '../../modules/org-experience/services/set-employee-durations/set-employee-durations.handler';
+import { SetEmployeeDurationsDto } from '../../modules/org-experience/services/set-employee-durations/set-employee-durations.dto';
 import { ListEmployeeExceptionsHandler } from '../../modules/people/employees/list-employee-exceptions.handler';
 import { CreateEmployeeExceptionHandler } from '../../modules/people/employees/create-employee-exception.handler';
 import { CreateEmployeeExceptionDto } from '../../modules/people/employees/create-employee-exception.dto';
@@ -153,6 +155,7 @@ export class DashboardPeopleController {
     private readonly removeEmployeeService: RemoveEmployeeServiceHandler,
     private readonly setEmployeeServiceOptions: SetEmployeeServiceOptionsHandler,
     private readonly setEmployeeCustomPricing: SetEmployeeCustomPricingHandler,
+    private readonly setEmployeeDurations: SetEmployeeDurationsHandler,
     private readonly listEmployeeExceptions: ListEmployeeExceptionsHandler,
     private readonly createEmployeeException: CreateEmployeeExceptionHandler,
     private readonly deleteEmployeeException: DeleteEmployeeExceptionHandler,
@@ -706,6 +709,22 @@ export class DashboardPeopleController {
     @Body() body: SetEmployeeCustomPricingDto,
   ) {
     return this.setEmployeeCustomPricing.execute({ employeeId, serviceId, ...body });
+  }
+
+  @Put('employees/:id/services/:serviceId/durations')
+  @CheckPermissions({ action: 'update', subject: 'Employee' })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Set practitioner-owned duration options for an employee on a service' })
+  @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Effective durations after update, grouped by delivery type' })
+  @ApiNotFoundResponse({ description: 'Employee-service assignment not found' })
+  setEmployeeDurationsEndpoint(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('serviceId', ParseUUIDPipe) serviceId: string,
+    @Body() body: SetEmployeeDurationsDto,
+  ) {
+    return this.setEmployeeDurations.execute({ employeeId: id, serviceId, ...body });
   }
 
   @Get('employees/:id/slots')

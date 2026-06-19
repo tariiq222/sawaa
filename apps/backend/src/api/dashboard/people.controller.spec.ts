@@ -32,6 +32,8 @@ import { GetEmployeeBreaksHandler } from '../../modules/people/employees/get-emp
 import { SetEmployeeBreaksHandler } from '../../modules/people/employees/set-employee-breaks/set-employee-breaks.handler';
 import { UpdateEmployeeServiceHandler } from '../../modules/people/employees/update-employee-service.handler';
 import { SetEmployeeServiceOptionsHandler } from '../../modules/org-experience/services/set-employee-service-options.handler';
+import { SetEmployeeCustomPricingHandler } from '../../modules/org-experience/services/set-employee-custom-pricing/set-employee-custom-pricing.handler';
+import { SetEmployeeDurationsHandler } from '../../modules/org-experience/services/set-employee-durations/set-employee-durations.handler';
 import { GetEmployeeAccountHandler } from '../../modules/identity/employee-account/get-employee-account.handler';
 import { CreateEmployeeAccountHandler } from '../../modules/identity/employee-account/create-employee-account.handler';
 import { UpdateEmployeeAccountHandler } from '../../modules/identity/employee-account/update-employee-account.handler';
@@ -73,6 +75,8 @@ describe('DashboardPeopleController (e2e)', () => {
   const mockSetEmployeeBreaks = { execute: jest.fn() };
   const mockUpdateEmployeeService = { execute: jest.fn() };
   const mockSetEmployeeServiceOptions = { execute: jest.fn() };
+  const mockSetEmployeeCustomPricing = { execute: jest.fn() };
+  const mockSetEmployeeDurations = { execute: jest.fn() };
   const mockGetEmployeeAccount = { execute: jest.fn() };
   const mockCreateEmployeeAccount = { execute: jest.fn() };
   const mockUpdateEmployeeAccount = { execute: jest.fn() };
@@ -124,6 +128,8 @@ describe('DashboardPeopleController (e2e)', () => {
         { provide: SetEmployeeBreaksHandler, useValue: mockSetEmployeeBreaks },
         { provide: UpdateEmployeeServiceHandler, useValue: mockUpdateEmployeeService },
         { provide: SetEmployeeServiceOptionsHandler, useValue: mockSetEmployeeServiceOptions },
+        { provide: SetEmployeeCustomPricingHandler, useValue: mockSetEmployeeCustomPricing },
+        { provide: SetEmployeeDurationsHandler, useValue: mockSetEmployeeDurations },
         { provide: GetEmployeeAccountHandler, useValue: mockGetEmployeeAccount },
         { provide: CreateEmployeeAccountHandler, useValue: mockCreateEmployeeAccount },
         { provide: UpdateEmployeeAccountHandler, useValue: mockUpdateEmployeeAccount },
@@ -795,6 +801,37 @@ describe('DashboardPeopleController (e2e)', () => {
         .post(`/dashboard/people/employees/${uuid(2)}/avatar`)
         .set('Authorization', 'Bearer fake-jwt')
         .expect(400);
+    });
+  });
+
+  describe('PUT /dashboard/people/employees/:id/services/:serviceId/durations', () => {
+    it('calls setEmployeeDurations.execute with employeeId, serviceId, and body', async () => {
+      const mockResult = [{ deliveryType: 'IN_PERSON', durations: [] }];
+      mockSetEmployeeDurations.execute.mockResolvedValue(mockResult);
+
+      const body = {
+        durations: [
+          {
+            deliveryType: 'IN_PERSON',
+            items: [
+              { label: '60 min session', labelAr: 'جلسة 60 دقيقة', durationMins: 60, price: 30000 },
+            ],
+          },
+        ],
+      };
+
+      const res = await request(app.getHttpServer())
+        .put(`/dashboard/people/employees/${uuid(2)}/services/${uuid(5)}/durations`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .send(body)
+        .expect(200);
+
+      expect(mockSetEmployeeDurations.execute).toHaveBeenCalledWith({
+        employeeId: uuid(2),
+        serviceId: uuid(5),
+        ...body,
+      });
+      expect(res.body).toEqual(mockResult);
     });
   });
 });
