@@ -64,6 +64,9 @@ model ServiceCategory {
   sortOrder    Int                 @default(0)
   isActive     Boolean             @default(true)
   bookingMode  CategoryBookingMode @default(SERVICES)
+  imageUrl      String?
+  iconName      String?
+  iconBgColor   String?
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
 

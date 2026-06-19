@@ -17,6 +17,9 @@ export interface PublicServiceCategory {
   nameEn: string | null;
   sortOrder: number;
   isActive: boolean;
+  imageUrl: string | null;
+  iconName: string | null;
+  iconBgColor: string | null;
 }
 
 export interface PublicService {

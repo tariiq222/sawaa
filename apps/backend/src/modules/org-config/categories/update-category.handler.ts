@@ -32,6 +32,9 @@ export class UpdateCategoryHandler {
           ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
           ...(dto.isActive !== undefined && { isActive: dto.isActive }),
           ...(dto.bookingMode !== undefined && { bookingMode: dto.bookingMode }),
+          ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
+          ...(dto.iconName !== undefined && { iconName: dto.iconName }),
+          ...(dto.iconBgColor !== undefined && { iconBgColor: dto.iconBgColor }),
         },
       });
 

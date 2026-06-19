@@ -10,6 +10,9 @@ export interface CreateCategoryPayload {
   sortOrder?: number
   departmentId?: string | null
   bookingMode?: "DIRECT" | "SERVICES"
+  iconName?: string | null
+  iconBgColor?: string | null
+  imageUrl?: string | null
 }
 
 export interface UpdateCategoryPayload {
@@ -19,6 +22,9 @@ export interface UpdateCategoryPayload {
   isActive?: boolean
   departmentId?: string | null
   bookingMode?: "DIRECT" | "SERVICES"
+  iconName?: string | null
+  iconBgColor?: string | null
+  imageUrl?: string | null
 }
 
 /* ─── Service DTOs ─── */

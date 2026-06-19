@@ -81,6 +81,7 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.amazonaws.com' },
       { protocol: 'https', hostname: 's3.*.amazonaws.com' },
       { protocol: 'http', hostname: 'localhost' },
+      { protocol: 'https', hostname: '*.sslip.io' },
       { protocol: 'https', hostname: 'fonts.gstatic.com' },
       { protocol: 'https', hostname: 'fonts.googleapis.com' },
     ],

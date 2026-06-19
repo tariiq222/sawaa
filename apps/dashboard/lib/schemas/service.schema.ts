@@ -20,6 +20,9 @@ export const createCategorySchema = z.object({
     .optional()
     .transform((v) => (v ? v : undefined)),
   bookingMode: z.enum(["DIRECT", "SERVICES"]).default("DIRECT"),
+  iconName: z.string().nullable().optional(),
+  iconBgColor: z.string().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
 })
 
 export type CreateCategoryFormData = z.infer<typeof createCategorySchema>
@@ -35,6 +38,9 @@ export const editCategorySchema = z.object({
     .union([z.string().uuid(), z.literal(""), z.null()])
     .optional(),
   bookingMode: z.enum(["DIRECT", "SERVICES"]).optional(),
+  iconName: z.string().nullable().optional(),
+  iconBgColor: z.string().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
 })
 
 export type EditCategoryFormData = z.infer<typeof editCategorySchema>

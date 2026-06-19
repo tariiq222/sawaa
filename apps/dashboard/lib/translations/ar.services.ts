@@ -185,6 +185,8 @@ export const arServices: Record<string, string> = {
   "services.categories.services.addService": "إضافة خدمة",
   "services.categories.services.empty": "لا توجد خدمات بعد",
   "services.categories.services.emptyDesc": "أضف أول خدمة لهذه العيادة.",
+  "services.categories.avatar.label": "الصورة والأيقونة",
+  "services.categories.avatar.hint": "اختر أيقونة أو ارفع صورة للعيادة",
   "services.categories.employees.notReady.title": "اضبط الإعدادات والأسعار أولاً",
   "services.categories.employees.notReady.desc": "انتقل إلى تبويب «الإعدادات والأسعار» لإعداد العيادة قبل إضافة الموظفين.",
   "services.formError": "تحقق من البيانات المدخلة",

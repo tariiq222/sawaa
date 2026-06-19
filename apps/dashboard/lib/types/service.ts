@@ -15,6 +15,9 @@ export interface ServiceCategory {
   departmentId: string | null
   bookingMode?: "DIRECT" | "SERVICES"
   department?: { id: string; nameEn: string | null; nameAr: string } | null
+  iconName?: string | null
+  iconBgColor?: string | null
+  imageUrl?: string | null
   createdAt: string
   _count?: { services: number }
 }

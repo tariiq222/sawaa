@@ -76,8 +76,9 @@ export async function SawaaHomePage() {
           nameEn: c.nameEn,
           descriptionAr: null,
           descriptionEn: null,
-          icon: null,
-          image: null,
+          icon: c.iconName ?? null,
+          image: c.imageUrl ?? null,
+          iconBgColor: c.iconBgColor ?? null,
         }))
     : [];
 

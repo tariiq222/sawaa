@@ -185,6 +185,8 @@ export const enServices: Record<string, string> = {
   "services.categories.services.addService": "Add Service",
   "services.categories.services.empty": "No services yet",
   "services.categories.services.emptyDesc": "Add the first service to this clinic.",
+  "services.categories.avatar.label": "Avatar & Icon",
+  "services.categories.avatar.hint": "Choose an icon or upload an image for the clinic",
   "services.categories.employees.notReady.title": "Set up pricing first",
   "services.categories.employees.notReady.desc": "Go to the «Settings & Pricing» tab to configure the clinic before adding employees.",
   "services.formError": "Please check the form fields",

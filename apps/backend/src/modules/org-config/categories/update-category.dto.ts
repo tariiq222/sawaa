@@ -24,4 +24,13 @@ export class UpdateCategoryDto {
     example: CategoryBookingMode.SERVICES,
   })
   @IsOptional() @IsEnum(CategoryBookingMode) bookingMode?: CategoryBookingMode;
+
+  @ApiPropertyOptional({ description: 'Category image URL', example: 'https://example.com/logo.png' })
+  @IsOptional() @IsString() imageUrl?: string;
+
+  @ApiPropertyOptional({ example: 'scissors-01' })
+  @IsOptional() @IsString() @MaxLength(50) iconName?: string;
+
+  @ApiPropertyOptional({ example: '#F0F4FF' })
+  @IsOptional() @IsString() @MaxLength(20) iconBgColor?: string;
 }

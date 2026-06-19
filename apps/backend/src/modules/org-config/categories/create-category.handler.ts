@@ -25,6 +25,9 @@ export class CreateCategoryHandler {
           departmentId: dto.departmentId ?? null,
           sortOrder: dto.sortOrder ?? 0,
           bookingMode: dto.bookingMode ?? 'SERVICES',
+          imageUrl: dto.imageUrl ?? null,
+          iconName: dto.iconName ?? null,
+          iconBgColor: dto.iconBgColor ?? null,
         },
       });
 

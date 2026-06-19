@@ -44,6 +44,7 @@ interface ClinicEntry {
   descriptionAr: string | null;
   descriptionEn: string | null;
   icon: string | null;
+  iconBgColor: string | null;
   therapistCount: number;
   serviceCount: number;
 }
@@ -74,7 +75,8 @@ export async function SawaaClinicsPage() {
             nameEn: c.nameEn,
             descriptionAr: null,
             descriptionEn: null,
-            icon: null,
+            icon: c.iconName ?? null,
+            iconBgColor: c.iconBgColor ?? null,
             therapistCount,
             serviceCount: categoryServiceIds.size,
           };
@@ -321,14 +323,17 @@ function ClinicsGrid({ clinics, locale, t }: GridProps) {
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
               style={{
-                background:
-                  'linear-gradient(135deg, var(--sw-primary-50) 0%, color-mix(in srgb, var(--primary) 18%, transparent) 100%)',
-                boxShadow: '0 0 0 1px color-mix(in srgb, var(--primary) 14%, transparent)',
+                background: c.iconBgColor
+                  ? `${c.iconBgColor}22`
+                  : 'linear-gradient(135deg, var(--sw-primary-50) 0%, color-mix(in srgb, var(--primary) 18%, transparent) 100%)',
+                boxShadow: c.iconBgColor
+                  ? `0 0 0 1px ${c.iconBgColor}33`
+                  : '0 0 0 1px color-mix(in srgb, var(--primary) 14%, transparent)',
               }}
             >
               <Icon
                 className="w-7 h-7"
-                style={{ color: 'var(--sw-primary-700)' }}
+                style={{ color: c.iconBgColor ?? 'var(--sw-primary-700)' }}
                 strokeWidth={1.6}
               />
             </div>

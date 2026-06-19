@@ -34,6 +34,7 @@ export interface ClinicItem {
   descriptionEn?: string | null;
   icon: string | null;
   image?: string | null;
+  iconBgColor?: string | null;
 }
 
 interface Props {
@@ -194,6 +195,8 @@ export function Clinics({ clinics, intro }: Props) {
                         boxShadow: `0 0 0 1px ${tone.ring}`,
                         background: c.image
                           ? undefined
+                          : c.iconBgColor
+                          ? `${c.iconBgColor}22`
                           : `linear-gradient(135deg, ${tone.soft} 0%, ${tone.ring} 100%)`,
                       }}
                     >
@@ -208,7 +211,7 @@ export function Clinics({ clinics, intro }: Props) {
                       ) : (
                         <Icon
                           className="w-16 h-16"
-                          style={{ color: tone.accent }}
+                          style={{ color: c.iconBgColor ?? tone.accent }}
                           strokeWidth={1.5}
                         />
                       )}

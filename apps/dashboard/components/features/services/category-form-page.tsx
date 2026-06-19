@@ -25,6 +25,7 @@ import type { ServiceCategory } from "@/lib/types/service"
 import { CategorySettingsTab } from "./category-settings-tab"
 import { CategoryServicesTab } from "./category-services-tab"
 import { CategoryEmployeesTab } from "./category-employees-tab"
+import { ServiceAvatarPicker } from "./service-avatar-picker"
 
 interface CategoryFormPageProps {
   mode: "create" | "edit"
@@ -62,7 +63,7 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
     resolver: zodResolver(
       (mode === "edit" ? editCategorySchema : createCategorySchema) as typeof editCategorySchema,
     ) as Resolver<EditCategoryFormData>,
-    defaultValues: { nameAr: "", nameEn: "", sortOrder: undefined, isActive: true, departmentId: "", bookingMode: "DIRECT" as const },
+    defaultValues: { nameAr: "", nameEn: "", sortOrder: undefined, isActive: true, departmentId: "", bookingMode: "DIRECT" as const, iconName: undefined, iconBgColor: undefined, imageUrl: undefined },
   })
   const { register, handleSubmit, control, reset, formState: { errors } } = form
   const watchedMode = form.watch("bookingMode")
@@ -77,13 +78,16 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
         isActive: category.isActive,
         departmentId: category.departmentId ?? "",
         bookingMode: category.bookingMode ?? "DIRECT",
+        iconName: category.iconName ?? undefined,
+        iconBgColor: category.iconBgColor ?? undefined,
+        imageUrl: category.imageUrl ?? undefined,
       })
     }
   }, [mode, category, reset])
 
   const buildCreatePayload = (data: EditCategoryFormData): CreateCategoryFormData => {
     const deptId = !data.departmentId || data.departmentId === "__none__" ? undefined : data.departmentId
-    return { nameAr: data.nameAr!, nameEn: data.nameEn || undefined, sortOrder: data.sortOrder, departmentId: deptId, bookingMode: data.bookingMode ?? "DIRECT" }
+    return { nameAr: data.nameAr!, nameEn: data.nameEn || undefined, sortOrder: data.sortOrder, departmentId: deptId, bookingMode: data.bookingMode ?? "DIRECT", iconName: data.iconName ?? undefined, iconBgColor: data.iconBgColor ?? undefined, imageUrl: data.imageUrl ?? undefined }
   }
 
   const saveAndGoToTab = async (target: string) => {
@@ -106,7 +110,7 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
         toast.success(t("services.categories.create.success"))
       } else {
         const deptId = !data.departmentId || data.departmentId === "__none__" ? undefined : data.departmentId
-        await updateMut.mutateAsync({ id: categoryId!, nameAr: data.nameAr, nameEn: data.nameEn || undefined, sortOrder: data.sortOrder, isActive: data.isActive, departmentId: deptId ?? null, bookingMode: data.bookingMode })
+        await updateMut.mutateAsync({ id: categoryId!, nameAr: data.nameAr, nameEn: data.nameEn || undefined, sortOrder: data.sortOrder, isActive: data.isActive, departmentId: deptId ?? null, bookingMode: data.bookingMode, iconName: data.iconName ?? undefined, iconBgColor: data.iconBgColor ?? undefined, imageUrl: data.imageUrl ?? undefined })
         toast.success(t("services.categories.edit.success"))
       }
       router.push("/categories")
@@ -185,6 +189,35 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
           <TabsContent value="info" className="mt-6 flex flex-col gap-6">
             <section className="rounded-2xl border border-border bg-surface-solid p-6 shadow-sm">
               <h2 className="mb-5 text-xs font-bold uppercase tracking-wide text-muted-foreground">{t("services.categories.page.tabs.info")}</h2>
+              {/* Avatar picker */}
+              <div className="mb-5 flex items-center gap-4">
+                <ServiceAvatarPicker
+                  iconName={form.watch("iconName")}
+                  iconBgColor={form.watch("iconBgColor")}
+                  imageUrl={form.watch("imageUrl")}
+                  serviceName={form.watch("nameAr") || form.watch("nameEn")}
+                  onIconChange={(name, color) => {
+                    form.setValue("iconName", name)
+                    form.setValue("iconBgColor", color)
+                    form.setValue("imageUrl", null)
+                  }}
+                  onImageChange={(file) => {
+                    const url = URL.createObjectURL(file)
+                    form.setValue("imageUrl", url)
+                    form.setValue("iconName", null)
+                    form.setValue("iconBgColor", null)
+                  }}
+                  onClear={() => {
+                    form.setValue("iconName", null)
+                    form.setValue("iconBgColor", null)
+                    form.setValue("imageUrl", null)
+                  }}
+                />
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-sm font-medium text-foreground">{t("services.categories.avatar.label")}</p>
+                  <p className="text-xs text-muted-foreground">{t("services.categories.avatar.hint")}</p>
+                </div>
+              </div>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
                 <Field label={t("services.categories.create.nameAr")} required error={errors.nameAr ? t(errors.nameAr.message ?? "common.required") : undefined}>
                   <Input id="nameAr" {...register("nameAr")} placeholder={t("services.categories.create.nameAr")} />
