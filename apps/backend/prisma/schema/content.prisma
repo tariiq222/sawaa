@@ -1,17 +1,8 @@
 // Content BC — website CMS content.
 //
-// Phase 1 (MVP): key-value SiteSetting for Hero/Features/Stats/CTA/SiteInfo texts.
-// Future phases will add BlogPost, FaqItem, Testimonial, SupportGroup entities.
-// SaaS-02g: SiteSetting scoped.
-
-model SiteSetting {
-  key        String   @id
-  valueText  String?
-  valueAr    String?
-  valueEn    String?
-  valueJson  Json?
-  valueMedia String?
-  updatedAt  DateTime @updatedAt
-
-  @@index([updatedAt])
-}
+// The SiteSetting model was removed in the single-tenant CMS cleanup (2026-06-20).
+// Site content is now frozen as constants in the website source — no DB-backed CMS.
+// The corresponding table is dropped via migration 20260620020000_drop_dead_site_setting.
+//
+// This file is intentionally empty of models. Future content entities (BlogPost,
+// FaqItem, Testimonial) would be added here if CMS is ever reintroduced.
