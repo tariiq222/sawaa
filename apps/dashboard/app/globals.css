@@ -123,8 +123,8 @@
 
     /* Glassmorphism — light mode uses solid white for maximum contrast */
     --glass-blur: 0px;
-    --glass-bg: #FBF8F2;
-    --glass-bg-solid: #FBF8F2;
+    --glass-bg: #FFFFFF;
+    --glass-bg-solid: #FFFFFF;
     --glass-border: #E4E7EC;
 }
 
@@ -135,22 +135,22 @@
     --primary-light: #7CD8C2;
     --primary-dark: #0E4B43;
     --primary-ultra-light: rgba(30, 158, 131, 0.10);
-    --accent: #E7DBC4;
+    --accent: #DCEAE6;
     --accent-foreground: #2B3A39;
-    --accent-ultra-light: rgba(231, 219, 196, 0.22);
+    --accent-ultra-light: rgba(30, 158, 131, 0.08);
     --brand-warm: #C75D52;
     --brand-warm-soft: #FBE7E2;
-    --background: #F3F1EA;
+    --background: #F2F5F4;
     --foreground: #2B3A39;
-    --surface: #FBF8F2;
-    --surface-solid: #FBF8F2;
-    --surface-muted: #F3EEE5;
+    --surface: #FFFFFF;
+    --surface-solid: #FFFFFF;
+    --surface-muted: #EFF4F3;
     --muted: #E6F3EF;
     --muted-foreground: #5C7872;
     /* --card is a shadcn-compat alias of --surface. Do not diverge. */
     --card: var(--surface);
     --card-foreground: #2B3A39;
-    --popover: #FBF8F2;
+    --popover: #FFFFFF;
     --popover-foreground: #2B3A39;
     --secondary: #E6F3EF;
     --secondary-foreground: #2B3A39;
@@ -185,7 +185,7 @@
     --chart-3: #C2410C;
     --chart-4: #6D28D9;
     --chart-5: #DB2777;
-    --sidebar: #F3F1EA;
+    --sidebar: rgba(255, 255, 255, 0.68);
     --sidebar-foreground: #2B3A39;
     --sidebar-primary: #1E9E83;
     --sidebar-primary-foreground: #FFFFFF;
