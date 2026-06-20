@@ -82,12 +82,11 @@ export function FilterBar({
 }: FilterBarProps) {
   const { t } = useLocale()
 
-  const hasAttributeFilters = !!search || (selects && selects.length > 0) || !!dateRange
-
   return (
     <div className={cn("rounded-2xl border border-border bg-card/60 p-3 ring-1 ring-primary/[0.04]", className)}>
-      {/* Single row: tabs + attribute filters + trailing */}
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Row 1: tabs + search + trailing | Row 2: attribute filters */}
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
         {tabs && (
           <div
             role="tablist"
@@ -118,21 +117,24 @@ export function FilterBar({
           </div>
         )}
 
-        {hasAttributeFilters && (
-          <>
-            {search && (
-              <label className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 min-w-[200px] transition-all duration-200 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/50">
-                <span className="sr-only">{search.placeholder ?? t("common.search")}</span>
-                <HugeiconsIcon icon={Search01Icon} size={14} className="shrink-0 text-muted-foreground" aria-hidden="true" />
-                <input
-                  type="search"
-                  value={search.value}
-                  onChange={(e) => search.onChange(e.target.value)}
-                  placeholder={search.placeholder}
-                  className="border-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-full"
-                />
-              </label>
-            )}
+        {search && (
+          <label className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 min-w-[200px] transition-all duration-200 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/50">
+            <span className="sr-only">{search.placeholder ?? t("common.search")}</span>
+            <HugeiconsIcon icon={Search01Icon} size={14} className="shrink-0 text-muted-foreground" aria-hidden="true" />
+            <input
+              type="search"
+              value={search.value}
+              onChange={(e) => search.onChange(e.target.value)}
+              placeholder={search.placeholder}
+              className="border-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-full"
+            />
+          </label>
+        )}
+        {trailing && <div className="flex items-center ms-auto">{trailing}</div>}
+        </div>
+
+        {((selects?.length ?? 0) > 0 || dateRange) && (
+          <div className="flex flex-wrap items-center gap-2">
             {selects?.map((filter) => (
               <Select
                 key={filter.key}
@@ -198,9 +200,8 @@ export function FilterBar({
                 {resultCount}
               </span>
             )}
-          </>
+          </div>
         )}
-        {trailing && <div className="flex items-center ms-auto">{trailing}</div>}
       </div>
     </div>
   )
