@@ -6,17 +6,12 @@ import { api } from "@/lib/api"
 import type {
   OrganizationSettings,
   UpdateOrganizationSettingsPayload,
-  PublicOrganizationSettings,
 } from "@/lib/types/organization-settings"
 
 /* ─── Queries ─── */
 
 export async function fetchOrganizationSettings(): Promise<OrganizationSettings> {
   return api.get<OrganizationSettings>("/dashboard/organization/settings")
-}
-
-export async function fetchOrganizationSettingsPublic(): Promise<PublicOrganizationSettings> {
-  return api.get<PublicOrganizationSettings>("/dashboard/organization/settings")
 }
 
 /* ─── Mutations ─── */

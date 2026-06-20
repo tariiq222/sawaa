@@ -10,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@sawaa/ui"
-import { cn } from "@/lib/utils"
 import { useBookingSettings, useBookingSettingsMutation } from "@/hooks/use-organization-settings"
 import type { RefundType } from "@/lib/api/booking-settings"
 import { SettingsTabSidebar } from "./settings-tab-sidebar"

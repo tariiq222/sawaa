@@ -157,6 +157,17 @@ export function utcTimeToRiyadhHHMM(dateISO: string, timeUtc: string): string {
   return formatInTimeZone(new Date(utcIso), BUSINESS_TZ, "HH:mm")
 }
 
+/** Convert an ISO UTC timestamp to clinic-local (Asia/Riyadh) date + time parts. */
+export function isoToClinicParts(iso: string): { date: string; time: string } {
+  if (!iso) return { date: "", time: "" }
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return { date: "", time: "" }
+  return {
+    date: formatInTimeZone(d, BUSINESS_TZ, "yyyy-MM-dd"),
+    time: formatInTimeZone(d, BUSINESS_TZ, "HH:mm"),
+  }
+}
+
 /** Convert a Date/ISO timestamp to the HH:mm input expected by formatClinicTime. */
 export function toCanonicalTime(date: Date | string): string {
   const d = new Date(date)

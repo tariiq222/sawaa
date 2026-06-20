@@ -4,7 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Globe02Icon, Store01Icon } from "@hugeicons/core-free-icons"
 import { Avatar, AvatarFallback } from "@sawaa/ui"
-import { cn, formatClinicDate, formatClinicTime } from "@/lib/utils"
+import { cn, formatClinicDate, formatClinicTime, isoToClinicParts } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"
 import type { Booking } from "@/lib/types/booking"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
@@ -147,7 +147,7 @@ export function getBookingColumns(
       id: "clinic",
       header: t("bookings.col.header.clinic"),
       cell: ({ row }) => {
-        const name = row.original.branchNameSnapshot
+        const name = row.original.categoryNameSnapshot
         if (!name) return <span className="text-muted-foreground">—</span>
         return <span className="text-sm font-medium text-foreground">{name}</span>
       },
@@ -170,6 +170,7 @@ export function getBookingColumns(
     },
     {
       id: "datetime",
+      accessorFn: (row) => new Date(`${row.date}T${row.startTime || "00:00"}`).getTime(),
       header: t("bookings.col.header.datetime"),
       cell: ({ row }) => {
         const mins = row.original.durationMinutesSnapshot
@@ -186,6 +187,23 @@ export function getBookingColumns(
                 </span>
               )}
             </div>
+          </div>
+        )
+      },
+    },
+    {
+      id: "createdAt",
+      accessorFn: (row) => new Date(row.createdAt).getTime(),
+      header: t("bookings.col.header.createdAt"),
+      cell: ({ row }) => {
+        const parts = isoToClinicParts(row.original.createdAt)
+        if (!parts.date) return <span className="text-muted-foreground">—</span>
+        return (
+          <div className="font-numeric">
+            <p className="text-sm font-medium text-foreground">
+              {formatClinicDate(parts.date, dateFormat)}
+            </p>
+            <span className="text-xs text-muted-foreground">{formatClinicTime(parts.time)}</span>
           </div>
         )
       },

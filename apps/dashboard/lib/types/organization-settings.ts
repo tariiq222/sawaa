@@ -50,11 +50,3 @@ export type UpdateOrganizationSettingsPayload = Partial<
   Omit<OrganizationSettings, "id" | "createdAt" | "updatedAt">
 >
 
-export interface PublicOrganizationSettings {
-  contactPhone: string | null
-  contactEmail: string | null
-  address: string | null
-  socialMedia: Record<string, string> | null
-  cancellationPolicyAr: string | null
-  cancellationPolicyEn: string | null
-}

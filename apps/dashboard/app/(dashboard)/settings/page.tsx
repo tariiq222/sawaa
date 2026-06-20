@@ -13,9 +13,7 @@ import { WorkingHoursTab } from "@/components/features/settings/working-hours-ta
 import { SettingsPaymentTab } from "@/components/features/settings/settings-payment-tab"
 import { SettingsIntegrationsTab } from "@/components/features/settings/settings-integrations-tab"
 import { EmailTemplatesTab } from "@/components/features/settings/email-templates-tab"
-import { LegalContentTab } from "@/components/features/settings/legal-content-tab"
 import { DiscountReasonsManager } from "@/components/features/settings/discount-reasons-manager"
-import { PaymentMethodsToggles } from "@/components/features/settings/payment-methods-toggles"
 import { PermissionGuard } from "@/components/features/permission-guard"
 
 export default function SettingsPage() {
@@ -37,7 +35,6 @@ export default function SettingsPage() {
               <TabsTrigger value="payment">{t("settings.tabs.payment")}</TabsTrigger>
               <TabsTrigger value="discount-reasons">{t("settings.tabs.discountReasons")}</TabsTrigger>
               <TabsTrigger value="integrations">{t("settings.tabs.integrations")}</TabsTrigger>
-              <TabsTrigger value="legal">{t("settings.tabs.legal")}</TabsTrigger>
               <TabsTrigger value="email-templates">{t("settings.tabs.emailTemplates")}</TabsTrigger>
             </TabsList>
           </div>
@@ -54,18 +51,14 @@ export default function SettingsPage() {
           <TabsContent value="hours" className="mt-4">
             <WorkingHoursTab t={t} />
           </TabsContent>
-          <TabsContent value="payment" className="mt-4 space-y-4">
+          <TabsContent value="payment" className="mt-4">
             <SettingsPaymentTab />
-            <PaymentMethodsToggles />
           </TabsContent>
           <TabsContent value="discount-reasons" className="mt-4">
             <DiscountReasonsManager />
           </TabsContent>
           <TabsContent value="integrations" className="mt-4">
             <SettingsIntegrationsTab />
-          </TabsContent>
-          <TabsContent value="legal" className="mt-4">
-            <LegalContentTab />
           </TabsContent>
           <TabsContent value="email-templates" className="mt-4">
             <EmailTemplatesTab />

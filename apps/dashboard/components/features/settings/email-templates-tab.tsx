@@ -8,13 +8,10 @@ import { Skeleton } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { useEmailTemplates } from "@/hooks/use-email-templates"
 import { useLocale } from "@/components/locale-provider"
-import { EmailLayoutForm } from "./email-layout-form"
 import { EmailTemplateInlineEditor } from "./email-template-inline-editor"
 import { BlockPreview } from "./email-builder/block-preview"
 import type { EmailTemplate } from "@/lib/types/email-template"
 import { SettingsTabSidebar } from "./settings-tab-sidebar"
-
-const EMAIL_LAYOUT_ID = "__email-layout__"
 
 /* ─── Template View (read-only) ─── */
 
@@ -93,10 +90,7 @@ export function EmailTemplatesTab() {
   }
 
   const list = templates ?? []
-  const isLayoutSelected = activeId === EMAIL_LAYOUT_ID
-  const selectedTemplate = isLayoutSelected
-    ? null
-    : (list.find((tmpl: EmailTemplate) => tmpl.id === activeId) ?? list[0] ?? null)
+  const selectedTemplate = list.find((tmpl: EmailTemplate) => tmpl.id === activeId) ?? list[0] ?? null
   const isEditing = selectedTemplate?.id === editingId
 
   return (
@@ -105,15 +99,14 @@ export function EmailTemplatesTab() {
         {/* Sidebar */}
         <SettingsTabSidebar
           title={t("settings.emailTemplates.title")}
-          items={[{ id: EMAIL_LAYOUT_ID, label: t("settings.emailLayout.title") }]}
+          items={[]}
           activeId={activeId ?? list[0]?.id ?? ""}
           onSelect={(id) => { setActiveId(id); setEditingId(null) }}
           width="w-56"
           footer={
             <>
-              <div className="mx-1 my-1 border-b border-border" />
               {list.map((tmpl: EmailTemplate) => {
-                const isActive = !isLayoutSelected && (activeId ?? list[0]?.id) === tmpl.id
+                const isActive = (activeId ?? list[0]?.id) === tmpl.id
                 return (
                   <div
                     key={tmpl.id}
@@ -142,9 +135,7 @@ export function EmailTemplatesTab() {
 
         {/* Content Panel */}
         <div className="flex-1 min-w-0 p-5 overflow-y-auto overflow-x-hidden bg-surface-muted/50 flex flex-col">
-          {isLayoutSelected ? (
-            <EmailLayoutForm onCancel={() => setActiveId(null)} />
-          ) : selectedTemplate ? (
+          {selectedTemplate ? (
             isEditing ? (
               <EmailTemplateInlineEditor
                 key={`edit-${selectedTemplate.id}`}

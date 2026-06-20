@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { Card, CardContent, Button, Input, Label, Skeleton, Switch } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { SettingsTabSidebar } from "./settings-tab-sidebar"
+import { PaymentMethodsToggles } from "./payment-methods-toggles"
 import { usePaymentSettings, usePaymentSettingsMutation } from "@/hooks/use-organization-settings"
 import {
   useMoyasarConfig,
@@ -248,6 +249,12 @@ export function SettingsPaymentTab() {
                         </div>
                       </CardContent>
                     </Card>
+                  </div>
+
+                  <div className="mt-1">
+                    <p className="text-sm font-medium text-foreground">{t("settings.payment.atClinicMethods")}</p>
+                    <p className="mt-0.5 mb-2 text-xs text-muted-foreground">{t("settings.payment.atClinicMethodsDesc")}</p>
+                    <PaymentMethodsToggles />
                   </div>
                 </div>
               )}

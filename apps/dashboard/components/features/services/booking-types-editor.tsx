@@ -1,12 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { toast } from "sonner"
 
-import { HugeiconsIcon } from "@hugeicons/react"
-import { PencilEdit02Icon } from "@hugeicons/core-free-icons"
-
-import { Button } from "@sawaa/ui"
 import { Separator } from "@sawaa/ui"
 import {
   useServiceBookingTypes,
@@ -98,54 +94,28 @@ interface BookingTypesEditorProps {
 export function BookingTypesEditor({ serviceId, useClinicTerminology = false }: BookingTypesEditorProps) {
   const { t, locale } = useLocale()
   const isAr = locale === "ar"
-  const [dirty, setDirty] = useState(false)
-  const [editing, setEditing] = useState(false)
   const [types, setTypes] = useState<DraftBookingType[]>(buildEmptyDrafts())
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { data: existing, isLoading } = useServiceBookingTypes(serviceId)
   const mutation = useServiceBookingTypesMutation(serviceId)
 
-  /* Sync server data into local state */
+  /* Sync server data into local state — skip while a save is in-flight */
   useEffect(() => {
-    if (!existing || dirty) return
-    const drafts = mergeDraftsFromServer(existing)
+    if (!existing || mutation.isPending) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTypes(drafts)
-    // Locked by default once something is saved; unlocked for a fresh service.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setEditing(!drafts.some((d) => d.enabled))
-  }, [existing, dirty])
+    setTypes(mergeDraftsFromServer(existing))
+  }, [existing, mutation.isPending])
 
-  const toggleType = (deliveryType: string) => {
-    setTypes((prev) =>
-      prev.map((d) =>
-        d.deliveryType === deliveryType
-          ? { ...d, enabled: !d.enabled }
-          : d,
-      ),
-    )
-    setDirty(true)
-  }
-
-  const updateType = (
-    deliveryType: string,
-    field: keyof DraftBookingType,
-    value: unknown,
-  ) => {
-    setTypes((prev) =>
-      prev.map((d) =>
-        d.deliveryType === deliveryType ? { ...d, [field]: value } : d,
-      ),
-    )
-    setDirty(true)
-  }
-
-  const handleSave = async () => {
-    const enabledTypes = types.filter((d) => d.enabled)
-    if (enabledTypes.length === 0) {
-      toast.error(t("services.bookingTypes.noTypes"))
-      return
+  /* Clear debounce timer on unmount */
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
     }
+  }, [])
+
+  const save = async (nextTypes: DraftBookingType[]) => {
+    const enabledTypes = nextTypes.filter((d) => d.enabled)
     try {
       await mutation.mutateAsync({
         types: enabledTypes.map((d) => ({
@@ -158,12 +128,32 @@ export function BookingTypesEditor({ serviceId, useClinicTerminology = false }: 
           availabilityWindows: [],
         })),
       })
-      setDirty(false)
-      setEditing(false)
-      toast.success(t("services.bookingTypes.saved"))
     } catch {
       toast.error(t("services.deliveryTypes.saveFailed"))
     }
+  }
+
+  const toggleType = (deliveryType: string) => {
+    const next = types.map((d) =>
+      d.deliveryType === deliveryType ? { ...d, enabled: !d.enabled } : d,
+    )
+    setTypes(next)
+    void save(next)
+  }
+
+  const updateType = (
+    deliveryType: string,
+    field: keyof DraftBookingType,
+    value: unknown,
+  ) => {
+    const next = types.map((d) =>
+      d.deliveryType === deliveryType ? { ...d, [field]: value } : d,
+    )
+    setTypes(next)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      void save(next)
+    }, 800)
   }
 
   return (
@@ -173,18 +163,6 @@ export function BookingTypesEditor({ serviceId, useClinicTerminology = false }: 
         <p className="text-sm font-medium text-foreground">
           {t("services.deliveryTypes.title")}
         </p>
-        {!editing && !isLoading && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setEditing(true)}
-          >
-            <HugeiconsIcon icon={PencilEdit02Icon} strokeWidth={2} className="size-4" />
-            {t("common.edit")}
-          </Button>
-        )}
       </div>
 
       {isLoading && (
@@ -205,7 +183,6 @@ export function BookingTypesEditor({ serviceId, useClinicTerminology = false }: 
             isAr={isAr}
             t={t}
             useClinicTerminology={useClinicTerminology}
-            readOnly={!editing}
             onToggle={() => toggleType(draft.deliveryType)}
             onUpdate={(field, value) =>
               updateType(draft.deliveryType, field, value)
@@ -213,20 +190,6 @@ export function BookingTypesEditor({ serviceId, useClinicTerminology = false }: 
           />
         ))}
       </div>
-
-      {editing && (
-        <Button
-          type="button"
-          size="sm"
-          className="w-full"
-          disabled={mutation.isPending}
-          onClick={handleSave}
-        >
-          {mutation.isPending
-            ? t("services.deliveryTypes.saving")
-            : t("services.deliveryTypes.save")}
-        </Button>
-      )}
     </div>
   )
 }

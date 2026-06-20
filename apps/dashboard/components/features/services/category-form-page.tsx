@@ -151,10 +151,11 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
         const deptId = !data.departmentId || data.departmentId === "__none__" ? undefined : data.departmentId
         // imageUrl in payload only when set from the server (not a pending file upload)
         const imageUrlValue = pendingAvatarFile.current ? undefined : (data.imageUrl ?? undefined)
-        await updateMut.mutateAsync({ id: categoryId!, nameAr: data.nameAr, nameEn: data.nameEn || undefined, sortOrder: data.sortOrder, isActive: data.isActive, departmentId: deptId ?? null, bookingMode: data.bookingMode, iconName: data.iconName ?? undefined, iconBgColor: data.iconBgColor ?? undefined, imageUrl: imageUrlValue })
+        const resolvedId = category?.id ?? categoryId!
+        await updateMut.mutateAsync({ id: resolvedId, nameAr: data.nameAr, nameEn: data.nameEn || undefined, sortOrder: data.sortOrder, isActive: data.isActive, departmentId: deptId ?? null, bookingMode: data.bookingMode, iconName: data.iconName ?? undefined, iconBgColor: data.iconBgColor ?? undefined, imageUrl: imageUrlValue })
 
         if (pendingAvatarFile.current) {
-          await uploadCategoryImage(categoryId!, pendingAvatarFile.current)
+          await uploadCategoryImage(resolvedId, pendingAvatarFile.current)
           pendingAvatarFile.current = null
           setLocalAvatarPreview(null)
         }

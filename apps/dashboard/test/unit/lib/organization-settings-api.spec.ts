@@ -11,7 +11,6 @@ vi.mock("@/lib/api", () => ({
 
 import {
   fetchOrganizationSettings,
-  fetchOrganizationSettingsPublic,
   updateOrganizationSettings,
   fetchBookingFlowOrder,
   updateBookingFlowOrder,
@@ -27,12 +26,6 @@ describe("organization-settings api", () => {
   it("fetchOrganizationSettings calls /dashboard/organization/settings", async () => {
     getMock.mockResolvedValueOnce({ id: "cs-1", organizationName: "Test" })
     await fetchOrganizationSettings()
-    expect(getMock).toHaveBeenCalledWith("/dashboard/organization/settings")
-  })
-
-  it("fetchOrganizationSettingsPublic calls /dashboard/organization/settings", async () => {
-    getMock.mockResolvedValueOnce({ organizationName: "Public" })
-    await fetchOrganizationSettingsPublic()
     expect(getMock).toHaveBeenCalledWith("/dashboard/organization/settings")
   })
 
