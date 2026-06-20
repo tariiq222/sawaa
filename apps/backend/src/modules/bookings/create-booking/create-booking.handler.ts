@@ -440,10 +440,11 @@ export class CreateBookingHandler {
         });
 
         let invoice: { id: string } | null = null;
-        // Do not create invoice for AWAITING_PAYMENT bookings — invoice is
-        // created when payment is confirmed (payment-completed-handler).
-        // Similarly skip for group fill and pay-at-clinic.
-        if (!dto.payAtClinic && !isGroupService && initialStatus !== 'AWAITING_PAYMENT') {
+        // Create an ISSUED invoice for all individual paid bookings immediately,
+        // including AWAITING_PAYMENT online bookings — init-client-payment requires
+        // an invoice to exist before the payment flow can start.
+        // Skip only: pay-at-clinic (no online payment), group fill (separate flow).
+        if (!dto.payAtClinic && !isGroupService) {
           const orgSettings = await tx.organizationSettings.findFirst({
             where: {},
             select: { vatRate: true },

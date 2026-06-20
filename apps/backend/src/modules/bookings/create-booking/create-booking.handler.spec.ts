@@ -1124,9 +1124,26 @@ describe('CreateBookingHandler', () => {
     );
   });
 
-  it('does not create invoice for AWAITING_PAYMENT ONLINE booking', async () => {
-    await handler.execute({ ...baseDto, source: 'ONLINE' });
-    expect(prisma.invoice.create).not.toHaveBeenCalled();
+  it('creates ISSUED invoice for AWAITING_PAYMENT ONLINE booking so init-payment can proceed', async () => {
+    // AWAITING_PAYMENT bookings need an invoice at creation time — init-client-payment
+    // throws 404 if invoiceId is null. The @@unique([bookingId]) DB constraint prevents duplicates.
+    prisma.booking.create = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: 'AWAITING_PAYMENT',
+      source: 'ONLINE',
+    });
+
+    const result = await handler.execute({ ...baseDto, source: 'ONLINE' });
+
+    expect(prisma.invoice.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          bookingId: mockBooking.id,
+          status: 'ISSUED',
+        }),
+      }),
+    );
+    expect(result.invoiceId).toBe('invoice-1');
   });
 
   it('creates ONLINE booking as CONFIRMED when payAtClinic=true (no payment needed)', async () => {
