@@ -11,14 +11,11 @@ import { SurfaceRow } from "@sawaa/ui"
 import { useServiceEmployees } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
 import { AssignEmployeesDialog } from "@/components/features/services/assign-employees-dialog"
-import { EditEmployeeServiceSheet } from "@/components/features/employees/edit-employee-service-sheet"
 import { AssignedEmployeeRow } from "@/components/features/services/assigned-employee-row"
 import { FormSection } from "@/components/features/shared/form-section"
 import { useQuery } from "@tanstack/react-query"
 import { fetchEmployees } from "@/lib/api/employees"
 import { queryKeys } from "@/lib/query-keys"
-import type { ServiceEmployee } from "@/lib/types/service"
-import type { EmployeeService } from "@/lib/types/employee"
 
 interface Props {
   serviceId?: string
@@ -29,12 +26,11 @@ interface Props {
   serviceNameEn?: string
 }
 
-export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPendingChange, serviceNameAr, serviceNameEn }: Props) {
+export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPendingChange }: Props) {
   const { t, locale } = useLocale()
   const router = useRouter()
   const isAr = locale === "ar"
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editing, setEditing] = useState<ServiceEmployee | null>(null)
 
   /* ── Edit mode: fetch assigned employees ── */
   const { data: employees, isLoading } = useServiceEmployees(isCreate ? "" : (serviceId ?? ""))
@@ -59,24 +55,6 @@ export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPe
 
   const handleRemovePending = (id: string) => {
     onPendingChange?.(pendingIds.filter((x) => x !== id))
-  }
-
-  function buildEmployeeService(item: ServiceEmployee): EmployeeService {
-    return {
-      id: item.id,
-      serviceId: serviceId ?? "",
-      bufferMinutes: item.bufferMinutes,
-      isActive: item.isActive,
-      availableTypes: item.availableTypes,
-      service: {
-        id: serviceId ?? "",
-        nameAr: serviceNameAr ?? "",
-        nameEn: serviceNameEn ?? "",
-        price: 0,
-        duration: 0,
-      },
-      serviceTypes: [],
-    }
   }
 
   /* ── Loading (edit only) ── */
@@ -212,20 +190,11 @@ export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPe
                 serviceId={serviceId ?? ""}
                 isAr={isAr}
                 t={t}
-                onEdit={() => setEditing(item)}
                 onView={() => router.push(`/employees/${item.employee.id}/edit`)}
               />
             ))}
           </div>
         )}
-
-        {/* note: useServiceEmployees list isn't force-refreshed after sheet saves — rows show no price so stale data is not visible */}
-        <EditEmployeeServiceSheet
-          employeeId={editing?.employee.id ?? ""}
-          employeeService={editing ? buildEmployeeService(editing) : null}
-          open={!!editing}
-          onOpenChange={(o) => { if (!o) setEditing(null) }}
-        />
 
         <AssignEmployeesDialog
           open={dialogOpen}

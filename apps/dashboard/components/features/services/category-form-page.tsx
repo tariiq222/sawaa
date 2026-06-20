@@ -14,7 +14,7 @@ import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { FormSection, FormField } from "@/components/features/shared/form-section"
 import {
-  Button, Skeleton, Tabs, TabsList, TabsTrigger, TabsContent,
+  Button, Skeleton, Tabs, TabsContent,
   Input, Switch, Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue, RadioGroup, RadioGroupItem, Label,
 } from "@sawaa/ui"
@@ -31,6 +31,7 @@ import { CategoryServicesTab } from "./category-services-tab"
 import { CategoryEmployeesTab } from "./category-employees-tab"
 import { ServiceAvatarPicker } from "./service-avatar-picker"
 import { CategoryWizardNav } from "./category-wizard-nav"
+import { CategoryWizardStepper } from "./category-wizard-stepper"
 
 interface CategoryFormPageProps {
   mode: "create" | "edit"
@@ -226,11 +227,18 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
             }
           }}
         >
-          <TabsList>
-            {tabs.map((tab) => (
-              <TabsTrigger key={tab} value={tab}>{t(`services.categories.page.tabs.${tab}`)}</TabsTrigger>
-            ))}
-          </TabsList>
+          <CategoryWizardStepper
+            tabs={tabs}
+            activeTab={activeTab}
+            onTabChange={(val) => {
+              if (mode === "create" && val !== "info") {
+                saveAndGoToTab(val)
+              } else {
+                setActiveTab(val)
+              }
+            }}
+            t={t}
+          />
           <TabsContent value="info" className="mt-6 flex flex-col gap-6">
             <FormSection title={t("services.categories.page.tabs.info")}>
               {/* Avatar picker */}
@@ -288,7 +296,7 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
                     )}
                   />
                 </FormField>
-                <FormField label={t("services.categories.create.sortOrder")}><Input id="sortOrder" type="number" min={0} max={999} {...register("sortOrder")} placeholder="0" /></FormField>
+                <FormField label={t("services.categories.create.sortOrder")}><Input id="sortOrder" type="number" min={0} max={999} {...register("sortOrder", { valueAsNumber: true })} placeholder="0" /></FormField>
               </div>
             </FormSection>
 
@@ -337,20 +345,20 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
 
           {effectiveMode === "SERVICES" ? (
             <TabsContent value="services" className="mt-6">
-              <CategoryServicesTab categoryId={categoryId} />
+              <CategoryServicesTab categoryId={category?.id} />
             </TabsContent>
           ) : (
             <>
               <TabsContent value="settings" className="mt-6">
                 <CategorySettingsTab
-                  categoryId={categoryId}
+                  categoryId={category?.id}
                   mode={mode}
                   categoryNameAr={category?.nameAr ?? ""}
                   bookingMode={effectiveMode}
                 />
               </TabsContent>
               <TabsContent value="employees" className="mt-6">
-                <CategoryEmployeesTab categoryId={categoryId} mode={mode} />
+                <CategoryEmployeesTab categoryId={category?.id} mode={mode} />
               </TabsContent>
             </>
           )}

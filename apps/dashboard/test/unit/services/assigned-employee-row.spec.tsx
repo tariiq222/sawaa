@@ -124,7 +124,6 @@ describe("AssignedEmployeeRow with EmployeeWorkingInfo", () => {
         serviceId="svc-1"
         isAr
         t={(k) => k}
-        onEdit={vi.fn()}
         onView={vi.fn()}
       />,
     )
@@ -145,7 +144,6 @@ describe("AssignedEmployeeRow with EmployeeWorkingInfo", () => {
         serviceId="svc-1"
         isAr
         t={(k) => k}
-        onEdit={vi.fn()}
         onView={vi.fn()}
       />,
     )

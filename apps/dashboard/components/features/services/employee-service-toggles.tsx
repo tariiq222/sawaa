@@ -14,24 +14,25 @@ interface EmployeeServiceTogglesProps {
   item: ServiceEmployee
   serviceId: string
   t: (key: string) => string
+  customPricing: boolean
+  onToggleCustomPricing: (next: boolean) => void
 }
 
 export function EmployeeServiceToggles({
   item,
   serviceId,
   t,
+  customPricing,
+  onToggleCustomPricing,
 }: EmployeeServiceTogglesProps) {
   const { employee } = item
   const minUnit = t("employees.services.minutes")
 
-  const { updateMut, customPricingMut } = useEmployeeServiceMutations(employee.id)
+  const { updateMut } = useEmployeeServiceMutations(employee.id)
 
   const [optimisticIsActive, setOptimisticIsActive] = useState<boolean | null>(
     null,
   )
-  const [optimisticHasCustomPricing, setOptimisticHasCustomPricing] = useState<
-    boolean | null
-  >(null)
 
   const clearOptimistic = () => setOptimisticIsActive(null)
 
@@ -52,8 +53,6 @@ export function EmployeeServiceToggles({
   }
 
   const displayedIsActive = optimisticIsActive ?? item.isActive
-  const displayedHasCustomPricing =
-    optimisticHasCustomPricing ?? item.hasCustomPricing
 
   return (
     <div className="rounded-lg border border-border bg-surface-muted/60 p-3">
@@ -86,33 +85,8 @@ export function EmployeeServiceToggles({
           </Label>
           <Switch
             id={`pricing-${employee.id}`}
-            checked={displayedHasCustomPricing}
-            onCheckedChange={(enabled) => {
-              setOptimisticHasCustomPricing(enabled)
-              customPricingMut.mutate(
-                {
-                  serviceId,
-                  payload: {
-                    enabled,
-                    types: enabled
-                      ? item.serviceTypes.map((st) => ({
-                          deliveryType: st.deliveryType as 'IN_PERSON' | 'ONLINE',
-                          price: st.price ?? st.basePrice,
-                          durationMins: st.durationMins ?? st.baseDurationMins,
-                        }))
-                      : [],
-                  },
-                },
-                {
-                  onSettled: () => setOptimisticHasCustomPricing(null),
-                  onSuccess: () =>
-                    toast.success(t("services.employees.customPricingSaved")),
-                  onError: () =>
-                    toast.error(t("services.employees.customPricingSaveError")),
-                },
-              )
-            }}
-            disabled={customPricingMut.isPending || item.serviceTypes.length === 0}
+            checked={customPricing}
+            onCheckedChange={onToggleCustomPricing}
             className="scale-90"
             aria-label={t("services.employees.customPricing")}
           />
@@ -131,11 +105,6 @@ export function EmployeeServiceToggles({
           />
         </div>
       </div>
-      {item.serviceTypes.length === 0 && (
-        <p className="mt-1.5 text-[10px] text-muted-foreground/70">
-          {t("services.employees.noTypesForPricing")}
-        </p>
-      )}
     </div>
   )
 }

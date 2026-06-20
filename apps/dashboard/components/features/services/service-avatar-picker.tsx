@@ -329,7 +329,7 @@ export function ServiceAvatarPicker({
         <button
           type="button"
           onClick={handleClear}
-          className="inset-b-0 absolute inset-e-0 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-white shadow-md ring-2 ring-background transition-colors hover:bg-destructive/80"
+          className="absolute top-0 inset-e-0 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-white shadow-md ring-2 ring-background transition-colors hover:bg-destructive/80"
         >
           <HugeiconsIcon icon={Cancel01Icon} className="h-3 w-3" />
         </button>
@@ -337,7 +337,7 @@ export function ServiceAvatarPicker({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inset-b-0 absolute inset-e-0 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md ring-2 ring-background transition-colors hover:bg-primary/80"
+          className="absolute top-0 inset-e-0 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md ring-2 ring-background transition-colors hover:bg-primary/80"
         >
           <HugeiconsIcon icon={Add01Icon} className="h-3 w-3" />
         </button>

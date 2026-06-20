@@ -509,6 +509,7 @@ export const enServices: Record<string, string> = {
   "services.employees.durations.typeDisabled": "This practitioner does not offer this delivery type.",
   "services.employees.durations.customPricing": "Custom pricing",
   "services.employees.durations.inheritHint": "The practitioner inherits the service's rates and durations. Enable custom pricing to set their own.",
+  "services.employees.durations.noDeliveryTypes": "Enable delivery methods and pricing in the \"Settings & Pricing\" step first before you can set a custom price for this practitioner.",
 
   /* ── Employees Tab — Working Info ── */
   "services.employees.workingInfo.title": "Working info",

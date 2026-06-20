@@ -18,7 +18,6 @@ interface Props {
   /** Persist the practitioner's opted-out delivery types (e.g. remote-only). When omitted, the per-type toggle is hidden. */
   onToggleType?: (disabledDeliveryTypes: string[]) => Promise<void>
   useCustomPricing?: boolean
-  onToggleCustomPricing?: (enabled: boolean) => Promise<void>
 }
 
 const SUPPORTED = [
@@ -61,15 +60,12 @@ export function EmployeeCustomPricingRow({
   onSave,
   onToggleType,
   useCustomPricing,
-  onToggleCustomPricing,
 }: Props) {
   const supported = SUPPORTED.filter((s) =>
     (item.availableTypes ?? []).some((a) => a.toLowerCase() === s.key),
   )
 
-  const [localCustomPricing, setLocalCustomPricing] = useState<boolean>(
-    () => useCustomPricing ?? false,
-  )
+  const localCustomPricing = useCustomPricing ?? false
 
   const [disabledTypes, setDisabledTypes] = useState<string[]>(
     () => (item.disabledDeliveryTypes ?? []).map((d) => d.toUpperCase()),
@@ -160,24 +156,6 @@ export function EmployeeCustomPricingRow({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Custom pricing toggle */}
-      <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-2">
-        <span className="text-xs font-medium text-foreground">{t("services.employees.durations.customPricing")}</span>
-        <Switch
-          size="sm"
-          checked={localCustomPricing}
-          onCheckedChange={async (v) => {
-            const prev = localCustomPricing
-            setLocalCustomPricing(v)
-            try {
-              await onToggleCustomPricing?.(v)
-            } catch {
-              setLocalCustomPricing(prev)
-            }
-          }}
-          aria-label={t("services.employees.durations.customPricing")}
-        />
-      </div>
       {!localCustomPricing ? (
         <p className="text-[11px] text-muted-foreground leading-snug px-1">
           {t("services.employees.durations.inheritHint")}
@@ -187,6 +165,11 @@ export function EmployeeCustomPricingRow({
           {hasInheritedRows && (
             <p className="text-[11px] text-muted-foreground leading-snug">
               {t("services.employees.durations.customizeHint")}
+            </p>
+          )}
+          {supported.length === 0 && (
+            <p className="text-[11px] text-muted-foreground leading-snug px-1">
+              {t("services.employees.durations.noDeliveryTypes")}
             </p>
           )}
           {supported.map((s) => {

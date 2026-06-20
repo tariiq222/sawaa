@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import {
   Sheet,
   SheetContent,
@@ -18,6 +19,7 @@ import { EmployeeAvatar } from "@/components/features/shared/employee-avatar"
 import { EmployeeServiceToggles } from "@/components/features/services/employee-service-toggles"
 import { EmployeeCustomPricingRow } from "@/components/features/services/employee-custom-pricing-row"
 import type { EmployeeService } from "@/lib/types/employee"
+import type { ServiceEmployee } from "@/lib/types/service"
 
 /* ─── Props ─── */
 
@@ -44,10 +46,6 @@ export function EditEmployeeServiceSheet({
   // Find the ServiceEmployee record for this specific EmployeeService assignment
   // (matched by EmployeeService.id which equals ServiceEmployee.id)
   const serviceEmployee = serviceEmployees?.find((se) => se.id === ps?.id)
-
-  const { durationsMut, deliveryTypesMut, pricingModeMut } = useEmployeeServiceMutations(
-    serviceEmployee?.employee.id ?? "",
-  )
 
   const isAr = locale === "ar"
 
@@ -97,51 +95,91 @@ export function EditEmployeeServiceSheet({
               <Skeleton className="h-32 w-full rounded-lg" />
             </div>
           ) : (
-            <div className="flex flex-col gap-4">
-              <EmployeeServiceToggles
-                item={serviceEmployee}
-                serviceId={serviceId}
-                t={t}
-              />
-              <EmployeeCustomPricingRow
-                item={serviceEmployee}
-                serviceId={serviceId}
-                employeeId={serviceEmployee.employee.id}
-                t={t}
-                isSaving={durationsMut.isPending}
-                onSave={async (payload) => {
-                  try {
-                    await durationsMut.mutateAsync({ serviceId, payload })
-                    toast.success(t("services.employees.durations.saved"))
-                  } catch (err) {
-                    toast.error(t("services.employees.durations.saveError"))
-                    throw err
-                  }
-                }}
-                onToggleType={async (disabledDeliveryTypes) => {
-                  try {
-                    await deliveryTypesMut.mutateAsync({ serviceId, disabledDeliveryTypes })
-                    toast.success(t("services.employees.durations.saved"))
-                  } catch (err) {
-                    toast.error(t("services.employees.durations.saveError"))
-                    throw err
-                  }
-                }}
-                useCustomPricing={serviceEmployee.useCustomPricing}
-                onToggleCustomPricing={async (useCustomPricing) => {
-                  try {
-                    await pricingModeMut.mutateAsync({ serviceId, useCustomPricing })
-                    toast.success(t("services.employees.durations.saved"))
-                  } catch (err) {
-                    toast.error(t("services.employees.durations.saveError"))
-                    throw err
-                  }
-                }}
-              />
-            </div>
+            <SheetServiceBody
+              serviceEmployee={serviceEmployee}
+              serviceId={serviceId}
+              t={t}
+            />
           )}
         </SheetBody>
       </SheetContent>
     </Sheet>
+  )
+}
+
+/* ─── Sheet body (serviceEmployee guaranteed loaded) ─── */
+
+function SheetServiceBody({
+  serviceEmployee,
+  serviceId,
+  t,
+}: {
+  serviceEmployee: ServiceEmployee
+  serviceId: string
+  t: (key: string) => string
+}) {
+  const { durationsMut, deliveryTypesMut, pricingModeMut } =
+    useEmployeeServiceMutations(serviceEmployee.employee.id)
+
+  const [customPricing, setCustomPricing] = useState<boolean>(
+    serviceEmployee.useCustomPricing ?? false,
+  )
+  const toastId = `emp-save-${serviceEmployee.employee.id}-${serviceId}`
+
+  const toggleCustomPricing = async (next: boolean) => {
+    const prev = customPricing
+    setCustomPricing(next)
+    try {
+      await pricingModeMut.mutateAsync({ serviceId, useCustomPricing: next })
+      toast.success(t("services.employees.durations.saved"), { id: toastId })
+    } catch {
+      // Turning ON can be rejected until a custom duration exists — keep the
+      // section open so the user can add one; pricing-mode persists on save.
+      if (!next) {
+        setCustomPricing(prev)
+        toast.error(t("services.employees.durations.saveError"), { id: toastId })
+      }
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <EmployeeServiceToggles
+        item={serviceEmployee}
+        serviceId={serviceId}
+        t={t}
+        customPricing={customPricing}
+        onToggleCustomPricing={toggleCustomPricing}
+      />
+      <EmployeeCustomPricingRow
+        item={serviceEmployee}
+        serviceId={serviceId}
+        employeeId={serviceEmployee.employee.id}
+        t={t}
+        isSaving={durationsMut.isPending}
+        onSave={async (payload) => {
+          try {
+            await durationsMut.mutateAsync({ serviceId, payload })
+            if (customPricing && !serviceEmployee.useCustomPricing) {
+              await pricingModeMut.mutateAsync({ serviceId, useCustomPricing: true })
+            }
+            toast.success(t("services.employees.durations.saved"), { id: toastId })
+          } catch (err) {
+            toast.error(t("services.employees.durations.saveError"), { id: toastId })
+            throw err
+          }
+        }}
+        onToggleType={async (disabledDeliveryTypes) => {
+          try {
+            await deliveryTypesMut.mutateAsync({ serviceId, disabledDeliveryTypes })
+            toast.success(t("services.employees.durations.saved"), { id: toastId })
+          } catch (err) {
+            toast.error(t("services.employees.durations.saveError"), { id: toastId })
+            throw err
+          }
+        }}
+        useCustomPricing={customPricing}
+      />
+    </div>
   )
 }

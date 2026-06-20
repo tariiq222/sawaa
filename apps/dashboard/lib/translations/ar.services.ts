@@ -509,6 +509,7 @@ export const arServices: Record<string, string> = {
   "services.employees.durations.typeDisabled": "هذا الممارس لا يقدّم هذا النوع من الحضور.",
   "services.employees.durations.customPricing": "سعر مخصص",
   "services.employees.durations.inheritHint": "الممارس يرث أسعار ومدد الخدمة. فعّل السعر المخصص لتحديد أسعار خاصة به.",
+  "services.employees.durations.noDeliveryTypes": "فعّل طرق التقديم والأسعار في خطوة «الإعدادات والأسعار» أولاً حتى تقدر تخصّص سعر لهذا الممارس.",
 
   /* ── Employees Tab — Working Info ── */
   "services.employees.workingInfo.title": "بيانات العمل",
