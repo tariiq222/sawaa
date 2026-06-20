@@ -26,6 +26,7 @@ export const arGroupSessions: Record<string, string> = {
   "groupSessions.deliveryType.online": "عن بُعد",
   "groupSessions.action.cancel": "إلغاء",
   "groupSessions.create.title": "جلسة جماعية جديدة",
+  "groupSessions.create.pageDescription": "أدخل تفاصيل الجلسة الجماعية الجديدة",
   "groupSessions.create.submit": "إنشاء الجلسة",
   "groupSessions.create.submitting": "جاري الإنشاء...",
   "groupSessions.create.branchLoading": "جاري تحميل بيانات الفرع...",

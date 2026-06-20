@@ -33,17 +33,18 @@ export interface NavGroup {
   items: NavItem[]
 }
 
-export const receptionNav: NavItem[] = [
+export const operationsNav: NavItem[] = [
   { titleKey: "nav.dashboard", href: "/", icon: Home01Icon },
   { titleKey: "nav.bookings", href: "/bookings", icon: Calendar03Icon, permission: "booking:read" },
+  { titleKey: "nav.groupSessions", href: "/group-sessions", icon: UserMultiple02Icon, permission: "booking:read" },
   { titleKey: "nav.clients", href: "/clients", icon: UserMultiple02Icon, permission: "client:read" },
   { titleKey: "nav.payments", href: "/payments", icon: MoneyBag02Icon, permission: "payment:read" },
   { titleKey: "nav.invoices", href: "/invoices", icon: DocumentAttachmentIcon, permission: "payment:read" },
 ]
 
 export const practiceNav: NavItem[] = [
-  { titleKey: "nav.ratings", href: "/ratings", icon: StarIcon, permission: "employee:read" },
   { titleKey: "nav.intakeForms", href: "/intake-forms", icon: DocumentValidationIcon, permission: "service:read" },
+  { titleKey: "nav.ratings", href: "/ratings", icon: StarIcon, permission: "employee:read" },
 ]
 
 export const catalogNav: NavItem[] = [
@@ -52,7 +53,6 @@ export const catalogNav: NavItem[] = [
   { titleKey: "nav.categories", href: "/categories", icon: Layers01Icon, permission: "category:read" },
   { titleKey: "nav.departments", href: "/departments", icon: Building06Icon, permission: "department:read" },
   { titleKey: "nav.employees", href: "/employees", icon: Stethoscope02Icon, permission: "employee:read" },
-  { titleKey: "nav.groupSessions", href: "/group-sessions", icon: UserMultiple02Icon, permission: "booking:read" },
 ]
 
 export const managementNav: NavItem[] = [
@@ -62,17 +62,21 @@ export const managementNav: NavItem[] = [
   { titleKey: "nav.activityLog", href: "/activity-log", icon: Activity01Icon, permission: "setting:read" },
 ]
 
-export const setupNav: NavItem[] = [
-  { titleKey: "nav.chatbot", href: "/chatbot", icon: AiChat02Icon, permission: "setting:read" },
+export const communicationNav: NavItem[] = [
   { titleKey: "nav.notifications", href: "/notifications", icon: Notification03Icon, permission: "setting:read" },
-  { titleKey: "nav.settings", href: "/settings", icon: Settings02Icon, permission: "setting:read" },
   { titleKey: "nav.contactMessages", href: "/contact-messages", icon: InboxIcon, permission: "setting:read" },
+  { titleKey: "nav.chatbot", href: "/chatbot", icon: AiChat02Icon, permission: "setting:read" },
+]
+
+export const systemNav: NavItem[] = [
+  { titleKey: "nav.settings", href: "/settings", icon: Settings02Icon, permission: "setting:read" },
 ]
 
 export const navGroups: NavGroup[] = [
-  { labelKey: "nav.reception", items: receptionNav },
+  { labelKey: "nav.operations", items: operationsNav },
   { labelKey: "nav.practice", items: practiceNav },
   { labelKey: "nav.catalog", items: catalogNav },
   { labelKey: "nav.management", items: managementNav },
-  { labelKey: "nav.setup", items: setupNav },
+  { labelKey: "nav.communication", items: communicationNav },
+  { labelKey: "nav.system", items: systemNav },
 ]

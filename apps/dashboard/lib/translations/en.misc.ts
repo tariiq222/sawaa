@@ -386,6 +386,8 @@ export const enMisc: Record<string, string> = {
   "ratings.totalRatings": "Total Ratings",
   "ratings.empty": "No reviews yet",
   "ratings.anonymous": "Anonymous",
+  "ratings.public": "Visible to clients",
+  "ratings.private": "Hidden",
   "ratings.previous": "Previous",
   "ratings.next": "Next",
   "ratings.title": "Ratings & Reviews",

@@ -63,6 +63,7 @@ export const arDepartments: Record<string, string> = {
   "departments.edit.cancel": "إلغاء",
   "departments.edit.submit": "حفظ التغييرات",
   "departments.edit.submitting": "جاري الحفظ...",
+  "departments.edit.notFound": "القسم غير موجود",
 
   // Delete
   "departments.delete.title": "حذف القسم",

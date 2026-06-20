@@ -26,6 +26,7 @@ export const enGroupSessions: Record<string, string> = {
   "groupSessions.deliveryType.online": "Online",
   "groupSessions.action.cancel": "Cancel",
   "groupSessions.create.title": "New Group Session",
+  "groupSessions.create.pageDescription": "Enter details for the new group session",
   "groupSessions.create.submit": "Create Session",
   "groupSessions.create.submitting": "Creating...",
   "groupSessions.create.branchLoading": "Loading branch data...",

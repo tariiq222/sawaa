@@ -1,21 +1,23 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  receptionNav,
+  operationsNav,
   practiceNav,
   catalogNav,
   managementNav,
-  setupNav,
+  communicationNav,
+  systemNav,
   navGroups,
 } from "@/components/sidebar-config"
 
 describe("SidebarConfig — persona groups", () => {
   const allNavItems = [
-    ...receptionNav,
+    ...operationsNav,
     ...practiceNav,
     ...catalogNav,
     ...managementNav,
-    ...setupNav,
+    ...communicationNav,
+    ...systemNav,
   ]
 
   const allHrefs = allNavItems.map((item) => item.href)
@@ -25,25 +27,32 @@ describe("SidebarConfig — persona groups", () => {
     expect(duplicates).toHaveLength(0)
   })
 
-  it("navGroups has all 5 persona sections", () => {
-    expect(navGroups).toHaveLength(5)
+  it("navGroups has all 6 persona sections", () => {
+    expect(navGroups).toHaveLength(6)
     expect(navGroups.map((g) => g.labelKey)).toEqual([
-      "nav.reception",
+      "nav.operations",
       "nav.practice",
       "nav.catalog",
       "nav.management",
-      "nav.setup",
+      "nav.communication",
+      "nav.system",
     ])
   })
 
-  it("setupNav contains system items", () => {
-    expect(allHrefs).toContain("/settings")
-    expect(allHrefs).toContain("/contact-messages")
+  it("operationsNav contains front-desk items", () => {
+    expect(allHrefs).toContain("/bookings")
+    expect(allHrefs).toContain("/group-sessions")
+    expect(allHrefs).toContain("/clients")
   })
 
-  it("receptionNav contains front-desk items", () => {
-    expect(allHrefs).toContain("/bookings")
-    expect(allHrefs).toContain("/clients")
+  it("communicationNav contains messaging items", () => {
+    expect(allHrefs).toContain("/notifications")
+    expect(allHrefs).toContain("/contact-messages")
+    expect(allHrefs).toContain("/chatbot")
+  })
+
+  it("systemNav contains settings", () => {
+    expect(allHrefs).toContain("/settings")
   })
 
   it("practiceNav contains practitioner ops items", () => {

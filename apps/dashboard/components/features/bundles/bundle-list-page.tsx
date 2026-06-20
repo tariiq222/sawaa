@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Add01Icon } from "@hugeicons/core-free-icons"
 
@@ -14,8 +15,6 @@ import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 
 import { getBundleColumns } from "./bundle-columns"
-import { CreateBundleDialog } from "./create-bundle-dialog"
-import { EditBundleDialog } from "./edit-bundle-dialog"
 import { DeleteBundleDialog } from "./delete-bundle-dialog"
 
 import { useBundlesList } from "@/hooks/use-bundles"
@@ -32,14 +31,13 @@ export function BundleListPage() {
     page, setPage, resetFilters, refetch,
   } = useBundlesList()
 
-  const [createOpen, setCreateOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<ServiceBundle | null>(null)
+  const router = useRouter()
   const [deleteTarget, setDeleteTarget] = useState<ServiceBundle | null>(null)
 
   const columns = getBundleColumns(
     locale,
     t,
-    canDo("service", "update") ? (b) => setEditTarget(b) : undefined,
+    canDo("service", "update") ? (b) => router.push(`/bundles/${b.id}/edit`) : undefined,
     canDo("service", "delete") ? (b) => setDeleteTarget(b) : undefined,
   )
 
@@ -54,7 +52,7 @@ export function BundleListPage() {
         description={t("bundles.description")}
       >
         {canDo("service", "create") && (
-          <Button className="gap-2 rounded-lg px-5" onClick={() => setCreateOpen(true)}>
+          <Button className="gap-2 rounded-lg px-5" onClick={() => router.push("/bundles/create")}>
             <HugeiconsIcon icon={Add01Icon} size={16} />
             {t("bundles.addBundle")}
           </Button>
@@ -93,7 +91,7 @@ export function BundleListPage() {
           data={bundles}
           emptyTitle={hasFilters ? t("bundles.empty.searchTitle") : t("bundles.empty.title")}
           emptyDescription={hasFilters ? t("bundles.empty.searchDescription") : t("bundles.empty.description")}
-          emptyAction={hasFilters ? undefined : { label: t("bundles.addBundle"), onClick: () => setCreateOpen(true) }}
+          emptyAction={hasFilters ? undefined : { label: t("bundles.addBundle"), onClick: () => router.push("/bundles/create") }}
         />
       )}
 
@@ -107,8 +105,6 @@ export function BundleListPage() {
         </div>
       )}
 
-      <CreateBundleDialog open={createOpen} onOpenChange={setCreateOpen} />
-      <EditBundleDialog bundle={editTarget} open={!!editTarget} onOpenChange={(o) => { if (!o) setEditTarget(null) }} />
       <DeleteBundleDialog bundle={deleteTarget} open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null) }} />
     </ListPageShell>
   )

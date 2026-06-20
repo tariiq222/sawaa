@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Add01Icon } from "@hugeicons/core-free-icons"
@@ -11,8 +12,6 @@ import { DataTable } from "@/components/features/data-table"
 import { FilterBar } from "@/components/features/filter-bar"
 import { ErrorBanner } from "@/components/features/error-banner"
 import { getDepartmentColumns } from "@/components/features/departments/department-columns"
-import { CreateDepartmentDialog } from "@/components/features/departments/create-department-dialog"
-import { EditDepartmentDialog } from "@/components/features/departments/edit-department-dialog"
 import { DeleteDepartmentDialog } from "@/components/features/departments/delete-department-dialog"
 import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
@@ -24,6 +23,7 @@ import type { Department } from "@/lib/types/department"
 export function DepartmentListPage() {
   const { t, locale } = useLocale()
   const { canDo } = useAuth()
+  const router = useRouter()
   const {
     departments, meta, isLoading, error,
     search, setSearch, isActive, setIsActive,
@@ -32,8 +32,6 @@ export function DepartmentListPage() {
 
   const { updateMut } = useDepartmentMutations()
 
-  const [createOpen, setCreateOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<Department | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Department | null>(null)
 
   const hasFilters = search.length > 0 || isActive !== undefined
@@ -41,7 +39,7 @@ export function DepartmentListPage() {
   const columns = getDepartmentColumns(
     locale,
     t,
-    canDo("department", "update") ? (d) => setEditTarget(d) : undefined,
+    canDo("department", "update") ? (d) => router.push(`/departments/${d.id}/edit`) : undefined,
     canDo("department", "delete") ? (d) => setDeleteTarget(d) : undefined,
     canDo("department", "update") ? (d) => updateMut.mutate({ id: d.id, isActive: !d.isActive }) : undefined,
   )
@@ -54,7 +52,7 @@ export function DepartmentListPage() {
         title={t("departments.title")}
         description={t("departments.description")}
       >
-        <Button className="gap-2 rounded-lg px-5" onClick={() => setCreateOpen(true)}>
+        <Button className="gap-2 rounded-lg px-5" onClick={() => router.push("/departments/create")}>
           <HugeiconsIcon icon={Add01Icon} size={16} />
           {t("departments.addDepartment")}
         </Button>
@@ -97,7 +95,7 @@ export function DepartmentListPage() {
           emptyAction={
             hasFilters
               ? { label: t("departments.filters.reset"), onClick: resetFilters }
-              : { label: t("departments.addDepartment"), onClick: () => setCreateOpen(true) }
+              : { label: t("departments.addDepartment"), onClick: () => router.push("/departments/create") }
           }
           serverPaginated
           page={page}
@@ -108,8 +106,6 @@ export function DepartmentListPage() {
         />
       )}
 
-      <CreateDepartmentDialog open={createOpen} onOpenChange={setCreateOpen} />
-      <EditDepartmentDialog department={editTarget} open={!!editTarget} onOpenChange={(o) => { if (!o) setEditTarget(null) }} />
       <DeleteDepartmentDialog department={deleteTarget} open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null) }} />
     </ListPageShell>
   )

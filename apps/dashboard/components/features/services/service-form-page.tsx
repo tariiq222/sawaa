@@ -16,7 +16,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@sawaa/ui"
 import { BasicInfoTab } from "@/components/features/services/create/basic-info-tab"
 import { PricingTab } from "@/components/features/services/create/pricing-tab"
 import { BookingSettingsTab } from "@/components/features/services/create/booking-settings-tab"
-import { IntakeFormsTab } from "@/components/features/services/intake-forms-tab"
 import { ServiceEmployeesTab } from "@/components/features/services/service-employees-tab"
 import {
   createServiceSchema,
@@ -284,9 +283,6 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
               <TabsTrigger value="pricing" className="text-xs sm:text-sm">{t("services.create.tabs.pricing")}</TabsTrigger>
               <TabsTrigger value="booking" className="text-xs sm:text-sm">{t("services.create.tabs.booking")}</TabsTrigger>
               <TabsTrigger value="employees" className="text-xs sm:text-sm">{t("services.tabs.employees")}</TabsTrigger>
-              <TabsTrigger value="intake" className="text-xs sm:text-sm">
-                {t("services.tabs.intake")}
-              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -318,28 +314,6 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
               serviceNameAr={service?.nameAr ?? form.watch("nameAr") ?? ""}
               serviceNameEn={service?.nameEn ?? form.watch("nameEn") ?? ""}
             />
-          </TabsContent>
-
-          <TabsContent value="intake" className="pt-4">
-            {isEdit && service ? (
-              <IntakeFormsTab serviceId={service.id} />
-            ) : (
-              <div className="rounded-lg border border-border bg-surface-muted p-6 flex flex-col gap-4">
-                <p className="text-sm font-semibold text-foreground">{t("services.intake.createHint.title")}</p>
-                <p className="text-sm text-muted-foreground">
-                  {t("services.intake.createHint.desc")}{" "}
-                  <span className="text-primary font-medium">
-                    {t("services.intake.createHint.link")}
-                  </span>{" "}
-                  {t("services.intake.createHint.descSuffix")}
-                </p>
-                <div className="border-t border-border pt-3">
-                  <p className="text-xs text-muted-foreground">
-                    {t("services.intake.createHintFootnote")}
-                  </p>
-                </div>
-              </div>
-            )}
           </TabsContent>
 
         </Tabs>

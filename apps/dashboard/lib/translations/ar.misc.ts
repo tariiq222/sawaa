@@ -386,6 +386,8 @@ export const arMisc: Record<string, string> = {
   "ratings.totalRatings": "إجمالي التقييمات",
   "ratings.empty": "لا توجد تقييمات بعد",
   "ratings.anonymous": "مستفيد مجهول",
+  "ratings.public": "ظاهر للعملاء",
+  "ratings.private": "مخفي",
   "ratings.previous": "السابق",
   "ratings.next": "التالي",
   "ratings.title": "التقييمات والمراجعات",

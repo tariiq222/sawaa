@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useLocale } from "@/components/locale-provider"
 import { useGroupSessions } from "@/hooks/use-group-sessions"
 import { ListPageShell } from "@/components/features/list-page-shell"
@@ -10,13 +11,13 @@ import { FilterBar } from "@/components/features/filter-bar"
 import { DataTable } from "@/components/features/data-table"
 import { ErrorBanner } from "@/components/features/error-banner"
 import { Button, Skeleton, Switch, Label } from "@sawaa/ui"
-import { CreateGroupSessionDialog } from "./create-group-session-dialog"
 import { CancelGroupSessionDialog } from "./cancel-group-session-dialog"
 import { getGroupSessionColumns } from "./group-session-columns"
 import type { GroupSessionListItem, GroupSessionStatus } from "@/lib/types/group-session"
 
 export function GroupSessionsPageContent() {
   const { t, locale } = useLocale()
+  const router = useRouter()
   const {
     sessions,
     meta,
@@ -29,7 +30,6 @@ export function GroupSessionsPageContent() {
     hasFilters,
   } = useGroupSessions()
 
-  const [createOpen, setCreateOpen] = useState(false)
   const [cancelSession, setCancelSession] = useState<GroupSessionListItem | null>(null)
 
   const statusOptions = [
@@ -54,7 +54,7 @@ export function GroupSessionsPageContent() {
         title={t("groupSessions.title")}
         description={t("groupSessions.description")}
       >
-        <Button onClick={() => setCreateOpen(true)}>
+        <Button onClick={() => router.push("/group-sessions/create")}>
           {t("groupSessions.newSession")}
         </Button>
       </PageHeader>
@@ -108,8 +108,6 @@ export function GroupSessionsPageContent() {
           onPageChange={setPage}
         />
       )}
-
-      <CreateGroupSessionDialog open={createOpen} onOpenChange={setCreateOpen} />
 
       {cancelSession && (
         <CancelGroupSessionDialog

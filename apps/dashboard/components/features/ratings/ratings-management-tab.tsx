@@ -61,10 +61,10 @@ export function RatingsManagementTab() {
       </div>
 
       {/* Rating Cards */}
-      <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {ratings.map((r) => (
-          <Card key={r.id}>
-            <CardContent className="flex items-start justify-between p-4">
+          <Card key={r.id} className="h-full">
+            <CardContent className="flex h-full flex-col justify-between gap-3 p-4">
               <div className="flex flex-col gap-2 flex-1">
                 <div className="flex items-center gap-2">
                   <div className="flex gap-0.5">
@@ -73,6 +73,7 @@ export function RatingsManagementTab() {
                         key={`review-star-${i}`}
                         icon={StarIcon}
                         size={14}
+                        fill={i < r.stars ? "currentColor" : "none"}
                         className={
                           i < r.stars
                             ? "text-warning"
@@ -97,7 +98,7 @@ export function RatingsManagementTab() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-3 ms-4">
+              <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
                 <span className="text-xs text-muted-foreground">
                   {r.isPublic ? t("ratings.public") : t("ratings.private")}
                 </span>

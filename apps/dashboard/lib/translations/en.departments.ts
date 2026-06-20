@@ -63,6 +63,7 @@ export const enDepartments: Record<string, string> = {
   "departments.edit.cancel": "Cancel",
   "departments.edit.submit": "Save Changes",
   "departments.edit.submitting": "Saving...",
+  "departments.edit.notFound": "Department not found",
 
   // Delete
   "departments.delete.title": "Delete Department",
