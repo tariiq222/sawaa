@@ -56,9 +56,30 @@ export class GetEmployeeServiceTypesHandler {
           d.deliveryType === cfg.deliveryType &&
           (useCustomPricing ? d.employeeServiceId === link.id : !d.employeeServiceId),
       );
-      const ownedDefault = useCustomPricing
-        ? (scoped.find((d) => d.isDefault) ?? scoped[0])
-        : undefined;
+
+      // Resolve the top-level price/duration to match PriceResolverService behaviour
+      // when durationOptionId is null:
+      //   CUSTOM: first owned default (or scoped[0]) — no overrides applied.
+      //   INHERIT: first service-default (isDefault, then scoped[0]) — employee override layered on top.
+      let topLevelPrice: number;
+      let topLevelDuration: number;
+
+      if (useCustomPricing) {
+        const ownedDefault = scoped.find((d) => d.isDefault) ?? scoped[0];
+        topLevelPrice = ownedDefault ? Number(ownedDefault.price) : Number(cfg.price);
+        topLevelDuration = ownedDefault ? ownedDefault.durationMins : cfg.durationMins;
+      } else {
+        const inheritDefault = scoped.find((d) => d.isDefault) ?? scoped[0];
+        if (inheritDefault) {
+          const ov = overrideByDurationId.get(inheritDefault.id);
+          topLevelPrice = ov?.priceOverride != null ? Number(ov.priceOverride) : Number(inheritDefault.price);
+          topLevelDuration = ov?.durationOverride != null ? ov.durationOverride : inheritDefault.durationMins;
+        } else {
+          // No service-default option exists — fall back to config-level values.
+          topLevelPrice = Number(cfg.price);
+          topLevelDuration = cfg.durationMins;
+        }
+      }
 
       return {
         id: `${link.id}:${cfg.deliveryType}`,
@@ -66,8 +87,8 @@ export class GetEmployeeServiceTypesHandler {
         deliveryType: cfg.deliveryType,
         /** @deprecated deliveryType is the source of truth. */
         bookingType: cfg.deliveryType,
-        price: ownedDefault ? Number(ownedDefault.price) : Number(cfg.price),
-        duration: ownedDefault ? ownedDefault.durationMins : cfg.durationMins,
+        price: topLevelPrice,
+        duration: topLevelDuration,
         useCustomOptions: scoped.length > 0,
         isActive: cfg.isActive,
         durationOptions: scoped.map((d) => {
