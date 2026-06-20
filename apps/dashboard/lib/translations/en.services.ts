@@ -359,6 +359,7 @@ export const enServices: Record<string, string> = {
   "services.employees.priceHeader": "Price",
   "services.employees.durationHeader": "Duration",
   "services.employees.countLabel": "practitioner",
+  "services.employees.customPricingAfterSave": "Custom pricing can be set after saving the service",
 
   /* ── Assign Dialog ── */
   "services.employees.dialogTitle": "Add Employees",

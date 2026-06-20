@@ -3,16 +3,16 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { UserIcon, Add01Icon, Delete02Icon } from "@hugeicons/core-free-icons"
+import { UserIcon, Add01Icon } from "@hugeicons/core-free-icons"
 
 import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
-import { SurfaceRow } from "@sawaa/ui"
 import { useServiceEmployees } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
 import { AssignEmployeesDialog } from "@/components/features/services/assign-employees-dialog"
 import { AssignedEmployeeRow } from "@/components/features/services/assigned-employee-row"
 import { FormSection } from "@/components/features/shared/form-section"
+import { PendingEmployeeRow } from "@/components/features/services/pending-employee-row"
 import { useQuery } from "@tanstack/react-query"
 import { fetchEmployees } from "@/lib/api/employees"
 import { queryKeys } from "@/lib/query-keys"
@@ -24,9 +24,11 @@ interface Props {
   onPendingChange?: (ids: string[]) => void
   serviceNameAr?: string
   serviceNameEn?: string
+  pendingActive?: Record<string, boolean>
+  onPendingActiveChange?: (active: Record<string, boolean>) => void
 }
 
-export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPendingChange }: Props) {
+export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPendingChange, pendingActive = {}, onPendingActiveChange }: Props) {
   const { t, locale } = useLocale()
   const router = useRouter()
   const isAr = locale === "ar"
@@ -71,15 +73,17 @@ export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPe
   /* ── Create mode ── */
   if (isCreate) {
     return (
-      <div className="space-y-4">
-        {pendingEmployees.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-              <HugeiconsIcon icon={UserIcon} strokeWidth={1.5} className="size-6 text-muted-foreground" />
-            </div>
-            <p className="text-sm font-medium text-foreground">
-              {t("services.employees.emptyTitle")}
-            </p>
+      <FormSection>
+        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 mb-5">
+          <div className="flex flex-col gap-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">{t("services.tabs.employees")}</p>
+            <p className="text-xs text-muted-foreground">{t("services.employees.editHint")}</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="inline-flex items-center gap-1.5 rounded-sm border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+              <HugeiconsIcon icon={UserIcon} strokeWidth={2} className="size-3" />
+              {`${pendingEmployees.length} ${t("services.employees.countLabel")}`}
+            </span>
             <Button
               type="button"
               size="sm"
@@ -90,57 +94,43 @@ export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPe
               {t("services.employees.add")}
             </Button>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {pendingEmployees.map((p) => {
-              const fullName = `${p.user.firstName} ${p.user.lastName}`
-              const displayName = isAr && p.nameAr ? p.nameAr : fullName
-              return (
-                <SurfaceRow
+        </div>
+        <div className="space-y-3">
+          {pendingEmployees.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+              <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+                <HugeiconsIcon icon={UserIcon} strokeWidth={1.5} className="size-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium text-foreground">
+                {t("services.employees.emptyTitle")}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-stretch">
+              {pendingEmployees.map((p) => (
+                <PendingEmployeeRow
                   key={p.id}
-                  variant="default"
-                  size="md"
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-surface-muted">
-                      <div className="flex size-full items-center justify-center">
-                        <HugeiconsIcon icon={UserIcon} strokeWidth={1.5} className="size-5 text-muted-foreground" />
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-medium text-foreground">{displayName}</span>
-                      {p.specialty && (
-                        <span className="text-xs text-muted-foreground">
-                          {isAr ? (p.specialtyAr || p.specialty) : p.specialty}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0 text-muted-foreground hover:text-error"
-                    onClick={() => handleRemovePending(p.id)}
-                  >
-                    <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-4" />
-                  </Button>
-                </SurfaceRow>
-              )
-            })}
-          </div>
-        )}
+                  employee={p}
+                  isActive={pendingActive[p.id] ?? true}
+                  onActiveChange={(next) =>
+                    onPendingActiveChange?.({ ...pendingActive, [p.id]: next })
+                  }
+                  onRemove={() => handleRemovePending(p.id)}
+                />
+              ))}
+            </div>
+          )}
 
-        <AssignEmployeesDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          serviceId=""
-          excludeIds={pendingIds}
-          createMode
-          onCreateAssign={handleCreateAssign}
-        />
-      </div>
+          <AssignEmployeesDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            serviceId=""
+            excludeIds={pendingIds}
+            createMode
+            onCreateAssign={handleCreateAssign}
+          />
+        </div>
+      </FormSection>
     )
   }
 

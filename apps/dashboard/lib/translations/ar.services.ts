@@ -359,6 +359,7 @@ export const arServices: Record<string, string> = {
   "services.employees.priceHeader": "السعر",
   "services.employees.durationHeader": "المدة",
   "services.employees.countLabel": "ممارس",
+  "services.employees.customPricingAfterSave": "يُضبط السعر المخصص بعد حفظ الخدمة",
 
   /* ── Assign Dialog ── */
   "services.employees.dialogTitle": "إضافة ممارسين",

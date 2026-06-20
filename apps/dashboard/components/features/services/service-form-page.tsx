@@ -43,7 +43,7 @@ import {
   saveBookingTypesMutation,
 } from "@/components/features/services/service-form-helpers"
 import { uploadServiceImage } from "@/lib/api/services"
-import { assignService } from "@/lib/api/employees-schedule"
+import { assignService, updateEmployeeService } from "@/lib/api/employees-schedule"
 import { ServiceBreadcrumb } from "@/components/features/services/service-breadcrumb"
 import { sarToHalalas, halalasToSar } from "@/lib/money"
 
@@ -91,6 +91,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
   const [bookingTypes, setBookingTypes] = useState<DraftBookingType[]>(EMPTY_BOOKING_TYPES)
   const [bookingTypesDirty, setBookingTypesDirty] = useState(false)
   const [pendingEmployeeIds, setPendingEmployeeIds] = useState<string[]>([])
+  const [pendingActive, setPendingActive] = useState<Record<string, boolean>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const pendingAvatarFile = useRef<File | null>(null)
 
@@ -179,9 +180,12 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
         await saveBookingTypesApi(created.id, bookingTypes)
         if (pendingEmployeeIds.length > 0) {
           await Promise.all(
-            pendingEmployeeIds.map((employeeId) =>
-              assignService(employeeId, { serviceId: created.id })
-            )
+            pendingEmployeeIds.map(async (employeeId) => {
+              await assignService(employeeId, { serviceId: created.id })
+              if (pendingActive[employeeId] === false) {
+                await updateEmployeeService(employeeId, created.id, { isActive: false })
+              }
+            })
           )
         }
         toast.success(t("services.create.success"))
@@ -313,6 +317,8 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
               onPendingChange={setPendingEmployeeIds}
               serviceNameAr={service?.nameAr ?? form.watch("nameAr") ?? ""}
               serviceNameEn={service?.nameEn ?? form.watch("nameEn") ?? ""}
+              pendingActive={pendingActive}
+              onPendingActiveChange={setPendingActive}
             />
           </TabsContent>
 
