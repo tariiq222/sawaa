@@ -188,9 +188,32 @@ export class CheckAvailabilityHandler {
         where: {
           employeeId_serviceId: { employeeId: query.employeeId, serviceId: query.serviceId },
         },
-        select: { id: true, isActive: true },
+        select: { id: true, isActive: true, disabledDeliveryTypes: true, useCustomPricing: true },
       });
       if (!link || link.isActive === false) return [];
+      // The service supports this deliveryType (gated above), but this
+      // practitioner may have opted out of it (e.g. remote-only). Treat an
+      // opted-out type as "not offered" → no slots, silently.
+      if (
+        normalizedTypes.deliveryType &&
+        (link.disabledDeliveryTypes ?? []).includes(normalizedTypes.deliveryType)
+      ) {
+        return [];
+      }
+      // Custom-pricing gate: if the practitioner requires custom options and none exist
+      // for this delivery type, treat it as "not offered" → no slots.
+      if (link.useCustomPricing === true && normalizedTypes.deliveryType) {
+        const hasOwned = await this.prisma.serviceDurationOption.findFirst({
+          where: {
+            serviceId: query.serviceId,
+            deliveryType: normalizedTypes.deliveryType,
+            employeeServiceId: link.id,
+            isActive: true,
+          },
+          select: { id: true },
+        });
+        if (!hasOwned) return [];
+      }
     }
 
     const employeeBranch = await this.prisma.employeeBranch.findUnique({
@@ -338,18 +361,18 @@ export class CheckAvailabilityHandler {
     }
     if (deliveryType) {
       const scoped = await this.prisma.serviceDurationOption.findFirst({
-        where: { serviceId, deliveryType, isDefault: true, isActive: true },
+        where: { serviceId, deliveryType, isDefault: true, isActive: true, employeeServiceId: null },
         select: { durationMins: true },
       });
       if (scoped) return scoped;
     }
     const global = await this.prisma.serviceDurationOption.findFirst({
-      where: { serviceId, isDefault: true, isActive: true },
+      where: { serviceId, isDefault: true, isActive: true, employeeServiceId: null },
       select: { durationMins: true },
     });
     if (global) return global;
     const any = await this.prisma.serviceDurationOption.findFirst({
-      where: { serviceId, isActive: true },
+      where: { serviceId, isActive: true, employeeServiceId: null },
       orderBy: [{ deliveryType: 'asc' }, { sortOrder: 'asc' }],
       select: { durationMins: true },
     });

@@ -1592,6 +1592,49 @@ describe('CheckAvailabilityHandler', () => {
 
       expect(result.length).toBeGreaterThan(0);
     });
+
+    it('returns [] when the practitioner opted out of the requested deliveryType', async () => {
+      const prisma = makePrisma();
+      prisma.employeeService = {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'es-1',
+          employeeId: 'emp-1',
+          serviceId: 'svc-1',
+          isActive: true,
+          disabledDeliveryTypes: ['IN_PERSON'],
+        }),
+      };
+      const settingsHandler = makeSettingsHandler();
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: settingsHandler },
+        ],
+      }).compile();
+      handler = moduleRef.get(CheckAvailabilityHandler);
+
+      const blocked = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        serviceId: 'svc-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+        deliveryType: 'IN_PERSON' as never,
+      });
+      expect(blocked).toEqual([]);
+
+      // A type the practitioner still offers must keep producing slots.
+      const allowed = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        serviceId: 'svc-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+        deliveryType: 'ONLINE' as never,
+      });
+      expect(allowed.length).toBeGreaterThan(0);
+    });
   });
 
   describe('execute — Track B: overlap detection across all blocking statuses', () => {
@@ -1863,6 +1906,77 @@ describe('CheckAvailabilityHandler', () => {
 
       expect(result.length).toBeGreaterThan(0);
       expect(result[0].endTime.getTime() - result[0].startTime.getTime()).toBe(30 * 60_000);
+    });
+  });
+
+  describe('execute — useCustomPricing gate', () => {
+    const buildHandler = async (prisma: ReturnType<typeof makePrisma>) => {
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          CheckAvailabilityHandler,
+          { provide: PrismaService, useValue: prisma },
+          { provide: GetBookingSettingsHandler, useValue: makeSettingsHandler() },
+        ],
+      }).compile();
+      return moduleRef.get(CheckAvailabilityHandler);
+    };
+
+    it('returns [] when useCustomPricing=true and no owned duration options exist for the delivery type', async () => {
+      const prisma = makePrisma();
+      prisma.employeeService.findUnique = jest.fn().mockResolvedValue({
+        id: 'es-1',
+        isActive: true,
+        disabledDeliveryTypes: [],
+        useCustomPricing: true,
+      });
+      // findFirst for owned serviceDurationOption returns null → no owned rows
+      prisma.serviceDurationOption.findFirst = jest.fn().mockResolvedValue(null);
+      handler = await buildHandler(prisma);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        serviceId: 'svc-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+        deliveryType: 'IN_PERSON' as any,
+      });
+
+      expect(result).toEqual([]);
+      expect(prisma.serviceDurationOption.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            serviceId: 'svc-1',
+            deliveryType: 'IN_PERSON',
+            employeeServiceId: 'es-1',
+            isActive: true,
+          }),
+        }),
+      );
+    });
+
+    it('continues to produce slots when useCustomPricing=true and owned options exist', async () => {
+      const prisma = makePrisma();
+      prisma.employeeService.findUnique = jest.fn().mockResolvedValue({
+        id: 'es-1',
+        isActive: true,
+        disabledDeliveryTypes: [],
+        useCustomPricing: true,
+      });
+      // findFirst for owned serviceDurationOption returns a row → gate passes
+      prisma.serviceDurationOption.findFirst = jest.fn().mockResolvedValue({ id: 'opt-owned' });
+      handler = await buildHandler(prisma);
+
+      const result = await handler.execute({
+        employeeId: 'emp-1',
+        branchId: 'branch-1',
+        serviceId: 'svc-1',
+        date: tomorrowMidnight,
+        durationMins: 60,
+        deliveryType: 'IN_PERSON' as any,
+      });
+
+      expect(result.length).toBeGreaterThan(0);
     });
   });
 });

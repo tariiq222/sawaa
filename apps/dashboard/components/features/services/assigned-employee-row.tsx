@@ -4,6 +4,7 @@ import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowRight01Icon,
+  InformationCircleIcon,
   PencilEdit01Icon,
 } from "@hugeicons/core-free-icons"
 
@@ -12,6 +13,7 @@ import { Button } from "@sawaa/ui"
 import { Label } from "@sawaa/ui"
 import { Switch } from "@sawaa/ui"
 import { SurfaceRow } from "@sawaa/ui"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@sawaa/ui"
 import { useEmployeeServiceMutations } from "@/hooks/use-employee-mutations"
 import { EmployeeAvatar } from "@/components/features/shared/employee-avatar"
 import { toast } from "sonner"
@@ -43,7 +45,7 @@ export function AssignedEmployeeRow({
   const fullName = `${employee.user.firstName} ${employee.user.lastName}`
   const displayName = isAr && employee.nameAr ? employee.nameAr : fullName
 
-  const { updateMut, durationsMut } = useEmployeeServiceMutations(employee.id)
+  const { updateMut, durationsMut, deliveryTypesMut, pricingModeMut } = useEmployeeServiceMutations(employee.id)
   const isSaving =
     updateMut.isPending && updateMut.variables?.serviceId === serviceId
 
@@ -68,11 +70,11 @@ export function AssignedEmployeeRow({
       size="md"
       className="flex h-full flex-col gap-3"
     >
-      {/* Header: avatar + name + available types */}
-      <div className="flex items-start gap-3 min-w-0">
-        <EmployeeAvatar avatarUrl={employee.avatarUrl} name={displayName} className="size-10" />
+      {/* Header: avatar + name + active toggle */}
+      <div className="flex items-center gap-3 min-w-0">
+        <EmployeeAvatar avatarUrl={employee.avatarUrl} name={displayName} className="size-10 shrink-0" />
 
-        <div className="flex flex-col gap-0.5 min-w-0">
+        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-foreground">{displayName}</span>
             {!employee.isActive && (
@@ -85,24 +87,31 @@ export function AssignedEmployeeRow({
             <span className="text-xs text-muted-foreground">{employee.title}</span>
           )}
         </div>
-      </div>
 
-      {/* Active toggle */}
-      <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-2">
-        <Label
-          htmlFor={`active-${employee.id}`}
-          className="cursor-pointer text-xs leading-none"
-        >
-          {t("services.create.isActive")}
-        </Label>
-        <Switch
-          id={`active-${employee.id}`}
-          checked={displayedActive}
-          onCheckedChange={toggleActive}
-          disabled={isSaving}
-          size="sm"
-          aria-label={t("employees.services.inlineActiveAria")}
-        />
+        {/* Active toggle group pushed to end */}
+        <div className="ms-auto flex shrink-0 items-center gap-1.5">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex cursor-default">
+                  <HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="size-4 text-muted-foreground" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{t("services.employees.activeDesc")}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <Label htmlFor={`active-${employee.id}`} className="sr-only">
+            {t("services.create.isActive")}
+          </Label>
+          <Switch
+            id={`active-${employee.id}`}
+            checked={displayedActive}
+            onCheckedChange={toggleActive}
+            disabled={isSaving}
+            size="sm"
+            aria-label={t("employees.services.inlineActiveAria")}
+          />
+        </div>
       </div>
 
       {/* Custom price + duration per delivery type */}
@@ -112,19 +121,37 @@ export function AssignedEmployeeRow({
         employeeId={employee.id}
         t={t}
         isSaving={durationsMut.isPending && durationsMut.variables?.serviceId === serviceId}
-        onSave={(payload) =>
-          durationsMut.mutate(
-            { serviceId, payload },
-            {
-              onSuccess: () => toast.success(t("services.employees.durations.saved")),
-              onError: () => toast.error(t("services.employees.durations.saveError")),
-            },
-          )
-        }
+        onSave={async (payload) => {
+          try {
+            await durationsMut.mutateAsync({ serviceId, payload })
+            toast.success(t("services.employees.durations.saved"))
+          } catch (err) {
+            toast.error(t("services.employees.durations.saveError"))
+            throw err
+          }
+        }}
+        onToggleType={async (disabledDeliveryTypes) => {
+          try {
+            await deliveryTypesMut.mutateAsync({ serviceId, disabledDeliveryTypes })
+            toast.success(t("services.employees.durations.saved"))
+          } catch (err) {
+            toast.error(t("services.employees.durations.saveError"))
+            throw err
+          }
+        }}
+        useCustomPricing={item.useCustomPricing}
+        onToggleCustomPricing={async (useCustomPricing) => {
+          try {
+            await pricingModeMut.mutateAsync({ serviceId, useCustomPricing })
+            toast.success(t("services.employees.durations.saved"))
+          } catch (err) {
+            toast.error(t("services.employees.durations.saveError"))
+            throw err
+          }
+        }}
       />
 
-      {/* Footer actions — primary "edit" carries the in-context weight,
-          secondary "view" stays quiet and jumps to the full profile */}
+      {/* Footer actions */}
       <div className="mt-auto flex items-center gap-2 border-t border-border pt-3">
         <Button
           type="button"

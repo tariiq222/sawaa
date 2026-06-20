@@ -34,7 +34,7 @@ describe('mapEmployeeRow', () => {
       createdAt: new Date('2024-01-01'),
       updatedAt: new Date('2024-01-02'),
       branches: [{ id: 'eb1', branchId: 'b1', employeeId: 'e1' }],
-      services: [{ id: 'es1', employeeId: 'e1', serviceId: 's1', isActive: true, bufferMinutes: 0 }],
+      services: [{ id: 'es1', employeeId: 'e1', serviceId: 's1', isActive: true, bufferMinutes: 0, disabledDeliveryTypes: [], useCustomPricing: false }],
       availability: [{ id: 'ea1', employeeId: 'e1', dayOfWeek: 1, startTime: '09:00', endTime: '17:00', isActive: true, createdAt: new Date(), updatedAt: new Date() }],
     };
 

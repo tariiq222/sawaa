@@ -45,7 +45,7 @@ export function EditEmployeeServiceSheet({
   // (matched by EmployeeService.id which equals ServiceEmployee.id)
   const serviceEmployee = serviceEmployees?.find((se) => se.id === ps?.id)
 
-  const { durationsMut } = useEmployeeServiceMutations(
+  const { durationsMut, deliveryTypesMut, pricingModeMut } = useEmployeeServiceMutations(
     serviceEmployee?.employee.id ?? "",
   )
 
@@ -109,19 +109,34 @@ export function EditEmployeeServiceSheet({
                 employeeId={serviceEmployee.employee.id}
                 t={t}
                 isSaving={durationsMut.isPending}
-                onSave={(payload) =>
-                  durationsMut.mutate(
-                    { serviceId, payload },
-                    {
-                      onSuccess: () =>
-                        toast.success(t("services.employees.durations.saved")),
-                      onError: () =>
-                        toast.error(
-                          t("services.employees.durations.saveError"),
-                        ),
-                    },
-                  )
-                }
+                onSave={async (payload) => {
+                  try {
+                    await durationsMut.mutateAsync({ serviceId, payload })
+                    toast.success(t("services.employees.durations.saved"))
+                  } catch (err) {
+                    toast.error(t("services.employees.durations.saveError"))
+                    throw err
+                  }
+                }}
+                onToggleType={async (disabledDeliveryTypes) => {
+                  try {
+                    await deliveryTypesMut.mutateAsync({ serviceId, disabledDeliveryTypes })
+                    toast.success(t("services.employees.durations.saved"))
+                  } catch (err) {
+                    toast.error(t("services.employees.durations.saveError"))
+                    throw err
+                  }
+                }}
+                useCustomPricing={serviceEmployee.useCustomPricing}
+                onToggleCustomPricing={async (useCustomPricing) => {
+                  try {
+                    await pricingModeMut.mutateAsync({ serviceId, useCustomPricing })
+                    toast.success(t("services.employees.durations.saved"))
+                  } catch (err) {
+                    toast.error(t("services.employees.durations.saveError"))
+                    throw err
+                  }
+                }}
               />
             </div>
           )}

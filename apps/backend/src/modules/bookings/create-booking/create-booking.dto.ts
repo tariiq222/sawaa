@@ -39,7 +39,7 @@ export class CreateBookingDto {
   @IsDateString() scheduledAt!: string;
 
   @ApiPropertyOptional({ description: 'Specific duration option to resolve price and duration', example: '00000000-0000-0000-0000-000000000000' })
-  @IsOptional() @IsUUID() durationOptionId?: string;
+  @IsOptional() @Transform(({ value }) => (value === '' ? undefined : value)) @IsUUID() durationOptionId?: string;
 
   @ApiPropertyOptional({ description: 'Currency code (ISO 4217)', example: 'SAR' })
   @IsOptional() @IsString() currency?: string;

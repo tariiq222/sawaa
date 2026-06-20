@@ -341,6 +341,7 @@ export const enServices: Record<string, string> = {
   "services.employees.emptyDesc": "Click \"Add Employee\" to assign one to this service.",
   "services.employees.goToEmployees": "Go to Employees",
   "services.employees.employeeInactive": "Inactive employee",
+  "services.employees.activeDesc": "When on, this practitioner is bookable for this service. When off, they stay saved but cannot be booked for it.",
   "services.employees.add": "Add Employee",
   "services.employees.createHint": "Selected employees will be linked when you save the service.",
   "services.employees.editHint": "To customize pricing or duration per employee, go to the employee profile.",
@@ -472,6 +473,10 @@ export const enServices: Record<string, string> = {
   "bundles.edit.submitting": "Saving...",
   "bundles.edit.success": "Bundle updated successfully",
   "bundles.edit.error": "Failed to update bundle",
+  "bundles.edit.isHidden": "Hidden",
+  "bundles.notFound.title": "Bundle not found",
+  "bundles.notFound.desc": "Make sure the URL is correct or go back to the bundles list",
+  "bundles.notFound.back": "Back to Bundles",
   "bundles.delete.title": "Delete Bundle",
   "bundles.delete.description": "Are you sure you want to delete {name}? This action cannot be undone.",
   "bundles.delete.confirm": "Delete",
@@ -501,6 +506,9 @@ export const enServices: Record<string, string> = {
   "services.employees.durations.remove": "Remove",
   "services.employees.durations.noDurations": "No durations defined",
   "services.employees.durations.customizeHint": "Editing durations creates practitioner-specific overrides that are no longer updated when the service defaults change.",
+  "services.employees.durations.typeDisabled": "This practitioner does not offer this delivery type.",
+  "services.employees.durations.customPricing": "Custom pricing",
+  "services.employees.durations.inheritHint": "The practitioner inherits the service's rates and durations. Enable custom pricing to set their own.",
 
   /* ── Employees Tab — Working Info ── */
   "services.employees.workingInfo.title": "Working info",

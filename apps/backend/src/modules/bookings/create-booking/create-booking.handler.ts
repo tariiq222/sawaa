@@ -130,6 +130,32 @@ export class CreateBookingHandler {
       throw new BadRequestException('Employee does not provide this service');
     }
 
+    // Per-practitioner delivery-type enforcement (independent of the optional
+    // availability handler): the practitioner may opt out of a delivery type the
+    // service supports, or be in custom-pricing mode where a type with no owned
+    // duration rows is not offered. Enforce both at the create layer so a direct
+    // POST cannot book a surface the practitioner does not actually offer.
+    if (deliveryType) {
+      const empDisabled = (employeeService.disabledDeliveryTypes ?? []) as DeliveryType[];
+      if (empDisabled.includes(deliveryType)) {
+        throw new BadRequestException('Practitioner does not offer this delivery type');
+      }
+      if (employeeService.useCustomPricing === true) {
+        const owned = await this.prisma.serviceDurationOption.findFirst({
+          where: {
+            serviceId: dto.serviceId,
+            deliveryType,
+            employeeServiceId: employeeService.id,
+            isActive: true,
+          },
+          select: { id: true },
+        });
+        if (!owned) {
+          throw new BadRequestException('Practitioner does not offer this delivery type');
+        }
+      }
+    }
+
     // Resolve category and department names for snapshots
     let categoryName: string | null = null;
     let departmentName: string | null = null;

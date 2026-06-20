@@ -59,6 +59,10 @@ import { SetEmployeeCustomPricingHandler } from '../../modules/org-experience/se
 import { SetEmployeeCustomPricingDto } from '../../modules/org-experience/services/set-employee-custom-pricing/set-employee-custom-pricing.dto';
 import { SetEmployeeDurationsHandler } from '../../modules/org-experience/services/set-employee-durations/set-employee-durations.handler';
 import { SetEmployeeDurationsDto } from '../../modules/org-experience/services/set-employee-durations/set-employee-durations.dto';
+import { SetEmployeeDeliveryTypesHandler } from '../../modules/org-experience/services/set-employee-delivery-types/set-employee-delivery-types.handler';
+import { SetEmployeeDeliveryTypesDto } from '../../modules/org-experience/services/set-employee-delivery-types/set-employee-delivery-types.dto';
+import { SetEmployeePricingModeHandler } from '../../modules/org-experience/services/set-employee-pricing-mode/set-employee-pricing-mode.handler';
+import { SetEmployeePricingModeDto } from '../../modules/org-experience/services/set-employee-pricing-mode/set-employee-pricing-mode.dto';
 import { ListEmployeeExceptionsHandler } from '../../modules/people/employees/list-employee-exceptions.handler';
 import { CreateEmployeeExceptionHandler } from '../../modules/people/employees/create-employee-exception.handler';
 import { CreateEmployeeExceptionDto } from '../../modules/people/employees/create-employee-exception.dto';
@@ -156,6 +160,8 @@ export class DashboardPeopleController {
     private readonly setEmployeeServiceOptions: SetEmployeeServiceOptionsHandler,
     private readonly setEmployeeCustomPricing: SetEmployeeCustomPricingHandler,
     private readonly setEmployeeDurations: SetEmployeeDurationsHandler,
+    private readonly setEmployeeDeliveryTypes: SetEmployeeDeliveryTypesHandler,
+    private readonly setEmployeePricingMode: SetEmployeePricingModeHandler,
     private readonly listEmployeeExceptions: ListEmployeeExceptionsHandler,
     private readonly createEmployeeException: CreateEmployeeExceptionHandler,
     private readonly deleteEmployeeException: DeleteEmployeeExceptionHandler,
@@ -725,6 +731,52 @@ export class DashboardPeopleController {
     @Body() body: SetEmployeeDurationsDto,
   ) {
     return this.setEmployeeDurations.execute({ employeeId: id, serviceId, ...body });
+  }
+
+  @Put('employees/:id/services/:serviceId/delivery-types')
+  @CheckPermissions({ action: 'update', subject: 'Employee' })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Set the delivery types a practitioner opts out of for a service' })
+  @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({
+    description: 'The persisted disabled delivery types',
+    schema: {
+      type: 'object',
+      properties: {
+        disabledDeliveryTypes: {
+          type: 'array',
+          items: { type: 'string', enum: ['IN_PERSON', 'ONLINE'] },
+        },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'Employee-service assignment not found' })
+  setEmployeeDeliveryTypesEndpoint(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('serviceId', ParseUUIDPipe) serviceId: string,
+    @Body() body: SetEmployeeDeliveryTypesDto,
+  ) {
+    return this.setEmployeeDeliveryTypes.execute({ employeeId: id, serviceId, ...body });
+  }
+
+  @Put('employees/:id/services/:serviceId/pricing-mode')
+  @CheckPermissions({ action: 'update', subject: 'Employee' })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Set whether a practitioner uses custom pricing for a service' })
+  @ApiParam({ name: 'id', description: 'Employee UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiParam({ name: 'serviceId', description: 'Service UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({
+    description: 'The persisted pricing mode',
+    schema: { type: 'object', properties: { useCustomPricing: { type: 'boolean' } } },
+  })
+  @ApiNotFoundResponse({ description: 'Employee-service assignment not found' })
+  setEmployeePricingModeEndpoint(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('serviceId', ParseUUIDPipe) serviceId: string,
+    @Body() body: SetEmployeePricingModeDto,
+  ) {
+    return this.setEmployeePricingMode.execute({ employeeId: id, serviceId, ...body });
   }
 
   @Get('employees/:id/slots')

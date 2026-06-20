@@ -341,6 +341,7 @@ export const arServices: Record<string, string> = {
   "services.employees.emptyDesc": "اضغط \"إضافة ممارس\" لإسناد ممارس لهذه الخدمة.",
   "services.employees.goToEmployees": "الذهاب إلى الممارسين",
   "services.employees.employeeInactive": "الممارس غير نشط",
+  "services.employees.activeDesc": "عند التفعيل يظهر هذا الممارس قابلاً للحجز في هذه الخدمة. عند الإيقاف يبقى محفوظاً لكن لا يمكن حجزه عليها.",
   "services.employees.add": "إضافة ممارس",
   "services.employees.createHint": "سيتم ربط الممارسين المختارين عند حفظ الخدمة.",
   "services.employees.editHint": "لتخصيص السعر أو المدة لكل ممارس، انتقل إلى ملفه الشخصي.",
@@ -472,6 +473,10 @@ export const arServices: Record<string, string> = {
   "bundles.edit.submitting": "جارٍ الحفظ...",
   "bundles.edit.success": "تم تحديث الباقة بنجاح",
   "bundles.edit.error": "فشل تحديث الباقة",
+  "bundles.edit.isHidden": "مخفية",
+  "bundles.notFound.title": "الباقة غير موجودة",
+  "bundles.notFound.desc": "تأكد من أن الرابط صحيح أو ارجع لقائمة الباقات",
+  "bundles.notFound.back": "العودة للباقات",
   "bundles.delete.title": "حذف الباقة",
   "bundles.delete.description": "هل أنت متأكد من حذف باقة {name}؟ لا يمكن التراجع عن هذا الإجراء.",
   "bundles.delete.confirm": "حذف",
@@ -501,6 +506,9 @@ export const arServices: Record<string, string> = {
   "services.employees.durations.remove": "حذف",
   "services.employees.durations.noDurations": "لا توجد مدد محددة",
   "services.employees.durations.customizeHint": "تعديل المدد ينشئ إعدادات خاصة بالمعالج لن تتأثر بتغييرات الخدمة مستقبلاً.",
+  "services.employees.durations.typeDisabled": "هذا الممارس لا يقدّم هذا النوع من الحضور.",
+  "services.employees.durations.customPricing": "سعر مخصص",
+  "services.employees.durations.inheritHint": "الممارس يرث أسعار ومدد الخدمة. فعّل السعر المخصص لتحديد أسعار خاصة به.",
 
   /* ── Employees Tab — Working Info ── */
   "services.employees.workingInfo.title": "بيانات العمل",

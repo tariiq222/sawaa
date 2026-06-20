@@ -227,3 +227,25 @@ export async function setEmployeeDurations(
     payload,
   )
 }
+
+export async function setEmployeeDeliveryTypes(
+  employeeId: string,
+  serviceId: string,
+  disabledDeliveryTypes: string[],
+): Promise<{ disabledDeliveryTypes: string[] }> {
+  return api.put(
+    `/dashboard/people/employees/${employeeId}/services/${serviceId}/delivery-types`,
+    { disabledDeliveryTypes },
+  )
+}
+
+export async function setEmployeePricingMode(
+  employeeId: string,
+  serviceId: string,
+  useCustomPricing: boolean,
+): Promise<{ useCustomPricing: boolean }> {
+  return api.put(
+    `/dashboard/people/employees/${employeeId}/services/${serviceId}/pricing-mode`,
+    { useCustomPricing },
+  )
+}

@@ -178,7 +178,10 @@ export interface ServiceEmployee {
   customDuration: number | null
   bufferMinutes: number
   availableTypes: string[]
+  /** Delivery types this practitioner opts out of for the service (subset of availableTypes). */
+  disabledDeliveryTypes?: string[]
   isActive: boolean
   hasCustomPricing: boolean
+  useCustomPricing?: boolean
   effectiveDurations?: PractitionerDurationGroup[]
 }

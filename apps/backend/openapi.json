@@ -4091,6 +4091,28 @@
         ],
         "type": "object"
       },
+      "SetEmployeeDeliveryTypesDto": {
+        "properties": {
+          "disabledDeliveryTypes": {
+            "description": "Delivery types this practitioner does NOT offer for the service. Empty array means they offer every type the service supports.",
+            "example": [
+              "ONLINE"
+            ],
+            "items": {
+              "enum": [
+                "IN_PERSON",
+                "ONLINE"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "disabledDeliveryTypes"
+        ],
+        "type": "object"
+      },
       "SetEmployeeDurationsDto": {
         "properties": {
           "durations": {
@@ -4103,6 +4125,19 @@
         },
         "required": [
           "durations"
+        ],
+        "type": "object"
+      },
+      "SetEmployeePricingModeDto": {
+        "properties": {
+          "useCustomPricing": {
+            "description": "When true, only practitioner-owned duration options are offered for this service. When false (default), the practitioner inherits service-level options.",
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "useCustomPricing"
         ],
         "type": "object"
       },
@@ -23264,6 +23299,119 @@
         ]
       }
     },
+    "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/delivery-types": {
+      "put": {
+        "operationId": "DashboardPeopleController_setEmployeeDeliveryTypesEndpoint",
+        "parameters": [
+          {
+            "description": "Employee UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Service UUID",
+            "in": "path",
+            "name": "serviceId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetEmployeeDeliveryTypesDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "disabledDeliveryTypes": {
+                      "items": {
+                        "enum": [
+                          "IN_PERSON",
+                          "ONLINE"
+                        ],
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The persisted disabled delivery types"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Employee-service assignment not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Set the delivery types a practitioner opts out of for a service",
+        "tags": [
+          "Dashboard / People"
+        ]
+      }
+    },
     "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/durations": {
       "put": {
         "operationId": "DashboardPeopleController_setEmployeeDurationsEndpoint",
@@ -23447,6 +23595,112 @@
           }
         ],
         "summary": "Set employee-specific service options",
+        "tags": [
+          "Dashboard / People"
+        ]
+      }
+    },
+    "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/pricing-mode": {
+      "put": {
+        "operationId": "DashboardPeopleController_setEmployeePricingModeEndpoint",
+        "parameters": [
+          {
+            "description": "Employee UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Service UUID",
+            "in": "path",
+            "name": "serviceId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetEmployeePricingModeDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "useCustomPricing": {
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The persisted pricing mode"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Employee-service assignment not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Set whether a practitioner uses custom pricing for a service",
         "tags": [
           "Dashboard / People"
         ]
@@ -30845,6 +31099,118 @@
           }
         },
         "summary": "Get public service catalog (departments, categories, services)",
+        "tags": [
+          "Public / Catalog"
+        ]
+      }
+    },
+    "/api/v1/public/services/{serviceId}/practitioners/{employeeId}/booking-options": {
+      "get": {
+        "operationId": "PublicCatalogController_getPractitionerBookingOptionsEndpoint",
+        "parameters": [
+          {
+            "description": "Service UUID",
+            "in": "path",
+            "name": "serviceId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Employee UUID",
+            "in": "path",
+            "name": "employeeId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "disabledDeliveryTypes": {
+                      "items": {
+                        "enum": [
+                          "IN_PERSON",
+                          "ONLINE"
+                        ],
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "options": {
+                      "items": {
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "deliveryType": {
+                            "enum": [
+                              "IN_PERSON",
+                              "ONLINE"
+                            ],
+                            "type": "string"
+                          },
+                          "durationMins": {
+                            "type": "number"
+                          },
+                          "durationOptionId": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "price": {
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "useCustomPricing": {
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Booking options for this practitioner"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Employee-service assignment not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Get booking options for a specific practitioner on a service",
         "tags": [
           "Public / Catalog"
         ]

@@ -106,10 +106,14 @@ export async function getPublicAvailability(
  * token. The backend derives `clientId` from the session.
  */
 export async function createBooking(payload: AuthedBookingPayload): Promise<AuthedBookingResponse> {
+  // Config-priced (inherit) delivery types carry an empty durationOptionId from
+  // booking-options; omit it so the backend @IsUUID validation is not tripped.
+  const body = { ...payload };
+  if (!body.durationOptionId) delete body.durationOptionId;
   const json = await publicFetch<unknown>('/public/bookings', {
     method: 'POST',
     credentials: 'include',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   });
   return unwrap<AuthedBookingResponse>(json);
 }
@@ -130,3 +134,29 @@ export async function initPayment(invoiceId: string): Promise<{ paymentId: strin
 
 // Backwards-compatible aliases for existing call sites (payment.api.ts re-export).
 export { createBooking as createGuestBooking, initPayment as initGuestPayment };
+
+export interface PractitionerBookingOption {
+  deliveryType: 'IN_PERSON' | 'ONLINE';
+  durationOptionId: string;
+  durationMins: number;
+  price: number;           // halalas
+  currency: string;
+  label: string | null;
+}
+
+export interface PractitionerBookingOptions {
+  useCustomPricing: boolean;
+  disabledDeliveryTypes: Array<'IN_PERSON' | 'ONLINE'>;
+  options: PractitionerBookingOption[];
+}
+
+export async function getPractitionerBookingOptions(
+  serviceId: string,
+  employeeId: string,
+): Promise<PractitionerBookingOptions> {
+  const json = await publicFetch<unknown>(
+    `/public/services/${serviceId}/practitioners/${employeeId}/booking-options`,
+    { cache: 'no-store' },
+  );
+  return unwrap<PractitionerBookingOptions>(json);
+}

@@ -126,6 +126,8 @@ export class ListServiceEmployeesHandler {
           customDuration: null,
           bufferMinutes: l.bufferMinutes,
           availableTypes,
+          disabledDeliveryTypes: l.disabledDeliveryTypes ?? [],
+          useCustomPricing: l.useCustomPricing ?? false,
           isActive: l.isActive,
           effectiveDurations: resolveEffectiveDurations(serviceDefaults, ownedByLink.get(l.id) ?? []),
         };

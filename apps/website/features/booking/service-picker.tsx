@@ -33,6 +33,12 @@ interface ServicePickerProps {
    * VAT-inclusive with an "incl. VAT" label when > 0.
    */
   vatRate?: number;
+  /**
+   * When true, clicking a service card immediately selects it without the
+   * inline delivery/duration picker. Used in service-first flow where
+   * practitioner options replace the service-level choices.
+   */
+  skipChoicePicker?: boolean;
 }
 
 type Choice = {
@@ -52,6 +58,7 @@ export function ServicePicker({
   onClearLockedTherapist,
   initialCategoryId = null,
   vatRate = 0,
+  skipChoicePicker = false,
 }: ServicePickerProps) {
   const t = useT();
   const locale = useLocale();
@@ -271,6 +278,10 @@ export function ServicePicker({
           const stage: 'type' | 'duration' = pickerType ? 'duration' : 'type';
 
           const handleHeaderClick = () => {
+            if (skipChoicePicker) {
+              onSelect(service);
+              return;
+            }
             if (!hasOptions) {
               onSelect(
                 service,

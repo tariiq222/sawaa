@@ -20,6 +20,7 @@ export interface SummarySelection {
   /** The screen currently shown — its row hides the edit affordance. */
   activeScreen?: SummaryScreen | null;
   vatRate?: number;
+  resolvedPriceHalalas?: number | null;
   /** Jump back to a completed step to change it. Omit to hide edit affordances. */
   onEdit?: (screen: SummaryScreen) => void;
 }
@@ -74,6 +75,7 @@ function useSummaryRows(sel: SummarySelection) {
   const isAr = locale === 'ar';
   const dateLocale = isAr ? 'ar-SA' : 'en-US';
   const resolved = resolveChoice(sel.service, sel.choice);
+  const finalPrice = sel.resolvedPriceHalalas != null ? sel.resolvedPriceHalalas : resolved.price;
 
   const rows: Array<{
     screen: SummaryScreen;
@@ -141,8 +143,8 @@ function useSummaryRows(sel: SummarySelection) {
 
   const vatRate = sel.vatRate ?? 0;
   const gross =
-    resolved.price != null && resolved.price > 0
-      ? halalasToSarNumber(grossWithVat(resolved.price, vatRate))
+    finalPrice != null
+      ? halalasToSarNumber(grossWithVat(finalPrice, vatRate))
       : null;
   const totalLabel =
     gross != null

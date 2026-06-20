@@ -18,8 +18,12 @@ import {
   getPublicBranches,
   createBooking,
   initPayment,
+  getPractitionerBookingOptions,
   type PublicBranch,
+  type PractitionerBookingOptions,
+  type PractitionerBookingOption,
 } from '@/features/booking/booking.api';
+import { grossWithVat, halalasToSarNumber } from '@/lib/money';
 import { PaymentRedirect } from '@/features/payment/payment-redirect';
 import { BookingSkeleton } from '@/features/booking/booking-skeleton';
 import { SummaryRail, SummaryChips, type SummaryScreen } from '@/features/booking/summary-rail';
@@ -46,7 +50,7 @@ function todayLocalIso(): string {
  */
 type EntryPoint = 'service' | 'therapist';
 
-type WizardScreen = 'service' | 'therapist' | 'branch' | 'slot' | 'info';
+type WizardScreen = 'service' | 'therapist' | 'choice' | 'branch' | 'slot' | 'info';
 
 type UiState = {
   entryPoint: EntryPoint;
@@ -63,6 +67,11 @@ type UiState = {
   submitError: string | null;
   redirectUrl: string | null;
   bookingId: string | null;
+  practitionerOptions: PractitionerBookingOptions | null;
+  practitionerOptionsLoading: boolean;
+  showingChoiceStep: boolean;
+  /** Therapist-first only: true once the user has confirmed the therapist and advanced to service. */
+  therapistStepDone: boolean;
 };
 
 type UiAction =
@@ -77,7 +86,13 @@ type UiAction =
   | { type: 'SET_CHOICE'; choice: { durationOptionId: string; deliveryType: 'IN_PERSON' | 'ONLINE' } | null }
   | { type: 'SUBMIT_START' }
   | { type: 'SUBMIT_ERROR'; error: string }
-  | { type: 'SUBMIT_DONE'; bookingId: string; redirectUrl: string };
+  | { type: 'SUBMIT_DONE'; bookingId: string; redirectUrl: string }
+  | { type: 'SET_PRACTITIONER_OPTIONS'; opts: PractitionerBookingOptions | null }
+  | { type: 'SET_PRACTITIONER_OPTIONS_LOADING'; loading: boolean }
+  | { type: 'ENTER_CHOICE_STEP' }
+  | { type: 'EXIT_CHOICE_STEP' }
+  | { type: 'THERAPIST_STEP_DONE' }
+  | { type: 'THERAPIST_STEP_UNDONE' };
 
 const INITIAL_UI_STATE: UiState = {
   entryPoint: 'service',
@@ -91,6 +106,10 @@ const INITIAL_UI_STATE: UiState = {
   submitError: null,
   redirectUrl: null,
   bookingId: null,
+  practitionerOptions: null,
+  practitionerOptionsLoading: false,
+  showingChoiceStep: false,
+  therapistStepDone: false,
 };
 
 function uiReducer(state: UiState, action: UiAction): UiState {
@@ -98,7 +117,7 @@ function uiReducer(state: UiState, action: UiAction): UiState {
     case 'SET_ENTRY_POINT':
       return { ...state, entryPoint: action.entryPoint };
     case 'LOCK_EMPLOYEE':
-      return { ...state, lockedEmployee: action.employee };
+      return { ...state, lockedEmployee: action.employee, therapistStepDone: false };
     case 'CLEAR_LOCKED_EMPLOYEE':
       return { ...state, lockedEmployee: null };
     case 'START_BRANCH_PICK':
@@ -124,6 +143,18 @@ function uiReducer(state: UiState, action: UiAction): UiState {
         bookingId: action.bookingId,
         redirectUrl: action.redirectUrl,
       };
+    case 'SET_PRACTITIONER_OPTIONS':
+      return { ...state, practitionerOptions: action.opts };
+    case 'SET_PRACTITIONER_OPTIONS_LOADING':
+      return { ...state, practitionerOptionsLoading: action.loading };
+    case 'ENTER_CHOICE_STEP':
+      return { ...state, showingChoiceStep: true };
+    case 'EXIT_CHOICE_STEP':
+      return { ...state, showingChoiceStep: false };
+    case 'THERAPIST_STEP_DONE':
+      return { ...state, therapistStepDone: true };
+    case 'THERAPIST_STEP_UNDONE':
+      return { ...state, therapistStepDone: false };
     default:
       return state;
   }
@@ -136,9 +167,9 @@ function uiReducer(state: UiState, action: UiAction): UiState {
  */
 function buildFlow(entryPoint: EntryPoint): WizardScreen[] {
   if (entryPoint === 'therapist') {
-    return ['therapist', 'service', 'slot', 'info'];
+    return ['therapist', 'service', 'choice', 'slot', 'info'];
   }
-  return ['service', 'therapist', 'slot', 'info'];
+  return ['service', 'therapist', 'choice', 'slot', 'info'];
 }
 
 function IconButton({
@@ -225,6 +256,123 @@ function ProgressBar({ current, labels }: { current: number; labels: string[] })
   );
 }
 
+function PractitionerChoicePicker({
+  options,
+  isLoading,
+  isAr,
+  vatRate,
+  onSelect,
+  t,
+}: {
+  options: PractitionerBookingOption[];
+  isLoading: boolean;
+  isAr: boolean;
+  vatRate: number;
+  onSelect: (choice: { durationOptionId: string; deliveryType: 'IN_PERSON' | 'ONLINE' }) => void;
+  t: ReturnType<typeof useT>;
+}) {
+  const fmt = (halalas: number) =>
+    Intl.NumberFormat(isAr ? 'ar-SA' : 'en-US', {
+      style: 'decimal',
+      maximumFractionDigits: 2,
+    }).format(halalasToSarNumber(grossWithVat(halalas, vatRate)));
+
+  if (isLoading) {
+    return <BookingSkeleton count={3} />;
+  }
+
+  if (options.length === 0) {
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="text-sm" style={{ color: 'var(--sw-body)' }}>
+          {isAr ? 'لا توجد خيارات متاحة.' : 'No options available.'}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <section className="flex flex-col gap-5">
+      <header className="flex flex-col gap-1.5">
+        <h2
+          className="text-[1.625rem] sm:text-[1.75rem] font-extrabold tracking-tight leading-tight"
+          style={{ color: 'var(--sw-secondary-700)', letterSpacing: '-0.015em' }}
+        >
+          {t('booking.step.choice')}
+        </h2>
+        <p className="text-sm leading-relaxed max-w-[52ch]" style={{ color: 'var(--sw-body)' }}>
+          {isAr ? 'اختر مدة الجلسة وطريقة الحضور.' : 'Choose session duration and attendance type.'}
+        </p>
+      </header>
+      <ul className="flex flex-col gap-3" role="list">
+        {options.map((opt, i) => {
+          const labelText = opt.label
+            ? opt.label
+            : opt.deliveryType === 'ONLINE'
+              ? isAr ? 'أونلاين' : 'Online'
+              : isAr ? 'حضوري' : 'In-person';
+          return (
+            <li key={`${opt.durationOptionId}-${opt.deliveryType}-${i}`}>
+              <button
+                type="button"
+                onClick={() => onSelect({ durationOptionId: opt.durationOptionId, deliveryType: opt.deliveryType })}
+                className="w-full text-start rounded-[1.25rem] bg-white transition-all duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
+                style={{
+                  border: '1.5px solid color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)',
+                  boxShadow: 'var(--sw-shadow-xs)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--primary) 55%, transparent)';
+                  e.currentTarget.style.boxShadow = 'var(--sw-shadow-md)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)';
+                  e.currentTarget.style.boxShadow = 'var(--sw-shadow-xs)';
+                }}
+              >
+                <div className="flex items-center gap-4 p-4 sm:p-5">
+                  <div className="flex flex-col min-w-0 flex-1 gap-1">
+                    <span className="font-bold text-base leading-snug" style={{ color: 'var(--sw-secondary-700)' }}>
+                      {labelText}
+                    </span>
+                    <span className="text-[0.8125rem] font-medium" style={{ color: 'var(--sw-body)' }}>
+                      {`${opt.durationMins} ${isAr ? 'دقيقة' : 'min'}`}
+                      {opt.deliveryType === 'ONLINE'
+                        ? ` · ${isAr ? 'أونلاين' : 'Online'}`
+                        : ` · ${isAr ? 'حضوري' : 'In-person'}`}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end shrink-0 gap-0.5">
+                    <span className="flex items-baseline gap-1">
+                      <span
+                        className="font-extrabold tabular-nums leading-none text-xl sm:text-[1.375rem]"
+                        style={{ color: 'var(--sw-secondary-700)', letterSpacing: '-0.02em' }}
+                      >
+                        {fmt(opt.price)}
+                      </span>
+                      <span
+                        className="text-[0.6875rem] font-semibold"
+                        style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 50%, transparent)' }}
+                      >
+                        {t('booking.summary.currency')}
+                      </span>
+                    </span>
+                    {vatRate > 0 && (
+                      <span className="text-[0.625rem] font-medium" style={{ color: 'color-mix(in srgb, var(--sw-secondary-700) 45%, transparent)' }}>
+                        {t('booking.price.inclVat')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 function BookingWizardInner() {
   const t = useT();
   const locale = useLocale();
@@ -256,6 +404,10 @@ function BookingWizardInner() {
     submitError,
     redirectUrl,
     bookingId,
+    practitionerOptions,
+    practitionerOptionsLoading,
+    showingChoiceStep,
+    therapistStepDone,
   } = ui;
 
   const { data: employees = [], isLoading: loadingEmployees, error: employeesError } = useQuery({
@@ -412,6 +564,7 @@ function BookingWizardInner() {
   const labelOf: Record<WizardScreen, string> = {
     service: t('booking.step.service'),
     therapist: t('booking.step.therapist'),
+    choice: t('booking.step.choice'),
     branch: t('booking.step.branch'),
     slot: t('booking.step.slot'),
     info: t('booking.step.info'),
@@ -421,6 +574,10 @@ function BookingWizardInner() {
   // Which visible screen are we on right now?
   const currentScreen: WizardScreen = useMemo(() => {
     if (awaitingBranch) return 'branch';
+    if (showingChoiceStep) return 'choice';
+    // Therapist-first: the underlying machine starts at SERVICE, but the visible
+    // first screen is the therapist picker (until the user confirms a therapist).
+    if (entryPoint === 'therapist' && state.step === WizardStep.SERVICE && !therapistStepDone) return 'therapist';
     switch (state.step) {
       case WizardStep.SERVICE:
         return 'service';
@@ -434,7 +591,7 @@ function BookingWizardInner() {
       default:
         return 'info';
     }
-  }, [state.step, awaitingBranch]);
+  }, [state.step, awaitingBranch, showingChoiceStep, entryPoint, therapistStepDone]);
 
   const stepIndex = Math.max(0, flow.indexOf(currentScreen));
 
@@ -488,31 +645,55 @@ function BookingWizardInner() {
 
   // === Handlers (entry-point aware) ===
 
-  const handleServiceSelect = (
+  const handleServiceSelect = async (
     svc: Service,
     choice?: { durationOptionId: string; deliveryType: 'IN_PERSON' | 'ONLINE' },
   ) => {
     dispatch({ type: 'SELECT_SERVICE', service: svc });
     dispatchUi({ type: 'SET_CHOICE', choice: choice ?? null });
-    // If a therapist was already chosen (deep link), apply it now — the state
-    // machine accepts SELECT_EMPLOYEE only after SELECT_SERVICE, so we sequence
-    // them.
     const carriedTherapist = lockedEmployee;
     if (carriedTherapist) {
       dispatch({ type: 'SELECT_EMPLOYEE', employee: carriedTherapist });
       dispatchUi({ type: 'CLEAR_LOCKED_EMPLOYEE' });
+      dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS_LOADING', loading: true });
+      dispatchUi({ type: 'ENTER_CHOICE_STEP' });
+      try {
+        const opts = await getPractitionerBookingOptions(svc.id, carriedTherapist.id);
+        dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS', opts });
+      } catch {
+        dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS', opts: null });
+      } finally {
+        dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS_LOADING', loading: false });
+      }
     }
   };
 
-  const handleTherapistSelect = (emp: EmployeeWithUser) => {
+  const handleTherapistSelect = async (emp: EmployeeWithUser) => {
     if (entryPoint === 'therapist') {
-      // Therapist-first deep link: lock the therapist; service step comes next.
       dispatchUi({ type: 'LOCK_EMPLOYEE', employee: emp });
+      dispatchUi({ type: 'THERAPIST_STEP_DONE' });
       return;
     }
-    // Single-branch center: the branch is already auto-selected, so just
-    // finalize the therapist selection.
     dispatch({ type: 'SELECT_EMPLOYEE', employee: emp });
+    if (service) {
+      dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS_LOADING', loading: true });
+      dispatchUi({ type: 'ENTER_CHOICE_STEP' });
+      try {
+        const opts = await getPractitionerBookingOptions(service.id, emp.id);
+        dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS', opts });
+      } catch {
+        dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS', opts: null });
+      } finally {
+        dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS_LOADING', loading: false });
+      }
+    } else {
+      dispatchUi({ type: 'ENTER_CHOICE_STEP' });
+    }
+  };
+
+  const handleChoiceConfirm = (choice: { durationOptionId: string; deliveryType: 'IN_PERSON' | 'ONLINE' }) => {
+    dispatchUi({ type: 'SET_CHOICE', choice });
+    dispatchUi({ type: 'EXIT_CHOICE_STEP' });
   };
 
   const handleBranchSelect = (branch: PublicBranch) => {
@@ -657,6 +838,20 @@ function BookingWizardInner() {
       dispatchUi({ type: 'CANCEL_BRANCH_PICK' });
       return;
     }
+    if (showingChoiceStep) {
+      dispatchUi({ type: 'EXIT_CHOICE_STEP' });
+      dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS', opts: null });
+      if (service) {
+        dispatch({ type: 'SELECT_SERVICE', service });
+      }
+      return;
+    }
+    // Therapist-first: back from service → return to therapist screen
+    if (entryPoint === 'therapist' && therapistStepDone && state.step === WizardStep.SERVICE) {
+      dispatchUi({ type: 'THERAPIST_STEP_UNDONE' });
+      dispatchUi({ type: 'SET_CHOICE', choice: null });
+      return;
+    }
     switch (state.step) {
       case WizardStep.SERVICE:
         // First content step. Branch is auto-selected — pressing back exits
@@ -712,6 +907,8 @@ function BookingWizardInner() {
         break;
       case 'therapist':
         if (service) dispatch({ type: 'SELECT_SERVICE', service });
+        dispatchUi({ type: 'EXIT_CHOICE_STEP' });
+        dispatchUi({ type: 'SET_PRACTITIONER_OPTIONS', opts: null });
         break;
       case 'slot':
         if (employee) dispatch({ type: 'SELECT_EMPLOYEE', employee });
@@ -745,6 +942,13 @@ function BookingWizardInner() {
         : (currentScreen as SummaryScreen),
     vatRate,
     onEdit: jumpToScreen,
+    resolvedPriceHalalas: (() => {
+      if (!selectedChoice || !practitionerOptions) return null;
+      const opt = practitionerOptions.options.find(
+        (o) => o.durationOptionId === selectedChoice.durationOptionId && o.deliveryType === selectedChoice.deliveryType,
+      );
+      return opt?.price ?? null;
+    })(),
   };
 
   return (
@@ -891,7 +1095,7 @@ function BookingWizardInner() {
                 )}
 
                 {/* === SERVICE SCREEN === */}
-                {!nothingBookable && !awaitingBranch && state.step === WizardStep.SERVICE && (
+                {!nothingBookable && !awaitingBranch && state.step === WizardStep.SERVICE && currentScreen === 'service' && (
                   loadingData ? (
                     <BookingSkeleton count={4} />
                   ) : (
@@ -909,13 +1113,14 @@ function BookingWizardInner() {
                             : undefined
                         }
                         initialCategoryId={preselectCategoryId}
+                        skipChoicePicker={entryPoint === 'service'}
                       />
                     </div>
                   )
                 )}
 
                 {/* === THERAPIST SCREEN === */}
-                {!nothingBookable && !awaitingBranch && state.step === WizardStep.THERAPIST && (
+                {!nothingBookable && !awaitingBranch && currentScreen === 'therapist' && (
                   <div className="flex flex-col gap-5">
                     {loadingData ? (
                       <BookingSkeleton count={4} />
@@ -927,6 +1132,18 @@ function BookingWizardInner() {
                       />
                     )}
                   </div>
+                )}
+
+                {/* === CHOICE SCREEN (duration / delivery-type from practitioner options) === */}
+                {!nothingBookable && !awaitingBranch && showingChoiceStep && service && employee && (
+                  <PractitionerChoicePicker
+                    options={practitionerOptions?.options ?? []}
+                    isLoading={practitionerOptionsLoading}
+                    isAr={isAr}
+                    vatRate={vatRate}
+                    onSelect={handleChoiceConfirm}
+                    t={t}
+                  />
                 )}
 
                 {/* === SLOT SCREEN === */}
@@ -956,14 +1173,21 @@ function BookingWizardInner() {
                     vatRate={vatRate}
                     selectedPriceHalalas={(() => {
                       if (!selectedChoice) return undefined;
+                      if (practitionerOptions) {
+                        const opt = practitionerOptions.options.find(
+                          (o) => o.durationOptionId === selectedChoice.durationOptionId && o.deliveryType === selectedChoice.deliveryType,
+                        );
+                        if (opt != null) return opt.price;
+                      }
+                      // fallback: old service-level lookup for backward-compat
                       const ext = service as Service & {
                         durationOptions?: Array<{ id: string; price: number | string }>;
                         bookingConfigs?: Array<{ id: string; price: number | string }>;
                       };
-                      const opt =
+                      const svcOpt =
                         ext.durationOptions?.find((o) => o.id === selectedChoice.durationOptionId) ??
                         ext.bookingConfigs?.find((c) => c.id === selectedChoice.durationOptionId);
-                      return opt != null ? Number(opt.price) : undefined;
+                      return svcOpt != null ? Number(svcOpt.price) : undefined;
                     })()}
                     onBack={() => dispatch({ type: 'SELECT_EMPLOYEE', employee })}
                     onSubmitInfo={async () => {

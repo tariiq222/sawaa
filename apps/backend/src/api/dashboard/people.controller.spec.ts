@@ -34,6 +34,8 @@ import { UpdateEmployeeServiceHandler } from '../../modules/people/employees/upd
 import { SetEmployeeServiceOptionsHandler } from '../../modules/org-experience/services/set-employee-service-options.handler';
 import { SetEmployeeCustomPricingHandler } from '../../modules/org-experience/services/set-employee-custom-pricing/set-employee-custom-pricing.handler';
 import { SetEmployeeDurationsHandler } from '../../modules/org-experience/services/set-employee-durations/set-employee-durations.handler';
+import { SetEmployeeDeliveryTypesHandler } from '../../modules/org-experience/services/set-employee-delivery-types/set-employee-delivery-types.handler';
+import { SetEmployeePricingModeHandler } from '../../modules/org-experience/services/set-employee-pricing-mode/set-employee-pricing-mode.handler';
 import { GetEmployeeAccountHandler } from '../../modules/identity/employee-account/get-employee-account.handler';
 import { CreateEmployeeAccountHandler } from '../../modules/identity/employee-account/create-employee-account.handler';
 import { UpdateEmployeeAccountHandler } from '../../modules/identity/employee-account/update-employee-account.handler';
@@ -77,6 +79,8 @@ describe('DashboardPeopleController (e2e)', () => {
   const mockSetEmployeeServiceOptions = { execute: jest.fn() };
   const mockSetEmployeeCustomPricing = { execute: jest.fn() };
   const mockSetEmployeeDurations = { execute: jest.fn() };
+  const mockSetEmployeeDeliveryTypes = { execute: jest.fn() };
+  const mockSetEmployeePricingMode = { execute: jest.fn() };
   const mockGetEmployeeAccount = { execute: jest.fn() };
   const mockCreateEmployeeAccount = { execute: jest.fn() };
   const mockUpdateEmployeeAccount = { execute: jest.fn() };
@@ -130,6 +134,8 @@ describe('DashboardPeopleController (e2e)', () => {
         { provide: SetEmployeeServiceOptionsHandler, useValue: mockSetEmployeeServiceOptions },
         { provide: SetEmployeeCustomPricingHandler, useValue: mockSetEmployeeCustomPricing },
         { provide: SetEmployeeDurationsHandler, useValue: mockSetEmployeeDurations },
+        { provide: SetEmployeeDeliveryTypesHandler, useValue: mockSetEmployeeDeliveryTypes },
+        { provide: SetEmployeePricingModeHandler, useValue: mockSetEmployeePricingMode },
         { provide: GetEmployeeAccountHandler, useValue: mockGetEmployeeAccount },
         { provide: CreateEmployeeAccountHandler, useValue: mockCreateEmployeeAccount },
         { provide: UpdateEmployeeAccountHandler, useValue: mockUpdateEmployeeAccount },

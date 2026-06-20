@@ -18,6 +18,8 @@ import {
   updateEmployeeAccount,
   setEmployeeCustomPricing,
   setEmployeeDurations,
+  setEmployeeDeliveryTypes,
+  setEmployeePricingMode,
 } from "@/lib/api/employees"
 import type {
   EmployeeAccountRole,
@@ -203,7 +205,25 @@ export function useEmployeeServiceMutations(employeeId: string) {
     },
   })
 
-  return { assignMut, updateMut, optionsMut, removeMut, customPricingMut, durationsMut }
+  const deliveryTypesMut = useMutation({
+    mutationFn: ({ serviceId, disabledDeliveryTypes }: { serviceId: string; disabledDeliveryTypes: string[] }) =>
+      setEmployeeDeliveryTypes(employeeId, serviceId, disabledDeliveryTypes),
+    onSuccess: (_d, vars) => {
+      invalidate()
+      invalidateServiceList(vars.serviceId)
+    },
+  })
+
+  const pricingModeMut = useMutation({
+    mutationFn: ({ serviceId, useCustomPricing }: { serviceId: string; useCustomPricing: boolean }) =>
+      setEmployeePricingMode(employeeId, serviceId, useCustomPricing),
+    onSuccess: (_d, vars) => {
+      invalidate()
+      invalidateServiceList(vars.serviceId)
+    },
+  })
+
+  return { assignMut, updateMut, optionsMut, removeMut, customPricingMut, durationsMut, deliveryTypesMut, pricingModeMut }
 }
 
 /* ─── Employee Account Mutations ─── */
