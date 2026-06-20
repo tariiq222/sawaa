@@ -1,7 +1,3 @@
-/** VAT rate for Saudi Arabia — 15% stored as integer basis points */
-export const VAT_RATE = 1500;
-export const VAT_PERCENTAGE = 15;
-
 /** Pagination defaults */
 export const DEFAULT_PAGE = 1;
 export const DEFAULT_PER_PAGE = 20;
