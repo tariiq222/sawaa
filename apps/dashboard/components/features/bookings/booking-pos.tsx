@@ -88,7 +88,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     name: string,
     bookingMode: "DIRECT" | "SERVICES" | null,
   ) => {
-    const filters = { categoryId: id, isActive: true, perPage: 100 }
+    const filters = { categoryId: id, isActive: true, perPage: 100, includeHidden: true }
     const qKey = queryKeys.services.list(filters)
 
     // Prefer cached data; fall back to a network fetch (TanStack Query dedupes).
