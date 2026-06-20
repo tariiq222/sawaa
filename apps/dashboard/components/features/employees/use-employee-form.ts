@@ -12,7 +12,8 @@ import type { AvailabilitySlot, EmployeeService } from "@/lib/types/employee"
 import {
   assignService,
   deleteEmployee,
-  setEmployeeServiceOptions,
+  setEmployeeDurations,
+  setEmployeePricingMode,
   uploadEmployeeAvatar,
 } from "@/lib/api/employees"
 import {
@@ -29,7 +30,6 @@ import {
 } from "@/hooks/use-employee-mutations"
 import { useLocale } from "@/components/locale-provider"
 import { halalasToSarNumber, sarToHalalas } from "@/lib/money"
-import { buildEmployeeServiceOptionsPayload } from "./employee-service-option-overrides"
 import { z } from "zod"
 import { createEmployeeSchemaStatic } from "@/components/features/employees/create/form-schema"
 
@@ -52,6 +52,41 @@ function toStorageTypeConfigs(types: DraftService["types"] = []) {
     ...tc,
     price: tc.price != null ? sarToHalalas(tc.price) : tc.price,
   }))
+}
+
+/**
+ * Builds the practitioner-owned durations payload for a draft service when the
+ * user entered any custom price/duration. Persisting these owned rows + flipping
+ * pricing mode to custom is what makes the wizard's per-type overrides take
+ * effect — without it the assignment silently lands in inherit mode and the
+ * entered prices are dropped. Returns null when no custom values were entered
+ * (pure inherit), in which case the caller leaves the link in inherit mode.
+ */
+function buildOwnedDurationsPayload(ds: DraftService) {
+  const defByDt = new Map(
+    (ds.serviceBookingTypes ?? []).map((bt) => [bt.deliveryType.toLowerCase(), bt]),
+  )
+  const durations = ds.types
+    .filter((tc) => tc.isActive !== false && (tc.price != null || tc.duration != null))
+    .map((tc) => {
+      const def = defByDt.get(tc.deliveryType)
+      const durationMins = tc.duration ?? def?.durationMins ?? null
+      const priceSar = tc.price ?? (def ? halalasToSarNumber(def.price) : null)
+      if (durationMins == null || priceSar == null) return null
+      return {
+        deliveryType: tc.deliveryType.toUpperCase(),
+        items: [
+          {
+            label: `${durationMins} min`,
+            labelAr: `${durationMins} دقيقة`,
+            durationMins,
+            price: sarToHalalas(priceSar),
+          },
+        ],
+      }
+    })
+    .filter((d): d is NonNullable<typeof d> => d !== null)
+  return durations.length > 0 ? { durations } : null
 }
 
 const defaultSchedule: AvailabilitySlot[] = Array.from(
@@ -301,15 +336,16 @@ export function useEmployeeForm({
         } else {
           // The assign endpoint whitelists only `serviceId` (global
           // forbidNonWhitelisted ValidationPipe); sending the extra option
-          // fields 400s. availableTypes/types persist via the
-          // setEmployeeServiceOptions call below, matching the create path.
+          // fields 400s. Per-type custom prices persist via the owned-durations
+          // call below, matching the create path.
           await assignService(id, { serviceId: ds.serviceId })
         }
-        const optionsPayload = buildEmployeeServiceOptionsPayload({
-          typeConfigs: ds.types,
-        })
-        if (optionsPayload) {
-          await setEmployeeServiceOptions(id, ds.serviceId, optionsPayload)
+        // Persist per-type custom prices as owned duration rows + flip the
+        // pricing mode to custom. Leaving them unsent would silently drop them.
+        const ownedDurations = buildOwnedDurationsPayload(ds)
+        if (ownedDurations) {
+          await setEmployeeDurations(id, ds.serviceId, ownedDurations)
+          await setEmployeePricingMode(id, ds.serviceId, true)
         }
       } catch {
         stepErrors.push(t("employees.form.stepErrorServices"))
@@ -417,11 +453,10 @@ export function useEmployeeForm({
             await assignService(newId, {
               serviceId: ds.serviceId,
             })
-            const optionsPayload = buildEmployeeServiceOptionsPayload({
-              typeConfigs: ds.types,
-            })
-            if (optionsPayload) {
-              await setEmployeeServiceOptions(newId, ds.serviceId, optionsPayload)
+            const ownedDurations = buildOwnedDurationsPayload(ds)
+            if (ownedDurations) {
+              await setEmployeeDurations(newId, ds.serviceId, ownedDurations)
+              await setEmployeePricingMode(newId, ds.serviceId, true)
             }
           })
         )

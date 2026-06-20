@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { SetEmployeeCustomPricingHandler } from './set-employee-custom-pricing.handler';
 
@@ -66,6 +66,20 @@ describe('SetEmployeeCustomPricingHandler', () => {
         types: [{ deliveryType: 'IN_PERSON', price: 30000, durationMins: 60 }],
       }),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it('throws BadRequestException when enabling overrides for a practitioner in custom-pricing mode', async () => {
+    prisma.employeeService.findUnique.mockResolvedValue({ id: LINK_ID, useCustomPricing: true });
+
+    await expect(
+      handler.execute({
+        employeeId: EMPLOYEE_ID,
+        serviceId: SERVICE_ID,
+        enabled: true,
+        types: [{ deliveryType: 'IN_PERSON', price: 30000, durationMins: 60 }],
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
   });
 
   // ── Test 2 ─────────────────────────────────────────────────────────────────

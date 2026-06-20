@@ -97,7 +97,7 @@ export const bookingPosPayloadSchema = z.object({
   date: z.string().min(1),
   startTime: z.string().min(1),
   payAtClinic: z.boolean().optional(),
-  branchId: z.string().min(1).optional(),
+  branchId: z.string().min(1),
   couponCode: z.string().min(1).optional(),
 })
 

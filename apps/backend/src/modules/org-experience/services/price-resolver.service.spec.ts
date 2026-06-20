@@ -247,6 +247,76 @@ describe('PriceResolverService', () => {
     expect(result.isEmployeeOverride).toBe(false);
   });
 
+  // ─── Custom-pricing mode (owned rows only) ───
+
+  it('custom mode: prices from the owned row and ignores any EmployeeServiceOption override', async () => {
+    const prisma = buildPrisma({ employeeServiceOption: mockEmployeeServiceOption });
+    const service = new PriceResolverService(prisma as never);
+
+    const result = await service.resolve({
+      serviceId: 'svc-1',
+      employeeServiceId: 'es-1',
+      durationOptionId: 'opt-owned',
+      useCustomPricing: true,
+    });
+
+    // owned row price (250), NOT the override (300)
+    expect(result.price).toBe(250);
+    expect(result.isEmployeeOverride).toBe(false);
+    expect(prisma.employeeServiceOption.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('custom mode: scopes the duration-option lookup to the practitioner owned rows', async () => {
+    const prisma = buildPrisma();
+    const service = new PriceResolverService(prisma as never);
+
+    await service.resolve({
+      serviceId: 'svc-1',
+      employeeServiceId: 'es-1',
+      durationOptionId: 'opt-owned',
+      useCustomPricing: true,
+    });
+
+    expect(prisma.serviceDurationOption.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: 'opt-owned', serviceId: 'svc-1', employeeServiceId: 'es-1', isActive: true }),
+      }),
+    );
+  });
+
+  it('custom mode: throws when no owned row resolves (never falls back to base price)', async () => {
+    const prisma = buildPrisma();
+    prisma.serviceDurationOption.findFirst = jest.fn().mockResolvedValue(null);
+    const service = new PriceResolverService(prisma as never);
+
+    await expect(
+      service.resolve({
+        serviceId: 'svc-1',
+        employeeServiceId: 'es-1',
+        durationOptionId: null,
+        deliveryType: 'IN_PERSON',
+        useCustomPricing: true,
+      }),
+    ).rejects.toThrow(/no custom pricing/i);
+  });
+
+  it('inherit mode: scopes explicit duration-option lookup to service-default rows', async () => {
+    const prisma = buildPrisma();
+    const service = new PriceResolverService(prisma as never);
+
+    await service.resolve({
+      serviceId: 'svc-1',
+      employeeServiceId: 'es-1',
+      durationOptionId: 'opt-1',
+    });
+
+    expect(prisma.serviceDurationOption.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: 'opt-1', serviceId: 'svc-1', employeeServiceId: null, isActive: true }),
+      }),
+    );
+  });
+
   it('skips ServiceBookingConfig lookup when deliveryType is not provided', async () => {
     const prisma = buildPrisma({ serviceBookingConfig: { price: 999, durationMins: 99 } });
     prisma.serviceDurationOption.findFirst = jest.fn().mockResolvedValue(null);

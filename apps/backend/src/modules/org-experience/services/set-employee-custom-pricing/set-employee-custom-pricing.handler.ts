@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { normalizeDeliveryTypeInput } from '../delivery-type-input.helper';
 import { SetEmployeeCustomPricingCommand } from './set-employee-custom-pricing.dto';
@@ -18,6 +18,16 @@ export class SetEmployeeCustomPricingHandler {
     });
     if (!link) throw new NotFoundException('Employee-service assignment not found');
     const employeeServiceId = link.id;
+
+    // Guard against the silent-write trap: this endpoint writes EmployeeServiceOption
+    // overrides, which are only read in INHERIT mode. A practitioner in custom-pricing
+    // (owned-rows) mode is priced exclusively from owned ServiceDurationOption rows, so
+    // these writes would be silently ignored. Fail loudly instead of losing data.
+    if (cmd.enabled !== false && link.useCustomPricing === true) {
+      throw new BadRequestException(
+        'Practitioner is in custom-pricing mode; set prices via the owned duration-options endpoint, not custom-pricing overrides',
+      );
+    }
 
     if (cmd.enabled === false) {
       await this.rlsTransaction.withTransaction((tx: any) =>
@@ -39,7 +49,7 @@ export class SetEmployeeCustomPricingHandler {
         });
 
         let anchor = await tx.serviceDurationOption.findFirst({
-          where: { serviceId: cmd.serviceId, deliveryType, isActive: true },
+          where: { serviceId: cmd.serviceId, deliveryType, isActive: true, employeeServiceId: null },
           orderBy: [{ isDefault: 'desc' }, { sortOrder: 'asc' }],
         });
 

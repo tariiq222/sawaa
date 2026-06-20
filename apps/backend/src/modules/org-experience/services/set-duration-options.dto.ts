@@ -1,4 +1,4 @@
-import { ArrayMinSize, IsArray, IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID, MaxLength, Min, ValidateNested } from 'class-validator';
+import { ArrayMinSize, IsArray, IsBoolean, IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { DeliveryType } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -19,8 +19,8 @@ export class DurationOptionInputDto {
   @ApiProperty({ description: 'Duration in minutes', example: 30 })
   @IsInt() @Min(1) durationMins!: number;
 
-  @ApiProperty({ description: 'Price for this duration', example: 50 })
-  @IsNumber() @Min(0) price!: number;
+  @ApiProperty({ description: 'Price for this duration in integer halalas', example: 5000 })
+  @IsInt() @Min(0) price!: number;
 
   @ApiPropertyOptional({ description: 'Currency code', example: 'SAR' })
   @IsOptional() @IsString() @MaxLength(8) currency?: string;

@@ -80,10 +80,33 @@ export class ListServiceEmployeesHandler {
         const e = empById.get(l.employeeId)!;
         const { firstName, lastName } = splitName(e.name, e.nameAr, e.nameEn);
         const empOptions = optionsByLink.get(l.id) ?? new Map<string, (typeof allOptions)[0]>();
+        const linkCustomPricing = l.useCustomPricing ?? false;
+        const ownedRows = ownedByLink.get(l.id) ?? [];
 
         const serviceTypes = configs.map((c) => {
           const basePrice = Number(c.price);
           const baseDuration = c.durationMins;
+
+          // CUSTOM mode: price/duration come from the practitioner's owned rows,
+          // never from service config + EmployeeServiceOption overrides.
+          if (linkCustomPricing) {
+            const owned =
+              ownedRows.find((o) => o.deliveryType === c.deliveryType && o.isDefault) ??
+              ownedRows.find((o) => o.deliveryType === c.deliveryType);
+            return {
+              id: `${l.id}:${c.deliveryType}`,
+              deliveryType: c.deliveryType,
+              /** @deprecated deliveryType is the source of truth. */
+              bookingType: c.deliveryType,
+              price: owned ? Number(owned.price) : basePrice,
+              durationMins: owned ? owned.durationMins : baseDuration,
+              basePrice,
+              baseDurationMins: baseDuration,
+              isCustom: !!owned,
+              isActive: true,
+            };
+          }
+
           const ov = empOptions.get(String(c.deliveryType));
           const isCustom = !!ov && (ov.priceOverride !== null || ov.durationOverride !== null);
           const price =

@@ -18,6 +18,19 @@ export class SetDurationOptionsHandler {
     });
     if (!service) throw new NotFoundException('Service not found');
 
+    // Ownership guard: every provided option id must belong to this service,
+    // otherwise an update could mutate a duration option of a different service.
+    const updateIds = dto.options.map((o) => o.id).filter((id): id is string => !!id);
+    if (updateIds.length > 0) {
+      const owned = await this.prisma.serviceDurationOption.findMany({
+        where: { id: { in: updateIds }, serviceId: dto.serviceId },
+        select: { id: true },
+      });
+      if (owned.length !== updateIds.length) {
+        throw new NotFoundException('Duration option not found for this service');
+      }
+    }
+
     await this.rlsTransaction.withTransaction((tx) =>
       Promise.all(
         dto.options.map((opt) => {

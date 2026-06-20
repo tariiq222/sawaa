@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { SetEmployeeServiceOptionsHandler } from './set-employee-service-options.handler';
 
@@ -47,6 +47,33 @@ describe('SetEmployeeServiceOptionsHandler', () => {
         },
       },
     });
+  });
+
+  it('throws BadRequestException when the practitioner is in custom-pricing mode', async () => {
+    (prisma.employeeService.findUnique as jest.Mock).mockResolvedValue({ id: 'link-1', useCustomPricing: true });
+
+    await expect(
+      handler.execute({
+        employeeId: '00000000-0000-0000-0000-000000000001',
+        serviceId: '00000000-0000-0000-0000-000000000002',
+        options: [{ durationOptionId: 'opt-1', priceOverride: 5000 }],
+      } as any),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.serviceDurationOption.findMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects overrides that target a non-service-default (owned) duration option', async () => {
+    (prisma.employeeService.findUnique as jest.Mock).mockResolvedValue({ id: 'link-1' });
+    // query filters employeeServiceId: null → owned row id is not returned
+    (prisma.serviceDurationOption.findMany as jest.Mock).mockResolvedValue([]);
+
+    await expect(
+      handler.execute({
+        employeeId: '00000000-0000-0000-0000-000000000001',
+        serviceId: '00000000-0000-0000-0000-000000000002',
+        options: [{ durationOptionId: 'owned-opt', priceOverride: 5000 }],
+      } as any),
+    ).rejects.toThrow(NotFoundException);
   });
 
   it('resolves the link and returns the employee service options', async () => {

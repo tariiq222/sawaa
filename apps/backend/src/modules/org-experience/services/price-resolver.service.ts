@@ -16,21 +16,26 @@ export class PriceResolverService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Resolves final price + duration for a booking, following priority order:
+   * Resolves final price + duration for a booking. The practitioner's pricing mode
+   * (useCustomPricing) selects which rows are authoritative:
    *
-   * 1. EmployeeServiceOption.priceOverride / durationOverride (per-employee override)
-   *    scoped by employeeServiceId + deliveryType + durationOptionId
-   * 2. ServiceDurationOption.price / durationMins (catalog option)
-   *    scoped by deliveryType
-   * 3. ServiceBookingConfig.price / durationMins (config-level price per deliveryType)
-   *    scoped by serviceId + deliveryType + isActive=true
-   * 4. Service.price / durationMins (final fallback)
+   * CUSTOM mode — owned rows only:
+   *   ServiceDurationOption where employeeServiceId = link.id. No overrides, no
+   *   service-default / booking-config / base fallback. If none resolve → 400.
+   *
+   * INHERIT mode — service catalog, priority order:
+   *   1. EmployeeServiceOption.priceOverride / durationOverride (per-employee override
+   *      on a service-default option) scoped by employeeServiceId + deliveryType + durationOptionId
+   *   2. ServiceDurationOption.price / durationMins (service-default option, employeeServiceId IS NULL)
+   *   3. ServiceBookingConfig.price / durationMins (config-level price per deliveryType, isActive=true)
+   *   4. Service.price / durationMins (final fallback)
    *
    * @param serviceId   - the service being booked
    * @param employeeServiceId - EmployeeService join-table id (null for unassigned)
-   * @param durationOptionId  - chosen ServiceDurationOption; null = use isDefault
+   * @param durationOptionId  - chosen ServiceDurationOption; null = use isDefault/first
    * @param bookingType - appointment shape retained for callers; deliveryType scopes options
    * @param deliveryType - delivery channel for price scoping
+   * @param useCustomPricing - the practitioner's pricing mode (source of truth)
    */
   async resolve(params: {
     serviceId: string;
@@ -38,15 +43,28 @@ export class PriceResolverService {
     durationOptionId: string | null;
     bookingType?: BookingType | null;
     deliveryType?: DeliveryType | null;
+    /**
+     * The practitioner's pricing mode (EmployeeService.useCustomPricing). This is
+     * the SINGLE SOURCE OF TRUTH for which rows are read — not an inference from
+     * whether owned rows happen to exist:
+     *   - custom  → price exclusively from the practitioner's OWNED ServiceDurationOption
+     *               rows (employeeServiceId = link.id). EmployeeServiceOption overrides
+     *               and service-default rows are never consulted.
+     *   - inherit → service-default rows (employeeServiceId IS NULL) + EmployeeServiceOption
+     *               overrides. Owned rows are never consulted.
+     */
+    useCustomPricing?: boolean;
   }): Promise<ResolvedPrice> {
     const { serviceId, employeeServiceId, durationOptionId, deliveryType } = params;
+    const useCustomPricing = params.useCustomPricing ?? false;
 
-    // --- Step 1: resolve the ServiceDurationOption ---
+    // --- Step 1: resolve the ServiceDurationOption (mode-scoped) ---
     const durationOption = await this.resolveDurationOption({
       serviceId,
       durationOptionId,
       deliveryType,
       employeeServiceId,
+      useCustomPricing,
     });
 
     // Validate that the explicitly-provided duration option matches the service and delivery type
@@ -61,6 +79,24 @@ export class PriceResolverService {
       }
     }
 
+    // --- CUSTOM MODE: price exclusively from the practitioner's owned rows ---
+    // No EmployeeServiceOption overrides, no service-default / booking-config / base fallback.
+    if (useCustomPricing) {
+      if (!durationOption) {
+        throw new BadRequestException(
+          'Practitioner has no custom pricing for the selected option',
+        );
+      }
+      return {
+        price: Number(durationOption.price),
+        durationMins: durationOption.durationMins,
+        durationOptionId: durationOption.id,
+        currency: durationOption.currency,
+        isEmployeeOverride: false,
+      };
+    }
+
+    // --- INHERIT MODE (below) ---
     // --- Step 2: check for employee-level override scoped by deliveryType ---
     let employeeOverride: { priceOverride: unknown; durationOverride: unknown } | null = null;
     if (employeeServiceId && durationOption) {
@@ -133,24 +169,16 @@ export class PriceResolverService {
   }
 
   /**
-   * Resolves a ServiceDurationOption for the booking, applying two-tier precedence:
+   * Resolves a ServiceDurationOption for the booking. The row set is selected by
+   * pricing mode — the two modes never read each other's rows:
    *
-   * TIER 1 — Employee-owned rows (employeeServiceId IS NOT NULL):
-   *   If the employee has their own active ServiceDurationOption rows for this
-   *   (service, deliveryType), those rows REPLACE the service defaults entirely.
-   *   These are distinct from EmployeeServiceOption overrides — they are separate
-   *   option rows, not price/duration tweaks on a shared catalog option.
+   * CUSTOM (useCustomPricing = true): only the practitioner's OWNED rows
+   *   (employeeServiceId = link.id). An explicit durationOptionId must be one of
+   *   them; otherwise null (and resolve() rejects). No service-default fallback.
    *
-   * TIER 2 — Service-default rows (employeeServiceId IS NULL):
-   *   Standard catalog rows shared across all employees offering the service.
-   *   Only used when the employee has no owned rows for the deliveryType.
-   *
-   * NOTE ON NON-COMPETITION: EmployeeServiceOption (price/duration override on a
-   * specific catalog option) and employee-owned ServiceDurationOption rows (TIER 1)
-   * do NOT compete. An EmployeeServiceOption always references a specific
-   * durationOptionId. If the resolver picks up a TIER 1 owned row, that row's ID
-   * will not match any EmployeeServiceOption linked to the service defaults,
-   * so the override lookup in Step 2 of resolve() will correctly return null.
+   * INHERIT (useCustomPricing = false): only service-default rows
+   *   (employeeServiceId IS NULL). EmployeeServiceOption overrides are layered on
+   *   top later in resolve(). Owned rows are never consulted.
    */
   private async resolveDurationOption(params: {
     serviceId: string;
@@ -158,44 +186,50 @@ export class PriceResolverService {
     employeeServiceId?: string | null;
     bookingType?: BookingType | null;
     deliveryType?: DeliveryType | null;
+    useCustomPricing?: boolean;
   }) {
     const { serviceId, durationOptionId, deliveryType, employeeServiceId } = params;
+    const useCustomPricing = params.useCustomPricing ?? false;
+    const SELECT = { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true } as const;
 
-    if (durationOptionId) {
-      return this.prisma.serviceDurationOption.findFirst({
-        where: { id: durationOptionId, serviceId, isActive: true },
-        select: { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true },
-      });
-    }
-
-    // TIER 1: prefer employee-owned rows when available.
-    // An employee can define their own ServiceDurationOption rows (employeeServiceId = link.id).
-    // When own active rows exist for the requested deliveryType, use them exclusively —
-    // they replace service defaults for this employee.
-    if (employeeServiceId) {
+    // ── CUSTOM MODE: only the practitioner's OWNED rows (employeeServiceId = link.id) ──
+    if (useCustomPricing && employeeServiceId) {
+      if (durationOptionId) {
+        // An explicit option must be one of the practitioner's owned rows.
+        return this.prisma.serviceDurationOption.findFirst({
+          where: { id: durationOptionId, serviceId, employeeServiceId, isActive: true },
+          select: SELECT,
+        });
+      }
       if (deliveryType) {
         const ownedScoped = await this.prisma.serviceDurationOption.findFirst({
           where: { serviceId, deliveryType, employeeServiceId, isActive: true },
-          orderBy: [{ sortOrder: 'asc' }],
-          select: { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true },
+          orderBy: [{ isDefault: 'desc' }, { sortOrder: 'asc' }],
+          select: SELECT,
         });
         if (ownedScoped) return ownedScoped;
       }
-
-      const ownedGlobal = await this.prisma.serviceDurationOption.findFirst({
+      // No service-default fallback in custom mode — owned rows only.
+      return this.prisma.serviceDurationOption.findFirst({
         where: { serviceId, employeeServiceId, isActive: true },
         orderBy: [{ deliveryType: 'asc' }, { sortOrder: 'asc' }],
-        select: { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true },
+        select: SELECT,
       });
-      if (ownedGlobal) return ownedGlobal;
     }
 
-    // TIER 2: service-default rows (employeeServiceId IS NULL).
+    // ── INHERIT MODE: only service-default rows (employeeServiceId IS NULL) ──
+    if (durationOptionId) {
+      return this.prisma.serviceDurationOption.findFirst({
+        where: { id: durationOptionId, serviceId, employeeServiceId: null, isActive: true },
+        select: SELECT,
+      });
+    }
+
     // Try: default option scoped to this deliveryType.
     if (deliveryType) {
       const scoped = await this.prisma.serviceDurationOption.findFirst({
         where: { serviceId, deliveryType, isDefault: true, isActive: true, employeeServiceId: null },
-        select: { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true },
+        select: SELECT,
       });
       if (scoped) return scoped;
     }
@@ -203,7 +237,7 @@ export class PriceResolverService {
     // Try: any default option for the service.
     const global = await this.prisma.serviceDurationOption.findFirst({
       where: { serviceId, isDefault: true, isActive: true, employeeServiceId: null },
-      select: { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true },
+      select: SELECT,
     });
     if (global) return global;
 
@@ -211,7 +245,7 @@ export class PriceResolverService {
     return this.prisma.serviceDurationOption.findFirst({
       where: { serviceId, isActive: true, employeeServiceId: null },
       orderBy: [{ deliveryType: 'asc' }, { sortOrder: 'asc' }],
-      select: { id: true, price: true, durationMins: true, currency: true, serviceId: true, deliveryType: true },
+      select: SELECT,
     });
   }
 }

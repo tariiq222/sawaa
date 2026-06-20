@@ -51,7 +51,9 @@ export class PublicCatalogController {
           hideDurationOnBooking: true,
           minParticipants: true,
           durationOptions: {
-            where: { isActive: true },
+            // Service-level catalog only: never expose practitioner-OWNED rows
+            // (employeeServiceId != null) in the public service listing.
+            where: { isActive: true, employeeServiceId: null },
             orderBy: { sortOrder: 'asc' },
             select: {
               id: true,

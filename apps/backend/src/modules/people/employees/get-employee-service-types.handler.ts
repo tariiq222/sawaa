@@ -43,14 +43,22 @@ export class GetEmployeeServiceTypesHandler {
       }),
     ]);
 
+    const useCustomPricing = link.useCustomPricing ?? false;
     const overrideByDurationId = new Map(
       employeeOverrides.map((o) => [o.durationOptionId, o]),
     );
 
     return configs.map((cfg) => {
+      // Mode is the source of truth: custom → owned rows only (no overrides);
+      // inherit → service-default rows only (overrides layered on top).
       const scoped = durationOptions.filter(
-        (d) => d.deliveryType === cfg.deliveryType,
+        (d) =>
+          d.deliveryType === cfg.deliveryType &&
+          (useCustomPricing ? d.employeeServiceId === link.id : !d.employeeServiceId),
       );
+      const ownedDefault = useCustomPricing
+        ? (scoped.find((d) => d.isDefault) ?? scoped[0])
+        : undefined;
 
       return {
         id: `${link.id}:${cfg.deliveryType}`,
@@ -58,12 +66,13 @@ export class GetEmployeeServiceTypesHandler {
         deliveryType: cfg.deliveryType,
         /** @deprecated deliveryType is the source of truth. */
         bookingType: cfg.deliveryType,
-        price: Number(cfg.price),
-        duration: cfg.durationMins,
+        price: ownedDefault ? Number(ownedDefault.price) : Number(cfg.price),
+        duration: ownedDefault ? ownedDefault.durationMins : cfg.durationMins,
         useCustomOptions: scoped.length > 0,
         isActive: cfg.isActive,
         durationOptions: scoped.map((d) => {
-          const ov = overrideByDurationId.get(d.id);
+          // Overrides only apply in inherit mode.
+          const ov = useCustomPricing ? undefined : overrideByDurationId.get(d.id);
           return {
             id: d.id,
             employeeServiceTypeId: `${link.id}:${cfg.deliveryType}`,

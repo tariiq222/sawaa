@@ -1002,6 +1002,19 @@ describe('CreateBookingHandler', () => {
     expect(prisma.booking.create).not.toHaveBeenCalled();
   });
 
+  it('rejects a non-owned durationOptionId for a custom-pricing practitioner (no charging the inherited base price)', async () => {
+    prisma.employeeService.findUnique = jest
+      .fn()
+      .mockResolvedValue({ id: 'es-1', employeeId: 'emp-1', serviceId: 'svc-1', isActive: true, useCustomPricing: true });
+    // Ownership lookup scoped by the passed id finds no owned row → not one of the practitioner's options.
+    (prisma as any).serviceDurationOption = { findFirst: jest.fn().mockResolvedValue(null) };
+
+    await expect(
+      handler.execute({ ...baseDto, deliveryType: 'IN_PERSON' as any, durationOptionId: 'svc-default-opt' }),
+    ).rejects.toThrow('Selected duration option is not offered by this practitioner');
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
   it('rejects a scheduled time that falls outside business hours (no availability)', async () => {
     // Simulate the availability check returning [] so the guard fires.
     const availabilityHandler = {

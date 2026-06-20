@@ -3,7 +3,6 @@ import {
   IsDefined,
   IsInt,
   IsISO8601,
-  IsNumber,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -32,8 +31,8 @@ export class UpdateServiceDto {
   @ApiPropertyOptional({ description: 'Duration in minutes', example: 30 })
   @IsOptional() @IsInt() @Min(1) durationMins?: number;
 
-  @ApiPropertyOptional({ description: 'Price', example: 50 })
-  @IsOptional() @IsNumber() @Min(0) price?: number;
+  @ApiPropertyOptional({ description: 'Price in integer halalas (1 SAR = 100)', example: 5000 })
+  @IsOptional() @IsInt() @Min(0) price?: number;
 
   @ApiPropertyOptional({ description: 'Currency code', example: 'SAR' })
   @IsOptional() @IsString() @MaxLength(8) currency?: string;
@@ -78,9 +77,9 @@ export class UpdateServiceDto {
   @ApiPropertyOptional({ description: 'Whether a deposit is required', example: false })
   @IsOptional() @IsBoolean() depositEnabled?: boolean;
 
-  @ApiPropertyOptional({ description: 'Fixed deposit amount (must not exceed price)', example: 20 })
+  @ApiPropertyOptional({ description: 'Fixed deposit amount in integer halalas — must not exceed price', example: 2000 })
   @ValidateIf((o: UpdateServiceDto) => o.depositEnabled === true)
-  @IsDefined() @IsNumber() @Min(1) depositAmount?: number;
+  @IsDefined() @IsInt() @Min(1) depositAmount?: number;
 
   // ─── الجلسات الجماعية ────────────────────────────────────────────────────
   @ApiPropertyOptional({ description: 'Minimum participants for a group session', example: 1 })

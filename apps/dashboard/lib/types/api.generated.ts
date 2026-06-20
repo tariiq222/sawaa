@@ -2311,6 +2311,23 @@ export interface paths {
         patch: operations["DashboardPeopleController_updateEmployeeServiceEndpoint"];
         trace?: never;
     };
+    "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/delivery-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set the delivery types a practitioner opts out of for a service */
+        put: operations["DashboardPeopleController_setEmployeeDeliveryTypesEndpoint"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/durations": {
         parameters: {
             query?: never;
@@ -2338,6 +2355,23 @@ export interface paths {
         get?: never;
         /** Set employee-specific service options */
         put: operations["DashboardPeopleController_setEmployeeServiceOptionsEndpoint"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/people/employees/{id}/services/{serviceId}/pricing-mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set whether a practitioner uses custom pricing for a service */
+        put: operations["DashboardPeopleController_setEmployeePricingModeEndpoint"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3869,6 +3903,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/services/{serviceId}/practitioners/{employeeId}/booking-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get booking options for a specific practitioner on a service */
+        get: operations["PublicCatalogController_getPractitionerBookingOptionsEndpoint"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/sms/webhooks/{provider}": {
         parameters: {
             query?: never;
@@ -4146,8 +4197,8 @@ export interface components {
              */
             labelAr?: string;
             /**
-             * @description Price for this duration option
-             * @example 50
+             * @description Price for this duration option in integer halalas
+             * @example 5000
              */
             price: number;
             /**
@@ -4177,8 +4228,8 @@ export interface components {
              */
             isActive?: boolean;
             /**
-             * @description Price for this booking type
-             * @example 50
+             * @description Price for this booking type in integer halalas
+             * @example 5000
              */
             price: number;
             /**
@@ -5546,8 +5597,8 @@ export interface components {
              */
             labelAr: string;
             /**
-             * @description Price for this duration
-             * @example 50
+             * @description Price for this duration in integer halalas
+             * @example 5000
              */
             price: number;
             /**
@@ -6720,9 +6771,25 @@ export interface components {
             /** @description Pricing entries per delivery type */
             types: components["schemas"]["CustomPricingTypeDto"][];
         };
+        SetEmployeeDeliveryTypesDto: {
+            /**
+             * @description Delivery types this practitioner does NOT offer for the service. Empty array means they offer every type the service supports.
+             * @example [
+             *       "ONLINE"
+             *     ]
+             */
+            disabledDeliveryTypes: ("IN_PERSON" | "ONLINE")[];
+        };
         SetEmployeeDurationsDto: {
             /** @description Duration rows grouped by delivery type */
             durations: components["schemas"]["EmployeeDurationsByTypeDto"][];
+        };
+        SetEmployeePricingModeDto: {
+            /**
+             * @description When true, only practitioner-owned duration options are offered for this service. When false (default), the practitioner inherits service-level options.
+             * @example false
+             */
+            useCustomPricing: boolean;
         };
         SetEmployeeServiceOptionsDto: {
             /** @description Employee service option overrides (at least one required) */
@@ -7440,8 +7507,8 @@ export interface components {
              */
             currency?: string;
             /**
-             * @description Fixed deposit amount (must not exceed price)
-             * @example 20
+             * @description Fixed deposit amount in integer halalas — must not exceed price
+             * @example 2000
              */
             depositAmount?: number;
             /**
@@ -7529,8 +7596,8 @@ export interface components {
              */
             nameEn?: string;
             /**
-             * @description Price
-             * @example 50
+             * @description Price in integer halalas (1 SAR = 100)
+             * @example 5000
              */
             price?: number;
             /**
@@ -20947,6 +21014,80 @@ export interface operations {
             };
         };
     };
+    DashboardPeopleController_setEmployeeDeliveryTypesEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Employee UUID */
+                id: string;
+                /** @description Service UUID */
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetEmployeeDeliveryTypesDto"];
+            };
+        };
+        responses: {
+            /** @description The persisted disabled delivery types */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        disabledDeliveryTypes?: ("IN_PERSON" | "ONLINE")[];
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Employee-service assignment not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     DashboardPeopleController_setEmployeeDurationsEndpoint: {
         parameters: {
             query?: never;
@@ -21070,6 +21211,80 @@ export interface operations {
                 };
             };
             /** @description Employee-service link not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardPeopleController_setEmployeePricingModeEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Employee UUID */
+                id: string;
+                /** @description Service UUID */
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetEmployeePricingModeDto"];
+            };
+        };
+        responses: {
+            /** @description The persisted pricing mode */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        useCustomPricing?: boolean;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Employee-service assignment not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -26437,6 +26652,68 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PublicCatalogController_getPractitionerBookingOptionsEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service UUID */
+                serviceId: string;
+                /** @description Employee UUID */
+                employeeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Booking options for this practitioner */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        disabledDeliveryTypes?: ("IN_PERSON" | "ONLINE")[];
+                        options?: {
+                            currency?: string;
+                            /** @enum {string} */
+                            deliveryType?: "IN_PERSON" | "ONLINE";
+                            durationMins?: number;
+                            durationOptionId?: string;
+                            label?: string | null;
+                            price?: number;
+                        }[];
+                        useCustomPricing?: boolean;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Employee-service assignment not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unhandled server error */
             500: {

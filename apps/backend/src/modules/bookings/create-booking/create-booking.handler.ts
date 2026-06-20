@@ -141,17 +141,27 @@ export class CreateBookingHandler {
         throw new BadRequestException('Practitioner does not offer this delivery type');
       }
       if (employeeService.useCustomPricing === true) {
+        // In custom-pricing mode the practitioner is charged exclusively from
+        // their own ServiceDurationOption rows. Require any explicitly-selected
+        // durationOptionId to be one of those owned rows — otherwise a client
+        // could pass a service-default option id and be charged the inherited
+        // base price instead of the practitioner's custom price.
         const owned = await this.prisma.serviceDurationOption.findFirst({
           where: {
             serviceId: dto.serviceId,
             deliveryType,
             employeeServiceId: employeeService.id,
             isActive: true,
+            ...(dto.durationOptionId ? { id: dto.durationOptionId } : {}),
           },
           select: { id: true },
         });
         if (!owned) {
-          throw new BadRequestException('Practitioner does not offer this delivery type');
+          throw new BadRequestException(
+            dto.durationOptionId
+              ? 'Selected duration option is not offered by this practitioner'
+              : 'Practitioner does not offer this delivery type',
+          );
         }
       }
     }
@@ -195,6 +205,7 @@ export class CreateBookingHandler {
       durationOptionId: dto.durationOptionId ?? null,
       bookingType: bookingType ?? null,
       deliveryType: deliveryType ?? null,
+      useCustomPricing: employeeService.useCustomPricing === true,
     });
 
     const durationMins = resolved.durationMins;

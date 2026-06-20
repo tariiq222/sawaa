@@ -6,7 +6,6 @@ import {
   IsEnum,
   IsInt,
   Matches,
-  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -37,8 +36,8 @@ export class BookingConfigDurationOptionInputDto {
   @IsInt() @Min(1)
   durationMins!: number;
 
-  @ApiProperty({ description: 'Price for this duration option', example: 50 })
-  @IsNumber() @Min(0)
+  @ApiProperty({ description: 'Price for this duration option in integer halalas', example: 5000 })
+  @IsInt() @Min(0)
   price!: number;
 
   @ApiPropertyOptional({ description: 'Currency code', example: 'SAR' })
@@ -86,8 +85,8 @@ export class BookingConfigInputDto {
   @IsOptional() @IsEnum(DeliveryType)
   deliveryType?: DeliveryType;
 
-  @ApiProperty({ description: 'Price for this booking type', example: 50 })
-  @IsNumber() @Min(0) price!: number;
+  @ApiProperty({ description: 'Price for this booking type in integer halalas', example: 5000 })
+  @IsInt() @Min(0) price!: number;
 
   @ApiProperty({ description: 'Duration in minutes for this booking type', example: 30 })
   @IsInt() @Min(1) durationMins!: number;

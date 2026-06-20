@@ -31,6 +31,20 @@ describe('SetDurationOptionsHandler', () => {
     await expect(handler.execute({ serviceId: 'missing', options: [] })).rejects.toThrow(NotFoundException);
   });
 
+  it('should reject an option id that belongs to a different service', async () => {
+    prisma.service.findFirst.mockResolvedValue({ id: 'svc-1' });
+    // ownership query finds none owned by svc-1 → foreign id
+    prisma.serviceDurationOption.findMany.mockResolvedValue([]);
+
+    await expect(
+      handler.execute({
+        serviceId: 'svc-1',
+        options: [{ id: 'foreign-opt', label: 'X', labelAr: 'س', durationMins: 30, price: 100 }],
+      }),
+    ).rejects.toThrow(NotFoundException);
+    expect(txMock.serviceDurationOption.update).not.toHaveBeenCalled();
+  });
+
   it('should update existing option', async () => {
     prisma.service.findFirst.mockResolvedValue({ id: 'svc-1' });
     txMock.serviceDurationOption.update.mockResolvedValue({ id: 'opt-1' });
