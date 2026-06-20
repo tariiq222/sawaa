@@ -9,6 +9,7 @@ describe('mapBookingRow', () => {
     serviceId: 'svc-1',
     employeeServiceId: 'es-1',
     bookingType: 'INDIVIDUAL',
+    deliveryType: 'IN_PERSON',
     status: 'PENDING',
     scheduledAt: new Date('2026-05-04T10:00:00Z'),
     endsAt: new Date('2026-05-04T11:00:00Z'),
@@ -528,6 +529,23 @@ describe('mapBookingRow', () => {
 
     expect(result.client?.firstName).toBe('Madonna');
     expect(result.client?.lastName).toBe('');
+  });
+
+  it('maps deliveryType IN_PERSON to in_person', () => {
+    const result = mapBookingRow(mockBooking, relations);
+    expect(result.deliveryType).toBe('in_person');
+  });
+
+  it('maps deliveryType ONLINE to online', () => {
+    const booking = { ...mockBooking, deliveryType: 'ONLINE' } as unknown as Booking;
+    const result = mapBookingRow(booking, relations);
+    expect(result.deliveryType).toBe('online');
+  });
+
+  it('maps null deliveryType to null', () => {
+    const booking = { ...mockBooking, deliveryType: null } as unknown as Booking;
+    const result = mapBookingRow(booking, relations);
+    expect(result.deliveryType).toBeNull();
   });
 });
 

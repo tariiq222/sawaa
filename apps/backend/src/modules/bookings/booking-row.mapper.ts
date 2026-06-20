@@ -81,6 +81,7 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
     serviceId: b.serviceId,
     employeeServiceId: '',
     type: mapTypeForUi(b.bookingType),
+    deliveryType: mapDeliveryTypeForUi(b.deliveryType),
     source: b.source,
     categoryNameSnapshot: b.categoryNameSnapshot ?? null,
     branchNameSnapshot: b.branchNameSnapshot ?? null,
@@ -158,6 +159,12 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
     intakeFormId: null,
     intakeFormAlreadySubmitted: false,
   };
+}
+
+/** DB DeliveryType enum → dashboard lowercase alias. */
+function mapDeliveryTypeForUi(dt: string | null | undefined): string | null {
+  if (!dt) return null;
+  return dt.toLowerCase(); // IN_PERSON → in_person, ONLINE → online
 }
 
 /** DB BookingType → dashboard snake_case alias. INDIVIDUAL → in_person. */

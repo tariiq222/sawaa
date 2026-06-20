@@ -40,7 +40,9 @@ export function useCreateBookingSlots({
 
   const selectedDuration = React.useMemo((): number | undefined => {
     // Use service type duration directly from the selected delivery type
-    const pst = serviceTypes.find((st) => st.deliveryType === deliveryType)
+    const pst = serviceTypes.find(
+      (st) => st.deliveryType.toLowerCase() === (deliveryType ?? "").toLowerCase()
+    )
     if (pst?.isActive && pst?.duration != null) return pst.duration
 
     const es = employeeServices.find((s) => s.serviceId === serviceId)
