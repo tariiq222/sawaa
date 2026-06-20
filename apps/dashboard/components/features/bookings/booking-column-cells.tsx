@@ -262,11 +262,31 @@ export function isPartiallyPaid(booking: Booking): boolean {
 export function PaymentStatusCell({ booking }: { booking: Booking }) {
   const { t } = useLocale()
   const payment = booking.payment
+  const hasOutstanding = (booking.invoice?.outstanding ?? 0) > 0
+  const canRecordPayment = !!booking.invoice && hasOutstanding && payment?.status !== "awaiting"
+
+  const [recordOpen, setRecordOpen] = useState(false)
 
   const status = isPartiallyPaid(booking) ? "partial" : payment?.status ?? "unpaid"
   const label = payment
     ? t("bookings.col.paymentStatus." + status)
     : t("bookings.col.paymentStatus.unpaid")
+
+  if (canRecordPayment) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setRecordOpen(true)}
+          aria-label={t("bookings.col.recordPayment")}
+          className="rounded-md transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 cursor-pointer"
+        >
+          <PaymentStatusBadge status={status} label={label} />
+        </button>
+        <RecordPaymentDialog booking={booking} open={recordOpen} onOpenChange={setRecordOpen} />
+      </>
+    )
+  }
 
   return <PaymentStatusBadge status={status} label={label} />
 }
