@@ -2,9 +2,9 @@
 
 import type { ColumnDef } from "@tanstack/react-table"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Globe02Icon, Store01Icon } from "@hugeicons/core-free-icons"
-import { Avatar, AvatarFallback } from "@sawaa/ui"
-import { cn, formatClinicDate, formatClinicTime, isoToClinicParts } from "@/lib/utils"
+import { Globe02Icon, Store01Icon, Building02Icon, Video01Icon, UserMultiple02Icon } from "@hugeicons/core-free-icons"
+import { Avatar, AvatarFallback, Tooltip, TooltipContent, TooltipTrigger } from "@sawaa/ui"
+import { cn, formatClinicDate, formatClinicTime } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"
 import type { Booking } from "@/lib/types/booking"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
@@ -32,20 +32,14 @@ function getGradient(name: string): string {
   return avatarGradients[Math.abs(hash) % avatarGradients.length]
 }
 
-/* Type dots — colored disc with a soft halo so the column reads at a glance.
-   The dot is a real color (not an opacity wash) and the halo extends the hue.
-   Ring uses token opacity so both light/dark themes stay consistent. */
-const typeDotConfig: Record<string, string> = {
-  in_person: "bg-primary ring-2 ring-primary/20",
-  online:    "bg-info ring-2 ring-info/20",
-  walk_in:   "bg-success ring-2 ring-success/20",
-}
-
-const typeLabelKey: Record<string, string> = {
-  in_person: "bookings.col.type.inPerson",
-  online: "bookings.col.type.online",
-  walk_in: "bookings.col.type.walkIn",
-  group: "bookings.col.type.group",
+/* Type icon — a glyph that names the attendance mode at a glance:
+   in-person → building, online → video, group → people. Muted tone so it
+   doesn't compete with the colored source chip beside it. */
+const typeIconConfig: Record<string, { icon: typeof Building02Icon; labelKey: string }> = {
+  in_person: { icon: Building02Icon, labelKey: "bookings.col.type.inPerson" },
+  online:    { icon: Video01Icon, labelKey: "bookings.col.type.online" },
+  walk_in:   { icon: Building02Icon, labelKey: "bookings.col.type.walkIn" },
+  group:     { icon: UserMultiple02Icon, labelKey: "bookings.col.type.group" },
 }
 
 /* Source icon — colored chip so the channel reads at a glance.
@@ -66,8 +60,7 @@ const sourceIconConfig: Record<string, { icon: typeof Store01Icon; labelKey: str
 /* ── Column definitions ── */
 
 export function getBookingColumns(
-  onRowClick: (booking: Booking) => void,
-  onEditClick: (booking: Booking) => void,
+  onRowClick: (booking: Booking, tab?: "details" | "reschedule" | "invoice") => void,
   onStatusAction: (booking: Booking, action: QuickStatusActionType) => void,
   onDelete: (booking: Booking) => void,
   t: (key: string) => string,
@@ -81,23 +74,44 @@ export function getBookingColumns(
       header: "#",
       cell: ({ row }) => {
         const source = sourceIconConfig[row.original.source]
+        const type = typeIconConfig[row.original.type]
+        const typeLabel = type ? t(type.labelKey) : row.original.type
         return (
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-col items-start gap-1.5">
             <span className="text-[13px] font-medium font-numeric text-muted-foreground">
               #{row.original.bookingNumber.toString().padStart(4, "0")}
             </span>
-            {source && (
-              <span
-                className={cn(
-                  "inline-flex size-5 items-center justify-center rounded-md",
-                  source.tone,
-                )}
-                title={t(source.labelKey)}
-                aria-label={t(source.labelKey)}
-              >
-                <HugeiconsIcon icon={source.icon} size={12} strokeWidth={2.4} />
-              </span>
-            )}
+            <div className="flex items-center gap-1.5">
+              {type && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className="inline-flex size-5 items-center justify-center rounded-md bg-muted text-muted-foreground"
+                      aria-label={typeLabel}
+                    >
+                      <HugeiconsIcon icon={type.icon} size={12} strokeWidth={2.4} />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{typeLabel}</TooltipContent>
+                </Tooltip>
+              )}
+              {source && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className={cn(
+                        "inline-flex size-5 items-center justify-center rounded-md",
+                        source.tone,
+                      )}
+                      aria-label={t(source.labelKey)}
+                    >
+                      <HugeiconsIcon icon={source.icon} size={12} strokeWidth={2.4} />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{t(source.labelKey)}</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
           </div>
         )
       },
@@ -122,8 +136,8 @@ export function getBookingColumns(
             </Avatar>
             <div>
               <p className="text-sm font-semibold text-foreground">{name}</p>
-              <p className="text-[11px] font-numeric text-muted-foreground">
-                #{row.original.bookingNumber.toString().padStart(4, "0")}
+              <p className="text-[11px] font-numeric text-muted-foreground" dir="ltr">
+                {p.phone ?? "—"}
               </p>
             </div>
           </button>
@@ -153,22 +167,6 @@ export function getBookingColumns(
       },
     },
     {
-      accessorKey: "type",
-      header: t("bookings.col.header.type"),
-      cell: ({ row }) => {
-        const type = row.original.type
-        const dot = typeDotConfig[type] ?? "bg-muted-foreground"
-        const labelKey = typeLabelKey[type]
-        const label = labelKey ? t(labelKey) : type
-        return (
-          <div className="flex items-center gap-2.5">
-            <span className={cn("size-2.5 shrink-0 rounded-full", dot)} />
-            <span className="text-[13px] font-semibold text-foreground">{label}</span>
-          </div>
-        )
-      },
-    },
-    {
       id: "datetime",
       accessorFn: (row) => new Date(`${row.date}T${row.startTime || "00:00"}`).getTime(),
       header: t("bookings.col.header.datetime"),
@@ -187,23 +185,6 @@ export function getBookingColumns(
                 </span>
               )}
             </div>
-          </div>
-        )
-      },
-    },
-    {
-      id: "createdAt",
-      accessorFn: (row) => new Date(row.createdAt).getTime(),
-      header: t("bookings.col.header.createdAt"),
-      cell: ({ row }) => {
-        const parts = isoToClinicParts(row.original.createdAt)
-        if (!parts.date) return <span className="text-muted-foreground">—</span>
-        return (
-          <div className="font-numeric">
-            <p className="text-sm font-medium text-foreground">
-              {formatClinicDate(parts.date, dateFormat)}
-            </p>
-            <span className="text-xs text-muted-foreground">{formatClinicTime(parts.time)}</span>
           </div>
         )
       },
@@ -237,7 +218,6 @@ export function getBookingColumns(
         <ActionsCell
           booking={row.original}
           onView={() => onRowClick(row.original)}
-          onEdit={() => onEditClick(row.original)}
           onDelete={() => onDelete(row.original)}
           t={t}
         />

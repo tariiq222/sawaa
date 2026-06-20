@@ -314,7 +314,6 @@ export const arBookings: Record<string, string> = {
   "bookings.col.header.clinic": "العيادة",
   "bookings.col.header.type": "النوع",
   "bookings.col.header.datetime": "تاريخ الموعد",
-  "bookings.col.header.createdAt": "تاريخ الحجز",
   "bookings.col.header.amount": "المبلغ",
   "bookings.col.header.paymentStatus": "حالة الدفع",
   "bookings.col.paymentStatus.unpaid": "غير مدفوع",

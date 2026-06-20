@@ -377,6 +377,33 @@ describe('CreateBookingHandler', () => {
     expect(prisma.invoice.create).not.toHaveBeenCalled();
   });
 
+  it('does not create invoice when price is zero', async () => {
+    priceResolver.resolve = jest.fn().mockResolvedValue({
+      price: 0,
+      durationMins: 60,
+      durationOptionId: '',
+      currency: 'SAR',
+      isEmployeeOverride: false,
+    });
+    const result = await handler.execute(baseDto);
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
+    expect(result.invoiceId).toBeNull();
+  });
+
+  it('creates invoice when price is positive', async () => {
+    priceResolver.resolve = jest.fn().mockResolvedValue({
+      price: 100,
+      durationMins: 60,
+      durationOptionId: '',
+      currency: 'SAR',
+      isEmployeeOverride: false,
+    });
+    prisma.booking.create = jest.fn().mockResolvedValue({ ...mockBooking, price: 100 });
+    prisma.organizationSettings.findFirst = jest.fn().mockResolvedValue({ vatRate: '0' });
+    await handler.execute(baseDto);
+    expect(prisma.invoice.create).toHaveBeenCalled();
+  });
+
   it('computes invoice VAT and total using computeVat (subtotal=10000, discount=2000, vatRate=0.15)', async () => {
     // Arrange: service priced at 10000 halalas, 20%-off coupon discounting by 2000 halalas.
     priceResolver.resolve = jest.fn().mockResolvedValue({

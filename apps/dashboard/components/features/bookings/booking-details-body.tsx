@@ -108,11 +108,12 @@ interface DetailsBodyProps {
   employeeName: string
   specialty: string
   appointmentDate: string
+  bookedAt: string
   t: (key: string) => string
   locale?: "en" | "ar"
 }
 
-export function DetailsBody({ booking, clientName, employeeName, specialty, appointmentDate, t, locale = "ar" }: DetailsBodyProps) {
+export function DetailsBody({ booking, clientName, employeeName, specialty, appointmentDate, bookedAt, t, locale = "ar" }: DetailsBodyProps) {
   const serviceName = locale === "ar"
     ? (booking.service?.nameAr ?? booking.service?.nameEn ?? "—")
     : (booking.service?.nameEn ?? booking.service?.nameAr ?? "—")
@@ -154,6 +155,13 @@ export function DetailsBody({ booking, clientName, employeeName, specialty, appo
               value={`${booking.durationMinutesSnapshot ?? booking.service?.duration ?? 0} ${t("bookings.wizard.step.typeDuration.minutes")}`}
               numeric
               icon={Timer02Icon}
+            />
+          </div>
+          <div className="px-5 pb-3 pt-1 flex flex-col gap-2 border-t border-border/60">
+            <DetailRow label={t("detail.bookedAt")} value={bookedAt} numeric />
+            <DetailRow
+              label={t("detail.bookingChannel")}
+              value={t(`detail.bookingChannel.${booking.source === "ONLINE" ? "online" : "reception"}`)}
             />
           </div>
         </div>

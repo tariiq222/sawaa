@@ -4,7 +4,6 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Tick01Icon,
   ViewIcon,
-  PencilEdit01Icon,
   Delete02Icon,
   CheckmarkCircle02Icon,
   CheckmarkCircle01Icon,
@@ -12,8 +11,8 @@ import {
   Cancel01Icon,
   UserCheck01Icon,
   EyeIcon,
-  MoneyAdd01Icon,
   Invoice01Icon,
+  Calendar03Icon,
 } from "@hugeicons/core-free-icons"
 import {
   DropdownMenu,
@@ -34,7 +33,7 @@ import { generateInvoicePdf } from "@/lib/api/invoices"
 import { RecordPaymentDialog } from "@/components/features/bookings/record-payment-dialog"
 import type { Booking } from "@/lib/types/booking"
 
-export type QuickStatusActionType = "confirm" | "checkin" | "complete" | "noshow"
+export type QuickStatusActionType = "confirm" | "checkin" | "complete" | "noshow" | "reschedule"
 
 type QuickStatusAction = {
   action: QuickStatusActionType
@@ -49,15 +48,22 @@ const confirmAction: QuickStatusAction = {
   icon: Tick01Icon,
 }
 
+const rescheduleAction: QuickStatusAction = {
+  action: "reschedule",
+  labelKey: "bookings.col.edit",
+  icon: Calendar03Icon,
+}
+
 /* Quick status actions available per status */
 const quickStatusActions: Record<string, QuickStatusAction[]> = {
-  pending:            [confirmAction],
+  pending:            [confirmAction, rescheduleAction],
   pending_group_fill: [confirmAction],
   awaiting_payment:   [confirmAction],
   confirmed: [
     { action: "checkin",  labelKey: "bookings.actions.action.checkin",  icon: UserCheck01Icon },
     { action: "complete", labelKey: "bookings.actions.action.complete", icon: CheckmarkCircle01Icon },
     { action: "noshow",   labelKey: "bookings.actions.action.noshow",   icon: EyeIcon, destructive: true },
+    rescheduleAction,
   ],
 }
 
@@ -71,13 +77,6 @@ const CANCELLABLE_STATUSES = new Set([
 ])
 
 /* Terminal statuses — the booking is over, so it can no longer be edited */
-const TERMINAL_STATUSES = new Set([
-  "completed",
-  "cancelled",
-  "no_show",
-  "expired",
-])
-
 /* ── Actions cell — delete opens the parent's AdminCancelDialog directly ──
    Icon buttons are colorized by intent so the user can tell at a glance which
    action is which, even before hovering. Neutrals stay for read/edit (view,
@@ -92,19 +91,16 @@ const intentIconBtn: Record<string, string> = {
 export function ActionsCell({
   booking,
   onView,
-  onEdit,
   onDelete,
   t,
 }: {
   booking: Booking
   onView: () => void
-  onEdit: () => void
   onDelete: () => void
   t: (key: string) => string
 }) {
   const queryClient = useQueryClient()
   const { verifyMut } = usePaymentMutations()
-  const [recordOpen, setRecordOpen] = useState(false)
   const [invoiceLoading, setInvoiceLoading] = useState(false)
 
   // Generate (or reuse) the invoice PDF and open it in a new tab — works for any status.
@@ -129,13 +125,9 @@ export function ActionsCell({
   }
 
   const payment = booking.payment
-  const hasOutstanding = (booking.invoice?.outstanding ?? 0) > 0
-  // Record/collect while a balance remains — covers unpaid and deposit/partial follow-ups.
-  const canRecordPayment = !!booking.invoice && hasOutstanding && payment?.status !== "awaiting"
   const canVerify = payment?.status === "awaiting"
   const isPending = verifyMut.isPending
   // Terminal bookings are over: no editing. Invoice stays reachable for review.
-  const isTerminal = TERMINAL_STATUSES.has(booking.status)
   const hasInvoice = !!booking.invoice
 
   const invalidateBookings = () =>
@@ -143,18 +135,6 @@ export function ActionsCell({
 
   return (
     <div className="flex items-center gap-1">
-      {canRecordPayment && (
-        <>
-          <button
-            className={intentIconBtn.approve}
-            aria-label={t("bookings.col.recordPayment")}
-            onClick={() => setRecordOpen(true)}
-          >
-            <HugeiconsIcon icon={MoneyAdd01Icon} size={16} strokeWidth={2.2} />
-          </button>
-          <RecordPaymentDialog booking={booking} open={recordOpen} onOpenChange={setRecordOpen} />
-        </>
-      )}
       {canVerify && payment && (
         <>
           <button
@@ -186,11 +166,6 @@ export function ActionsCell({
           onClick={handleInvoicePdf}
         >
           <HugeiconsIcon icon={Invoice01Icon} size={16} strokeWidth={2.2} />
-        </button>
-      )}
-      {!isTerminal && (
-        <button className={intentIconBtn.neutral} aria-label={t("bookings.col.edit")} onClick={onEdit}>
-          <HugeiconsIcon icon={PencilEdit01Icon} size={16} strokeWidth={2.2} />
         </button>
       )}
       <button

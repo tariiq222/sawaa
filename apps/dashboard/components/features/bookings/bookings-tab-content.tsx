@@ -22,11 +22,10 @@ import { ApiError } from "@/lib/api"
 import type { Booking, CancellationReason } from "@/lib/types/booking"
 
 interface BookingsTabContentProps {
-  onRowClick: (b: Booking) => void
-  onEditClick: (b: Booking) => void
+  onRowClick: (b: Booking, tab?: "details" | "reschedule" | "invoice") => void
 }
 
-export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabContentProps) {
+export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
   const { t, locale } = useLocale()
   const { weekStartDayNumber, dateFormat } = useOrganizationConfig()
   const queryClient = useQueryClient()
@@ -80,6 +79,7 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
   }
 
   const handleStatusAction = async (booking: Booking, action: QuickStatusActionType) => {
+    if (action === "reschedule") { onRowClick(booking, "reschedule"); return }
     try {
       if (action === "confirm") await confirmMut.mutateAsync(booking.id)
       else if (action === "checkin") await checkInMut.mutateAsync(booking.id)
@@ -124,7 +124,7 @@ export function BookingsTabContent({ onRowClick, onEditClick }: BookingsTabConte
   }
 
   const columns = useMemo(
-    () => getBookingColumns(onRowClick, onEditClick, handleStatusAction, handleDelete, t, { dateFormat, locale }),
+    () => getBookingColumns(onRowClick, handleStatusAction, handleDelete, t, { dateFormat, locale }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [t, dateFormat, locale]
   )

@@ -34,14 +34,8 @@ export function BookingsPageContent() {
     "details" | "reschedule" | "invoice"
   >("details")
 
-  const handleRowClick = (booking: Booking) => {
-    setDetailDefaultTab("details")
-    setSelectedBooking(booking)
-    setDetailOpen(true)
-  }
-
-  const handleEditClick = (booking: Booking) => {
-    setDetailDefaultTab("reschedule")
+  const handleRowClick = (booking: Booking, tab: "details" | "reschedule" | "invoice" = "details") => {
+    setDetailDefaultTab(tab)
     setSelectedBooking(booking)
     setDetailOpen(true)
   }
@@ -74,10 +68,7 @@ export function BookingsPageContent() {
           onCancel={() => setCreating(false)}
         />
       ) : (
-        <BookingsTabContent
-          onRowClick={handleRowClick}
-          onEditClick={handleEditClick}
-        />
+        <BookingsTabContent onRowClick={handleRowClick} />
       )}
 
       <BookingDetailSheet

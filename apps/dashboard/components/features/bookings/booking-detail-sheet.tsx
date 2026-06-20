@@ -15,6 +15,7 @@ import { StatusBadge, BookingTypeBadge } from "@/components/features/status-badg
 import { DetailSection } from "@/components/features/detail-sheet-parts"
 import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
+import { isoToClinicParts } from "@/lib/utils"
 import type { Booking } from "@/lib/types/booking"
 import { BookingActions } from "./booking-actions"
 import { DetailsBody } from "./booking-details-body"
@@ -55,6 +56,9 @@ export function BookingDetailSheet({ booking, open, onOpenChange, onAction, defa
 
   const appointmentDate = formatDate(booking.date)
 
+  const bookedParts = isoToClinicParts(booking.createdAt)
+  const bookedAt = bookedParts.date ? `${formatDate(bookedParts.date)} - ${bookedParts.time}` : "—"
+
   const canReschedule = !["completed", "cancelled", "no_show", "cancel_requested", "expired"].includes(booking.status)
   const hasInvoice = !!booking.invoice
   // Keep the requested tab valid for this booking; fall back to details.
@@ -71,6 +75,7 @@ export function BookingDetailSheet({ booking, open, onOpenChange, onAction, defa
         employeeName={employeeName}
         specialty={specialty}
         appointmentDate={appointmentDate}
+        bookedAt={bookedAt}
         t={t}
         locale={locale}
       />
