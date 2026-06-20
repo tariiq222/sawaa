@@ -52,6 +52,15 @@ export const paymentStatusStyles = {
   FAILED:               { bg: "bg-error-soft",    text: "text-error",            border: "border-error/40"            },
   REFUNDED:             { bg: "bg-refunded-soft", text: "text-refunded",         border: "border-refunded/40"         },
   PARTIALLY_REFUNDED:   { bg: "bg-refunded-soft", text: "text-refunded",         border: "border-refunded/40"         },
+  // lowercase keys — booking payment-status cell (paid/unpaid/partial/...)
+  paid:                 { bg: "bg-success-soft",  text: "text-success",          border: "border-success/40"          },
+  unpaid:               { bg: "bg-error-soft",    text: "text-error",            border: "border-error/40"            },
+  partial:              { bg: "bg-warning-soft",  text: "text-warning",          border: "border-warning/40"          },
+  pending:              { bg: "bg-warning-soft",  text: "text-warning",          border: "border-warning/40"          },
+  awaiting:             { bg: "bg-warning-soft",  text: "text-warning",          border: "border-warning/40"          },
+  failed:               { bg: "bg-error-soft",    text: "text-error",            border: "border-error/40"            },
+  rejected:             { bg: "bg-error-soft",    text: "text-error",            border: "border-error/40"            },
+  refunded:             { bg: "bg-refunded-soft", text: "text-refunded",         border: "border-refunded/40"         },
   _fallback:            { bg: "bg-muted",          text: "text-muted-foreground", border: "border-border"              },
 } as const
 

@@ -263,7 +263,7 @@ export function PaymentStatusCell({ booking }: { booking: Booking }) {
   const { t } = useLocale()
   const payment = booking.payment
 
-  const status = isPartiallyPaid(booking) ? "partial" : payment?.status ?? "pending"
+  const status = isPartiallyPaid(booking) ? "partial" : payment?.status ?? "unpaid"
   const label = payment
     ? t("bookings.col.paymentStatus." + status)
     : t("bookings.col.paymentStatus.unpaid")
