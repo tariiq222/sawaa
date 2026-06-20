@@ -53,7 +53,7 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
 
   const { data: allCategories, isLoading: categoriesLoading } = useCategories()
   const { createMut, updateMut } = useCategoryMutations()
-  const { options: departmentOptions } = useDepartmentOptions()
+  const { options: departmentOptions, isLoading: departmentsLoading } = useDepartmentOptions()
 
   const category: ServiceCategory | undefined =
     mode === "edit" && categoryId ? allCategories?.find((c) => c.id === categoryId || formatRef("CAT", c.ref) === categoryId) : undefined
@@ -74,23 +74,31 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
   const prevTab = tabIndex > 0 ? tabs[tabIndex - 1] : null
   const nextTab = tabIndex < tabs.length - 1 ? tabs[tabIndex + 1] : null
 
+  const hydratedForId = useRef<string | null>(null)
   useEffect(() => {
-    if (mode === "edit" && category) {
-      reset({
-        nameAr: category.nameAr,
-        nameEn: category.nameEn ?? "",
-        sortOrder: category.sortOrder,
-        isActive: category.isActive,
-        departmentId: category.departmentId ?? "",
-        bookingMode: category.bookingMode ?? "DIRECT",
-        iconName: category.iconName ?? undefined,
-        iconBgColor: category.iconBgColor ?? undefined,
-        imageUrl: category.imageUrl ?? undefined,
-      })
-      pendingAvatarFile.current = null
-      setLocalAvatarPreview(null)
-    }
-  }, [mode, category, reset])
+    if (mode !== "edit" || !category) return
+    // Wait for department options before hydrating: the controlled Radix Select
+    // can only reflect the saved departmentId once its matching <SelectItem> is
+    // mounted. Hydrating earlier leaves the field blank, and a later save would
+    // wipe the clinic's department. Guard per-category so the user's own edits
+    // aren't reset by a background departments refetch.
+    if (departmentsLoading) return
+    if (hydratedForId.current === category.id) return
+    hydratedForId.current = category.id
+    reset({
+      nameAr: category.nameAr,
+      nameEn: category.nameEn ?? "",
+      sortOrder: category.sortOrder,
+      isActive: category.isActive,
+      departmentId: category.departmentId ?? "",
+      bookingMode: category.bookingMode ?? "DIRECT",
+      iconName: category.iconName ?? undefined,
+      iconBgColor: category.iconBgColor ?? undefined,
+      imageUrl: category.imageUrl ?? undefined,
+    })
+    pendingAvatarFile.current = null
+    setLocalAvatarPreview(null)
+  }, [mode, category, departmentsLoading, reset])
 
   useEffect(() => {
     if (mode !== "edit" || !form.formState.isDirty) return
@@ -282,7 +290,7 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
                     name="departmentId"
                     control={control}
                     render={({ field }) => (
-                      <Select value={field.value ?? ""} onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}>
+                      <Select key={field.value || "none"} value={field.value ?? ""} onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}>
                         <SelectTrigger className="w-full"><SelectValue placeholder={t("services.categories.create.departmentPlaceholder")} /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__none__">{t("services.categories.create.departmentPlaceholder")}</SelectItem>
