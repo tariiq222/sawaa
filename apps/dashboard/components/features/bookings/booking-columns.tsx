@@ -147,7 +147,7 @@ export function getBookingColumns(
       id: "clinic",
       header: t("bookings.col.header.clinic"),
       cell: ({ row }) => {
-        const name = row.original.categoryNameSnapshot
+        const name = row.original.branchNameSnapshot
         if (!name) return <span className="text-muted-foreground">—</span>
         return <span className="text-sm font-medium text-foreground">{name}</span>
       },

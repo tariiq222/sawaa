@@ -68,7 +68,7 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
   const endTime = formatToBusinessHHmm(ends);
 
   const clientNames = splitName(client?.name ?? null, client?.firstName ?? null, client?.lastName ?? null);
-  const employeeNames = splitName(employee?.name ?? null, null, null);
+  const employeeNames = splitName(employee?.nameAr || employee?.name || null, null, null);
 
   const pay = relations.paymentsByBookingId.get(b.id) ?? null;
   const inv = relations.invoicesByBookingId?.get(b.id) ?? null;
@@ -83,6 +83,7 @@ export function mapBookingRow(b: Booking, relations: BookingRelations, opts: Map
     type: mapTypeForUi(b.bookingType),
     source: b.source,
     categoryNameSnapshot: b.categoryNameSnapshot ?? null,
+    branchNameSnapshot: b.branchNameSnapshot ?? null,
     durationMinutesSnapshot: b.durationMinutesSnapshot ?? null,
     priceSnapshot: b.priceSnapshot != null ? Number(b.priceSnapshot) : null,
     date,
