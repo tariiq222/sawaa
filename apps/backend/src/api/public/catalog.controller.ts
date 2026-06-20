@@ -4,6 +4,7 @@ import { ApiTags, ApiOperation, ApiOkResponse, ApiParam, ApiNotFoundResponse } f
 import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
 import { PrismaService } from '../../infrastructure/database';
+import { CacheService } from '../../infrastructure/cache';
 import { GetPractitionerBookingOptionsHandler } from '../../modules/org-experience/services/get-practitioner-booking-options/get-practitioner-booking-options.handler';
 
 @ApiTags('Public / Catalog')
@@ -13,6 +14,7 @@ export class PublicCatalogController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly getPractitionerBookingOptions: GetPractitionerBookingOptionsHandler,
+    private readonly cache: CacheService,
   ) {}
 
   @Public()
@@ -21,80 +23,82 @@ export class PublicCatalogController {
   @ApiOperation({ summary: 'Get public service catalog (departments, categories, services)' })
   @ApiOkResponse({ description: 'Active departments, categories, and services' })
   async getCatalog() {
-    const [departments, categories, rawServices, orgSettings] = await Promise.all([
-      this.prisma.department.findMany({
-        // isVisible is the public hide-from-booking toggle; filter at the source
-        // so hidden departments never reach any client (website/mobile). (R-32)
-        where: { isActive: true, isVisible: true },
-        orderBy: { sortOrder: 'asc' },
-      }),
-      this.prisma.serviceCategory.findMany({
-        where: { isActive: true },
-        orderBy: { sortOrder: 'asc' },
-      }),
-      this.prisma.service.findMany({
-        where: { isActive: true, isHidden: false, archivedAt: null },
-        select: {
-          id: true,
-          categoryId: true,
-          nameAr: true,
-          nameEn: true,
-          descriptionAr: true,
-          descriptionEn: true,
-          durationMins: true,
-          price: true,
-          currency: true,
-          imageUrl: true,
-          iconName: true,
-          iconBgColor: true,
-          hidePriceOnBooking: true,
-          hideDurationOnBooking: true,
-          minParticipants: true,
-          durationOptions: {
-            // Service-level catalog only: never expose practitioner-OWNED rows
-            // (employeeServiceId != null) in the public service listing.
-            where: { isActive: true, employeeServiceId: null },
-            orderBy: { sortOrder: 'asc' },
-            select: {
-              id: true,
-              label: true,
-              durationMins: true,
-              price: true,
-              sortOrder: true,
+    return this.cache.getOrSet('ref:public-catalog', async () => {
+      const [departments, categories, rawServices, orgSettings] = await Promise.all([
+        this.prisma.department.findMany({
+          // isVisible is the public hide-from-booking toggle; filter at the source
+          // so hidden departments never reach any client (website/mobile). (R-32)
+          where: { isActive: true, isVisible: true },
+          orderBy: { sortOrder: 'asc' },
+        }),
+        this.prisma.serviceCategory.findMany({
+          where: { isActive: true },
+          orderBy: { sortOrder: 'asc' },
+        }),
+        this.prisma.service.findMany({
+          where: { isActive: true, isHidden: false, archivedAt: null },
+          select: {
+            id: true,
+            categoryId: true,
+            nameAr: true,
+            nameEn: true,
+            descriptionAr: true,
+            descriptionEn: true,
+            durationMins: true,
+            price: true,
+            currency: true,
+            imageUrl: true,
+            iconName: true,
+            iconBgColor: true,
+            hidePriceOnBooking: true,
+            hideDurationOnBooking: true,
+            minParticipants: true,
+            durationOptions: {
+              // Service-level catalog only: never expose practitioner-OWNED rows
+              // (employeeServiceId != null) in the public service listing.
+              where: { isActive: true, employeeServiceId: null },
+              orderBy: { sortOrder: 'asc' },
+              select: {
+                id: true,
+                label: true,
+                durationMins: true,
+                price: true,
+                sortOrder: true,
+              },
+            },
+            bookingConfigs: {
+              where: { isActive: true },
+              select: {
+                id: true,
+                deliveryType: true,
+                price: true,
+                durationMins: true,
+              },
             },
           },
-          bookingConfigs: {
-            where: { isActive: true },
-            select: {
-              id: true,
-              deliveryType: true,
-              price: true,
-              durationMins: true,
-            },
-          },
-        },
-        orderBy: { nameAr: 'asc' },
-      }),
-      // Same source the booking/invoice flow uses (create-booking.handler.ts) —
-      // exposed so the website can display VAT-inclusive prices. Fractional
-      // rate (0.15 = 15%), defaults to 0 when settings are missing.
-      this.prisma.organizationSettings.findFirst({
-        where: {},
-        select: { vatRate: true },
-      }),
-    ]);
+          orderBy: { nameAr: 'asc' },
+        }),
+        // Same source the booking/invoice flow uses (create-booking.handler.ts) —
+        // exposed so the website can display VAT-inclusive prices. Fractional
+        // rate (0.15 = 15%), defaults to 0 when settings are missing.
+        this.prisma.organizationSettings.findFirst({
+          where: {},
+          select: { vatRate: true },
+        }),
+      ]);
 
-    const vatRate = Number(orgSettings?.vatRate?.toString() ?? '0');
+      const vatRate = Number(orgSettings?.vatRate?.toString() ?? '0');
 
-    const services = rawServices.map(
-      ({ hidePriceOnBooking, hideDurationOnBooking, ...service }) => ({
-        ...service,
-        showPrice: !hidePriceOnBooking,
-        showDuration: !hideDurationOnBooking,
-      }),
-    );
+      const services = rawServices.map(
+        ({ hidePriceOnBooking, hideDurationOnBooking, ...service }) => ({
+          ...service,
+          showPrice: !hidePriceOnBooking,
+          showDuration: !hideDurationOnBooking,
+        }),
+      );
 
-    return { departments, categories, services, vatRate };
+      return { departments, categories, services, vatRate };
+    }, 300);
   }
 
   @Public()

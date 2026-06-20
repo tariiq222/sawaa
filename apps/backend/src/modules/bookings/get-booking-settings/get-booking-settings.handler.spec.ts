@@ -1,6 +1,12 @@
 import { GetBookingSettingsHandler } from './get-booking-settings.handler';
 import { buildPrisma } from '../testing/booking-test-helpers';
 
+/** Pass-through CacheService mock: calls the loader immediately, no Redis. */
+const buildCache = () => ({
+  getOrSet: jest.fn((_key: string, loader: () => Promise<unknown>) => loader()),
+  invalidatePrefix: jest.fn().mockResolvedValue(undefined),
+});
+
 const dbSettings = {
   id: 'settings-1', branchId: null,
   bufferMinutes: 0, freeCancelBeforeHours: 24, freeCancelRefundType: 'FULL' as const,
@@ -17,7 +23,7 @@ describe('GetBookingSettingsHandler', () => {
     (prisma as any).bookingSettings = {
       findFirst: jest.fn().mockResolvedValueOnce(branchSettings),
     };
-    const handler = new GetBookingSettingsHandler(prisma as never);
+    const handler = new GetBookingSettingsHandler(prisma as never, buildCache() as never);
 
     const result = await handler.execute({ branchId: 'branch-1' });
 
@@ -32,7 +38,7 @@ describe('GetBookingSettingsHandler', () => {
         .mockResolvedValueOnce(null)      // branch lookup returns null
         .mockResolvedValueOnce(dbSettings), // global lookup returns settings
     };
-    const handler = new GetBookingSettingsHandler(prisma as never);
+    const handler = new GetBookingSettingsHandler(prisma as never, buildCache() as never);
 
     const result = await handler.execute({ branchId: 'branch-1' });
 
@@ -45,7 +51,7 @@ describe('GetBookingSettingsHandler', () => {
     (prisma as any).bookingSettings = {
       findFirst: jest.fn().mockResolvedValue(null),
     };
-    const handler = new GetBookingSettingsHandler(prisma as never);
+    const handler = new GetBookingSettingsHandler(prisma as never, buildCache() as never);
 
     const result = await handler.execute({ branchId: 'branch-1' });
 

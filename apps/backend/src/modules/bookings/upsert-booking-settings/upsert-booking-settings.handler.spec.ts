@@ -1,6 +1,12 @@
 import { UpsertBookingSettingsHandler } from './upsert-booking-settings.handler';
 import { buildPrisma } from '../testing/booking-test-helpers';
 
+/** Pass-through CacheService mock: no Redis I/O in unit tests. */
+const buildCache = () => ({
+  getOrSet: jest.fn((_key: string, loader: () => Promise<unknown>) => loader()),
+  invalidatePrefix: jest.fn().mockResolvedValue(undefined),
+});
+
 const dbSettings = {
   id: 'settings-1', branchId: null,
   bufferMinutes: 0, freeCancelBeforeHours: 24, freeCancelRefundType: 'FULL' as const,
@@ -17,7 +23,7 @@ describe('UpsertBookingSettingsHandler', () => {
       findFirst: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue({ ...dbSettings, branchId: 'branch-1', bufferMinutes: 15 }),
     };
-    const handler = new UpsertBookingSettingsHandler(prisma as never);
+    const handler = new UpsertBookingSettingsHandler(prisma as never, buildCache() as never);
 
     const result = await handler.execute({ branchId: 'branch-1', bufferMinutes: 15 });
 
@@ -36,7 +42,7 @@ describe('UpsertBookingSettingsHandler', () => {
       findFirst: jest.fn().mockResolvedValue(dbSettings),
       update: jest.fn().mockResolvedValue({ ...dbSettings, bufferMinutes: 5 }),
     };
-    const handler = new UpsertBookingSettingsHandler(prisma as never);
+    const handler = new UpsertBookingSettingsHandler(prisma as never, buildCache() as never);
 
     await handler.execute({ branchId: null, bufferMinutes: 5 });
 

@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { BookingSettings, RefundType } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
+import { BOOKING_SETTINGS_CACHE_KEY } from '../get-booking-settings/get-booking-settings.handler';
 
 export interface UpsertBookingSettingsCommand {
   branchId: string | null;
@@ -23,6 +25,7 @@ export interface UpsertBookingSettingsCommand {
 export class UpsertBookingSettingsHandler {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(cmd: UpsertBookingSettingsCommand): Promise<BookingSettings> {
@@ -36,15 +39,16 @@ export class UpsertBookingSettingsHandler {
       ? await this.prisma.bookingSettings.findFirst({ where: { branchId } })
       : await this.prisma.bookingSettings.findFirst({ where: { branchId: null } });
 
-    if (existing) {
-      return this.prisma.bookingSettings.update({
-        where: { id: existing.id },
-        data: updateData,
-      });
-    }
+    const result = existing
+      ? await this.prisma.bookingSettings.update({
+          where: { id: existing.id },
+          data: updateData,
+        })
+      : await this.prisma.bookingSettings.create({
+          data: { branchId, ...updateData },
+        });
 
-    return this.prisma.bookingSettings.create({
-      data: { branchId, ...updateData },
-    });
+    await this.cache.invalidatePrefix(BOOKING_SETTINGS_CACHE_KEY);
+    return result;
   }
 }

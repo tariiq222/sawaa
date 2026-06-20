@@ -45,6 +45,7 @@ export class NotificationRetryWorker implements OnModuleInit {
           await this.dispatcher.attemptSend(logId, channel, payload, attempt);
         });
       },
+      { concurrency: 5 },
     );
     this.logger.log(`Worker registered for queue: ${NOTIFICATION_RETRY_QUEUE}`);
   }

@@ -36,6 +36,7 @@ export class SendEmailWorker implements OnModuleInit {
           await this.sendEmail.execute(job.data);
         });
       },
+      { concurrency: 5 },
     );
     this.logger.log(`Worker registered for queue: ${EMAIL_SEND_QUEUE}`);
   }

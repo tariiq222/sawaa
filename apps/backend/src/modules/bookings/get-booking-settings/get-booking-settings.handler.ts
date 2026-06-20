@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import type { BookingSettings } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
+import { CacheService } from '../../../infrastructure/cache';
+
+export const BOOKING_SETTINGS_CACHE_KEY = 'ref:booking-settings';
 
 export interface GetBookingSettingsQuery {
   branchId: string | null;
@@ -27,21 +30,27 @@ export type ResolvedBookingSettings = typeof DEFAULT_BOOKING_SETTINGS;
 
 @Injectable()
 export class GetBookingSettingsHandler {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+  ) {}
 
   async execute(query: GetBookingSettingsQuery): Promise<BookingSettings | ResolvedBookingSettings> {
-    if (query.branchId) {
-      const branchRow = await this.prisma.bookingSettings.findFirst({
-        where: { branchId: query.branchId },
+    const cacheKey = `${BOOKING_SETTINGS_CACHE_KEY}:${query.branchId ?? 'global'}`;
+    return this.cache.getOrSet(cacheKey, async () => {
+      if (query.branchId) {
+        const branchRow = await this.prisma.bookingSettings.findFirst({
+          where: { branchId: query.branchId },
+        });
+        if (branchRow) return branchRow;
+      }
+
+      const globalRow = await this.prisma.bookingSettings.findFirst({
+        where: { branchId: null },
       });
-      if (branchRow) return branchRow;
-    }
+      if (globalRow) return globalRow;
 
-    const globalRow = await this.prisma.bookingSettings.findFirst({
-      where: { branchId: null },
-    });
-    if (globalRow) return globalRow;
-
-    return DEFAULT_BOOKING_SETTINGS;
+      return DEFAULT_BOOKING_SETTINGS;
+    }, 300);
   }
 }

@@ -60,6 +60,7 @@ export class ZoomMeetingWorker implements OnModuleInit {
           }
         });
       },
+      { concurrency: 3 },
     );
     this.logger.log(`Worker registered for queue: ${ZOOM_MEETING_QUEUE}`);
   }

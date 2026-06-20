@@ -116,6 +116,7 @@ export class UpdateServiceHandler {
     });
 
     await this.cache.invalidatePrefix(SERVICES_CACHE_PREFIX);
+    await this.cache.invalidatePrefix('ref:public-catalog');
 
     if (dto.isActive !== undefined && dto.isActive !== wasActive) {
       const event = dto.isActive

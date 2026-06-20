@@ -129,6 +129,9 @@ model Booking {
   @@index([branchId, scheduledAt])
   @@index([serviceId, scheduledAt])
   @@index([bundleGroupId])
+  @@index([status, expiresAt])
+  @@index([status, endsAt])
+  @@index([status, scheduledAt])
 }
 
 // ─── Group Session ────────────────────────────────────────────────────────────
@@ -173,6 +176,7 @@ model GroupSession {
   @@index([employeeId])
   @@index([scheduledAt])
   @@index([isPublic])
+  @@index([status, scheduledAt])
 }
 
 model GroupEnrollment {
