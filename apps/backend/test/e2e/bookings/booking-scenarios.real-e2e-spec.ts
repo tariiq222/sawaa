@@ -999,6 +999,7 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 					currency: "SAR",
 					status: "COMPLETED",
 					method: "MADA",
+					gatewayRef: "pay_approve_cancel_11",
 				},
 			});
 
@@ -1058,7 +1059,7 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 			const scheduledAt = await getFirstAvailableSlot(
 				ctx.employeeId,
 				ctx.serviceId,
-				tomorrow(),
+				daysFromNow(2),
 			);
 			const createRes = await createBooking({
 				scheduledAt: scheduledAt.toISOString(),
@@ -1328,7 +1329,7 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 			const scheduledAt = await getFirstAvailableSlot(
 				ctx.employeeId,
 				ctx.serviceId,
-				tomorrow(),
+				daysFromNow(2),
 			);
 			const createRes = await createBooking({
 				scheduledAt: scheduledAt.toISOString(),
