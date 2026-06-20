@@ -28,6 +28,11 @@ export function BookingsPageContent() {
     queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all, refetchType: "all" })
 
   const [creating, setCreating] = useState(newParam === "1")
+  const [prevNewParam, setPrevNewParam] = useState(newParam)
+  if (newParam !== prevNewParam) {
+    setPrevNewParam(newParam)
+    if (newParam === "1") setCreating(true)
+  }
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailDefaultTab, setDetailDefaultTab] = useState<
