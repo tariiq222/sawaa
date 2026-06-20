@@ -65,7 +65,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   } = useBookingFormState()
 
   const handleSelectDeliveryType = (deliveryType: string) => {
-    selectDeliveryType(deliveryType as "in_person" | "online")
+    selectDeliveryType(deliveryType.toLowerCase() as "in_person" | "online")
     setOpenSection("datetime")
   }
 

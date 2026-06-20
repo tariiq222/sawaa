@@ -124,7 +124,7 @@ export function StepTypeDuration({
   }, [activeTypes, selectedType, onSelectType])
 
   const selectedServiceType = selectedType
-    ? activeTypes.find((st) => st.deliveryType === selectedType)
+    ? activeTypes.find((st) => st.deliveryType.toLowerCase() === selectedType.toLowerCase())
     : undefined
 
   if (isLoading) return <StepTypeDurationSkeleton />
@@ -148,7 +148,7 @@ export function StepTypeDuration({
               <TypeCard
                 key={st.id}
                 serviceType={st}
-                selected={selectedType === st.deliveryType}
+                selected={selectedType?.toLowerCase() === st.deliveryType.toLowerCase()}
                 onSelect={() => onSelectType(st.deliveryType)}
                 t={t}
               />
