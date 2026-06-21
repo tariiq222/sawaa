@@ -3,26 +3,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { ReactNode } from "react"
 
-const {
-  fetchBranches,
-  createBranch,
-  updateBranch,
-} = vi.hoisted(() => ({
+const { fetchBranches } = vi.hoisted(() => ({
   fetchBranches: vi.fn(),
-  createBranch: vi.fn(),
-  updateBranch: vi.fn(),
 }))
 
 vi.mock("@/lib/api/branches", () => ({
   fetchBranches,
-  createBranch,
-  updateBranch,
 }))
 
-import {
-  useBranches,
-  useBranchMutations,
-} from "@/hooks/use-branches"
+import { useBranches } from "@/hooks/use-branches"
 
 function makeWrapper() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -107,33 +96,4 @@ describe("useBranches", () => {
     expect(result.current.search).toBe("")
     expect(result.current.page).toBe(1)
   })
-})
-
-describe("useBranchMutations", () => {
-  beforeEach(() => { vi.clearAllMocks() })
-
-  it("createMut calls createBranch", async () => {
-    createBranch.mockResolvedValueOnce({ id: "b-new" })
-
-    const { result } = renderHook(() => useBranchMutations(), { wrapper: makeWrapper() })
-
-    act(() => {
-      result.current.createMut.mutate({ name: "New Branch" } as Parameters<typeof createBranch>[0])
-    })
-
-    await waitFor(() => expect(createBranch).toHaveBeenCalled())
-  })
-
-  it("updateMut calls updateBranch with id and payload", async () => {
-    updateBranch.mockResolvedValueOnce({ id: "b-1" })
-
-    const { result } = renderHook(() => useBranchMutations(), { wrapper: makeWrapper() })
-
-    act(() => {
-      result.current.updateMut.mutate({ id: "b-1", name: "Updated" } as Parameters<typeof result.current.updateMut.mutate>[0])
-    })
-
-    await waitFor(() => expect(updateBranch).toHaveBeenCalledWith("b-1", expect.objectContaining({ name: "Updated" })))
-  })
-
 })

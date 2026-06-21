@@ -126,16 +126,6 @@ export interface ChatbotConfig {
   updatedAt: string
 }
 
-/** @deprecated Use ChatbotConfig instead — backend is now a singleton */
-export interface ChatbotConfigEntry {
-  id: string
-  key: string
-  value: unknown
-  category: string
-  createdAt: string
-  updatedAt: string
-}
-
 export interface QuickReply {
   label_ar: string
   label_en: string

@@ -2,18 +2,6 @@ import { formatPrice } from "@/lib/money"
 
 const RIYAL = "⃁"
 
-interface SarSymbolProps {
-  className?: string
-}
-
-export function SarSymbol({ className }: SarSymbolProps) {
-  return (
-    <span className={`inline-block align-middle${className ? ` ${className}` : ""}`}>
-      {RIYAL}
-    </span>
-  )
-}
-
 interface FormattedCurrencyProps {
   /** Amount in halalat (1 SAR = 100 halalat) */
   amount: number

@@ -41,27 +41,3 @@ export interface BranchListQuery extends PaginatedQuery {
   search?: string
   isActive?: boolean
 }
-
-/* ─── DTOs ─── */
-
-export interface CreateBranchPayload {
-  nameAr: string
-  nameEn?: string
-  addressAr?: string
-  addressEn?: string
-  phone?: string
-  isMain?: boolean
-  isActive?: boolean
-  timezone?: string
-}
-
-export interface UpdateBranchPayload {
-  nameAr?: string
-  nameEn?: string
-  addressAr?: string
-  addressEn?: string
-  phone?: string
-  isMain?: boolean
-  isActive?: boolean
-  timezone?: string
-}

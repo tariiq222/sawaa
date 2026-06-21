@@ -6,7 +6,6 @@ import {
   CartesianGrid,
   Legend,
   Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -138,34 +137,6 @@ export function TrendChart({
               />
             ))}
         </AreaChart>
-      </ResponsiveContainer>
-    </div>
-  )
-}
-
-export function MiniLineChart({
-  data,
-  dataKey,
-  color,
-  height = 60,
-}: {
-  data: Array<Record<string, string | number>>
-  dataKey: string
-  color: string
-  height?: number
-}) {
-  return (
-    <div style={{ width: "100%", height, direction: "ltr" }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data}>
-          <Line
-            type="monotone"
-            dataKey={dataKey}
-            stroke={color}
-            strokeWidth={2}
-            dot={false}
-          />
-        </LineChart>
       </ResponsiveContainer>
     </div>
   )
