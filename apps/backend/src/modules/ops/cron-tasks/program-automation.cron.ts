@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ActivityAction } from '@prisma/client';
+import { ActivityAction, ProgramStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 
 const CRON_ACTOR_EMAIL = 'system:program-automation-cron';
@@ -8,12 +8,12 @@ const BATCH_SIZE = 100;
 /**
  * ProgramAutomationCron
  * =====================
- * Closes SCHEDULED programs once `startDate + daysCount` has elapsed,
- * transitioning them to COMPLETED and writing an audit row per program.
+ * Closes SCHEDULED programs once their full duration has elapsed. A
+ * program's effective endDate is `startDate + daysCount` days; once the
+ * current time passes that boundary, the program transitions to
+ * COMPLETED (terminal status) and an audit row is written per program.
  *
- * Commits A and B introduce this cron as a stub so the existing job
- * registration keeps compiling; commit D fills in the program-specific
- * conditions (computed `endDate = startDate + daysCount days`).
+ * Runs on the same 30-minute cadence as the legacy group-session automation.
  */
 @Injectable()
 export class ProgramAutomationCron {
@@ -25,18 +25,25 @@ export class ProgramAutomationCron {
 
   async execute(): Promise<void> {
     const now = new Date();
-    const targets = await this.prisma.program.findMany({
-      where: { status: 'SCHEDULED', startDate: { lte: now } },
+
+    // Snapshot candidate ids + dates so we can compute endDate per row and
+    // run the guarded update against the same snapshot.
+    const candidates = await this.prisma.program.findMany({
+      where: { status: ProgramStatus.SCHEDULED, startDate: { not: null } },
       select: { id: true, startDate: true, daysCount: true },
       orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
       take: BATCH_SIZE,
     });
+
+    const targets = candidates.filter((p) =>
+      ProgramAutomationCron.hasEnded(p.startDate, p.daysCount, now),
+    );
     if (targets.length === 0) return;
 
     const ids = targets.map((t) => t.id);
     const result = await this.prisma.program.updateMany({
-      where: { id: { in: ids }, status: 'SCHEDULED' },
-      data: { status: 'COMPLETED' },
+      where: { id: { in: ids }, status: ProgramStatus.SCHEDULED },
+      data: { status: ProgramStatus.COMPLETED },
     });
 
     if (result.count > 0) {
@@ -51,5 +58,16 @@ export class ProgramAutomationCron {
       });
       this.logger.log(`closed ${result.count} programs`);
     }
+  }
+
+  /**
+   * True when `startDate + daysCount` days has elapsed relative to `now`.
+   * Computed as plain Date arithmetic (no timezone gymnastics) because the
+   * stored startDate is already a UTC instant.
+   */
+  static hasEnded(startDate: Date | null, daysCount: number, now: Date): boolean {
+    if (!startDate) return false;
+    const endDate = new Date(startDate.getTime() + daysCount * 86_400_000);
+    return endDate.getTime() <= now.getTime();
   }
 }
