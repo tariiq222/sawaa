@@ -60,7 +60,7 @@ model Booking {
   branchId             String
   clientId             String
   employeeId           String
-  serviceId            String
+  serviceId            String?  // null for GROUP bookings (use programId instead)
   bookingType          BookingType         @default(INDIVIDUAL)
   // DB-???: deliveryType — required delivery channel; bookingType now models appointment shape only.
   deliveryType         DeliveryType

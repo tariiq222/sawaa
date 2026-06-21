@@ -119,6 +119,7 @@ export async function buildOverviewReport(
   // Top services (by booking count)
   const serviceCount = new Map<string, number>();
   for (const b of bookings) {
+    if (!b.serviceId) continue;
     serviceCount.set(b.serviceId, (serviceCount.get(b.serviceId) ?? 0) + 1);
   }
   const topServiceIds = [...serviceCount.entries()]

@@ -142,7 +142,7 @@ export async function buildRatingsReport(
       : Promise.resolve([]),
   ]);
 
-  const serviceIds = [...new Set(negBookings.map((b) => b.serviceId))];
+  const serviceIds = [...new Set(negBookings.map((b) => b.serviceId).filter((id): id is string => id !== null))];
   const negServices = serviceIds.length
     ? await prisma.service.findMany({
         where: { id: { in: serviceIds } },
@@ -159,7 +159,7 @@ export async function buildRatingsReport(
     const c = clientById.get(r.clientId);
     const e = employeeById.get(r.employeeId);
     const b = bookingById.get(r.bookingId);
-    const s = b ? serviceById.get(b.serviceId) : undefined;
+    const s = b?.serviceId ? serviceById.get(b.serviceId) : undefined;
     const clientName =
       c?.firstName || c?.lastName
         ? [c?.firstName, c?.lastName].filter(Boolean).join(' ')

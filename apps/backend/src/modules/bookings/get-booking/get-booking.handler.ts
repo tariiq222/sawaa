@@ -25,7 +25,7 @@ export class GetBookingHandler {
     const [client, employee, service, invoice] = await Promise.all([
       this.prisma.client.findFirst({ where: { id: booking.clientId } }),
       this.prisma.employee.findFirst({ where: { id: booking.employeeId } }),
-      this.prisma.service.findFirst({ where: { id: booking.serviceId } }),
+      booking.serviceId ? this.prisma.service.findFirst({ where: { id: booking.serviceId } }) : Promise.resolve(null),
       this.prisma.invoice.findFirst({
         where: { bookingId: booking.id },
         select: {

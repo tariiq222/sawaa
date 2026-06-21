@@ -46,7 +46,7 @@ export async function buildServicesReport(
   }
 
   const bookingIds = bookings.map((b) => b.id);
-  const serviceIds = [...new Set(bookings.map((b) => b.serviceId))];
+  const serviceIds = [...new Set(bookings.map((b) => b.serviceId).filter((id): id is string => id !== null))];
 
   const [services, ratings] = await Promise.all([
     prisma.service.findMany({
@@ -77,6 +77,7 @@ export async function buildServicesReport(
   >();
 
   for (const b of bookings) {
+    if (!b.serviceId) continue;
     const entry = agg.get(b.serviceId) ?? {
       bookings: 0,
       completed: 0,

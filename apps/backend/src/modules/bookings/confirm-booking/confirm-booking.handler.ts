@@ -49,7 +49,7 @@ export class ConfirmBookingHandler {
       clientId: booking.clientId,
       employeeId: booking.employeeId,
       branchId: booking.branchId,
-      serviceId: booking.serviceId,
+      serviceId: booking.serviceId!,
       scheduledAt: booking.scheduledAt,
       price: Number(booking.price),
       currency: booking.currency,

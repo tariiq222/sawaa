@@ -27,10 +27,10 @@ export class PublicBookingsController {
   @Throttle({ default: { ttl: 60_000, limit: 60 } })
   @Get('group-sessions')
   @ApiOperation({ summary: 'List public group session slots' })
-  @ApiQuery({ name: 'branchId', required: false, type: String })
+  @ApiQuery({ name: 'departmentId', required: false, type: String, description: 'Filter by department (GroupProgram.departmentId)' })
   @ApiOkResponse({ schema: { type: 'array', items: { type: 'object' }, description: 'List of available group sessions' } })
-  async listGroupSessionsEndpoint(@Query('branchId') branchId?: string) {
-    return this.listGroupSessions.execute(branchId);
+  async listGroupSessionsEndpoint(@Query('departmentId') departmentId?: string) {
+    return this.listGroupSessions.execute(departmentId);
   }
 
   @Public()

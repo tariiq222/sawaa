@@ -66,7 +66,7 @@ describe('BookingExpiryCron', () => {
         expect.objectContaining({
           where: {
             expiresAt: { lt: expect.any(Date) },
-            status: { in: ['PENDING', 'AWAITING_PAYMENT', 'PENDING_GROUP_FILL'] },
+            status: { in: ['PENDING', 'AWAITING_PAYMENT'] },
           },
           select: { id: true },
           take: 100,

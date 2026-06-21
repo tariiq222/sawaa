@@ -52,15 +52,6 @@ describe('ExpireBookingHandler', () => {
 });
 
 describe('ExpireBookingHandler — group booking statuses', () => {
-  it('expires PENDING_GROUP_FILL booking', async () => {
-    const prisma = buildPrisma();
-    prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.PENDING_GROUP_FILL });
-    await newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'system' });
-    expect(prisma.booking.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.EXPIRED }) }),
-    );
-  });
-
   it('expires AWAITING_PAYMENT booking', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.AWAITING_PAYMENT });
@@ -76,7 +67,7 @@ describe('ExpireBookingHandler — group session capacity', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({
       ...mockBooking,
-      status: BookingStatus.PENDING_GROUP_FILL,
+      status: BookingStatus.AWAITING_PAYMENT,
       groupSessionId: 'gs-1',
     });
     const groupCapacity = buildGroupCapacity();

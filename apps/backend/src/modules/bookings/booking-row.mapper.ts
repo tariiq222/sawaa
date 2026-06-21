@@ -55,7 +55,7 @@ export interface MapBookingRowOptions {
 export function mapBookingRow(b: Booking, relations: BookingRelations, opts: MapBookingRowOptions = {}) {
   const client = relations.clientsById.get(b.clientId) ?? null;
   const employee = relations.employeesById.get(b.employeeId) ?? null;
-  const service = relations.servicesById.get(b.serviceId) ?? null;
+  const service = b.serviceId ? (relations.servicesById.get(b.serviceId) ?? null) : null;
 
   const scheduled = b.scheduledAt;
   const ends = b.endsAt;

@@ -129,12 +129,12 @@ export class ListBookingsHandler {
 
 async function loadRelations(
   prisma: PrismaService,
-  rows: { id: string; clientId: string; employeeId: string; serviceId: string }[],
+  rows: { id: string; clientId: string; employeeId: string; serviceId: string | null }[],
 ): Promise<BookingRelations> {
   const bookingIds = rows.map((r) => r.id);
   const clientIds = [...new Set(rows.map((r) => r.clientId))];
   const employeeIds = [...new Set(rows.map((r) => r.employeeId))];
-  const serviceIds = [...new Set(rows.map((r) => r.serviceId))];
+  const serviceIds = [...new Set(rows.map((r) => r.serviceId).filter((id): id is string => id !== null))];
 
   const [clients, employees, services, invoices] = await Promise.all([
     clientIds.length

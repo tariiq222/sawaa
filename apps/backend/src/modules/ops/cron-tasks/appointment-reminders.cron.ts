@@ -131,10 +131,11 @@ export class AppointmentRemindersCron {
   }
 
   private async resolveServiceName(
-    serviceId: string,
+    serviceId: string | null,
     snapshot: string | null,
   ): Promise<string | null> {
     if (snapshot) return snapshot;
+    if (!serviceId) return null;
     const service = await this.prisma.service.findUnique({
       where: { id: serviceId },
       select: { nameAr: true, nameEn: true },

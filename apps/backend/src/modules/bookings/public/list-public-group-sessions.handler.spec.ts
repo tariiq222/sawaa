@@ -32,12 +32,12 @@ describe('ListPublicGroupSessionsHandler', () => {
     expect(result[0].price).toBe(100);
   });
 
-  it('filters by branchId when provided', async () => {
+  it('filters by departmentId when provided', async () => {
     prisma.groupSession.findMany.mockResolvedValue([]);
-    await handler.execute('branch-1');
+    await handler.execute('dept-1');
     expect(prisma.groupSession.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ branchId: 'branch-1' }),
+        where: expect.objectContaining({ program: { departmentId: 'dept-1' } }),
       }),
     );
   });

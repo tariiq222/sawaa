@@ -374,7 +374,7 @@ export class CreateBundleBookingHandler {
             employeeId: booking.employeeId ?? '',
             organizationId: DEFAULT_ORG_ID,
             scheduledAt: booking.scheduledAt,
-            serviceId: booking.serviceId,
+            serviceId: booking.serviceId!,
           });
           await tx.outboxEvent.create({
             data: {

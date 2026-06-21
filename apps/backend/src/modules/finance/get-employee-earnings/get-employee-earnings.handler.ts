@@ -76,7 +76,7 @@ export class GetEmployeeEarningsHandler {
 
     const bookingServiceMap = new Map(bookings.map((b) => [b.id, b.serviceId]));
 
-    const serviceIds = [...new Set(bookings.map((b) => b.serviceId))];
+    const serviceIds = [...new Set(bookings.map((b) => b.serviceId).filter((id): id is string => id !== null))];
     const services = serviceIds.length > 0
       ? await this.prisma.service.findMany({
           where: { id: { in: serviceIds } },

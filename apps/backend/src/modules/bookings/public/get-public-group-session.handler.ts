@@ -16,7 +16,7 @@ export interface PublicGroupSessionDetail {
   status: string;
   isPublic: boolean;
   employeeId: string;
-  serviceId: string;
+  programId: string;
   branchId: string;
   spotsLeft: number;
   isFull: boolean;

@@ -56,7 +56,7 @@ export class ListClientBookingsHandler {
     }
 
     const employeeIds = [...new Set(bookings.map((b) => b.employeeId))];
-    const serviceIds = [...new Set(bookings.map((b) => b.serviceId))];
+    const serviceIds = [...new Set(bookings.map((b) => b.serviceId).filter((id): id is string => id !== null))];
     const branchIds = [...new Set(bookings.map((b) => b.branchId))];
     const bookingIds = bookings.map((b) => b.id);
 
@@ -80,7 +80,7 @@ export class ListClientBookingsHandler {
 
     const items: ClientBookingItem[] = bookings.map((b) => {
       const employee = employeesById.get(b.employeeId);
-      const service = servicesById.get(b.serviceId);
+      const service = b.serviceId ? servicesById.get(b.serviceId) : undefined;
       const branch = branchesById.get(b.branchId);
       const invoice = invoicesByBookingId.get(b.id);
       const payment = invoice ? paymentsByInvoiceId.get(invoice.id) : null;

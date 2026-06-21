@@ -1111,6 +1111,24 @@ export interface paths {
         patch: operations["DashboardFinanceController_verifyPaymentEndpoint"];
         trace?: never;
     };
+    "/api/v1/dashboard/group-programs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List group programs */
+        get: operations["DashboardGroupProgramsController_list"];
+        put?: never;
+        /** Create a group program */
+        post: operations["DashboardGroupProgramsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/group-sessions": {
         parameters: {
             query?: never;
@@ -4513,11 +4531,6 @@ export interface components {
              */
             expiresAt?: string;
             /**
-             * @description Group session to attach this booking to
-             * @example 00000000-0000-0000-0000-000000000000
-             */
-            groupSessionId?: string;
-            /**
              * @description Free-text notes for the booking
              * @example Client prefers morning sessions
              */
@@ -5142,6 +5155,48 @@ export interface components {
              */
             startDate: string;
         };
+        CreateGroupProgramDto: {
+            /**
+             * @description Default session price in integer halalas (0 = free)
+             * @example 5000
+             */
+            defaultPrice: number;
+            /**
+             * @description Department ID this program belongs to
+             * @example 00000000-0000-0000-0000-000000000001
+             */
+            departmentId: string;
+            /**
+             * @description Arabic description
+             * @example وصف البرنامج
+             */
+            descriptionAr?: string;
+            /**
+             * @description English description
+             * @example Program description
+             */
+            descriptionEn?: string;
+            /**
+             * @description Maximum participants per session
+             * @example 20
+             */
+            maxParticipants: number;
+            /**
+             * @description Minimum participants to activate a session
+             * @example 3
+             */
+            minParticipants: number;
+            /**
+             * @description Arabic name
+             * @example برنامج دعم الأسرة
+             */
+            nameAr: string;
+            /**
+             * @description English name
+             * @example Family Support Program
+             */
+            nameEn?: string;
+        };
         CreateGroupSessionDto: {
             /**
              * @description Branch where session takes place
@@ -5189,6 +5244,11 @@ export interface components {
              */
             price: number;
             /**
+             * @description Group program this session belongs to
+             * @example 00000000-...
+             */
+            programId: string;
+            /**
              * @description Public Arabic description
              * @example وصف عام
              */
@@ -5203,11 +5263,6 @@ export interface components {
              * @example 2026-07-01T10:00:00.000Z
              */
             scheduledAt: string;
-            /**
-             * @description Service linked to this session
-             * @example 00000000-...
-             */
-            serviceId: string;
             /**
              * @description Session title
              * @example Family Communication Workshop
@@ -13372,6 +13427,132 @@ export interface operations {
             };
             /** @description Payment not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardGroupProgramsController_list: {
+        parameters: {
+            query?: {
+                /** @description Return only active programs */
+                activeOnly?: boolean;
+                /** @description Filter by department ID */
+                departmentId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of group programs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>[];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardGroupProgramsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateGroupProgramDto"];
+            };
+        };
+        responses: {
+            /** @description Group program created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id?: string;
+                        /** @example GP-1024 */
+                        ref?: string;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -14,7 +14,7 @@ export interface PublicGroupSession {
   currency: string;
   status: string;
   employeeId: string;
-  serviceId: string;
+  programId: string;
   spotsLeft: number;
   isFull: boolean;
 }
@@ -23,7 +23,7 @@ export interface PublicGroupSession {
 export class ListPublicGroupSessionsHandler {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute(branchId?: string): Promise<PublicGroupSession[]> {
+  async execute(departmentId?: string): Promise<PublicGroupSession[]> {
     const now = new Date();
 
     const where: Record<string, unknown> = {
@@ -32,8 +32,8 @@ export class ListPublicGroupSessionsHandler {
       scheduledAt: { gte: now },
     };
 
-    if (branchId) {
-      where.branchId = branchId;
+    if (departmentId) {
+      where.program = { departmentId };
     }
 
     const sessions = await this.prisma.groupSession.findMany({
@@ -52,7 +52,7 @@ export class ListPublicGroupSessionsHandler {
         currency: true,
         status: true,
         employeeId: true,
-        serviceId: true,
+        programId: true,
       },
     });
 

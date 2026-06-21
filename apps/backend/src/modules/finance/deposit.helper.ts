@@ -14,7 +14,7 @@ export interface DepositPrismaClient {
     findFirst(args: {
       where: { id: string };
       select?: Record<string, unknown>;
-    }): Promise<{ serviceId: string } | null>;
+    }): Promise<{ serviceId: string | null } | null>;
   };
   service: {
     findFirst(args: {

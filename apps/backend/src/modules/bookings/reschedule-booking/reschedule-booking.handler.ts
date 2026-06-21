@@ -72,7 +72,7 @@ export class RescheduleBookingHandler {
       bookingId: cmd.bookingId,
       employeeId: booking.employeeId,
       branchId: booking.branchId,
-      serviceId: booking.serviceId,
+      serviceId: booking.serviceId!,
       scheduledAt: newScheduledAt,
       durationMins,
       durationOptionId: booking.durationOptionId,

@@ -71,7 +71,7 @@ export class BookGroupSessionHandler {
 
   private async createBooking(
     clientId: string,
-    session: { id: string; price: unknown; currency: string; employeeId: string; serviceId: string; branchId: string; scheduledAt: Date; durationMins: number; maxCapacity: number; deliveryType: DeliveryType },
+    session: { id: string; price: unknown; currency: string; employeeId: string; programId: string; branchId: string; scheduledAt: Date; durationMins: number; maxCapacity: number; deliveryType: DeliveryType },
   ): Promise<BookGroupSessionResult> {
     const price = Number(session.price);
 
@@ -107,7 +107,7 @@ export class BookGroupSessionHandler {
           branchId: session.branchId,
           clientId,
           employeeId: session.employeeId,
-          serviceId: session.serviceId,
+          programId: session.programId,
           bookingType: 'GROUP',
           deliveryType: session.deliveryType,
           source: 'ONLINE',

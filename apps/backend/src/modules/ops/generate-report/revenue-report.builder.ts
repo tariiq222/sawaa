@@ -228,9 +228,9 @@ export async function buildRevenueReport(
           where: { id: { in: recentBookingIds } },
           select: { id: true, serviceId: true },
         })
-      : Promise.resolve([] as Array<{ id: string; serviceId: string }>),
+      : Promise.resolve([] as Array<{ id: string; serviceId: string | null }>),
   ]);
-  const recentServiceIds = [...new Set(recentBookings.map((b) => b.serviceId))];
+  const recentServiceIds = [...new Set(recentBookings.map((b) => b.serviceId).filter((id): id is string => id !== null))];
   const recentServices = recentServiceIds.length
     ? await prisma.service.findMany({
         where: { id: { in: recentServiceIds } },
@@ -247,7 +247,7 @@ export async function buildRevenueReport(
     const b = p.invoice?.bookingId
       ? bookingById.get(p.invoice.bookingId)
       : undefined;
-    const s = b ? serviceById.get(b.serviceId) : undefined;
+    const s = b?.serviceId ? serviceById.get(b.serviceId) : undefined;
     const clientName =
       c?.firstName || c?.lastName
         ? [c?.firstName, c?.lastName].filter(Boolean).join(' ')
