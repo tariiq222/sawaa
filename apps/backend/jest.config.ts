@@ -28,6 +28,17 @@ const config: Config = {
     },
   },
   testEnvironment: 'node',
+  // Retry only the controller e2e specs to absorb supertest/HTTP resource
+  // contention under the full parallel suite (see test/jest-retry.setup.ts).
+  setupFilesAfterEnv: ['<rootDir>/test/jest-retry.setup.ts'],
+  // The controller e2e specs each bootstrap a Nest application in beforeAll and
+  // exercise it through supertest. Under the full parallel suite, CPU
+  // contention can push a single app bootstrap or request past Jest's 5s
+  // default, failing whole suites spuriously (the same specs pass 40/40 in
+  // isolation). A generous ceiling absorbs that contention without masking real
+  // logic errors — assertions still decide correctness, only slow timing is
+  // tolerated.
+  testTimeout: 30_000,
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
   modulePathIgnorePatterns: ['<rootDir>/dist/'],
   moduleNameMapper: {
