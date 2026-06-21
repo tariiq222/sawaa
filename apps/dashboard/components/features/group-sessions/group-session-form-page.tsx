@@ -8,7 +8,7 @@ import { toast } from "sonner"
 import { useLocale } from "@/components/locale-provider"
 import { useGroupSessionMutations } from "@/hooks/use-group-sessions"
 import { useEmployees } from "@/hooks/use-employees"
-import { useServices } from "@/hooks/use-services"
+import { useGroupPrograms } from "@/hooks/use-group-programs"
 import { useBranches } from "@/hooks/use-branches"
 import { createGroupSessionSchema } from "@/lib/schemas/group-session.schema"
 import type { CreateGroupSessionFormData } from "@/lib/schemas/group-session.schema"
@@ -35,7 +35,7 @@ export function GroupSessionFormPage() {
   const router = useRouter()
   const { createMut } = useGroupSessionMutations()
   const { employees } = useEmployees()
-  const { services } = useServices()
+  const { programs } = useGroupPrograms()
   const { branches } = useBranches()
 
   const {
@@ -51,7 +51,7 @@ export function GroupSessionFormPage() {
     defaultValues: {
       branchId: "",
       employeeId: "",
-      serviceId: "",
+      programId: "",
       title: "",
       scheduledAt: "",
       durationMins: 60,
@@ -79,7 +79,7 @@ export function GroupSessionFormPage() {
     const payload = {
       branchId: data.branchId,
       employeeId: data.employeeId,
-      serviceId: data.serviceId,
+      programId: data.programId,
       title: data.title,
       scheduledAt: new Date(data.scheduledAt).toISOString(),
       durationMins: data.durationMins,
@@ -124,13 +124,13 @@ export function GroupSessionFormPage() {
                 </Select>
               )} />
             </FormField>
-            <FormField label={t("groupSessions.form.service")} error={errors.serviceId?.message as string}>
-              <Controller control={control} name="serviceId" render={({ field }) => (
+            <FormField label={t("groupSessions.form.program")} error={errors.programId?.message as string}>
+              <Controller control={control} name="programId" render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger><SelectValue placeholder={t("groupSessions.form.selectService")} /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("groupSessions.form.selectProgram")} /></SelectTrigger>
                   <SelectContent>
-                    {services.map((svc) => (
-                      <SelectItem key={svc.id} value={svc.id}>{svc.nameAr}</SelectItem>
+                    {programs.map((program) => (
+                      <SelectItem key={program.id} value={program.id}>{program.nameAr || program.nameEn}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

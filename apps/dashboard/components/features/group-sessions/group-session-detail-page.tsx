@@ -72,8 +72,8 @@ export function GroupSessionDetailPage({ sessionId }: Props) {
 
   const serviceName =
     locale === "ar"
-      ? (session.service?.nameAr ?? session.title)
-      : (session.service?.nameEn ?? session.service?.nameAr ?? session.title)
+      ? (session.program?.nameAr ?? session.title)
+      : (session.program?.nameEn ?? session.program?.nameAr ?? session.title)
   const practitionerName =
     locale === "ar"
       ? (session.employee?.nameAr ?? session.employee?.name ?? "—")
@@ -123,7 +123,7 @@ export function GroupSessionDetailPage({ sessionId }: Props) {
         <TabsContent value="info" className="pt-4">
           <DetailSection title={t("groupSessions.detail.session")}>
             <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-              <DetailRow label={t("groupSessions.detail.service")} value={serviceName} />
+              <DetailRow label={t("groupSessions.detail.program")} value={serviceName} />
               <DetailRow label={t("groupSessions.detail.practitioner")} value={practitionerName} />
               <DetailRow
                 label={t("groupSessions.detail.scheduledAt")}

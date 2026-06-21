@@ -5,7 +5,7 @@ const now = () => new Date()
 export const createGroupSessionSchema = z.object({
   branchId: z.string().min(1, { message: "required" }),
   employeeId: z.string().min(1, { message: "required" }),
-  serviceId: z.string().min(1, { message: "required" }),
+  programId: z.string().min(1, { message: "required" }),
   title: z.string().min(1, { message: "required" }).max(200),
   scheduledAt: z
     .string()

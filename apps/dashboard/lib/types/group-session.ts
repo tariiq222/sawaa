@@ -18,7 +18,7 @@ export interface GroupSessionListItem {
   deliveryType: GroupSessionDeliveryType
   isPublic: boolean
   employeeId: string
-  serviceId: string
+  programId: string
   spotsLeft: number
 }
 
@@ -47,7 +47,7 @@ export interface GroupSessionDetail extends GroupSessionListItem {
   branchId: string
   createdAt: string
   enrollments: GroupSessionEnrollment[]
-  service: { nameAr: string; nameEn: string | null } | null
+  program: { nameAr: string; nameEn: string | null } | null
   employee: { name: string; nameAr: string | null; nameEn: string | null } | null
 }
 
@@ -61,7 +61,7 @@ export interface GroupSessionListQuery {
 export interface CreateGroupSessionPayload {
   branchId: string
   employeeId: string
-  serviceId: string
+  programId: string
   title: string
   descriptionAr?: string
   descriptionEn?: string
