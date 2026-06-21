@@ -53,6 +53,9 @@ import { ListGroupSessionsHandler } from './list-group-sessions/list-group-sessi
 import { GetGroupSessionHandler } from './get-group-session/get-group-session.handler';
 import { CancelGroupSessionHandler } from './cancel-group-session/cancel-group-session.handler';
 import { DashboardGroupSessionsController } from '../../api/dashboard/group-sessions.controller';
+import { CreateGroupProgramHandler } from './create-group-program/create-group-program.handler';
+import { ListGroupProgramsHandler } from './list-group-programs/list-group-programs.handler';
+import { DashboardGroupProgramsController } from '../../api/dashboard/group-programs.controller';
 
 const handlers = [
   CreateBookingHandler,
@@ -98,6 +101,8 @@ const handlers = [
   ListGroupSessionsHandler,
   GetGroupSessionHandler,
   CancelGroupSessionHandler,
+  CreateGroupProgramHandler,
+  ListGroupProgramsHandler,
 ];
 
 @Module({
@@ -108,7 +113,7 @@ const handlers = [
     ZoomModule,
     FinanceModule,
   ],
-  controllers: [DashboardBookingsController, DashboardGroupSessionsController],
+  controllers: [DashboardBookingsController, DashboardGroupSessionsController, DashboardGroupProgramsController],
   providers: [...handlers, ZoomMeetingWorker, PaymentCompletedEventHandler, DepositPaidEventHandler, RefundCompletedEventHandler],
   exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CreatePublicBookingHandler, NoShowBookingHandler],
 })
