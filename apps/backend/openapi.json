@@ -2631,21 +2631,15 @@
         ],
         "type": "string"
       },
-      "EnrollInProgramDto": {
+      "EnrollClientDto": {
         "properties": {
           "clientId": {
-            "description": "Client being enrolled",
-            "format": "uuid",
-            "type": "string"
-          },
-          "programId": {
-            "description": "Program to enroll into",
+            "description": "Client being enrolled on-behalf",
             "format": "uuid",
             "type": "string"
           }
         },
         "required": [
-          "programId",
           "clientId"
         ],
         "type": "object"
@@ -24566,7 +24560,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/EnrollInProgramDto"
+                "$ref": "#/components/schemas/EnrollClientDto"
               }
             }
           },

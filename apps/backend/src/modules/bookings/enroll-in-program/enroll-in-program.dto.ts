@@ -21,6 +21,16 @@ export class EnrollInProgramDto {
 }
 
 /**
+ * Request body for the dashboard on-behalf enrollment endpoint. The program is
+ * taken from the `:id` route param, so only the client is supplied in the body.
+ */
+export class EnrollClientDto {
+  @ApiProperty({ format: 'uuid', description: 'Client being enrolled on-behalf' })
+  @IsUUID()
+  clientId!: string;
+}
+
+/**
  * Supervisor IDs are passed as a flat array; the slice handler resolves them
  * into the ProgramSupervisor composite-PK rows inside the create/update
  * transaction.

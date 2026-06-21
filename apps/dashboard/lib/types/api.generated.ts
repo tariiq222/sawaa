@@ -5870,17 +5870,12 @@ export interface components {
          * @enum {string}
          */
         EmploymentType: "FULL_TIME" | "PART_TIME" | "CONTRACT";
-        EnrollInProgramDto: {
+        EnrollClientDto: {
             /**
              * Format: uuid
-             * @description Client being enrolled
+             * @description Client being enrolled on-behalf
              */
             clientId: string;
-            /**
-             * Format: uuid
-             * @description Program to enroll into
-             */
-            programId: string;
         };
         GenerateReportDto: {
             /**
@@ -21949,7 +21944,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["EnrollInProgramDto"];
+                "application/json": components["schemas"]["EnrollClientDto"];
             };
         };
         responses: {

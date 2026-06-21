@@ -24,7 +24,7 @@ import { EnrollInProgramHandler } from '../../modules/bookings/enroll-in-program
 import { CreateProgramDto } from '../../modules/bookings/create-program/create-program.dto';
 import {
   CancelProgramDto,
-  EnrollInProgramDto,
+  EnrollClientDto,
   ScheduleProgramDto,
 } from '../../modules/bookings/enroll-in-program/enroll-in-program.dto';
 
@@ -105,7 +105,7 @@ export class DashboardProgramsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   async enroll(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: EnrollInProgramDto,
+    @Body() dto: EnrollClientDto,
   ) {
     return this.enrollInProgram.execute({
       programId: id,

@@ -42,11 +42,15 @@ export class ScheduleProgramHandler {
       });
 
       // Rewrite the placeholder scheduledAt on every enrollment booking so
-      // the public booking detail reflects the real appointment time.
-      const placeholderEnd = new Date(startDate.getTime());
+      // the public booking detail reflects the real appointment time. endsAt is
+      // one program day after the start to keep the Booking invariant
+      // endsAt > scheduledAt (these dates are advisory for GROUP bookings).
+      const advisoryEnd = new Date(
+        startDate.getTime() + program.hoursPerDay * 60 * 60_000,
+      );
       await tx.booking.updateMany({
         where: { programId },
-        data: { scheduledAt: startDate, endsAt: placeholderEnd },
+        data: { scheduledAt: startDate, endsAt: advisoryEnd },
       });
 
       return { id: programId, status: nextStatus, startDate };

@@ -190,6 +190,7 @@ describe('EnrollInProgramHandler', () => {
       price: new Prisma.Decimal(0),
       currency: 'SAR',
       branchId: 'b-1',
+      hoursPerDay: 4,
       nameAr: 'x',
       nameEn: null,
       ref: 1,
@@ -216,8 +217,17 @@ describe('EnrollInProgramHandler', () => {
           employeeId: 'emp-1',
           price: 0,
           scheduledAt: PROGRAM_DATE_PLACEHOLDER,
+          // Advisory dates must satisfy the Booking CHECK constraints
+          // (durationMins > 0, endsAt > scheduledAt) — these were 0 / equal
+          // before and silently broke every enrollment against a real DB.
+          durationMins: 240,
         }),
       }),
+    );
+    const createdBooking = tx.booking.create.mock.calls[0][0].data;
+    expect(createdBooking.durationMins).toBeGreaterThan(0);
+    expect(createdBooking.endsAt.getTime()).toBeGreaterThan(
+      createdBooking.scheduledAt.getTime(),
     );
     expect(tx.invoice.create).not.toHaveBeenCalled();
     expect(eventBus.publish).not.toHaveBeenCalled();

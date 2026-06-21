@@ -128,6 +128,14 @@ export class EnrollInProgramHandler {
         const nextBookingNumber = (lastBooking?.bookingNumber ?? 0) + 1;
 
         const placeholder = PROGRAM_DATE_PLACEHOLDER;
+        // Advisory duration for the GROUP booking: one program day. Real dates
+        // live on the Program; these only satisfy the Booking invariants
+        // (durationMins > 0, endsAt > scheduledAt) until the program is
+        // scheduled, when schedule-program back-fills the actual dates.
+        const advisoryDurationMins = program.hoursPerDay * 60;
+        const advisoryEndsAt = new Date(
+          placeholder.getTime() + advisoryDurationMins * 60_000,
+        );
         const booking = await tx.booking.create({
           data: {
             branchId: program.branchId,
@@ -139,8 +147,8 @@ export class EnrollInProgramHandler {
             source: cmd.public ? 'ONLINE' : 'RECEPTION',
             status: initialBookingStatus,
             scheduledAt: placeholder,
-            endsAt: placeholder,
-            durationMins: 0,
+            endsAt: advisoryEndsAt,
+            durationMins: advisoryDurationMins,
             price,
             currency: program.currency,
             programId: program.id,
