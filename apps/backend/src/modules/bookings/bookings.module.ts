@@ -32,6 +32,7 @@ import { RetryZoomMeetingHandler } from './retry-zoom-meeting/retry-zoom-meeting
 import { ZoomMeetingService } from './zoom-meeting.service';
 import { ZoomModule } from '../integrations/zoom/zoom.module';
 import { DashboardBookingsController } from '../../api/dashboard/bookings.controller';
+import { DashboardProgramsController } from '../../api/dashboard/programs.controller';
 import { GetPublicAvailabilityHandler } from './availability/public/get-public-availability.handler';
 import { GetPublicAvailabilityDaysHandler } from './availability/public/get-public-availability-days.handler';
 import { ListClientBookingsHandler } from './client/list-client-bookings.handler';
@@ -109,7 +110,7 @@ const handlers = [
     ZoomModule,
     FinanceModule,
   ],
-  controllers: [DashboardBookingsController],
+  controllers: [DashboardBookingsController, DashboardProgramsController],
   providers: [...handlers, ZoomMeetingWorker, PaymentCompletedEventHandler, DepositPaidEventHandler, RefundCompletedEventHandler],
   exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CreatePublicBookingHandler, NoShowBookingHandler],
 })

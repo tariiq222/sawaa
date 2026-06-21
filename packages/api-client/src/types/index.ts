@@ -140,13 +140,3 @@ export type {
   ContactMessageStatus,
   CreateContactMessagePayload,
 } from './public-directory'
-export type {
-  GroupSessionStatus,
-  GroupSessionDeliveryType,
-  GroupSessionListItem,
-  GroupSessionEnrollment,
-  GroupSessionDetail,
-  GroupSessionListQuery,
-  CreateGroupSessionPayload,
-  GroupSessionListResponse,
-} from './group-session'

@@ -16,7 +16,7 @@ import { PublicEmployeesController } from './employees.controller';
 import { PublicContactMessagesController } from './contact-messages.controller';
 import { PublicOtpController } from './otp.controller';
 import { PublicAvailabilityController } from './availability.controller';
-import { PublicBookingsController } from './bookings.controller';
+import { PublicBookingsController, PublicProgramsController } from './bookings.controller';
 import { PublicIntakeFormsController } from './intake-forms.controller';
 import { PublicPaymentsController } from './payments.controller';
 import { PublicBranchesController } from './branches.controller';
@@ -37,7 +37,7 @@ import { PublicMetricsController } from './metrics.controller';
 
 @Module({
   imports: [DatabaseModule, BookingsModule, OrgExperienceModule, IdentityModule, PeopleModule, CommsModule, FinanceModule, OrgConfigModule, PlatformModule, OpsModule],
-  controllers: [AuthController, PublicAuthController, PublicMeController, PublicBrandingController, PublicCatalogController, PublicSlotsController, PublicEmployeesController, PublicContactMessagesController, PublicOtpController, PublicAvailabilityController, PublicBookingsController, PublicIntakeFormsController, PublicPaymentsController, PublicBranchesController, PublicInvoicesController, PublicRefundsController, PublicSmsWebhooksController, PublicPaymentWebhookController, PublicVerifyEmailController, PublicHealthController, PublicMetricsController, PublicTestimonialsController],
+  controllers: [AuthController, PublicAuthController, PublicMeController, PublicBrandingController, PublicCatalogController, PublicSlotsController, PublicEmployeesController, PublicContactMessagesController, PublicOtpController, PublicAvailabilityController, PublicBookingsController, PublicProgramsController, PublicIntakeFormsController, PublicPaymentsController, PublicBranchesController, PublicInvoicesController, PublicRefundsController, PublicSmsWebhooksController, PublicPaymentWebhookController, PublicVerifyEmailController, PublicHealthController, PublicMetricsController, PublicTestimonialsController],
   providers: [AppMetricsService, DbMetricsService],
 })
 export class PublicModule {}

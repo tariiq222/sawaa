@@ -486,14 +486,16 @@
         ],
         "type": "object"
       },
-      "CancelGroupSessionDto": {
+      "CancelProgramDto": {
         "properties": {
-          "cancelReason": {
-            "description": "Reason for cancelling the session",
-            "example": "Counselor unavailable",
+          "reason": {
+            "description": "Reason for cancelling the program",
             "type": "string"
           }
         },
+        "required": [
+          "reason"
+        ],
         "type": "object"
       },
       "CancellationReason": {
@@ -1617,148 +1619,6 @@
         ],
         "type": "object"
       },
-      "CreateGroupProgramDto": {
-        "properties": {
-          "defaultPrice": {
-            "description": "Default session price in integer halalas (0 = free)",
-            "example": 5000,
-            "type": "number"
-          },
-          "departmentId": {
-            "description": "Department ID this program belongs to",
-            "example": "00000000-0000-0000-0000-000000000001",
-            "type": "string"
-          },
-          "descriptionAr": {
-            "description": "Arabic description",
-            "example": "وصف البرنامج",
-            "type": "string"
-          },
-          "descriptionEn": {
-            "description": "English description",
-            "example": "Program description",
-            "type": "string"
-          },
-          "maxParticipants": {
-            "description": "Maximum participants per session",
-            "example": 20,
-            "type": "number"
-          },
-          "minParticipants": {
-            "description": "Minimum participants to activate a session",
-            "example": 3,
-            "type": "number"
-          },
-          "nameAr": {
-            "description": "Arabic name",
-            "example": "برنامج دعم الأسرة",
-            "type": "string"
-          },
-          "nameEn": {
-            "description": "English name",
-            "example": "Family Support Program",
-            "type": "string"
-          }
-        },
-        "required": [
-          "departmentId",
-          "nameAr",
-          "minParticipants",
-          "maxParticipants",
-          "defaultPrice"
-        ],
-        "type": "object"
-      },
-      "CreateGroupSessionDto": {
-        "properties": {
-          "branchId": {
-            "description": "Branch where session takes place",
-            "example": "00000000-...",
-            "type": "string"
-          },
-          "deliveryType": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DeliveryType"
-              }
-            ],
-            "description": "Delivery channel",
-            "example": "IN_PERSON"
-          },
-          "descriptionAr": {
-            "description": "Arabic description",
-            "example": "وصف الجلسة",
-            "type": "string"
-          },
-          "descriptionEn": {
-            "description": "English description",
-            "example": "Session description",
-            "type": "string"
-          },
-          "durationMins": {
-            "description": "Duration in minutes",
-            "example": 90,
-            "type": "number"
-          },
-          "employeeId": {
-            "description": "Employee leading the session",
-            "example": "00000000-...",
-            "type": "string"
-          },
-          "isPublic": {
-            "description": "Make session visible on public website",
-            "example": false,
-            "type": "boolean"
-          },
-          "maxCapacity": {
-            "description": "Maximum number of attendees",
-            "example": 20,
-            "type": "number"
-          },
-          "price": {
-            "description": "Price in integer halalas",
-            "example": 30000,
-            "type": "number"
-          },
-          "programId": {
-            "description": "Group program this session belongs to",
-            "example": "00000000-...",
-            "type": "string"
-          },
-          "publicDescriptionAr": {
-            "description": "Public Arabic description",
-            "example": "وصف عام",
-            "type": "string"
-          },
-          "publicDescriptionEn": {
-            "description": "Public English description",
-            "example": "Public description",
-            "type": "string"
-          },
-          "scheduledAt": {
-            "description": "ISO 8601 start datetime",
-            "example": "2026-07-01T10:00:00.000Z",
-            "type": "string"
-          },
-          "title": {
-            "description": "Session title",
-            "example": "Family Communication Workshop",
-            "type": "string"
-          }
-        },
-        "required": [
-          "branchId",
-          "employeeId",
-          "programId",
-          "title",
-          "scheduledAt",
-          "durationMins",
-          "maxCapacity",
-          "price",
-          "deliveryType"
-        ],
-        "type": "object"
-      },
       "CreateIntakeFormDto": {
         "properties": {
           "fields": {
@@ -1912,6 +1772,96 @@
           "type",
           "title",
           "description"
+        ],
+        "type": "object"
+      },
+      "CreateProgramDto": {
+        "properties": {
+          "branchId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "currency": {
+            "default": "SAR",
+            "type": "string"
+          },
+          "daysCount": {
+            "minimum": 1,
+            "type": "number"
+          },
+          "departmentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "depositAmount": {
+            "description": "Deposit amount in integer halalas (must be <= price)",
+            "type": "number"
+          },
+          "depositEnabled": {
+            "default": false,
+            "type": "boolean"
+          },
+          "descriptionAr": {
+            "type": "string"
+          },
+          "descriptionEn": {
+            "type": "string"
+          },
+          "hoursPerDay": {
+            "minimum": 1,
+            "type": "number"
+          },
+          "isPublic": {
+            "default": false,
+            "type": "boolean"
+          },
+          "maxParticipants": {
+            "default": 30,
+            "minimum": 1,
+            "type": "number"
+          },
+          "minParticipants": {
+            "default": 1,
+            "minimum": 1,
+            "type": "number"
+          },
+          "nameAr": {
+            "description": "Arabic display name",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English display name",
+            "type": "string"
+          },
+          "price": {
+            "description": "Price in integer halalas",
+            "minimum": 0,
+            "type": "number"
+          },
+          "publicDescriptionAr": {
+            "type": "string"
+          },
+          "publicDescriptionEn": {
+            "type": "string"
+          },
+          "supervisorIds": {
+            "description": "Supervising employee IDs",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "departmentId",
+          "branchId",
+          "nameAr",
+          "daysCount",
+          "hoursPerDay",
+          "minParticipants",
+          "maxParticipants",
+          "price",
+          "supervisorIds"
         ],
         "type": "object"
       },
@@ -2681,6 +2631,25 @@
         ],
         "type": "string"
       },
+      "EnrollInProgramDto": {
+        "properties": {
+          "clientId": {
+            "description": "Client being enrolled",
+            "format": "uuid",
+            "type": "string"
+          },
+          "programId": {
+            "description": "Program to enroll into",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "programId",
+          "clientId"
+        ],
+        "type": "object"
+      },
       "GenerateReportDto": {
         "properties": {
           "branchId": {
@@ -2744,15 +2713,6 @@
           "to"
         ],
         "type": "object"
-      },
-      "GroupSessionStatus": {
-        "enum": [
-          "OPEN",
-          "FULL",
-          "CANCELLED",
-          "COMPLETED"
-        ],
-        "type": "string"
       },
       "InitClientPaymentDto": {
         "properties": {
@@ -3953,6 +3913,22 @@
         "required": [
           "sessionToken",
           "newPassword"
+        ],
+        "type": "object"
+      },
+      "ScheduleProgramDto": {
+        "properties": {
+          "durationMins": {
+            "description": "Override the duration in minutes (advisory)",
+            "type": "number"
+          },
+          "startDate": {
+            "description": "ISO date for the program start (must be future)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "startDate"
         ],
         "type": "object"
       },
@@ -13075,564 +13051,6 @@
         "summary": "Approve or reject a pending bank transfer payment",
         "tags": [
           "Dashboard / Finance"
-        ]
-      }
-    },
-    "/api/v1/dashboard/group-programs": {
-      "get": {
-        "operationId": "DashboardGroupProgramsController_list",
-        "parameters": [
-          {
-            "description": "Return only active programs",
-            "in": "query",
-            "name": "activeOnly",
-            "required": false,
-            "schema": {
-              "example": true,
-              "type": "boolean"
-            }
-          },
-          {
-            "description": "Filter by department ID",
-            "in": "query",
-            "name": "departmentId",
-            "required": false,
-            "schema": {
-              "example": "00000000-0000-0000-0000-000000000001",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "type": "object"
-                  },
-                  "type": "array"
-                }
-              }
-            },
-            "description": "List of group programs"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List group programs",
-        "tags": [
-          "Dashboard / Bookings"
-        ]
-      },
-      "post": {
-        "operationId": "DashboardGroupProgramsController_create",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateGroupProgramDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "ref": {
-                      "example": "GP-1024",
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Group program created"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a group program",
-        "tags": [
-          "Dashboard / Bookings"
-        ]
-      }
-    },
-    "/api/v1/dashboard/group-sessions": {
-      "get": {
-        "operationId": "DashboardGroupSessionsController_list",
-        "parameters": [
-          {
-            "description": "Filter by session status",
-            "in": "query",
-            "name": "status",
-            "required": false,
-            "schema": {
-              "$ref": "#/components/schemas/GroupSessionStatus"
-            }
-          },
-          {
-            "description": "Return only upcoming sessions (scheduledAt >= now)",
-            "in": "query",
-            "name": "upcoming",
-            "required": false,
-            "schema": {
-              "example": true,
-              "type": "boolean"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "items": {
-                      "items": {
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "limit": {
-                      "type": "number"
-                    },
-                    "page": {
-                      "type": "number"
-                    },
-                    "total": {
-                      "type": "number"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Paginated list of group sessions"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List group sessions",
-        "tags": [
-          "Dashboard / Bookings"
-        ]
-      },
-      "post": {
-        "operationId": "DashboardGroupSessionsController_create",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateGroupSessionDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "scheduledAt": {
-                      "format": "date-time",
-                      "type": "string"
-                    },
-                    "status": {
-                      "example": "OPEN",
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Group session created"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a group session",
-        "tags": [
-          "Dashboard / Bookings"
-        ]
-      }
-    },
-    "/api/v1/dashboard/group-sessions/{id}": {
-      "get": {
-        "operationId": "DashboardGroupSessionsController_getOne",
-        "parameters": [
-          {
-            "description": "Group session UUID or reference (e.g. GS-1024)",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Group session details including enrollments"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "404": {
-            "description": "Group session not found"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get a group session by ID",
-        "tags": [
-          "Dashboard / Bookings"
-        ]
-      }
-    },
-    "/api/v1/dashboard/group-sessions/{id}/cancel": {
-      "patch": {
-        "operationId": "DashboardGroupSessionsController_cancel",
-        "parameters": [
-          {
-            "description": "Group session UUID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CancelGroupSessionDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "cancelReason": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "cancelledAt": {
-                      "format": "date-time",
-                      "type": "string"
-                    },
-                    "id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "status": {
-                      "example": "CANCELLED",
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Group session cancelled"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "404": {
-            "description": "Group session not found"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Cancel a group session",
-        "tags": [
-          "Dashboard / Bookings"
         ]
       }
     },
@@ -24827,6 +24245,539 @@
         ]
       }
     },
+    "/api/v1/dashboard/programs": {
+      "get": {
+        "operationId": "DashboardProgramsController_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "departmentId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "branchId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of programs with computed isFull badge"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List programs (filterable by status, department, branch)",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      },
+      "post": {
+        "operationId": "DashboardProgramsController_create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProgramDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Program created in DRAFT status"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new program (DRAFT)",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/programs/{id}": {
+      "get": {
+        "operationId": "DashboardProgramsController_getOne",
+        "parameters": [
+          {
+            "description": "UUID or numeric ref",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Program detail with enrollments and supervisors"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a single program by UUID or numeric ref",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/programs/{id}/cancel": {
+      "patch": {
+        "operationId": "DashboardProgramsController_cancel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelProgramDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel a program (cascades to enrollments, no automatic refund)",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/programs/{id}/enrollments": {
+      "post": {
+        "operationId": "DashboardProgramsController_enroll",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollInProgramDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enroll a client on-behalf from the dashboard",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/programs/{id}/publish": {
+      "patch": {
+        "operationId": "DashboardProgramsController_publish",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Publish a DRAFT program (DRAFT → OPEN)",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/programs/{id}/schedule": {
+      "patch": {
+        "operationId": "DashboardProgramsController_schedule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleProgramDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Schedule a program (OPEN|MIN_REACHED → SCHEDULED)",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
     "/api/v1/dashboard/refunds": {
       "get": {
         "operationId": "RefundsController_listRefunds",
@@ -29330,197 +29281,6 @@
         ]
       }
     },
-    "/api/v1/public/bookings/group-sessions": {
-      "get": {
-        "operationId": "PublicBookingsController_listGroupSessionsEndpoint",
-        "parameters": [
-          {
-            "description": "Filter by department (GroupProgram.departmentId)",
-            "in": "query",
-            "name": "departmentId",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "List of available group sessions",
-                  "items": {
-                    "type": "object"
-                  },
-                  "type": "array"
-                }
-              }
-            },
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "summary": "List public group session slots",
-        "tags": [
-          "Public / Bookings"
-        ]
-      }
-    },
-    "/api/v1/public/bookings/group-sessions/{id}": {
-      "get": {
-        "operationId": "PublicBookingsController_getGroupSessionEndpoint",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "description": "Group session details",
-                  "type": "object"
-                }
-              }
-            },
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "404": {
-            "description": "Session not found"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "summary": "Get a group session by ID",
-        "tags": [
-          "Public / Bookings"
-        ]
-      }
-    },
-    "/api/v1/public/bookings/group-sessions/{id}/book": {
-      "post": {
-        "operationId": "PublicBookingsController_bookGroupSessionEndpoint",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "bookingId": {
-                      "type": "string"
-                    },
-                    "invoiceId": {
-                      "format": "uuid",
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string"
-                    },
-                    "type": {
-                      "enum": [
-                        "BOOKED"
-                      ],
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": ""
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "409": {
-            "description": "Session full"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Book a group session",
-        "tags": [
-          "Public / Bookings"
-        ]
-      }
-    },
     "/api/v1/public/bookings/{bookingId}/intake-responses": {
       "post": {
         "operationId": "PublicIntakeFormsController_submit",
@@ -31209,6 +30969,181 @@
         "summary": "Receive Moyasar booking-payment webhook events",
         "tags": [
           "Public / Payments"
+        ]
+      }
+    },
+    "/api/v1/public/programs": {
+      "get": {
+        "operationId": "PublicProgramsController_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "departmentId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of programs with computed isFull badge"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "List public programs (isPublic=true, OPEN|MIN_REACHED, not FULL)",
+        "tags": [
+          "Public / Bookings"
+        ]
+      }
+    },
+    "/api/v1/public/programs/{id}": {
+      "get": {
+        "operationId": "PublicProgramsController_getOne",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Program detail"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Program not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Get a public program by ID",
+        "tags": [
+          "Public / Bookings"
+        ]
+      }
+    },
+    "/api/v1/public/programs/{id}/enroll": {
+      "post": {
+        "operationId": "PublicProgramsController_enroll",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "bookingId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "invoiceId": {
+                      "format": "uuid",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "enum": [
+                        "ENROLLED"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Enrollment created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Program not found"
+          },
+          "409": {
+            "description": "Program full or already enrolled"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Self-enroll into a public program",
+        "tags": [
+          "Public / Bookings"
         ]
       }
     },
