@@ -15,7 +15,7 @@ const mockSession = {
   deliveryType: DeliveryType.IN_PERSON,
   isPublic: false,
   employeeId: 'emp-1',
-  serviceId: 'svc-1',
+  programId: 'prog-1',
 };
 
 const mockPrisma = {
@@ -46,6 +46,7 @@ describe('ListGroupSessionsHandler', () => {
     const result = await handler.execute({ page: 1, limit: 10 });
     expect(result.items).toHaveLength(1);
     expect(result.items[0].spotsLeft).toBe(7);
+    expect(result.items[0].programId).toBe('prog-1');
     expect(result.meta.total).toBe(1);
   });
 

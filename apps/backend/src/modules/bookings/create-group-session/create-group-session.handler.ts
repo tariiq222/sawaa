@@ -31,28 +31,19 @@ export class CreateGroupSessionHandler {
     if (!employee) throw new NotFoundException('Employee not found');
     if (employee.isActive === false) throw new BadRequestException('Employee is not active');
 
-    // 3. Service check
-    const service = await this.prisma.service.findFirst({
-      where: { id: cmd.serviceId },
-      select: { id: true, nameAr: true, isActive: true, archivedAt: true },
+    // 3. Group program check
+    const program = await this.prisma.groupProgram.findFirst({
+      where: { id: cmd.programId },
+      select: { id: true, isActive: true },
     });
-    if (!service) throw new NotFoundException('Service not found');
-    if (service.isActive === false) throw new BadRequestException('Service is not active');
-    if (service.archivedAt != null) throw new BadRequestException('Service is archived');
-
-    // 4. EmployeeService link check
-    const employeeService = await this.prisma.employeeService.findUnique({
-      where: { employeeId_serviceId: { employeeId: cmd.employeeId, serviceId: cmd.serviceId } },
-    });
-    if (!employeeService || employeeService.isActive === false) {
-      throw new BadRequestException('Employee does not provide this service');
-    }
+    if (!program) throw new NotFoundException('Group program not found');
+    if (!program.isActive) throw new BadRequestException('Group program is not active');
 
     const session = await this.prisma.groupSession.create({
       data: {
         branchId: cmd.branchId,
         employeeId: cmd.employeeId,
-        serviceId: cmd.serviceId,
+        programId: cmd.programId,
         title: cmd.title,
         descriptionAr: cmd.descriptionAr,
         descriptionEn: cmd.descriptionEn,

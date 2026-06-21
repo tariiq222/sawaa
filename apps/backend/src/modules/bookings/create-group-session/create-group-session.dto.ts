@@ -9,8 +9,8 @@ export class CreateGroupSessionDto {
   @ApiProperty({ description: 'Employee leading the session', example: '00000000-...' })
   @IsUUID() employeeId!: string;
 
-  @ApiProperty({ description: 'Service linked to this session', example: '00000000-...' })
-  @IsUUID() serviceId!: string;
+  @ApiProperty({ description: 'Group program this session belongs to', example: '00000000-...' })
+  @IsUUID() programId!: string;
 
   @ApiProperty({ description: 'Session title', example: 'Family Communication Workshop' })
   @IsString() title!: string;

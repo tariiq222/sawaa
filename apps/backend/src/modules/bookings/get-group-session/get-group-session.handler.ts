@@ -29,9 +29,12 @@ export interface GroupSessionEnrollmentResult {
   } | null;
 }
 
-export interface GroupSessionServiceResult {
+export interface GroupSessionProgramResult {
+  id: string;
   nameAr: string;
   nameEn: string | null;
+  departmentId: string;
+  minParticipants: number;
 }
 
 export interface GroupSessionEmployeeResult {
@@ -95,10 +98,10 @@ export class GetGroupSessionHandler {
 
     const clientById = new Map(clientsRaw.map((c) => [c.id, c]));
 
-    const [service, employee] = await Promise.all([
-      this.prisma.service.findUnique({
-        where: { id: session.serviceId },
-        select: { nameAr: true, nameEn: true },
+    const [program, employee] = await Promise.all([
+      this.prisma.groupProgram.findUnique({
+        where: { id: session.programId },
+        select: { id: true, nameAr: true, nameEn: true, departmentId: true, minParticipants: true },
       }),
       this.prisma.employee.findUnique({
         where: { id: session.employeeId },
@@ -120,7 +123,7 @@ export class GetGroupSessionHandler {
       ...session,
       price: Number(session.price),
       enrollments,
-      service: service as GroupSessionServiceResult | null,
+      program: program as GroupSessionProgramResult | null,
       employee: employee as GroupSessionEmployeeResult | null,
       spotsLeft,
     };

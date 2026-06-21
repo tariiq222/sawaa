@@ -44,7 +44,7 @@ export class ListGroupSessionsHandler {
       deliveryType: s.deliveryType,
       isPublic: s.isPublic,
       employeeId: s.employeeId,
-      serviceId: s.serviceId,
+      programId: s.programId,
       spotsLeft: s.maxCapacity - s.enrolledCount,
     }));
 

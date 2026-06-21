@@ -14,7 +14,7 @@ const mockSession = {
   ref: 12,
   branchId: 'branch-1',
   employeeId: 'emp-1',
-  serviceId: 'svc-1',
+  programId: 'prog-1',
   title: 'Test Session',
   scheduledAt: new Date('2026-07-01T10:00:00Z'),
   durationMins: 60,
@@ -60,7 +60,13 @@ const mockClient = {
   phone: '+966501234567',
 };
 
-const mockService = { nameAr: 'جلسة جماعية', nameEn: 'Group Session' };
+const mockProgram = {
+  id: 'prog-1',
+  nameAr: 'جلسة جماعية',
+  nameEn: 'Group Session',
+  departmentId: 'dept-1',
+  minParticipants: 3,
+};
 const mockEmployee = { name: 'Dr. Ahmed', nameAr: 'د. أحمد', nameEn: 'Dr. Ahmed' };
 
 const mockPrisma = {
@@ -70,7 +76,7 @@ const mockPrisma = {
   client: {
     findMany: jest.fn(),
   },
-  service: {
+  groupProgram: {
     findUnique: jest.fn(),
   },
   employee: {
@@ -90,7 +96,7 @@ describe('GetGroupSessionHandler', () => {
     }).compile();
     handler = module.get(GetGroupSessionHandler);
     jest.clearAllMocks();
-    mockPrisma.service.findUnique.mockResolvedValue(mockService);
+    mockPrisma.groupProgram.findUnique.mockResolvedValue(mockProgram);
     mockPrisma.employee.findUnique.mockResolvedValue(mockEmployee);
   });
 
@@ -121,8 +127,8 @@ describe('GetGroupSessionHandler', () => {
     expect(enrollment.booking?.checkedInAt).toBe(checkedInAt);
     expect(enrollment.booking?.completedAt).toBeNull();
 
-    // Service and employee
-    expect(result.service).toEqual(mockService);
+    // Program and employee
+    expect(result.program).toEqual(mockProgram);
     expect(result.employee).toEqual(mockEmployee);
 
     // spotsLeft = maxCapacity(10) - enrolledCount(2)
