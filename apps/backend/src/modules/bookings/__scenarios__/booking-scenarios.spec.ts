@@ -56,8 +56,14 @@ import { DEFAULT_ORG_ID } from "../../../common/constants";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const futureDate = (hours = 48) => new Date(Date.now() + hours * 3_600_000);
-const pastDate = (hours = 1) => new Date(Date.now() - hours * 3_600_000);
+// Freeze the time base ONCE so that two `futureDate()` calls with the same
+// offset (e.g. the availability-slot mock and the booking's scheduledAt) always
+// produce the exact same millisecond. assertSlotAvailable matches slot start
+// times by exact getTime(); recomputing Date.now() per call let the two diverge
+// by >=1ms under parallel CPU load, intermittently failing the scenario.
+const TIME_BASE = Date.now();
+const futureDate = (hours = 48) => new Date(TIME_BASE + hours * 3_600_000);
+const pastDate = (hours = 1) => new Date(TIME_BASE - hours * 3_600_000);
 
 const buildSettings = (overrides = {}) => ({
 	execute: jest
