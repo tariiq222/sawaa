@@ -11,7 +11,7 @@ import api from '../../api';
 
 const mockedApi = api as unknown as { get: jest.Mock; post: jest.Mock };
 
-const session = { id: 'g1', title: 'مجموعة القلق', scheduledAt: '2026-07-01T18:00:00.000Z', maxCapacity: 10, enrolledCount: 4, spotsLeft: 6, isFull: false, price: 10000, currency: 'SAR', durationMins: 60, status: 'SCHEDULED', employeeId: 'e1', serviceId: 's1', descriptionAr: null, descriptionEn: null };
+const session = { id: 'g1', title: 'مجموعة القلق', scheduledAt: '2026-07-01T18:00:00.000Z', maxCapacity: 10, enrolledCount: 4, spotsLeft: 6, isFull: false, price: 10000, currency: 'SAR', durationMins: 60, status: 'SCHEDULED', employeeId: 'e1', programId: 'p1', descriptionAr: null, descriptionEn: null };
 
 beforeEach(() => {
   jest.clearAllMocks();

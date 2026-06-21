@@ -13,7 +13,7 @@ export interface GroupSession {
   currency: string;
   status: string;
   employeeId: string;
-  serviceId: string;
+  programId: string;
   spotsLeft: number;
   isFull: boolean;
 }
@@ -33,9 +33,9 @@ function unwrap<T>(body: unknown): T {
 }
 
 export const groupSessionsService = {
-  async list(branchId?: string): Promise<GroupSession[]> {
+  async list(departmentId?: string): Promise<GroupSession[]> {
     const response = await api.get<unknown>('/public/bookings/group-sessions', {
-      params: branchId ? { branchId } : undefined,
+      params: departmentId ? { departmentId } : undefined,
     });
     return unwrap<GroupSession[]>(response.data);
   },

@@ -6,10 +6,10 @@ import {
   type SupportGroup,
 } from './support-groups.api';
 
-export function usePublicGroupSessions(branchId?: string) {
+export function usePublicGroupSessions(departmentId?: string) {
   const { data: sessions = [], isLoading, error } = useQuery<SupportGroup[], Error>({
-    queryKey: ['public', 'group-sessions', branchId],
-    queryFn: () => getPublicGroupSessions(branchId),
+    queryKey: ['public', 'group-sessions', departmentId],
+    queryFn: () => getPublicGroupSessions(departmentId),
   });
 
   return {

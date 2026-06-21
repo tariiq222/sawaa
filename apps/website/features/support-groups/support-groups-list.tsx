@@ -6,18 +6,18 @@ import { SupportGroupCard } from './support-group-card';
 import type { SupportGroup } from './support-groups.api';
 
 interface SupportGroupsListProps {
-  branchId?: string;
+  departmentId?: string;
   onSelectGroup?: (group: SupportGroup) => void;
   selectedGroupId?: string;
 }
 
 export function SupportGroupsList({
-  branchId,
+  departmentId,
   onSelectGroup,
   selectedGroupId,
 }: SupportGroupsListProps) {
   const t = useT();
-  const { sessions, isLoading, error } = usePublicGroupSessions(branchId);
+  const { sessions, isLoading, error } = usePublicGroupSessions(departmentId);
 
   if (isLoading) {
     return (

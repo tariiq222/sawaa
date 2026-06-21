@@ -30,11 +30,11 @@ export interface BookGroupSessionResponse {
 }
 
 export async function getPublicGroupSessions(
-  branchId?: string,
+  departmentId?: string,
 ): Promise<SupportGroup[]> {
   const base = getApiBase();
-  const url = branchId
-    ? `${base}/public/bookings/group-sessions?branchId=${encodeURIComponent(branchId)}`
+  const url = departmentId
+    ? `${base}/public/bookings/group-sessions?departmentId=${encodeURIComponent(departmentId)}`
     : `${base}/public/bookings/group-sessions`;
 
   try {
