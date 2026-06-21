@@ -56,7 +56,7 @@ export async function createTestApp(): Promise<{ app: INestApplication; prisma: 
 
   addModel(
     'user', 'client', 'employee', 'branch', 'service', 'booking', 'invoice',
-    'payment', 'refundRequest', 'groupSession', 'groupEnrollment', 'notification',
+    'payment', 'refundRequest', 'program', 'programEnrollment', 'programSupervisor', 'notification',
     'notificationDeliveryLog', 'smsDelivery', 'organizationEmailConfig',
     'organizationSmsConfig', 'organizationPaymentConfig', 'brandingConfig',
     'employeeBranch', 'employeeService', 'employeeServiceType', 'employeeAvailability',

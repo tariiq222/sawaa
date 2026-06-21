@@ -17,7 +17,7 @@ const DELETE_CLIENT_MESSAGES = {
 	hasUnpaidInvoices: (n: number) =>
 		`لا يمكن حذف العميل لوجود ${n} فاتورة${n === 1 ? "" : " غير"} مدفوعة. يرجى تسويتها أولاً.`,
 	hasActiveEnrollments: (n: number) =>
-		`لا يمكن حذف العميل لوجود ${n} تسجيل${n === 1 ? "" : "ات"} نشط${n === 1 ? "" : "ة"} في جلسات جماعية. يرجى إلغاؤها أولاً.`,
+		`لا يمكن حذف العميل لوجود ${n} تسجيل${n === 1 ? "" : "ات"} نشط${n === 1 ? "" : "ة"} في برامج جماعية. يرجى إلغاؤها أولاً.`,
 	hasRatings: (n: number) =>
 		`لا يمكن حذف العميل لوجود ${n} تقييم${n === 1 ? "" : "ات"}. يجب الحفاظ على التقييمات لأغراض التدقيق.`,
 } as const;
@@ -66,8 +66,8 @@ export class DeleteClientHandler {
 			);
 		}
 
-		// GroupEnrollment (people → bookings)
-		const activeEnrollments = await this.prisma.groupEnrollment.count({
+		// ProgramEnrollment (people → bookings)
+		const activeEnrollments = await this.prisma.programEnrollment.count({
 			where: {
 				clientId: cmd.clientId,
 				booking: {

@@ -134,15 +134,15 @@ export class CancelBookingHandler {
           idempotencyKey = created.idempotencyKey;
         }
       }
-      // Roll back sibling AWAITING_PAYMENT bookings for group sessions
+      // Roll back sibling AWAITING_PAYMENT bookings for program enrollments
       // when the cancellation drops the enrolled count below the threshold.
-      if (booking.groupSessionId) {
-        // Remove the GroupEnrollment row so the client can re-enroll after
+      if (booking.programId) {
+        // Remove the ProgramEnrollment row so the client can re-enroll after
         // their seat is freed. deleteMany is safe: a booking has at most one
         // enrollment (@@unique on bookingId) and returns count=0 silently if
         // there is none.
-        await tx.groupEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
-        await this.groupSessionCapacity.decrementEnrollment(tx, booking.groupSessionId);
+        await tx.programEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
+        await this.groupSessionCapacity.decrementEnrollment(tx, booking.programId);
       }
       return cancelledBooking;
     });

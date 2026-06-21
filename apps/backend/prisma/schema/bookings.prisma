@@ -1,4 +1,4 @@
-// Bookings BC — appointments, group sessions.
+// Bookings BC — appointments, programs.
 // Models added in Phase 8 (p8-t*). Cross-BC IDs (clientId, employeeId, serviceId, branchId)
 // are plain strings — no Prisma FK relations. Referential integrity is event-driven.
 
@@ -60,7 +60,7 @@ model Booking {
   branchId             String
   clientId             String
   employeeId           String
-  serviceId            String?  // null for GROUP bookings (use programId instead)
+  serviceId            String? // null for GROUP bookings (use programId instead)
   bookingType          BookingType         @default(INDIVIDUAL)
   // DB-???: deliveryType — required delivery channel; bookingType now models appointment shape only.
   deliveryType         DeliveryType
@@ -83,9 +83,7 @@ model Booking {
   noShowAt             DateTime?
   expiresAt            DateTime?
   durationOptionId     String? // cross-BC ref to ServiceDurationOption — plain string, no FK
-  groupSessionId       String?
-  programId            String?  // set for GROUP bookings only; null for individual bookings
-  groupSession         GroupSession?       @relation(fields: [groupSessionId], references: [id], onDelete: SetNull)
+  programId            String? // set for GROUP bookings only; null for individual bookings
   bundleId             String?
   bundleGroupId        String?
   payAtClinic          Boolean             @default(false)
@@ -117,7 +115,7 @@ model Booking {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  groupEnrollment GroupEnrollment?
+  programEnrollment ProgramEnrollment?
 
   // DB-07: @@index([employeeId]) dropped — redundant prefix of [employeeId, scheduledAt] and [employeeId, endsAt]
   @@index([clientId])
@@ -135,64 +133,98 @@ model Booking {
   @@index([status, scheduledAt])
 }
 
-// ─── Group Session ────────────────────────────────────────────────────────────
+// ─── Program ────────────────────────────────────────────────────────────────
 
-enum GroupSessionStatus {
+// Lifecycle of a group program (البرامج الجماعية):
+//   DRAFT       — staff is composing the program; not enrollable
+//   OPEN        — published; clients can self-enroll / staff can enroll on-behalf
+//   MIN_REACHED — enrollment reached the configured minimum; staff can schedule it
+//   SCHEDULED   — startDate set; enrollment locked
+//   COMPLETED   — terminal (cron closes programs after startDate + daysCount)
+//   CANCELLED   — terminal (admin cancelled; enrollments cancelled, manual refund)
+//
+// FULL (no seats left) is a computed badge (enrolledCount >= maxParticipants),
+// not a stored status — see modules/bookings/program/program-state-machine.ts.
+enum ProgramStatus {
+  DRAFT
   OPEN
-  FULL
-  CANCELLED
+  MIN_REACHED
+  SCHEDULED
   COMPLETED
+  CANCELLED
 }
 
-model GroupSession {
-  id                  String             @id @default(uuid())
-  ref                 Int                @unique @default(autoincrement())
+model Program {
+  id                  String        @id @default(uuid())
+  ref                 Int           @unique @default(autoincrement())
+  departmentId        String
   branchId            String
-  employeeId          String
-  programId           String
-  title               String
+  nameAr              String
+  nameEn              String?
   descriptionAr       String?
   descriptionEn       String?
-  scheduledAt         DateTime
-  durationMins        Int
-  maxCapacity         Int
-  enrolledCount       Int                @default(0)
+  /// Null until staff schedules the program. Updates the `scheduledAt` sentinel
+  /// on each enrollment booking once set.
+  startDate           DateTime?
+  /// Number of consecutive days the program runs from startDate.
+  daysCount           Int
+  hoursPerDay         Int
+  minParticipants     Int           @default(1)
+  maxParticipants     Int           @default(30)
+  /// Denormalised count of ProgramEnrollment rows; kept in sync transactionally
+  /// by the enrollment handler. A FULL badge is computed by the API as
+  /// enrolledCount >= maxParticipants.
+  enrolledCount       Int           @default(0)
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
-  price               Decimal            @db.Decimal(12, 2)
-  currency            String             @default("SAR")
-  status              GroupSessionStatus @default(OPEN)
-  // DB-???: deliveryType — supports both IN_PERSON and ONLINE group sessions.
-  deliveryType        DeliveryType
-  isPublic            Boolean            @default(false)
+  price               Decimal       @db.Decimal(12, 2)
+  currency            String        @default("SAR")
+  depositEnabled      Boolean       @default(false)
+  /// Stored in integer halalas (1 SAR = 100). Optional; only consulted when
+  /// depositEnabled = true. CHECK constraint enforces depositAmount <= price.
+  depositAmount       Decimal?      @db.Decimal(12, 2)
+  status              ProgramStatus @default(DRAFT)
+  /// When true, the program appears on the public listing and the public
+  /// enrollment endpoint accepts it. Staff-only enrollment is unaffected.
+  isPublic            Boolean       @default(false)
   publicDescriptionAr String?
   publicDescriptionEn String?
   cancelReason        String?
   cancelledAt         DateTime?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
-  enrollments     GroupEnrollment[]
-  bookings        Booking[]
-  program         GroupProgram       @relation(fields: [programId], references: [id])
+  enrollments ProgramEnrollment[]
+  supervisors ProgramSupervisor[]
 
-  @@index([employeeId])
-  @@index([programId])
-  @@index([scheduledAt])
+  @@index([departmentId])
+  @@index([branchId])
+  @@index([status])
   @@index([isPublic])
-  @@index([status, scheduledAt])
+  @@index([status, startDate])
 }
 
-model GroupEnrollment {
-  id             String       @id @default(uuid())
-  groupSessionId String
-  groupSession   GroupSession @relation(fields: [groupSessionId], references: [id], onDelete: Cascade)
-  clientId       String
-  bookingId      String       @unique
-  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  enrolledAt     DateTime     @default(now())
+model ProgramEnrollment {
+  id         String   @id @default(uuid())
+  programId  String
+  program    Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  clientId   String
+  bookingId  String   @unique
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  enrolledAt DateTime @default(now())
 
-  @@unique([groupSessionId, clientId])
+  @@unique([programId, clientId])
   @@index([clientId])
+  @@index([programId])
+}
+
+model ProgramSupervisor {
+  programId  String
+  program    Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  employeeId String
+  createdAt  DateTime @default(now())
+
+  @@id([programId, employeeId])
+  @@index([employeeId])
 }
 
 // ─── BookingStatusLog ─────────────────────────────────────────────────────────
@@ -293,27 +325,4 @@ model BundleUsage {
   @@index([purchaseId])
   @@index([bookingId])
   @@index([serviceId])
-}
-
-// ─── Group Program ─────────────────────────────────────────────────────────────
-
-model GroupProgram {
-  id              String   @id @default(uuid())
-  ref             Int      @unique @default(autoincrement())
-  departmentId    String
-  nameAr          String
-  nameEn          String?
-  descriptionAr   String?
-  descriptionEn   String?
-  minParticipants Int      @default(1)
-  maxParticipants Int      @default(30)
-  defaultPrice    Int      @default(0) // integer halalas
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  sessions GroupSession[]
-
-  @@index([departmentId])
-  @@index([isActive])
 }

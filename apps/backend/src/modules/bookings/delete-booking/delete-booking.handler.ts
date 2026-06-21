@@ -39,7 +39,7 @@ const DELETE_BOOKING_MESSAGES = {
  *
  * Cleanup runs in one transaction. Booking has no FK to Invoice/StatusLog/
  * Rating/IntakeResponse (cross-BC plain-string refs), so they are removed
- * explicitly; GroupEnrollment cascades via its FK. BundleUsage.bookingId is
+ * explicitly; ProgramEnrollment cascades via its FK. BundleUsage.bookingId is
  * nulled to preserve the bundle consumption record.
  */
 @Injectable()

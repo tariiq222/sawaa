@@ -19,7 +19,6 @@ import {
 	BookingStatus,
 	CancellationReason,
 	DeliveryType,
-	GroupSessionStatus,
 	PaymentStatus,
 	Prisma,
 	RefundType,

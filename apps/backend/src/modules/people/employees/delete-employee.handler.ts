@@ -18,10 +18,10 @@ const DELETE_EMPLOYEE_MESSAGES = {
 	notFound: "الموظف غير موجود",
 	hasActiveBookings: (n: number) =>
 		`لا يمكن حذف الموظف لوجود ${n} حجز${n === 1 ? "" : "اً"} نشط${n === 1 ? "" : "ة"} مسندة إليه. يرجى إلغاؤها أو إتمامها أولاً.`,
-	hostingGroupSessions: (n: number) =>
-		`لا يمكن حذف الموظف لأنه يستضيف ${n} جلسة جماعية${n === 1 ? "" : "ات"} قادمة. يرجى إلغاؤها أولاً.`,
+	supervisingPrograms: (n: number) =>
+		`لا يمكن حذف الموظف لأنه يشرف على ${n} برنامج جماعي${n === 1 ? "" : "ات"} غير منتهٍ. يرجى إزالة إشرافه أو إنهاء البرنامج أولاً.`,
 	hasUnpaidInvoices: (n: number) =>
-		`لا يمكن حذف الموظف لوجود ${n} فاتورة${n === 1 ? "" : " غير"} مدفوعة. يرجى تسويتها أولاً.`,
+		`لا يمكن حذف الموظف لوجود ${n} فاتورة${n === 1 ? " غير" : ""} مدفوعة. يرجى تسويتها أولاً.`,
 	hasRatings: (n: number) =>
 		`لا يمكن حذف الموظف لوجود ${n} تقييم${n === 1 ? "" : "ات"}. يجب الحفاظ على التقييمات لأغراض التدقيق.`,
 } as const;
@@ -65,16 +65,19 @@ export class DeleteEmployeeHandler {
 					);
 				}
 
-				// GroupSession (people → bookings): block if hosting upcoming sessions
-				const activeGroupSessions = await tx.groupSession.count({
+				// ProgramSupervisor (people → bookings): block if the employee is
+				// supervising a program that has not reached a terminal status.
+				const supervisingPrograms = await tx.programSupervisor.count({
 					where: {
 						employeeId: cmd.employeeId,
-						status: { in: ["OPEN", "FULL"] },
+						program: {
+							status: { notIn: ["COMPLETED", "CANCELLED"] },
+						},
 					},
 				});
-				if (activeGroupSessions > 0) {
+				if (supervisingPrograms > 0) {
 					throw new ConflictException(
-						DELETE_EMPLOYEE_MESSAGES.hostingGroupSessions(activeGroupSessions),
+						DELETE_EMPLOYEE_MESSAGES.supervisingPrograms(supervisingPrograms),
 					);
 				}
 

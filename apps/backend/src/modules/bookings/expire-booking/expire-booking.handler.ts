@@ -81,19 +81,19 @@ export class ExpireBookingHandler {
 				idempotencyKey = created.idempotencyKey;
 			}
 
-			// A scheduled group-session enrollee that expires must release their
-			// seat: guarded enrolledCount decrement inside the same transaction
+			// A scheduled program enrollee that expires must release their seat:
+			// guarded enrolledCount decrement inside the same transaction
 			// (mirrors cancel-booking.handler).
-			if (booking.groupSessionId) {
-				// Remove the GroupEnrollment row so the client can re-enroll after
+			if (booking.programId) {
+				// Remove the ProgramEnrollment row so the client can re-enroll after
 				// their seat is freed. deleteMany is safe: a booking has at most one
 				// enrollment (@@unique on bookingId) and returns count=0 silently if
 				// there is none.
-				await tx.groupEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
-			await this.groupSessionCapacity.decrementEnrollment(
-				tx,
-				booking.groupSessionId,
-			);
+				await tx.programEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
+				await this.groupSessionCapacity.decrementEnrollment(
+					tx,
+					booking.programId,
+				);
 			}
 
 			return expiredBooking;

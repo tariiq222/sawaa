@@ -6,7 +6,7 @@ import { BookingAutocompleteCron } from './booking-autocomplete.cron';
 import { BookingExpiryCron } from './booking-expiry.cron';
 import { BookingNoShowCron } from './booking-noshow.cron';
 import { AppointmentRemindersCron } from './appointment-reminders.cron';
-import { GroupSessionAutomationCron } from './group-session-automation.cron';
+import { ProgramAutomationCron } from './program-automation.cron';
 import { RefreshTokenCleanupCron } from './refresh-token-cleanup.cron';
 import { DataRetentionCron } from './data-retention.cron';
 import { DbRowCountCron } from './db-row-count.cron';
@@ -33,7 +33,7 @@ describe('CronTasksService', () => {
   let mockBookingExpiry: jest.Mocked<BookingExpiryCron>;
   let mockBookingNoShow: jest.Mocked<BookingNoShowCron>;
   let mockAppointmentReminders: jest.Mocked<AppointmentRemindersCron>;
-  let mockGroupSessionAutomation: jest.Mocked<GroupSessionAutomationCron>;
+  let mockProgramAutomation: jest.Mocked<ProgramAutomationCron>;
   let mockRefreshTokenCleanup: jest.Mocked<RefreshTokenCleanupCron>;
   let mockDataRetention: jest.Mocked<DataRetentionCron>;
   let mockDbRowCount: jest.Mocked<DbRowCountCron>;
@@ -81,9 +81,9 @@ describe('CronTasksService', () => {
     mockAppointmentReminders = {
       execute: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<AppointmentRemindersCron>;
-    mockGroupSessionAutomation = {
+    mockProgramAutomation = {
       execute: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<GroupSessionAutomationCron>;
+    } as unknown as jest.Mocked<ProgramAutomationCron>;
     mockRefreshTokenCleanup = {
       execute: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<RefreshTokenCleanupCron>;
@@ -117,7 +117,7 @@ describe('CronTasksService', () => {
       mockBookingExpiry,
       mockBookingNoShow,
       mockAppointmentReminders,
-      mockGroupSessionAutomation,
+      mockProgramAutomation,
       mockRefreshTokenCleanup,
       mockDataRetention,
       mockDbRowCount,
@@ -185,7 +185,7 @@ describe('CronTasksService', () => {
           'booking-expiry',
           'booking-noshow',
           'appointment-reminders',
-          'group-session-automation',
+          'program-automation',
           'refresh-token-cleanup',
           'data-retention',
           'db-row-count',
@@ -212,7 +212,7 @@ describe('CronTasksService', () => {
         { name: CRON_JOBS.BOOKING_EXPIRY, cron: '*/10 * * * *' },
         { name: CRON_JOBS.BOOKING_NOSHOW, cron: '*/5 * * * *' },
         { name: CRON_JOBS.APPOINTMENT_REMINDERS, cron: '*/5 * * * *' },
-        { name: CRON_JOBS.GROUP_SESSION_AUTOMATION, cron: '*/30 * * * *' },
+        { name: CRON_JOBS.PROGRAM_AUTOMATION, cron: '*/30 * * * *' },
         { name: CRON_JOBS.REFRESH_TOKEN_CLEANUP, cron: '0 3 * * *' },
         { name: CRON_JOBS.DATA_RETENTION, cron: '0 3 * * *' },
         { name: CRON_JOBS.DB_ROW_COUNT, cron: '0 1 * * 0' },
@@ -280,8 +280,8 @@ describe('CronTasksService', () => {
     it('handles group-session-automation', async () => {
       (service as any).registerWorker();
       const processor = (mockBullMq.createWorker as jest.Mock).mock.calls[0][1];
-      await processor(createJob(CRON_JOBS.GROUP_SESSION_AUTOMATION));
-      expect(mockGroupSessionAutomation.execute).toHaveBeenCalledTimes(1);
+      await processor(createJob(CRON_JOBS.PROGRAM_AUTOMATION));
+      expect(mockProgramAutomation.execute).toHaveBeenCalledTimes(1);
     });
 
     it('handles refresh-token-cleanup', async () => {

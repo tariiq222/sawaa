@@ -24,10 +24,6 @@ export class ProgramCapacityService {
    * floored at 0 via a guarded conditional update. Called inside the booking
    * lifecycle transaction (cancel/expire/no-show).
    *
-   * Note: the underlying query still targets the legacy `groupSession` table
-   * during the pre-migration phase (commit A). Commit B swaps the table
-   * reference to `program`.
-   *
    * @param tx        - The Prisma transaction client.
    * @param programId - The ID of the program to decrement.
    */
@@ -35,7 +31,7 @@ export class ProgramCapacityService {
     tx: Prisma.TransactionClient,
     programId: string,
   ): Promise<void> {
-    await tx.groupSession.updateMany({
+    await tx.program.updateMany({
       where: { id: programId, enrolledCount: { gt: 0 } },
       data: { enrolledCount: { decrement: 1 } },
     });

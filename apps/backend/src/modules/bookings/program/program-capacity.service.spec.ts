@@ -8,7 +8,7 @@ describe('ProgramCapacityService — decrementEnrollment', () => {
 
   beforeEach(async () => {
     tx = {
-      groupSession: {
+      program: {
         updateMany: jest.fn(),
       },
     };
@@ -41,22 +41,22 @@ describe('ProgramCapacityService — decrementEnrollment', () => {
   });
 
   it('decrements enrolledCount with a > 0 guard for the given program', async () => {
-    tx.groupSession.updateMany.mockResolvedValue({ count: 1 });
+    tx.program.updateMany.mockResolvedValue({ count: 1 });
 
     await service.decrementEnrollment(tx, 'prog-1');
 
-    expect(tx.groupSession.updateMany).toHaveBeenCalledWith({
+    expect(tx.program.updateMany).toHaveBeenCalledWith({
       where: { id: 'prog-1', enrolledCount: { gt: 0 } },
       data: { enrolledCount: { decrement: 1 } },
     });
   });
 
   it('targets only the supplied programId', async () => {
-    tx.groupSession.updateMany.mockResolvedValue({ count: 0 });
+    tx.program.updateMany.mockResolvedValue({ count: 0 });
 
     await service.decrementEnrollment(tx, 'prog-specific-id');
 
-    expect(tx.groupSession.updateMany).toHaveBeenCalledWith(
+    expect(tx.program.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ id: 'prog-specific-id' }),
       }),
@@ -64,17 +64,17 @@ describe('ProgramCapacityService — decrementEnrollment', () => {
   });
 
   it('does not throw when the program has no participants (guarded update matches nothing)', async () => {
-    tx.groupSession.updateMany.mockResolvedValue({ count: 0 });
+    tx.program.updateMany.mockResolvedValue({ count: 0 });
 
     await expect(service.decrementEnrollment(tx, 'prog-empty')).resolves.toBeUndefined();
   });
 
   it('decrementEnrollmentStandalone opens a transaction and decrements', async () => {
-    tx.groupSession.updateMany.mockResolvedValue({ count: 1 });
+    tx.program.updateMany.mockResolvedValue({ count: 1 });
 
     await service.decrementEnrollmentStandalone('prog-2');
 
-    expect(tx.groupSession.updateMany).toHaveBeenCalledWith({
+    expect(tx.program.updateMany).toHaveBeenCalledWith({
       where: { id: 'prog-2', enrolledCount: { gt: 0 } },
       data: { enrolledCount: { decrement: 1 } },
     });

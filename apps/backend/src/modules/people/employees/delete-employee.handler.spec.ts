@@ -8,7 +8,7 @@ const buildPrisma = () => ({
   $queryRaw: jest.fn(),
   employee: { findFirst: jest.fn(), delete: jest.fn() },
   booking: { count: jest.fn() },
-  groupSession: { count: jest.fn() },
+  programSupervisor: { count: jest.fn() },
   invoice: { count: jest.fn() },
   rating: { count: jest.fn() },
 });
@@ -44,17 +44,17 @@ describe('DeleteEmployeeHandler', () => {
     await expect(handler.execute({ employeeId: 'emp-1' })).rejects.toThrow(ConflictException);
   });
 
-  it('should throw ConflictException when active group sessions exist', async () => {
+  it('should throw ConflictException when supervising active programs exist', async () => {
     prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
     prisma.booking.count.mockResolvedValue(0);
-    prisma.groupSession.count.mockResolvedValue(2);
+    prisma.programSupervisor.count.mockResolvedValue(2);
     await expect(handler.execute({ employeeId: 'emp-1' })).rejects.toThrow(ConflictException);
   });
 
   it('should throw ConflictException when unpaid invoices exist', async () => {
     prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
     prisma.booking.count.mockResolvedValue(0);
-    prisma.groupSession.count.mockResolvedValue(0);
+    prisma.programSupervisor.count.mockResolvedValue(0);
     prisma.invoice.count.mockResolvedValue(1);
     await expect(handler.execute({ employeeId: 'emp-1' })).rejects.toThrow(ConflictException);
   });
@@ -62,7 +62,7 @@ describe('DeleteEmployeeHandler', () => {
   it('should throw ConflictException when ratings exist', async () => {
     prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
     prisma.booking.count.mockResolvedValue(0);
-    prisma.groupSession.count.mockResolvedValue(0);
+    prisma.programSupervisor.count.mockResolvedValue(0);
     prisma.invoice.count.mockResolvedValue(0);
     prisma.rating.count.mockResolvedValue(2);
     await expect(handler.execute({ employeeId: 'emp-1' })).rejects.toThrow(ConflictException);
@@ -71,7 +71,7 @@ describe('DeleteEmployeeHandler', () => {
   it('should delete employee when no constraints', async () => {
     prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
     prisma.booking.count.mockResolvedValue(0);
-    prisma.groupSession.count.mockResolvedValue(0);
+    prisma.programSupervisor.count.mockResolvedValue(0);
     prisma.invoice.count.mockResolvedValue(0);
     prisma.rating.count.mockResolvedValue(0);
     prisma.employee.delete.mockResolvedValue({ id: 'emp-1' });

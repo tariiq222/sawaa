@@ -6,7 +6,7 @@ import { BookingAutocompleteCron } from './booking-autocomplete.cron';
 import { BookingExpiryCron } from './booking-expiry.cron';
 import { BookingNoShowCron } from './booking-noshow.cron';
 import { AppointmentRemindersCron } from './appointment-reminders.cron';
-import { GroupSessionAutomationCron } from './group-session-automation.cron';
+import { ProgramAutomationCron } from './program-automation.cron';
 import { RefreshTokenCleanupCron } from './refresh-token-cleanup.cron';
 import { DataRetentionCron } from './data-retention.cron';
 
@@ -26,7 +26,7 @@ export const CRON_JOBS = {
   BOOKING_EXPIRY: 'booking-expiry',
   BOOKING_NOSHOW: 'booking-noshow',
   APPOINTMENT_REMINDERS: 'appointment-reminders',
-  GROUP_SESSION_AUTOMATION: 'group-session-automation',
+  PROGRAM_AUTOMATION: 'program-automation',
   REFRESH_TOKEN_CLEANUP: 'refresh-token-cleanup',
   DATA_RETENTION: 'data-retention',
   DB_ROW_COUNT: 'db-row-count',
@@ -51,7 +51,7 @@ export class CronTasksService implements OnModuleInit {
     private readonly bookingExpiry: BookingExpiryCron,
     private readonly bookingNoShow: BookingNoShowCron,
     private readonly appointmentReminders: AppointmentRemindersCron,
-    private readonly groupSessionAutomation: GroupSessionAutomationCron,
+    private readonly programAutomation: ProgramAutomationCron,
     private readonly refreshTokenCleanup: RefreshTokenCleanupCron,
     private readonly dataRetention: DataRetentionCron,
     private readonly dbRowCount: DbRowCountCron,
@@ -78,7 +78,7 @@ export class CronTasksService implements OnModuleInit {
       { name: CRON_JOBS.BOOKING_EXPIRY, cron: '*/10 * * * *' },
       { name: CRON_JOBS.BOOKING_NOSHOW, cron: '*/5 * * * *' },
       { name: CRON_JOBS.APPOINTMENT_REMINDERS, cron: '*/5 * * * *' }, // 5-min slices — must match REMINDER_WINDOW_MINUTES
-      { name: CRON_JOBS.GROUP_SESSION_AUTOMATION, cron: '*/30 * * * *' },
+      { name: CRON_JOBS.PROGRAM_AUTOMATION, cron: '*/30 * * * *' },
       { name: CRON_JOBS.REFRESH_TOKEN_CLEANUP, cron: '0 3 * * *' },
       { name: CRON_JOBS.DATA_RETENTION, cron: '0 3 * * *' }, // daily 03:00 — PDPL PII/log purge
       { name: CRON_JOBS.DB_ROW_COUNT, cron: '0 1 * * 0' }, // weekly Sunday 01:00
@@ -129,8 +129,8 @@ export class CronTasksService implements OnModuleInit {
           case CRON_JOBS.APPOINTMENT_REMINDERS:
             await this.appointmentReminders.execute();
             break;
-          case CRON_JOBS.GROUP_SESSION_AUTOMATION:
-            await this.groupSessionAutomation.execute();
+          case CRON_JOBS.PROGRAM_AUTOMATION:
+            await this.programAutomation.execute();
             break;
           case CRON_JOBS.REFRESH_TOKEN_CLEANUP:
             await this.refreshTokenCleanup.execute();

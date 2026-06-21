@@ -1,15 +1,15 @@
 import { BadRequestException } from '@nestjs/common';
+import { ProgramStatus } from '@prisma/client';
 import {
   assertProgramTransition,
   isProgramOpenForEnrollment,
   isProgramTerminalStatus,
-  ProgramStatus,
   PROGRAM_TERMINAL_STATUSES,
   type ProgramTransition,
   VALID_PROGRAM_TRANSITIONS,
 } from './program-state-machine';
 
-const ALL_STATUSES: ProgramStatus[] = Object.values(ProgramStatus);
+const ALL_STATUSES = Object.values(ProgramStatus);
 
 function allTerminalCombinations(): Array<{ from: ProgramStatus; transition: ProgramTransition }> {
   const pairs: Array<{ from: ProgramStatus; transition: ProgramTransition }> = [];

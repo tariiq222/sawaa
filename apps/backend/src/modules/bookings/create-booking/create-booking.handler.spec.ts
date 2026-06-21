@@ -59,10 +59,6 @@ const buildPrisma = () => {
       count: jest.fn().mockResolvedValue(0),
     },
     invoice: { create: jest.fn().mockResolvedValue(mockInvoice) },
-    groupSession: {
-      findUnique: jest.fn().mockResolvedValue({ maxCapacity: 5 }),
-      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-    },
     organizationSettings: { findFirst: jest.fn().mockResolvedValue({ vatRate: '0.15', paymentAtClinicEnabled: true }) },
     outboxEvent: { create: jest.fn().mockResolvedValue({ id: 'outbox-1' }) },
     coupon: { update: jest.fn().mockResolvedValue({}) },

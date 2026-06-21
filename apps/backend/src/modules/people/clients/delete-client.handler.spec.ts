@@ -9,7 +9,7 @@ describe("DeleteClientHandler", () => {
 		client: { findFirst: jest.Mock; update: jest.Mock };
 		booking: { count: jest.Mock };
 		invoice: { count: jest.Mock };
-		groupEnrollment: { count: jest.Mock };
+		programEnrollment: { count: jest.Mock };
 		rating: { count: jest.Mock };
 	};
 
@@ -18,7 +18,7 @@ describe("DeleteClientHandler", () => {
 			client: { findFirst: jest.fn(), update: jest.fn().mockResolvedValue({}) },
 			booking: { count: jest.fn().mockResolvedValue(0) },
 			invoice: { count: jest.fn().mockResolvedValue(0) },
-			groupEnrollment: { count: jest.fn().mockResolvedValue(0) },
+			programEnrollment: { count: jest.fn().mockResolvedValue(0) },
 			rating: { count: jest.fn().mockResolvedValue(0) },
 		};
 
@@ -61,13 +61,13 @@ describe("DeleteClientHandler", () => {
 		);
 	});
 
-	it("blocks when active group enrollments exist", async () => {
+	it("blocks when active program enrollments exist", async () => {
 		prisma.client.findFirst.mockResolvedValue({
 			id: "c1",
 			phone: "+966500000000",
 			notes: "",
 		});
-		prisma.groupEnrollment.count.mockResolvedValue(3);
+		prisma.programEnrollment.count.mockResolvedValue(3);
 		await expect(handler.execute({ clientId: "c1" })).rejects.toThrow(
 			"3 تسجيل",
 		);

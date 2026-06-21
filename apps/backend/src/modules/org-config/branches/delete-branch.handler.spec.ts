@@ -13,7 +13,7 @@ describe('DeleteBranchHandler', () => {
       branch: { findFirst: jest.fn(), delete: jest.fn() },
       employeeBranch: { count: jest.fn() },
       booking: { count: jest.fn().mockResolvedValue(0) },
-      groupSession: { count: jest.fn().mockResolvedValue(0) },
+      program: { count: jest.fn().mockResolvedValue(0) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -46,10 +46,10 @@ describe('DeleteBranchHandler', () => {
     expect(prisma.branch.delete).not.toHaveBeenCalled();
   });
 
-  it('should throw ConflictException when a group session references the branch', async () => {
+  it('should throw ConflictException when a program references the branch', async () => {
     prisma.branch.findFirst.mockResolvedValue({ id: 'b1' });
     prisma.employeeBranch.count.mockResolvedValue(0);
-    prisma.groupSession.count.mockResolvedValue(1);
+    prisma.program.count.mockResolvedValue(1);
     await expect(handler.execute({ branchId: 'b1' })).rejects.toThrow(ConflictException);
     expect(prisma.branch.delete).not.toHaveBeenCalled();
   });

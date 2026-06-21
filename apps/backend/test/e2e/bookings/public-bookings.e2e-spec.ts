@@ -52,29 +52,4 @@ describe('Public Bookings (e2e)', () => {
 
     expect(res.body).toHaveLength(1);
   });
-
-  it('GET /api/v1/public/group-sessions returns open sessions', async () => {
-    prisma.groupSession.findMany.mockResolvedValue([
-      {
-        id: 'gs1',
-        title: 'Yoga',
-        scheduledAt: new Date('2026-12-01'),
-        durationMins: 60,
-        maxCapacity: 10,
-        enrolledCount: 3,
-        price: 50,
-        currency: 'SAR',
-        status: 'OPEN',
-        employeeId: 'e1',
-        serviceId: 's1',
-      },
-    ]);
-
-    const res = await request(app.getHttpServer())
-      .get('/api/v1/public/bookings/group-sessions')
-      .expect(200);
-
-    expect(res.body).toHaveLength(1);
-    expect(res.body[0].title).toBe('Yoga');
-  });
 });

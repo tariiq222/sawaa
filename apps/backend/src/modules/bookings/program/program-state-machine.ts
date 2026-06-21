@@ -18,25 +18,10 @@
  *
  *   Enrollment is allowed in OPEN and MIN_REACHED only.
  *   FULL (no more seats) is a computed badge, not a stored state.
- *
- * The ProgramStatus values are defined locally as a const-typed string union
- * during the pre-migration phase. After the migration that introduces the
- * Prisma enum lands (commit B), the import in this file switches to
- * `import { ProgramStatus } from '@prisma/client'` and the local const is
- * deleted.
  */
 
 import { BadRequestException } from '@nestjs/common';
-
-export const ProgramStatus = {
-  DRAFT: 'DRAFT',
-  OPEN: 'OPEN',
-  MIN_REACHED: 'MIN_REACHED',
-  SCHEDULED: 'SCHEDULED',
-  COMPLETED: 'COMPLETED',
-  CANCELLED: 'CANCELLED',
-} as const;
-export type ProgramStatus = (typeof ProgramStatus)[keyof typeof ProgramStatus];
+import { ProgramStatus } from '@prisma/client';
 
 export type ProgramTransition =
   | 'OPEN_REGISTRATION'

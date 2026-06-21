@@ -9,8 +9,11 @@ export class GetClientBookingHandler {
     const booking = await this.prisma.booking.findFirst({
       where: { id: bookingId, clientId },
       include: {
-        groupSession: true,
-        groupEnrollment: true,
+        programEnrollment: {
+          include: {
+            program: true,
+          },
+        },
       },
     });
 

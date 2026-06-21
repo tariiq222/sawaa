@@ -11,7 +11,7 @@ import { BookingAutocompleteCron } from './cron-tasks/booking-autocomplete.cron'
 import { BookingExpiryCron } from './cron-tasks/booking-expiry.cron';
 import { BookingNoShowCron } from './cron-tasks/booking-noshow.cron';
 import { AppointmentRemindersCron } from './cron-tasks/appointment-reminders.cron';
-import { GroupSessionAutomationCron } from './cron-tasks/group-session-automation.cron';
+import { ProgramAutomationCron } from './cron-tasks/program-automation.cron';
 import { RefreshTokenCleanupCron } from './cron-tasks/refresh-token-cleanup.cron';
 import { DataRetentionCron } from './cron-tasks/data-retention.cron';
 import { LogActivityHandler } from './log-activity/log-activity.handler';
@@ -40,7 +40,7 @@ const cronHandlers = [
   BookingExpiryCron,
   BookingNoShowCron,
   AppointmentRemindersCron,
-  GroupSessionAutomationCron,
+  ProgramAutomationCron,
   RefreshTokenCleanupCron,
   // PDPL — daily PII/log retention purge
   DataRetentionCron,

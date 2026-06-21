@@ -96,30 +96,30 @@ describe('NoShowBookingHandler — financial consequence (forfeiture)', () => {
   });
 });
 
-describe('NoShowBookingHandler — group session capacity', () => {
-  it('recalculates group capacity with the tx and groupSessionId when no-showing a group booking', async () => {
+describe('NoShowBookingHandler — program enrollment capacity', () => {
+  it('decrements program enrollment with the tx and programId when no-showing a program booking', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({
       ...mockBooking,
       status: BookingStatus.CONFIRMED,
-      groupSessionId: 'gs-1',
+      programId: 'prog-1',
     });
     const groupCapacity = buildGroupCapacity();
 
     await newHandler(prisma, groupCapacity).execute({ bookingId: 'book-1', changedBy: 'system' });
 
     // buildRlsTransaction passes `prisma` itself as the tx — asserting on it
-    // proves the recalculation runs inside the same transaction as the update.
+    // proves the decrement runs inside the same transaction as the update.
     expect(groupCapacity.decrementEnrollment).toHaveBeenCalledTimes(1);
-    expect(groupCapacity.decrementEnrollment).toHaveBeenCalledWith(prisma, 'gs-1');
+    expect(groupCapacity.decrementEnrollment).toHaveBeenCalledWith(prisma, 'prog-1');
   });
 
-  it('does NOT recalculate group capacity when the booking has no groupSessionId', async () => {
+  it('does NOT decrement program enrollment when the booking has no programId', async () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({
       ...mockBooking,
       status: BookingStatus.CONFIRMED,
-      groupSessionId: null,
+      programId: null,
     });
     const groupCapacity = buildGroupCapacity();
 

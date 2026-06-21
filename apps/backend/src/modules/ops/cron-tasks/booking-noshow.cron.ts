@@ -28,8 +28,8 @@ export class BookingNoShowCron {
       const cutoff = new Date(Date.now() - minutes * 60_000);
 
       // Snapshot the matching ids first so we can process each one through
-      // NoShowBookingHandler, which handles the full lifecycle including group
-      // session capacity recalculation and GroupEnrollment cleanup.
+      // NoShowBookingHandler, which handles the full lifecycle including program
+      // capacity recalculation and ProgramEnrollment cleanup.
       const targets = await this.prisma.booking.findMany({
         where: {
           status: BookingStatus.CONFIRMED,

@@ -44,7 +44,6 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 		employee2Id: "",
 		serviceId: "",
 		serviceGroupId: "",
-		groupProgramId: "",
 		clientId: "",
 		client2Id: "",
 		userId: "",
@@ -342,20 +341,6 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 		});
 		ctx.serviceGroupId = groupSvc.id;
 
-		// ── Create group program (group sessions link to a program, not a service) ──
-		const groupProgram = await prisma.groupProgram.create({
-			data: {
-				departmentId: dept.id,
-				nameAr: "برنامج التواصل بين الزوجين",
-				nameEn: "Couples Communication Program",
-				minParticipants: 4,
-				maxParticipants: 10,
-				defaultPrice: 50000, // 500 SAR in halalas
-				isActive: true,
-			},
-		});
-		ctx.groupProgramId = groupProgram.id;
-
 		// ── Service booking configs + duration options (required by CheckAvailabilityHandler)
 		await prisma.serviceBookingConfig.createMany({
 			data: [
@@ -525,9 +510,10 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 				prisma.bookingStatusLog.deleteMany({}),
 				prisma.payment.deleteMany({}),
 				prisma.invoice.deleteMany({}),
+				prisma.programEnrollment.deleteMany({}),
+				prisma.programSupervisor.deleteMany({}),
+				prisma.program.deleteMany({}),
 				prisma.booking.deleteMany({}),
-				prisma.groupEnrollment.deleteMany({}),
-				prisma.groupSession.deleteMany({}),
 				prisma.couponRedemption.deleteMany({}),
 				prisma.coupon.deleteMany({}),
 			])
@@ -746,70 +732,10 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 	});
 
 	// ═══════════════════════════════════════════════════════════════════════════
-	// SCENARIOS 8–10: Group Sessions
+	// SCENARIOS 8–10: Programs (group flow)
 	// ═══════════════════════════════════════════════════════════════════════════
-
-	describe("Scenario 10: Group sessions / workshops", () => {
-		it("Scenario 10 — Group session never reaches min, bookings expire", async () => {
-			const scheduledAt = await getFirstAvailableSlot(
-				ctx.employeeId,
-				ctx.serviceGroupId,
-				daysFromNow(3),
-				90,
-			);
-
-			const groupSession = await prisma.groupSession.create({
-				data: {
-					branchId: ctx.branchId,
-					employeeId: ctx.employeeId,
-					programId: ctx.groupProgramId,
-					scheduledAt,
-					durationMins: 90,
-					maxCapacity: 10,
-					price: new Prisma.Decimal(50000),
-					status: "OPEN",
-					title: "ورشة تواصل",
-					deliveryType: "IN_PERSON",
-					isPublic: true,
-				},
-			});
-
-			const { BookGroupSessionHandler } = await import(
-				"../../../src/modules/bookings/public/book-group-session.handler"
-			);
-			const bookGroupHandler = app.get(BookGroupSessionHandler);
-
-			// Only 2 bookings (below min 4)
-			for (const cid of [ctx.clientId, ctx.client2Id]) {
-				const result = await bookGroupHandler.execute({
-					groupSessionId: groupSession.id,
-					clientId: cid,
-				});
-				expect(result.type).toBe("BOOKED");
-			}
-
-			// Manually expire bookings
-			const bookings = await prisma.booking.findMany({
-				where: { groupSessionId: groupSession.id },
-			});
-			const { ExpireBookingHandler } = await import(
-				"../../../src/modules/bookings/expire-booking/expire-booking.handler"
-			);
-			const expireHandler = app.get(ExpireBookingHandler);
-
-			for (const b of bookings) {
-				await expireHandler.execute({ bookingId: b.id, changedBy: "system" });
-			}
-
-			const expired = await prisma.booking.findMany({
-				where: {
-					groupSessionId: groupSession.id,
-					status: BookingStatus.EXPIRED,
-				},
-			});
-			expect(expired).toHaveLength(2);
-		});
-	});
+	// Removed in the group→program collapse. The replacement program scenarios
+	// will land alongside the EnrollInProgramHandler in commit C.
 
 	// ═══════════════════════════════════════════════════════════════════════════
 	// SCENARIOS 11–13: Cancellation Flows

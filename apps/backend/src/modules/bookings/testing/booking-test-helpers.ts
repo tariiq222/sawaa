@@ -16,7 +16,7 @@ const buildPrismaRaw = () => ({
   payment: {
     findFirst: jest.fn().mockResolvedValue(null),
   },
-  groupEnrollment: {
+  programEnrollment: {
     deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
   },
   booking: {

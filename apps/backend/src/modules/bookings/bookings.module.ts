@@ -38,23 +38,12 @@ import { ListClientBookingsHandler } from './client/list-client-bookings.handler
 import { ClientCancelBookingHandler } from './client/client-cancel-booking.handler';
 import { ClientRescheduleBookingHandler } from './client/client-reschedule-booking.handler';
 import { GetClientBookingHandler } from './client/get-client-booking.handler';
-import { ListPublicGroupSessionsHandler } from './public/list-public-group-sessions.handler';
-import { GetPublicGroupSessionHandler } from './public/get-public-group-session.handler';
-import { BookGroupSessionHandler } from './public/book-group-session.handler';
 import { GetBookingStatusHandler } from './public/get-booking-status.handler';
 import { CreatePublicBookingHandler } from './public/create-public-booking.handler';
 import { CreateEmployeeBookingHandler } from './create-employee-booking/create-employee-booking.handler';
 import { ValidateCouponService } from './coupons/validate-coupon.service';
 import { CreateBundleBookingHandler } from './create-bundle-booking/create-bundle-booking.handler';
 import { ProgramCapacityService } from './program/program-capacity.service';
-import { CreateGroupSessionHandler } from './create-group-session/create-group-session.handler';
-import { ListGroupSessionsHandler } from './list-group-sessions/list-group-sessions.handler';
-import { GetGroupSessionHandler } from './get-group-session/get-group-session.handler';
-import { CancelGroupSessionHandler } from './cancel-group-session/cancel-group-session.handler';
-import { DashboardGroupSessionsController } from '../../api/dashboard/group-sessions.controller';
-import { CreateGroupProgramHandler } from './create-group-program/create-group-program.handler';
-import { ListGroupProgramsHandler } from './list-group-programs/list-group-programs.handler';
-import { DashboardGroupProgramsController } from '../../api/dashboard/group-programs.controller';
 
 const handlers = [
   CreateBookingHandler,
@@ -87,20 +76,11 @@ const handlers = [
   ClientCancelBookingHandler,
   ClientRescheduleBookingHandler,
   GetClientBookingHandler,
-  ListPublicGroupSessionsHandler,
-  GetPublicGroupSessionHandler,
-  BookGroupSessionHandler,
   GetBookingStatusHandler,
   CreatePublicBookingHandler,
   ValidateCouponService,
   CreateBundleBookingHandler,
   ProgramCapacityService,
-  CreateGroupSessionHandler,
-  ListGroupSessionsHandler,
-  GetGroupSessionHandler,
-  CancelGroupSessionHandler,
-  CreateGroupProgramHandler,
-  ListGroupProgramsHandler,
 ];
 
 @Module({
@@ -111,7 +91,7 @@ const handlers = [
     ZoomModule,
     FinanceModule,
   ],
-  controllers: [DashboardBookingsController, DashboardGroupSessionsController, DashboardGroupProgramsController],
+  controllers: [DashboardBookingsController],
   providers: [...handlers, ZoomMeetingWorker, PaymentCompletedEventHandler, DepositPaidEventHandler, RefundCompletedEventHandler],
   exports: [...handlers, CheckAvailabilityHandler, ListClientBookingsHandler, ClientCancelBookingHandler, ClientRescheduleBookingHandler, ValidateCouponService, CreatePublicBookingHandler, NoShowBookingHandler],
 })

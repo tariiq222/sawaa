@@ -117,12 +117,12 @@ export class ApproveCancelBookingHandler {
         }
       }
 
-      // Roll back sibling AWAITING_PAYMENT bookings for group sessions.
-      if (booking.groupSessionId) {
-        // Remove the GroupEnrollment row so the client can re-enroll after
+      // Roll back sibling AWAITING_PAYMENT bookings for program enrollments.
+      if (booking.programId) {
+        // Remove the ProgramEnrollment row so the client can re-enroll after
         // their seat is freed.
-        await tx.groupEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
-        await this.groupSessionCapacity.decrementEnrollment(tx, booking.groupSessionId);
+        await tx.programEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
+        await this.groupSessionCapacity.decrementEnrollment(tx, booking.programId);
       }
       return results;
     });
