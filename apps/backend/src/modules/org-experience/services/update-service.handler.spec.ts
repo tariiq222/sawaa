@@ -9,11 +9,8 @@ function createService(overrides?: Partial<any>) {
   return {
     id: 's1',
     price: 100,
-    minParticipants: 1,
-    maxParticipants: 5,
     depositEnabled: false,
     depositAmount: null,
-    reserveWithoutPayment: false,
     isActive: true,
     ...overrides,
   };
@@ -78,16 +75,6 @@ describe('UpdateServiceHandler', () => {
         OR: [{ nameEn: 'Family Consultation' }],
       },
     });
-  });
-
-  it('should throw when min > max', async () => {
-    prisma.service.findFirst.mockResolvedValue(createService());
-    await expect(handler.execute({ serviceId: 's1', minParticipants: 5, maxParticipants: 3 } as any)).rejects.toThrow(BadRequestException);
-  });
-
-  it('should throw when reserveWithoutPayment with max <= 1', async () => {
-    prisma.service.findFirst.mockResolvedValue(createService());
-    await expect(handler.execute({ serviceId: 's1', reserveWithoutPayment: true, maxParticipants: 1 } as any)).rejects.toThrow(BadRequestException);
   });
 
   it('should update service successfully', async () => {

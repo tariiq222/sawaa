@@ -124,16 +124,6 @@ model Service {
   /// Per-service commission rate override (0.0000–1.0000). Null → use Employee.commissionRate.
   commissionRateOverride Decimal? @db.Decimal(5, 4)
 
-  // ─── Participants (group sessions) ───────────────────────────────────────
-  // minParticipants <= maxParticipants — enforced by CHECK constraint
-  // "service_min_le_max_participants" (migration 20260605120100).
-  minParticipants Int @default(1)
-  maxParticipants Int @default(1)
-
-  // ─── الجلسات الجماعية ────────────────────────────────────────────────────
-  // reserveWithoutPayment: payment deferred until minParticipants is reached (24h window)
-  reserveWithoutPayment Boolean @default(false)
-
   durationOptions     ServiceDurationOption[]
   bookingConfigs      ServiceBookingConfig[]
   availabilityWindows ServiceAvailabilityWindow[]

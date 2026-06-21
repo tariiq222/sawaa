@@ -148,7 +148,6 @@ describe('PublicCatalogController (e2e)', () => {
           imageUrl: true,
           iconName: true,
           iconBgColor: true,
-          minParticipants: true,
         }),
       );
 

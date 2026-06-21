@@ -101,8 +101,6 @@ async function main() {
       price: 30000,
       currency: 'SAR',
       categoryId: cat1.id,
-      minParticipants: 1,
-      maxParticipants: 1,
       isActive: true,
       bookingConfigs: {
         create: [
@@ -122,8 +120,6 @@ async function main() {
       price: 35000,
       currency: 'SAR',
       categoryId: cat2.id,
-      minParticipants: 1,
-      maxParticipants: 1,
       isActive: true,
       bookingConfigs: {
         create: [
@@ -143,8 +139,6 @@ async function main() {
       price: 28000,
       currency: 'SAR',
       categoryId: cat3.id,
-      minParticipants: 1,
-      maxParticipants: 1,
       isActive: true,
       bookingConfigs: {
         create: [
@@ -164,8 +158,6 @@ async function main() {
       price: 25000,
       currency: 'SAR',
       categoryId: cat4.id,
-      minParticipants: 1,
-      maxParticipants: 1,
       isActive: true,
       bookingConfigs: {
         create: [
@@ -185,8 +177,6 @@ async function main() {
       price: 30000,
       currency: 'SAR',
       categoryId: cat5.id,
-      minParticipants: 1,
-      maxParticipants: 1,
       isActive: true,
       bookingConfigs: {
         create: [
@@ -206,8 +196,6 @@ async function main() {
       price: 40000,
       currency: 'SAR',
       categoryId: cat6.id,
-      minParticipants: 1,
-      maxParticipants: 1,
       isActive: true,
       bookingConfigs: {
         create: [
@@ -226,8 +214,6 @@ async function main() {
       price: 32000,
       currency: 'SAR',
       categoryId: cat6.id,
-      minParticipants: 1,
-      maxParticipants: 1,
       isActive: true,
       bookingConfigs: {
         create: [
@@ -246,8 +232,6 @@ async function main() {
       price: 18000,
       currency: 'SAR',
       categoryId: cat6.id,
-      minParticipants: 1,
-      maxParticipants: 1,
       isActive: true,
       bookingConfigs: {
         create: [
@@ -266,8 +250,6 @@ async function main() {
       price: 12000,
       currency: 'SAR',
       categoryId: cat6.id,
-      minParticipants: 1,
-      maxParticipants: 1,
       isActive: true,
       bookingConfigs: {
         create: [

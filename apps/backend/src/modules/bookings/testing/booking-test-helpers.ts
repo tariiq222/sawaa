@@ -55,7 +55,6 @@ const buildPrismaRaw = () => ({
     }),
     findFirst: jest.fn().mockResolvedValue({
       id: 'svc-1', durationMins: 60, price: 200, currency: 'SAR',
-      minParticipants: 1, maxParticipants: 1, reserveWithoutPayment: false,
     }),
     findMany: jest.fn().mockResolvedValue([{ id: 'svc-1', durationMins: 60, price: 200, currency: 'SAR' }]),
   },

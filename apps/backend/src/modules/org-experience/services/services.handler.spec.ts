@@ -39,9 +39,6 @@ const mockService = {
   maxAdvanceDays: null,
   depositEnabled: false,
   depositAmount: null,
-  minParticipants: 1,
-  maxParticipants: 1,
-  reserveWithoutPayment: false,
   archivedAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -109,30 +106,6 @@ describe('CreateServiceHandler', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('throws BadRequestException when minParticipants > maxParticipants', async () => {
-    const prisma = buildPrisma();
-    const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache);
-    await expect(
-      handler.execute({ nameAr: 'جلسة', nameEn: 'Session', categoryId: 'cat-1', durationMins: 60, price: 100, minParticipants: 10, maxParticipants: 5 }),
-    ).rejects.toThrow(BadRequestException);
-  });
-
-  it('throws BadRequestException when reserveWithoutPayment is true but maxParticipants = 1', async () => {
-    const prisma = buildPrisma();
-    const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache);
-    await expect(
-      handler.execute({ nameAr: 'خدمة فردية', nameEn: 'Solo service', categoryId: 'cat-1', durationMins: 30, price: 100, maxParticipants: 1, reserveWithoutPayment: true }),
-    ).rejects.toThrow(BadRequestException);
-  });
-
-  it('creates group session service successfully', async () => {
-    const prisma = buildPrisma();
-    const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache);
-    const result = await handler.execute({
-      nameAr: 'يوغا جماعية', nameEn: 'Group yoga', categoryId: 'cat-1', durationMins: 60, price: 100, minParticipants: 3, maxParticipants: 10, reserveWithoutPayment: true,
-    });
-    expect(result.id).toBe('svc-1');
-  });
 });
 
 describe('GetServiceHandler', () => {
@@ -180,13 +153,6 @@ describe('UpdateServiceHandler', () => {
     prisma.service.findFirst = jest.fn().mockResolvedValue({ ...mockService, depositEnabled: true, depositAmount: '80.00' });
     const handler = new UpdateServiceHandler(prisma as never, buildEventBus() as never, cache);
     await expect(handler.execute({ serviceId, price: 50 })).rejects.toThrow(BadRequestException);
-  });
-
-  it('throws BadRequestException when minParticipants would exceed maxParticipants', async () => {
-    const prisma = buildPrisma();
-    prisma.service.findFirst = jest.fn().mockResolvedValue({ ...mockService, maxParticipants: 5 });
-    const handler = new UpdateServiceHandler(prisma as never, buildEventBus() as never, cache);
-    await expect(handler.execute({ serviceId, minParticipants: 10 })).rejects.toThrow(BadRequestException);
   });
 
   it('emits ServiceDeactivatedEvent when isActive transitions true → false', async () => {

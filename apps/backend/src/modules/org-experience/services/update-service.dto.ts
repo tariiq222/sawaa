@@ -81,16 +81,6 @@ export class UpdateServiceDto {
   @ValidateIf((o: UpdateServiceDto) => o.depositEnabled === true)
   @IsDefined() @IsInt() @Min(1) depositAmount?: number;
 
-  // ─── الجلسات الجماعية ────────────────────────────────────────────────────
-  @ApiPropertyOptional({ description: 'Minimum participants for a group session', example: 1 })
-  @IsOptional() @IsInt() @Min(1) minParticipants?: number;
-
-  @ApiPropertyOptional({ description: 'Maximum participants for a group session', example: 1 })
-  @IsOptional() @IsInt() @Min(1) maxParticipants?: number;
-
-  @ApiPropertyOptional({ description: 'Allow reservation without payment until minimum participants is reached', example: false })
-  @IsOptional() @IsBoolean() reserveWithoutPayment?: boolean;
-
   // ─── التزامن المتفائل ─────────────────────────────────────────────────────
   @ApiPropertyOptional({ description: 'Expected updatedAt timestamp (ISO) for optimistic concurrency; if it does not match current state, the update is rejected with 409', example: '2026-06-08T10:00:00.000Z' })
   @IsOptional() @IsISO8601() expectedUpdatedAt?: string;

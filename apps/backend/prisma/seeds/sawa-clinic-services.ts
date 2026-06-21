@@ -23,8 +23,6 @@ const SERVICES = [
     price: 20000,
     currency: 'SAR',
     isActive: true,
-    minParticipants: 1,
-    maxParticipants: 1,
   },
   {
     nameAr: 'استشارة',
@@ -33,8 +31,6 @@ const SERVICES = [
     price: 15000,
     currency: 'SAR',
     isActive: true,
-    minParticipants: 1,
-    maxParticipants: 1,
   },
 ];
 
@@ -78,8 +74,6 @@ async function main() {
           price: service.price,
           currency: service.currency,
           isActive: service.isActive,
-          minParticipants: service.minParticipants,
-          maxParticipants: service.maxParticipants,
           bookingConfigs: {
             create: [
               {

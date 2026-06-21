@@ -57,12 +57,4 @@ export class CreateServiceDto {
   @ApiPropertyOptional({ description: 'Fixed deposit amount in integer halalas — must not exceed price' })
   @ValidateIf((o: CreateServiceDto) => o.depositEnabled === true)
   @IsDefined() @IsInt() @Min(1) depositAmount?: number;
-
-  // ─── الجلسات الجماعية ────────────────────────────────────────────────────
-  @ApiPropertyOptional({ description: 'Minimum participants required for the session to proceed', example: 1, default: 1 }) @IsOptional() @IsInt() @Min(1) minParticipants?: number;
-  @ApiPropertyOptional({ description: 'Maximum participants allowed in the session', example: 1, default: 1 }) @IsOptional() @IsInt() @Min(1) maxParticipants?: number;
-
-  @ApiPropertyOptional({ description: 'Defer payment until minParticipants is reached. Requires maxParticipants > 1' })
-  @ValidateIf((o: CreateServiceDto) => o.maxParticipants !== undefined && o.maxParticipants > 1)
-  @IsOptional() @IsBoolean() reserveWithoutPayment?: boolean;
 }

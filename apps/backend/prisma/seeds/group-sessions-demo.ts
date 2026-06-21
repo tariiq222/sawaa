@@ -106,9 +106,9 @@ async function main() {
   });
   if (!employee) throw new Error('No active employee found. Run seed:therapists first.');
 
-  // Find a group-capable service (maxParticipants > 1), or create a minimal one
+  // Find an active service, or create a minimal one
   let service = await prisma.service.findFirst({
-    where: { isActive: true, maxParticipants: { gt: 1 } },
+    where: { isActive: true },
     orderBy: { createdAt: 'asc' },
   });
   if (!service) {
@@ -139,7 +139,6 @@ async function main() {
         durationMins: 90,
         price: 15000,
         currency: 'SAR',
-        maxParticipants: 10,
         isActive: true,
         isHidden: false,
       },

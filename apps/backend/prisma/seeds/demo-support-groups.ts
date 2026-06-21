@@ -117,7 +117,7 @@ async function main() {
   }
 
   let service = await prisma.service.findFirst({
-    where: { isActive: true, maxParticipants: { gt: 1 } },
+    where: { isActive: true },
     orderBy: { createdAt: 'asc' },
   });
   if (!service) {
@@ -129,8 +129,6 @@ async function main() {
         durationMins: 90,
         price: 15000,
         currency: 'SAR',
-        minParticipants: 4,
-        maxParticipants: 10,
         isActive: true,
       },
     });

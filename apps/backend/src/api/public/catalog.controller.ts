@@ -52,7 +52,6 @@ export class PublicCatalogController {
             iconBgColor: true,
             hidePriceOnBooking: true,
             hideDurationOnBooking: true,
-            minParticipants: true,
             durationOptions: {
               // Service-level catalog only: never expose practitioner-OWNED rows
               // (employeeServiceId != null) in the public service listing.

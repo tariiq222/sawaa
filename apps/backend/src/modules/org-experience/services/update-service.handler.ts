@@ -32,8 +32,6 @@ export class UpdateServiceHandler {
 
     // Merge incoming values with existing for cross-field constraint validation
     const effectivePrice = dto.price ?? Number(service.price);
-    const effectiveMin = dto.minParticipants ?? service.minParticipants;
-    const effectiveMax = dto.maxParticipants ?? service.maxParticipants;
     const effectiveDepositEnabled = dto.depositEnabled ?? service.depositEnabled;
     const effectiveDepositAmount =
       dto.depositAmount !== undefined ? dto.depositAmount : service.depositAmount ? Number(service.depositAmount) : undefined;
@@ -48,15 +46,6 @@ export class UpdateServiceHandler {
       effectiveDepositAmount > effectivePrice
     ) {
       throw new BadRequestException('depositAmount must not exceed the service price');
-    }
-
-    if (effectiveMin > effectiveMax) {
-      throw new BadRequestException('minParticipants must not exceed maxParticipants');
-    }
-
-    const effectiveReserve = dto.reserveWithoutPayment ?? service.reserveWithoutPayment;
-    if (effectiveReserve && effectiveMax <= 1) {
-      throw new BadRequestException('reserveWithoutPayment requires maxParticipants > 1');
     }
 
     const duplicateChecks = [
@@ -104,10 +93,6 @@ export class UpdateServiceHandler {
         // العربون
         depositEnabled: dto.depositEnabled,
         depositAmount: dto.depositAmount,
-        // الجلسات الجماعية
-        minParticipants: dto.minParticipants,
-        maxParticipants: dto.maxParticipants,
-        reserveWithoutPayment: dto.reserveWithoutPayment,
       },
       include: {
         category: true,

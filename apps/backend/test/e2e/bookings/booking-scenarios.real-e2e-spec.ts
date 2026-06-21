@@ -44,6 +44,7 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 		employee2Id: "",
 		serviceId: "",
 		serviceGroupId: "",
+		groupProgramId: "",
 		clientId: "",
 		client2Id: "",
 		userId: "",
@@ -337,12 +338,23 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 				currency: "SAR",
 				isActive: true,
 				categoryId: cat.id,
-				minParticipants: 4,
-				maxParticipants: 10,
-				reserveWithoutPayment: true,
 			},
 		});
 		ctx.serviceGroupId = groupSvc.id;
+
+		// ── Create group program (group sessions link to a program, not a service) ──
+		const groupProgram = await prisma.groupProgram.create({
+			data: {
+				departmentId: dept.id,
+				nameAr: "برنامج التواصل بين الزوجين",
+				nameEn: "Couples Communication Program",
+				minParticipants: 4,
+				maxParticipants: 10,
+				defaultPrice: 50000, // 500 SAR in halalas
+				isActive: true,
+			},
+		});
+		ctx.groupProgramId = groupProgram.id;
 
 		// ── Service booking configs + duration options (required by CheckAvailabilityHandler)
 		await prisma.serviceBookingConfig.createMany({
@@ -737,175 +749,7 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 	// SCENARIOS 8–10: Group Sessions
 	// ═══════════════════════════════════════════════════════════════════════════
 
-	describe("Scenarios 8–10: Group sessions / workshops", () => {
-		it("Scenario 8 — Group session reaches min, transitions to awaiting payment", async () => {
-			const scheduledAt = await getFirstAvailableSlot(
-				ctx.employeeId,
-				ctx.serviceGroupId,
-				daysFromNow(3),
-				90,
-			);
-
-			// Create group session (isPublic: true so BookGroupSessionHandler accepts it)
-			const groupSession = await prisma.groupSession.create({
-				data: {
-					branchId: ctx.branchId,
-					employeeId: ctx.employeeId,
-					serviceId: ctx.serviceGroupId,
-					scheduledAt,
-					durationMins: 90,
-					maxCapacity: 10,
-					price: new Prisma.Decimal(50000),
-					status: "OPEN",
-					title: "ورشة تواصل",
-					deliveryType: "IN_PERSON",
-					isPublic: true,
-				},
-			});
-
-			// Book 4 clients via BookGroupSessionHandler (bypasses availability check)
-			const { BookGroupSessionHandler } = await import(
-				"../../../src/modules/bookings/public/book-group-session.handler"
-			);
-			const bookGroupHandler = app.get(BookGroupSessionHandler);
-			const clients = [ctx.clientId, ctx.client2Id];
-			// Need 2 more clients
-			const c3 = await prisma.client.create({
-				data: {
-					name: "عميل 3",
-					phone: "0500000010",
-					email: "c3-s8-e2e@sawaa.app",
-					source: "ONLINE",
-				},
-			});
-			const c4 = await prisma.client.create({
-				data: {
-					name: "عميل 4",
-					phone: "0500000011",
-					email: "c4-s8-e2e@sawaa.app",
-					source: "ONLINE",
-				},
-			});
-
-			for (const cid of [...clients, c3.id, c4.id]) {
-				const result = await bookGroupHandler.execute({
-					groupSessionId: groupSession.id,
-					clientId: cid,
-				});
-				expect(result.type).toBe("BOOKED");
-				expect(result.bookingId).toBeDefined();
-			}
-
-			// Trigger min-reached handler
-			const { GroupSessionMinReachedHandler } = await import(
-				"../../../src/modules/bookings/group-session-min-reached/group-session-min-reached.handler"
-			);
-			const handler = app.get(GroupSessionMinReachedHandler);
-			await handler.execute({
-				serviceId: ctx.serviceGroupId,
-				employeeId: ctx.employeeId,
-				scheduledAt,
-			});
-
-			// All bookings should now be AWAITING_PAYMENT
-			const bookings = await prisma.booking.findMany({
-				where: { groupSessionId: groupSession.id },
-			});
-			expect(bookings).toHaveLength(4);
-			for (const b of bookings) {
-				expect(b.status).toBe(BookingStatus.AWAITING_PAYMENT);
-			}
-		});
-
-		it("Scenario 9 — Participant withdraws, count drops below min, rollback", async () => {
-			const scheduledAt = await getFirstAvailableSlot(
-				ctx.employeeId,
-				ctx.serviceGroupId,
-				daysFromNow(3),
-				90,
-			);
-
-			const groupSession = await prisma.groupSession.create({
-				data: {
-					branchId: ctx.branchId,
-					employeeId: ctx.employeeId,
-					serviceId: ctx.serviceGroupId,
-					scheduledAt,
-					durationMins: 90,
-					maxCapacity: 10,
-					price: new Prisma.Decimal(50000),
-					status: "OPEN",
-					title: "ورشة تواصل",
-					deliveryType: "IN_PERSON",
-					isPublic: true,
-				},
-			});
-
-			const { BookGroupSessionHandler } = await import(
-				"../../../src/modules/bookings/public/book-group-session.handler"
-			);
-			const bookGroupHandler = app.get(BookGroupSessionHandler);
-
-			const c3 = await prisma.client.create({
-				data: {
-					name: "عميل 3",
-					phone: "0500000012",
-					email: "c3-s9-e2e@sawaa.app",
-					source: "ONLINE",
-				},
-			});
-			const c4 = await prisma.client.create({
-				data: {
-					name: "عميل 4",
-					phone: "0500000013",
-					email: "c4-s9-e2e@sawaa.app",
-					source: "ONLINE",
-				},
-			});
-
-			const bookingIds: string[] = [];
-			for (const cid of [ctx.clientId, ctx.client2Id, c3.id, c4.id]) {
-				const result = await bookGroupHandler.execute({
-					groupSessionId: groupSession.id,
-					clientId: cid,
-				});
-				expect(result.type).toBe("BOOKED");
-				bookingIds.push(result.bookingId!);
-			}
-
-			// Promote to AWAITING_PAYMENT
-			const { GroupSessionMinReachedHandler } = await import(
-				"../../../src/modules/bookings/group-session-min-reached/group-session-min-reached.handler"
-			);
-			await app.get(GroupSessionMinReachedHandler).execute({
-				serviceId: ctx.serviceGroupId,
-				employeeId: ctx.employeeId,
-				scheduledAt,
-			});
-
-			// Cancel one booking directly in DB (AWAITING_PAYMENT can't go through DIRECT_CANCEL)
-			// and trigger recalculation to roll back the remaining unpaid bookings.
-			await prisma.booking.update({
-				where: { id: bookingIds[0] },
-				data: { status: BookingStatus.CANCELLED },
-			});
-			const { GroupSessionCapacityService } = await import(
-				"../../../src/modules/bookings/group-session/group-session-capacity.service"
-			);
-			await app
-				.get(GroupSessionCapacityService)
-				.recalculateGroupStatusStandalone(groupSession.id);
-
-			// Remaining unpaid bookings should roll back to PENDING_GROUP_FILL
-			const remaining = await prisma.booking.findMany({
-				where: {
-					groupSessionId: groupSession.id,
-					status: BookingStatus.PENDING_GROUP_FILL,
-				},
-			});
-			expect(remaining.length).toBeGreaterThanOrEqual(1);
-		});
-
+	describe("Scenario 10: Group sessions / workshops", () => {
 		it("Scenario 10 — Group session never reaches min, bookings expire", async () => {
 			const scheduledAt = await getFirstAvailableSlot(
 				ctx.employeeId,
@@ -918,7 +762,7 @@ describeRealE2e("Booking Scenarios — 30 Real-World Stories (real e2e)", () => 
 				data: {
 					branchId: ctx.branchId,
 					employeeId: ctx.employeeId,
-					serviceId: ctx.serviceGroupId,
+					programId: ctx.groupProgramId,
 					scheduledAt,
 					durationMins: 90,
 					maxCapacity: 10,

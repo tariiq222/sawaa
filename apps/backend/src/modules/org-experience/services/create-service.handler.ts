@@ -53,10 +53,6 @@ export class CreateServiceHandler {
         // العربون
         depositEnabled: dto.depositEnabled ?? false,
         depositAmount: dto.depositAmount,
-        // الجلسات الجماعية
-        minParticipants: dto.minParticipants ?? 1,
-        maxParticipants: dto.maxParticipants ?? 1,
-        reserveWithoutPayment: dto.reserveWithoutPayment ?? false,
       },
       include: {
         category: true,
@@ -87,16 +83,6 @@ export class CreateServiceHandler {
       dto.depositAmount > dto.price
     ) {
       throw new BadRequestException('depositAmount must not exceed the service price');
-    }
-
-    const min = dto.minParticipants ?? 1;
-    const max = dto.maxParticipants ?? 1;
-    if (min > max) {
-      throw new BadRequestException('minParticipants must not exceed maxParticipants');
-    }
-
-    if (dto.reserveWithoutPayment && max <= 1) {
-      throw new BadRequestException('reserveWithoutPayment requires maxParticipants > 1');
     }
   }
 }
