@@ -52,9 +52,6 @@ export interface Service {
   maxAdvanceDays: number | null
   depositEnabled: boolean
   depositAmount: number | null
-  minParticipants: number
-  maxParticipants: number
-  reserveWithoutPayment: boolean
   archivedAt: string | null
   createdAt: string
   updatedAt: string

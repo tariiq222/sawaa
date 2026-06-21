@@ -50,9 +50,6 @@ export interface CreateServicePayload {
   maxAdvanceDays?: number | null
   depositEnabled?: boolean
   depositAmount?: number
-  minParticipants?: number
-  maxParticipants?: number
-  reserveWithoutPayment?: boolean
 }
 
 export interface UpdateServicePayload {
@@ -76,9 +73,6 @@ export interface UpdateServicePayload {
   maxAdvanceDays?: number | null
   depositEnabled?: boolean
   depositAmount?: number
-  minParticipants?: number
-  maxParticipants?: number
-  reserveWithoutPayment?: boolean
 }
 
 /* ─── Duration Options Payloads ─── */

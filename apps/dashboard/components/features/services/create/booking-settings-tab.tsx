@@ -5,7 +5,7 @@ import { useLocale } from "@/components/locale-provider"
 import { fetchBookingSettings } from "@/lib/api/booking-settings"
 import { FormSection } from "@/components/features/shared/form-section"
 import { queryKeys } from "@/lib/query-keys"
-import { OverrideField, NumberField, SwitchField } from "../booking-settings-fields"
+import { OverrideField } from "../booking-settings-fields"
 import type { UseFormReturn } from "react-hook-form"
 import type { CreateServiceFormData } from "./form-schema"
 
@@ -26,9 +26,6 @@ export function BookingSettingsTab({ form }: BookingSettingsTabProps) {
     maxAdvanceDays,
     depositEnabled,
     depositAmount,
-    maxParticipants,
-    minParticipants,
-    reserveWithoutPayment,
   } = form.watch()
 
   const { data: globalSettings } = useQuery({
@@ -109,43 +106,6 @@ export function BookingSettingsTab({ form }: BookingSettingsTabProps) {
           />
         </div>
 
-        {/* Row 3: Max Participants */}
-        <OverrideField
-          id="create-max-participants"
-          label={t("services.booking.maxParticipants.label")}
-          description={t("services.booking.maxParticipants.desc")}
-          value={(maxParticipants ?? 1) > 1 ? maxParticipants : null}
-          defaultValue={1}
-          unit=""
-          globalHint={t("services.booking.maxParticipants.hint")}
-          min={1}
-          max={100}
-          onEnable={() => form.setValue("maxParticipants", 2)}
-          onDisable={() => form.setValue("maxParticipants", 1)}
-          onChange={(v) => form.setValue("maxParticipants", v ?? 1)}
-        />
-
-        {(maxParticipants ?? 1) > 1 && (
-          <div className="space-y-4 ps-1">
-            <NumberField
-              id="create-min-participants"
-              label={t("services.booking.minParticipants.label")}
-              value={minParticipants ?? 1}
-              onChange={(v) => form.setValue("minParticipants", v ?? undefined)}
-              unit=""
-              min={1}
-              max={maxParticipants ?? 100}
-              hint={t("services.booking.minParticipants.desc")}
-            />
-            <SwitchField
-              id="create-reserve-without-payment"
-              label={t("services.booking.reserveWithoutPayment.label")}
-              description={t("services.booking.reserveWithoutPayment.desc")}
-              checked={reserveWithoutPayment ?? false}
-              onCheckedChange={(v) => form.setValue("reserveWithoutPayment", v)}
-            />
-          </div>
-        )}
 
       </div>
     </FormSection>

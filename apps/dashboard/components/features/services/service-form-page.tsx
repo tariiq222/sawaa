@@ -120,9 +120,6 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
       bufferMinutes: service.bufferMinutes ?? undefined,
       depositEnabled: service.depositEnabled,
       depositAmount: service.depositAmount != null ? halalasToSar(service.depositAmount) : null,
-      maxParticipants: service.maxParticipants ?? 1,
-      minParticipants: service.minParticipants ?? undefined,
-      reserveWithoutPayment: service.reserveWithoutPayment ?? false,
       minLeadMinutes: service.minLeadMinutes ?? null,
       maxAdvanceDays: service.maxAdvanceDays ?? null,
     })

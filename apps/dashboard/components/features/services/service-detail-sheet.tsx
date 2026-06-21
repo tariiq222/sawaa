@@ -196,13 +196,6 @@ export function ServiceDetailSheet({
                   numeric
                 />
               )}
-              {service.maxParticipants > 1 && (
-                <DetailRow
-                  label={t("services.detail.maxParticipants")}
-                  value={`${service.maxParticipants}`}
-                  numeric
-                />
-              )}
             </div>
           </DetailSection>
 
