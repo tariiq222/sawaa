@@ -44,6 +44,15 @@ import { CreateEmployeeBookingHandler } from './create-employee-booking/create-e
 import { ValidateCouponService } from './coupons/validate-coupon.service';
 import { CreateBundleBookingHandler } from './create-bundle-booking/create-bundle-booking.handler';
 import { ProgramCapacityService } from './program/program-capacity.service';
+import { EnrollInProgramHandler } from './enroll-in-program/enroll-in-program.handler';
+import { ListProgramsHandler } from './list-programs/list-programs.handler';
+import { GetProgramHandler } from './get-program/get-program.handler';
+import { CreateProgramHandler } from './create-program/create-program.handler';
+import { PublishProgramHandler } from './publish-program/publish-program.handler';
+import { ScheduleProgramHandler } from './schedule-program/schedule-program.handler';
+import { CancelProgramHandler } from './cancel-program/cancel-program.handler';
+import { ListPublicProgramsHandler } from './public/list-public-programs.handler';
+import { GetPublicProgramHandler } from './public/get-public-program.handler';
 
 const handlers = [
   CreateBookingHandler,
@@ -81,6 +90,15 @@ const handlers = [
   ValidateCouponService,
   CreateBundleBookingHandler,
   ProgramCapacityService,
+  EnrollInProgramHandler,
+  ListProgramsHandler,
+  GetProgramHandler,
+  CreateProgramHandler,
+  PublishProgramHandler,
+  ScheduleProgramHandler,
+  CancelProgramHandler,
+  ListPublicProgramsHandler,
+  GetPublicProgramHandler,
 ];
 
 @Module({
