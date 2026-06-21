@@ -46,7 +46,9 @@ describe('ZoomMeetingWorker', () => {
   });
 
   it('registers worker for the zoom-meeting-create queue on module init', () => {
-    expect(bullmq.createWorker).toHaveBeenCalledWith(ZOOM_MEETING_QUEUE, expect.any(Function));
+    expect(bullmq.createWorker).toHaveBeenCalledWith(ZOOM_MEETING_QUEUE, expect.any(Function), {
+      concurrency: 3,
+    });
   });
 
   it('runs CreateZoomMeetingHandler with the job bookingId inside a CLS context', async () => {

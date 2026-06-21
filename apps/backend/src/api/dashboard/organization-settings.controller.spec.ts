@@ -226,11 +226,18 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
       expect(res.body.nameAr).toBe('قص الشعر');
     });
 
-    it('returns 400 for invalid UUID', async () => {
-      return request(app.getHttpServer())
-        .get('/dashboard/organization/services/not-a-uuid')
+    it('accepts a reference id and forwards it to the handler', async () => {
+      // The route accepts a UUID or a human reference (e.g. SVC-1); the handler
+      // resolves it via parseEntityRef, so the controller forwards the raw
+      // identifier instead of enforcing a UUID at the route level.
+      mockGetService.execute.mockResolvedValue({ id: uuid(1), nameAr: 'قص الشعر' });
+
+      await request(app.getHttpServer())
+        .get('/dashboard/organization/services/SVC-1')
         .set('Authorization', 'Bearer fake-jwt')
-        .expect(400);
+        .expect(200);
+
+      expect(mockGetService.execute).toHaveBeenCalledWith({ serviceId: 'SVC-1' });
     });
   });
 

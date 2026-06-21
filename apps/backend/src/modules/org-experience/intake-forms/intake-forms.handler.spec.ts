@@ -45,12 +45,14 @@ describe('CreateIntakeFormHandler', () => {
 });
 
 describe('GetIntakeFormHandler', () => {
+  const formUuid = '22222222-2222-4222-8222-222222222222';
+
   it('returns form by id', async () => {
     const prisma = buildPrisma();
     const handler = new GetIntakeFormHandler(prisma as never);
-    const result = await handler.execute({ formId: 'form-1' });
+    const result = await handler.execute({ formId: formUuid });
     expect(prisma.intakeForm.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ id: 'form-1' }) }),
+      expect.objectContaining({ where: expect.objectContaining({ id: formUuid }) }),
     );
     expect(result.nameAr).toBe('استمارة المريض');
   });
@@ -59,7 +61,7 @@ describe('GetIntakeFormHandler', () => {
     const prisma = buildPrisma();
     prisma.intakeForm.findFirst = jest.fn().mockResolvedValue(null);
     const handler = new GetIntakeFormHandler(prisma as never);
-    await expect(handler.execute({ formId: 'missing' })).rejects.toThrow(NotFoundException);
+    await expect(handler.execute({ formId: formUuid })).rejects.toThrow(NotFoundException);
   });
 });
 

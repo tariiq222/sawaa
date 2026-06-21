@@ -3,6 +3,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { PublicCatalogController } from './catalog.controller';
 import { PrismaService } from '../../infrastructure/database';
+import { CacheService } from '../../infrastructure/cache';
+import { GetPractitionerBookingOptionsHandler } from '../../modules/org-experience/services/get-practitioner-booking-options/get-practitioner-booking-options.handler';
 
 describe('PublicCatalogController (e2e)', () => {
   let app: INestApplication;
@@ -14,10 +16,22 @@ describe('PublicCatalogController (e2e)', () => {
     organizationSettings: { findFirst: jest.fn() },
   };
 
+  const mockGetPractitionerBookingOptions = { execute: jest.fn() };
+  const mockCache = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+    getOrSet: jest.fn((_key: string, factory: () => unknown) => factory()),
+  };
+
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [PublicCatalogController],
-      providers: [{ provide: PrismaService, useValue: mockPrisma }],
+      providers: [
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: GetPractitionerBookingOptionsHandler, useValue: mockGetPractitionerBookingOptions },
+        { provide: CacheService, useValue: mockCache },
+      ],
     }).compile();
 
     app = moduleRef.createNestApplication();
@@ -154,7 +168,7 @@ describe('PublicCatalogController (e2e)', () => {
       // Relations are projected via nested select, not include.
       expect(serviceArg.select.durationOptions).toEqual(
         expect.objectContaining({
-          where: { isActive: true },
+          where: { isActive: true, employeeServiceId: null },
           select: expect.objectContaining({
             id: true,
             label: true,

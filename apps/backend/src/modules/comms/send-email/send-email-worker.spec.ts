@@ -44,7 +44,9 @@ describe('SendEmailWorker', () => {
   });
 
   it('registers worker for the email-send queue on module init', () => {
-    expect(bullmq.createWorker).toHaveBeenCalledWith(EMAIL_SEND_QUEUE, expect.any(Function));
+    expect(bullmq.createWorker).toHaveBeenCalledWith(EMAIL_SEND_QUEUE, expect.any(Function), {
+      concurrency: 5,
+    });
   });
 
   it('runs SendEmailHandler with the job payload inside a CLS context', async () => {

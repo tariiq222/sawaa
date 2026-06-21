@@ -261,11 +261,18 @@ describe('DashboardPeopleController (e2e)', () => {
       expect(res.body.firstName).toBe('Sara');
     });
 
-    it('returns 400 for invalid UUID', async () => {
-      return request(app.getHttpServer())
-        .get('/dashboard/people/clients/not-a-uuid')
+    it('accepts a reference id and forwards it to the handler', async () => {
+      // The route accepts a UUID or a human reference (e.g. CL-1024); the
+      // handler resolves it via parseEntityRef, so the controller forwards the
+      // raw identifier instead of enforcing a UUID at the route level.
+      mockGetClient.execute.mockResolvedValue({ id: uuid(1), firstName: 'Sara' });
+
+      await request(app.getHttpServer())
+        .get('/dashboard/people/clients/CL-1024')
         .set('Authorization', 'Bearer fake-jwt')
-        .expect(400);
+        .expect(200);
+
+      expect(mockGetClient.execute).toHaveBeenCalledWith({ clientId: 'CL-1024' });
     });
   });
 
@@ -452,11 +459,18 @@ describe('DashboardPeopleController (e2e)', () => {
       expect(res.body.name).toBe('Khalid');
     });
 
-    it('returns 400 for invalid UUID', async () => {
-      return request(app.getHttpServer())
-        .get('/dashboard/people/employees/not-a-uuid')
+    it('accepts a reference id and forwards it to the handler', async () => {
+      // The route accepts a UUID or a human reference (e.g. EMP-1024); the
+      // handler resolves it via parseEntityRef, so the controller forwards the
+      // raw identifier instead of enforcing a UUID at the route level.
+      mockGetEmployee.execute.mockResolvedValue({ id: uuid(2), name: 'Khalid' });
+
+      await request(app.getHttpServer())
+        .get('/dashboard/people/employees/EMP-1024')
         .set('Authorization', 'Bearer fake-jwt')
-        .expect(400);
+        .expect(200);
+
+      expect(mockGetEmployee.execute).toHaveBeenCalledWith({ employeeId: 'EMP-1024' });
     });
   });
 

@@ -109,21 +109,24 @@ describe('CreateServiceHandler', () => {
 });
 
 describe('GetServiceHandler', () => {
+  const serviceUuid = '11111111-1111-4111-8111-111111111111';
+
   it('returns service by id', async () => {
     const prisma = buildPrisma();
     prisma.service.findFirst = jest.fn().mockResolvedValue(mockService);
     const handler = new GetServiceHandler(prisma as never);
-    const result = await handler.execute({ serviceId: 'svc-1' });
+    const result = await handler.execute({ serviceId: serviceUuid });
     expect(prisma.service.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ id: 'svc-1' }) }),
+      expect.objectContaining({ where: expect.objectContaining({ id: serviceUuid }) }),
     );
     expect(result.id).toBe('svc-1');
   });
 
   it('throws NotFoundException when service not found', async () => {
     const prisma = buildPrisma();
+    prisma.service.findFirst = jest.fn().mockResolvedValue(null);
     const handler = new GetServiceHandler(prisma as never);
-    await expect(handler.execute({ serviceId: 'missing' })).rejects.toThrow(NotFoundException);
+    await expect(handler.execute({ serviceId: serviceUuid })).rejects.toThrow(NotFoundException);
   });
 });
 

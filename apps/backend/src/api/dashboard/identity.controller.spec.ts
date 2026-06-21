@@ -147,11 +147,18 @@ describe('DashboardIdentityController (e2e)', () => {
       expect(mockGetUser.execute).toHaveBeenCalledWith({ userId: '00000000-0000-0000-0000-000000000001' });
     });
 
-    it('returns 400 for invalid UUID', async () => {
-      return request(app.getHttpServer())
-        .get('/dashboard/identity/users/not-a-uuid')
+    it('accepts a reference id and forwards it to the handler', async () => {
+      // The route accepts a UUID or a human reference (e.g. USR-1024); the
+      // handler resolves it via parseEntityRef, so the controller forwards the
+      // raw identifier instead of enforcing a UUID at the route level.
+      mockGetUser.execute.mockResolvedValue({ id: 'u1', name: 'Ali' });
+
+      await request(app.getHttpServer())
+        .get('/dashboard/identity/users/USR-1024')
         .set('Authorization', 'Bearer fake-jwt')
-        .expect(400);
+        .expect(200);
+
+      expect(mockGetUser.execute).toHaveBeenCalledWith({ userId: 'USR-1024' });
     });
   });
 

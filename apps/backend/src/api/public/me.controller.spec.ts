@@ -122,7 +122,7 @@ describe('PublicMeController (e2e)', () => {
       return request(app.getHttpServer())
         .patch('/public/me')
         .set('Authorization', 'Bearer fake-jwt')
-        .send({ email: 'new@example.com' })
+        .send({ unknownField: 'x' })
         .expect(400);
     });
   });
