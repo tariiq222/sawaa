@@ -84,6 +84,7 @@ model Booking {
   expiresAt            DateTime?
   durationOptionId     String? // cross-BC ref to ServiceDurationOption — plain string, no FK
   groupSessionId       String?
+  programId            String?  // set for GROUP bookings only; null for individual bookings
   groupSession         GroupSession?       @relation(fields: [groupSessionId], references: [id], onDelete: SetNull)
   bundleId             String?
   bundleGroupId        String?
@@ -148,7 +149,7 @@ model GroupSession {
   ref                 Int                @unique @default(autoincrement())
   branchId            String
   employeeId          String
-  serviceId           String
+  programId           String
   title               String
   descriptionAr       String?
   descriptionEn       String?
@@ -172,8 +173,10 @@ model GroupSession {
 
   enrollments     GroupEnrollment[]
   bookings        Booking[]
+  program         GroupProgram       @relation(fields: [programId], references: [id])
 
   @@index([employeeId])
+  @@index([programId])
   @@index([scheduledAt])
   @@index([isPublic])
   @@index([status, scheduledAt])
@@ -290,4 +293,27 @@ model BundleUsage {
   @@index([purchaseId])
   @@index([bookingId])
   @@index([serviceId])
+}
+
+// ─── Group Program ─────────────────────────────────────────────────────────────
+
+model GroupProgram {
+  id              String   @id @default(uuid())
+  ref             Int      @unique @default(autoincrement())
+  departmentId    String
+  nameAr          String
+  nameEn          String?
+  descriptionAr   String?
+  descriptionEn   String?
+  minParticipants Int      @default(1)
+  maxParticipants Int      @default(30)
+  defaultPrice    Int      @default(0) // integer halalas
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  sessions GroupSession[]
+
+  @@index([departmentId])
+  @@index([isActive])
 }
