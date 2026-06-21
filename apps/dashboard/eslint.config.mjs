@@ -33,6 +33,7 @@ const FEATURES = [
   "groups",
   "contact-messages",
   "group-sessions",
+  "group-programs",
 ]
 
 /**

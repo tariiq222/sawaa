@@ -22,6 +22,7 @@ import { enOps } from "./en.ops"
 import { enZoom } from "./en.zoom"
 import { enRegister } from "./en.register"
 import { enGroupSessions } from "./en.group-sessions"
+import { enGroupPrograms } from "./en.group-programs"
 
 export const en: Record<string, string> = {
   ...enNav,
@@ -41,4 +42,5 @@ export const en: Record<string, string> = {
   ...enZoom,
   ...enRegister,
   ...enGroupSessions,
+  ...enGroupPrograms,
 }

@@ -43,6 +43,7 @@ export const enNav: Record<string, string> = {
   "nav.bundles": "Bundles",
   "nav.groups": "Groups",
   "nav.groupSessions": "Group Sessions",
+  "nav.groupPrograms": "Group Programs",
   "nav.create": "Create",
   "nav.edit": "Edit",
   "notifications.viewAll": "View All Notifications",

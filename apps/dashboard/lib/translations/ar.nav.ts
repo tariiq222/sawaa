@@ -43,6 +43,7 @@ export const arNav: Record<string, string> = {
   "nav.bundles": "الباقات",
   "nav.groups": "المجموعات",
   "nav.groupSessions": "الجلسات الجماعية",
+  "nav.groupPrograms": "البرامج الجماعية",
   "nav.create": "إنشاء",
   "nav.edit": "تعديل",
   "notifications.viewAll": "عرض جميع الإشعارات",
