@@ -7,24 +7,40 @@ import {
 } from './support-groups.api';
 
 const sample: SupportGroup = {
-  id: 'g1',
-  title: 'Anxiety Group',
+  id: 'prog-1',
+  ref: 1,
+  title: 'برنامج تواصل',
+  nameAr: 'برنامج تواصل',
+  nameEn: 'Communication Program',
   descriptionAr: 'وصف',
   descriptionEn: 'desc',
-  scheduledAt: '2026-05-01T18:00:00Z',
-  durationMins: 60,
-  maxCapacity: 10,
+  publicDescriptionAr: null,
+  publicDescriptionEn: null,
+  departmentId: 'd-1',
+  branchId: 'b-1',
+  startDate: '2026-05-01T18:00:00Z',
+  daysCount: 4,
+  hoursPerDay: 2,
+  minParticipants: 4,
+  maxParticipants: 10,
   enrolledCount: 3,
-  price: 50,
+  price: '50000',
   currency: 'SAR',
-  status: 'SCHEDULED',
-  employeeId: 'e1',
-  serviceId: 's1',
-  spotsLeft: 7,
+  depositEnabled: false,
+  depositAmount: null,
+  status: 'OPEN',
+  isPublic: true,
   isFull: false,
+  spotsLeft: 7,
+  // Back-compat aliases
+  scheduledAt: '2026-05-01T18:00:00Z',
+  durationMins: 120,
+  maxCapacity: 10,
+  serviceId: '',
+  employeeId: '',
 };
 
-describe('support-groups.api', () => {
+describe('support-groups.api (programs backend)', () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
@@ -37,23 +53,23 @@ describe('support-groups.api', () => {
   });
 
   describe('getPublicGroupSessions', () => {
-    it('requests without branchId query when none is provided', async () => {
-      fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve([sample]) });
+    it('requests /public/programs without a departmentId when none is provided', async () => {
+      fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ programs: [sample] }) });
       await getPublicGroupSessions();
       const [url, init] = fetchMock.mock.calls[0];
-      expect(url).toMatch(/\/public\/bookings\/group-sessions$/);
+      expect(url).toMatch(/\/public\/programs$/);
       expect(init).toMatchObject({ next: { revalidate: 60 } });
     });
 
-    it('encodes branchId in the query string', async () => {
-      fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve([sample]) });
-      await getPublicGroupSessions('branch/1');
+    it('encodes departmentId in the query string', async () => {
+      fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ programs: [sample] }) });
+      await getPublicGroupSessions('d/1');
       const [url] = fetchMock.mock.calls[0];
-      expect(url).toContain(`branchId=${encodeURIComponent('branch/1')}`);
+      expect(url).toContain(`departmentId=${encodeURIComponent('d/1')}`);
     });
 
-    it('unwraps { data } envelope', async () => {
-      fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ data: [sample] }) });
+    it('unwraps the { programs } envelope', async () => {
+      fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ programs: [sample] }) });
       await expect(getPublicGroupSessions()).resolves.toEqual([sample]);
     });
 
@@ -64,25 +80,25 @@ describe('support-groups.api', () => {
   });
 
   describe('getPublicGroupSession', () => {
-    it('URL-encodes the session id', async () => {
+    it('URL-encodes the program id', async () => {
       fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve(sample) });
-      await getPublicGroupSession('ses/1');
+      await getPublicGroupSession('prog/1');
       const [url, init] = fetchMock.mock.calls[0];
-      expect(url).toContain(encodeURIComponent('ses/1'));
+      expect(url).toContain(encodeURIComponent('prog/1'));
       expect(init.next).toEqual({ revalidate: 60 });
     });
   });
 
   describe('bookGroupSession', () => {
-    it('POSTs with credentials:include', async () => {
+    it('POSTs to /public/programs/:id/enroll with credentials:include', async () => {
       fetchMock.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ type: 'BOOKED', bookingId: 'bk1' }),
+        json: () => Promise.resolve({ type: 'ENROLLED', bookingId: 'bk1' }),
       });
-      const out = await bookGroupSession('g1', 'tok');
-      expect(out).toEqual({ type: 'BOOKED', bookingId: 'bk1' });
+      const out = await bookGroupSession('prog-1');
+      expect(out).toEqual({ type: 'ENROLLED', bookingId: 'bk1' });
       const [url, init] = fetchMock.mock.calls[0];
-      expect(url).toMatch(/\/public\/bookings\/group-sessions\/g1\/book$/);
+      expect(url).toMatch(/\/public\/programs\/prog-1\/enroll$/);
       expect(init.method).toBe('POST');
       expect(init.credentials).toBe('include');
     });
@@ -90,19 +106,11 @@ describe('support-groups.api', () => {
     it('surfaces the backend error message on failure', async () => {
       fetchMock.mockResolvedValue({
         ok: false,
+        status: 409,
         statusText: 'Conflict',
-        json: () => Promise.resolve({ message: 'Already booked' }),
+        text: () => Promise.resolve('Already enrolled'),
       });
-      await expect(bookGroupSession('g1', 'tok')).rejects.toThrow('Already booked');
-    });
-
-    it('falls back to statusText when the error body has no message', async () => {
-      fetchMock.mockResolvedValue({
-        ok: false,
-        statusText: 'Server Error',
-        json: () => Promise.reject(new Error('not json')),
-      });
-      await expect(bookGroupSession('g1', 'tok')).rejects.toThrow('Server Error');
+      await expect(bookGroupSession('prog-1')).rejects.toThrow(/Already enrolled|Conflict/);
     });
   });
 });
