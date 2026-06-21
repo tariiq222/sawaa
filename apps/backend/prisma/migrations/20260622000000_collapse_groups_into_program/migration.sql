@@ -2,34 +2,39 @@
 -- single Program model served at route /programs.
 --
 -- Steps (ordered to satisfy foreign keys):
---   1. Drop the Booking ↔ GroupSession FK and column
---   2. Drop the GroupEnrollment table (Cascade-dropped; depended on GroupSession)
---   3. Drop the GroupSession table
---   4. Drop the GroupProgram table
---   5. Drop the GroupSessionStatus enum
---   6. Create the new ProgramStatus enum
---   7. Create the new Program, ProgramEnrollment, and ProgramSupervisor tables
---   8. Wire up Booking.programId ↔ ProgramEnrollment.bookingId (1:1)
---   9. Add the deposit-amount CHECK constraint
+--   1. Drop the staff-overlap exclusion constraint (depends on groupSessionId)
+--   2. Drop the Booking ↔ GroupSession FK and column
+--   3. Drop the GroupEnrollment table (Cascade-dropped; depended on GroupSession)
+--   4. Drop the GroupSession table
+--   5. Drop the GroupProgram table
+--   6. Drop the GroupSessionStatus enum
+--   7. Create the new ProgramStatus enum
+--   8. Create the new Program, ProgramEnrollment, and ProgramSupervisor tables
+--   9. Wire up Booking.programId ↔ ProgramEnrollment.bookingId (1:1)
+--  10. Add the deposit-amount CHECK constraint
+--  11. Recreate the staff-overlap exclusion on programId (replaces groupSessionId)
 
--- 1. Drop Booking.groupSessionId + its FK
+-- 1. Drop the staff-overlap constraint that references groupSessionId
+ALTER TABLE "Booking" DROP CONSTRAINT IF EXISTS "booking_staff_active_time_no_overlap";
+
+-- 2. Drop Booking.groupSessionId + its FK
 ALTER TABLE "Booking" DROP CONSTRAINT IF EXISTS "Booking_groupSessionId_fkey";
 DROP INDEX IF EXISTS "Booking_groupSessionId_idx";
 ALTER TABLE "Booking" DROP COLUMN IF EXISTS "groupSessionId";
 
--- 2. Drop GroupEnrollment
+-- 3. Drop GroupEnrollment
 DROP TABLE IF EXISTS "GroupEnrollment";
 
--- 3. Drop GroupSession
+-- 4. Drop GroupSession
 DROP TABLE IF EXISTS "GroupSession";
 
--- 4. Drop GroupProgram
+-- 5. Drop GroupProgram
 DROP TABLE IF EXISTS "GroupProgram";
 
--- 5. Drop the obsolete GroupSessionStatus enum
+-- 6. Drop the obsolete GroupSessionStatus enum
 DROP TYPE IF EXISTS "GroupSessionStatus";
 
--- 6. Create the new ProgramStatus enum
+-- 7. Create the new ProgramStatus enum
 CREATE TYPE "ProgramStatus" AS ENUM (
   'DRAFT',
   'OPEN',
@@ -39,7 +44,7 @@ CREATE TYPE "ProgramStatus" AS ENUM (
   'CANCELLED'
 );
 
--- 7a. Program table
+-- 8a. Program table
 CREATE TABLE "Program" (
     "id" TEXT NOT NULL,
     "ref" SERIAL NOT NULL,
@@ -78,7 +83,7 @@ CREATE INDEX "Program_status_idx" ON "Program"("status");
 CREATE INDEX "Program_isPublic_idx" ON "Program"("isPublic");
 CREATE INDEX "Program_status_startDate_idx" ON "Program"("status", "startDate");
 
--- 7b. ProgramSupervisor (composite PK)
+-- 8b. ProgramSupervisor (composite PK)
 CREATE TABLE "ProgramSupervisor" (
     "programId" TEXT NOT NULL,
     "employeeId" TEXT NOT NULL,
@@ -89,7 +94,7 @@ CREATE TABLE "ProgramSupervisor" (
 
 CREATE INDEX "ProgramSupervisor_employeeId_idx" ON "ProgramSupervisor"("employeeId");
 
--- 7c. ProgramEnrollment
+-- 8c. ProgramEnrollment
 CREATE TABLE "ProgramEnrollment" (
     "id" TEXT NOT NULL,
     "programId" TEXT NOT NULL,
@@ -105,7 +110,7 @@ CREATE UNIQUE INDEX "ProgramEnrollment_programId_clientId_key" ON "ProgramEnroll
 CREATE INDEX "ProgramEnrollment_clientId_idx" ON "ProgramEnrollment"("clientId");
 CREATE INDEX "ProgramEnrollment_programId_idx" ON "ProgramEnrollment"("programId");
 
--- 8. Wire up Booking.programId → ProgramEnrollment.bookingId (1:1)
+-- 9. Wire up Booking.programId → ProgramEnrollment.bookingId (1:1)
 -- The Booking.programId column already exists from migration 20260621101541;
 -- the FK to ProgramEnrollment.bookingId gives us the inverse relation.
 ALTER TABLE "ProgramEnrollment"
@@ -120,7 +125,29 @@ ALTER TABLE "ProgramSupervisor"
   ADD CONSTRAINT "ProgramSupervisor_programId_fkey"
   FOREIGN KEY ("programId") REFERENCES "Program"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- 9. Enforce: depositAmount <= price when deposit is enabled.
+-- 10. Enforce: depositAmount <= price when deposit is enabled.
 ALTER TABLE "Program"
   ADD CONSTRAINT "program_deposit_lte_price_chk"
   CHECK ("depositAmount" IS NULL OR "depositAmount" <= "price");
+
+-- 11. Recreate the staff-overlap exclusion on programId. The semantics are
+-- identical: bookings in the same Program (COALESCE) can overlap (multiple
+-- participants in the same group session), but bookings for the same employee
+-- outside a Program cannot overlap.
+ALTER TABLE "Booking"
+ADD CONSTRAINT "booking_staff_active_time_no_overlap"
+EXCLUDE USING gist (
+  "employeeId" WITH =,
+  tsrange("scheduledAt", "endsAt", '[)') WITH &&,
+  (COALESCE("programId", id)) WITH <>
+)
+WHERE (
+  status IN (
+    'PENDING',
+    'PENDING_GROUP_FILL',
+    'AWAITING_PAYMENT',
+    'CONFIRMED',
+    'CANCEL_REQUESTED',
+    'DEPOSIT_PAID'
+  )
+);
