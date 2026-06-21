@@ -41,7 +41,6 @@ export const enNav: Record<string, string> = {
   "nav.activityLog": "Activity Log",
   "nav.intakeForms": "Intake Forms",
   "nav.bundles": "Bundles",
-  "nav.groups": "Groups",
   "nav.programs": "Group Programs",
   "nav.create": "Create",
   "nav.edit": "Edit",
