@@ -8,9 +8,9 @@ import {
   DialogDescription,
   DialogFooter,
   DialogBody,
+  Button,
+  DateTimeInput,
 } from '@sawaa/ui';
-import { Button } from '@sawaa/ui';
-import { DateTimeInput } from '@/components/ui/date-time-input';
 import { useState } from 'react';
 import { useLocale } from '@/components/locale-provider';
 import { scheduleProgramSchema } from '@/lib/schemas/program.schema';
@@ -60,7 +60,7 @@ export function ScheduleProgramDialog({
               <span className="text-sm font-medium">{t('programs.detail.startDate')}</span>
               <DateTimeInput
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(value: string) => setStartDate(value)}
                 required
                 className="mt-1"
               />
