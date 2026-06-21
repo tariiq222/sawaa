@@ -2075,21 +2075,9 @@
             "example": 30,
             "type": "number"
           },
-          "maxParticipants": {
-            "default": 1,
-            "description": "Maximum participants allowed in the session",
-            "example": 1,
-            "type": "number"
-          },
           "minLeadMinutes": {
             "description": "Minimum lead time before booking, in minutes",
             "example": 60,
-            "type": "number"
-          },
-          "minParticipants": {
-            "default": 1,
-            "description": "Minimum participants required for the session to proceed",
-            "example": 1,
             "type": "number"
           },
           "nameAr": {
@@ -2104,10 +2092,6 @@
             "description": "Price in integer halalas (1 SAR = 100)",
             "example": 5000,
             "type": "number"
-          },
-          "reserveWithoutPayment": {
-            "description": "Defer payment until minParticipants is reached. Requires maxParticipants > 1",
-            "type": "boolean"
           }
         },
         "required": [
@@ -5253,19 +5237,9 @@
             "example": 30,
             "type": "number"
           },
-          "maxParticipants": {
-            "description": "Maximum participants for a group session",
-            "example": 1,
-            "type": "number"
-          },
           "minLeadMinutes": {
             "description": "Minimum lead time in minutes before booking",
             "example": 60,
-            "type": "number"
-          },
-          "minParticipants": {
-            "description": "Minimum participants for a group session",
-            "example": 1,
             "type": "number"
           },
           "nameAr": {
@@ -5282,11 +5256,6 @@
             "description": "Price in integer halalas (1 SAR = 100)",
             "example": 5000,
             "type": "number"
-          },
-          "reserveWithoutPayment": {
-            "description": "Allow reservation without payment until minimum participants is reached",
-            "example": false,
-            "type": "boolean"
           }
         },
         "type": "object"
@@ -29366,8 +29335,9 @@
         "operationId": "PublicBookingsController_listGroupSessionsEndpoint",
         "parameters": [
           {
+            "description": "Filter by department (GroupProgram.departmentId)",
             "in": "query",
-            "name": "branchId",
+            "name": "departmentId",
             "required": false,
             "schema": {
               "type": "string"

@@ -5508,22 +5508,10 @@ export interface components {
              */
             maxAdvanceDays?: number;
             /**
-             * @description Maximum participants allowed in the session
-             * @default 1
-             * @example 1
-             */
-            maxParticipants: number;
-            /**
              * @description Minimum lead time before booking, in minutes
              * @example 60
              */
             minLeadMinutes?: number;
-            /**
-             * @description Minimum participants required for the session to proceed
-             * @default 1
-             * @example 1
-             */
-            minParticipants: number;
             /** @example قص الشعر */
             nameAr: string;
             /** @example Haircut */
@@ -5533,8 +5521,6 @@ export interface components {
              * @example 5000
              */
             price: number;
-            /** @description Defer payment until minParticipants is reached. Requires maxParticipants > 1 */
-            reserveWithoutPayment?: boolean;
         };
         CreateUserDto: {
             /**
@@ -7626,20 +7612,10 @@ export interface components {
              */
             maxAdvanceDays?: number;
             /**
-             * @description Maximum participants for a group session
-             * @example 1
-             */
-            maxParticipants?: number;
-            /**
              * @description Minimum lead time in minutes before booking
              * @example 60
              */
             minLeadMinutes?: number;
-            /**
-             * @description Minimum participants for a group session
-             * @example 1
-             */
-            minParticipants?: number;
             /**
              * @description Service name in Arabic
              * @example قص الشعر
@@ -7655,11 +7631,6 @@ export interface components {
              * @example 5000
              */
             price?: number;
-            /**
-             * @description Allow reservation without payment until minimum participants is reached
-             * @example false
-             */
-            reserveWithoutPayment?: boolean;
         };
         UpdateUserDto: {
             /**
@@ -25395,7 +25366,8 @@ export interface operations {
     PublicBookingsController_listGroupSessionsEndpoint: {
         parameters: {
             query?: {
-                branchId?: string;
+                /** @description Filter by department (GroupProgram.departmentId) */
+                departmentId?: string;
             };
             header?: never;
             path?: never;
