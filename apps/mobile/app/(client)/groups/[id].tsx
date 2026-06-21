@@ -97,10 +97,10 @@ export default function GroupDetailScreen() {
             </View>
 
             <View style={styles.detailsGrid}>
-              <DetailRow icon="calendar" label={formatDateTime(group.scheduledAt, dir.isRTL)} dir={dir} />
-              <DetailRow icon="duration" label={t('groups.duration', { count: group.durationMins })} dir={dir} />
-              <DetailRow icon="users" label={t('groups.enrolled', { count: group.enrolledCount, max: group.maxCapacity })} dir={dir} />
-              <DetailRow icon="price" label={formatPrice(group.price, dir.isRTL, t('home.sar'))} dir={dir} />
+              <DetailRow icon="calendar" label={formatDateTime(group.scheduledAt ?? '', dir.isRTL)} dir={dir} />
+              <DetailRow icon="duration" label={t('groups.duration', { count: group.durationMins ?? 0 })} dir={dir} />
+              <DetailRow icon="users" label={t('groups.enrolled', { count: group.enrolledCount, max: group.maxCapacity ?? 0 })} dir={dir} />
+              <DetailRow icon="price" label={formatPrice(Number(group.price), dir.isRTL, t('home.sar'))} dir={dir} />
             </View>
 
             <View style={[styles.badgeRow, { flexDirection: dir.row }]}>

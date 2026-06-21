@@ -28,8 +28,11 @@ export function SupportSessions({ dir, f400, f700 }: SupportSessionsProps) {
   const sessions = useMemo(() => {
     const now = Date.now();
     return (groupsQuery.data ?? [])
-      .filter((s) => new Date(s.scheduledAt).getTime() >= now)
-      .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
+      .filter((s) => s.scheduledAt && new Date(s.scheduledAt).getTime() >= now)
+      .sort((a, b) =>
+        new Date(a.scheduledAt ?? a.startDate ?? '').getTime() -
+        new Date(b.scheduledAt ?? b.startDate ?? '').getTime(),
+      )
       .slice(0, 3);
   }, [groupsQuery.data]);
 
@@ -58,7 +61,7 @@ export function SupportSessions({ dir, f400, f700 }: SupportSessionsProps) {
                   dateStyle: 'medium',
                   timeStyle: 'short',
                   ...(dir.isRTL ? { calendar: 'gregory' } : {}),
-                }).format(new Date(s.scheduledAt))}
+                }).format(new Date(s.scheduledAt ?? s.startDate ?? ''))}
               </Text>
             </View>
             <Pressable onPress={() => router.push(`/(client)/groups/${s.id}`)} style={styles.supportCta} accessibilityRole="button">

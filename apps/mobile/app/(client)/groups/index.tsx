@@ -62,13 +62,13 @@ export default function GroupsScreen() {
               <ThemedText variant="subheading" style={{ textAlign: dir.textAlign }} numberOfLines={2}>
                 {item.title}
               </ThemedText>
-              <MetaLine icon="calendar" text={formatDateTime(item.scheduledAt, dir.isRTL)} dir={dir} />
+              <MetaLine icon="calendar" text={formatDateTime(item.scheduledAt ?? '', dir.isRTL)} dir={dir} />
             </View>
           </View>
 
           <View style={[styles.infoRow, { flexDirection: dir.row }]}> 
             <MetaLine icon="users" text={t('groups.enrolled', { count: item.enrolledCount, max: item.maxCapacity })} dir={dir} />
-            <MetaLine icon="price" text={formatPrice(item.price, dir.isRTL, t('home.sar'))} dir={dir} />
+            <MetaLine icon="price" text={formatPrice(Number(item.price), dir.isRTL, t('home.sar'))} dir={dir} />
           </View>
 
           <View style={[styles.footerRow, { flexDirection: dir.row }]}>
