@@ -56,9 +56,6 @@ export class CreateBookingDto {
   @ApiPropertyOptional({ description: 'Booking expiry datetime (ISO 8601)', example: '2026-05-01T12:00:00.000Z' })
   @IsOptional() @IsDateString() expiresAt?: string;
 
-  @ApiPropertyOptional({ description: 'Group session to attach this booking to', example: '00000000-0000-0000-0000-000000000000' })
-  @IsOptional() @IsUUID() groupSessionId?: string;
-
   @ApiPropertyOptional({ description: 'Payment collected at the clinic instead of online', example: true })
   @IsOptional() @IsBoolean() payAtClinic?: boolean;
 

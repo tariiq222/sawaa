@@ -52,11 +52,10 @@ export class NoShowBookingHandler {
         }),
       ]);
 
-      // NO_SHOW leaves GROUP_CAPACITY_BOOKING_STATUSES (CONFIRMED → NO_SHOW),
-      // so a group enrollee must release their seat: guarded enrolledCount
-      // decrement + sibling rollback inside the same transaction (mirrors
-      // cancel-booking.handler). Money handling above is unaffected — the
-      // forfeiture rule stands.
+      // A scheduled group-session enrollee marked NO_SHOW must release their
+      // seat: guarded enrolledCount decrement inside the same transaction
+      // (mirrors cancel-booking.handler). Money handling above is unaffected —
+      // the forfeiture rule stands.
       if (booking.groupSessionId) {
         // Remove the GroupEnrollment row so the client can re-enroll after
         // their seat is freed. deleteMany is safe: a booking has at most one

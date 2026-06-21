@@ -5,15 +5,15 @@
  *
  * State diagram:
  *
- *   (create)  ──────────────────────────────────────────────────────────────────────
- *                │                       │                       │
- *                ▼                       ▼                       ▼
- *            PENDING           PENDING_GROUP_FILL         AWAITING_PAYMENT
- *                │                       │                       │
- *         CONFIRM│              ─────────┘              PAYMENT_CONFIRMED│
- *                │             EXPIRE                           │
- *                ▼                                              │
- *           CONFIRMED ◄────────────────────────────────────────┘
+ *   (create)  ────────────────────────────────────────────
+ *                │                       │
+ *                ▼                       ▼
+ *            PENDING                AWAITING_PAYMENT
+ *                │                       │
+ *         CONFIRM│              PAYMENT_CONFIRMED│
+ *                │                       │
+ *                ▼                       │
+ *           CONFIRMED ◄──────────────────┘
  *             │    │
  *   COMPLETE  │    │  NO_SHOW
  *             │    │
@@ -35,9 +35,6 @@
  *     CANCEL_REQUESTED                                      → APPROVE_CANCEL → CANCELLED
  *     CANCEL_REQUESTED                                      → REJECT_CANCEL → CONFIRMED
  *
- *   Group session rollback (when an enrollee cancels after min reached):
- *     AWAITING_PAYMENT  → GROUP_FILL_ROLLBACK → PENDING_GROUP_FILL
- *
  *   Terminal states: CANCELLED | COMPLETED | NO_SHOW | EXPIRED
  *   (none of these appear as a 'from' state in any transition;
  *    DEPOSIT_PAID is an active, non-terminal state)
@@ -55,13 +52,11 @@ import { BookingStatus } from '@prisma/client';
 
 export type BookingTransition =
   | 'CREATE_PENDING'
-  | 'CREATE_GROUP_FILL'
   | 'CREATE_AWAITING_PAYMENT'
   | 'CREATE_CONFIRMED'
   | 'CONFIRM'
   | 'PAYMENT_CONFIRMED'
   | 'DEPOSIT_CONFIRMED'
-  | 'GROUP_FILL_REACHED_MIN'
   | 'CLIENT_REQUEST_CANCEL'
   | 'DIRECT_CANCEL'
   | 'CLIENT_DIRECT_CANCEL'
@@ -71,8 +66,7 @@ export type BookingTransition =
   | 'COMPLETE'
   | 'NO_SHOW'
   | 'EXPIRE'
-  | 'CHECK_IN'
-  | 'GROUP_FILL_ROLLBACK';
+  | 'CHECK_IN';
 
 // ─── Transition table ─────────────────────────────────────────────────────────
 
@@ -88,10 +82,6 @@ export const VALID_TRANSITIONS: Record<
   CREATE_PENDING: {
     from: [],
     to: BookingStatus.PENDING,
-  },
-  CREATE_GROUP_FILL: {
-    from: [],
-    to: BookingStatus.PENDING_GROUP_FILL,
   },
   CREATE_AWAITING_PAYMENT: {
     from: [],
@@ -135,16 +125,6 @@ export const VALID_TRANSITIONS: Record<
   DEPOSIT_CONFIRMED: {
     from: [BookingStatus.PENDING, BookingStatus.AWAITING_PAYMENT],
     to: BookingStatus.DEPOSIT_PAID,
-  },
-
-  /**
-   * Minimum participant count reached for a group session slot →
-   * all PENDING_GROUP_FILL bookings are promoted to AWAITING_PAYMENT.
-   * Handler: group-session-min-reached/group-session-min-reached.handler.ts
-   */
-  GROUP_FILL_REACHED_MIN: {
-    from: [BookingStatus.PENDING_GROUP_FILL],
-    to: BookingStatus.AWAITING_PAYMENT,
   },
 
   /**
@@ -245,7 +225,6 @@ export const VALID_TRANSITIONS: Record<
   EXPIRE: {
     from: [
       BookingStatus.PENDING,
-      BookingStatus.PENDING_GROUP_FILL,
       BookingStatus.AWAITING_PAYMENT,
       BookingStatus.DEPOSIT_PAID,
     ],
@@ -260,19 +239,6 @@ export const VALID_TRANSITIONS: Record<
   CHECK_IN: {
     from: [BookingStatus.CONFIRMED],
     to: BookingStatus.CONFIRMED,
-  },
-
-  /**
-   * A participant cancels from a group session that had already reached
-   * min-participants and transitioned to AWAITING_PAYMENT. If the remaining
-   * enrolled count drops below the threshold the remaining bookings roll back
-   * from AWAITING_PAYMENT → PENDING_GROUP_FILL to restart the fill window.
-   *
-   * Handler: group-session/group-session-capacity.service.ts
-   */
-  GROUP_FILL_ROLLBACK: {
-    from: [BookingStatus.AWAITING_PAYMENT],
-    to: BookingStatus.PENDING_GROUP_FILL,
   },
 };
 

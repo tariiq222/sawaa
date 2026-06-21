@@ -52,7 +52,6 @@ export class DeleteEmployeeHandler {
 						status: {
 							in: [
 								"PENDING",
-								"PENDING_GROUP_FILL",
 								"AWAITING_PAYMENT",
 								"CONFIRMED",
 								"CANCEL_REQUESTED",

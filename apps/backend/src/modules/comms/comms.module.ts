@@ -30,7 +30,6 @@ import { OnBookingCancelledHandler } from './events/on-booking-cancelled.handler
 import { OnBookingReminderHandler } from './events/on-booking-reminder.handler';
 import { OnPaymentFailedHandler } from './events/on-payment-failed.handler';
 import { OnClientEnrolledHandler } from './events/on-client-enrolled.handler';
-import { OnGroupSessionPaymentLinksReadyHandler } from './events/on-group-session-payment-links-ready.handler';
 import { CreateContactMessageHandler } from './contact-messages/create-contact-message.handler';
 import { ListContactMessagesHandler } from './contact-messages/list-contact-messages.handler';
 import { UpdateContactMessageStatusHandler } from './contact-messages/update-contact-message-status.handler';
@@ -105,7 +104,6 @@ const eventHandlers = [
   OnBookingReminderHandler,
   OnPaymentFailedHandler,
   OnClientEnrolledHandler,
-  OnGroupSessionPaymentLinksReadyHandler,
   OnBookingCreatedStaffHandler,
   OnBookingCancelledStaffHandler,
   OnPaymentCompletedStaffHandler,
@@ -125,7 +123,6 @@ export class CommsModule implements OnModuleInit {
     private readonly onBookingReminder: OnBookingReminderHandler,
     private readonly onPaymentFailed: OnPaymentFailedHandler,
     private readonly onClientEnrolled: OnClientEnrolledHandler,
-    private readonly onGroupSessionPaymentLinksReady: OnGroupSessionPaymentLinksReadyHandler,
     private readonly onBookingCreatedStaff: OnBookingCreatedStaffHandler,
     private readonly onBookingCancelledStaff: OnBookingCancelledStaffHandler,
     private readonly onPaymentCompletedStaff: OnPaymentCompletedStaffHandler,
@@ -137,7 +134,6 @@ export class CommsModule implements OnModuleInit {
     this.onBookingReminder.register(this.eventBus);
     this.onPaymentFailed.register(this.eventBus);
     this.onClientEnrolled.register(this.eventBus);
-    this.onGroupSessionPaymentLinksReady.register(this.eventBus);
     this.onBookingCreatedStaff.register(this.eventBus);
     this.onBookingCancelledStaff.register(this.eventBus);
     this.onPaymentCompletedStaff.register(this.eventBus);

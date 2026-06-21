@@ -9,7 +9,6 @@ import { Prisma, type DeliveryType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { PriceResolverService } from '../../org-experience/services/price-resolver.service';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
-import { GroupSessionMinReachedHandler } from '../group-session-min-reached/group-session-min-reached.handler';
 import { EventBusService } from '../../../infrastructure/events';
 import { BookingCreatedEvent } from '../events/booking-created.event';
 import { ValidateCouponService } from '../coupons/validate-coupon.service';
@@ -19,7 +18,7 @@ import { normalizeBookingTypes } from '../shared/delivery-type.helper';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
 import { computeVat } from '../../finance/money.helper';
 import { hashToInt32 } from '../booking-lifecycle.helper';
-import { GROUP_CAPACITY_BOOKING_STATUSES, STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
+import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
 
 /** Re-map a Postgres exclusion violation (23P01) to a domain 409 conflict. */
 function mapDbConflict(err: unknown): never {
@@ -49,7 +48,6 @@ export class CreateBookingHandler {
     private readonly rlsTransaction: RlsTransactionService,
     private readonly priceResolver: PriceResolverService,
     private readonly settingsHandler: GetBookingSettingsHandler,
-    private readonly groupMinReachedHandler: GroupSessionMinReachedHandler,
     private readonly eventBus: EventBusService,
     private readonly couponValidator: ValidateCouponService,
     @Optional() private readonly availabilityHandler?: CheckAvailabilityHandler,
@@ -252,114 +250,48 @@ export class CreateBookingHandler {
 
     let discountedPrice: number | null = null;
 
-    // Resolve group-session settings from the service
-    const serviceRecord = await this.prisma.service.findFirst({
-      where: { id: dto.serviceId },
-      select: { minParticipants: true, maxParticipants: true, reserveWithoutPayment: true },
-    });
-    // A service is "group" for capacity/bookingType purposes whenever it
-    // accepts more than one participant. `reserveWithoutPayment` separately
-    // controls the fill-then-charge flow (PENDING_GROUP_FILL status).
-    const isGroupService = !!serviceRecord && serviceRecord.maxParticipants > 1;
-    const isReserveBeforePaymentGroup =
-      isGroupService && !!serviceRecord?.reserveWithoutPayment;
-
     // RECEPTION bookings (dashboard/employee) are confirmed immediately —
     // a staff member created them, so the appointment itself is settled.
     // ONLINE bookings (mobile client / public website) are confirmed immediately
-    // only when: payAtClinic=true (no payment needed), or service is free (price=0),
-    // or service is a group fill (PENDING_GROUP_FILL handles its own flow).
-    // Otherwise ONLINE bookings start as AWAITING_PAYMENT with a 15-minute expiry
-    // so the payment step can complete before the slot is released.
+    // only when: payAtClinic=true (no payment needed) or the service is free
+    // (price=0). Otherwise ONLINE bookings start as AWAITING_PAYMENT with a
+    // 15-minute expiry so the payment step can complete before the slot is
+    // released.
     const resolvedSource = dto.source ?? 'RECEPTION';
     const needsOnlinePayment =
       resolvedSource === 'ONLINE' &&
       !dto.payAtClinic &&
-      !isGroupService &&
       price > 0;
 
-    const initialStatus = isReserveBeforePaymentGroup
-      ? 'PENDING_GROUP_FILL'
-      : needsOnlinePayment
-        ? 'AWAITING_PAYMENT'
-        : 'CONFIRMED';
+    const initialStatus = needsOnlinePayment ? 'AWAITING_PAYMENT' : 'CONFIRMED';
 
-    // Serializable: prevents two concurrent group-session bookings from both reading slotCount=N-1 and overflowing capacity.
     const booking = await this.rlsTransaction.withTransaction(
       async (tx) => {
-        if (!isGroupService) {
-          // CR-5: acquire advisory lock BEFORE the conflict check so that two
-          // concurrent requests on the same employee+slot cannot both see "no
-          // conflict" and both proceed. Lock key is scoped to
-          // employeeId + slot window.
-          const lockKey1 = hashToInt32(`${dto.employeeId ?? 'noemp'}`);
-          const lockKey2 = hashToInt32(`${scheduledAt.toISOString()}:${endsAt.toISOString()}`);
-          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey1}::int, ${lockKey2}::int)`;
+        // CR-5: acquire advisory lock BEFORE the conflict check so that two
+        // concurrent requests on the same employee+slot cannot both see "no
+        // conflict" and both proceed. Lock key is scoped to
+        // employeeId + slot window.
+        const lockKey1 = hashToInt32(`${dto.employeeId ?? 'noemp'}`);
+        const lockKey2 = hashToInt32(`${scheduledAt.toISOString()}:${endsAt.toISOString()}`);
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey1}::int, ${lockKey2}::int)`;
 
-          // Now that the lock is held, check for an overlap with statuses that occupy staff time.
-          const effectiveBufferMins = service.bufferMinutes ?? bookingSettings.bufferMinutes;
-          const bufferMs = effectiveBufferMins * 60_000;
-          const bufferedStart = new Date(scheduledAt.getTime() - bufferMs);
-          const bufferedEnd = new Date(endsAt.getTime() + bufferMs);
+        // Now that the lock is held, check for an overlap with statuses that occupy staff time.
+        const effectiveBufferMins = service.bufferMinutes ?? bookingSettings.bufferMinutes;
+        const bufferMs = effectiveBufferMins * 60_000;
+        const bufferedStart = new Date(scheduledAt.getTime() - bufferMs);
+        const bufferedEnd = new Date(endsAt.getTime() + bufferMs);
 
-          const conflict = await tx.booking.findFirst({
-            where: {
-              employeeId: dto.employeeId,
-              status: { in: [...STAFF_TIME_BLOCKING_BOOKING_STATUSES] },
-              scheduledAt: { lt: bufferedEnd },
-              endsAt: { gt: bufferedStart },
-            },
-            select: { id: true },
-          });
-          if (conflict) {
-            throw new ConflictException('Employee already has a booking in this time slot');
-          }
-        } else {
-          // Group bookings: serialize concurrent attempts on the same slot.
-          // Same pattern as create-zoom-meeting — pg_advisory_xact_lock is held
-          // until the transaction commits, preventing two clients from both
-          // reading slotCount < maxParticipants and both succeeding.
-          const lockKey1 = hashToInt32(`${dto.serviceId}:${dto.employeeId ?? 'noemp'}`);
-          const lockKey2 = hashToInt32(scheduledAt.toISOString());
-          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey1}::int, ${lockKey2}::int)`;
-
-          // Check capacity now that the lock is held
-          const slotCount = await tx.booking.count({
-            where: {
-              serviceId: dto.serviceId,
-              employeeId: dto.employeeId,
-              scheduledAt,
-              ...(dto.groupSessionId ? { groupSessionId: dto.groupSessionId } : {}),
-              status: { in: [...GROUP_CAPACITY_BOOKING_STATUSES] },
-            },
-          });
-          if (slotCount >= serviceRecord!.maxParticipants) {
-            throw new ConflictException('This group session is full');
-          }
-
-          if (dto.groupSessionId) {
-            // Keep GroupSession.enrolledCount in sync with the public
-            // book-group-session path: reserve the seat with a guarded
-            // atomic increment so dashboard and public bookings serialize
-            // on the same row and the counter never drifts past capacity.
-            const groupSession = await tx.groupSession.findUnique({
-              where: { id: dto.groupSessionId },
-              select: { maxCapacity: true },
-            });
-            if (!groupSession) {
-              throw new NotFoundException('Group session not found');
-            }
-            const reserved = await tx.groupSession.updateMany({
-              where: {
-                id: dto.groupSessionId,
-                enrolledCount: { lt: groupSession.maxCapacity },
-              },
-              data: { enrolledCount: { increment: 1 } },
-            });
-            if (reserved.count === 0) {
-              throw new ConflictException('This group session is full');
-            }
-          }
+        const conflict = await tx.booking.findFirst({
+          where: {
+            employeeId: dto.employeeId,
+            status: { in: [...STAFF_TIME_BLOCKING_BOOKING_STATUSES] },
+            scheduledAt: { lt: bufferedEnd },
+            endsAt: { gt: bufferedStart },
+          },
+          select: { id: true },
+        });
+        if (conflict) {
+          throw new ConflictException('Employee already has a booking in this time slot');
         }
 
         if (dto.couponCode) {
@@ -410,18 +342,17 @@ export class CreateBookingHandler {
             durationMins,
             price,
             currency,
-            bookingType: isGroupService ? 'GROUP' : bookingType,
+            bookingType,
             deliveryType,
             source: resolvedSource,
             notes: dto.notes,
             // CONFIRMED bookings carry no expiry window — EXPIRE only acts on
-            // unconfirmed states. PENDING_GROUP_FILL and AWAITING_PAYMENT both
-            // get a 15-minute window (or the caller-supplied expiresAt).
+            // unconfirmed states. AWAITING_PAYMENT gets a 15-minute window
+            // (or the caller-supplied expiresAt).
             expiresAt:
               initialStatus === 'CONFIRMED'
                 ? undefined
                 : dto.expiresAt ?? new Date(Date.now() + 15 * 60 * 1000),
-            groupSessionId: dto.groupSessionId,
             payAtClinic: dto.payAtClinic ?? false,
             couponCode: dto.couponCode ?? null,
             discountedPrice: discountedPrice,
@@ -440,12 +371,11 @@ export class CreateBookingHandler {
         });
 
         let invoice: { id: string } | null = null;
-        // Create an ISSUED invoice for all individual paid bookings immediately,
+        // Create an ISSUED invoice for all paid bookings immediately,
         // including AWAITING_PAYMENT online bookings — init-client-payment requires
         // an invoice to exist before the payment flow can start.
-        // Skip: pay-at-clinic (no online payment), group fill (separate flow),
-        // and zero-price bookings (nothing to invoice).
-        if (!dto.payAtClinic && !isGroupService && price > 0) {
+        // Skip: pay-at-clinic (no online payment) and zero-price bookings.
+        if (!dto.payAtClinic && price > 0) {
           const orgSettings = await tx.organizationSettings.findFirst({
             where: {},
             select: { vatRate: true },
@@ -502,27 +432,6 @@ export class CreateBookingHandler {
       },
       { isolationLevel: 'Serializable' },
     ).catch(mapDbConflict);
-
-    // After insert: check if minParticipants is now reached for this slot
-    if (isGroupService) {
-      const filledCount = await this.prisma.booking.count({
-        where: {
-          serviceId: dto.serviceId,
-          employeeId: dto.employeeId,
-          scheduledAt,
-          ...(dto.groupSessionId ? { groupSessionId: dto.groupSessionId } : {}),
-          status: { in: [...GROUP_CAPACITY_BOOKING_STATUSES] },
-        },
-      });
-      if (filledCount >= serviceRecord!.minParticipants) {
-        // Fire-and-forget — don't fail the booking if notification fails
-        this.groupMinReachedHandler.execute({
-          serviceId: dto.serviceId,
-          employeeId: dto.employeeId,
-          scheduledAt,
-        }).catch(() => { /* logged by eventBus */ });
-      }
-    }
 
     return booking;
   }

@@ -98,10 +98,6 @@ describe('Booking state machine — impossible sequences (integration)', () => {
   });
 
   describe('staff time blocking statuses', () => {
-    it('includes PENDING_GROUP_FILL so fill-before-payment groups occupy employee time', () => {
-      expect(STAFF_TIME_BLOCKING_BOOKING_STATUSES).toContain(BookingStatus.PENDING_GROUP_FILL);
-    });
-
     it('does not include terminal statuses released from employee time', () => {
       expect(STAFF_TIME_BLOCKING_BOOKING_STATUSES).not.toContain(BookingStatus.CANCELLED);
       expect(STAFF_TIME_BLOCKING_BOOKING_STATUSES).not.toContain(BookingStatus.COMPLETED);

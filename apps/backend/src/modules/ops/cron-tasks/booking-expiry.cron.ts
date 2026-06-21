@@ -29,7 +29,6 @@ export class BookingExpiryCron {
             in: [
               BookingStatus.PENDING,
               BookingStatus.AWAITING_PAYMENT,
-              BookingStatus.PENDING_GROUP_FILL,
             ],
           },
         },

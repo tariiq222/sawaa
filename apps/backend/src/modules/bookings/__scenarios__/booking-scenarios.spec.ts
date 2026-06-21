@@ -43,7 +43,6 @@ import {
 	DEFAULT_BOOKING_SETTINGS,
 } from "../get-booking-settings/get-booking-settings.handler";
 import { PriceResolverService } from "../../org-experience/services/price-resolver.service";
-import { GroupSessionMinReachedHandler } from "../group-session-min-reached/group-session-min-reached.handler";
 import { CreateZoomMeetingHandler } from "../create-zoom-meeting/create-zoom-meeting.handler";
 import { ZoomMeetingService } from "../zoom-meeting.service";
 import { RefundPaymentHandler } from "../../finance/refund-payment/refund-payment.handler";
@@ -75,10 +74,6 @@ const buildPriceResolver = () => ({
 		currency: "SAR",
 		isEmployeeOverride: false,
 	}),
-});
-
-const buildGroupMinReached = () => ({
-	execute: jest.fn().mockResolvedValue(undefined),
 });
 
 const buildCouponValidator = () => ({
@@ -164,7 +159,6 @@ describe("Scenario 1 — Mother books online session for child, pays Mada, Zoom 
 			buildRlsTransaction(prisma) as never,
 			priceResolver as never,
 			settings as never,
-			buildGroupMinReached() as never,
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
@@ -394,7 +388,6 @@ describe("Scenario 3 — Reception books for client, pay-at-clinic, check-in, ca
 			buildRlsTransaction(prisma) as never,
 			priceResolver as never,
 			settings as never,
-			buildGroupMinReached() as never,
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
@@ -642,193 +635,6 @@ describe("Scenario 7 — Client exceeds max reschedules (3)", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 8. مجموعة دعم أسري تمتلئ وتنطلق
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe("Scenario 8 — Group session reaches minimum, transitions to payment, all confirm", () => {
-	it("PENDING_GROUP_FILL → AWAITING_PAYMENT when min reached → CONFIRMED after payment", async () => {
-		const prisma = buildExtendedPrisma();
-		const priceResolver = buildPriceResolver();
-		const settings = buildSettings();
-		const eventBus = buildEventBus();
-		const couponValidator = buildCouponValidator();
-		const sharedSlot = futureDate();
-		const availability = {
-			execute: jest.fn().mockResolvedValue([{ startTime: sharedSlot }]),
-		};
-
-		// Service config: min 4, max 10
-		prisma.service.findFirst.mockResolvedValue({
-			id: "svc-group",
-			durationMins: 90,
-			price: 500,
-			currency: "SAR",
-			isActive: true,
-			archivedAt: null,
-			isHidden: false,
-			minParticipants: 4,
-			maxParticipants: 10,
-			reserveWithoutPayment: true,
-		});
-		prisma.branch.findFirst.mockResolvedValue({
-			id: "branch-1",
-			nameAr: "الفرع",
-			isActive: true,
-		});
-		prisma.client.findFirst.mockResolvedValue({ id: "client-1" });
-		prisma.employee.findFirst.mockResolvedValue({
-			id: "emp-1",
-			name: "د. سامي",
-			isActive: true,
-		});
-		prisma.employeeService.findUnique.mockResolvedValue({
-			id: "es-1",
-			employeeId: "emp-1",
-			serviceId: "svc-group",
-		});
-		prisma.booking.count.mockResolvedValue(3); // 3 already enrolled
-		prisma.booking.create.mockResolvedValue({
-			id: "book-g8",
-			status: BookingStatus.PENDING_GROUP_FILL,
-			bookingType: "GROUP",
-			clientId: "client-1",
-			employeeId: "emp-1",
-			serviceId: "svc-group",
-			scheduledAt: sharedSlot,
-		});
-
-		const createHandler = new CreateBookingHandler(
-			prisma as never,
-			buildRlsTransaction(prisma) as never,
-			priceResolver as never,
-			settings as never,
-			buildGroupMinReached() as never,
-			eventBus as never,
-			couponValidator as never,
-			availability as never,
-		);
-
-		const created = await createHandler.execute({
-			branchId: "branch-1",
-			clientId: "client-1",
-			employeeId: "emp-1",
-			serviceId: "svc-group",
-			scheduledAt: sharedSlot,
-			bookingType: "GROUP" as any,
-		});
-
-		expect(created.status).toBe(BookingStatus.PENDING_GROUP_FILL);
-
-		// Post-tx count reaches 4 → min reached handler called
-		// Then GroupSessionMinReachedHandler transitions to AWAITING_PAYMENT
-		prisma.booking.updateMany.mockResolvedValue({ count: 4 });
-		// Simulate the transition
-		const minReached = new GroupSessionMinReachedHandler(
-			prisma as never,
-			buildRlsTransaction(prisma) as never,
-			eventBus as never,
-		);
-
-		prisma.booking.findMany.mockResolvedValue([
-			{ id: "book-g1" },
-			{ id: "book-g2" },
-			{ id: "book-g3" },
-			{ id: "book-g8" },
-		]);
-
-		await minReached.execute({
-			serviceId: "svc-group",
-			employeeId: "emp-1",
-			scheduledAt: sharedSlot,
-		});
-
-		expect(prisma.booking.updateMany).toHaveBeenCalledWith(
-			expect.objectContaining({
-				data: expect.objectContaining({
-					status: BookingStatus.AWAITING_PAYMENT,
-				}),
-			}),
-		);
-	});
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 9. الورشة الجماعية تنكسر بانسحاب مشارك
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe("Scenario 9 — Group session participant withdraws, count drops below min, rollback", () => {
-	it("rolls back AWAITING_PAYMENT to PENDING_GROUP_FILL when count < min", async () => {
-		const tx = {
-			booking: {
-				count: jest.fn().mockResolvedValue(3),
-				findMany: jest.fn().mockResolvedValue([{ id: "b1" }, { id: "b2" }]),
-				updateMany: jest.fn().mockResolvedValue({ count: 2 }),
-			},
-			invoice: { findMany: jest.fn().mockResolvedValue([]) },
-			groupSession: {
-				updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-				findUnique: jest.fn().mockResolvedValue({ serviceId: "svc-g9" }),
-			},
-			service: {
-				findUnique: jest.fn().mockResolvedValue({ minParticipants: 4 }),
-			},
-			bookingStatusLog: { create: jest.fn().mockResolvedValue({}) },
-		};
-
-		const service = new GroupSessionCapacityService(
-			{} as never,
-			{ withTransaction: jest.fn((fn: any) => fn(tx)) } as never,
-		);
-
-		await service.recalculateGroupStatus(tx as never, "gs-9");
-
-		expect(tx.booking.updateMany).toHaveBeenCalledWith({
-			where: { id: { in: ["b1", "b2"] } },
-			data: { status: BookingStatus.PENDING_GROUP_FILL, expiresAt: null },
-		});
-	});
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 10. ورشة ما اكتمل عددها
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe("Scenario 10 — Group session never reaches min before expiry window", () => {
-	it("expires PENDING_GROUP_FILL bookings when window closes, no refund (no payment)", async () => {
-		const prisma = buildPrisma();
-		const eventBus = buildEventBus();
-		const refundHandler = buildRefundHandler();
-
-		prisma.booking.findUnique.mockResolvedValue({
-			...mockBooking,
-			id: "book-g10",
-			status: BookingStatus.PENDING_GROUP_FILL,
-			bookingType: "GROUP",
-			scheduledAt: futureDate(),
-			expiresAt: pastDate(),
-		});
-
-		const expireHandler = new ExpireBookingHandler(
-			prisma as never,
-			buildRlsTransaction(prisma) as never,
-			eventBus as never,
-			refundHandler as never,
-			buildGroupCapacity() as never,
-		);
-
-		await expireHandler.execute({ bookingId: "book-g10", changedBy: "system" });
-
-		expect(prisma.booking.update).toHaveBeenCalledWith(
-			expect.objectContaining({
-				data: expect.objectContaining({ status: BookingStatus.EXPIRED }),
-			}),
-		);
-		// No payment was made → no refund
-		expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
-	});
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
 // 11. عميلة تطلب إلغاء والعيادة توافق
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1032,7 +838,6 @@ describe("Scenario 14 — Booking rejected when employee does not provide servic
 			buildRlsTransaction(prisma) as never,
 			priceResolver as never,
 			settings as never,
-			buildGroupMinReached() as never,
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
@@ -1119,7 +924,6 @@ describe("Scenario 15 — Coupon discount applied before VAT", () => {
 			buildRlsTransaction(prisma) as never,
 			priceResolver as never,
 			settings as never,
-			buildGroupMinReached() as never,
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
@@ -1199,7 +1003,6 @@ describe("Scenario 16 — Race condition: two clients book last slot simultaneou
 			buildRlsTransaction(prisma) as never,
 			priceResolver as never,
 			settings as never,
-			buildGroupMinReached() as never,
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
@@ -1304,7 +1107,6 @@ describe("Scenario 18 — Booking too close to appointment (less than min lead t
 			buildRlsTransaction(prisma) as never,
 			priceResolver as never,
 			settings as never,
-			buildGroupMinReached() as never,
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
@@ -1368,7 +1170,6 @@ describe("Scenario 19 — Booking too far in future (> maxAdvanceBookingDays)", 
 			buildRlsTransaction(prisma) as never,
 			priceResolver as never,
 			settings as never,
-			buildGroupMinReached() as never,
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
@@ -1428,7 +1229,6 @@ describe("Scenario 20 — Employee deactivated, booking rejected", () => {
 			buildRlsTransaction(prisma) as never,
 			priceResolver as never,
 			settings as never,
-			buildGroupMinReached() as never,
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
@@ -1486,7 +1286,6 @@ describe("Scenario 21 — Service is archived/hidden, booking rejected", () => {
 			buildRlsTransaction(prisma) as never,
 			priceResolver as never,
 			settings as never,
-			buildGroupMinReached() as never,
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
@@ -1538,7 +1337,6 @@ describe("Scenario 21 — Service is archived/hidden, booking rejected", () => {
 			buildRlsTransaction(prisma) as never,
 			priceResolver as never,
 			settings as never,
-			buildGroupMinReached() as never,
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
@@ -1582,7 +1380,6 @@ describe("Scenario 22 — Branch is inactive, booking rejected", () => {
 			buildRlsTransaction(prisma) as never,
 			priceResolver as never,
 			settings as never,
-			buildGroupMinReached() as never,
 			eventBus as never,
 			couponValidator as never,
 			availability as never,
@@ -1945,7 +1742,6 @@ describe("Scenario 28 — Service price changes after booking, snapshot preserve
 			buildRlsTransaction(prisma) as never,
 			priceResolver as never,
 			settings as never,
-			buildGroupMinReached() as never,
 			eventBus as never,
 			couponValidator as never,
 			availability as never,

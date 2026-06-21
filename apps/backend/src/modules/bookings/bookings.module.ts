@@ -31,7 +31,6 @@ import { ZoomMeetingWorker } from './create-zoom-meeting/zoom-meeting-worker';
 import { RetryZoomMeetingHandler } from './retry-zoom-meeting/retry-zoom-meeting.handler';
 import { ZoomMeetingService } from './zoom-meeting.service';
 import { ZoomModule } from '../integrations/zoom/zoom.module';
-import { GroupSessionMinReachedHandler } from './group-session-min-reached/group-session-min-reached.handler';
 import { DashboardBookingsController } from '../../api/dashboard/bookings.controller';
 import { GetPublicAvailabilityHandler } from './availability/public/get-public-availability.handler';
 import { GetPublicAvailabilityDaysHandler } from './availability/public/get-public-availability-days.handler';
@@ -82,7 +81,6 @@ const handlers = [
   ZoomMeetingQueueService,
   RetryZoomMeetingHandler,
   ZoomMeetingService,
-  GroupSessionMinReachedHandler,
   GetPublicAvailabilityHandler,
   GetPublicAvailabilityDaysHandler,
   ListClientBookingsHandler,

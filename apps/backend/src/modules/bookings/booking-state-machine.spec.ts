@@ -125,10 +125,6 @@ describe('BookingStateMachine — assertTransition', () => {
       expect(assertTransition(BookingStatus.PENDING, 'EXPIRE')).toBe(BookingStatus.EXPIRED);
     });
 
-    it('EXPIRE: PENDING_GROUP_FILL → EXPIRED', () => {
-      expect(assertTransition(BookingStatus.PENDING_GROUP_FILL, 'EXPIRE')).toBe(BookingStatus.EXPIRED);
-    });
-
     it('EXPIRE: AWAITING_PAYMENT → EXPIRED', () => {
       expect(assertTransition(BookingStatus.AWAITING_PAYMENT, 'EXPIRE')).toBe(BookingStatus.EXPIRED);
     });
@@ -145,15 +141,6 @@ describe('BookingStateMachine — assertTransition', () => {
       expect(assertTransition(BookingStatus.CONFIRMED, 'CHECK_IN')).toBe(BookingStatus.CONFIRMED);
     });
 
-    it('GROUP_FILL_REACHED_MIN: PENDING_GROUP_FILL → AWAITING_PAYMENT', () => {
-      expect(assertTransition(BookingStatus.PENDING_GROUP_FILL, 'GROUP_FILL_REACHED_MIN')).toBe(BookingStatus.AWAITING_PAYMENT);
-    });
-
-    it('GROUP_FILL_ROLLBACK: AWAITING_PAYMENT → PENDING_GROUP_FILL', () => {
-      expect(assertTransition(BookingStatus.AWAITING_PAYMENT, 'GROUP_FILL_ROLLBACK')).toBe(
-        BookingStatus.PENDING_GROUP_FILL,
-      );
-    });
   });
 
   describe('CREATE_* transitions bypass the from-guard (empty from list)', () => {
@@ -161,7 +148,6 @@ describe('BookingStateMachine — assertTransition', () => {
       // CREATE transitions are not called with assertTransition in practice —
       // but the function must handle them gracefully (from list is empty)
       expect(VALID_TRANSITIONS.CREATE_PENDING.to).toBe(BookingStatus.PENDING);
-      expect(VALID_TRANSITIONS.CREATE_GROUP_FILL.to).toBe(BookingStatus.PENDING_GROUP_FILL);
       expect(VALID_TRANSITIONS.CREATE_AWAITING_PAYMENT.to).toBe(BookingStatus.AWAITING_PAYMENT);
       expect(VALID_TRANSITIONS.CREATE_CONFIRMED.to).toBe(BookingStatus.CONFIRMED);
     });
@@ -199,27 +185,9 @@ describe('BookingStateMachine — assertTransition', () => {
       expect(() => assertTransition(BookingStatus.PENDING, 'COMPLETE')).toThrow(BadRequestException);
     });
 
-    it('GROUP_FILL_ROLLBACK from PENDING throws (only AWAITING_PAYMENT is valid source)', () => {
-      expect(() => assertTransition(BookingStatus.PENDING, 'GROUP_FILL_ROLLBACK')).toThrow(
-        BadRequestException,
-      );
-    });
-
-    it('GROUP_FILL_ROLLBACK from CONFIRMED throws', () => {
-      expect(() => assertTransition(BookingStatus.CONFIRMED, 'GROUP_FILL_ROLLBACK')).toThrow(
-        BadRequestException,
-      );
-    });
-
     it('NO_SHOW from PENDING_GROUP_FILL throws', () => {
       expect(() =>
         assertTransition(BookingStatus.PENDING_GROUP_FILL, 'NO_SHOW'),
-      ).toThrow(BadRequestException);
-    });
-
-    it('GROUP_FILL_REACHED_MIN from CONFIRMED throws (only valid from PENDING_GROUP_FILL)', () => {
-      expect(() =>
-        assertTransition(BookingStatus.CONFIRMED, 'GROUP_FILL_REACHED_MIN'),
       ).toThrow(BadRequestException);
     });
 

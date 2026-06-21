@@ -33,7 +33,6 @@ export class ExpireBookingHandler {
 			cmd.bookingId,
 			[
 				BookingStatus.PENDING,
-				BookingStatus.PENDING_GROUP_FILL,
 				BookingStatus.AWAITING_PAYMENT,
 				BookingStatus.DEPOSIT_PAID,
 			],
@@ -82,9 +81,9 @@ export class ExpireBookingHandler {
 				idempotencyKey = created.idempotencyKey;
 			}
 
-			// EXPIRED leaves GROUP_CAPACITY_BOOKING_STATUSES, so a group enrollee
-			// must release their seat: guarded enrolledCount decrement + sibling
-			// rollback inside the same transaction (mirrors cancel-booking.handler).
+			// A scheduled group-session enrollee that expires must release their
+			// seat: guarded enrolledCount decrement inside the same transaction
+			// (mirrors cancel-booking.handler).
 			if (booking.groupSessionId) {
 				// Remove the GroupEnrollment row so the client can re-enroll after
 				// their seat is freed. deleteMany is safe: a booking has at most one

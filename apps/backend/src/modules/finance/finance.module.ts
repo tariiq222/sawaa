@@ -30,7 +30,6 @@ import { GetPaymentStatsHandler } from './get-payment-stats/get-payment-stats.ha
 import { GetEmployeeEarningsHandler } from './get-employee-earnings/get-employee-earnings.handler';
 import { RefundPaymentHandler } from './refund-payment/refund-payment.handler';
 import { VerifyPaymentHandler } from './verify-payment/verify-payment.handler';
-import { GroupSessionReadyHandler } from './group-session-ready/group-session-ready.handler';
 import { MoyasarApiClient } from './moyasar-api/moyasar-api.client';
 
 import { InitClientPaymentHandler } from './payments/client/init-client-payment/init-client-payment.handler';
@@ -75,7 +74,6 @@ const handlers = [
   GetEmployeeEarningsHandler,
   RefundPaymentHandler,
   VerifyPaymentHandler,
-  GroupSessionReadyHandler,
   InitClientPaymentHandler,
   RequestRefundHandler,
   ApproveRefundHandler,
@@ -95,7 +93,6 @@ const handlers = [
   providers: [
     ...handlers,
     BookingConfirmedHandler,
-    GroupSessionReadyHandler,
     MoyasarApiClient,
     OnBookingCancelledRefundHandler,
     IssueInvoiceReceiptHandler,
@@ -107,7 +104,6 @@ const handlers = [
 export class FinanceModule implements OnModuleInit {
   constructor(
     private readonly bookingConfirmedHandler: BookingConfirmedHandler,
-    private readonly groupSessionReadyHandler: GroupSessionReadyHandler,
     private readonly onBookingCancelledRefundHandler: OnBookingCancelledRefundHandler,
     private readonly issueInvoiceReceiptHandler: IssueInvoiceReceiptHandler,
     private readonly sendInvoiceReceiptHandler: SendInvoiceReceiptHandler,
@@ -116,7 +112,6 @@ export class FinanceModule implements OnModuleInit {
 
   onModuleInit(): void {
     this.bookingConfirmedHandler.register();
-    this.groupSessionReadyHandler.register();
     this.onBookingCancelledRefundHandler.register();
     this.issueInvoiceReceiptHandler.register();
     this.sendInvoiceReceiptHandler.register(this.eventBus);

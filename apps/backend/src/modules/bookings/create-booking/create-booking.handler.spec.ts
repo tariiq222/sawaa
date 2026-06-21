@@ -5,12 +5,10 @@ import { CreateBookingHandler } from './create-booking.handler';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { PriceResolverService } from '../../org-experience/services/price-resolver.service';
 import { GetBookingSettingsHandler, DEFAULT_BOOKING_SETTINGS } from '../get-booking-settings/get-booking-settings.handler';
-import { GroupSessionMinReachedHandler } from '../group-session-min-reached/group-session-min-reached.handler';
 import { EventBusService } from '../../../infrastructure/events';
 import { ValidateCouponService } from '../coupons/validate-coupon.service';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import {
-  GROUP_CAPACITY_BOOKING_STATUSES,
   STAFF_TIME_BLOCKING_BOOKING_STATUSES,
 } from '../active-booking-statuses';
 
@@ -95,10 +93,6 @@ const buildSettingsHandler = (overrides = {}) => ({
   execute: jest.fn().mockResolvedValue({ ...DEFAULT_BOOKING_SETTINGS, ...overrides }),
 });
 
-const buildGroupMinReachedHandler = () => ({
-  execute: jest.fn().mockResolvedValue(undefined),
-});
-
 const buildEventBus = () => ({
   publish: jest.fn().mockResolvedValue(undefined),
 });
@@ -121,7 +115,6 @@ describe('CreateBookingHandler', () => {
   let rlsTransaction: { withTransaction: jest.Mock };
   let priceResolver: ReturnType<typeof buildPriceResolver>;
   let settingsHandler: ReturnType<typeof buildSettingsHandler>;
-  let groupMinReachedHandler: ReturnType<typeof buildGroupMinReachedHandler>;
   let eventBus: ReturnType<typeof buildEventBus>;
   let couponValidator: ReturnType<typeof buildCouponValidator>;
 
@@ -129,7 +122,6 @@ describe('CreateBookingHandler', () => {
     prisma = buildPrisma();
     priceResolver = buildPriceResolver();
     settingsHandler = buildSettingsHandler();
-    groupMinReachedHandler = buildGroupMinReachedHandler();
     eventBus = buildEventBus();
     couponValidator = buildCouponValidator();
 
@@ -140,7 +132,6 @@ describe('CreateBookingHandler', () => {
         { provide: RlsTransactionService, useValue: rlsTransaction = { withTransaction: jest.fn((cb: any) => cb(prisma)) } },
         { provide: PriceResolverService, useValue: priceResolver },
         { provide: GetBookingSettingsHandler, useValue: settingsHandler },
-        { provide: GroupSessionMinReachedHandler, useValue: groupMinReachedHandler },
         { provide: EventBusService, useValue: eventBus },
         { provide: ValidateCouponService, useValue: couponValidator },
       ],
@@ -253,7 +244,6 @@ describe('CreateBookingHandler', () => {
       rlsTransaction as any,
       priceResolver as any,
       settingsHandler as any,
-      groupMinReachedHandler as any,
       eventBus as any,
       couponValidator as any,
       availabilityHandler as any,
@@ -482,202 +472,7 @@ describe('CreateBookingHandler', () => {
   });
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 6. Group service transaction path
-  // ──────────────────────────────────────────────────────────────────────────
-
-  const setupGroupService = () => {
-    prisma.service.findFirst = jest
-      .fn()
-      .mockResolvedValueOnce(mockService) // first call (basic service lookup)
-      .mockResolvedValueOnce({
-        id: 'svc-1',
-        minParticipants: 2,
-        maxParticipants: 5,
-        reserveWithoutPayment: true,
-      });
-    prisma.booking.create = jest.fn().mockResolvedValue({
-      ...mockBooking,
-      bookingType: 'GROUP',
-      status: 'PENDING_GROUP_FILL',
-    });
-  };
-
-  it('takes pg_advisory_xact_lock before capacity check for group bookings', async () => {
-    setupGroupService();
-
-    const callOrder: string[] = [];
-    (prisma.$executeRaw as jest.Mock).mockImplementation(async () => {
-      callOrder.push('$executeRaw');
-    });
-    (prisma.booking.count as jest.Mock).mockImplementation(async () => {
-      callOrder.push('booking.count');
-      return 0;
-    });
-
-    await handler.execute(baseDto);
-
-    expect(callOrder.indexOf('$executeRaw')).toBeLessThan(callOrder.indexOf('booking.count'));
-
-    const rawCall = (prisma.$executeRaw as jest.Mock).mock.calls[0];
-    expect(rawCall[0].join('')).toMatch(/pg_advisory_xact_lock/);
-  });
-
-  it('allows group booking when capacity is below maxParticipants', async () => {
-    setupGroupService();
-    prisma.booking.count = jest.fn().mockResolvedValue(3);
-
-    const result = await handler.execute(baseDto);
-
-    expect(prisma.booking.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ status: 'PENDING_GROUP_FILL', bookingType: 'GROUP' }),
-      }),
-    );
-    expect(result.invoiceId).toBeNull();
-    expect(prisma.booking.count).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          status: { in: [...GROUP_CAPACITY_BOOKING_STATUSES] },
-        }),
-      }),
-    );
-  });
-
-  it('scopes group capacity counts by groupSessionId when provided', async () => {
-    setupGroupService();
-    prisma.booking.count = jest.fn().mockResolvedValue(0);
-
-    await handler.execute({ ...baseDto, groupSessionId: 'gs-1' });
-
-    expect(prisma.booking.count).toHaveBeenNthCalledWith(1,
-      expect.objectContaining({
-        where: expect.objectContaining({
-          groupSessionId: 'gs-1',
-          status: { in: [...GROUP_CAPACITY_BOOKING_STATUSES] },
-        }),
-      }),
-    );
-    expect(prisma.booking.count).toHaveBeenNthCalledWith(2,
-      expect.objectContaining({
-        where: expect.objectContaining({
-          groupSessionId: 'gs-1',
-          status: { in: [...GROUP_CAPACITY_BOOKING_STATUSES] },
-        }),
-      }),
-    );
-  });
-
-  it('throws ConflictException when group session is full', async () => {
-    setupGroupService();
-    prisma.booking.count = jest.fn().mockResolvedValue(5);
-
-    await expect(handler.execute(baseDto)).rejects.toThrow('This group session is full');
-  });
-
-  it('increments GroupSession.enrolledCount with a capacity guard when groupSessionId is provided', async () => {
-    setupGroupService();
-    prisma.booking.count = jest.fn().mockResolvedValue(0);
-    prisma.groupSession.findUnique = jest.fn().mockResolvedValue({ maxCapacity: 5 });
-
-    await handler.execute({ ...baseDto, groupSessionId: 'gs-1' });
-
-    expect(prisma.groupSession.findUnique).toHaveBeenCalledWith({
-      where: { id: 'gs-1' },
-      select: { maxCapacity: true },
-    });
-    expect(prisma.groupSession.updateMany).toHaveBeenCalledWith({
-      where: { id: 'gs-1', enrolledCount: { lt: 5 } },
-      data: { enrolledCount: { increment: 1 } },
-    });
-    expect(prisma.booking.create).toHaveBeenCalled();
-  });
-
-  it('throws ConflictException and skips creation when the guarded enrolledCount increment matches no row', async () => {
-    setupGroupService();
-    prisma.booking.count = jest.fn().mockResolvedValue(0);
-    prisma.groupSession.updateMany = jest.fn().mockResolvedValue({ count: 0 });
-
-    await expect(
-      handler.execute({ ...baseDto, groupSessionId: 'gs-1' }),
-    ).rejects.toThrow('This group session is full');
-    expect(prisma.booking.create).not.toHaveBeenCalled();
-  });
-
-  it('throws NotFoundException when groupSessionId points to a missing GroupSession', async () => {
-    setupGroupService();
-    prisma.booking.count = jest.fn().mockResolvedValue(0);
-    prisma.groupSession.findUnique = jest.fn().mockResolvedValue(null);
-
-    await expect(
-      handler.execute({ ...baseDto, groupSessionId: 'gs-missing' }),
-    ).rejects.toThrow('Group session not found');
-    expect(prisma.groupSession.updateMany).not.toHaveBeenCalled();
-    expect(prisma.booking.create).not.toHaveBeenCalled();
-  });
-
-  it('does not touch GroupSession when a group booking has no groupSessionId', async () => {
-    setupGroupService();
-    prisma.booking.count = jest.fn().mockResolvedValue(0);
-
-    await handler.execute(baseDto);
-
-    expect(prisma.groupSession.findUnique).not.toHaveBeenCalled();
-    expect(prisma.groupSession.updateMany).not.toHaveBeenCalled();
-  });
-
-  it('does not create invoice for pending group session', async () => {
-    setupGroupService();
-    prisma.booking.count = jest.fn().mockResolvedValue(0);
-
-    await handler.execute(baseDto);
-    expect(prisma.invoice.create).not.toHaveBeenCalled();
-  });
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // 7. Post-transaction: groupMinReachedHandler
-  // ──────────────────────────────────────────────────────────────────────────
-
-  it('calls groupMinReachedHandler when minParticipants is reached post-tx', async () => {
-    setupGroupService();
-    prisma.booking.count = jest
-      .fn()
-      .mockResolvedValueOnce(0) // capacity check inside tx
-      .mockResolvedValueOnce(2); // post-tx count (minParticipants=2)
-
-    await handler.execute(baseDto);
-
-    expect(groupMinReachedHandler.execute).toHaveBeenCalledWith({
-      serviceId: 'svc-1',
-      employeeId: 'emp-1',
-      scheduledAt: expect.any(Date),
-    });
-  });
-
-  it('does not call groupMinReachedHandler when minParticipants is not reached', async () => {
-    setupGroupService();
-    prisma.booking.count = jest
-      .fn()
-      .mockResolvedValueOnce(0) // capacity check inside tx
-      .mockResolvedValueOnce(1); // post-tx count (minParticipants=2)
-
-    await handler.execute(baseDto);
-
-    expect(groupMinReachedHandler.execute).not.toHaveBeenCalled();
-  });
-
-  it('swallows groupMinReachedHandler rejection', async () => {
-    setupGroupService();
-    groupMinReachedHandler.execute.mockRejectedValue(new Error('fail'));
-    prisma.booking.count = jest
-      .fn()
-      .mockResolvedValueOnce(0) // capacity check inside tx
-      .mockResolvedValueOnce(2); // post-tx count (minParticipants=2)
-
-    await expect(handler.execute(baseDto)).resolves.not.toThrow();
-  });
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // 8. DB exclusion constraint error mapping
+  // 6. DB exclusion constraint error mapping
   // ──────────────────────────────────────────────────────────────────────────
 
   it('maps Postgres 23P01 exclusion violation to ConflictException', async () => {
@@ -714,23 +509,6 @@ describe('CreateBookingHandler', () => {
     await handler.execute({ ...baseDto, employeeId: undefined as any });
 
     expect(callOrder.indexOf('$executeRaw')).toBeGreaterThanOrEqual(0);
-  });
-
-  it('uses noemp fallback in advisory lock when employeeId is undefined (group)', async () => {
-    setupGroupService();
-    const callOrder: string[] = [];
-    (prisma.$executeRaw as jest.Mock).mockImplementation(async () => {
-      callOrder.push('$executeRaw');
-    });
-    (prisma.booking.count as jest.Mock).mockImplementation(async () => {
-      callOrder.push('booking.count');
-      return 0;
-    });
-
-    await handler.execute({ ...baseDto, employeeId: undefined as any });
-
-    expect(callOrder.indexOf('$executeRaw')).toBeGreaterThanOrEqual(0);
-    expect(callOrder.indexOf('booking.count')).toBeGreaterThanOrEqual(0);
   });
 
   it('defaults bookingType to INDIVIDUAL when not provided', async () => {
@@ -969,27 +747,6 @@ describe('CreateBookingHandler', () => {
     ).rejects.toThrow(/does not match requested delivery type/);
   });
 
-  it('allows GROUP + ONLINE combination', async () => {
-    setupGroupService();
-    prisma.booking.count = jest.fn().mockResolvedValue(0);
-
-    const result = await handler.execute({
-      ...baseDto,
-      bookingType: 'GROUP' as any,
-      deliveryType: 'ONLINE' as any,
-    });
-
-    expect(prisma.booking.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          bookingType: 'GROUP',
-          deliveryType: 'ONLINE',
-        }),
-      }),
-    );
-    expect(result.status).toBe('PENDING_GROUP_FILL');
-  });
-
   it('defaults WALK_IN bookingType to IN_PERSON deliveryType', async () => {
     await handler.execute({ ...baseDto, bookingType: 'WALK_IN' as any });
     expect(prisma.booking.create).toHaveBeenCalledWith(
@@ -1052,7 +809,6 @@ describe('CreateBookingHandler', () => {
       rlsTransaction as any,
       priceResolver as any,
       settingsHandler as any,
-      groupMinReachedHandler as any,
       eventBus as any,
       couponValidator as any,
       availabilityHandler as any,

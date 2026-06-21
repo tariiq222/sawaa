@@ -40,7 +40,6 @@ export class DeleteClientHandler {
 				status: {
 					in: [
 						"PENDING",
-						"PENDING_GROUP_FILL",
 						"AWAITING_PAYMENT",
 						"CONFIRMED",
 						"CANCEL_REQUESTED",
@@ -75,7 +74,6 @@ export class DeleteClientHandler {
 					status: {
 						in: [
 							"PENDING",
-							"PENDING_GROUP_FILL",
 							"AWAITING_PAYMENT",
 							"CONFIRMED",
 							"CANCEL_REQUESTED",
