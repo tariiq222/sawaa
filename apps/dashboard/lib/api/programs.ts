@@ -40,8 +40,9 @@ export async function cancelProgram(id: string, payload: CancelProgramPayload) {
 }
 
 export async function enrollClientInProgram(payload: EnrollInProgramPayload): Promise<EnrollInProgramResult> {
+  // programId is taken from the URL; the body carries only the client
+  // (the backend EnrollClientDto rejects unknown fields).
   return api.post(`/dashboard/programs/${payload.programId}/enrollments`, {
-    programId: payload.programId,
     clientId: payload.clientId,
   });
 }

@@ -71,7 +71,7 @@ export function CancelProgramDialog({
               {t('common.cancel')}
             </Button>
             <Button type="submit" variant="destructive" disabled={submitting}>
-              {submitting ? t('common.deleting') : t('programs.cancel')}
+              {submitting ? t('common.deleting') : t('programs.dialog.cancel.confirm')}
             </Button>
           </DialogFooter>
         </form>
