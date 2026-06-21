@@ -32,9 +32,8 @@ const FEATURES = [
   "activity-log",
   "groups",
   "contact-messages",
-  "group-sessions",
-  "group-programs",
-]
+  "programs",
+] 
 
 /**
  * For a given feature, build the list of sibling features it must NOT import from.

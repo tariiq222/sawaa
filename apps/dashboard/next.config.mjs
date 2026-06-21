@@ -63,7 +63,7 @@ const nextConfig = {
     'import-in-the-middle',
   ],
   experimental: {
-    optimizePackageImports: ['@hugeicons/core-free-icons', '@hugeicons/react', 'recharts', '@sawaa/ui'],
+    optimizePackageImports: ['@hugeicons/core-free-icons', 'recharts', '@sawaa/ui'],
   },
   // Dev autologin hint values. Renamed away from NEXT_PUBLIC_DEV_PASSWORD —
   // the previous name made the variable look like a real credential and would

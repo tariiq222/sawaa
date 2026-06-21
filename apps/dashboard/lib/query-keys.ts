@@ -247,16 +247,11 @@ export const queryKeys = {
     detail: (id: string) => ["bundles", "detail", id] as const,
   },
 
-  /* ─── Group Sessions ─── */
-  groupSessions: {
-    all: ["group-sessions"] as const,
-    list: (filters?: object) => ["group-sessions", "list", filters] as const,
-    detail: (id: string) => ["group-sessions", "detail", id] as const,
-  },
-
-  /* ─── Group Programs ─── */
-  groupPrograms: {
-    all: ["group-programs"] as const,
-    list: (filters?: object) => ["group-programs", "list", filters] as const,
+  /* ─── Programs (group bookings) ─── */
+  programs: {
+    all: ["programs"] as const,
+    lists: () => ["programs", "list"] as const,
+    list: (filters?: object) => ["programs", "list", filters ?? {}] as const,
+    detail: (id: string) => ["programs", "detail", id] as const,
   },
 } as const
