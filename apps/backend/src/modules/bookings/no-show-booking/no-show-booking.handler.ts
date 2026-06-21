@@ -3,7 +3,7 @@ import { BookingStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { fetchBookingOrFail, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { assertTransition } from '../booking-state-machine';
-import { GroupSessionCapacityService } from '../group-session/group-session-capacity.service';
+import { ProgramCapacityService } from '../program/program-capacity.service';
 
 export interface NoShowBookingCommand {
   bookingId: string;
@@ -15,7 +15,7 @@ export class NoShowBookingHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
-    private readonly groupSessionCapacity: GroupSessionCapacityService,
+    private readonly groupSessionCapacity: ProgramCapacityService,
   ) {}
 
   async execute(cmd: NoShowBookingCommand) {
@@ -62,7 +62,7 @@ export class NoShowBookingHandler {
         // enrollment (@@unique on bookingId) and returns count=0 silently if
         // there is none (individual bookings without a groupSessionId).
         await tx.groupEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
-        await this.groupSessionCapacity.recalculateGroupStatus(tx, booking.groupSessionId);
+        await this.groupSessionCapacity.decrementEnrollment(tx, booking.groupSessionId);
       }
 
       return noShowBooking;

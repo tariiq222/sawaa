@@ -46,7 +46,7 @@ import { CreatePublicBookingHandler } from './public/create-public-booking.handl
 import { CreateEmployeeBookingHandler } from './create-employee-booking/create-employee-booking.handler';
 import { ValidateCouponService } from './coupons/validate-coupon.service';
 import { CreateBundleBookingHandler } from './create-bundle-booking/create-bundle-booking.handler';
-import { GroupSessionCapacityService } from './group-session/group-session-capacity.service';
+import { ProgramCapacityService } from './program/program-capacity.service';
 import { CreateGroupSessionHandler } from './create-group-session/create-group-session.handler';
 import { ListGroupSessionsHandler } from './list-group-sessions/list-group-sessions.handler';
 import { GetGroupSessionHandler } from './get-group-session/get-group-session.handler';
@@ -94,7 +94,7 @@ const handlers = [
   CreatePublicBookingHandler,
   ValidateCouponService,
   CreateBundleBookingHandler,
-  GroupSessionCapacityService,
+  ProgramCapacityService,
   CreateGroupSessionHandler,
   ListGroupSessionsHandler,
   GetGroupSessionHandler,

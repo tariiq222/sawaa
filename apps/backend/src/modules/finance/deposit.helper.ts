@@ -8,15 +8,31 @@ import type { Prisma } from '@prisma/client';
  *
  * `depositAmount` is a Decimal(12,2) column of whole halalas; the real client
  * yields Prisma.Decimal while test doubles may supply a plain number/string.
+ *
+ * The `program` accessor is OPTIONAL. Callers that don't expose a Program
+ * delegate (e.g. callers operating on legacy schemas, or test doubles that
+ * only need the service path) simply omit it — the program branch is skipped
+ * and the helper degrades to the service/no-deposit path. Once the Program
+ * table exists in the generated Prisma client, callers can pass the full
+ * client and the program branch activates.
  */
 export interface DepositPrismaClient {
   booking: {
     findFirst(args: {
       where: { id: string };
       select?: Record<string, unknown>;
-    }): Promise<{ serviceId: string | null } | null>;
+    }): Promise<{ serviceId: string | null; programId?: string | null } | null>;
   };
   service: {
+    findFirst(args: {
+      where: { id: string };
+      select?: Record<string, unknown>;
+    }): Promise<{
+      depositEnabled: boolean;
+      depositAmount: Prisma.Decimal | number | string | null;
+    } | null>;
+  };
+  program?: {
     findFirst(args: {
       where: { id: string };
       select?: Record<string, unknown>;
@@ -28,24 +44,59 @@ export interface DepositPrismaClient {
 }
 
 export interface DepositConfig {
-  /** true when the booking's service has deposit collection enabled with a positive amount */
+  /** true when the booking's service or program has deposit collection enabled with a positive amount */
   enabled: boolean;
   /** the exact deposit amount in integer halalas, or null when not enabled */
   depositAmount: number | null;
 }
 
+interface RawDepositRow {
+  depositEnabled: boolean;
+  depositAmount: Prisma.Decimal | number | string | null;
+}
+
+function resolveDepositFromRow(row: RawDepositRow | null): DepositConfig {
+  if (!row || row.depositEnabled !== true) {
+    return { enabled: false, depositAmount: null };
+  }
+
+  // depositAmount is a Decimal(12,2) of integer halalas — coerce via toString
+  // so a Prisma.Decimal, string, or number all normalize correctly. Kept as a
+  // tolerant Number() coercion (not decimalToHalalas) on purpose: a garbage
+  // value must degrade to "no deposit", never block a payment by throwing.
+  const amount =
+    row.depositAmount == null
+      ? NaN
+      : Math.round(Number(row.depositAmount.toString()));
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { enabled: false, depositAmount: null };
+  }
+
+  return { enabled: true, depositAmount: amount };
+}
+
 /**
- * Resolve the deposit configuration for an invoice from its underlying service.
+ * Resolve the deposit configuration for an invoice from its underlying service
+ * or program.
  *
  * There is NO Prisma relation `invoice.booking` — invoices link to bookings only
- * via the scalar `bookingId`. We therefore load the booking (for its serviceId)
- * and then the service independently.
+ * via the scalar `bookingId`. We therefore load the booking (for its serviceId
+ * or programId) and then the service/program independently.
+ *
+ * Resolution order:
+ *   1. If the booking has a `serviceId` → consult the Service row.
+ *   2. Else if the booking has a `programId` AND the client exposes a
+ *      `program` accessor → consult the Program row.
+ *   3. Otherwise → no deposit.
  *
  * Returns `{ enabled: false, depositAmount: null }` for:
  *   - bundle-purchase invoices (no bookingId),
- *   - bookings whose service has no deposit configured,
- *   - a depositEnabled service with a missing / non-positive depositAmount
- *     (treated as "no deposit" — never block a payment on a misconfigured row).
+ *   - bookings whose service/program has no deposit configured,
+ *   - a depositEnabled row with a missing / non-positive depositAmount
+ *     (treated as "no deposit" — never block a payment on a misconfigured row),
+ *   - GROUP/program bookings when the client does not expose a Program
+ *     delegate (legacy callers during the schema transition).
  */
 export async function resolveInvoiceDeposit(
   client: DepositPrismaClient,
@@ -55,32 +106,27 @@ export async function resolveInvoiceDeposit(
 
   const booking = await client.booking.findFirst({
     where: { id: bookingId },
-    select: { serviceId: true },
+    select: { serviceId: true, programId: true },
   });
-  if (!booking?.serviceId) return { enabled: false, depositAmount: null };
+  if (!booking) return { enabled: false, depositAmount: null };
 
-  const service = await client.service.findFirst({
-    where: { id: booking.serviceId },
-    select: { depositEnabled: true, depositAmount: true },
-  });
-  if (!service || service.depositEnabled !== true) {
-    return { enabled: false, depositAmount: null };
+  if (booking.serviceId) {
+    const service = await client.service.findFirst({
+      where: { id: booking.serviceId },
+      select: { depositEnabled: true, depositAmount: true },
+    });
+    return resolveDepositFromRow(service);
   }
 
-  // depositAmount is a Decimal(12,2) of integer halalas — coerce via toString
-  // so a Prisma.Decimal, string, or number all normalize correctly. Kept as a
-  // tolerant Number() coercion (not decimalToHalalas) on purpose: a garbage
-  // value must degrade to "no deposit", never block a payment by throwing.
-  const amount =
-    service.depositAmount == null
-      ? NaN
-      : Math.round(Number(service.depositAmount.toString()));
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return { enabled: false, depositAmount: null };
+  if (booking.programId && client.program) {
+    const program = await client.program.findFirst({
+      where: { id: booking.programId },
+      select: { depositEnabled: true, depositAmount: true },
+    });
+    return resolveDepositFromRow(program);
   }
 
-  return { enabled: true, depositAmount: amount };
+  return { enabled: false, depositAmount: null };
 }
 
 /**

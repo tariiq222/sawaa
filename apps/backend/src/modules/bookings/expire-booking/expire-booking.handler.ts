@@ -10,7 +10,7 @@ import { DEFAULT_ORG_ID } from "../../../common/constants";
 import { BookingCancelledEvent } from "../events/booking-cancelled.event";
 import { fetchBookingOrFail } from "../booking-lifecycle.helper";
 import { assertTransition } from "../booking-state-machine";
-import { GroupSessionCapacityService } from "../group-session/group-session-capacity.service";
+import { ProgramCapacityService } from "../program/program-capacity.service";
 
 export interface ExpireBookingCommand {
 	bookingId: string;
@@ -24,7 +24,7 @@ export class ExpireBookingHandler {
 		private readonly rlsTransaction: RlsTransactionService,
 		private readonly eventBus: EventBusService,
 		private readonly refundHandler: RefundPaymentHandler,
-		private readonly groupSessionCapacity: GroupSessionCapacityService,
+		private readonly groupSessionCapacity: ProgramCapacityService,
 	) {}
 
 	async execute(cmd: ExpireBookingCommand) {
@@ -90,10 +90,10 @@ export class ExpireBookingHandler {
 				// enrollment (@@unique on bookingId) and returns count=0 silently if
 				// there is none.
 				await tx.groupEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
-				await this.groupSessionCapacity.recalculateGroupStatus(
-					tx,
-					booking.groupSessionId,
-				);
+			await this.groupSessionCapacity.decrementEnrollment(
+				tx,
+				booking.groupSessionId,
+			);
 			}
 
 			return expiredBooking;

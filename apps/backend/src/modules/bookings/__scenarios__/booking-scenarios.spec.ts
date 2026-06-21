@@ -35,7 +35,7 @@ import { RescheduleBookingHandler } from "../reschedule-booking/reschedule-booki
 import { ExpireBookingHandler } from "../expire-booking/expire-booking.handler";
 import { NoShowBookingHandler } from "../no-show-booking/no-show-booking.handler";
 import { CheckAvailabilityHandler } from "../check-availability/check-availability.handler";
-import { GroupSessionCapacityService } from "../group-session/group-session-capacity.service";
+import { ProgramCapacityService } from "../program/program-capacity.service";
 import { ValidateCouponService } from "../coupons/validate-coupon.service";
 
 import {
@@ -95,7 +95,7 @@ const buildRefundHandler = () => ({
 });
 
 const buildGroupCapacity = () => ({
-	recalculateGroupStatus: jest.fn().mockResolvedValue(undefined),
+	decrementEnrollment: jest.fn().mockResolvedValue(undefined),
 });
 
 // Extend buildPrisma with missing models used by CreateBookingHandler

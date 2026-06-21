@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { GroupSessionCapacityService } from './group-session-capacity.service';
+import { ProgramCapacityService } from './program-capacity.service';
 
-describe('GroupSessionCapacityService — recalculateGroupStatus', () => {
-  let service: GroupSessionCapacityService;
+describe('ProgramCapacityService — decrementEnrollment', () => {
+  let service: ProgramCapacityService;
   let tx: any;
 
   beforeEach(async () => {
@@ -15,7 +15,7 @@ describe('GroupSessionCapacityService — recalculateGroupStatus', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        GroupSessionCapacityService,
+        ProgramCapacityService,
         {
           provide: PrismaService,
           useValue: {},
@@ -29,7 +29,7 @@ describe('GroupSessionCapacityService — recalculateGroupStatus', () => {
       ],
     }).compile();
 
-    service = module.get<GroupSessionCapacityService>(GroupSessionCapacityService);
+    service = module.get<ProgramCapacityService>(ProgramCapacityService);
   });
 
   afterEach(() => {
@@ -40,42 +40,42 @@ describe('GroupSessionCapacityService — recalculateGroupStatus', () => {
     expect(service).toBeDefined();
   });
 
-  it('decrements enrolledCount with a > 0 guard for the given group session', async () => {
+  it('decrements enrolledCount with a > 0 guard for the given program', async () => {
     tx.groupSession.updateMany.mockResolvedValue({ count: 1 });
 
-    await service.recalculateGroupStatus(tx, 'gs-1');
+    await service.decrementEnrollment(tx, 'prog-1');
 
     expect(tx.groupSession.updateMany).toHaveBeenCalledWith({
-      where: { id: 'gs-1', enrolledCount: { gt: 0 } },
+      where: { id: 'prog-1', enrolledCount: { gt: 0 } },
       data: { enrolledCount: { decrement: 1 } },
     });
   });
 
-  it('targets only the supplied groupSessionId', async () => {
+  it('targets only the supplied programId', async () => {
     tx.groupSession.updateMany.mockResolvedValue({ count: 0 });
 
-    await service.recalculateGroupStatus(tx, 'gs-specific-id');
+    await service.decrementEnrollment(tx, 'prog-specific-id');
 
     expect(tx.groupSession.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ id: 'gs-specific-id' }),
+        where: expect.objectContaining({ id: 'prog-specific-id' }),
       }),
     );
   });
 
-  it('does not throw when the session has no participants (guarded update matches nothing)', async () => {
+  it('does not throw when the program has no participants (guarded update matches nothing)', async () => {
     tx.groupSession.updateMany.mockResolvedValue({ count: 0 });
 
-    await expect(service.recalculateGroupStatus(tx, 'gs-empty')).resolves.toBeUndefined();
+    await expect(service.decrementEnrollment(tx, 'prog-empty')).resolves.toBeUndefined();
   });
 
-  it('recalculateGroupStatusStandalone opens a transaction and decrements', async () => {
+  it('decrementEnrollmentStandalone opens a transaction and decrements', async () => {
     tx.groupSession.updateMany.mockResolvedValue({ count: 1 });
 
-    await service.recalculateGroupStatusStandalone('gs-2');
+    await service.decrementEnrollmentStandalone('prog-2');
 
     expect(tx.groupSession.updateMany).toHaveBeenCalledWith({
-      where: { id: 'gs-2', enrolledCount: { gt: 0 } },
+      where: { id: 'prog-2', enrolledCount: { gt: 0 } },
       data: { enrolledCount: { decrement: 1 } },
     });
   });

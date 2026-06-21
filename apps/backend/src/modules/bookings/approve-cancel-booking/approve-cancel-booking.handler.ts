@@ -9,7 +9,7 @@ import { EventBusService } from '../../../infrastructure/events';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { BookingCancelApprovedEvent } from '../events/booking-cancel-approved.event';
 import { assertTransition } from '../booking-state-machine';
-import { GroupSessionCapacityService } from '../group-session/group-session-capacity.service';
+import { ProgramCapacityService } from '../program/program-capacity.service';
 import { updateBookingAtomically } from '../booking-lifecycle.helper';
 import { RefundPaymentHandler } from '../../finance/refund-payment/refund-payment.handler';
 
@@ -30,7 +30,7 @@ export class ApproveCancelBookingHandler {
     private readonly rlsTransaction: RlsTransactionService,
     private readonly eventBus: EventBusService,
     private readonly settingsHandler: GetBookingSettingsHandler,
-    private readonly groupSessionCapacity: GroupSessionCapacityService,
+    private readonly groupSessionCapacity: ProgramCapacityService,
     private readonly refundHandler: RefundPaymentHandler,
   ) {}
 
@@ -122,7 +122,7 @@ export class ApproveCancelBookingHandler {
         // Remove the GroupEnrollment row so the client can re-enroll after
         // their seat is freed.
         await tx.groupEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
-        await this.groupSessionCapacity.recalculateGroupStatus(tx, booking.groupSessionId);
+        await this.groupSessionCapacity.decrementEnrollment(tx, booking.groupSessionId);
       }
       return results;
     });

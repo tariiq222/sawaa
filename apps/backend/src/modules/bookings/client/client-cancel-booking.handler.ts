@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { CancellationReason, RefundType } from '@prisma/client';
+import { BookingType, CancellationReason, RefundType } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
@@ -9,7 +9,7 @@ import { RefundPaymentHandler } from '../../finance/refund-payment/refund-paymen
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { assertTransition } from '../booking-state-machine';
 import { computeRefundType, computeRefundAmountHalalas } from '../cancellation-policy';
-import { GroupSessionCapacityService } from '../group-session/group-session-capacity.service';
+import { ProgramCapacityService } from '../program/program-capacity.service';
 import { updateBookingAtomically } from '../booking-lifecycle.helper';
 
 export type ClientCancelCommand = ClientCancelBookingDto & {
@@ -25,7 +25,7 @@ export class ClientCancelBookingHandler {
     private readonly settingsHandler: GetBookingSettingsHandler,
     private readonly eventBus: EventBusService,
     private readonly refundHandler: RefundPaymentHandler,
-    private readonly groupSessionCapacity: GroupSessionCapacityService,
+    private readonly programCapacity: ProgramCapacityService,
   ) {}
 
   async execute(cmd: ClientCancelCommand) {
@@ -39,6 +39,13 @@ export class ClientCancelBookingHandler {
 
     if (booking.clientId !== cmd.clientId) {
       throw new ForbiddenException('You do not own this booking');
+    }
+
+    // Program enrollments can only be cancelled by staff — clients cannot
+    // un-enroll from a group program on their own. The dashboard's
+    // cancel-program flow (or a per-enrollment admin cancel) handles this.
+    if (booking.bookingType === BookingType.GROUP) {
+      throw new ForbiddenException('Program enrollments can only be cancelled by staff');
     }
 
     const settings = await this.settingsHandler.execute({ branchId: booking.branchId });
@@ -161,7 +168,7 @@ export class ClientCancelBookingHandler {
           }
         }
       }
-      // Roll back sibling AWAITING_PAYMENT bookings for group sessions
+      // Roll back sibling AWAITING_PAYMENT bookings for program enrollments
       // when the cancellation drops the enrolled count below the threshold.
       if (booking.groupSessionId) {
         // Remove the GroupEnrollment row so the client can re-enroll after
@@ -169,7 +176,7 @@ export class ClientCancelBookingHandler {
         // enrollment (@@unique on bookingId) and returns count=0 silently if
         // there is none.
         await tx.groupEnrollment.deleteMany({ where: { bookingId: cmd.bookingId } });
-        await this.groupSessionCapacity.recalculateGroupStatus(tx, booking.groupSessionId);
+        await this.programCapacity.decrementEnrollment(tx, booking.groupSessionId);
       }
       return cancelled;
     });

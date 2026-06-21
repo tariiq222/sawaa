@@ -4,7 +4,7 @@ import { NoShowBookingHandler } from './no-show-booking.handler';
 import { buildPrisma, buildRlsTransaction, mockBooking } from '../testing/booking-test-helpers';
 
 const buildGroupCapacity = () => ({
-  recalculateGroupStatus: jest.fn().mockResolvedValue(undefined),
+  decrementEnrollment: jest.fn().mockResolvedValue(undefined),
 });
 
 const newHandler = (
@@ -110,8 +110,8 @@ describe('NoShowBookingHandler — group session capacity', () => {
 
     // buildRlsTransaction passes `prisma` itself as the tx — asserting on it
     // proves the recalculation runs inside the same transaction as the update.
-    expect(groupCapacity.recalculateGroupStatus).toHaveBeenCalledTimes(1);
-    expect(groupCapacity.recalculateGroupStatus).toHaveBeenCalledWith(prisma, 'gs-1');
+    expect(groupCapacity.decrementEnrollment).toHaveBeenCalledTimes(1);
+    expect(groupCapacity.decrementEnrollment).toHaveBeenCalledWith(prisma, 'gs-1');
   });
 
   it('does NOT recalculate group capacity when the booking has no groupSessionId', async () => {
@@ -125,6 +125,6 @@ describe('NoShowBookingHandler — group session capacity', () => {
 
     await newHandler(prisma, groupCapacity).execute({ bookingId: 'book-1', changedBy: 'system' });
 
-    expect(groupCapacity.recalculateGroupStatus).not.toHaveBeenCalled();
+    expect(groupCapacity.decrementEnrollment).not.toHaveBeenCalled();
   });
 });
