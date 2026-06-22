@@ -1,7 +1,13 @@
 import type { PaginatedResponse, PaginationParams } from './api'
 
-// Aligned with backend Prisma enums (UPPER_CASE).
-export type PaymentMethod = 'MOYASAR' | 'BANK_TRANSFER' | 'CASH'
+// Aligned with backend Prisma enum `PaymentMethod` in finance.prisma (UPPER_CASE).
+export type PaymentMethod =
+  | 'ONLINE_CARD'
+  | 'BANK_TRANSFER'
+  | 'CASH'
+  | 'COUPON'
+  | 'MADA'
+  | 'TABBY'
 
 export type PaymentStatus =
   | 'PENDING'

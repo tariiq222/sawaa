@@ -64,3 +64,61 @@ export async function performStaffPasswordReset(
 }
 
 export type { AuthResponse, ChangePasswordPayload, TokenPair, UserPayload }
+
+/* ─── OTP (dashboard) ─────────────────────────────────────────────────── */
+
+export interface RequestDashboardOtpPayload {
+  email: string
+}
+
+export interface RequestDashboardOtpResponse {
+  /** Masked identifier returned by the backend (e.g. "a***@domain.com"). */
+  maskedIdentifier: string
+  /** Seconds until the OTP expires — useful for the UI countdown. */
+  expiresInSeconds: number
+}
+
+export async function requestDashboardOtp(
+  payload: RequestDashboardOtpPayload,
+): Promise<RequestDashboardOtpResponse> {
+  return apiRequest<RequestDashboardOtpResponse>('/auth/otp/request-dashboard', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export interface VerifyDashboardOtpPayload {
+  email: string
+  code: string
+}
+
+export async function verifyDashboardOtp(
+  payload: VerifyDashboardOtpPayload,
+): Promise<AuthResponse> {
+  return apiRequest<AuthResponse>('/auth/otp/verify-dashboard', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+/* ─── Lookup (login helper) ───────────────────────────────────────────── */
+
+export interface LookupUserPayload {
+  email: string
+}
+
+export interface LookupUserResponse {
+  /** Whether the email corresponds to a known user. */
+  exists: boolean
+  /** True when the user must complete email verification before login. */
+  emailVerificationRequired: boolean
+}
+
+export async function lookupUser(
+  payload: LookupUserPayload,
+): Promise<LookupUserResponse> {
+  return apiRequest<LookupUserResponse>('/auth/lookup', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}

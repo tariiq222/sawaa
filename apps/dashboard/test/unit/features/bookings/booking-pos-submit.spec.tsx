@@ -199,8 +199,8 @@ const makeCompleteState = (overrides = {}) => ({
     serviceName: "Counseling",
     employeeId: "emp-1",
     employeeName: "Ahmad",
-    deliveryType: "in_person" as const,
-    type: "in_person" as const,
+    deliveryType: "IN_PERSON" as const,
+    type: "IN_PERSON" as const,
     date: "2026-06-01",
     startTime: "09:00",
     payAtClinic: false,
@@ -302,7 +302,7 @@ describe("BookingPos — real handleSubmit → createMut.mutateAsync payload", (
       serviceId: "svc-1",
       employeeId: "emp-1",
       type: "individual",
-      deliveryType: "in_person",
+      deliveryType: "IN_PERSON",
       date: "2026-06-01",
       startTime: "09:00",
       payAtClinic: false,
@@ -350,7 +350,7 @@ describe("BookingPos — real handleSubmit → createMut.mutateAsync payload", (
     // the payload fails runtime validation and no booking is ever created.
     renderBookingPos(
       makeCompleteState({
-        deliveryType: "IN_PERSON" as unknown as "in_person",
+        deliveryType: "IN_PERSON" as unknown as "IN_PERSON",
       })
     )
 
@@ -366,7 +366,7 @@ describe("BookingPos — real handleSubmit → createMut.mutateAsync payload", (
     const [payload] = createMut.mutateAsync.mock.calls[0] as [
       Record<string, unknown>,
     ]
-    expect(payload).toMatchObject({ deliveryType: "in_person" })
+    expect(payload).toMatchObject({ deliveryType: "IN_PERSON" })
   })
 
   it("does not call create mutation when the POS payload fails runtime validation", async () => {

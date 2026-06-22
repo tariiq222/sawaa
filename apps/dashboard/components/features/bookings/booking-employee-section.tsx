@@ -121,11 +121,11 @@ export function BookingEmployeeSection({
             <Select value={field.value} onValueChange={field.onChange}>
               <SelectTrigger className="bg-surface-muted border-border"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {(!availableTypes.length || availableTypes.includes("in_person")) && (
-                  <SelectItem value="in_person">{t("bookings.form.type.inPerson")}</SelectItem>
+                {(!availableTypes.length || availableTypes.includes("IN_PERSON")) && (
+                  <SelectItem value="IN_PERSON">{t("bookings.form.type.inPerson")}</SelectItem>
                 )}
-                {(!availableTypes.length || availableTypes.includes("online")) && (
-                  <SelectItem value="online">{t("bookings.form.type.online")}</SelectItem>
+                {(!availableTypes.length || availableTypes.includes("ONLINE")) && (
+                  <SelectItem value="ONLINE">{t("bookings.form.type.online")}</SelectItem>
                 )}
                 {(!availableTypes.length || availableTypes.includes("walk_in")) && (
                   <SelectItem value="walk_in">{t("bookings.form.type.walkIn")}</SelectItem>

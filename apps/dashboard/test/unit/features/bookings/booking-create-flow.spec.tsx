@@ -116,7 +116,7 @@ describe("BookingSummary — submit blocking & interactions", () => {
         clientName="Sara"
         serviceName="Counseling"
         employeeName="Ahmad"
-        type="in_person"
+        type="IN_PERSON"
         date="2026-06-01"
         startTime="09:00"
       />,
@@ -134,7 +134,7 @@ describe("BookingSummary — submit blocking & interactions", () => {
         clientName="Sara"
         serviceName="Counseling"
         employeeName="Ahmad"
-        type="in_person"
+        type="IN_PERSON"
         date="2026-06-01"
         startTime="09:00"
       />,
@@ -183,7 +183,7 @@ describe("BookingSummary — submit blocking & interactions", () => {
         clientName="Sara"
         serviceName="Counseling"
         employeeName="Ahmad"
-        type="in_person"
+        type="IN_PERSON"
         date="2026-06-01"
         startTime="09:00"
       />,
@@ -235,7 +235,7 @@ describe("useBookingFormState — internal state machine", () => {
       result.current.selectClient("cli-1", "Sara")
       result.current.selectService("svc-1", "Counseling")
       result.current.selectEmployee("emp-1", "Ahmad")
-      result.current.selectType("in_person")
+      result.current.selectType("IN_PERSON")
     })
     expect(result.current.isComplete).toBe(false)
   })
@@ -246,7 +246,7 @@ describe("useBookingFormState — internal state machine", () => {
       result.current.selectClient("cli-1", "Sara")
       result.current.selectService("svc-1", "Counseling")
       result.current.selectEmployee("emp-1", "Ahmad")
-      result.current.selectType("in_person")
+      result.current.selectType("IN_PERSON")
       result.current.selectDate("2026-06-01")
     })
     expect(result.current.isComplete).toBe(false)
@@ -258,7 +258,7 @@ describe("useBookingFormState — internal state machine", () => {
       result.current.selectClient("cli-1", "Sara")
       result.current.selectService("svc-1", "Counseling")
       result.current.selectEmployee("emp-1", "Ahmad")
-      result.current.selectType("in_person")
+      result.current.selectType("IN_PERSON")
       result.current.selectDate("2026-06-01")
       result.current.selectTime("09:00")
     })
@@ -271,7 +271,7 @@ describe("useBookingFormState — internal state machine", () => {
       result.current.selectClient("cli-1", "Sara")
       result.current.selectService("svc-1", "Counseling")
       result.current.selectEmployee("emp-1", "Ahmad")
-      result.current.selectType("in_person")
+      result.current.selectType("IN_PERSON")
       result.current.selectDate("2026-06-01")
       result.current.selectTime("09:00")
     })
@@ -285,7 +285,7 @@ describe("useBookingFormState — internal state machine", () => {
       result.current.selectClient("cli-1", "Sara")
       result.current.selectService("svc-1", "Counseling")
       result.current.selectEmployee("emp-1", "Ahmad")
-      result.current.selectType("in_person")
+      result.current.selectType("IN_PERSON")
       result.current.selectDate("2026-06-01")
       result.current.selectTime("09:00")
     })
@@ -299,7 +299,7 @@ describe("useBookingFormState — internal state machine", () => {
       result.current.selectClient("cli-1", "Sara")
       result.current.selectService("svc-1", "Counseling")
       result.current.selectEmployee("emp-1", "Ahmad")
-      result.current.selectType("in_person")
+      result.current.selectType("IN_PERSON")
       result.current.selectDate("2026-06-01")
       result.current.selectTime("09:00")
       result.current.setPayAtClinic(true)
@@ -309,7 +309,7 @@ describe("useBookingFormState — internal state machine", () => {
     expect(s.clientId).toBe("cli-1")
     expect(s.serviceId).toBe("svc-1")
     expect(s.employeeId).toBe("emp-1")
-    expect(s.type).toBe("in_person")
+    expect(s.type).toBe("IN_PERSON")
     expect(s.date).toBe("2026-06-01")
     expect(s.startTime).toBe("09:00")
     expect(s.payAtClinic).toBe(true)
@@ -322,7 +322,7 @@ describe("useBookingFormState — internal state machine", () => {
       result.current.selectClient("cli-2", "Nora")
       result.current.selectService("svc-2", "Family Therapy")
       result.current.selectEmployee("emp-2", "Layla")
-      result.current.selectType("online")
+      result.current.selectType("ONLINE")
       result.current.selectDate("2026-07-15")
       result.current.selectTime("14:30")
     })
@@ -330,7 +330,7 @@ describe("useBookingFormState — internal state machine", () => {
     expect(s.clientId).toBe("cli-2")
     expect(s.serviceId).toBe("svc-2")
     expect(s.employeeId).toBe("emp-2")
-    expect(s.type).toBe("online")
+    expect(s.type).toBe("ONLINE")
     expect(s.date).toBe("2026-07-15")
     expect(s.startTime).toBe("14:30")
     expect(s.payAtClinic).toBe(true)
@@ -343,7 +343,7 @@ describe("useBookingFormState — internal state machine", () => {
       result.current.selectClient("cli-1", "Sara")
       result.current.selectService("svc-1", "Counseling")
       result.current.selectEmployee("emp-1", "Ahmad")
-      result.current.selectType("in_person")
+      result.current.selectType("IN_PERSON")
       result.current.selectDate("2026-06-01")
       result.current.selectTime("09:00")
     })
@@ -365,7 +365,7 @@ describe("useBookingFormState — internal state machine", () => {
       result.current.selectClient("cli-1", "Sara")
       result.current.selectService("svc-1", "Counseling")
       result.current.selectEmployee("emp-1", "Ahmad")
-      result.current.selectType("in_person")
+      result.current.selectType("IN_PERSON")
       result.current.selectDate("2026-06-01")
       result.current.selectTime("09:00")
     })
@@ -387,18 +387,18 @@ describe("useBookingFormState — internal state machine", () => {
       result.current.selectClient("cli-1", "Sara")
       result.current.selectService("svc-1", "Counseling")
       result.current.selectEmployee("emp-1", "Ahmad")
-      result.current.selectType("in_person")
+      result.current.selectType("IN_PERSON")
       result.current.selectDate("2026-06-01")
       result.current.selectTime("09:00")
     })
     act(() => {
-      result.current.selectType("online")
+      result.current.selectType("ONLINE")
     })
     const s = result.current.state
     expect(s.clientId).toBe("cli-1")
     expect(s.serviceId).toBe("svc-1")
     expect(s.employeeId).toBe("emp-1")
-    expect(s.type).toBe("online")
+    expect(s.type).toBe("ONLINE")
     expect(s.date).toBeNull()
     expect(s.startTime).toBeNull()
   })
@@ -409,15 +409,15 @@ describe("useBookingFormState — internal state machine", () => {
       result.current.selectClient("cli-1", "Sara")
       result.current.selectService("svc-1", "Counseling")
       result.current.selectEmployee("emp-1", "Ahmad")
-      result.current.selectType("in_person")
+      result.current.selectType("IN_PERSON")
       result.current.selectDate("2026-06-01")
       result.current.selectTime("09:00")
     })
     act(() => {
-      result.current.selectDeliveryType("online")
+      result.current.selectDeliveryType("ONLINE")
     })
     const s = result.current.state
-    expect(s.deliveryType).toBe("online")
+    expect(s.deliveryType).toBe("ONLINE")
     expect(s.date).toBeNull()
     expect(s.startTime).toBeNull()
     expect(s.clientId).toBe("cli-1")

@@ -4,7 +4,10 @@ import { BullMqService } from './bull-mq.service';
 
 jest.mock('bullmq', () => ({
   Queue: jest.fn().mockImplementation(() => ({ close: jest.fn() })),
-  Worker: jest.fn().mockImplementation(() => ({ close: jest.fn() })),
+  Worker: jest.fn().mockImplementation(() => ({
+    close: jest.fn(),
+    on: jest.fn(),
+  })),
   QueueEvents: jest.fn().mockImplementation(() => ({ close: jest.fn() })),
 }));
 

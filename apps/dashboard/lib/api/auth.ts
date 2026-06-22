@@ -41,31 +41,14 @@ export async function login(
 }
 
 export async function requestDashboardOtp(identifier: string): Promise<{ success: boolean }> {
-  const res = await fetch(`/api/proxy/auth/otp/request-dashboard`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ identifier }),
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error((body as { message?: string }).message ?? 'Failed to send OTP')
-  }
-  return res.json()
+  // Delegates to the typed @sawaa/api-client module so the central envelope
+  // unwrap, refresh-mutex and CSRF behaviour are applied uniformly.
+  await authApi.requestDashboardOtp({ email: identifier })
+  return { success: true }
 }
 
 export async function verifyDashboardOtp(identifier: string, code: string): Promise<AuthResponse> {
-  const res = await fetch(`/api/proxy/auth/otp/verify-dashboard`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ identifier, code }),
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error((body as { message?: string }).message ?? 'Invalid or expired code')
-  }
-  const data = (await res.json()) as AuthResponse
+  const data = await authApi.verifyDashboardOtp({ email: identifier, code })
   persistAuth(data)
   return data
 }
@@ -125,41 +108,21 @@ export async function performStaffPasswordReset(
 }
 
 export async function lookupUser(identifier: string): Promise<{ exists: boolean; hasPassword: boolean; identifier: string; channel: string }> {
-  const res = await fetch(`/api/proxy/auth/lookup`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier }),
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error((body as { message?: string }).message ?? 'Failed to lookup user')
-  }
-  return res.json()
-}
-
-export async function requestPasswordReset(email: string): Promise<void> {
-  const res = await fetch('/api/proxy/auth/request-password-reset', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error((body as { message?: string }).message ?? 'Failed to send reset link')
+  // Backend returns { exists, emailVerificationRequired }; the dashboard
+  // callers only care about the boolean `exists` so we project to keep
+  // backwards compatibility with existing call sites.
+  const res = await authApi.lookupUser({ email: identifier })
+  return {
+    exists: res.exists,
+    hasPassword: res.exists, // best-effort: the user exists in the staff table
+    identifier,
+    channel: 'email',
   }
 }
 
-export async function performPasswordReset(token: string, newPassword: string): Promise<void> {
-  const res = await fetch('/api/proxy/auth/reset-password', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token, newPassword }),
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error((body as { message?: string }).message ?? 'Failed to reset password')
-  }
-}
+// Note: legacy requestPasswordReset/performPasswordReset were removed — the
+// dashboard uses the staff variants (requestStaffPasswordReset,
+// performStaffPasswordReset) via the @sawaa/api-client auth module.
 
 /**
  * @deprecated PII is no longer persisted to localStorage. This now returns

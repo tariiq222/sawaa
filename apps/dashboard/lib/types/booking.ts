@@ -12,7 +12,7 @@
 
 /* ─── Enums ─── */
 
-export type DeliveryType = "in_person" | "online"
+export type DeliveryType = "IN_PERSON" | "ONLINE"
 
 export type BookingType = "individual" | "group" | "walk_in"
 

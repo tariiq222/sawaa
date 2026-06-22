@@ -28,7 +28,7 @@ import {
   ScheduleProgramDto,
 } from '../../modules/bookings/enroll-in-program/enroll-in-program.dto';
 
-@ApiTags('Dashboard / Bookings')
+@ApiTags('Dashboard / Programs')
 @ApiBearerAuth()
 @ApiStandardResponses()
 @UseGuards(JwtGuard, CaslGuard)

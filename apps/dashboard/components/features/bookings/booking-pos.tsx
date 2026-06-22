@@ -65,7 +65,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   } = useBookingFormState()
 
   const handleSelectDeliveryType = (deliveryType: string) => {
-    selectDeliveryType(deliveryType.toLowerCase() as "in_person" | "online")
+    selectDeliveryType(deliveryType.toUpperCase() as "IN_PERSON" | "ONLINE")
     setOpenSection("datetime")
   }
 
@@ -131,8 +131,8 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
 
   // Summary strings for collapsed chips
   const deliveryTypeLabels: Record<string, string> = {
-    in_person: t("bookings.wizard.step.typeDuration.inPerson"),
-    online: t("bookings.wizard.step.typeDuration.online"),
+    IN_PERSON: t("bookings.wizard.step.typeDuration.inPerson"),
+    ONLINE: t("bookings.wizard.step.typeDuration.online"),
   }
   const summaries: Record<SectionId, string | null> = {
     client: state.clientName,
@@ -177,7 +177,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
       employeeId: state.employeeId,
       serviceId: state.serviceId,
       type: "individual" as const,
-      deliveryType: state.deliveryType.toLowerCase() as "in_person" | "online",
+      deliveryType: state.deliveryType,
       date: state.date,
       startTime: state.startTime,
       payAtClinic: state.payAtClinic,

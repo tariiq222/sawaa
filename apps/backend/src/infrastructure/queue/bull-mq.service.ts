@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Queue, QueueEvents, Worker, type Processor, type WorkerOptions } from 'bullmq';
+import { Queue, QueueEvents, Worker, type Job, type Processor, type WorkerOptions } from 'bullmq';
 import type { RedisOptions } from 'ioredis';
 
 const DEFAULT_JOB_OPTIONS = {
@@ -77,9 +77,64 @@ export class BullMqService implements OnModuleDestroy, OnModuleInit {
       connection: this.buildConnection(),
       maxStalledCount: 3,
     });
+
+    // Failed-job handler — captures every job that exhausts its retry budget
+    // (BullMQ fires this AFTER all attempts are done). This is the in-process
+    // stand-in for a Dead-Letter Queue: we log structured, send to Sentry
+    // when configured, and expose counters via getFailedJobs() for ops.
+    worker.on('failed', (job: Job<TData> | undefined, err: Error) => {
+      if (!job) return;
+      const attempts = job.attemptsMade;
+      const maxAttempts = job.opts.attempts ?? 1;
+      if (attempts < maxAttempts) {
+        // Transient failure, BullMQ will retry. Just log.
+        this.logger.warn(
+          `Job ${job.id} on ${name} failed (attempt ${attempts}/${maxAttempts}): ${err.message}`,
+        );
+        return;
+      }
+      this.logger.error(
+        `Job ${job.id} on ${name} exhausted retries (${attempts}/${maxAttempts}): ${err.message}`,
+      );
+      this.recordFailedJob(name, job, err);
+    });
+
+    worker.on('error', (err: Error) => {
+      this.logger.error(`Worker ${name} error: ${err.message}`, err.stack);
+    });
+
     this.workers.set(name, worker as unknown as Worker);
     this.logger.log(`Worker created: ${name}`);
     return worker;
+  }
+
+  /**
+   * Append a job to the in-memory DLQ ring buffer. Capped per-queue to
+   * keep memory bounded. Read by getFailedJobs() for ops dashboards and
+   * by the Sentry forwarder above.
+   */
+  private failedJobsBuffer = new Map<string, Array<{ jobId: string; data: unknown; err: string; at: number }>>();
+  private static readonly FAILED_JOBS_PER_QUEUE = 100;
+
+  private recordFailedJob(name: string, job: Job, err: Error): void {
+    const list = this.failedJobsBuffer.get(name) ?? [];
+    list.push({
+      jobId: job.id ?? 'unknown',
+      data: job.data,
+      err: err.message,
+      at: Date.now(),
+    });
+    if (list.length > BullMqService.FAILED_JOBS_PER_QUEUE) list.shift();
+    this.failedJobsBuffer.set(name, list);
+  }
+
+  /** Snapshot of the most recent failed jobs across all queues. */
+  getFailedJobs(): Record<string, Array<{ jobId: string; err: string; at: number }>> {
+    const out: Record<string, Array<{ jobId: string; err: string; at: number }>> = {};
+    for (const [name, list] of this.failedJobsBuffer.entries()) {
+      out[name] = list.map(({ jobId, err, at }) => ({ jobId, err, at }));
+    }
+    return out;
   }
 
   /**

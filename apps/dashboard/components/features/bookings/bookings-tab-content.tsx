@@ -151,8 +151,8 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
             placeholder: t("bookings.filters.delivery"),
             options: [
               { value: "all", label: t("bookings.filters.allDelivery") },
-              { value: "in_person", label: t("bookings.filters.inPerson") },
-              { value: "online", label: t("bookings.filters.online") },
+              { value: "IN_PERSON", label: t("bookings.filters.inPerson") },
+              { value: "ONLINE", label: t("bookings.filters.online") },
             ],
             onValueChange: (v) => setFilters({ delivery: v as typeof filters.delivery }),
           },

@@ -14,9 +14,9 @@ export interface BookingFormState {
   serviceName: string | null
   employeeId: string | null
   employeeName: string | null
-  deliveryType: 'in_person' | 'online' | null
+  deliveryType: 'IN_PERSON' | 'ONLINE' | null
   /** @deprecated Use deliveryType. Kept as a read-compatible alias during the refactor. */
-  type: 'in_person' | 'online' | null
+  type: 'IN_PERSON' | 'ONLINE' | null
   date: string | null      // ISO date YYYY-MM-DD
   startTime: string | null // HH:MM
   payAtClinic: boolean
@@ -164,7 +164,7 @@ export function useBookingFormState() {
   }, [])
 
   /** Selecting a delivery type resets datetime */
-  const selectDeliveryType = useCallback((deliveryType: 'in_person' | 'online') => {
+  const selectDeliveryType = useCallback((deliveryType: 'IN_PERSON' | 'ONLINE') => {
     setState((prev) => ({
       ...prev,
       deliveryType,

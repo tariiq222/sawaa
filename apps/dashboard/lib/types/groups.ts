@@ -2,7 +2,7 @@ export type GroupSchedulingMode = "fixed_date" | "on_capacity"
 export type GroupStatus = "open" | "awaiting_payment" | "confirmed" | "full" | "completed" | "cancelled"
 export type GroupEnrollmentStatus = "registered" | "payment_requested" | "confirmed" | "attended" | "expired" | "cancelled"
 export type GroupPaymentType = "FREE_HOLD" | "DEPOSIT" | "FULL_PAYMENT"
-export type DeliveryMode = "in_person" | "online"
+export type DeliveryMode = "IN_PERSON" | "ONLINE"
 
 export interface Group {
   id: string

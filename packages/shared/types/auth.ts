@@ -1,3 +1,12 @@
+/**
+ * Server-side / conceptual AuthUser shape.
+ *
+ * For the canonical user payload returned by /auth/login and /auth/me
+ * (mirroring the live backend controller), use `UserPayload` from
+ * `@sawaa/api-client` (it is the wire format the dashboard consumes).
+ * This `AuthUser` is a higher-level abstract used by long-lived
+ * shared types — keep them in sync when the backend shape changes.
+ */
 import type { UserGender } from '../enums/user';
 
 export interface AuthUser {

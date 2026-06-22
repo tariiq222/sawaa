@@ -29,10 +29,10 @@ describe("bookings api", () => {
 
   it("fetchBookings sends filters to /dashboard/bookings", async () => {
     getMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
-    await fetchBookings({ page: 1, status: "confirmed", type: "individual", deliveryType: "online" })
+    await fetchBookings({ page: 1, status: "confirmed", type: "individual", deliveryType: "ONLINE" })
     expect(getMock).toHaveBeenCalledWith(
       "/dashboard/bookings",
-      expect.objectContaining({ status: "confirmed", bookingType: "individual", deliveryType: "online" }),
+      expect.objectContaining({ status: "confirmed", bookingType: "individual", deliveryType: "ONLINE" }),
     )
   })
 
@@ -48,7 +48,7 @@ describe("bookings api", () => {
       serviceId: "svc-1",
       employeeId: "emp-1",
       type: "individual",
-      deliveryType: "in_person",
+      deliveryType: "IN_PERSON",
       date: "2026-04-01",
       startTime: "10:00",
     })

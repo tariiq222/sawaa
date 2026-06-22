@@ -82,3 +82,28 @@ if (process.env.SENTRY_DSN) {
     },
   });
 }
+
+// ─── Global error handlers ─────────────────────────────────────────────────
+// Catch promise rejections and synchronous exceptions that escape the Nest
+// pipeline. Without these, an unhandled rejection in a BullMQ worker or a
+// stray throw in a cron job leads to a silent crash. Both handlers report to
+// Sentry (when configured) and log with the standard logger so it shows up in
+// the same place as the rest of the application logs.
+process.on('unhandledRejection', (reason: unknown) => {
+  // eslint-disable-next-line no-console
+  console.error('[unhandledRejection]', reason instanceof Error ? (reason.stack ?? reason.message) : reason);
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)));
+  }
+});
+
+process.on('uncaughtException', (err: Error) => {
+  // eslint-disable-next-line no-console
+  console.error('[uncaughtException]', err.stack ?? err.message);
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(err);
+  }
+  // Do not exit immediately: Nest's shutdown hooks (enabled in main.ts) will
+  // close the HTTP server and BullMQ workers cleanly when the process is
+  // reaped. A force-exit here would skip the in-flight request drain.
+});

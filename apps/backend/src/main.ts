@@ -16,6 +16,7 @@ import { PrismaService } from './infrastructure/database';
 import { AppMetricsService } from './infrastructure/telemetry/app-metrics.service';
 import { configureCors } from './cors';
 import { setShuttingDown } from './common/shutdown.state';
+import { csrfMiddleware } from './common/middleware/csrf.middleware';
 
 async function bootstrap(): Promise<void> {
   // rawBody: true preserves the untouched request body buffer on req.rawBody,
@@ -29,6 +30,23 @@ async function bootstrap(): Promise<void> {
   app.use(helmet());
   app.use(cookieParser());
   app.use(express.json({ limit: '100kb' }));
+
+  // CSRF protection: applied to cookie-based auth endpoints (mobile-client,
+  // public with session cookie). Dashboard uses Bearer tokens which are
+  // CSRF-immune, so /api/v1/dashboard and /api/v1/auth are excluded.
+  app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (
+      req.path.startsWith('/api/v1/dashboard') ||
+      req.path.startsWith('/api/v1/auth') ||
+      req.path.startsWith('/api/v1/public/sms/webhooks') ||
+      req.path.startsWith('/api/v1/public/payment-webhook') ||
+      req.path.startsWith('/api/v1/public/health') ||
+      req.path.startsWith('/api/v1/public/metrics')
+    ) {
+      return next();
+    }
+    return csrfMiddleware(req, res, next);
+  });
   app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
   if (process.env.THROTTLER_DISABLED !== 'true') {

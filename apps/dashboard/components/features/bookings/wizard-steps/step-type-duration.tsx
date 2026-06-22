@@ -29,16 +29,14 @@ interface StepTypeDurationProps {
 /* ─── Helpers ─── */
 
 const DELIVERY_TYPE_META: Record<DeliveryType, { icon: IconSvgElement }> = {
-  in_person: { icon: Building01Icon },
-  online: { icon: VideoReplayIcon },
+  IN_PERSON: { icon: Building01Icon },
+  ONLINE: { icon: VideoReplayIcon },
 }
 
 function getTypeLabel(type: string, t: (key: string) => string): string {
   const map: Record<string, string> = {
     IN_PERSON: t("bookings.wizard.step.typeDuration.inPerson"),
     ONLINE: t("bookings.wizard.step.typeDuration.online"),
-    in_person: t("bookings.wizard.step.typeDuration.inPerson"),
-    online: t("bookings.wizard.step.typeDuration.online"),
   }
   return map[type] ?? map[type?.toUpperCase()] ?? type
 }
@@ -71,7 +69,7 @@ function TypeCard({
   onSelect: () => void
   t: (key: string) => string
 }) {
-  const type = serviceType.deliveryType.toLowerCase() as DeliveryType
+  const type = serviceType.deliveryType as DeliveryType
   const meta = DELIVERY_TYPE_META[type]
   const label = getTypeLabel(serviceType.deliveryType, t)
 
@@ -124,7 +122,7 @@ export function StepTypeDuration({
   }, [activeTypes, selectedType, onSelectType])
 
   const selectedServiceType = selectedType
-    ? activeTypes.find((st) => st.deliveryType.toLowerCase() === selectedType.toLowerCase())
+    ? activeTypes.find((st) => st.deliveryType === selectedType)
     : undefined
 
   if (isLoading) return <StepTypeDurationSkeleton />
@@ -148,7 +146,7 @@ export function StepTypeDuration({
               <TypeCard
                 key={st.id}
                 serviceType={st}
-                selected={selectedType?.toLowerCase() === st.deliveryType.toLowerCase()}
+                selected={selectedType === st.deliveryType}
                 onSelect={() => onSelectType(st.deliveryType)}
                 t={t}
               />
