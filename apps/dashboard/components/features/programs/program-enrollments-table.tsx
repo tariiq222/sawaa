@@ -21,7 +21,7 @@ export function ProgramEnrollmentsTable({
       columns={[
         {
           id: 'bookingNumber',
-          header: 'Ref',
+          header: t('programs.column.ref'),
           accessorFn: (e) => e.booking.bookingNumber as unknown as string,
           cell: ({ row }) => (
             <span className="font-mono">#{row.original.booking.bookingNumber}</span>
@@ -29,7 +29,7 @@ export function ProgramEnrollmentsTable({
         },
         {
           id: 'clientId',
-          header: 'Client',
+          header: t('programs.enrollment.client'),
           accessorFn: (e) => e.clientId,
           cell: ({ row }) => (
             <span className="text-sm">{row.original.clientId.slice(0, 8)}…</span>
@@ -37,23 +37,28 @@ export function ProgramEnrollmentsTable({
         },
         {
           id: 'status',
-          header: 'Status',
+          header: t('programs.column.status'),
           accessorFn: (e) => e.booking.status as unknown as string,
-          cell: ({ row }) => <span className="text-sm">{row.original.booking.status}</span>,
+          cell: ({ row }) => (
+            <span className="text-sm">
+              {t(`bookings.status.${String(row.original.booking.status).toLowerCase()}`)}
+            </span>
+          ),
         },
         {
           id: 'price',
-          header: 'Price',
+          header: t('programs.column.price'),
           accessorFn: (e) => e.booking.price,
           cell: ({ row }) => (
             <span className="tabular-nums text-sm">
-              {(Number(row.original.booking.price) / 100).toFixed(2)} {row.original.booking.currency}
+              {(Number(row.original.booking.price) / 100).toFixed(2)}{' '}
+              {t(`programs.currency.${row.original.booking.currency}`)}
             </span>
           ),
         },
         {
           id: 'enrolledAt',
-          header: 'Enrolled',
+          header: t('programs.enrollment.enrolledAt'),
           accessorFn: (e) => e.enrolledAt,
           cell: ({ row }) => (
             <span className="text-sm text-(--text-muted)">

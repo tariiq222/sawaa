@@ -6,9 +6,11 @@ import { Input, Badge } from '@sawaa/ui';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Cancel01Icon, Search01Icon } from '@hugeicons/core-free-icons';
 import { useEmployees } from '@/hooks/use-employees';
+import { useLocale } from '@/components/locale-provider';
 import type { CreateProgramFormValues } from '@/lib/schemas/program.schema';
 
 export function ProgramFormSupervisors({ form }: { form: UseFormReturn<CreateProgramFormValues> }) {
+  const { t } = useLocale();
   const [search, setSearch] = useState('');
   const employees = useEmployees();
   const employeesList = (employees.employees ?? []) as Array<{ id: string; name?: string; specialty?: string }>;
@@ -28,13 +30,13 @@ export function ProgramFormSupervisors({ form }: { form: UseFormReturn<CreatePro
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-(--text-muted)">Pick one or more supervisors to lead the sessions.</p>
+      <p className="text-sm text-(--text-muted)">{t('programs.form.supervisors.help')}</p>
       <div className="relative">
         <HugeiconsIcon icon={Search01Icon} className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-(--text-muted)" />
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name"
+          placeholder={t('programs.form.supervisors.search')}
           className="ps-9"
         />
       </div>
@@ -46,7 +48,7 @@ export function ProgramFormSupervisors({ form }: { form: UseFormReturn<CreatePro
               <span>{e.name}</span>
               <button
                 type="button"
-                aria-label="remove"
+                aria-label={t('common.remove')}
                 onClick={() => toggle(e.id)}
                 className="ms-1"
               >

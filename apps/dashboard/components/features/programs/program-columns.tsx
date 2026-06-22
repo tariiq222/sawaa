@@ -7,13 +7,14 @@ import { ProgramStatusBadge } from './program-status-badge';
 
 interface ProgramColumnsProps {
   onSelect: (id: string) => void;
+  t: (key: string) => string;
 }
 
-export function programColumns({ onSelect }: ProgramColumnsProps) {
+export function programColumns({ onSelect, t }: ProgramColumnsProps) {
   return [
     {
       id: 'ref',
-      header: 'Ref',
+      header: t('programs.column.ref'),
       accessorFn: (p: ProgramSummary) => p.ref,
       cell: ({ row }: { row: { original: ProgramSummary } }) => (
         <span className="font-mono text-(--text-muted)">#{row.original.ref}</span>
@@ -21,7 +22,7 @@ export function programColumns({ onSelect }: ProgramColumnsProps) {
     },
     {
       id: 'name',
-      header: 'Name',
+      header: t('programs.column.name'),
       accessorFn: (p: ProgramSummary) => p.nameAr,
       cell: ({ row }: { row: { original: ProgramSummary } }) => (
         <Button
@@ -35,11 +36,11 @@ export function programColumns({ onSelect }: ProgramColumnsProps) {
     },
     {
       id: 'schedule',
-      header: 'Schedule',
+      header: t('programs.column.schedule'),
       accessorFn: (p: ProgramSummary) => p.daysCount,
       cell: ({ row }: { row: { original: ProgramSummary } }) => (
         <span className="text-sm text-(--text-muted)">
-          {row.original.daysCount}d · {row.original.hoursPerDay}h
+          {row.original.daysCount} {t('programs.unit.day')} · {row.original.hoursPerDay} {t('programs.unit.hour')}
           {row.original.startDate
             ? ` · ${new Date(row.original.startDate).toLocaleDateString()}`
             : ''}
@@ -48,7 +49,7 @@ export function programColumns({ onSelect }: ProgramColumnsProps) {
     },
     {
       id: 'capacity',
-      header: 'Capacity',
+      header: t('programs.column.capacity'),
       accessorFn: (p: ProgramSummary) => p.enrolledCount,
       cell: ({ row }: { row: { original: ProgramSummary } }) => (
         <span className="tabular-nums text-sm">
@@ -58,28 +59,30 @@ export function programColumns({ onSelect }: ProgramColumnsProps) {
     },
     {
       id: 'price',
-      header: 'Price',
+      header: t('programs.column.price'),
       accessorFn: (p: ProgramSummary) => p.price,
       cell: ({ row }: { row: { original: ProgramSummary } }) => (
         <span className="tabular-nums text-sm">
-          {halalasStringToSar(row.original.price).toFixed(2)} {row.original.currency}
+          {halalasStringToSar(row.original.price).toFixed(2)}{' '}
+          {t(`programs.currency.${row.original.currency}`)}
         </span>
       ),
     },
     {
       id: 'status',
-      header: 'Status',
+      header: t('programs.column.status'),
       cell: ({ row }: { row: { original: ProgramSummary } }) => (
         <ProgramStatusBadge
           status={row.original.status}
           enrolledCount={row.original.enrolledCount}
           maxParticipants={row.original.maxParticipants}
+          t={t}
         />
       ),
     },
     {
       id: 'isPublic',
-      header: 'Public',
+      header: t('programs.column.isPublic'),
       cell: ({ row }: { row: { original: ProgramSummary } }) =>
         row.original.isPublic ? (
           <span className="text-xs text-(--text-success)">●</span>
@@ -89,7 +92,7 @@ export function programColumns({ onSelect }: ProgramColumnsProps) {
     },
     {
       id: 'createdAt',
-      header: 'Created',
+      header: t('programs.column.createdAt'),
       accessorFn: (p: ProgramSummary) => p.createdAt,
       cell: ({ row }: { row: { original: ProgramSummary } }) => (
         <span className="text-sm text-(--text-muted)">

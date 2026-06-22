@@ -474,6 +474,7 @@ export const arMisc: Record<string, string> = {
   // — Shared UI —
   "common.sarAlt": "ريال",
   "common.removeColor": "إزالة اللون",
+  "common.remove": "إزالة",
 
   // — Forgot Password —
   "forgotPassword.title": "نسيت كلمة المرور",

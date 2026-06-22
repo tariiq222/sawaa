@@ -7,12 +7,13 @@ interface ProgramStatusBadgeProps {
   status: string;
   enrolledCount: number;
   maxParticipants: number;
+  t: (key: string) => string;
 }
 
-export function ProgramStatusBadge({ status, enrolledCount, maxParticipants }: ProgramStatusBadgeProps) {
+export function ProgramStatusBadge({ status, enrolledCount, maxParticipants, t }: ProgramStatusBadgeProps) {
   const full = isFullBadge(enrolledCount, maxParticipants);
-  if (full) return <Badge variant="warning">مكتمل العدد</Badge>;
-  return <Badge variant={statusVariant(status)}>{status}</Badge>;
+  if (full) return <Badge variant="warning">{t('programs.fullBadge')}</Badge>;
+  return <Badge variant={statusVariant(status)}>{t(`programs.status.${status}`)}</Badge>;
 }
 
 function statusVariant(status: string): 'default' | 'success' | 'warning' | 'destructive' | 'secondary' {

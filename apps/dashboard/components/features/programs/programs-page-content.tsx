@@ -25,8 +25,8 @@ export function ProgramsPageContent({
   );
   const { data, isLoading, isError } = usePrograms(queryArg);
   const columns = useMemo(
-    () => programColumns({ onSelect: onSelect ?? (() => undefined) }),
-    [onSelect],
+    () => programColumns({ onSelect: onSelect ?? (() => undefined), t }),
+    [onSelect, t],
   );
 
   if (isError) {

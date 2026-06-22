@@ -44,6 +44,7 @@ export function ProgramDetailPage({ id }: { id: string }) {
           status={program.status}
           enrolledCount={program.enrolledCount}
           maxParticipants={program.maxParticipants}
+          t={t}
         />
       </header>
 
@@ -72,7 +73,7 @@ export function ProgramDetailPage({ id }: { id: string }) {
 
       <div className="grid gap-4 md:grid-cols-3">
         <section className="rounded-lg border border-(--border) bg-(--surface) p-4">
-          <h3 className="mb-2 text-sm font-medium text-(--text-muted)">Schedule</h3>
+          <h3 className="mb-2 text-sm font-medium text-(--text-muted)">{t('programs.column.schedule')}</h3>
           <dl className="space-y-1 text-sm">
             <div className="flex justify-between">
               <dt className="text-(--text-muted)">{t('programs.detail.daysCount')}</dt>
@@ -96,18 +97,18 @@ export function ProgramDetailPage({ id }: { id: string }) {
             <span className="text-base text-(--text-muted)"> / {program.maxParticipants}</span>
           </p>
           <p className="mt-1 text-xs text-(--text-muted)">
-            {t('programs.detail.enrollmentCount')} · min {program.minParticipants}
+            {t('programs.detail.enrollmentCount')} · {t('programs.detail.min')} {program.minParticipants}
           </p>
         </section>
 
         <section className="rounded-lg border border-(--border) bg-(--surface) p-4">
           <h3 className="mb-2 text-sm font-medium text-(--text-muted)">{t('programs.column.price')}</h3>
           <p className="text-2xl font-semibold tabular-nums">
-            {halalasStringToSar(program.price).toFixed(2)} {program.currency}
+            {halalasStringToSar(program.price).toFixed(2)} {t(`programs.currency.${program.currency}`)}
           </p>
           <p className="mt-1 text-xs text-(--text-muted)">
             {program.depositEnabled
-              ? `${t('programs.detail.depositEnabled')} · ${halalasStringToSar(program.depositAmount ?? '0').toFixed(2)} ${program.currency}`
+              ? `${t('programs.detail.depositEnabled')} · ${halalasStringToSar(program.depositAmount ?? '0').toFixed(2)} ${t(`programs.currency.${program.currency}`)}`
               : t('programs.detail.depositDisabled')}
           </p>
           <p className="mt-1 text-xs text-(--text-muted)">

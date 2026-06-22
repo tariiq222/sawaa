@@ -2,15 +2,17 @@
 
 import { type UseFormReturn } from 'react-hook-form';
 import { Input } from '@sawaa/ui';
+import { useLocale } from '@/components/locale-provider';
 import type { CreateProgramFormValues } from '@/lib/schemas/program.schema';
 
 export function ProgramFormDeposit({ form }: { form: UseFormReturn<CreateProgramFormValues> }) {
+  const { t } = useLocale();
   const depositEnabled = form.watch('depositEnabled');
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <label className="block md:col-span-1">
-        <span className="mb-1 block text-sm font-medium">Price (SAR)</span>
+        <span className="mb-1 block text-sm font-medium">{t('programs.form.field.priceSar')}</span>
         <Input
           type="number"
           min={0}
@@ -27,11 +29,11 @@ export function ProgramFormDeposit({ form }: { form: UseFormReturn<CreateProgram
           {...form.register('depositEnabled')}
           className="size-4"
         />
-        <span className="text-sm font-medium">Enable deposit</span>
+        <span className="text-sm font-medium">{t('programs.form.field.depositEnabled')}</span>
       </label>
       {depositEnabled && (
         <label className="block md:col-span-1">
-          <span className="mb-1 block text-sm font-medium">Deposit (SAR)</span>
+          <span className="mb-1 block text-sm font-medium">{t('programs.form.field.depositSar')}</span>
           <Input
             type="number"
             min={0}

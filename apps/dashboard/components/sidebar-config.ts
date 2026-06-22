@@ -37,6 +37,7 @@ export interface NavGroup {
 export const operationsNav: NavItem[] = [
   { titleKey: "nav.dashboard", href: "/", icon: Home01Icon },
   { titleKey: "nav.bookings", href: "/bookings", icon: Calendar03Icon, permission: "booking:read" },
+  { titleKey: "nav.programs", href: "/programs", icon: MentoringIcon, permission: "service:read" },
   { titleKey: "nav.clients", href: "/clients", icon: UserMultiple02Icon, permission: "client:read" },
   { titleKey: "nav.payments", href: "/payments", icon: MoneyBag02Icon, permission: "payment:read" },
   { titleKey: "nav.invoices", href: "/invoices", icon: DocumentAttachmentIcon, permission: "payment:read" },
@@ -52,7 +53,6 @@ export const catalogNav: NavItem[] = [
   { titleKey: "nav.bundles", href: "/bundles", icon: Package01Icon, permission: "service:read" },
   { titleKey: "nav.categories", href: "/categories", icon: Layers01Icon, permission: "category:read" },
   { titleKey: "nav.departments", href: "/departments", icon: Building06Icon, permission: "department:read" },
-  { titleKey: "nav.programs", href: "/programs", icon: MentoringIcon, permission: "service:read" },
   { titleKey: "nav.employees", href: "/employees", icon: Stethoscope02Icon, permission: "employee:read" },
 ] 
 

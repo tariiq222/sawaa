@@ -2,11 +2,13 @@
 
 import { type UseFormReturn } from 'react-hook-form';
 import { Input, Textarea } from '@sawaa/ui';
+import { useLocale } from '@/components/locale-provider';
 import { useDepartmentOptions } from '@/hooks/use-departments';
 import { useBranches } from '@/hooks/use-branches';
 import type { CreateProgramFormValues } from '@/lib/schemas/program.schema';
 
 export function ProgramFormBasics({ form }: { form: UseFormReturn<CreateProgramFormValues> }) {
+  const { t } = useLocale();
   const departments = useDepartmentOptions();
   const branches = useBranches();
   const deptList = (departments.options ?? []) as Array<{ id: string; nameAr?: string }>;
@@ -14,14 +16,14 @@ export function ProgramFormBasics({ form }: { form: UseFormReturn<CreateProgramF
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <Field label="Name (Arabic)" error={form.formState.errors.nameAr?.message}>
+      <Field label={t('programs.form.field.nameAr')} error={form.formState.errors.nameAr?.message}>
         <Input {...form.register('nameAr')} />
       </Field>
-      <Field label="Name (English)">
+      <Field label={t('programs.form.field.nameEn')}>
         <Input {...form.register('nameEn')} />
       </Field>
 
-      <Field label="Department" error={form.formState.errors.departmentId?.message}>
+      <Field label={t('programs.form.field.department')} error={form.formState.errors.departmentId?.message}>
         <select
           {...form.register('departmentId')}
           className="w-full rounded border border-(--border) bg-(--surface) px-3 py-2 text-sm"
@@ -33,7 +35,7 @@ export function ProgramFormBasics({ form }: { form: UseFormReturn<CreateProgramF
         </select>
       </Field>
 
-      <Field label="Branch" error={form.formState.errors.branchId?.message}>
+      <Field label={t('programs.form.field.branch')} error={form.formState.errors.branchId?.message}>
         <select
           {...form.register('branchId')}
           className="w-full rounded border border-(--border) bg-(--surface) px-3 py-2 text-sm"
@@ -46,12 +48,12 @@ export function ProgramFormBasics({ form }: { form: UseFormReturn<CreateProgramF
       </Field>
 
       <div className="md:col-span-2">
-        <Field label="Description (Arabic)">
+        <Field label={t('programs.form.field.descriptionAr')}>
           <Textarea rows={3} {...form.register('descriptionAr')} />
         </Field>
       </div>
       <div className="md:col-span-2">
-        <Field label="Description (English)">
+        <Field label={t('programs.form.field.descriptionEn')}>
           <Textarea rows={3} {...form.register('descriptionEn')} />
         </Field>
       </div>

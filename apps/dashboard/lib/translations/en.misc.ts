@@ -474,6 +474,7 @@ export const enMisc: Record<string, string> = {
   // — Shared UI —
   "common.sarAlt": "Riyal",
   "common.removeColor": "Remove color",
+  "common.remove": "Remove",
 
   // — Forgot Password —
   "forgotPassword.title": "Forgot Password",
