@@ -90,7 +90,6 @@ if (process.env.SENTRY_DSN) {
 // Sentry (when configured) and log with the standard logger so it shows up in
 // the same place as the rest of the application logs.
 process.on('unhandledRejection', (reason: unknown) => {
-  // eslint-disable-next-line no-console
   console.error('[unhandledRejection]', reason instanceof Error ? (reason.stack ?? reason.message) : reason);
   if (process.env.SENTRY_DSN) {
     Sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)));
@@ -98,7 +97,6 @@ process.on('unhandledRejection', (reason: unknown) => {
 });
 
 process.on('uncaughtException', (err: Error) => {
-  // eslint-disable-next-line no-console
   console.error('[uncaughtException]', err.stack ?? err.message);
   if (process.env.SENTRY_DSN) {
     Sentry.captureException(err);
