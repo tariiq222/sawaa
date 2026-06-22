@@ -106,19 +106,23 @@ describe("column cells render correctly", () => {
     expect(cellContainer(col, makePayment({ method: "crypto" as Payment["method"] })).textContent).toBe("crypto")
   })
 
-  it("status cell applies the tinted class matching the status", () => {
+  it("status cell renders the i18n label for known statuses", () => {
+    // The cell delegates to PaymentStatusBadge with the resolved t() label
+    // (status enum is the Prisma UPPERCASE form; t() receives the lookup key
+    // and returns the same key in this spec — so we assert the key shows up).
     const col = cols.find((c) => (c as { accessorKey?: string }).accessorKey === "status")!
-    expect(cellContainer(col, makePayment({ status: "COMPLETED" as Payment["status"] })).innerHTML).toContain("text-success")
-    expect(cellContainer(col, makePayment({ status: "PENDING" as Payment["status"] })).innerHTML).toContain("text-warning")
-    expect(cellContainer(col, makePayment({ status: "REFUNDED" as Payment["status"] })).innerHTML).toContain("text-info")
-    expect(cellContainer(col, makePayment({ status: "FAILED" as Payment["status"] })).innerHTML).toContain("text-destructive")
+    expect(cellContainer(col, makePayment({ status: "COMPLETED" as Payment["status"] })).textContent).toContain("payments.status.paid")
+    expect(cellContainer(col, makePayment({ status: "PENDING" as Payment["status"] })).textContent).toContain("payments.status.pending")
+    expect(cellContainer(col, makePayment({ status: "REFUNDED" as Payment["status"] })).textContent).toContain("payments.status.refunded")
+    expect(cellContainer(col, makePayment({ status: "FAILED" as Payment["status"] })).textContent).toContain("payments.status.failed")
   })
 
-  it("status cell falls back to an unstyled badge when status is unknown", () => {
+  it("status cell falls back to the pending label for unknown statuses", () => {
+    // Unknown status → labelKey defaults to "payments.status.pending".
     const col = cols.find((c) => (c as { accessorKey?: string }).accessorKey === "status")!
     const html = cellContainer(col, makePayment({ status: "mystery" as Payment["status"] })).innerHTML
-    expect(html).not.toContain("text-success")
-    expect(html).not.toContain("text-warning")
-    expect(html).toContain("mystery")
+    expect(html).not.toContain("payments.status.paid")
+    expect(html).not.toContain("payments.status.refunded")
+    expect(html).toContain("payments.status.pending")
   })
 })

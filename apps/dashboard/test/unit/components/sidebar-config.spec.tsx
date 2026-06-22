@@ -41,7 +41,7 @@ describe("SidebarConfig — persona groups", () => {
 
   it("operationsNav contains front-desk items", () => {
     expect(allHrefs).toContain("/bookings")
-    expect(allHrefs).toContain("/group-sessions")
+    expect(allHrefs).toContain("/programs")
     expect(allHrefs).toContain("/clients")
   })
 

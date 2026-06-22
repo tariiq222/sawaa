@@ -14,6 +14,7 @@ const valid = {
   email: "ali@clinic.test",
   specialty: "Cardiology",
   isActive: true,
+  isPublic: false,
 }
 
 describe("createEmployeeSchema", () => {

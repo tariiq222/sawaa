@@ -183,7 +183,11 @@ export function FilterBar({
                 </div>
               </>
             )}
+          </div>
+        )}
 
+        {(hasFilters || resultCount !== undefined) && (
+          <div className="flex flex-wrap items-center gap-2">
             {hasFilters && (
               <Button
                 variant="ghost"

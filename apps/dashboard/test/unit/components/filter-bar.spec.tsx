@@ -100,6 +100,7 @@ describe("FilterBar", () => {
         hasFilters={true}
         onReset={onReset}
         search={{ value: "test", onChange: vi.fn() }}
+        selects={[]}
       />,
     )
 
@@ -125,6 +126,7 @@ describe("FilterBar", () => {
         hasFilters={true}
         onReset={onReset}
         search={{ value: "test", onChange: vi.fn() }}
+        selects={[]}
       />,
     )
 
@@ -148,6 +150,7 @@ describe("FilterBar", () => {
         {...baseProps}
         search={{ value: "", onChange: vi.fn() }}
         resultCount={<span>25 نتيجة</span>}
+        selects={[]}
       />,
     )
     expect(screen.getByText("25 نتيجة")).toBeInTheDocument()
