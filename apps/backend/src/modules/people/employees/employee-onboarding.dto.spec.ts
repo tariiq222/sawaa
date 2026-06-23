@@ -3,10 +3,11 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { EmployeeOnboardingDto, EmployeeOnboardingProfileDto } from './employee-onboarding.dto';
 
-async function validateDto(plain: Record<string, unknown>, Cls = EmployeeOnboardingDto) {
-  const dto = plainToInstance(Cls, plain);
-  return validate(dto);
-}
+const validateDto = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(EmployeeOnboardingDto, plain));
+
+const validateProfile = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(EmployeeOnboardingProfileDto, plain));
 
 describe('EmployeeOnboardingDto', () => {
   it('accepts a minimal valid payload (only step)', async () => {
@@ -125,7 +126,7 @@ describe('EmployeeOnboardingDto', () => {
 
 describe('EmployeeOnboardingProfileDto', () => {
   it('accepts an empty payload (all fields optional)', async () => {
-    const errors = await validateDto({}, EmployeeOnboardingProfileDto);
+    const errors = await validateProfile({});
     expect(errors).toHaveLength(0);
   });
 });

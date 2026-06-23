@@ -7,21 +7,26 @@ import {
   UpdateAvailabilityDto,
 } from './update-availability.dto';
 
-async function validateDto(plain: Record<string, unknown>, Cls = UpdateAvailabilityDto) {
-  const dto = plainToInstance(Cls, plain);
-  return validate(dto);
+type AnyCtor = new (...args: never[]) => object;
+
+async function validateDto<T extends object>(plain: Record<string, unknown>, Cls: AnyCtor) {
+  const dto = plainToInstance(Cls as new () => T, plain);
+  return validate(dto as object);
 }
+
+const validateDefault = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(UpdateAvailabilityDto, plain));
 
 describe('UpdateAvailabilityDto', () => {
   it('accepts a valid payload with only windows', async () => {
-    const errors = await validateDto({
+    const errors = await validateDefault({
       windows: [{ dayOfWeek: 1, startTime: '09:00', endTime: '17:00' }],
     });
     expect(errors).toHaveLength(0);
   });
 
   it('accepts a valid payload with windows and exceptions', async () => {
-    const errors = await validateDto({
+    const errors = await validateDefault({
       windows: [
         { dayOfWeek: 0, startTime: '09:00', endTime: '12:00' },
         { dayOfWeek: 0, startTime: '13:00', endTime: '17:00', isActive: true },
@@ -38,52 +43,52 @@ describe('UpdateAvailabilityDto', () => {
   });
 
   it('rejects a missing windows array', async () => {
-    const errors = await validateDto({});
+    const errors = await validateDefault({});
     expect(errors.some((e) => e.property === 'windows')).toBe(true);
   });
 
   it('rejects a non-array windows field', async () => {
-    const errors = await validateDto({ windows: 'not-an-array' });
+    const errors = await validateDefault({ windows: 'not-an-array' });
     expect(errors.some((e) => e.property === 'windows')).toBe(true);
   });
 
   it('rejects a window with dayOfWeek < 0', async () => {
-    const errors = await validateDto({
+    const errors = await validateDefault({
       windows: [{ dayOfWeek: -1, startTime: '09:00', endTime: '17:00' }],
     });
     expect(errors.some((e) => e.property === 'windows')).toBe(true);
   });
 
   it('rejects a window with dayOfWeek > 6', async () => {
-    const errors = await validateDto({
+    const errors = await validateDefault({
       windows: [{ dayOfWeek: 7, startTime: '09:00', endTime: '17:00' }],
     });
     expect(errors.some((e) => e.property === 'windows')).toBe(true);
   });
 
   it('accepts a window with HH:MM:SS startTime (extended format)', async () => {
-    const errors = await validateDto({
+    const errors = await validateDefault({
       windows: [{ dayOfWeek: 1, startTime: '09:00:00', endTime: '17:00:00' }],
     });
     expect(errors).toHaveLength(0);
   });
 
   it('rejects a window with a non-time startTime', async () => {
-    const errors = await validateDto({
+    const errors = await validateDefault({
       windows: [{ dayOfWeek: 1, startTime: 'nine', endTime: '17:00' }],
     });
     expect(errors.some((e) => e.property === 'windows')).toBe(true);
   });
 
   it('rejects a non-boolean isActive on a window', async () => {
-    const errors = await validateDto({
+    const errors = await validateDefault({
       windows: [{ dayOfWeek: 1, startTime: '09:00', endTime: '17:00', isActive: 'yes' }],
     });
     expect(errors.some((e) => e.property === 'windows')).toBe(true);
   });
 
   it('rejects an exception with non-ISO startDate', async () => {
-    const errors = await validateDto({
+    const errors = await validateDefault({
       windows: [{ dayOfWeek: 1, startTime: '09:00', endTime: '17:00' }],
       exceptions: [{ startDate: 'yesterday', endDate: '2026-05-07T09:00:00.000Z' }],
     });
@@ -91,7 +96,7 @@ describe('UpdateAvailabilityDto', () => {
   });
 
   it('rejects an exception with non-ISO endDate', async () => {
-    const errors = await validateDto({
+    const errors = await validateDefault({
       windows: [{ dayOfWeek: 1, startTime: '09:00', endTime: '17:00' }],
       exceptions: [{ startDate: '2026-05-01T09:00:00.000Z', endDate: 'soon' }],
     });
