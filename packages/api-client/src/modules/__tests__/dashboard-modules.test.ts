@@ -10,8 +10,17 @@ import {
 } from '../bookings'
 import {
   assignEmployeeService,
+  createEmployee,
+  createEmployeeVacation,
+  deleteEmployee,
+  deleteEmployeeVacation,
+  getEmployee,
+  getEmployeeBreaks,
+  getEmployeeServices,
+  getEmployeeVacations,
   listEmployees,
   setEmployeeBreaks,
+  updateEmployee,
   updateEmployeeService,
 } from '../employees'
 import {
@@ -212,7 +221,101 @@ describe('employees module', () => {
     })
   })
 
-  it('throws ApiError on employee list failure', async () => {
+  it('GETs /dashboard/people/employees/:id (bearer token attached)', async () => {
+    await getEmployee('emp-1')
+    const [url, init] = lastRequest()
+    expect(url).toBe('http://api.test/dashboard/people/employees/emp-1')
+    expect(init?.method).toBeUndefined()
+    expect(authHeader(init)).toBe('Bearer access.jwt')
+  })
+
+  it('POSTs a new employee with the payload', async () => {
+    await createEmployee({
+      firstName: 'Layla',
+      lastName: 'Hassan',
+      email: 'layla@sawaa.app',
+    })
+    const [url, init] = lastRequest()
+    expect(url).toBe('http://api.test/dashboard/people/employees')
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(init?.body as string)).toEqual({
+      firstName: 'Layla',
+      lastName: 'Hassan',
+      email: 'layla@sawaa.app',
+    })
+  })
+
+  it('PATCHes an employee update with the payload', async () => {
+    await updateEmployee('emp-1', { firstName: 'Laila' })
+    const [url, init] = lastRequest()
+    expect(url).toBe('http://api.test/dashboard/people/employees/emp-1')
+    expect(init?.method).toBe('PATCH')
+    expect(JSON.parse(init?.body as string)).toEqual({ firstName: 'Laila' })
+  })
+
+  it('DELETEs an employee (no body)', async () => {
+    await deleteEmployee('emp-1')
+    const [url, init] = lastRequest()
+    expect(url).toBe('http://api.test/dashboard/people/employees/emp-1')
+    expect(init?.method).toBe('DELETE')
+    expect(init?.body).toBeUndefined()
+  })
+
+  it('GETs /dashboard/people/employees/:id/breaks', async () => {
+    await getEmployeeBreaks('emp-1')
+    const [url, init] = lastRequest()
+    expect(url).toBe('http://api.test/dashboard/people/employees/emp-1/breaks')
+    expect(init?.method).toBeUndefined()
+    expect(authHeader(init)).toBe('Bearer access.jwt')
+  })
+
+  it('GETs /dashboard/people/employees/:id/vacations', async () => {
+    await getEmployeeVacations('emp-1')
+    const [url, init] = lastRequest()
+    expect(url).toBe(
+      'http://api.test/dashboard/people/employees/emp-1/vacations',
+    )
+    expect(init?.method).toBeUndefined()
+  })
+
+  it('POSTs a new vacation for an employee', async () => {
+    await createEmployeeVacation('emp-1', {
+      dateFrom: '2026-07-01',
+      dateTo: '2026-07-15',
+      reason: 'annual leave',
+    })
+    const [url, init] = lastRequest()
+    expect(url).toBe(
+      'http://api.test/dashboard/people/employees/emp-1/vacations',
+    )
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(init?.body as string)).toEqual({
+      dateFrom: '2026-07-01',
+      dateTo: '2026-07-15',
+      reason: 'annual leave',
+    })
+  })
+
+  it('DELETEs a vacation', async () => {
+    await deleteEmployeeVacation('emp-1', 'vac-1')
+    const [url, init] = lastRequest()
+    expect(url).toBe(
+      'http://api.test/dashboard/people/employees/emp-1/vacations/vac-1',
+    )
+    expect(init?.method).toBe('DELETE')
+  })
+
+  it('GETs /dashboard/people/employees/:id/services', async () => {
+    await getEmployeeServices('emp-1')
+    const [url, init] = lastRequest()
+    expect(url).toBe(
+      'http://api.test/dashboard/people/employees/emp-1/services',
+    )
+    expect(init?.method).toBeUndefined()
+    expect(authHeader(init)).toBe('Bearer access.jwt')
+  })
+
+  it('throws ApiError on employee delete failure', async () => {
     vi.mocked(fetch).mockReset()
     vi.mocked(fetch).mockResolvedValueOnce(
       errJson({ error: 'FORBIDDEN', message: 'No access' }, 403),
