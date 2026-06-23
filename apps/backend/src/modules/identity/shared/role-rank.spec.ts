@@ -83,17 +83,36 @@ describe('role-rank', () => {
       ).toThrow('Only super admins can grant SUPER_ADMIN');
     });
 
-    // BUG (see final report): the second guard's `<=` comparison catches
-    // the SUPER_ADMIN→SUPER_ADMIN case (100 <= 100 is true) and throws,
-    // even though the first guard's whole point is that a super admin is
-    // the ONLY actor who may grant SUPER_ADMIN. So in production today,
-    // no one — not even a super admin — can grant SUPER_ADMIN via this
-    // helper. The test below documents current behavior; the production
-    // unit must be patched (likely changing `<=` to `<`) before the
-    // dashboard's role-management UI can ever create another super admin.
-    it('CURRENTLY throws when a super admin tries to grant SUPER_ADMIN (BUG — see report)', () => {
+    // A super admin is the ONLY actor allowed to grant SUPER_ADMIN. The first
+    // guard vets that, and the "at or above your rank" guard carves this single
+    // case out so another super admin can actually be minted. (Previously the
+    // `<=` comparison caught 100 <= 100 and threw, making it impossible for
+    // anyone — even a super admin — to grant SUPER_ADMIN.)
+    it('allows a super admin to grant SUPER_ADMIN', () => {
       expect(() =>
         assertCanAssignRole({ role: 'SUPER_ADMIN', isSuperAdmin: true }, 'SUPER_ADMIN'),
+      ).not.toThrow();
+      // The super-admin lift also applies when the actor's built-in role is lower.
+      expect(() =>
+        assertCanAssignRole({ role: 'ADMIN', isSuperAdmin: true }, 'SUPER_ADMIN'),
+      ).not.toThrow();
+    });
+
+    // Regression: the SUPER_ADMIN carve-out must NOT leak into other roles. A
+    // non-super-admin still cannot grant SUPER_ADMIN, and no actor may grant a
+    // (non-SUPER_ADMIN) role at or above their own rank.
+    it('still blocks granting any role at or above the actor rank (carve-out is SUPER_ADMIN-only)', () => {
+      // Non-super-admin SUPER_ADMIN-by-role: blocked by the first guard.
+      expect(() =>
+        assertCanAssignRole({ role: 'SUPER_ADMIN', isSuperAdmin: false }, 'SUPER_ADMIN'),
+      ).toThrow('Only super admins can grant SUPER_ADMIN');
+      // Equal rank, non-SUPER_ADMIN target: still horizontal escalation.
+      expect(() =>
+        assertCanAssignRole({ role: 'ADMIN', isSuperAdmin: false }, 'ADMIN'),
+      ).toThrow('Cannot assign a role at or above your rank');
+      // Higher rank, non-SUPER_ADMIN target: still vertical escalation.
+      expect(() =>
+        assertCanAssignRole({ role: 'ACCOUNTANT', isSuperAdmin: false }, 'ADMIN'),
       ).toThrow('Cannot assign a role at or above your rank');
     });
 

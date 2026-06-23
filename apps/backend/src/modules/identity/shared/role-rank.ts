@@ -33,7 +33,12 @@ export function assertCanAssignRole(
   if (newRole === 'SUPER_ADMIN' && !actor.isSuperAdmin) {
     throw new ForbiddenException('Only super admins can grant SUPER_ADMIN');
   }
-  if (actorRankOf(actor) <= ROLE_RANK[newRole]) {
+  // A super admin granting SUPER_ADMIN is the one legitimate "at your own rank"
+  // grant — it is already vetted by the guard above and is the only way another
+  // super admin can ever be minted. Every other actor stays bound by the strict
+  // "at or above your rank" rule (so an ADMIN still cannot grant ADMIN, etc.).
+  const grantingSuperAdmin = newRole === 'SUPER_ADMIN' && actor.isSuperAdmin;
+  if (!grantingSuperAdmin && actorRankOf(actor) <= ROLE_RANK[newRole]) {
     throw new ForbiddenException('Cannot assign a role at or above your rank');
   }
 }
