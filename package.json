@@ -13,6 +13,7 @@
     "check:legacy-multitenant": "node scripts/check-legacy-multitenant.js",
     "check:api-client-drift": "node scripts/check-api-client-drift.mjs",
     "test": "turbo run test",
+    "test:cov": "turbo run test:cov",
     "typecheck": "turbo run typecheck",
     "docker:up": "docker compose -f docker/docker-compose.yml --env-file docker/.env up -d",
     "docker:down": "docker compose -f docker/docker-compose.yml --env-file docker/.env down",

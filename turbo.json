@@ -11,6 +11,9 @@
     },
     "lint": {},
     "test": {},
+    "test:cov": {
+      "outputs": ["coverage/**"]
+    },
     "typecheck": {
       "dependsOn": ["^build"]
     }

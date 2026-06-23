@@ -17,6 +17,13 @@ const config: Config = {
     '!src/modules/**/index.ts',
     '!src/api/**/index.ts',
     '!src/infrastructure/**/index.ts',
+    '!src/**/*.module.ts',
+    '!src/main.ts',
+    '!src/**/*.spec.ts',
+    // Generated Prisma client lives under node_modules/.prisma and is
+    // excluded by Jest's default coveragePathIgnorePatterns; include this
+    // guard in case the Prisma generator output is ever moved under src/.
+    '!src/**/generated/**',
   ],
   coverageDirectory: './coverage',
   coverageThreshold: {
