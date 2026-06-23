@@ -1,43 +1,43 @@
 import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { ListServicesDto } from './list-services.dto';
+import { ListBundlesDto } from './list-bundles.dto';
 
 async function validateDto(plain: Record<string, unknown>) {
-  const dto = plainToInstance(ListServicesDto, plain);
+  const dto = plainToInstance(ListBundlesDto, plain);
   return validate(dto);
 }
 
-describe('ListServicesDto', () => {
+describe('ListBundlesDto', () => {
   it('accepts an empty payload (all filters optional, pagination defaults)', async () => {
     const errors = await validateDto({});
     expect(errors).toHaveLength(0);
   });
 
   it('coerces isActive = "true" to boolean true', async () => {
-    const dto = plainToInstance(ListServicesDto, { isActive: 'true' });
+    const dto = plainToInstance(ListBundlesDto, { isActive: 'true' });
     const errors = await validate(dto);
     expect(errors).toHaveLength(0);
     expect(dto.isActive).toBe(true);
   });
 
-  it('coerces includeHidden = "1" to boolean true', async () => {
-    const dto = plainToInstance(ListServicesDto, { includeHidden: '1' });
+  it('coerces isActive = "false" to boolean false', async () => {
+    const dto = plainToInstance(ListBundlesDto, { isActive: 'false' });
     const errors = await validate(dto);
     expect(errors).toHaveLength(0);
-    expect(dto.includeHidden).toBe(true);
-  });
-
-  it('coerces includeArchived = "0" to boolean false', async () => {
-    const dto = plainToInstance(ListServicesDto, { includeArchived: '0' });
-    const errors = await validate(dto);
-    expect(errors).toHaveLength(0);
-    expect(dto.includeArchived).toBe(false);
+    expect(dto.isActive).toBe(false);
   });
 
   it('rejects a non-boolean isActive (string that is not "true"/"false")', async () => {
-    const errors = await validateDto({ isActive: 'yes' });
+    const errors = await validateDto({ isActive: 'maybe' });
     expect(errors.some((e) => e.property === 'isActive')).toBe(true);
+  });
+
+  it('coerces includeHidden = "1" to boolean true', async () => {
+    const dto = plainToInstance(ListBundlesDto, { includeHidden: '1' });
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+    expect(dto.includeHidden).toBe(true);
   });
 
   it('rejects a non-boolean includeHidden', async () => {
@@ -45,18 +45,8 @@ describe('ListServicesDto', () => {
     expect(errors.some((e) => e.property === 'includeHidden')).toBe(true);
   });
 
-  it('rejects a non-boolean includeArchived', async () => {
-    const errors = await validateDto({ includeArchived: 'maybe' });
-    expect(errors.some((e) => e.property === 'includeArchived')).toBe(true);
-  });
-
-  it('rejects a categoryId that is not a UUID', async () => {
-    const errors = await validateDto({ categoryId: 'not-a-uuid' });
-    expect(errors.some((e) => e.property === 'categoryId')).toBe(true);
-  });
-
-  it('accepts a valid categoryId UUID', async () => {
-    const errors = await validateDto({ categoryId: '550e8400-e29b-41d4-a716-446655440000' });
+  it('accepts a search string', async () => {
+    const errors = await validateDto({ search: 'عناية' });
     expect(errors).toHaveLength(0);
   });
 
@@ -71,7 +61,7 @@ describe('ListServicesDto', () => {
   });
 
   it('coerces page from string to integer', async () => {
-    const dto = plainToInstance(ListServicesDto, { page: '2' });
+    const dto = plainToInstance(ListBundlesDto, { page: '2' });
     const errors = await validate(dto);
     expect(errors).toHaveLength(0);
     expect(dto.page).toBe(2);
