@@ -25,7 +25,7 @@ describe('JSON-LD schema generators (lib/seo/schema.ts)', () => {
           addressCountry: 'SA',
         },
         openingHoursSpecification: [
-          { dayOfWeek: 'Sunday', opens: '09:00', closes: '21:00' },
+          { '@type': 'OpeningHoursSpecification', dayOfWeek: 'Sunday', opens: '09:00', closes: '21:00' },
         ],
         medicalSpecialty: 'Psychiatry',
       });
