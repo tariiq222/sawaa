@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-24T01:15:00Z",
+  "learnings": [
+    {
+      "at": "2026-06-24T01:30:00Z",
+      "category": "wasted-work",
+      "note": "bugs.json carried BUG-001 (assertCanAssignRole <=) and BUG-002 (RemoveRoleHandler no rank gate) as OPEN P1 security gaps, sourced from the 2026-06-23 lessons.md which recorded them as 'not patched, owner approval required'. When the owner approved fixing them, re-reading the CURRENT source showed BOTH were already remediated in dedicated prior commits (5f3b7c4a, 9ac6bfbe), wired through identity.controller.ts (@UserId() actorUserId), and behaviour-tested (role-rank.spec + remove-role.handler.spec, 57 identity-security tests green). No fix was needed; the bugs were marked closed and Security health 85→95.",
+      "severity": "P1",
+      "lesson": "When the analyst imports a bug from lessons/docs into bugs.json, it MUST re-verify the bug still reproduces against the CURRENT source (read the file + run the spec) before recording status:open. A bug documented on date X may be fixed by commit Y before the QA pass. Trusting a stale lesson nearly caused (a) a false NO-GO-flavored health deduction and (b) a redundant 'fix' of already-correct security code. This is the source-of-truth corollary to LR-001: verify against code, not against a prior narrative."
+    },
+    {
+      "at": "2026-06-24T01:15:00Z",
+      "category": "process",
+      "note": "Orchestrator initially mis-detected the run as a 'full audit' because a glob for '.qa-memory/**' returned no files — the default glob did not traverse the dot-prefixed directory. The scout (which lists directories directly) correctly found the existing .qa-memory. An out-of-band `ls -la .qa-memory` confirmed it existed (full memory base built earlier the same day).",
+      "severity": "P2",
+      "lesson": "Detect incremental-vs-full mode with a direct directory listing (ls -la .qa-memory) or a dotglob-enabled check, never a plain '**' glob — hidden dot-directories are skipped and you will falsely trigger a wasteful full rebuild. Verify mode before re-dispatching the analyst (LR-001)."
+    },
+    {
+      "at": "2026-06-24T00:00:00Z",
+      "category": "process",
+      "note": "Scout-reported 'untested ops' lists can have a high false-gap rate when the project has many controller-level spec files colocated with the controllers (apps/backend/src/api/public/*.spec.ts). Of the 26 originally-listed untested ops, 24 were false gaps — covered by controller specs, handler specs, or real-e2e tests. Always verify by reading the actual test files before reporting gaps.",
+      "severity": "P2",
+      "lesson": "Before reporting an API endpoint as untested, check: (1) colocated controller spec (*.controller.spec.ts), (2) handler spec (*.handler.spec.ts), (3) real-e2e spec, (4) website/dashboard unit test that calls the API client method. The scout's parser may miss colocated specs."
+    },
+    {
+      "at": "2026-06-24T00:00:00Z",
+      "category": "gap",
+      "note": "Two real API gaps confirmed after full verification: POST /public/programs/{id}/enroll (no controller-level or e2e test — only handler unit test) and GET /public/intake-forms/applicable (intake-forms.controller.ts has no spec file at all). Both are P2.",
+      "severity": "P2",
+      "lesson": "The enroll endpoint gap is notable: the handler has a spec but the HTTP wiring (controller → handler → response shape) is untested. A controller spec that mocks the handler and asserts the HTTP contract is the missing piece."
+    },
+    {
+      "at": "2026-06-24T00:00:00Z",
+      "category": "process",
+      "note": "The RECEPTIONIST payment/invoice access is correctly 200 (built-in-rules.ts:30 grants RECEPTIONIST create+read on Payment AND Invoice). The flows RBAC spec (rbac-route-access.spec.ts) is STALE on this point. When an RBAC assertion fails on a status mismatch, always diff against built-in-rules.ts before classifying as a security gap.",
+      "severity": "P2",
+      "lesson": "built-in-rules.ts is the authoritative CASL contract. Stale e2e RBAC assertions are test-maintenance items, not security bugs. The casl-ability.factory.spec and route-auth-coverage.e2e-spec are the authoritative test sources."
+    },
+    {
+      "at": "2026-06-24T00:00:00Z",
+      "category": "security",
+      "note": "Two P1 security gaps documented in lessons.md (2026-06-23): (1) assertCanAssignRole uses <= instead of < — SUPER_ADMIN cannot grant SUPER_ADMIN role. (2) RemoveRoleHandler lacks rank gate — low-rank actor can strip higher-ranked user's custom role. Both require owner approval before fix. Not blocking for non-role-management releases.",
+      "severity": "P1",
+      "lesson": "Security gaps in role-rank logic must be surfaced in coverage.json and releases.json even when they cannot be fixed without owner approval. The health score deduction (85 instead of 100 for security) reflects this."
+    },
+    {
+      "at": "2026-06-24T00:00:00Z",
+      "category": "tooling",
+      "note": "Dashboard e2e flows (27 specs) are documented-flaky due to: (1) dev-server crashes under load (Turbopack instability), (2) test-data pollution from ensure* helpers without afterAll cleanup, (3) stale selectors (guessed Arabic text, class-based selectors). These are test-infrastructure debt, not product bugs. The reliable signal is: backend real-e2e (17 specs/141 tests) + dashboard Vitest (171/1499) + website Vitest (63/474) + smoke (7/39).",
+      "severity": "P2",
+      "lesson": "For a trustworthy dashboard e2e signal: (1) run against next start (prod build), not next dev; (2) ensure DB is clean before run; (3) fix selectors to use role/test-id attributes. Until then, treat flows as 'have tests by enumeration' but not as a reliable pass/fail signal."
+    },
+    {
+      "at": "2026-06-24T00:00:00Z",
+      "category": "process",
+      "note": "The API coverage 'any-test' number (99.3%) is much higher than the 'behaviour-only' number (72.0%) because the route-auth-coverage.e2e-spec covers 224 routes with anonymous 401 probes. This is a valid and important security test but not a behaviour test. Always report both numbers and label them clearly.",
+      "severity": "P3",
+      "lesson": "Report API coverage with two numbers: (1) any-test (includes gate probes) and (2) behaviour-only (excludes anonymous 401 probes). The behaviour-only number is more meaningful for functional coverage; the gate-probe number is more meaningful for security coverage."
+    }
+  ]
+}

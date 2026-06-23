@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-24T00:00:00Z",
+  "lastChangedCommit": "207d3d29",
+  "modules": [
+    {
+      "id": "identity",
+      "name": "Identity & Auth",
+      "paths": ["apps/backend/src/modules/identity", "apps/backend/src/api/public/auth.controller.ts", "apps/backend/src/api/public/public-auth.controller.ts"],
+      "entryPoints": ["apps/backend/src/api/public/auth.controller.ts", "apps/backend/src/api/public/public-auth.controller.ts"],
+      "openapiTags": ["Public / Auth", "Dashboard / Identity"],
+      "lastChangedCommit": "207d3d29"
+    },
+    {
+      "id": "people",
+      "name": "People (Clients & Employees)",
+      "paths": ["apps/backend/src/modules/people", "apps/backend/src/api/dashboard/clients.controller.ts", "apps/backend/src/api/dashboard/employees.controller.ts"],
+      "entryPoints": ["apps/backend/src/api/dashboard/clients.controller.ts", "apps/backend/src/api/dashboard/employees.controller.ts"],
+      "openapiTags": ["Dashboard / People", "Public / Employees"],
+      "lastChangedCommit": "207d3d29"
+    },
+    {
+      "id": "bookings",
+      "name": "Bookings",
+      "paths": ["apps/backend/src/modules/bookings", "apps/backend/src/api/dashboard/bookings.controller.ts", "apps/backend/src/api/public/bookings.controller.ts"],
+      "entryPoints": ["apps/backend/src/api/dashboard/bookings.controller.ts", "apps/backend/src/api/public/bookings.controller.ts"],
+      "openapiTags": ["Dashboard / Bookings", "Public / Bookings", "Public / Programs"],
+      "lastChangedCommit": "207d3d29"
+    },
+    {
+      "id": "finance",
+      "name": "Finance (Payments & Invoices)",
+      "paths": ["apps/backend/src/modules/finance", "apps/backend/src/api/dashboard/finance.controller.ts", "apps/backend/src/api/public/payments.controller.ts", "apps/backend/src/api/public/invoices.controller.ts"],
+      "entryPoints": ["apps/backend/src/api/dashboard/finance.controller.ts", "apps/backend/src/api/public/payments.controller.ts"],
+      "openapiTags": ["Dashboard / Finance", "Public / Payments", "Public / Invoices"],
+      "lastChangedCommit": "207d3d29"
+    },
+    {
+      "id": "comms",
+      "name": "Communications (SMS, Email, Notifications)",
+      "paths": ["apps/backend/src/modules/comms", "apps/backend/src/api/dashboard/comms.controller.ts", "apps/backend/src/api/public/sms-webhooks.controller.ts"],
+      "entryPoints": ["apps/backend/src/api/dashboard/comms.controller.ts", "apps/backend/src/api/public/sms-webhooks.controller.ts"],
+      "openapiTags": ["Dashboard / Comms", "Public / SMS Webhooks"],
+      "lastChangedCommit": "207d3d29"
+    },
+    {
+      "id": "org-config",
+      "name": "Org Config (Branches, Categories, Departments)",
+      "paths": ["apps/backend/src/modules/org-config", "apps/backend/src/api/dashboard/org-config.controller.ts", "apps/backend/src/api/public/branches.controller.ts"],
+      "entryPoints": ["apps/backend/src/api/dashboard/org-config.controller.ts", "apps/backend/src/api/public/branches.controller.ts"],
+      "openapiTags": ["Dashboard / Org Config", "Public / Branches"],
+      "lastChangedCommit": "207d3d29"
+    },
+    {
+      "id": "org-experience",
+      "name": "Org Experience (Services, Branding, Intake Forms)",
+      "paths": ["apps/backend/src/modules/org-experience", "apps/backend/src/api/public/catalog.controller.ts", "apps/backend/src/api/public/intake-forms.controller.ts"],
+      "entryPoints": ["apps/backend/src/api/public/catalog.controller.ts", "apps/backend/src/api/public/intake-forms.controller.ts"],
+      "openapiTags": ["Public / Catalog", "Public / Org Experience"],
+      "lastChangedCommit": "207d3d29"
+    },
+    {
+      "id": "client-portal",
+      "name": "Client Portal (Public Me, Client Auth)",
+      "paths": ["apps/backend/src/api/public/me.controller.ts", "apps/backend/src/api/public/public-auth.controller.ts"],
+      "entryPoints": ["apps/backend/src/api/public/me.controller.ts"],
+      "openapiTags": ["Public / Me", "Public / Client Auth"],
+      "lastChangedCommit": "207d3d29"
+    },
+    {
+      "id": "ai",
+      "name": "AI (Chatbot, Knowledge Base)",
+      "paths": ["apps/backend/src/modules/ai", "apps/backend/src/api/dashboard/ai.controller.ts"],
+      "entryPoints": ["apps/backend/src/api/dashboard/ai.controller.ts"],
+      "openapiTags": ["Dashboard / AI"],
+      "lastChangedCommit": "207d3d29"
+    },
+    {
+      "id": "media",
+      "name": "Media (Uploads, MinIO)",
+      "paths": ["apps/backend/src/modules/media", "apps/backend/src/api/dashboard/media.controller.ts"],
+      "entryPoints": ["apps/backend/src/api/dashboard/media.controller.ts"],
+      "openapiTags": ["Dashboard / Media"],
+      "lastChangedCommit": "207d3d29"
+    },
+    {
+      "id": "ops",
+      "name": "Ops (Health, Reports, Activity)",
+      "paths": ["apps/backend/src/modules/ops", "apps/backend/src/api/public/health.controller.ts"],
+      "entryPoints": ["apps/backend/src/api/public/health.controller.ts"],
+      "openapiTags": ["Public / Health"],
+      "lastChangedCommit": "207d3d29"
+    },
+    {
+      "id": "mobile",
+      "name": "Mobile (Client & Employee Apps)",
+      "paths": ["apps/backend/src/api/mobile", "apps/mobile"],
+      "entryPoints": ["apps/backend/src/api/mobile/client", "apps/backend/src/api/mobile/employee"],
+      "openapiTags": ["Mobile / Client", "Mobile / Employee"],
+      "lastChangedCommit": "207d3d29"
+    },
+    {
+      "id": "dashboard-frontend",
+      "name": "Dashboard Frontend",
+      "paths": ["apps/dashboard"],
+      "entryPoints": ["apps/dashboard/app"],
+      "openapiTags": [],
+      "lastChangedCommit": "207d3d29"
+    },
+    {
+      "id": "website-frontend",
+      "name": "Website Frontend",
+      "paths": ["apps/website"],
+      "entryPoints": ["apps/website/app"],
+      "openapiTags": [],
+      "lastChangedCommit": "207d3d29"
+    }
+  ]
+}

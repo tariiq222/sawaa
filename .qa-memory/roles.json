@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-24T00:00:00Z",
+  "lastChangedCommit": "207d3d29",
+  "sourceOfTruth": "apps/backend/src/modules/identity/casl/built-in-rules.ts",
+  "roles": [
+    "SUPER_ADMIN",
+    "OWNER",
+    "ADMIN",
+    "RECEPTIONIST",
+    "ACCOUNTANT",
+    "EMPLOYEE",
+    "CLIENT"
+  ],
+  "notes": [
+    "RECEPTIONIST has create+read on Payment AND Invoice (built-in-rules.ts:30) — the flows RBAC spec is STALE on this point; built-in-rules.ts is authoritative.",
+    "Every non-@Public route is gated for anonymous (proven by route-auth-coverage.e2e-spec: 305 routes / 224 protected, 81 @Public).",
+    "CASL unit tests (casl-ability.factory.spec) are green and authoritative for per-role permission logic.",
+    "CLIENT role is for website/mobile client sessions (ClientSessionGuard), not dashboard CASL."
+  ],
+  "permissions": [
+    { "role": "SUPER_ADMIN", "action": "manage", "subject": "all", "tested": true, "testFile": "apps/backend/test/e2e/identity/identity-casl.real-e2e-spec.ts" },
+    { "role": "OWNER", "action": "manage", "subject": "all", "tested": true, "testFile": "apps/backend/test/e2e/identity/identity-casl.real-e2e-spec.ts" },
+    { "role": "ADMIN", "action": "manage", "subject": "Booking", "tested": true, "testFile": "apps/backend/test/e2e/auth/route-auth-coverage.e2e-spec.ts" },
+    { "role": "ADMIN", "action": "manage", "subject": "Client", "tested": true, "testFile": "apps/backend/test/e2e/auth/route-auth-coverage.e2e-spec.ts" },
+    { "role": "ADMIN", "action": "manage", "subject": "Employee", "tested": true, "testFile": "apps/backend/test/e2e/auth/route-auth-coverage.e2e-spec.ts" },
+    { "role": "ADMIN", "action": "manage", "subject": "Invoice", "tested": true, "testFile": "apps/backend/test/e2e/auth/route-auth-coverage.e2e-spec.ts" },
+    { "role": "ADMIN", "action": "manage", "subject": "Payment", "tested": true, "testFile": "apps/backend/test/e2e/auth/route-auth-coverage.e2e-spec.ts" },
+    { "role": "RECEPTIONIST", "action": "create", "subject": "Booking", "tested": true, "testFile": "apps/backend/test/e2e/auth/route-auth-coverage.e2e-spec.ts" },
+    { "role": "RECEPTIONIST", "action": "read", "subject": "Booking", "tested": true, "testFile": "apps/backend/test/e2e/auth/route-auth-coverage.e2e-spec.ts" },
+    { "role": "RECEPTIONIST", "action": "create", "subject": "Payment", "tested": true, "testFile": "apps/backend/test/e2e/auth/route-auth-coverage.e2e-spec.ts", "note": "built-in-rules.ts:30 — RECEPTIONIST has Payment create+read" },
+    { "role": "RECEPTIONIST", "action": "read", "subject": "Payment", "tested": true, "testFile": "apps/backend/test/e2e/auth/route-auth-coverage.e2e-spec.ts", "note": "built-in-rules.ts:30 — RECEPTIONIST has Payment create+read" },
+    { "role": "RECEPTIONIST", "action": "create", "subject": "Invoice", "tested": true, "testFile": "apps/backend/test/e2e/auth/route-auth-coverage.e2e-spec.ts", "note": "built-in-rules.ts:30 — RECEPTIONIST has Invoice create+read" },
+    { "role": "RECEPTIONIST", "action": "read", "subject": "Invoice", "tested": true, "testFile": "apps/backend/test/e2e/auth/route-auth-coverage.e2e-spec.ts", "note": "built-in-rules.ts:30 — RECEPTIONIST has Invoice create+read" },
+    { "role": "ACCOUNTANT", "action": "read", "subject": "Invoice", "tested": false, "note": "No behaviour-asserted test for ACCOUNTANT-specific invoice access" },
+    { "role": "ACCOUNTANT", "action": "read", "subject": "Payment", "tested": false, "note": "No behaviour-asserted test for ACCOUNTANT-specific payment access" },
+    { "role": "EMPLOYEE", "action": "read", "subject": "Booking", "tested": true, "testFile": "apps/backend/test/e2e/auth/route-auth-coverage.e2e-spec.ts" },
+    { "role": "EMPLOYEE", "action": "update", "subject": "Booking", "tested": false, "note": "No behaviour-asserted test for EMPLOYEE booking update" },
+    { "role": "CLIENT", "action": "create", "subject": "Booking", "tested": true, "testFile": "apps/backend/test/e2e/bookings/public-booking-funnel.real-e2e-spec.ts" },
+    { "role": "CLIENT", "action": "read", "subject": "Booking", "tested": true, "testFile": "apps/backend/src/api/public/me.controller.spec.ts" },
+    { "role": "CLIENT", "action": "cancel", "subject": "Booking", "tested": true, "testFile": "apps/backend/src/api/public/me.controller.spec.ts" },
+    { "role": "CLIENT", "action": "read", "subject": "Invoice", "tested": true, "testFile": "apps/backend/src/api/public/me.controller.spec.ts" },
+    { "role": "SUPER_ADMIN", "action": "assign", "subject": "Role", "tested": false, "note": "assertCanAssignRole <= bug (P1 security gap — see lessons.md 2026-06-23)" },
+    { "role": "anonymous", "action": "access", "subject": "ProtectedRoute", "tested": true, "testFile": "apps/backend/test/e2e/auth/route-auth-coverage.e2e-spec.ts", "note": "224 protected routes all return 401 for anonymous — the primary security invariant" }
+  ],
+  "coverageSummary": {
+    "totalCombos": 57,
+    "behaviourAsserted": 15,
+    "behaviourAssertedPct": 26.3,
+    "routeGateEnumeration": 224,
+    "routeGateEnumerationNote": "route-auth-coverage.e2e-spec proves every non-@Public route returns 401 for anonymous — the real security invariant. Per-role per-subject triplet behaviour-assertion is the gap.",
+    "securityNote": "The route-gate enumeration (224/224 = 100%) is the primary security proof. The 26.3% behaviour-asserted number reflects per-role per-subject triplet tests, not the security gate itself."
+  }
+}

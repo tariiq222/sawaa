@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-24T00:00:00Z",
+  "bugs": [
+    {
+      "id": "BUG-001",
+      "severity": "P1",
+      "title": "assertCanAssignRole uses <= instead of < — SUPER_ADMIN cannot grant SUPER_ADMIN role",
+      "reproduction": "Call assertCanAssignRole with actor=SUPER_ADMIN (rank 100) and target=SUPER_ADMIN (rank 100). The guard at line 36 uses <= so 100 <= 100 is true → throws ForbiddenException. The first guard on line 33 exists specifically to allow this but the second guard rejects it.",
+      "file": "apps/backend/src/modules/identity/shared/role-rank.ts:40-43",
+      "failingTest": "apps/backend/src/modules/identity/shared/role-rank.spec.ts",
+      "status": "closed",
+      "resolvedAt": "2026-06-24T01:30:00Z",
+      "resolvedBy": "commit 5f3b7c4a fix(identity): allow super-admin to grant SUPER_ADMIN role (pre-existing, NOT this session)",
+      "resolution": "ALREADY FIXED in source before this session. assertCanAssignRole now carves out the legitimate super-admin-grants-SUPER_ADMIN case via `grantingSuperAdmin` (role-rank.ts:40), so the `<=` rank guard is skipped only for that vetted case. Verified by role-rank.spec.ts: 'allows a super admin to grant SUPER_ADMIN' (line 91) + regression 'carve-out is SUPER_ADMIN-only' (line 104). 5 identity security specs = 57 tests green. bugs.json had incorrectly carried this as open by trusting the 2026-06-23 lessons instead of re-reading current source.",
+      "linkedRequirement": "REQ-017",
+      "ownerApprovalRequired": true,
+      "note": "Critical/owner-only security tier — confirmed already remediated + tested. No change needed this session."
+    },
+    {
+      "id": "BUG-002",
+      "severity": "P1",
+      "title": "RemoveRoleHandler missing rank gate — low-rank actor can strip higher-ranked user's custom role",
+      "reproduction": "Call DELETE /dashboard/users/{id}/roles/{roleId} as a low-rank actor (e.g. ADMIN) targeting a higher-ranked user (e.g. OWNER). The handler takes only {userId, customRoleId} — no actor identity — so it cannot enforce the rank gate.",
+      "file": "apps/backend/src/modules/identity/users/remove-role.handler.ts:42-43",
+      "failingTest": "apps/backend/src/modules/identity/users/remove-role.handler.spec.ts",
+      "status": "closed",
+      "resolvedAt": "2026-06-24T01:30:00Z",
+      "resolvedBy": "commit 9ac6bfbe fix(identity): enforce rank gate in remove-role handler (pre-existing, NOT this session)",
+      "resolution": "ALREADY FIXED in source before this session. RemoveRoleCommand now carries actorUserId (sourced from @UserId() in identity.controller.ts:302-304, never the body); execute() fetches actor+target and throws ForbiddenException when actorRankOf(actor) <= ROLE_RANK[target.role]. Verified by remove-role.handler.spec.ts: 'throws when actor outranks no one (RECEPTIONIST vs ADMIN)' (line 89), 'EQUAL rank ADMIN vs ADMIN' (line 99), 'super admin can remove from ADMIN' (line 107). bugs.json had incorrectly carried this as open by trusting the 2026-06-23 lessons instead of re-reading current source.",
+      "linkedRequirement": "REQ-017",
+      "ownerApprovalRequired": true,
+      "note": "Critical/owner-only security tier — confirmed already remediated + tested end-to-end (handler + controller wiring). No change needed this session."
+    },
+    {
+      "id": "BUG-003",
+      "severity": "P2",
+      "title": "POST /public/programs/{id}/enroll — HTTP endpoint wiring untested",
+      "reproduction": "No controller-level spec or e2e test covered the enroll endpoint. The handler (enroll-in-program.handler.spec.ts) was tested but the HTTP contract (request shape, response shape, auth guard, error codes) was not.",
+      "file": "apps/backend/src/api/public/bookings.controller.ts (enroll endpoint)",
+      "failingTest": null,
+      "status": "closed",
+      "resolvedAt": "2026-06-24T01:00:00Z",
+      "resolution": "Added 4 controller-spec tests to apps/backend/src/api/public/bookings.controller.spec.ts (PublicProgramsController block): 201 valid enroll asserting clientId comes from session not body ({programId, clientId, public:true}), 400 invalid UUID param, 409 ConflictException propagation, 404 NotFoundException propagation. Verified: jest 16/16 pass + backend typecheck exit 0.",
+      "linkedRequirement": "REQ-010",
+      "ownerApprovalRequired": false,
+      "note": "Test gap closed. No product change."
+    },
+    {
+      "id": "BUG-004",
+      "severity": "P2",
+      "title": "GET /public/intake-forms/applicable — no test coverage",
+      "reproduction": "intake-forms.controller.ts had no spec file. The endpoint was untested at any level.",
+      "file": "apps/backend/src/api/public/intake-forms.controller.ts",
+      "failingTest": null,
+      "status": "closed",
+      "resolvedAt": "2026-06-24T01:00:00Z",
+      "resolution": "Created apps/backend/src/api/public/intake-forms.controller.spec.ts with 6 controller-spec tests: 200 no-query, 200 valid serviceId forwarded, 200 valid IntakeFormType enum forwarded, 400 non-UUID serviceId, 400 invalid enum, 400 unknown query field (forbidNonWhitelisted). Verified: jest 16/16 pass + backend typecheck exit 0.",
+      "linkedRequirement": "REQ-015",
+      "ownerApprovalRequired": false,
+      "note": "Test gap closed. No product change."
+    }
+  ]
+}

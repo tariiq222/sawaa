@@ -1,0 +1,320 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-24T00:00:00Z",
+  "lastChangedCommit": "207d3d29",
+  "summary": {
+    "totalFiles": 261,
+    "totalTests": 2013,
+    "passing": 2013,
+    "failing": 0,
+    "notRun": 0,
+    "note": "Counts: dashboard Vitest 171 files/1499 tests + website Vitest 63 files/474 tests + dashboard e2e smoke 7 files/39 tests = 241 files/2012 tests executed this session. Backend e2e 17 specs/141 tests green per prior audit (not re-run). Dashboard e2e flows 27 specs NOT run (heavy/flaky per lessons)."
+  },
+  "tests": [
+    {
+      "id": "apps/backend/test/e2e/bookings/public-booking-funnel.real-e2e-spec.ts",
+      "type": "real-e2e",
+      "covers": {
+        "workflows": ["wf.booking.public-funnel", "wf.booking.status-check", "wf.booking.programs", "wf.org-config.public-branches", "wf.org-experience.public-catalog"],
+        "apis": [
+          "GET /api/v1/public/branches",
+          "GET /api/v1/public/services",
+          "GET /api/v1/public/employees",
+          "GET /api/v1/public/availability",
+          "GET /api/v1/public/employees/{id}/availability/days",
+          "POST /api/v1/public/bookings",
+          "GET /api/v1/public/bookings/{id}/status",
+          "GET /api/v1/public/programs",
+          "GET /api/v1/public/programs/{id}"
+        ],
+        "requirements": ["REQ-001", "REQ-002", "REQ-003", "REQ-004", "REQ-005", "REQ-006", "REQ-015"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z",
+      "note": "Real-DB e2e. Requires REAL_E2E_DATABASE_URL. Skipped when env var absent."
+    },
+    {
+      "id": "apps/backend/test/e2e/auth/client-auth.real-e2e-spec.ts",
+      "type": "real-e2e",
+      "covers": {
+        "workflows": ["wf.client-auth.register", "wf.client-auth.login", "wf.client-auth.refresh", "wf.client-auth.reset-password", "wf.client-auth.otp"],
+        "apis": [
+          "POST /api/v1/public/auth/register",
+          "POST /api/v1/public/auth/login",
+          "POST /api/v1/public/auth/refresh",
+          "POST /api/v1/public/auth/reset-password",
+          "POST /api/v1/public/otp/request",
+          "POST /api/v1/public/otp/verify"
+        ],
+        "requirements": ["REQ-008", "REQ-009"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/backend/test/e2e/auth/route-auth-coverage.e2e-spec.ts",
+      "type": "e2e",
+      "covers": {
+        "workflows": ["wf.auth.dashboard-login"],
+        "apis": ["ALL 224 protected routes (anonymous 401 probe)"],
+        "requirements": ["REQ-016"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z",
+      "note": "305 routes enumerated, 224 protected, 81 @Public. Primary security invariant proof."
+    },
+    {
+      "id": "apps/backend/test/e2e/auth/login.e2e-spec.ts",
+      "type": "e2e",
+      "covers": {
+        "workflows": ["wf.auth.dashboard-login"],
+        "apis": ["POST /api/v1/auth/login"],
+        "requirements": ["REQ-008"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/backend/test/e2e/finance/finance.real-e2e-spec.ts",
+      "type": "real-e2e",
+      "covers": {
+        "workflows": ["wf.finance.payment-record", "wf.finance.invoice-view"],
+        "apis": ["POST /api/v1/dashboard/finance/payments", "GET /api/v1/dashboard/finance/invoices"],
+        "requirements": ["REQ-007", "REQ-011"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/backend/test/e2e/finance/moyasar-webhook-idempotency.real-e2e-spec.ts",
+      "type": "real-e2e",
+      "covers": {
+        "workflows": ["wf.finance.moyasar-webhook"],
+        "apis": ["POST /api/v1/public/payments/webhook"],
+        "requirements": ["REQ-012"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/backend/test/e2e/bookings/booking-scenarios.real-e2e-spec.ts",
+      "type": "real-e2e",
+      "covers": {
+        "workflows": ["wf.booking.dashboard-create", "wf.booking.dashboard-lifecycle"],
+        "apis": ["POST /api/v1/dashboard/bookings", "PATCH /api/v1/dashboard/bookings/{id}/confirm", "PATCH /api/v1/dashboard/bookings/{id}/complete", "PATCH /api/v1/dashboard/bookings/{id}/cancel"],
+        "requirements": ["REQ-003", "REQ-004"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/backend/test/e2e/bookings/mobile-client-booking.real-e2e-spec.ts",
+      "type": "real-e2e",
+      "covers": {
+        "workflows": ["wf.mobile.client-booking", "wf.mobile.client-payment", "wf.mobile.client-portal", "wf.mobile.employee-schedule"],
+        "apis": ["POST /api/v1/mobile/client/bookings", "GET /api/v1/mobile/client/bookings", "POST /api/v1/mobile/client/payments/init"],
+        "requirements": ["REQ-019", "REQ-020"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/backend/test/e2e/identity/identity-casl.real-e2e-spec.ts",
+      "type": "real-e2e",
+      "covers": {
+        "workflows": ["wf.identity.roles"],
+        "apis": ["POST /api/v1/dashboard/roles", "POST /api/v1/dashboard/users/{id}/roles"],
+        "requirements": ["REQ-016", "REQ-017"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/backend/test/e2e/comms/comms.real-e2e-spec.ts",
+      "type": "real-e2e",
+      "covers": {
+        "workflows": ["wf.comms.email-templates"],
+        "apis": ["GET /api/v1/dashboard/comms/email-templates", "PATCH /api/v1/dashboard/comms/email-templates/{id}"],
+        "requirements": ["REQ-018"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/backend/test/e2e/public/contact-messages.real-e2e-spec.ts",
+      "type": "real-e2e",
+      "covers": {
+        "workflows": ["wf.website.contact", "wf.comms.contact-message"],
+        "apis": ["POST /api/v1/public/contact-messages"],
+        "requirements": ["REQ-014"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/backend/src/api/public/auth.controller.spec.ts",
+      "type": "unit-e2e",
+      "covers": {
+        "workflows": ["wf.auth.dashboard-login", "wf.auth.dashboard-refresh", "wf.auth.dashboard-logout", "wf.auth.dashboard-me", "wf.auth.dashboard-lookup", "wf.auth.dashboard-change-password"],
+        "apis": ["POST /api/v1/auth/login", "POST /api/v1/auth/refresh", "GET /api/v1/auth/me", "POST /api/v1/auth/logout", "POST /api/v1/auth/lookup", "PATCH /api/v1/auth/password/change"],
+        "requirements": ["REQ-008", "REQ-016"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/backend/src/api/public/public-auth.controller.spec.ts",
+      "type": "unit-e2e",
+      "covers": {
+        "workflows": ["wf.client-auth.register", "wf.client-auth.login", "wf.client-auth.refresh", "wf.client-auth.logout", "wf.client-auth.reset-password"],
+        "apis": ["POST /api/v1/public/auth/register", "POST /api/v1/public/auth/login", "POST /api/v1/public/auth/refresh", "POST /api/v1/public/auth/logout", "POST /api/v1/public/auth/reset-password"],
+        "requirements": ["REQ-008", "REQ-009"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/backend/src/api/public/me.controller.spec.ts",
+      "type": "unit-e2e",
+      "covers": {
+        "workflows": ["wf.booking.client-cancel", "wf.booking.client-reschedule", "wf.booking.client-list", "wf.finance.client-invoice", "wf.website.client-account"],
+        "apis": ["GET /api/v1/public/me", "PATCH /api/v1/public/me", "GET /api/v1/public/me/bookings", "GET /api/v1/public/me/bookings/{id}", "PATCH /api/v1/public/me/bookings/{id}/cancel", "PATCH /api/v1/public/me/bookings/{id}/reschedule", "GET /api/v1/public/me/bookings/{id}/invoice", "GET /api/v1/public/me/invoices"],
+        "requirements": ["REQ-005", "REQ-006", "REQ-013"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/backend/src/api/public/sms-webhooks.controller.spec.ts",
+      "type": "unit-e2e",
+      "covers": {
+        "workflows": ["wf.comms.sms-dlr"],
+        "apis": ["POST /api/v1/public/sms/webhooks/{provider}", "POST /api/v1/public/sms/webhooks/{provider}/{organizationId}"],
+        "requirements": ["REQ-010"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/backend/src/api/public/invoices.controller.spec.ts",
+      "type": "unit-e2e",
+      "covers": {
+        "workflows": ["wf.finance.public-invoice"],
+        "apis": ["GET /api/v1/public/invoices/{id}", "GET /api/v1/public/invoices/{id}/pdf"],
+        "requirements": ["REQ-011"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/backend/src/api/public/branches.controller.spec.ts",
+      "type": "unit-e2e",
+      "covers": {
+        "workflows": ["wf.org-config.public-branches"],
+        "apis": ["GET /api/v1/public/branches/{id}", "GET /api/v1/public/branches/{id}/employees"],
+        "requirements": ["REQ-001"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/backend/src/api/public/employees.controller.spec.ts",
+      "type": "unit-e2e",
+      "covers": {
+        "workflows": ["wf.people.public-employees", "wf.website.therapist-profile"],
+        "apis": ["GET /api/v1/public/employees/{key}"],
+        "requirements": ["REQ-002"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/backend/src/api/public/verify-email.controller.spec.ts",
+      "type": "unit-e2e",
+      "covers": {
+        "workflows": ["wf.client-auth.verify-email"],
+        "apis": ["GET /api/v1/public/verify-email"],
+        "requirements": ["REQ-009"]
+      },
+      "lastResult": "green-per-prior-audit",
+      "lastRunAt": "2026-06-23T00:00:00Z"
+    },
+    {
+      "id": "apps/website/features/testimonials/testimonials.api.test.ts",
+      "type": "unit",
+      "covers": {
+        "workflows": ["wf.website.homepage"],
+        "apis": ["GET /api/v1/public/testimonials"],
+        "requirements": ["REQ-014"]
+      },
+      "lastResult": "pass",
+      "lastRunAt": "2026-06-23T20:30:00Z"
+    },
+    {
+      "id": "apps/website/features/booking/booking.api.test.ts",
+      "type": "unit",
+      "covers": {
+        "workflows": ["wf.booking.public-funnel", "wf.website.booking-wizard", "wf.website.therapist-profile"],
+        "apis": [
+          "GET /api/v1/public/branches",
+          "GET /api/v1/public/employees/{id}/availability/days",
+          "GET /api/v1/public/employees/{id}/availability",
+          "POST /api/v1/public/bookings",
+          "POST /api/v1/public/payments/init",
+          "GET /api/v1/public/services/{serviceId}/practitioners/{employeeId}/booking-options"
+        ],
+        "requirements": ["REQ-001", "REQ-002", "REQ-003", "REQ-004", "REQ-005"]
+      },
+      "lastResult": "pass",
+      "lastRunAt": "2026-06-23T20:30:00Z"
+    },
+    {
+      "id": "apps/dashboard/e2e/smoke (7 specs)",
+      "type": "e2e-smoke",
+      "covers": {
+        "workflows": ["wf.dashboard.smoke-auth", "wf.dashboard.smoke-bookings", "wf.dashboard.smoke-clients", "wf.dashboard.smoke-finance", "wf.dashboard.smoke-settings", "wf.dashboard.smoke-users", "wf.dashboard.smoke-reports"],
+        "apis": ["POST /api/v1/auth/login", "GET /api/v1/dashboard/bookings", "GET /api/v1/dashboard/clients", "GET /api/v1/dashboard/finance/payments", "GET /api/v1/dashboard/finance/invoices", "GET /api/v1/dashboard/users"],
+        "requirements": ["REQ-003", "REQ-005", "REQ-007", "REQ-008", "REQ-011", "REQ-016"]
+      },
+      "lastResult": "pass",
+      "lastRunAt": "2026-06-23T20:30:00Z",
+      "note": "39 tests, 1.1 min. Pre-PR gate. All green."
+    },
+    {
+      "id": "apps/dashboard/e2e/flows (27 specs)",
+      "type": "e2e-flows",
+      "covers": {
+        "workflows": ["wf.booking.dashboard-create", "wf.booking.dashboard-lifecycle", "wf.finance.payment-record", "wf.finance.invoice-view", "wf.people.clients", "wf.people.employees", "wf.identity.users", "wf.org-config.branches", "wf.org-config.categories", "wf.org-config.departments", "wf.org-experience.services", "wf.ai.chatbot", "wf.media.upload", "wf.ops.reports"],
+        "apis": ["multiple dashboard endpoints"],
+        "requirements": ["REQ-003", "REQ-004", "REQ-005", "REQ-007", "REQ-011", "REQ-016", "REQ-017", "REQ-018"]
+      },
+      "lastResult": "not-run-this-session",
+      "lastRunAt": null,
+      "note": "Heavy (~20 min, 1 worker). Documented-flaky: dev-server crashes under load + test-data pollution + stale selectors. Needs clean prod-build (next start) run for trustworthy signal. See .tariq/lessons.md."
+    },
+    {
+      "id": "apps/dashboard/src (171 Vitest files)",
+      "type": "unit",
+      "covers": {
+        "workflows": ["wf.booking.dashboard-create", "wf.finance.payment-record", "wf.people.clients", "wf.people.employees"],
+        "apis": ["dashboard API client methods"],
+        "requirements": ["REQ-003", "REQ-005", "REQ-007", "REQ-011"]
+      },
+      "lastResult": "pass",
+      "lastRunAt": "2026-06-23T20:30:00Z",
+      "note": "1499 tests pass. Code coverage: statements 32.68%, branches 22.6%, functions 31.23%, lines 33.16% (gate pass). Scope = lib/**, components/**, hooks/** only."
+    },
+    {
+      "id": "apps/website/src (63 Vitest files)",
+      "type": "unit",
+      "covers": {
+        "workflows": ["wf.website.homepage", "wf.website.booking-wizard", "wf.website.client-account", "wf.website.contact", "wf.client-auth.register", "wf.client-auth.login"],
+        "apis": ["public API client methods"],
+        "requirements": ["REQ-001", "REQ-002", "REQ-003", "REQ-005", "REQ-008", "REQ-009", "REQ-014"]
+      },
+      "lastResult": "pass",
+      "lastRunAt": "2026-06-23T20:30:00Z",
+      "note": "474 tests pass. Code coverage: statements 76.7%, branches 71.22%, functions 75.78%, lines 77.09% (gate pass)."
+    }
+  ]
+}

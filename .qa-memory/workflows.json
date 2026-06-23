@@ -1,0 +1,622 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-24T00:00:00Z",
+  "lastChangedCommit": "207d3d29",
+  "totalWorkflows": 62,
+  "testedWorkflows": 62,
+  "note": "All 62 workflows have ≥1 associated test file by enumeration. Dashboard flow pass-rate is materially lower due to documented selector/seed flakes (see .tariq/lessons.md). Backend real-e2e and unit suites are green.",
+  "workflows": [
+    {
+      "id": "wf.auth.dashboard-login",
+      "name": "Dashboard admin login",
+      "steps": ["submit credentials", "receive JWT + refresh cookie"],
+      "apis": ["POST /api/v1/auth/login"],
+      "roles": ["SUPER_ADMIN", "OWNER", "ADMIN", "RECEPTIONIST", "ACCOUNTANT", "EMPLOYEE"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/auth.controller.spec.ts", "apps/backend/test/e2e/auth/login.e2e-spec.ts"]
+    },
+    {
+      "id": "wf.auth.dashboard-refresh",
+      "name": "Dashboard token refresh",
+      "steps": ["send refresh cookie", "receive new access token"],
+      "apis": ["POST /api/v1/auth/refresh"],
+      "roles": ["SUPER_ADMIN", "OWNER", "ADMIN", "RECEPTIONIST", "ACCOUNTANT", "EMPLOYEE"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/auth.controller.spec.ts"]
+    },
+    {
+      "id": "wf.auth.dashboard-logout",
+      "name": "Dashboard logout",
+      "steps": ["revoke refresh token", "clear cookie"],
+      "apis": ["POST /api/v1/auth/logout"],
+      "roles": ["SUPER_ADMIN", "OWNER", "ADMIN", "RECEPTIONIST", "ACCOUNTANT", "EMPLOYEE"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/auth.controller.spec.ts"]
+    },
+    {
+      "id": "wf.auth.dashboard-me",
+      "name": "Get current dashboard user",
+      "steps": ["send JWT", "receive user profile + permissions"],
+      "apis": ["GET /api/v1/auth/me"],
+      "roles": ["SUPER_ADMIN", "OWNER", "ADMIN", "RECEPTIONIST", "ACCOUNTANT", "EMPLOYEE"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/auth.controller.spec.ts"]
+    },
+    {
+      "id": "wf.auth.dashboard-lookup",
+      "name": "User lookup (pre-login identifier check)",
+      "steps": ["submit email/phone", "receive user existence hint"],
+      "apis": ["POST /api/v1/auth/lookup"],
+      "roles": ["anonymous"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/auth.controller.spec.ts", "apps/backend/src/modules/identity/lookup-user/lookup-user.handler.spec.ts"]
+    },
+    {
+      "id": "wf.auth.dashboard-otp",
+      "name": "Dashboard OTP 2FA (request + verify)",
+      "steps": ["request OTP", "verify OTP", "receive session"],
+      "apis": ["POST /api/v1/auth/otp/request-dashboard", "POST /api/v1/auth/otp/verify-dashboard"],
+      "roles": ["SUPER_ADMIN"],
+      "tested": true,
+      "tests": ["apps/backend/src/modules/identity/request-dashboard-otp/request-dashboard-otp.handler.spec.ts", "apps/backend/src/modules/identity/verify-dashboard-otp/verify-dashboard-otp.handler.spec.ts"]
+    },
+    {
+      "id": "wf.auth.dashboard-password-reset",
+      "name": "Dashboard password reset flow",
+      "steps": ["request reset email", "click link", "submit new password"],
+      "apis": ["POST /api/v1/auth/request-password-reset", "POST /api/v1/auth/reset-password"],
+      "roles": ["anonymous"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/flows/auth-recovery/auth-recovery.spec.ts"]
+    },
+    {
+      "id": "wf.auth.dashboard-change-password",
+      "name": "Dashboard change password (authenticated)",
+      "steps": ["submit old + new password"],
+      "apis": ["PATCH /api/v1/auth/password/change"],
+      "roles": ["SUPER_ADMIN", "OWNER", "ADMIN", "RECEPTIONIST", "ACCOUNTANT", "EMPLOYEE"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/auth.controller.spec.ts"]
+    },
+    {
+      "id": "wf.client-auth.register",
+      "name": "Client registration",
+      "steps": ["submit name/phone/email/password", "receive client session"],
+      "apis": ["POST /api/v1/public/auth/register"],
+      "roles": ["anonymous"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/public-auth.controller.spec.ts", "apps/backend/test/e2e/auth/client-auth.real-e2e-spec.ts"]
+    },
+    {
+      "id": "wf.client-auth.login",
+      "name": "Client login",
+      "steps": ["submit credentials", "receive httpOnly cookie"],
+      "apis": ["POST /api/v1/public/auth/login"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/public-auth.controller.spec.ts", "apps/backend/test/e2e/auth/client-auth.real-e2e-spec.ts"]
+    },
+    {
+      "id": "wf.client-auth.refresh",
+      "name": "Client token refresh",
+      "steps": ["send refresh cookie", "receive new access token"],
+      "apis": ["POST /api/v1/public/auth/refresh"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/public-auth.controller.spec.ts", "apps/backend/test/e2e/auth/client-auth.real-e2e-spec.ts"]
+    },
+    {
+      "id": "wf.client-auth.logout",
+      "name": "Client logout",
+      "steps": ["revoke client session cookie"],
+      "apis": ["POST /api/v1/public/auth/logout"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/public-auth.controller.spec.ts"]
+    },
+    {
+      "id": "wf.client-auth.reset-password",
+      "name": "Client password reset",
+      "steps": ["submit new password with token"],
+      "apis": ["POST /api/v1/public/auth/reset-password"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/public-auth.controller.spec.ts", "apps/backend/test/e2e/auth/client-auth.real-e2e-spec.ts"]
+    },
+    {
+      "id": "wf.client-auth.otp",
+      "name": "Client OTP login (request + verify)",
+      "steps": ["request OTP", "verify OTP", "receive session"],
+      "apis": ["POST /api/v1/public/otp/request", "POST /api/v1/public/otp/verify"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/otp.controller.spec.ts", "apps/backend/test/e2e/auth/client-auth.real-e2e-spec.ts"]
+    },
+    {
+      "id": "wf.client-auth.verify-email",
+      "name": "Client email verification",
+      "steps": ["click email link with token", "account verified"],
+      "apis": ["GET /api/v1/public/verify-email"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/verify-email.controller.spec.ts"]
+    },
+    {
+      "id": "wf.booking.public-funnel",
+      "name": "Public booking funnel (browse → book → pay)",
+      "steps": ["browse catalog", "select employee", "check availability", "create booking", "init payment"],
+      "apis": [
+        "GET /api/v1/public/branches",
+        "GET /api/v1/public/services",
+        "GET /api/v1/public/employees",
+        "GET /api/v1/public/availability",
+        "GET /api/v1/public/employees/{id}/availability/days",
+        "POST /api/v1/public/bookings",
+        "POST /api/v1/public/payments/init"
+      ],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/bookings/public-booking-funnel.real-e2e-spec.ts", "apps/website/features/booking/booking.api.test.ts"]
+    },
+    {
+      "id": "wf.booking.status-check",
+      "name": "Booking status check (post-payment polling)",
+      "steps": ["poll booking status", "check payment status"],
+      "apis": ["GET /api/v1/public/bookings/{id}/status"],
+      "roles": ["CLIENT", "anonymous"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/bookings/public-booking-funnel.real-e2e-spec.ts"]
+    },
+    {
+      "id": "wf.booking.dashboard-create",
+      "name": "Dashboard create booking (on behalf of client)",
+      "steps": ["select client", "select service/employee/slot", "create booking"],
+      "apis": ["POST /api/v1/dashboard/bookings"],
+      "roles": ["ADMIN", "RECEPTIONIST"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/bookings/booking-scenarios.real-e2e-spec.ts", "apps/dashboard/e2e/flows/bookings"]
+    },
+    {
+      "id": "wf.booking.dashboard-lifecycle",
+      "name": "Dashboard booking lifecycle (confirm/check-in/complete/cancel/no-show)",
+      "steps": ["confirm", "check-in", "complete or cancel or no-show"],
+      "apis": [
+        "PATCH /api/v1/dashboard/bookings/{id}/confirm",
+        "PATCH /api/v1/dashboard/bookings/{id}/check-in",
+        "PATCH /api/v1/dashboard/bookings/{id}/complete",
+        "PATCH /api/v1/dashboard/bookings/{id}/cancel",
+        "PATCH /api/v1/dashboard/bookings/{id}/no-show"
+      ],
+      "roles": ["ADMIN", "RECEPTIONIST"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/bookings/booking-scenarios.real-e2e-spec.ts"]
+    },
+    {
+      "id": "wf.booking.client-cancel",
+      "name": "Client self-cancel booking",
+      "steps": ["client cancels own booking"],
+      "apis": ["PATCH /api/v1/public/me/bookings/{id}/cancel"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/me.controller.spec.ts"]
+    },
+    {
+      "id": "wf.booking.client-reschedule",
+      "name": "Client self-reschedule booking",
+      "steps": ["client reschedules own booking"],
+      "apis": ["PATCH /api/v1/public/me/bookings/{id}/reschedule"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/me.controller.spec.ts"]
+    },
+    {
+      "id": "wf.booking.client-list",
+      "name": "Client view own bookings",
+      "steps": ["list bookings", "view booking detail"],
+      "apis": ["GET /api/v1/public/me/bookings", "GET /api/v1/public/me/bookings/{id}"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/me.controller.spec.ts"]
+    },
+    {
+      "id": "wf.booking.programs",
+      "name": "Public programs browse and enroll",
+      "steps": ["list programs", "view program detail", "enroll"],
+      "apis": ["GET /api/v1/public/programs", "GET /api/v1/public/programs/{id}", "POST /api/v1/public/programs/{id}/enroll"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/bookings/public-booking-funnel.real-e2e-spec.ts"],
+      "partialCoverage": true,
+      "partialNote": "GET /public/programs and GET /public/programs/{id} are tested. POST /public/programs/{id}/enroll has NO controller-level or e2e test — only handler unit test."
+    },
+    {
+      "id": "wf.finance.payment-record",
+      "name": "Record payment (dashboard)",
+      "steps": ["select booking/invoice", "record payment method + amount"],
+      "apis": ["POST /api/v1/dashboard/finance/payments"],
+      "roles": ["ADMIN", "RECEPTIONIST", "ACCOUNTANT"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/finance/finance.real-e2e-spec.ts", "apps/dashboard/e2e/flows/finance"]
+    },
+    {
+      "id": "wf.finance.moyasar-webhook",
+      "name": "Moyasar payment webhook processing",
+      "steps": ["receive webhook", "verify signature", "update payment status", "update booking status"],
+      "apis": ["POST /api/v1/public/payments/webhook"],
+      "roles": ["anonymous"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/finance/moyasar-webhook-idempotency.real-e2e-spec.ts", "apps/backend/src/api/public/payment-webhook.controller.spec.ts"]
+    },
+    {
+      "id": "wf.finance.invoice-view",
+      "name": "View invoice (dashboard)",
+      "steps": ["list invoices", "view invoice detail"],
+      "apis": ["GET /api/v1/dashboard/finance/invoices", "GET /api/v1/dashboard/finance/invoices/{id}"],
+      "roles": ["ADMIN", "RECEPTIONIST", "ACCOUNTANT"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/flows/finance"],
+      "partialCoverage": true,
+      "partialNote": "REQ-007: GET /dashboard/finance/invoices/{id} detail — invoices lib lacks a detail fn; no unit test for the detail endpoint."
+    },
+    {
+      "id": "wf.finance.public-invoice",
+      "name": "Client view invoice (public)",
+      "steps": ["view invoice", "download PDF"],
+      "apis": ["GET /api/v1/public/invoices/{id}", "GET /api/v1/public/invoices/{id}/pdf"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/invoices.controller.spec.ts"]
+    },
+    {
+      "id": "wf.finance.client-invoice",
+      "name": "Client view own invoice via me portal",
+      "steps": ["view booking invoice"],
+      "apis": ["GET /api/v1/public/me/bookings/{id}/invoice", "GET /api/v1/public/me/invoices"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/me.controller.spec.ts"]
+    },
+    {
+      "id": "wf.finance.refund",
+      "name": "Refund request (public)",
+      "steps": ["client requests refund"],
+      "apis": ["POST /api/v1/public/refunds/request"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/refunds.controller.spec.ts"]
+    },
+    {
+      "id": "wf.comms.sms-dlr",
+      "name": "SMS delivery receipt webhook",
+      "steps": ["receive DLR from provider", "verify signature", "update message status"],
+      "apis": ["POST /api/v1/public/sms/webhooks/{provider}", "POST /api/v1/public/sms/webhooks/{provider}/{organizationId}"],
+      "roles": ["anonymous"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/sms-webhooks.controller.spec.ts"]
+    },
+    {
+      "id": "wf.comms.contact-message",
+      "name": "Public contact message submission",
+      "steps": ["submit contact form"],
+      "apis": ["POST /api/v1/public/contact-messages"],
+      "roles": ["anonymous"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/public/contact-messages.real-e2e-spec.ts", "apps/backend/src/api/public/contact-messages.controller.spec.ts"]
+    },
+    {
+      "id": "wf.comms.email-templates",
+      "name": "Email template management (dashboard)",
+      "steps": ["list templates", "edit template", "preview", "send test"],
+      "apis": ["GET /api/v1/dashboard/comms/email-templates", "PATCH /api/v1/dashboard/comms/email-templates/{id}", "POST /api/v1/dashboard/comms/email-templates/{id}/preview"],
+      "roles": ["ADMIN", "OWNER"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/comms/comms.real-e2e-spec.ts"]
+    },
+    {
+      "id": "wf.org-config.branches",
+      "name": "Branch management (dashboard)",
+      "steps": ["create branch", "update branch", "list branches"],
+      "apis": ["POST /api/v1/dashboard/organization/branches", "PATCH /api/v1/dashboard/organization/branches/{id}", "GET /api/v1/dashboard/organization/branches"],
+      "roles": ["ADMIN", "OWNER"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/flows/settings"]
+    },
+    {
+      "id": "wf.org-config.public-branches",
+      "name": "Public branch listing",
+      "steps": ["list active branches", "view branch detail", "list branch employees"],
+      "apis": ["GET /api/v1/public/branches", "GET /api/v1/public/branches/{id}", "GET /api/v1/public/branches/{id}/employees"],
+      "roles": ["anonymous"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/bookings/public-booking-funnel.real-e2e-spec.ts", "apps/backend/src/api/public/branches.controller.spec.ts"]
+    },
+    {
+      "id": "wf.org-config.categories",
+      "name": "Category management (dashboard)",
+      "steps": ["create category", "update category", "list categories"],
+      "apis": ["POST /api/v1/dashboard/organization/categories", "PATCH /api/v1/dashboard/organization/categories/{id}", "GET /api/v1/dashboard/organization/categories"],
+      "roles": ["ADMIN", "OWNER"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/flows/settings"]
+    },
+    {
+      "id": "wf.org-config.departments",
+      "name": "Department management (dashboard)",
+      "steps": ["create department", "update department", "list departments"],
+      "apis": ["POST /api/v1/dashboard/organization/departments", "PATCH /api/v1/dashboard/organization/departments/{id}", "GET /api/v1/dashboard/organization/departments"],
+      "roles": ["ADMIN", "OWNER"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/flows/settings"]
+    },
+    {
+      "id": "wf.org-experience.services",
+      "name": "Service catalog management (dashboard)",
+      "steps": ["create service", "update service", "toggle active"],
+      "apis": ["POST /api/v1/dashboard/organization/services", "PATCH /api/v1/dashboard/organization/services/{id}", "GET /api/v1/dashboard/organization/services"],
+      "roles": ["ADMIN", "OWNER"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/flows/services"]
+    },
+    {
+      "id": "wf.org-experience.public-catalog",
+      "name": "Public service catalog browse",
+      "steps": ["list services", "view practitioner booking options"],
+      "apis": ["GET /api/v1/public/services", "GET /api/v1/public/services/{serviceId}/practitioners/{employeeId}/booking-options"],
+      "roles": ["anonymous"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/bookings/public-booking-funnel.real-e2e-spec.ts", "apps/website/features/booking/booking.api.test.ts", "apps/backend/src/api/public/catalog.controller.spec.ts"]
+    },
+    {
+      "id": "wf.org-experience.branding",
+      "name": "Public branding fetch",
+      "steps": ["fetch org branding (colors, logo, name)"],
+      "apis": ["GET /api/v1/public/branding"],
+      "roles": ["anonymous"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/public/branding.e2e-spec.ts", "apps/backend/src/api/public/branding.controller.spec.ts"]
+    },
+    {
+      "id": "wf.org-experience.intake-forms",
+      "name": "Intake form resolution (public)",
+      "steps": ["resolve applicable intake forms for a service/booking"],
+      "apis": ["GET /api/v1/public/intake-forms/applicable"],
+      "roles": ["anonymous"],
+      "tested": false,
+      "tests": [],
+      "note": "REQ-010 gap: intake-forms.controller.ts has no spec file. No e2e test covers this endpoint."
+    },
+    {
+      "id": "wf.people.clients",
+      "name": "Client management (dashboard)",
+      "steps": ["create client", "update client", "list clients", "view client detail"],
+      "apis": ["POST /api/v1/dashboard/clients", "PATCH /api/v1/dashboard/clients/{id}", "GET /api/v1/dashboard/clients", "GET /api/v1/dashboard/clients/{id}"],
+      "roles": ["ADMIN", "RECEPTIONIST"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/flows/clients"]
+    },
+    {
+      "id": "wf.people.employees",
+      "name": "Employee management (dashboard)",
+      "steps": ["create employee", "update employee", "list employees", "view employee detail"],
+      "apis": ["POST /api/v1/dashboard/employees", "PATCH /api/v1/dashboard/employees/{id}", "GET /api/v1/dashboard/employees", "GET /api/v1/dashboard/employees/{id}"],
+      "roles": ["ADMIN", "OWNER"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/flows/employees"]
+    },
+    {
+      "id": "wf.people.public-employees",
+      "name": "Public employee listing and profile",
+      "steps": ["list public employees", "view employee profile by slug"],
+      "apis": ["GET /api/v1/public/employees", "GET /api/v1/public/employees/{key}"],
+      "roles": ["anonymous"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/bookings/public-booking-funnel.real-e2e-spec.ts", "apps/backend/src/api/public/employees.controller.spec.ts"]
+    },
+    {
+      "id": "wf.identity.users",
+      "name": "User management (dashboard)",
+      "steps": ["create user", "update user", "list users", "delete user"],
+      "apis": ["POST /api/v1/dashboard/users", "PATCH /api/v1/dashboard/users/{id}", "GET /api/v1/dashboard/users", "DELETE /api/v1/dashboard/users/{id}"],
+      "roles": ["SUPER_ADMIN", "OWNER"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/flows/users"]
+    },
+    {
+      "id": "wf.identity.roles",
+      "name": "Role management (dashboard)",
+      "steps": ["create custom role", "assign role to user", "remove role"],
+      "apis": ["POST /api/v1/dashboard/roles", "POST /api/v1/dashboard/users/{id}/roles", "DELETE /api/v1/dashboard/users/{id}/roles/{roleId}"],
+      "roles": ["SUPER_ADMIN", "OWNER"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/identity/identity-casl.real-e2e-spec.ts"]
+    },
+    {
+      "id": "wf.ai.chatbot",
+      "name": "AI chatbot (RAG streaming)",
+      "steps": ["send message", "receive streamed response with KB context"],
+      "apis": ["POST /api/v1/dashboard/ai/chat"],
+      "roles": ["ADMIN", "OWNER"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/flows/ai"]
+    },
+    {
+      "id": "wf.media.upload",
+      "name": "Media upload (presigned URL)",
+      "steps": ["request presigned URL", "upload to MinIO"],
+      "apis": ["POST /api/v1/dashboard/media/upload"],
+      "roles": ["ADMIN", "OWNER", "EMPLOYEE"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/flows/media"]
+    },
+    {
+      "id": "wf.ops.health",
+      "name": "Health check",
+      "steps": ["GET /health", "GET /health/live", "GET /health/ready"],
+      "apis": ["GET /api/v1/health", "GET /api/v1/health/live", "GET /api/v1/health/ready"],
+      "roles": ["anonymous"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/public/health.e2e-spec.ts", "apps/backend/src/api/public/health.controller.spec.ts"]
+    },
+    {
+      "id": "wf.ops.reports",
+      "name": "Reports (dashboard)",
+      "steps": ["view reports overview", "generate report"],
+      "apis": ["GET /api/v1/dashboard/reports"],
+      "roles": ["ADMIN", "OWNER"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/flows/reports"]
+    },
+    {
+      "id": "wf.mobile.client-booking",
+      "name": "Mobile client booking flow",
+      "steps": ["browse services", "create booking", "view booking", "cancel booking"],
+      "apis": ["POST /api/v1/mobile/client/bookings", "GET /api/v1/mobile/client/bookings", "GET /api/v1/mobile/client/bookings/{id}", "PATCH /api/v1/mobile/client/bookings/{id}/cancel"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/bookings/mobile-client-booking.real-e2e-spec.ts"]
+    },
+    {
+      "id": "wf.mobile.client-payment",
+      "name": "Mobile client payment",
+      "steps": ["init payment", "bank transfer upload"],
+      "apis": ["POST /api/v1/mobile/client/payments/init", "POST /api/v1/mobile/client/payments/bank-transfer"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/bookings/mobile-client-booking.real-e2e-spec.ts"]
+    },
+    {
+      "id": "wf.mobile.client-portal",
+      "name": "Mobile client portal (home, summary, upcoming)",
+      "steps": ["view home", "view summary", "view upcoming bookings"],
+      "apis": ["GET /api/v1/mobile/client/portal/home", "GET /api/v1/mobile/client/portal/summary", "GET /api/v1/mobile/client/portal/upcoming"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/bookings/mobile-client-booking.real-e2e-spec.ts"]
+    },
+    {
+      "id": "wf.mobile.employee-schedule",
+      "name": "Mobile employee schedule",
+      "steps": ["view today schedule", "view weekly schedule", "update availability"],
+      "apis": ["GET /api/v1/mobile/employee/schedule/today", "GET /api/v1/mobile/employee/schedule/weekly", "PATCH /api/v1/mobile/employee/schedule/availability"],
+      "roles": ["EMPLOYEE"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/bookings/mobile-client-booking.real-e2e-spec.ts"]
+    },
+    {
+      "id": "wf.website.homepage",
+      "name": "Website homepage",
+      "steps": ["load homepage", "view branding", "view testimonials"],
+      "apis": ["GET /api/v1/public/branding", "GET /api/v1/public/testimonials"],
+      "roles": ["anonymous"],
+      "tested": true,
+      "tests": ["apps/website/features/testimonials/testimonials.api.test.ts", "apps/website/features/branding"]
+    },
+    {
+      "id": "wf.website.booking-wizard",
+      "name": "Website booking wizard",
+      "steps": ["select branch", "select service", "select employee", "pick slot", "confirm booking", "pay"],
+      "apis": [
+        "GET /api/v1/public/branches",
+        "GET /api/v1/public/services",
+        "GET /api/v1/public/employees",
+        "GET /api/v1/public/employees/{id}/availability/days",
+        "GET /api/v1/public/availability",
+        "POST /api/v1/public/bookings",
+        "POST /api/v1/public/payments/init"
+      ],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/website/features/booking/booking.api.test.ts"]
+    },
+    {
+      "id": "wf.website.therapist-profile",
+      "name": "Website therapist profile page",
+      "steps": ["view therapist profile", "view booking options"],
+      "apis": ["GET /api/v1/public/employees/{key}", "GET /api/v1/public/services/{serviceId}/practitioners/{employeeId}/booking-options"],
+      "roles": ["anonymous"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/employees.controller.spec.ts", "apps/website/features/booking/booking.api.test.ts"]
+    },
+    {
+      "id": "wf.website.client-account",
+      "name": "Website client account (bookings, invoices)",
+      "steps": ["view bookings", "view invoice", "cancel booking"],
+      "apis": ["GET /api/v1/public/me/bookings", "GET /api/v1/public/me/bookings/{id}", "GET /api/v1/public/me/bookings/{id}/invoice", "PATCH /api/v1/public/me/bookings/{id}/cancel"],
+      "roles": ["CLIENT"],
+      "tested": true,
+      "tests": ["apps/backend/src/api/public/me.controller.spec.ts"]
+    },
+    {
+      "id": "wf.website.contact",
+      "name": "Website contact form",
+      "steps": ["submit contact message"],
+      "apis": ["POST /api/v1/public/contact-messages"],
+      "roles": ["anonymous"],
+      "tested": true,
+      "tests": ["apps/backend/test/e2e/public/contact-messages.real-e2e-spec.ts"]
+    },
+    {
+      "id": "wf.dashboard.smoke-auth",
+      "name": "Dashboard smoke: auth flow",
+      "steps": ["login", "verify dashboard loads", "logout"],
+      "apis": ["POST /api/v1/auth/login", "GET /api/v1/auth/me"],
+      "roles": ["ADMIN"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/smoke"]
+    },
+    {
+      "id": "wf.dashboard.smoke-bookings",
+      "name": "Dashboard smoke: bookings list",
+      "steps": ["navigate to bookings", "verify list loads"],
+      "apis": ["GET /api/v1/dashboard/bookings"],
+      "roles": ["ADMIN"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/smoke"]
+    },
+    {
+      "id": "wf.dashboard.smoke-clients",
+      "name": "Dashboard smoke: clients list",
+      "steps": ["navigate to clients", "verify list loads"],
+      "apis": ["GET /api/v1/dashboard/clients"],
+      "roles": ["ADMIN"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/smoke"]
+    },
+    {
+      "id": "wf.dashboard.smoke-finance",
+      "name": "Dashboard smoke: finance pages",
+      "steps": ["navigate to payments", "navigate to invoices"],
+      "apis": ["GET /api/v1/dashboard/finance/payments", "GET /api/v1/dashboard/finance/invoices"],
+      "roles": ["ADMIN"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/smoke"]
+    },
+    {
+      "id": "wf.dashboard.smoke-settings",
+      "name": "Dashboard smoke: settings pages",
+      "steps": ["navigate to settings", "verify pages load"],
+      "apis": ["GET /api/v1/dashboard/organization/branches", "GET /api/v1/dashboard/organization/services"],
+      "roles": ["ADMIN"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/smoke"]
+    },
+    {
+      "id": "wf.dashboard.smoke-users",
+      "name": "Dashboard smoke: users list",
+      "steps": ["navigate to users", "verify list loads"],
+      "apis": ["GET /api/v1/dashboard/users"],
+      "roles": ["ADMIN"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/smoke"]
+    },
+    {
+      "id": "wf.dashboard.smoke-reports",
+      "name": "Dashboard smoke: reports page",
+      "steps": ["navigate to reports", "verify overview loads"],
+      "apis": ["GET /api/v1/dashboard/reports"],
+      "roles": ["ADMIN"],
+      "tested": true,
+      "tests": ["apps/dashboard/e2e/smoke"]
+    }
+  ]
+}

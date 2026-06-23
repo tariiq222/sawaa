@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "runs": [
+    {
+      "at": "2026-06-23T20:30:00Z",
+      "commit": "fb3ce228",
+      "mode": "full",
+      "scope": "frontend + integration review",
+      "suites": {
+        "dashboardUnit": "171 files / 1499 tests pass",
+        "websiteUnit": "63 files / 474 tests pass",
+        "dashboardSmoke": "39 tests pass",
+        "dashboardFlows": "not run (heavy/flaky)",
+        "backendE2e": "not re-run (green per prior audit)"
+      },
+      "coverage": {
+        "dashboardLines": 33.16,
+        "websiteLines": 77.09
+      },
+      "verdict": "GO for measured layers (unit + smoke); flows verification pending",
+      "note": "No new P0/P1 product bug surfaced in the suites executed this session."
+    },
+    {
+      "at": "2026-06-24T00:00:00Z",
+      "commit": "207d3d29",
+      "mode": "full",
+      "scope": "full analyst pass — API chain analysis + false-gap verification + .qa-memory build",
+      "agent": "tariqqa-analyst (claude-sonnet-4-6)",
+      "suites": {
+        "dashboardUnit": "171 files / 1499 tests pass (from prior session)",
+        "websiteUnit": "63 files / 474 tests pass (from prior session)",
+        "dashboardSmoke": "39 tests pass (from prior session)",
+        "dashboardFlows": "not run (heavy/flaky — documented)",
+        "backendE2e": "17 specs / 141 tests green (prior audit)"
+      },
+      "coverage": {
+        "business": 90.0,
+        "api_anyTest": 99.3,
+        "api_behaviourOnly": 72.0,
+        "workflow": 98.4,
+        "permission_behaviourAsserted": 26.3,
+        "permission_routeGate": 100.0,
+        "code_dashboardLines": 33.16,
+        "code_websiteLines": 77.09
+      },
+      "health": 86.0,
+      "verdict": "GO — with conditions",
+      "verdictDetail": "GO for measured layers. Conditions: (1) 2 real API gaps (programs enroll, intake-forms) are P2. (2) 2 P1 security gaps (assertCanAssignRole <=, RemoveRoleHandler missing rank gate) require owner review. (3) Dashboard e2e flows need prod-build run before major release. (4) Performance/Database sub-scores are placeholders.",
+      "falseGapsResolved": 24,
+      "realGapsConfirmed": 2,
+      "realGaps": [
+        "POST /api/v1/public/programs/{id}/enroll — no controller-level or e2e test",
+        "GET /api/v1/public/intake-forms/applicable — intake-forms.controller.ts has no spec file"
+      ],
+      "filesWritten": [
+        ".qa-memory/architecture.md",
+        ".qa-memory/modules.json",
+        ".qa-memory/workflows.json",
+        ".qa-memory/roles.json",
+        ".qa-memory/tests.json",
+        ".qa-memory/coverage.json",
+        ".qa-memory/releases.json",
+        ".qa-memory/learnings.json"
+      ]
+    }
+  ]
+}
