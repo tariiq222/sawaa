@@ -60,8 +60,10 @@ export function UserListPage() {
 
   const canEditUser = canDo("user", "update")
   const canDeleteUser = canDo("user", "delete")
+  const canViewUser = canDo("user", "read")
   const columns = getUserColumns(
-    (canEditUser || canDeleteUser) ? {
+    (canViewUser || canEditUser || canDeleteUser) ? {
+      onView: canViewUser ? (u) => router.push(`/users/${formatRef("USR", u.ref)}`) : undefined,
       onEdit: canEditUser ? (u) => router.push(`/users/${formatRef("USR", u.ref)}/edit`) : undefined,
       onDelete: canDeleteUser ? setDeleteUser : undefined,
       onToggleActive: canEditUser ? handleToggleActive : undefined,

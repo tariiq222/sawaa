@@ -176,14 +176,16 @@ export function BasicInfoTab({ form, showEmail = false, employeeName, readOnlyEm
             <div className="grid grid-cols-2 gap-3">
               <FormField label={t("employees.create.genderLabel")}>
                 <Select
-                  value={form.watch("gender") ?? ""}
-                  onValueChange={(v) => form.setValue("gender", (v || undefined) as "MALE" | "FEMALE" | undefined)}
+                  value={form.watch("gender") ?? "__none__"}
+                  onValueChange={(v) =>
+                    form.setValue("gender", (v === "__none__" ? undefined : v) as "MALE" | "FEMALE" | undefined)
+                  }
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="—" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t("employees.create.genderUnspecified")}</SelectItem>
+                    <SelectItem value="__none__">{t("employees.create.genderUnspecified")}</SelectItem>
                     <SelectItem value="MALE">{t("employees.create.genderMale")}</SelectItem>
                     <SelectItem value="FEMALE">{t("employees.create.genderFemale")}</SelectItem>
                   </SelectContent>

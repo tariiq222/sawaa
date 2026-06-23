@@ -123,6 +123,23 @@ export const enUsers: Record<string, string> = {
   "users.section.account": "Account Details",
   "users.section.role": "Role & Permissions",
 
+  // — User Detail Page —
+  "users.detail.home": "Home",
+  "users.detail.notFound": "User not found",
+  "users.detail.backToUsers": "Back to Users",
+  "users.detail.personalInfo": "Personal Information",
+  "users.detail.accountInfo": "Account Information",
+  "users.detail.fullName": "Full Name",
+  "users.detail.email": "Email",
+  "users.detail.phone": "Phone",
+  "users.detail.gender": "Gender",
+  "users.detail.role": "Role",
+  "users.detail.customRole": "Custom Role",
+  "users.detail.status": "Status",
+  "users.detail.registered": "Joined",
+  "users.detail.lastUpdated": "Last Updated",
+  "users.col.view": "View",
+
   // — Activity Log Columns —
   "activityLog.col.user": "User",
   "activityLog.col.action": "Action",

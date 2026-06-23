@@ -23,11 +23,12 @@ interface DeleteUserDialogProps {
   user: User | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  onDeleted?: () => void
 }
 
 /* ─── Component ─── */
 
-export function DeleteUserDialog({ user, open, onOpenChange }: DeleteUserDialogProps) {
+export function DeleteUserDialog({ user, open, onOpenChange, onDeleted }: DeleteUserDialogProps) {
   const { deleteMut } = useUserMutations()
   const { t } = useLocale()
 
@@ -37,6 +38,7 @@ export function DeleteUserDialog({ user, open, onOpenChange }: DeleteUserDialogP
       await deleteMut.mutateAsync(user.id)
       toast.success(t("users.delete.success"))
       onOpenChange(false)
+      onDeleted?.()
     } catch (err) {
       showApiError(err, { fallback: t("users.delete.error"), t })
     }

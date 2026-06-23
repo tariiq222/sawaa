@@ -5,6 +5,7 @@ import { useState, useCallback } from "react"
 import { queryKeys } from "@/lib/query-keys"
 import {
   fetchUsers,
+  fetchUser,
   createUser,
   updateUser,
   updateUserRole,
@@ -59,6 +60,17 @@ export function useUsers() {
     resetFilters,
     refetch,
   }
+}
+
+/* ─── User Detail ─── */
+
+export function useUser(id: string | null) {
+  return useQuery({
+    queryKey: queryKeys.users.detail(id!),
+    queryFn: () => fetchUser(id!),
+    enabled: !!id,
+    staleTime: 10 * 60 * 1000,
+  })
 }
 
 /* ─── User Mutations ─── */

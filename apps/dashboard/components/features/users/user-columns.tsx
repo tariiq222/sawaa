@@ -10,6 +10,7 @@ import {
   Delete02Icon,
   UserCheck01Icon,
   UserBlock01Icon,
+  ViewIcon,
 } from "@hugeicons/core-free-icons"
 import { Avatar, AvatarFallback } from "@sawaa/ui"
 import { Badge } from "@sawaa/ui"
@@ -27,6 +28,7 @@ import type { UserRole } from "@/lib/types/user"
 import { ActiveBadge } from "@/components/features/status-badge"
 
 interface UserColumnCallbacks {
+  onView?: (user: User) => void
   onEdit?: (user: User) => void
   onDelete?: (user: User) => void
   onToggleActive?: (user: User) => void
@@ -115,6 +117,12 @@ export function getUserColumns(
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              {callbacks.onView && (
+                <DropdownMenuItem onClick={() => callbacks.onView!(user)}>
+                  <HugeiconsIcon icon={ViewIcon} size={14} />
+                  {t("users.col.view")}
+                </DropdownMenuItem>
+              )}
               {callbacks.onEdit && (
                 <DropdownMenuItem onClick={() => callbacks.onEdit!(user)}>
                   <HugeiconsIcon icon={PencilEdit02Icon} size={14} />

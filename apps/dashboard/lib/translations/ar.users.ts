@@ -123,6 +123,23 @@ export const arUsers: Record<string, string> = {
   "users.section.account": "معلومات الحساب",
   "users.section.role": "الدور والصلاحيات",
 
+  // — User Detail Page —
+  "users.detail.home": "الرئيسية",
+  "users.detail.notFound": "لم يتم العثور على المستخدم",
+  "users.detail.backToUsers": "العودة للمستخدمين",
+  "users.detail.personalInfo": "المعلومات الشخصية",
+  "users.detail.accountInfo": "معلومات الحساب",
+  "users.detail.fullName": "الاسم الكامل",
+  "users.detail.email": "البريد الإلكتروني",
+  "users.detail.phone": "رقم الجوال",
+  "users.detail.gender": "الجنس",
+  "users.detail.role": "الدور",
+  "users.detail.customRole": "الدور المخصص",
+  "users.detail.status": "الحالة",
+  "users.detail.registered": "تاريخ التسجيل",
+  "users.detail.lastUpdated": "آخر تحديث",
+  "users.col.view": "عرض",
+
   // — Activity Log Columns —
   "activityLog.col.user": "المستخدم",
   "activityLog.col.action": "الإجراء",
