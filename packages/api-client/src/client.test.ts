@@ -436,25 +436,31 @@ describe('setApiRequestBaseUrl', () => {
 // ─── Not-initialized guard ─────────────────────────────────────────────────
 
 describe('apiRequest before initClient', () => {
-  it('throws when called without initClient', async () => {
-    // Re-init with no config by stubbing the module: simplest is to mutate via
-    // a fresh module load, but the public API has no reset. Verify the
-    // module is always initialized in this file's beforeEach; this test
-    // documents the contract by calling the throw path indirectly through a
-    // fresh isolated import is not feasible here — assert error MESSAGE instead.
-    // (See plan: only the "throw if not initialized" branch is covered — it
-    // requires module reset. We assert the message to confirm the contract.)
-    expect(() => {
-      throw new Error('api-client not initialized')
-    }).toThrow('api-client not initialized')
-  })
+  it('initializes a bare-bones config when setApiRequestBaseUrl is called before initClient', async () => {
+    // Force a fresh module load so the module-level `config` is null again.
+    vi.resetModules()
+    const fresh = await import('./client?bare-config')
 
-  it('throws synchronously via guard logic — verified by message contract', () => {
-    // The guard is at the very top of apiRequest; mutating module state to
-    // null config is not exposed via the public API. We assert the message
-    // contract that callers can rely on for catch blocks.
-    const guardMessage = 'api-client not initialized'
-    expect(guardMessage).toMatch(/api-client not initialized/)
+    fresh.setApiRequestBaseUrl('http://bare.test')
+
+    // After the bare-config path runs, apiRequest must work end-to-end:
+    //   - it has a baseUrl (the one we just set)
+    //   - no token attached (getAccessToken returns null)
+    //   - no-op callbacks (must not throw)
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValueOnce(jsonResponse({ id: 'bare' })),
+    )
+    try {
+      const result = await fresh.apiRequest<{ id: string }>('/anything')
+      expect(result).toEqual({ id: 'bare' })
+      const [url, init] = vi.mocked(fetch).mock.calls[0]!
+      expect(url).toBe('http://bare.test/anything')
+      const headers = init?.headers as Record<string, string>
+      expect(headers.Authorization).toBeUndefined()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it('mutex can be queried and set without throwing', () => {

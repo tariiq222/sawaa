@@ -24,8 +24,11 @@ import {
   updateEmployeeService,
 } from '../employees'
 import {
+  applyInvoiceDiscount,
   getPayment,
+  getPaymentStats,
   listPayments,
+  processPayment,
   refundPayment,
   verifyPayment,
 } from '../payments'
@@ -393,5 +396,65 @@ describe('payments module', () => {
     expect(lastRequest()[0]).toBe(
       'http://api.test/dashboard/finance/payments?page=3&limit=25&status=COMPLETED&method=CASH',
     )
+  })
+
+  it('GETs /dashboard/finance/payments/stats (no body)', async () => {
+    const fakeStats = {
+      total: 100,
+      totalAmount: 50000,
+      completed: 80,
+      completedAmount: 40000,
+      pending: 10,
+      pendingAmount: 5000,
+      pendingVerification: 5,
+      pendingVerificationAmount: 2500,
+      refunded: 3,
+      refundedAmount: 1500,
+      failed: 2,
+    }
+    vi.mocked(fetch).mockReset()
+    vi.mocked(fetch).mockResolvedValueOnce(okJson(fakeStats))
+
+    const result = await getPaymentStats()
+
+    expect(result).toEqual(fakeStats)
+    const [url, init] = lastRequest()
+    expect(url).toBe('http://api.test/dashboard/finance/payments/stats')
+    expect(init?.method).toBeUndefined()
+    expect(authHeader(init)).toBe('Bearer access.jwt')
+  })
+
+  it('POSTs a manual payment to /dashboard/finance/payments', async () => {
+    await processPayment({
+      invoiceId: 'inv-1',
+      amount: 25000, // halalas
+      method: 'CASH',
+      gatewayRef: 'rcpt-42',
+    })
+    const [url, init] = lastRequest()
+    expect(url).toBe('http://api.test/dashboard/finance/payments')
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(init?.body as string)).toEqual({
+      invoiceId: 'inv-1',
+      amount: 25000,
+      method: 'CASH',
+      gatewayRef: 'rcpt-42',
+    })
+  })
+
+  it('PATCHes an invoice discount', async () => {
+    await applyInvoiceDiscount('inv-1', {
+      discountAmt: 500,
+      discountReasonId: 'reason-1',
+      note: 'goodwill',
+    })
+    const [url, init] = lastRequest()
+    expect(url).toBe('http://api.test/dashboard/finance/invoices/inv-1/discount')
+    expect(init?.method).toBe('PATCH')
+    expect(JSON.parse(init?.body as string)).toEqual({
+      discountAmt: 500,
+      discountReasonId: 'reason-1',
+      note: 'goodwill',
+    })
   })
 })
