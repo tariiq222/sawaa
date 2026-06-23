@@ -46,16 +46,17 @@ export default defineConfig({
         "tailwind.config.*",
         "postcss.config.*",
       ],
-      // Ratchet: raised after Phase 4 critical-path coverage (provider
-      // credentials, permission-guard, locale-provider, dashboard-home,
-      // programs). Set just below measured coverage (~32% lines) to lock in
-      // gains without flaking under concurrent runs. Target 45% is the gradual
-      // component-coverage follow-up.
+      // Ratchet: raised after additional hook / api / schema coverage
+      // (provider-config hooks: moyasar/zoom/sms/email, ratings,
+      // top-performers, discount-reasons CRUD, and the 6 content schemas:
+      // blog-posts / faq / feature-cards / hero / section-intros /
+      // support-groups). Set ~1.5 points below measured coverage to lock in
+      // gains without flaking under concurrent runs.
       thresholds: {
-        statements: 30,
-        branches: 20,
-        functions: 28,
-        lines: 30,
+        statements: 31,
+        branches: 21,
+        functions: 30,
+        lines: 32,
       },
       reporter: ["text", "lcov", "html"],
     },

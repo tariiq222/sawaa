@@ -158,7 +158,7 @@ describe("useUpsertSmsConfig", () => {
       result.current.mutate({
         provider: "UNIFONIC",
         senderId: "Sawaa",
-        apiKey: "uk_xxx",
+        unifonic: { appSid: "sid", apiKey: "uk_xxx" },
       })
     })
 
@@ -166,7 +166,7 @@ describe("useUpsertSmsConfig", () => {
     expect(upsertSmsConfig.mock.calls[0]?.[0]).toEqual({
       provider: "UNIFONIC",
       senderId: "Sawaa",
-      apiKey: "uk_xxx",
+      unifonic: { appSid: "sid", apiKey: "uk_xxx" },
     })
     expect(result.current.data).toEqual(SAMPLE_CONFIG)
   })
