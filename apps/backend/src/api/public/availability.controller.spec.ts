@@ -72,4 +72,67 @@ describe('PublicAvailabilityController (e2e)', () => {
         .expect(400);
     });
   });
+
+  describe('GET /public/employees/:id/availability/days', () => {
+    it('returns 200 with the days availability map', async () => {
+      mockDaysHandler.execute.mockResolvedValue({
+        '2026-05-20': true,
+        '2026-05-21': false,
+      });
+
+      await request(app.getHttpServer())
+        .get(`/public/employees/${uuid(1)}/availability/days`)
+        .expect(200);
+
+      expect(mockDaysHandler.execute).toHaveBeenCalledWith({
+        employeeId: uuid(1),
+        serviceId: undefined,
+        branchId: undefined,
+        startDate: undefined,
+        days: undefined,
+      });
+    });
+
+    it('parses days query parameter to a number (parseInt branch)', async () => {
+      mockDaysHandler.execute.mockResolvedValue({});
+
+      await request(app.getHttpServer())
+        .get(`/public/employees/${uuid(1)}/availability/days?days=14`)
+        .expect(200);
+
+      expect(mockDaysHandler.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ days: 14 }),
+      );
+    });
+
+    it('forwards serviceId, branchId, and startDate query parameters', async () => {
+      mockDaysHandler.execute.mockResolvedValue({});
+
+      await request(app.getHttpServer())
+        .get(
+          `/public/employees/${uuid(1)}/availability/days?serviceId=${uuid(2)}&branchId=${uuid(3)}&startDate=2026-05-20&days=7`,
+        )
+        .expect(200);
+
+      expect(mockDaysHandler.execute).toHaveBeenCalledWith({
+        employeeId: uuid(1),
+        serviceId: uuid(2),
+        branchId: uuid(3),
+        startDate: '2026-05-20',
+        days: 7,
+      });
+    });
+
+    it('passes days=undefined when the query param is absent (optional branch)', async () => {
+      mockDaysHandler.execute.mockResolvedValue({});
+
+      await request(app.getHttpServer())
+        .get(`/public/employees/${uuid(1)}/availability/days?startDate=2026-05-20`)
+        .expect(200);
+
+      expect(mockDaysHandler.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ days: undefined }),
+      );
+    });
+  });
 });
