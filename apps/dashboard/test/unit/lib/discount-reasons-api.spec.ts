@@ -81,25 +81,46 @@ describe("discount-reasons api", () => {
 
   describe("createDiscountReason", () => {
     it("POSTs to /dashboard/discount-reasons with the input body", async () => {
-      postMock.mockResolvedValueOnce({ id: "dr-1", label: "Compassionate", isActive: true, sortOrder: 1 })
-      const input = { label: "Compassionate", isActive: true, sortOrder: 1 }
+      postMock.mockResolvedValueOnce({
+        id: "dr-1",
+        labelAr: "سبب إنساني",
+        labelEn: "Compassionate",
+        isActive: true,
+        sortOrder: 1,
+        createdAt: "2026-06-01T00:00:00.000Z",
+        updatedAt: "2026-06-01T00:00:00.000Z",
+      })
+      const input = { labelAr: "سبب إنساني", labelEn: "Compassionate", isActive: true, sortOrder: 1 }
       await createDiscountReason(input)
       expect(postMock).toHaveBeenCalledWith("/dashboard/discount-reasons", input)
     })
 
     it("returns the persisted DiscountReason (with backend-assigned id)", async () => {
-      const persisted = { id: "dr-1", label: "Compassionate", isActive: true, sortOrder: 1 }
+      const persisted = {
+        id: "dr-1",
+        labelAr: "سبب إنساني",
+        labelEn: "Compassionate",
+        isActive: true,
+        sortOrder: 1,
+        createdAt: "2026-06-01T00:00:00.000Z",
+        updatedAt: "2026-06-01T00:00:00.000Z",
+      }
       postMock.mockResolvedValueOnce(persisted)
-      const result = await createDiscountReason({ label: "Compassionate", isActive: true, sortOrder: 1 })
+      const result = await createDiscountReason({
+        labelAr: "سبب إنساني",
+        labelEn: "Compassionate",
+        isActive: true,
+        sortOrder: 1,
+      })
       expect(result).toEqual(persisted)
     })
 
     it("propagates validation errors", async () => {
-      const err = new Error("label is required")
+      const err = new Error("labelAr is required")
       postMock.mockRejectedValueOnce(err)
       await expect(
-        createDiscountReason({ label: "", isActive: true, sortOrder: 0 }),
-      ).rejects.toThrow("label is required")
+        createDiscountReason({ labelAr: "", isActive: true, sortOrder: 0 }),
+      ).rejects.toThrow("labelAr is required")
     })
   })
 
@@ -107,16 +128,32 @@ describe("discount-reasons api", () => {
 
   describe("updateDiscountReason", () => {
     it("PATCHes the row by id with the input body", async () => {
-      patchMock.mockResolvedValueOnce({ id: "dr-1", label: "Renamed", isActive: true, sortOrder: 1 })
-      await updateDiscountReason("dr-1", { label: "Renamed" })
+      patchMock.mockResolvedValueOnce({
+        id: "dr-1",
+        labelAr: "مسمّى جديد",
+        labelEn: null,
+        isActive: true,
+        sortOrder: 1,
+        createdAt: "2026-06-01T00:00:00.000Z",
+        updatedAt: "2026-06-02T00:00:00.000Z",
+      })
+      await updateDiscountReason("dr-1", { labelAr: "مسمّى جديد" })
       expect(patchMock).toHaveBeenCalledWith(
         "/dashboard/discount-reasons/dr-1",
-        { label: "Renamed" },
+        { labelAr: "مسمّى جديد" },
       )
     })
 
     it("uses PATCH (not PUT) — partial update", async () => {
-      patchMock.mockResolvedValueOnce({ id: "dr-1", label: "x", isActive: false, sortOrder: 2 })
+      patchMock.mockResolvedValueOnce({
+        id: "dr-1",
+        labelAr: "x",
+        labelEn: null,
+        isActive: false,
+        sortOrder: 2,
+        createdAt: "2026-06-01T00:00:00.000Z",
+        updatedAt: "2026-06-01T00:00:00.000Z",
+      })
       await updateDiscountReason("dr-1", { isActive: false, sortOrder: 2 })
       // No PUT/PATCH confusion.
       expect(patchMock).toHaveBeenCalledTimes(1)
@@ -125,7 +162,7 @@ describe("discount-reasons api", () => {
 
     it("propagates api errors", async () => {
       patchMock.mockRejectedValueOnce(new Error("Not found"))
-      await expect(updateDiscountReason("dr-x", { label: "x" })).rejects.toThrow("Not found")
+      await expect(updateDiscountReason("dr-x", { labelAr: "x" })).rejects.toThrow("Not found")
     })
   })
 
