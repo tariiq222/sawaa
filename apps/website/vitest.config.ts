@@ -19,5 +19,22 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    coverage: {
+      provider: 'v8',
+      include: ['features/**', 'lib/**'],
+      exclude: ['**/*.test.*', '**/*.d.ts', '**/index.ts'],
+      reporter: ['text', 'text-summary'],
+      // Ratchet thresholds — measured features+lib baseline (2026-06-23) at
+      //   statements 76.7 / branches 71.22 / functions 75.78 / lines 77.09.
+      // Each threshold is ~2 points below the measured floor so the gate
+      // gates on real coverage but stays passable today. Raise these as more
+      // tests land.
+      thresholds: {
+        statements: 74,
+        branches: 69,
+        functions: 73,
+        lines: 75,
+      },
+    },
   },
 });
