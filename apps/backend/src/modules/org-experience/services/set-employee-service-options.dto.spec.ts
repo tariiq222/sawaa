@@ -7,10 +7,11 @@ import {
 } from './set-employee-service-options.dto';
 import { DeliveryType } from '@prisma/client';
 
-async function validateDto(plain: Record<string, unknown>, Cls = SetEmployeeServiceOptionsDto) {
-  const dto = plainToInstance(Cls, plain);
-  return validate(dto);
-}
+const validateDto = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(SetEmployeeServiceOptionsDto, plain));
+
+const validateOption = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(EmployeeServiceOptionInputDto, plain));
 
 const validOption = {
   durationOptionId: '550e8400-e29b-41d4-a716-446655440000',
@@ -118,12 +119,12 @@ describe('SetEmployeeServiceOptionsDto', () => {
 
 describe('EmployeeServiceOptionInputDto', () => {
   it('accepts a fully valid instance directly', async () => {
-    const errors = await validateDto(validOption, EmployeeServiceOptionInputDto);
+    const errors = await validateOption(validOption);
     expect(errors).toHaveLength(0);
   });
 
   it('rejects a missing durationOptionId when validated directly', async () => {
-    const errors = await validateDto({}, EmployeeServiceOptionInputDto);
+    const errors = await validateOption({});
     expect(errors.some((e) => e.property === 'durationOptionId')).toBe(true);
   });
 });

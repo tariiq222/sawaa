@@ -4,10 +4,11 @@ import { validate } from 'class-validator';
 import { CreateIntakeFormDto, IntakeFieldInputDto } from './create-intake-form.dto';
 import { IntakeFieldType, IntakeFormScope, IntakeFormType } from '@prisma/client';
 
-async function validateDto(plain: Record<string, unknown>, Cls = CreateIntakeFormDto) {
-  const dto = plainToInstance(Cls, plain);
-  return validate(dto);
-}
+const validateCreate = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(CreateIntakeFormDto, plain));
+
+const validateField = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(IntakeFieldInputDto, plain));
 
 const validPayload: Record<string, unknown> = {
   nameAr: 'استبيان ما قبل الجلسة',
@@ -17,12 +18,12 @@ const validPayload: Record<string, unknown> = {
 
 describe('CreateIntakeFormDto', () => {
   it('accepts a minimal valid payload (only required fields)', async () => {
-    const errors = await validateDto(validPayload);
+    const errors = await validateCreate(validPayload);
     expect(errors).toHaveLength(0);
   });
 
   it('accepts a fully populated payload with fields', async () => {
-    const errors = await validateDto({
+    const errors = await validateCreate({
       ...validPayload,
       nameEn: 'Pre-session Questionnaire',
       scopeId: null,
@@ -49,49 +50,49 @@ describe('CreateIntakeFormDto', () => {
 
   it('rejects a missing nameAr', async () => {
     const { nameAr: _ignored, ...rest } = validPayload;
-    const errors = await validateDto(rest);
+    const errors = await validateCreate(rest);
     expect(errors.some((e) => e.property === 'nameAr')).toBe(true);
   });
 
   it('rejects a missing type', async () => {
     const { type: _ignored, ...rest } = validPayload;
-    const errors = await validateDto(rest);
+    const errors = await validateCreate(rest);
     expect(errors.some((e) => e.property === 'type')).toBe(true);
   });
 
   it('rejects a missing scope', async () => {
     const { scope: _ignored, ...rest } = validPayload;
-    const errors = await validateDto(rest);
+    const errors = await validateCreate(rest);
     expect(errors.some((e) => e.property === 'scope')).toBe(true);
   });
 
   it('rejects a nameAr longer than 200 chars', async () => {
-    const errors = await validateDto({ ...validPayload, nameAr: 'أ'.repeat(201) });
+    const errors = await validateCreate({ ...validPayload, nameAr: 'أ'.repeat(201) });
     expect(errors.some((e) => e.property === 'nameAr')).toBe(true);
   });
 
   it('rejects an out-of-enum type', async () => {
-    const errors = await validateDto({ ...validPayload, type: 'UNEXPECTED' });
+    const errors = await validateCreate({ ...validPayload, type: 'UNEXPECTED' });
     expect(errors.some((e) => e.property === 'type')).toBe(true);
   });
 
   it('rejects an out-of-enum scope', async () => {
-    const errors = await validateDto({ ...validPayload, scope: 'TEAM' });
+    const errors = await validateCreate({ ...validPayload, scope: 'TEAM' });
     expect(errors.some((e) => e.property === 'scope')).toBe(true);
   });
 
   it('rejects a non-boolean isActive', async () => {
-    const errors = await validateDto({ ...validPayload, isActive: 'true' });
+    const errors = await validateCreate({ ...validPayload, isActive: 'true' });
     expect(errors.some((e) => e.property === 'isActive')).toBe(true);
   });
 
   it('rejects a non-string scopeId', async () => {
-    const errors = await validateDto({ ...validPayload, scopeId: 42 });
+    const errors = await validateCreate({ ...validPayload, scopeId: 42 });
     expect(errors.some((e) => e.property === 'scopeId')).toBe(true);
   });
 
   it('accepts a string scopeId', async () => {
-    const errors = await validateDto({ ...validPayload, scopeId: 'service-123' });
+    const errors = await validateCreate({ ...validPayload, scopeId: 'service-123' });
     expect(errors).toHaveLength(0);
   });
 
@@ -100,7 +101,7 @@ describe('CreateIntakeFormDto', () => {
       labelAr: `سؤال ${i}`,
       fieldType: IntakeFieldType.TEXT,
     }));
-    const errors = await validateDto({ ...validPayload, fields });
+    const errors = await validateCreate({ ...validPayload, fields });
     expect(errors.some((e) => e.property === 'fields')).toBe(true);
   });
 
@@ -109,86 +110,59 @@ describe('CreateIntakeFormDto', () => {
       labelAr: `سؤال ${i}`,
       fieldType: IntakeFieldType.TEXT,
     }));
-    const errors = await validateDto({ ...validPayload, fields });
+    const errors = await validateCreate({ ...validPayload, fields });
     expect(errors).toHaveLength(0);
   });
 });
 
 describe('IntakeFieldInputDto', () => {
   it('accepts a valid text field directly', async () => {
-    const errors = await validateDto(
-      { labelAr: 'سؤال', fieldType: IntakeFieldType.TEXT },
-      IntakeFieldInputDto,
-    );
+    const errors = await validateField({ labelAr: 'سؤال', fieldType: IntakeFieldType.TEXT });
     expect(errors).toHaveLength(0);
   });
 
   it('rejects a missing labelAr', async () => {
-    const errors = await validateDto(
-      { fieldType: IntakeFieldType.TEXT },
-      IntakeFieldInputDto,
-    );
+    const errors = await validateField({ fieldType: IntakeFieldType.TEXT });
     expect(errors.some((e) => e.property === 'labelAr')).toBe(true);
   });
 
   it('rejects a missing fieldType', async () => {
-    const errors = await validateDto({ labelAr: 'سؤال' }, IntakeFieldInputDto);
+    const errors = await validateField({ labelAr: 'سؤال' });
     expect(errors.some((e) => e.property === 'fieldType')).toBe(true);
   });
 
   it('rejects an out-of-enum fieldType', async () => {
-    const errors = await validateDto(
-      { labelAr: 'سؤال', fieldType: 'RATING' },
-      IntakeFieldInputDto,
-    );
+    const errors = await validateField({ labelAr: 'سؤال', fieldType: 'RATING' });
     expect(errors.some((e) => e.property === 'fieldType')).toBe(true);
   });
 
   it('rejects a labelAr longer than 200 chars', async () => {
-    const errors = await validateDto(
-      { labelAr: 'أ'.repeat(201), fieldType: IntakeFieldType.TEXT },
-      IntakeFieldInputDto,
-    );
+    const errors = await validateField({ labelAr: 'أ'.repeat(201), fieldType: IntakeFieldType.TEXT });
     expect(errors.some((e) => e.property === 'labelAr')).toBe(true);
   });
 
   it('rejects a non-boolean isRequired', async () => {
-    const errors = await validateDto(
-      { labelAr: 'سؤال', fieldType: IntakeFieldType.TEXT, isRequired: 'yes' },
-      IntakeFieldInputDto,
-    );
+    const errors = await validateField({ labelAr: 'سؤال', fieldType: IntakeFieldType.TEXT, isRequired: 'yes' });
     expect(errors.some((e) => e.property === 'isRequired')).toBe(true);
   });
 
   it('rejects a non-string-array options field', async () => {
-    const errors = await validateDto(
-      { labelAr: 'سؤال', fieldType: IntakeFieldType.SELECT, options: [1, 2, 3] },
-      IntakeFieldInputDto,
-    );
+    const errors = await validateField({ labelAr: 'سؤال', fieldType: IntakeFieldType.SELECT, options: [1, 2, 3] });
     expect(errors.some((e) => e.property === 'options')).toBe(true);
   });
 
   it('accepts a valid string-array options field', async () => {
-    const errors = await validateDto(
-      { labelAr: 'سؤال', fieldType: IntakeFieldType.SELECT, options: ['a', 'b'] },
-      IntakeFieldInputDto,
-    );
+    const errors = await validateField({ labelAr: 'سؤال', fieldType: IntakeFieldType.SELECT, options: ['a', 'b'] });
     expect(errors).toHaveLength(0);
   });
 
   it('rejects a negative position', async () => {
-    const errors = await validateDto(
-      { labelAr: 'سؤال', fieldType: IntakeFieldType.TEXT, position: -1 },
-      IntakeFieldInputDto,
-    );
+    const errors = await validateField({ labelAr: 'سؤال', fieldType: IntakeFieldType.TEXT, position: -1 });
     expect(errors.some((e) => e.property === 'position')).toBe(true);
   });
 
   it('rejects a non-integer position', async () => {
-    const errors = await validateDto(
-      { labelAr: 'سؤال', fieldType: IntakeFieldType.TEXT, position: 1.5 },
-      IntakeFieldInputDto,
-    );
+    const errors = await validateField({ labelAr: 'سؤال', fieldType: IntakeFieldType.TEXT, position: 1.5 });
     expect(errors.some((e) => e.property === 'position')).toBe(true);
   });
 });

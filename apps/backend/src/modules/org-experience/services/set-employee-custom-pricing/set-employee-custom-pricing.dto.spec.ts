@@ -6,10 +6,11 @@ import {
   SetEmployeeCustomPricingDto,
 } from './set-employee-custom-pricing.dto';
 
-async function validateDto(plain: Record<string, unknown>, Cls = SetEmployeeCustomPricingDto) {
-  const dto = plainToInstance(Cls, plain);
-  return validate(dto);
-}
+const validateDto = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(SetEmployeeCustomPricingDto, plain));
+
+const validateType = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(CustomPricingTypeDto, plain));
 
 const validPayload: Record<string, unknown> = {
   enabled: true,
@@ -98,18 +99,12 @@ describe('SetEmployeeCustomPricingDto', () => {
 
 describe('CustomPricingTypeDto', () => {
   it('accepts a fully valid instance directly', async () => {
-    const errors = await validateDto(
-      { deliveryType: 'IN_PERSON', price: 100, durationMins: 60 },
-      CustomPricingTypeDto,
-    );
+    const errors = await validateType({ deliveryType: 'IN_PERSON', price: 100, durationMins: 60 });
     expect(errors).toHaveLength(0);
   });
 
   it('rejects a missing deliveryType directly', async () => {
-    const errors = await validateDto(
-      { price: 100, durationMins: 60 },
-      CustomPricingTypeDto,
-    );
+    const errors = await validateType({ price: 100, durationMins: 60 });
     expect(errors.some((e) => e.property === 'deliveryType')).toBe(true);
   });
 });

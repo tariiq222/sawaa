@@ -7,13 +7,14 @@ import {
   SetEmployeeDurationsDto,
 } from './set-employee-durations.dto';
 
-async function validateDto(
-  plain: Record<string, unknown>,
-  Cls = SetEmployeeDurationsDto,
-) {
-  const dto = plainToInstance(Cls, plain);
-  return validate(dto);
-}
+const validateDto = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(SetEmployeeDurationsDto, plain));
+
+const validateItem = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(EmployeeDurationItemDto, plain));
+
+const validateGroup = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(EmployeeDurationsByTypeDto, plain));
 
 const validItem = {
   label: '60 min session',
@@ -152,22 +153,19 @@ describe('SetEmployeeDurationsDto', () => {
 
 describe('EmployeeDurationItemDto', () => {
   it('accepts a valid item directly', async () => {
-    const errors = await validateDto(validItem, EmployeeDurationItemDto);
+    const errors = await validateItem(validItem);
     expect(errors).toHaveLength(0);
   });
 });
 
 describe('EmployeeDurationsByTypeDto', () => {
   it('accepts a valid group directly', async () => {
-    const errors = await validateDto(
-      { deliveryType: 'IN_PERSON', items: [validItem] },
-      EmployeeDurationsByTypeDto,
-    );
+    const errors = await validateGroup({ deliveryType: 'IN_PERSON', items: [validItem] });
     expect(errors).toHaveLength(0);
   });
 
   it('rejects a missing items array directly', async () => {
-    const errors = await validateDto({ deliveryType: 'IN_PERSON' }, EmployeeDurationsByTypeDto);
+    const errors = await validateGroup({ deliveryType: 'IN_PERSON' });
     expect(errors.some((e) => e.property === 'items')).toBe(true);
   });
 });

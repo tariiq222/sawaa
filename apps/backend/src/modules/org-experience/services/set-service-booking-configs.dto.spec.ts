@@ -9,10 +9,17 @@ import {
 } from './set-service-booking-configs.dto';
 import { DeliveryType } from '@prisma/client';
 
-async function validateDto(plain: Record<string, unknown>, Cls = SetServiceBookingConfigsDto) {
-  const dto = plainToInstance(Cls, plain);
-  return validate(dto);
-}
+const validateDto = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(SetServiceBookingConfigsDto, plain));
+
+const validateConfig = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(BookingConfigInputDto, plain));
+
+const validateDurationOption = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(BookingConfigDurationOptionInputDto, plain));
+
+const validateWindow = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(ServiceAvailabilityWindowInputDto, plain));
 
 const validConfig = {
   price: 5000,
@@ -163,63 +170,48 @@ describe('SetServiceBookingConfigsDto', () => {
 
 describe('BookingConfigInputDto', () => {
   it('accepts a fully valid instance directly', async () => {
-    const errors = await validateDto(validConfig, BookingConfigInputDto);
+    const errors = await validateConfig(validConfig);
     expect(errors).toHaveLength(0);
   });
 
   it('rejects a missing price when validated directly', async () => {
     const { price: _ignored, ...rest } = validConfig;
-    const errors = await validateDto(rest, BookingConfigInputDto);
+    const errors = await validateConfig(rest);
     expect(errors.some((e) => e.property === 'price')).toBe(true);
   });
 
   it('rejects a missing durationMins when validated directly', async () => {
     const { durationMins: _ignored, ...rest } = validConfig;
-    const errors = await validateDto(rest, BookingConfigInputDto);
+    const errors = await validateConfig(rest);
     expect(errors.some((e) => e.property === 'durationMins')).toBe(true);
   });
 });
 
 describe('BookingConfigDurationOptionInputDto', () => {
   it('accepts a valid duration option directly', async () => {
-    const errors = await validateDto(
-      { label: '30 min', durationMins: 30, price: 5000 },
-      BookingConfigDurationOptionInputDto,
-    );
+    const errors = await validateDurationOption({ label: '30 min', durationMins: 30, price: 5000 });
     expect(errors).toHaveLength(0);
   });
 
   it('rejects a missing label', async () => {
-    const errors = await validateDto(
-      { durationMins: 30, price: 5000 },
-      BookingConfigDurationOptionInputDto,
-    );
+    const errors = await validateDurationOption({ durationMins: 30, price: 5000 });
     expect(errors.some((e) => e.property === 'label')).toBe(true);
   });
 });
 
 describe('ServiceAvailabilityWindowInputDto', () => {
   it('accepts a valid availability window directly', async () => {
-    const errors = await validateDto(
-      { dayOfWeek: 1, startTime: '09:00', endTime: '17:00' },
-      ServiceAvailabilityWindowInputDto,
-    );
+    const errors = await validateWindow({ dayOfWeek: 1, startTime: '09:00', endTime: '17:00' });
     expect(errors).toHaveLength(0);
   });
 
   it('rejects a non-HH:MM startTime', async () => {
-    const errors = await validateDto(
-      { dayOfWeek: 1, startTime: '9am', endTime: '17:00' },
-      ServiceAvailabilityWindowInputDto,
-    );
+    const errors = await validateWindow({ dayOfWeek: 1, startTime: '9am', endTime: '17:00' });
     expect(errors.some((e) => e.property === 'startTime')).toBe(true);
   });
 
   it('rejects a dayOfWeek > 6', async () => {
-    const errors = await validateDto(
-      { dayOfWeek: 7, startTime: '09:00', endTime: '17:00' },
-      ServiceAvailabilityWindowInputDto,
-    );
+    const errors = await validateWindow({ dayOfWeek: 7, startTime: '09:00', endTime: '17:00' });
     expect(errors.some((e) => e.property === 'dayOfWeek')).toBe(true);
   });
 });

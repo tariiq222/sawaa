@@ -4,10 +4,11 @@ import { validate } from 'class-validator';
 import { DurationOptionInputDto, SetDurationOptionsDto } from './set-duration-options.dto';
 import { DeliveryType } from '@prisma/client';
 
-async function validateDto(plain: Record<string, unknown>, Cls = SetDurationOptionsDto) {
-  const dto = plainToInstance(Cls, plain);
-  return validate(dto);
-}
+const validateDto = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(SetDurationOptionsDto, plain));
+
+const validateOption = (plain: Record<string, unknown>) =>
+  validate(plainToInstance(DurationOptionInputDto, plain));
 
 const validOption = {
   label: '30 min',
@@ -150,13 +151,13 @@ describe('SetDurationOptionsDto', () => {
 
 describe('DurationOptionInputDto', () => {
   it('accepts a fully valid instance directly', async () => {
-    const errors = await validateDto(validOption, DurationOptionInputDto);
+    const errors = await validateOption(validOption);
     expect(errors).toHaveLength(0);
   });
 
   it('rejects a missing label when validated directly', async () => {
     const { label: _ignored, ...rest } = validOption;
-    const errors = await validateDto(rest, DurationOptionInputDto);
+    const errors = await validateOption(rest);
     expect(errors.some((e) => e.property === 'label')).toBe(true);
   });
 });
