@@ -67,14 +67,6 @@ describe('DateStrip', () => {
   it('disables dates NOT in the bookableDates set (even when allowedDaysOfWeek would allow)', () => {
     const iso = todayIso();
     const today = iso;
-    const tomorrow = (() => {
-      const d = new Date(`${iso}T00:00:00`);
-      d.setDate(d.getDate() + 1);
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${day}`;
-    })();
     render(
       withLocale(
         <DateStrip
@@ -90,9 +82,7 @@ describe('DateStrip', () => {
     expect((radios[0] as HTMLButtonElement).disabled).toBe(false);
     expect((radios[1] as HTMLButtonElement).disabled).toBe(true);
     expect((radios[2] as HTMLButtonElement).disabled).toBe(true);
-    // Verify tomorrow is in the radiogroup but disabled. The aria-label
-    // includes the day-of-week + month name, so match on the locale-formatted
-    // long-form (e.g. "June 24" for "2026-06-24" in en-US).
+    // The second radio corresponds to tomorrow — verify it stays disabled.
     const tomorrowRadio = radios[1] as HTMLButtonElement;
     expect(tomorrowRadio.disabled).toBe(true);
   });
