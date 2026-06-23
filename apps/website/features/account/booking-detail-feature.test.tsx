@@ -74,8 +74,8 @@ function booking(overrides: Partial<ClientBookingItem> = {}): ClientBookingItem 
 }
 
 async function openCancelAndConfirm() {
-  fireEvent.click(await screen.findByRole('button', { name: 'إلغاء الحجز' }));
-  fireEvent.click(screen.getByRole('button', { name: 'نعم، ألغِ الحجز' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'إلغاء الموعد' }));
+  fireEvent.click(screen.getByRole('button', { name: 'نعم، ألغِ الموعد' }));
 }
 
 describe('BookingDetailFeature', () => {
@@ -101,10 +101,10 @@ describe('BookingDetailFeature', () => {
 
     await openCancelAndConfirm();
 
-    expect(await screen.findByText('تم إلغاء الحجز')).toBeTruthy();
+    expect(await screen.findByText('تم إلغاء الموعد')).toBeTruthy();
     expect(screen.getByText('ملغي')).toBeTruthy();
     // Cancel/reschedule actions disappear once cancelled
-    expect(screen.queryByRole('button', { name: 'إلغاء الحجز' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'إلغاء الموعد' })).toBeNull();
   });
 
   it('shows the approval-pending message and a localized CANCEL_REQUESTED pill', async () => {

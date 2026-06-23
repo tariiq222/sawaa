@@ -133,7 +133,7 @@ describe('AccountFeature', () => {
     useCurrentClientMock.mockReturnValue({ client: fakeClient, isLoading: false, error: null, refetch: vi.fn() });
     render(withLocale('ar', <AccountFeature locale="ar" />));
     expect(screen.getByRole('tab', { name: 'نظرة عامة' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'حجوزاتي' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'مواعيدي' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'الفواتير والمدفوعات' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'الملف الشخصي' })).toBeTruthy();
   });
