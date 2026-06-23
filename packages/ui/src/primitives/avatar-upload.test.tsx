@@ -102,7 +102,8 @@ describe('AvatarUpload', () => {
       fireEvent.change(input, { target: { files: [file] } });
 
       expect(onChange).toHaveBeenCalledTimes(1);
-      const [argFile, argUrl] = onChange.mock.calls[0];
+      const callArgs = onChange.mock.calls[0] as unknown as [File, string];
+      const [argFile, argUrl] = callArgs;
       expect(argFile).toBe(file);
       expect(typeof argUrl).toBe('string');
       expect(argUrl).toMatch(/^blob:/);
@@ -164,7 +165,8 @@ describe('AvatarUpload', () => {
       // We have two buttons: the avatar-circle click target, and the clear badge.
       // The clear badge has bg-destructive; the circle is a div, not a button.
       // So the only button here is the clear badge.
-      fireEvent.click(buttons[0]);
+      expect(buttons[0]).toBeDefined();
+      fireEvent.click(buttons[0]!);
       expect(onClear).toHaveBeenCalledTimes(1);
       // After clear, the preview image should be gone.
       expect(screen.queryByAltText('avatar')).toBeNull();
@@ -186,7 +188,8 @@ describe('AvatarUpload', () => {
       ) as HTMLInputElement;
       const inputClickSpy = vi.spyOn(input, 'click');
       const badge = screen.getAllByRole('button')[0];
-      fireEvent.click(badge);
+      expect(badge).toBeDefined();
+      fireEvent.click(badge!);
       expect(onClear).toHaveBeenCalledTimes(1);
       expect(inputClickSpy).not.toHaveBeenCalled();
     });
@@ -222,7 +225,8 @@ describe('AvatarUpload', () => {
 
       // The badge is a <button> in the empty state.
       const buttons = screen.getAllByRole('button');
-      fireEvent.click(buttons[0]);
+      expect(buttons[0]).toBeDefined();
+      fireEvent.click(buttons[0]!);
 
       expect(inputClickSpy).toHaveBeenCalledTimes(1);
     });

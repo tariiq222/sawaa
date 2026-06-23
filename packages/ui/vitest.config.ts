@@ -31,6 +31,14 @@ export default defineConfig({
         'src/primitives/alert-dialog.tsx',
         'src/primitives/sidebar.tsx',
         'src/primitives/sidebar-menu.tsx',
+        // Trivial Radix / react-day-picker / HTML passthroughs with no logic
+        // worth testing (no branching beyond defaults / class concatenation).
+        // calendar.tsx — react-day-picker DayPicker wrapper, Chevron icon pick only.
+        'src/primitives/calendar.tsx',
+        // checkbox.tsx — single Radix <Checkbox.Root> wrapper.
+        'src/primitives/checkbox.tsx',
+        // table.tsx — pure HTML element wrappers (Table, TableHeader, ...).
+        'src/primitives/table.tsx',
       ],
       thresholds: {
         lines: 80,
