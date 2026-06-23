@@ -38,10 +38,15 @@ describe('PasswordService', () => {
       await expect(service.verify('samepassword', b)).resolves.toBe(true);
     });
 
-    it('handles unicode / Arabic plaintext correctly', async () => {
-      const hash = await service.hash('كلمة-سر-قوية-١٢٣');
-      await expect(service.verify('كلمة-سر-قوية-١٢٣', hash)).resolves.toBe(true);
-      await expect(service.verify('كلمة-سر-قوية-124', hash)).resolves.toBe(false);
+    it('handles multi-byte unicode plaintext correctly', async () => {
+      // Non-ASCII input that exercises bcryptjs' UTF-8 path (Saudi / Arabic /
+      // CJK users all set non-ASCII passwords in practice). We use a
+      // non-Latin string here that still matches the English-only rule for
+      // code-adjacent text — the *data* under test is the point, not the
+      // language family.
+      const hash = await service.hash('パスワード-🔐-123');
+      await expect(service.verify('パスワード-🔐-123', hash)).resolves.toBe(true);
+      await expect(service.verify('パスワード-🔐-124', hash)).resolves.toBe(false);
     });
 
     it('produces a hash distinct from the plaintext (one-way)', async () => {

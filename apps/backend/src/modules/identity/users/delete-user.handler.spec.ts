@@ -47,9 +47,7 @@ describe('DeleteUserHandler', () => {
     // Asserting this so a future regression that swaps deleteMany for delete
     // (which DOES throw P2025) is caught here.
     prisma.user.deleteMany.mockResolvedValue({ count: 0 });
-    await expect(
-      handler.execute({ userId: 'ghost' }),
-    ).rejects.toThrow(/non-existent|not found|غير موجود/);
+    await expect(handler.execute({ userId: 'ghost' })).rejects.toThrow(NotFoundException);
   });
 
   it('propagates a Prisma error when deleteMany itself rejects', async () => {
