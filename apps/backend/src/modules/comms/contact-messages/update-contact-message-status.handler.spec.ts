@@ -5,31 +5,41 @@ import { UpdateContactMessageStatusHandler } from './update-contact-message-stat
 
 describe('UpdateContactMessageStatusHandler', () => {
   let handler: UpdateContactMessageStatusHandler;
-  let prisma: PrismaService;
+  let prisma: { contactMessage: { findFirst: jest.Mock; update: jest.Mock } };
 
   beforeEach(async () => {
+    prisma = { contactMessage: { findFirst: jest.fn(), update: jest.fn() } };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UpdateContactMessageStatusHandler,
-        { provide: PrismaService, useValue: {
-    contactMessage: { findFirst: jest.fn(), update: jest.fn() }
-        } },
+        { provide: PrismaService, useValue: prisma },
       ],
     }).compile();
 
     handler = module.get<UpdateContactMessageStatusHandler>(UpdateContactMessageStatusHandler);
-    prisma = module.get<PrismaService>(PrismaService);
   });
 
-  it('should be defined', () => {
-    expect(handler).toBeDefined();
+  it('throws when the contact message does not exist', async () => {
+    prisma.contactMessage.findFirst.mockResolvedValue(null);
+
+    await expect(
+      handler.execute({ id: '00000000-0000-0000-0000-000000000001', status: ContactMessageStatus.NEW }),
+    ).rejects.toThrow();
+    expect(prisma.contactMessage.update).not.toHaveBeenCalled();
   });
 
-  it('should execute', async () => {
-    (prisma.contactMessage.findFirst as jest.Mock).mockResolvedValue({ id: 'test' });
-    await handler.execute({id:"00000000-0000-0000-0000-000000000001",status:ContactMessageStatus.NEW});
-    
-    (prisma.contactMessage.findFirst as jest.Mock).mockResolvedValue(null);
-    await expect(handler.execute({id:"00000000-0000-0000-0000-000000000001",status:ContactMessageStatus.NEW})).rejects.toThrow();
+  it('updates the contact message status when found', async () => {
+    prisma.contactMessage.findFirst.mockResolvedValue({ id: 'm-1' });
+    prisma.contactMessage.update.mockResolvedValue({ id: 'm-1', status: ContactMessageStatus.RESOLVED });
+
+    await handler.execute({ id: 'm-1', status: ContactMessageStatus.RESOLVED });
+
+    expect(prisma.contactMessage.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'm-1' },
+        data: { status: ContactMessageStatus.RESOLVED },
+      }),
+    );
   });
 });

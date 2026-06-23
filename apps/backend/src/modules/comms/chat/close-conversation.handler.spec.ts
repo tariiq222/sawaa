@@ -1,34 +1,59 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConversationStatus, MessageSenderType } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { CloseConversationHandler } from './close-conversation.handler';
 
 describe('CloseConversationHandler', () => {
   let handler: CloseConversationHandler;
-  let prisma: PrismaService;
+  let prisma: { chatConversation: { findFirst: jest.Mock; update: jest.Mock } };
 
   beforeEach(async () => {
+    prisma = { chatConversation: { findFirst: jest.fn(), update: jest.fn() } };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CloseConversationHandler,
-        { provide: PrismaService, useValue: {
-    chatConversation: { findFirst: jest.fn(), update: jest.fn() }
-        } },
+        { provide: PrismaService, useValue: prisma },
       ],
     }).compile();
 
     handler = module.get<CloseConversationHandler>(CloseConversationHandler);
-    prisma = module.get<PrismaService>(PrismaService);
   });
 
-  it('should be defined', () => {
-    expect(handler).toBeDefined();
+  it('throws when the conversation does not exist', async () => {
+    prisma.chatConversation.findFirst.mockResolvedValue(null);
+
+    await expect(
+      handler.execute({ conversationId: '00000000-0000-0000-0000-000000000001' }),
+    ).rejects.toThrow();
+    expect(prisma.chatConversation.update).not.toHaveBeenCalled();
   });
 
-  it('should execute', async () => {
-    (prisma.chatConversation.findFirst as jest.Mock).mockResolvedValue({ id: 'test' });
-    await handler.execute({conversationId:"00000000-0000-0000-0000-000000000001"});
-    
-    (prisma.chatConversation.findFirst as jest.Mock).mockResolvedValue(null);
-    await expect(handler.execute({conversationId:"00000000-0000-0000-0000-000000000001"})).rejects.toThrow();
+  it('returns the existing row unchanged when already CLOSED (idempotent)', async () => {
+    const row = { id: 'c1', status: ConversationStatus.CLOSED };
+    prisma.chatConversation.findFirst.mockResolvedValue(row);
+
+    const result = await handler.execute({ conversationId: 'c1' });
+
+    expect(result).toBe(row);
+    expect(prisma.chatConversation.update).not.toHaveBeenCalled();
+  });
+
+  it('updates an OPEN conversation to CLOSED', async () => {
+    prisma.chatConversation.findFirst.mockResolvedValue({
+      id: 'c1',
+      status: ConversationStatus.OPEN,
+    });
+    prisma.chatConversation.update.mockResolvedValue({
+      id: 'c1',
+      status: ConversationStatus.CLOSED,
+    });
+
+    await handler.execute({ conversationId: 'c1' });
+
+    expect(prisma.chatConversation.update).toHaveBeenCalledWith({
+      where: { id: 'c1' },
+      data: { status: ConversationStatus.CLOSED },
+    });
   });
 });
