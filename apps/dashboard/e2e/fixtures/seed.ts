@@ -936,3 +936,134 @@ export async function refundPayment(
     { ...input }
   )
 }
+
+// ─── Coupons ─────────────────────────────────────────────────────────────
+
+/**
+ * Coupon counter for unique codes within a test run. Coupon codes must be
+ * globally unique per the backend constraint, so we suffix Date.now().
+ */
+let couponCounter = 0
+function uniqueCouponCode(): string {
+  return `E2E${String(Date.now()).slice(-6)}${String(couponCounter++).padStart(2, "0")}`
+}
+
+export interface SeedCouponInput {
+  /** Discount type. Default PERCENTAGE. */
+  discountType?: "PERCENTAGE" | "FIXED"
+  /** Percent (0-100) for PERCENTAGE; SAR amount (in halalas) for FIXED. Default 10. */
+  discountValue?: number
+  descriptionAr?: string
+  descriptionEn?: string
+  isActive?: boolean
+  maxUses?: number
+}
+
+export interface SeededCoupon {
+  id: string
+  code: string
+  discountType: "PERCENTAGE" | "FIXED"
+  discountValue: number
+  isActive: boolean
+}
+
+/**
+ * Create a coupon via POST /dashboard/finance/coupons. Cleans up with
+ * cleanupCoupon(id, token).
+ */
+export async function seedCoupon(
+  token: string,
+  overrides: SeedCouponInput = {}
+): Promise<SeededCoupon> {
+  const code = uniqueCouponCode()
+  const created = await apiPost<{
+    id: string
+    code: string
+    discountType: "PERCENTAGE" | "FIXED"
+    discountValue: number
+    isActive: boolean
+  }>("/dashboard/finance/coupons", token, {
+    code,
+    discountType: overrides.discountType ?? "PERCENTAGE",
+    discountValue: overrides.discountValue ?? 10,
+    descriptionAr: overrides.descriptionAr,
+    descriptionEn: overrides.descriptionEn,
+    isActive: overrides.isActive ?? true,
+    maxUses: overrides.maxUses,
+  })
+
+  return {
+    id: created.id,
+    code: created.code,
+    discountType: created.discountType,
+    discountValue: created.discountValue,
+    isActive: created.isActive,
+  }
+}
+
+export async function cleanupCoupon(id: string, token: string): Promise<void> {
+  await apiDelete(`/dashboard/finance/coupons/${id}`, token)
+}
+
+// ─── Users ───────────────────────────────────────────────────────────────
+
+/**
+ * User counter for unique emails within a test run. Emails must be unique
+ * across the seeded tenant, so we suffix Date.now().
+ */
+let userCounter = 0
+function uniqueUserEmail(): string {
+  return `e2e-user-${String(Date.now()).slice(-6)}-${String(userCounter++).padStart(2, "0")}@sawaa-test.com`
+}
+
+export interface SeedUserInput {
+  name?: string
+  email?: string
+  password?: string
+  role?: "ADMIN" | "RECEPTIONIST" | "ACCOUNTANT" | "EMPLOYEE"
+  phone?: string
+  gender?: "MALE" | "FEMALE"
+}
+
+export interface SeededUser {
+  id: string
+  email: string
+  name: string
+  role: string
+}
+
+/**
+ * Create a staff user via POST /dashboard/identity/users. Cleans up with
+ * cleanupUser(id, token).
+ */
+export async function seedUser(
+  token: string,
+  overrides: SeedUserInput = {}
+): Promise<SeededUser> {
+  const suffix = uniqueSuffix()
+  const email = overrides.email ?? uniqueUserEmail()
+  const created = await apiPost<{
+    id: string
+    email: string
+    name: string
+    role: string
+  }>("/dashboard/identity/users", token, {
+    email,
+    password: overrides.password ?? `E2eUser@${suffix}`,
+    name: overrides.name ?? `E2E User ${suffix}`,
+    role: overrides.role ?? "RECEPTIONIST",
+    phone: overrides.phone,
+    gender: overrides.gender,
+  })
+
+  return {
+    id: created.id,
+    email: created.email,
+    name: created.name,
+    role: created.role,
+  }
+}
+
+export async function cleanupUser(id: string, token: string): Promise<void> {
+  await apiDelete(`/dashboard/identity/users/${id}`, token)
+}

@@ -12,6 +12,7 @@
     "test:watch": "TZ=Asia/Riyadh jest --watch",
     "test:cov": "jest --coverage",
     "test:e2e": "NODE_OPTIONS=\"--max-old-space-size=4096\" jest --config test/jest-e2e.json --json --outputFile=test-results-clients.json",
+    "test:e2e:real": "REAL_E2E_DATABASE_URL=\"postgresql://sawaa:sawaa_dev_password@localhost:3453/sawaa_test?schema=public&connection_limit=10&pool_timeout=20\" jest --config test/jest-e2e.json --runInBand",
     "test:smoke": "jest --config test/jest-smoke.json --runInBand",
     "test:kiwi": "jest --json --outputFile=/tmp/jest-backend-unit.json || true && node ../../scripts/kiwi/kiwi-sync-manual-qa.mjs --jest /tmp/jest-backend-unit.json --tag backend --domain Backend --plan-name 'Sawaa / Backend / Unit' --plan-summary 'Automated Jest unit tests for apps/backend.'",
     "test:kiwi:e2e": "jest --config test/jest-e2e.json --json --outputFile=/tmp/jest-backend-e2e.json || true && node ../../scripts/kiwi/kiwi-sync-manual-qa.mjs --jest /tmp/jest-backend-e2e.json --tag backend-e2e --domain 'Backend E2E' --plan-name 'Sawaa / Backend / E2E' --plan-summary 'Jest E2E tests for apps/backend.'",

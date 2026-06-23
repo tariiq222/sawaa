@@ -31,14 +31,14 @@ describe('UpdateContactMessageStatusHandler', () => {
 
   it('updates the contact message status when found', async () => {
     prisma.contactMessage.findFirst.mockResolvedValue({ id: 'm-1' });
-    prisma.contactMessage.update.mockResolvedValue({ id: 'm-1', status: ContactMessageStatus.RESOLVED });
+    prisma.contactMessage.update.mockResolvedValue({ id: 'm-1', status: ContactMessageStatus.REPLIED });
 
-    await handler.execute({ id: 'm-1', status: ContactMessageStatus.RESOLVED });
+    await handler.execute({ id: 'm-1', status: ContactMessageStatus.REPLIED });
 
     expect(prisma.contactMessage.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 'm-1' },
-        data: { status: ContactMessageStatus.RESOLVED },
+        data: { status: ContactMessageStatus.REPLIED },
       }),
     );
   });

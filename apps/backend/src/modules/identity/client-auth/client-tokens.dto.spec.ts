@@ -3,7 +3,7 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { LogoutDto, RefreshTokenDto } from './client-tokens.dto';
 
-async function validateDto<T>(klass: new () => T, plain: Record<string, unknown>) {
+async function validateDto<T extends object>(klass: new () => T, plain: Record<string, unknown>) {
   const dto = plainToInstance(klass, plain);
   return validate(dto);
 }

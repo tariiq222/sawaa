@@ -52,6 +52,10 @@ export default defineConfig({
     {
       name: 'flows',
       testMatch: 'e2e/flows/**/*.spec.ts',
+      // The _manual/ folder holds long-running, one-shot exploration specs
+      // (often with hardcoded service IDs) that must NOT run as part of the
+      // nightly flow suite. They are picked up only when invoked directly.
+      testIgnore: 'e2e/flows/_manual/**',
       dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'] },
     },

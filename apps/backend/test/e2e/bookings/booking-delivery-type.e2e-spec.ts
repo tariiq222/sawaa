@@ -383,7 +383,14 @@ describe('Booking DeliveryType (e2e)', () => {
       // by (serviceId, deliveryType); a null row signals "unsupported" and the
       // handler now throws BadRequestException (unless the caller opts into
       // silentOnMissingConfig, which this endpoint does not).
-      prisma.serviceBookingConfig.findUnique.mockResolvedValueOnce(null);
+      //
+      // Use mockResolvedValue (not ...Once): the handler queries
+      // serviceBookingConfig.findUnique twice for this request — first inside
+      // resolveDurationOption (duration fallback) and again for the
+      // unsupported-delivery-type gate. A single mockResolvedValueOnce would be
+      // consumed by the duration-fallback call, leaving the gate to see the
+      // default (supported) config and wrongly return 200.
+      prisma.serviceBookingConfig.findUnique.mockResolvedValue(null);
 
       const res = await request(app.getHttpServer())
         .get('/api/v1/dashboard/bookings/availability')
