@@ -1,30 +1,38 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { RemoveRoleHandler } from './remove-role.handler';
-import { ROLE_RANK, actorRankOf } from '../shared/role-rank';
 
 /**
- * SECURITY GAP (see final report):
- *
- * Per the brief, remove-role MUST be rank-gated — an actor must not be
- * able to remove a custom role from a user at or above their rank.
- *
- * Today the production handler takes only `{userId, customRoleId}` and
- * performs NO actor lookup, NO target-role lookup, and NO rank check
- * before issuing `updateMany`. A low-rank actor can therefore strip a
- * higher-ranked user's custom role without restriction. Compare against
- * `UpdateUserRoleHandler` which DOES perform the full rank gate.
- *
- * The test "documents the current (vulnerable) behavior" below so the
- * spec passes today. A separate test asserts the rank gate WOULD throw
- * if it were wired up — see the security gap note above and the final
- * report. Production code MUST be patched to add the gate (and accept
- * an `actorUserId` parameter) before this gap is closed.
+ * remove-role is rank-gated: an actor must not be able to strip a custom role
+ * from a user at or above their own rank. The handler looks up the actor and
+ * the target's current built-in role and enforces the same gate as
+ * UpdateUserRoleHandler (actorRank <= targetRank → ForbiddenException) BEFORE
+ * issuing the updateMany.
  */
 describe('RemoveRoleHandler', () => {
   let handler: RemoveRoleHandler;
-  let prisma: { user: { updateMany: jest.Mock } };
+  let prisma: { user: { updateMany: jest.Mock; findUnique: jest.Mock } };
+
+  const ACTOR_ID = '00000000-0000-0000-0000-0000000000aa';
+  const TARGET_ID = '00000000-0000-0000-0000-000000000001';
+  const ROLE_ID = '00000000-0000-0000-0000-000000000010';
+
+  /**
+   * Wire the two findUnique lookups the handler performs: the first call
+   * resolves the actor (by actorUserId), the second resolves the target user
+   * (by userId). Pass null for either to simulate "not found".
+   */
+  function mockLookups(
+    actor: { role: string; isSuperAdmin: boolean } | null,
+    target: { role: string } | null,
+  ) {
+    prisma.user.findUnique.mockImplementation(({ where }: { where: { id: string } }) => {
+      if (where.id === ACTOR_ID) return Promise.resolve(actor);
+      if (where.id === TARGET_ID) return Promise.resolve(target);
+      return Promise.resolve(null);
+    });
+  }
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -32,7 +40,7 @@ describe('RemoveRoleHandler', () => {
         RemoveRoleHandler,
         {
           provide: PrismaService,
-          useValue: { user: { updateMany: jest.fn() } },
+          useValue: { user: { updateMany: jest.fn(), findUnique: jest.fn() } },
         },
       ],
     }).compile();
@@ -41,70 +49,83 @@ describe('RemoveRoleHandler', () => {
     prisma = module.get<PrismaService>(PrismaService) as any;
   });
 
-  it('resolves when the user currently holds the custom role (count=1)', async () => {
+  it('resolves when a higher-ranked actor removes the role (count=1)', async () => {
+    // ADMIN (80) removing from an EMPLOYEE (30) → allowed.
+    mockLookups({ role: 'ADMIN', isSuperAdmin: false }, { role: 'EMPLOYEE' });
     prisma.user.updateMany.mockResolvedValue({ count: 1 });
     await expect(
-      handler.execute({
-        userId: '00000000-0000-0000-0000-000000000001',
-        customRoleId: '00000000-0000-0000-0000-000000000010',
-      }),
+      handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID, customRoleId: ROLE_ID }),
     ).resolves.toBeUndefined();
   });
 
   it('passes both ids into the where clause and sets customRoleId: null', async () => {
+    mockLookups({ role: 'ADMIN', isSuperAdmin: false }, { role: 'EMPLOYEE' });
     prisma.user.updateMany.mockResolvedValue({ count: 1 });
-    await handler.execute({
-      userId: '00000000-0000-0000-0000-000000000001',
-      customRoleId: '00000000-0000-0000-0000-000000000010',
-    });
+    await handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID, customRoleId: ROLE_ID });
     expect(prisma.user.updateMany).toHaveBeenCalledWith({
-      where: {
-        id: '00000000-0000-0000-0000-000000000001',
-        customRoleId: '00000000-0000-0000-0000-000000000010',
-      },
+      where: { id: TARGET_ID, customRoleId: ROLE_ID },
       data: { customRoleId: null },
     });
     expect(prisma.user.updateMany).toHaveBeenCalledTimes(1);
   });
 
   it('throws NotFoundException when no row was updated (count=0)', async () => {
+    mockLookups({ role: 'ADMIN', isSuperAdmin: false }, { role: 'EMPLOYEE' });
     prisma.user.updateMany.mockResolvedValue({ count: 0 });
     await expect(
-      handler.execute({
-        userId: '00000000-0000-0000-0000-000000000001',
-        customRoleId: '00000000-0000-0000-0000-000000000010',
-      }),
+      handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID, customRoleId: ROLE_ID }),
     ).rejects.toThrow(NotFoundException);
   });
 
   it('propagates Prisma errors when updateMany rejects', async () => {
+    mockLookups({ role: 'ADMIN', isSuperAdmin: false }, { role: 'EMPLOYEE' });
     prisma.user.updateMany.mockRejectedValue(new Error('DB down'));
     await expect(
-      handler.execute({
-        userId: '00000000-0000-0000-0000-000000000001',
-        customRoleId: '00000000-0000-0000-0000-000000000010',
-      }),
+      handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID, customRoleId: ROLE_ID }),
     ).rejects.toThrow('DB down');
   });
 
-  // ─── SECURITY GAP — see file header ──────────────────────────────────
-  // The two assertions below demonstrate that the rank gate WOULD fire if
-  // it were wired up. They are NOT applied to the production handler in
-  // this spec because the production handler does not implement the gate.
-  // They exist so that, when the gate is added, the test author can move
-  // them into a real `it()` block and immediately see the gate fire.
-  it('SECURITY GAP: rank gate WOULD throw if implemented (RECEPTIONIST vs ADMIN)', () => {
-    const actor = { role: 'RECEPTIONIST' as const, isSuperAdmin: false };
-    const targetRole = 'ADMIN' as const;
-    // actor rank 40 ≤ target rank 80 → forbidden
-    expect(actorRankOf(actor) <= ROLE_RANK[targetRole]).toBe(true);
+  // ─── Rank gate ───────────────────────────────────────────────────────────
+  it('throws ForbiddenException when the actor outranks no one (RECEPTIONIST vs ADMIN)', async () => {
+    // RECEPTIONIST (40) trying to strip a role from an ADMIN (80) → forbidden.
+    mockLookups({ role: 'RECEPTIONIST', isSuperAdmin: false }, { role: 'ADMIN' });
+    await expect(
+      handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID, customRoleId: ROLE_ID }),
+    ).rejects.toThrow(ForbiddenException);
+    // The gate must short-circuit before any mutation.
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
   });
 
-  it('SECURITY GAP: documents the current lack of rank check in the handler signature', () => {
-    // RemoveRoleCommand accepts only userId + customRoleId — no actor identity.
-    // That alone is sufficient to prove no rank check is possible without
-    // changing the handler signature.
-    const cmdKeys = ['userId', 'customRoleId'].sort();
-    expect(cmdKeys).toEqual(['customRoleId', 'userId']);
+  it('throws ForbiddenException on EQUAL rank (ADMIN vs ADMIN — horizontal escalation)', async () => {
+    mockLookups({ role: 'ADMIN', isSuperAdmin: false }, { role: 'ADMIN' });
+    await expect(
+      handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID, customRoleId: ROLE_ID }),
+    ).rejects.toThrow('Cannot modify a user at or above your rank');
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('lets a super admin (lifted to rank 100) remove a role from an ADMIN', async () => {
+    mockLookups({ role: 'ADMIN', isSuperAdmin: true }, { role: 'ADMIN' });
+    prisma.user.updateMany.mockResolvedValue({ count: 1 });
+    await expect(
+      handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID, customRoleId: ROLE_ID }),
+    ).resolves.toBeUndefined();
+    expect(prisma.user.updateMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws ForbiddenException when the actor is not found', async () => {
+    mockLookups(null, { role: 'EMPLOYEE' });
+    await expect(
+      handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID, customRoleId: ROLE_ID }),
+    ).rejects.toThrow('Actor not found');
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('throws NotFoundException when the target user is not found', async () => {
+    mockLookups({ role: 'ADMIN', isSuperAdmin: false }, null);
+    await expect(
+      handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID, customRoleId: ROLE_ID }),
+    ).rejects.toThrow(NotFoundException);
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
   });
 });

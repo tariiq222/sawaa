@@ -302,6 +302,39 @@ describe('DashboardIdentityController (e2e)', () => {
     });
   });
 
+  describe('DELETE /dashboard/identity/users/:userId/roles/:roleId', () => {
+    it('forwards the authenticated actor id to the handler', async () => {
+      mockRemoveRole.execute.mockResolvedValue(undefined);
+
+      await request(app.getHttpServer())
+        .delete(
+          '/dashboard/identity/users/00000000-0000-0000-0000-000000000001/roles/00000000-0000-0000-0000-000000000010',
+        )
+        .set('Authorization', 'Bearer fake-jwt')
+        .set('x-test-actor-id', 'actor-user')
+        .expect(204);
+
+      expect(mockRemoveRole.execute).toHaveBeenCalledWith({
+        actorUserId: 'actor-user',
+        userId: '00000000-0000-0000-0000-000000000001',
+        customRoleId: '00000000-0000-0000-0000-000000000010',
+      });
+    });
+
+    it('returns 500 when actor identity is missing (UserId decorator throws)', async () => {
+      // In production JwtGuard populates req.user. With no actor injected the
+      // @UserId() decorator throws, so the role is never removed.
+      await request(app.getHttpServer())
+        .delete(
+          '/dashboard/identity/users/00000000-0000-0000-0000-000000000001/roles/00000000-0000-0000-0000-000000000010',
+        )
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(500);
+
+      expect(mockRemoveRole.execute).not.toHaveBeenCalled();
+    });
+  });
+
   describe('GET /dashboard/identity/roles', () => {
     it('returns 200 with roles list', async () => {
       mockListRoles.execute.mockResolvedValue([{ id: 'role-1', name: 'Manager', permissions: [] }]);

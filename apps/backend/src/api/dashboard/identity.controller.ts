@@ -8,6 +8,7 @@ import {
 } from '@nestjs/swagger';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
+import { UserId } from '../../common/auth/user-id.decorator';
 import { ApiStandardResponses, ApiErrorDto } from '../../common/swagger';
 import { ListUsersHandler } from '../../modules/identity/users/list-users.handler';
 import { GetUserHandler } from '../../modules/identity/users/get-user.handler';
@@ -298,8 +299,9 @@ export class DashboardIdentityController {
   async removeRoleEndpoint(
     @Param('userId', ParseUUIDPipe) userId: string,
     @Param('roleId', ParseUUIDPipe) customRoleId: string,
+    @UserId() actorUserId: string,
   ) {
-    await this.removeRoleHandler.execute({ userId, customRoleId });
+    await this.removeRoleHandler.execute({ actorUserId, userId, customRoleId });
   }
 
   // ── Roles ────────────────────────────────────────────────────────────────
