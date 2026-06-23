@@ -194,4 +194,100 @@ describe('booking-wizard reducer', () => {
     const next = reduce(s, { type: 'SELECT_SERVICE', service: mockService });
     expect(next).toEqual(state({ step: WizardStep.THERAPIST, service: mockService }));
   });
+
+  // ---- PAYMENT step back-navigation and PAYMENT_SUCCESS path ----------------
+
+  function paymentState() {
+    return state({
+      step: WizardStep.PAYMENT,
+      service: mockService,
+      employee: mockEmployee,
+      slot: mockSlot,
+      client: mockClient,
+    })
+  }
+
+  it('PAYMENT -> CONFIRMATION (success) on PAYMENT_SUCCESS', () => {
+    const next = reduce(paymentState(), { type: 'PAYMENT_SUCCESS', bookingId: 'book-2' })
+    expect(next).toEqual(state({ step: WizardStep.CONFIRMATION, bookingId: 'book-2', status: 'success' }))
+  })
+
+  it('PAYMENT -> THERAPIST on SELECT_SERVICE (back-nav)', () => {
+    const next = reduce(paymentState(), { type: 'SELECT_SERVICE', service: mockService })
+    expect(next).toEqual(state({ step: WizardStep.THERAPIST, service: mockService }))
+  })
+
+  it('PAYMENT -> SLOT on SELECT_EMPLOYEE (back-nav)', () => {
+    const otherEmployee: EmployeeWithUser = {
+      ...mockEmployee,
+      id: 'emp-2',
+      user: { ...mockEmployee.user, firstName: 'Sara' },
+    }
+    const next = reduce(paymentState(), { type: 'SELECT_EMPLOYEE', employee: otherEmployee })
+    expect(next).toEqual(state({ step: WizardStep.SLOT, service: mockService, employee: otherEmployee }))
+  })
+
+  it('PAYMENT -> INFO_OTP on SELECT_SLOT (back-nav)', () => {
+    const otherSlot: AvailableSlot = {
+      startTime: '2026-04-20T10:00:00Z',
+      endTime: '2026-04-20T10:30:00Z',
+    }
+    const next = reduce(paymentState(), { type: 'SELECT_SLOT', slot: otherSlot })
+    expect(next).toEqual(state({
+      step: WizardStep.INFO_OTP,
+      service: mockService,
+      employee: mockEmployee,
+      slot: otherSlot,
+    }))
+  })
+
+  // ---- CONFIRMATION is terminal except for RESET -----------------------------
+
+  it('CONFIRMATION ignores non-RESET events (noop)', () => {
+    const s = state({ step: WizardStep.CONFIRMATION, bookingId: 'book-1', status: 'success' })
+    expect(reduce(s, { type: 'SELECT_SERVICE', service: mockService })).toEqual(s)
+    expect(reduce(s, { type: 'SELECT_EMPLOYEE', employee: mockEmployee })).toEqual(s)
+    expect(reduce(s, { type: 'SELECT_SLOT', slot: mockSlot })).toEqual(s)
+    expect(reduce(s, { type: 'SUBMIT_INFO', client: mockClient })).toEqual(s)
+    expect(reduce(s, { type: 'VERIFY_OTP', sessionToken: 'tok' })).toEqual(s)
+    expect(reduce(s, { type: 'INIT_PAYMENT', bookingId: 'b2', invoiceId: 'i2', totalHalalat: 100, redirectUrl: 'x' })).toEqual(s)
+    expect(reduce(s, { type: 'PAYMENT_SUCCESS', bookingId: 'b2' })).toEqual(s)
+    expect(reduce(s, { type: 'PAYMENT_FAIL' })).toEqual(s)
+  })
+
+  it('RESET from PAYMENT goes to SERVICE (not affected by current branch)', () => {
+    const next = reduce(paymentState(), { type: 'RESET' })
+    expect(next).toEqual({ step: WizardStep.SERVICE })
+  })
+
+  it('RESET from SLOT goes to SERVICE', () => {
+    const s = state({ step: WizardStep.SLOT, service: mockService, employee: mockEmployee })
+    expect(reduce(s, { type: 'RESET' })).toEqual({ step: WizardStep.SERVICE })
+  })
+
+  it('RESET from THERAPIST goes to SERVICE', () => {
+    const s = state({ step: WizardStep.THERAPIST, service: mockService })
+    expect(reduce(s, { type: 'RESET' })).toEqual({ step: WizardStep.SERVICE })
+  })
+
+  it('RESET from INFO_OTP goes to SERVICE', () => {
+    const s = state({ step: WizardStep.INFO_OTP, service: mockService, employee: mockEmployee, slot: mockSlot })
+    expect(reduce(s, { type: 'RESET' })).toEqual({ step: WizardStep.SERVICE })
+  })
+
+  // ---- Additional edge cases ------------------------------------------------
+
+  it('PAYMENT_SUCCESS carries the bookingId through to CONFIRMATION', () => {
+    const next = reduce(paymentState(), { type: 'PAYMENT_SUCCESS', bookingId: 'book-XYZ-789' })
+    if (next.step !== WizardStep.CONFIRMATION) throw new Error('expected CONFIRMATION')
+    expect(next.bookingId).toBe('book-XYZ-789')
+    expect(next.status).toBe('success')
+  })
+
+  it('PAYMENT_FAIL yields bookingId="" and status="failed" regardless of state', () => {
+    const next = reduce(paymentState(), { type: 'PAYMENT_FAIL' })
+    if (next.step !== WizardStep.CONFIRMATION) throw new Error('expected CONFIRMATION')
+    expect(next.bookingId).toBe('')
+    expect(next.status).toBe('failed')
+  })
 });
