@@ -150,3 +150,6 @@ sawaa-prod-secrets.md
 
 # Ad-hoc review/migration artifacts — SQL dumps + reports with real client data
 outputs/
+
+# Tariq agent local memory (SQLite state + lessons) — not for VCS
+.tariq/
