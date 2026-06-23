@@ -1,35 +1,42 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { GetFileHandler } from './get-file.handler';
 
 describe('GetFileHandler', () => {
   let handler: GetFileHandler;
-  let prisma: PrismaService;
+  let prisma: { file: { findFirst: jest.Mock } };
 
   beforeEach(async () => {
+    prisma = { file: { findFirst: jest.fn() } };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         GetFileHandler,
-        { provide: PrismaService, useValue: {
-    file: { findFirst: jest.fn() }
-        } },
+        { provide: PrismaService, useValue: prisma },
       ],
     }).compile();
 
     handler = module.get<GetFileHandler>(GetFileHandler);
-    prisma = module.get<PrismaService>(PrismaService);
   });
 
-  it('should be defined', () => {
-    expect(handler).toBeDefined();
+  it('throws NotFoundException when the file is missing', async () => {
+    prisma.file.findFirst.mockResolvedValue(null);
+
+    await expect(handler.execute('f-1')).rejects.toThrow(NotFoundException);
   });
 
-  it('should execute successfully', async () => {
-    (prisma.file.findFirst as jest.Mock).mockResolvedValue({ id: 'test-id' });
-    const result = await handler.execute('test' as any);
-    expect(result).toBeDefined();
-    
-    (prisma.file.findFirst as jest.Mock).mockResolvedValue(null);
-    await expect(handler.execute('test' as any)).rejects.toThrow();
+  it('excludes soft-deleted files via the isDeleted filter', async () => {
+    prisma.file.findFirst.mockResolvedValue(null);
+    await expect(handler.execute('f-1')).rejects.toThrow(NotFoundException);
+    expect(prisma.file.findFirst).toHaveBeenCalledWith({
+      where: { id: 'f-1', isDeleted: false },
+    });
+  });
+
+  it('returns the file row when found', async () => {
+    prisma.file.findFirst.mockResolvedValue({ id: 'f-1', bucket: 'avatars' });
+    const result = await handler.execute('f-1');
+    expect(result).toEqual({ id: 'f-1', bucket: 'avatars' });
   });
 });
