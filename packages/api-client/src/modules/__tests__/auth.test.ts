@@ -175,3 +175,189 @@ describe('authApi.changePassword', () => {
     })
   })
 })
+
+describe('authApi.requestStaffPasswordReset', () => {
+  it('POSTs /auth/request-password-reset with the email and returns void', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }))
+
+    await authApi.requestStaffPasswordReset('staff@sawaa.app')
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0]!
+    expect(url).toBe('http://api.test/auth/request-password-reset')
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(init?.body as string)).toEqual({ email: 'staff@sawaa.app' })
+  })
+
+  it('throws ApiError on 4xx with the parsed code/message', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      mockJsonResponse(
+        { error: { code: 'RATE_LIMITED', message: 'Too many requests' } },
+        429,
+      ),
+    )
+
+    await expect(
+      authApi.requestStaffPasswordReset('staff@sawaa.app'),
+    ).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 429,
+      code: 'RATE_LIMITED',
+      message: 'Too many requests',
+    })
+  })
+})
+
+describe('authApi.performStaffPasswordReset', () => {
+  it('POSTs /auth/reset-password with token+newPassword and returns void', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }))
+
+    await authApi.performStaffPasswordReset('reset.tok', 'newPassword!1')
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0]!
+    expect(url).toBe('http://api.test/auth/reset-password')
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(init?.body as string)).toEqual({
+      token: 'reset.tok',
+      newPassword: 'newPassword!1',
+    })
+  })
+
+  it('throws ApiError with INVALID_TOKEN on bad reset token', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      mockJsonResponse(
+        { message: { error: 'INVALID_TOKEN', message: 'Token expired' } },
+        400,
+      ),
+    )
+
+    await expect(
+      authApi.performStaffPasswordReset('expired.tok', 'x'),
+    ).rejects.toMatchObject({
+      status: 400,
+      code: 'INVALID_TOKEN',
+      message: 'Token expired',
+    })
+  })
+})
+
+describe('authApi.requestDashboardOtp', () => {
+  it('POSTs /auth/otp/request-dashboard with email and unwraps the masked identifier response', async () => {
+    const otpResponse = { maskedIdentifier: 'a***@sawaa.app', expiresInSeconds: 300 }
+    storedAccess = fakeAccess
+    vi.mocked(fetch).mockResolvedValueOnce(
+      mockJsonResponse({ success: true, data: otpResponse }),
+    )
+
+    const result = await authApi.requestDashboardOtp({ email: 'admin@sawaa.app' })
+
+    expect(result).toEqual(otpResponse)
+    const [url, init] = vi.mocked(fetch).mock.calls[0]!
+    expect(url).toBe('http://api.test/auth/otp/request-dashboard')
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(init?.body as string)).toEqual({ email: 'admin@sawaa.app' })
+    const headers = init?.headers as Record<string, string>
+    expect(headers.Authorization).toBe(`Bearer ${fakeAccess}`)
+  })
+
+  it('throws ApiError when the OTP rate limit fires', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      mockJsonResponse({ error: 'OTP_RATE_LIMIT', message: 'Try later' }, 429),
+    )
+
+    await expect(
+      authApi.requestDashboardOtp({ email: 'admin@sawaa.app' }),
+    ).rejects.toMatchObject({
+      status: 429,
+      code: 'OTP_RATE_LIMIT',
+    })
+  })
+})
+
+describe('authApi.verifyDashboardOtp', () => {
+  it('POSTs /auth/otp/verify-dashboard with email+code and returns AuthResponse', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      mockJsonResponse({ success: true, data: fakeAuth }),
+    )
+
+    const result = await authApi.verifyDashboardOtp({
+      email: 'admin@sawaa.app',
+      code: '123456',
+    })
+
+    expect(result).toEqual(fakeAuth)
+    const [url, init] = vi.mocked(fetch).mock.calls[0]!
+    expect(url).toBe('http://api.test/auth/otp/verify-dashboard')
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(init?.body as string)).toEqual({
+      email: 'admin@sawaa.app',
+      code: '123456',
+    })
+  })
+
+  it('throws ApiError on wrong code with the parsed code', async () => {
+    // Wrong code is a validation problem (422), not an expired session —
+    // we deliberately avoid 401 here because /auth/otp/verify-dashboard is
+    // NOT in AUTH_ENDPOINTS_NO_RETRY, so a 401 would trigger refresh.
+    vi.mocked(fetch).mockResolvedValueOnce(
+      mockJsonResponse(
+        { message: { error: 'INVALID_OTP', message: 'Wrong code' } },
+        422,
+      ),
+    )
+
+    await expect(
+      authApi.verifyDashboardOtp({ email: 'admin@sawaa.app', code: '000000' }),
+    ).rejects.toMatchObject({
+      status: 422,
+      code: 'INVALID_OTP',
+      message: 'Wrong code',
+    })
+  })
+})
+
+describe('authApi.lookupUser', () => {
+  it('POSTs /auth/lookup with the identifier field and unwraps the envelope', async () => {
+    const lookupResp = { exists: true, emailVerificationRequired: false }
+    storedAccess = fakeAccess
+    vi.mocked(fetch).mockResolvedValueOnce(
+      mockJsonResponse({ success: true, data: lookupResp }),
+    )
+
+    const result = await authApi.lookupUser({ identifier: 'admin@sawaa.app' })
+
+    expect(result).toEqual(lookupResp)
+    const [url, init] = vi.mocked(fetch).mock.calls[0]!
+    expect(url).toBe('http://api.test/auth/lookup')
+    expect(init?.method).toBe('POST')
+    // CRITICAL: the wire field is `identifier`, NOT `email` — guards against
+    // silent field-renames that would break the backend lookup.
+    expect(JSON.parse(init?.body as string)).toEqual({
+      identifier: 'admin@sawaa.app',
+    })
+    const headers = init?.headers as Record<string, string>
+    expect(headers.Authorization).toBe(`Bearer ${fakeAccess}`)
+  })
+
+  it('returns exists=false without throwing when the identifier is unknown', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      mockJsonResponse({
+        success: true,
+        data: { exists: false, emailVerificationRequired: false },
+      }),
+    )
+
+    const result = await authApi.lookupUser({ identifier: 'unknown@sawaa.app' })
+
+    expect(result).toEqual({ exists: false, emailVerificationRequired: false })
+  })
+
+  it('throws ApiError when the lookup endpoint is unavailable', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      mockJsonResponse({ error: 'SERVICE_DOWN', message: 'Try later' }, 503),
+    )
+
+    await expect(
+      authApi.lookupUser({ identifier: 'admin@sawaa.app' }),
+    ).rejects.toMatchObject({ status: 503, code: 'SERVICE_DOWN' })
+  })
+})
