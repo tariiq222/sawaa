@@ -1,10 +1,21 @@
 import type { BrandingConfig, DerivedTokens } from '../types/branding'
 
 function hexToRgbParts(hex: string): string {
-  const clean = hex.replace('#', '')
-  const r = parseInt(clean.substring(0, 2), 16)
-  const g = parseInt(clean.substring(2, 4), 16)
-  const b = parseInt(clean.substring(4, 6), 16)
+  const clean = hex.startsWith('#') ? hex.slice(1) : hex
+  // Expand 3-digit shorthand (#abc → #aabbcc) before parsing.
+  const expanded =
+    clean.length === 3
+      ? clean
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : clean
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) {
+    throw new Error(`Invalid hex color: ${hex}`)
+  }
+  const r = parseInt(expanded.substring(0, 2), 16)
+  const g = parseInt(expanded.substring(2, 4), 16)
+  const b = parseInt(expanded.substring(4, 6), 16)
   return `${r} ${g} ${b}`
 }
 

@@ -82,24 +82,28 @@ describe('generateCssVariables', () => {
     expect(css).toContain("--font-primary:   'Cairo', system-ui, sans-serif")
   })
 
-  it('derives rgba parts from a 3-digit hex (documenting actual behavior)', () => {
-    // NOTE: hexToRgbParts uses substring(0,2)/(2,4)/(4,6) on a 6-char window.
-    // For "#FFF" (length 3): r = parseInt('FF',16) = 255,
-    //                       g = parseInt('F',16)  = 15  (substring(2,4) is 'F'),
-    //                       b = parseInt('',16)   = NaN (substring(4,6) is '').
-    // This documents the current behavior — see report.
-    const theme = { ...DEFAULT_BRANDING, colorPrimary: '#FFF', colorAccent: '#FFF' }
+  it('expands 3-digit shorthand hex into full RGB parts', () => {
+    // #FFF / #fff → #FFFFFF → r=255, g=255, b=255
+    const theme = { ...DEFAULT_BRANDING, colorPrimary: '#FFF', colorAccent: '#fff' }
     const css = generateCssVariables(theme)
-    expect(css).toContain('--primary-glow:   rgba(255,15,NaN,0.35)')
-    expect(css).toContain('--accent-glow:    rgba(255,15,NaN,0.30)')
+    expect(css).toContain('--primary-glow:   rgba(255,255,255,0.35)')
+    expect(css).toContain('--accent-glow:    rgba(255,255,255,0.30)')
+    expect(css).toContain('--primary-ultra:  rgba(255,255,255,0.08)')
   })
 
-  it('derives NaN parts from a fully-invalid hex (documenting actual behavior)', () => {
-    // NOTE: parseInt('XY',16) === NaN, so all three channels become NaN.
-    const theme = { ...DEFAULT_BRANDING, colorPrimary: '#XYZ', colorAccent: '#XYZ' }
+  it('expands mixed-case 3-digit shorthand (#aBc → #AABBCC)', () => {
+    const theme = { ...DEFAULT_BRANDING, colorPrimary: '#aBc', colorAccent: '#aBc' }
     const css = generateCssVariables(theme)
-    expect(css).toContain('--primary-glow:   rgba(NaN,NaN,NaN,0.35)')
-    expect(css).toContain('--accent-glow:    rgba(NaN,NaN,NaN,0.30)')
+    // 0xAA = 170, 0xBB = 187, 0xCC = 204
+    expect(css).toContain('--primary-glow:   rgba(170,187,204,0.35)')
+    expect(css).toContain('--accent-glow:    rgba(170,187,204,0.30)')
+  })
+
+  it('throws on a fully-invalid hex instead of emitting NaN parts', () => {
+    // parseInt('XY', 16) === NaN — the previous implementation leaked NaN into
+    // the generated CSS. Now we fail loudly so the bad config surfaces.
+    const theme = { ...DEFAULT_BRANDING, colorPrimary: '#XYZ', colorAccent: '#XYZ' }
+    expect(() => generateCssVariables(theme)).toThrow(/Invalid hex color/)
   })
 
   it('strips a leading "#" before parsing', () => {
