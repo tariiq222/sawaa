@@ -120,14 +120,12 @@ describe('auth.api', () => {
       clientRegisterMock.mockResolvedValue({ client: fakeProfile });
       await clientRegisterApi({
         name: 'Sara',
-        email: 'a@b.co',
-        phone: '+966500000000',
+        otpSessionToken: 'otp-session-xyz',
         password: 'Secret1',
       });
       expect(clientRegisterMock).toHaveBeenCalledWith({
         name: 'Sara',
-        email: 'a@b.co',
-        phone: '+966500000000',
+        otpSessionToken: 'otp-session-xyz',
         password: 'Secret1',
       });
     });

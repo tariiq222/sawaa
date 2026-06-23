@@ -5,7 +5,27 @@ import type { Service } from '@sawaa/shared';
 import { ServicePicker } from './service-picker';
 import { LocaleProvider } from '@/features/locale/locale-provider';
 
-function makeService(overrides: Partial<Service> = {}): Service {
+// Mirrors the extended shape ServicePicker reads off each service
+// (bookingConfigs / durationOptions are not on the base Service type).
+type ServiceWithConfigs = Service & {
+  durationMins?: number;
+  bookingConfigs?: Array<{
+    id: string;
+    deliveryType: 'IN_PERSON' | 'ONLINE';
+    price: number | string;
+    durationMins: number;
+  }>;
+  durationOptions?: Array<{
+    id: string;
+    deliveryType: 'IN_PERSON' | 'ONLINE';
+    label: string;
+    labelAr: string | null;
+    durationMins: number;
+    price: number | string;
+  }>;
+};
+
+function makeService(overrides: Partial<ServiceWithConfigs> = {}): ServiceWithConfigs {
   return {
     id: 'svc1',
     nameAr: 'جلسة استشارية',
