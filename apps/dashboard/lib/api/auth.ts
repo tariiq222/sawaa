@@ -111,7 +111,7 @@ export async function lookupUser(identifier: string): Promise<{ exists: boolean;
   // Backend returns { exists, emailVerificationRequired }; the dashboard
   // callers only care about the boolean `exists` so we project to keep
   // backwards compatibility with existing call sites.
-  const res = await authApi.lookupUser({ email: identifier })
+  const res = await authApi.lookupUser({ identifier })
   return {
     exists: res.exists,
     hasPassword: res.exists, // best-effort: the user exists in the staff table

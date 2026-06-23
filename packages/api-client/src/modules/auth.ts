@@ -104,7 +104,7 @@ export async function verifyDashboardOtp(
 /* ─── Lookup (login helper) ───────────────────────────────────────────── */
 
 export interface LookupUserPayload {
-  email: string
+  identifier: string
 }
 
 export interface LookupUserResponse {
