@@ -1,9 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConversationStatus, MessageSenderType } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
+import { assertConversationAccess } from './assert-conversation-access.helper';
 
 export interface GetConversationCommand {
   conversationId: string;
+  /**
+   * Caller identity for role-based scoping (AUTHZ-004 / COMMS-004).
+   * EMPLOYEE callers may only access conversations assigned to them; privileged
+   * dashboard roles (OWNER/ADMIN/RECEPTIONIST/...) pass no role and see all.
+   */
+  requesterRole?: string | null;
+  requesterUserId?: string;
 }
 
 const SENDER_TYPE_TO_ROLE: Record<MessageSenderType, 'user' | 'staff' | 'assistant'> = {
@@ -24,6 +32,7 @@ export class GetConversationHandler {
     if (!conversation) {
       throw new NotFoundException('Conversation not found');
     }
+    await assertConversationAccess(this.prisma, conversation, cmd);
 
     const client = await this.prisma.client.findFirst({
       where: { id: conversation.clientId },

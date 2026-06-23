@@ -12,7 +12,7 @@ import {
 import { ApiTags, ApiOperation, ApiParam, ApiBearerAuth, ApiOkResponse, ApiCreatedResponse } from '@nestjs/swagger';
 import { ProgramStatus } from '@prisma/client';
 import { JwtGuard } from '../../common/guards/jwt.guard';
-import { CaslGuard } from '../../common/guards/casl.guard';
+import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
 import { ApiStandardResponses } from '../../common/swagger';
 import { CreateProgramHandler } from '../../modules/bookings/create-program/create-program.handler';
 import { ListProgramsHandler } from '../../modules/bookings/list-programs/list-programs.handler';
@@ -45,6 +45,7 @@ export class DashboardProgramsController {
   ) {}
 
   @Post()
+  @CheckPermissions({ action: 'manage', subject: 'Booking' })
   @ApiOperation({ summary: 'Create a new program (DRAFT)' })
   @ApiCreatedResponse({ description: 'Program created in DRAFT status' })
   async create(@Body() dto: CreateProgramDto) {
@@ -52,6 +53,7 @@ export class DashboardProgramsController {
   }
 
   @Get()
+  @CheckPermissions({ action: 'read', subject: 'Booking' })
   @ApiOperation({ summary: 'List programs (filterable by status, department, branch)' })
   @ApiOkResponse({ description: 'List of programs with computed isFull badge' })
   async list(
@@ -63,6 +65,7 @@ export class DashboardProgramsController {
   }
 
   @Get(':id')
+  @CheckPermissions({ action: 'read', subject: 'Booking' })
   @ApiOperation({ summary: 'Get a single program by UUID or numeric ref' })
   @ApiParam({ name: 'id', description: 'UUID or numeric ref' })
   @ApiOkResponse({ description: 'Program detail with enrollments and supervisors' })
@@ -71,6 +74,7 @@ export class DashboardProgramsController {
   }
 
   @Patch(':id/publish')
+  @CheckPermissions({ action: 'manage', subject: 'Booking' })
   @ApiOperation({ summary: 'Publish a DRAFT program (DRAFT → OPEN)' })
   @ApiParam({ name: 'id', format: 'uuid' })
   async publish(@Param('id', ParseUUIDPipe) id: string) {
@@ -78,6 +82,7 @@ export class DashboardProgramsController {
   }
 
   @Patch(':id/schedule')
+  @CheckPermissions({ action: 'manage', subject: 'Booking' })
   @ApiOperation({ summary: 'Schedule a program (OPEN|MIN_REACHED → SCHEDULED)' })
   @ApiParam({ name: 'id', format: 'uuid' })
   async schedule(
@@ -88,6 +93,7 @@ export class DashboardProgramsController {
   }
 
   @Patch(':id/cancel')
+  @CheckPermissions({ action: 'manage', subject: 'Booking' })
   @ApiOperation({
     summary:
       'Cancel a program (cascades to enrollments, no automatic refund)',
@@ -101,6 +107,7 @@ export class DashboardProgramsController {
   }
 
   @Post(':id/enrollments')
+  @CheckPermissions({ action: 'manage', subject: 'Booking' })
   @ApiOperation({ summary: 'Enroll a client on-behalf from the dashboard' })
   @ApiParam({ name: 'id', format: 'uuid' })
   async enroll(

@@ -219,8 +219,17 @@ export class DashboardBookingsController {
     },
   })
   @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
-  getBooking(@Param('id', ParseUUIDPipe) id: string) {
-    return this.getHandler.execute({ bookingId: id });
+  getBooking(
+    @CurrentUser() user: JwtUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    // AUTHZ-005: pass caller identity so the handler scopes EMPLOYEE reads to
+    // their own assigned bookings (privileged roles keep full access).
+    return this.getHandler.execute({
+      bookingId: id,
+      role: user.role ?? null,
+      userId: user.sub,
+    });
   }
 
   @Patch(':id/cancel')

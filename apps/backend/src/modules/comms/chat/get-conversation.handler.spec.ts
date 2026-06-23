@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ConversationStatus, MessageSenderType } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { GetConversationHandler } from './get-conversation.handler';
@@ -9,12 +9,14 @@ describe('GetConversationHandler', () => {
   let prisma: {
     chatConversation: { findFirst: jest.Mock };
     client: { findFirst: jest.Mock };
+    employee: { findFirst: jest.Mock };
   };
 
   beforeEach(async () => {
     prisma = {
       chatConversation: { findFirst: jest.fn() },
       client: { findFirst: jest.fn().mockResolvedValue(null) },
+      employee: { findFirst: jest.fn() },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -95,6 +97,71 @@ describe('GetConversationHandler', () => {
 
     expect(result.handedOff).toBe(false);
     expect(result.endedAt).toEqual(updatedAt);
+  });
+
+  // AUTHZ-004 / COMMS-004: EMPLOYEE callers may only read their assigned chats.
+  it('forbids an EMPLOYEE from reading a conversation assigned to another counselor', async () => {
+    prisma.chatConversation.findFirst.mockResolvedValue({
+      id: 'c1',
+      clientId: 'u1',
+      employeeId: 'emp-B', // assigned to a different counselor
+      status: ConversationStatus.OPEN,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastMessageAt: null,
+      messages: [],
+    });
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-A' }); // caller is emp-A
+
+    await expect(
+      handler.execute({ conversationId: 'c1', requesterRole: 'EMPLOYEE', requesterUserId: 'user-A' }),
+    ).rejects.toThrow(ForbiddenException);
+    expect(prisma.employee.findFirst).toHaveBeenCalledWith({
+      where: { userId: 'user-A' },
+      select: { id: true },
+    });
+  });
+
+  it('allows an EMPLOYEE to read a conversation assigned to them', async () => {
+    prisma.chatConversation.findFirst.mockResolvedValue({
+      id: 'c1',
+      clientId: 'u1',
+      employeeId: 'emp-A',
+      status: ConversationStatus.OPEN,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastMessageAt: null,
+      messages: [],
+    });
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-A' });
+
+    const result = await handler.execute({
+      conversationId: 'c1',
+      requesterRole: 'EMPLOYEE',
+      requesterUserId: 'user-A',
+    });
+    expect(result.id).toBe('c1');
+  });
+
+  it('does not scope a privileged role (ADMIN reads any conversation)', async () => {
+    prisma.chatConversation.findFirst.mockResolvedValue({
+      id: 'c1',
+      clientId: 'u1',
+      employeeId: 'emp-B',
+      status: ConversationStatus.OPEN,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastMessageAt: null,
+      messages: [],
+    });
+
+    const result = await handler.execute({
+      conversationId: 'c1',
+      requesterRole: 'ADMIN',
+      requesterUserId: 'user-admin',
+    });
+    expect(result.id).toBe('c1');
+    expect(prisma.employee.findFirst).not.toHaveBeenCalled();
   });
 
   it('falls back to empty user fields when the client row is missing', async () => {

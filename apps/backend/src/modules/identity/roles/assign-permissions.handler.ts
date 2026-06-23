@@ -1,10 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { AssignPermissionsDto } from './assign-permissions.dto';
 
 export type AssignPermissionsCommand = AssignPermissionsDto & {
   customRoleId: string;
 };
+
+const ASSIGN_PERMISSIONS_MESSAGES = {
+  notFound: (id: string) => `Role ${id} not found`,
+  isSystem: 'لا يمكن تعديل صلاحيات دور النظام',
+} as const;
 
 @Injectable()
 export class AssignPermissionsHandler {
@@ -15,7 +20,14 @@ export class AssignPermissionsHandler {
       where: { id: cmd.customRoleId },
       select: { id: true, isSystem: true, systemKey: true },
     });
-    if (!role) throw new NotFoundException(`Role ${cmd.customRoleId} not found`);
+    if (!role)
+      throw new NotFoundException(ASSIGN_PERMISSIONS_MESSAGES.notFound(cmd.customRoleId));
+    // IDENT-005: built-in/system roles are immutable from the permissions API.
+    // Their permissions are reset from BUILT_IN on boot, so a write here would be
+    // silently lost — and worse, allow tampering with privileged roles. Mirror
+    // delete-role.handler which also refuses to mutate system roles.
+    if (role.isSystem)
+      throw new ForbiddenException(ASSIGN_PERMISSIONS_MESSAGES.isSystem);
 
     // Replace permissions atomically — admin handler, no per-user RLS context required for permission rows
     // eslint-disable-next-line no-restricted-syntax

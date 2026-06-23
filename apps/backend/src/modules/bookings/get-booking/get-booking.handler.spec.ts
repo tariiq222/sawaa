@@ -58,6 +58,54 @@ describe('GetBookingHandler', () => {
     expect(result.id).toBe('mapped-booking');
   });
 
+  // AUTHZ-005: EMPLOYEE may only read bookings assigned to them.
+  it('forbids EMPLOYEE from reading another employee booking (IDOR)', async () => {
+    // Booking belongs to employee "emp-B"; caller resolves to "emp-A".
+    prisma.booking.findFirst.mockResolvedValue({ id: 'b1', clientId: 'c1', employeeId: 'emp-B', serviceId: 's1' });
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-A' });
+
+    await expect(
+      handler.execute({ bookingId: 'b1', role: 'EMPLOYEE', userId: 'user-A' }),
+    ).rejects.toThrow(ForbiddenException);
+    expect(prisma.employee.findFirst).toHaveBeenCalledWith({
+      where: { userId: 'user-A' },
+      select: { id: true },
+    });
+  });
+
+  it('forbids EMPLOYEE with no employee profile from reading any booking', async () => {
+    prisma.booking.findFirst.mockResolvedValue({ id: 'b1', clientId: 'c1', employeeId: 'emp-B', serviceId: 's1' });
+    prisma.employee.findFirst.mockResolvedValue(null);
+
+    await expect(
+      handler.execute({ bookingId: 'b1', role: 'EMPLOYEE', userId: 'user-orphan' }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('allows EMPLOYEE to read their own assigned booking', async () => {
+    prisma.booking.findFirst.mockResolvedValue({ id: 'b1', clientId: 'c1', employeeId: 'emp-A', serviceId: 's1' });
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-A' });
+    prisma.client.findFirst.mockResolvedValue(null);
+    prisma.service.findFirst.mockResolvedValue(null);
+
+    const result = await handler.execute({ bookingId: 'b1', role: 'EMPLOYEE', userId: 'user-A' });
+    expect(result.id).toBe('mapped-booking');
+  });
+
+  it('does not scope privileged roles (ADMIN reads any booking)', async () => {
+    prisma.booking.findFirst.mockResolvedValue({ id: 'b1', clientId: 'c1', employeeId: 'emp-B', serviceId: 's1' });
+    prisma.client.findFirst.mockResolvedValue(null);
+    prisma.service.findFirst.mockResolvedValue(null);
+
+    const result = await handler.execute({ bookingId: 'b1', role: 'ADMIN', userId: 'user-admin' });
+    expect(result.id).toBe('mapped-booking');
+    // Privileged path must NOT perform the employee-ownership lookup.
+    expect(prisma.employee.findFirst).not.toHaveBeenCalledWith({
+      where: { userId: 'user-admin' },
+      select: { id: true },
+    });
+  });
+
   it('passes Payment.amount through verbatim — already in halalas', async () => {
     prisma.booking.findFirst.mockResolvedValue({ id: 'b1', clientId: 'c1', employeeId: 'e1', serviceId: 's1' });
     prisma.client.findFirst.mockResolvedValue(null);

@@ -1,14 +1,21 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ForbiddenException } from '@nestjs/common';
 import { ConversationStatus, MessageSenderType } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 import { CloseConversationHandler } from './close-conversation.handler';
 
 describe('CloseConversationHandler', () => {
   let handler: CloseConversationHandler;
-  let prisma: { chatConversation: { findFirst: jest.Mock; update: jest.Mock } };
+  let prisma: {
+    chatConversation: { findFirst: jest.Mock; update: jest.Mock };
+    employee: { findFirst: jest.Mock };
+  };
 
   beforeEach(async () => {
-    prisma = { chatConversation: { findFirst: jest.fn(), update: jest.fn() } };
+    prisma = {
+      chatConversation: { findFirst: jest.fn(), update: jest.fn() },
+      employee: { findFirst: jest.fn() },
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -36,6 +43,21 @@ describe('CloseConversationHandler', () => {
     const result = await handler.execute({ conversationId: 'c1' });
 
     expect(result).toBe(row);
+    expect(prisma.chatConversation.update).not.toHaveBeenCalled();
+  });
+
+  // AUTHZ-004 / COMMS-004: EMPLOYEE callers may only close their assigned chats.
+  it('forbids an EMPLOYEE from closing a conversation assigned to another counselor', async () => {
+    prisma.chatConversation.findFirst.mockResolvedValue({
+      id: 'c1',
+      employeeId: 'emp-B',
+      status: ConversationStatus.OPEN,
+    });
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-A' });
+
+    await expect(
+      handler.execute({ conversationId: 'c1', requesterRole: 'EMPLOYEE', requesterUserId: 'user-A' }),
+    ).rejects.toThrow(ForbiddenException);
     expect(prisma.chatConversation.update).not.toHaveBeenCalled();
   });
 

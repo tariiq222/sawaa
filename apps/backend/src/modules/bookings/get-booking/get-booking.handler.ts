@@ -5,6 +5,16 @@ import { mapBookingRow, type BookingRelations } from '../booking-row.mapper';
 export interface GetBookingQuery {
   bookingId: string;
   clientId?: string;
+  /**
+   * Caller identity for role-based ownership scoping (dashboard).
+   *
+   * When `role === 'EMPLOYEE'`, the booking is only returned if it is assigned
+   * to the employee resolved from `userId` — mirroring the EMPLOYEE scoping in
+   * list-bookings.handler. Privileged roles (OWNER/ADMIN/RECEPTIONIST/etc.) pass
+   * no role here and keep full read access. AUTHZ-005.
+   */
+  role?: string | null;
+  userId?: string;
 }
 
 @Injectable()
@@ -20,6 +30,19 @@ export class GetBookingHandler {
     }
     if (query.clientId && booking.clientId !== query.clientId) {
       throw new ForbiddenException('Not your booking');
+    }
+    // AUTHZ-005: a counselor (EMPLOYEE) may only read bookings assigned to them.
+    // Resolve their Employee.id from the JWT user id (Booking.employeeId is an
+    // Employee.id, not a User.id) and reject access to any other employee's
+    // booking. Other dashboard roles are unaffected.
+    if (query.role === 'EMPLOYEE' && query.userId) {
+      const emp = await this.prisma.employee.findFirst({
+        where: { userId: query.userId },
+        select: { id: true },
+      });
+      if (!emp || booking.employeeId !== emp.id) {
+        throw new ForbiddenException('Booking is not assigned to you');
+      }
     }
 
     const [client, employee, service, invoice] = await Promise.all([

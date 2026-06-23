@@ -319,8 +319,14 @@ export class DashboardCommsController {
   @Get('chat/conversations/:id')
   getConversationEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtUser,
   ) {
-    return this.getConversation.execute({ conversationId: id });
+    // AUTHZ-004: scope EMPLOYEE callers to their assigned conversations.
+    return this.getConversation.execute({
+      conversationId: id,
+      requesterRole: user.role ?? null,
+      requesterUserId: user.sub,
+    });
   }
 
   @ApiOperation({ summary: 'Close a conversation' })
@@ -331,8 +337,14 @@ export class DashboardCommsController {
   @HttpCode(HttpStatus.OK)
   closeConversationEndpoint(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtUser,
   ) {
-    return this.closeConversation.execute({ conversationId: id });
+    // AUTHZ-004: scope EMPLOYEE callers to their assigned conversations.
+    return this.closeConversation.execute({
+      conversationId: id,
+      requesterRole: user.role ?? null,
+      requesterUserId: user.sub,
+    });
   }
 
   @ApiOperation({ summary: 'Send a staff message in a conversation' })
@@ -350,6 +362,9 @@ export class DashboardCommsController {
       conversationId: id,
       staffId: user.sub,
       body: body.body,
+      // AUTHZ-004: scope EMPLOYEE callers to their assigned conversations.
+      requesterRole: user.role ?? null,
+      requesterUserId: user.sub,
     });
   }
 
