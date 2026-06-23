@@ -15,10 +15,24 @@ const buildCoupon = (overrides: Partial<typeof defaultCoupon> = {}) => ({
   ...overrides,
 });
 
-// Default invoice: 10 000 halalas subtotal, 0 existing discount, 15% VAT
-const defaultInvoice = {
+// Default invoice: 10 000 halalas subtotal, 0 existing discount, 15% VAT, booking-backed.
+// bookingId is explicitly `string | null` so buildInvoice({ bookingId: null })
+// typechecks (the bundle path must set bookingId=null).
+const defaultInvoice: {
+  id: string;
+  clientId: string;
+  bookingId: string | null;
+  bundlePurchaseId: string | null;
+  subtotal: number;
+  discountAmt: number;
+  vatRate: number;
+  vatAmt: number;
+  total: number;
+} = {
   id: 'inv-1',
   clientId: 'client-1',
+  bookingId: 'book-1',
+  bundlePurchaseId: null,
   subtotal: 10000,
   discountAmt: 0,
   vatRate: 0.15,
@@ -26,7 +40,7 @@ const defaultInvoice = {
   total: 11500,
 };
 
-// Default coupon: 10% percentage discount, no limits
+// Default coupon: 10% percentage discount, no limits, no service restriction
 const defaultCoupon: {
   id: string;
   code: string;
@@ -38,6 +52,7 @@ const defaultCoupon: {
   usedCount: number;
   minOrderAmt: number | null;
   maxUsesPerUser: number | null;
+  serviceIds: string[];
 } = {
   id: 'coupon-1',
   code: 'SAVE10',
@@ -49,16 +64,19 @@ const defaultCoupon: {
   usedCount: 0,
   minOrderAmt: null,
   maxUsesPerUser: null,
+  serviceIds: [],
 };
 
 const buildPrisma = (
   invoice: ReturnType<typeof buildInvoice> = buildInvoice(),
   coupon: ReturnType<typeof buildCoupon> = buildCoupon(),
+  bookingServiceId: string | null = 'svc-1',
 ) => {
   const db: {
     invoice: { findFirst: jest.Mock; update: jest.Mock };
     coupon: { findFirst: jest.Mock; update: jest.Mock; updateMany: jest.Mock };
     couponRedemption: { findUnique: jest.Mock; count: jest.Mock; create: jest.Mock };
+    booking: { findFirst: jest.Mock };
     $transaction: jest.Mock;
   } = {
     invoice: {
@@ -75,6 +93,11 @@ const buildPrisma = (
       count: jest.fn().mockResolvedValue(0),
       create: jest.fn().mockResolvedValue({ id: 'red-1', couponId: coupon.id, invoiceId: invoice.id, discount: 0 }),
     },
+    booking: {
+      findFirst: jest.fn().mockResolvedValue(
+        bookingServiceId === null ? null : { id: invoice.bookingId, serviceId: bookingServiceId },
+      ),
+    },
     $transaction: jest.fn(),
   };
   db.$transaction = jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn(db));
@@ -88,8 +111,9 @@ const buildRlsTransaction = (prisma: ReturnType<typeof buildPrisma>) => ({
 const buildHandler = (
   invoice?: ReturnType<typeof buildInvoice>,
   coupon?: ReturnType<typeof buildCoupon>,
+  bookingServiceId: string | null = 'svc-1',
 ): { handler: ApplyCouponHandler; prisma: ReturnType<typeof buildPrisma> } => {
-  const prisma = buildPrisma(invoice, coupon);
+  const prisma = buildPrisma(invoice, coupon, bookingServiceId);
   const handler = new ApplyCouponHandler(prisma as never, buildRlsTransaction(prisma) as never);
   return { handler, prisma };
 };
@@ -312,5 +336,56 @@ describe('ApplyCouponHandler — guard tests', () => {
     await handler.execute(cmd);
     const redemption = prisma.couponRedemption.create.mock.calls[0]?.[0];
     expect(redemption?.data?.clientId).toBe('client-1');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FIN-002: Coupon.serviceIds whitelist must be enforced against the invoice's
+// booking serviceId (P0). Without this guard, a service-restricted coupon can
+// be redeemed on any invoice — bypassing the dashboard's per-service targeting.
+// ---------------------------------------------------------------------------
+
+describe('ApplyCouponHandler — serviceIds whitelist (FIN-002)', () => {
+  it('rejects when coupon.serviceIds is non-empty and booking.serviceId is NOT in the list', async () => {
+    const coupon = buildCoupon({ serviceIds: ['svc-X', 'svc-Y'] });
+    const { handler, prisma } = buildHandler(undefined, coupon, 'svc-Z' /* booking.serviceId */);
+    await expect(handler.execute(cmd)).rejects.toThrow(/not eligible for this service/i);
+    expect(prisma.couponRedemption.create).not.toHaveBeenCalled();
+    expect(prisma.invoice.update).not.toHaveBeenCalled();
+  });
+
+  it('accepts when coupon.serviceIds is non-empty and booking.serviceId IS in the list', async () => {
+    const coupon = buildCoupon({ serviceIds: ['svc-X', 'svc-Y'] });
+    const { handler, prisma } = buildHandler(undefined, coupon, 'svc-Y' /* booking.serviceId */);
+    const result = await handler.execute(cmd);
+    expect(result.id).toBe('red-1');
+    expect(prisma.couponRedemption.create).toHaveBeenCalled();
+    expect(prisma.invoice.update).toHaveBeenCalled();
+  });
+
+  it('accepts any service when coupon.serviceIds is empty (= applies to all services)', async () => {
+    // Default coupon already has serviceIds: [], and booking.serviceId = 'svc-1'.
+    const { handler, prisma } = buildHandler();
+    const result = await handler.execute(cmd);
+    expect(result.id).toBe('red-1');
+    expect(prisma.couponRedemption.create).toHaveBeenCalled();
+  });
+
+  it('rejects service-restricted coupon on a bundle-backed invoice (bundle path)', async () => {
+    // A bundle invoice has no single serviceId — bundles span many services,
+    // and a service-restricted coupon cannot be unambiguously evaluated.
+    // Minimal correct rule: reject with a clear message rather than guessing.
+    const invoice = buildInvoice({ bundlePurchaseId: 'bp-1', bookingId: null });
+    const coupon = buildCoupon({ serviceIds: ['svc-X'] });
+    const { handler, prisma } = buildHandler(invoice, coupon);
+    await expect(handler.execute(cmd)).rejects.toThrow(/restricted/i);
+    expect(prisma.couponRedemption.create).not.toHaveBeenCalled();
+  });
+
+  it('accepts a coupon with empty serviceIds on a bundle-backed invoice (no restriction to violate)', async () => {
+    const invoice = buildInvoice({ bundlePurchaseId: 'bp-1', bookingId: null });
+    const { handler, prisma } = buildHandler(invoice);
+    const result = await handler.execute(cmd);
+    expect(result.id).toBe('red-1');
   });
 });

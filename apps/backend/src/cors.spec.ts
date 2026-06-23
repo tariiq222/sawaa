@@ -66,6 +66,18 @@ describe('configureCors', () => {
     expect(cb).toHaveBeenCalledWith(null, true);
   });
 
+  it('allows the X-CSRF-Token header so cross-origin cookie clients can pass CSRF (INFRA-030)', () => {
+    process.env.NODE_ENV = 'development';
+    configureCors(app as INestApplication);
+    expect(corsConfig.allowedHeaders).toContain('X-CSRF-Token');
+  });
+
+  it('exposes X-Request-ID so clients can correlate errors', () => {
+    process.env.NODE_ENV = 'development';
+    configureCors(app as INestApplication);
+    expect(corsConfig.exposedHeaders).toContain('X-Request-ID');
+  });
+
   it('should not include dev origins in production', () => {
     process.env.NODE_ENV = 'production';
     configureCors(app as INestApplication);

@@ -972,4 +972,46 @@ describe('CreateBookingHandler', () => {
       }),
     );
   });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 14. Service-level minLeadMinutes override (ORG-001, P0)
+  // check-availability already honors service.minLeadMinutes; create-booking
+  // must agree — otherwise a client can POST a booking that violates the
+  // service's own lead time even though availability hides those slots.
+  // ──────────────────────────────────────────────────────────────────────────
+
+  it('rejects booking 60 min ahead when service.minLeadMinutes=240 (service override stricter than global)', async () => {
+    // Service carries its own 4-hour lead rule; global is 60 min.
+    prisma.service.findFirst = jest.fn().mockResolvedValue({ ...mockService, minLeadMinutes: 240 });
+    const sixtyMinAhead = new Date(Date.now() + 60 * 60_000);
+
+    await expect(
+      handler.execute({ ...baseDto, scheduledAt: sixtyMinAhead }),
+    ).rejects.toThrow(/at least 240 minutes in advance/);
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
+  it('accepts booking 4 hours ahead when service.minLeadMinutes=240 (within override)', async () => {
+    // 4 hours + 5 min cushion — handler recomputes `now` after the test sets
+    // scheduledAt, so a tiny gap between the two `Date.now()` calls can
+    // otherwise flip a 240-min target into a 239-min violation.
+    prisma.service.findFirst = jest.fn().mockResolvedValue({ ...mockService, minLeadMinutes: 240 });
+    const fourHoursAhead = new Date(Date.now() + (4 * 60 + 5) * 60_000);
+
+    await expect(
+      handler.execute({ ...baseDto, scheduledAt: fourHoursAhead }),
+    ).resolves.toBeDefined();
+    expect(prisma.booking.create).toHaveBeenCalled();
+  });
+
+  it('falls back to global minBookingLeadMinutes when service has no minLeadMinutes override', async () => {
+    // Global default (DEFAULT_BOOKING_SETTINGS.minBookingLeadMinutes = 60).
+    // 30 min ahead is less than 60 → must reject via the global fallback.
+    const thirtyMinAhead = new Date(Date.now() + 30 * 60_000);
+
+    await expect(
+      handler.execute({ ...baseDto, scheduledAt: thirtyMinAhead }),
+    ).rejects.toThrow(/at least 60 minutes in advance/);
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
 });

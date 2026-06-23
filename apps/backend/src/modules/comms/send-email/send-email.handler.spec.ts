@@ -37,6 +37,23 @@ describe('SendEmailHandler', () => {
     });
   });
 
+  it('HTML-escapes interpolated variables in the body to prevent stored XSS (COMMS-001)', async () => {
+    const prisma = buildPrisma();
+    const sendMail = jest.fn().mockResolvedValue(undefined);
+    const factory = buildFactory({ isAvailable: () => true, sendMail });
+
+    await new SendEmailHandler(prisma as unknown as PrismaService, factory).execute({
+      to: 'client@example.com',
+      templateSlug: 'welcome',
+      vars: { client_name: '<script>alert(1)</script>' },
+    });
+
+    const arg = sendMail.mock.calls[0][0];
+    expect(arg.html).toBe('<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>');
+    // Subject is a plain-text context — left raw so users do not see entities.
+    expect(arg.subject).toBe('مرحباً <script>alert(1)</script>');
+  });
+
   it('throws ServiceUnavailableException when no provider is configured', async () => {
     const prisma = buildPrisma();
     const sendMail = jest.fn();

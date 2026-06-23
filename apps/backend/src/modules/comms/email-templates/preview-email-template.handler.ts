@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { escapeHtml } from '../../../common/security/escape-html';
 import { PrismaService } from '../../../infrastructure/database';
 
 export interface PreviewEmailTemplateCommand {
@@ -19,14 +20,21 @@ export class PreviewEmailTemplateHandler {
       throw new NotFoundException('Email template not found');
     }
 
-    const interpolate = (str: string): string =>
+    // Body is rendered as HTML, so context values are escaped to block XSS in
+    // the preview (COMMS-001). The subject is plain text — left un-escaped so
+    // the previewer does not see HTML entities.
+    const interpolateHtml = (str: string): string =>
+      str.replace(/\{\{(\w+)\}\}/g, (_, key: string) =>
+        escapeHtml(String(cmd.context[key] ?? '')),
+      );
+    const interpolateText = (str: string): string =>
       str.replace(/\{\{(\w+)\}\}/g, (_, key: string) =>
         String(cmd.context[key] ?? ''),
       );
 
     return {
-      subject: interpolate(template.subject),
-      body: interpolate(template.htmlBody),
+      subject: interpolateText(template.subject),
+      body: interpolateHtml(template.htmlBody),
     };
   }
 }

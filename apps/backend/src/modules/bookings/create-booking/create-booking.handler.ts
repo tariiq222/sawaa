@@ -108,6 +108,7 @@ export class CreateBookingHandler {
         archivedAt: true,
         isHidden: true,
         bufferMinutes: true,
+        minLeadMinutes: true,
         category: { select: { bookingMode: true } },
       },
     });
@@ -218,14 +219,18 @@ export class CreateBookingHandler {
     // Explicit window checks BEFORE slot availability so the admin gets a
     // specific reason ("more than 90 days in advance" or "less than 60 min lead")
     // instead of the generic "not available" thrown by assertSlotAvailable.
+    // Resolve effective min-lead using the same fallback shape as the
+    // bufferMinutes line below AND as CheckAvailabilityHandler
+    // (check-availability.handler.ts:321): service override wins, else the
+    // global BookingSettings value. Without this, a service that requires a
+    // longer lead would still accept bookings violating its own rule even
+    // though availability correctly hides those slots (ORG-001, P0).
     const now = new Date();
     const leadMinutes = (scheduledAt.getTime() - now.getTime()) / 60_000;
-    if (
-      bookingSettings.minBookingLeadMinutes != null &&
-      leadMinutes < bookingSettings.minBookingLeadMinutes
-    ) {
+    const effectiveMinLeadMinutes = service.minLeadMinutes ?? bookingSettings.minBookingLeadMinutes;
+    if (effectiveMinLeadMinutes != null && leadMinutes < effectiveMinLeadMinutes) {
       throw new BadRequestException(
-        `Booking must be at least ${bookingSettings.minBookingLeadMinutes} minutes in advance`,
+        `Booking must be at least ${effectiveMinLeadMinutes} minutes in advance`,
       );
     }
     if (bookingSettings.maxAdvanceBookingDays != null) {

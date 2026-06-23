@@ -59,6 +59,35 @@ export class ApplyCouponHandler {
       throw new BadRequestException(`Order total does not meet minimum for coupon ${cmd.code}`);
     }
 
+    // FIN-002 (P0): Coupon.serviceIds is the per-service whitelist persisted
+    // at coupon creation. It was stored but never enforced here, so a
+    // service-restricted coupon could be redeemed on any invoice. The booking
+    // path (validate-coupon.service.ts) already does this check; apply-coupon
+    // must agree or the dashboard's per-service targeting is bypassed.
+    if (coupon.serviceIds.length > 0) {
+      if (invoice.bundlePurchaseId) {
+        // Bundle-backed invoice: no single serviceId (a bundle spans multiple
+        // services). Refuse service-restricted coupons rather than guessing.
+        throw new BadRequestException(
+          `Coupon ${cmd.code} is restricted to specific services and cannot be applied to a bundle purchase`,
+        );
+      }
+      if (!invoice.bookingId) {
+        throw new BadRequestException(
+          `Coupon ${cmd.code} is restricted to specific services and requires a booking-backed invoice`,
+        );
+      }
+      const booking = await this.prisma.booking.findFirst({
+        where: { id: invoice.bookingId },
+        select: { serviceId: true },
+      });
+      if (!booking || booking.serviceId == null || !coupon.serviceIds.includes(booking.serviceId)) {
+        throw new BadRequestException(
+          `Coupon ${cmd.code} is not eligible for this service`,
+        );
+      }
+    }
+
     const existing = await this.prisma.couponRedemption.findUnique({
       where: { couponId_invoiceId: { couponId: coupon.id, invoiceId: cmd.invoiceId } },
     });

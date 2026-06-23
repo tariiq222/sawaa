@@ -26,6 +26,13 @@ export function configureCors(app: INestApplication): void {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+    // X-CSRF-Token is required by csrfMiddleware for cookie-based client
+    // mutations (website is cross-origin: :5205 → :5200). Without it on the
+    // allow-list the browser preflight strips the header and the mutation
+    // fails (INFRA-030).
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-CSRF-Token'],
+    // Expose the request id so the client can surface it in error messages for
+    // support correlation.
+    exposedHeaders: ['X-Request-ID'],
   });
 }

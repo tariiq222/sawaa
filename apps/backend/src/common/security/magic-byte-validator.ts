@@ -28,6 +28,17 @@ export async function validateMagicBytes(
     // file-type returns undefined for plain-text formats (txt, csv) — they have no magic bytes.
     // Only accept them when the claimed mime is in the text whitelist AND in allowedMimes.
     if (textMimes.includes(claimedMime) && allowedMimes.includes(claimedMime)) {
+      // A claimed text mime with no detectable magic bytes is the one gap an
+      // attacker can drive a binary/polyglot payload through (MEDIA-001). Valid
+      // UTF-8/ASCII text never contains a NUL byte, so its presence means the
+      // content is not really text — reject it.
+      if (buffer.includes(0x00)) {
+        return {
+          ok: false,
+          detectedMime: null,
+          reason: 'claimed a text mime but content contains NUL bytes (binary payload)',
+        };
+      }
       return { ok: true, detectedMime: null };
     }
     return {

@@ -17,6 +17,18 @@ describe('validateMagicBytes', () => {
     expect(result.detectedMime).toBeNull();
   });
 
+  it('rejects a binary payload smuggled under a whitelisted text mime (NUL bytes)', async () => {
+    const { fileTypeFromBuffer } = jest.requireMock('file-type');
+    fileTypeFromBuffer.mockResolvedValue(undefined);
+    const result = await validateMagicBytes(
+      Buffer.from([0x68, 0x69, 0x00, 0x01, 0x02]), // "hi" + NUL + binary bytes
+      'text/plain',
+      ['text/plain', 'text/csv'],
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/NUL/);
+  });
+
   it('rejects non-whitelisted text mime with no magic bytes', async () => {
     const { fileTypeFromBuffer } = jest.requireMock('file-type');
     fileTypeFromBuffer.mockResolvedValue(undefined);
