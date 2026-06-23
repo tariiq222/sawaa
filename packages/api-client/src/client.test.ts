@@ -439,7 +439,9 @@ describe('apiRequest before initClient', () => {
   it('initializes a bare-bones config when setApiRequestBaseUrl is called before initClient', async () => {
     // Force a fresh module load so the module-level `config` is null again.
     vi.resetModules()
-    const fresh = await import('./client?bare-config')
+    // The `?bare-config` query suffix disambiguates the import so vitest does
+    // not hand back the cached module from other tests in this file.
+    const fresh = (await import(`./client?bare-config=${Date.now()}`)) as typeof import('./client')
 
     fresh.setApiRequestBaseUrl('http://bare.test')
 
@@ -452,7 +454,7 @@ describe('apiRequest before initClient', () => {
       vi.fn().mockResolvedValueOnce(jsonResponse({ id: 'bare' })),
     )
     try {
-      const result = await fresh.apiRequest<{ id: string }>('/anything')
+      const result = await fresh.apiRequest('/anything')
       expect(result).toEqual({ id: 'bare' })
       const [url, init] = vi.mocked(fetch).mock.calls[0]!
       expect(url).toBe('http://bare.test/anything')

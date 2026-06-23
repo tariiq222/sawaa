@@ -200,7 +200,7 @@ describe('employees module', () => {
 
   it('PUTs breaks for an employee', async () => {
     await setEmployeeBreaks('emp-1', {
-      breaks: [{ dayOfWeek: 1, start: '12:00', end: '13:00' }],
+      breaks: [{ dayOfWeek: 1, startTime: '12:00', endTime: '13:00' }],
     })
     const [url, init] = lastRequest()
     expect(url).toBe(
@@ -208,7 +208,7 @@ describe('employees module', () => {
     )
     expect(init?.method).toBe('PUT')
     expect(JSON.parse(init?.body as string)).toEqual({
-      breaks: [{ dayOfWeek: 1, start: '12:00', end: '13:00' }],
+      breaks: [{ dayOfWeek: 1, startTime: '12:00', endTime: '13:00' }],
     })
   })
 
@@ -234,26 +234,29 @@ describe('employees module', () => {
 
   it('POSTs a new employee with the payload', async () => {
     await createEmployee({
-      firstName: 'Layla',
-      lastName: 'Hassan',
-      email: 'layla@sawaa.app',
+      userId: 'user-1',
+      specialty: 'family-therapy',
+      experience: 5,
     })
     const [url, init] = lastRequest()
     expect(url).toBe('http://api.test/dashboard/people/employees')
     expect(init?.method).toBe('POST')
     expect(JSON.parse(init?.body as string)).toEqual({
-      firstName: 'Layla',
-      lastName: 'Hassan',
-      email: 'layla@sawaa.app',
+      userId: 'user-1',
+      specialty: 'family-therapy',
+      experience: 5,
     })
   })
 
   it('PATCHes an employee update with the payload', async () => {
-    await updateEmployee('emp-1', { firstName: 'Laila' })
+    await updateEmployee('emp-1', { specialty: 'couples-therapy', isActive: false })
     const [url, init] = lastRequest()
     expect(url).toBe('http://api.test/dashboard/people/employees/emp-1')
     expect(init?.method).toBe('PATCH')
-    expect(JSON.parse(init?.body as string)).toEqual({ firstName: 'Laila' })
+    expect(JSON.parse(init?.body as string)).toEqual({
+      specialty: 'couples-therapy',
+      isActive: false,
+    })
   })
 
   it('DELETEs an employee (no body)', async () => {
@@ -283,8 +286,8 @@ describe('employees module', () => {
 
   it('POSTs a new vacation for an employee', async () => {
     await createEmployeeVacation('emp-1', {
-      dateFrom: '2026-07-01',
-      dateTo: '2026-07-15',
+      startDate: '2026-07-01',
+      endDate: '2026-07-15',
       reason: 'annual leave',
     })
     const [url, init] = lastRequest()
@@ -293,8 +296,8 @@ describe('employees module', () => {
     )
     expect(init?.method).toBe('POST')
     expect(JSON.parse(init?.body as string)).toEqual({
-      dateFrom: '2026-07-01',
-      dateTo: '2026-07-15',
+      startDate: '2026-07-01',
+      endDate: '2026-07-15',
       reason: 'annual leave',
     })
   })

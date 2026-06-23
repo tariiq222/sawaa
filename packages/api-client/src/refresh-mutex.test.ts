@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { afterEach, describe, expect, it } from 'vitest'
 import { getRefreshMutex, setRefreshMutex } from './refresh-mutex'
 
