@@ -1,37 +1,78 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
+import { CATEGORIES_CACHE_PREFIX } from './categories.cache';
+import { DEPARTMENTS_CACHE_PREFIX } from '../departments/departments.cache';
 import { CreateCategoryHandler } from './create-category.handler';
 
 describe('CreateCategoryHandler', () => {
   let handler: CreateCategoryHandler;
-  let prisma: PrismaService;
+  let prisma: any;
+  let cache: { invalidatePrefix: jest.Mock };
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    prisma = {
+      serviceCategory: {
+        create: jest.fn().mockResolvedValue({ id: 'c-new', nameAr: 'شعر', bookingMode: 'SERVICES' }),
+      },
+    };
+    cache = { invalidatePrefix: jest.fn().mockResolvedValue(undefined) };
+
+    const module = await Test.createTestingModule({
       providers: [
         CreateCategoryHandler,
-        { provide: PrismaService, useValue: {
-    serviceCategory: { create: jest.fn() }
-        } },
-        { provide: RlsTransactionService, useValue: {
-    withTransaction: jest.fn((fn: (tx: unknown) => Promise<unknown>) => fn({ serviceCategory: { create: jest.fn().mockResolvedValue({ id: 'test-id' }) }, service: { create: jest.fn() } }))
-        } },
-        { provide: CacheService, useValue: { getOrSet: (_k: string, l: () => Promise<unknown>) => l(), invalidatePrefix: jest.fn() } },
+        { provide: PrismaService, useValue: prisma },
+        {
+          provide: RlsTransactionService,
+          useValue: { withTransaction: jest.fn((cb: any) => cb(prisma)) },
+        },
+        { provide: CacheService, useValue: cache },
       ],
     }).compile();
 
-    handler = module.get<CreateCategoryHandler>(CreateCategoryHandler);
-    prisma = module.get<PrismaService>(PrismaService);
+    handler = module.get(CreateCategoryHandler);
   });
 
-  it('should be defined', () => {
-    expect(handler).toBeDefined();
+  it('creates a SERVICES-mode category without a hidden service row', async () => {
+    const result = await handler.execute({
+      nameAr: 'شعر',
+      nameEn: 'Hair',
+      departmentId: '00000000-0000-0000-0000-000000000001',
+      sortOrder: 1,
+    } as never);
+
+    expect(result.id).toBe('c-new');
+    expect(prisma.serviceCategory.create).toHaveBeenCalledTimes(1);
   });
 
-  it('should execute successfully', async () => {
-    (prisma.serviceCategory.create as jest.Mock).mockResolvedValue({ id: 'test-id' });
-    const result = await handler.execute({nameAr:"Test Name",nameEn:"Test Name",departmentId:"00000000-0000-0000-0000-000000000001",sortOrder:1});
-    expect(result).toBeDefined();
+  it('creates a hidden Service row when bookingMode is DIRECT', async () => {
+    prisma.serviceCategory.create.mockResolvedValue({ id: 'c-dir', bookingMode: 'DIRECT' });
+    prisma.service = { create: jest.fn().mockResolvedValue({ id: 'svc-hidden' }) };
+
+    await handler.execute({
+      nameAr: 'استشارة',
+      nameEn: 'Consult',
+      bookingMode: 'DIRECT',
+    } as never);
+
+    expect(prisma.service.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          categoryId: 'c-dir',
+          nameAr: 'استشارة',
+          isHidden: true,
+          isActive: true,
+          price: expect.anything(),
+          durationMins: 30,
+        }),
+      }),
+    );
+  });
+
+  it('invalidates both categories and departments cache prefixes after a write', async () => {
+    await handler.execute({ nameAr: 'x', nameEn: 'x' } as never);
+
+    expect(cache.invalidatePrefix).toHaveBeenCalledWith(CATEGORIES_CACHE_PREFIX);
+    expect(cache.invalidatePrefix).toHaveBeenCalledWith(DEPARTMENTS_CACHE_PREFIX);
   });
 });
