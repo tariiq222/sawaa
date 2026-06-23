@@ -48,7 +48,8 @@ async function doRefresh(refreshPath: string): Promise<string> {
   })
   if (!res.ok) {
     config.onAuthFailure()
-    throw new Error('Refresh failed')
+    const peek = await peekErrorBody(res)
+    throw new ApiError(res.status, peek.message, peek.body, peek.code)
   }
   const raw = (await res.json()) as unknown
   const data =

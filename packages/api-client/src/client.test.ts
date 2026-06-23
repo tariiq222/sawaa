@@ -217,15 +217,22 @@ describe('apiRequest 401 refresh flow', () => {
     expect(refreshCalls).toHaveLength(1)
   })
 
-  it('fires onAuthFailure and rejects when the refresh itself returns non-2xx', async () => {
+  it('fires onAuthFailure and rejects with an ApiError when the refresh itself returns non-2xx', async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(jsonResponse({ message: 'expired' }, 401))
       .mockResolvedValueOnce(jsonResponse({ message: 'refresh invalid' }, 401))
 
-    // The current implementation throws a plain Error('Refresh failed') from
-    // doRefresh after firing onAuthFailure. This is the contract callers can
-    // rely on — not an ApiError.
-    await expect(apiRequest('/dashboard/bookings/x')).rejects.toThrow('Refresh failed')
+    const err = await apiRequest('/dashboard/bookings/x').catch((e) => e)
+    // The refresh-endpoint failure is now surfaced as an ApiError so callers
+    // that branch on `err instanceof ApiError` (e.g. to show a 401 toast or
+    // route to a login screen) hit the auth-failure code path instead of
+    // being skipped by a plain Error. onAuthFailure still fires.
+    expect(err).toBeInstanceOf(ApiError)
+    expect(err).toMatchObject({
+      status: 401,
+      message: 'refresh invalid',
+      code: 'refresh invalid',
+    })
     expect(onAuthFailure).toHaveBeenCalledTimes(1)
     expect(onTokenRefreshed).not.toHaveBeenCalled()
   })
