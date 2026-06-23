@@ -14,7 +14,7 @@ import { queryKeys } from "@/lib/query-keys"
 import { fetchServices } from "@/lib/api/services"
 import { fetchEmployeeServiceTypes } from "@/lib/api/employees-schedule"
 import type { EmployeeServiceType } from "@/lib/types/employee"
-import { ApiError } from "@/lib/api"
+import { showApiError } from "@/lib/mutation-helpers"
 import { bookingPosPayloadSchema } from "@/lib/schemas/booking.schema"
 
 import { ClientStep } from "./booking-client-step"
@@ -194,13 +194,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
       reset()
       onSuccess()
     } catch (err) {
-      if (err instanceof ApiError && err.status >= 500) {
-        const requestId = (err.body as Record<string, unknown> | undefined)?.requestId as string | undefined
-        const base = t("bookings.wizard.submitError")
-        toast.error(requestId ? `${base} (رقم الطلب: ${requestId})` : base)
-      } else {
-        toast.error(err instanceof Error ? err.message : t("bookings.wizard.submitError"))
-      }
+      showApiError(err, { fallback: t("bookings.wizard.submitError"), t })
     }
   }
 

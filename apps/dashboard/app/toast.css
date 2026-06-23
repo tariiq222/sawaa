@@ -2,7 +2,7 @@
 /* sonner unstyled=true — data-type is set directly on [data-sonner-toast] */
 
 [data-sonner-toaster] {
-  font-family: "IBM Plex Sans Arabic", sans-serif !important;
+  font-family: var(--font-arabic), ui-sans-serif, system-ui, sans-serif !important;
 }
 
 /* ─── Base ─── */

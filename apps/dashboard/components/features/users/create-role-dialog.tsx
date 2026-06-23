@@ -3,6 +3,7 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
+import { showApiError } from "@/lib/mutation-helpers"
 
 import {
   Dialog,
@@ -61,7 +62,7 @@ export function CreateRoleDialog({ open, onOpenChange, onCreated }: CreateRoleDi
         form.setError("name", { message: t("users.roles.create.nameTaken") })
         return
       }
-      toast.error(err instanceof Error ? err.message : t("users.roles.create.error"))
+      showApiError(err, { fallback: t("users.roles.create.error"), t })
     }
   })
 

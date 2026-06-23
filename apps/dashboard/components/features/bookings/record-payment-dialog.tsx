@@ -26,6 +26,7 @@ import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { useRecordPaymentMutations } from "@/hooks/use-payments"
 import { useDiscountReasons } from "@/hooks/use-discount-reasons"
 import { usePaymentSettings } from "@/hooks/use-organization-settings"
+import { showApiError } from "@/lib/mutation-helpers"
 import { sarToHalalas, halalasToSar } from "@/lib/money"
 import type { Booking } from "@/lib/types/booking"
 
@@ -123,7 +124,7 @@ function RecordPaymentForm({ booking, onClose }: { booking: Booking; onClose: ()
       toast.success(t("bookings.recordPayment.successToast"))
       onClose()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("bookings.recordPayment.errorToast"))
+      showApiError(err, { fallback: t("bookings.recordPayment.errorToast"), t })
     }
   }
 

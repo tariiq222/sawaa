@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
+import { showApiError } from "@/lib/mutation-helpers"
 
 import { Button } from "@sawaa/ui"
 import { Input } from "@sawaa/ui"
@@ -147,7 +148,7 @@ export function BundleFormPage(props: Props) {
       }
       router.push("/bundles")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t(isEdit ? "bundles.edit.error" : "bundles.create.error"))
+      showApiError(err, { fallback: t(isEdit ? "bundles.edit.error" : "bundles.create.error"), t })
     }
   })
 

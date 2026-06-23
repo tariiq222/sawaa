@@ -6,6 +6,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useMemo,
   type ReactNode,
 } from "react"
 import { DirectionProvider } from "@radix-ui/react-direction"
@@ -54,14 +55,37 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const t = useCallback(
-    (key: string) => translations[locale][key] ?? key,
+    (key: string) => {
+      if (!key) return ""
+      const direct = translations[locale][key]
+      if (direct !== undefined) return direct
+      // Bridge: if the key exists only in the other locale (parity-window
+      // drift), show real text instead of a raw dotted key. Parity is gated
+      // by i18n:verify, so in production this rarely fires.
+      const bridged = translations.en[key] ?? translations.ar[key]
+      if (bridged !== undefined) return bridged
+      if (process.env.NODE_ENV !== "production") {
+        // eslint-disable-next-line no-console
+        console.warn(`[i18n] missing translation key: "${key}" (locale=${locale})`)
+      }
+      // Preserve legacy behaviour: return the key so existing
+      // `t(dynamicKey) || rawValue` fallbacks keep working.
+      return key
+    },
     [locale]
   )
 
   const dir = locale === "ar" ? "rtl" : "ltr"
 
+  // Memoize so the ~every-component useLocale() consumer tree doesn't
+  // re-render on unrelated parent renders (e.g. 30s poll ticks).
+  const value = useMemo<LocaleContextValue>(
+    () => ({ locale, dir, toggleLocale, t }),
+    [locale, dir, toggleLocale, t],
+  )
+
   return (
-    <LocaleContext.Provider value={{ locale, dir, toggleLocale, t }}>
+    <LocaleContext.Provider value={value}>
       <DirectionProvider dir={dir}>{children}</DirectionProvider>
     </LocaleContext.Provider>
   )

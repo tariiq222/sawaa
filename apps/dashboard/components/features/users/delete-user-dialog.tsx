@@ -1,6 +1,7 @@
 "use client"
 
 import { toast } from "sonner"
+import { showApiError } from "@/lib/mutation-helpers"
 
 import {
   Dialog,
@@ -37,7 +38,7 @@ export function DeleteUserDialog({ user, open, onOpenChange }: DeleteUserDialogP
       toast.success(t("users.delete.success"))
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("users.delete.error"))
+      showApiError(err, { fallback: t("users.delete.error"), t })
     }
   }
 

@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -115,22 +116,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [permissions],
   )
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        permissions,
-        login,
-        loginWithTokens,
-        logout,
-        isAuthenticated: !!user,
-        canDo,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  // Memoize the context value so consumers (Header, Sidebar, every page that
+  // calls useAuth) don't re-render on unrelated parent renders.
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      loading,
+      permissions,
+      login,
+      loginWithTokens,
+      logout,
+      isAuthenticated: !!user,
+      canDo,
+    }),
+    [user, loading, permissions, login, loginWithTokens, logout, canDo],
   )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 /* ─── Hook ─── */

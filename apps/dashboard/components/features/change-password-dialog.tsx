@@ -19,6 +19,7 @@ import { Label } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
 import { changePassword } from "@/lib/api/auth"
 import { useLocale } from "@/components/locale-provider"
+import { showApiError } from "@/lib/mutation-helpers"
 import { useState } from "react"
 
 const schema = z
@@ -56,7 +57,7 @@ export function ChangePasswordDialog({ open, onOpenChange }: Props) {
       form.reset()
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("changePassword.error"))
+      showApiError(err, { fallback: t("changePassword.error"), t })
     } finally {
       setLoading(false)
     }

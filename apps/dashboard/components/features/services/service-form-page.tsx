@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
+import { showApiError } from "@/lib/mutation-helpers"
 import { useQuery } from "@tanstack/react-query"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
@@ -191,7 +192,7 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
       router.push("/services")
     } catch (err) {
       const key = isEdit ? "services.edit.error" : "services.create.error"
-      toast.error(err instanceof Error ? err.message : t(key))
+      showApiError(err, { fallback: t(key), t })
     } finally {
       setIsSubmitting(false)
     }

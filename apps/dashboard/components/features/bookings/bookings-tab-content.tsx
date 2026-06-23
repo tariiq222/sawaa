@@ -2,7 +2,6 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { toast } from "sonner"
 import { Skeleton } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
 import { DataTable } from "@/components/features/data-table"
@@ -18,7 +17,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
-import { ApiError } from "@/lib/api"
+import { showApiError } from "@/lib/mutation-helpers"
 import type { Booking, CancellationReason } from "@/lib/types/booking"
 
 interface BookingsTabContentProps {
@@ -87,13 +86,7 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
       else await noShowMut.mutateAsync(booking.id)
       refresh()
     } catch (err) {
-      if (err instanceof ApiError && err.status >= 500) {
-        const requestId = (err.body as Record<string, unknown> | undefined)?.requestId as string | undefined
-        const base = t("bookings.actions.toast.serverError")
-        toast.error(requestId ? `${base} (رقم الطلب: ${requestId})` : base)
-      } else {
-        toast.error(err instanceof Error ? err.message : t("bookings.actions.toast.genericError"))
-      }
+      showApiError(err, { fallback: t("bookings.actions.toast.genericError"), t })
     }
   }
 
@@ -113,13 +106,7 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
       setHardDeleteTarget(null)
       refresh()
     } catch (err) {
-      if (err instanceof ApiError && err.status >= 500) {
-        const requestId = (err.body as Record<string, unknown> | undefined)?.requestId as string | undefined
-        const base = t("bookings.actions.toast.serverError")
-        toast.error(requestId ? `${base} (رقم الطلب: ${requestId})` : base)
-      } else {
-        toast.error(err instanceof Error ? err.message : t("bookings.actions.toast.genericError"))
-      }
+      showApiError(err, { fallback: t("bookings.actions.toast.genericError"), t })
     }
   }
 
@@ -222,7 +209,9 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
         onReset={() => { setSearch(""); resetFilters(); setActiveTimeTab("all") }}
       />
 
-      {error && <ErrorBanner message={error} onRetry={refresh} retryLabel={t("bookings.filters.reset")} />}
+      {error && (!bookings || bookings.length === 0) && (
+        <ErrorBanner message={error} onRetry={refresh} retryLabel={t("bookings.filters.reset")} />
+      )}
 
       {loading && (!bookings || bookings.length === 0) ? (
         <div className="space-y-2">
@@ -285,13 +274,7 @@ export function BookingsTabContent({ onRowClick }: BookingsTabContentProps) {
             refresh()
             resetDelete()
           } catch (err) {
-            if (err instanceof ApiError && err.status >= 500) {
-              const requestId = (err.body as Record<string, unknown> | undefined)?.requestId as string | undefined
-              const base = t("bookings.actions.toast.serverError")
-              toast.error(requestId ? `${base} (رقم الطلب: ${requestId})` : base)
-            } else {
-              toast.error(err instanceof Error ? err.message : t("bookings.actions.toast.genericError"))
-            }
+            showApiError(err, { fallback: t("bookings.actions.toast.genericError"), t })
           }
         }}
       />

@@ -3,6 +3,7 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
+import { showApiError } from "@/lib/mutation-helpers"
 
 import { Button } from "@sawaa/ui"
 import {
@@ -72,7 +73,7 @@ export function VerifyDialog({
       onOpenChange(false)
       onSuccess()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("payments.verify.failedToast"))
+      showApiError(err, { fallback: t("payments.verify.failedToast"), t })
     }
   })
 

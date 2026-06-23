@@ -12,6 +12,7 @@ import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { Button } from "@sawaa/ui"
 import { useClientMutations } from "@/hooks/use-clients"
 import { useLocale } from "@/components/locale-provider"
+import { showApiError } from "@/lib/mutation-helpers"
 import { createClientSchema, type CreateClientFormData, splitFullName } from "@/lib/schemas/client.schema"
 import { ClientFormFields } from "@/components/features/clients/client-form"
 
@@ -46,7 +47,7 @@ export default function CreateClientPage() {
       if (err instanceof ApiError && err.code === "CLIENT_PHONE_EXISTS") {
         toast.error(t("clients.create.duplicatePhone"))
       } else {
-        toast.error(err instanceof Error ? err.message : t("clients.create.error"))
+        showApiError(err, { fallback: t("clients.create.error"), t })
       }
     }
   })

@@ -21,6 +21,7 @@ import { useLocale } from "@/components/locale-provider"
 import { formatDatePattern } from "@/lib/date"
 import { cn } from "@/lib/utils"
 import type { ChatMessage } from "@/lib/types/chatbot"
+import { showApiError } from "@/lib/mutation-helpers"
 
 /* ─── Props ─── */
 
@@ -118,7 +119,7 @@ export function SessionDetailSheet({
       await endSessionMut.mutateAsync(sessionId)
       toast.success(t("chatbot.sessionEnded"))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("chatbot.sessionEndError"))
+      showApiError(err, { fallback: t("chatbot.sessionEndError"), t })
     }
   }
 
@@ -129,7 +130,7 @@ export function SessionDetailSheet({
       setStaffMsg("")
       refetch()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("chatbot.sendError"))
+      showApiError(err, { fallback: t("chatbot.sendError"), t })
     }
   }
 

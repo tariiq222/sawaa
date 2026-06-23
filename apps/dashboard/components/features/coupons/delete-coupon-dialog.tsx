@@ -1,6 +1,7 @@
 "use client"
 
 import { toast } from "sonner"
+import { showApiError } from "@/lib/mutation-helpers"
 
 import {
   AlertDialog,
@@ -41,7 +42,7 @@ export function DeleteCouponDialog({
       toast.success(t("coupons.delete.success"))
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("coupons.delete.error"))
+      showApiError(err, { fallback: t("coupons.delete.error"), t })
     }
   }
 

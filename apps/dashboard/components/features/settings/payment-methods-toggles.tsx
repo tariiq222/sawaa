@@ -5,6 +5,7 @@ import { Card, CardContent, Switch, Skeleton } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { usePaymentSettings, usePaymentSettingsMutation } from "@/hooks/use-organization-settings"
 import type { PaymentSettings } from "@/lib/api/organization-settings"
+import { toastApiError } from "@/lib/mutation-helpers"
 
 type MethodKey = "payMethodCashEnabled" | "payMethodBankEnabled" | "payMethodMadaEnabled" | "payMethodTabbyEnabled"
 
@@ -23,7 +24,7 @@ export function PaymentMethodsToggles() {
   const toggle = (key: MethodKey, value: boolean) => {
     mut.mutate(
       { [key]: value } as Partial<PaymentSettings>,
-      { onSuccess: () => toast.success(t("settings.saved")), onError: (err: Error) => toast.error(err.message) },
+      { onError: toastApiError(t("settings.error"), t) },
     )
   }
 

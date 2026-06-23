@@ -376,6 +376,7 @@ export const arEmployees: Record<string, string> = {
   "employees.form.stepErrorServices": "الخدمات",
   "employees.form.stepErrorAvatar": "الصورة الشخصية",
   "employees.form.createPartialSuccess": "تم إنشاء الممارس الصحي، لكن فشل حفظ: {steps}",
+  "employees.form.partialFailure": "تعذّر حفظ بعض الأجزاء: {list}",
 
   // — Vacation Manager —
   "vacation.validation.startRequired": "تاريخ البداية مطلوب",

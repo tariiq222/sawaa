@@ -14,6 +14,7 @@ import {
 } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useClientMutations } from "@/hooks/use-clients"
+import { showApiError } from "@/lib/mutation-helpers"
 import type { Client } from "@/lib/types/client"
 
 interface DeleteClientDialogProps {
@@ -37,7 +38,7 @@ export function DeleteClientDialog({ client, open, onOpenChange, onDeleted }: De
         onDeleted?.()
       },
       onError: (err) => {
-        toast.error(err instanceof Error ? err.message : t("clients.delete.error"))
+        showApiError(err, { fallback: t("clients.delete.error"), t })
       },
     })
   }

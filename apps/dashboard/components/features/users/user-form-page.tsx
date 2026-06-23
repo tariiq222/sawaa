@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
+import { showApiError } from "@/lib/mutation-helpers"
 import { useQuery } from "@tanstack/react-query"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
@@ -119,7 +120,7 @@ export function UserFormPage(props: Props) {
       }
       router.push("/users")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t(isEdit ? "users.edit.error" : "users.create.error"))
+      showApiError(err, { fallback: t(isEdit ? "users.edit.error" : "users.create.error"), t })
     }
   })
 

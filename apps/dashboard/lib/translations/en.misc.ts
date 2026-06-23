@@ -533,6 +533,9 @@ export const enMisc: Record<string, string> = {
   "error.somethingWrong": "Something went wrong",
   "error.unexpected": "An unexpected error occurred. Please try again.",
   "error.tryAgain": "Try Again",
+  "error.server": "A system error occurred. Please try again.",
+  "error.network": "Could not reach the server. Check your connection and try again.",
+  "error.missingTranslation": "An unexpected error occurred",
 
   // — Brand identity (login panel) —
   "brand.name": "Sawaa Family Counseling",

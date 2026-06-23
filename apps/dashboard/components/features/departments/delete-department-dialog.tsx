@@ -1,6 +1,7 @@
 "use client"
 
 import { toast } from "sonner"
+import { showApiError } from "@/lib/mutation-helpers"
 
 import {
   AlertDialog,
@@ -50,7 +51,7 @@ export function DeleteDepartmentDialog({
       await deleteMut.mutateAsync(id)
       toast.success(t("departments.delete.success"))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("departments.delete.error"))
+      showApiError(err, { fallback: t("departments.delete.error"), t })
     }
   }
 

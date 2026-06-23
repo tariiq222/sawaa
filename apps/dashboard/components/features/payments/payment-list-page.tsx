@@ -17,7 +17,7 @@ import type { Payment } from "@/lib/types/payment"
 
 export function PaymentListPage() {
   const { t } = useLocale()
-  const { payments, isLoading, error, search, setSearch, status, setStatus, method, setMethod, hasFilters, resetFilters, refetch } = usePayments()
+  const { payments, meta, isLoading, error, search, setSearch, status, setStatus, method, setMethod, hasFilters, resetFilters, refetch, page, setPage } = usePayments()
 
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -55,7 +55,18 @@ export function PaymentListPage() {
           ))}
         </div>
       ) : (
-        <DataTable columns={columns} data={payments} emptyTitle={t("payments.empty.title")} emptyDescription={t("payments.empty.description")} />
+        <DataTable
+          columns={columns}
+          data={payments}
+          emptyTitle={t("payments.empty.title")}
+          emptyDescription={t("payments.empty.description")}
+          serverPaginated
+          page={meta?.page ?? page}
+          totalPages={meta?.totalPages ?? 1}
+          hasPreviousPage={meta?.hasPreviousPage ?? false}
+          hasNextPage={meta?.hasNextPage ?? false}
+          onPageChange={setPage}
+        />
       )}
 
       <PaymentDetailDialog paymentId={selectedPaymentId} open={sheetOpen} onOpenChange={setSheetOpen} onAction={handleAction} />

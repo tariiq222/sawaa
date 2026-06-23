@@ -22,6 +22,7 @@ import {
   useCreateHoliday,
   useDeleteHoliday,
 } from "@/hooks/use-organization-settings"
+import { toastApiError } from "@/lib/mutation-helpers"
 
 /* ─── Props ─── */
 
@@ -58,7 +59,7 @@ export function HolidaysSection({ t, branchId }: Props) {
       { branchId, date, nameAr, nameEn },
       {
         onSuccess: () => { toast.success(t("settings.saved")); resetForm() },
-        onError: (err: Error) => toast.error(err.message),
+        onError: toastApiError(t("settings.error"), t),
       },
     )
   }
@@ -152,7 +153,7 @@ export function HolidaysSection({ t, branchId }: Props) {
                 onDelete={() =>
                   deleteMutation.mutate(holiday.id, {
                     onSuccess: () => toast.success(t("settings.saved")),
-                    onError: (err: Error) => toast.error(err.message),
+                    onError: toastApiError(t("settings.error"), t),
                   })
                 }
                 isDeleting={deleteMutation.isPending}

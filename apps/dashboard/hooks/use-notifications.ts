@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { useState } from "react"
 import { queryKeys } from "@/lib/query-keys"
 import {
@@ -54,6 +54,9 @@ export function useUnreadCount() {
     queryFn: fetchUnreadCount,
     refetchInterval: 30_000,
     staleTime: 30_000,
+    // Keep the last successful count on a failed poll so the badge never
+    // collapses to a false zero while the network hiccups.
+    placeholderData: keepPreviousData,
   })
 }
 

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { useLocale } from "@/components/locale-provider"
+import { ErrorBanner } from "@/components/features/error-banner"
 import { Skeleton } from "@sawaa/ui"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Alert01Icon } from "@hugeicons/core-free-icons"
@@ -45,11 +46,12 @@ export function BookingsReportPage() {
     compareWithPrevious: true,
   }
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.reports.bookings(params),
     queryFn: () => fetchBookingReport(params),
     enabled: !!params.dateFrom && !!params.dateTo,
   })
+  const errMsg = error instanceof Error ? t("error.server") : t("error.unexpected")
 
   return (
     <ReportPageShell
@@ -63,6 +65,8 @@ export function BookingsReportPage() {
             <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </KpiRow>
+      ) : error ? (
+        <ErrorBanner message={errMsg} onRetry={() => refetch()} />
       ) : !data ? (
         <ReportsEmptyState />
       ) : (

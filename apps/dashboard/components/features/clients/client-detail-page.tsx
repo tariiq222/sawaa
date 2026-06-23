@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import { useClient } from "@/hooks/use-clients"
+import { ApiError } from "@/lib/api"
 import { ClientAccountToggle } from "@/components/features/clients/client-account-toggle"
 import { ActiveBadge } from "@/components/features/status-badge"
 import { BLOOD_LABELS, type BloodType } from "@/lib/schemas/client.schema"
@@ -42,9 +43,28 @@ export function ClientDetailPage({ clientId }: Props) {
   const { formatDate } = useOrganizationConfig()
   const [deleteOpen, setDeleteOpen] = useState(false)
 
-  const { data: client, isLoading, error } = useClient(clientId)
+  const { data: client, isLoading, error, refetch } = useClient(clientId)
 
   if (isLoading) return <ClientPageSkeleton />
+
+  const isNotFound =
+    (error instanceof ApiError && error.status === 404) || (!error && !client)
+
+  if (!isNotFound && error) {
+    return (
+      <ListPageShell>
+        <Breadcrumbs />
+        <ErrorBanner
+          message={t("error.server")}
+          onRetry={() => refetch()}
+        />
+        <Button variant="outline" onClick={() => router.push("/clients")}>
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+          {t("clients.detail.backToClients")}
+        </Button>
+      </ListPageShell>
+    )
+  }
 
   if (error || !client) {
     return (

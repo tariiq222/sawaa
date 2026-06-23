@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@sawaa/ui"
 import { useBookingMutations } from "@/hooks/use-bookings"
-import { ApiError } from "@/lib/api"
+import { showApiError } from "@/lib/mutation-helpers"
 import { sarToHalalas } from "@/lib/money"
 import type { Booking, CancellationReason, RefundDecision, RefundType } from "@/lib/types/booking"
 import { ApproveCancelDialog, RejectCancelDialog, AdminCancelDialog } from "./cancel-dialogs"
@@ -107,13 +107,7 @@ export function BookingActions({ booking, onAction }: BookingActionsProps) {
       toast.success(msg)
       onAction()
     } catch (err) {
-      if (err instanceof ApiError && err.status >= 500) {
-        const requestId = (err.body as Record<string, unknown> | undefined)?.requestId as string | undefined
-        const base = t("bookings.actions.toast.serverError")
-        toast.error(requestId ? `${base} (رقم الطلب: ${requestId})` : base)
-      } else {
-        toast.error(err instanceof Error ? err.message : t("bookings.actions.toast.genericError"))
-      }
+      showApiError(err, { fallback: t("bookings.actions.toast.genericError"), t })
     }
   }
 

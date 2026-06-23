@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { showApiError } from "@/lib/mutation-helpers"
 
 import { DataTable } from "@/components/features/data-table"
 import { ErrorBanner } from "@/components/features/error-banner"
@@ -47,7 +48,7 @@ export function ServicesTabContent() {
       await deleteMut.mutateAsync(s.id)
       toast.success(t("services.delete.success"))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("services.delete.error"))
+      showApiError(err, { fallback: t("services.delete.error"), t })
     }
   }
   const handleRowClick = (s: Service) => setDetailTarget(s)

@@ -269,9 +269,9 @@ describe("BookingActions", () => {
     })
   })
 
-  it("generic Error shows toast with error message", async () => {
+  it("generic Error shows toast with localized fallback", async () => {
     const { completeMut } = mockMutations()
-    completeMut.mutateAsync.mockRejectedValue(new Error("Network failure"))
+    completeMut.mutateAsync.mockRejectedValue(new Error("Something went wrong"))
     const toastModule = await import("sonner")
     const toastErrorSpy = vi.spyOn(toastModule.toast, "error")
     render(<BookingActions booking={makeBooking("confirmed")} onAction={vi.fn()} />)
@@ -280,7 +280,7 @@ describe("BookingActions", () => {
     fireEvent.click(findDropdownItem("complete")!)
 
     await waitFor(() => {
-      expect(toastErrorSpy).toHaveBeenCalledWith("Network failure")
+      expect(toastErrorSpy).toHaveBeenCalledWith("bookings.actions.toast.genericError")
     })
   })
 

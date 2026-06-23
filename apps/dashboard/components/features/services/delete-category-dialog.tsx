@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 import { toast } from "sonner"
+import { showApiError } from "@/lib/mutation-helpers"
 
 import {
   AlertDialog,
@@ -41,7 +42,7 @@ export function DeleteCategoryDialog({ category, open, onOpenChange }: Props) {
       toast.success(t("services.categories.delete.success"))
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("services.categories.delete.error"))
+      showApiError(err, { fallback: t("services.categories.delete.error"), t })
     }
   }
 

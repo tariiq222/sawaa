@@ -11,6 +11,7 @@ import {
   useBookingSettings,
   useBookingSettingsMutation,
 } from "@/hooks/use-organization-settings"
+import { toastApiError } from "@/lib/mutation-helpers"
 import { SettingsTabSidebar } from "./settings-tab-sidebar"
 import { NumberRow } from "./setting-row"
 
@@ -50,7 +51,7 @@ export function BookingTab({ t }: Props) {
   const handleSettingsSave = (data: Record<string, unknown>) =>
     settingsMut.mutate(data, {
       onSuccess: () => toast.success(t("settings.saved")),
-      onError: (err: Error) => toast.error(err.message),
+      onError: toastApiError(t("settings.error"), t),
     })
 
   if (settingsLoading || flowLoading) {
@@ -136,7 +137,7 @@ export function BookingTab({ t }: Props) {
               <div className="mt-auto flex justify-end pt-2">
                 <Button size="sm" disabled={isSaving} onClick={() => flowMut.mutate(flowOrderVal, {
                   onSuccess: () => toast.success(t("settings.saved")),
-                  onError: (err: Error) => toast.error(err.message),
+                  onError: toastApiError(t("settings.error"), t),
                 })}>
                   {t("settings.save")}
                 </Button>

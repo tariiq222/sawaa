@@ -40,6 +40,7 @@ import { useLocale } from "@/components/locale-provider"
 import { COUNTRIES } from "@/lib/countries-data"
 import { cn } from "@/lib/utils"
 import { BLOOD_TYPES, BLOOD_LABELS, splitFullName } from "@/lib/schemas/client.schema"
+import { showApiError } from "@/lib/mutation-helpers"
 import {
   walkInClientSchema,
   type WalkInClientFormData,
@@ -158,7 +159,7 @@ export function BookingWalkInForm({ onSelect }: BookingWalkInFormProps) {
         onSelect(res.id, [firstName, middleName, lastName].filter(Boolean).join(" "))
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("bookings.walkin.toast.error"))
+      showApiError(err, { fallback: t("bookings.walkin.toast.error"), t })
     } finally {
       setCreating(false)
     }

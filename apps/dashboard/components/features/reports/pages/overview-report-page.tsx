@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useLocale } from "@/components/locale-provider"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
+import { ErrorBanner } from "@/components/features/error-banner"
 import { Skeleton } from "@sawaa/ui"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { InformationCircleIcon } from "@hugeicons/core-free-icons"
@@ -29,11 +30,12 @@ export function OverviewReportPage() {
     compareWithPrevious: true,
   }
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.reports.overview(params),
     queryFn: () => fetchOverviewReport(params),
     enabled: !!params.dateFrom && !!params.dateTo,
   })
+  const errMsg = error instanceof Error ? t("error.server") : t("error.unexpected")
 
   return (
     <ReportPageShell
@@ -47,6 +49,8 @@ export function OverviewReportPage() {
             <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </KpiRow>
+      ) : error ? (
+        <ErrorBanner message={errMsg} onRetry={() => refetch()} />
       ) : !data ? (
         <ReportsEmptyState />
       ) : (

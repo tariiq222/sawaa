@@ -18,6 +18,7 @@ import {
 import { useLocale } from "@/components/locale-provider"
 import { useEmployeeAccount } from "@/hooks/use-employees"
 import { useEmployeeAccountMutations } from "@/hooks/use-employee-mutations"
+import { showApiError } from "@/lib/mutation-helpers"
 import type { EmployeeAccountRole } from "@/lib/api/employees"
 
 const STAFF_ROLES: EmployeeAccountRole[] = [
@@ -108,7 +109,7 @@ export function EmployeeAccountTab({ employeeId }: Props) {
         { role },
         {
           onSuccess: () => toast.success(t("employees.detail.account.updated")),
-          onError: (err) => toast.error(err instanceof Error ? err.message : String(err)),
+          onError: (err) => showApiError(err, { fallback: t("error.unexpected"), t }),
         },
       )
     }
@@ -118,7 +119,7 @@ export function EmployeeAccountTab({ employeeId }: Props) {
         { isActive },
         {
           onSuccess: () => toast.success(t("employees.detail.account.updated")),
-          onError: (err) => toast.error(err instanceof Error ? err.message : String(err)),
+          onError: (err) => showApiError(err, { fallback: t("error.unexpected"), t }),
         },
       )
     }
@@ -169,7 +170,7 @@ export function EmployeeAccountTab({ employeeId }: Props) {
           toast.success(t("employees.detail.account.created"))
           setPassword("")
         },
-        onError: (err) => toast.error(err instanceof Error ? err.message : String(err)),
+        onError: (err) => showApiError(err, { fallback: t("error.unexpected"), t }),
       },
     )
   }

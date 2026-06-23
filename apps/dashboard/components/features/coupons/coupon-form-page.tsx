@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
+import { showApiError } from "@/lib/mutation-helpers"
 import { useQuery } from "@tanstack/react-query"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
@@ -117,7 +118,7 @@ export function CouponFormPage(props: Props) {
       }
       router.push("/coupons")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t(isEdit ? "coupons.edit.error" : "coupons.create.error"))
+      showApiError(err, { fallback: t(isEdit ? "coupons.edit.error" : "coupons.create.error"), t })
     }
   })
 

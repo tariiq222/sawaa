@@ -238,7 +238,7 @@ describe("BookingRescheduleTab", () => {
     })
   })
 
-  it("shows error toast with message when reschedule fails with generic Error", async () => {
+  it("shows localized fallback toast when reschedule fails with generic Error", async () => {
     mockSlots({
       slots: [{ startTime: "14:00", endTime: "14:30" }],
       slotsLoading: false,
@@ -253,7 +253,7 @@ describe("BookingRescheduleTab", () => {
     fireEvent.click(screen.getByText("bookings.reschedule.submit"))
 
     await waitFor(() =>
-      expect(toastErrorSpy).toHaveBeenCalledWith("Unexpected failure"),
+      expect(toastErrorSpy).toHaveBeenCalledWith("bookings.reschedule.toast.error"),
     )
   })
 })

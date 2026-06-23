@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useLocale } from "@/components/locale-provider"
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
+import { ErrorBanner } from "@/components/features/error-banner"
 import { Input, Skeleton } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { queryKeys } from "@/lib/query-keys"
@@ -29,11 +30,12 @@ export function PractitionersReportPage() {
     compareWithPrevious: true,
   }
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.reports.practitioners(params),
     queryFn: () => fetchPractitionersReport(params),
     enabled: !!params.dateFrom && !!params.dateTo,
   })
+  const errMsg = error instanceof Error ? t("error.server") : t("error.unexpected")
 
   const filtered = data?.rows.filter((r) =>
     search ? r.name.toLowerCase().includes(search.toLowerCase()) : true,
@@ -51,6 +53,8 @@ export function PractitionersReportPage() {
             <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </KpiRow>
+      ) : error ? (
+        <ErrorBanner message={errMsg} onRetry={() => refetch()} />
       ) : !data ? (
         <ReportsEmptyState />
       ) : (

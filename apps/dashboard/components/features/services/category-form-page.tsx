@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useForm, Controller, type Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
+import { showApiError } from "@/lib/mutation-helpers"
 
 import { useCategories, useCategoryMutations } from "@/hooks/use-services"
 import { useDepartmentOptions } from "@/hooks/use-departments"
@@ -128,7 +129,7 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
       toast.success(t("services.categories.create.success"))
       router.push(`/categories/${formatRef("CAT", created.ref)}/edit?tab=${target}`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("services.categories.create.error"))
+      showApiError(err, { fallback: t("services.categories.create.error"), t })
     } finally { setIsSubmitting(false) }
   }
 
@@ -170,7 +171,7 @@ export function CategoryFormPage({ mode, categoryId }: CategoryFormPageProps) {
         }
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t(mode === "create" ? "services.categories.create.error" : "services.categories.edit.error"))
+      showApiError(err, { fallback: t(mode === "create" ? "services.categories.create.error" : "services.categories.edit.error"), t })
     } finally { setIsSubmitting(false) }
   }
 

@@ -20,6 +20,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { ActiveBadge } from "@/components/features/status-badge"
 import { useEmployee } from "@/hooks/use-employees"
+import { ApiError } from "@/lib/api"
 import {
   EmployeeRatingsSection,
   EmployeeAvailabilitySection,
@@ -43,9 +44,28 @@ export function EmployeeDetailPage({ employeeId }: Props) {
   const { t, locale } = useLocale()
   const isAr = locale === "ar"
 
-  const { data: employee, isLoading, error } = useEmployee(employeeId)
+  const { data: employee, isLoading, error, refetch } = useEmployee(employeeId)
 
   if (isLoading) return <ProfileSkeleton />
+
+  const isNotFound =
+    (error instanceof ApiError && error.status === 404) || (!error && !employee)
+
+  if (!isNotFound && error) {
+    return (
+      <ListPageShell>
+        <Breadcrumbs />
+        <ErrorBanner
+          message={t("error.server")}
+          onRetry={() => refetch()}
+        />
+        <Button variant="outline" onClick={() => router.push("/employees")}>
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+          {t("employees.detail.backToEmployees")}
+        </Button>
+      </ListPageShell>
+    )
+  }
 
   if (error || !employee) {
     return (

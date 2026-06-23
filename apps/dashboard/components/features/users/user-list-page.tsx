@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Add01Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
+import { showApiError } from "@/lib/mutation-helpers"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
 import { ErrorBanner } from "@/components/features/error-banner"
@@ -53,7 +54,7 @@ export function UserListPage() {
         toast.success(t("users.toast.activated"))
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("users.toast.actionFailed"))
+      showApiError(err, { fallback: t("users.toast.actionFailed"), t })
     }
   }, [activateMut, deactivateMut, t])
 

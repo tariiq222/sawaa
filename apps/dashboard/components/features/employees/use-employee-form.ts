@@ -364,9 +364,9 @@ export function useEmployeeForm({
       stepErrors.push(t("employees.form.stepErrorBranches"))
     }
     if (stepErrors.length > 0) {
-      toast.warning(
-        `${t("employees.edit.success")} (${t("common.warnings")}: ${[...new Set(stepErrors)].join(t("common.listSep"))})`
-      )
+      // Not a full success — surface the failed step names so the user re-submits them.
+      const failedList = [...new Set(stepErrors)].join(t("common.listSep"))
+      toast.error(t("employees.form.partialFailure").replace("{list}", failedList))
     } else {
       toast.success(t("employees.edit.success"))
     }

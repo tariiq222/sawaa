@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { useLocale } from "@/components/locale-provider"
+import { ErrorBanner } from "@/components/features/error-banner"
 import { Skeleton } from "@sawaa/ui"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchRatingsReport } from "@/lib/api/reports"
@@ -33,11 +34,12 @@ export function RatingsReportPage() {
     compareWithPrevious: true,
   }
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.reports.ratings(params),
     queryFn: () => fetchRatingsReport(params),
     enabled: !!params.dateFrom && !!params.dateTo,
   })
+  const errMsg = error instanceof Error ? t("error.server") : t("error.unexpected")
 
   const positiveRate = data && data.totalRatings > 0
     ? (data.positiveCount / data.totalRatings) * 100
@@ -58,6 +60,8 @@ export function RatingsReportPage() {
             <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </KpiRow>
+      ) : error ? (
+        <ErrorBanner message={errMsg} onRetry={() => refetch()} />
       ) : !data ? (
         <ReportsEmptyState />
       ) : (

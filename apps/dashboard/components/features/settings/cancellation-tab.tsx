@@ -12,6 +12,7 @@ import {
 } from "@sawaa/ui"
 import { useBookingSettings, useBookingSettingsMutation } from "@/hooks/use-organization-settings"
 import type { RefundType } from "@/lib/api/booking-settings"
+import { toastApiError } from "@/lib/mutation-helpers"
 import { SettingsTabSidebar } from "./settings-tab-sidebar"
 import { NumberRow, SwitchRow } from "./setting-row"
 
@@ -77,7 +78,7 @@ export function CancellationTab({ t }: Props) {
   const save = (data: Record<string, unknown>) => {
     mutation.mutate(data, {
       onSuccess: () => toast.success(t("settings.saved")),
-      onError: (err: Error) => toast.error(err.message),
+      onError: toastApiError(t("settings.error"), t),
     })
   }
 

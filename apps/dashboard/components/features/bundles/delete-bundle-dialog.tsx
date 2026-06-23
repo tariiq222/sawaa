@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 import { toast } from "sonner"
+import { showApiError } from "@/lib/mutation-helpers"
 
 import {
   AlertDialog,
@@ -39,7 +40,7 @@ export function DeleteBundleDialog({ bundle, open, onOpenChange }: Props) {
       toast.success(t("bundles.delete.success"))
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("bundles.delete.error"))
+      showApiError(err, { fallback: t("bundles.delete.error"), t })
     }
   }
 

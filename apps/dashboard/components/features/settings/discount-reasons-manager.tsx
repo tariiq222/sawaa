@@ -10,6 +10,7 @@ import {
   useDiscountReasons,
   useDiscountReasonMutations,
 } from "@/hooks/use-discount-reasons"
+import { showApiError } from "@/lib/mutation-helpers"
 
 export function DiscountReasonsManager() {
   const { t } = useLocale()
@@ -24,7 +25,7 @@ export function DiscountReasonsManager() {
       await createMut.mutateAsync({ labelAr })
       setNewLabel("")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("discountReasons.errorToast"))
+      showApiError(err, { fallback: t("discountReasons.errorToast"), t })
     }
   }
 
@@ -32,7 +33,7 @@ export function DiscountReasonsManager() {
     try {
       await updateMut.mutateAsync({ id, isActive })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("discountReasons.errorToast"))
+      showApiError(err, { fallback: t("discountReasons.errorToast"), t })
     }
   }
 
@@ -40,7 +41,7 @@ export function DiscountReasonsManager() {
     try {
       await deleteMut.mutateAsync(id)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("discountReasons.errorToast"))
+      showApiError(err, { fallback: t("discountReasons.errorToast"), t })
     }
   }
 

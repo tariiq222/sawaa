@@ -4,6 +4,7 @@ import { forwardRef, useImperativeHandle, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Delete02Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
+import { showApiError } from "@/lib/mutation-helpers"
 import { cn } from "@/lib/utils"
 
 import { Button } from "@sawaa/ui"
@@ -50,7 +51,7 @@ export const RolesTab = forwardRef<RolesTabHandle>(function RolesTab(_props, ref
       toast.success(t("users.roles.deleted"))
       setDeleteTarget(null)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("users.roles.deleteError"))
+      showApiError(err, { fallback: t("users.roles.deleteError"), t })
     }
   }
 

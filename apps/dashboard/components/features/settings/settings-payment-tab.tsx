@@ -13,6 +13,7 @@ import {
   useUpsertMoyasarConfig,
 } from "@/hooks/use-moyasar-config"
 import type { UpsertMoyasarConfigPayload } from "@/lib/api/moyasar-config"
+import { toastApiError } from "@/lib/mutation-helpers"
 
 type TabId = "moyasar" | "atclinic"
 
@@ -41,7 +42,7 @@ export function SettingsPaymentTab() {
   const togglePaymentMethod = (key: "paymentMoyasarEnabled" | "paymentAtClinicEnabled", value: boolean) => {
     paymentMut.mutate(
       { [key]: value },
-      { onSuccess: () => toast.success(t("settings.saved")), onError: (err: Error) => toast.error(err.message) },
+      { onError: toastApiError(t("settings.error"), t) },
     )
   }
 
@@ -73,7 +74,7 @@ export function SettingsPaymentTab() {
         setSecretKey("")
         setWebhookSecret("")
       },
-      onError: (err: Error) => toast.error(err.message),
+      onError: toastApiError(t("settings.error"), t),
     })
   }
 
@@ -84,7 +85,7 @@ export function SettingsPaymentTab() {
           result.ok ? t("settings.moyasar.testOk") : `${t("settings.moyasar.testFailed")}: ${result.status}`,
         )
       },
-      onError: (err: Error) => toast.error(err.message),
+      onError: toastApiError(t("settings.error"), t),
     })
   }
 

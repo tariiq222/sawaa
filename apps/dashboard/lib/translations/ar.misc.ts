@@ -533,6 +533,9 @@ export const arMisc: Record<string, string> = {
   "error.somethingWrong": "حدث خطأ",
   "error.unexpected": "حدث خطأ غير متوقع. الرجاء المحاولة مرة أخرى.",
   "error.tryAgain": "إعادة المحاولة",
+  "error.server": "حدث خطأ في النظام. يرجى المحاولة مرة أخرى.",
+  "error.network": "تعذّر الاتصال بالخادم. تحقّق من الاتصال وحاول مجدداً.",
+  "error.missingTranslation": "حدث خطأ غير متوقع",
 
   // — Brand identity (login panel) —
   "brand.name": "سواء للإرشاد الأسري",

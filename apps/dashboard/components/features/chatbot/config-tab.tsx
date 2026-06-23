@@ -11,6 +11,7 @@ import { Textarea } from "@sawaa/ui"
 import { useChatbotConfig, useChatbotMutations } from "@/hooks/use-chatbot"
 import { useLocale } from "@/components/locale-provider"
 import type { UpsertChatbotConfigPayload } from "@/lib/types/chatbot"
+import { showApiError } from "@/lib/mutation-helpers"
 
 /* ─── Component ─── */
 
@@ -49,7 +50,7 @@ export function ConfigTab() {
       await updateConfigMut.mutateAsync(payload)
       toast.success(t("chatbot.config.saved"))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("chatbot.config.saveError"))
+      showApiError(err, { fallback: t("chatbot.config.saveError"), t })
     }
   }
 

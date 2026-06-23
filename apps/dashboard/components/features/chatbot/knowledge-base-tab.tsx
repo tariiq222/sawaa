@@ -10,6 +10,7 @@ import {
   useChatbotMutations,
 } from "@/hooks/use-chatbot"
 import { getEntryColumns } from "./kb-entry-columns"
+import { showApiError } from "@/lib/mutation-helpers"
 
 export function KnowledgeBaseTab() {
   const { t } = useLocale()
@@ -21,7 +22,7 @@ export function KnowledgeBaseTab() {
       await deleteKbEntryMut.mutateAsync(id)
       toast.success(t("chatbot.kb.entryDeleted"))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("chatbot.kb.deleteFailed"))
+      showApiError(err, { fallback: t("chatbot.kb.deleteFailed"), t })
     }
   }
 

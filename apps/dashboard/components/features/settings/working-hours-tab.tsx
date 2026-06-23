@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
+import { toastApiError } from "@/lib/mutation-helpers"
 import type { OrganizationHour } from "@/lib/api/organization"
 import { useOrganizationHours, useOrganizationHoursMutation } from "@/hooks/use-organization-settings"
 import { HolidaysSection } from "./holidays-section"
@@ -119,7 +120,7 @@ function WorkingHoursPanel({ t, branchId }: Props & { branchId: string }) {
     }))
     mutation.mutate({ branchId, hours: payload }, {
       onSuccess: () => toast.success(t("settings.saved")),
-      onError: (err: Error) => toast.error(err.message),
+      onError: toastApiError(t("settings.error"), t),
     })
   }
 
