@@ -10,7 +10,15 @@ export const userBaseSchema = z.object({
     (v) => !v || /^\+[1-9]\d{6,14}$/.test(v),
     { message: "أدخل الرقم بصيغة دولية مثل: +966501234567" }
   ),
-  gender: z.enum(["MALE", "FEMALE"]).optional(),
+  // Treat an empty/blank gender as "unset". The edit form's reset can leave the
+  // gender <Select> empty (""), and a bare z.enum would then reject it silently
+  // (the gender FormField shows no error), blocking the whole form submit. An
+  // unset gender is valid and is omitted from the request, preserving the
+  // stored value rather than failing.
+  gender: z.preprocess(
+    (v) => (v === "" || v == null ? undefined : v),
+    z.enum(["MALE", "FEMALE"]).optional(),
+  ),
 })
 
 export const userCreateSchema = userBaseSchema.extend({

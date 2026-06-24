@@ -72,16 +72,20 @@ test.describe('Error States', () => {
     }
   })
 
-  test('should handle session expiry redirect', async ({ page }) => {
+  test('clearing the session shows the inline login gate (no dashboard content)', async ({ page }) => {
     await page.context().clearCookies()
 
     await page.goto('/')
 
-    // Clearing cookies must bounce the user to /login — fail loudly if it doesn't.
-    await page.waitForURL(/\/login/, { timeout: 10_000 })
-
-    const isOnLogin = page.url().includes('/login')
-    expect(typeof isOnLogin).toBe('boolean')
+    // This dashboard gates auth CLIENT-SIDE by design: middleware.ts only
+    // forwards headers (no redirect), and AuthGate renders <LoginForm/> inline
+    // when the session can't be refreshed — there is NO /login route bounce.
+    // The real security invariant is that a cleared session shows the login
+    // form (#identifier) instead of dashboard content, staying on the same URL.
+    await expect(page.locator('#identifier')).toBeVisible({ timeout: 15_000 })
+    expect(new URL(page.url()).pathname).toBe('/')
+    // The authenticated shell (sidebar nav) must not be present.
+    await expect(page.getByRole('navigation')).toHaveCount(0)
   })
 
   test('should show validation errors on forms', async ({ page }) => {

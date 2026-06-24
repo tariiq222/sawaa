@@ -79,7 +79,7 @@ export function UserFormPage(props: Props) {
       email: user.email,
       name: user.name,
       phone: user.phone ?? "",
-      gender: user.gender ?? undefined,
+      gender: user.gender || undefined,
       roleSelection: initialRoleSelection,
     })
   }, [user, form, initialRoleSelection])
