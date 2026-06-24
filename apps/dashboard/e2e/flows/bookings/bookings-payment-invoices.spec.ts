@@ -208,7 +208,9 @@ test.describe("Bookings - payment and invoice finance trail", () => {
       paymentRow.getByText(EXPECTED_TOTAL_AR_OR_EN).first()
     ).toBeVisible()
     await expect(paymentRow.getByText(/نقدي|Cash/i)).toBeVisible()
-    await expect(paymentRow.getByText("COMPLETED")).toBeVisible()
+    // The payments table renders the status via the i18n label
+    // (payments.status.paid → "مدفوع"), never the raw "COMPLETED" enum.
+    await expect(paymentRow.getByText(/مدفوع|Paid/i)).toBeVisible()
   })
 
   test("method filter narrows payments to the seeded cash payment without body fallbacks", async ({

@@ -136,6 +136,15 @@ test.describe("Booking types and multiplicity", () => {
     await expectCurrentPath(page, "/bookings")
     await expectNoAppCrash(page)
 
+    // The seeded bookings are future-dated (slotIso dayOffset 2), so switch off
+    // the default "today" filter before searching for them.
+    const allTab = page
+      .getByRole("tab", { name: /^الكل$|^All$/ })
+      .or(page.getByRole("button", { name: /^الكل$|^All$/ }))
+      .first()
+    await expect(allTab).toBeVisible({ timeout: 10_000 })
+    await allTab.click()
+
     await expectBookingContract(individualBooking, {
       serviceId: individualService.id,
       type: "in_person",
@@ -149,9 +158,11 @@ test.describe("Booking types and multiplicity", () => {
       type: "group",
     })
 
-    await expectSeededBookingRow(page, individualBooking, /زيارة حضورية|In-person/i)
-    await expectSeededBookingRow(page, walkInBooking, /زيارة مباشرة|Walk-in/i)
-    await expectSeededBookingRow(page, groupBooking, /group|جماعي/i)
+    // The type surfaces as an icon whose aria-label is the i18n type label
+    // (bookings.col.type.* → "حضوري" / "مباشرة" / "جماعي"), matched via getByLabel.
+    await expectSeededBookingRow(page, individualBooking, /حضوري|In-person/i)
+    await expectSeededBookingRow(page, walkInBooking, /مباشرة|Walk-in/i)
+    await expectSeededBookingRow(page, groupBooking, /جماعي|group/i)
   })
 })
 
@@ -180,15 +191,22 @@ async function createBookableService(
 
 async function expectSeededBookingRow(
   page: Page,
-  booking: SeededBooking,
+  _booking: SeededBooking,
   typeLabel: RegExp
 ) {
-  await page
-    .getByRole("textbox", { name: /بحث بالاسم|Search by name/i })
-    .fill(booking.id)
-  const row = page.getByRole("row").filter({ hasText: clientFullName() }).first()
+  // Search by client name (the booking-number search does not match the UUID).
+  // All three seeded bookings share one client, so disambiguate the row by the
+  // type icon's aria-label.
+  const search = page.getByPlaceholder("بحث بالاسم، رقم الحجز...")
+  await expect(search).toBeVisible({ timeout: 10_000 })
+  await search.fill(clientFullName())
+  const row = page
+    .getByRole("row")
+    .filter({ hasText: clientFullName() })
+    .filter({ has: page.getByLabel(typeLabel) })
+    .first()
   await expect(row).toBeVisible({ timeout: 20_000 })
-  await expect(row.getByText(typeLabel).first()).toBeVisible()
+  await expect(row.getByLabel(typeLabel).first()).toBeVisible()
 }
 
 async function expectBookingContract(

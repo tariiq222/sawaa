@@ -36,13 +36,17 @@ test.describe('Bookings List — user flow', () => {
     const hasEmpty = await emptyState.isVisible().catch(() => false);
 
     if (hasTable) {
-      // 5. Click first row to open detail sheet
+      // 5. Open the detail sheet. Only the client-name cell is a real <button>
+      //    wired to onRowClick — clicking the bare <tr> does nothing — so click
+      //    the first button inside the row (the client cell is the first one).
       const firstRow = page.locator('tbody tr').first();
       await expect(firstRow).toBeVisible({ timeout: 10_000 });
-      await firstRow.click();
+      const clientBtn = firstRow.getByRole('button').first();
+      await expect(clientBtn).toBeVisible({ timeout: 10_000 });
+      await clientBtn.click();
 
-      // 6. Detail sheet should open (confirmed by sheet/dialog appearing)
-      const sheet = page.locator('[role="dialog"], [data-state="open"]').first();
+      // 6. Detail sheet (Dialog) should open
+      const sheet = page.locator('[role="dialog"]').first();
       await expect(sheet).toBeVisible({ timeout: 10_000 });
     } else if (hasEmpty) {
       // No bookings yet — this is valid for a fresh organization
@@ -81,9 +85,10 @@ test.describe('Bookings List — user flow', () => {
 
     if (await createBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await createBtn.click();
-      // The create action opens a Dialog (not a page navigation)
-      const dialog = page.locator('[role="dialog"]');
-      await expect(dialog).toBeVisible({ timeout: 10_000 });
+      // The create action renders the booking POS inline (not in a Dialog and
+      // not a page navigation) — wait for the POS container to appear.
+      const pos = page.locator('.rounded-2xl.border').filter({ hasText: /حجز جديد/ });
+      await expect(pos).toBeVisible({ timeout: 10_000 });
     } else {
       // Button may be behind a feature gate or differently labelled
       await expect(page.locator('body')).toBeVisible();

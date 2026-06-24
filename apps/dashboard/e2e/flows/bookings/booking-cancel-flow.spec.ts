@@ -25,13 +25,22 @@ let seededClientId = '';
 let seededServiceId = '';
 let seededEmployeeId = '';
 
+// Unique per-run suffix so the name-based search below resolves to THIS run's
+// freshly seeded CONFIRMED booking — not a stale terminal booking left in the
+// polluted dev DB by a previous run (which has no status actions and a
+// different employee). Mirrors bookings-status-workflow.spec.ts.
+const runId = String(Date.now()).slice(-6);
+const clientLastName = `اختبار ${runId}`;
+const clientSearchName = `لإلغاء ${clientLastName}`; // firstName + ' ' + lastName
+const employeeName = `موظف إلغاء ${runId}`;
+
 test.beforeAll(async () => {
   const organization = await getTestTenant();
   token = organization.accessToken;
 
   const client = await seedClient(token, {
     firstName: 'لإلغاء',
-    lastName: 'اختبار',
+    lastName: clientLastName,
     gender: 'FEMALE',
   });
   seededClientId = client.id;
@@ -45,7 +54,7 @@ test.beforeAll(async () => {
   seededServiceId = service.id;
 
   const employee = await seedEmployee(token, {
-    name: 'موظف إلغاء',
+    name: employeeName,
     gender: 'MALE',
   });
   seededEmployeeId = employee.id;
@@ -101,13 +110,13 @@ test.describe('Booking Cancel — user flow', () => {
     // search box is the next stable control after switching tabs.
     const search = page.getByPlaceholder(/بحث|Search/i).first();
     await expect(search).toBeVisible({ timeout: 10_000 });
-    await search.fill('لإلغاء اختبار');
+    await search.fill(clientSearchName);
     await page.waitForResponse(
       (r) => r.url().includes('/bookings') && r.request().method() === 'GET' && r.ok(),
     ).catch(() => {});
 
     // 3. Find and click the seeded booking row (click client name button)
-    const clientBtn = page.getByRole('button', { name: /لإلغاء اختبار/ }).first();
+    const clientBtn = page.getByRole('button', { name: new RegExp(clientSearchName) }).first();
     // Skip if the booking row is not found (e.g. seed failed or list is empty)
     const clientBtnVisible = await clientBtn.isVisible({ timeout: 20_000 }).catch(() => false);
     if (!clientBtnVisible) {
@@ -171,13 +180,13 @@ test.describe('Booking Cancel — user flow', () => {
     await allTab.click();
     const search = page.getByPlaceholder(/بحث|Search/i).first();
     await expect(search).toBeVisible({ timeout: 10_000 });
-    await search.fill('لإلغاء اختبار');
+    await search.fill(clientSearchName);
     await page.waitForResponse(
       (r) => r.url().includes('/bookings') && r.request().method() === 'GET' && r.ok(),
     ).catch(() => {});
 
     // Click the seeded booking's client name
-    const clientBtn = page.getByRole('button', { name: /لإلغاء اختبار/ }).first();
+    const clientBtn = page.getByRole('button', { name: new RegExp(clientSearchName) }).first();
     // Skip if the booking row is not visible (e.g. seed failed or already cancelled)
     const clientBtnVisible = await clientBtn.isVisible({ timeout: 20_000 }).catch(() => false);
     if (!clientBtnVisible) {
