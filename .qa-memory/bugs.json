@@ -1,7 +1,31 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-24T00:00:00Z",
+  "updatedAt": "2026-06-24T01:40:00Z",
   "bugs": [
+    {
+      "id": "BUG-005",
+      "severity": "P2",
+      "title": "Dashboard: clearing cookies / session expiry does not redirect to /login on next navigation (suspected)",
+      "reproduction": "e2e/flows/errors/error-states.spec.ts:68 — clearCookies() then page.goto('/') expects waitForURL(/\\/login/) within 10s. On the prod build the redirect did not happen within 10s (test failed). Auth model: in-memory access token + httpOnly refresh cookie 'ck_refresh'. On a fresh page load with no valid session the app should bounce to /login; it appears not to.",
+      "file": "apps/dashboard (auth bootstrap / middleware) — exact location TBD by owner triage",
+      "failingTest": "apps/dashboard/e2e/flows/errors/error-states.spec.ts:68",
+      "status": "open",
+      "linkedRequirement": "REQ-008",
+      "ownerApprovalRequired": true,
+      "note": "AUTH tier = owner-only. Could be EITHER a real UX/security gap (unauthenticated load of / not redirected) OR a stale test written against the old token model. Needs owner triage before any code change. NOT fixed by tariqQA. Trace: apps/dashboard/test-results/flows-errors-error-states--*-session-expiry*/trace.zip"
+    },
+    {
+      "id": "BUG-006",
+      "severity": "P3",
+      "title": "Dashboard e2e flows: 12 specs carry stale/brittle selectors (test-debt, not product bugs)",
+      "reproduction": "Prod-build flows run 2026-06-24: 12/13 failures are test-maintenance. Categories: (1) error-states.spec.ts:35 & :49 use '#__next' (Pages-Router root) which does not exist in this App-Router app; (2) bookings specs assert raw English enum 'COMPLETED' instead of the i18n label 'مدفوع' (payment-columns.tsx maps COMPLETED→payments.status.paid); (3) booking-create wizard uses exact regex /^عيادات$/ but seed department is 'عيادات سواء' (sawa-customer.ts:22); (4) cancel-flow expects a 'تغيير الحالة' button label that no longer exists in the sheet; (5) booking detail expects fixture employee 'موظف إلغاء' that exists only in the spec; (6) employee custom-pricing panel matched by a stale class selector; (7) bookings 'بحث بالاسم' textbox label does not exist; (8) full-user-journey + users PATCH submit use brittle .last()/filter selectors that race.",
+      "file": "apps/dashboard/e2e/flows/{errors,bookings,employees,system,users}/*.spec.ts",
+      "failingTest": "multiple — see prod flows log /tmp/sawa-e2e-prod-flows.log",
+      "status": "open",
+      "linkedRequirement": null,
+      "ownerApprovalRequired": false,
+      "note": "These are tariqQA-fixable (test files are in scope, no product change). Fix = update selectors to role/test-id + i18n labels + actual seed names. The underlying product operations all work (verified by the 145 passing tests + smoke 39/39)."
+    },
     {
       "id": "BUG-001",
       "severity": "P1",

@@ -1,7 +1,21 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-24T01:15:00Z",
+  "updatedAt": "2026-06-24T01:40:00Z",
   "learnings": [
+    {
+      "at": "2026-06-24T01:40:00Z",
+      "category": "tooling",
+      "note": "Dashboard Playwright flows MUST run on a prod build (PW_E2E_PROD=1 -> next build && next start), never the Turbopack dev server. First attempt reused the running `next dev` :5203 server which crashed between the auth-setup phase and the first test -> all 35 smoke tests failed ERR_CONNECTION_REFUSED while the 4 setup tests passed. Re-running with PW_E2E_PROD=1 gave a clean signal: smoke 39/39, flows 145/163. The passing setup tests were the tell that auth/seed/API were healthy and only the runtime was dead.",
+      "severity": "P2",
+      "lesson": "If dashboard smoke fails with ERR_CONNECTION_REFUSED but the auth-setup tests pass, it is a dead/crashed dev server, not a product bug -> switch to PW_E2E_PROD=1 and re-run once. reuseExistingServer silently reuses a flaky dev server, so verify the server under test is the prod build before declaring any e2e result."
+    },
+    {
+      "at": "2026-06-24T01:40:00Z",
+      "category": "process",
+      "note": "Triaging 13 dashboard e2e flow failures: 12 were test-debt, 1 a genuine product question. Verified each against real app code/seed/i18n: '#__next' is a Pages-Router root absent in this App-Router app; asserting raw enum 'COMPLETED' ignores the i18n label; exact regex /^عيادات$/ misses seed name 'عيادات سواء'; '.last()'/class-based selectors are brittle. Only the session-expiry redirect (auth) was escalated, and it is owner-gated.",
+      "severity": "P2",
+      "lesson": "A failing dashboard e2e flow is guilty-until-proven for the TEST, not the product: check selector vs current DOM, assertion vs i18n label (not raw enum), name regex vs actual seed value, and brittle .last()/CSS targets. Escalate to a product bug only after app code/seed/i18n rule out a stale test; if it touches auth, gate it owner-only."
+    },
     {
       "at": "2026-06-24T01:30:00Z",
       "category": "wasted-work",

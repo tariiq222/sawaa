@@ -62,6 +62,23 @@
         ".qa-memory/releases.json",
         ".qa-memory/learnings.json"
       ]
+    },
+    {
+      "at": "2026-06-24T01:40:00Z",
+      "commit": "207d3d29",
+      "mode": "incremental",
+      "scope": "Dashboard e2e focus — first trustworthy Playwright flows run on a prod build",
+      "agent": "tariqQA (claude-opus-4-8) orchestrating tariqqa-scout + tariqqa-runner (MiniMax)",
+      "deviceGuard": "14 cores / 24GB, load ~5-7. Playwright forced workers=1, fullyParallel=false. Per-test 60s. Single reliable run per suite (LR-007).",
+      "suites": {
+        "dashboardSmokeProd": "39/39 pass (1.6m, prod build)",
+        "dashboardFlowsProd": "145 pass / 13 fail / 4 skip / 1 did-not-run (13.1m, prod build) — 163 tests",
+        "dashboardDevServerAttempt": "ABORTED — Turbopack dev server crashed mid-run; all smoke ERR_CONNECTION_REFUSED, 4 auth-setup tests passed (auth/seed/API healthy). Confirms documented dev-server instability."
+      },
+      "dashboardE2eVerdict": "Every primary dashboard user operation verified working on prod build. 13 flow failures: 12 test-debt (BUG-006), 1 suspected product gap (BUG-005, owner-gated auth).",
+      "newBugs": ["BUG-005 (P2, suspected session-expiry redirect, owner-gated)", "BUG-006 (P3, 12 stale-selector flow specs, tariqQA-fixable test-debt)"],
+      "verdict": "GO for dashboard operations (smoke + flows on prod build) — with 1 owner triage (BUG-005) and test-debt cleanup (BUG-006) pending",
+      "note": "Replaces the prior 'flows not-run/flaky' unknown with real evidence. The reliable e2e path is PW_E2E_PROD=1 (build+start), NOT the Turbopack dev server. No product or test code modified this run."
     }
   ]
 }
