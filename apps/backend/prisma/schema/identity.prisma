@@ -158,6 +158,11 @@ model CustomRole {
   name        String
   isSystem    Boolean      @default(false)
   systemKey   UserRole?    @unique
+  // For system roles: once an admin edits their permissions via the dashboard,
+  // this flips to true so SystemRolesBootstrap stops overwriting them from
+  // BUILT_IN on every boot. Never-customized system roles (and fresh installs)
+  // keep receiving BUILT_IN updates. Always false for custom roles.
+  permissionsCustomized Boolean @default(false)
   permissions Permission[]
   users       User[]
   createdAt   DateTime     @default(now())

@@ -38,7 +38,7 @@ export class SystemRolesBootstrap implements OnModuleInit {
 
       const existing = await this.prisma.customRole.findFirst({
         where: { systemKey: roleKey },
-        select: { id: true },
+        select: { id: true, permissionsCustomized: true },
       });
 
       if (!existing) {
@@ -51,8 +51,16 @@ export class SystemRolesBootstrap implements OnModuleInit {
           },
         });
         this.logger.log(`Created system role: ${roleKey}`);
+      } else if (existing.permissionsCustomized) {
+        // An admin has edited this system role's permissions via the dashboard.
+        // Do NOT overwrite them from BUILT_IN — that edit must persist across
+        // deploys/restarts. (This is the regression fix: previously every boot
+        // wiped admin edits back to defaults.)
+        this.logger.log(`Skipped synced system role (customized): ${roleKey}`);
       } else {
-        // Sync permissions: delete old, insert new (idempotent) — onModuleInit bootstrap, no user RLS context
+        // Never-customized system role: keep it in sync with BUILT_IN so default
+        // permission updates ship on boot. Delete old, insert new (idempotent) —
+        // onModuleInit bootstrap, no user RLS context.
         // eslint-disable-next-line no-restricted-syntax
         await this.prisma.$transaction([
           this.prisma.permission.deleteMany({ where: { customRoleId: existing.id } }),

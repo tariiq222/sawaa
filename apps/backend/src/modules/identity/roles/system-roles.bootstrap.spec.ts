@@ -41,11 +41,49 @@ describe('SystemRolesBootstrap', () => {
     expect(prisma.customRole.create).toHaveBeenCalledTimes(4);
   });
 
-  it('should sync permissions when system roles already exist (idempotent)', async () => {
-    prisma.customRole.findFirst.mockResolvedValue({ id: 'existing-id' });
+  it('syncs permissions when a system role exists and is NOT customized', async () => {
+    prisma.customRole.findFirst.mockResolvedValue({ id: 'existing-id', permissionsCustomized: false });
     await bootstrap.onModuleInit();
+    // One sync transaction per existing, non-customized role.
     expect(prisma.$transaction).toHaveBeenCalledTimes(4);
     expect(prisma.customRole.create).not.toHaveBeenCalled();
+  });
+
+  it('SKIPS the sync (no delete/recreate) when a system role is customized', async () => {
+    prisma.customRole.findFirst.mockResolvedValue({ id: 'existing-id', permissionsCustomized: true });
+    await bootstrap.onModuleInit();
+    // The customized branch must not touch permissions at all.
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.permission.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.permission.createMany).not.toHaveBeenCalled();
+    expect(prisma.customRole.create).not.toHaveBeenCalled();
+  });
+
+  it('REGRESSION: a customized system role survives a bootstrap run (admin edit is not wiped)', async () => {
+    // Simulate the exact bug scenario: an admin previously edited ADMIN's
+    // permissions (permissionsCustomized=true) and the other three roles are
+    // untouched defaults. Before the fix, EVERY existing role was deleteMany +
+    // createMany on boot, destroying the admin edit. After the fix, the
+    // customized role must be left completely alone while the others still sync.
+    prisma.customRole.findFirst.mockImplementation(({ where }: { where: { systemKey: string } }) => {
+      if (where.systemKey === 'ADMIN') {
+        return Promise.resolve({ id: 'admin-id', permissionsCustomized: true });
+      }
+      return Promise.resolve({ id: `${where.systemKey}-id`, permissionsCustomized: false });
+    });
+
+    await bootstrap.onModuleInit();
+
+    // The customized ADMIN role's permission rows were never deleted/recreated.
+    const deletedRoleIds = prisma.permission.deleteMany.mock.calls.map(
+      (c) => c[0].where.customRoleId,
+    );
+    expect(deletedRoleIds).not.toContain('admin-id');
+    // The other three (non-customized) roles still got synced from BUILT_IN.
+    expect(prisma.$transaction).toHaveBeenCalledTimes(3);
+    expect(deletedRoleIds.sort()).toEqual(
+      ['ACCOUNTANT-id', 'EMPLOYEE-id', 'RECEPTIONIST-id'],
+    );
   });
 
   it('should be idempotent across two runs (create-then-sync)', async () => {
@@ -54,9 +92,9 @@ describe('SystemRolesBootstrap', () => {
     await bootstrap.onModuleInit();
     expect(prisma.customRole.create).toHaveBeenCalledTimes(4);
 
-    // Second run: roles exist → sync
+    // Second run: roles exist and are not customized → sync
     jest.clearAllMocks();
-    prisma.customRole.findFirst.mockResolvedValue({ id: 'existing-id' });
+    prisma.customRole.findFirst.mockResolvedValue({ id: 'existing-id', permissionsCustomized: false });
     await bootstrap.onModuleInit();
     expect(prisma.$transaction).toHaveBeenCalledTimes(4);
     expect(prisma.customRole.create).not.toHaveBeenCalled();
