@@ -81,7 +81,7 @@ export interface EmployeeService {
     nameEn: string
     price: number
     duration: number
-  }
+  } | null
   serviceTypes?: EmployeeServiceType[]
 }
 

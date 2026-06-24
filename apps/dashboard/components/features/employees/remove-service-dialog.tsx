@@ -36,7 +36,7 @@ export function RemoveServiceDialog({
   const { locale, t } = useLocale()
   const { removeMut } = useEmployeeServiceMutations(employeeId)
 
-  const serviceName = ps
+  const serviceName = ps?.service
     ? locale === "ar"
       ? ps.service.nameAr
       : ps.service.nameEn

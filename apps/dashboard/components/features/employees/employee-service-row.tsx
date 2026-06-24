@@ -183,7 +183,7 @@ function buildTypeBadges(
   return ps.availableTypes.map((type) => {
     const key = TYPE_LABEL_MAP[type]
     const typeLabel = key ? t(`employees.services.${key}`) : type
-    const duration = ps.customDuration ?? ps.service.duration
+    const duration = ps.customDuration ?? ps.service?.duration ?? 0
     const priceVal =
       type === "clinic_visit" && ps.priceClinic != null
         ? formatPrice(Number(ps.priceClinic))

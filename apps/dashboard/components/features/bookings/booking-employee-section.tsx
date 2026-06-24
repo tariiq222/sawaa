@@ -105,8 +105,8 @@ export function BookingEmployeeSection({
                 <SelectValue placeholder={employeeServicesLoading ? t("bookings.form.placeholder.loading") : t("bookings.form.placeholder.selectService")} />
               </SelectTrigger>
               <SelectContent>
-                {employeeServices.map((ps) => (
-                  <SelectItem key={ps.serviceId} value={ps.serviceId}>{ps.service.nameAr}</SelectItem>
+                {employeeServices.filter((ps) => ps.service).map((ps) => (
+                  <SelectItem key={ps.serviceId} value={ps.serviceId}>{ps.service!.nameAr}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

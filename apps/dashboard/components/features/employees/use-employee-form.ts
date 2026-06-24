@@ -229,10 +229,10 @@ export function useEmployeeForm({
     if (!existingServices?.length || hydratedRef.current.services) return
     hydratedRef.current.services = true
     setDraftServices(
-      existingServices.map((ps: EmployeeService) => ({
+      existingServices.filter((ps) => ps.service).map((ps: EmployeeService) => ({
         key: ps.id,
         serviceId: ps.serviceId,
-        serviceName: ps.service.nameAr || ps.service.nameEn,
+        serviceName: ps.service!.nameAr || ps.service!.nameEn,
         bufferMinutes: ps.bufferMinutes ?? 0,
         isActive: ps.isActive,
         availableTypes: ps.availableTypes ?? [],

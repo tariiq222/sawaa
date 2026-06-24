@@ -49,7 +49,7 @@ export function EditEmployeeServiceSheet({
 
   const isAr = locale === "ar"
 
-  const serviceName = ps ? (isAr ? ps.service.nameAr : ps.service.nameEn) : ""
+  const serviceName = ps?.service ? (isAr ? ps.service.nameAr : ps.service.nameEn) : ""
 
   // Identity of the practitioner whose pricing this sheet edits — resolved
   // once the ServiceEmployee record loads. Same display logic as the row.
