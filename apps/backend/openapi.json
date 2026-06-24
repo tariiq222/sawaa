@@ -24320,7 +24320,7 @@
         ],
         "summary": "List programs (filterable by status, department, branch)",
         "tags": [
-          "Dashboard / Bookings"
+          "Dashboard / Programs"
         ]
       },
       "post": {
@@ -24388,7 +24388,7 @@
         ],
         "summary": "Create a new program (DRAFT)",
         "tags": [
-          "Dashboard / Bookings"
+          "Dashboard / Programs"
         ]
       }
     },
@@ -24458,7 +24458,7 @@
         ],
         "summary": "Get a single program by UUID or numeric ref",
         "tags": [
-          "Dashboard / Bookings"
+          "Dashboard / Programs"
         ]
       }
     },
@@ -24538,7 +24538,7 @@
         ],
         "summary": "Cancel a program (cascades to enrollments, no automatic refund)",
         "tags": [
-          "Dashboard / Bookings"
+          "Dashboard / Programs"
         ]
       }
     },
@@ -24618,7 +24618,7 @@
         ],
         "summary": "Enroll a client on-behalf from the dashboard",
         "tags": [
-          "Dashboard / Bookings"
+          "Dashboard / Programs"
         ]
       }
     },
@@ -24688,7 +24688,7 @@
         ],
         "summary": "Publish a DRAFT program (DRAFT → OPEN)",
         "tags": [
-          "Dashboard / Bookings"
+          "Dashboard / Programs"
         ]
       }
     },
@@ -24768,7 +24768,7 @@
         ],
         "summary": "Schedule a program (OPEN|MIN_REACHED → SCHEDULED)",
         "tags": [
-          "Dashboard / Bookings"
+          "Dashboard / Programs"
         ]
       }
     },
