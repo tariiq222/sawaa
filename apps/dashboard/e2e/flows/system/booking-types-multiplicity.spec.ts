@@ -62,11 +62,11 @@ test.beforeAll(async () => {
 
   individualService = await createBookableService("حجز فردي تعدد")
   walkInService = await createBookableService("حجز حضور مباشر تعدد")
-  groupService = await createBookableService("حجز جماعي تعدد", {
-    minParticipants: 2,
-    maxParticipants: 5,
-    reserveWithoutPayment: true,
-  })
+  // The "group" semantics for this test come from the booking's
+  // bookingType: "GROUP" below — NOT from service-level capacity. Participant
+  // counts live on the Program model, not Service, so the service is seeded
+  // plainly here.
+  groupService = await createBookableService("حجز جماعي تعدد")
 
   individualBooking = await createDashboardBooking(token, {
     branchId,

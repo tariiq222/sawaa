@@ -17,16 +17,11 @@ test.describe('Categories CRUD Operations', () => {
   })
 
   test('should display categories list or empty state', async ({ page }) => {
-    await page.waitForResponse(r => r.url().includes('/categories') && r.request().method() === 'GET' && r.ok()).catch(() => {})
-
-    const categoriesList = page.locator('[class*="table"], [class*="list"], [class*="category"]')
-    const emptyState = page.locator('text=/no category|لا يوجد تصنيف|no data/i')
-
-    const hasList = await categoriesList.first().isVisible().catch(() => false)
-    const hasEmpty = await emptyState.first().isVisible().catch(() => false)
-
-    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
-    expect(hasList || hasEmpty).toBeTruthy()
+    // Categories surface as "clinics" (العيادات). The list renders a DataTable
+    // (<table>) or the empty-state title "لا توجد عيادات".
+    const table = page.getByRole('table')
+    const emptyState = page.getByText(/لا توجد عيادات|No clinics found/i)
+    await expect(table.or(emptyState).first()).toBeVisible({ timeout: 15_000 })
   })
 
   test('should navigate to create category page', async ({ page }) => {
@@ -65,47 +60,57 @@ test.describe('Categories CRUD Operations', () => {
 
   test('should create new category with valid data', async ({ page }) => {
     await page.goto('/categories/create')
-    // The retrying expect on the name input below is the real readiness signal.
 
-    const nameInput = page.locator('input[id*="name"], input[placeholder*="name"], input[placeholder*="الاسم"]')
-    const descriptionInput = page.locator('textarea[id*="description"], textarea[placeholder*="description"]')
-    const saveButton = page.locator('button[type="submit"], button:has-text("Save"), button:has-text("حفظ")')
+    // Category creation is a multi-step wizard (info → settings → employees).
+    // Only nameAr is required on the info step. Clicking "التالي" persists the
+    // category (POST) and redirects to its edit route for the next step.
+    const nameAr = page.locator('input#nameAr')
+    await expect(nameAr).toBeVisible({ timeout: 10_000 })
+    await nameAr.fill(`عيادة اختبار ${Date.now()}`)
+    await page.locator('input#nameEn').fill(`E2E Clinic ${Date.now()}`)
 
-    await expect(nameInput.first()).toBeVisible({ timeout: 10_000 })
-    await nameInput.first().fill(`Test Category ${Date.now()}`)
-
-    const descriptionVisible = await descriptionInput.first().isVisible().catch(() => false)
-    if (descriptionVisible) await descriptionInput.first().fill('Test category description')
-
-    await expect(saveButton.first()).toBeVisible({ timeout: 10_000 })
-    await saveButton.first().click()
-    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
+    const created = page.waitForResponse(
+      (r) => /\/organization\/categories(\?|$)/.test(r.url()) && r.request().method() === 'POST' && r.ok(),
+      { timeout: 15_000 },
+    )
+    await page.getByRole('button', { name: 'التالي' }).click()
+    await created
+    await page.waitForURL('**/categories/*/edit**', { timeout: 15_000 })
   })
 
   test('should edit existing category', async ({ page }) => {
-    const editButton = page.locator('a[href*="/categories/edit"], button:has-text("edit"), button:has-text("تعديل")').first()
+    // Row edit action is an icon button with aria-label "تعديل" → navigates to
+    // /categories/CAT-xxx/edit (info tab).
+    const editButton = page.getByRole('button', { name: 'تعديل' }).first()
     await expect(editButton).toBeVisible({ timeout: 10_000 })
     await editButton.click()
+    await page.waitForURL('**/categories/*/edit**', { timeout: 10_000 })
 
-    const nameInput = page.locator('input[id*="name"], input[placeholder*="name"]')
-    await expect(nameInput.first()).toBeVisible({ timeout: 10_000 })
-    await nameInput.first().clear()
-    await nameInput.first().fill(`Updated Category ${Date.now()}`)
+    // The form hydrates the saved name asynchronously (waits for department
+    // options); wait for the non-empty value before editing it.
+    const nameAr = page.locator('input#nameAr')
+    await expect(nameAr).not.toHaveValue('', { timeout: 10_000 })
+    await nameAr.fill(`عيادة محدثة ${Date.now()}`)
 
-    const saveButton = page.locator('button[type="submit"], button:has-text("Save"), button:has-text("حفظ")')
-    await expect(saveButton.first()).toBeVisible({ timeout: 10_000 })
-    await saveButton.first().click()
-    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
+    // Advancing from the info tab in edit mode persists via PATCH.
+    const saved = page.waitForResponse(
+      (r) => /\/organization\/categories\//.test(r.url()) && r.request().method() === 'PATCH' && r.ok(),
+      { timeout: 15_000 },
+    )
+    await page.getByRole('button', { name: 'التالي' }).click()
+    await saved
   })
 
   test('should delete category with confirmation', async ({ page }) => {
-    const deleteButton = page.locator('button:has-text("Delete"), button:has-text("حذف")').first()
+    // Row delete action is an icon button with aria-label "حذف" → opens an
+    // AlertDialog whose confirm action is also labelled "حذف".
+    const deleteButton = page.getByRole('button', { name: 'حذف' }).first()
     await expect(deleteButton).toBeVisible({ timeout: 10_000 })
     await deleteButton.click()
 
-    const confirmButton = page.locator('button:has-text("Confirm"), button:has-text("تأكيد")')
-    await expect(confirmButton.first()).toBeVisible({ timeout: 10_000 })
-    await confirmButton.first().click()
-    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
+    const dialog = page.getByRole('alertdialog')
+    await expect(dialog).toBeVisible({ timeout: 10_000 })
+    await dialog.getByRole('button', { name: 'حذف' }).click()
+    await expect(dialog).toBeHidden({ timeout: 10_000 })
   })
 })

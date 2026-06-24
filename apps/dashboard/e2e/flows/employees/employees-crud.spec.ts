@@ -110,20 +110,22 @@ test.describe('Employees CRUD Operations', () => {
   })
 
   test('should edit existing employee', async ({ page }) => {
-    const editButton = page.locator('a[href*="/employees/edit"], a[href*="/edit"], button:has-text("edit"), button:has-text("تعديل")').first()
+    // Row edit action is an icon button with aria-label "تعديل" (common.edit) →
+    // navigates to /employees/<id>/edit.
+    const editButton = page.getByRole('button', { name: 'تعديل' }).first()
     await expect(editButton).toBeVisible({ timeout: 10_000 })
     await editButton.click()
     await page.waitForURL(/\/employees\/[^/]+\/edit/, { timeout: 10_000 })
 
-    const nameInput = page.locator('input[id*="name"], input[name*="name"], input[placeholder*="name"]').first()
-    await expect(nameInput).toBeVisible({ timeout: 10_000 })
-    await nameInput.clear()
-    await nameInput.fill(`Updated Employee ${Date.now()}`)
+    // Wait for the form to hydrate the saved name before editing it.
+    const nameEn = page.locator('input[name="nameEn"]')
+    await expect(nameEn).not.toHaveValue('', { timeout: 10_000 })
+    await nameEn.fill(`Updated Employee ${Date.now()}`)
 
-    const saveButton = page.locator('button[type="submit"], button:has-text("Save"), button:has-text("حفظ")').first()
-    await expect(saveButton).toBeVisible({ timeout: 10_000 })
-    await saveButton.click()
-    await expect(saveButton).toBeHidden({ timeout: 15_000 })
+    // Single form with one type="submit"; a successful save returns to
+    // /employees.
+    await page.locator('button[type="submit"]').click()
+    await page.waitForURL('**/employees', { timeout: 15_000 })
   })
 
   test('should delete employee with confirmation', async ({ page }) => {

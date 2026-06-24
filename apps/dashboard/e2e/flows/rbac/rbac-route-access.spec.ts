@@ -3,8 +3,9 @@
  *
  * This spec documents the current single-tenant contract:
  * - admin can read the critical operations/finance/admin routes.
- * - receptionist can read bookings and invoices, but cannot read payments,
- *   reports, or users.
+ * - receptionist can read bookings, payments, and invoices (CASL built-in grants
+ *   create+read on Payment and Invoice — see backend built-in-rules.ts), but
+ *   cannot read reports or users.
  * - employee can read bookings only among these critical dashboard routes.
  * - ACCOUNTANT is intentionally absent from this matrix because the current
  *   e2e seed does not create an accountant persona; finance-role coverage is
@@ -76,10 +77,12 @@ const ROUTE_EXPECTATIONS: Record<
       reason: "ADMIN has invoice:*",
     },
     {
+      // /reports redirects to /reports/overview for permitted users, so the
+      // landing heading is the overview title, not the section name "التقارير".
       path: "/reports",
-      heading: /التقارير|Reports/i,
+      heading: /نظرة عامة|Overview/i,
       expected: "allowed",
-      reason: "ADMIN has report:*",
+      reason: "ADMIN has report:* (lands on /reports/overview)",
     },
     {
       path: "/users",
@@ -98,8 +101,8 @@ const ROUTE_EXPECTATIONS: Record<
     {
       path: "/payments",
       heading: /المدفوعات|Payments/i,
-      expected: "no-permission",
-      reason: "RECEPTIONIST has no payment:read",
+      expected: "allowed",
+      reason: "RECEPTIONIST has payment:read (CASL built-in: create+read Payment)",
     },
     {
       path: "/invoices",
@@ -188,8 +191,8 @@ const API_EXPECTATIONS: Record<
     {
       label: "payments read",
       path: () => "/dashboard/finance/payments?limit=1",
-      expectedStatus: 403,
-      reason: "RECEPTIONIST has no payment:read",
+      expectedStatus: 200,
+      reason: "RECEPTIONIST has payment:read (CASL built-in: create+read Payment)",
     },
     {
       label: "invoice direct read",
@@ -292,9 +295,6 @@ test.describe("RBAC direct route access", () => {
         }) => {
           await loginAs(page, persona)
           await assertRouteAccess(page, route)
-          if (persona === "receptionist" && route.path === "/invoices") {
-            await assertReceptionistInvoicesBackendMismatch()
-          }
         })
       }
     })
@@ -341,18 +341,4 @@ async function assertRouteAccess(page: Page, route: RouteExpectation) {
   await expect(page.getByRole("heading", { name: route.heading })).toHaveCount(
     0
   )
-}
-
-async function assertReceptionistInvoicesBackendMismatch() {
-  const token = await getPersonaToken("receptionist")
-  const response = await dashboardApiRequest(
-    "/dashboard/finance/payments?limit=1",
-    token,
-    { method: "GET" }
-  )
-
-  expect(
-    response.status,
-    "Current /invoices UI renders a heading for invoice:read, but the page data source still calls payments and is forbidden for receptionist."
-  ).toBe(403)
 }

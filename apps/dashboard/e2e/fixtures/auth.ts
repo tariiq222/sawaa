@@ -85,8 +85,21 @@ export async function loginAs(
     },
   ])
 
-  await page.goto("/", { waitUntil: "domcontentloaded" })
-  await page.evaluate(
+  // Seed the localStorage hydration hint BEFORE the first navigation so the
+  // dashboard boots authenticated in a SINGLE page load.
+  //
+  // Why this matters (root cause of the `main` not-visible flake): the backend
+  // ROTATES the refresh token on every /auth/refresh — it revokes the presented
+  // token and issues a new one via Set-Cookie. The old flow did
+  // goto("/") → setLocalStorage → reload(), which fired TWO refreshes back to
+  // back. The reload aborted the first refresh in-flight, so the browser never
+  // stored the rotated cookie (Set-Cookie) and replayed the ORIGINAL token on
+  // the second refresh — which the backend had already revoked → 401 → AuthGate
+  // bounces to the login screen and `main` never renders. `sawaa_user` is only a
+  // non-PII hydration hint (the canonical auth path is the ck_refresh cookie →
+  // refresh → /me), so seeding it via an init script before a single load is
+  // behaviourally identical, minus the rotation race.
+  await page.addInitScript(
     ({ user }) => {
       localStorage.setItem("sawaa_user", JSON.stringify({
         id: user.id,
@@ -97,7 +110,8 @@ export async function loginAs(
     },
     { user: data.user }
   )
-  await page.reload({ waitUntil: "domcontentloaded" })
+
+  await page.goto("/", { waitUntil: "domcontentloaded" })
   await expectAuthenticatedShell(page)
   await expectNoAppCrash(page)
 }

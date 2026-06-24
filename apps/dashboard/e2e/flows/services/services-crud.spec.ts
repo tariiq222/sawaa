@@ -1,7 +1,34 @@
 import { test, expect } from '@playwright/test'
 import { devLogin } from './helpers/auth'
+import {
+  seedService,
+  cleanupService,
+  getPersonaToken,
+  type SeededService,
+} from '../../fixtures/seed'
 
 test.describe('Services CRUD Operations', () => {
+  let adminToken: string
+  let seededService: SeededService
+
+  // The dashboard services list excludes archived services, and cleanup archives
+  // them — so without seeding, the list is legitimately EMPTY across runs and the
+  // row-dependent tests (display/view/edit/delete) have nothing to act on. Seed a
+  // real, active service so those tests always have a row.
+  test.beforeAll(async () => {
+    adminToken = await getPersonaToken('admin')
+    seededService = await seedService(adminToken, {
+      nameAr: `خدمة CRUD ${Date.now()}`,
+      nameEn: `CRUD Service ${Date.now()}`,
+    })
+  })
+
+  test.afterAll(async () => {
+    if (seededService?.id) {
+      await cleanupService(seededService.id, adminToken).catch(() => undefined)
+    }
+  })
+
   test.beforeEach(async ({ page }) => {
     await devLogin(page)
     await page.goto('/services')
@@ -21,8 +48,10 @@ test.describe('Services CRUD Operations', () => {
   })
 
   test('should display services list or empty state', async ({ page }) => {
-    await page.waitForResponse(r => r.url().includes('/services') && r.request().method() === 'GET' && r.ok()).catch(() => {})
-
+    // The beforeEach already awaits the services list GET. A second
+    // waitForResponse here would block on a NEW GET that never fires (the page
+    // is already loaded), hanging until the test timeout — so rely on the
+    // rendered table/empty-state as the readiness signal instead.
     await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
 
     // The list renders a real <table> (DataTable → @sawaa/ui Table primitive).
@@ -122,8 +151,8 @@ test.describe('Services CRUD Operations', () => {
   })
 
   test('should edit existing service', async ({ page }) => {
-    await page.waitForResponse(r => r.url().includes('/services') && r.request().method() === 'GET' && r.ok()).catch(() => {})
-    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 10_000 })
+    // A seeded service (beforeAll) guarantees a real row; wait on it directly.
+    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15_000 })
 
     // Edit is a row-action icon button with aria-label t("services.action.edit")
     // = "تعديل" / "Edit". It navigates to /services/{id}/edit via router.push.
@@ -151,8 +180,8 @@ test.describe('Services CRUD Operations', () => {
   })
 
   test('should delete service with confirmation', async ({ page }) => {
-    await page.waitForResponse(r => r.url().includes('/services') && r.request().method() === 'GET' && r.ok()).catch(() => {})
-    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 10_000 })
+    // A seeded service (beforeAll) guarantees a real row; wait on it directly.
+    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15_000 })
 
     // Delete is a row-action icon button with aria-label t("services.action.delete")
     // = "حذف" / "Delete". It opens an AlertDialog (it does NOT delete inline).

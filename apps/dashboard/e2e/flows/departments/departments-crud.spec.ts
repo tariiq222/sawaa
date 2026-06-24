@@ -17,27 +17,22 @@ test.describe('Departments CRUD Operations', () => {
   })
 
   test('should display departments list or empty state', async ({ page }) => {
-    await page.waitForResponse(r => r.url().includes('/departments') && r.request().method() === 'GET' && r.ok()).catch(() => {})
-
-    const departmentsList = page.locator('[class*="table"], [class*="list"], [class*="department"]')
-    const emptyState = page.locator('text=/no department|لا يوجد قسم|no data/i')
-
-    const hasList = await departmentsList.first().isVisible().catch(() => false)
-    const hasEmpty = await emptyState.first().isVisible().catch(() => false)
-
-    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
-    expect(hasList || hasEmpty).toBeTruthy()
+    // The real list renders a DataTable (<table>) or the empty-state title
+    // "لا توجد أقسام" — assert on the actual rendered structure, not guessed
+    // class fragments.
+    const table = page.getByRole('table')
+    const emptyState = page.getByText(/لا توجد أقسام|No departments/i)
+    await expect(table.or(emptyState).first()).toBeVisible({ timeout: 15_000 })
   })
 
-  test('should open create department dialog', async ({ page }) => {
-    // Departments use a dialog for creation — there is no /departments/create route.
-    // The "إضافة قسم" button opens a Dialog (not a page navigation).
-    const createButton = page.locator('button:has-text("إضافة قسم"), button:has-text("Add Department")')
-    await expect(createButton.first()).toBeVisible({ timeout: 10_000 })
-    await createButton.first().click()
-    // Dialog should appear
-    const dialog = page.locator('[role="dialog"]')
-    await expect(dialog).toBeVisible({ timeout: 10_000 })
+  test('should navigate to the create department page', async ({ page }) => {
+    // Creation is a dedicated /departments/create route (PageHeader "إضافة قسم"
+    // button → router.push), NOT a dialog. The empty-state can render a second
+    // "إضافة قسم" action inside the table, so target the header button (first in
+    // DOM) explicitly.
+    await page.getByRole('button', { name: 'إضافة قسم' }).first().click()
+    await page.waitForURL('**/departments/create', { timeout: 10_000 })
+    await expect(page.locator('input[name="nameEn"]')).toBeVisible({ timeout: 10_000 })
   })
 
   test('should search departments', async ({ page }) => {
@@ -68,47 +63,49 @@ test.describe('Departments CRUD Operations', () => {
 
   test('should create new department with valid data', async ({ page }) => {
     await page.goto('/departments/create')
-    // The retrying expect on the name input below is the real readiness signal.
 
-    const nameInput = page.locator('input[id*="name"], input[placeholder*="name"], input[placeholder*="الاسم"]')
-    const descriptionInput = page.locator('textarea[id*="description"], textarea[placeholder*="description"]')
-    const saveButton = page.locator('button[type="submit"], button:has-text("Save"), button:has-text("حفظ")')
+    // Real form fields are register("nameAr"/"nameEn") → name="…", with no
+    // id/placeholder. Both AR + EN names are required by the zod schema.
+    const nameEn = page.locator('input[name="nameEn"]')
+    const nameAr = page.locator('input[name="nameAr"]')
+    await expect(nameEn).toBeVisible({ timeout: 10_000 })
+    await nameEn.fill(`E2E Department ${Date.now()}`)
+    await nameAr.fill(`قسم اختبار ${Date.now()}`)
 
-    await expect(nameInput.first()).toBeVisible({ timeout: 10_000 })
-    await nameInput.first().fill(`Test Department ${Date.now()}`)
-
-    const descriptionVisible = await descriptionInput.first().isVisible().catch(() => false)
-    if (descriptionVisible) await descriptionInput.first().fill('Test department description')
-
-    await expect(saveButton.first()).toBeVisible({ timeout: 10_000 })
-    await saveButton.first().click()
-    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
+    // The footer submit is the only type="submit" control on the form; its
+    // visible label is theme/locale-dependent, so target it by type.
+    await page.locator('button[type="submit"]').click()
+    await page.waitForURL('**/departments', { timeout: 15_000 })
+    await expect(page.getByRole('table').or(page.getByText(/لا توجد أقسام/)).first())
+      .toBeVisible({ timeout: 10_000 })
   })
 
   test('should edit existing department', async ({ page }) => {
-    const editButton = page.locator('a[href*="/departments/edit"], button:has-text("edit"), button:has-text("تعديل")').first()
+    // Row edit action is an icon button with aria-label "تعديل" → navigates to
+    // /departments/[id]/edit.
+    const editButton = page.getByRole('button', { name: 'تعديل' }).first()
     await expect(editButton).toBeVisible({ timeout: 10_000 })
     await editButton.click()
+    await page.waitForURL('**/departments/*/edit', { timeout: 10_000 })
 
-    const nameInput = page.locator('input[id*="name"], input[placeholder*="name"]')
-    await expect(nameInput.first()).toBeVisible({ timeout: 10_000 })
-    await nameInput.first().clear()
-    await nameInput.first().fill(`Updated Department ${Date.now()}`)
+    const nameEn = page.locator('input[name="nameEn"]')
+    await expect(nameEn).toBeVisible({ timeout: 10_000 })
+    await nameEn.fill(`Updated Department ${Date.now()}`)
 
-    const saveButton = page.locator('button[type="submit"], button:has-text("Save"), button:has-text("حفظ")')
-    await expect(saveButton.first()).toBeVisible({ timeout: 10_000 })
-    await saveButton.first().click()
-    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
+    await page.locator('button[type="submit"]').click()
+    await page.waitForURL('**/departments', { timeout: 15_000 })
   })
 
   test('should delete department with confirmation', async ({ page }) => {
-    const deleteButton = page.locator('button:has-text("Delete"), button:has-text("حذف")').first()
+    // Row delete action is an icon button with aria-label "حذف" → opens an
+    // AlertDialog whose confirm action is also labelled "حذف".
+    const deleteButton = page.getByRole('button', { name: 'حذف' }).first()
     await expect(deleteButton).toBeVisible({ timeout: 10_000 })
     await deleteButton.click()
 
-    const confirmButton = page.locator('button:has-text("Confirm"), button:has-text("تأكيد")')
-    await expect(confirmButton.first()).toBeVisible({ timeout: 10_000 })
-    await confirmButton.first().click()
-    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 })
+    const dialog = page.getByRole('alertdialog')
+    await expect(dialog).toBeVisible({ timeout: 10_000 })
+    await dialog.getByRole('button', { name: 'حذف' }).click()
+    await expect(dialog).toBeHidden({ timeout: 10_000 })
   })
 })

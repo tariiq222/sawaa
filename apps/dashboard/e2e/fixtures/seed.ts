@@ -95,9 +95,11 @@ export interface SeedServiceInput {
   durationMins?: number
   price?: number
   currency?: string
-  minParticipants?: number
-  maxParticipants?: number
-  reserveWithoutPayment?: boolean
+  // NOTE: minParticipants / maxParticipants / reserveWithoutPayment are NOT
+  // service fields — they live on the Program model (group sessions with
+  // capacity). The CreateServiceDto rejects them (forbidNonWhitelisted), so
+  // they must never be forwarded here. A booking's "group" semantics are set
+  // via bookingType: "GROUP" on the booking itself, not via service capacity.
   /** Skip auto-creating the default IN_PERSON booking config (default false). */
   skipBookingConfig?: boolean
   /** Attach the service to this category instead of the auto-created one. */
@@ -389,6 +391,25 @@ let cachedTestCategoryId: string | null = null
 async function ensureTestCategoryId(token: string): Promise<string | undefined> {
   if (cachedTestCategoryId) return cachedTestCategoryId
   try {
+    // Reuse an existing "Test Category" if a previous run already created one.
+    // `cachedTestCategoryId` only de-dupes WITHIN a process; without this lookup
+    // every run created a fresh row, accumulating dozens of identical
+    // categories in the dev DB. That bloat slows the categories list and makes
+    // the CRUD specs' broad row selectors ambiguous. Find-or-create keeps the
+    // list lean and deterministic across runs.
+    const existing = await apiGet<{
+      items?: Array<{ id: string; nameAr?: string; nameEn?: string }>
+    }>("/dashboard/organization/categories?isActive=true", token)
+      .then((r) => r.items ?? [])
+      .catch(() => [] as Array<{ id: string; nameAr?: string; nameEn?: string }>)
+    const reused = existing.find(
+      (c) => c.nameEn === "Test Category" || c.nameAr === "فئة اختبار"
+    )
+    if (reused) {
+      cachedTestCategoryId = reused.id
+      return reused.id
+    }
+
     // Attach the category to a real department so the booking wizard chain
     // (department → category → service) can reach the seeded service. Prefer the
     // individual-clinic department ("عيادات"/Clinics); fall back to the first.
@@ -449,9 +470,6 @@ export async function seedService(
     currency: overrides.currency ?? "SAR",
     isActive: true,
     categoryId,
-    minParticipants: overrides.minParticipants,
-    maxParticipants: overrides.maxParticipants,
-    reserveWithoutPayment: overrides.reserveWithoutPayment,
   }
 
   const created = await apiPost<{
@@ -781,6 +799,30 @@ async function findAvailableSlotIso(
   )
 }
 
+// The create-booking gate (`create-booking.handler.ts`) rejects payAtClinic
+// bookings unless the GLOBAL org setting `paymentAtClinicEnabled` is true —
+// it reads `OrganizationSettings.paymentAtClinicEnabled`, NOT the per-branch
+// `BookingSettings.payAtClinicEnabled`. Enable the global flag once per process
+// (single-tenant, so it stays on) via PATCH /dashboard/organization/settings.
+let payAtClinicEnabledOnce: Promise<void> | null = null
+
+async function ensurePayAtClinicEnabled(token: string): Promise<void> {
+  if (!payAtClinicEnabledOnce) {
+    payAtClinicEnabledOnce = apiPatch(
+      "/dashboard/organization/settings",
+      token,
+      { paymentAtClinicEnabled: true }
+    )
+      .then(() => undefined)
+      .catch((err: unknown) => {
+        // Reset so a later seed can retry rather than caching the failure.
+        payAtClinicEnabledOnce = null
+        throw err
+      })
+  }
+  return payAtClinicEnabledOnce
+}
+
 export async function seedBooking(
   token: string,
   input: SeedBookingInput
@@ -810,6 +852,11 @@ export async function seedBooking(
       serviceId: input.serviceId,
     }))
 
+  const payAtClinic = input.payAtClinic ?? false
+  if (payAtClinic) {
+    await ensurePayAtClinicEnabled(token)
+  }
+
   const created = await apiPost<{
     id: string
     clientId: string
@@ -823,7 +870,7 @@ export async function seedBooking(
     employeeId: input.employeeId,
     serviceId: input.serviceId,
     scheduledAt,
-    payAtClinic: input.payAtClinic ?? false,
+    payAtClinic,
     bookingType: "INDIVIDUAL",
   })
 
@@ -841,6 +888,11 @@ export async function createDashboardBooking(
   token: string,
   input: CreateDashboardBookingInput
 ): Promise<SeededBooking> {
+  const payAtClinic = input.payAtClinic ?? true
+  if (payAtClinic) {
+    await ensurePayAtClinicEnabled(token)
+  }
+
   const created = await apiPost<{
     id: string
     clientId: string
@@ -856,7 +908,7 @@ export async function createDashboardBooking(
     scheduledAt: input.scheduledAt,
     bookingType: input.bookingType ?? "INDIVIDUAL",
     deliveryType: input.deliveryType ?? "IN_PERSON",
-    payAtClinic: input.payAtClinic ?? true,
+    payAtClinic,
     notes: input.notes,
   })
 

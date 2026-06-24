@@ -192,7 +192,9 @@ test.describe("Finance invoice/payment status matrix", () => {
       paymentRow.getByText(sarAmountPattern(PARTIAL_PAYMENT_HALALAS)).first()
     ).toBeVisible()
     await expect(paymentRow.getByText(/نقدي|Cash/i)).toBeVisible()
-    await expect(paymentRow.getByText("COMPLETED")).toBeVisible()
+    // Status renders the localized "payments.status.paid" label
+    // (COMPLETED → "مدفوع" / "Paid"), not the raw enum value.
+    await expect(paymentRow.getByText(/مدفوع|Paid/i)).toBeVisible()
     await expect(
       paymentRow.getByText(rawHalalasPattern(PARTIAL_PAYMENT_HALALAS))
     ).toHaveCount(0)

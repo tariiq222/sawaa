@@ -5,14 +5,29 @@
  *   1. Backend must be running:  npm run dev:backend  (port 5200)
  *   2. Docker stack (DB/Redis):  npm run docker:up
  *
- * The webServer block below spawns the Next.js dev server automatically
- * (or reuses an already-running one in non-CI mode).
+ * The webServer block below spawns the Next.js server automatically (or reuses
+ * an already-running one in non-CI mode).
+ *
+ * Dev vs. production server:
+ *   By default the webServer uses `next dev` (Turbopack), which is convenient
+ *   for the quick smoke suite. Turbopack compiles routes on-demand, however, so
+ *   under load the FULL `flows` suite can stall in per-test `beforeEach`
+ *   (login + first navigation) and even time out. For a reliable flows run use a
+ *   production build by setting `PW_E2E_PROD=1` (auto-enabled in CI): the
+ *   webServer then runs `next build && next start`, so route compilation happens
+ *   once up-front instead of mid-test.
+ *
+ *     PW_E2E_PROD=1 pnpm --filter dashboard run e2e          # reliable flows
  *
  * Projects:
  *   smoke  — e2e/smoke/**   ≤7 specs, <2 min, runs on every PR
  *   flows  — e2e/flows/**   full feature flows, runs nightly
  */
 import { defineConfig, devices } from '@playwright/test';
+
+// Use a production build (build + start) for reliable, compile-stall-free runs.
+// Defaults on in CI; opt in locally with PW_E2E_PROD=1.
+const useProdServer = process.env.PW_E2E_PROD === '1' || !!process.env.CI;
 
 export default defineConfig({
   testDir: './e2e',
@@ -62,12 +77,20 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'pnpm --filter dashboard dev',
+    // Production build (compile once up-front) for reliable full-suite runs;
+    // Turbopack dev server otherwise for fast local smoke iteration.
+    // `next start` reads the port from the PORT env (set below); the dev script
+    // pins --port 5203 itself, so PORT is harmless there.
+    command: useProdServer
+      ? 'pnpm --filter dashboard build && pnpm --filter dashboard start'
+      : 'pnpm --filter dashboard dev',
     port: 5203,
-    timeout: 120_000,
+    // A cold production build needs much longer than a dev boot.
+    timeout: useProdServer ? 300_000 : 120_000,
     reuseExistingServer: !process.env.CI,
     env: {
       NEXT_PUBLIC_API_URL: 'http://localhost:5200/api/v1',
+      PORT: '5203',
     },
   },
 });
