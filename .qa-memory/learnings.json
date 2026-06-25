@@ -1,7 +1,31 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-24T01:40:00Z",
+  "updatedAt": "2026-06-24T09:10:00Z",
   "learnings": [
+    {
+      "at": "2026-06-24T09:10:00Z",
+      "category": "gap",
+      "note": "Root-caused the POS-wizard e2e blocker (#68 employee onboarding + #3 booking-create + #12 full-user-journey). The real cause was NOT a stale selector or a bookable-count timing issue: the e2e DB's Department table was EMPTY. The base dev seed (apps/backend/prisma/seed.ts) seeds only admin/branch/configs; the 'عيادات سواء' department comes from a SEPARATE manual script (prisma/seeds/sawa-customer.ts → seed:sawa) the Playwright harness never runs. With zero departments, the e2e seed created the shared 'Test Category' orphaned (departmentId:null), the wizard's department step (step-department.tsx) rendered zero cards, and the helper's department-card click hung until the 120s timeout. Proven empirically: GET /dashboard/organization/departments returned total:0 and the reused Test Category had departmentId:null.",
+      "severity": "P1",
+      "lesson": "An e2e flow that drives the booking POS wizard depends on a clinic DEPARTMENT existing, but no harness-run seed guarantees it. Make the e2e seed self-sufficient: ensure the clinic department exists (find-or-create), attach/re-parent the test category to it, and bust the departments cache after seeding a bookable service. Don't assume `seed:sawa` ran. Verify backend reference-table state (GET departments/categories) with a tiny repro script before guessing at the UI layer.",
+      "scope": "sawaa dashboard e2e"
+    },
+    {
+      "at": "2026-06-24T09:10:00Z",
+      "category": "process",
+      "note": "After the wizard chain was fixed, full-user-journey #12 surfaced THREE more stale assertions in sequence, each newly reachable: (1) POST /dashboard/finance/invoices returned 409 INVOICE_ALREADY_EXISTS because a dashboard-confirmed booking auto-creates its invoice (bookings.booking.confirmed → BookingConfirmedHandler) — product-correct, so the seed's createInvoice() was made idempotent (fetch the existing invoice on 409); (2) the auto-invoice uses DEFAULT_VAT_RATE=0, so total==subtotal (28000→280.00), not the test's hand-computed 32200 — expected totals realigned; (3) the bookings list has no delivery-type column and the payments list renders status via the i18n label 'مدفوع' not raw 'COMPLETED'. All three were test debt against the real product, fixed test-side.",
+      "severity": "P2",
+      "lesson": "When an e2e UI step starts passing for the first time, it exposes the NEXT untested assumption (auto-invoicing, default-VAT totals, i18n status labels, removed columns). Expect a cascade and verify each against real handlers/i18n. A booking confirmed through the dashboard already owns exactly one invoice (@@unique([bookingId])) at 0% VAT — seeds creating invoices for such bookings must be idempotent.",
+      "scope": "sawaa dashboard e2e"
+    },
+    {
+      "at": "2026-06-24T02:10:00Z",
+      "category": "process",
+      "note": "While fixing a stale e2e selector (#68 employee onboarding), I burned 3 full prod-build run cycles (~6 min each) guessing selectors one layer at a time. Each guess uncovered the NEXT stale layer: removed 'custom pricing' switch -> stale durationOptions assertion -> dept name regex -> finally a disabled WizardCard. Reading step-department.tsx up front (the dept renders as <button disabled={bookableCategoriesCount===0}>, so Playwright .click waits for enabled forever) would have revealed the real blocker in one read instead of three runs.",
+      "severity": "P2",
+      "lesson": "To fix a stale e2e selector, READ the target component's current render first (element type, role, disabled gating, conditional mount) before re-running. One component read beats three expensive prod-build runs. And in describe.serial, the first test must fully pass for siblings to run, so a deep multi-layer failure blocks the whole block (the did-not-run sibling).",
+      "scope": "sawaa dashboard e2e"
+    },
     {
       "at": "2026-06-24T01:40:00Z",
       "category": "tooling",

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-24T01:40:00Z",
+  "updatedAt": "2026-06-24T09:10:00Z",
   "bugs": [
     {
       "id": "BUG-005",
@@ -21,10 +21,40 @@
       "reproduction": "Prod-build flows run 2026-06-24: 12/13 failures are test-maintenance. Categories: (1) error-states.spec.ts:35 & :49 use '#__next' (Pages-Router root) which does not exist in this App-Router app; (2) bookings specs assert raw English enum 'COMPLETED' instead of the i18n label 'مدفوع' (payment-columns.tsx maps COMPLETED→payments.status.paid); (3) booking-create wizard uses exact regex /^عيادات$/ but seed department is 'عيادات سواء' (sawa-customer.ts:22); (4) cancel-flow expects a 'تغيير الحالة' button label that no longer exists in the sheet; (5) booking detail expects fixture employee 'موظف إلغاء' that exists only in the spec; (6) employee custom-pricing panel matched by a stale class selector; (7) bookings 'بحث بالاسم' textbox label does not exist; (8) full-user-journey + users PATCH submit use brittle .last()/filter selectors that race.",
       "file": "apps/dashboard/e2e/flows/{errors,bookings,employees,system,users}/*.spec.ts",
       "failingTest": "multiple — see prod flows log /tmp/sawa-e2e-prod-flows.log",
-      "status": "open",
+      "status": "in-progress",
       "linkedRequirement": null,
       "ownerApprovalRequired": false,
-      "note": "These are tariqQA-fixable (test files are in scope, no product change). Fix = update selectors to role/test-id + i18n labels + actual seed names. The underlying product operations all work (verified by the 145 passing tests + smoke 39/39)."
+      "note": "These are tariqQA-fixable (test files are in scope, no product change). 11 of 13 fixed and VERIFIED by an independent orchestrator full-flows prod-build run (157/163 pass, up from 145/163; did-not-run cleared). RESIDUAL (still RED, NOT resolved despite tariq-deep marking progress.remainingBlocker 'RESOLVED'): users/user-management.spec.ts:166 'opens the edit page for the seeded user and updates the name' still times out (21.8s) on the PATCH waitForResponse — tariq-deep edited user-management.spec.ts but did not land this test green; LR-001 caught the overclaim via independent re-run. The other remaining red (error-states.spec.ts:75 session-expiry) is BUG-005, owner-gated, not test-debt. Keep this bug OPEN until user-management:166 is green.",
+      "progress": {
+        "at": "2026-06-24T02:10:00Z",
+        "spec": "employee-onboarding-booking-visibility.spec.ts (#68, describe.serial)",
+        "fixed": [
+          "configureServiceOverride: replaced removed 'custom pricing' switch + stale panel class selector with the redesigned EmployeeServiceTypesEditor flow (fill the IN_PERSON EmployeeTypeRow price=180/duration=50). VERIFIED: test now drives the full onboarding UI and persists custom pricing via the owned-durations endpoint.",
+          "stale durationOptions assertion: new flat model persists owned ServiceDurationOption with isDefault=false that REPLACES service defaults (set-employee-durations.handler.ts:95). Updated assertion to assert the override by value (50min @ 18000 halalas) and that the 45-min service default was replaced. VERIFIED passing.",
+          "department button regex: /^عيادات$/ -> /عيادات|clinic/i to match the real seeded dept name 'عيادات سواء'/'Sawa Clinics'."
+        ],
+        "remainingBlocker": "RESOLVED 2026-06-24T09:10 by tariq-deep. ROOT CAUSE was not the selector nor bookable-count timing: the e2e Department table was EMPTY (base seed.ts doesn't create departments; only seed:sawa does, and the harness never runs it). So the shared Test Category was orphaned (departmentId:null), the wizard's department step rendered zero cards, and the helper's department click hung 120s. Fix (test/seed only): seed.ts now ensureClinicDepartmentId() (find-or-create 'عيادات سواء'), ensureTestCategoryId() re-parents the category to it, and seedService() busts the departments cache after seeding a bookable service. Helpers in all 3 specs now assert each WizardCard is enabled before clicking. Plus 3 newly-exposed stale assertions fixed in full-user-journey (idempotent createInvoice on 409 auto-invoice, total 280.00 at 0% VAT, i18n 'مدفوع' status, removed delivery-type column).",
+        "resolvedAt": "2026-06-24T09:10:00Z",
+        "verification": "PW_E2E_PROD=1 prod build: employee-onboarding-booking-visibility.spec.ts 2/2 (incl. the formerly did-not-run sibling), booking-create-flow.spec.ts 3/3, full-user-journey.spec.ts 1/1 — combined 10 passed. Regression sweep of helper-consumers (finance/bookings/rbac) 35 passed.",
+        "filesChanged": [
+          "apps/dashboard/e2e/fixtures/seed.ts",
+          "apps/dashboard/e2e/flows/employees/employee-onboarding-booking-visibility.spec.ts",
+          "apps/dashboard/e2e/flows/bookings/booking-create-flow.spec.ts",
+          "apps/dashboard/e2e/flows/system/full-user-journey.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "BUG-007",
+      "severity": "P3",
+      "title": "Departments-list cache (bookableCategoriesCount) not invalidated by service create/archive",
+      "reproduction": "list-departments.handler.ts caches the departments list (Redis 'ref:departments:', 1h TTL) and embeds each active category's bookable-service count as bookableCategoriesCount (used to disable empty department cards in the POS wizard). CreateServiceHandler and ArchiveServiceHandler invalidate only SERVICES_CACHE_PREFIX, NOT DEPARTMENTS_CACHE_PREFIX. So after adding/removing the first bookable service under a category, the cached departments list can keep reporting bookableCategoriesCount===0 (department card stays disabled) — or a stale >0 after archiving the last service — for up to 1h until any department/category mutation busts the cache.",
+      "file": "apps/backend/src/modules/org-experience/services/create-service.handler.ts:63 and archive-service.handler.ts:55 (compare update-category.handler.ts:65 which DOES invalidate DEPARTMENTS_CACHE_PREFIX)",
+      "failingTest": null,
+      "status": "open",
+      "linkedRequirement": null,
+      "ownerApprovalRequired": true,
+      "note": "Found while root-causing the POS-wizard e2e blocker; NOT fixed (product code, out of QA scope). Low real-world impact (TTL self-heals in 1h and category edits bust it), but a service create/archive should invalidate DEPARTMENTS_CACHE_PREFIX too so the wizard's department gating is immediately correct. The e2e seed works around it by issuing a no-op category PATCH after seeding a service. Suggested fix: add `await this.cache.invalidatePrefix(DEPARTMENTS_CACHE_PREFIX)` to CreateServiceHandler + ArchiveServiceHandler (+ likely RestoreServiceHandler/UpdateServiceHandler when isActive/isHidden/categoryId change)."
     },
     {
       "id": "BUG-001",

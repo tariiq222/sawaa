@@ -36,16 +36,17 @@
     "dashboardE2eFlows": {
       "tool": "playwright",
       "specFiles": 26,
-      "result": "run-2026-06-24-prod-build",
+      "result": "run-2026-06-24-prod-build-after-bug006-fixes",
       "command": "PW_E2E_PROD=1 pnpm --filter dashboard run e2e:flows",
       "tests": 163,
-      "passed": 145,
-      "failed": 13,
+      "passed": 157,
+      "failed": 2,
       "skipped": 4,
-      "didNotRun": 1,
-      "durationMin": 13.1,
-      "passRate": 89.0,
-      "note": "FIRST trustworthy flows run: executed against a prod build (next build && next start) per playwright.config PW_E2E_PROD path. 145/163 pass. The earlier dev-server (Turbopack) attempt crashed mid-run (all smoke ERR_CONNECTION_REFUSED) — confirmed the documented dev-server instability; prod build is stable. Of the 13 failures: 12 are TEST-DEBT (stale/guessed selectors, App-Router vs Pages-Router #__next selector, English-enum vs i18n-label assertions, exact-name regex vs seed name 'عيادات سواء', brittle .last() action targets), 1 is a SUSPECTED PRODUCT gap (session-expiry redirect — see BUG-005). 4 skipped are intentional test.skip; 1 did-not-run is a descheduled dependent test. Every PRIMARY dashboard user operation (auth, navigation across 13 routes, reports, bookings list/record-payment/status-workflow, CRUD for clients/categories/coupons/departments/services/payments/invoices/notifications/ratings, RBAC persona matrix) passed."
+      "didNotRun": 0,
+      "durationMin": 8.5,
+      "passRate": 96.3,
+      "history": { "firstRun": "145/163 (13 failed, 1 did-not-run) at 2026-06-24T01:40", "afterBug006Fixes": "157/163 (2 failed, 0 did-not-run) at 2026-06-24T02:40" },
+      "note": "After BUG-006 test-debt remediation (tariqQA fixed #68's 3 layers; tariq-deep rewrote the shared POS booking-wizard helper + e2e seed clinic-department/category wiring, fixing 11 of 13 prior failures). Independently re-verified by the orchestrator on a prod build: 157/163 pass, did-not-run cleared. The 2 REMAINING failures: (1) errors/error-states.spec.ts:75 session-expiry redirect = BUG-005 (suspected product/auth gap, OWNER-GATED — expected red, not test-debt); (2) users/user-management.spec.ts:166 edit-and-update-name = residual test-debt (PATCH-submit waitForResponse times out; tariq-deep's edit to this file did NOT land it green — still open). Root cause of the POS blocker was a SEED gap: the e2e DB had zero departments (the 'عيادات سواء' dept comes from a manual seed:sawa script the harness never ran), so the test category was orphaned and the wizard department step rendered no enabled cards. Also surfaced BUG-007 (product cache-invalidation gap, P3, owner-gated, NOT fixed)."
     },
     "dashboardE2eSmokeProd": {
       "tool": "playwright",
