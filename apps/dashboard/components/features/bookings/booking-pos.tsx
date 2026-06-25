@@ -340,10 +340,15 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
             onToggle={() => setOpenSection("client")}
           >
             <ClientStep onSelect={handleClientSelect} />
-            {state.clientId && (
-              <ClientCreditsPanel clientId={state.clientId} onUseCredit={handleUseCredit} />
-            )}
           </CollapsibleSection>
+
+          {/* Client's package credits — rendered OUTSIDE the collapsible client
+              section so it stays visible after the client step collapses (the
+              wizard auto-advances openSection to "department" on selection).
+              Renders nothing when the client has no usable credits. */}
+          {state.clientId && (
+            <ClientCreditsPanel clientId={state.clientId} onUseCredit={handleUseCredit} />
+          )}
 
           {/* 2. Department */}
           <CollapsibleSection
