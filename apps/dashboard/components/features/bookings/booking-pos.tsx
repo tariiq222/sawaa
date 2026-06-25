@@ -43,6 +43,25 @@ import { MatchingCreditBadge } from "./matching-credit-badge"
 import { useBookingFormState } from "./use-booking-form-state"
 import { CollapsibleSection, PosSectionHint, type SectionId } from "./pos-collapsible-section"
 
+/* ─── Pure helpers ─── */
+
+/**
+ * When the operator switches delivery type, preserve an already-set
+ * durationOptionId if it still exists among the new serviceType's options.
+ * Falls back to `defaultId` (the type's default/first option) otherwise.
+ * Returns `defaultId` when `currentId` is null (normal non-credit flow).
+ */
+export function resolvePreservedDurationOptionId(
+  currentId: string | null,
+  serviceType: import("@/lib/types/employee").EmployeeServiceType | undefined,
+  defaultId: string | null,
+): string | null {
+  if (!currentId) return defaultId
+  const options = serviceType?.durationOptions ?? []
+  const stillPresent = options.some((o) => o.id === currentId)
+  return stillPresent ? currentId : defaultId
+}
+
 /* ─── Props ─── */
 
 interface BookingPosProps {
@@ -130,7 +149,19 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     durationOptionId: string | null,
   ) => {
     selectDeliveryType(deliveryType.toUpperCase() as "IN_PERSON" | "ONLINE")
-    selectDurationOption(durationOptionId)
+    // Preserve an existing credit-driven durationOptionId when it is still
+    // valid for the chosen delivery type. Falls back to the default/first
+    // option for the new type when null or no longer present.
+    const normalizedType = deliveryType.toUpperCase()
+    const matchingServiceType = serviceTypes.find(
+      (st) => st.deliveryType.toUpperCase() === normalizedType && st.isActive,
+    )
+    const resolvedId = resolvePreservedDurationOptionId(
+      state.durationOptionId,
+      matchingServiceType,
+      durationOptionId,
+    )
+    selectDurationOption(resolvedId)
     setOpenSection("datetime")
     // DurationOption change re-arms the badge so the new triple can match.
     setUseCredit(false)

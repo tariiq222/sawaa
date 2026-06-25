@@ -24,12 +24,24 @@ export function ClientCreditsPanel({ clientId, onUseCredit }: Props) {
 
   if (isLoading) return null
 
-  const usable = (purchases ?? [])
-    // Hook already fetches with { status: "ACTIVE" } — no re-filter needed.
-    .flatMap((p) =>
-      p.credits.map((c) => ({ purchaseName: p.packageNameAr, credit: c })),
-    )
-    .filter((x) => x.credit.remaining > 0)
+  // Flatten, filter by remaining > 0, then dedupe by the credit triple
+  // (serviceId:employeeId:durationOptionId). Two ACTIVE purchases can hold
+  // credits for the same slot; keep only the first (highest-remaining by
+  // API order). key={credit.id} still uniquely identifies the card.
+  const usable = (() => {
+    const seen = new Set<string>()
+    return (purchases ?? [])
+      .flatMap((p) =>
+        p.credits.map((c) => ({ purchaseName: p.packageNameAr, credit: c })),
+      )
+      .filter((x) => {
+        if (x.credit.remaining <= 0) return false
+        const key = `${x.credit.serviceId}:${x.credit.employeeId}:${x.credit.durationOptionId}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+  })()
 
   if (usable.length === 0) return null
 
