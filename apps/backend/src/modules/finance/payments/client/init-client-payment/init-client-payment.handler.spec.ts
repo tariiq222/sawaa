@@ -45,6 +45,13 @@ const buildPrisma = () => ({
 
 const buildMoyasar = () => ({
   createPayment: jest.fn().mockResolvedValue(mockMoyasarPayment),
+  // Default: any reconciled gateway session is terminally failed, so the handler
+  // is free to discard the stale row and create a fresh one. Individual tests
+  // override this to exercise the in-flight (`initiated`) and settled (`paid`)
+  // branches of the G3 double-charge guard.
+  getPaymentStatus: jest
+    .fn()
+    .mockResolvedValue({ id: 'moyasar-payment-existing', status: 'failed', amount: 230, currency: 'SAR' }),
 });
 
 const buildHandler = () => {
@@ -125,13 +132,14 @@ describe('InitClientPaymentHandler', () => {
     expect(prisma.payment.create).not.toHaveBeenCalled();
   });
 
-  it('deletes existing pending payment with gatewayRef and creates a fresh one', async () => {
+  it('discards a terminally-failed gateway session and creates a fresh one', async () => {
     const { handler, prisma, moyasar } = buildHandler();
     prisma.payment.findFirst.mockResolvedValue({
       id: 'payment-existing',
       status: PaymentStatus.PENDING,
       gatewayRef: 'moyasar-payment-existing',
     });
+    moyasar.getPaymentStatus.mockResolvedValue({ status: 'failed' });
 
     const result = await handler.execute({ invoiceId, clientId });
 
@@ -139,9 +147,58 @@ describe('InitClientPaymentHandler', () => {
       paymentId: 'payment-1',
       redirectUrl: 'https://checkout.moyasar.com/pay/moyasar-payment-1',
     });
+    expect(moyasar.getPaymentStatus).toHaveBeenCalledWith(organizationId, 'moyasar-payment-existing');
     expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'payment-existing' } });
     expect(prisma.payment.create).toHaveBeenCalled();
     expect(moyasar.createPayment).toHaveBeenCalled();
+  });
+
+  // ─── G3: double-charge guard on in-flight gateway sessions ───────────────────
+
+  it('G3: rejects a second init while the gateway session is still initiated (no double charge)', async () => {
+    const { handler, prisma, moyasar } = buildHandler();
+    prisma.payment.findFirst.mockResolvedValue({
+      id: 'payment-existing',
+      status: PaymentStatus.PENDING,
+      gatewayRef: 'moyasar-payment-existing',
+    });
+    moyasar.getPaymentStatus.mockResolvedValue({ status: 'initiated' });
+
+    await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(ConflictException);
+    // The live session must be preserved — never deleted, never duplicated.
+    expect(prisma.payment.delete).not.toHaveBeenCalled();
+    expect(prisma.payment.create).not.toHaveBeenCalled();
+    expect(moyasar.createPayment).not.toHaveBeenCalled();
+  });
+
+  it('G3: rejects a second init when the gateway session already settled (paid)', async () => {
+    const { handler, prisma, moyasar } = buildHandler();
+    prisma.payment.findFirst.mockResolvedValue({
+      id: 'payment-existing',
+      status: PaymentStatus.PENDING,
+      gatewayRef: 'moyasar-payment-existing',
+    });
+    moyasar.getPaymentStatus.mockResolvedValue({ status: 'paid' });
+
+    await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(ConflictException);
+    expect(prisma.payment.delete).not.toHaveBeenCalled();
+    expect(prisma.payment.create).not.toHaveBeenCalled();
+    expect(moyasar.createPayment).not.toHaveBeenCalled();
+  });
+
+  it('G3: fails closed (no recreate) when the gateway status cannot be reconciled', async () => {
+    const { handler, prisma, moyasar } = buildHandler();
+    prisma.payment.findFirst.mockResolvedValue({
+      id: 'payment-existing',
+      status: PaymentStatus.PENDING,
+      gatewayRef: 'moyasar-payment-existing',
+    });
+    moyasar.getPaymentStatus.mockRejectedValue(new Error('Moyasar 500'));
+
+    await expect(handler.execute({ invoiceId, clientId })).rejects.toThrow(ConflictException);
+    expect(prisma.payment.delete).not.toHaveBeenCalled();
+    expect(prisma.payment.create).not.toHaveBeenCalled();
+    expect(moyasar.createPayment).not.toHaveBeenCalled();
   });
 
   it('deletes the pending row when Moyasar throws so the idempotency key is not claimed', async () => {

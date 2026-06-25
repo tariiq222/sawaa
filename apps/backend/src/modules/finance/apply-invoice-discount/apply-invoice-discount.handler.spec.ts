@@ -4,16 +4,16 @@ import { ApplyInvoiceDiscountHandler } from './apply-invoice-discount.handler';
 
 type Tx = {
   invoice: { findFirst: jest.Mock; update: jest.Mock };
-  payment: { aggregate: jest.Mock };
+  payment: { findMany: jest.Mock; delete: jest.Mock };
   discountReason: { findFirst: jest.Mock };
 };
 
-function makeHandler(tx: Tx) {
+function makeHandler(tx: Tx, moyasar: { getPaymentStatus: jest.Mock } = { getPaymentStatus: jest.fn() }) {
   const prisma = {} as never;
   const rlsTransaction = {
     withTransaction: (cb: (tx: Tx) => unknown) => cb(tx),
   } as never;
-  return new ApplyInvoiceDiscountHandler(prisma, rlsTransaction);
+  return new ApplyInvoiceDiscountHandler(prisma, rlsTransaction, moyasar as never);
 }
 
 const baseInvoice = {
@@ -31,7 +31,10 @@ function makeTx(overrides: Partial<Tx> = {}): Tx {
       findFirst: jest.fn().mockResolvedValue(baseInvoice),
       update: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 'inv-1', ...data })),
     },
-    payment: { aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }) },
+    payment: {
+      findMany: jest.fn().mockResolvedValue([]),
+      delete: jest.fn().mockResolvedValue({ id: 'pay-x' }),
+    },
     discountReason: { findFirst: jest.fn().mockResolvedValue({ id: 'reason-1' }) },
     ...overrides,
   };
@@ -102,13 +105,92 @@ describe('ApplyInvoiceDiscountHandler', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('rejects a discount once a payment has been recorded', async () => {
+  it('rejects a discount once a COMPLETED payment exists', async () => {
     const tx = makeTx({
-      payment: { aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 5000 } }) },
+      payment: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'p1', status: 'COMPLETED', gatewayRef: 'g1' }]),
+        delete: jest.fn(),
+      },
     });
     const handler = makeHandler(tx);
     await expect(
       handler.execute({ invoiceId: 'inv-1', appliedBy: 'u', discountAmt: 1000, discountReasonId: 'r' }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  // ─── Z3: discount while a card payment is in flight (silent-overcharge guard) ──
+
+  it('Z3: rejects a discount while a bank transfer is awaiting verification', async () => {
+    const tx = makeTx({
+      payment: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'p1', status: 'PENDING_VERIFICATION', gatewayRef: null }]),
+        delete: jest.fn(),
+      },
+    });
+    const handler = makeHandler(tx);
+    await expect(
+      handler.execute({ invoiceId: 'inv-1', appliedBy: 'u', discountAmt: 1000, discountReasonId: 'r' }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('Z3: rejects a discount when a PENDING card session has already settled (paid)', async () => {
+    const tx = makeTx({
+      payment: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'p1', status: 'PENDING', gatewayRef: 'g1' }]),
+        delete: jest.fn(),
+      },
+    });
+    const moyasar = { getPaymentStatus: jest.fn().mockResolvedValue({ status: 'paid' }) };
+    const handler = makeHandler(tx, moyasar);
+    await expect(
+      handler.execute({ invoiceId: 'inv-1', appliedBy: 'u', discountAmt: 1000, discountReasonId: 'reason-1' }),
+    ).rejects.toThrow(BadRequestException);
+    expect(tx.payment.delete).not.toHaveBeenCalled();
+  });
+
+  it('Z3: discards an abandoned (initiated) card session, then applies the discount — no permanent lock', async () => {
+    const tx = makeTx({
+      payment: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'p1', status: 'PENDING', gatewayRef: 'g1' }]),
+        delete: jest.fn().mockResolvedValue({ id: 'p1' }),
+      },
+    });
+    const moyasar = { getPaymentStatus: jest.fn().mockResolvedValue({ status: 'initiated' }) };
+    const handler = makeHandler(tx, moyasar);
+
+    await handler.execute({ invoiceId: 'inv-1', appliedBy: 'user-1', discountAmt: 2000, discountReasonId: 'reason-1' });
+
+    expect(tx.payment.delete).toHaveBeenCalledWith({ where: { id: 'p1' } });
+    const data = tx.invoice.update.mock.calls[0][0].data;
+    expect(Number(data.discountAmt)).toBe(2000);
+    expect(Number(data.total)).toBe(9200);
+  });
+
+  it('Z3: fails closed when the gateway status of a PENDING card row cannot be fetched', async () => {
+    const tx = makeTx({
+      payment: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'p1', status: 'PENDING', gatewayRef: 'g1' }]),
+        delete: jest.fn(),
+      },
+    });
+    const moyasar = { getPaymentStatus: jest.fn().mockRejectedValue(new Error('Moyasar 500')) };
+    const handler = makeHandler(tx, moyasar);
+    await expect(
+      handler.execute({ invoiceId: 'inv-1', appliedBy: 'u', discountAmt: 1000, discountReasonId: 'reason-1' }),
+    ).rejects.toThrow(BadRequestException);
+    expect(tx.payment.delete).not.toHaveBeenCalled();
+  });
+
+  it('Z3: rejects a discount when a PENDING row has no gateway session yet', async () => {
+    const tx = makeTx({
+      payment: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'p1', status: 'PENDING', gatewayRef: null }]),
+        delete: jest.fn(),
+      },
+    });
+    const handler = makeHandler(tx);
+    await expect(
+      handler.execute({ invoiceId: 'inv-1', appliedBy: 'u', discountAmt: 1000, discountReasonId: 'reason-1' }),
     ).rejects.toThrow(BadRequestException);
   });
 
