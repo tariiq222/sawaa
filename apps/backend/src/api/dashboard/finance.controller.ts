@@ -409,9 +409,11 @@ export class DashboardFinanceController {
   // ── Package purchases (reception manual sale) ───────────────────────────────
 
   @Post('package-purchases')
-  // Mirrors the manual-payment flow's CASL subject — RECEPTIONIST may sell
-  // packages; full invoice+payment ownership sits on Invoice/Payment.
-  @CheckPermissions({ action: 'manage', subject: 'Invoice' })
+  // RECEPTIONIST sells packages at the desk and is granted create:Invoice
+  // (not manage). The dashboard gates the "sell" button on the same
+  // create:Invoice, so the endpoint must match. manage:Invoice (ADMIN/OWNER)
+  // still passes since CASL `manage` is a superset of every action.
+  @CheckPermissions({ action: 'create', subject: 'Invoice' })
   @ApiOperation({ summary: 'Sell a SessionPackage to a client at the desk (manual payment)' })
   @ApiCreatedResponse({ description: 'Package purchase created, invoice issued, payment recorded, credits activated' })
   @ApiResponse({ status: 400, description: 'Invalid package state, client missing, or ONLINE_CARD method', type: ApiErrorDto })

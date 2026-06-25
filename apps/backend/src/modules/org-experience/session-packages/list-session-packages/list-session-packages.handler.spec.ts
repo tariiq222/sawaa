@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../../../../infrastructure/database';
+import { ComputePackagePriceService } from '../../compute-package-price.service';
 import { ListSessionPackagesHandler } from './list-session-packages.handler';
 
 function buildPrisma() {
@@ -11,14 +12,34 @@ function buildPrisma() {
   };
 }
 
+function buildPricing() {
+  return {
+    compute: jest.fn().mockResolvedValue({
+      subtotal: 81000,
+      discountAmount: 9000,
+      finalPrice: 72000,
+      fullValue: 90000,
+      freeValue: 18000,
+      itemUnitPrices: [],
+      lines: [],
+    }),
+  };
+}
+
 describe('ListSessionPackagesHandler', () => {
   let handler: ListSessionPackagesHandler;
   let prisma: ReturnType<typeof buildPrisma>;
+  let pricing: ReturnType<typeof buildPricing>;
 
   beforeEach(async () => {
     prisma = buildPrisma();
+    pricing = buildPricing();
     const module = await Test.createTestingModule({
-      providers: [ListSessionPackagesHandler, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        ListSessionPackagesHandler,
+        { provide: PrismaService, useValue: prisma },
+        { provide: ComputePackagePriceService, useValue: pricing },
+      ],
     }).compile();
     handler = module.get(ListSessionPackagesHandler);
   });
@@ -77,13 +98,33 @@ describe('ListSessionPackagesHandler', () => {
   });
 
   it('returns total + items and computes meta correctly', async () => {
-    prisma.sessionPackage.findMany.mockResolvedValue([{ id: 'a' }, { id: 'b' }]);
+    prisma.sessionPackage.findMany.mockResolvedValue([
+      { id: 'a', items: [] },
+      { id: 'b', items: [] },
+    ]);
     prisma.sessionPackage.count.mockResolvedValue(2);
     const res = await handler.execute({});
     expect(res.items).toHaveLength(2);
     expect(res.meta.total).toBe(2);
     expect(res.meta.totalPages).toBe(1);
     expect(res.meta.hasNextPage).toBe(false);
+  });
+
+  it('flattens the computed price onto each row so the dashboard sees real money', async () => {
+    prisma.sessionPackage.findMany.mockResolvedValue([{ id: 'a', items: [] }]);
+    prisma.sessionPackage.count.mockResolvedValue(1);
+    const res = await handler.execute({});
+    expect(pricing.compute).toHaveBeenCalledTimes(1);
+    expect(res.items[0]).toEqual(
+      expect.objectContaining({
+        id: 'a',
+        subtotal: 81000,
+        discountAmount: 9000,
+        finalPrice: 72000,
+        fullValue: 90000,
+        freeValue: 18000,
+      }),
+    );
   });
 
   it('honors a custom page + limit', async () => {

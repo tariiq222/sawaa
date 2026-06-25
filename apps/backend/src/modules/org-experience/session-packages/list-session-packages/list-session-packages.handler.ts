@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
 import { toListResponse } from '../../../../common/dto';
+import { ComputePackagePriceService } from '../../compute-package-price.service';
 import { ListSessionPackagesDto } from './list-session-packages.dto';
 
 export type ListSessionPackagesCommand = ListSessionPackagesDto;
@@ -12,11 +13,21 @@ export type ListSessionPackagesCommand = ListSessionPackagesDto;
  *   - isPublic filter (optional)
  *   - case-insensitive contains-search over nameAr / nameEn
  *
+ * Each row is decorated with the canonical computed price
+ * (subtotal / discountAmount / finalPrice / fullValue / freeValue) via the SAME
+ * ComputePackagePriceService the get/public endpoints use, so the dashboard
+ * list table and the reception sell-package dialog show the real frozen price
+ * instead of zeros. Money fields are flattened onto the row to match the
+ * dashboard `SessionPackage` type.
+ *
  * Returns the canonical `{ items, meta }` shape via toListResponse.
  */
 @Injectable()
 export class ListSessionPackagesHandler {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pricing: ComputePackagePriceService,
+  ) {}
 
   async execute(dto: ListSessionPackagesCommand) {
     const page = dto.page ?? 1;
@@ -46,6 +57,30 @@ export class ListSessionPackagesHandler {
       this.prisma.sessionPackage.count({ where }),
     ]);
 
-    return toListResponse(items, total, page, limit);
+    const priced = await Promise.all(
+      items.map(async (pkg) => {
+        const price = await this.pricing.compute({
+          items: pkg.items.map((i) => ({
+            serviceId: i.serviceId,
+            employeeId: i.employeeId,
+            durationOptionId: i.durationOptionId,
+            paidQuantity: i.paidQuantity,
+            freeQuantity: i.freeQuantity,
+            discountType: i.discountType,
+            discountValue: Number(i.discountValue),
+          })),
+        });
+        return {
+          ...pkg,
+          subtotal: price.subtotal,
+          discountAmount: price.discountAmount,
+          finalPrice: price.finalPrice,
+          fullValue: price.fullValue,
+          freeValue: price.freeValue,
+        };
+      }),
+    );
+
+    return toListResponse(priced, total, page, limit);
   }
 }
