@@ -62,6 +62,41 @@ describe('ExpireBookingHandler — group booking statuses', () => {
   });
 });
 
+describe('ExpireBookingHandler — session-package credit return', () => {
+  it('returns the credit on expiry of a credit booking', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.AWAITING_PAYMENT,
+      packageCreditId: 'credit-1',
+    });
+
+    await newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'system' });
+
+    expect((prisma as any).packageCreditUsage.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'RETURNED' }) }),
+    );
+    expect((prisma as any).packageCredit.update).toHaveBeenCalledWith({
+      where: { id: 'credit-1' },
+      data: { usedQuantity: { decrement: 1 } },
+    });
+  });
+
+  it('does NOT touch credit models for a non-credit booking', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.AWAITING_PAYMENT,
+      packageCreditId: null,
+    });
+
+    await newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'system' });
+
+    expect((prisma as any).packageCreditUsage.findFirst).not.toHaveBeenCalled();
+    expect((prisma as any).packageCredit.update).not.toHaveBeenCalled();
+  });
+});
+
 describe('ExpireBookingHandler — program enrollment capacity', () => {
   it('decrements program enrollment with the tx and programId when expiring a program booking', async () => {
     const prisma = buildPrisma();

@@ -26,6 +26,7 @@ const GROUPS: ReportNavGroup[] = [
       { href: "/reports/financial", labelKey: "reports.nav.financial" },
       { href: "/reports/bookings", labelKey: "reports.nav.bookings" },
       { href: "/reports/clients", labelKey: "reports.nav.clients" },
+      { href: "/reports/packages", labelKey: "reports.nav.packages" },
     ],
   },
   {

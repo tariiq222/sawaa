@@ -28,11 +28,11 @@ import { GetOrgSettingsHandler } from '../../modules/org-experience/org-settings
 import { UpsertOrgSettingsHandler } from '../../modules/org-experience/org-settings/upsert-org-settings.handler';
 import { GetBookingSettingsHandler } from '../../modules/bookings/get-booking-settings/get-booking-settings.handler';
 import { UpsertBookingSettingsHandler } from '../../modules/bookings/upsert-booking-settings/upsert-booking-settings.handler';
-import { CreateBundleHandler } from '../../modules/org-experience/bundles/create-bundle.handler';
-import { UpdateBundleHandler } from '../../modules/org-experience/bundles/update-bundle.handler';
-import { ListBundlesHandler } from '../../modules/org-experience/bundles/list-bundles.handler';
-import { GetBundleHandler } from '../../modules/org-experience/bundles/get-bundle.handler';
-import { ArchiveBundleHandler } from '../../modules/org-experience/bundles/archive-bundle.handler';
+import { CreateSessionPackageHandler } from '../../modules/org-experience/session-packages/create-session-package/create-session-package.handler';
+import { UpdateSessionPackageHandler } from '../../modules/org-experience/session-packages/update-session-package/update-session-package.handler';
+import { ListSessionPackagesHandler } from '../../modules/org-experience/session-packages/list-session-packages/list-session-packages.handler';
+import { GetSessionPackageHandler } from '../../modules/org-experience/session-packages/get-session-package/get-session-package.handler';
+import { ArchiveSessionPackageHandler } from '../../modules/org-experience/session-packages/archive-session-package/archive-session-package.handler';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
@@ -64,11 +64,11 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
   const mockUpsertBookingSettings = { execute: jest.fn() };
   const mockGetDurationOptions = { execute: jest.fn() };
   const mockSetDurationOptions = { execute: jest.fn() };
-  const mockCreateBundle = { execute: jest.fn() };
-  const mockUpdateBundle = { execute: jest.fn() };
-  const mockListBundles = { execute: jest.fn() };
-  const mockGetBundle = { execute: jest.fn() };
-  const mockArchiveBundle = { execute: jest.fn() };
+  const mockCreateSessionPackage = { execute: jest.fn() };
+  const mockUpdateSessionPackage = { execute: jest.fn() };
+  const mockListSessionPackages = { execute: jest.fn() };
+  const mockGetSessionPackage = { execute: jest.fn() };
+  const mockArchiveSessionPackage = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -100,11 +100,11 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
         { provide: UpsertBookingSettingsHandler, useValue: mockUpsertBookingSettings },
         { provide: GetDurationOptionsHandler, useValue: mockGetDurationOptions },
         { provide: SetDurationOptionsHandler, useValue: mockSetDurationOptions },
-        { provide: CreateBundleHandler, useValue: mockCreateBundle },
-        { provide: UpdateBundleHandler, useValue: mockUpdateBundle },
-        { provide: ListBundlesHandler, useValue: mockListBundles },
-        { provide: GetBundleHandler, useValue: mockGetBundle },
-        { provide: ArchiveBundleHandler, useValue: mockArchiveBundle },
+        { provide: CreateSessionPackageHandler, useValue: mockCreateSessionPackage },
+        { provide: UpdateSessionPackageHandler, useValue: mockUpdateSessionPackage },
+        { provide: ListSessionPackagesHandler, useValue: mockListSessionPackages },
+        { provide: GetSessionPackageHandler, useValue: mockGetSessionPackage },
+        { provide: ArchiveSessionPackageHandler, useValue: mockArchiveSessionPackage },
       ],
     })
       .overrideGuard(JwtGuard)
@@ -438,6 +438,168 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
     it('returns 400 for invalid UUID', async () => {
       return request(app.getHttpServer())
         .get('/dashboard/organization/intake-forms/responses/not-a-uuid')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(400);
+    });
+  });
+
+  // ── Session Packages (Phase 1B) ─────────────────────────────────────────
+
+  describe('POST /dashboard/organization/packages', () => {
+    const validPayload = () => ({
+      nameAr: 'باقة العائلة',
+      discountType: 'PERCENTAGE',
+      discountValue: 10,
+      items: [
+        {
+          serviceId: uuid(1),
+          employeeId: uuid(2),
+          durationOptionId: uuid(3),
+          paidQuantity: 4,
+          freeQuantity: 1,
+        },
+      ],
+    });
+
+    it('returns 201 on a valid package creation', async () => {
+      mockCreateSessionPackage.execute.mockResolvedValue({ id: uuid(1), nameAr: 'باقة العائلة' });
+
+      const res = await request(app.getHttpServer())
+        .post('/dashboard/organization/packages')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send(validPayload())
+        .expect(201);
+
+      expect(res.body.id).toBe(uuid(1));
+      expect(mockCreateSessionPackage.execute).toHaveBeenCalledWith(validPayload());
+    });
+
+    it('returns 400 for missing required fields', async () => {
+      return request(app.getHttpServer())
+        .post('/dashboard/organization/packages')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ nameAr: 'باقة العائلة' })
+        .expect(400);
+    });
+
+    it('returns 400 for an empty items array', async () => {
+      return request(app.getHttpServer())
+        .post('/dashboard/organization/packages')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ ...validPayload(), items: [] })
+        .expect(400);
+    });
+
+    it('returns 400 for an unknown discountType', async () => {
+      return request(app.getHttpServer())
+        .post('/dashboard/organization/packages')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ ...validPayload(), discountType: 'WHATEVER' })
+        .expect(400);
+    });
+
+    it('returns 400 for unknown top-level fields', async () => {
+      return request(app.getHttpServer())
+        .post('/dashboard/organization/packages')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ ...validPayload(), extra: 'bad' })
+        .expect(400);
+    });
+  });
+
+  describe('GET /dashboard/organization/packages', () => {
+    it('returns 200 with the list payload', async () => {
+      mockListSessionPackages.execute.mockResolvedValue({
+        items: [{ id: uuid(1), nameAr: 'باقة العائلة' }],
+        meta: { total: 1, page: 1, perPage: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
+      });
+
+      const res = await request(app.getHttpServer())
+        .get('/dashboard/organization/packages')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+
+      expect(res.body.items).toHaveLength(1);
+    });
+
+    it('forwards query string filters to the handler', async () => {
+      mockListSessionPackages.execute.mockResolvedValue({ items: [], meta: { total: 0, page: 1, perPage: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false } });
+
+      await request(app.getHttpServer())
+        .get('/dashboard/organization/packages?isActive=true&search=family')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+
+      expect(mockListSessionPackages.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ isActive: true, search: 'family' }),
+      );
+    });
+  });
+
+  describe('GET /dashboard/organization/packages/:packageId', () => {
+    it('returns 200 with the package + computed price', async () => {
+      mockGetSessionPackage.execute.mockResolvedValue({
+        id: uuid(1),
+        nameAr: 'باقة العائلة',
+        price: { subtotal: 40000, discountAmount: 4000, finalPrice: 36000, itemUnitPrices: [] },
+      });
+
+      const res = await request(app.getHttpServer())
+        .get(`/dashboard/organization/packages/${uuid(1)}`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+
+      expect(res.body.id).toBe(uuid(1));
+      expect(res.body.price.finalPrice).toBe(36000);
+      expect(mockGetSessionPackage.execute).toHaveBeenCalledWith({ packageId: uuid(1) });
+    });
+
+    it('returns 400 for an invalid UUID', async () => {
+      return request(app.getHttpServer())
+        .get('/dashboard/organization/packages/not-a-uuid')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(400);
+    });
+  });
+
+  describe('PATCH /dashboard/organization/packages/:packageId', () => {
+    it('returns 200 on a valid update', async () => {
+      mockUpdateSessionPackage.execute.mockResolvedValue({ id: uuid(1), nameAr: 'باقة محدّثة' });
+
+      const res = await request(app.getHttpServer())
+        .patch(`/dashboard/organization/packages/${uuid(1)}`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ nameAr: 'باقة محدّثة' })
+        .expect(200);
+
+      expect(res.body.nameAr).toBe('باقة محدّثة');
+      expect(mockUpdateSessionPackage.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ packageId: uuid(1), nameAr: 'باقة محدّثة' }),
+      );
+    });
+
+    it('returns 400 for an invalid UUID', async () => {
+      return request(app.getHttpServer())
+        .patch('/dashboard/organization/packages/not-a-uuid')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ nameAr: 'x' })
+        .expect(400);
+    });
+  });
+
+  describe('DELETE /dashboard/organization/packages/:packageId', () => {
+    it('returns 204 on archive', async () => {
+      mockArchiveSessionPackage.execute.mockResolvedValue({ id: uuid(1) });
+
+      return request(app.getHttpServer())
+        .delete(`/dashboard/organization/packages/${uuid(1)}`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(204);
+    });
+
+    it('returns 400 for an invalid UUID', async () => {
+      return request(app.getHttpServer())
+        .delete('/dashboard/organization/packages/not-a-uuid')
         .set('Authorization', 'Bearer fake-jwt')
         .expect(400);
     });

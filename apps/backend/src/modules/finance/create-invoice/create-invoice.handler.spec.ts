@@ -42,10 +42,10 @@ describe('CreateInvoiceHandler', () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  it('creates invoice with bookingId and null bundlePurchaseId', async () => {
+  it('creates invoice with bookingId and null packagePurchaseId', async () => {
     const result = await handler.execute({
       bookingId: 'book-1',
-      bundlePurchaseId: null,
+      packagePurchaseId: null,
       branchId: 'branch-1',
       clientId: 'client-1',
       employeeId: 'emp-1',
@@ -56,18 +56,18 @@ describe('CreateInvoiceHandler', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           bookingId: 'book-1',
-          bundlePurchaseId: null,
+          packagePurchaseId: null,
         }),
       }),
     );
     expect(result.bookingId).toBe('book-1');
-    expect(result.bundlePurchaseId).toBeNull();
+    expect(result.packagePurchaseId).toBeNull();
   });
 
-  it('creates invoice with bundlePurchaseId and null bookingId', async () => {
+  it('creates invoice with packagePurchaseId and null bookingId', async () => {
     const result = await handler.execute({
       bookingId: null,
-      bundlePurchaseId: 'bp-1',
+      packagePurchaseId: 'bp-1',
       branchId: 'branch-1',
       clientId: 'client-1',
       employeeId: 'emp-1',
@@ -78,38 +78,38 @@ describe('CreateInvoiceHandler', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           bookingId: null,
-          bundlePurchaseId: 'bp-1',
+          packagePurchaseId: 'bp-1',
         }),
       }),
     );
-    expect(result.bundlePurchaseId).toBe('bp-1');
+    expect(result.packagePurchaseId).toBe('bp-1');
     expect(result.bookingId).toBeNull();
   });
 
-  it('rejects invoice with both bookingId and bundlePurchaseId null', async () => {
+  it('rejects invoice with both bookingId and packagePurchaseId null', async () => {
     await expect(
       handler.execute({
         bookingId: null,
-        bundlePurchaseId: null,
+        packagePurchaseId: null,
         branchId: 'branch-1',
         clientId: 'client-1',
         employeeId: 'emp-1',
         subtotal: 200,
       }),
-    ).rejects.toThrow('Exactly one of bookingId or bundlePurchaseId must be provided');
+    ).rejects.toThrow('Exactly one of bookingId or packagePurchaseId must be provided');
   });
 
-  it('rejects invoice with both bookingId and bundlePurchaseId non-null', async () => {
+  it('rejects invoice with both bookingId and packagePurchaseId non-null', async () => {
     await expect(
       handler.execute({
         bookingId: 'book-1',
-        bundlePurchaseId: 'bp-1',
+        packagePurchaseId: 'bp-1',
         branchId: 'branch-1',
         clientId: 'client-1',
         employeeId: 'emp-1',
         subtotal: 200,
       }),
-    ).rejects.toThrow('Exactly one of bookingId or bundlePurchaseId must be provided');
+    ).rejects.toThrow('Exactly one of bookingId or packagePurchaseId must be provided');
   });
 
   it('uses provided subtotal as snapshot price without re-fetching service price', async () => {
@@ -125,10 +125,10 @@ describe('CreateInvoiceHandler', () => {
     expect(Number(result.subtotal)).toBe(15000);
   });
 
-  it('computes VAT correctly on bundle purchase invoice', async () => {
+  it('computes VAT correctly on package purchase invoice', async () => {
     const result = await handler.execute({
       bookingId: null,
-      bundlePurchaseId: 'bp-1',
+      packagePurchaseId: 'bp-1',
       branchId: 'branch-1',
       clientId: 'client-1',
       employeeId: 'emp-1',
@@ -175,13 +175,13 @@ describe('CreateInvoiceHandler', () => {
     ).rejects.toThrow(ConflictException);
   });
 
-  it('throws ConflictException when invoice already exists for bundle purchase', async () => {
+  it('throws ConflictException when invoice already exists for package purchase', async () => {
     prisma.invoice.findUnique = jest.fn().mockResolvedValue({ id: 'existing-inv' });
 
     await expect(
       handler.execute({
         bookingId: null,
-        bundlePurchaseId: 'bp-1',
+        packagePurchaseId: 'bp-1',
         branchId: 'branch-1',
         clientId: 'client-1',
         employeeId: 'emp-1',

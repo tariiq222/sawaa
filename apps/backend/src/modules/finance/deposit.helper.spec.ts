@@ -22,7 +22,7 @@ const buildClient = (
 });
 
 describe('resolveInvoiceDeposit', () => {
-  it('returns disabled for a null bookingId (bundle purchase)', async () => {
+  it('returns disabled for a null bookingId (package purchase)', async () => {
     const client = buildClient(null, null);
     const result = await resolveInvoiceDeposit(client, null);
     expect(result).toEqual({ enabled: false, depositAmount: null });

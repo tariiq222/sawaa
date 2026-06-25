@@ -28,7 +28,7 @@ export class GetBookingInvoiceHandler {
       clientId: invoice.clientId,
       employeeId: invoice.employeeId,
       bookingId: invoice.bookingId,
-      bundlePurchaseId: invoice.bundlePurchaseId,
+      packagePurchaseId: invoice.packagePurchaseId,
       subtotal: Number(invoice.subtotal),
       discountAmt: Number(invoice.discountAmt),
       vatRate: Number(invoice.vatRate),

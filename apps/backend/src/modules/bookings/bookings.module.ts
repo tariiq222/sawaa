@@ -43,7 +43,6 @@ import { GetBookingStatusHandler } from './public/get-booking-status.handler';
 import { CreatePublicBookingHandler } from './public/create-public-booking.handler';
 import { CreateEmployeeBookingHandler } from './create-employee-booking/create-employee-booking.handler';
 import { ValidateCouponService } from './coupons/validate-coupon.service';
-import { CreateBundleBookingHandler } from './create-bundle-booking/create-bundle-booking.handler';
 import { ProgramCapacityService } from './program/program-capacity.service';
 import { EnrollInProgramHandler } from './enroll-in-program/enroll-in-program.handler';
 import { ListProgramsHandler } from './list-programs/list-programs.handler';
@@ -54,6 +53,9 @@ import { ScheduleProgramHandler } from './schedule-program/schedule-program.hand
 import { CancelProgramHandler } from './cancel-program/cancel-program.handler';
 import { ListPublicProgramsHandler } from './public/list-public-programs.handler';
 import { GetPublicProgramHandler } from './public/get-public-program.handler';
+import { BookFromCreditHandler } from './book-from-credit/book-from-credit.handler';
+import { GetMatchingCreditsHandler } from './get-matching-credits/get-matching-credits.handler';
+import { TransferCreditHandler } from './transfer-credit/transfer-credit.handler';
 
 const handlers = [
   CreateBookingHandler,
@@ -89,7 +91,6 @@ const handlers = [
   GetBookingStatusHandler,
   CreatePublicBookingHandler,
   ValidateCouponService,
-  CreateBundleBookingHandler,
   ProgramCapacityService,
   EnrollInProgramHandler,
   ListProgramsHandler,
@@ -100,6 +101,9 @@ const handlers = [
   CancelProgramHandler,
   ListPublicProgramsHandler,
   GetPublicProgramHandler,
+  BookFromCreditHandler,
+  GetMatchingCreditsHandler,
+  TransferCreditHandler,
 ];
 
 @Module({

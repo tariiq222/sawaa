@@ -63,7 +63,7 @@ export interface BookingService {
 export interface BookingPayment {
   id: string
   amount: number
-  method: "moyasar" | "bank_transfer" | "cash"
+  method: "moyasar" | "bank_transfer" | "cash" | "mada" | "tabby"
   status: "pending" | "awaiting" | "paid" | "failed" | "refunded" | "rejected"
   totalAmount: number
 }

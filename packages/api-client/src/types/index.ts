@@ -19,7 +19,6 @@ export type {
   BookingListQuery,
   BookingListResponse,
   CreateBookingPayload,
-  CreateBundleBookingPayload,
 } from './booking'
 export type {
   ClientListItem,
@@ -140,3 +139,21 @@ export type {
   ContactMessageStatus,
   CreateContactMessagePayload,
 } from './public-directory'
+export type {
+  SessionPackage,
+  SessionPackageItem,
+  SessionPackageListQuery,
+  SessionPackageListResponse,
+  SessionPackageItemInput,
+  SessionPackageDetail,
+  CreateSessionPackagePayload,
+  UpdateSessionPackagePayload,
+  PackagePriceBreakdown,
+  DiscountType,
+  PackagePurchaseStatus,
+  PackageCreditUsageStatus,
+  PackagePurchase,
+  PackageCredit,
+  PackageCreditUsage,
+  ArchivedSessionPackage,
+} from './session-package'

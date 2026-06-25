@@ -38,17 +38,19 @@ import { GetOrgSettingsHandler } from './org-settings/get-org-settings.handler';
 import { UpsertOrgSettingsHandler } from './org-settings/upsert-org-settings.handler';
 import { GetBookingSettingsHandler } from '../bookings/get-booking-settings/get-booking-settings.handler';
 import { UpsertBookingSettingsHandler } from '../bookings/upsert-booking-settings/upsert-booking-settings.handler';
-import { BundlePriceService } from './bundles/bundle-price.service';
-import { CreateBundleHandler } from './bundles/create-bundle.handler';
-import { UpdateBundleHandler } from './bundles/update-bundle.handler';
-import { ListBundlesHandler } from './bundles/list-bundles.handler';
-import { GetBundleHandler } from './bundles/get-bundle.handler';
-import { ArchiveBundleHandler } from './bundles/archive-bundle.handler';
 import { DashboardDiscountReasonsController } from '../../api/dashboard/discount-reasons.controller';
 import { ListDiscountReasonsHandler } from './discount-reasons/list-discount-reasons.handler';
 import { CreateDiscountReasonHandler } from './discount-reasons/create-discount-reason.handler';
 import { UpdateDiscountReasonHandler } from './discount-reasons/update-discount-reason.handler';
 import { DeleteDiscountReasonHandler } from './discount-reasons/delete-discount-reason.handler';
+import { ComputePackagePriceService } from './compute-package-price.service';
+import { CreateSessionPackageHandler } from './session-packages/create-session-package/create-session-package.handler';
+import { UpdateSessionPackageHandler } from './session-packages/update-session-package/update-session-package.handler';
+import { ListSessionPackagesHandler } from './session-packages/list-session-packages/list-session-packages.handler';
+import { GetSessionPackageHandler } from './session-packages/get-session-package/get-session-package.handler';
+import { ArchiveSessionPackageHandler } from './session-packages/archive-session-package/archive-session-package.handler';
+import { ListPublicPackagesHandler } from './session-packages/list-public-packages/list-public-packages.handler';
+import { GetPublicPackageHandler } from './session-packages/get-public-package/get-public-package.handler';
 
 const serviceHandlers = [
   CreateServiceHandler, UpdateServiceHandler, ListServicesHandler, GetServiceHandler, ArchiveServiceHandler,
@@ -63,14 +65,19 @@ const serviceHandlers = [
   SetEmployeePricingModeHandler,
 ];
 
-const bundleHandlers = [
-  CreateBundleHandler, UpdateBundleHandler, ListBundlesHandler, GetBundleHandler, ArchiveBundleHandler,
-  BundlePriceService,
-];
-
 const discountReasonHandlers = [
   ListDiscountReasonsHandler, CreateDiscountReasonHandler,
   UpdateDiscountReasonHandler, DeleteDiscountReasonHandler,
+];
+
+const sessionPackageHandlers = [
+  CreateSessionPackageHandler,
+  UpdateSessionPackageHandler,
+  ListSessionPackagesHandler,
+  GetSessionPackageHandler,
+  ArchiveSessionPackageHandler,
+  ListPublicPackagesHandler,
+  GetPublicPackageHandler,
 ];
 
 @Module({
@@ -78,8 +85,9 @@ const discountReasonHandlers = [
   controllers: [DashboardOrganizationSettingsController, DashboardDiscountReasonsController],
   providers: [
     ...serviceHandlers,
-    ...bundleHandlers,
     ...discountReasonHandlers,
+    ...sessionPackageHandlers,
+    ComputePackagePriceService,
     GetPublicBrandingHandler,
     CreateIntakeFormHandler, GetIntakeFormHandler, ListIntakeFormsHandler, DeleteIntakeFormHandler,
     UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,
@@ -90,8 +98,9 @@ const discountReasonHandlers = [
   ],
   exports: [
     ...serviceHandlers,
-    ...bundleHandlers,
     ...discountReasonHandlers,
+    ...sessionPackageHandlers,
+    ComputePackagePriceService,
     GetPublicBrandingHandler,
     CreateIntakeFormHandler, GetIntakeFormHandler, ListIntakeFormsHandler, DeleteIntakeFormHandler,
     UpdateIntakeFormHandler, SetIntakeFieldsHandler, GetIntakeFormResponsesHandler,

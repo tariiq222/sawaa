@@ -7,7 +7,7 @@ export interface InvoiceDetail {
   clientId: string;
   employeeId: string;
   bookingId: string;
-  bundlePurchaseId: string | null;
+  packagePurchaseId: string | null;
   subtotal: number;
   discountAmt: number;
   vatRate: number;

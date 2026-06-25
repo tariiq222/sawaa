@@ -159,12 +159,12 @@ model EmployeeBranch {
 }
 
 model EmployeeService {
-  id            String   @id @default(uuid())
-  employeeId    String
-  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  serviceId     String
-  isActive      Boolean  @default(true)
-  bufferMinutes Int      @default(0)
+  id                    String         @id @default(uuid())
+  employeeId            String
+  employee              Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  serviceId             String
+  isActive              Boolean        @default(true)
+  bufferMinutes         Int            @default(0)
   // Delivery types this practitioner does NOT offer for this service, even
   // though the service supports them. Empty = offers every type the service
   // has an active ServiceBookingConfig for (default; preserves prior behavior).
@@ -173,7 +173,7 @@ model EmployeeService {
   // (employeeServiceId = link.id) are offered for booking. Delivery types
   // with no owned options are hidden entirely. Default false = inherit
   // service-level options.
-  useCustomPricing Boolean @default(false)
+  useCustomPricing      Boolean        @default(false)
 
   // NOTE: (employeeId, serviceId) unique constraint already exists — no migration needed.
   @@unique([employeeId, serviceId])

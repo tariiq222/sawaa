@@ -17,6 +17,7 @@ import { DataRetentionCron } from './cron-tasks/data-retention.cron';
 import { LogActivityHandler } from './log-activity/log-activity.handler';
 import { ListActivityHandler } from './log-activity/list-activity.handler';
 import { GenerateReportHandler } from './generate-report/generate-report.handler';
+import { PackageReportsHandler } from './generate-report/package-reports.handler';
 import { HealthCheckHandler } from './health-check/health-check.handler';
 import { RedisService } from '../../infrastructure/cache/redis.service';
 import { DbRowCountCron } from './cron-tasks/db-row-count.cron';
@@ -32,6 +33,7 @@ const handlers = [
   LogActivityHandler,
   ListActivityHandler,
   GenerateReportHandler,
+  PackageReportsHandler,
   HealthCheckHandler,
 ];
 

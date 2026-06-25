@@ -16,7 +16,7 @@ interface BookingConfirmedPayload {
  * Fallback subscriber for `bookings.booking.confirmed`.
  *
  * The primary creation path is inline inside the booking handlers
- * (`create-booking`, `create-bundle-booking`, `complete-booking` for payAtClinic).
+  * (`create-booking`, `complete-booking` for payAtClinic).
  * This handler exists only to cover edge paths that emit
  * `bookings.booking.confirmed` without a pre-created invoice
  * (e.g., legacy flows or future external integrations). When the invoice

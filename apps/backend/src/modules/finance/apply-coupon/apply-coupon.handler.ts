@@ -65,11 +65,11 @@ export class ApplyCouponHandler {
     // path (validate-coupon.service.ts) already does this check; apply-coupon
     // must agree or the dashboard's per-service targeting is bypassed.
     if (coupon.serviceIds.length > 0) {
-      if (invoice.bundlePurchaseId) {
-        // Bundle-backed invoice: no single serviceId (a bundle spans multiple
+      if (invoice.packagePurchaseId) {
+        // Package-backed invoice: no single serviceId (a package spans multiple
         // services). Refuse service-restricted coupons rather than guessing.
         throw new BadRequestException(
-          `Coupon ${cmd.code} is restricted to specific services and cannot be applied to a bundle purchase`,
+          `Coupon ${cmd.code} is restricted to specific services and cannot be applied to a package purchase`,
         );
       }
       if (!invoice.bookingId) {

@@ -38,9 +38,6 @@ export class ArchiveServiceHandler {
 				await tx.employeeService.deleteMany({
 					where: { serviceId: dto.serviceId },
 				});
-				await tx.serviceBundleItem.deleteMany({
-					where: { serviceId: dto.serviceId },
-				});
 				return tx.service.delete({
 					where: { id: dto.serviceId },
 				});

@@ -113,7 +113,7 @@ describe('DepositPaidEventHandler', () => {
     expect(prisma.booking.updateMany).not.toHaveBeenCalled();
   });
 
-  it('skips bundle-purchase events with no bookingId', async () => {
+  it('skips package-purchase events with no bookingId', async () => {
     const { prisma, getSubscriber } = buildHandler();
 
     await getSubscriber()(makeEnvelope({ bookingId: null }));

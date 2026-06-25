@@ -7,7 +7,7 @@ const sample: InvoiceDetail = {
   clientId: 'c1',
   employeeId: 'e1',
   bookingId: 'bk1',
-  bundlePurchaseId: null,
+  packagePurchaseId: null,
   subtotal: 100,
   discountAmt: 10,
   vatRate: 0.15,

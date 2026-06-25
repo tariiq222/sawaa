@@ -70,11 +70,11 @@ describe('RefundCompletedEvent', () => {
     );
   });
 
-  it('preserves a null bookingId (bundle-purchase refunds) without coercion to undefined', () => {
+  it('preserves a null bookingId (package-purchase refunds) without coercion to undefined', () => {
     // The booking-cancellation cascade is a no-op when bookingId is null, but
     // the field MUST round-trip as `null` so consumers can branch on it
     // (and not on a `bookings/refund-completed-handler` accidentally treating
-    // a bundle refund as a booking refund).
+    // a package refund as a booking refund).
     const event = new RefundCompletedEvent({ ...PAYLOAD, bookingId: null });
     const { payload } = event.toEnvelope();
     expect(payload.bookingId).toBeNull();

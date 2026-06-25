@@ -58,18 +58,18 @@ describe('PaymentCompletedEvent', () => {
     });
   });
 
-  it('toEnvelope().payload passes through every field, including the optional bundlePurchaseId', () => {
+  it('toEnvelope().payload passes through every field, including the optional packagePurchaseId', () => {
     const event = new PaymentCompletedEvent({
       ...PAYLOAD,
       bookingId: null,
-      bundlePurchaseId: 'bp-1',
+      packagePurchaseId: 'bp-1',
     });
     expect(event.toEnvelope().payload).toEqual(
       expect.objectContaining({
         paymentId: 'pay-1',
         invoiceId: 'inv-1',
         bookingId: null,
-        bundlePurchaseId: 'bp-1',
+        packagePurchaseId: 'bp-1',
         amount: 15000,
         currency: 'SAR',
         organizationId: 'org-1',
@@ -77,7 +77,7 @@ describe('PaymentCompletedEvent', () => {
     );
   });
 
-  it('preserves a null bookingId (bundle-purchase invoices) without coercion to undefined', () => {
+  it('preserves a null bookingId (package-purchase invoices) without coercion to undefined', () => {
     const event = new PaymentCompletedEvent({
       ...PAYLOAD,
       bookingId: null,

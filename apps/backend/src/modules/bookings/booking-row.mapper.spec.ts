@@ -564,5 +564,7 @@ describe('mapPaymentMethodForUi', () => {
   it('maps BANK_TRANSFER → bank_transfer', () => expect(mapPaymentMethodForUi('BANK_TRANSFER')).toBe('bank_transfer'));
   it('maps CASH → cash', () => expect(mapPaymentMethodForUi('CASH')).toBe('cash'));
   it('maps COUPON → cash (fallback display)', () => expect(mapPaymentMethodForUi('COUPON')).toBe('cash'));
+  it('maps MADA → mada', () => expect(mapPaymentMethodForUi('MADA')).toBe('mada'));
+  it('maps TABBY → tabby', () => expect(mapPaymentMethodForUi('TABBY')).toBe('tabby'));
   it('maps unknown → cash (fallback)', () => expect(mapPaymentMethodForUi('UNKNOWN')).toBe('cash'));
 });

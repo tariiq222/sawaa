@@ -39,8 +39,7 @@ const DELETE_BOOKING_MESSAGES = {
  *
  * Cleanup runs in one transaction. Booking has no FK to Invoice/StatusLog/
  * Rating/IntakeResponse (cross-BC plain-string refs), so they are removed
- * explicitly; ProgramEnrollment cascades via its FK. BundleUsage.bookingId is
- * nulled to preserve the bundle consumption record.
+ * explicitly; ProgramEnrollment cascades via its FK.
  */
 @Injectable()
 export class DeleteBookingHandler {
@@ -107,10 +106,6 @@ export class DeleteBookingHandler {
 			});
 			await tx.rating.deleteMany({ where: { bookingId: booking.id } });
 			await tx.intakeResponse.deleteMany({ where: { bookingId: booking.id } });
-			await tx.bundleUsage.updateMany({
-				where: { bookingId: booking.id },
-				data: { bookingId: null },
-			});
 
 			// Immutable audit row written inside the same transaction, BEFORE the
 			// booking row is removed, so a hard-delete never erases the record of who

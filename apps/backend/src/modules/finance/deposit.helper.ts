@@ -91,7 +91,7 @@ function resolveDepositFromRow(row: RawDepositRow | null): DepositConfig {
  *   3. Otherwise → no deposit.
  *
  * Returns `{ enabled: false, depositAmount: null }` for:
- *   - bundle-purchase invoices (no bookingId),
+ *   - package-purchase invoices (no bookingId),
  *   - bookings whose service/program has no deposit configured,
  *   - a depositEnabled row with a missing / non-positive depositAmount
  *     (treated as "no deposit" — never block a payment on a misconfigured row),

@@ -34,12 +34,17 @@ import { NoShowBookingHandler } from '../../modules/bookings/no-show-booking/no-
 import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
 import { CheckAvailabilityDto } from '../../modules/bookings/check-availability/check-availability.dto';
 import { ListBookingStatusLogHandler } from '../../modules/bookings/list-booking-status-log/list-booking-status-log.handler';
-import { CreateBundleBookingHandler } from '../../modules/bookings/create-bundle-booking/create-bundle-booking.handler';
-import { CreateBundleBookingDto } from '../../modules/bookings/create-bundle-booking/create-bundle-booking.dto';
 import { ApproveCancelBookingHandler } from '../../modules/bookings/approve-cancel-booking/approve-cancel-booking.handler';
 import { ApproveCancelBookingDto } from '../../modules/bookings/approve-cancel-booking/approve-cancel-booking.dto';
 import { RejectCancelBookingHandler } from '../../modules/bookings/reject-cancel-booking/reject-cancel-booking.handler';
 import { RejectCancelBookingDto } from '../../modules/bookings/reject-cancel-booking/reject-cancel-booking.dto';
+import { BookFromCreditHandler } from '../../modules/bookings/book-from-credit/book-from-credit.handler';
+import { BookFromCreditDto } from '../../modules/bookings/book-from-credit/book-from-credit.dto';
+import { GetMatchingCreditsHandler } from '../../modules/bookings/get-matching-credits/get-matching-credits.handler';
+import { GetMatchingCreditsDto } from '../../modules/bookings/get-matching-credits/get-matching-credits.dto';
+import { TransferCreditHandler } from '../../modules/bookings/transfer-credit/transfer-credit.handler';
+import { TransferCreditDto } from '../../modules/bookings/transfer-credit/transfer-credit.dto';
+import { ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('Dashboard / Bookings')
 @ApiBearerAuth()
@@ -62,9 +67,11 @@ export class DashboardBookingsController {
     private readonly noShowHandler: NoShowBookingHandler,
     private readonly availabilityHandler: CheckAvailabilityHandler,
     private readonly statusLogHandler: ListBookingStatusLogHandler,
-    private readonly createBundleHandler: CreateBundleBookingHandler,
     private readonly approveCancelHandler: ApproveCancelBookingHandler,
     private readonly rejectCancelHandler: RejectCancelBookingHandler,
+    private readonly bookFromCreditHandler: BookFromCreditHandler,
+    private readonly matchingCreditsHandler: GetMatchingCreditsHandler,
+    private readonly transferCreditHandler: TransferCreditHandler,
   ) {}
 
   @Post()
@@ -91,15 +98,6 @@ export class DashboardBookingsController {
       scheduledAt: new Date(scheduledAt),
       expiresAt: expiresAt ? new Date(expiresAt) : undefined,
     });
-  }
-
-  @Post('bundle')
-  @CheckPermissions({ action: 'manage', subject: 'Booking' })
-  @ApiOperation({ summary: 'Create a booking for a service bundle' })
-  @ApiCreatedResponse({ description: 'Bundle booking created — multiple consecutive bookings' })
-  createBundleBooking(@Body() body: CreateBundleBookingDto) {
-    const { scheduledAt, ...rest } = body;
-    return this.createBundleHandler.execute({ ...rest, scheduledAt: new Date(scheduledAt) });
   }
 
   @Get()
@@ -170,6 +168,91 @@ export class DashboardBookingsController {
     return this.availabilityHandler.execute({
       ...rest,
       date: new Date(date),
+    });
+  }
+
+  @Post('from-credit')
+  @CheckPermissions({ action: 'create', subject: 'Booking' })
+  @ApiOperation({ summary: 'Book an appointment by consuming session-package credit' })
+  @ApiCreatedResponse({
+    description: 'Zero-value booking created from a package credit',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        status: { type: 'string', example: 'CONFIRMED' },
+        scheduledAt: { type: 'string', format: 'date-time' },
+        packageCreditId: { type: 'string', format: 'uuid' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Slot unavailable, missing credit selector, or past date', type: ApiErrorDto })
+  @ApiResponse({ status: 404, description: 'No usable package credit found', type: ApiErrorDto })
+  @ApiResponse({ status: 409, description: 'No remaining credit or slot conflict (concurrent over-draw rejected)', type: ApiErrorDto })
+  bookFromCredit(@UserId() userId: string, @Body() body: BookFromCreditDto) {
+    const { scheduledAt, ...rest } = body;
+    return this.bookFromCreditHandler.execute({
+      ...rest,
+      scheduledAt: new Date(scheduledAt),
+      userId,
+    });
+  }
+
+  @Get('matching-credits')
+  @CheckPermissions({ action: 'read', subject: 'Booking' })
+  @ApiOperation({ summary: 'List a client\'s usable session-package credits matching a service/employee/duration' })
+  @ApiQuery({ name: 'clientId', description: 'Client ID', example: '00000000-0000-4000-a000-000000000001' })
+  @ApiQuery({ name: 'serviceId', description: 'Service ID', example: '00000000-0000-4000-a000-000000000004' })
+  @ApiQuery({ name: 'employeeId', description: 'Employee ID', example: '00000000-0000-4000-a000-000000000003' })
+  @ApiQuery({ name: 'durationOptionId', description: 'Duration option ID', example: '00000000-0000-4000-a000-000000000005' })
+  @ApiOkResponse({
+    description: 'Matching ACTIVE credits with remaining capacity (FIFO order)',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          creditId: { type: 'string', format: 'uuid' },
+          purchaseId: { type: 'string', format: 'uuid' },
+          totalQuantity: { type: 'number' },
+          usedQuantity: { type: 'number' },
+          remaining: { type: 'number' },
+        },
+      },
+    },
+  })
+  getMatchingCredits(@Query() q: GetMatchingCreditsDto) {
+    return this.matchingCreditsHandler.execute(q);
+  }
+
+  @Post('credits/:creditId/transfer')
+  // Credit management is part of booking management — same subject as creating
+  // a booking from a credit, but transfer is a stronger mutation so it requires
+  // `manage:Booking` (OWNER/ADMIN/MANAGER), not plain `create`.
+  @CheckPermissions({ action: 'manage', subject: 'Booking' })
+  @ApiOperation({ summary: 'Transfer a session-package credit to another practitioner' })
+  @ApiParam({ name: 'creditId', description: 'Package credit ID', example: '00000000-0000-4000-a000-000000000006' })
+  @ApiOkResponse({
+    description: 'Credit re-pointed to the target employee (price snapshot unchanged)',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        employeeId: { type: 'string', format: 'uuid' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Target employee does not provide the service/duration, is inactive, or is the current owner', type: ApiErrorDto })
+  @ApiResponse({ status: 404, description: 'Credit or target employee not found', type: ApiErrorDto })
+  transferCredit(
+    @UserId() userId: string,
+    @Param('creditId', ParseUUIDPipe) creditId: string,
+    @Body() body: TransferCreditDto,
+  ) {
+    return this.transferCreditHandler.execute({
+      creditId,
+      toEmployeeId: body.toEmployeeId,
+      userId,
     });
   }
 

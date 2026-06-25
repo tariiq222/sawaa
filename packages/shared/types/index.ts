@@ -10,3 +10,4 @@ export type * from "./notification";
 export * from "./branding";
 export * from "./public-branding";
 export type * from "./guest";
+export type * from "./session-package";

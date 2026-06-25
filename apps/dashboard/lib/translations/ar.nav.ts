@@ -40,7 +40,7 @@ export const arNav: Record<string, string> = {
   "nav.ratings": "التقييمات",
   "nav.activityLog": "سجل النشاط",
   "nav.intakeForms": "نماذج المعلومات",
-  "nav.bundles": "الباقات",
+  "nav.packages": "باقات الجلسات",
   "nav.programs": "البرامج الجماعية",
   "nav.create": "إنشاء",
   "nav.edit": "تعديل",

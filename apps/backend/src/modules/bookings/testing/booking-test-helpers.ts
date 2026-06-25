@@ -80,6 +80,21 @@ const buildPrismaRaw = () => ({
     findUnique: jest.fn().mockResolvedValue(null),
     create: jest.fn().mockResolvedValue({ id: 'inv-1' }),
   },
+  // Session-package credit return (cancel / no-show / expire). Defaults model
+  // a booking that consumed a credit from an ACTIVE purchase; specs override
+  // packageCreditUsage.findFirst to null for non-credit bookings.
+  packageCreditUsage: {
+    findFirst: jest.fn().mockResolvedValue({ id: 'usage-1', creditId: 'credit-1' }),
+    update: jest.fn().mockResolvedValue({ id: 'usage-1' }),
+  },
+  packageCredit: {
+    update: jest.fn().mockResolvedValue({ id: 'credit-1' }),
+    findUnique: jest.fn().mockResolvedValue({ purchaseId: 'purchase-1' }),
+  },
+  packagePurchase: {
+    findUnique: jest.fn().mockResolvedValue({ status: 'ACTIVE' }),
+    update: jest.fn().mockResolvedValue({ id: 'purchase-1' }),
+  },
 });
 
 // $transaction supports two shapes:

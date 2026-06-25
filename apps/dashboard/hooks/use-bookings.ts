@@ -128,8 +128,13 @@ export function useTodayBookings(date: string) {
 
 export function useBookingMutations() {
   const queryClient = useQueryClient()
-  const invalidate = () =>
+  const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all, refetchType: "all" })
+    // Any booking mutation changes practitioner availability — drop the cached
+    // slot grids so a booked time disappears immediately instead of lingering
+    // (and failing on click) under the global 5-min staleTime.
+    queryClient.invalidateQueries({ queryKey: ["employees", "slots"], refetchType: "all" })
+  }
 
   const createMut = useMutation({
     mutationFn: createBooking,

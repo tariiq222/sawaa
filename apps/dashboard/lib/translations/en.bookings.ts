@@ -403,4 +403,14 @@ export const enBookings: Record<string, string> = {
   "bookings.recordPayment.submitting": "Recording...",
   "bookings.recordPayment.successToast": "Payment recorded",
   "bookings.recordPayment.errorToast": "Failed to record payment",
+
+  /* ── Book from credit — auto-detect badge + explicit entry (Phase 3) ── */
+  "bookings.credit.badge.title": "This client has a matching package credit",
+  "bookings.credit.badge.body": "{remaining} sessions remaining • Book from credit to avoid extra payment.",
+  "bookings.credit.badge.useCredit": "Book from credit",
+  "bookings.credit.badge.using": "Booking from credit",
+  "bookings.credit.badge.dismiss": "Continue with regular booking",
+  "bookings.credit.badge.dismissed": "Continuing with regular booking",
+  "bookings.credit.toast.success": "Appointment booked from credit",
+  "bookings.credit.toast.error": "Failed to book appointment from credit",
 }

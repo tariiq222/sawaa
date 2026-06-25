@@ -50,7 +50,7 @@ export const practiceNav: NavItem[] = [
 
 export const catalogNav: NavItem[] = [
   { titleKey: "nav.services", href: "/services", icon: Briefcase01Icon, permission: "service:read" },
-  { titleKey: "nav.bundles", href: "/bundles", icon: Package01Icon, permission: "service:read" },
+  { titleKey: "nav.packages", href: "/packages", icon: Package01Icon, permission: "service:read" },
   { titleKey: "nav.categories", href: "/categories", icon: Layers01Icon, permission: "category:read" },
   { titleKey: "nav.departments", href: "/departments", icon: Building06Icon, permission: "department:read" },
   { titleKey: "nav.employees", href: "/employees", icon: Stethoscope02Icon, permission: "employee:read" },

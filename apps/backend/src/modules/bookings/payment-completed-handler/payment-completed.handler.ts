@@ -13,7 +13,7 @@ interface PaymentCompletedPayload {
   paymentId: string;
   invoiceId: string;
   bookingId: string | null;
-  bundlePurchaseId?: string | null;
+  packagePurchaseId?: string | null;
 }
 
 /**
@@ -41,9 +41,9 @@ export class PaymentCompletedEventHandler {
       'finance.payment.completed',
       async (envelope) => {
         const { bookingId, paymentId } = envelope.payload;
-        // Bundle-purchase invoices have no bookingId — skip booking confirmation.
+        // Package-purchase invoices have no bookingId — skip booking confirmation.
         if (!bookingId) {
-          this.logger.log(`Payment ${paymentId} completed for bundle purchase — no booking to confirm`);
+          this.logger.log(`Payment ${paymentId} completed for package purchase — no booking to confirm`);
           return;
         }
         try {

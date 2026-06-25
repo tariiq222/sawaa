@@ -50,14 +50,14 @@ import { UpsertOrgSettingsDto } from '../../modules/org-experience/org-settings/
 import { GetBookingSettingsHandler } from '../../modules/bookings/get-booking-settings/get-booking-settings.handler';
 import { UpsertBookingSettingsHandler } from '../../modules/bookings/upsert-booking-settings/upsert-booking-settings.handler';
 import { UpsertBookingSettingsDto } from '../../modules/bookings/upsert-booking-settings/upsert-booking-settings.dto';
-import { CreateBundleHandler } from '../../modules/org-experience/bundles/create-bundle.handler';
-import { CreateBundleDto } from '../../modules/org-experience/bundles/create-bundle.dto';
-import { UpdateBundleHandler } from '../../modules/org-experience/bundles/update-bundle.handler';
-import { UpdateBundleDto } from '../../modules/org-experience/bundles/update-bundle.dto';
-import { ListBundlesHandler } from '../../modules/org-experience/bundles/list-bundles.handler';
-import { ListBundlesDto } from '../../modules/org-experience/bundles/list-bundles.dto';
-import { GetBundleHandler } from '../../modules/org-experience/bundles/get-bundle.handler';
-import { ArchiveBundleHandler } from '../../modules/org-experience/bundles/archive-bundle.handler';
+import { CreateSessionPackageHandler } from '../../modules/org-experience/session-packages/create-session-package/create-session-package.handler';
+import { CreateSessionPackageDto } from '../../modules/org-experience/session-packages/create-session-package/create-session-package.dto';
+import { UpdateSessionPackageHandler } from '../../modules/org-experience/session-packages/update-session-package/update-session-package.handler';
+import { UpdateSessionPackageDto } from '../../modules/org-experience/session-packages/update-session-package/update-session-package.dto';
+import { ListSessionPackagesHandler } from '../../modules/org-experience/session-packages/list-session-packages/list-session-packages.handler';
+import { ListSessionPackagesDto } from '../../modules/org-experience/session-packages/list-session-packages/list-session-packages.dto';
+import { GetSessionPackageHandler } from '../../modules/org-experience/session-packages/get-session-package/get-session-package.handler';
+import { ArchiveSessionPackageHandler } from '../../modules/org-experience/session-packages/archive-session-package/archive-session-package.handler';
 @ApiTags('Dashboard / Org Experience')
 @ApiBearerAuth()
 @ApiStandardResponses()
@@ -91,11 +91,11 @@ export class DashboardOrganizationSettingsController {
     private readonly listServiceEmployees: ListServiceEmployeesHandler,
     private readonly getDurationOptions: GetDurationOptionsHandler,
     private readonly setDurationOptions: SetDurationOptionsHandler,
-    private readonly createBundle: CreateBundleHandler,
-    private readonly updateBundle: UpdateBundleHandler,
-    private readonly listBundles: ListBundlesHandler,
-    private readonly getBundle: GetBundleHandler,
-    private readonly archiveBundle: ArchiveBundleHandler,
+    private readonly createSessionPackage: CreateSessionPackageHandler,
+    private readonly updateSessionPackage: UpdateSessionPackageHandler,
+    private readonly listSessionPackages: ListSessionPackagesHandler,
+    private readonly getSessionPackage: GetSessionPackageHandler,
+    private readonly archiveSessionPackage: ArchiveSessionPackageHandler,
   ) {}
 
   // ── Services ─────────────────────────────────────────────────────────────
@@ -212,58 +212,6 @@ export class DashboardOrganizationSettingsController {
     @Body() body: SetDurationOptionsDto,
   ) {
     return this.setDurationOptions.execute({ serviceId, ...body });
-  }
-
-  // ── Service Bundles ───────────────────────────────────────────────────────
-
-  @Post('bundles')
-  @CheckPermissions({ action: 'create', subject: 'Service' })
-  @ApiOperation({ summary: 'Create a service bundle' })
-  @ApiCreatedResponse({ description: 'Bundle created' })
-  createBundleEndpoint(@Body() body: CreateBundleDto) {
-    return this.createBundle.execute(body);
-  }
-
-  @Get('bundles')
-  @CheckPermissions({ action: 'read', subject: 'Service' })
-  @ApiOperation({ summary: 'List service bundles' })
-  @ApiOkResponse({ description: 'Paginated list of bundles' })
-  listBundlesEndpoint(@Query() query: ListBundlesDto) {
-    return this.listBundles.execute(query);
-  }
-
-  @Get('bundles/:bundleId')
-  @CheckPermissions({ action: 'read', subject: 'Service' })
-  @ApiOperation({ summary: 'Get a service bundle by id' })
-  @ApiParam({ name: 'bundleId', description: 'Bundle UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Bundle details' })
-  @ApiResponse({ status: 404, description: 'Bundle not found' })
-  getBundleEndpoint(@Param('bundleId', ParseUUIDPipe) bundleId: string) {
-    return this.getBundle.execute({ bundleId });
-  }
-
-  @Patch('bundles/:bundleId')
-  @CheckPermissions({ action: 'update', subject: 'Service' })
-  @ApiOperation({ summary: 'Update a service bundle' })
-  @ApiParam({ name: 'bundleId', description: 'Bundle UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiOkResponse({ description: 'Bundle updated' })
-  @ApiResponse({ status: 404, description: 'Bundle not found' })
-  updateBundleEndpoint(
-    @Param('bundleId', ParseUUIDPipe) bundleId: string,
-    @Body() body: UpdateBundleDto,
-  ) {
-    return this.updateBundle.execute({ bundleId, ...body });
-  }
-
-  @Delete('bundles/:bundleId')
-  @CheckPermissions({ action: 'delete', subject: 'Service' })
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Archive a service bundle' })
-  @ApiParam({ name: 'bundleId', description: 'Bundle UUID', example: '00000000-0000-0000-0000-000000000000' })
-  @ApiNoContentResponse({ description: 'Bundle archived' })
-  @ApiResponse({ status: 404, description: 'Bundle not found' })
-  archiveBundleEndpoint(@Param('bundleId', ParseUUIDPipe) bundleId: string) {
-    return this.archiveBundle.execute({ bundleId });
   }
 
   // ── Intake Forms ──────────────────────────────────────────────────────────
@@ -426,6 +374,61 @@ export class DashboardOrganizationSettingsController {
   @ApiOkResponse({ description: 'Booking settings updated' })
   upsertBookingSettingsEndpoint(@Body() body: UpsertBookingSettingsDto) {
     return this.upsertBookingSettings.execute({ branchId: null, ...body });
+  }
+
+  // ── Session Packages ─────────────────────────────────────────────────────
+
+  @Post('packages')
+  @CheckPermissions({ action: 'create', subject: 'Service' })
+  @ApiOperation({ summary: 'Create a session package' })
+  @ApiCreatedResponse({ description: 'Session package created' })
+  @ApiResponse({ status: 400, description: 'Validation failed (invalid items, missing employee-service link, or invalid discount)' })
+  createSessionPackageEndpoint(@Body() body: CreateSessionPackageDto) {
+    return this.createSessionPackage.execute(body);
+  }
+
+  @Get('packages')
+  @CheckPermissions({ action: 'read', subject: 'Service' })
+  @ApiOperation({ summary: 'List session packages' })
+  @ApiOkResponse({ description: 'Paginated list of session packages' })
+  listSessionPackagesEndpoint(@Query() query: ListSessionPackagesDto) {
+    return this.listSessionPackages.execute(query);
+  }
+
+  @Get('packages/:packageId')
+  @CheckPermissions({ action: 'read', subject: 'Service' })
+  @ApiOperation({ summary: 'Get a session package by id' })
+  @ApiParam({ name: 'packageId', description: 'Session package UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Session package details including the computed price' })
+  @ApiResponse({ status: 404, description: 'Session package not found' })
+  getSessionPackageEndpoint(@Param('packageId', ParseUUIDPipe) packageId: string) {
+    return this.getSessionPackage.execute({ packageId });
+  }
+
+  @Patch('packages/:packageId')
+  @CheckPermissions({ action: 'update', subject: 'Service' })
+  @ApiOperation({ summary: 'Update a session package' })
+  @ApiParam({ name: 'packageId', description: 'Session package UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Session package updated' })
+  @ApiResponse({ status: 400, description: 'Validation failed (invalid items or invalid discount)' })
+  @ApiResponse({ status: 404, description: 'Session package not found' })
+  updateSessionPackageEndpoint(
+    @Param('packageId', ParseUUIDPipe) packageId: string,
+    @Body() body: UpdateSessionPackageDto,
+  ) {
+    // Path param must win — body's `packageId` (if any) is not part of the API contract.
+    return this.updateSessionPackage.execute({ ...body, packageId });
+  }
+
+  @Delete('packages/:packageId')
+  @CheckPermissions({ action: 'delete', subject: 'Service' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Archive a session package' })
+  @ApiParam({ name: 'packageId', description: 'Session package UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiNoContentResponse({ description: 'Session package archived' })
+  @ApiResponse({ status: 404, description: 'Session package not found' })
+  archiveSessionPackageEndpoint(@Param('packageId', ParseUUIDPipe) packageId: string) {
+    return this.archiveSessionPackage.execute({ packageId });
   }
 
 }

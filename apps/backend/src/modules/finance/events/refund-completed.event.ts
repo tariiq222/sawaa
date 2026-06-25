@@ -5,7 +5,7 @@ export interface RefundCompletedPayload {
   organizationId: string;
   invoiceId: string;
   paymentId: string;
-  /** null for bundle-purchase invoices */
+  /** null for package-purchase invoices */
   bookingId: string | null;
   amount: number;
   currency: string;

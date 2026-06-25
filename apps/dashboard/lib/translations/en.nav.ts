@@ -40,7 +40,7 @@ export const enNav: Record<string, string> = {
   "nav.ratings": "Ratings",
   "nav.activityLog": "Activity Log",
   "nav.intakeForms": "Intake Forms",
-  "nav.bundles": "Bundles",
+  "nav.packages": "Session Packages",
   "nav.programs": "Group Programs",
   "nav.create": "Create",
   "nav.edit": "Edit",

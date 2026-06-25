@@ -16,9 +16,11 @@ import { CompleteBookingHandler } from '../../modules/bookings/complete-booking/
 import { NoShowBookingHandler } from '../../modules/bookings/no-show-booking/no-show-booking.handler';
 import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
 import { ListBookingStatusLogHandler } from '../../modules/bookings/list-booking-status-log/list-booking-status-log.handler';
-import { CreateBundleBookingHandler } from '../../modules/bookings/create-bundle-booking/create-bundle-booking.handler';
 import { ApproveCancelBookingHandler } from '../../modules/bookings/approve-cancel-booking/approve-cancel-booking.handler';
 import { RejectCancelBookingHandler } from '../../modules/bookings/reject-cancel-booking/reject-cancel-booking.handler';
+import { BookFromCreditHandler } from '../../modules/bookings/book-from-credit/book-from-credit.handler';
+import { GetMatchingCreditsHandler } from '../../modules/bookings/get-matching-credits/get-matching-credits.handler';
+import { TransferCreditHandler } from '../../modules/bookings/transfer-credit/transfer-credit.handler';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
@@ -39,9 +41,11 @@ describe('DashboardBookingsController (e2e)', () => {
   const mockNoShow = { execute: jest.fn() };
   const mockAvailability = { execute: jest.fn() };
   const mockStatusLog = { execute: jest.fn() };
-  const mockCreateBundleBooking = { execute: jest.fn() };
   const mockApproveCancel = { execute: jest.fn() };
   const mockRejectCancel = { execute: jest.fn() };
+  const mockBookFromCredit = { execute: jest.fn() };
+  const mockMatchingCredits = { execute: jest.fn() };
+  const mockTransferCredit = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -61,9 +65,11 @@ describe('DashboardBookingsController (e2e)', () => {
         { provide: NoShowBookingHandler, useValue: mockNoShow },
         { provide: CheckAvailabilityHandler, useValue: mockAvailability },
         { provide: ListBookingStatusLogHandler, useValue: mockStatusLog },
-        { provide: CreateBundleBookingHandler, useValue: mockCreateBundleBooking },
         { provide: ApproveCancelBookingHandler, useValue: mockApproveCancel },
         { provide: RejectCancelBookingHandler, useValue: mockRejectCancel },
+        { provide: BookFromCreditHandler, useValue: mockBookFromCredit },
+        { provide: GetMatchingCreditsHandler, useValue: mockMatchingCredits },
+        { provide: TransferCreditHandler, useValue: mockTransferCredit },
       ],
     })
       .overrideGuard(JwtGuard)
@@ -298,6 +304,141 @@ describe('DashboardBookingsController (e2e)', () => {
         .set('Authorization', 'Bearer fake-jwt')
         .expect(200);
       expect(res.body).toHaveLength(1);
+    });
+  });
+
+  describe('POST /dashboard/bookings/from-credit', () => {
+    const fromCreditBody = {
+      clientId: '00000000-0000-4000-a000-000000000001',
+      creditId: '00000000-0000-4000-a000-000000000006',
+      branchId: '00000000-0000-4000-a000-000000000002',
+      scheduledAt: '2026-12-31T09:00:00Z',
+    };
+
+    it('returns 201 and converts scheduledAt to a Date for the handler', async () => {
+      mockBookFromCredit.execute.mockResolvedValue({ id: 'booking-credit-1', status: 'CONFIRMED' });
+
+      const res = await request(app.getHttpServer())
+        .post('/dashboard/bookings/from-credit')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send(fromCreditBody)
+        .expect(201);
+
+      expect(res.body.id).toBe('booking-credit-1');
+      expect(mockBookFromCredit.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientId: fromCreditBody.clientId,
+          creditId: fromCreditBody.creditId,
+          branchId: fromCreditBody.branchId,
+          scheduledAt: expect.any(Date),
+          userId: 'user-1',
+        }),
+      );
+    });
+
+    it('accepts the (serviceId, employeeId, durationOptionId) triple without creditId', async () => {
+      mockBookFromCredit.execute.mockResolvedValue({ id: 'booking-credit-2' });
+
+      await request(app.getHttpServer())
+        .post('/dashboard/bookings/from-credit')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({
+          clientId: '00000000-0000-4000-a000-000000000001',
+          serviceId: '00000000-0000-4000-a000-000000000004',
+          employeeId: '00000000-0000-4000-a000-000000000003',
+          durationOptionId: '00000000-0000-4000-a000-000000000005',
+          branchId: '00000000-0000-4000-a000-000000000002',
+          scheduledAt: '2026-12-31T09:00:00Z',
+        })
+        .expect(201);
+    });
+
+    it('returns 400 for an invalid scheduledAt', async () => {
+      return request(app.getHttpServer())
+        .post('/dashboard/bookings/from-credit')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ ...fromCreditBody, scheduledAt: 'not-a-date' })
+        .expect(400);
+    });
+
+    it('returns 400 for unknown fields', async () => {
+      return request(app.getHttpServer())
+        .post('/dashboard/bookings/from-credit')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ ...fromCreditBody, extra: 'bad' })
+        .expect(400);
+    });
+  });
+
+  describe('GET /dashboard/bookings/matching-credits', () => {
+    it('returns 200 with matching credits and passes the query to the handler', async () => {
+      mockMatchingCredits.execute.mockResolvedValue([{ creditId: 'c-1', remaining: 3 }]);
+
+      const res = await request(app.getHttpServer())
+        .get(
+          '/dashboard/bookings/matching-credits' +
+            '?clientId=00000000-0000-4000-a000-000000000001' +
+            '&serviceId=00000000-0000-4000-a000-000000000004' +
+            '&employeeId=00000000-0000-4000-a000-000000000003' +
+            '&durationOptionId=00000000-0000-4000-a000-000000000005',
+        )
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+
+      expect(res.body).toHaveLength(1);
+      expect(mockMatchingCredits.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientId: '00000000-0000-4000-a000-000000000001',
+          serviceId: '00000000-0000-4000-a000-000000000004',
+          employeeId: '00000000-0000-4000-a000-000000000003',
+          durationOptionId: '00000000-0000-4000-a000-000000000005',
+        }),
+      );
+    });
+
+    it('returns 400 when a required query param is missing', async () => {
+      return request(app.getHttpServer())
+        .get('/dashboard/bookings/matching-credits?clientId=00000000-0000-4000-a000-000000000001')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(400);
+    });
+  });
+
+  describe('POST /dashboard/bookings/credits/:creditId/transfer', () => {
+    const CREDIT_ID = '00000000-0000-4000-a000-000000000006';
+    const TO_EMPLOYEE_ID = '00000000-0000-4000-a000-000000000099';
+
+    it('returns 201 and forwards creditId + toEmployeeId + acting user to the handler', async () => {
+      mockTransferCredit.execute.mockResolvedValue({ id: CREDIT_ID, employeeId: TO_EMPLOYEE_ID });
+
+      const res = await request(app.getHttpServer())
+        .post(`/dashboard/bookings/credits/${CREDIT_ID}/transfer`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ toEmployeeId: TO_EMPLOYEE_ID })
+        .expect(201);
+
+      expect(res.body.employeeId).toBe(TO_EMPLOYEE_ID);
+      expect(mockTransferCredit.execute).toHaveBeenCalledWith({
+        creditId: CREDIT_ID,
+        toEmployeeId: TO_EMPLOYEE_ID,
+        userId: 'user-1',
+      });
+    });
+
+    it('returns 400 when toEmployeeId is not a UUID', async () => {
+      return request(app.getHttpServer())
+        .post(`/dashboard/bookings/credits/${CREDIT_ID}/transfer`)
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ toEmployeeId: 'not-a-uuid' })
+        .expect(400);
+    });
+
+    it('returns 400 when the creditId path param is not a UUID', async () => {
+      return request(app.getHttpServer())
+        .post('/dashboard/bookings/credits/not-a-uuid/transfer')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ toEmployeeId: TO_EMPLOYEE_ID })
+        .expect(400);
     });
   });
 });

@@ -403,4 +403,14 @@ export const arBookings: Record<string, string> = {
   "bookings.recordPayment.submitting": "جاري التسجيل...",
   "bookings.recordPayment.successToast": "تم تسجيل الدفعة",
   "bookings.recordPayment.errorToast": "فشل تسجيل الدفعة",
+
+  /* ── Book from credit — auto-detect badge + explicit entry (Phase 3) ── */
+  "bookings.credit.badge.title": "هذا المستفيد لديه رصيد مطابق",
+  "bookings.credit.badge.body": "المتبقي {remaining} جلسة • احجز من الرصيد لتجنّب الدفع الإضافي.",
+  "bookings.credit.badge.useCredit": "احجز من الرصيد",
+  "bookings.credit.badge.using": "سيُحجز من الرصيد",
+  "bookings.credit.badge.dismiss": "متابعة الحجز العادي",
+  "bookings.credit.badge.dismissed": "متابعة الحجز العادي",
+  "bookings.credit.toast.success": "تم حجز الموعد وخصم الرصيد",
+  "bookings.credit.toast.error": "فشل حجز الموعد من الرصيد",
 }

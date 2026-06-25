@@ -4,11 +4,13 @@ import { ReportFormat } from '@prisma/client';
 describe('DashboardOpsController', () => {
   let controller: DashboardOpsController;
   let generateReport: jest.Mock;
+  let packageReports: jest.Mock;
   let listActivity: jest.Mock;
   let resMock: any;
 
   beforeEach(() => {
     generateReport = jest.fn();
+    packageReports = jest.fn();
     listActivity = jest.fn();
     resMock = {
       setHeader: jest.fn().mockReturnThis(),
@@ -16,6 +18,7 @@ describe('DashboardOpsController', () => {
     };
     controller = new DashboardOpsController(
       { execute: generateReport } as any,
+      { execute: packageReports } as any,
       { execute: listActivity } as any,
     );
   });
@@ -49,6 +52,20 @@ describe('DashboardOpsController', () => {
     const response = await controller.generateReportEndpoint({ format: ReportFormat.EXCEL, reportType: 'revenue' } as any, resMock);
     expect(response).toBeUndefined();
     expect(resMock.send).not.toHaveBeenCalled();
+  });
+
+  it('packageReportEndpoint should forward report + date range to the handler', async () => {
+    packageReports.mockResolvedValue({ purchaseCount: 0 });
+    const query = { report: 'SALES', from: '2026-01-01', to: '2026-01-31' };
+
+    const response = await controller.packageReportEndpoint(query as any);
+
+    expect(packageReports).toHaveBeenCalledWith({
+      report: 'SALES',
+      from: '2026-01-01',
+      to: '2026-01-31',
+    });
+    expect(response).toEqual({ purchaseCount: 0 });
   });
 
   it('listActivityEndpoint should call listActivity.execute with query params', async () => {

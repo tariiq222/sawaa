@@ -3,7 +3,7 @@ import { BaseEvent } from '../../../common/events';
 export interface DepositPaidPayload {
   paymentId: string;
   invoiceId: string;
-  /** null for bundle-purchase invoices — deposits only apply to booking invoices */
+  /** null for package-purchase invoices — deposits only apply to booking invoices */
   bookingId: string | null;
   amount: number;
   currency: string;

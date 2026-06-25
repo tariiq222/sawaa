@@ -211,25 +211,28 @@ async function configureServiceOverride(page: Page, serviceNameAr: string) {
   await page.getByText('اختر خدمة').click()
   await page.getByRole('option', { name: serviceNameAr }).click()
 
-  const addServicePanel = page.locator('div.rounded-lg.border.border-border.p-4.space-y-4').filter({
-    hasText: 'تفعيل أسعار وأوقات مختلفة عن الخدمة',
+  // Selecting a service auto-populates the delivery-type editor with the
+  // service's active booking types (here IN_PERSON), each rendered as an
+  // EmployeeTypeRow with empty price/duration inputs whose placeholders are the
+  // service defaults. The old "enable custom pricing" switch was removed — the
+  // override is now done by typing into the row's flat price/duration fields.
+  const inPersonRow = page.locator('div.group.rounded-lg.border').filter({
+    hasText: 'حضوري',
   })
-  await expect(addServicePanel).toBeVisible()
-  const customPricingSwitch = addServicePanel.locator('button[role="switch"]').first()
-  await expect(customPricingSwitch).toBeEnabled()
-  await customPricingSwitch.click()
-  await expect(customPricingSwitch).toHaveAttribute('aria-checked', 'true')
+  await expect(inPersonRow).toBeVisible()
 
-  const numberInputs = addServicePanel.locator('input[type="number"]')
+  const rowNumberInputs = inPersonRow.locator('input[type="number"]')
   await expect
-    .poll(() => numberInputs.count(), {
-      message: 'custom pricing panel should expose numeric fields',
+    .poll(() => rowNumberInputs.count(), {
+      message: 'in-person type row should expose price + duration fields',
     })
     .toBeGreaterThanOrEqual(2)
-  await numberInputs.nth(0).fill('180')
-  await numberInputs.nth(1).fill('50')
+  await rowNumberInputs.nth(0).fill('180')
+  await rowNumberInputs.nth(1).fill('50')
 
-  await addServicePanel.getByRole('button', { name: 'إضافة خدمة' }).click()
+  // Submit the add-service form. Once the form is open the outer "add service"
+  // trigger is unmounted, so this label resolves to the form's submit button.
+  await page.getByRole('button', { name: 'إضافة خدمة' }).click()
   await expect(page.getByText(serviceNameAr)).toBeVisible()
 }
 
@@ -247,9 +250,34 @@ async function openBookingWizardForService(page: Page, input: {
   await searchInput.fill(input.clientName)
   await page.locator('button').filter({ hasText: input.clientName }).first().click()
 
-  await posContainer.getByRole('button', { name: /^عيادات$|^Clinics$/ }).first().click()
-  await posContainer.locator('button').filter({ hasText: /فئة اختبار|Test Category/u }).first().click()
-  await posContainer.locator('button').filter({ hasText: input.serviceNameAr }).first().click()
+  // Booking wizard chain: department → category → service. Each step renders a
+  // WizardCard (`<button disabled={...}>`); Playwright `.click()` waits for the
+  // ENABLED state, so a disabled card hangs the test until the suite timeout.
+  // The e2e seed guarantees the clinic department ('عيادات سواء' / 'Sawa Clinics')
+  // exists, holds the "Test Category", and that the category has a bookable
+  // service — so the targeted cards are enabled. Match by the seeded names
+  // (substring, not an exact /^عيادات$/ which never matches the real name) and
+  // assert each card is enabled before clicking, turning a silent 120s hang into
+  // a fast, descriptive failure if the seed regresses.
+  const departmentCard = posContainer
+    .getByRole('button', { name: /عيادات|clinic/i })
+    .first()
+  await expect(departmentCard, 'clinic department card should be enabled').toBeEnabled()
+  await departmentCard.click()
+
+  const categoryCard = posContainer
+    .locator('button')
+    .filter({ hasText: /فئة اختبار|Test Category/u })
+    .first()
+  await expect(categoryCard, 'test category card should be enabled').toBeEnabled()
+  await categoryCard.click()
+
+  const serviceCard = posContainer
+    .locator('button')
+    .filter({ hasText: input.serviceNameAr })
+    .first()
+  await expect(serviceCard, 'seeded service card should be enabled').toBeEnabled()
+  await serviceCard.click()
 }
 
 test.describe('Practitioner onboarding, custom service options, and booking visibility', () => {
@@ -359,9 +387,15 @@ test.describe('Practitioner onboarding, custom service options, and booking visi
       `/dashboard/people/employees/${employeeId}/services/${serviceId}/types`,
     )
     const inPerson = serviceTypes.find((type) => type.deliveryType === 'IN_PERSON')
+    // Practitioner-owned durations REPLACE the service defaults (45/60 min). After the
+    // custom override the only effective IN_PERSON option is 50 min @ 180 SAR (18000
+    // halalas). Owned rows are persisted with isDefault=false by design (see
+    // set-employee-durations.handler.ts), so assert the override took effect by value
+    // and that the service-default 45-min option was replaced (not merely added).
     expect(inPerson?.durationOptions.some((option) =>
-      option.isDefault && option.durationMinutes === 50 && Number(option.price) === 18_000
+      option.durationMinutes === 50 && Number(option.price) === 18_000
     )).toBeTruthy()
+    expect(inPerson?.durationOptions.some((option) => option.durationMinutes === 45)).toBe(false)
 
     const vacationDate = nextIsoDateForDay(0)
     const vacation = await postJson<{ id: string }>(
@@ -390,11 +424,21 @@ test.describe('Practitioner onboarding, custom service options, and booking visi
     await openBookingWizardForService(page, { clientName, serviceNameAr })
     await expect(page.locator('button').filter({ hasText: employeeNameAr }).first()).toBeVisible()
     await page.locator('button').filter({ hasText: employeeNameAr }).first().click()
-    const customDurationOption = page
-      .locator('button')
-      .filter({ hasText: /50 دقيقة/u })
-      .filter({ hasText: /180\.00 ر\.س/u })
-    await expect(customDurationOption).toBeVisible()
+    // Selecting the practitioner auto-advances the wizard: with a single active
+    // delivery type (IN_PERSON) the type/duration step auto-selects it and
+    // collapses, surfacing the effective price in the booking summary panel
+    // ("ملخص الحجز"). The summary's price line (booking-summary.tsx →
+    // FormattedCurrency) reflects the practitioner-owned EmployeeServiceType
+    // price, i.e. the 180.00 SAR override that REPLACES the 200.00 service
+    // default — which is the whole point of this test: custom practitioner
+    // pricing is visible to bookings. Scope to the summary panel and assert it
+    // shows 180.00 (the riyal glyph renders as its own node, so match the
+    // number; 180.00 vs the 200.00 default disambiguates the override).
+    const bookingSummary = page.locator('div').filter({ hasText: /ملخص الحجز/u }).last()
+    await expect(
+      bookingSummary.getByText(/180\.00/u).first(),
+      'booking summary should reflect the practitioner-owned 180.00 SAR override',
+    ).toBeVisible()
 
     await patchJson(token, `/dashboard/people/employees/${employeeId}/services/${serviceId}`, {
       isActive: false,

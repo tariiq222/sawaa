@@ -52,6 +52,12 @@ import { GetMoyasarConfigHandler } from '../../modules/finance/moyasar-config/ge
 import { UpsertMoyasarConfigHandler } from '../../modules/finance/moyasar-config/upsert-moyasar-config.handler';
 import { TestMoyasarConfigHandler } from '../../modules/finance/moyasar-config/test-moyasar-config.handler';
 import { UpsertMoyasarConfigDto } from '../../modules/finance/moyasar-config/upsert-moyasar-config.dto';
+import { CreatePackagePurchaseHandler } from '../../modules/finance/package-purchases/create-package-purchase/create-package-purchase.handler';
+import { CreatePackagePurchaseDto } from '../../modules/finance/package-purchases/create-package-purchase/create-package-purchase.dto';
+import { ListClientPackagePurchasesHandler } from '../../modules/finance/package-purchases/list-client-package-purchases/list-client-package-purchases.handler';
+import { ListClientPackagePurchasesQueryDto } from '../../modules/finance/package-purchases/list-client-package-purchases/list-client-package-purchases.dto';
+import { RefundPackagePurchaseHandler } from '../../modules/finance/package-purchases/refund-package-purchase/refund-package-purchase.handler';
+import { RefundPackagePurchaseDto } from '../../modules/finance/package-purchases/refund-package-purchase/refund-package-purchase.dto';
 import { MinioService } from '../../infrastructure/storage/minio.service';
 import {
   FINANCE_INVOICES_BUCKET_NAME,
@@ -89,6 +95,9 @@ export class DashboardFinanceController {
     private readonly getMoyasarConfig: GetMoyasarConfigHandler,
     private readonly upsertMoyasarConfig: UpsertMoyasarConfigHandler,
     private readonly testMoyasarConfig: TestMoyasarConfigHandler,
+    private readonly createPackagePurchase: CreatePackagePurchaseHandler,
+    private readonly listClientPackagePurchases: ListClientPackagePurchasesHandler,
+    private readonly refundPackagePurchase: RefundPackagePurchaseHandler,
     private readonly storage: MinioService,
   ) {}
 
@@ -395,5 +404,63 @@ export class DashboardFinanceController {
   @ApiOkResponse({ description: 'Connectivity test result' })
   testMoyasarConfigEndpoint() {
     return this.testMoyasarConfig.execute();
+  }
+
+  // ── Package purchases (reception manual sale) ───────────────────────────────
+
+  @Post('package-purchases')
+  // Mirrors the manual-payment flow's CASL subject — RECEPTIONIST may sell
+  // packages; full invoice+payment ownership sits on Invoice/Payment.
+  @CheckPermissions({ action: 'manage', subject: 'Invoice' })
+  @ApiOperation({ summary: 'Sell a SessionPackage to a client at the desk (manual payment)' })
+  @ApiCreatedResponse({ description: 'Package purchase created, invoice issued, payment recorded, credits activated' })
+  @ApiResponse({ status: 400, description: 'Invalid package state, client missing, or ONLINE_CARD method', type: ApiErrorDto })
+  @ApiResponse({ status: 404, description: 'Package or client not found', type: ApiErrorDto })
+  createPackagePurchaseEndpoint(@Body() body: CreatePackagePurchaseDto) {
+    return this.createPackagePurchase.execute({ ...body });
+  }
+
+  @Post('package-purchases/:purchaseId/refund')
+  // Manual refund moves money — same OWNER/ADMIN privilege as the gateway
+  // refund approve/deny endpoints (manage:Setting), NOT routine manage:Invoice.
+  @CheckPermissions({ action: 'manage', subject: 'Setting' })
+  @ApiOperation({ summary: 'Manually refund a session-package purchase (marks REFUNDED, voids credits, records the refund)' })
+  @ApiParam({ name: 'purchaseId', description: 'Package purchase UUID', example: '00000000-0000-4000-a000-000000000007' })
+  @ApiOkResponse({ description: 'Purchase marked REFUNDED, credits voided, refund recorded' })
+  @ApiResponse({ status: 400, description: 'Already refunded or refundAmount outside [0, amountPaid]', type: ApiErrorDto })
+  @ApiResponse({ status: 404, description: 'Package purchase not found', type: ApiErrorDto })
+  @HttpCode(HttpStatus.OK)
+  refundPackagePurchaseEndpoint(
+    @UserId() userId: string,
+    @Param('purchaseId', ParseUUIDPipe) purchaseId: string,
+    @Body() body: RefundPackagePurchaseDto,
+  ) {
+    return this.refundPackagePurchase.execute({
+      purchaseId,
+      refundAmount: body.refundAmount,
+      notes: body.notes,
+      userId,
+    });
+  }
+
+  // ── Client credits (read-only view) ─────────────────────────────────────────
+  // Endpoint path follows the dashboard convention
+  // /dashboard/clients/:clientId/<resource>; the client-scoped route lives in
+  // the people controller for client CRUD, but the package-purchases view is
+  // finance-owned so the route is registered here under /dashboard/finance
+  // and the frontend calls it from the client's financial tab.
+  @Get('clients/:clientId/package-purchases')
+  @CheckPermissions({ action: 'read', subject: 'Invoice' })
+  @ApiOperation({ summary: 'List a client\'s package purchases with their remaining credit balances' })
+  @ApiParam({ name: 'clientId', description: 'Client UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Client package purchases with credits' })
+  listClientPackagePurchasesEndpoint(
+    @Param('clientId', ParseUUIDPipe) clientId: string,
+    @Query() query: ListClientPackagePurchasesQueryDto,
+  ) {
+    return this.listClientPackagePurchases.execute({
+      clientId,
+      status: query.status,
+    });
   }
 }

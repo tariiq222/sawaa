@@ -34,6 +34,11 @@ import { MoyasarApiClient } from './moyasar-api/moyasar-api.client';
 
 import { InitClientPaymentHandler } from './payments/client/init-client-payment/init-client-payment.handler';
 import { RequestRefundHandler } from './refund-payment/request-refund.handler';
+import { CreatePackagePurchaseHandler } from './package-purchases/create-package-purchase/create-package-purchase.handler';
+import { ListClientPackagePurchasesHandler } from './package-purchases/list-client-package-purchases/list-client-package-purchases.handler';
+import { RefundPackagePurchaseHandler } from './package-purchases/refund-package-purchase/refund-package-purchase.handler';
+import { InitPackagePurchaseHandler } from './package-purchases/init-package-purchase/init-package-purchase.handler';
+import { ActivatePackagePurchaseHandler } from './package-purchases/activate-package-purchase/activate-package-purchase.handler';
 import { ApproveRefundHandler } from './refund-payment/approve-refund.handler';
 import { DenyRefundHandler } from './refund-payment/deny-refund.handler';
 import { ListRefundsHandler } from './refund-payment/list-refunds.handler';
@@ -41,9 +46,6 @@ import { GetMoyasarConfigHandler } from './moyasar-config/get-moyasar-config.han
 import { UpsertMoyasarConfigHandler } from './moyasar-config/upsert-moyasar-config.handler';
 import { TestMoyasarConfigHandler } from './moyasar-config/test-moyasar-config.handler';
 import { OnBookingCancelledRefundHandler } from './events/on-booking-cancelled.handler';
-import { CreateBundlePurchaseHandler } from './bundle-purchases/create-bundle-purchase.handler';
-import { UseBundleHandler } from './bundle-purchases/use-bundle.handler';
-import { ListClientBundlePurchasesHandler } from './bundle-purchases/list-client-bundle-purchases.handler';
 import { IssueInvoiceReceiptHandler } from './issue-invoice-receipt/issue-invoice-receipt.handler';
 import { SendInvoiceReceiptHandler } from './issue-invoice-receipt/send-invoice-receipt.handler';
 import { InvoicePdfRendererService } from './issue-invoice-receipt/invoice-pdf-renderer.service';
@@ -82,9 +84,11 @@ const handlers = [
   GetMoyasarConfigHandler,
   UpsertMoyasarConfigHandler,
   TestMoyasarConfigHandler,
-  CreateBundlePurchaseHandler,
-  UseBundleHandler,
-  ListClientBundlePurchasesHandler,
+  CreatePackagePurchaseHandler,
+  ListClientPackagePurchasesHandler,
+  RefundPackagePurchaseHandler,
+  InitPackagePurchaseHandler,
+  ActivatePackagePurchaseHandler,
 ];
 
 @Module({
@@ -107,6 +111,7 @@ export class FinanceModule implements OnModuleInit {
     private readonly onBookingCancelledRefundHandler: OnBookingCancelledRefundHandler,
     private readonly issueInvoiceReceiptHandler: IssueInvoiceReceiptHandler,
     private readonly sendInvoiceReceiptHandler: SendInvoiceReceiptHandler,
+    private readonly activatePackagePurchaseHandler: ActivatePackagePurchaseHandler,
     private readonly eventBus: EventBusService,
   ) {}
 
@@ -115,5 +120,9 @@ export class FinanceModule implements OnModuleInit {
     this.onBookingCancelledRefundHandler.register();
     this.issueInvoiceReceiptHandler.register();
     this.sendInvoiceReceiptHandler.register(this.eventBus);
+    // Phase 4 self-purchase: activate a PENDING package purchase + issue its
+    // credits when its Moyasar payment completes. Subscribes to the SAME
+    // finance.payment.completed event the (unchanged) webhook already emits.
+    this.activatePackagePurchaseHandler.register();
   }
 }

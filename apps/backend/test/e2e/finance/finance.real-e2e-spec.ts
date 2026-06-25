@@ -416,7 +416,7 @@ describeRealE2e("Finance — real-DB e2e (halala math, coupons, payments, refund
       expect(second.body.code ?? second.body.message).toMatch(/INVOICE_ALREADY_EXISTS|already/i);
     });
 
-    it("rejects invoice creation with neither bookingId nor bundlePurchaseId (XOR)", async () => {
+    it("rejects invoice creation with neither bookingId nor packagePurchaseId (XOR)", async () => {
       const res = await withAuth(ctx.authToken)(
         api().post("/api/v1/dashboard/finance/invoices"),
       ).send({

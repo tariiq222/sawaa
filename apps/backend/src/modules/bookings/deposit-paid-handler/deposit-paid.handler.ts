@@ -44,9 +44,9 @@ export class DepositPaidEventHandler {
       'finance.payment.deposit_paid',
       async (envelope) => {
         const { bookingId, paymentId } = envelope.payload;
-        // Bundle-purchase invoices carry no bookingId — deposits never apply.
+        // Package-purchase invoices carry no bookingId — deposits never apply.
         if (!bookingId) {
-          this.logger.log(`Deposit ${paymentId} paid for bundle purchase — no booking to update`);
+          this.logger.log(`Deposit ${paymentId} paid for package purchase — no booking to update`);
           return;
         }
         try {

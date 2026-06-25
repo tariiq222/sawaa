@@ -11,6 +11,7 @@ import { BookingCancelledEvent } from "../events/booking-cancelled.event";
 import { fetchBookingOrFail } from "../booking-lifecycle.helper";
 import { assertTransition } from "../booking-state-machine";
 import { ProgramCapacityService } from "../program/program-capacity.service";
+import { returnPackageCreditForBooking } from "../package-credit-return.helper";
 
 export interface ExpireBookingCommand {
 	bookingId: string;
@@ -79,6 +80,13 @@ export class ExpireBookingHandler {
 				});
 				refundRequestId = created.refundRequestId;
 				idempotencyKey = created.idempotencyKey;
+			}
+
+			// Session-package credit bookings: returning the credit on expiry
+			// keeps the bucket consistent if a credit booking ever lands in an
+			// expirable state. No refund/invoice — the credit booking is zero-value.
+			if (booking.packageCreditId) {
+				await returnPackageCreditForBooking(tx, cmd.bookingId);
 			}
 
 			// A scheduled program enrollee that expires must release their seat:

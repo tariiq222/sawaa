@@ -53,7 +53,7 @@ const buildDeps = (overrides: {
     paidAt: new Date('2026-05-24T10:05:00Z'),
     clientId: 'client-1',
     bookingId: 'book-1',
-    bundlePurchaseId: null,
+    packagePurchaseId: null,
     subtotal: 10000,
     discountAmt: 0,
     vatAmt: 1500,
@@ -173,17 +173,17 @@ describe('buildInvoicePdfData', () => {
     expect(data.clientName).toBe('فاطمة');
   });
 
-  it('substitutes "باقة جلسات" for the service name when the invoice has a bundlePurchaseId and no booking', async () => {
+  it('substitutes "باقة جلسات" for the service name when the invoice has a packagePurchaseId and no booking', async () => {
     const { prisma, cls, invoice } = buildDeps({
       booking: null,
       invoice: {
-        id: 'inv-bundle',
+        id: 'inv-package',
         number: 99,
         issuedAt: new Date(),
         paidAt: new Date(),
         clientId: 'client-1',
         bookingId: null,
-        bundlePurchaseId: 'bp-1',
+        packagePurchaseId: 'bp-1',
         subtotal: 10000,
         discountAmt: 0,
         vatAmt: 1500,
@@ -206,7 +206,7 @@ describe('buildInvoicePdfData', () => {
         paidAt: new Date(),
         clientId: 'client-1',
         bookingId: 'book-1',
-        bundlePurchaseId: null,
+        packagePurchaseId: null,
         subtotal: new Prisma.Decimal('9999.50'),
         discountAmt: new Prisma.Decimal('100.00'),
         vatAmt: new Prisma.Decimal('1484.93'),
@@ -231,7 +231,7 @@ describe('buildInvoicePdfData', () => {
         paidAt: new Date('2026-05-24T10:05:00Z'),
         clientId: 'client-1',
         bookingId: 'book-1',
-        bundlePurchaseId: null,
+        packagePurchaseId: null,
         subtotal: 10000,
         discountAmt: 0,
         vatAmt: 1500,
@@ -253,7 +253,7 @@ describe('buildInvoicePdfData', () => {
         paidAt: null,
         clientId: 'client-1',
         bookingId: 'book-1',
-        bundlePurchaseId: null,
+        packagePurchaseId: null,
         subtotal: 10000,
         discountAmt: 0,
         vatAmt: 1500,
@@ -274,13 +274,13 @@ describe('buildInvoicePdfData', () => {
     const { prisma, cls, invoice } = buildDeps({
       booking: null,
       invoice: {
-        id: 'inv-bundle',
+        id: 'inv-package',
         number: 99,
         issuedAt: new Date(),
         paidAt: new Date(),
         clientId: 'client-1',
-        bookingId: null, // bundle-purchase invoice — no booking
-        bundlePurchaseId: 'bp-1',
+        bookingId: null, // package-purchase invoice — no booking
+        packagePurchaseId: 'bp-1',
         subtotal: 10000,
         discountAmt: 0,
         vatAmt: 1500,

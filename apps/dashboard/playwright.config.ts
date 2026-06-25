@@ -89,7 +89,10 @@ export default defineConfig({
     timeout: useProdServer ? 300_000 : 120_000,
     reuseExistingServer: !process.env.CI,
     env: {
-      NEXT_PUBLIC_API_URL: 'http://localhost:5200/api/v1',
+      // Allow overriding the API URL via PW_API_URL so the same config works
+      // against the real backend on a non-default host port (e.g. the local
+      // docker stack maps the backend to 3450 instead of 5200).
+      NEXT_PUBLIC_API_URL: `${process.env.PW_API_URL ?? 'http://localhost:5200'}/api/v1`,
       PORT: '5203',
     },
   },

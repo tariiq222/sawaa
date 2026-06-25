@@ -4,6 +4,7 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 import { fetchBookingOrFail, updateBookingAtomically } from '../booking-lifecycle.helper';
 import { assertTransition } from '../booking-state-machine';
 import { ProgramCapacityService } from '../program/program-capacity.service';
+import { returnPackageCreditForBooking } from '../package-credit-return.helper';
 
 export interface NoShowBookingCommand {
   bookingId: string;
@@ -51,6 +52,14 @@ export class NoShowBookingHandler {
           },
         }),
       ]);
+
+      // Session-package credit bookings: a no-show RETURNS the credit (the
+      // plan returns credit in ALL no-show cases — no burn, no refund). This
+      // is distinct from the paid-booking forfeiture rule above: a credit
+      // booking had zero monetary value, so the credit goes back to the bucket.
+      if (booking.packageCreditId) {
+        await returnPackageCreditForBooking(tx, cmd.bookingId);
+      }
 
       // A scheduled program enrollee marked NO_SHOW must release their seat:
       // guarded enrolledCount decrement inside the same transaction (mirrors

@@ -1,0 +1,111 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+import { DiscountType } from '@prisma/client';
+
+export class CreateSessionPackageItemDto {
+  @ApiProperty({ description: 'Service UUID', format: 'uuid', example: '00000000-0000-4000-a000-000000000000' })
+  @IsUUID()
+  serviceId!: string;
+
+  @ApiProperty({ description: 'Employee (practitioner) UUID', format: 'uuid', example: '00000000-0000-4000-a000-000000000000' })
+  @IsUUID()
+  employeeId!: string;
+
+  @ApiProperty({ description: 'ServiceDurationOption UUID', format: 'uuid', example: '00000000-0000-4000-a000-000000000000' })
+  @IsUUID()
+  durationOptionId!: string;
+
+  @ApiProperty({ description: 'Number of paid sessions the client gets', minimum: 0, example: 4 })
+  @IsInt() @Min(0)
+  paidQuantity!: number;
+
+  @ApiPropertyOptional({ description: 'Number of free bonus sessions bundled with the paid ones', minimum: 0, default: 0, example: 1 })
+  @IsOptional() @IsInt() @Min(0)
+  freeQuantity?: number;
+
+  @ApiPropertyOptional({ description: 'Display order within the package', minimum: 0, example: 0 })
+  @IsOptional() @IsInt() @Min(0)
+  sortOrder?: number;
+}
+
+/**
+ * Class-level rule (every item must offer at least one session —
+ * paidQuantity + freeQuantity >= 1) is intentionally enforced in the
+ * Create/Update handlers instead of via @Validate() on a placeholder
+ * field. class-validator's @Validate(ConstraintClass) with a plain class
+ * is silently dead in this version (see create-invoice.dto.spec.ts note
+ * for the precedent). The handler-level check is authoritative and is
+ * covered by the create / update handler specs.
+ */
+export class CreateSessionPackageDto {
+  @ApiProperty({ description: 'Arabic name', maxLength: 200, example: 'باقة الاستشارة العائلية' })
+  @IsString() @MaxLength(200)
+  nameAr!: string;
+
+  @ApiPropertyOptional({ description: 'English name', maxLength: 200, example: 'Family Counseling Pack' })
+  @IsOptional() @IsString() @MaxLength(200)
+  nameEn?: string;
+
+  @ApiPropertyOptional({ description: 'Arabic description', example: 'أربع جلسات استشارة مع المعالج' })
+  @IsOptional() @IsString()
+  descriptionAr?: string;
+
+  @ApiPropertyOptional({ description: 'English description', example: 'Four consultation sessions with the practitioner' })
+  @IsOptional() @IsString()
+  descriptionEn?: string;
+
+  @ApiPropertyOptional({ description: 'Image URL (upload via /uploads)', example: 'https://cdn.example.com/pack.png' })
+  @IsOptional() @IsString()
+  imageUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Lucide icon name', example: 'package' })
+  @IsOptional() @IsString()
+  iconName?: string;
+
+  @ApiPropertyOptional({ description: 'Icon background color (hex)', example: '#FFD8A8' })
+  @IsOptional() @IsString()
+  iconBgColor?: string;
+
+  @ApiProperty({ description: 'Discount type — PERCENTAGE (0-100) or FIXED (in integer halalas, 1 SAR = 100)', enum: DiscountType, example: DiscountType.PERCENTAGE })
+  @IsEnum(DiscountType)
+  discountType!: DiscountType;
+
+  @ApiProperty({
+    description:
+      'Discount value. For PERCENTAGE: 0-100 (e.g. 10 = 10%). For FIXED: integer halalas (e.g. 5000 = 50 SAR), matching the rest of the codebase.',
+    minimum: 0,
+    example: 10,
+  })
+  @IsInt() @Min(0)
+  discountValue!: number;
+
+  @ApiPropertyOptional({ description: 'Whether the package is selectable', default: true, example: true })
+  @IsOptional() @IsBoolean()
+  isActive?: boolean;
+
+  @ApiPropertyOptional({ description: 'Whether the package is visible to clients on the public catalog', default: false, example: true })
+  @IsOptional() @IsBoolean()
+  isPublic?: boolean;
+
+  @ApiPropertyOptional({ description: 'Display order (ascending)', minimum: 0, default: 0, example: 0 })
+  @IsOptional() @IsInt() @Min(0)
+  sortOrder?: number;
+
+  @ApiProperty({ description: 'Package items (min 1)', type: [CreateSessionPackageItemDto] })
+  @IsArray() @ArrayMinSize(1)
+  @ValidateNested({ each: true }) @Type(() => CreateSessionPackageItemDto)
+  items!: CreateSessionPackageItemDto[];
+}

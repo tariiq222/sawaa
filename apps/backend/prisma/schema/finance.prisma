@@ -38,56 +38,57 @@ enum DiscountType {
 
 // ─── Invoice ─────────────────────────────────────────────────────────────────
 
-// XOR constraint: exactly ONE of bookingId OR bundlePurchaseId must be non-null.
-// Enforced in DB by migration 20260520150000_finalize_delivery_type_transition.
+// XOR constraint: exactly ONE of bookingId OR packagePurchaseId must be non-null.
+// Enforced in DB by migration 20260520150000_finalize_delivery_type_transition,
+// replaced by Invoice_booking_or_package_xor_chk in the session-packages rebuild.
 model Invoice {
-  id               String        @id @default(uuid())
-  number           Int           @unique @default(autoincrement())
-  branchId         String
-  clientId         String
-  employeeId       String
-  // DB-???: was non-null String. Made nullable to support bundle invoices.
-  bookingId        String?
-  // DB-???: links invoice to a bundle purchase. Nullable — XOR with bookingId.
-  bundlePurchaseId String?
+  id                String        @id @default(uuid())
+  number            Int           @unique @default(autoincrement())
+  branchId          String
+  clientId          String
+  employeeId        String
+  // DB-???: was non-null String. Made nullable to support package-purchase invoices.
+  bookingId         String?
+  // DB-???: links invoice to a session-package purchase. Nullable — XOR with bookingId.
+  packagePurchaseId String?
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
-  subtotal         Decimal       @db.Decimal(12, 2)
+  subtotal          Decimal       @db.Decimal(12, 2)
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
-  discountAmt      Decimal       @default(0) @db.Decimal(12, 2)
+  discountAmt       Decimal       @default(0) @db.Decimal(12, 2)
   // Manual-discount audit trail. discountReasonId references DiscountReason
   // (no FK relation — cross-cluster id, kept as plain string per BC rules).
-  discountReasonId String?
+  discountReasonId  String?
   discountAppliedBy String?
   discountAppliedAt DateTime?
-  vatRate          Decimal       @default(0) @db.Decimal(5, 4)
+  vatRate           Decimal       @default(0) @db.Decimal(5, 4)
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
-  vatAmt           Decimal       @db.Decimal(12, 2)
+  vatAmt            Decimal       @db.Decimal(12, 2)
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
-  total            Decimal       @db.Decimal(12, 2)
+  total             Decimal       @db.Decimal(12, 2)
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
-  refundedAmount   Decimal       @default(0) @db.Decimal(12, 2)
+  refundedAmount    Decimal       @default(0) @db.Decimal(12, 2)
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
-  refundedVatAmt   Decimal       @default(0) @db.Decimal(12, 2)
-  currency         String        @default("SAR")
-  status           InvoiceStatus @default(DRAFT)
-  issuedAt         DateTime?
-  dueAt            DateTime?
-  paidAt           DateTime?
-  pdfUrl           String?
-  pdfGeneratedAt   DateTime?
-  sentToClientAt   DateTime?
-  notes            String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  refundedVatAmt    Decimal       @default(0) @db.Decimal(12, 2)
+  currency          String        @default("SAR")
+  status            InvoiceStatus @default(DRAFT)
+  issuedAt          DateTime?
+  dueAt             DateTime?
+  paidAt            DateTime?
+  pdfUrl            String?
+  pdfGeneratedAt    DateTime?
+  sentToClientAt    DateTime?
+  notes             String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   payments       Payment[]
   refundRequests RefundRequest[]
 
   @@unique([bookingId])
-  @@unique([bundlePurchaseId])
+  @@unique([packagePurchaseId])
   @@index([clientId])
   @@index([bookingId])
-  @@index([bundlePurchaseId])
+  @@index([packagePurchaseId])
   @@index([status, dueAt])
   @@index([status, createdAt])
   @@index([employeeId])

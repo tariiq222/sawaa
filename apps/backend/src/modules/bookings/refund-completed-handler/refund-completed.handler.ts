@@ -47,7 +47,7 @@ export class RefundCompletedEventHandler {
       async (envelope) => {
         const { bookingId, refundRequestId } = envelope.payload;
         if (!bookingId) {
-          this.logger.log(`Refund ${refundRequestId} has no bookingId — bundle-purchase refund, skipping cascade`);
+          this.logger.log(`Refund ${refundRequestId} has no bookingId — package-purchase refund, skipping cascade`);
           return;
         }
 

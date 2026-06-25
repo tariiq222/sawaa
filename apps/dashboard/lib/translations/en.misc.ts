@@ -33,6 +33,7 @@ export const enMisc: Record<string, string> = {
   "reports.nav.practitioners": "Practitioners",
   "reports.nav.services": "Services",
   "reports.nav.ratings": "Ratings",
+  "reports.nav.packages": "Packages",
 
   // Period presets
   "reports.dateFrom": "From",
@@ -567,6 +568,35 @@ export const enMisc: Record<string, string> = {
   "pagination.prev": "Prev",
   "pagination.next": "Next",
   "pagination.reset": "Reset",
+
+  // — Session-package reports (Phase 5) —
+  "reports.packages.title": "Package Reports",
+  "reports.packages.description": "Package sales, outstanding liability, consumption, and refunds.",
+  "reports.packages.type.label": "Report type",
+  "reports.packages.type.sales": "Sales",
+  "reports.packages.type.outstanding": "Outstanding",
+  "reports.packages.type.consumption": "Consumption",
+  "reports.packages.type.refunded": "Refunded",
+  "reports.packages.sales.purchaseCount": "Packages sold",
+  "reports.packages.sales.totalRevenue": "Total revenue",
+  "reports.packages.sales.byBucket.cash": "Cash",
+  "reports.packages.sales.byBucket.network": "Network (mada)",
+  "reports.packages.sales.byBucket.electronic": "Electronic",
+  "reports.packages.sales.byMethod": "By payment method",
+  "reports.packages.sales.count": "Transactions",
+  "reports.packages.outstanding.liability": "Outstanding liability (SAR)",
+  "reports.packages.outstanding.sessions": "Remaining sessions",
+  "reports.packages.outstanding.creditCount": "Active credit buckets",
+  "reports.packages.consumption.totalConsumed": "Total sessions delivered",
+  "reports.packages.consumption.byEmployee": "Consumption by practitioner",
+  "reports.packages.consumption.count": "Sessions",
+  "reports.packages.refunded.count": "Refunded packages",
+  "reports.packages.refunded.totalRefunded": "Total refunded",
+  "reports.packages.refunded.items": "Refunded packages",
+  "reports.packages.refunded.purchaseId": "Purchase ID",
+  "reports.packages.refunded.amountPaid": "Amount paid",
+  "reports.packages.refunded.refundAmount": "Refunded",
+  "reports.packages.refunded.notes": "Notes",
 
   // — Global Error —
   "globalError.title": "An unexpected error occurred",

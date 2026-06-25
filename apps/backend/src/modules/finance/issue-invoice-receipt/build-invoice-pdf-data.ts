@@ -60,7 +60,7 @@ export async function buildInvoicePdfData(
     logoUrl: null,
     brandColor: PLATFORM_BRAND.colors.primary,
     clientName: client ? `${client.firstName} ${client.lastName ?? ''}`.trim() : '—',
-    serviceName: booking?.serviceNameSnapshot ?? (invoice.bundlePurchaseId ? 'باقة جلسات' : '—'),
+    serviceName: booking?.serviceNameSnapshot ?? (invoice.packagePurchaseId ? 'باقة جلسات' : '—'),
     subtotal: Number(invoice.subtotal),
     discountAmt: Number(invoice.discountAmt),
     vatAmt: Number(invoice.vatAmt),

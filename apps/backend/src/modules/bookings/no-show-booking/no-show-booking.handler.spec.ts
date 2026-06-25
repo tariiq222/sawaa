@@ -96,6 +96,58 @@ describe('NoShowBookingHandler — financial consequence (forfeiture)', () => {
   });
 });
 
+describe('NoShowBookingHandler — session-package credit return', () => {
+  it('returns the credit (usage RETURNED + usedQuantity decremented) on no-show of a credit booking', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.CONFIRMED,
+      packageCreditId: 'credit-1',
+    });
+
+    await newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+
+    expect((prisma as any).packageCreditUsage.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'RETURNED' }) }),
+    );
+    expect((prisma as any).packageCredit.update).toHaveBeenCalledWith({
+      where: { id: 'credit-1' },
+      data: { usedQuantity: { decrement: 1 } },
+    });
+  });
+
+  it('reopens a COMPLETED purchase to ACTIVE on credit return', async () => {
+    const prisma = buildPrisma();
+    (prisma as any).packagePurchase.findUnique = jest.fn().mockResolvedValue({ status: 'COMPLETED' });
+    prisma.booking.findUnique = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.CONFIRMED,
+      packageCreditId: 'credit-1',
+    });
+
+    await newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+
+    expect((prisma as any).packagePurchase.update).toHaveBeenCalledWith({
+      where: { id: 'purchase-1' },
+      data: { status: 'ACTIVE' },
+    });
+  });
+
+  it('does NOT touch credit models for a non-credit booking', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique = jest.fn().mockResolvedValue({
+      ...mockBooking,
+      status: BookingStatus.CONFIRMED,
+      packageCreditId: null,
+    });
+
+    await newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'user-42' });
+
+    expect((prisma as any).packageCreditUsage.findFirst).not.toHaveBeenCalled();
+    expect((prisma as any).packageCredit.update).not.toHaveBeenCalled();
+  });
+});
+
 describe('NoShowBookingHandler — program enrollment capacity', () => {
   it('decrements program enrollment with the tx and programId when no-showing a program booking', async () => {
     const prisma = buildPrisma();

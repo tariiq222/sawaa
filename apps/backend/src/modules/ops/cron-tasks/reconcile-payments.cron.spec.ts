@@ -17,7 +17,7 @@ type InvoiceRow = {
   total: number;
   currency: string;
   bookingId: string | null;
-  bundlePurchaseId: string | null;
+  packagePurchaseId: string | null;
   clientId: string;
 };
 
@@ -32,7 +32,7 @@ const defaultInvoice: InvoiceRow = {
   total: 10_000,
   currency: 'SAR',
   bookingId: 'bk_1',
-  bundlePurchaseId: null,
+  packagePurchaseId: null,
   clientId: 'cl_1',
 };
 

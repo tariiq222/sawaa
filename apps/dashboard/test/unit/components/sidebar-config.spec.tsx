@@ -62,7 +62,7 @@ describe("SidebarConfig — persona groups", () => {
 
   it("catalogNav contains directory items", () => {
     expect(allHrefs).toContain("/services")
-    expect(allHrefs).toContain("/bundles")
+    expect(allHrefs).toContain("/packages")
     expect(allHrefs).toContain("/categories")
     expect(allHrefs).toContain("/departments")
     expect(allHrefs).toContain("/employees")

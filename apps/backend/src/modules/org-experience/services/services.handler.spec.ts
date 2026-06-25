@@ -63,9 +63,6 @@ const buildPrisma = () => {
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       groupBy: jest.fn().mockResolvedValue([]),
     },
-    serviceBundleItem: {
-      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
-    },
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(prisma));
@@ -265,12 +262,8 @@ describe('ArchiveServiceHandler', () => {
     expect(prisma.booking.count).toHaveBeenCalledWith({ where: { serviceId: 'svc-1' } });
     expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(1);
     expect(prisma.employeeService.deleteMany).toHaveBeenCalledWith({ where: { serviceId: 'svc-1' } });
-    expect(prisma.serviceBundleItem.deleteMany).toHaveBeenCalledWith({ where: { serviceId: 'svc-1' } });
     expect(prisma.service.delete).toHaveBeenCalledWith({ where: { id: 'svc-1' } });
     expect(prisma.employeeService.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
-      prisma.service.delete.mock.invocationCallOrder[0],
-    );
-    expect(prisma.serviceBundleItem.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
       prisma.service.delete.mock.invocationCallOrder[0],
     );
     expect(prisma.service.update).not.toHaveBeenCalled();
@@ -291,7 +284,6 @@ describe('ArchiveServiceHandler', () => {
     });
     expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
     expect(prisma.employeeService.deleteMany).not.toHaveBeenCalled();
-    expect(prisma.serviceBundleItem.deleteMany).not.toHaveBeenCalled();
     expect(prisma.service.delete).not.toHaveBeenCalled();
     expect(result).toEqual(mockService);
   });
@@ -304,7 +296,6 @@ describe('ArchiveServiceHandler', () => {
     expect(prisma.booking.count).not.toHaveBeenCalled();
     expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
     expect(prisma.employeeService.deleteMany).not.toHaveBeenCalled();
-    expect(prisma.serviceBundleItem.deleteMany).not.toHaveBeenCalled();
     expect(prisma.service.delete).not.toHaveBeenCalled();
     expect(prisma.service.update).not.toHaveBeenCalled();
   });

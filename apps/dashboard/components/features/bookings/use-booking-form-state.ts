@@ -1,3 +1,10 @@
+// EXCEPTION: hook size limit (200) exceeded — 237 lines — 2026-06-24
+// Phase 3 added `durationOptionId` to the booking form state plus a
+// new `selectDurationOption` setter, and propagated the field through
+// every reset path (client, department, category, service, employee).
+// Once a follow-up refactor extracts reset paths into a helper this
+// file will drop back under 200.
+
 import { useCallback, useState } from 'react'
 
 export type CategoryBookingMode = 'DIRECT' | 'SERVICES'
@@ -14,6 +21,14 @@ export interface BookingFormState {
   serviceName: string | null
   employeeId: string | null
   employeeName: string | null
+  /**
+   * Phase 3 — ServiceDurationOption id implied by the selected
+   * (employee, service, deliveryType) triple. Set by StepTypeDuration
+   * from the first/default duration option of the matching
+   * EmployeeServiceType, so the auto-detect credit lookup and the
+   * from-credit booking can use the exact triple the backend requires.
+   */
+  durationOptionId: string | null
   deliveryType: 'IN_PERSON' | 'ONLINE' | null
   /** @deprecated Use deliveryType. Kept as a read-compatible alias during the refactor. */
   type: 'IN_PERSON' | 'ONLINE' | null
@@ -35,6 +50,7 @@ const INITIAL_STATE: BookingFormState = {
   serviceName: null,
   employeeId: null,
   employeeName: null,
+  durationOptionId: null,
   deliveryType: null,
   type: null,
   date: null,
@@ -72,6 +88,7 @@ export function useBookingFormState() {
       serviceName: null,
       employeeId: null,
       employeeName: null,
+      durationOptionId: null,
       deliveryType: null,
       type: null,
       date: null,
@@ -92,6 +109,7 @@ export function useBookingFormState() {
       serviceName: null,
       employeeId: null,
       employeeName: null,
+      durationOptionId: null,
       deliveryType: null,
       type: null,
       date: null,
@@ -126,6 +144,7 @@ export function useBookingFormState() {
         serviceName: shouldAutoSelect ? autoService!.serviceName : null,
         employeeId: null,
         employeeName: null,
+        durationOptionId: null,
         deliveryType: null,
         type: null,
         date: null,
@@ -143,6 +162,7 @@ export function useBookingFormState() {
       serviceName,
       employeeId: null,
       employeeName: null,
+      durationOptionId: null,
       deliveryType: null,
       type: null,
       date: null,
@@ -156,6 +176,7 @@ export function useBookingFormState() {
       ...prev,
       employeeId,
       employeeName,
+      durationOptionId: null,
       deliveryType: null,
       type: null,
       date: null,
@@ -172,6 +193,17 @@ export function useBookingFormState() {
       date: null,
       startTime: null,
     }))
+  }, [])
+
+  /**
+   * Phase 3 — set the resolved ServiceDurationOption id alongside the
+   * selected deliveryType. StepTypeDuration resolves the duration from
+   * the EmployeeServiceType's durationOptions (default → first) and
+   * calls this so the auto-detect badge can query matching credits with
+   * the full (client, service, employee, duration) triple.
+   */
+  const selectDurationOption = useCallback((durationOptionId: string | null) => {
+    setState((prev) => ({ ...prev, durationOptionId }))
   }, [])
 
   /** Selecting a date resets time */
@@ -203,6 +235,7 @@ export function useBookingFormState() {
     selectDeliveryType,
     /** @deprecated Use selectDeliveryType. */
     selectType: selectDeliveryType,
+    selectDurationOption,
     selectDate,
     selectTime,
     setPayAtClinic,

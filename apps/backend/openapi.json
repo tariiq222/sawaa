@@ -258,6 +258,72 @@
         ],
         "type": "object"
       },
+      "BookFromCreditDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch where the appointment takes place",
+            "example": "00000000-0000-4000-a000-000000000002",
+            "format": "uuid",
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Client booking the appointment",
+            "example": "00000000-0000-4000-a000-000000000001",
+            "format": "uuid",
+            "type": "string"
+          },
+          "creditId": {
+            "description": "Explicit PackageCredit bucket to consume. When omitted, the handler FIFO-selects the oldest matching credit from the (serviceId, employeeId, durationOptionId) triple.",
+            "example": "00000000-0000-4000-a000-000000000006",
+            "format": "uuid",
+            "type": "string"
+          },
+          "deliveryType": {
+            "description": "Delivery channel; defaults to the credit duration option delivery type",
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "example": "IN_PERSON",
+            "type": "string"
+          },
+          "durationOptionId": {
+            "description": "Duration option to match a credit on (required when creditId is omitted)",
+            "example": "00000000-0000-4000-a000-000000000005",
+            "format": "uuid",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee to match a credit on (required when creditId is omitted)",
+            "example": "00000000-0000-4000-a000-000000000003",
+            "format": "uuid",
+            "type": "string"
+          },
+          "notes": {
+            "description": "Free-form note attached to the booking",
+            "example": "Returning client",
+            "type": "string"
+          },
+          "scheduledAt": {
+            "description": "Appointment start time (ISO 8601, must be in the future)",
+            "example": "2026-12-31T09:00:00Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "serviceId": {
+            "description": "Service to match a credit on (required when creditId is omitted)",
+            "example": "00000000-0000-4000-a000-000000000004",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientId",
+          "branchId",
+          "scheduledAt"
+        ],
+        "type": "object"
+      },
       "BookingConfigDurationOptionInputDto": {
         "properties": {
           "currency": {
@@ -889,143 +955,6 @@
         },
         "required": [
           "nameAr"
-        ],
-        "type": "object"
-      },
-      "CreateBundleBookingDto": {
-        "properties": {
-          "branchId": {
-            "description": "Branch where the bundle booking takes place",
-            "example": "00000000-0000-0000-0000-000000000000",
-            "type": "string"
-          },
-          "bundleId": {
-            "description": "Service bundle to book",
-            "example": "00000000-0000-0000-0000-000000000000",
-            "type": "string"
-          },
-          "clientId": {
-            "description": "Client being booked",
-            "example": "00000000-0000-0000-0000-000000000000",
-            "type": "string"
-          },
-          "deliveryType": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DeliveryType"
-              }
-            ],
-            "description": "Delivery channel for all bundle bookings (IN_PERSON or ONLINE)",
-            "example": "IN_PERSON"
-          },
-          "employeeId": {
-            "description": "Employee performing all bundle services",
-            "example": "00000000-0000-0000-0000-000000000000",
-            "type": "string"
-          },
-          "notes": {
-            "description": "Free-text notes for the bookings",
-            "example": "Client prefers quiet room",
-            "type": "string"
-          },
-          "payAtClinic": {
-            "description": "Payment collected at the clinic instead of online",
-            "example": false,
-            "type": "boolean"
-          },
-          "scheduledAt": {
-            "description": "ISO 8601 start datetime for the first service in the bundle",
-            "example": "2026-05-01T09:00:00.000Z",
-            "type": "string"
-          }
-        },
-        "required": [
-          "branchId",
-          "clientId",
-          "employeeId",
-          "bundleId",
-          "scheduledAt"
-        ],
-        "type": "object"
-      },
-      "CreateBundleDto": {
-        "properties": {
-          "currency": {
-            "default": "SAR",
-            "example": "SAR",
-            "type": "string"
-          },
-          "descriptionAr": {
-            "description": "Bundle description in Arabic",
-            "type": "string"
-          },
-          "descriptionEn": {
-            "description": "Bundle description in English",
-            "type": "string"
-          },
-          "discountType": {
-            "enum": [
-              "PERCENTAGE",
-              "FIXED"
-            ],
-            "example": "PERCENTAGE",
-            "type": "string"
-          },
-          "discountValue": {
-            "description": "Discount value (percentage or fixed amount)",
-            "example": 10,
-            "type": "number"
-          },
-          "iconBgColor": {
-            "example": "#F0F4FF",
-            "type": "string"
-          },
-          "iconName": {
-            "example": "bundle-01",
-            "type": "string"
-          },
-          "imageUrl": {
-            "description": "Bundle image URL",
-            "type": "string"
-          },
-          "isActive": {
-            "default": true,
-            "example": true,
-            "type": "boolean"
-          },
-          "isHidden": {
-            "default": false,
-            "example": false,
-            "type": "boolean"
-          },
-          "nameAr": {
-            "example": "باقة العناية الشاملة",
-            "type": "string"
-          },
-          "nameEn": {
-            "example": "Full Care Bundle",
-            "type": "string"
-          },
-          "serviceIds": {
-            "description": "Array of service UUIDs to include in the bundle. Order defines execution order.",
-            "items": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "minItems": 2,
-            "type": "array"
-          },
-          "sortOrder": {
-            "default": 0,
-            "example": 0,
-            "type": "number"
-          }
-        },
-        "required": [
-          "nameAr",
-          "discountType",
-          "discountValue",
-          "serviceIds"
         ],
         "type": "object"
       },
@@ -1681,7 +1610,7 @@
       "CreateInvoiceDto": {
         "properties": {
           "bookingId": {
-            "description": "Booking this invoice is for (XOR with bundlePurchaseId)",
+            "description": "Booking this invoice is for (XOR with packagePurchaseId)",
             "example": "00000000-0000-0000-0000-000000000000",
             "type": "object"
           },
@@ -1689,11 +1618,6 @@
             "description": "Branch where the service was delivered",
             "example": "00000000-0000-0000-0000-000000000000",
             "type": "string"
-          },
-          "bundlePurchaseId": {
-            "description": "Bundle purchase this invoice is for (XOR with bookingId)",
-            "example": "00000000-0000-0000-0000-000000000000",
-            "type": "object"
           },
           "clientId": {
             "description": "Client being invoiced",
@@ -1720,6 +1644,11 @@
             "example": "Includes consultation fee",
             "type": "string"
           },
+          "packagePurchaseId": {
+            "description": "Session-package purchase this invoice is for (XOR with bookingId)",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "object"
+          },
           "subtotal": {
             "description": "Subtotal before discount and tax in integer halalas (1 SAR = 100)",
             "example": 10000,
@@ -1736,6 +1665,50 @@
           "clientId",
           "employeeId",
           "subtotal"
+        ],
+        "type": "object"
+      },
+      "CreatePackagePurchaseDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch where the sale happens",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          },
+          "clientId": {
+            "description": "Client buying the package",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Optional employee reference (e.g. the practitioner associated with the first item). Stored as a plain string on the invoice — no Prisma FK.",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          },
+          "method": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentMethod"
+              }
+            ],
+            "description": "Manual payment method used at the desk (reception flow). ONLINE_CARD is rejected — online card sales happen through the Moyasar webhook flow."
+          },
+          "notes": {
+            "description": "Free-form notes attached to the purchase",
+            "example": "Walk-in sale, paid in cash",
+            "type": "string"
+          },
+          "packageId": {
+            "description": "Session package being sold",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          }
+        },
+        "required": [
+          "packageId",
+          "clientId",
+          "branchId",
+          "method"
         ],
         "type": "object"
       },
@@ -2050,6 +2023,143 @@
           "durationMins",
           "price",
           "categoryId"
+        ],
+        "type": "object"
+      },
+      "CreateSessionPackageDto": {
+        "properties": {
+          "descriptionAr": {
+            "description": "Arabic description",
+            "example": "أربع جلسات استشارة مع المعالج",
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English description",
+            "example": "Four consultation sessions with the practitioner",
+            "type": "string"
+          },
+          "discountType": {
+            "description": "Discount type — PERCENTAGE (0-100) or FIXED (in integer halalas, 1 SAR = 100)",
+            "enum": [
+              "PERCENTAGE",
+              "FIXED"
+            ],
+            "example": "PERCENTAGE",
+            "type": "string"
+          },
+          "discountValue": {
+            "description": "Discount value. For PERCENTAGE: 0-100 (e.g. 10 = 10%). For FIXED: integer halalas (e.g. 5000 = 50 SAR), matching the rest of the codebase.",
+            "example": 10,
+            "minimum": 0,
+            "type": "number"
+          },
+          "iconBgColor": {
+            "description": "Icon background color (hex)",
+            "example": "#FFD8A8",
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Lucide icon name",
+            "example": "package",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Image URL (upload via /uploads)",
+            "example": "https://cdn.example.com/pack.png",
+            "type": "string"
+          },
+          "isActive": {
+            "default": true,
+            "description": "Whether the package is selectable",
+            "example": true,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "default": false,
+            "description": "Whether the package is visible to clients on the public catalog",
+            "example": true,
+            "type": "boolean"
+          },
+          "items": {
+            "description": "Package items (min 1)",
+            "items": {
+              "$ref": "#/components/schemas/CreateSessionPackageItemDto"
+            },
+            "type": "array"
+          },
+          "nameAr": {
+            "description": "Arabic name",
+            "example": "باقة الاستشارة العائلية",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English name",
+            "example": "Family Counseling Pack",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "sortOrder": {
+            "default": 0,
+            "description": "Display order (ascending)",
+            "example": 0,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "nameAr",
+          "discountType",
+          "discountValue",
+          "items"
+        ],
+        "type": "object"
+      },
+      "CreateSessionPackageItemDto": {
+        "properties": {
+          "durationOptionId": {
+            "description": "ServiceDurationOption UUID",
+            "example": "00000000-0000-4000-a000-000000000000",
+            "format": "uuid",
+            "type": "string"
+          },
+          "employeeId": {
+            "description": "Employee (practitioner) UUID",
+            "example": "00000000-0000-4000-a000-000000000000",
+            "format": "uuid",
+            "type": "string"
+          },
+          "freeQuantity": {
+            "default": 0,
+            "description": "Number of free bonus sessions bundled with the paid ones",
+            "example": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "paidQuantity": {
+            "description": "Number of paid sessions the client gets",
+            "example": 4,
+            "minimum": 0,
+            "type": "number"
+          },
+          "serviceId": {
+            "description": "Service UUID",
+            "example": "00000000-0000-4000-a000-000000000000",
+            "format": "uuid",
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Display order within the package",
+            "example": 0,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "serviceId",
+          "employeeId",
+          "durationOptionId",
+          "paidQuantity"
         ],
         "type": "object"
       },
@@ -2730,6 +2840,25 @@
         ],
         "type": "object"
       },
+      "InitPackagePurchaseDto": {
+        "properties": {
+          "branchId": {
+            "description": "Branch UUID the purchase is attributed to",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          },
+          "packageId": {
+            "description": "SessionPackage UUID to purchase (must be a public, active package)",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "type": "string"
+          }
+        },
+        "required": [
+          "packageId",
+          "branchId"
+        ],
+        "type": "object"
+      },
       "IntakeFieldInputDto": {
         "properties": {
           "fieldType": {
@@ -3332,6 +3461,15 @@
         ],
         "type": "string"
       },
+      "PackagePurchaseStatus": {
+        "enum": [
+          "PENDING",
+          "ACTIVE",
+          "COMPLETED",
+          "REFUNDED"
+        ],
+        "type": "string"
+      },
       "PaginatedClientsDto": {
         "properties": {
           "items": {
@@ -3652,6 +3790,24 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "RefundPackagePurchaseDto": {
+        "properties": {
+          "notes": {
+            "description": "Reason / note for the manual refund (appended to the purchase notes)",
+            "example": "Client moved abroad",
+            "type": "string"
+          },
+          "refundAmount": {
+            "description": "Refund amount in integer halalas (1 SAR = 100). Must be between 0 and the amount paid. 0 records a cancellation with no money returned.",
+            "example": 50000,
+            "type": "number"
+          }
+        },
+        "required": [
+          "refundAmount"
+        ],
         "type": "object"
       },
       "RefundPaymentDto": {
@@ -4329,6 +4485,19 @@
         ],
         "type": "object"
       },
+      "TransferCreditDto": {
+        "properties": {
+          "toEmployeeId": {
+            "description": "Target employee (practitioner) to move the credit to",
+            "example": "00000000-0000-4000-a000-000000000099",
+            "type": "string"
+          }
+        },
+        "required": [
+          "toEmployeeId"
+        ],
+        "type": "object"
+      },
       "UnifonicCredentialsDto": {
         "properties": {
           "apiKey": {
@@ -4433,77 +4602,6 @@
             "description": "IANA timezone identifier",
             "example": "Asia/Riyadh",
             "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "UpdateBundleDto": {
-        "properties": {
-          "currency": {
-            "example": "SAR",
-            "type": "string"
-          },
-          "descriptionAr": {
-            "description": "Bundle description in Arabic",
-            "type": "string"
-          },
-          "descriptionEn": {
-            "description": "Bundle description in English",
-            "type": "string"
-          },
-          "discountType": {
-            "enum": [
-              "PERCENTAGE",
-              "FIXED"
-            ],
-            "example": "PERCENTAGE",
-            "type": "string"
-          },
-          "discountValue": {
-            "description": "Discount value (percentage or fixed amount)",
-            "example": 10,
-            "type": "number"
-          },
-          "iconBgColor": {
-            "example": "#F0F4FF",
-            "type": "string"
-          },
-          "iconName": {
-            "example": "bundle-01",
-            "type": "string"
-          },
-          "imageUrl": {
-            "description": "Bundle image URL",
-            "type": "string"
-          },
-          "isActive": {
-            "example": true,
-            "type": "boolean"
-          },
-          "isHidden": {
-            "example": false,
-            "type": "boolean"
-          },
-          "nameAr": {
-            "example": "باقة العناية الشاملة",
-            "type": "string"
-          },
-          "nameEn": {
-            "example": "Full Care Bundle",
-            "type": "string"
-          },
-          "serviceIds": {
-            "description": "Replace bundle services. Must include at least 2 services. Order defines execution order.",
-            "items": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "minItems": 2,
-            "type": "array"
-          },
-          "sortOrder": {
-            "example": 0,
-            "type": "number"
           }
         },
         "type": "object"
@@ -5225,6 +5323,78 @@
           "price": {
             "description": "Price in integer halalas (1 SAR = 100)",
             "example": 5000,
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateSessionPackageDto": {
+        "properties": {
+          "descriptionAr": {
+            "description": "Arabic description",
+            "type": "string"
+          },
+          "descriptionEn": {
+            "description": "English description",
+            "type": "string"
+          },
+          "discountType": {
+            "description": "Discount type — PERCENTAGE (0-100) or FIXED (integer halalas, 1 SAR = 100)",
+            "enum": [
+              "PERCENTAGE",
+              "FIXED"
+            ],
+            "type": "string"
+          },
+          "discountValue": {
+            "description": "Discount value (see CreateSessionPackageDto for semantics)",
+            "minimum": 0,
+            "type": "number"
+          },
+          "iconBgColor": {
+            "description": "Icon background color (hex)",
+            "type": "string"
+          },
+          "iconName": {
+            "description": "Lucide icon name",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Image URL",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether the package is selectable",
+            "example": true,
+            "type": "boolean"
+          },
+          "isPublic": {
+            "description": "Whether the package is visible to clients",
+            "example": true,
+            "type": "boolean"
+          },
+          "items": {
+            "description": "Replacement items (full set; delete-and-create semantics in the handler)",
+            "items": {
+              "$ref": "#/components/schemas/CreateSessionPackageItemDto"
+            },
+            "type": "array"
+          },
+          "nameAr": {
+            "description": "Arabic name",
+            "example": "باقة محدّثة",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English name",
+            "example": "Updated Pack",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Display order (ascending)",
+            "minimum": 0,
             "type": "number"
           }
         },
@@ -7805,15 +7975,123 @@
         ]
       }
     },
-    "/api/v1/dashboard/bookings/bundle": {
+    "/api/v1/dashboard/bookings/credits/{creditId}/transfer": {
       "post": {
-        "operationId": "DashboardBookingsController_createBundleBooking",
+        "operationId": "DashboardBookingsController_transferCredit",
+        "parameters": [
+          {
+            "description": "Package credit ID",
+            "in": "path",
+            "name": "creditId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-4000-a000-000000000006",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferCreditDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "employeeId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Credit re-pointed to the target employee (price snapshot unchanged)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Target employee does not provide the service/duration, is inactive, or is the current owner"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Credit or target employee not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Transfer a session-package credit to another practitioner",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/bookings/from-credit": {
+      "post": {
+        "operationId": "DashboardBookingsController_bookFromCredit",
         "parameters": [],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateBundleBookingDto"
+                "$ref": "#/components/schemas/BookFromCreditDto"
               }
             }
           },
@@ -7821,7 +8099,186 @@
         },
         "responses": {
           "201": {
-            "description": "Bundle booking created — multiple consecutive bookings"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "packageCreditId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "scheduledAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "status": {
+                      "example": "CONFIRMED",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Zero-value booking created from a package credit"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Slot unavailable, missing credit selector, or past date"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No usable package credit found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No remaining credit or slot conflict (concurrent over-draw rejected)"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Book an appointment by consuming session-package credit",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/bookings/matching-credits": {
+      "get": {
+        "operationId": "DashboardBookingsController_getMatchingCredits",
+        "parameters": [
+          {
+            "description": "Client ID",
+            "in": "query",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-4000-a000-000000000001",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Service ID",
+            "in": "query",
+            "name": "serviceId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-4000-a000-000000000004",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Employee ID",
+            "in": "query",
+            "name": "employeeId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-4000-a000-000000000003",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Duration option ID",
+            "in": "query",
+            "name": "durationOptionId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-4000-a000-000000000005",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "properties": {
+                      "creditId": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "purchaseId": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "remaining": {
+                        "type": "number"
+                      },
+                      "totalQuantity": {
+                        "type": "number"
+                      },
+                      "usedQuantity": {
+                        "type": "number"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Matching ACTIVE credits with remaining capacity (FIFO order)"
           },
           "400": {
             "content": {
@@ -7869,7 +8326,7 @@
             "bearer": []
           }
         ],
-        "summary": "Create a booking for a service bundle",
+        "summary": "List a client's usable session-package credits matching a service/employee/duration",
         "tags": [
           "Dashboard / Bookings"
         ]
@@ -11229,6 +11686,86 @@
         ]
       }
     },
+    "/api/v1/dashboard/finance/clients/{clientId}/package-purchases": {
+      "get": {
+        "operationId": "DashboardFinanceController_listClientPackagePurchasesEndpoint",
+        "parameters": [
+          {
+            "description": "Client UUID",
+            "in": "path",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by purchase status",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/PackagePurchaseStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Client package purchases with credits"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List a client's package purchases with their remaining credit balances",
+        "tags": [
+          "Dashboard / Finance"
+        ]
+      }
+    },
     "/api/v1/dashboard/finance/coupons": {
       "get": {
         "operationId": "DashboardFinanceController_listCouponsEndpoint",
@@ -12425,6 +12962,177 @@
           }
         ],
         "summary": "Probe Moyasar with the stored credentials and persist verification status",
+        "tags": [
+          "Dashboard / Finance"
+        ]
+      }
+    },
+    "/api/v1/dashboard/finance/package-purchases": {
+      "post": {
+        "operationId": "DashboardFinanceController_createPackagePurchaseEndpoint",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePackagePurchaseDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Package purchase created, invoice issued, payment recorded, credits activated"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid package state, client missing, or ONLINE_CARD method"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Package or client not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Sell a SessionPackage to a client at the desk (manual payment)",
+        "tags": [
+          "Dashboard / Finance"
+        ]
+      }
+    },
+    "/api/v1/dashboard/finance/package-purchases/{purchaseId}/refund": {
+      "post": {
+        "operationId": "DashboardFinanceController_refundPackagePurchaseEndpoint",
+        "parameters": [
+          {
+            "description": "Package purchase UUID",
+            "in": "path",
+            "name": "purchaseId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-4000-a000-000000000007",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundPackagePurchaseDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Purchase marked REFUNDED, credits voided, refund recorded"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Already refunded or refundAmount outside [0, amountPaid]"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Package purchase not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Manually refund a session-package purchase (marks REFUNDED, voids credits, records the refund)",
         "tags": [
           "Dashboard / Finance"
         ]
@@ -15490,6 +16198,102 @@
         ]
       }
     },
+    "/api/v1/dashboard/ops/reports/packages": {
+      "get": {
+        "operationId": "DashboardOpsController_packageReportEndpoint",
+        "parameters": [
+          {
+            "description": "Which package report to generate",
+            "in": "query",
+            "name": "report",
+            "required": true,
+            "schema": {
+              "enum": [
+                "SALES",
+                "OUTSTANDING_CREDIT",
+                "CONSUMPTION",
+                "REFUNDED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Start of period (ISO 8601 date)",
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "example": "2026-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "description": "End of period (ISO 8601 date)",
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "example": "2026-03-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON report object (shape depends on the report type)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generate a session-package operational report (sales, outstanding-credit liability, consumption per employee, or refunded packages)",
+        "tags": [
+          "Dashboard / Ops"
+        ]
+      }
+    },
     "/api/v1/dashboard/organization/booking-settings": {
       "get": {
         "operationId": "DashboardOrganizationSettingsController_getBookingSettingsEndpoint",
@@ -16292,393 +17096,6 @@
         "summary": "Unassign an employee from a branch",
         "tags": [
           "Dashboard / Org Config"
-        ]
-      }
-    },
-    "/api/v1/dashboard/organization/bundles": {
-      "get": {
-        "operationId": "DashboardOrganizationSettingsController_listBundlesEndpoint",
-        "parameters": [
-          {
-            "description": "Filter by active status",
-            "in": "query",
-            "name": "isActive",
-            "required": false,
-            "schema": {
-              "example": true,
-              "type": "boolean"
-            }
-          },
-          {
-            "description": "Include hidden bundles",
-            "in": "query",
-            "name": "includeHidden",
-            "required": false,
-            "schema": {
-              "example": false,
-              "type": "boolean"
-            }
-          },
-          {
-            "description": "Search by name",
-            "in": "query",
-            "name": "search",
-            "required": false,
-            "schema": {
-              "example": "عناية",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Paginated list of bundles"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List service bundles",
-        "tags": [
-          "Dashboard / Org Experience"
-        ]
-      },
-      "post": {
-        "operationId": "DashboardOrganizationSettingsController_createBundleEndpoint",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateBundleDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Bundle created"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a service bundle",
-        "tags": [
-          "Dashboard / Org Experience"
-        ]
-      }
-    },
-    "/api/v1/dashboard/organization/bundles/{bundleId}": {
-      "delete": {
-        "operationId": "DashboardOrganizationSettingsController_archiveBundleEndpoint",
-        "parameters": [
-          {
-            "description": "Bundle UUID",
-            "in": "path",
-            "name": "bundleId",
-            "required": true,
-            "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Bundle archived"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "404": {
-            "description": "Bundle not found"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Archive a service bundle",
-        "tags": [
-          "Dashboard / Org Experience"
-        ]
-      },
-      "get": {
-        "operationId": "DashboardOrganizationSettingsController_getBundleEndpoint",
-        "parameters": [
-          {
-            "description": "Bundle UUID",
-            "in": "path",
-            "name": "bundleId",
-            "required": true,
-            "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Bundle details"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "404": {
-            "description": "Bundle not found"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get a service bundle by id",
-        "tags": [
-          "Dashboard / Org Experience"
-        ]
-      },
-      "patch": {
-        "operationId": "DashboardOrganizationSettingsController_updateBundleEndpoint",
-        "parameters": [
-          {
-            "description": "Bundle UUID",
-            "in": "path",
-            "name": "bundleId",
-            "required": true,
-            "schema": {
-              "example": "00000000-0000-0000-0000-000000000000",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateBundleDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Bundle updated"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Validation failed"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Missing or invalid authentication"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Action denied by permission policy"
-          },
-          "404": {
-            "description": "Bundle not found"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                }
-              }
-            },
-            "description": "Unhandled server error"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Update a service bundle",
-        "tags": [
-          "Dashboard / Org Experience"
         ]
       }
     },
@@ -18359,6 +18776,380 @@
           }
         ],
         "summary": "Replace all fields on an intake form",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      }
+    },
+    "/api/v1/dashboard/organization/packages": {
+      "get": {
+        "operationId": "DashboardOrganizationSettingsController_listSessionPackagesEndpoint",
+        "parameters": [
+          {
+            "description": "Filter by active status",
+            "in": "query",
+            "name": "isActive",
+            "required": false,
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Filter by public visibility",
+            "in": "query",
+            "name": "isPublic",
+            "required": false,
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Search by Arabic or English name (case-insensitive contains)",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "example": "family",
+              "maxLength": 100,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of session packages"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List session packages",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      },
+      "post": {
+        "operationId": "DashboardOrganizationSettingsController_createSessionPackageEndpoint",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionPackageDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Session package created"
+          },
+          "400": {
+            "description": "Validation failed (invalid items, missing employee-service link, or invalid discount)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a session package",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      }
+    },
+    "/api/v1/dashboard/organization/packages/{packageId}": {
+      "delete": {
+        "operationId": "DashboardOrganizationSettingsController_archiveSessionPackageEndpoint",
+        "parameters": [
+          {
+            "description": "Session package UUID",
+            "in": "path",
+            "name": "packageId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Session package archived"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Session package not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archive a session package",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      },
+      "get": {
+        "operationId": "DashboardOrganizationSettingsController_getSessionPackageEndpoint",
+        "parameters": [
+          {
+            "description": "Session package UUID",
+            "in": "path",
+            "name": "packageId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session package details including the computed price"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Session package not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a session package by id",
+        "tags": [
+          "Dashboard / Org Experience"
+        ]
+      },
+      "patch": {
+        "operationId": "DashboardOrganizationSettingsController_updateSessionPackageEndpoint",
+        "parameters": [
+          {
+            "description": "Session package UUID",
+            "in": "path",
+            "name": "packageId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSessionPackageDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Session package updated"
+          },
+          "400": {
+            "description": "Validation failed (invalid items or invalid discount)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "description": "Session package not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a session package",
         "tags": [
           "Dashboard / Org Experience"
         ]
@@ -24320,7 +25111,7 @@
         ],
         "summary": "List programs (filterable by status, department, branch)",
         "tags": [
-          "Dashboard / Bookings"
+          "Dashboard / Programs"
         ]
       },
       "post": {
@@ -24388,7 +25179,7 @@
         ],
         "summary": "Create a new program (DRAFT)",
         "tags": [
-          "Dashboard / Bookings"
+          "Dashboard / Programs"
         ]
       }
     },
@@ -24458,7 +25249,7 @@
         ],
         "summary": "Get a single program by UUID or numeric ref",
         "tags": [
-          "Dashboard / Bookings"
+          "Dashboard / Programs"
         ]
       }
     },
@@ -24538,7 +25329,7 @@
         ],
         "summary": "Cancel a program (cascades to enrollments, no automatic refund)",
         "tags": [
-          "Dashboard / Bookings"
+          "Dashboard / Programs"
         ]
       }
     },
@@ -24618,7 +25409,7 @@
         ],
         "summary": "Enroll a client on-behalf from the dashboard",
         "tags": [
-          "Dashboard / Bookings"
+          "Dashboard / Programs"
         ]
       }
     },
@@ -24688,7 +25479,7 @@
         ],
         "summary": "Publish a DRAFT program (DRAFT → OPEN)",
         "tags": [
-          "Dashboard / Bookings"
+          "Dashboard / Programs"
         ]
       }
     },
@@ -24768,7 +25559,7 @@
         ],
         "summary": "Schedule a program (OPEN|MIN_REACHED → SCHEDULED)",
         "tags": [
-          "Dashboard / Bookings"
+          "Dashboard / Programs"
         ]
       }
     },
@@ -30858,6 +31649,90 @@
         ]
       }
     },
+    "/api/v1/public/packages": {
+      "get": {
+        "operationId": "PublicPackagesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Public, active session packages with computed prices"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Get the public session-package catalog",
+        "tags": [
+          "Public / Catalog"
+        ]
+      }
+    },
+    "/api/v1/public/packages/{packageId}": {
+      "get": {
+        "operationId": "PublicPackagesController_get",
+        "parameters": [
+          {
+            "description": "SessionPackage UUID",
+            "in": "path",
+            "name": "packageId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The public session package with its computed price"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Package not found or not public"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "summary": "Get one public session package by id",
+        "tags": [
+          "Public / Catalog"
+        ]
+      }
+    },
     "/api/v1/public/payments/init": {
       "post": {
         "operationId": "PublicPaymentsController_initPayment",
@@ -30924,6 +31799,87 @@
           }
         ],
         "summary": "Initialize a Moyasar payment for a booking invoice (requires a logged-in client session)",
+        "tags": [
+          "Public / Payments"
+        ]
+      }
+    },
+    "/api/v1/public/payments/package-purchases/init": {
+      "post": {
+        "operationId": "PublicPaymentsController_initPackagePurchaseEndpoint",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitPackagePurchaseDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "invoiceId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "paymentId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "purchaseId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "redirectUrl": {
+                      "example": "https://checkout.moyasar.com/pay/payment-id",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "purchaseId",
+                    "invoiceId",
+                    "paymentId",
+                    "redirectUrl"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Package purchase initialized (PENDING until the Moyasar payment completes)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Initialize a Moyasar payment to self-purchase a session package (requires a logged-in client session)",
         "tags": [
           "Public / Payments"
         ]

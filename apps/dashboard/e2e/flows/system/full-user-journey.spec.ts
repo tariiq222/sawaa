@@ -34,8 +34,14 @@ import {
 } from "../../fixtures/seed"
 
 const SERVICE_PRICE_HALALAS = 28_000
-const JOURNEY_TOTAL_HALALAS = 32_200
-const JOURNEY_TOTAL_AR_OR_EN = /٣٢٢(?:٫|\.)٠٠|322(?:\.|٫)00|322/
+// A dashboard-confirmed booking auto-creates its invoice (bookings.booking.
+// confirmed → BookingConfirmedHandler), which uses the default VAT rate of 0%
+// (create-invoice.handler.ts: DEFAULT_VAT_RATE = 0). So the invoice total equals
+// the booking subtotal — 28000 halalas, displayed as 280.00. The seed's
+// createInvoice() is idempotent and returns this existing invoice rather than
+// creating a second one (one booking has exactly one invoice).
+const JOURNEY_TOTAL_HALALAS = SERVICE_PRICE_HALALAS
+const JOURNEY_TOTAL_AR_OR_EN = /٢٨٠(?:٫|\.)٠٠|280(?:\.|٫)00|280/
 
 let token = ""
 let branchId = ""
@@ -100,6 +106,10 @@ test.describe("Full system user journey", () => {
 
     await expectBookingVisibleInList(page, booking.id, clientFullName())
 
+    // The POS already created (and auto-invoiced) the booking, so this resolves
+    // to that auto-created invoice via the seed's idempotent createInvoice().
+    // The requested vatRate is moot — the auto-invoice uses the product default
+    // (0%), so total == subtotal == SERVICE_PRICE_HALALAS.
     invoice = await createInvoice(token, {
       bookingId: booking.id,
       branchId,
@@ -127,8 +137,12 @@ test.describe("Full system user journey", () => {
     await page.goto("/bookings")
     await expectCurrentPath(page, "/bookings")
     await expectNoAppCrash(page)
+    // The bookings-list search field is a placeholder-only input
+    // (bookings.searchPlaceholder = "بحث بالاسم، رقم الحجز...") with no
+    // accessible name, so getByRole('textbox', { name }) never resolves. Target
+    // it by placeholder substring (tolerant of the Arabic-comma variant).
     await page
-      .getByRole("textbox", { name: /بحث بالاسم|Search by name/i })
+      .getByPlaceholder(/بحث بالاسم|Search by name/i)
       .fill(booking.id)
 
     const completedRow = page
@@ -153,6 +167,25 @@ async function createBookingFromDashboardPos(page: Page): Promise<SeededBooking>
 
   await pos.locator("input[placeholder*='ابحث'], input[placeholder*='Search']").first().fill(client.lastName)
   await pos.getByRole("button", { name: new RegExp(escapeRegex(clientFullName())) }).click()
+
+  // The POS wizard is a strict chain: client → department → category → service.
+  // After picking the client, walk the department and category steps before the
+  // service can appear. The seed (fixtures/seed.ts) ensures the clinic
+  // department ('عيادات سواء' / 'Sawa Clinics') exists, holds the shared "Test
+  // Category", and that the seeded service makes the category bookable — so each
+  // WizardCard (`<button disabled={...}>`) is enabled. Assert enabled before
+  // clicking so a seed regression fails fast instead of hanging on a disabled
+  // card until the suite timeout.
+  const departmentCard = pos.getByRole("button", { name: /عيادات|clinic/i }).first()
+  await expect(departmentCard, "clinic department card should be enabled").toBeEnabled({ timeout: 10_000 })
+  await departmentCard.click()
+
+  const categoryCard = pos
+    .locator("button")
+    .filter({ hasText: /فئة اختبار|Test Category/ })
+    .first()
+  await expect(categoryCard, "test category card should be enabled").toBeEnabled({ timeout: 10_000 })
+  await categoryCard.click()
 
   await pos.getByRole("button", { name: new RegExp(escapeRegex(service.nameAr)) }).click()
   await pos.getByRole("button", { name: new RegExp(escapeRegex(employee.name)) }).click()
@@ -201,14 +234,19 @@ async function expectBookingVisibleInList(
 ) {
   await page.goto("/bookings")
   await expectCurrentPath(page, "/bookings")
+  // Placeholder-only search input (no accessible name) — match by placeholder.
   await page
-    .getByRole("textbox", { name: /بحث بالاسم|Search by name/i })
+    .getByPlaceholder(/بحث بالاسم|Search by name/i)
     .fill(bookingId)
 
   const row = page.getByRole("row").filter({ hasText: clientName }).first()
   await expect(row).toBeVisible({ timeout: 20_000 })
   await expect(row.getByText(employee.name)).toBeVisible()
-  await expect(row.getByText(/زيارة حضورية|In-person|IN_PERSON/i)).toBeVisible()
+  // The redesigned bookings list row shows columns: actions, status, payment
+  // status, amount, date, clinic/category, practitioner, patient — but NOT a
+  // delivery-type ("زيارة حضورية") badge (that label lives only in the POS
+  // wizard / detail / reschedule surfaces). Assert the row's confirmed/pending
+  // status instead, which is the meaningful list-level signal.
   await expect(row.getByText(/مؤكد|Confirmed|بالانتظار|Pending/i)).toBeVisible()
 }
 
@@ -235,7 +273,10 @@ async function assertInvoiceAndPaymentSurfaces(page: Page) {
     .first()
   await expect(paymentRow).toBeVisible({ timeout: 20_000 })
   await expect(paymentRow.getByText(/نقدي|Cash/i)).toBeVisible()
-  await expect(paymentRow.getByText("COMPLETED")).toBeVisible()
+  // The payments list renders the COMPLETED status via its i18n label
+  // (payment-columns.tsx → PAYMENT_STATUS_KEYS.COMPLETED = "payments.status.paid"
+  // → "مدفوع" / "Paid"), NOT the raw enum. Assert the localized label.
+  await expect(paymentRow.getByText(/مدفوع|Paid/i).first()).toBeVisible()
   await expect(paymentRow.getByText(JOURNEY_TOTAL_AR_OR_EN).first()).toBeVisible()
 }
 

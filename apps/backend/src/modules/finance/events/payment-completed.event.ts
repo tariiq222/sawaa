@@ -3,10 +3,10 @@ import { BaseEvent } from '../../../common/events';
 export interface PaymentCompletedPayload {
   paymentId: string;
   invoiceId: string;
-  /** null for bundle-purchase invoices */
+  /** null for package-purchase invoices */
   bookingId: string | null;
-  /** set when the invoice is for a bundle purchase */
-  bundlePurchaseId?: string | null;
+  /** set when the invoice is for a session-package purchase */
+  packagePurchaseId?: string | null;
   amount: number;
   currency: string;
   // SaaS-02e — optional during rollout; made required in 02f once all

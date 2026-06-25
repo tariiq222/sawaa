@@ -59,6 +59,13 @@ export function useCreateBookingSlots({
         deliveryType,
       }),
     enabled: canFetchSlots,
+    // Availability is real-time and shared: a slot can be taken by another
+    // booking (this session's or another receptionist's) at any moment. The
+    // global 5-min staleTime + refetchOnMount:false would otherwise serve a
+    // stale grid showing an already-booked slot, which then fails on click
+    // with "time not available". Always refetch fresh when the step opens.
+    staleTime: 0,
+    refetchOnMount: "always",
   })
 
   // Backend returns slot times in UTC; convert to Asia/Riyadh wall-clock so

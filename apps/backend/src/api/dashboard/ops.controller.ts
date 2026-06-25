@@ -13,6 +13,8 @@ import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
 import { ApiStandardResponses } from '../../common/swagger';
 import { GenerateReportHandler } from '../../modules/ops/generate-report/generate-report.handler';
 import { GenerateReportDto } from '../../modules/ops/generate-report/generate-report.dto';
+import { PackageReportsHandler } from '../../modules/ops/generate-report/package-reports.handler';
+import { PackageReportQueryDto } from '../../modules/ops/generate-report/package-report.dto';
 import { ListActivityHandler } from '../../modules/ops/log-activity/list-activity.handler';
 import { ListActivityDto } from '../../modules/ops/log-activity/list-activity.dto';
 
@@ -24,6 +26,7 @@ import { ListActivityDto } from '../../modules/ops/log-activity/list-activity.dt
 export class DashboardOpsController {
   constructor(
     private readonly generateReport: GenerateReportHandler,
+    private readonly packageReports: PackageReportsHandler,
     private readonly listActivity: ListActivityHandler,
   ) {}
 
@@ -56,6 +59,29 @@ export class DashboardOpsController {
     }
 
     return result.data;
+  }
+
+  @Get('reports/packages')
+  @CheckPermissions({ action: 'read', subject: 'Report' })
+  @ApiOperation({
+    summary:
+      'Generate a session-package operational report (sales, outstanding-credit liability, consumption per employee, or refunded packages)',
+  })
+  @ApiQuery({
+    name: 'report',
+    required: true,
+    enum: ['SALES', 'OUTSTANDING_CREDIT', 'CONSUMPTION', 'REFUNDED'],
+    description: 'Which package report to generate',
+  })
+  @ApiQuery({ name: 'from', required: true, description: 'Start of period (ISO 8601 date)' })
+  @ApiQuery({ name: 'to', required: true, description: 'End of period (ISO 8601 date)' })
+  @ApiOkResponse({ description: 'JSON report object (shape depends on the report type)' })
+  packageReportEndpoint(@Query() query: PackageReportQueryDto) {
+    return this.packageReports.execute({
+      report: query.report,
+      from: query.from,
+      to: query.to,
+    });
   }
 
   @Get('activity')

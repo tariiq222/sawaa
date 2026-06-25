@@ -4,21 +4,21 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 class InvoiceXorConstraint {
   validate(dto: CreateInvoiceDto) {
     const hasBooking = !!dto.bookingId;
-    const hasBundle = !!dto.bundlePurchaseId;
-    return (hasBooking && !hasBundle) || (!hasBooking && hasBundle);
+    const hasPackage = !!dto.packagePurchaseId;
+    return (hasBooking && !hasPackage) || (!hasBooking && hasPackage);
   }
 
   defaultMessage() {
-    return 'Exactly one of bookingId or bundlePurchaseId must be provided (XOR)';
+    return 'Exactly one of bookingId or packagePurchaseId must be provided (XOR)';
   }
 }
 
 export class CreateInvoiceDto {
-  @ApiPropertyOptional({ description: 'Booking this invoice is for (XOR with bundlePurchaseId)', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiPropertyOptional({ description: 'Booking this invoice is for (XOR with packagePurchaseId)', example: '00000000-0000-0000-0000-000000000000' })
   @IsOptional() @IsUUID() bookingId?: string | null;
 
-  @ApiPropertyOptional({ description: 'Bundle purchase this invoice is for (XOR with bookingId)', example: '00000000-0000-0000-0000-000000000000' })
-  @IsOptional() @IsUUID() bundlePurchaseId?: string | null;
+  @ApiPropertyOptional({ description: 'Session-package purchase this invoice is for (XOR with bookingId)', example: '00000000-0000-0000-0000-000000000000' })
+  @IsOptional() @IsUUID() packagePurchaseId?: string | null;
 
   @ApiProperty({ description: 'Branch where the service was delivered', example: '00000000-0000-0000-0000-000000000000' })
   @IsUUID() branchId!: string;

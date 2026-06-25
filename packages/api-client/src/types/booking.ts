@@ -98,15 +98,4 @@ export interface CreateBookingPayload {
   couponCode?: string
 }
 
-export interface CreateBundleBookingPayload {
-  branchId: string
-  clientId: string
-  employeeId: string
-  bundleId: string
-  scheduledAt: string
-  notes?: string
-  payAtClinic?: boolean
-  deliveryType?: DeliveryType
-}
-
 export type BookingListResponse = PaginatedResponse<BookingListItem>

@@ -381,6 +381,71 @@ export async function cleanupClient(id: string, token: string): Promise<void> {
   await apiDelete(`/dashboard/people/clients/${id}`, token)
 }
 
+// ─── Department ──────────────────────────────────────────────────────────
+
+// The booking wizard is a strict chain: client → department → category →
+// service. The department step (step-department.tsx) renders one WizardCard
+// (`<button disabled={bookableCategoriesCount === 0}>`) per active department,
+// and the e2e DB does NOT necessarily have any departments: the base dev seed
+// (apps/backend/prisma/seed.ts) only creates the admin/branch/configs — the
+// "عيادات سواء" department comes from the SEPARATE, manually-run `seed:sawa`
+// script (prisma/seeds/sawa-customer.ts), which the Playwright harness never
+// invokes. When departments is empty the test category is created orphaned
+// (departmentId: null), the wizard shows zero department cards, and the POS
+// helper's department-card click waits forever on a card that never appears.
+//
+// So the e2e seed must be self-sufficient: ensure the clinic department exists
+// before attaching the test category to it.
+const CLINIC_DEPARTMENT = {
+  nameAr: "عيادات سواء",
+  nameEn: "Sawa Clinics",
+} as const
+
+let cachedClinicDepartmentId: string | null = null
+
+type DepartmentRow = { id: string; nameAr?: string; nameEn?: string }
+
+function findClinicDepartment(deps: DepartmentRow[]): DepartmentRow | undefined {
+  // Match the real seeded name ('عيادات سواء' / 'Sawa Clinics') by substring,
+  // never an exact /^عيادات$/ which would miss it. Fall back to the first
+  // department so a differently-named single department still works.
+  return (
+    deps.find(
+      (d) => /عيادات/.test(d.nameAr ?? "") || /clinic/i.test(d.nameEn ?? "")
+    ) ?? deps[0]
+  )
+}
+
+async function ensureClinicDepartmentId(token: string): Promise<string | undefined> {
+  if (cachedClinicDepartmentId) return cachedClinicDepartmentId
+  try {
+    const deps = await apiGet<{ items?: DepartmentRow[] }>(
+      "/dashboard/organization/departments?isActive=true&limit=100",
+      token
+    )
+      .then((r) => r.items ?? [])
+      .catch(() => [] as DepartmentRow[])
+
+    const existing = findClinicDepartment(deps)
+    if (existing) {
+      cachedClinicDepartmentId = existing.id
+      return existing.id
+    }
+
+    // No department at all — create the clinic department the wizard needs.
+    const created = await apiPost<{ id: string }>(
+      "/dashboard/organization/departments",
+      token,
+      { ...CLINIC_DEPARTMENT, isActive: true }
+    )
+    cachedClinicDepartmentId = created.id
+    return created.id
+  } catch {
+    // Best-effort: if department creation fails, fall back to no department.
+    return undefined
+  }
+}
+
 // ─── Service ─────────────────────────────────────────────────────────────
 
 // One shared category per run is enough to make seeded services appear in the
@@ -391,6 +456,11 @@ let cachedTestCategoryId: string | null = null
 async function ensureTestCategoryId(token: string): Promise<string | undefined> {
   if (cachedTestCategoryId) return cachedTestCategoryId
   try {
+    // The booking wizard chain (department → category → service) can only reach
+    // the seeded service when the test category is attached to a department that
+    // the wizard renders. Make sure that department exists first.
+    const clinicId = await ensureClinicDepartmentId(token)
+
     // Reuse an existing "Test Category" if a previous run already created one.
     // `cachedTestCategoryId` only de-dupes WITHIN a process; without this lookup
     // every run created a fresh row, accumulating dozens of identical
@@ -398,31 +468,38 @@ async function ensureTestCategoryId(token: string): Promise<string | undefined> 
     // the CRUD specs' broad row selectors ambiguous. Find-or-create keeps the
     // list lean and deterministic across runs.
     const existing = await apiGet<{
-      items?: Array<{ id: string; nameAr?: string; nameEn?: string }>
+      items?: Array<{ id: string; nameAr?: string; nameEn?: string; departmentId?: string | null }>
     }>("/dashboard/organization/categories?isActive=true", token)
       .then((r) => r.items ?? [])
-      .catch(() => [] as Array<{ id: string; nameAr?: string; nameEn?: string }>)
+      .catch(
+        () =>
+          [] as Array<{
+            id: string
+            nameAr?: string
+            nameEn?: string
+            departmentId?: string | null
+          }>
+      )
     const reused = existing.find(
       (c) => c.nameEn === "Test Category" || c.nameAr === "فئة اختبار"
     )
     if (reused) {
       cachedTestCategoryId = reused.id
+      // A prior run may have created this category orphaned (departmentId: null)
+      // — back when the seed couldn't find/create a department. Re-parent it so
+      // it shows up under the clinic department in the wizard. The category
+      // PATCH also invalidates the departments cache (departments list embeds
+      // each category's bookable-service count), so the wizard sees a fresh
+      // bookableCategoriesCount on the next read.
+      if (clinicId && reused.departmentId !== clinicId) {
+        await apiPatch(
+          `/dashboard/organization/categories/${reused.id}`,
+          token,
+          { departmentId: clinicId }
+        ).catch(() => undefined)
+      }
       return reused.id
     }
-
-    // Attach the category to a real department so the booking wizard chain
-    // (department → category → service) can reach the seeded service. Prefer the
-    // individual-clinic department ("عيادات"/Clinics); fall back to the first.
-    // The list endpoint returns { items, meta } (not { data }).
-    const deps = await apiGet<{
-      items?: Array<{ id: string; nameAr?: string; nameEn?: string }>
-    }>("/dashboard/organization/departments?isActive=true", token)
-      .then((r) => r.items ?? [])
-      .catch(() => [] as Array<{ id: string; nameAr?: string; nameEn?: string }>)
-    const clinic =
-      deps.find(
-        (d) => d.nameAr === "عيادات" || /clinic/i.test(d.nameEn ?? "")
-      ) ?? deps[0]
 
     const created = await apiPost<{ id: string }>(
       "/dashboard/organization/categories",
@@ -430,7 +507,7 @@ async function ensureTestCategoryId(token: string): Promise<string | undefined> 
       {
         nameAr: "فئة اختبار",
         nameEn: "Test Category",
-        ...(clinic ? { departmentId: clinic.id } : {}),
+        ...(clinicId ? { departmentId: clinicId } : {}),
       }
     )
     cachedTestCategoryId = created.id
@@ -439,6 +516,27 @@ async function ensureTestCategoryId(token: string): Promise<string | undefined> 
     // Best-effort: if category creation fails, fall back to no category.
     return undefined
   }
+}
+
+// Force the departments-list cache (which embeds each active category's
+// bookable-service count as `bookableCategoriesCount`) to refresh after a
+// service is created/archived under the test category. The backend's
+// CreateServiceHandler/ArchiveServiceHandler invalidate only the SERVICES cache
+// prefix, NOT the DEPARTMENTS prefix, so the wizard's department step can keep
+// showing the clinic department as disabled (bookableCategoriesCount === 0)
+// even after the seed adds a bookable service. A no-op category PATCH DOES
+// invalidate the departments cache (see UpdateCategoryHandler), so we trigger
+// one to keep the wizard chain reliable. Best-effort.
+async function refreshBookableDepartmentCache(
+  token: string,
+  categoryId: string
+): Promise<void> {
+  const clinicId = await ensureClinicDepartmentId(token).catch(() => undefined)
+  await apiPatch(
+    `/dashboard/organization/categories/${categoryId}`,
+    token,
+    clinicId ? { departmentId: clinicId } : { isActive: true }
+  ).catch(() => undefined)
 }
 
 /**
@@ -499,6 +597,18 @@ export async function seedService(
     ]).catch(() => {
       // Tolerate races / pre-existing config; booking config is best-effort.
     })
+  }
+
+  // When this service is attached to the shared auto-created test category, bust
+  // the departments cache so the wizard's department step sees the category as
+  // bookable (bookableCategoriesCount > 0). Skip when the caller pinned a
+  // category or opted out of categories entirely — they own their own wiring.
+  if (
+    categoryId &&
+    overrides.categoryId === undefined &&
+    overrides.skipCategory !== true
+  ) {
+    await refreshBookableDepartmentCache(token, categoryId)
   }
 
   return {
@@ -806,7 +916,7 @@ async function findAvailableSlotIso(
 // (single-tenant, so it stays on) via PATCH /dashboard/organization/settings.
 let payAtClinicEnabledOnce: Promise<void> | null = null
 
-async function ensurePayAtClinicEnabled(token: string): Promise<void> {
+export async function ensurePayAtClinicEnabled(token: string): Promise<void> {
   if (!payAtClinicEnabledOnce) {
     payAtClinicEnabledOnce = apiPatch(
       "/dashboard/organization/settings",
@@ -950,7 +1060,41 @@ export async function createInvoice(
   token: string,
   input: CreateInvoiceInput
 ): Promise<SeededInvoice> {
-  return apiPost<SeededInvoice>("/dashboard/finance/invoices", token, { ...input })
+  // Confirming a booking (which the dashboard POS does on create) auto-generates
+  // its invoice via the bookings.booking.confirmed → BookingConfirmedHandler
+  // reaction (create-invoice/booking-confirmed.handler.ts). So for a booking
+  // created through the POS UI an invoice already exists, and POSTing another
+  // returns 409 INVOICE_ALREADY_EXISTS with the existing invoiceId in the body.
+  // Treat that as success and return the existing invoice so the seed is
+  // idempotent w.r.t. the auto-invoice behavior. This is product-correct: one
+  // booking has exactly one invoice (@@unique([bookingId])).
+  const res = await fetchWithRetry(`${API_BASE}/api/v1/dashboard/finance/invoices`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ ...input }),
+  })
+
+  if (res.ok) return (await res.json()) as SeededInvoice
+
+  const text = await res.text().catch(() => "(unreadable)")
+  if (res.status === 409) {
+    let invoiceId: string | undefined
+    try {
+      invoiceId = (JSON.parse(text) as { invoiceId?: string }).invoiceId
+    } catch {
+      invoiceId = undefined
+    }
+    if (invoiceId) {
+      return getInvoice(token, invoiceId)
+    }
+  }
+
+  throw new Error(
+    `[seed] POST /dashboard/finance/invoices failed — HTTP ${res.status}: ${text}`
+  )
 }
 
 export async function getInvoice(

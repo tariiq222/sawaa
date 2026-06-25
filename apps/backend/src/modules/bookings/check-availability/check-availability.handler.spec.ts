@@ -1610,6 +1610,12 @@ describe('CheckAvailabilityHandler', () => {
       { status: 'AWAITING_PAYMENT', label: 'AWAITING_PAYMENT booking' },
       { status: 'DEPOSIT_PAID', label: 'DEPOSIT_PAID booking' },
       { status: 'CANCEL_REQUESTED', label: 'CANCEL_REQUESTED booking' },
+      // A finalized booking still occupies the practitioner's slot when its
+      // scheduledAt is in the future — staff can mark COMPLETED / NO_SHOW
+      // before the session time, which must NOT reopen the slot for a
+      // double-booking. Regression: prod double-booking 2026-06-24.
+      { status: 'COMPLETED', label: 'COMPLETED booking' },
+      { status: 'NO_SHOW', label: 'NO_SHOW booking' },
     ];
 
     it.each(blockingStatuses)(
@@ -1657,9 +1663,10 @@ describe('CheckAvailabilityHandler', () => {
 
     it('queries existing bookings with the blocking-status filter (PENDING/CONFIRMED/etc)', async () => {
       // Defensive: the handler's conflict query must scope to
-      // STAFF_TIME_BLOCKING_BOOKING_STATUSES so CANCELLED / COMPLETED /
-      // EXPIRED terminal bookings do not block slots. Mock findMany with no
-      // rows; assert the handler called it with the right WHERE shape.
+      // STAFF_TIME_BLOCKING_BOOKING_STATUSES so only CANCELLED / EXPIRED
+      // terminal bookings release the slot (COMPLETED / NO_SHOW still block —
+      // see active-booking-statuses.ts). Mock findMany with no rows; assert the
+      // handler called it with the right WHERE shape.
       const prisma = makePrisma();
       prisma.booking.findMany = jest.fn().mockResolvedValue([]);
       const settingsHandler = makeSettingsHandler();

@@ -204,12 +204,12 @@ export function mapPaymentStatusForUi(s: string): PaymentStatusUi {
   }
 }
 
-type PaymentMethodUi = 'moyasar' | 'bank_transfer' | 'cash';
+type PaymentMethodUi = 'moyasar' | 'bank_transfer' | 'cash' | 'mada' | 'tabby';
 
 /**
  * Maps Prisma PaymentMethod enum → dashboard BookingPayment.method union.
- * Prisma enum members: ONLINE_CARD, BANK_TRANSFER, CASH, COUPON
- * Dashboard union: "moyasar" | "bank_transfer" | "cash"
+ * Prisma enum members: ONLINE_CARD, BANK_TRANSFER, CASH, COUPON, MADA, TABBY
+ * Dashboard union: "moyasar" | "bank_transfer" | "cash" | "mada" | "tabby"
  */
 export function mapPaymentMethodForUi(m: string): PaymentMethodUi {
   switch (m.toUpperCase()) {
@@ -217,6 +217,8 @@ export function mapPaymentMethodForUi(m: string): PaymentMethodUi {
     case 'BANK_TRANSFER': return 'bank_transfer';
     case 'CASH': return 'cash';
     case 'COUPON': return 'cash'; // coupon-paid bookings treat method as cash for display
+    case 'MADA': return 'mada'; // manual network/card-machine payment recorded at the clinic
+    case 'TABBY': return 'tabby';
     default: return 'cash';
   }
 }

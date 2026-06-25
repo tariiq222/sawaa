@@ -13,9 +13,9 @@ export type CreateInvoiceCommand = Omit<CreateInvoiceDto, 'dueAt'> & {
 
 function validateXor(dto: CreateInvoiceCommand): void {
   const hasBooking = !!dto.bookingId;
-  const hasBundle = !!dto.bundlePurchaseId;
-  if ((hasBooking && hasBundle) || (!hasBooking && !hasBundle)) {
-    throw new BadRequestException('Exactly one of bookingId or bundlePurchaseId must be provided');
+  const hasPackage = !!dto.packagePurchaseId;
+  if ((hasBooking && hasPackage) || (!hasBooking && !hasPackage)) {
+    throw new BadRequestException('Exactly one of bookingId or packagePurchaseId must be provided');
   }
 }
 
@@ -51,15 +51,15 @@ export class CreateInvoiceHandler {
         });
       }
     }
-    if (dto.bundlePurchaseId) {
+    if (dto.packagePurchaseId) {
       const existing = await this.prisma.invoice.findUnique({
-        where: { bundlePurchaseId: dto.bundlePurchaseId },
+        where: { packagePurchaseId: dto.packagePurchaseId },
         select: { id: true },
       });
       if (existing) {
         throw new ConflictException({
           code: 'INVOICE_ALREADY_EXISTS',
-          bundlePurchaseId: dto.bundlePurchaseId,
+          packagePurchaseId: dto.packagePurchaseId,
           invoiceId: existing.id,
         });
       }
@@ -73,7 +73,7 @@ export class CreateInvoiceHandler {
           clientId: dto.clientId,
           employeeId: dto.employeeId,
           bookingId: dto.bookingId ?? null,
-          bundlePurchaseId: dto.bundlePurchaseId ?? null,
+          packagePurchaseId: dto.packagePurchaseId ?? null,
           subtotal: subtotalDec,
           discountAmt: discountAmtDec,
           vatRate: vatRateDec,
@@ -90,7 +90,7 @@ export class CreateInvoiceHandler {
         throw new ConflictException({
           code: 'INVOICE_ALREADY_EXISTS',
           bookingId: dto.bookingId,
-          bundlePurchaseId: dto.bundlePurchaseId,
+          packagePurchaseId: dto.packagePurchaseId,
         });
       }
       throw err;
@@ -104,7 +104,7 @@ export class CreateInvoiceHandler {
       payload: {
         invoiceId: invoice.id,
         bookingId: invoice.bookingId,
-        bundlePurchaseId: invoice.bundlePurchaseId,
+        packagePurchaseId: invoice.packagePurchaseId,
         clientId: invoice.clientId,
         total: Number(invoice.total),
       },

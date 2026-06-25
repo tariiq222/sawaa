@@ -240,11 +240,36 @@ export const queryKeys = {
     topPerformers: () => ["dashboard", "top-performers"] as const,
   },
 
-  /* ─── Bundles ─── */
-  bundles: {
-    all: ["bundles"] as const,
-    list: (filters?: object) => ["bundles", "list", filters ?? {}] as const,
-    detail: (id: string) => ["bundles", "detail", id] as const,
+  /* ─── Session Packages ─── */
+  packages: {
+    all: ["packages"] as const,
+    list: (filters?: object) => ["packages", "list", filters ?? {}] as const,
+    detail: (id: string) => ["packages", "detail", id] as const,
+  },
+
+  /* ─── Package Purchases (Phase 2 — reception manual sale + balances) ─── */
+  packagePurchases: {
+    all: ["package-purchases"] as const,
+    byClient: (clientId: string, filters?: object) =>
+      ["package-purchases", "client", clientId, filters ?? {}] as const,
+  },
+
+  /* ─── Credit Bookings (Phase 3 — book from credit + auto-detect) ─── */
+  creditBookings: {
+    all: ["credit-bookings"] as const,
+    matchingCredits: (query: object) =>
+      ["credit-bookings", "matching-credits", query] as const,
+  },
+
+  /* ─── Package Reports (Phase 5 — sales / outstanding / consumption / refunded) ─── */
+  packageReports: {
+    all: ["package-reports"] as const,
+    report: (query: object) => ["package-reports", "report", query] as const,
+  },
+
+  /* ─── Credit Operations (Phase 5 — transfer + refund) ─── */
+  packageCreditOps: {
+    all: ["package-credit-ops"] as const,
   },
 
   /* ─── Programs (group bookings) ─── */

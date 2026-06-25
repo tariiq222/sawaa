@@ -50,7 +50,7 @@ export class InitClientPaymentHandler {
       throw new ForbiddenException('Invoice does not belong to this client');
     }
 
-    // For bundle invoices, bookingId may be null — skip booking status check.
+    // For package invoices, bookingId may be null — skip booking status check.
     if (invoice.bookingId) {
       const booking = await this.prisma.booking.findFirst({
         where: { id: invoice.bookingId },

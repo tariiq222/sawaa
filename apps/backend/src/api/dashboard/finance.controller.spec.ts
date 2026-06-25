@@ -14,6 +14,8 @@ describe('DashboardFinanceController', () => {
       'verifyPayment', 'bankTransferUpload', 'getMoyasarConfig',
       'upsertMoyasarConfig', 'testMoyasarConfig', 'generateInvoicePdf',
       'getPayment', 'applyInvoiceDiscount',
+      'createPackagePurchase', 'listClientPackagePurchases',
+      'refundPackagePurchase',
     ];
 
     handlers = {};
@@ -47,6 +49,9 @@ describe('DashboardFinanceController', () => {
       handlerMocks[15] as any, // getMoyasarConfig
       handlerMocks[16] as any, // upsertMoyasarConfig
       handlerMocks[17] as any, // testMoyasarConfig
+      handlerMocks[21] as any, // createPackagePurchase
+      handlerMocks[22] as any, // listClientPackagePurchases
+      handlerMocks[23] as any, // refundPackagePurchase
       storage as any,          // MinioService
     );
   });
@@ -236,5 +241,47 @@ describe('DashboardFinanceController', () => {
   it('testMoyasarConfigEndpoint should call testMoyasarConfig.execute', async () => {
     await controller.testMoyasarConfigEndpoint();
     expect(handlers.testMoyasarConfig).toHaveBeenCalledWith();
+  });
+
+  // ── Package purchases ──────────────────────────────────────────────────────
+
+  it('createPackagePurchaseEndpoint should call createPackagePurchase.execute', async () => {
+    const body = {
+      packageId: '00000000-0000-0000-0000-000000000001',
+      clientId: '00000000-0000-0000-0000-000000000002',
+      branchId: '00000000-0000-0000-0000-000000000003',
+      method: 'CASH',
+      notes: 'Walk-in sale',
+    };
+    await controller.createPackagePurchaseEndpoint(body as any);
+    expect(handlers.createPackagePurchase).toHaveBeenCalledWith(body);
+  });
+
+  it('refundPackagePurchaseEndpoint should forward purchaseId + refundAmount + notes + acting user', async () => {
+    const body = { refundAmount: 50000, notes: 'client moved abroad' };
+    await controller.refundPackagePurchaseEndpoint('manager-1', 'purchase-9', body as any);
+    expect(handlers.refundPackagePurchase).toHaveBeenCalledWith({
+      purchaseId: 'purchase-9',
+      refundAmount: 50000,
+      notes: 'client moved abroad',
+      userId: 'manager-1',
+    });
+  });
+
+  it('listClientPackagePurchasesEndpoint should call listClientPackagePurchases.execute with clientId and status', async () => {
+    const query = { status: 'ACTIVE' as const };
+    await controller.listClientPackagePurchasesEndpoint('client-1', query as any);
+    expect(handlers.listClientPackagePurchases).toHaveBeenCalledWith({
+      clientId: 'client-1',
+      status: 'ACTIVE',
+    });
+  });
+
+  it('listClientPackagePurchasesEndpoint should pass through undefined status when no filter', async () => {
+    await controller.listClientPackagePurchasesEndpoint('client-1', {} as any);
+    expect(handlers.listClientPackagePurchases).toHaveBeenCalledWith({
+      clientId: 'client-1',
+      status: undefined,
+    });
   });
 });

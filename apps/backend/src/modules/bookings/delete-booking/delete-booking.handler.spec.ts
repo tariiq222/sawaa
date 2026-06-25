@@ -13,7 +13,6 @@ const buildPrisma = (overrides: Record<string, unknown> = {}) => {
     bookingStatusLog: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
     rating: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
     intakeResponse: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
-    bundleUsage: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
     activityLog: { create: jest.fn().mockResolvedValue({ id: 'log-1' }) },
     booking: { delete: jest.fn().mockResolvedValue({ id: 'book-1' }) },
   };
@@ -50,10 +49,6 @@ describe('DeleteBookingHandler', () => {
     expect(tx.bookingStatusLog.deleteMany).toHaveBeenCalledWith({ where: { bookingId: 'book-1' } });
     expect(tx.rating.deleteMany).toHaveBeenCalledWith({ where: { bookingId: 'book-1' } });
     expect(tx.intakeResponse.deleteMany).toHaveBeenCalledWith({ where: { bookingId: 'book-1' } });
-    expect(tx.bundleUsage.updateMany).toHaveBeenCalledWith({
-      where: { bookingId: 'book-1' },
-      data: { bookingId: null },
-    });
     expect(tx.booking.delete).toHaveBeenCalledWith({ where: { id: 'book-1' } });
   });
 

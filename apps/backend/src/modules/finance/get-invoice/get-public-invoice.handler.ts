@@ -9,7 +9,7 @@ export interface GetPublicInvoiceResult {
   clientId: string;
   employeeId: string;
   bookingId: string | null;
-  bundlePurchaseId: string | null;
+  packagePurchaseId: string | null;
   subtotal: number;
   discountAmt: number;
   vatRate: number;
@@ -51,7 +51,7 @@ export class GetPublicInvoiceHandler {
       clientId: invoice.clientId,
       employeeId: invoice.employeeId,
       bookingId: invoice.bookingId,
-      bundlePurchaseId: invoice.bundlePurchaseId,
+      packagePurchaseId: invoice.packagePurchaseId,
       subtotal: Number(invoice.subtotal),
       discountAmt: Number(invoice.discountAmt),
       vatRate: Number(invoice.vatRate),

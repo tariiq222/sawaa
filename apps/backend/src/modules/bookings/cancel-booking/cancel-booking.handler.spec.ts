@@ -601,4 +601,108 @@ describe('CancelBookingHandler', () => {
       );
     });
   });
+
+  describe('session-package credit return', () => {
+    // Augment the shared mock prisma with the package models the credit-return
+    // helper touches. The cancel handler runs the helper inside its tx.
+    function withCreditModels(p: ReturnType<typeof buildMockPrisma>, opts: {
+      usage?: { id: string; creditId: string } | null;
+      purchaseStatus?: BookingStatus | string;
+    } = {}) {
+      const usage = opts.usage === undefined ? { id: 'usage-1', creditId: 'credit-1' } : opts.usage;
+      (p as any).packageCreditUsage = {
+        findFirst: jest.fn().mockResolvedValue(usage),
+        update: jest.fn().mockResolvedValue({ id: 'usage-1' }),
+      };
+      (p as any).packageCredit = {
+        update: jest.fn().mockResolvedValue({ id: 'credit-1' }),
+        findUnique: jest.fn().mockResolvedValue({ purchaseId: 'purchase-1' }),
+      };
+      (p as any).packagePurchase = {
+        findUnique: jest.fn().mockResolvedValue({ status: opts.purchaseStatus ?? 'ACTIVE' }),
+        update: jest.fn().mockResolvedValue({ id: 'purchase-1' }),
+      };
+      return p;
+    }
+
+    it('returns the credit (usage RETURNED + usedQuantity decremented) when cancelling a credit booking', async () => {
+      withCreditModels(prisma);
+      prisma.booking.findFirst.mockResolvedValue({
+        ...baseBooking,
+        status: BookingStatus.CONFIRMED,
+        packageCreditId: 'credit-1',
+      });
+
+      await handler.execute({
+        bookingId: 'book-1',
+        reason: CancellationReason.CLIENT_REQUESTED,
+        changedBy: 'user-1',
+      });
+
+      expect((prisma as any).packageCreditUsage.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ status: 'RETURNED' }) }),
+      );
+      expect((prisma as any).packageCredit.update).toHaveBeenCalledWith({
+        where: { id: 'credit-1' },
+        data: { usedQuantity: { decrement: 1 } },
+      });
+    });
+
+    it('reopens a COMPLETED purchase to ACTIVE on credit return', async () => {
+      withCreditModels(prisma, { purchaseStatus: 'COMPLETED' });
+      prisma.booking.findFirst.mockResolvedValue({
+        ...baseBooking,
+        status: BookingStatus.CONFIRMED,
+        packageCreditId: 'credit-1',
+      });
+
+      await handler.execute({
+        bookingId: 'book-1',
+        reason: CancellationReason.CLIENT_REQUESTED,
+        changedBy: 'user-1',
+      });
+
+      expect((prisma as any).packagePurchase.update).toHaveBeenCalledWith({
+        where: { id: 'purchase-1' },
+        data: { status: 'ACTIVE' },
+      });
+    });
+
+    it('does NOT touch credit models when the booking has no packageCreditId', async () => {
+      withCreditModels(prisma);
+      prisma.booking.findFirst.mockResolvedValue({
+        ...baseBooking,
+        status: BookingStatus.CONFIRMED,
+        packageCreditId: null,
+      });
+
+      await handler.execute({
+        bookingId: 'book-1',
+        reason: CancellationReason.CLIENT_REQUESTED,
+        changedBy: 'user-1',
+      });
+
+      expect((prisma as any).packageCreditUsage.findFirst).not.toHaveBeenCalled();
+      expect((prisma as any).packageCredit.update).not.toHaveBeenCalled();
+    });
+
+    it('does NOT create any refund request for a credit booking (zero monetary value)', async () => {
+      withCreditModels(prisma);
+      prisma.booking.findFirst.mockResolvedValue({
+        ...baseBooking,
+        status: BookingStatus.CONFIRMED,
+        packageCreditId: 'credit-1',
+      });
+      // A credit booking has no completed payment.
+      prisma.payment.findFirst.mockResolvedValue(null);
+
+      await handler.execute({
+        bookingId: 'book-1',
+        reason: CancellationReason.CLIENT_REQUESTED,
+        changedBy: 'user-1',
+      });
+
+      expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
+    });
+  });
 });

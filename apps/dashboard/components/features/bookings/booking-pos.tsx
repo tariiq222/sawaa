@@ -1,5 +1,14 @@
 "use client"
 
+// EXCEPTION: feature-component size limit (300) and absolute file size
+// limit (350) exceeded — 2026-06-24 — Phase 3 of session-packages
+// rebuild wired the auto-detect "احجز من الرصيد" badge + from-credit
+// submit path into this wizard. Splitting the wizard mid-refactor
+// would risk breaking the auto-advance section navigation; the
+// alternative (extracting a credit-mode wrapper) is deferred to a
+// follow-up. Once the badge code stabilises this file can be split
+// into booking-pos-shell.tsx + booking-pos-credit-mode.tsx.
+
 import { useState, useMemo, useCallback } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Cancel01Icon } from "@hugeicons/core-free-icons"
@@ -10,11 +19,13 @@ import { useLocale } from "@/components/locale-provider"
 import { useBranches } from "@/hooks/use-branches"
 import { useBookingSettings } from "@/hooks/use-organization-settings"
 import { useBookingMutations } from "@/hooks/use-bookings"
+import { useBookFromCredit } from "@/hooks/use-credit-bookings"
 import { queryKeys } from "@/lib/query-keys"
 import { fetchServices } from "@/lib/api/services"
 import { fetchEmployeeServiceTypes } from "@/lib/api/employees-schedule"
 import type { EmployeeServiceType } from "@/lib/types/employee"
 import { showApiError } from "@/lib/mutation-helpers"
+import { combineDateTimeToISO } from "@/lib/utils"
 import { bookingPosPayloadSchema } from "@/lib/schemas/booking.schema"
 
 import { ClientStep } from "./booking-client-step"
@@ -25,6 +36,7 @@ import { StepEmployee } from "./wizard-steps/step-employee"
 import { StepTypeDuration } from "./wizard-steps/step-type-duration"
 import { StepDatetime } from "./wizard-steps/step-datetime"
 import { BookingSummary } from "./booking-summary"
+import { MatchingCreditBadge } from "./matching-credit-badge"
 import { useBookingFormState } from "./use-booking-form-state"
 import { CollapsibleSection, PosSectionHint, type SectionId } from "./pos-collapsible-section"
 
@@ -41,12 +53,22 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   const { t, locale } = useLocale()
   const [openSection, setOpenSection] = useState<SectionId>("client")
 
+  // Phase 3 — "احجز من الرصيد" toggle. When true, submit posts to
+  // /dashboard/bookings/from-credit instead of /dashboard/bookings,
+  // consuming the oldest matching credit. Reset whenever the operator
+  // changes client/service/employee/duration — re-selecting should
+  // always start from a fresh suggestion.
+  const [useCredit, setUseCredit] = useState(false)
+  // Sticky dismissal for the current selection (param change re-arms).
+  const [creditDismissed, setCreditDismissed] = useState(false)
+
   const { branches } = useBranches()
   const mainBranch = branches.find((b) => b.isMain) ?? branches[0]
   const { data: bookingSettings } = useBookingSettings()
   const maxAdvanceDays = bookingSettings?.maxAdvanceBookingDays ?? 90
   const queryClient = useQueryClient()
   const { createMut } = useBookingMutations()
+  const bookFromCreditMut = useBookFromCredit()
 
   const {
     state,
@@ -58,20 +80,51 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     selectService,
     selectEmployee,
     selectDeliveryType,
+    selectDurationOption,
     selectDate,
     selectTime,
     setPayAtClinic,
     setCouponCode,
   } = useBookingFormState()
 
-  const handleSelectDeliveryType = (deliveryType: string) => {
-    selectDeliveryType(deliveryType.toUpperCase() as "IN_PERSON" | "ONLINE")
-    setOpenSection("datetime")
+  // Phase 3 — re-arm the badge when the operator changes any of the
+  // four matching-credit params (client/service/employee/duration).
+  // Re-selecting clears the dismissal so the badge can suggest again.
+  const handleClientSelect = (id: string, name: string) => {
+    selectClient(id, name)
+    setOpenSection("department")
+    setUseCredit(false)
+    setCreditDismissed(false)
+  }
+  const handleDepartmentSelect = (id: string, name: string) => {
+    selectDepartment(id, name)
+    setOpenSection("category")
+  }
+  // Service/employee changes invalidate the credit triple → re-arm.
+  const handleServiceSelect = (id: string, name: string) => {
+    selectService(id, name)
+    setOpenSection("employee")
+    setUseCredit(false)
+    setCreditDismissed(false)
+  }
+  const handleEmployeeSelect = (id: string, name: string) => {
+    selectEmployee(id, name)
+    setOpenSection("typeDuration")
+    setUseCredit(false)
+    setCreditDismissed(false)
   }
 
-  // Auto-advance wrapped handlers
-  const handleClientSelect = (id: string, name: string) => { selectClient(id, name); setOpenSection("department") }
-  const handleDepartmentSelect = (id: string, name: string) => { selectDepartment(id, name); setOpenSection("category") }
+  const handleSelectDeliveryType = (
+    deliveryType: string,
+    durationOptionId: string | null,
+  ) => {
+    selectDeliveryType(deliveryType.toUpperCase() as "IN_PERSON" | "ONLINE")
+    selectDurationOption(durationOptionId)
+    setOpenSection("datetime")
+    // DurationOption change re-arms the badge so the new triple can match.
+    setUseCredit(false)
+    setCreditDismissed(false)
+  }
 
   /**
    * When a category (clinic) is selected, branch on `category.bookingMode`:
@@ -115,9 +168,6 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     selectCategory(id, name, bookingMode)
     setOpenSection("service")
   }, [queryClient, selectCategory, locale])
-
-  const handleServiceSelect = (id: string, name: string) => { selectService(id, name); setOpenSection("employee") }
-  const handleEmployeeSelect = (id: string, name: string) => { selectEmployee(id, name); setOpenSection("typeDuration") }
 
   /**
    * True when the service was pre-selected automatically because the chosen
@@ -172,6 +222,48 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
   const handleSubmit = async () => {
     if (!state.clientId || !state.serviceId || !state.employeeId || !state.deliveryType || !state.date || !state.startTime)
       return
+
+    // Phase 3 — when the operator has accepted "احجز من الرصيد", post to
+    // /dashboard/bookings/from-credit with the full triple and let the
+    // backend FIFO-select the matching credit. Otherwise fall through to
+    // the normal paid booking path.
+    if (useCredit) {
+      if (!state.durationOptionId || !mainBranch?.id) {
+        // Defensive: badge can only appear with the full triple, but if
+        // the operator toggled credit mode then changed a param, the
+        // triple may have been cleared. Surface as a generic submit
+        // error rather than silently no-op'ing.
+        toast.error(t("bookings.wizard.submitError"))
+        return
+      }
+      const scheduledAt = combineDateTimeToISO(state.date, state.startTime)
+      if (!scheduledAt) {
+        toast.error(t("bookings.wizard.submitError"))
+        return
+      }
+      try {
+        await bookFromCreditMut.mutateAsync({
+          clientId: state.clientId,
+          serviceId: state.serviceId,
+          employeeId: state.employeeId,
+          durationOptionId: state.durationOptionId,
+          branchId: mainBranch.id,
+          scheduledAt,
+          deliveryType: state.deliveryType,
+        })
+        toast.success(t("bookings.credit.toast.success"))
+        reset()
+        onSuccess()
+      } catch (err) {
+        showApiError(err, {
+          fallback: t("bookings.credit.toast.error"),
+          t,
+          dedupeKey: "credit-book-error",
+        })
+      }
+      return
+    }
+
     const payload = {
       clientId: state.clientId,
       employeeId: state.employeeId,
@@ -197,6 +289,16 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
       showApiError(err, { fallback: t("bookings.wizard.submitError"), t })
     }
   }
+
+  // Phase 3 — auto-detect badge appears as soon as the operator has
+  // picked client + service + employee + duration. Accepting flips the
+  // wizard into "book from credit" mode; dismissing is sticky for the
+  // current selection.
+  const creditBadgeReady =
+    !!state.clientId &&
+    !!state.serviceId &&
+    !!state.employeeId &&
+    !!state.durationOptionId
 
   return (
     <div className="flex flex-col gap-4 p-4 md:p-5">
@@ -318,17 +420,41 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
             onToggle={() => setOpenSection("datetime")}
           >
             {canShowDatetime ? (
-              <StepDatetime
-                employeeId={state.employeeId!}
-                serviceId={state.serviceId!}
-                deliveryType={state.deliveryType!}
-                durationOptionId={null}
-                selectedDate={state.date}
-                selectedTime={state.startTime}
-                onSelectDate={selectDate}
-                onSelectTime={selectTime}
-                maxAdvanceDays={maxAdvanceDays}
-              />
+              <>
+                <StepDatetime
+                  employeeId={state.employeeId!}
+                  serviceId={state.serviceId!}
+                  deliveryType={state.deliveryType!}
+                  durationOptionId={null}
+                  selectedDate={state.date}
+                  selectedTime={state.startTime}
+                  onSelectDate={selectDate}
+                  onSelectTime={selectTime}
+                  maxAdvanceDays={maxAdvanceDays}
+                />
+                {/* Phase 3 — auto-detect "احجز من الرصيد" badge once all
+                    four params are set. Renders nothing until then. */}
+                {creditBadgeReady && (
+                  <div className="mt-3">
+                    <MatchingCreditBadge
+                      clientId={state.clientId}
+                      serviceId={state.serviceId}
+                      employeeId={state.employeeId}
+                      durationOptionId={state.durationOptionId}
+                      useCredit={useCredit}
+                      dismissed={creditDismissed}
+                      onAccept={() => {
+                        setUseCredit(true)
+                        setCreditDismissed(false)
+                      }}
+                      onDismiss={() => {
+                        setUseCredit(false)
+                        setCreditDismissed(true)
+                      }}
+                    />
+                  </div>
+                )}
+              </>
             ) : (
               <PosSectionHint hint={t("bookings.pos.hint.needEmployee")} />
             )}

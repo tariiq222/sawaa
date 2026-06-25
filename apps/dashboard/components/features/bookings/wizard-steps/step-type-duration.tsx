@@ -23,7 +23,15 @@ interface StepTypeDurationProps {
   employeeId: string
   serviceId: string
   selectedType: string | null
-  onSelectType: (type: string) => void
+  /**
+   * Phase 3 — also receive the resolved durationOptionId so the form
+   * state can carry the full (service, employee, duration) triple that
+   * the matching-credits lookup and the from-credit booking require.
+   */
+  onSelectType: (
+    type: string,
+    durationOptionId: string | null,
+  ) => void
 }
 
 /* ─── Helpers ─── */
@@ -114,10 +122,25 @@ export function StepTypeDuration({
     return true
   })
 
+  // Resolve the ServiceDurationOption id implied by a given
+  // EmployeeServiceType — prefer the explicit default, otherwise the
+  // first option in the order returned by the backend. Returns null
+  // when the type has no duration options (the booking is then created
+  // without a duration, which the backend accepts).
+  const resolveDurationOptionId = (
+    serviceType: EmployeeServiceType,
+  ): string | null => {
+    const options = serviceType.durationOptions ?? []
+    if (options.length === 0) return null
+    const def = options.find((o) => o.isDefault)
+    return def?.id ?? options[0]?.id ?? null
+  }
+
   // Auto-select when only one type
   useEffect(() => {
     if (activeTypes.length === 1 && !selectedType) {
-      onSelectType(activeTypes[0].deliveryType)
+      const only = activeTypes[0]
+      onSelectType(only.deliveryType, resolveDurationOptionId(only))
     }
   }, [activeTypes, selectedType, onSelectType])
 
@@ -147,7 +170,12 @@ export function StepTypeDuration({
                 key={st.id}
                 serviceType={st}
                 selected={selectedType === st.deliveryType}
-                onSelect={() => onSelectType(st.deliveryType)}
+                onSelect={() =>
+                  onSelectType(
+                    st.deliveryType,
+                    resolveDurationOptionId(st),
+                  )
+                }
                 t={t}
               />
             ))}

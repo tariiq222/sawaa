@@ -7,6 +7,7 @@ import {
   PencilEdit01Icon,
   ArrowLeft01Icon,
   Delete02Icon,
+  ShoppingBagAddIcon,
 } from "@hugeicons/core-free-icons"
 
 import { ListPageShell } from "@/components/features/list-page-shell"
@@ -17,6 +18,8 @@ import { ClientPageSkeleton } from "@/components/features/clients/client-page-sk
 import { DeleteClientDialog } from "@/components/features/clients/delete-client-dialog"
 import { ClientBookingsPanel } from "@/components/features/clients/client-bookings-panel"
 import { ClientInvoicesPanel } from "@/components/features/clients/client-invoices-panel"
+import { ClientPackageBalancesPanel } from "@/components/features/clients/client-package-balances-panel"
+import { SellPackageDialog } from "@/components/features/clients/sell-package-dialog"
 import { Button } from "@sawaa/ui"
 import { Avatar, AvatarFallback } from "@sawaa/ui"
 import { Badge } from "@sawaa/ui"
@@ -24,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import { useOrganizationConfig } from "@/hooks/use-organization-config"
 import { useClient } from "@/hooks/use-clients"
+import { useAuth } from "@/components/providers/auth-provider"
 import { ApiError } from "@/lib/api"
 import { ClientAccountToggle } from "@/components/features/clients/client-account-toggle"
 import { ActiveBadge } from "@/components/features/status-badge"
@@ -41,9 +45,12 @@ export function ClientDetailPage({ clientId }: Props) {
   const router = useRouter()
   const { locale, t } = useLocale()
   const { formatDate } = useOrganizationConfig()
+  const { canDo } = useAuth()
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [sellOpen, setSellOpen] = useState(false)
 
   const { data: client, isLoading, error, refetch } = useClient(clientId)
+  const canSellPackage = canDo("invoice", "create")
 
   if (isLoading) return <ClientPageSkeleton />
 
@@ -120,6 +127,16 @@ export function ClientDetailPage({ clientId }: Props) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {canSellPackage && (
+            <Button
+              variant="outline"
+              className="gap-2 rounded-lg px-5 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+              onClick={() => setSellOpen(true)}
+            >
+              <HugeiconsIcon icon={ShoppingBagAddIcon} size={16} />
+              {t("packages.sell.button")}
+            </Button>
+          )}
           <Button
             className="gap-2 rounded-lg px-6"
             onClick={() => router.push(`/clients/${clientId}/edit`)}
@@ -142,6 +159,7 @@ export function ClientDetailPage({ clientId }: Props) {
         <TabsList variant="line">
           <TabsTrigger value="info">{t("clients.dialog.tabs.contact")}</TabsTrigger>
           <TabsTrigger value="bookings">{t("clients.dialog.tabs.bookings")}</TabsTrigger>
+          <TabsTrigger value="balances">{t("packages.balances.title")}</TabsTrigger>
           <TabsTrigger value="invoices">{t("clients.dialog.tabs.invoices")}</TabsTrigger>
           <TabsTrigger value="stats">{t("clients.dialog.tabs.stats")}</TabsTrigger>
         </TabsList>
@@ -228,12 +246,17 @@ export function ClientDetailPage({ clientId }: Props) {
           <ClientBookingsPanel clientId={client.id} t={t} formatDate={formatDate} />
         </TabsContent>
 
-        {/* ── Tab 3: الفواتير ── */}
+        {/* ── Tab 3: أرصدة الباقات (Phase 2) ── */}
+        <TabsContent value="balances" className="pt-4">
+          <ClientPackageBalancesPanel clientId={client.id} />
+        </TabsContent>
+
+        {/* ── Tab 4: الفواتير ── */}
         <TabsContent value="invoices" className="pt-4">
           <ClientInvoicesPanel t={t} />
         </TabsContent>
 
-        {/* ── Tab 4: الإحصائيات ── */}
+        {/* ── Tab 5: الإحصائيات ── */}
         <TabsContent value="stats" className="pt-4">
           <div className="py-8 text-center text-sm text-muted-foreground">
             {t("clients.dialog.noBookings")}
@@ -247,6 +270,14 @@ export function ClientDetailPage({ clientId }: Props) {
         onOpenChange={setDeleteOpen}
         onDeleted={() => router.push("/clients")}
       />
+
+      {canSellPackage && (
+        <SellPackageDialog
+          clientId={client.id}
+          open={sellOpen}
+          onOpenChange={setSellOpen}
+        />
+      )}
     </ListPageShell>
   )
 }

@@ -33,6 +33,7 @@ export const arMisc: Record<string, string> = {
   "reports.nav.practitioners": "الممارسون",
   "reports.nav.services": "الخدمات",
   "reports.nav.ratings": "التقييمات",
+  "reports.nav.packages": "الباقات",
 
   // Period presets
   "reports.dateFrom": "من",
@@ -567,6 +568,35 @@ export const arMisc: Record<string, string> = {
   "pagination.prev": "السابق",
   "pagination.next": "التالي",
   "pagination.reset": "إعادة تعيين",
+
+  // — Session-package reports (Phase 5) —
+  "reports.packages.title": "تقارير الباقات",
+  "reports.packages.description": "مبيعات الباقات، الرصيد القائم، الاستهلاك، والاسترداد.",
+  "reports.packages.type.label": "نوع التقرير",
+  "reports.packages.type.sales": "المبيعات",
+  "reports.packages.type.outstanding": "الرصيد القائم",
+  "reports.packages.type.consumption": "الاستهلاك",
+  "reports.packages.type.refunded": "المستردة",
+  "reports.packages.sales.purchaseCount": "عدد الباقات المباعة",
+  "reports.packages.sales.totalRevenue": "إجمالي الإيرادات",
+  "reports.packages.sales.byBucket.cash": "نقداً",
+  "reports.packages.sales.byBucket.network": "شبكة (mada)",
+  "reports.packages.sales.byBucket.electronic": "إلكتروني",
+  "reports.packages.sales.byMethod": "توزيع طرق الدفع",
+  "reports.packages.sales.count": "عدد المعاملات",
+  "reports.packages.outstanding.liability": "الالتزام المالي (ر.س)",
+  "reports.packages.outstanding.sessions": "الجلسات المتبقية",
+  "reports.packages.outstanding.creditCount": "عدد الدلاء النشطة",
+  "reports.packages.consumption.totalConsumed": "إجمالي الجلسات المؤدّاة",
+  "reports.packages.consumption.byEmployee": "الاستهلاك حسب المعالج",
+  "reports.packages.consumption.count": "الجلسات",
+  "reports.packages.refunded.count": "عدد الباقات المستردة",
+  "reports.packages.refunded.totalRefunded": "إجمالي المبالغ المستردة",
+  "reports.packages.refunded.items": "قائمة الباقات المستردة",
+  "reports.packages.refunded.purchaseId": "رقم الشراء",
+  "reports.packages.refunded.amountPaid": "المبلغ المدفوع",
+  "reports.packages.refunded.refundAmount": "المسترد",
+  "reports.packages.refunded.notes": "ملاحظات",
 
   // — Global Error —
   "globalError.title": "حدث خطأ غير متوقع",

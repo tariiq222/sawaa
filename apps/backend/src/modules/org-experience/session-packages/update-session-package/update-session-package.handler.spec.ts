@@ -1,0 +1,265 @@
+import { Test } from '@nestjs/testing';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
+import { DiscountType } from '@prisma/client';
+import { UpdateSessionPackageHandler } from './update-session-package.handler';
+import { ComputePackagePriceService } from '../../compute-package-price.service';
+
+function buildPrisma() {
+  const sessionPackageFindFirst = jest.fn();
+  const employeeService = { findMany: jest.fn() };
+  const serviceDurationOption = { findMany: jest.fn() };
+  const employeeServiceFindFirst = jest.fn();
+  const employeeServiceOptionFindFirst = jest.fn();
+  const serviceDurationOptionFindFirst = jest.fn();
+  const sessionPackageItemDeleteMany = jest.fn();
+  const sessionPackageItemCreateMany = jest.fn();
+  const sessionPackageUpdate = jest.fn();
+  const tx = {
+    sessionPackage: { update: sessionPackageUpdate },
+    sessionPackageItem: {
+      deleteMany: sessionPackageItemDeleteMany,
+      createMany: sessionPackageItemCreateMany,
+    },
+  };
+  return {
+    sessionPackage: { findFirst: sessionPackageFindFirst },
+    employeeService: { ...employeeService, findFirst: employeeServiceFindFirst },
+    employeeServiceOption: { findFirst: employeeServiceOptionFindFirst },
+    serviceDurationOption: {
+      ...serviceDurationOption,
+      findFirst: serviceDurationOptionFindFirst,
+    },
+    _tx: tx,
+  };
+}
+
+const PACKAGE_ID = '00000000-0000-4000-a000-0000000000aa';
+const SERVICE_ID = '00000000-0000-4000-a000-000000000001';
+const EMPLOYEE_ID = '00000000-0000-4000-a000-000000000002';
+const DURATION_OPTION_ID = '00000000-0000-4000-a000-000000000003';
+
+const existingPackage = () => ({
+  id: PACKAGE_ID,
+  nameAr: 'باقة قديمة',
+  nameEn: 'Old Pack',
+  descriptionAr: null,
+  descriptionEn: null,
+  imageUrl: null,
+  iconName: null,
+  iconBgColor: null,
+  discountType: DiscountType.PERCENTAGE,
+  discountValue: { toString: () => '10' },
+  isActive: true,
+  isPublic: false,
+  sortOrder: 0,
+  archivedAt: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  items: [
+    {
+      id: 'item-1',
+      packageId: PACKAGE_ID,
+      serviceId: SERVICE_ID,
+      employeeId: EMPLOYEE_ID,
+      durationOptionId: DURATION_OPTION_ID,
+      paidQuantity: 4,
+      freeQuantity: 0,
+      sortOrder: 0,
+      createdAt: new Date(),
+    },
+  ],
+});
+
+const validUpdate = () => ({ nameAr: 'باقة محدّثة' });
+
+describe('UpdateSessionPackageHandler', () => {
+  let handler: UpdateSessionPackageHandler;
+  let prisma: ReturnType<typeof buildPrisma>;
+  let tx: ReturnType<typeof buildPrisma>['_tx'];
+
+  beforeEach(async () => {
+    prisma = buildPrisma();
+    tx = prisma._tx;
+    prisma.sessionPackage.findFirst.mockResolvedValue(existingPackage());
+    prisma.employeeService.findMany.mockResolvedValue([
+      { employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID },
+    ]);
+    prisma.serviceDurationOption.findMany.mockResolvedValue([
+      { id: DURATION_OPTION_ID, serviceId: SERVICE_ID },
+    ]);
+    prisma.employeeService.findFirst.mockResolvedValue({ id: 'es-1' });
+    prisma.employeeServiceOption.findFirst.mockResolvedValue(null);
+    prisma.serviceDurationOption.findFirst.mockResolvedValue({
+      id: DURATION_OPTION_ID,
+      serviceId: SERVICE_ID,
+      price: { toString: () => '10000' },
+    });
+    tx.sessionPackage.update.mockResolvedValue({ id: PACKAGE_ID });
+
+    const module = await Test.createTestingModule({
+      providers: [
+        UpdateSessionPackageHandler,
+        ComputePackagePriceService,
+        { provide: PrismaService, useValue: prisma },
+        {
+          provide: RlsTransactionService,
+          useValue: { withTransaction: jest.fn((fn: (t: typeof tx) => Promise<unknown>) => fn(tx)) },
+        },
+      ],
+    }).compile();
+
+    handler = module.get(UpdateSessionPackageHandler);
+  });
+
+  it('is defined', () => {
+    expect(handler).toBeDefined();
+  });
+
+  it('throws NotFoundException when the package does not exist', async () => {
+    prisma.sessionPackage.findFirst.mockResolvedValue(null);
+    await expect(handler.execute({ packageId: 'missing', ...validUpdate() } as any)).rejects.toThrow(NotFoundException);
+    expect(tx.sessionPackage.update).not.toHaveBeenCalled();
+  });
+
+  it('throws NotFoundException when the package is archived', async () => {
+    prisma.sessionPackage.findFirst.mockResolvedValue(null);
+    await expect(handler.execute({ packageId: 'archived', ...validUpdate() } as any)).rejects.toThrow(NotFoundException);
+  });
+
+  it('updates a single field without touching the rest', async () => {
+    const result = await handler.execute({ packageId: PACKAGE_ID, nameAr: 'باقة محدّثة' } as any);
+    expect(prisma.sessionPackage.findFirst).toHaveBeenCalledWith({
+      where: { id: PACKAGE_ID, archivedAt: null },
+      include: { items: true },
+    });
+    const data = tx.sessionPackage.update.mock.calls[0][0].data;
+    expect(data.nameAr).toBe('باقة محدّثة');
+    expect(data.discountValue).toBeUndefined();
+    expect(data.discountType).toBeUndefined();
+    expect(result).toEqual({ id: PACKAGE_ID });
+  });
+
+  it('preserves existing discountType/Value when only one of them is updated', async () => {
+    // Update discountValue only — discountType should NOT be in the update payload
+    // because it wasn't provided in the DTO. The handler should keep using the
+    // stored discountType when re-validating.
+    prisma.employeeService.findFirst.mockResolvedValue({ id: 'es-1' });
+    prisma.employeeServiceOption.findFirst.mockResolvedValue(null);
+    prisma.serviceDurationOption.findFirst.mockResolvedValue({
+      id: DURATION_OPTION_ID,
+      serviceId: SERVICE_ID,
+      price: { toString: () => '10000' },
+    });
+
+    await handler.execute({ packageId: PACKAGE_ID, discountValue: 15 } as any);
+    const data = tx.sessionPackage.update.mock.calls[0][0].data;
+    // discountType must NOT be in update data (it wasn't in the DTO).
+    expect(data.discountType).toBeUndefined();
+    expect(data.discountValue).toBe(15);
+  });
+
+  describe('items replacement', () => {
+    it('replaces items atomically (deleteMany + createMany) when items are provided', async () => {
+      tx.sessionPackageItem.deleteMany.mockResolvedValue({ count: 1 });
+      tx.sessionPackageItem.createMany.mockResolvedValue({ count: 1 });
+
+      await handler.execute({
+        packageId: PACKAGE_ID,
+        items: [
+          {
+            serviceId: SERVICE_ID,
+            employeeId: EMPLOYEE_ID,
+            durationOptionId: DURATION_OPTION_ID,
+            paidQuantity: 8,
+            freeQuantity: 2,
+            sortOrder: 0,
+          },
+        ],
+      } as any);
+
+      expect(tx.sessionPackageItem.deleteMany).toHaveBeenCalledWith({ where: { packageId: PACKAGE_ID } });
+      expect(tx.sessionPackageItem.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            packageId: PACKAGE_ID,
+            serviceId: SERVICE_ID,
+            employeeId: EMPLOYEE_ID,
+            durationOptionId: DURATION_OPTION_ID,
+            paidQuantity: 8,
+            freeQuantity: 2,
+            sortOrder: 0,
+          },
+        ],
+      });
+    });
+
+    it('does not touch items when no items are provided', async () => {
+      await handler.execute({ packageId: PACKAGE_ID, nameAr: 'باقة محدّثة' } as any);
+      expect(tx.sessionPackageItem.deleteMany).not.toHaveBeenCalled();
+      expect(tx.sessionPackageItem.createMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects items with paidQuantity + freeQuantity = 0', async () => {
+      await expect(
+        handler.execute({
+          packageId: PACKAGE_ID,
+          items: [{ serviceId: SERVICE_ID, employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID, paidQuantity: 0, freeQuantity: 0 }],
+        } as any),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(tx.sessionPackageItem.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects items whose employee does not provide the service', async () => {
+      prisma.employeeService.findMany.mockResolvedValue([]);
+      await expect(
+        handler.execute({
+          packageId: PACKAGE_ID,
+          items: [{ serviceId: SERVICE_ID, employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID, paidQuantity: 1, freeQuantity: 0 }],
+        } as any),
+      ).rejects.toThrow(/Employee does not provide/i);
+    });
+
+    it('rejects items whose duration option belongs to a different service', async () => {
+      prisma.employeeService.findMany.mockResolvedValue([
+        { employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID },
+      ]);
+      prisma.serviceDurationOption.findMany.mockResolvedValue([
+        { id: DURATION_OPTION_ID, serviceId: 'different-service' },
+      ]);
+      await expect(
+        handler.execute({
+          packageId: PACKAGE_ID,
+          items: [{ serviceId: SERVICE_ID, employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID, paidQuantity: 1, freeQuantity: 0 }],
+        } as any),
+      ).rejects.toThrow(/Duration option not found/i);
+    });
+  });
+
+  describe('discount validation', () => {
+    it('rejects PERCENTAGE discountValue > 100', async () => {
+      await expect(
+        handler.execute({ packageId: PACKAGE_ID, discountType: DiscountType.PERCENTAGE, discountValue: 150 } as any),
+      ).rejects.toThrow(/between 0 and 100/);
+    });
+
+    it('rejects FIXED discountValue that exceeds the subtotal of the effective items', async () => {
+      // existing items subtotal = 4 paid × 10_000 = 40_000 halalas
+      await expect(
+        handler.execute({
+          packageId: PACKAGE_ID,
+          discountType: DiscountType.FIXED,
+          discountValue: 50_000,
+        } as any),
+      ).rejects.toThrow(/must not exceed/i);
+    });
+
+    it('accepts a valid PERCENTAGE discount change', async () => {
+      await handler.execute({ packageId: PACKAGE_ID, discountType: DiscountType.PERCENTAGE, discountValue: 25 } as any);
+      const data = tx.sessionPackage.update.mock.calls[0][0].data;
+      expect(data.discountType).toBe(DiscountType.PERCENTAGE);
+      expect(data.discountValue).toBe(25);
+    });
+  });
+});

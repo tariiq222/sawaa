@@ -95,13 +95,18 @@ test.describe('Booking Create Wizard — user flow', () => {
     await expect(clientBtn).toBeVisible({ timeout: 10_000 });
     await clientBtn.click();
 
-    // 5. Department section auto-opens — pick the clinics ("عيادات") department.
-    //    Scope to the POS container so we don't match the sidebar "العيادات" nav.
-    //    The seed guarantees this step exists, so wait for it explicitly.
+    // 5. Department section auto-opens — pick the clinic department. Its real
+    //    seeded name is 'عيادات سواء' / 'Sawa Clinics' (fixtures/seed.ts ensures
+    //    it exists), so match by substring — NOT an exact /^عيادات$/ which never
+    //    matches it. Scope to the POS container so we don't match the sidebar
+    //    nav. The card is a `<button disabled={bookableCategoriesCount === 0}>`,
+    //    and Playwright `.click()` waits for the enabled state; assert it's
+    //    enabled first so a seed regression fails fast instead of hanging.
     const deptBtn = posContainer
-      .getByRole('button', { name: /^عيادات$|^Clinics$/ })
+      .getByRole('button', { name: /عيادات|clinic/i })
       .first();
     await expect(deptBtn).toBeVisible({ timeout: 10_000 });
+    await expect(deptBtn, 'clinic department card should be enabled').toBeEnabled();
     await deptBtn.click();
 
     // 6. Category (clinic) section — pick the seeded test category. Waiting for

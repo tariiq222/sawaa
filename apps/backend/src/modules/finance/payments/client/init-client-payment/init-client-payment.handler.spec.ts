@@ -310,8 +310,8 @@ describe('InitClientPaymentHandler', () => {
     expect(moyasarCall.callbackUrl).toContain(`invoiceId=${invoiceId}`);
   });
 
-  it('skips the booking status guard for bundle-purchase invoices (bookingId is null)', async () => {
-    // Bundle invoices have no bookingId — the consumer side (PaymentCompletedEventHandler)
+  it('skips the booking status guard for package-purchase invoices (bookingId is null)', async () => {
+    // Package invoices have no bookingId — the consumer side (PaymentCompletedEventHandler)
     // also skips booking confirmation when bookingId is null. The init handler must not
     // block payment init by trying to validate a non-existent booking.
     const { handler, prisma, moyasar } = buildHandler();

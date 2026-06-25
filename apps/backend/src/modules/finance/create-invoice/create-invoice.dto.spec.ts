@@ -17,8 +17,8 @@ describe('CreateInvoiceDto', () => {
     subtotal: 10000,
   };
 
-  const baseBundle = {
-    bundlePurchaseId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab',
+  const basePackage = {
+    packagePurchaseId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab',
     branchId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2',
     clientId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3',
     employeeId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4',
@@ -30,8 +30,8 @@ describe('CreateInvoiceDto', () => {
     expect(errors).toHaveLength(0);
   });
 
-  it('accepts a bundle-backed invoice (XOR with bundlePurchaseId)', async () => {
-    const errors = await validateDto(baseBundle);
+  it('accepts a package-backed invoice (XOR with packagePurchaseId)', async () => {
+    const errors = await validateDto(basePackage);
     expect(errors).toHaveLength(0);
   });
 

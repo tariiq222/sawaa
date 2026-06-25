@@ -98,11 +98,18 @@ describe('Booking state machine — impossible sequences (integration)', () => {
   });
 
   describe('staff time blocking statuses', () => {
-    it('does not include terminal statuses released from employee time', () => {
+    it('releases CANCELLED and EXPIRED from employee time (slot reopens)', () => {
       expect(STAFF_TIME_BLOCKING_BOOKING_STATUSES).not.toContain(BookingStatus.CANCELLED);
-      expect(STAFF_TIME_BLOCKING_BOOKING_STATUSES).not.toContain(BookingStatus.COMPLETED);
-      expect(STAFF_TIME_BLOCKING_BOOKING_STATUSES).not.toContain(BookingStatus.NO_SHOW);
       expect(STAFF_TIME_BLOCKING_BOOKING_STATUSES).not.toContain(BookingStatus.EXPIRED);
+    });
+
+    it('still blocks COMPLETED and NO_SHOW (a future-dated finalized booking keeps its slot)', () => {
+      // Regression: prod double-booking 2026-06-24. complete-booking / no-show
+      // have no time guard, so staff can finalize a booking before its scheduled
+      // time. If these statuses released the slot, the practitioner's future time
+      // reopened and a second client could be booked into the same slot.
+      expect(STAFF_TIME_BLOCKING_BOOKING_STATUSES).toContain(BookingStatus.COMPLETED);
+      expect(STAFF_TIME_BLOCKING_BOOKING_STATUSES).toContain(BookingStatus.NO_SHOW);
     });
   });
 });

@@ -89,7 +89,7 @@ describe('RefundCompletedEventHandler', () => {
     );
   });
 
-  it('skips the cascade when bookingId is null (bundle-purchase refund path)', async () => {
+  it('skips the cascade when bookingId is null (package-purchase refund path)', async () => {
     await registeredHandler(baseEnvelope(null));
 
     expect(prisma.booking.findFirst).not.toHaveBeenCalled();

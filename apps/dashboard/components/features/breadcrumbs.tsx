@@ -76,7 +76,7 @@ function generateBreadcrumbs(pathname: string, t: (key: string) => string): Brea
     branches: t("nav.branches"),
     users: t("nav.users"),
     settings: t("nav.settings"),
-    bundles: t("nav.bundles"),
+    packages: t("nav.packages"),
     "intake-forms": t("nav.intakeForms"),
     "contact-messages": t("nav.contactMessages"),
     profile: t("nav.profile"),

@@ -17,12 +17,12 @@ const buildCoupon = (overrides: Partial<typeof defaultCoupon> = {}) => ({
 
 // Default invoice: 10 000 halalas subtotal, 0 existing discount, 15% VAT, booking-backed.
 // bookingId is explicitly `string | null` so buildInvoice({ bookingId: null })
-// typechecks (the bundle path must set bookingId=null).
+// typechecks (the package path must set bookingId=null).
 const defaultInvoice: {
   id: string;
   clientId: string;
   bookingId: string | null;
-  bundlePurchaseId: string | null;
+  packagePurchaseId: string | null;
   subtotal: number;
   discountAmt: number;
   vatRate: number;
@@ -32,7 +32,7 @@ const defaultInvoice: {
   id: 'inv-1',
   clientId: 'client-1',
   bookingId: 'book-1',
-  bundlePurchaseId: null,
+  packagePurchaseId: null,
   subtotal: 10000,
   discountAmt: 0,
   vatRate: 0.15,
@@ -371,19 +371,19 @@ describe('ApplyCouponHandler — serviceIds whitelist (FIN-002)', () => {
     expect(prisma.couponRedemption.create).toHaveBeenCalled();
   });
 
-  it('rejects service-restricted coupon on a bundle-backed invoice (bundle path)', async () => {
-    // A bundle invoice has no single serviceId — bundles span many services,
+  it('rejects service-restricted coupon on a package-backed invoice (package path)', async () => {
+    // A package invoice has no single serviceId — packages span many services,
     // and a service-restricted coupon cannot be unambiguously evaluated.
     // Minimal correct rule: reject with a clear message rather than guessing.
-    const invoice = buildInvoice({ bundlePurchaseId: 'bp-1', bookingId: null });
+    const invoice = buildInvoice({ packagePurchaseId: 'bp-1', bookingId: null });
     const coupon = buildCoupon({ serviceIds: ['svc-X'] });
     const { handler, prisma } = buildHandler(invoice, coupon);
     await expect(handler.execute(cmd)).rejects.toThrow(/restricted/i);
     expect(prisma.couponRedemption.create).not.toHaveBeenCalled();
   });
 
-  it('accepts a coupon with empty serviceIds on a bundle-backed invoice (no restriction to violate)', async () => {
-    const invoice = buildInvoice({ bundlePurchaseId: 'bp-1', bookingId: null });
+  it('accepts a coupon with empty serviceIds on a package-backed invoice (no restriction to violate)', async () => {
+    const invoice = buildInvoice({ packagePurchaseId: 'bp-1', bookingId: null });
     const { handler, prisma } = buildHandler(invoice);
     const result = await handler.execute(cmd);
     expect(result.id).toBe('red-1');

@@ -144,7 +144,7 @@ export class ReconcilePaymentsCron {
         total: true,
         currency: true,
         bookingId: true,
-        bundlePurchaseId: true,
+        packagePurchaseId: true,
         clientId: true,
       },
     });
@@ -179,7 +179,7 @@ export class ReconcilePaymentsCron {
       total: unknown;
       currency: string;
       bookingId: string | null;
-      bundlePurchaseId: string | null;
+      packagePurchaseId: string | null;
       clientId: string;
     };
     amountHalalas: number;
@@ -259,7 +259,7 @@ export class ReconcilePaymentsCron {
         paymentId: paymentRowId,
         invoiceId: invoice.id,
         bookingId: invoice.bookingId,
-        bundlePurchaseId: invoice.bundlePurchaseId,
+        packagePurchaseId: invoice.packagePurchaseId,
         amount: amountHalalas,
         currency: invoice.currency,
         organizationId: DEFAULT_ORG_ID,

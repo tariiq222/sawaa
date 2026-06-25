@@ -13,6 +13,7 @@ import { assertTransition } from '../booking-state-machine';
 import { computeRefundType, computeRefundAmountHalalas } from '../cancellation-policy';
 import { ProgramCapacityService } from '../program/program-capacity.service';
 import { updateBookingAtomically } from '../booking-lifecycle.helper';
+import { returnPackageCreditForBooking } from '../package-credit-return.helper';
 
 export type CancelBookingCommand = CancelBookingDto & {
   bookingId: string;
@@ -110,6 +111,12 @@ export class CancelBookingHandler {
           },
           data: { usedCount: { decrement: 1 } },
         });
+      }
+      // Session-package credit bookings: return the credit to its bucket in
+      // ALL cancel cases (no burn window, no refund — the booking had zero
+      // monetary value). Runs inside the same tx as the status flip.
+      if (booking.packageCreditId) {
+        await returnPackageCreditForBooking(tx, cmd.bookingId);
       }
       if (completedPayment && refundType !== RefundType.NONE) {
         // Honour the configured refund percent. FULL → 100% (refundAmount
