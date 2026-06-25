@@ -208,4 +208,24 @@ describe('useBookingFormState', () => {
     })
     expect(result.current.isComplete).toBe(true)
   })
+
+  it('applyCreditTarget fills the path and clears delivery/date/time', () => {
+    const { result } = renderHook(() => useBookingFormState())
+    act(() => result.current.selectClient('c1', 'محمد'))
+    act(() =>
+      result.current.applyCreditTarget({
+        departmentId: 'dep1', departmentName: 'قسم',
+        categoryId: 'cat1', categoryName: 'عيادة', categoryBookingMode: 'SERVICES',
+        serviceId: 's1', serviceName: 'خدمة',
+        employeeId: 'e1', employeeName: 'موظف',
+        durationOptionId: 'd1',
+      }),
+    )
+    const s = result.current.state
+    expect(s).toEqual(expect.objectContaining({
+      clientId: 'c1', departmentId: 'dep1', categoryId: 'cat1',
+      categoryBookingMode: 'SERVICES', serviceId: 's1', employeeId: 'e1',
+      durationOptionId: 'd1', deliveryType: null, date: null, startTime: null,
+    }))
+  })
 })

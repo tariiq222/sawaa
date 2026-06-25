@@ -1,13 +1,33 @@
-// EXCEPTION: hook size limit (200) exceeded — 237 lines — 2026-06-24
+// EXCEPTION: hook size limit (200) exceeded — 290 lines — 2026-06-25
 // Phase 3 added `durationOptionId` to the booking form state plus a
 // new `selectDurationOption` setter, and propagated the field through
 // every reset path (client, department, category, service, employee).
+// Phase 4 adds `CreditTarget` interface + `applyCreditTarget` setter for
+// the package-credits panel wizard-jump flow.
 // Once a follow-up refactor extracts reset paths into a helper this
 // file will drop back under 200.
 
 import { useCallback, useState } from 'react'
 
 export type CategoryBookingMode = 'DIRECT' | 'SERVICES'
+
+/**
+ * Describes a fully-resolved target for a package credit: every field
+ * needed to jump-fill the booking wizard from department down to
+ * durationOption in one atomic state update.
+ */
+export interface CreditTarget {
+  departmentId: string | null
+  departmentName: string | null
+  categoryId: string
+  categoryName: string
+  categoryBookingMode: CategoryBookingMode | null
+  serviceId: string
+  serviceName: string
+  employeeId: string
+  employeeName: string
+  durationOptionId: string
+}
 
 export interface BookingFormState {
   clientId: string | null
@@ -223,6 +243,31 @@ export function useBookingFormState() {
     setState((prev) => ({ ...prev, couponCode }))
   }, [])
 
+  /**
+   * Jump the wizard straight to a package credit's target: fills
+   * department → category (+mode) → service → employee → durationOption in one
+   * atomic update, leaving deliveryType/date/time for the user to finish.
+   */
+  const applyCreditTarget = useCallback((t: CreditTarget) => {
+    setState((prev) => ({
+      ...prev,
+      departmentId: t.departmentId,
+      departmentName: t.departmentName,
+      categoryId: t.categoryId,
+      categoryName: t.categoryName,
+      categoryBookingMode: t.categoryBookingMode,
+      serviceId: t.serviceId,
+      serviceName: t.serviceName,
+      employeeId: t.employeeId,
+      employeeName: t.employeeName,
+      durationOptionId: t.durationOptionId,
+      deliveryType: null,
+      type: null,
+      date: null,
+      startTime: null,
+    }))
+  }, [])
+
   return {
     state,
     isComplete,
@@ -236,6 +281,7 @@ export function useBookingFormState() {
     /** @deprecated Use selectDeliveryType. */
     selectType: selectDeliveryType,
     selectDurationOption,
+    applyCreditTarget,
     selectDate,
     selectTime,
     setPayAtClinic,

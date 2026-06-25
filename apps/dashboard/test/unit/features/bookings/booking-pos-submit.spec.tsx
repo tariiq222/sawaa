@@ -218,6 +218,7 @@ const makeCompleteState = (overrides = {}) => ({
   selectDeliveryType: vi.fn(),
   selectType: vi.fn(),
   selectDurationOption: vi.fn(),
+  applyCreditTarget: vi.fn(),
   selectDate: vi.fn(),
   selectTime: vi.fn(),
   setPayAtClinic: vi.fn(),
