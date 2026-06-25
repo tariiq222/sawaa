@@ -3,7 +3,8 @@
 // EXCEPTION: feature-component size limit (300) and absolute file size
 // limit (350) exceeded — 2026-06-24 — Phase 3 of session-packages
 // rebuild wired the auto-detect "احجز من الرصيد" badge + from-credit
-// submit path into this wizard. Splitting the wizard mid-refactor
+// submit path into this wizard. Task 5 (2026-06-25) added the client
+// credits panel below the client step. Splitting the wizard mid-refactor
 // would risk breaking the auto-advance section navigation; the
 // alternative (extracting a credit-mode wrapper) is deferred to a
 // follow-up. Once the badge code stabilises this file can be split
@@ -29,6 +30,8 @@ import { combineDateTimeToISO } from "@/lib/utils"
 import { bookingPosPayloadSchema } from "@/lib/schemas/booking.schema"
 
 import { ClientStep } from "./booking-client-step"
+import { ClientCreditsPanel } from "./client-credits-panel"
+import type { CreditTarget } from "./use-booking-form-state"
 import { StepDepartment } from "./wizard-steps/step-department"
 import { StepCategory } from "./wizard-steps/step-category"
 import { StepService } from "./wizard-steps/step-service"
@@ -85,7 +88,15 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     selectTime,
     setPayAtClinic,
     setCouponCode,
+    applyCreditTarget,
   } = useBookingFormState()
+
+  // Task 5 — jump to the typeDuration step when the operator selects a
+  // credit from the client credits panel.
+  const handleUseCredit = (target: CreditTarget) => {
+    applyCreditTarget(target)
+    setOpenSection("typeDuration")
+  }
 
   // Phase 3 — re-arm the badge when the operator changes any of the
   // four matching-credit params (client/service/employee/duration).
@@ -329,6 +340,9 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
             onToggle={() => setOpenSection("client")}
           >
             <ClientStep onSelect={handleClientSelect} />
+            {state.clientId && (
+              <ClientCreditsPanel clientId={state.clientId} onUseCredit={handleUseCredit} />
+            )}
           </CollapsibleSection>
 
           {/* 2. Department */}
