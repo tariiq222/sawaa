@@ -94,6 +94,7 @@ test("renders only usable credits and fires onUseCredit on click", async () => {
   render(<ClientCreditsPanel clientId="c1" onUseCredit={onUseCredit} />)
   expect(screen.getByText("خدمة")).toBeInTheDocument()
   expect(screen.queryByText("منتهية")).not.toBeInTheDocument() // remaining 0 hidden
+  // t() stub returns the key verbatim, so the regex matches the key string, not the Arabic copy.
   screen.getByRole("button", { name: /packages\.credits\.use/ }).click()
   expect(onUseCredit).toHaveBeenCalledWith(
     expect.objectContaining({ serviceId: "s1", durationOptionId: "d1" }),

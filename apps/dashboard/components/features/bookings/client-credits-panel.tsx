@@ -20,10 +20,12 @@ interface Props {
  */
 export function ClientCreditsPanel({ clientId, onUseCredit }: Props) {
   const { t } = useLocale()
-  const { data: purchases } = useClientPackagePurchases(clientId, { status: "ACTIVE" })
+  const { data: purchases, isLoading } = useClientPackagePurchases(clientId, { status: "ACTIVE" })
+
+  if (isLoading) return null
 
   const usable = (purchases ?? [])
-    .filter((p) => p.status === "ACTIVE")
+    // Hook already fetches with { status: "ACTIVE" } — no re-filter needed.
     .flatMap((p) =>
       p.credits.map((c) => ({ purchaseName: p.packageNameAr, credit: c })),
     )
