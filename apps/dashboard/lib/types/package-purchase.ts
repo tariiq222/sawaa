@@ -71,6 +71,20 @@ export interface PackageCredit {
   totalQuantity: number
   usedQuantity: number
   remaining: number
+  /**
+   * Wizard-jump fields (booking wizard credits panel). Resolved backend-side
+   * from the credit's service → category → department chain so a credit card
+   * can pre-fill the wizard target in one click. `serviceIsBookable` is false
+   * when the service is archived/inactive or the employee is inactive.
+   */
+  categoryId: string | null
+  categoryNameAr: string
+  categoryNameEn: string | null
+  categoryBookingMode: "DIRECT" | "SERVICES" | null
+  departmentId: string | null
+  departmentNameAr: string
+  departmentNameEn: string | null
+  serviceIsBookable: boolean
 }
 
 /**
