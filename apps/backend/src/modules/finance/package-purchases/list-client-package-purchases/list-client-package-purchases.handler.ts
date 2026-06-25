@@ -25,6 +25,15 @@ export interface ClientPackageCreditRow {
   usedQuantity: number;
   /** Computed: totalQuantity − usedQuantity. */
   remaining: number;
+  categoryId: string | null;
+  categoryNameAr: string;
+  categoryNameEn: string | null;
+  categoryBookingMode: 'DIRECT' | 'SERVICES' | null;
+  departmentId: string | null;
+  departmentNameAr: string;
+  departmentNameEn: string | null;
+  /** True when the service is active, not archived, and the employee is active. */
+  serviceIsBookable: boolean;
 }
 
 export interface ClientPackagePurchaseRow {
@@ -93,7 +102,16 @@ export class ListClientPackagePurchasesHandler {
       serviceIds.length > 0
         ? this.prisma.service.findMany({
             where: { id: { in: serviceIds } },
-            select: { id: true, nameAr: true, nameEn: true },
+            select: {
+              id: true, nameAr: true, nameEn: true, isActive: true, archivedAt: true,
+              categoryId: true,
+              category: {
+                select: {
+                  id: true, nameAr: true, nameEn: true, bookingMode: true, departmentId: true,
+                  department: { select: { id: true, nameAr: true, nameEn: true } },
+                },
+              },
+            },
           })
         : Promise.resolve([]),
       employeeIds.length > 0
@@ -101,7 +119,7 @@ export class ListClientPackagePurchasesHandler {
             where: { id: { in: employeeIds } },
             // `name` is the canonical fallback (every Employee row has one);
             // nameAr / nameEn are the localised fields when populated.
-            select: { id: true, name: true, nameAr: true, nameEn: true },
+            select: { id: true, name: true, nameAr: true, nameEn: true, isActive: true },
           })
         : Promise.resolve([]),
       durationOptionIds.length > 0
@@ -139,6 +157,10 @@ export class ListClientPackagePurchasesHandler {
           const service = serviceMap.get(credit.serviceId);
           const employee = employeeMap.get(credit.employeeId);
           const duration = durationMap.get(credit.durationOptionId);
+          const category = service?.category ?? null;
+          const department = category?.department ?? null;
+          const serviceIsBookable =
+            !!service && service.isActive && service.archivedAt === null && !!employee && employee.isActive;
           return {
             id: credit.id,
             serviceId: credit.serviceId,
@@ -156,6 +178,14 @@ export class ListClientPackagePurchasesHandler {
             totalQuantity: credit.totalQuantity,
             usedQuantity: credit.usedQuantity,
             remaining: credit.totalQuantity - credit.usedQuantity,
+            categoryId: service?.categoryId ?? null,
+            categoryNameAr: category?.nameAr ?? '',
+            categoryNameEn: category?.nameEn ?? null,
+            categoryBookingMode: (category?.bookingMode as 'DIRECT' | 'SERVICES' | undefined) ?? null,
+            departmentId: department?.id ?? null,
+            departmentNameAr: department?.nameAr ?? '',
+            departmentNameEn: department?.nameEn ?? null,
+            serviceIsBookable,
           };
         }),
       };

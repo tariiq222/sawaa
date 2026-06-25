@@ -262,4 +262,42 @@ describe('ListClientPackagePurchasesHandler', () => {
     expect(prisma.employee.findMany).not.toHaveBeenCalled();
     expect(prisma.serviceDurationOption.findMany).not.toHaveBeenCalled();
   });
+
+  it('resolves category + department + bookability onto each credit row', async () => {
+    prisma.packagePurchase.findMany.mockResolvedValue([
+      {
+        id: 'p1', packageId: 'pkg1', clientId: 'c1', status: 'ACTIVE',
+        subtotalSnapshot: 0, discountSnapshot: 0, amountPaid: 0, refundAmount: 0,
+        paidAt: new Date('2026-06-01'), refundedAt: null, notes: null, createdAt: new Date('2026-06-01'),
+        credits: [
+          { id: 'cr1', serviceId: 's1', employeeId: 'e1', durationOptionId: 'd1',
+            unitPriceSnapshot: 10000, totalQuantity: 5, usedQuantity: 1 },
+          { id: 'cr2', serviceId: 's2', employeeId: 'e1', durationOptionId: 'd1',
+            unitPriceSnapshot: 10000, totalQuantity: 2, usedQuantity: 0 },
+        ],
+      },
+    ]);
+    prisma.sessionPackage.findMany.mockResolvedValue([{ id: 'pkg1', nameAr: 'باقة', nameEn: null }]);
+    prisma.service.findMany.mockResolvedValue([
+      { id: 's1', nameAr: 'خدمة', nameEn: null, isActive: true, archivedAt: null,
+        categoryId: 'cat1',
+        category: { id: 'cat1', nameAr: 'عيادة', nameEn: null, bookingMode: 'SERVICES',
+          departmentId: 'dep1', department: { id: 'dep1', nameAr: 'قسم', nameEn: null } } },
+      { id: 's2', nameAr: 'خدمة محذوفة', nameEn: null, isActive: false, archivedAt: new Date('2026-06-02'),
+        categoryId: 'cat1',
+        category: { id: 'cat1', nameAr: 'عيادة', nameEn: null, bookingMode: 'SERVICES',
+          departmentId: 'dep1', department: { id: 'dep1', nameAr: 'قسم', nameEn: null } } },
+    ]);
+    prisma.employee.findMany.mockResolvedValue([{ id: 'e1', name: 'Emp', nameAr: 'موظف', nameEn: null, isActive: true }]);
+    prisma.serviceDurationOption.findMany.mockResolvedValue([{ id: 'd1', labelAr: '٤٥ د', label: '45m', durationMins: 45 }]);
+
+    const handler = new ListClientPackagePurchasesHandler(prisma as never);
+    const rows = await handler.execute({ clientId: 'c1' });
+    const [active, archived] = rows[0].credits;
+    expect(active).toEqual(expect.objectContaining({
+      categoryId: 'cat1', categoryNameAr: 'عيادة', categoryBookingMode: 'SERVICES',
+      departmentId: 'dep1', departmentNameAr: 'قسم', serviceIsBookable: true,
+    }));
+    expect(archived.serviceIsBookable).toBe(false);
+  });
 });
