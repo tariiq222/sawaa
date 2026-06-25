@@ -413,4 +413,10 @@ export const enBookings: Record<string, string> = {
   "bookings.credit.badge.dismissed": "Continuing with regular booking",
   "bookings.credit.toast.success": "Appointment booked from credit",
   "bookings.credit.toast.error": "Failed to book appointment from credit",
+
+  /* ── Client credits panel — package credits wizard entry (Phase 4) ── */
+  "packages.credits.availableForClient": "This client's package credits",
+  "packages.credits.remaining": "Remaining",
+  "packages.credits.use": "Use package credit",
+  "packages.credits.unavailable": "Unavailable",
 }

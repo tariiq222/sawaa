@@ -413,4 +413,10 @@ export const arBookings: Record<string, string> = {
   "bookings.credit.badge.dismissed": "متابعة الحجز العادي",
   "bookings.credit.toast.success": "تم حجز الموعد وخصم الرصيد",
   "bookings.credit.toast.error": "فشل حجز الموعد من الرصيد",
+
+  /* ── Client credits panel — package credits wizard entry (Phase 4) ── */
+  "packages.credits.availableForClient": "أرصدة باقات هذا المستفيد",
+  "packages.credits.remaining": "المتبقي",
+  "packages.credits.use": "استخدام رصيد الباقة",
+  "packages.credits.unavailable": "غير متاح",
 }
