@@ -83,11 +83,10 @@ export class CreatePackagePurchaseHandler {
       throw new NotFoundException(`Client ${dto.clientId} not found`);
     }
 
-    // 3. Freeze the price. discountValue lives in the package row; for
-    // PERCENTAGE it's the percentage itself (e.g. 10 = 10%), for FIXED it's
-    // integer halalas — both forms are exactly what ComputePackagePriceService
-    // expects (CreateSessionPackageHandler already normalised them at write
-    // time, so we can pass through).
+    // 3. Freeze the price. Discount now lives on each item; for PERCENTAGE it's
+    // the percentage itself (e.g. 10 = 10%), for FIXED it's integer halalas —
+    // both forms are exactly what ComputePackagePriceService expects (the
+    // Create/Update handlers already normalised them at write time).
     const price = await this.pricing.compute({
       items: pkg.items.map((it) => ({
         serviceId: it.serviceId,
@@ -95,9 +94,9 @@ export class CreatePackagePurchaseHandler {
         durationOptionId: it.durationOptionId,
         paidQuantity: it.paidQuantity,
         freeQuantity: it.freeQuantity,
+        discountType: it.discountType,
+        discountValue: Number(it.discountValue),
       })),
-      discountType: pkg.discountType,
-      discountValue: Number(pkg.discountValue),
     });
 
     // 4 + 5: create purchase, credits, invoice in one transaction.

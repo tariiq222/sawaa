@@ -36,6 +36,10 @@ export const packageItemSchema = z.object({
   durationOptionId: uuid,
   paidQuantity: z.coerce.number().int().min(0, "packages.errors.minQuantity"),
   freeQuantity: z.coerce.number().int().min(0).optional(),
+  // Per-item discount. FIXED value is rendered in SAR on the form; the submit
+  // handler converts to halalas. PERCENTAGE stays 0-100. null = no discount.
+  discountType: z.enum(["PERCENTAGE", "FIXED"]).nullable().optional(),
+  discountValue: z.coerce.number().min(0).optional(),
   sortOrder: z.coerce.number().int().min(0).optional(),
 })
 
@@ -51,15 +55,9 @@ const basePackageSchema = z.object({
   nameEn: z.string().trim().max(200).optional(),
   descriptionAr: z.string().trim().max(2000).optional(),
   descriptionEn: z.string().trim().max(2000).optional(),
-  imageUrl: z.string().trim().max(500).optional(),
-  iconName: z.string().trim().max(100).optional(),
-  iconBgColor: z.string().trim().max(20).optional(),
-  discountType: z.enum(["PERCENTAGE", "FIXED"]).optional(),
-  /**
-   * Renders in SAR for FIXED (so the form shows "50 SAR", not "5000 halalas");
-   * converts to halalas in the submit handler. PERCENTAGE stays 0-100.
-   */
-  discountValue: z.coerce.number().min(0).optional(),
+  imageUrl: z.string().trim().max(500).nullable().optional(),
+  iconName: z.string().trim().max(100).nullable().optional(),
+  iconBgColor: z.string().trim().max(20).nullable().optional(),
   sortOrder: z.coerce.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
   isPublic: z.boolean().optional(),
@@ -86,8 +84,6 @@ export type PackageFormData = z.infer<typeof basePackageSchema>
 
 export const createPackageSchema = basePackageSchema.extend({
   nameAr: z.string().trim().min(1, REQUIRED).max(200),
-  discountType: z.enum(["PERCENTAGE", "FIXED"]),
-  discountValue: z.coerce.number().min(0),
   items: z
     .array(packageItemSchema)
     .min(1, "packages.errors.minItems")

@@ -18,8 +18,6 @@ const validItem = {
 
 const validCreate = {
   nameAr: "باقة الاستشارات",
-  discountType: "PERCENTAGE",
-  discountValue: 10,
   isActive: true,
   isPublic: false,
   items: [validItem],
@@ -49,34 +47,34 @@ describe("createPackageSchema", () => {
     if (result.success) expect(result.data.nameEn).toBe("Counseling Pack")
   })
 
-  it("rejects lowercase discountType casing (enum is uppercase)", () => {
+  it("rejects lowercase per-item discountType casing (enum is uppercase)", () => {
     const result = createPackageSchema.safeParse({
       ...validCreate,
-      discountType: "percentage",
+      items: [{ ...validItem, discountType: "percentage" }],
     })
     expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error.issues[0]?.path).toEqual(["discountType"])
-    }
   })
 
-  it("accepts FIXED as discountType", () => {
+  it("accepts FIXED as a per-item discountType", () => {
     const result = createPackageSchema.safeParse({
       ...validCreate,
-      discountType: "FIXED",
+      items: [{ ...validItem, discountType: "FIXED", discountValue: 50 }],
     })
     expect(result.success).toBe(true)
   })
 
-  it("coerces a numeric string discountValue and rejects negatives", () => {
+  it("accepts a null per-item discountType (no discount) and coerces the value", () => {
     const ok = createPackageSchema.safeParse({
       ...validCreate,
-      discountValue: "12.5",
+      items: [{ ...validItem, discountType: "PERCENTAGE", discountValue: "12.5" }],
     })
     expect(ok.success).toBe(true)
-    if (ok.success) expect(ok.data.discountValue).toBe(12.5)
+    if (ok.success) expect(ok.data.items[0].discountValue).toBe(12.5)
 
-    const neg = createPackageSchema.safeParse({ ...validCreate, discountValue: -1 })
+    const neg = createPackageSchema.safeParse({
+      ...validCreate,
+      items: [{ ...validItem, discountValue: -1 }],
+    })
     expect(neg.success).toBe(false)
   })
 
@@ -145,8 +143,15 @@ describe("editPackageSchema", () => {
     }
   })
 
-  it("rejects an invalid discountType when provided", () => {
-    expect(editPackageSchema.safeParse({ discountType: "fixed" }).success).toBe(false)
-    expect(editPackageSchema.safeParse({ discountType: "FIXED" }).success).toBe(true)
+  it("rejects an invalid per-item discountType when provided", () => {
+    const base = { items: [{ ...validItem }] }
+    expect(
+      editPackageSchema.safeParse({ items: [{ ...validItem, discountType: "fixed" }] }).success,
+    ).toBe(false)
+    expect(
+      editPackageSchema.safeParse({ items: [{ ...validItem, discountType: "FIXED", discountValue: 50 }] })
+        .success,
+    ).toBe(true)
+    expect(editPackageSchema.safeParse(base).success).toBe(true)
   })
 })

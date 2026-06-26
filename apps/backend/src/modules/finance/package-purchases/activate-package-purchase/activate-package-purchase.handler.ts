@@ -98,8 +98,6 @@ export class ActivatePackagePurchaseHandler {
         return this.prisma.sessionPackage.findFirst({
           where: { id: purchase.packageId },
           select: {
-            discountType: true,
-            discountValue: true,
             items: {
               orderBy: { sortOrder: 'asc' },
               select: {
@@ -108,6 +106,8 @@ export class ActivatePackagePurchaseHandler {
                 durationOptionId: true,
                 paidQuantity: true,
                 freeQuantity: true,
+                discountType: true,
+                discountValue: true,
               },
             },
           },
@@ -133,9 +133,9 @@ export class ActivatePackagePurchaseHandler {
             durationOptionId: it.durationOptionId,
             paidQuantity: it.paidQuantity,
             freeQuantity: it.freeQuantity,
+            discountType: it.discountType,
+            discountValue: Number(it.discountValue),
           })),
-          discountType: pkg.discountType,
-          discountValue: Number(pkg.discountValue),
         });
       });
 

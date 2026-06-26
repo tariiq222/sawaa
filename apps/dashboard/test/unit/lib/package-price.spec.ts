@@ -1,113 +1,97 @@
 import { describe, expect, it } from "vitest"
-import { applyPackageDiscount, computePackagePrice } from "@/lib/package-price"
+import { applyItemDiscount, computePackagePrice } from "@/lib/package-price"
 
 // Money is integer halalas end-to-end (mirrors backend ComputePackagePriceService).
-//   PERCENTAGE → discountAmount = floor(subtotal × pct / 100), capped at subtotal
-//   FIXED      → discountAmount = min(discountValue, subtotal)
-//   finalPrice = max(0, subtotal − discountAmount)
+// Discount is now PER ITEM, applied to the item's payable (paid × unitPrice):
+//   PERCENTAGE → floor(base × pct / 100), pct clamped to 0-100
+//   FIXED      → min(value, base)
+//   null type / 0 value → no discount
 
-describe("applyPackageDiscount — FIXED (halalas)", () => {
-  it("subtracts a fixed halalas discount from the halalas subtotal", () => {
-    expect(applyPackageDiscount(20000, "FIXED", 5000)).toEqual({
-      discountAmount: 5000,
-      finalPrice: 15000,
-    })
+describe("applyItemDiscount", () => {
+  it("subtracts a fixed halalas discount from the base", () => {
+    expect(applyItemDiscount(20000, "FIXED", 5000)).toBe(5000)
   })
 
-  it("caps the discount at the subtotal (overshoot clamps, never negative final)", () => {
-    expect(applyPackageDiscount(20000, "FIXED", 30000)).toEqual({
-      discountAmount: 20000,
-      finalPrice: 0,
-    })
+  it("caps a FIXED discount at the base (never negative)", () => {
+    expect(applyItemDiscount(20000, "FIXED", 30000)).toBe(20000)
   })
 
-  it("treats negative FIXED as 0 (Math.max guard)", () => {
-    expect(applyPackageDiscount(10000, "FIXED", -1)).toEqual({
-      discountAmount: 0,
-      finalPrice: 10000,
-    })
-  })
-})
-
-describe("applyPackageDiscount — PERCENTAGE", () => {
-  it("floors a 0-100 percentage against the halalas subtotal", () => {
-    expect(applyPackageDiscount(20000, "PERCENTAGE", 10)).toEqual({
-      discountAmount: 2000,
-      finalPrice: 18000,
-    })
+  it("floors a 0-100 percentage against the base", () => {
+    expect(applyItemDiscount(20000, "PERCENTAGE", 10)).toBe(2000)
   })
 
-  it("caps the percentage at 100 (no over-discount)", () => {
-    expect(applyPackageDiscount(20000, "PERCENTAGE", 150)).toEqual({
-      discountAmount: 20000,
-      finalPrice: 0,
-    })
+  it("caps the percentage at 100", () => {
+    expect(applyItemDiscount(20000, "PERCENTAGE", 150)).toBe(20000)
   })
 
   it("floors fractional halalas (9999 × 33 / 100 = 3299.67 → 3299)", () => {
-    // Backend uses Math.floor for PERCENTAGE; the legacy bundle dashboard
-    // used Math.round. This module intentionally matches the backend.
-    expect(applyPackageDiscount(9999, "PERCENTAGE", 33)).toEqual({
-      discountAmount: 3299,
-      finalPrice: 6700,
-    })
+    expect(applyItemDiscount(9999, "PERCENTAGE", 33)).toBe(3299)
   })
 
-  it("clamps negative percentage to 0", () => {
-    expect(applyPackageDiscount(10000, "PERCENTAGE", -5)).toEqual({
-      discountAmount: 0,
-      finalPrice: 10000,
-    })
+  it("returns 0 for a null type", () => {
+    expect(applyItemDiscount(10000, null, 50)).toBe(0)
+  })
+
+  it("returns 0 for a zero value", () => {
+    expect(applyItemDiscount(10000, "PERCENTAGE", 0)).toBe(0)
   })
 })
 
-describe("computePackagePrice — item list + discount", () => {
-  it("sums paidQuantity × unitPrice across rows", () => {
-    expect(
-      computePackagePrice(
-        [
-          { unitPrice: 12000, paidQuantity: 1 },
-          { unitPrice: 8000, paidQuantity: 2 },
-        ],
-        "PERCENTAGE",
-        10,
-      ),
-    ).toEqual({ subtotal: 28000, discountAmount: 2800, finalPrice: 25200 })
+describe("computePackagePrice — per-item breakdown", () => {
+  it("sums payable across rows and applies per-item discounts", () => {
+    const r = computePackagePrice([
+      { unitPrice: 12000, paidQuantity: 1, discountType: "PERCENTAGE", discountValue: 10 }, // 12000, −1200
+      { unitPrice: 8000, paidQuantity: 2 }, // 16000, no discount
+    ])
+    expect(r.subtotal).toBe(28000)
+    expect(r.discountAmount).toBe(1200)
+    expect(r.finalPrice).toBe(26800)
+    expect(r.lines[0].net).toBe(10800)
+    expect(r.lines[1].net).toBe(16000)
   })
 
-  it("free-only items (paidQuantity=0) contribute 0 to the subtotal", () => {
-    expect(
-      computePackagePrice(
-        [
-          { unitPrice: 12000, paidQuantity: 1 },
-          { unitPrice: 8000, paidQuantity: 0, freeQuantity: 1 },
-        ],
-        "FIXED",
-        5000,
-      ),
-    ).toEqual({ subtotal: 12000, discountAmount: 5000, finalPrice: 7000 })
+  it("free sessions add to fullValue/freeValue but never to subtotal", () => {
+    const r = computePackagePrice([{ unitPrice: 10000, paidQuantity: 4, freeQuantity: 1 }])
+    expect(r.subtotal).toBe(40000)
+    expect(r.fullValue).toBe(50000)
+    expect(r.freeValue).toBe(10000)
+    expect(r.finalPrice).toBe(40000)
+    expect(r.totalSavings).toBe(10000) // free value + 0 discount
+  })
+
+  it("totalSavings sums free value and item discounts", () => {
+    const r = computePackagePrice([
+      { unitPrice: 10000, paidQuantity: 2, freeQuantity: 1, discountType: "FIXED", discountValue: 3000 },
+    ])
+    // payable 20000, free value 10000, discount 3000
+    expect(r.subtotal).toBe(20000)
+    expect(r.discountAmount).toBe(3000)
+    expect(r.freeValue).toBe(10000)
+    expect(r.finalPrice).toBe(17000)
+    expect(r.totalSavings).toBe(13000)
+  })
+
+  it("free-only items (paidQuantity=0) contribute 0 to subtotal", () => {
+    const r = computePackagePrice([
+      { unitPrice: 12000, paidQuantity: 1 },
+      { unitPrice: 8000, paidQuantity: 0, freeQuantity: 1 },
+    ])
+    expect(r.subtotal).toBe(12000)
+    expect(r.freeValue).toBe(8000)
+    expect(r.finalPrice).toBe(12000)
   })
 
   it("empty item list returns a zero breakdown", () => {
-    expect(computePackagePrice([], "PERCENTAGE", 50)).toEqual({
-      subtotal: 0,
-      discountAmount: 0,
-      finalPrice: 0,
-    })
+    const r = computePackagePrice([])
+    expect(r).toMatchObject({ subtotal: 0, discountAmount: 0, finalPrice: 0, fullValue: 0, freeValue: 0 })
   })
 
   it("coerces string halalas (Prisma Decimal wire format) numerically", () => {
-    // Backend serializes Decimal halalas as strings ("16000", "14000").
-    // A bare `a + b` reduce would concatenate → 1,600,014,000 halalas.
-    expect(
-      computePackagePrice(
-        [
-          { unitPrice: "16000" as unknown as number, paidQuantity: 1 },
-          { unitPrice: "14000" as unknown as number, paidQuantity: 1 },
-        ],
-        "PERCENTAGE",
-        0,
-      ),
-    ).toEqual({ subtotal: 30000, discountAmount: 0, finalPrice: 30000 })
+    const r = computePackagePrice([
+      { unitPrice: "16000" as unknown as number, paidQuantity: 1 },
+      { unitPrice: "14000" as unknown as number, paidQuantity: 1 },
+    ])
+    expect(r.subtotal).toBe(30000)
+    expect(r.finalPrice).toBe(30000)
   })
 })

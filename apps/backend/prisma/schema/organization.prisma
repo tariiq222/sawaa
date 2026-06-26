@@ -454,6 +454,11 @@ model SessionPackageItem {
   durationOptionId String
   paidQuantity     Int
   freeQuantity     Int            @default(0)
+  // Per-item discount applied to (paidQuantity × unitPrice). null type = no discount.
+  // PERCENTAGE → discountValue is 0-100; FIXED → integer halalas. discountValue >= 0
+  // is enforced via CHECK constraint in the migration SQL.
+  discountType     DiscountType?
+  discountValue    Decimal        @db.Decimal(12, 2) @default(0)
   sortOrder        Int            @default(0)
   createdAt        DateTime       @default(now())
 

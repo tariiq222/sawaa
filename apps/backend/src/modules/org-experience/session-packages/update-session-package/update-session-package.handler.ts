@@ -40,38 +40,28 @@ export class UpdateSessionPackageHandler {
     }
 
     const itemsProvided = dto.items !== undefined;
-    const effectiveItems = itemsProvided ? dto.items! : existing.items;
 
-    // 1. Validate items (whether new or carried over for discount math).
+    // 1. Validate items + their per-item discounts when a new set is provided.
     if (itemsProvided) {
       this.validateItemQuantities(dto.items!);
       await this.validateItemReferences(dto.items!);
-    }
-
-    // 2. If discount changed, re-run pricing against the effective items and validate.
-    let storedDiscountValue: number | undefined;
-    if (dto.discountType !== undefined || dto.discountValue !== undefined) {
-      const effectiveType = dto.discountType ?? existing.discountType;
-      const effectiveRawValue = dto.discountValue ?? Number(existing.discountValue);
-      const stored = this.normalizeDiscountValue(effectiveType, effectiveRawValue);
 
       const price = await this.pricing.compute({
-        items: effectiveItems.map((i) => ({
+        items: dto.items!.map((i) => ({
           durationOptionId: i.durationOptionId,
           employeeId: i.employeeId,
           serviceId: i.serviceId,
           paidQuantity: i.paidQuantity,
           freeQuantity: i.freeQuantity ?? 0,
+          discountType: i.discountType ?? null,
+          discountValue: this.normalizeItemDiscountValue(i.discountType, i.discountValue),
         })),
-        discountType: effectiveType,
-        discountValue: stored,
       });
-
-      this.validateDiscount(effectiveType, effectiveRawValue, price.subtotal);
-      storedDiscountValue = stored;
+      this.validateItemDiscounts(dto.items!, price.lines);
     }
 
-    // 3. Apply the update atomically: replace items if provided, then patch fields.
+    // 2. Apply the update atomically: replace items if provided, then patch fields.
+    //    Package-level discount is deprecated and never written here.
     return this.rlsTransaction.withTransaction(async (tx) => {
       if (itemsProvided) {
         await tx.sessionPackageItem.deleteMany({ where: { packageId: dto.packageId } });
@@ -83,6 +73,11 @@ export class UpdateSessionPackageHandler {
             durationOptionId: item.durationOptionId,
             paidQuantity: item.paidQuantity,
             freeQuantity: item.freeQuantity ?? 0,
+            discountType: item.discountType ?? null,
+            discountValue: this.normalizeItemDiscountValue(
+              item.discountType,
+              item.discountValue,
+            ) as unknown as Prisma.Decimal,
             sortOrder: item.sortOrder ?? idx,
           })),
         });
@@ -98,10 +93,6 @@ export class UpdateSessionPackageHandler {
           ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
           ...(dto.iconName !== undefined && { iconName: dto.iconName }),
           ...(dto.iconBgColor !== undefined && { iconBgColor: dto.iconBgColor }),
-          ...(dto.discountType !== undefined && { discountType: dto.discountType }),
-          ...(storedDiscountValue !== undefined && {
-            discountValue: storedDiscountValue as unknown as Prisma.Decimal,
-          }),
           ...(dto.isActive !== undefined && { isActive: dto.isActive }),
           ...(dto.isPublic !== undefined && { isPublic: dto.isPublic }),
           ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
@@ -144,21 +135,31 @@ export class UpdateSessionPackageHandler {
     }
   }
 
-  private normalizeDiscountValue(discountType: DiscountType, rawValue: number): number {
+  private normalizeItemDiscountValue(
+    discountType: DiscountType | null | undefined,
+    rawValue: number | undefined,
+  ): number {
+    if (!discountType || !rawValue) return 0;
     if (discountType === DiscountType.PERCENTAGE) return rawValue;
     return toHalalas(rawValue).toNumber();
   }
 
-  private validateDiscount(discountType: DiscountType, rawValue: number, subtotalHalalas: number): void {
-    if (discountType === DiscountType.PERCENTAGE) {
-      if (rawValue < 0 || rawValue > 100) {
-        throw new BadRequestException('PERCENTAGE discountValue must be between 0 and 100');
+  private validateItemDiscounts(
+    items: CreateSessionPackageItemDto[],
+    lines: { payable: number }[],
+  ): void {
+    items.forEach((item, i) => {
+      if (!item.discountType || !item.discountValue) return;
+      if (item.discountType === DiscountType.PERCENTAGE) {
+        if (item.discountValue < 0 || item.discountValue > 100) {
+          throw new BadRequestException('PERCENTAGE discountValue must be between 0 and 100');
+        }
+        return;
       }
-      return;
-    }
-    const discountHalalas = toHalalas(rawValue).toNumber();
-    if (discountHalalas > subtotalHalalas) {
-      throw new BadRequestException('FIXED discountValue must not exceed the computed subtotal');
-    }
+      const discountHalalas = toHalalas(item.discountValue).toNumber();
+      if (discountHalalas > (lines[i]?.payable ?? 0)) {
+        throw new BadRequestException("FIXED discountValue must not exceed the item's payable amount");
+      }
+    });
   }
 }

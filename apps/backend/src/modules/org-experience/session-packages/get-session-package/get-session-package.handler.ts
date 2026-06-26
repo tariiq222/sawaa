@@ -32,13 +32,10 @@ export class GetSessionPackageHandler {
         durationOptionId: i.durationOptionId,
         paidQuantity: i.paidQuantity,
         freeQuantity: i.freeQuantity,
+        // Per-item discount. PERCENTAGE stored as 0-100; FIXED as integer halalas.
+        discountType: i.discountType,
+        discountValue: Number(i.discountValue),
       })),
-      discountType: pkg.discountType,
-      // discountValue semantics on the GET path: re-hydrate the stored decimal
-      // back into the same scale the pricing service expects.
-      //   PERCENTAGE → stored as percentage (e.g. 10)
-      //   FIXED      → stored as integer halalas
-      discountValue: Number(pkg.discountValue),
     });
 
     return { ...pkg, price };

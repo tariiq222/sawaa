@@ -110,6 +110,7 @@ export class InitPackagePurchaseHandler {
     }
 
     // 3. Freeze the price with the SAME service the catalog + reception sale use.
+    //    Discount now lives per-item; subtotal/discount/finalPrice keep their meaning.
     const price = await this.pricing.compute({
       items: pkg.items.map((it) => ({
         serviceId: it.serviceId,
@@ -117,9 +118,9 @@ export class InitPackagePurchaseHandler {
         durationOptionId: it.durationOptionId,
         paidQuantity: it.paidQuantity,
         freeQuantity: it.freeQuantity,
+        discountType: it.discountType,
+        discountValue: Number(it.discountValue),
       })),
-      discountType: pkg.discountType,
-      discountValue: Number(pkg.discountValue),
     });
 
     // Moyasar's minimum charge is 100 halalas (1.00 SAR). A free package cannot

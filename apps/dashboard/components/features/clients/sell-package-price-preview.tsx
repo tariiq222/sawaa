@@ -3,19 +3,17 @@
 /**
  * Server-computed price preview for the sell-package dialog.
  *
- * Reads the frozen prices that the backend has already calculated for the
- * selected `SessionPackage` (subtotal / discountAmount / finalPrice) and
- * re-derives the discount for display. We deliberately do NOT recompute
- * the unit price on the client (per-employee override + duration pricing
- * live in the backend's `ComputePackagePriceService`); the preview just
- * renders the numbers the catalog endpoint already returned.
+ * Reads the frozen prices the backend already calculated for the selected
+ * `SessionPackage` (subtotal / discountAmount / finalPrice). The discount is
+ * the sum of the per-item discounts — the backend's
+ * `ComputePackagePriceService` aggregates it, so the preview just renders the
+ * numbers the catalog endpoint already returned (no client-side re-derivation).
  */
 
 import { Label } from "@sawaa/ui"
 
 import { FormattedCurrency } from "@/components/features/shared/sar-symbol"
 import { useLocale } from "@/components/locale-provider"
-import { applyPackageDiscount } from "@/lib/package-price"
 import type { SessionPackage } from "@/lib/types/package"
 
 interface Props {
@@ -27,12 +25,8 @@ export function SellPackagePricePreview({ pkg }: Props) {
   if (!pkg) return null
 
   const subtotal = Number(pkg.subtotal) || 0
-  const discountValue = Number(pkg.discountValue) || 0
-  const { discountAmount, finalPrice } = applyPackageDiscount(
-    subtotal,
-    pkg.discountType,
-    discountValue,
-  )
+  const discountAmount = Number(pkg.discountAmount) || 0
+  const finalPrice = Number(pkg.finalPrice) || 0
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3">

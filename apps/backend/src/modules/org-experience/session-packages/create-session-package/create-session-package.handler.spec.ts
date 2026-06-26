@@ -41,10 +41,10 @@ const validItem = () => ({
   freeQuantity: 0,
 });
 
+// Package-level discountType/discountValue are deprecated — the DTO still accepts
+// them but the handler ignores them. Tests pass per-item discounts on the item.
 const validDto = () => ({
   nameAr: 'باقة العائلة',
-  discountType: DiscountType.PERCENTAGE,
-  discountValue: 10,
   items: [validItem()],
 });
 
@@ -105,22 +105,26 @@ describe('CreateSessionPackageHandler', () => {
   });
 
   describe('happy path', () => {
-    it('creates a package with the resolved discountValue and items.createMany payload', async () => {
+    it('stores a neutral discountType=PERCENTAGE/discountValue=0 on the package row and per-item discount fields on items.createMany', async () => {
       mockHappyPath();
+      // Item has no per-item discount.
       await handler.execute(validDto() as any);
 
       expect(tx.sessionPackage.create).toHaveBeenCalledTimes(1);
       const call = tx.sessionPackage.create.mock.calls[0][0];
+      // Package-level discount is always stored as a neutral PERCENTAGE/0 sentinel.
       expect(call.data.discountType).toBe(DiscountType.PERCENTAGE);
-      // PERCENTAGE 10 is stored as-is (not converted to halalas).
-      expect(call.data.discountValue).toBe(10);
+      expect(call.data.discountValue).toBe(0);
       expect(call.data.items.createMany.data).toHaveLength(1);
+      // Per-item discount fields must be present (null/0 for items with no discount).
       expect(call.data.items.createMany.data[0]).toEqual({
         serviceId: SERVICE_ID,
         employeeId: EMPLOYEE_ID,
         durationOptionId: DURATION_OPTION_ID,
         paidQuantity: 4,
         freeQuantity: 0,
+        discountType: null,
+        discountValue: 0,
         sortOrder: 0,
       });
       expect(call.include).toEqual({ items: true });
@@ -150,16 +154,27 @@ describe('CreateSessionPackageHandler', () => {
       expect(data.sortOrder).toBe(7);
     });
 
-    it('persists FIXED discountValue as-is (already in integer halalas per codebase convention)', async () => {
-      mockHappyPath({ basePrice: 50_000 }); // 4 paid × 50_000 = 200_000 halalas subtotal
+    it('persists a per-item PERCENTAGE discount as-is on the item row', async () => {
+      mockHappyPath({ basePrice: 10_000 }); // 4 paid × 10_000 = 40_000 payable
       await handler.execute({
         ...validDto(),
-        discountType: DiscountType.FIXED,
-        discountValue: 5_000, // 50 SAR in halalas
+        items: [{ ...validItem(), discountType: DiscountType.PERCENTAGE, discountValue: 10 }],
       } as any);
-      const data = tx.sessionPackage.create.mock.calls[0][0].data;
-      expect(data.discountType).toBe(DiscountType.FIXED);
-      expect(data.discountValue).toBe(5_000);
+      const itemData = tx.sessionPackage.create.mock.calls[0][0].data.items.createMany.data[0];
+      expect(itemData.discountType).toBe(DiscountType.PERCENTAGE);
+      expect(itemData.discountValue).toBe(10);
+    });
+
+    it('persists a per-item FIXED discount (value already in integer halalas) on the item row', async () => {
+      mockHappyPath({ basePrice: 10_000 }); // 4 paid × 10_000 = 40_000 payable
+      // discountValue is always in integer halalas — send 5_000 halalas (50 SAR).
+      await handler.execute({
+        ...validDto(),
+        items: [{ ...validItem(), discountType: DiscountType.FIXED, discountValue: 5_000 }],
+      } as any);
+      const itemData = tx.sessionPackage.create.mock.calls[0][0].data.items.createMany.data[0];
+      expect(itemData.discountType).toBe(DiscountType.FIXED);
+      expect(itemData.discountValue).toBe(5_000);
     });
 
     it('runs inside an RLS-scoped transaction', async () => {
@@ -216,39 +231,37 @@ describe('CreateSessionPackageHandler', () => {
     });
   });
 
-  describe('discount validation', () => {
-    it('rejects a PERCENTAGE discountValue > 100', async () => {
+  describe('per-item discount validation', () => {
+    it('rejects a per-item PERCENTAGE discountValue > 100', async () => {
       mockHappyPath();
 
       await expect(
         handler.execute({
           ...validDto(),
-          discountType: DiscountType.PERCENTAGE,
-          discountValue: 150,
+          items: [{ ...validItem(), discountType: DiscountType.PERCENTAGE, discountValue: 150 }],
         } as any),
       ).rejects.toThrow(/between 0 and 100/);
     });
 
-    it('rejects a PERCENTAGE discountValue < 0', async () => {
+    it('rejects a per-item PERCENTAGE discountValue < 0', async () => {
       mockHappyPath();
 
       await expect(
         handler.execute({
           ...validDto(),
-          discountType: DiscountType.PERCENTAGE,
-          discountValue: -5,
+          items: [{ ...validItem(), discountType: DiscountType.PERCENTAGE, discountValue: -5 }],
         } as any),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('rejects a FIXED discount that exceeds the computed subtotal', async () => {
-      // Subtotal = 4 paid × 10_000 = 40_000 halalas
+    it('rejects a per-item FIXED discount that exceeds the item payable amount', async () => {
+      // Item payable = 4 paid × 10_000 = 40_000 halalas.
+      // discountValue is in integer halalas — send 50_000 > 40_000 to trigger rejection.
       mockHappyPath({ basePrice: 10_000 });
       await expect(
         handler.execute({
           ...validDto(),
-          discountType: DiscountType.FIXED,
-          discountValue: 50_000, // 50_000 halalas > 40_000 halalas subtotal
+          items: [{ ...validItem(), discountType: DiscountType.FIXED, discountValue: 50_000 }],
         } as any),
       ).rejects.toThrow(/must not exceed/i);
     });

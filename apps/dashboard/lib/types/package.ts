@@ -28,6 +28,9 @@ export interface SessionPackageItem {
   durationOptionId: string
   paidQuantity: number
   freeQuantity: number
+  /** Per-item discount applied to (paid × unit). null = no discount. */
+  discountType: PackageDiscountType | null
+  discountValue: number | string
   sortOrder: number
 }
 
@@ -50,6 +53,7 @@ export interface SessionPackage {
   imageUrl: string | null
   iconName: string | null
   iconBgColor: string | null
+  /** DEPRECATED package-level discount — superseded by per-item discount. */
   discountType: PackageDiscountType
   discountValue: number | string
   isActive: boolean
@@ -62,6 +66,9 @@ export interface SessionPackage {
   subtotal: number | string
   discountAmount: number | string
   finalPrice: number | string
+  /** Total true value incl. free sessions, and the value given for free (display). */
+  fullValue?: number | string
+  freeValue?: number | string
 }
 
 /* ─── Item payloads (write side) ─── */
@@ -72,6 +79,9 @@ export interface CreatePackageItemPayload {
   durationOptionId: string
   paidQuantity: number
   freeQuantity?: number
+  /** Per-item discount. PERCENTAGE: 0-100. FIXED: integer halalas. null/omit = none. */
+  discountType?: PackageDiscountType | null
+  discountValue?: number
   sortOrder?: number
 }
 
@@ -84,11 +94,12 @@ export interface CreateSessionPackagePayload {
   nameEn?: string
   descriptionAr?: string
   descriptionEn?: string
-  imageUrl?: string
-  iconName?: string
-  iconBgColor?: string
-  discountType: PackageDiscountType
-  discountValue: number
+  imageUrl?: string | null
+  iconName?: string | null
+  iconBgColor?: string | null
+  /** DEPRECATED — discount now lives per-item. Backend ignores these. */
+  discountType?: PackageDiscountType
+  discountValue?: number
   isActive?: boolean
   isPublic?: boolean
   sortOrder?: number
@@ -109,8 +120,21 @@ export interface PackageListQuery extends PaginatedQuery {
 
 /* ─── Price breakdown (for the form preview only — list/get already include it) ─── */
 
+/** Per-line price detail (integer halalas) — mirrors the backend `lines[]`. */
+export interface PackageLineBreakdown {
+  fullValue: number // (paid + free) × unit
+  freeValue: number // free × unit
+  payable: number // paid × unit
+  discountAmount: number // item discount on payable
+  net: number // payable − discount
+}
+
 export interface PackagePriceBreakdown {
-  subtotal: number
-  discountAmount: number
-  finalPrice: number
+  subtotal: number // Σ payable (paid × unit)
+  discountAmount: number // Σ per-item discount
+  finalPrice: number // subtotal − discountAmount
+  fullValue: number // Σ fullValue (incl. free sessions)
+  freeValue: number // Σ freeValue
+  totalSavings: number // freeValue + discountAmount
+  lines: PackageLineBreakdown[]
 }

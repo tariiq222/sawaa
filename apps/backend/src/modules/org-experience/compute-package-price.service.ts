@@ -8,37 +8,48 @@ import { PrismaService } from '../../infrastructure/database';
  * are plain cross-BC strings (no Prisma FK), matching the SessionPackageItem
  * schema convention.
  */
+/**
+ * Per-item discount, interpreted by type (mirrors the package-level convention):
+ *   PERCENTAGE → discountValue is a 0-100 percentage (e.g. 10 = 10%)
+ *   FIXED      → discountValue is an integer-halalas amount (e.g. 5000 = 50 SAR)
+ *   null type  → no item discount.
+ * The discount applies to the item's PAYABLE amount (paidQuantity × unitPrice).
+ */
 export type PackageItemInput = {
   durationOptionId: string;
   employeeId: string;
   serviceId: string;
   paidQuantity: number;
   freeQuantity: number;
-};
-
-/**
- * Discount input is interpreted differently by type:
- *   PERCENTAGE → discountValue is a 0-100 percentage (e.g. 10 = 10%)
- *   FIXED      → discountValue is an integer-halalas amount (e.g. 5000 = 50 SAR)
- *
- * The CreateSessionPackage handler converts the dashboard's SAR-float discount
- * to halalas (FIXED) or passes the percentage through (PERCENTAGE) before
- * calling this service, so this method never has to interpret the input scale.
- */
-export type PackageDiscountInput = {
-  discountType: DiscountType;
-  discountValue: number;
+  discountType?: DiscountType | null;
+  discountValue?: number;
 };
 
 export type ComputePackagePriceParams = {
   items: PackageItemInput[];
-} & PackageDiscountInput;
+};
+
+/** Per-line price breakdown (all integer halalas) for transparent display. */
+export type PackageLinePrice = {
+  durationOptionId: string;
+  unitPrice: number; // per-session price
+  fullValue: number; // (paid + free) × unitPrice — true value / cost
+  freeValue: number; // free × unitPrice — value given for free
+  payable: number; // paid × unitPrice — before item discount
+  discountAmount: number; // item discount on payable
+  net: number; // payable − discountAmount — what the client pays for this line
+};
 
 export type PackagePriceResult = {
-  subtotal: number; // integer halalas
-  discountAmount: number; // integer halalas
-  finalPrice: number; // integer halalas = max(0, subtotal − discountAmount)
+  // ── Payment snapshot fields (meaning unchanged — frozen at purchase) ──
+  subtotal: number; // Σ payable (paid × unit) — excludes free sessions
+  discountAmount: number; // Σ per-item discount
+  finalPrice: number; // max(0, subtotal − discountAmount) — amount charged
+  // ── Display-only fields (never persisted to the purchase snapshot) ──
+  fullValue: number; // Σ fullValue — total true value incl. free sessions
+  freeValue: number; // Σ freeValue — total value of free sessions
   itemUnitPrices: { durationOptionId: string; unitPrice: number }[];
+  lines: PackageLinePrice[];
 };
 
 /**
@@ -66,43 +77,70 @@ export class ComputePackagePriceService {
 
   async compute(params: ComputePackagePriceParams): Promise<PackagePriceResult> {
     const itemUnitPrices: { durationOptionId: string; unitPrice: number }[] = [];
+    const lines: PackageLinePrice[] = [];
     let subtotal = 0;
+    let discountAmount = 0;
+    let fullValue = 0;
+    let freeValue = 0;
 
     for (const item of params.items) {
       const unitPrice = await this.resolveUnitPrice(item);
       itemUnitPrices.push({ durationOptionId: item.durationOptionId, unitPrice });
-      subtotal += item.paidQuantity * unitPrice;
+
+      const payable = item.paidQuantity * unitPrice;
+      const lineFull = (item.paidQuantity + item.freeQuantity) * unitPrice;
+      const lineFree = item.freeQuantity * unitPrice;
+      const lineDiscount = ComputePackagePriceService.applyDiscount(
+        payable,
+        item.discountType ?? null,
+        item.discountValue ?? 0,
+      ).discountAmount;
+      const net = Math.max(0, payable - lineDiscount);
+
+      subtotal += payable;
+      discountAmount += lineDiscount;
+      fullValue += lineFull;
+      freeValue += lineFree;
+      lines.push({
+        durationOptionId: item.durationOptionId,
+        unitPrice,
+        fullValue: lineFull,
+        freeValue: lineFree,
+        payable,
+        discountAmount: lineDiscount,
+        net,
+      });
     }
 
-    const { discountAmount, finalPrice } = ComputePackagePriceService.applyDiscount(
-      subtotal,
-      params.discountType,
-      params.discountValue,
-    );
-
-    return { subtotal, discountAmount, finalPrice, itemUnitPrices };
+    const finalPrice = Math.max(0, subtotal - discountAmount);
+    return { subtotal, discountAmount, finalPrice, fullValue, freeValue, itemUnitPrices, lines };
   }
 
   /**
-   * Pure helper exposed for direct unit testing — compute()'s orchestration
-   * delegates here so the discount math is testable without Prisma.
+   * Pure helper exposed for direct unit testing — applies a single discount to a
+   * base amount (integer halalas). A null type or zero value yields no discount.
+   *   PERCENTAGE → floor(base × pct / 100), pct clamped to [0,100]
+   *   FIXED      → min(value, base)
+   * The result is hard-capped at `base` so finalPrice can never go negative.
    */
   static applyDiscount(
-    subtotal: number,
-    discountType: DiscountType,
+    base: number,
+    discountType: DiscountType | null | undefined,
     discountValue: number,
   ): { discountAmount: number; finalPrice: number } {
     let discountAmount: number;
-    if (discountType === DiscountType.PERCENTAGE) {
+    if (!discountType || !discountValue) {
+      discountAmount = 0;
+    } else if (discountType === DiscountType.PERCENTAGE) {
       const safePct = Math.max(0, Math.min(discountValue, 100));
-      discountAmount = Math.floor((subtotal * safePct) / 100);
+      discountAmount = Math.floor((base * safePct) / 100);
     } else {
       // FIXED
-      discountAmount = Math.max(0, Math.min(discountValue, subtotal));
+      discountAmount = Math.max(0, Math.min(discountValue, base));
     }
-    // Hard cap at subtotal so an overshoot from either branch can never push finalPrice negative.
-    discountAmount = Math.min(discountAmount, subtotal);
-    const finalPrice = Math.max(0, subtotal - discountAmount);
+    // Hard cap at base so an overshoot from either branch can never push finalPrice negative.
+    discountAmount = Math.min(discountAmount, base);
+    const finalPrice = Math.max(0, base - discountAmount);
     return { discountAmount, finalPrice };
   }
 

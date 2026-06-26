@@ -32,23 +32,20 @@ export class CreateSessionPackageHandler {
   async execute(dto: CreateSessionPackageCommand) {
     await this.validateItems(dto.items);
 
-    const storedDiscountValue = this.normalizeDiscountValue(dto.discountType, dto.discountValue);
-
-    // Run the pricing service BEFORE writing to make sure the discount is
-    // mathematically consistent with the subtotal (FIXED ≤ subtotal guard).
-    const pricePreview = await this.pricing.compute({
+    // Compute per-item prices (discount lives on each item now) and validate
+    // every item's discount against its own payable amount.
+    const price = await this.pricing.compute({
       items: dto.items.map((i) => ({
         durationOptionId: i.durationOptionId,
         employeeId: i.employeeId,
         serviceId: i.serviceId,
         paidQuantity: i.paidQuantity,
         freeQuantity: i.freeQuantity ?? 0,
+        discountType: i.discountType ?? null,
+        discountValue: this.normalizeItemDiscountValue(i.discountType, i.discountValue),
       })),
-      discountType: dto.discountType,
-      discountValue: storedDiscountValue,
     });
-
-    this.validateDiscount(dto.discountType, dto.discountValue, pricePreview.subtotal);
+    this.validateItemDiscounts(dto.items, price.lines);
 
     const created = await this.rlsTransaction.withTransaction((tx) =>
       tx.sessionPackage.create({
@@ -60,10 +57,10 @@ export class CreateSessionPackageHandler {
           imageUrl: dto.imageUrl ?? null,
           iconName: dto.iconName ?? null,
           iconBgColor: dto.iconBgColor ?? null,
-          discountType: dto.discountType,
-          // Stored as Decimal(12,2). For PERCENTAGE we keep the percentage
-          // value as-is (e.g. 10 = 10%); for FIXED we convert SAR → halalas.
-          discountValue: storedDiscountValue as unknown as Prisma.Decimal,
+          // Package-level discount is deprecated — store a neutral value.
+          // The effective discount now lives on each item.
+          discountType: DiscountType.PERCENTAGE,
+          discountValue: 0 as unknown as Prisma.Decimal,
           isActive: dto.isActive ?? true,
           isPublic: dto.isPublic ?? false,
           sortOrder: dto.sortOrder ?? 0,
@@ -75,6 +72,11 @@ export class CreateSessionPackageHandler {
                 durationOptionId: item.durationOptionId,
                 paidQuantity: item.paidQuantity,
                 freeQuantity: item.freeQuantity ?? 0,
+                discountType: item.discountType ?? null,
+                discountValue: this.normalizeItemDiscountValue(
+                  item.discountType,
+                  item.discountValue,
+                ) as unknown as Prisma.Decimal,
                 sortOrder: item.sortOrder ?? idx,
               })),
             },
@@ -123,35 +125,41 @@ export class CreateSessionPackageHandler {
   }
 
   /**
-   * Returns the value to persist on `SessionPackage.discountValue` (a Decimal(12,2)).
-   *   - PERCENTAGE → dto.discountValue (0-100, kept as the percentage itself)
-   *   - FIXED      → dto.discountValue as-is (already in integer halalas per the
-   *                  rest-of-codebase convention; `toHalalas` only rounds to
-   *                  0-dp for safety against non-integer input)
+   * Returns the value to persist on `SessionPackageItem.discountValue`.
+   *   - no type → 0
+   *   - PERCENTAGE → rawValue as-is (0-100)
+   *   - FIXED      → rawValue rounded to integer halalas
    */
-  private normalizeDiscountValue(discountType: DiscountType, rawValue: number): number {
-    if (discountType === DiscountType.PERCENTAGE) {
-      return rawValue;
-    }
-    // FIXED — already in integer halalas; round defensively.
+  private normalizeItemDiscountValue(
+    discountType: DiscountType | null | undefined,
+    rawValue: number | undefined,
+  ): number {
+    if (!discountType || !rawValue) return 0;
+    if (discountType === DiscountType.PERCENTAGE) return rawValue;
     return toHalalas(rawValue).toNumber();
   }
 
   /**
-   * PERCENTAGE → reject values outside [0,100].
-   * FIXED      → reject halalas values that exceed the computed subtotal.
+   * Per-item discount validation against the computed lines (same order as items):
+   *   PERCENTAGE → reject values outside [0,100].
+   *   FIXED      → reject halalas amounts that exceed the item's payable (paid × unit).
    */
-  private validateDiscount(discountType: DiscountType, rawValue: number, subtotalHalalas: number): void {
-    if (discountType === DiscountType.PERCENTAGE) {
-      if (rawValue < 0 || rawValue > 100) {
-        throw new BadRequestException('PERCENTAGE discountValue must be between 0 and 100');
+  private validateItemDiscounts(
+    items: CreateSessionPackageDto['items'],
+    lines: { payable: number }[],
+  ): void {
+    items.forEach((item, i) => {
+      if (!item.discountType || !item.discountValue) return;
+      if (item.discountType === DiscountType.PERCENTAGE) {
+        if (item.discountValue < 0 || item.discountValue > 100) {
+          throw new BadRequestException('PERCENTAGE discountValue must be between 0 and 100');
+        }
+        return;
       }
-      return;
-    }
-    // FIXED — rawValue is in integer halalas; compare directly to the subtotal in halalas.
-    const discountHalalas = toHalalas(rawValue).toNumber();
-    if (discountHalalas > subtotalHalalas) {
-      throw new BadRequestException('FIXED discountValue must not exceed the computed subtotal');
-    }
+      const discountHalalas = toHalalas(item.discountValue).toNumber();
+      if (discountHalalas > (lines[i]?.payable ?? 0)) {
+        throw new BadRequestException("FIXED discountValue must not exceed the item's payable amount");
+      }
+    });
   }
 }

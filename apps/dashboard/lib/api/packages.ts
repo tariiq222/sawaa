@@ -58,3 +58,24 @@ export async function updatePackage(
 export async function deletePackage(id: string): Promise<void> {
   await api.delete(`/dashboard/organization/packages/${id}`)
 }
+
+/**
+ * Uploads an image and attaches its presigned URL to the package.
+ * Mirrors `uploadServiceImage`: media upload → presigned URL → PATCH imageUrl.
+ */
+export async function uploadPackageImage(packageId: string, file: File): Promise<SessionPackage> {
+  const formData = new FormData()
+  formData.append("file", file)
+
+  const uploaded = await api.postForm<{ id: string; storageKey: string }>(
+    "/dashboard/media/upload",
+    formData,
+  )
+  const presignedData = await api.get<{ url: string }>(
+    `/dashboard/media/${uploaded.id}/presigned-url`,
+    { expirySeconds: 900 },
+  )
+  return api.patch<SessionPackage>(`/dashboard/organization/packages/${packageId}`, {
+    imageUrl: presignedData.url,
+  })
+}

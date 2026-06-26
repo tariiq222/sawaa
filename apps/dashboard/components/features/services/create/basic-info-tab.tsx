@@ -26,7 +26,7 @@ import {
 import { useCategories } from "@/hooks/use-services"
 import { useDepartmentOptions } from "@/hooks/use-departments"
 import { useLocale } from "@/components/locale-provider"
-import { ServiceAvatarPicker } from "@/components/features/services/service-avatar-picker"
+import { ServiceAvatarPicker } from "@/components/features/shared/service-avatar-picker"
 import { ServiceBranchesTab } from "@/components/features/services/service-branches-tab"
 import { ServiceBranchesPicker } from "@/components/features/services/service-branches-picker"
 import { FormSection, FormField } from "@/components/features/shared/form-section"

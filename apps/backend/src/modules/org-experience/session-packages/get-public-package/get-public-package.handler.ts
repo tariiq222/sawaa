@@ -45,9 +45,9 @@ export class GetPublicPackageHandler {
         durationOptionId: i.durationOptionId,
         paidQuantity: i.paidQuantity,
         freeQuantity: i.freeQuantity,
+        discountType: i.discountType,
+        discountValue: Number(i.discountValue),
       })),
-      discountType: pkg.discountType,
-      discountValue: Number(pkg.discountValue),
     });
 
     return { ...pkg, price };

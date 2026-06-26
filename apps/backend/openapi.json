@@ -2039,17 +2039,15 @@
             "type": "string"
           },
           "discountType": {
-            "description": "Discount type — PERCENTAGE (0-100) or FIXED (in integer halalas, 1 SAR = 100)",
+            "description": "DEPRECATED — use per-item discount. Ignored.",
             "enum": [
               "PERCENTAGE",
               "FIXED"
             ],
-            "example": "PERCENTAGE",
             "type": "string"
           },
           "discountValue": {
-            "description": "Discount value. For PERCENTAGE: 0-100 (e.g. 10 = 10%). For FIXED: integer halalas (e.g. 5000 = 50 SAR), matching the rest of the codebase.",
-            "example": 10,
+            "description": "DEPRECATED — use per-item discount. Ignored.",
             "minimum": 0,
             "type": "number"
           },
@@ -2109,14 +2107,28 @@
         },
         "required": [
           "nameAr",
-          "discountType",
-          "discountValue",
           "items"
         ],
         "type": "object"
       },
       "CreateSessionPackageItemDto": {
         "properties": {
+          "discountType": {
+            "description": "Per-item discount type applied to (paid × unit price). Omit/null for no discount.",
+            "enum": [
+              "PERCENTAGE",
+              "FIXED"
+            ],
+            "example": "PERCENTAGE",
+            "type": "string"
+          },
+          "discountValue": {
+            "default": 0,
+            "description": "Per-item discount value. PERCENTAGE: 0-100. FIXED: integer halalas.",
+            "example": 10,
+            "minimum": 0,
+            "type": "number"
+          },
           "durationOptionId": {
             "description": "ServiceDurationOption UUID",
             "example": "00000000-0000-4000-a000-000000000000",

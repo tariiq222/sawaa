@@ -36,6 +36,14 @@ export class CreateSessionPackageItemDto {
   @IsOptional() @IsInt() @Min(0)
   freeQuantity?: number;
 
+  @ApiPropertyOptional({ description: 'Per-item discount type applied to (paid × unit price). Omit/null for no discount.', enum: DiscountType, example: DiscountType.PERCENTAGE })
+  @IsOptional() @IsEnum(DiscountType)
+  discountType?: DiscountType | null;
+
+  @ApiPropertyOptional({ description: 'Per-item discount value. PERCENTAGE: 0-100. FIXED: integer halalas.', minimum: 0, default: 0, example: 10 })
+  @IsOptional() @IsInt() @Min(0)
+  discountValue?: number;
+
   @ApiPropertyOptional({ description: 'Display order within the package', minimum: 0, example: 0 })
   @IsOptional() @IsInt() @Min(0)
   sortOrder?: number;
@@ -79,18 +87,18 @@ export class CreateSessionPackageDto {
   @IsOptional() @IsString()
   iconBgColor?: string;
 
-  @ApiProperty({ description: 'Discount type — PERCENTAGE (0-100) or FIXED (in integer halalas, 1 SAR = 100)', enum: DiscountType, example: DiscountType.PERCENTAGE })
-  @IsEnum(DiscountType)
-  discountType!: DiscountType;
+  /**
+   * DEPRECATED package-level discount — superseded by per-item discount on
+   * each `items[]` entry. Kept optional for backward compatibility; the
+   * handler ignores it and stores a neutral PERCENTAGE/0 on the package.
+   */
+  @ApiPropertyOptional({ description: 'DEPRECATED — use per-item discount. Ignored.', enum: DiscountType })
+  @IsOptional() @IsEnum(DiscountType)
+  discountType?: DiscountType;
 
-  @ApiProperty({
-    description:
-      'Discount value. For PERCENTAGE: 0-100 (e.g. 10 = 10%). For FIXED: integer halalas (e.g. 5000 = 50 SAR), matching the rest of the codebase.',
-    minimum: 0,
-    example: 10,
-  })
-  @IsInt() @Min(0)
-  discountValue!: number;
+  @ApiPropertyOptional({ description: 'DEPRECATED — use per-item discount. Ignored.', minimum: 0 })
+  @IsOptional() @IsInt() @Min(0)
+  discountValue?: number;
 
   @ApiPropertyOptional({ description: 'Whether the package is selectable', default: true, example: true })
   @IsOptional() @IsBoolean()

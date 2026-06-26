@@ -30,7 +30,7 @@ import { uploadCategoryImage } from "@/lib/api/services"
 import { CategorySettingsTab } from "./category-settings-tab"
 import { CategoryServicesTab } from "./category-services-tab"
 import { CategoryEmployeesTab } from "./category-employees-tab"
-import { ServiceAvatarPicker } from "./service-avatar-picker"
+import { ServiceAvatarPicker } from "@/components/features/shared/service-avatar-picker"
 import { CategoryWizardNav } from "./category-wizard-nav"
 import { CategoryWizardStepper } from "./category-wizard-stepper"
 

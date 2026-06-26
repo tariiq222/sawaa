@@ -49,7 +49,7 @@ const existingPackage = () => ({
   iconName: null,
   iconBgColor: null,
   discountType: DiscountType.PERCENTAGE,
-  discountValue: { toString: () => '10' },
+  discountValue: { toString: () => '0' },
   isActive: true,
   isPublic: false,
   sortOrder: 0,
@@ -65,6 +65,8 @@ const existingPackage = () => ({
       durationOptionId: DURATION_OPTION_ID,
       paidQuantity: 4,
       freeQuantity: 0,
+      discountType: null,
+      discountValue: { toString: () => '0' },
       sortOrder: 0,
       createdAt: new Date(),
     },
@@ -135,32 +137,23 @@ describe('UpdateSessionPackageHandler', () => {
     });
     const data = tx.sessionPackage.update.mock.calls[0][0].data;
     expect(data.nameAr).toBe('باقة محدّثة');
+    // Package-level discount fields must never appear in the update payload.
     expect(data.discountValue).toBeUndefined();
     expect(data.discountType).toBeUndefined();
     expect(result).toEqual({ id: PACKAGE_ID });
   });
 
-  it('preserves existing discountType/Value when only one of them is updated', async () => {
-    // Update discountValue only — discountType should NOT be in the update payload
-    // because it wasn't provided in the DTO. The handler should keep using the
-    // stored discountType when re-validating.
-    prisma.employeeService.findFirst.mockResolvedValue({ id: 'es-1' });
-    prisma.employeeServiceOption.findFirst.mockResolvedValue(null);
-    prisma.serviceDurationOption.findFirst.mockResolvedValue({
-      id: DURATION_OPTION_ID,
-      serviceId: SERVICE_ID,
-      price: { toString: () => '10000' },
-    });
-
-    await handler.execute({ packageId: PACKAGE_ID, discountValue: 15 } as any);
+  it('never writes package-level discountType or discountValue in any update path', async () => {
+    // Even if a deprecated discountValue is sent in the DTO the handler must
+    // not forward it to the package row — discount now lives on items only.
+    await handler.execute({ packageId: PACKAGE_ID, nameEn: 'Updated' } as any);
     const data = tx.sessionPackage.update.mock.calls[0][0].data;
-    // discountType must NOT be in update data (it wasn't in the DTO).
     expect(data.discountType).toBeUndefined();
-    expect(data.discountValue).toBe(15);
+    expect(data.discountValue).toBeUndefined();
   });
 
   describe('items replacement', () => {
-    it('replaces items atomically (deleteMany + createMany) when items are provided', async () => {
+    it('replaces items atomically (deleteMany + createMany) with per-item discount fields when items are provided', async () => {
       tx.sessionPackageItem.deleteMany.mockResolvedValue({ count: 1 });
       tx.sessionPackageItem.createMany.mockResolvedValue({ count: 1 });
 
@@ -188,10 +181,37 @@ describe('UpdateSessionPackageHandler', () => {
             durationOptionId: DURATION_OPTION_ID,
             paidQuantity: 8,
             freeQuantity: 2,
+            discountType: null,
+            discountValue: 0,
             sortOrder: 0,
           },
         ],
       });
+    });
+
+    it('persists per-item PERCENTAGE discount on item row during replacement', async () => {
+      tx.sessionPackageItem.deleteMany.mockResolvedValue({ count: 1 });
+      tx.sessionPackageItem.createMany.mockResolvedValue({ count: 1 });
+
+      await handler.execute({
+        packageId: PACKAGE_ID,
+        items: [
+          {
+            serviceId: SERVICE_ID,
+            employeeId: EMPLOYEE_ID,
+            durationOptionId: DURATION_OPTION_ID,
+            paidQuantity: 4,
+            freeQuantity: 0,
+            discountType: DiscountType.PERCENTAGE,
+            discountValue: 20,
+            sortOrder: 0,
+          },
+        ],
+      } as any);
+
+      const createManyData = tx.sessionPackageItem.createMany.mock.calls[0][0].data[0];
+      expect(createManyData.discountType).toBe(DiscountType.PERCENTAGE);
+      expect(createManyData.discountValue).toBe(20);
     });
 
     it('does not touch items when no items are provided', async () => {
@@ -237,29 +257,70 @@ describe('UpdateSessionPackageHandler', () => {
     });
   });
 
-  describe('discount validation', () => {
-    it('rejects PERCENTAGE discountValue > 100', async () => {
-      await expect(
-        handler.execute({ packageId: PACKAGE_ID, discountType: DiscountType.PERCENTAGE, discountValue: 150 } as any),
-      ).rejects.toThrow(/between 0 and 100/);
-    });
-
-    it('rejects FIXED discountValue that exceeds the subtotal of the effective items', async () => {
-      // existing items subtotal = 4 paid × 10_000 = 40_000 halalas
+  describe('per-item discount validation', () => {
+    it('rejects a per-item PERCENTAGE discountValue > 100', async () => {
       await expect(
         handler.execute({
           packageId: PACKAGE_ID,
-          discountType: DiscountType.FIXED,
-          discountValue: 50_000,
+          items: [
+            {
+              serviceId: SERVICE_ID,
+              employeeId: EMPLOYEE_ID,
+              durationOptionId: DURATION_OPTION_ID,
+              paidQuantity: 4,
+              freeQuantity: 0,
+              discountType: DiscountType.PERCENTAGE,
+              discountValue: 150,
+            },
+          ],
+        } as any),
+      ).rejects.toThrow(/between 0 and 100/);
+    });
+
+    it('rejects a per-item FIXED discountValue that exceeds the item payable amount', async () => {
+      // Item payable = 4 paid × 10_000 = 40_000 halalas.
+      // discountValue is in integer halalas — 50_000 > 40_000 must be rejected.
+      await expect(
+        handler.execute({
+          packageId: PACKAGE_ID,
+          items: [
+            {
+              serviceId: SERVICE_ID,
+              employeeId: EMPLOYEE_ID,
+              durationOptionId: DURATION_OPTION_ID,
+              paidQuantity: 4,
+              freeQuantity: 0,
+              discountType: DiscountType.FIXED,
+              discountValue: 50_000,
+            },
+          ],
         } as any),
       ).rejects.toThrow(/must not exceed/i);
     });
 
-    it('accepts a valid PERCENTAGE discount change', async () => {
-      await handler.execute({ packageId: PACKAGE_ID, discountType: DiscountType.PERCENTAGE, discountValue: 25 } as any);
-      const data = tx.sessionPackage.update.mock.calls[0][0].data;
-      expect(data.discountType).toBe(DiscountType.PERCENTAGE);
-      expect(data.discountValue).toBe(25);
+    it('accepts a valid per-item PERCENTAGE discount when items are replaced', async () => {
+      tx.sessionPackageItem.deleteMany.mockResolvedValue({ count: 1 });
+      tx.sessionPackageItem.createMany.mockResolvedValue({ count: 1 });
+
+      await handler.execute({
+        packageId: PACKAGE_ID,
+        items: [
+          {
+            serviceId: SERVICE_ID,
+            employeeId: EMPLOYEE_ID,
+            durationOptionId: DURATION_OPTION_ID,
+            paidQuantity: 4,
+            freeQuantity: 0,
+            discountType: DiscountType.PERCENTAGE,
+            discountValue: 25,
+          },
+        ],
+      } as any);
+
+      // Item must have been written with the per-item discount.
+      const createManyData = tx.sessionPackageItem.createMany.mock.calls[0][0].data[0];
+      expect(createManyData.discountType).toBe(DiscountType.PERCENTAGE);
+      expect(createManyData.discountValue).toBe(25);
     });
   });
 });

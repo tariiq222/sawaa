@@ -80,8 +80,6 @@ describe('ComputePackagePriceService', () => {
 
       const result = await handler.compute({
         items: [{ ...validItem, paidQuantity: 2 }],
-        discountType: DiscountType.PERCENTAGE,
-        discountValue: 0,
       });
 
       expect(result.subtotal).toBe(15_000);
@@ -101,8 +99,6 @@ describe('ComputePackagePriceService', () => {
 
       const result = await handler.compute({
         items: [{ ...validItem, paidQuantity: 3 }],
-        discountType: DiscountType.PERCENTAGE,
-        discountValue: 0,
       });
 
       expect(result.subtotal).toBe(36_000);
@@ -122,8 +118,6 @@ describe('ComputePackagePriceService', () => {
 
       const result = await handler.compute({
         items: [{ ...validItem, paidQuantity: 2 }],
-        discountType: DiscountType.PERCENTAGE,
-        discountValue: 0,
       });
 
       expect(result.itemUnitPrices[0].unitPrice).toBe(9_000);
@@ -132,13 +126,7 @@ describe('ComputePackagePriceService', () => {
     it('throws when the EmployeeService link does not exist', async () => {
       (prisma.employeeService.findFirst as jest.Mock).mockResolvedValue(null);
 
-      await expect(
-        handler.compute({
-          items: [validItem],
-          discountType: DiscountType.PERCENTAGE,
-          discountValue: 0,
-        }),
-      ).rejects.toThrow(/employee service/i);
+      await expect(handler.compute({ items: [validItem] })).rejects.toThrow(/employee service/i);
     });
 
     it('throws when no duration option matches', async () => {
@@ -146,28 +134,25 @@ describe('ComputePackagePriceService', () => {
       (prisma.employeeServiceOption.findFirst as jest.Mock).mockResolvedValue(null);
       (prisma.serviceDurationOption.findFirst as jest.Mock).mockResolvedValue(null);
 
-      await expect(
-        handler.compute({
-          items: [validItem],
-          discountType: DiscountType.PERCENTAGE,
-          discountValue: 0,
-        }),
-      ).rejects.toThrow(/DurationOption/i);
+      await expect(handler.compute({ items: [validItem] })).rejects.toThrow(/DurationOption/i);
     });
   });
 
-  describe('discount math', () => {
-    it('returns zero discount for both PERCENTAGE and FIXED when discountValue = 0', async () => {
+  describe('per-item discount math', () => {
+    it('returns zero discount when an item has no discountType', async () => {
+      mockDefaultResolution();
+      const result = await handler.compute({ items: [{ ...validItem, paidQuantity: 4 }] });
+      expect(result.discountAmount).toBe(0);
+      expect(result.finalPrice).toBe(result.subtotal);
+    });
+
+    it('returns zero discount for both types when discountValue = 0', async () => {
       mockDefaultResolution();
       const pct = await handler.compute({
-        items: [{ ...validItem, paidQuantity: 4 }],
-        discountType: DiscountType.PERCENTAGE,
-        discountValue: 0,
+        items: [{ ...validItem, paidQuantity: 4, discountType: DiscountType.PERCENTAGE, discountValue: 0 }],
       });
       const fix = await handler.compute({
-        items: [{ ...validItem, paidQuantity: 4 }],
-        discountType: DiscountType.FIXED,
-        discountValue: 0,
+        items: [{ ...validItem, paidQuantity: 4, discountType: DiscountType.FIXED, discountValue: 0 }],
       });
       expect(pct.discountAmount).toBe(0);
       expect(pct.finalPrice).toBe(pct.subtotal);
@@ -175,13 +160,11 @@ describe('ComputePackagePriceService', () => {
       expect(fix.finalPrice).toBe(fix.subtotal);
     });
 
-    it('PERCENTAGE 10% of 100_000 halalas subtotal = 10_000 halalas discount', async () => {
+    it('PERCENTAGE 10% of a 100_000-halalas payable = 10_000 discount', async () => {
       mockDefaultResolution({ basePrice: 20_000 });
       // 5 paid × 20_000 = 100_000; 10% → 10_000; final = 90_000.
       const result = await handler.compute({
-        items: [{ ...validItem, paidQuantity: 5 }],
-        discountType: DiscountType.PERCENTAGE,
-        discountValue: 10,
+        items: [{ ...validItem, paidQuantity: 5, discountType: DiscountType.PERCENTAGE, discountValue: 10 }],
       });
       expect(result.subtotal).toBe(100_000);
       expect(result.discountAmount).toBe(10_000);
@@ -191,58 +174,47 @@ describe('ComputePackagePriceService', () => {
     it('PERCENTAGE rounds down (floor) — 7% of 333 halalas = 23 (not 24)', async () => {
       mockDefaultResolution({ basePrice: 333 });
       const result = await handler.compute({
-        items: [{ ...validItem, paidQuantity: 1 }],
-        discountType: DiscountType.PERCENTAGE,
-        discountValue: 7,
+        items: [{ ...validItem, paidQuantity: 1, discountType: DiscountType.PERCENTAGE, discountValue: 7 }],
       });
       expect(result.subtotal).toBe(333);
       expect(result.discountAmount).toBe(23);
       expect(result.finalPrice).toBe(310);
     });
 
-    it('PERCENTAGE > 100 clamps the discount at the subtotal', async () => {
+    it('PERCENTAGE > 100 clamps the discount at the item payable', async () => {
       mockDefaultResolution({ basePrice: 10_000 });
       const result = await handler.compute({
-        items: [{ ...validItem, paidQuantity: 2 }],
-        discountType: DiscountType.PERCENTAGE,
-        discountValue: 250,
+        items: [{ ...validItem, paidQuantity: 2, discountType: DiscountType.PERCENTAGE, discountValue: 250 }],
       });
       expect(result.subtotal).toBe(20_000);
       expect(result.discountAmount).toBe(20_000);
       expect(result.finalPrice).toBe(0);
     });
 
-    it('FIXED discount caps at the subtotal when discountValue exceeds it', async () => {
+    it('FIXED discount caps at the item payable when it exceeds it', async () => {
       mockDefaultResolution({ basePrice: 5_000 });
       // 1 paid × 5_000 = 5_000; FIXED 9_999 clamps to 5_000 → final = 0.
       const result = await handler.compute({
-        items: [{ ...validItem, paidQuantity: 1 }],
-        discountType: DiscountType.FIXED,
-        discountValue: 9_999,
+        items: [{ ...validItem, paidQuantity: 1, discountType: DiscountType.FIXED, discountValue: 9_999 }],
       });
       expect(result.subtotal).toBe(5_000);
       expect(result.discountAmount).toBe(5_000);
       expect(result.finalPrice).toBe(0);
     });
 
-    it('FIXED discount below subtotal reduces the final price by exactly that amount', async () => {
+    it('FIXED discount below payable reduces the final price by exactly that amount', async () => {
       mockDefaultResolution({ basePrice: 10_000 });
       const result = await handler.compute({
-        items: [{ ...validItem, paidQuantity: 3 }],
-        discountType: DiscountType.FIXED,
-        discountValue: 7_500,
+        items: [{ ...validItem, paidQuantity: 3, discountType: DiscountType.FIXED, discountValue: 7_500 }],
       });
       expect(result.subtotal).toBe(30_000);
       expect(result.discountAmount).toBe(7_500);
       expect(result.finalPrice).toBe(22_500);
     });
-  });
 
-  describe('multi-item aggregation + free items', () => {
-    it('sums paidQuantity × unitPrice across all items', async () => {
+    it('sums per-item discounts independently across items', async () => {
       (prisma.employeeService.findFirst as jest.Mock).mockResolvedValue({ id: 'es-1' });
       (prisma.employeeServiceOption.findFirst as jest.Mock).mockResolvedValue(null);
-      // Two distinct duration options with different base prices.
       (prisma.serviceDurationOption.findFirst as jest.Mock).mockImplementation((args: { where: { id: string } }) => {
         const price = args.where.id === 'dur-1' ? 10_000 : 4_000;
         return Promise.resolve({ id: args.where.id, serviceId: 'svc-1', price: { toString: () => String(price) } });
@@ -250,18 +222,41 @@ describe('ComputePackagePriceService', () => {
 
       const result = await handler.compute({
         items: [
-          { ...validItem, durationOptionId: 'dur-1', paidQuantity: 2 }, // 2 × 10_000 = 20_000
-          { ...validItem, durationOptionId: 'dur-2', paidQuantity: 3 }, // 3 × 4_000  = 12_000
+          { ...validItem, durationOptionId: 'dur-1', paidQuantity: 4, discountType: DiscountType.PERCENTAGE, discountValue: 10 }, // 40_000, −4_000
+          { ...validItem, durationOptionId: 'dur-2', paidQuantity: 2, discountType: DiscountType.FIXED, discountValue: 3_000 }, // 8_000, −3_000
         ],
-        discountType: DiscountType.PERCENTAGE,
-        discountValue: 0,
       });
 
-      expect(result.subtotal).toBe(32_000);
-      expect(result.itemUnitPrices).toHaveLength(2);
+      expect(result.subtotal).toBe(48_000);
+      expect(result.discountAmount).toBe(7_000); // 4_000 + 3_000
+      expect(result.finalPrice).toBe(41_000);
+      expect(result.lines[0].net).toBe(36_000);
+      expect(result.lines[1].net).toBe(5_000);
+    });
+  });
+
+  describe('free sessions + display fields', () => {
+    it('free sessions add to fullValue/freeValue but never to subtotal', async () => {
+      mockDefaultResolution({ basePrice: 10_000 });
+      // 4 paid + 1 free × 10_000. payable = 40_000; full = 50_000; free = 10_000.
+      const result = await handler.compute({
+        items: [{ ...validItem, paidQuantity: 4, freeQuantity: 1 }],
+      });
+      expect(result.subtotal).toBe(40_000);
+      expect(result.fullValue).toBe(50_000);
+      expect(result.freeValue).toBe(10_000);
+      expect(result.finalPrice).toBe(40_000);
+      expect(result.lines[0]).toMatchObject({
+        unitPrice: 10_000,
+        fullValue: 50_000,
+        freeValue: 10_000,
+        payable: 40_000,
+        discountAmount: 0,
+        net: 40_000,
+      });
     });
 
-    it('a free-only item (paidQuantity = 0) contributes 0 to the subtotal even though a unit price resolves', async () => {
+    it('a free-only item (paidQuantity = 0) contributes 0 to subtotal but surfaces its value', async () => {
       (prisma.employeeService.findFirst as jest.Mock).mockResolvedValue({ id: 'es-1' });
       (prisma.employeeServiceOption.findFirst as jest.Mock).mockResolvedValue(null);
       (prisma.serviceDurationOption.findFirst as jest.Mock).mockImplementation((args: { where: { id: string } }) => {
@@ -272,14 +267,13 @@ describe('ComputePackagePriceService', () => {
       const result = await handler.compute({
         items: [
           { ...validItem, durationOptionId: 'dur-1', paidQuantity: 2 }, // 20_000
-          { ...validItem, durationOptionId: 'dur-2', paidQuantity: 0, freeQuantity: 3 }, // contributes 0
+          { ...validItem, durationOptionId: 'dur-2', paidQuantity: 0, freeQuantity: 3 }, // free-only → 12_000 free value
         ],
-        discountType: DiscountType.PERCENTAGE,
-        discountValue: 0,
       });
 
       expect(result.subtotal).toBe(20_000);
-      // itemUnitPrices still surfaces the resolved unit price so the catalog UI can show "free with purchase".
+      expect(result.freeValue).toBe(12_000);
+      expect(result.fullValue).toBe(32_000);
       expect(result.itemUnitPrices).toEqual(
         expect.arrayContaining([
           { durationOptionId: 'dur-1', unitPrice: 10_000 },
@@ -288,15 +282,22 @@ describe('ComputePackagePriceService', () => {
       );
     });
 
-    it('finalPrice never goes below zero (PERCENTAGE 100% on tiny subtotal)', async () => {
+    it('finalPrice never goes below zero (PERCENTAGE 100% on tiny payable)', async () => {
       mockDefaultResolution({ basePrice: 1 });
       const result = await handler.compute({
-        items: [{ ...validItem, paidQuantity: 1 }],
-        discountType: DiscountType.PERCENTAGE,
-        discountValue: 100,
+        items: [{ ...validItem, paidQuantity: 1, discountType: DiscountType.PERCENTAGE, discountValue: 100 }],
       });
       expect(result.finalPrice).toBeGreaterThanOrEqual(0);
       expect(result.finalPrice).toBe(0);
+    });
+  });
+
+  describe('applyDiscount (pure helper)', () => {
+    it('returns no discount for null type', () => {
+      expect(ComputePackagePriceService.applyDiscount(1000, null, 50)).toEqual({
+        discountAmount: 0,
+        finalPrice: 1000,
+      });
     });
   });
 });

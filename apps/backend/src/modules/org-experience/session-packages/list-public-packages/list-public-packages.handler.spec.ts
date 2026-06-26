@@ -5,6 +5,11 @@ const SERVICE_ID = '00000000-0000-4000-a000-000000000005';
 const EMPLOYEE_ID = '00000000-0000-4000-a000-000000000004';
 const DURATION_OPTION_ID = '00000000-0000-4000-a000-000000000006';
 
+/**
+ * Per-item discount fields are now part of the item row. The package-level
+ * discountType/discountValue stored in the DB is a neutral PERCENTAGE/0
+ * sentinel and is NOT forwarded to compute().
+ */
 const publicItem = {
   id: 'item-1',
   packageId: 'pkg-1',
@@ -13,6 +18,8 @@ const publicItem = {
   durationOptionId: DURATION_OPTION_ID,
   paidQuantity: 4,
   freeQuantity: 1,
+  discountType: DiscountType.PERCENTAGE as DiscountType | null,
+  discountValue: new Prisma.Decimal(10),
   sortOrder: 0,
 };
 
@@ -20,8 +27,9 @@ const publicPackage = {
   id: 'pkg-1',
   nameAr: 'باقة العائلة',
   nameEn: 'Family Pack',
+  // Neutral package-level sentinel — never fed into compute().
   discountType: DiscountType.PERCENTAGE,
-  discountValue: new Prisma.Decimal(10),
+  discountValue: new Prisma.Decimal(0),
   isActive: true,
   isPublic: true,
   archivedAt: null,
@@ -65,7 +73,7 @@ describe('ListPublicPackagesHandler', () => {
     expect(arg.orderBy).toEqual([{ sortOrder: 'asc' }, { createdAt: 'desc' }]);
   });
 
-  it('decorates every package with the canonical computed price', async () => {
+  it('decorates every package with the canonical computed price using per-item discount fields', async () => {
     const { handler, prisma, pricing } = buildHandler();
     prisma.sessionPackage.findMany.mockResolvedValue([publicPackage]);
 
@@ -79,7 +87,7 @@ describe('ListPublicPackagesHandler', () => {
       finalPrice: 36_000,
       itemUnitPrices: [{ durationOptionId: DURATION_OPTION_ID, unitPrice: 10_000 }],
     });
-    // Price is computed from the SAME inputs the reception sale freezes.
+    // compute() is called with per-item discount fields (no package-level discountType/discountValue).
     expect(pricing.compute).toHaveBeenCalledWith({
       items: [
         {
@@ -88,10 +96,10 @@ describe('ListPublicPackagesHandler', () => {
           durationOptionId: DURATION_OPTION_ID,
           paidQuantity: 4,
           freeQuantity: 1,
+          discountType: DiscountType.PERCENTAGE,
+          discountValue: 10,
         },
       ],
-      discountType: DiscountType.PERCENTAGE,
-      discountValue: 10,
     });
   });
 

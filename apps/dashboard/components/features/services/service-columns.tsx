@@ -20,7 +20,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 import { formatPrice } from "@/lib/money"
 import type { Service } from "@/lib/types/service"
-import { ServiceAvatar } from "./service-avatar"
+import { ServiceAvatar } from "@/components/features/shared/service-avatar"
 
 type TFn = (key: string) => string
 
