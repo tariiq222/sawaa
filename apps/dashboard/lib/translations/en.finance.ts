@@ -112,7 +112,7 @@ export const enFinance: Record<string, string> = {
   "invoices.col.date": "Date",
   "invoices.col.status": "Status",
   "invoices.col.actions": "Actions",
-  "invoices.status.DRAFT": "Draft",
+  "invoices.status.DRAFT": "Awaiting Payment",
   "invoices.status.ISSUED": "Issued",
   "invoices.status.PAID": "Paid",
   "invoices.status.PARTIALLY_PAID": "Partially Paid",

@@ -220,8 +220,8 @@ describe('CreatePackagePurchaseHandler', () => {
       expect(invoiceData.clientId).toBe(CLIENT_ID);
       expect(invoiceData.branchId).toBe(BRANCH_ID);
       expect(invoiceData.employeeId).toBe(EMPLOYEE_ID);
-      expect(invoiceData.status).toBe('ISSUED');
-      expect(invoiceData.issuedAt).toBeInstanceOf(Date);
+      expect(invoiceData.status).toBe('DRAFT');
+      expect(invoiceData.issuedAt ?? null).toBeNull();
     });
 
     it('records the manual payment via ProcessPaymentHandler for the full finalPrice, making the invoice PAID', async () => {

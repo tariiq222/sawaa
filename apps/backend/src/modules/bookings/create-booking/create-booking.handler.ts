@@ -376,9 +376,11 @@ export class CreateBookingHandler {
         });
 
         let invoice: { id: string } | null = null;
-        // Create an ISSUED invoice for all paid bookings immediately,
+        // Create a DRAFT invoice for all paid bookings immediately,
         // including AWAITING_PAYMENT online bookings — init-client-payment requires
-        // an invoice to exist before the payment flow can start.
+        // an invoice to exist before the payment flow can start. It stays DRAFT
+        // ("awaiting payment") until the first COMPLETED payment, which stamps
+        // issuedAt and flips it to PARTIALLY_PAID/PAID.
         // Skip: pay-at-clinic (no online payment) and zero-price bookings.
         if (!dto.payAtClinic && price > 0) {
           const orgSettings = await tx.organizationSettings.findFirst({
@@ -406,8 +408,7 @@ export class CreateBookingHandler {
               vatAmt: vatAmtHalalas,
               total: totalHalalas,
               currency: booking.currency,
-              status: 'ISSUED',
-              issuedAt: new Date(),
+              status: 'DRAFT',
             },
             select: { id: true },
           });

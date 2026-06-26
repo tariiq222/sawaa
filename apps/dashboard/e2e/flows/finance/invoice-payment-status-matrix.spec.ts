@@ -143,11 +143,11 @@ test.describe("Finance invoice/payment status matrix", () => {
     await loginAs(page, "admin")
   })
 
-  test("keeps an invoice ISSUED and unpaid before any payment is recorded", async () => {
+  test("keeps an invoice DRAFT and unpaid before any payment is recorded", async () => {
     const invoice = await getInvoice(token, unpaidInvoice.id)
 
     expect(invoice.id).toBe(unpaidInvoice.id)
-    expect(invoice.status).toBe("ISSUED")
+    expect(invoice.status).toBe("DRAFT")
     expect(Number(invoice.subtotal)).toBe(SUBTOTAL_HALALAS)
     expect(Number(invoice.vatAmt)).toBe(4_500)
     expect(Number(invoice.total)).toBe(TOTAL_HALALAS)

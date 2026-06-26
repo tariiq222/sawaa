@@ -114,13 +114,13 @@ describe('InitPackagePurchaseHandler', () => {
       expect(Number(purchaseData.subtotalSnapshot)).toBe(40_000);
       expect(Number(purchaseData.amountPaid)).toBe(FINAL_PRICE);
 
-      // Invoice linked via packagePurchaseId, VAT=0, ISSUED.
+      // Invoice linked via packagePurchaseId, VAT=0, DRAFT (awaiting payment).
       const invoiceData = tx.invoice.create.mock.calls[0][0].data;
       expect(invoiceData.packagePurchaseId).toBe(PURCHASE_ID);
       expect(invoiceData.bookingId).toBeNull();
       expect(Number(invoiceData.vatRate)).toBe(0);
       expect(Number(invoiceData.total)).toBe(FINAL_PRICE);
-      expect(invoiceData.status).toBe('ISSUED');
+      expect(invoiceData.status).toBe('DRAFT');
 
       // PENDING payment keyed by client-pkg:<invoice>.
       const paymentData = tx.payment.create.mock.calls[0][0].data;

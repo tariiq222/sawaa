@@ -66,7 +66,7 @@ export const paymentStatusStyles = {
 
 // ─── Invoice Status Styles (UPPERCASE keys — mirrors InvoiceStatus enum) ───
 export const invoiceStatusStyles = {
-  DRAFT:               { bg: "bg-muted",          text: "text-muted-foreground", border: "border-muted-foreground/30" },
+  DRAFT:               { bg: "bg-warning-soft",    text: "text-warning",          border: "border-warning/40"          },
   ISSUED:              { bg: "bg-info-soft",       text: "text-info",             border: "border-info/40"             },
   PAID:                { bg: "bg-success-soft",    text: "text-success",          border: "border-success/40"          },
   PARTIALLY_PAID:      { bg: "bg-warning-soft",    text: "text-warning",          border: "border-warning/40"          },

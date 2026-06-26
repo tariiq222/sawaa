@@ -52,6 +52,7 @@ export interface UpdateClientProfilePayload {
 }
 
 export type ClientInvoiceStatus =
+  | 'DRAFT'
   | 'ISSUED'
   | 'PAID'
   | 'PARTIALLY_PAID'

@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { InvoiceStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
 
 export interface ClientInvoiceItem {
@@ -45,7 +44,9 @@ export class ListClientInvoicesHandler {
     const safePageSize = Math.min(100, Math.max(1, Math.floor(Number(pageSize)) || 20));
     const skip = (safePage - 1) * safePageSize;
 
-    const where = { clientId, status: { not: InvoiceStatus.DRAFT } };
+    // Show every invoice the client owns, including DRAFT ("awaiting payment")
+    // so a client can see and settle an unpaid booking from /account.
+    const where = { clientId };
 
     const [invoices, total] = await Promise.all([
       this.prisma.invoice.findMany({

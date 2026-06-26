@@ -451,6 +451,9 @@ export class MoyasarWebhookHandler {
               where: { id: invoiceId },
               data: {
                 status: fullyPaid ? 'PAID' : 'PARTIALLY_PAID',
+                // Stamp issuance time on the first payment that lifts the invoice
+                // out of DRAFT; keep an existing issuedAt untouched.
+                issuedAt: invoice.issuedAt ?? new Date(),
                 paidAt: fullyPaid ? new Date() : undefined,
               },
             });

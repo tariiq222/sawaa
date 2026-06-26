@@ -260,19 +260,17 @@ test.describe("Session Packages — dashboard lifecycle", () => {
     await expect(addItemBtn).toBeVisible({ timeout: 10_000 });
     await addItemBtn.click();
 
-    // The form's combobox order is:
-    //   [0] discountType (PERCENTAGE / FIXED) — the ONLY combobox on the
-    //       page before the first item row is added.
-    //   [1] items.0.service  (added by the click above)
-    //   [2] items.0.employee
-    //   [3] items.0.duration
-    // The item-builder row exposes three Select triggers in this order:
-    // service → employee → duration.
-    const itemComboboxes = page.getByRole("combobox");
-    await expect(itemComboboxes.nth(1)).toBeVisible({ timeout: 10_000 });
+    // Address the item-builder Select triggers by their stable form-field ids,
+    // NOT by global combobox index — the per-item discount select (and any
+    // future field) shifts positional indices and silently breaks this flow.
+    // Order in the row: service → employee → duration.
+    const serviceTrigger = page.locator('[id="items.0.serviceId"]');
+    const employeeTrigger = page.locator('[id="items.0.employeeId"]');
+    const durationTrigger = page.locator('[id="items.0.durationOptionId"]');
+    await expect(serviceTrigger).toBeVisible({ timeout: 10_000 });
 
-    // ── Service select (second combobox on the page, first in the item row) ──
-    await itemComboboxes.nth(1).click();
+    // ── Service select ────────────────────────────────────────────────
+    await serviceTrigger.click();
     // The option label is `nameAr` (we are in `ar` locale) — match the
     // AR name verbatim so regex chars in the suffix (digits + spaces) are
     // treated literally.
@@ -285,9 +283,9 @@ test.describe("Session Packages — dashboard lifecycle", () => {
 
     // ── Employee select — gated on service; wait for the data load ────
     await expect
-      .poll(async () => await itemComboboxes.nth(2).isEnabled(), { timeout: 15_000 })
+      .poll(async () => await employeeTrigger.isEnabled(), { timeout: 15_000 })
       .toBe(true);
-    await itemComboboxes.nth(2).click();
+    await employeeTrigger.click();
     const employeeOption = page
       .getByRole("option")
       .filter({ hasText: employeeName })
@@ -297,9 +295,9 @@ test.describe("Session Packages — dashboard lifecycle", () => {
 
     // ── Duration select — also gated on service ───────────────────────
     await expect
-      .poll(async () => await itemComboboxes.nth(3).isEnabled(), { timeout: 15_000 })
+      .poll(async () => await durationTrigger.isEnabled(), { timeout: 15_000 })
       .toBe(true);
-    await itemComboboxes.nth(3).click();
+    await durationTrigger.click();
     // Duration labels are "labelAr · durationMins د · price"; pick the
     // first option that has a minute count (the disabled "unavailable"
     // placeholder has no `\d+ د`).
@@ -373,12 +371,11 @@ test.describe("Session Packages — dashboard lifecycle", () => {
     await branchSelect.click();
     await page.getByRole("option").filter({ hasText: /اختبار/ }).first().click();
 
-    // Payment method: radiogroup buttons. CASH is the default-enabled
-    // option. The first radio should already be CASH.
+    // Payment method: radiogroup buttons. CASH is the default-enabled option
+    // and is always present once the sell dialog is open — select it explicitly.
     const cashRadio = dialog.getByRole("radio", { name: /نقداً/ });
-    if (await cashRadio.isVisible().catch(() => false)) {
-      await cashRadio.click();
-    }
+    await expect(cashRadio).toBeVisible({ timeout: 10_000 });
+    await cashRadio.click();
 
     // Submit the sell form.
     const sellResponsePromise = page.waitForResponse(

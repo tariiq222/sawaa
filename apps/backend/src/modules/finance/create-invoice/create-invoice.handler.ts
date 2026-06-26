@@ -81,8 +81,10 @@ export class CreateInvoiceHandler {
           total: totalHalalas,
           notes: dto.notes,
           dueAt: dto.dueAt,
-          status: 'ISSUED',
-          issuedAt: new Date(),
+          // DRAFT ("awaiting payment") until the first COMPLETED payment stamps
+          // issuedAt and flips it to PARTIALLY_PAID/PAID. See process-payment +
+          // moyasar-webhook handlers.
+          status: 'DRAFT',
         },
       });
     } catch (err) {

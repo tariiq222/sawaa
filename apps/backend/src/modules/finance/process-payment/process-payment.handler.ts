@@ -156,6 +156,9 @@ export class ProcessPaymentHandler {
         where: { id: dto.invoiceId },
         data: {
           status,
+          // Stamp the official issuance time on the first payment that lifts the
+          // invoice out of DRAFT. Keep an existing issuedAt untouched.
+          issuedAt: invoice.issuedAt ?? new Date(),
           paidAt: status === InvoiceStatus.PAID ? new Date() : undefined,
         },
       });

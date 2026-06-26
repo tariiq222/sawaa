@@ -18,6 +18,7 @@ export const PAYMENT_STATUS_KEY: Record<string, MessageKey> = {
 };
 
 export const INVOICE_STATUS_KEY: Record<string, MessageKey> = {
+  DRAFT: 'account.invoice.draft',
   ISSUED: 'account.invoice.issued',
   PAID: 'account.invoice.paid',
   PARTIALLY_PAID: 'account.invoice.partially_paid',
@@ -58,6 +59,7 @@ export const PAYMENT_STATUS_TOKEN: Record<string, string> = {
 
 /** CSS color token per invoice status (pill tint). */
 export const INVOICE_STATUS_TOKEN: Record<string, string> = {
+  DRAFT: 'var(--warning)',
   ISSUED: 'var(--warning)',
   PAID: 'var(--success)',
   PARTIALLY_PAID: 'var(--warning)',
@@ -68,5 +70,5 @@ export const INVOICE_STATUS_TOKEN: Record<string, string> = {
 
 /** Invoice statuses that allow the "pay now" flow. */
 export function isInvoicePayable(status: string | null | undefined): boolean {
-  return status === 'ISSUED' || status === 'PARTIALLY_PAID';
+  return status === 'DRAFT' || status === 'ISSUED' || status === 'PARTIALLY_PAID';
 }

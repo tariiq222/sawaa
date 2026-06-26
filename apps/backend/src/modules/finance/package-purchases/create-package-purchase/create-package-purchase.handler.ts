@@ -143,8 +143,8 @@ export class CreatePackagePurchaseHandler {
       });
 
       // Single invoice for the full finalPrice. VAT = 0 — center is not
-      // VAT-registered. status=ISSUED so ProcessPaymentHandler will flip it to
-      // PAID when it inserts the payment row.
+      // VAT-registered. status=DRAFT ("awaiting payment") so ProcessPaymentHandler
+      // stamps issuedAt and flips it to PAID when it inserts the payment row.
       const invoice = await tx.invoice.create({
         data: {
           branchId: dto.branchId,
@@ -160,8 +160,7 @@ export class CreatePackagePurchaseHandler {
           vatRate: new Prisma.Decimal(0),
           vatAmt: new Prisma.Decimal(0),
           total: new Prisma.Decimal(price.finalPrice),
-          status: 'ISSUED',
-          issuedAt: new Date(),
+          status: 'DRAFT',
           notes: dto.notes ?? null,
         },
       });

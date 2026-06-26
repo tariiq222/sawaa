@@ -62,12 +62,12 @@ export interface InitPackagePurchaseResult {
  *   5. Create PackagePurchase(status=PENDING) — NO credits yet: a PENDING
  *      purchase is excluded from every consumption path, so nothing is bookable
  *      before payment. Credits are issued only on activation.
- *   6. Create the Invoice linked via `packagePurchaseId` (status=ISSUED, VAT=0)
+ *   6. Create the Invoice linked via `packagePurchaseId` (status=DRAFT, VAT=0)
  *      and a PENDING Payment row keyed by `idempotencyKey = client-pkg:<invoice>`.
  *   7. Drive Moyasar and return the redirect URL.
  *
  * Failure / abandon path: the purchase stays PENDING with no credits, the
- * invoice stays ISSUED, the payment stays PENDING/FAILED — no credit is ever
+ * invoice stays DRAFT, the payment stays PENDING/FAILED — no credit is ever
  * issued. This requires NO change to the webhook: the webhook only emits
  * PaymentCompletedEvent on `paid`, and the activation consumer is the sole
  * issuer of credits.
@@ -263,8 +263,9 @@ export class InitPackagePurchaseHandler {
           vatRate: new Prisma.Decimal(0),
           vatAmt: new Prisma.Decimal(0),
           total: new Prisma.Decimal(price.finalPrice),
-          status: 'ISSUED',
-          issuedAt: new Date(),
+          // DRAFT ("awaiting payment") until the Moyasar webhook confirms the
+          // first COMPLETED payment, which stamps issuedAt and flips it to PAID.
+          status: 'DRAFT',
         },
         select: { id: true },
       });

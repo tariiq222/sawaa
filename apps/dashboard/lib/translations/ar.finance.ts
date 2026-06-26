@@ -112,7 +112,7 @@ export const arFinance: Record<string, string> = {
   "invoices.col.date": "التاريخ",
   "invoices.col.status": "الحالة",
   "invoices.col.actions": "الإجراءات",
-  "invoices.status.DRAFT": "مسودة",
+  "invoices.status.DRAFT": "بانتظار الدفع",
   "invoices.status.ISSUED": "صادرة",
   "invoices.status.PAID": "مدفوعة",
   "invoices.status.PARTIALLY_PAID": "مدفوعة جزئياً",

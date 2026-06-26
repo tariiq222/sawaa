@@ -56,7 +56,7 @@ describe('ListClientInvoicesHandler', () => {
     expect(mockPrisma.payment.findMany).not.toHaveBeenCalled();
   });
 
-  it('excludes DRAFT invoices in the where clause', async () => {
+  it('returns all client invoices including DRAFT (awaiting payment)', async () => {
     mockPrisma.invoice.findMany.mockResolvedValue([]);
     mockPrisma.invoice.count.mockResolvedValue(0);
 
@@ -64,12 +64,12 @@ describe('ListClientInvoicesHandler', () => {
 
     expect(mockPrisma.invoice.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { clientId: 'cl-1', status: { not: 'DRAFT' } },
+        where: { clientId: 'cl-1' },
         orderBy: { createdAt: 'desc' },
       }),
     );
     expect(mockPrisma.invoice.count).toHaveBeenCalledWith({
-      where: { clientId: 'cl-1', status: { not: 'DRAFT' } },
+      where: { clientId: 'cl-1' },
     });
   });
 

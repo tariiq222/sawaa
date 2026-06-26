@@ -903,9 +903,10 @@ describe('CreateBookingHandler', () => {
     );
   });
 
-  it('creates ISSUED invoice for AWAITING_PAYMENT ONLINE booking so init-payment can proceed', async () => {
+  it('creates DRAFT invoice for AWAITING_PAYMENT ONLINE booking so init-payment can proceed', async () => {
     // AWAITING_PAYMENT bookings need an invoice at creation time — init-client-payment
-    // throws 404 if invoiceId is null. The @@unique([bookingId]) DB constraint prevents duplicates.
+    // throws 404 if invoiceId is null. It stays DRAFT ("awaiting payment") until the
+    // first COMPLETED payment stamps issuedAt and flips it. @@unique([bookingId]) prevents dupes.
     prisma.booking.create = jest.fn().mockResolvedValue({
       ...mockBooking,
       status: 'AWAITING_PAYMENT',
@@ -918,7 +919,7 @@ describe('CreateBookingHandler', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           bookingId: mockBooking.id,
-          status: 'ISSUED',
+          status: 'DRAFT',
         }),
       }),
     );

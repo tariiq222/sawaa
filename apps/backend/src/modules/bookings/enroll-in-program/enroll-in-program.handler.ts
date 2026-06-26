@@ -187,8 +187,7 @@ export class EnrollInProgramHandler {
               vatAmt: vatAmt.toNumber(),
               total: total.toNumber(),
               currency: booking.currency,
-              status: 'ISSUED',
-              issuedAt: new Date(),
+              status: 'DRAFT',
             },
             select: { id: true },
           });
