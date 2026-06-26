@@ -2,7 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Globe02Icon, Store01Icon, Building02Icon, Video01Icon, UserMultiple02Icon } from "@hugeicons/core-free-icons"
+import { Globe02Icon, Store01Icon, Building02Icon, Video01Icon } from "@hugeicons/core-free-icons"
 import { Avatar, AvatarFallback, Tooltip, TooltipContent, TooltipTrigger } from "@sawaa/ui"
 import { cn, formatClinicDate, formatClinicTime } from "@/lib/utils"
 import type { DateFormat } from "@/lib/utils"
@@ -32,14 +32,12 @@ function getGradient(name: string): string {
   return avatarGradients[Math.abs(hash) % avatarGradients.length]
 }
 
-/* Type icon — a glyph that names the attendance mode at a glance:
-   in-person → building, online → video, group → people. Muted tone so it
+/* Delivery icon — a glyph that names how the session is delivered at a glance:
+   online → video, in-person (or unset) → building. Muted tone so it
    doesn't compete with the colored source chip beside it. */
-const typeIconConfig: Record<string, { icon: typeof Building02Icon; labelKey: string }> = {
-  in_person: { icon: Building02Icon, labelKey: "bookings.col.type.inPerson" },
-  online:    { icon: Video01Icon, labelKey: "bookings.col.type.online" },
-  walk_in:   { icon: Building02Icon, labelKey: "bookings.col.type.walkIn" },
-  group:     { icon: UserMultiple02Icon, labelKey: "bookings.col.type.group" },
+const deliveryIconConfig: Record<string, { icon: typeof Building02Icon; labelKey: string }> = {
+  ONLINE:    { icon: Video01Icon, labelKey: "bookings.col.type.online" },
+  IN_PERSON: { icon: Building02Icon, labelKey: "bookings.col.type.inPerson" },
 }
 
 /* Source icon — colored chip so the channel reads at a glance.
@@ -74,8 +72,8 @@ export function getBookingColumns(
       header: "#",
       cell: ({ row }) => {
         const source = sourceIconConfig[row.original.source]
-        const type = typeIconConfig[row.original.type]
-        const typeLabel = type ? t(type.labelKey) : row.original.type
+        const type = deliveryIconConfig[row.original.deliveryType ?? "IN_PERSON"]
+        const typeLabel = type ? t(type.labelKey) : ""
         return (
           <div className="flex flex-col items-start gap-1.5">
             <span className="text-[13px] font-medium font-numeric text-muted-foreground">
@@ -149,21 +147,20 @@ export function getBookingColumns(
       header: t("bookings.col.header.employee"),
       cell: ({ row }) => {
         const u = row.original.employee?.user
-        if (!u) return <span className="text-muted-foreground">—</span>
+        const clinic = row.original.categoryNameSnapshot
+        if (!u && !clinic) return <span className="text-muted-foreground">—</span>
         return (
-          <span className="text-sm font-medium text-foreground">
-            {t("bookings.info.drPrefix")} {u.firstName} {u.lastName}
-          </span>
+          <div className="flex flex-col gap-0.5">
+            {u ? (
+              <span className="text-sm font-medium text-foreground">
+                {t("bookings.info.drPrefix")} {u.firstName} {u.lastName}
+              </span>
+            ) : (
+              <span className="text-sm text-muted-foreground">—</span>
+            )}
+            {clinic && <span className="text-[11px] text-muted-foreground">{clinic}</span>}
+          </div>
         )
-      },
-    },
-    {
-      id: "clinic",
-      header: t("bookings.col.header.clinic"),
-      cell: ({ row }) => {
-        const name = row.original.categoryNameSnapshot
-        if (!name) return <span className="text-muted-foreground">—</span>
-        return <span className="text-sm font-medium text-foreground">{name}</span>
       },
     },
     {

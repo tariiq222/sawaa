@@ -311,7 +311,6 @@ export const arBookings: Record<string, string> = {
   // booking-columns (list table)
   "bookings.col.header.client": "المريض",
   "bookings.col.header.employee": "الممارس",
-  "bookings.col.header.clinic": "العيادة",
   "bookings.col.header.type": "النوع",
   "bookings.col.header.datetime": "تاريخ الموعد",
   "bookings.col.header.amount": "المبلغ",

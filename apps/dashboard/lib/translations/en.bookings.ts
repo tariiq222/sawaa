@@ -311,7 +311,6 @@ export const enBookings: Record<string, string> = {
   // booking-columns (list table)
   "bookings.col.header.client": "Client",
   "bookings.col.header.employee": "Employee",
-  "bookings.col.header.clinic": "Clinic",
   "bookings.col.header.type": "Type",
   "bookings.col.header.datetime": "Appointment Date",
   "bookings.col.header.amount": "Amount",
