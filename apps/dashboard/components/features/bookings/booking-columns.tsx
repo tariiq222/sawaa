@@ -68,7 +68,9 @@ export function getBookingColumns(
   const locale = config?.locale ?? "ar"
   return [
     {
-      accessorKey: "id",
+      id: "bookingNumber",
+      accessorFn: (row) => row.bookingNumber,
+      sortingFn: "basic",
       header: "#",
       cell: ({ row }) => {
         const source = sourceIconConfig[row.original.source]

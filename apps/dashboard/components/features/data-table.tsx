@@ -70,6 +70,7 @@ export function DataTable<TData, TValue>({
   const table = useReactTable({
     data: data ?? [],
     columns: columns ?? [],
+    enableMultiSort: false,
     getCoreRowModel: getCoreRowModel(),
     ...(serverPaginated ? {} : { getPaginationRowModel: getPaginationRowModel() }),
     ...(manualSorting
