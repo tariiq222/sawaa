@@ -1,5 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { DashboardFinanceController } from './finance.controller';
+import { CHECK_PERMISSIONS_KEY } from '../../common/guards/casl.guard';
 
 describe('DashboardFinanceController', () => {
   let controller: DashboardFinanceController;
@@ -255,6 +257,19 @@ describe('DashboardFinanceController', () => {
     };
     await controller.createPackagePurchaseEndpoint(body as any);
     expect(handlers.createPackagePurchase).toHaveBeenCalledWith(body);
+  });
+
+  it('P1-11: createPackagePurchaseEndpoint is gated by create:Invoice (not manage:Invoice) so RECEPTIONIST can sell', async () => {
+    // Regression for the e23cf613 fix: the dashboard "sell package" button is
+    // gated on create:Invoice, but the endpoint used to require manage:Invoice,
+    // so a RECEPTIONIST (create:Invoice + create:Payment only) saw the button
+    // then got "Insufficient permissions". The gate must stay create:Invoice —
+    // ADMIN/OWNER still pass because CASL `manage` is a superset of `create`.
+    const perms = new Reflector().get(
+      CHECK_PERMISSIONS_KEY,
+      DashboardFinanceController.prototype.createPackagePurchaseEndpoint,
+    );
+    expect(perms).toEqual([{ action: 'create', subject: 'Invoice' }]);
   });
 
   it('refundPackagePurchaseEndpoint should forward purchaseId + refundAmount + notes + acting user', async () => {
