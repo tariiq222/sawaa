@@ -534,4 +534,58 @@ describe('ProcessPaymentHandler', () => {
       );
     });
   });
+
+  describe('P1-10 — issuedAt stamp on DRAFT → first payment', () => {
+    it('stamps issuedAt when the first payment lifts a DRAFT invoice', async () => {
+      const draftInvoice = { ...mockInvoice, status: InvoiceStatus.DRAFT, issuedAt: null };
+      const tx = buildTx({
+        invoice: { findFirst: jest.fn().mockResolvedValue(draftInvoice), update: jest.fn() },
+        payment: {
+          findFirst: jest.fn().mockResolvedValue(mockPayment),
+          create: jest.fn().mockResolvedValue(mockPayment),
+          aggregate: jest.fn()
+            .mockResolvedValueOnce({ _sum: { amount: 0 } })
+            .mockResolvedValueOnce({ _sum: { amount: 230 } }),
+        },
+      });
+      const prisma = buildPrisma(tx);
+      const handler = new ProcessPaymentHandler(
+        prisma as never,
+        { withTransaction: jest.fn((fn: any) => fn(tx)) } as never,
+        buildEventBus() as never,
+      );
+
+      await handler.execute({ invoiceId: 'inv-1', amount: 230, method: PaymentMethod.CASH });
+
+      const updateData = tx.invoice.update.mock.calls[0][0].data;
+      expect(updateData.issuedAt).toBeInstanceOf(Date);
+      expect(updateData.status).toBe(InvoiceStatus.PAID);
+    });
+
+    it('preserves an existing issuedAt on a subsequent payment', async () => {
+      const existing = new Date('2026-01-01T00:00:00.000Z');
+      const issuedInvoice = { ...mockInvoice, status: InvoiceStatus.PARTIALLY_PAID, issuedAt: existing };
+      const tx = buildTx({
+        invoice: { findFirst: jest.fn().mockResolvedValue(issuedInvoice), update: jest.fn() },
+        payment: {
+          findFirst: jest.fn().mockResolvedValue(mockPayment),
+          create: jest.fn().mockResolvedValue(mockPayment),
+          aggregate: jest.fn()
+            .mockResolvedValueOnce({ _sum: { amount: 100 } })
+            .mockResolvedValueOnce({ _sum: { amount: 230 } }),
+        },
+      });
+      const prisma = buildPrisma(tx);
+      const handler = new ProcessPaymentHandler(
+        prisma as never,
+        { withTransaction: jest.fn((fn: any) => fn(tx)) } as never,
+        buildEventBus() as never,
+      );
+
+      await handler.execute({ invoiceId: 'inv-1', amount: 130, method: PaymentMethod.CASH });
+
+      const updateData = tx.invoice.update.mock.calls[0][0].data;
+      expect(updateData.issuedAt).toBe(existing);
+    });
+  });
 });

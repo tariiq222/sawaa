@@ -270,6 +270,28 @@ describe('MoyasarWebhookHandler', () => {
       expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.completed', expect.anything());
     });
 
+    it('P1-10: stamps issuedAt when a paid webhook lifts a DRAFT invoice', async () => {
+      const draftInvoice = { ...buildInvoice(ORG_A), status: 'DRAFT', issuedAt: null };
+      const { handler, prisma } = makeHandler({
+        prisma: buildPrisma(draftInvoice),
+      });
+      await handler.execute(makeReq());
+      const updateArg = prisma.invoice.update.mock.calls[0][0] as { data: Record<string, unknown> };
+      expect(updateArg.data.status).toBe('PAID');
+      expect(updateArg.data.issuedAt).toBeInstanceOf(Date);
+    });
+
+    it('P1-10: preserves an existing issuedAt on a paid webhook', async () => {
+      const existing = new Date('2026-01-01T00:00:00.000Z');
+      const issuedInvoice = { ...buildInvoice(ORG_A), status: 'ISSUED', issuedAt: existing };
+      const { handler, prisma } = makeHandler({
+        prisma: buildPrisma(issuedInvoice),
+      });
+      await handler.execute(makeReq());
+      const updateArg = prisma.invoice.update.mock.calls[0][0] as { data: Record<string, unknown> };
+      expect(updateArg.data.issuedAt).toBe(existing);
+    });
+
     it('creates a FAILED payment when the re-fetched status is failed', async () => {
       const { handler, prisma } = makeHandler({
         fetchedPayment: { id: 'moyasar-pay-1', status: 'failed', amount: 230, currency: 'SAR' },

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -205,7 +206,7 @@ export class InitPackagePurchaseHandler {
         const idempotencyKey = `client-pkg:${invoice.id}`;
         const payment = await this.prisma.payment.findFirst({
           where: { idempotencyKey },
-          select: { id: true, status: true },
+          select: { id: true, status: true, gatewayRef: true },
         });
         // A completed payment means this purchase should already be (or is being)
         // activated — do not re-charge. Treat it as a conflict-free no-op error.
@@ -213,8 +214,44 @@ export class InitPackagePurchaseHandler {
           throw new BadRequestException('This purchase has already been paid');
         }
         if (payment) {
-          // Delete the stale non-completed payment and create a fresh one so the
-          // client always gets a valid redirect (mirrors InitClientPaymentHandler).
+          // P1-6 (G3): a row with a gatewayRef means a live Moyasar session
+          // already exists for this purchase. Deleting it blind would let the
+          // client finish that old session AND the fresh one we create below =
+          // double charge with no internal trace of the first. Reconcile against
+          // the gateway before discarding — only a terminally-failed session is
+          // safe to replace. Mirrors InitClientPaymentHandler.
+          if (payment.gatewayRef) {
+            let gatewayStatus: string;
+            try {
+              const gw = await this.moyasar.getPaymentStatus(
+                DEFAULT_ORG_ID,
+                payment.gatewayRef,
+              );
+              gatewayStatus = gw.status;
+            } catch (error) {
+              if (error instanceof Error) {
+                this.logger.error(
+                  `Failed to reconcile in-flight package payment ${payment.id} for invoice ${invoice.id}`,
+                  error.stack,
+                );
+              }
+              // Fail closed: never recreate a session we could not verify.
+              throw new ConflictException(
+                'تعذّر التحقق من حالة الدفعة الجارية، حاول مرة أخرى لاحقاً',
+              );
+            }
+            if (['paid', 'captured', 'authorized'].includes(gatewayStatus)) {
+              throw new ConflictException('This purchase has already been paid');
+            }
+            if (gatewayStatus === 'initiated') {
+              throw new ConflictException(
+                'هناك دفعة قيد التنفيذ لهذه الباقة، أكمل الدفع الحالي أو انتظر انتهاء الجلسة',
+              );
+            }
+            // failed / voided / refunded → the session is dead, safe to discard.
+          }
+          // No gatewayRef yet, or a terminally-failed session: discard and
+          // recreate so the client always receives a valid redirect.
           await this.prisma.payment.delete({ where: { id: payment.id } });
         }
         const fresh = await this.prisma.payment.create({

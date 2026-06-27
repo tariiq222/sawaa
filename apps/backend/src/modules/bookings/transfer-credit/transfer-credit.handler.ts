@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ActivityAction, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { TransferCreditDto } from './transfer-credit.dto';
 
@@ -48,7 +49,7 @@ export class TransferCreditHandler {
         serviceId: true,
         employeeId: true,
         durationOptionId: true,
-        purchase: { select: { id: true, status: true } },
+        purchase: { select: { id: true, status: true, clientId: true } },
       },
     });
     if (!credit) {
@@ -93,12 +94,35 @@ export class TransferCreditHandler {
       );
     }
 
-    // 5. Re-point the credit. Price snapshot stays frozen — only employeeId moves.
-    return this.rlsTransaction.withTransaction((tx) =>
-      tx.packageCredit.update({
+    // 5. Re-point the credit + write an audit row in ONE transaction. Price
+    //    snapshot stays frozen — only employeeId moves. The audit row makes
+    //    the credit-routing change traceable (who moved whose credit, from/to
+    //    which practitioner) — without it a credit transfer leaves no trail.
+    const fromEmployeeId = credit.employeeId;
+    return this.rlsTransaction.withTransaction(async (tx) => {
+      const updated = await tx.packageCredit.update({
         where: { id: credit.id },
         data: { employeeId: cmd.toEmployeeId },
-      }),
-    );
+      });
+
+      await tx.activityLog.create({
+        data: {
+          userId: cmd.userId,
+          action: ActivityAction.UPDATE,
+          entity: 'PackageCredit',
+          entityId: credit.id,
+          description: 'Transferred a session-package credit to another practitioner',
+          metadata: {
+            creditId: credit.id,
+            fromEmployeeId,
+            toEmployeeId: cmd.toEmployeeId,
+            parentPurchaseId: credit.purchase?.id ?? null,
+            parentPurchaseClientId: credit.purchase?.clientId ?? null,
+          } as Prisma.InputJsonValue,
+        },
+      });
+
+      return updated;
+    });
   }
 }

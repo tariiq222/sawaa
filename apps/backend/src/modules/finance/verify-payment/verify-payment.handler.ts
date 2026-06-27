@@ -84,6 +84,12 @@ export class VerifyPaymentHandler {
           where: { id: invoice.id },
           data: {
             status,
+            // P1-7: stamp the official issuance time on the first payment that
+            // lifts the invoice out of DRAFT — mirrors process-payment +
+            // moyasar-webhook so bank-transfer invoices are not left with a
+            // NULL issuedAt while card/cash invoices carry one. Keep an
+            // existing issuedAt untouched.
+            issuedAt: invoice.issuedAt ?? new Date(),
             paidAt: status === InvoiceStatus.PAID ? new Date() : undefined,
           },
         });

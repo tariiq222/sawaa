@@ -41,14 +41,20 @@ function buildPrisma() {
   return { sessionPackage: { findMany: jest.fn() } };
 }
 
+const PUBLIC_PRICE = {
+  subtotal: 40_000,
+  discountAmount: 4_000,
+  finalPrice: 36_000,
+  itemUnitPrices: [{ durationOptionId: DURATION_OPTION_ID, unitPrice: 10_000 }],
+};
+
 function buildPricing() {
   return {
-    compute: jest.fn().mockResolvedValue({
-      subtotal: 40_000,
-      discountAmount: 4_000,
-      finalPrice: 36_000,
-      itemUnitPrices: [{ durationOptionId: DURATION_OPTION_ID, unitPrice: 10_000 }],
-    }),
+    // P1-4: the handler batches all packages through computeMany — one call per
+    // page returning one price per group.
+    computeMany: jest.fn().mockImplementation((groups: unknown[]) =>
+      Promise.resolve(groups.map(() => PUBLIC_PRICE)),
+    ),
   };
 }
 
@@ -81,15 +87,11 @@ describe('ListPublicPackagesHandler', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe('pkg-1');
-    expect(result[0].price).toEqual({
-      subtotal: 40_000,
-      discountAmount: 4_000,
-      finalPrice: 36_000,
-      itemUnitPrices: [{ durationOptionId: DURATION_OPTION_ID, unitPrice: 10_000 }],
-    });
-    // compute() is called with per-item discount fields (no package-level discountType/discountValue).
-    expect(pricing.compute).toHaveBeenCalledWith({
-      items: [
+    expect(result[0].price).toEqual(PUBLIC_PRICE);
+    // computeMany is called with one item-group per package, each carrying the
+    // per-item discount fields (no package-level discountType/discountValue).
+    expect(pricing.computeMany).toHaveBeenCalledWith([
+      [
         {
           serviceId: SERVICE_ID,
           employeeId: EMPLOYEE_ID,
@@ -100,7 +102,7 @@ describe('ListPublicPackagesHandler', () => {
           discountValue: 10,
         },
       ],
-    });
+    ]);
   });
 
   it('returns an empty array when no public packages exist (no crash)', async () => {
@@ -110,7 +112,8 @@ describe('ListPublicPackagesHandler', () => {
     const result = await handler.execute();
 
     expect(result).toEqual([]);
-    expect(pricing.compute).not.toHaveBeenCalled();
+    // computeMany is invoked with an empty batch and returns [].
+    expect(pricing.computeMany).toHaveBeenCalledWith([]);
   });
 
   it('prices each package independently when several are public', async () => {
@@ -123,6 +126,8 @@ describe('ListPublicPackagesHandler', () => {
     const result = await handler.execute();
 
     expect(result).toHaveLength(2);
-    expect(pricing.compute).toHaveBeenCalledTimes(2);
+    // One batched call for the whole page (not one-per-package).
+    expect(pricing.computeMany).toHaveBeenCalledTimes(1);
+    expect((pricing.computeMany as jest.Mock).mock.calls[0][0]).toHaveLength(2);
   });
 });

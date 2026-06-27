@@ -31,21 +31,22 @@ export class ListPublicPackagesHandler {
       include: { items: { orderBy: { sortOrder: 'asc' } } },
     });
 
-    return Promise.all(
-      packages.map(async (pkg) => {
-        const price = await this.pricing.compute({
-          items: pkg.items.map((i) => ({
-            serviceId: i.serviceId,
-            employeeId: i.employeeId,
-            durationOptionId: i.durationOptionId,
-            paidQuantity: i.paidQuantity,
-            freeQuantity: i.freeQuantity,
-            discountType: i.discountType,
-            discountValue: Number(i.discountValue),
-          })),
-        });
-        return { ...pkg, price };
-      }),
+    // Price every package in ONE batched lookup set (P1-4): the public catalog
+    // is unauthenticated + cacheable, so a per-package compute() would fan out
+    // 3 × Σ items queries on every page load. computeMany collapses that to 3.
+    const prices = await this.pricing.computeMany(
+      packages.map((pkg) =>
+        pkg.items.map((i) => ({
+          serviceId: i.serviceId,
+          employeeId: i.employeeId,
+          durationOptionId: i.durationOptionId,
+          paidQuantity: i.paidQuantity,
+          freeQuantity: i.freeQuantity,
+          discountType: i.discountType,
+          discountValue: Number(i.discountValue),
+        })),
+      ),
     );
+    return packages.map((pkg, idx) => ({ ...pkg, price: prices[idx] }));
   }
 }

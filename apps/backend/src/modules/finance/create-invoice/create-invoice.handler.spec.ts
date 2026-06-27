@@ -64,6 +64,23 @@ describe('CreateInvoiceHandler', () => {
     expect(result.packagePurchaseId).toBeNull();
   });
 
+  it('P1-10: creates the invoice as DRAFT (issued only on first payment)', async () => {
+    await handler.execute({
+      bookingId: 'book-1',
+      packagePurchaseId: null,
+      branchId: 'branch-1',
+      clientId: 'client-1',
+      employeeId: 'emp-1',
+      subtotal: 200,
+    });
+
+    expect(prisma.invoice.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'DRAFT' }),
+      }),
+    );
+  });
+
   it('creates invoice with packagePurchaseId and null bookingId', async () => {
     const result = await handler.execute({
       bookingId: null,

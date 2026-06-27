@@ -12,8 +12,22 @@ function buildPrisma() {
   };
 }
 
+const SESSION_PRICE = {
+  subtotal: 81000,
+  discountAmount: 9000,
+  finalPrice: 72000,
+  fullValue: 90000,
+  freeValue: 18000,
+  itemUnitPrices: [] as unknown[],
+  lines: [] as unknown[],
+};
+
 function buildPricing() {
   return {
+    // P1-4: batched pricing — one computeMany per page, one price per group.
+    computeMany: jest.fn().mockImplementation((groups: unknown[]) =>
+      Promise.resolve(groups.map(() => SESSION_PRICE)),
+    ),
     compute: jest.fn().mockResolvedValue({
       subtotal: 81000,
       discountAmount: 9000,
@@ -114,7 +128,7 @@ describe('ListSessionPackagesHandler', () => {
     prisma.sessionPackage.findMany.mockResolvedValue([{ id: 'a', items: [] }]);
     prisma.sessionPackage.count.mockResolvedValue(1);
     const res = await handler.execute({});
-    expect(pricing.compute).toHaveBeenCalledTimes(1);
+    expect(pricing.computeMany).toHaveBeenCalledTimes(1);
     expect(res.items[0]).toEqual(
       expect.objectContaining({
         id: 'a',

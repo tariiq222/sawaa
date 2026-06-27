@@ -17,7 +17,7 @@ function activeCredit(overrides: Record<string, unknown> = {}) {
     unitPriceSnapshot: 10_000,
     totalQuantity: 5,
     usedQuantity: 1,
-    purchase: { id: 'p1', status: PackagePurchaseStatus.ACTIVE },
+    purchase: { id: 'p1', status: PackagePurchaseStatus.ACTIVE, clientId: 'client-1' },
     ...overrides,
   };
 }
@@ -30,6 +30,7 @@ function buildPrisma(opts: {
 } = {}) {
   const tx = {
     packageCredit: { update: jest.fn().mockResolvedValue({ id: CREDIT_ID, employeeId: TO_EMPLOYEE_ID }) },
+    activityLog: { create: jest.fn().mockResolvedValue({ id: 'log-1' }) },
   };
   return {
     prisma: {
@@ -84,6 +85,31 @@ describe('TransferCreditHandler', () => {
       where: { id: CREDIT_ID },
       data: { employeeId: TO_EMPLOYEE_ID },
     });
+  });
+
+  it('P1-3: writes a PackageCredit transfer ActivityLog row with actor + from/to + client', async () => {
+    const parts = buildPrisma();
+    const handler = buildHandler(parts);
+
+    await handler.execute(cmd());
+
+    expect(parts.tx.activityLog.create).toHaveBeenCalledTimes(1);
+    const call = parts.tx.activityLog.create.mock.calls[0][0];
+    expect(call.data).toEqual(
+      expect.objectContaining({
+        userId: 'user-1',
+        action: 'UPDATE',
+        entity: 'PackageCredit',
+        entityId: CREDIT_ID,
+        description: expect.stringContaining('credit'),
+        metadata: expect.objectContaining({
+          creditId: CREDIT_ID,
+          fromEmployeeId: FROM_EMPLOYEE_ID,
+          toEmployeeId: TO_EMPLOYEE_ID,
+          parentPurchaseClientId: 'client-1',
+        }),
+      }),
+    );
   });
 
   it('does NOT re-price — unitPriceSnapshot is never written', async () => {

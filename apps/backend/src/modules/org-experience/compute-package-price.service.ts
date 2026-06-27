@@ -52,6 +52,11 @@ export type PackagePriceResult = {
   lines: PackageLinePrice[];
 };
 
+/** Resolves an item's per-session unit price (integer halalas). Throws when the
+ *  item references a missing active link / duration option — same failure
+ *  surface as the legacy per-item lookup. */
+type UnitPriceResolver = (item: PackageItemInput) => number;
+
 /**
  * Cluster-root pricing helper for session packages.
  *
@@ -70,12 +75,43 @@ export type PackagePriceResult = {
  *
  * Free-only items (paidQuantity = 0) resolve a unit price (so the catalog UI
  * can show "free with purchase") but contribute 0 to subtotal.
+ *
+ * Query strategy: a single package resolves its unit prices in THREE bulk
+ * lookups (not 3-per-item), and `computeMany` resolves an arbitrary number of
+ * packages in the SAME three bulk lookups — so the public catalog / dashboard
+ * package list stay O(1) round-trips regardless of catalog size (P1-4).
  */
 @Injectable()
 export class ComputePackagePriceService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Price a single package. Resolves its items' unit prices in 3 bulk queries. */
   async compute(params: ComputePackagePriceParams): Promise<PackagePriceResult> {
+    const resolver = await this.buildUnitPriceResolver(params.items);
+    return ComputePackagePriceService.priceItems(params.items, resolver);
+  }
+
+  /**
+   * Price many packages in ONE set of three bulk lookups. The per-package result
+   * is identical to calling `compute` on each group — only the query count
+   * collapses from `3 × Σ items` round-trips to a constant 3. Use this from the
+   * list/catalog handlers instead of `Promise.all(groups.map(compute))`.
+   */
+  async computeMany(
+    itemGroups: PackageItemInput[][],
+  ): Promise<PackagePriceResult[]> {
+    const allItems = itemGroups.flat();
+    const resolver = await this.buildUnitPriceResolver(allItems);
+    return itemGroups.map((items) =>
+      ComputePackagePriceService.priceItems(items, resolver),
+    );
+  }
+
+  /** Pure per-item math over a unit-price resolver — no I/O. */
+  private static priceItems(
+    items: PackageItemInput[],
+    unitPriceOf: UnitPriceResolver,
+  ): PackagePriceResult {
     const itemUnitPrices: { durationOptionId: string; unitPrice: number }[] = [];
     const lines: PackageLinePrice[] = [];
     let subtotal = 0;
@@ -83,8 +119,8 @@ export class ComputePackagePriceService {
     let fullValue = 0;
     let freeValue = 0;
 
-    for (const item of params.items) {
-      const unitPrice = await this.resolveUnitPrice(item);
+    for (const item of items) {
+      const unitPrice = unitPriceOf(item);
       itemUnitPrices.push({ durationOptionId: item.durationOptionId, unitPrice });
 
       const payable = item.paidQuantity * unitPrice;
@@ -144,39 +180,91 @@ export class ComputePackagePriceService {
     return { discountAmount, finalPrice };
   }
 
-  private async resolveUnitPrice(item: PackageItemInput): Promise<number> {
-    const employeeService = await this.prisma.employeeService.findFirst({
-      where: { employeeId: item.employeeId, serviceId: item.serviceId, isActive: true },
-      select: { id: true },
-    });
-    if (!employeeService) {
-      throw new Error(
-        `No active employee service link for employeeId=${item.employeeId}, serviceId=${item.serviceId}`,
-      );
+  /**
+   * Resolve unit prices for a set of items in three bulk lookups, returning a
+   * pure resolver. Resolution priority per item (unchanged):
+   *   1. EmployeeServiceOption.priceOverride (active row, non-null override)
+   *   2. ServiceDurationOption.price (fallback)
+   * The resolver throws on a missing active link / duration — the SAME failure
+   * the legacy per-item path raised, just deferred to price-time.
+   */
+  private async buildUnitPriceResolver(
+    items: PackageItemInput[],
+  ): Promise<UnitPriceResolver> {
+    if (items.length === 0) {
+      return () => {
+        throw new Error('No items to price');
+      };
     }
 
-    // EmployeeServiceOption.priceOverride (may be null) — only used when explicitly set.
-    const override = await this.prisma.employeeServiceOption.findFirst({
+    const employeeIds = [...new Set(items.map((i) => i.employeeId))];
+    const serviceIds = [...new Set(items.map((i) => i.serviceId))];
+    const durationOptionIds = [...new Set(items.map((i) => i.durationOptionId))];
+
+    // 1. Active EmployeeService links → map `${employeeId}:${serviceId}` → id.
+    const links = await this.prisma.employeeService.findMany({
       where: {
-        employeeServiceId: employeeService.id,
-        durationOptionId: item.durationOptionId,
+        employeeId: { in: employeeIds },
+        serviceId: { in: serviceIds },
         isActive: true,
       },
-      select: { priceOverride: true },
+      select: { id: true, employeeId: true, serviceId: true },
     });
-    if (override && override.priceOverride !== null && override.priceOverride !== undefined) {
-      return this.toHalalas(override.priceOverride);
-    }
+    const linkMap = new Map(
+      links.map((l) => [`${l.employeeId}:${l.serviceId}`, l.id]),
+    );
 
-    // Fallback: the service-default duration-option price.
-    const durationOption = await this.prisma.serviceDurationOption.findFirst({
-      where: { id: item.durationOptionId },
-      select: { price: true },
+    // 2. Active EmployeeServiceOption overrides for those links + durations →
+    //    map `${employeeServiceId}:${durationOptionId}` → priceOverride.
+    const employeeServiceIds = [...new Set(links.map((l) => l.id))];
+    const overrides =
+      employeeServiceIds.length > 0
+        ? await this.prisma.employeeServiceOption.findMany({
+            where: {
+              employeeServiceId: { in: employeeServiceIds },
+              durationOptionId: { in: durationOptionIds },
+              isActive: true,
+            },
+            select: {
+              employeeServiceId: true,
+              durationOptionId: true,
+              priceOverride: true,
+            },
+          })
+        : [];
+    const overrideMap = new Map(
+      overrides.map((o) => [
+        `${o.employeeServiceId}:${o.durationOptionId}`,
+        o.priceOverride,
+      ]),
+    );
+
+    // 3. Service-default duration-option prices → map id → price.
+    const durationOptions = await this.prisma.serviceDurationOption.findMany({
+      where: { id: { in: durationOptionIds } },
+      select: { id: true, price: true },
     });
-    if (!durationOption) {
-      throw new Error(`ServiceDurationOption not found for durationOptionId=${item.durationOptionId}`);
-    }
-    return this.toHalalas(durationOption.price);
+    const durationMap = new Map(durationOptions.map((d) => [d.id, d.price]));
+
+    return (item: PackageItemInput): number => {
+      const employeeServiceId = linkMap.get(`${item.employeeId}:${item.serviceId}`);
+      if (!employeeServiceId) {
+        throw new Error(
+          `No active employee service link for employeeId=${item.employeeId}, serviceId=${item.serviceId}`,
+        );
+      }
+      const override = overrideMap.get(`${employeeServiceId}:${item.durationOptionId}`);
+      if (override !== null && override !== undefined) {
+        return this.toHalalas(override);
+      }
+      const price = durationMap.get(item.durationOptionId);
+      if (price === null || price === undefined) {
+        throw new Error(
+          `ServiceDurationOption not found for durationOptionId=${item.durationOptionId}`,
+        );
+      }
+      return this.toHalalas(price);
+    };
   }
 
   /** Decimal(12,2) stores integer halalas but returns Prisma.Decimal; coerce defensively. */

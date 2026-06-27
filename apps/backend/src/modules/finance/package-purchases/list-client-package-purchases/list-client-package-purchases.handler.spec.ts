@@ -84,6 +84,7 @@ function buildPrisma() {
     service: { findMany: jest.fn() },
     employee: { findMany: jest.fn() },
     serviceDurationOption: { findMany: jest.fn() },
+    employeeService: { findMany: jest.fn().mockResolvedValue([]) },
   };
 }
 
@@ -113,6 +114,13 @@ describe('ListClientPackagePurchasesHandler', () => {
     prisma.serviceDurationOption.findMany.mockResolvedValue([
       { id: DURATION_OPTION_ID, labelAr: 'جلسة 60 دقيقة', label: '60-min Session', durationMins: 60 },
       { id: 'dopt-other', labelAr: 'جلسة 30 دقيقة', label: '30-min Session', durationMins: 30 },
+    ]);
+    // P1-8: every credit's (employee, service) pair has an active link by default.
+    prisma.employeeService.findMany.mockResolvedValue([
+      { employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID },
+      { employeeId: EMPLOYEE_ID, serviceId: OTHER_SERVICE_ID },
+      { employeeId: OTHER_EMPLOYEE_ID, serviceId: SERVICE_ID },
+      { employeeId: OTHER_EMPLOYEE_ID, serviceId: OTHER_SERVICE_ID },
     ]);
   }
 
@@ -290,6 +298,8 @@ describe('ListClientPackagePurchasesHandler', () => {
     ]);
     prisma.employee.findMany.mockResolvedValue([{ id: 'e1', name: 'Emp', nameAr: 'موظف', nameEn: null, isActive: true }]);
     prisma.serviceDurationOption.findMany.mockResolvedValue([{ id: 'd1', labelAr: '٤٥ د', label: '45m', durationMins: 45 }]);
+    // Active link for s1/e1 (the bookable credit); s2 is archived anyway.
+    prisma.employeeService.findMany.mockResolvedValue([{ employeeId: 'e1', serviceId: 's1' }]);
 
     const handler = new ListClientPackagePurchasesHandler(prisma as never);
     const rows = await handler.execute({ clientId: 'c1' });
@@ -299,5 +309,36 @@ describe('ListClientPackagePurchasesHandler', () => {
       departmentId: 'dep1', departmentNameAr: 'قسم', serviceIsBookable: true,
     }));
     expect(archived.serviceIsBookable).toBe(false);
+  });
+
+  it('P1-8: marks a credit NOT bookable when the EmployeeService link is inactive even though service + employee are active', async () => {
+    prisma.packagePurchase.findMany.mockResolvedValue([
+      {
+        id: 'p1', packageId: 'pkg1', clientId: 'c1', status: 'ACTIVE',
+        subtotalSnapshot: 0, discountSnapshot: 0, amountPaid: 0, refundAmount: 0,
+        paidAt: new Date('2026-06-01'), refundedAt: null, notes: null, createdAt: new Date('2026-06-01'),
+        credits: [
+          { id: 'cr1', serviceId: 's1', employeeId: 'e1', durationOptionId: 'd1',
+            unitPriceSnapshot: 10000, totalQuantity: 5, usedQuantity: 1 },
+        ],
+      },
+    ]);
+    prisma.sessionPackage.findMany.mockResolvedValue([{ id: 'pkg1', nameAr: 'باقة', nameEn: null }]);
+    prisma.service.findMany.mockResolvedValue([
+      { id: 's1', nameAr: 'خدمة', nameEn: null, isActive: true, archivedAt: null,
+        categoryId: 'cat1',
+        category: { id: 'cat1', nameAr: 'عيادة', nameEn: null, bookingMode: 'SERVICES',
+          departmentId: 'dep1', department: { id: 'dep1', nameAr: 'قسم', nameEn: null } } },
+    ]);
+    prisma.employee.findMany.mockResolvedValue([{ id: 'e1', name: 'Emp', nameAr: 'موظف', nameEn: null, isActive: true }]);
+    prisma.serviceDurationOption.findMany.mockResolvedValue([{ id: 'd1', labelAr: '٤٥ د', label: '45m', durationMins: 45 }]);
+    // No active EmployeeService link → the practitioner was soft-disabled for
+    // this service after the package was sold. book-from-credit would 400, so
+    // the wizard must show it as NOT bookable.
+    prisma.employeeService.findMany.mockResolvedValue([]);
+
+    const handler = new ListClientPackagePurchasesHandler(prisma as never);
+    const rows = await handler.execute({ clientId: 'c1' });
+    expect(rows[0].credits[0].serviceIsBookable).toBe(false);
   });
 });
