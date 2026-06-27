@@ -83,9 +83,9 @@ test.describe('Bookings List — user flow', () => {
       'button:has-text("حجز جديد"), button:has-text("إضافة"), a[href="/bookings/create"]',
     ).first();
 
-    // E2E-CONTRACT: allow-optional-click — the create affordance may be hidden
-    // behind a role/feature gate or rendered under a different label; the else
-    // branch asserts the list page still renders when it is absent.
+    // E2E-CONTRACT: allow-optional-click — the create button may be behind a
+    // feature gate or differently labelled across environments, so its presence
+    // is genuinely optional; the else branch asserts the page rendered instead.
     if (await createBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await createBtn.click();
       // The create action renders the booking POS inline (not in a Dialog and

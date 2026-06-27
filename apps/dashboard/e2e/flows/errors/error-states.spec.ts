@@ -57,10 +57,13 @@ test.describe('Error States', () => {
 
     await page.goto('/bookings')
 
-    // App-Router app: no #__next root, and an aborted-API load may redirect to
-    // /login (no <main>). Assert the app routed to a known surface without
-    // crashing; the retry-affordance check below stays best-effort.
-    await expect(page).toHaveURL(/\/(login|bookings)/, { timeout: 10_000 })
+    // App-Router app gates auth client-side: an aborted-API load keeps the same
+    // URL and renders either the dashboard shell (sidebar/main) or the inline
+    // login gate (#identifier). Assert a concrete app landmark mounted (no
+    // crash) instead of a generic <body> check; the retry check stays best-effort.
+    await expect(
+      page.locator('#identifier, main, nav, [data-sidebar]').first(),
+    ).toBeVisible({ timeout: 10_000 })
 
     const retryButton = page.locator('button:has-text("retry"), button:has-text("إعادة المحاولة")')
     const hasRetry = await retryButton.first().isVisible().catch(() => false)
