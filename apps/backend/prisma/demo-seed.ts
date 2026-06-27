@@ -272,24 +272,24 @@ async function main() {
   //   service ...012 (تنظيف أسنان)     = 25000
   //   service ...013 (استشارة جلدية)   = 20000
   const bookings = [
-    { id: 'bkg-1',  clientId: '00000000-0000-4000-8000-000000000021', employeeId: '00000000-0000-4000-8000-000000000001', serviceId: '00000000-0000-4000-8000-000000000011', status: 'PENDING',   type: 'INDIVIDUAL', at: mk(0, 9),  durationMins: 30, price: '12000' },
-    { id: 'bkg-2',  clientId: '00000000-0000-4000-8000-000000000022', employeeId: '00000000-0000-4000-8000-000000000002', serviceId: '00000000-0000-4000-8000-000000000013', status: 'CONFIRMED', type: 'INDIVIDUAL', at: mk(0, 10), durationMins: 30, price: '20000' },
-    { id: 'bkg-3',  clientId: '00000000-0000-4000-8000-000000000023', employeeId: '00000000-0000-4000-8000-000000000003', serviceId: '00000000-0000-4000-8000-000000000012', status: 'COMPLETED', type: 'INDIVIDUAL', at: mk(-1, 11),durationMins: 45, price: '25000' },
-    { id: 'bkg-4',  clientId: '00000000-0000-4000-8000-000000000021', employeeId: '00000000-0000-4000-8000-000000000002', serviceId: '00000000-0000-4000-8000-000000000013', status: 'CANCELLED', type: 'ONLINE',     at: mk(1, 14), durationMins: 30, price: '20000' },
-    { id: 'bkg-5',  clientId: '00000000-0000-4000-8000-000000000022', employeeId: '00000000-0000-4000-8000-000000000001', serviceId: '00000000-0000-4000-8000-000000000011', status: 'NO_SHOW',   type: 'INDIVIDUAL', at: mk(-2, 15),durationMins: 30, price: '12000' },
-    { id: 'bkg-6',  clientId: '00000000-0000-4000-8000-000000000023', employeeId: '00000000-0000-4000-8000-000000000001', serviceId: '00000000-0000-4000-8000-000000000011', status: 'AWAITING_PAYMENT', type: 'INDIVIDUAL', at: mk(0, 12), durationMins: 30, price: '12000' },
-    { id: 'bkg-7',  clientId: '00000000-0000-4000-8000-000000000021', employeeId: '00000000-0000-4000-8000-000000000003', serviceId: '00000000-0000-4000-8000-000000000012', status: 'CONFIRMED', type: 'WALK_IN',    at: mk(0, 13), durationMins: 45, price: '25000' },
-    { id: 'bkg-8',  clientId: '00000000-0000-4000-8000-000000000022', employeeId: '00000000-0000-4000-8000-000000000002', serviceId: '00000000-0000-4000-8000-000000000013', status: 'PENDING',   type: 'ONLINE',     at: mk(2, 10), durationMins: 30, price: '20000' },
-    { id: 'bkg-9',  clientId: '00000000-0000-4000-8000-000000000023', employeeId: '00000000-0000-4000-8000-000000000001', serviceId: '00000000-0000-4000-8000-000000000011', status: 'CONFIRMED', type: 'INDIVIDUAL', at: mk(3, 9),  durationMins: 30, price: '12000' },
-    { id: 'bkg-10', clientId: '00000000-0000-4000-8000-000000000021', employeeId: '00000000-0000-4000-8000-000000000003', serviceId: '00000000-0000-4000-8000-000000000012', status: 'PENDING',   type: 'INDIVIDUAL', at: mk(4, 11), durationMins: 45, price: '25000' },
-    { id: 'bkg-11', clientId: '00000000-0000-4000-8000-000000000022', employeeId: '00000000-0000-4000-8000-000000000002', serviceId: '00000000-0000-4000-8000-000000000013', status: 'EXPIRED', type:'INDIVIDUAL', at: mk(-3, 14), durationMins: 30, price: '20000' },
-    { id: 'bkg-12', clientId: '00000000-0000-4000-8000-000000000023', employeeId: '00000000-0000-4000-8000-000000000001', serviceId: '00000000-0000-4000-8000-000000000011', status: 'CANCEL_REQUESTED', type: 'INDIVIDUAL', at: mk(1, 10), durationMins: 30, price: '12000' },
+    { id: '00000000-0000-4000-9000-000000000001',  clientId: '00000000-0000-4000-8000-000000000021', employeeId: '00000000-0000-4000-8000-000000000001', serviceId: '00000000-0000-4000-8000-000000000011', status: 'PENDING',   type: 'INDIVIDUAL', at: mk(0, 9),  durationMins: 30, price: '12000' },
+    { id: '00000000-0000-4000-9000-000000000002',  clientId: '00000000-0000-4000-8000-000000000022', employeeId: '00000000-0000-4000-8000-000000000002', serviceId: '00000000-0000-4000-8000-000000000013', status: 'CONFIRMED', type: 'INDIVIDUAL', at: mk(0, 10), durationMins: 30, price: '20000' },
+    { id: '00000000-0000-4000-9000-000000000003',  clientId: '00000000-0000-4000-8000-000000000023', employeeId: '00000000-0000-4000-8000-000000000003', serviceId: '00000000-0000-4000-8000-000000000012', status: 'COMPLETED', type: 'INDIVIDUAL', at: mk(-1, 11),durationMins: 45, price: '25000' },
+    { id: '00000000-0000-4000-9000-000000000004',  clientId: '00000000-0000-4000-8000-000000000021', employeeId: '00000000-0000-4000-8000-000000000002', serviceId: '00000000-0000-4000-8000-000000000013', status: 'CANCELLED', type: 'ONLINE',     at: mk(1, 14), durationMins: 30, price: '20000' },
+    { id: '00000000-0000-4000-9000-000000000005',  clientId: '00000000-0000-4000-8000-000000000022', employeeId: '00000000-0000-4000-8000-000000000001', serviceId: '00000000-0000-4000-8000-000000000011', status: 'NO_SHOW',   type: 'INDIVIDUAL', at: mk(-2, 15),durationMins: 30, price: '12000' },
+    { id: '00000000-0000-4000-9000-000000000006',  clientId: '00000000-0000-4000-8000-000000000023', employeeId: '00000000-0000-4000-8000-000000000001', serviceId: '00000000-0000-4000-8000-000000000011', status: 'AWAITING_PAYMENT', type: 'INDIVIDUAL', at: mk(0, 12), durationMins: 30, price: '12000' },
+    { id: '00000000-0000-4000-9000-000000000007',  clientId: '00000000-0000-4000-8000-000000000021', employeeId: '00000000-0000-4000-8000-000000000003', serviceId: '00000000-0000-4000-8000-000000000012', status: 'CONFIRMED', type: 'WALK_IN',    at: mk(0, 13), durationMins: 45, price: '25000' },
+    { id: '00000000-0000-4000-9000-000000000008',  clientId: '00000000-0000-4000-8000-000000000022', employeeId: '00000000-0000-4000-8000-000000000002', serviceId: '00000000-0000-4000-8000-000000000013', status: 'PENDING',   type: 'ONLINE',     at: mk(2, 10), durationMins: 30, price: '20000' },
+    { id: '00000000-0000-4000-9000-000000000009',  clientId: '00000000-0000-4000-8000-000000000023', employeeId: '00000000-0000-4000-8000-000000000001', serviceId: '00000000-0000-4000-8000-000000000011', status: 'CONFIRMED', type: 'INDIVIDUAL', at: mk(3, 9),  durationMins: 30, price: '12000' },
+    { id: '00000000-0000-4000-9000-000000000010', clientId: '00000000-0000-4000-8000-000000000021', employeeId: '00000000-0000-4000-8000-000000000003', serviceId: '00000000-0000-4000-8000-000000000012', status: 'PENDING',   type: 'INDIVIDUAL', at: mk(4, 11), durationMins: 45, price: '25000' },
+    { id: '00000000-0000-4000-9000-000000000011', clientId: '00000000-0000-4000-8000-000000000022', employeeId: '00000000-0000-4000-8000-000000000002', serviceId: '00000000-0000-4000-8000-000000000013', status: 'EXPIRED', type:'INDIVIDUAL', at: mk(-3, 14), durationMins: 30, price: '20000' },
+    { id: '00000000-0000-4000-9000-000000000012', clientId: '00000000-0000-4000-8000-000000000023', employeeId: '00000000-0000-4000-8000-000000000001', serviceId: '00000000-0000-4000-8000-000000000011', status: 'CANCEL_REQUESTED', type: 'INDIVIDUAL', at: mk(1, 10), durationMins: 30, price: '12000' },
     // Extra bookings so more clients (خالد, ريم, عبدالله) show real lastBooking/nextBooking.
-    { id: 'bkg-13', clientId: '00000000-0000-4000-8000-000000000024', employeeId: '00000000-0000-4000-8000-000000000001', serviceId: '00000000-0000-4000-8000-000000000011', status: 'COMPLETED', type: 'INDIVIDUAL', at: mk(-5, 10), durationMins: 30, price: '12000' },
-    { id: 'bkg-14', clientId: '00000000-0000-4000-8000-000000000024', employeeId: '00000000-0000-4000-8000-000000000002', serviceId: '00000000-0000-4000-8000-000000000013', status: 'CONFIRMED', type: 'INDIVIDUAL', at: mk(5, 11),  durationMins: 30, price: '20000' },
-    { id: 'bkg-15', clientId: '00000000-0000-4000-8000-000000000025', employeeId: '00000000-0000-4000-8000-000000000003', serviceId: '00000000-0000-4000-8000-000000000012', status: 'COMPLETED', type: 'WALK_IN',    at: mk(-7, 12), durationMins: 45, price: '25000' },
-    { id: 'bkg-16', clientId: '00000000-0000-4000-8000-000000000025', employeeId: '00000000-0000-4000-8000-000000000003', serviceId: '00000000-0000-4000-8000-000000000012', status: 'PENDING',   type: 'WALK_IN',    at: mk(6, 9),   durationMins: 45, price: '25000' },
-    { id: 'bkg-17', clientId: '00000000-0000-4000-8000-000000000026', employeeId: '00000000-0000-4000-8000-000000000001', serviceId: '00000000-0000-4000-8000-000000000011', status: 'COMPLETED', type: 'WALK_IN',    at: mk(-3, 15), durationMins: 30, price: '12000' },
+    { id: '00000000-0000-4000-9000-000000000013', clientId: '00000000-0000-4000-8000-000000000024', employeeId: '00000000-0000-4000-8000-000000000001', serviceId: '00000000-0000-4000-8000-000000000011', status: 'COMPLETED', type: 'INDIVIDUAL', at: mk(-5, 10), durationMins: 30, price: '12000' },
+    { id: '00000000-0000-4000-9000-000000000014', clientId: '00000000-0000-4000-8000-000000000024', employeeId: '00000000-0000-4000-8000-000000000002', serviceId: '00000000-0000-4000-8000-000000000013', status: 'CONFIRMED', type: 'INDIVIDUAL', at: mk(5, 11),  durationMins: 30, price: '20000' },
+    { id: '00000000-0000-4000-9000-000000000015', clientId: '00000000-0000-4000-8000-000000000025', employeeId: '00000000-0000-4000-8000-000000000003', serviceId: '00000000-0000-4000-8000-000000000012', status: 'COMPLETED', type: 'WALK_IN',    at: mk(-7, 12), durationMins: 45, price: '25000' },
+    { id: '00000000-0000-4000-9000-000000000016', clientId: '00000000-0000-4000-8000-000000000025', employeeId: '00000000-0000-4000-8000-000000000003', serviceId: '00000000-0000-4000-8000-000000000012', status: 'PENDING',   type: 'WALK_IN',    at: mk(6, 9),   durationMins: 45, price: '25000' },
+    { id: '00000000-0000-4000-9000-000000000017', clientId: '00000000-0000-4000-8000-000000000026', employeeId: '00000000-0000-4000-8000-000000000001', serviceId: '00000000-0000-4000-8000-000000000011', status: 'COMPLETED', type: 'WALK_IN',    at: mk(-3, 15), durationMins: 30, price: '12000' },
   ];
 
   for (const [i, b] of bookings.entries()) {
@@ -320,11 +320,61 @@ async function main() {
     });
   }
 
+  // Invoices + payments — production creates an invoice per booking, so the
+  // dashboard payment column and the "record payment" dialog need one here too.
+  // The center is NOT VAT-registered: vatRate = 0, total = subtotal (halalas).
+  // COMPLETED/CONFIRMED bookings are seeded fully paid (CASH); the rest stay
+  // unpaid so their badge stays clickable to record a payment.
+  const PAID_STATUSES = new Set(['COMPLETED', 'CONFIRMED']);
+  for (const [i, b] of bookings.entries()) {
+    const isPaid = PAID_STATUSES.has(b.status);
+    const invoiceId = `00000000-0000-4000-9002-${String(i + 1).padStart(12, '0')}`;
+    const invoiceFields = {
+      branchId: BRANCH_ID,
+      clientId: b.clientId,
+      employeeId: b.employeeId,
+      subtotal: b.price as any,
+      vatRate: '0' as any,
+      vatAmt: '0' as any,
+      total: b.price as any,
+      currency: 'SAR',
+      status: (isPaid ? 'PAID' : 'ISSUED') as any,
+      issuedAt: b.at,
+      paidAt: isPaid ? b.at : null,
+      updatedAt: new Date(),
+    };
+    // Key on bookingId (unique) so pre-existing invoices created via the
+    // dashboard get normalized instead of colliding on the unique constraint.
+    const invoice = await prisma.invoice.upsert({
+      where: { bookingId: b.id },
+      create: { id: invoiceId, bookingId: b.id, ...invoiceFields },
+      update: invoiceFields,
+    });
+
+    if (isPaid) {
+      const paymentId = `00000000-0000-4000-9003-${String(i + 1).padStart(12, '0')}`;
+      await prisma.payment.upsert({
+        where: { id: paymentId },
+        create: {
+          id: paymentId,
+          invoiceId: invoice.id,
+          amount: b.price as any,
+          currency: 'SAR',
+          method: 'CASH',
+          status: 'COMPLETED',
+          processedAt: b.at,
+          updatedAt: new Date(),
+        },
+        update: {},
+      });
+    }
+  }
+
   // Ratings — tie them to COMPLETED bookings so one employee accumulates an
   // average that the UI can surface (plan §1.2: "an employee with ratings").
   const completed = bookings.filter((b) => b.status === 'COMPLETED');
   const ratings = completed.slice(0, 4).map((b, i) => ({
-    id: `rating-${i + 1}`,
+    id: `00000000-0000-4000-9001-${String(i + 1).padStart(12, '0')}`,
     bookingId: b.id,
     clientId: b.clientId,
     employeeId: b.employeeId,
