@@ -13,7 +13,7 @@ export class GetDurationOptionsHandler {
 
   async execute(cmd: GetDurationOptionsCommand) {
     return this.prisma.serviceDurationOption.findMany({
-      where: { serviceId: cmd.serviceId },
+      where: { serviceId: cmd.serviceId, isActive: true },
       orderBy: { sortOrder: 'asc' },
     });
   }

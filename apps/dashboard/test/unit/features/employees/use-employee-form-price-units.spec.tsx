@@ -116,6 +116,7 @@ const draftService = {
         {
           id: "opt-45",
           serviceId: "svc-1",
+          deliveryType: "IN_PERSON" as const,
           label: "45 minutes",
           labelAr: "٤٥ دقيقة",
           durationMins: 45,
@@ -127,6 +128,7 @@ const draftService = {
         {
           id: "opt-90",
           serviceId: "svc-1",
+          deliveryType: "IN_PERSON" as const,
           label: "90 minutes",
           labelAr: "٩٠ دقيقة",
           durationMins: 90,

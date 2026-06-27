@@ -89,6 +89,7 @@ export interface ServiceAvailabilityWindow {
 export interface ServiceDurationOption {
   id: string
   serviceId: string
+  deliveryType: ServiceDeliveryType
   label: string
   labelAr: string | null
   durationMins: number

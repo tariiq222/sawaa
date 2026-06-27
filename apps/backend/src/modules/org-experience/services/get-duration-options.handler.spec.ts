@@ -34,7 +34,7 @@ describe('GetDurationOptionsHandler', () => {
     const result = await handler.execute({ serviceId: 'svc-1' });
 
     expect(prisma.serviceDurationOption.findMany).toHaveBeenCalledWith({
-      where: { serviceId: 'svc-1' },
+      where: { serviceId: 'svc-1', isActive: true },
       orderBy: { sortOrder: 'asc' },
     });
     expect(result).toBe(rows);

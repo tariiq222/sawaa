@@ -511,6 +511,8 @@ export const enServices: Record<string, string> = {
   "packages.items.durationPlaceholder": "Select a duration",
   "packages.items.practitionerUnavailable": "No active practitioner offers this service",
   "packages.items.durationUnavailable": "No active duration option for this service",
+  "packages.items.deliveryType.IN_PERSON": "In-person",
+  "packages.items.deliveryType.ONLINE": "Online",
   "packages.summary.subtotal": "Subtotal",
   "packages.summary.fullValue": "Full value",
   "packages.summary.freeTotal": "Free sessions value",

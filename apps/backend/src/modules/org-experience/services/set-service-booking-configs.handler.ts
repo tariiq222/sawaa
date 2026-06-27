@@ -8,6 +8,31 @@ export type SetServiceBookingConfigsCommand = SetServiceBookingConfigsDto & {
   serviceId: string;
 };
 
+/**
+ * Collapse duration options that share the same durationMins within one delivery
+ * type. A service-level duration menu must expose exactly one price per
+ * (deliveryType, durationMins); without this guard the form's synthetic default
+ * plus a user-added row of the same duration produce duplicate
+ * ServiceDurationOption rows (no DB UNIQUE on the triple guards against it).
+ * Survivor preference: a row carrying an id (an existing DB row) wins over a new
+ * one so we never orphan-and-recreate a row that bookings may reference; the
+ * first occurrence (the form lists the default first) wins otherwise.
+ */
+export function dedupeDurationOptions<
+  T extends { id?: string; durationMins: number },
+>(options: T[]): T[] {
+  const byDuration = new Map<number, T>();
+  for (const option of options) {
+    const kept = byDuration.get(option.durationMins);
+    if (!kept) {
+      byDuration.set(option.durationMins, option);
+      continue;
+    }
+    if (!kept.id && option.id) byDuration.set(option.durationMins, option);
+  }
+  return [...byDuration.values()];
+}
+
 @Injectable()
 export class SetServiceBookingConfigsHandler {
   constructor(
@@ -91,21 +116,27 @@ export class SetServiceBookingConfigsHandler {
         });
 
         if (t.durationOptions) {
-          const optionIds = t.durationOptions.map((o) => o.id).filter((id): id is string => !!id);
+          // Collapse same-duration duplicates so one PUT can never persist two
+          // rows for the same (deliveryType, durationMins) triple.
+          const durationOptions = dedupeDurationOptions(t.durationOptions);
+          const optionIds = durationOptions.map((o) => o.id).filter((id): id is string => !!id);
           await tx.serviceDurationOption.deleteMany({
             where: {
               serviceId: cmd.serviceId,
               deliveryType,
+              // Service-level save only touches service-level rows; never delete
+              // a practitioner's owned (employeeServiceId != null) options.
+              employeeServiceId: null,
               ...(optionIds.length > 0 ? { id: { notIn: optionIds } } : {}),
             },
           });
-          await Promise.all(t.durationOptions.map((option, index) => (
+          await Promise.all(durationOptions.map((option, index) => (
             option.id
               ? tx.serviceDurationOption.updateMany({
                   // Defence-in-depth: compound where ensures we can never mutate
-                  // a duration option that belongs to a different service even if
-                  // the upstream validation is bypassed.
-                  where: { id: option.id, serviceId: cmd.serviceId },
+                  // a duration option that belongs to a different service (or to a
+                  // practitioner) even if the upstream validation is bypassed.
+                  where: { id: option.id, serviceId: cmd.serviceId, employeeServiceId: null },
                   data: {
                     deliveryType,
                     label: option.label,

@@ -20,6 +20,7 @@ const serviceBookingTypes: ServiceBookingType[] = [
       {
         id: "opt-45",
         serviceId: "svc-1",
+        deliveryType: "IN_PERSON",
         label: "45 minutes",
         labelAr: "٤٥ دقيقة",
         durationMins: 45,

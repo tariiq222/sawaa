@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
 import { normalizeDeliveryTypeInput } from '../delivery-type-input.helper';
+import { dedupeDurationOptions } from '../set-service-booking-configs.handler';
 import { SetEmployeeDurationsCommand } from './set-employee-durations.dto';
 
 export { SetEmployeeDurationsCommand };
@@ -53,7 +54,10 @@ export class SetEmployeeDurationsHandler {
         // Collect IDs that are staying (either updated or newly created)
         const keepIds: string[] = [];
 
-        for (const item of group.items) {
+        // Collapse same-duration duplicates: a practitioner's owned menu must
+        // expose one price per (deliveryType, durationMins), same as service level.
+        const items = dedupeDurationOptions(group.items);
+        for (const item of items) {
           if (item.id) {
             // Update existing row — must belong to this employee+service+deliveryType
             const existing = await tx.serviceDurationOption.findFirst({

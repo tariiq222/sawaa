@@ -8,11 +8,11 @@
  *   service       →  from a flat list of all services
  *   practitioner  →  from `useServiceEmployees(serviceId)` (auto-filtered
  *                    to the practitioners who actually offer the service)
- *   duration      →  from `useDurationOptions(serviceId)` (the service's
- *                    own duration options; if the practitioner has a
- *                    `useCustomPricing` override, we additionally surface
- *                    their `effectiveDurations` group with the override
- *                    price so the live preview shows the real number)
+ *   duration      →  from the SELECTED practitioner's `effectiveDurations`
+ *                    (their owned rows when they price custom, otherwise the
+ *                    inherited service-level rows) — each carries the effective
+ *                    id + price, so the dropdown shows one line per real option
+ *                    instead of every practitioner's look-alike price
  *   paid / free   →  integer >= 0
  *
  * The form's `watch` reads the rendered `paidQuantity × unitPrice` so the
@@ -44,11 +44,11 @@ import {
 } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
 
-import { useAllServices, useServiceEmployees, useDurationOptions } from "@/hooks/use-services"
+import { useAllServices, useServiceEmployees } from "@/hooks/use-services"
 import { useLocale } from "@/components/locale-provider"
 import { formatPrice, sarToHalalas } from "@/lib/money"
 import { applyItemDiscount } from "@/lib/package-price"
-import type { ServiceEmployee, ServiceDurationOption, Service } from "@/lib/types/service"
+import type { Service } from "@/lib/types/service"
 import type { PackageDiscountType } from "@/lib/types/package"
 
 /* ─── Public shape ─── */
@@ -79,24 +79,17 @@ const NONE = "__none__"
 const DISCOUNT_NONE = "__no_discount__"
 
 /**
- * Resolves a representative unit price (halalas) for a given item row.
- * - If the practitioner has an `effectiveDurations` entry matching this
- *   duration, that override wins; otherwise the service-default duration
- *   option price is used (mirrors `ComputePackagePriceService.resolveUnitPrice`).
- * - Returns 0 if no duration is selected.
+ * A duration choice resolved for the selected practitioner. `id` is the
+ * effective ServiceDurationOption id (the practitioner's owned row when they
+ * have custom pricing, otherwise the inherited service-level row) and `price`
+ * is its effective halalas price — mirroring `ComputePackagePriceService`.
  */
-export function resolveItemUnitPrice(
-  selectedDuration: ServiceDurationOption | undefined,
-  selectedEmployee: ServiceEmployee | undefined,
-): number {
-  if (!selectedDuration) return 0
-  const base = Number(selectedDuration.price) || 0
-  if (!selectedEmployee) return base
-  const override = selectedEmployee.effectiveDurations
-    ?.flatMap((g) => g.durations)
-    ?.find((d) => d.durationMins === selectedDuration.durationMins)
-  if (override && override.price != null) return Number(override.price) || base
-  return base
+interface DurationChoice {
+  id: string
+  deliveryType: "IN_PERSON" | "ONLINE"
+  durationMins: number
+  label: string
+  price: number
 }
 
 /* ─── Component ─── */
@@ -211,18 +204,35 @@ function ItemRow({
 
   const { data: employees = [], isLoading: isLoadingEmployees } =
     useServiceEmployees(selectedServiceId)
-  const { data: durations = [], isLoading: isLoadingDurations } =
-    useDurationOptions(selectedServiceId)
 
-  const selectedDuration = useMemo(
-    () => durations.find((d) => d.id === watch(durationPath)),
-    [durations, watch, durationPath],
-  )
   const selectedEmployee = useMemo(
     () => employees.find((e) => e.employee.id === selectedEmployeeId),
     [employees, selectedEmployeeId],
   )
-  const unitPrice = resolveItemUnitPrice(selectedDuration, selectedEmployee)
+
+  // Duration choices belong to the SELECTED practitioner: their owned rows when
+  // they price custom, otherwise the inherited service-level rows. Listing the
+  // raw service-wide rows here would surface every practitioner's price as a
+  // separate look-alike line.
+  const durationChoices = useMemo<DurationChoice[]>(
+    () =>
+      (selectedEmployee?.effectiveDurations ?? []).flatMap((g) =>
+        g.durations.map((d) => ({
+          id: d.id,
+          deliveryType: d.deliveryType,
+          durationMins: d.durationMins,
+          label: d.labelAr || d.label,
+          price: d.price,
+        })),
+      ),
+    [selectedEmployee],
+  )
+
+  const selectedDuration = useMemo(
+    () => durationChoices.find((d) => d.id === watch(durationPath)),
+    [durationChoices, watch, durationPath],
+  )
+  const unitPrice = Number(selectedDuration?.price ?? 0)
   const payable = paid * unitPrice
   const freeValue = free * unitPrice
   const fullValue = (paid + free) * unitPrice
@@ -302,7 +312,11 @@ function ItemRow({
             render={({ field }) => (
               <Select
                 value={(field.value as string) || NONE}
-                onValueChange={(v) => field.onChange(v === NONE ? "" : v)}
+                onValueChange={(v) => {
+                  field.onChange(v === NONE ? "" : v)
+                  // Duration choices are practitioner-specific — clear the stale pick.
+                  setValue(durationPath, "" as never, { shouldDirty: true })
+                }}
                 disabled={!selectedServiceId || isLoadingEmployees}
               >
                 <SelectTrigger id={employeePath as string}>
@@ -351,36 +365,34 @@ function ItemRow({
               <Select
                 value={(field.value as string) || NONE}
                 onValueChange={(v) => field.onChange(v === NONE ? "" : v)}
-                disabled={!selectedServiceId || isLoadingDurations}
+                disabled={!selectedServiceId || !selectedEmployeeId || isLoadingEmployees}
               >
                 <SelectTrigger id={durationPath as string}>
                   <SelectValue
                     placeholder={
                       !selectedServiceId
                         ? t("packages.items.servicePlaceholder")
-                        : isLoadingDurations
-                          ? t("common.loading")
-                          : durations.length === 0
-                            ? t("packages.items.durationUnavailable")
-                            : t("packages.items.durationPlaceholder")
+                        : !selectedEmployeeId
+                          ? t("packages.items.employeePlaceholder")
+                          : isLoadingEmployees
+                            ? t("common.loading")
+                            : durationChoices.length === 0
+                              ? t("packages.items.durationUnavailable")
+                              : t("packages.items.durationPlaceholder")
                     }
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  {durations.length === 0 ? (
+                  {durationChoices.length === 0 ? (
                     <SelectItem value={NONE} disabled>
                       {t("packages.items.durationUnavailable")}
                     </SelectItem>
                   ) : (
-                    durations.map((d) => {
-                      const label = d.labelAr ?? d.label
-                      const empOverride = selectedEmployee?.effectiveDurations
-                        ?.flatMap((g) => g.durations)
-                        ?.find((x) => x.durationMins === d.durationMins)
-                      const displayPrice = empOverride?.price ?? d.price
+                    durationChoices.map((d) => {
+                      const deliveryLabel = t(`packages.items.deliveryType.${d.deliveryType}`)
                       return (
                         <SelectItem key={d.id} value={d.id}>
-                          {label} · {d.durationMins} {t("common.min")} · {formatPrice(Number(displayPrice))}
+                          {deliveryLabel} · {d.durationMins} {t("common.min")} · {formatPrice(d.price)}
                         </SelectItem>
                       )
                     })

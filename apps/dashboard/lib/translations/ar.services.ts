@@ -511,6 +511,8 @@ export const arServices: Record<string, string> = {
   "packages.items.durationPlaceholder": "اختر مدة",
   "packages.items.practitionerUnavailable": "لا يوجد ممارس نشط يقدّم هذه الخدمة",
   "packages.items.durationUnavailable": "لا توجد خيارات مدة نشطة لهذه الخدمة",
+  "packages.items.deliveryType.IN_PERSON": "حضوري",
+  "packages.items.deliveryType.ONLINE": "أونلاين",
   "packages.summary.subtotal": "المجموع قبل الخصم",
   "packages.summary.fullValue": "القيمة الكاملة",
   "packages.summary.freeTotal": "قيمة الجلسات المجانية",

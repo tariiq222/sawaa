@@ -1,7 +1,44 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { SetServiceBookingConfigsHandler } from './set-service-booking-configs.handler';
+import { SetServiceBookingConfigsHandler, dedupeDurationOptions } from './set-service-booking-configs.handler';
+
+describe('dedupeDurationOptions', () => {
+  it('collapses two options with the same durationMins, keeping the one with an id', () => {
+    const out = dedupeDurationOptions([
+      { id: 'default-1', durationMins: 30, isDefault: true },
+      { durationMins: 30, isDefault: false },
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].id).toBe('default-1');
+  });
+
+  it('keeps distinct durations untouched', () => {
+    const out = dedupeDurationOptions([
+      { id: 'a', durationMins: 30 },
+      { id: 'b', durationMins: 60 },
+    ]);
+    expect(out).toHaveLength(2);
+  });
+
+  it('prefers an existing (id) row over a new (no-id) first occurrence', () => {
+    const out = dedupeDurationOptions([
+      { durationMins: 30 },
+      { id: 'existing', durationMins: 30 },
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].id).toBe('existing');
+  });
+
+  it('keeps the first when both share the same duration and id state', () => {
+    const out = dedupeDurationOptions([
+      { id: 'first', durationMins: 30 },
+      { id: 'second', durationMins: 30 },
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].id).toBe('first');
+  });
+});
 
 describe('SetServiceBookingConfigsHandler', () => {
   let handler: SetServiceBookingConfigsHandler;
@@ -85,6 +122,78 @@ describe('SetServiceBookingConfigsHandler', () => {
     }));
     expect(result[0].durationOptions).toHaveLength(1);
     expect(result[0].availabilityWindows).toHaveLength(1);
+  });
+
+  describe('duplicate prevention + practitioner isolation', () => {
+    const SERVICE_ID = '00000000-0000-0000-0000-000000000001';
+
+    const buildTx = () => ({
+      serviceBookingConfig: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        upsert: jest.fn().mockResolvedValue({}),
+      },
+      serviceDurationOption: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        create: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      serviceAvailabilityWindow: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+    });
+
+    beforeEach(() => {
+      (prisma.service.findFirst as jest.Mock).mockResolvedValue({ id: SERVICE_ID });
+      (prisma.serviceBookingConfig.findMany as jest.Mock).mockResolvedValue([]);
+      (prisma.serviceDurationOption.findMany as jest.Mock).mockResolvedValue([]);
+      (prisma.serviceAvailabilityWindow.findMany as jest.Mock).mockResolvedValue([]);
+    });
+
+    it('creates only one row when the payload has two new options of the same duration', async () => {
+      const tx = buildTx();
+      rlsTransaction.withTransaction.mockImplementation(async (cb) => cb(tx));
+
+      await handler.execute({
+        serviceId: SERVICE_ID,
+        types: [{
+          deliveryType: 'IN_PERSON' as any,
+          price: 100,
+          durationMins: 30,
+          durationOptions: [
+            { label: '30 min', labelAr: '30 دقيقة', durationMins: 30, price: 25000, isDefault: true },
+            { label: '30 min', labelAr: '30 دقيقة', durationMins: 30, price: 25000, isDefault: false },
+          ],
+        }],
+      });
+
+      expect(tx.serviceDurationOption.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('scopes deleteMany and updateMany to service-level rows (employeeServiceId: null)', async () => {
+      const tx = buildTx();
+      rlsTransaction.withTransaction.mockImplementation(async (cb) => cb(tx));
+      (prisma.serviceDurationOption.findMany as jest.Mock).mockResolvedValueOnce([
+        { id: 'opt-1', serviceId: SERVICE_ID },
+      ]);
+
+      await handler.execute({
+        serviceId: SERVICE_ID,
+        types: [{
+          deliveryType: 'IN_PERSON' as any,
+          price: 100,
+          durationMins: 30,
+          durationOptions: [{ id: 'opt-1', label: '30 min', durationMins: 30, price: 25000, isDefault: true }],
+        }],
+      });
+
+      expect(tx.serviceDurationOption.deleteMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ employeeServiceId: null }),
+      }));
+      expect(tx.serviceDurationOption.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ employeeServiceId: null }),
+      }));
+    });
   });
 
   describe('durationOption ownership validation', () => {
@@ -191,7 +300,7 @@ describe('SetServiceBookingConfigsHandler', () => {
 
       expect(rlsTransaction.withTransaction).toHaveBeenCalled();
       expect(tx.serviceDurationOption.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: { id: 'opt-1', serviceId: SERVICE_ID },
+        where: { id: 'opt-1', serviceId: SERVICE_ID, employeeServiceId: null },
       }));
     });
 
