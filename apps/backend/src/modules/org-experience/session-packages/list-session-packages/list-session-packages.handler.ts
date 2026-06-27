@@ -57,29 +57,29 @@ export class ListSessionPackagesHandler {
       this.prisma.sessionPackage.count({ where }),
     ]);
 
-    const priced = await Promise.all(
-      items.map(async (pkg) => {
-        const price = await this.pricing.compute({
-          items: pkg.items.map((i) => ({
-            serviceId: i.serviceId,
-            employeeId: i.employeeId,
-            durationOptionId: i.durationOptionId,
-            paidQuantity: i.paidQuantity,
-            freeQuantity: i.freeQuantity,
-            discountType: i.discountType,
-            discountValue: Number(i.discountValue),
-          })),
-        });
-        return {
-          ...pkg,
-          subtotal: price.subtotal,
-          discountAmount: price.discountAmount,
-          finalPrice: price.finalPrice,
-          fullValue: price.fullValue,
-          freeValue: price.freeValue,
-        };
-      }),
+    // Batched pricing (P1-4): one set of three bulk lookups for the whole page
+    // instead of 3 × Σ items per-package round-trips.
+    const prices = await this.pricing.computeMany(
+      items.map((pkg) =>
+        pkg.items.map((i) => ({
+          serviceId: i.serviceId,
+          employeeId: i.employeeId,
+          durationOptionId: i.durationOptionId,
+          paidQuantity: i.paidQuantity,
+          freeQuantity: i.freeQuantity,
+          discountType: i.discountType,
+          discountValue: Number(i.discountValue),
+        })),
+      ),
     );
+    const priced = items.map((pkg, idx) => ({
+      ...pkg,
+      subtotal: prices[idx].subtotal,
+      discountAmount: prices[idx].discountAmount,
+      finalPrice: prices[idx].finalPrice,
+      fullValue: prices[idx].fullValue,
+      freeValue: prices[idx].freeValue,
+    }));
 
     return toListResponse(priced, total, page, limit);
   }
