@@ -135,4 +135,50 @@ describe('ClientCancelBookingHandler', () => {
 
     expect(result.status).toBe('CANCELLED');
   });
+
+  // ─── Session-package credit return (P1-1 fix) ───────────────────────────
+
+  it('returns session-package credit on direct-cancel of a credit booking', async () => {
+    const creditBooking = { ...futureBooking, packageCreditId: 'credit-1' };
+    const prisma = buildPrisma();
+    prisma.booking.findUnique.mockResolvedValue(creditBooking);
+    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+
+    const result = await handler.execute({ bookingId: 'book-1', clientId: 'client-1' });
+
+    expect(result.status).toBe('CANCELLED');
+    expect(prisma.packageCreditUsage.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'usage-1' },
+        data: expect.objectContaining({ status: 'RETURNED' }),
+      }),
+    );
+    expect(prisma.packageCredit.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'credit-1' },
+        data: expect.objectContaining({ usedQuantity: { decrement: 1 } }),
+      }),
+    );
+  });
+
+  it('does NOT return credit on CANCEL_REQUESTED paths (credit stays consumed until approval)', async () => {
+    // 12h in the future + 24h free-cancel window → falls into the "outside
+    // free cancel window" branch which routes to CANCEL_REQUESTED.
+    const soonCreditBooking = {
+      ...futureBooking,
+      status: BookingStatus.CONFIRMED,
+      scheduledAt: new Date(Date.now() + 12 * 3_600_000),
+      endsAt: new Date(Date.now() + 13 * 3_600_000),
+      packageCreditId: 'credit-1',
+    };
+    const prisma = buildPrisma();
+    prisma.booking.findUnique.mockResolvedValue(soonCreditBooking);
+    const handler = new ClientCancelBookingHandler(prisma as never, buildRlsTransaction(prisma) as never, buildSettingsHandler() as never, buildEventBus() as never, refundHandler as never, buildGroupCapacity() as never);
+
+    const result = await handler.execute({ bookingId: 'book-1', clientId: 'client-1' });
+
+    expect(result.status).toBe('CANCEL_REQUESTED');
+    expect(prisma.packageCreditUsage.update).not.toHaveBeenCalled();
+    expect(prisma.packageCredit.update).not.toHaveBeenCalled();
+  });
 });

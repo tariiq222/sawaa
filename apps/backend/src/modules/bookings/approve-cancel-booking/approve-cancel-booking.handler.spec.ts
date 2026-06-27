@@ -327,4 +327,41 @@ describe('ApproveCancelBookingHandler', () => {
       }),
     );
   });
+
+  // ─── Session-package credit return (P1-1 fix) ───────────────────────────
+
+  it('returns session-package credit on cancel-approval of a credit booking', async () => {
+    const creditBooking = { ...cancelRequestedBooking, packageCreditId: 'credit-1' };
+    const prisma = buildPrisma();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue(creditBooking);
+    prisma.booking.update = jest.fn().mockResolvedValue({ ...creditBooking, status: BookingStatus.CANCELLED });
+    const handler = buildHandler(prisma);
+
+    await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1' });
+
+    expect(prisma.packageCreditUsage.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'usage-1' },
+        data: expect.objectContaining({ status: 'RETURNED' }),
+      }),
+    );
+    expect(prisma.packageCredit.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'credit-1' },
+        data: expect.objectContaining({ usedQuantity: { decrement: 1 } }),
+      }),
+    );
+  });
+
+  it('does NOT call returnPackageCreditForBooking when booking has no packageCreditId', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findFirst = jest.fn().mockResolvedValue(cancelRequestedBooking); // no packageCreditId
+    prisma.booking.update = jest.fn().mockResolvedValue({ ...cancelRequestedBooking, status: BookingStatus.CANCELLED });
+    const handler = buildHandler(prisma);
+
+    await handler.execute({ bookingId: 'book-1', approvedBy: 'admin-1' });
+
+    expect(prisma.packageCreditUsage.update).not.toHaveBeenCalled();
+    expect(prisma.packageCredit.update).not.toHaveBeenCalled();
+  });
 });

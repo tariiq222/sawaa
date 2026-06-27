@@ -69,6 +69,7 @@ function buildTx(lockedCredit = lockedCreditRow()) {
     },
     invoice: { create: jest.fn() }, // must NEVER be called
     outboxEvent: { create: jest.fn().mockResolvedValue({ id: 'outbox-1' }) },
+    activityLog: { create: jest.fn().mockResolvedValue({ id: 'log-1' }) },
   };
   return tx;
 }
@@ -300,7 +301,62 @@ describe('BookFromCreditHandler', () => {
       });
     });
 
-    it('writes a BookingCreatedEvent to the outbox inside the transaction', async () => {
+    it('P1-2: writes a PackageCreditUsage ActivityLog row with the acting user and target client', async () => {
+    const prisma = buildPrisma();
+    prisma.packageCredit.findFirst.mockResolvedValue({
+      id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
+      employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+      totalQuantity: 5, usedQuantity: 0,
+    });
+    const { handler, tx } = buildHandler({ prisma });
+    const STAFF_USER_ID = 'staff-user-99';
+
+    await handler.execute({ ...baseCmd(), userId: STAFF_USER_ID });
+
+    expect(tx.activityLog.create).toHaveBeenCalledTimes(1);
+    const call = tx.activityLog.create.mock.calls[0][0];
+    expect(call.data).toEqual(
+      expect.objectContaining({
+        userId: STAFF_USER_ID,
+        action: 'CREATE',
+        entity: 'PackageCreditUsage',
+        entityId: CREDIT_ID,
+        description: expect.stringContaining('session-package credit'),
+        metadata: expect.objectContaining({
+          targetClientId: CLIENT_ID,
+          creditId: CREDIT_ID,
+          purchaseId: PURCHASE_ID,
+          employeeId: EMPLOYEE_ID,
+          bookingNumber: 1,
+        }),
+      }),
+    );
+  });
+
+  it('P1-2: falls back to clientId as actor when the controller did not pass userId', async () => {
+    // The /me/* client-side endpoint (if ever wired) would not pass userId
+    // because the JWT claim lives on a different namespace. The audit row
+    // MUST still record SOMETHING as the actor, so we fall back to the
+    // clientId of the booking — which is the worst case the handler can
+    // accept (no orphan audit row).
+    const prisma = buildPrisma();
+    prisma.packageCredit.findFirst.mockResolvedValue({
+      id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
+      employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+      totalQuantity: 5, usedQuantity: 0,
+    });
+    const { handler, tx } = buildHandler({ prisma });
+    const cmdWithoutUserId = { ...baseCmd() } as Record<string, unknown>;
+    delete cmdWithoutUserId.userId;
+
+    await handler.execute(cmdWithoutUserId as never);
+
+    expect(tx.activityLog.create).toHaveBeenCalledTimes(1);
+    const call = tx.activityLog.create.mock.calls[0][0];
+    expect(call.data.userId).toBe(CLIENT_ID);
+  });
+
+  it('writes a BookingCreatedEvent to the outbox inside the transaction', async () => {
       const prisma = buildPrisma();
       mockResolvedCredit(prisma);
       const { handler, tx } = buildHandler({ prisma });

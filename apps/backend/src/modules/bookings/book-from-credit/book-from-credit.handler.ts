@@ -5,7 +5,7 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { DeliveryType, PackagePurchaseStatus, Prisma } from '@prisma/client';
+import { ActivityAction, DeliveryType, PackagePurchaseStatus, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { GetBookingSettingsHandler } from '../get-booking-settings/get-booking-settings.handler';
 import { CheckAvailabilityHandler } from '../check-availability/check-availability.handler';
@@ -272,6 +272,30 @@ export class BookFromCreditHandler {
         await tx.packageCredit.update({
           where: { id: credit.id },
           data: { usedQuantity: { increment: 1 } },
+        });
+
+        // P1-2 audit trail: every cross-client credit consumption is recorded
+        // with the acting staff user + the target client + the credit bucket.
+        // The endpoint already requires create:Booking, so the audit row is
+        // the accountability layer that makes a rogue receptionist's
+        // cross-client consumption traceable after the fact.
+        await tx.activityLog.create({
+          data: {
+            userId: cmd.userId ?? cmd.clientId,
+            action: ActivityAction.CREATE,
+            entity: 'PackageCreditUsage',
+            entityId: credit.id,
+            description: `Staff consumed a session-package credit on behalf of a client`,
+            metadata: {
+              bookingId: created.id,
+              bookingNumber: nextBookingNumber,
+              targetClientId: cmd.clientId,
+              creditId: credit.id,
+              purchaseId: credit.purchaseId,
+              employeeId: credit.employeeId,
+              scheduledAt: scheduledAt.toISOString(),
+            } as Prisma.InputJsonValue,
+          },
         });
 
         // Auto-complete the purchase when every credit is fully consumed.

@@ -11,6 +11,7 @@ import { BookingCancelApprovedEvent } from '../events/booking-cancel-approved.ev
 import { assertTransition } from '../booking-state-machine';
 import { ProgramCapacityService } from '../program/program-capacity.service';
 import { updateBookingAtomically } from '../booking-lifecycle.helper';
+import { returnPackageCreditForBooking } from '../package-credit-return.helper';
 import { RefundPaymentHandler } from '../../finance/refund-payment/refund-payment.handler';
 
 export interface ApproveCancelBookingCommand {
@@ -115,6 +116,14 @@ export class ApproveCancelBookingHandler {
           refundRequestId = created.refundRequestId;
           idempotencyKey = created.idempotencyKey;
         }
+      }
+
+      // Session-package credit bookings: return the credit to its bucket
+      // on cancel-approval. Mirrors the cancel-booking behaviour so every
+      // terminal non-completed case reopens the credit (no burn window, no
+      // refund — the booking had zero monetary value).
+      if (booking.packageCreditId) {
+        await returnPackageCreditForBooking(tx, cmd.bookingId);
       }
 
       // Roll back sibling AWAITING_PAYMENT bookings for program enrollments.

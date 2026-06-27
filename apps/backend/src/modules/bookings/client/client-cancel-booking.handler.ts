@@ -11,6 +11,7 @@ import { assertTransition } from '../booking-state-machine';
 import { computeRefundType, computeRefundAmountHalalas } from '../cancellation-policy';
 import { ProgramCapacityService } from '../program/program-capacity.service';
 import { updateBookingAtomically } from '../booking-lifecycle.helper';
+import { returnPackageCreditForBooking } from '../package-credit-return.helper';
 
 export type ClientCancelCommand = ClientCancelBookingDto & {
   bookingId: string;
@@ -168,6 +169,16 @@ export class ClientCancelBookingHandler {
           }
         }
       }
+      // Session-package credit bookings: return the credit to its bucket
+      // on the direct-cancel path. The CANCEL_REQUESTED branches above do
+      // NOT return the credit — the booking is still scheduled and the
+      // credit stays consumed until staff approval (or direct cancel).
+      // Mirrors the cancel-booking behaviour: no burn window, no refund —
+      // the booking had zero monetary value.
+      if (booking.packageCreditId) {
+        await returnPackageCreditForBooking(tx, cmd.bookingId);
+      }
+
       // Roll back sibling AWAITING_PAYMENT bookings for program enrollments
       // when the cancellation drops the enrolled count below the threshold.
       if (booking.programId) {
