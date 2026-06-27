@@ -337,11 +337,11 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
       mockUpdateRatingVisibility.execute.mockResolvedValue({ id: uuid(1), isPublic: true });
 
       const res = await request(app.getHttpServer())
-        // DTO requires both id and isPublic; the controller takes id from the
-        // path param and isPublic from the body when forwarding to the handler.
+        // The controller takes id from the path param and isPublic from the body
+        // when forwarding to the handler.
         .patch(`/dashboard/organization/ratings/${uuid(1)}/visibility`)
         .set('Authorization', 'Bearer fake-jwt')
-        .send({ id: uuid(1), isPublic: true })
+        .send({ isPublic: true })
         .expect(200);
 
       expect(res.body.isPublic).toBe(true);

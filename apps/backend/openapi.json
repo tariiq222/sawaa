@@ -5214,11 +5214,6 @@
       },
       "UpdateRatingVisibilityDto": {
         "properties": {
-          "id": {
-            "description": "Rating UUID",
-            "format": "uuid",
-            "type": "string"
-          },
           "isPublic": {
             "description": "Whether the rating is visible publicly",
             "example": true,
@@ -5226,7 +5221,6 @@
           }
         },
         "required": [
-          "id",
           "isPublic"
         ],
         "type": "object"

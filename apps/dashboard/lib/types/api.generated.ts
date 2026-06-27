@@ -5629,16 +5629,12 @@ export interface components {
              */
             descriptionEn?: string;
             /**
-             * @description Discount type — PERCENTAGE (0-100) or FIXED (in integer halalas, 1 SAR = 100)
-             * @example PERCENTAGE
+             * @description DEPRECATED — use per-item discount. Ignored.
              * @enum {string}
              */
-            discountType: "PERCENTAGE" | "FIXED";
-            /**
-             * @description Discount value. For PERCENTAGE: 0-100 (e.g. 10 = 10%). For FIXED: integer halalas (e.g. 5000 = 50 SAR), matching the rest of the codebase.
-             * @example 10
-             */
-            discountValue: number;
+            discountType?: "PERCENTAGE" | "FIXED";
+            /** @description DEPRECATED — use per-item discount. Ignored. */
+            discountValue?: number;
             /**
              * @description Icon background color (hex)
              * @example #FFD8A8
@@ -5686,6 +5682,18 @@ export interface components {
             sortOrder: number;
         };
         CreateSessionPackageItemDto: {
+            /**
+             * @description Per-item discount type applied to (paid × unit price). Omit/null for no discount.
+             * @example PERCENTAGE
+             * @enum {string}
+             */
+            discountType?: "PERCENTAGE" | "FIXED";
+            /**
+             * @description Per-item discount value. PERCENTAGE: 0-100. FIXED: integer halalas.
+             * @default 0
+             * @example 10
+             */
+            discountValue: number;
             /**
              * Format: uuid
              * @description ServiceDurationOption UUID
@@ -7726,11 +7734,6 @@ export interface components {
             status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
         };
         UpdateRatingVisibilityDto: {
-            /**
-             * Format: uuid
-             * @description Rating UUID
-             */
-            id: string;
             /**
              * @description Whether the rating is visible publicly
              * @example true
