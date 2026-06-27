@@ -172,7 +172,10 @@ export function useEmployeeServiceMutations(employeeId: string) {
   const removeMut = useMutation({
     mutationFn: (serviceId: string) =>
       removeEmployeeService(employeeId, serviceId),
-    onSuccess: invalidate,
+    onSuccess: (_data, serviceId) => {
+      invalidate()
+      invalidateServiceList(serviceId)
+    },
   })
 
   const customPricingMut = useMutation({

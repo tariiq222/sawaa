@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon, Delete02Icon } from "@hugeicons/core-free-icons"
 
 import { Badge } from "@sawaa/ui"
 import { Button } from "@sawaa/ui"
@@ -10,9 +10,12 @@ import { Label } from "@sawaa/ui"
 import { Switch } from "@sawaa/ui"
 import { SurfaceRow } from "@sawaa/ui"
 import { useEmployeeServiceMutations } from "@/hooks/use-employee-mutations"
+import { useAuth } from "@/components/providers/auth-provider"
 import { EmployeeAvatar } from "@/components/features/shared/employee-avatar"
+import { RemoveServiceDialog } from "@/components/features/employees/remove-service-dialog"
 import { toast } from "sonner"
 import type { ServiceEmployee } from "@/lib/types/service"
+import type { EmployeeService } from "@/lib/types/employee"
 import { EmployeeCustomPricingRow } from "./employee-custom-pricing-row"
 
 /* ─── Props ─── */
@@ -20,6 +23,8 @@ import { EmployeeCustomPricingRow } from "./employee-custom-pricing-row"
 interface AssignedEmployeeRowProps {
   item: ServiceEmployee
   serviceId: string
+  serviceNameAr?: string
+  serviceNameEn?: string
   isAr: boolean
   t: (key: string) => string
   onView: () => void
@@ -30,6 +35,8 @@ interface AssignedEmployeeRowProps {
 export function AssignedEmployeeRow({
   item,
   serviceId,
+  serviceNameAr,
+  serviceNameEn,
   isAr,
   t,
   onView,
@@ -39,6 +46,9 @@ export function AssignedEmployeeRow({
   const displayName = isAr && employee.nameAr ? employee.nameAr : fullName
   const toastId = `emp-save-${employee.id}-${serviceId}`
 
+  const { canDo } = useAuth()
+  const canEditService = canDo("service", "update")
+
   const { updateMut, durationsMut, deliveryTypesMut, pricingModeMut } = useEmployeeServiceMutations(employee.id)
   const isSaving =
     updateMut.isPending && updateMut.variables?.serviceId === serviceId
@@ -47,6 +57,24 @@ export function AssignedEmployeeRow({
   const displayedActive = optimisticActive ?? item.isActive
 
   const [customPricing, setCustomPricing] = useState<boolean>(item.useCustomPricing ?? false)
+  const [confirmRemove, setConfirmRemove] = useState<boolean>(false)
+
+  /* Minimum shape RemoveServiceDialog needs: it reads ps.serviceId (for the
+     mutation) and ps.service.{nameAr,nameEn} (for the dialog title). The
+     service name comes from the parent tab, which already resolves it from
+     the underlying service (or the hidden anchor service for categories). */
+  const employeeServiceForDialog: EmployeeService = {
+    id: item.id,
+    serviceId,
+    isActive: displayedActive,
+    service: {
+      id: serviceId,
+      nameAr: serviceNameAr ?? "",
+      nameEn: serviceNameEn ?? "",
+      price: 0,
+      duration: 0,
+    },
+  }
 
   const toggleCustomPricing = async (next: boolean) => {
     const prev = customPricing
@@ -180,7 +208,26 @@ export function AssignedEmployeeRow({
             className="size-3.5 rtl:rotate-180"
           />
         </Button>
+        {canEditService && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="ms-auto h-8 w-8 shrink-0 p-0 text-muted-foreground hover:text-error"
+            onClick={() => setConfirmRemove(true)}
+            aria-label={t("common.delete")}
+          >
+            <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-4" />
+          </Button>
+        )}
       </div>
+
+      <RemoveServiceDialog
+        employeeId={employee.id}
+        employeeService={employeeServiceForDialog}
+        open={confirmRemove}
+        onOpenChange={setConfirmRemove}
+      />
     </SurfaceRow>
   )
 }

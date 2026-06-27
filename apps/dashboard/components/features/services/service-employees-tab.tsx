@@ -28,7 +28,7 @@ interface Props {
   onPendingActiveChange?: (active: Record<string, boolean>) => void
 }
 
-export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPendingChange, pendingActive = {}, onPendingActiveChange }: Props) {
+export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPendingChange, pendingActive = {}, onPendingActiveChange, serviceNameAr, serviceNameEn }: Props) {
   const { t, locale } = useLocale()
   const router = useRouter()
   const isAr = locale === "ar"
@@ -178,6 +178,8 @@ export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPe
                 key={item.id}
                 item={item}
                 serviceId={serviceId ?? ""}
+                serviceNameAr={serviceNameAr}
+                serviceNameEn={serviceNameEn}
                 isAr={isAr}
                 t={t}
                 onView={() => router.push(`/employees/${item.employee.id}/edit`)}
