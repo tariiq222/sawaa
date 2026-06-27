@@ -132,6 +132,25 @@ export class ListClientPackagePurchasesHandler {
         : Promise.resolve([]),
     ]);
 
+    // P1-8: a credit is only bookable if the employee STILL provides the
+    // service via an active EmployeeService link — the wizard must not show a
+    // credit as bookable that book-from-credit will reject. Bulk-resolve the
+    // active links for every (employeeId, serviceId) pair the credits touch.
+    const activeLinks =
+      employeeIds.length > 0 && serviceIds.length > 0
+        ? await this.prisma.employeeService.findMany({
+            where: {
+              employeeId: { in: employeeIds },
+              serviceId: { in: serviceIds },
+              isActive: true,
+            },
+            select: { employeeId: true, serviceId: true },
+          })
+        : [];
+    const activeLinkSet = new Set(
+      activeLinks.map((l) => `${l.employeeId}:${l.serviceId}`),
+    );
+
     const packageMap = new Map(packages.map((p) => [p.id, p]));
     const serviceMap = new Map(services.map((s) => [s.id, s]));
     const employeeMap = new Map(employees.map((e) => [e.id, e]));
@@ -160,7 +179,12 @@ export class ListClientPackagePurchasesHandler {
           const category = service?.category ?? null;
           const department = category?.department ?? null;
           const serviceIsBookable =
-            !!service && service.isActive && service.archivedAt === null && !!employee && employee.isActive;
+            !!service &&
+            service.isActive &&
+            service.archivedAt === null &&
+            !!employee &&
+            employee.isActive &&
+            activeLinkSet.has(`${credit.employeeId}:${credit.serviceId}`);
           return {
             id: credit.id,
             serviceId: credit.serviceId,

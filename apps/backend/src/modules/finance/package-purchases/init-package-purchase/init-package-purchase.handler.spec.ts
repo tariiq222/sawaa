@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { DiscountType, PackagePurchaseStatus, PaymentStatus, Prisma } from '@prisma/client';
 import { DEFAULT_ORG_ID } from '../../../../common/constants';
 import { InitPackagePurchaseHandler } from './init-package-purchase.handler';
@@ -75,6 +75,7 @@ function buildPricing(finalPrice = FINAL_PRICE) {
 function buildMoyasar(redirectUrl: string | null = 'https://checkout.moyasar.com/pay/abc') {
   return {
     createPayment: jest.fn().mockResolvedValue({ id: 'moy-pay-1', redirectUrl }),
+    getPaymentStatus: jest.fn().mockResolvedValue({ status: 'failed' }),
   };
 }
 
@@ -260,6 +261,80 @@ describe('InitPackagePurchaseHandler', () => {
       const { handler } = buildHandler(prisma);
 
       await expect(handler.execute(cmd())).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  // ─── P1-6: G3 reconciliation before deleting a stale gateway session ──────
+  describe('P1-6 — gateway reconciliation on in-flight PENDING reuse', () => {
+    function buildReusePrisma(gatewayRef: string | null) {
+      const prisma = buildPrisma();
+      prisma.packagePurchase.findFirst.mockResolvedValue({ id: PURCHASE_ID });
+      prisma.invoice.findFirst.mockResolvedValue({ id: INVOICE_ID });
+      prisma.payment.findFirst.mockResolvedValue({
+        id: 'old-pay',
+        status: PaymentStatus.PENDING,
+        gatewayRef,
+      });
+      return prisma;
+    }
+
+    it('rejects (no re-charge) when the in-flight gateway session is already paid', async () => {
+      const prisma = buildReusePrisma('moy-live-1');
+      const moyasar = buildMoyasar();
+      moyasar.getPaymentStatus.mockResolvedValue({ status: 'paid' });
+      const { handler } = buildHandler(prisma, buildPricing(), moyasar);
+
+      await expect(handler.execute(cmd())).rejects.toThrow(ConflictException);
+      expect(prisma.payment.delete).not.toHaveBeenCalled();
+      expect(moyasar.createPayment).not.toHaveBeenCalled();
+    });
+
+    it('rejects (no re-charge) when the in-flight gateway session is still initiated', async () => {
+      const prisma = buildReusePrisma('moy-live-2');
+      const moyasar = buildMoyasar();
+      moyasar.getPaymentStatus.mockResolvedValue({ status: 'initiated' });
+      const { handler } = buildHandler(prisma, buildPricing(), moyasar);
+
+      await expect(handler.execute(cmd())).rejects.toThrow(ConflictException);
+      expect(prisma.payment.delete).not.toHaveBeenCalled();
+      expect(moyasar.createPayment).not.toHaveBeenCalled();
+    });
+
+    it('discards and recreates when the in-flight gateway session is terminally failed', async () => {
+      const prisma = buildReusePrisma('moy-dead-1');
+      const moyasar = buildMoyasar();
+      moyasar.getPaymentStatus.mockResolvedValue({ status: 'failed' });
+      const { handler } = buildHandler(prisma, buildPricing(), moyasar);
+
+      const result = await handler.execute(cmd());
+
+      expect(moyasar.getPaymentStatus).toHaveBeenCalledWith(DEFAULT_ORG_ID, 'moy-dead-1');
+      expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'old-pay' } });
+      expect(prisma.payment.create).toHaveBeenCalled();
+      expect(result.purchaseId).toBe(PURCHASE_ID);
+    });
+
+    it('fails closed (ConflictException) when the gateway status cannot be verified', async () => {
+      const prisma = buildReusePrisma('moy-unknown-1');
+      const moyasar = buildMoyasar();
+      moyasar.getPaymentStatus.mockRejectedValue(new Error('gateway 500'));
+      const { handler } = buildHandler(prisma, buildPricing(), moyasar);
+
+      await expect(handler.execute(cmd())).rejects.toThrow(ConflictException);
+      expect(prisma.payment.delete).not.toHaveBeenCalled();
+      expect(moyasar.createPayment).not.toHaveBeenCalled();
+    });
+
+    it('skips gateway reconciliation when the stale payment has no gatewayRef yet', async () => {
+      const prisma = buildReusePrisma(null);
+      const moyasar = buildMoyasar();
+      const { handler } = buildHandler(prisma, buildPricing(), moyasar);
+
+      const result = await handler.execute(cmd());
+
+      expect(moyasar.getPaymentStatus).not.toHaveBeenCalled();
+      expect(prisma.payment.delete).toHaveBeenCalledWith({ where: { id: 'old-pay' } });
+      expect(result.purchaseId).toBe(PURCHASE_ID);
     });
   });
 });

@@ -335,6 +335,26 @@ describe('VerifyPaymentHandler', () => {
     expect(partialCallData.paidAt).toBeUndefined();
   });
 
+  it('P1-7: stamps issuedAt on a DRAFT invoice when approval lifts it to PAID', async () => {
+    // INVOICE_FULL has no issuedAt (a DRAFT bank-transfer invoice). On approve
+    // the handler must stamp it — mirroring process-payment + moyasar-webhook —
+    // so bank-transfer invoices are not left with a NULL issuedAt.
+    const { handler, tx } = buildDeps();
+    await handler.execute({ paymentId: 'pay-1', action: 'approve' });
+    const callData = tx.invoice.update.mock.calls[0][0].data;
+    expect(callData.issuedAt).toBeInstanceOf(Date);
+  });
+
+  it('P1-7: preserves an existing issuedAt instead of overwriting it on approve', async () => {
+    const existing = new Date('2026-01-01T00:00:00.000Z');
+    const { handler, tx } = buildDeps({
+      invoice: { ...INVOICE_FULL, issuedAt: existing },
+    });
+    await handler.execute({ paymentId: 'pay-1', action: 'approve' });
+    const callData = tx.invoice.update.mock.calls[0][0].data;
+    expect(callData.issuedAt).toBe(existing);
+  });
+
   it('does NOT emit PaymentCompletedEvent when the post-tx invoice snapshot is missing (defensive)', async () => {
     // Edge case: the invoice was deleted between the tx finalize and the
     // event-emit read. The handler must not throw, must not emit a half-formed

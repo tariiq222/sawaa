@@ -23,6 +23,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SPEC_PATH = path.join(root, 'apps', 'backend', 'openapi.json');
 const MANIFEST_PATH = path.join(root, 'packages', 'api-client', 'endpoints.manifest.json');
+const MODULES_DIR = path.join(root, 'packages', 'api-client', 'src', 'modules');
 
 const HTTP_METHODS = new Set(['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH', 'TRACE']);
 
@@ -109,4 +110,55 @@ if (missing.length > 0) {
   );
 }
 
-console.log(`api-client drift check: ${manifest.length} endpoints verified`);
+// ── Reverse direction: every endpoint the api-client SOURCE calls must be
+// declared in the manifest. Without this, a NEW endpoint added to
+// src/modules/* silently escapes the gate (the original one-directional check
+// only proved manifest entries still exist in the spec). Scan every
+// apiRequest(...) call, normalize its method+path, and require a manifest entry.
+function normalizeClientPath(raw) {
+  let p = raw;
+  p = p.replace(/\$\{qs\}/g, '');        // appended query-string builder var
+  p = p.split('?')[0];                       // strip a literal query string
+  p = p.replace(/\$\{[^}]*\}/g, '{}');    // path params → {}
+  if (!p.startsWith('/api/v1')) p = '/api/v1' + p;
+  return p;
+}
+
+const manifestKeys = new Set(
+  manifest.map((e) => `${e.method.toUpperCase()} ${normalizePath(e.path)}`),
+);
+
+const APIREQUEST_RE =
+  /apiRequest\s*(?:<[^>]*>)?\s*\(\s*([`'"])((?:[^`'"\\]|\\.)*)\1\s*(?:,\s*\{([\s\S]*?)\})?/g;
+
+const undeclared = [];
+if (fs.existsSync(MODULES_DIR)) {
+  for (const file of fs.readdirSync(MODULES_DIR)) {
+    if (!file.endsWith('.ts') || file.endsWith('.d.ts')) continue;
+    const src = fs.readFileSync(path.join(MODULES_DIR, file), 'utf8');
+    let m;
+    while ((m = APIREQUEST_RE.exec(src))) {
+      const opts = m[3] ?? '';
+      const methodMatch = opts.match(/method:\s*[`'"]([A-Za-z]+)[`'"]/);
+      const method = (methodMatch ? methodMatch[1] : 'GET').toUpperCase();
+      const key = `${method} ${normalizePath(normalizeClientPath(m[2]))}`;
+      if (!manifestKeys.has(key)) {
+        undeclared.push(`  ${key}   [src/modules/${file}]`);
+      }
+    }
+  }
+}
+
+if (undeclared.length > 0) {
+  fail(
+    `${undeclared.length} endpoint(s) CALLED by packages/api-client/src/modules are not declared in ` +
+    `endpoints.manifest.json:\n${[...new Set(undeclared)].sort().join('\n')}\n` +
+    `Add each to packages/api-client/endpoints.manifest.json (full /api/v1 path, {param} placeholders) ` +
+    `in the same commit so the drift gate keeps covering it.`,
+  );
+}
+
+console.log(
+  `api-client drift check: ${manifest.length} manifest endpoints verified against the spec; ` +
+  `every api-client source call is declared.`,
+);
