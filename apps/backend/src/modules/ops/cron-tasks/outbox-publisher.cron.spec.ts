@@ -9,7 +9,6 @@ describe('OutboxPublisherCron', () => {
 
     const prisma = {
       $queryRaw: jest.fn()
-        .mockResolvedValueOnce([{ v: 12345n }])
         .mockResolvedValueOnce([{ acquired: true }])
         .mockResolvedValueOnce(rows),
       $executeRaw: jest.fn().mockResolvedValue(2),
@@ -39,7 +38,6 @@ describe('OutboxPublisherCron', () => {
   it('is a no-op when no pending events exist', async () => {
     const prisma = {
       $queryRaw: jest.fn()
-        .mockResolvedValueOnce([{ v: 12345n }])
         .mockResolvedValueOnce([{ acquired: true }])
         .mockResolvedValueOnce([]),
       $executeRaw: jest.fn().mockResolvedValue(1),
@@ -66,7 +64,6 @@ describe('OutboxPublisherCron', () => {
 
     const prisma = {
       $queryRaw: jest.fn()
-        .mockResolvedValueOnce([{ v: 12345n }])
         .mockResolvedValueOnce([{ acquired: true }])
         .mockResolvedValueOnce(rows),
       $executeRaw: jest.fn().mockResolvedValue(1),
@@ -107,7 +104,6 @@ describe('OutboxPublisherCron', () => {
 
     const prisma = {
       $queryRaw: jest.fn()
-        .mockResolvedValueOnce([{ v: 12345n }])
         .mockResolvedValueOnce([{ acquired: true }])
         .mockResolvedValueOnce(rows),
       $executeRaw: jest.fn().mockResolvedValue(1),
@@ -148,7 +144,6 @@ describe('OutboxPublisherCron', () => {
 
     const prisma = {
       $queryRaw: jest.fn()
-        .mockResolvedValueOnce([{ v: 12345n }])
         .mockResolvedValueOnce([{ acquired: true }])
         .mockResolvedValueOnce(rows),
       $executeRaw: jest.fn().mockResolvedValue(1),

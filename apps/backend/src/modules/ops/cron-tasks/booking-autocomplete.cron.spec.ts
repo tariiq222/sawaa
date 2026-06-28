@@ -6,8 +6,8 @@ import { BookingStatus } from '@prisma/client';
 
 const buildPrisma = () => ({
   $queryRaw: jest.fn()
-    .mockResolvedValueOnce([{ v: BigInt(12345) }])
     .mockResolvedValueOnce([{ acquired: true }]),
+  $executeRaw: jest.fn().mockResolvedValue(1),
   booking: {
     findMany: jest.fn().mockResolvedValue([]),
     update: jest.fn().mockResolvedValue({}),

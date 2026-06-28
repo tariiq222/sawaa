@@ -3,12 +3,12 @@ import { DbMetricsService } from '../../../infrastructure/telemetry/db-metrics.s
 
 const buildPrisma = () => ({
   $queryRaw: jest.fn()
-    .mockResolvedValueOnce([{ v: BigInt(12345) }])
     .mockResolvedValueOnce([{ acquired: true }])
     .mockResolvedValue([
       { relname: 'Booking', n_live_tup: BigInt(1_234_567) },
       { relname: 'ActivityLog', n_live_tup: BigInt(888_000) },
     ]),
+  $executeRaw: jest.fn().mockResolvedValue(1),
 });
 
 const buildMetrics = () => {
@@ -25,7 +25,7 @@ describe('DbRowCountCron', () => {
     const metrics = buildMetrics();
     const cron = new DbRowCountCron(prisma as never, metrics);
     await cron.execute();
-    expect(prisma.$queryRaw).toHaveBeenCalledTimes(4);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
   });
 
   it('sets a gauge for each row returned', async () => {

@@ -65,6 +65,21 @@ model CronHeartbeat {
   updatedAt DateTime @updatedAt
 }
 
+// ─── CronLock ─────────────────────────────────────────────────────────────────
+// Platform-level distributed lease lock for single-leader cron execution. One
+// row per cron job name. Replaces pg session advisory locks, which are unsafe
+// over a connection pool (acquire/release can land on different connections, so
+// the unlock silently fails and the lock leaks). Each acquire/release is a
+// single atomic statement → pool-safe. A crashed leader's lease auto-expires
+// after lockedUntil, so another instance can take over.
+
+model CronLock {
+  name        String   @id
+  owner       String
+  lockedUntil DateTime
+  acquiredAt  DateTime @default(now())
+}
+
 // ─── Report ──────────────────────────────────────────────────────────────────
 // SaaS-02g: scoped.
 
