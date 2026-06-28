@@ -26,9 +26,9 @@ describe('/booking/confirm page', () => {
     searchParams = new URLSearchParams({ status: 'success', bookingId: 'bk_42' });
     render(<BookingConfirmPage />);
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /تم تأكيد الحجز/i })).toBeTruthy();
+      expect(screen.getByRole('heading', { name: /تم تأكيد موعدك/i })).toBeTruthy();
     });
-    expect(screen.getByRole('link', { name: /حجز موعد آخر/i })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /احجز موعداً آخر/i })).toBeTruthy();
   });
 
   it('renders failed state with retry CTA', async () => {

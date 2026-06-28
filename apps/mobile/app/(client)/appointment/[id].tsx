@@ -73,12 +73,12 @@ export default function AppointmentDetailScreen() {
   const askCancel = () => {
     if (!id || cancelling) return;
     Alert.alert(
-      dir.isRTL ? 'إلغاء الحجز' : 'Cancel booking',
-      dir.isRTL ? 'هل تريد إلغاء هذا الحجز؟' : 'Cancel this booking?',
+      dir.isRTL ? 'إلغاء الموعد' : 'Cancel booking',
+      dir.isRTL ? 'هل تريد إلغاء هذا الموعد؟' : 'Cancel this booking?',
       [
         { text: dir.isRTL ? 'رجوع' : 'Back', style: 'cancel' },
         {
-          text: dir.isRTL ? 'إلغاء الحجز' : 'Cancel',
+          text: dir.isRTL ? 'إلغاء الموعد' : 'Cancel',
           style: 'destructive',
           onPress: () => {
             cancelMutation.mutate(
@@ -218,7 +218,7 @@ export default function AppointmentDetailScreen() {
           <Text style={[styles.cancelText, { fontFamily: f500, fontWeight: '500' }]}>
             {cancelling
               ? (dir.isRTL ? 'جاري الإلغاء…' : 'Cancelling…')
-              : (dir.isRTL ? 'إلغاء الحجز' : 'Cancel booking')}
+              : (dir.isRTL ? 'إلغاء الموعد' : 'Cancel booking')}
           </Text>
         </Pressable>
       </Animated.View>

@@ -120,7 +120,7 @@ export class DashboardIdentityController {
           properties: {
             total: { type: 'number' },
             page: { type: 'number' },
-            perPage: { type: 'number' },
+            limit: { type: 'number' },
             totalPages: { type: 'number' },
             hasNextPage: { type: 'boolean' },
             hasPreviousPage: { type: 'boolean' },
@@ -208,12 +208,16 @@ export class DashboardIdentityController {
       },
     },
   })
+  @ApiResponse({ status: 403, description: 'Cannot modify a user at or above your rank', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'User not found', type: ApiErrorDto })
   async updateUserEndpoint(
     @Param('id', ParseUUIDPipe) userId: string,
     @Body() body: UpdateUserDto,
+    @Request() req: { user?: { id?: string } },
   ) {
-    return this.updateUserHandler.execute({ ...body, userId });
+    const actorUserId = req.user?.id;
+    if (!actorUserId) throw new ForbiddenException('Missing actor');
+    return this.updateUserHandler.execute({ ...body, userId, actorUserId });
   }
 
   @Patch('users/:id/role')
@@ -244,9 +248,15 @@ export class DashboardIdentityController {
   @ApiOperation({ summary: 'Deactivate a user' })
   @ApiParam({ name: 'id', description: 'User UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiNoContentResponse({ description: 'User deactivated' })
+  @ApiResponse({ status: 403, description: 'Cannot modify a user at or above your rank', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'User not found', type: ApiErrorDto })
-  async deactivateUserEndpoint(@Param('id', ParseUUIDPipe) userId: string) {
-    await this.deactivateUserHandler.execute({ userId });
+  async deactivateUserEndpoint(
+    @Param('id', ParseUUIDPipe) userId: string,
+    @Request() req: { user?: { id?: string } },
+  ) {
+    const actorUserId = req.user?.id;
+    if (!actorUserId) throw new ForbiddenException('Missing actor');
+    await this.deactivateUserHandler.execute({ userId, actorUserId });
   }
 
   @Patch('users/:id/activate')
@@ -255,9 +265,15 @@ export class DashboardIdentityController {
   @ApiOperation({ summary: 'Activate a user' })
   @ApiParam({ name: 'id', description: 'User UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiNoContentResponse({ description: 'User activated' })
+  @ApiResponse({ status: 403, description: 'Cannot modify a user at or above your rank', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'User not found', type: ApiErrorDto })
-  async activateUserEndpoint(@Param('id', ParseUUIDPipe) userId: string) {
-    await this.updateUserHandler.execute({ userId, isActive: true });
+  async activateUserEndpoint(
+    @Param('id', ParseUUIDPipe) userId: string,
+    @Request() req: { user?: { id?: string } },
+  ) {
+    const actorUserId = req.user?.id;
+    if (!actorUserId) throw new ForbiddenException('Missing actor');
+    await this.updateUserHandler.execute({ userId, actorUserId, isActive: true });
   }
 
   @Delete('users/:id')
@@ -266,9 +282,15 @@ export class DashboardIdentityController {
   @ApiOperation({ summary: 'Delete a user' })
   @ApiParam({ name: 'id', description: 'User UUID', example: '00000000-0000-0000-0000-000000000000' })
   @ApiNoContentResponse({ description: 'User deleted' })
+  @ApiResponse({ status: 403, description: 'Cannot modify a user at or above your rank', type: ApiErrorDto })
   @ApiResponse({ status: 404, description: 'User not found', type: ApiErrorDto })
-  async deleteUserEndpoint(@Param('id', ParseUUIDPipe) userId: string) {
-    await this.deleteUserHandler.execute({ userId });
+  async deleteUserEndpoint(
+    @Param('id', ParseUUIDPipe) userId: string,
+    @Request() req: { user?: { id?: string } },
+  ) {
+    const actorUserId = req.user?.id;
+    if (!actorUserId) throw new ForbiddenException('Missing actor');
+    await this.deleteUserHandler.execute({ userId, actorUserId });
   }
 
   @Post('users/:userId/roles')

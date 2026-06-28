@@ -1,13 +1,17 @@
 import {
+  BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { RefundStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { MoyasarApiClient } from '../moyasar-api/moyasar-api.client';
 import { RefundCompletedEvent } from '../events/refund-completed.event';
 import { computeRefundAccounting } from './refund-vat.helper';
+import { decimalToHalalas } from '../money.helper';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 
 export interface ApproveRefundCommand {
@@ -44,24 +48,49 @@ export class ApproveRefundHandler {
       throw new NotFoundException('Refund request not found or not pending review');
     }
 
-    // Load the Payment record to get the Moyasar gatewayRef.
+    // Load the Payment record to get the Moyasar gatewayRef and the figures
+    // needed for the outstanding-balance clamp below.
     const payment = await this.prisma.payment.findUniqueOrThrow({
       where: { id: refundRequest.paymentId },
-      select: { gatewayRef: true },
+      select: { gatewayRef: true, amount: true, refundedAmount: true },
     });
 
     if (!payment.gatewayRef) {
       throw new NotFoundException('Payment has no gateway reference — cannot refund via Moyasar');
     }
 
-    await this.prisma.refundRequest.update({
-      where: { id: cmd.refundRequestId },
+    // P1 (money-safety): clamp this approval to the payment's outstanding
+    // (un-refunded) balance, mirroring RefundPaymentHandler /
+    // ManualRefundPaymentHandler. Without this, a PENDING_REVIEW request whose
+    // amount exceeds what is still refundable (e.g. a prior partial refund
+    // already consumed part of it) could over-refund past Payment.refundedAmount.
+    const refundAmount = Math.round(Number(refundRequest.amount));
+    const outstanding =
+      decimalToHalalas(payment.amount) - decimalToHalalas(payment.refundedAmount ?? 0);
+    if (refundAmount <= 0 || refundAmount > outstanding) {
+      throw new BadRequestException(
+        `Refund amount ${refundAmount} exceeds the refundable balance of ${outstanding} halalas`,
+      );
+    }
+
+    // P1 (money-safety): flip PENDING_REVIEW → PROCESSING atomically with a
+    // conditional updateMany guarded on the current status, and bail BEFORE
+    // touching the gateway if it claimed zero rows. This serialises concurrent
+    // approvals: only the writer that wins the flip proceeds to Moyasar +
+    // finalize, so two concurrent approves can no longer both move real money
+    // and both apply the refund accounting (double-applied refund). Mirrors the
+    // guarded-updateMany discipline in RefundPaymentHandler.
+    const { count } = await this.prisma.refundRequest.updateMany({
+      where: { id: cmd.refundRequestId, status: RefundStatus.PENDING_REVIEW },
       data: {
-        status: 'PROCESSING',
+        status: RefundStatus.PROCESSING,
         processedBy: cmd.approvedBy,
         processedAt: new Date(),
       },
     });
+    if (count === 0) {
+      throw new ConflictException('Refund request is already being processed');
+    }
 
     // Track whether Moyasar already moved real money. If so, a subsequent DB
     // failure must NOT mark the row as FAILED — the funds are gone and the
@@ -73,7 +102,7 @@ export class ApproveRefundHandler {
         DEFAULT_ORG_ID,
         {
           paymentId: payment.gatewayRef,
-          amount: Math.round(Number(refundRequest.amount)), // already halalas
+          amount: refundAmount, // already halalas
           idempotencyKey: `refund:${refundRequest.id}`,
         },
       );
@@ -84,13 +113,27 @@ export class ApproveRefundHandler {
       // together or not at all. Previously they were three sequential awaits;
       // a DB blip between any pair would leave books inconsistent with
       // Moyasar (real money refunded but invoice still ISSUED).
-      const { updated, invoice } = await this.rlsTransaction.withTransaction(async (tx) => {
-        const updated = await tx.refundRequest.update({
-          where: { id: cmd.refundRequestId },
+      const finalizeResult = await this.rlsTransaction.withTransaction(async (tx) => {
+        // P1 (money-safety): guard the finalize on status='PROCESSING' so the
+        // accounting (refundedAmount increment + status flip) is applied EXACTLY
+        // once even if another writer (the reconcile-refunds cron) already
+        // finalized this row. A bare update() would re-increment the ledger.
+        const { count } = await tx.refundRequest.updateMany({
+          where: { id: cmd.refundRequestId, status: RefundStatus.PROCESSING },
           data: {
-            status: 'COMPLETED',
+            status: RefundStatus.COMPLETED,
             gatewayRef: moyasarRefund.id,
           },
+        });
+        if (count === 0) {
+          this.logger.warn(
+            `Refund ${cmd.refundRequestId}: already finalized by another writer — skipping accounting`,
+          );
+          return null;
+        }
+        const updated = await tx.refundRequest.findUniqueOrThrow({
+          where: { id: cmd.refundRequestId },
+          select: { id: true, status: true },
         });
 
         const invoiceForAccounting = await tx.invoice.findUniqueOrThrow({
@@ -101,7 +144,7 @@ export class ApproveRefundHandler {
           invoiceTotal: invoiceForAccounting.total,
           invoiceVatAmt: invoiceForAccounting.vatAmt,
           alreadyRefundedAmount: invoiceForAccounting.refundedAmount,
-          thisRefundAmount: Number(refundRequest.amount),
+          thisRefundAmount: refundAmount,
         });
         const invoice = await tx.invoice.update({
           where: { id: refundRequest.invoiceId },
@@ -119,12 +162,25 @@ export class ApproveRefundHandler {
             // Mirror the invoice outcome: a partial refund keeps the payment
             // refundable; only a full refund closes it.
             status: accounting.newInvoiceStatus === 'REFUNDED' ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
-            refundedAmount: { increment: Number(refundRequest.amount) },
+            refundedAmount: { increment: refundAmount },
           },
         });
 
         return { updated, invoice };
       });
+
+      // The finalize was a no-op because another writer (reconcile cron) had
+      // already applied this refund. Money moved exactly once and the row is
+      // COMPLETED — report success without re-publishing or re-counting.
+      if (finalizeResult === null) {
+        return {
+          id: cmd.refundRequestId,
+          status: RefundStatus.COMPLETED,
+          gatewayRef: moyasarRefundId,
+        };
+      }
+
+      const { updated, invoice } = finalizeResult;
 
       // Fire RefundCompletedEvent for downstream listeners. Failure to publish must
       // never break the refund itself; reconcile cron is the safety net.
@@ -134,7 +190,7 @@ export class ApproveRefundHandler {
         invoiceId: invoice.id,
         paymentId: refundRequest.paymentId,
         bookingId: invoice.bookingId,
-        amount: Number(refundRequest.amount),
+        amount: refundAmount,
         currency: invoice.currency,
       });
       await this.eventBus

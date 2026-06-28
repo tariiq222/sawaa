@@ -10,10 +10,15 @@ vi.mock('@/components/locale-provider', () => ({
   useLocale: () => ({ t: (key: string) => key }),
 }))
 
+vi.mock('@/components/providers/auth-provider', () => ({
+  useAuth: () => ({ canDo: () => true }),
+}))
+
 vi.mock('@/hooks/use-payments', () => ({
   useRecordPaymentMutations: () => ({
     applyDiscountMut: { mutateAsync: applyDiscountMutateAsync, isPending: false },
     recordMut: { mutateAsync: recordMutateAsync, isPending: false },
+    ensureInvoiceMut: { mutateAsync: vi.fn().mockRejectedValue(new Error('no invoice')), isPending: false, isError: true },
   }),
 }))
 

@@ -145,7 +145,15 @@ export class ResilientNotificationDispatcher {
             payload,
             attempt: attemptNumber + 1,
           } satisfies RetryJobData,
-          { delay: delayMs, attempts: 1 },
+          {
+            delay: delayMs,
+            attempts: 1,
+            // Bound Redis growth — completed retry jobs are pruned after 1h,
+            // failed ones kept 24h for inspection (the queue has no worker-level
+            // DEFAULT_JOB_OPTIONS since jobs are added via getQueue()).
+            removeOnComplete: { age: 3600 },
+            removeOnFail: { age: 86400 },
+          },
         );
 
         await this.prisma.notificationDeliveryLog.update({

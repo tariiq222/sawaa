@@ -359,6 +359,7 @@ export const arMisc: Record<string, string> = {
   "detail.tabs.invoice": "الفاتورة",
   "detail.invoice.title": "تفاصيل الفاتورة",
   "detail.invoice.subtotal": "الإجمالي قبل الضريبة",
+  "detail.invoice.discount": "الخصم",
   "detail.invoice.vat": "ضريبة القيمة المضافة",
   "detail.invoice.total": "الإجمالي",
   "detail.invoice.paid": "المدفوع",

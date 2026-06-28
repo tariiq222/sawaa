@@ -18,7 +18,7 @@ type InvoiceAccounting = {
 };
 
 interface TxMock {
-  refundRequest: { update: jest.Mock };
+  refundRequest: { update: jest.Mock; updateMany: jest.Mock };
   payment: { update: jest.Mock };
   invoice: { update: jest.Mock; findUniqueOrThrow: jest.Mock };
   activityLog: { create: jest.Mock };
@@ -26,7 +26,13 @@ interface TxMock {
 
 function buildTx(invoice: InvoiceAccounting = { total: 10_000, vatAmt: 1_304, refundedAmount: 0 }): TxMock {
   return {
-    refundRequest: { update: jest.fn().mockResolvedValue({}) },
+    refundRequest: {
+      update: jest.fn().mockResolvedValue({}),
+      // Default: the guarded PROCESSING → COMPLETED flip wins (claims 1 row).
+      // Tests override to 0 to simulate a concurrent writer that already
+      // finalized the row.
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
     payment: { update: jest.fn().mockResolvedValue({}) },
     invoice: {
       update: jest.fn().mockResolvedValue({}),
@@ -91,8 +97,9 @@ describe('ReconcileRefundsCron', () => {
     await buildCron(prisma, tx, moyasar).execute();
 
     expect(moyasar.getRefundStatus).toHaveBeenCalledWith(DEFAULT_ORG_ID, 'moyasar_ref_1');
-    expect(tx.refundRequest.update).toHaveBeenCalledWith({
-      where: { id: 'rr_1' },
+    // PROCESSING → COMPLETED is a guarded updateMany so cron + approve can't double-apply.
+    expect(tx.refundRequest.updateMany).toHaveBeenCalledWith({
+      where: { id: 'rr_1', status: 'PROCESSING' },
       data: { status: 'COMPLETED' },
     });
     expect(tx.invoice.update).toHaveBeenCalledWith({
@@ -121,8 +128,8 @@ describe('ReconcileRefundsCron', () => {
 
     await buildCron(prisma, tx, moyasar).execute();
 
-    expect(tx.refundRequest.update).toHaveBeenCalledWith({
-      where: { id: 'rr_partial' },
+    expect(tx.refundRequest.updateMany).toHaveBeenCalledWith({
+      where: { id: 'rr_partial', status: 'PROCESSING' },
       data: { status: 'COMPLETED' },
     });
     expect(tx.invoice.update).toHaveBeenCalledWith({
@@ -182,6 +189,64 @@ describe('ReconcileRefundsCron', () => {
     // No payment/invoice mutation for a failed refund
     expect(tx.payment.update).not.toHaveBeenCalled();
     expect(tx.invoice.update).not.toHaveBeenCalled();
+  });
+
+  it('applies the refund accounting EXACTLY ONCE when the in-tx PROCESSING guard claims 0 rows (concurrent approve already finalized)', async () => {
+    // Money-safety: another writer (the approve handler) flipped PROCESSING →
+    // COMPLETED before this cron tx ran. The guarded updateMany now claims 0 rows,
+    // so the cron must NOT re-increment invoice/payment refundedAmount.
+    const row: StuckRow = {
+      id: 'rr_race',
+      paymentId: 'pay_race',
+      invoiceId: 'inv_race',
+      gatewayRef: 'moyasar_ref_race',
+      amount: 10_000,
+    };
+    const tx = buildTx({ total: 10_000, vatAmt: 1_304, refundedAmount: 0 });
+    tx.refundRequest.updateMany.mockResolvedValue({ count: 0 });
+    const prisma = buildPrisma([row], tx);
+    const moyasar = buildMoyasar({ moyasar_ref_race: 'paid' });
+
+    await buildCron(prisma, tx, moyasar).execute();
+
+    // Status was read, the guarded flip attempted — but no ledger mutation applied.
+    expect(tx.refundRequest.updateMany).toHaveBeenCalledWith({
+      where: { id: 'rr_race', status: 'PROCESSING' },
+      data: { status: 'COMPLETED' },
+    });
+    expect(tx.invoice.update).not.toHaveBeenCalled();
+    expect(tx.payment.update).not.toHaveBeenCalled();
+    expect(tx.activityLog.create).not.toHaveBeenCalled();
+  });
+
+  it('finalizes the same paid row only once across two cron passes (idempotent ledger)', async () => {
+    // First pass wins the PROCESSING → COMPLETED flip and applies accounting;
+    // the second pass finds the row already COMPLETED (guard claims 0) and no-ops.
+    const row: StuckRow = {
+      id: 'rr_twice',
+      paymentId: 'pay_twice',
+      invoiceId: 'inv_twice',
+      gatewayRef: 'moyasar_ref_twice',
+      amount: 10_000,
+    };
+    const tx = buildTx({ total: 10_000, vatAmt: 1_304, refundedAmount: 0 });
+    tx.refundRequest.updateMany
+      .mockResolvedValueOnce({ count: 1 }) // first pass wins
+      .mockResolvedValueOnce({ count: 0 }); // second pass loses
+    const prisma = buildPrisma([row], tx);
+    const moyasar = buildMoyasar({ moyasar_ref_twice: 'paid' });
+
+    const cron = buildCron(prisma, tx, moyasar);
+    await cron.execute();
+    await cron.execute();
+
+    // Ledger writes applied exactly once despite two passes.
+    expect(tx.payment.update).toHaveBeenCalledTimes(1);
+    expect(tx.invoice.update).toHaveBeenCalledTimes(1);
+    expect(tx.payment.update).toHaveBeenCalledWith({
+      where: { id: 'pay_twice' },
+      data: { status: 'REFUNDED', refundedAmount: { increment: 10_000 } },
+    });
   });
 
   it('leaves RefundRequest in PROCESSING when Moyasar status is "pending" (Moyasar still processing)', async () => {
@@ -253,8 +318,8 @@ describe('ReconcileRefundsCron', () => {
     await buildCron(prisma, tx, moyasar).execute(); // should not throw
 
     expect(moyasar.getRefundStatus).toHaveBeenCalledTimes(2);
-    expect(tx.refundRequest.update).toHaveBeenCalledWith({
-      where: { id: 'rr_ok' },
+    expect(tx.refundRequest.updateMany).toHaveBeenCalledWith({
+      where: { id: 'rr_ok', status: 'PROCESSING' },
       data: { status: 'COMPLETED' },
     });
   });

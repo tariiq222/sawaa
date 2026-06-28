@@ -8,7 +8,10 @@ import { EventBusService } from "../../../infrastructure/events";
 import { RefundPaymentHandler } from "../../finance/refund-payment/refund-payment.handler";
 import { DEFAULT_ORG_ID } from "../../../common/constants";
 import { BookingCancelledEvent } from "../events/booking-cancelled.event";
-import { fetchBookingOrFail } from "../booking-lifecycle.helper";
+import {
+	fetchBookingOrFail,
+	updateBookingAtomically,
+} from "../booking-lifecycle.helper";
 import { assertTransition } from "../booking-state-machine";
 import { ProgramCapacityService } from "../program/program-capacity.service";
 import { returnPackageCreditForBooking } from "../package-credit-return.helper";
@@ -55,8 +58,14 @@ export class ExpireBookingHandler {
 
 		const updated = await this.rlsTransaction.withTransaction(async (tx) => {
 			const [expiredBooking] = await Promise.all([
-				tx.booking.update({
-					where: { id: cmd.bookingId },
+				// Guarded status write: updateMany where status=currentStatus +
+				// assert count===1, so a concurrent PAYMENT_CONFIRMED/expire race
+				// cannot double-write or expire an already-confirmed booking (and
+				// double-refund). Mirrors complete-/no-show-booking.handler.
+				updateBookingAtomically(tx, {
+					bookingId: cmd.bookingId,
+					currentStatus: booking.status,
+					actionLabel: "expired",
 					data: { status: nextStatus, expiresAt: new Date() },
 				}),
 				tx.bookingStatusLog.create({

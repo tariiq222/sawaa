@@ -359,6 +359,7 @@ export const enMisc: Record<string, string> = {
   "detail.tabs.invoice": "Invoice",
   "detail.invoice.title": "Invoice details",
   "detail.invoice.subtotal": "Subtotal (before VAT)",
+  "detail.invoice.discount": "Discount",
   "detail.invoice.vat": "VAT",
   "detail.invoice.total": "Total",
   "detail.invoice.paid": "Paid",

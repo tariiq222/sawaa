@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 
+// Bound an otherwise-unlimited list query (admin refunds view).
+const MAX_REFUNDS = 100;
+
 export interface RefundRequestListItem {
   id: string;
   invoiceId: string;
@@ -27,6 +30,7 @@ export class ListRefundsHandler {
     const refunds = await this.prisma.refundRequest.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+      take: MAX_REFUNDS,
     });
 
     return refunds.map((r) => ({

@@ -38,6 +38,12 @@ export class ArchiveServiceHandler {
 				await tx.employeeService.deleteMany({
 					where: { serviceId: dto.serviceId },
 				});
+				// ServiceDurationOption.serviceId is a plain cross-BC string (no FK),
+				// so both service-default and practitioner-owned duration rows for
+				// this service orphan unless cleaned up here.
+				await tx.serviceDurationOption.deleteMany({
+					where: { serviceId: dto.serviceId },
+				});
 				return tx.service.delete({
 					where: { id: dto.serviceId },
 				});

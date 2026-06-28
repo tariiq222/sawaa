@@ -12,6 +12,9 @@ import { PrismaService } from '../../../infrastructure/database';
  * cannot compare two columns on the same row. The clinic publishes a small
  * handful of programs at a time, so the cost is acceptable.
  */
+// Bound an otherwise-unlimited list query (public programs catalog).
+const MAX_PUBLIC_PROGRAMS = 200;
+
 @Injectable()
 export class ListPublicProgramsHandler {
   constructor(private readonly prisma: PrismaService) {}
@@ -24,6 +27,7 @@ export class ListPublicProgramsHandler {
         ...(departmentId ? { departmentId } : {}),
       },
       orderBy: [{ createdAt: 'desc' }],
+      take: MAX_PUBLIC_PROGRAMS,
       include: {
         supervisors: { select: { employeeId: true } },
       },

@@ -313,8 +313,14 @@ describe("Scenario 2 — Father gets distracted at payment page, booking expires
 
 		await expireHandler.execute({ bookingId: "book-2", changedBy: "system" });
 
-		expect(prisma.booking.update).toHaveBeenCalledWith(
+		// expire now routes through the guarded updateBookingAtomically (updateMany
+		// filtered by current status), not a raw update, to avoid concurrent double-write.
+		expect(prisma.booking.updateMany).toHaveBeenCalledWith(
 			expect.objectContaining({
+				where: expect.objectContaining({
+					id: "book-2",
+					status: BookingStatus.AWAITING_PAYMENT,
+				}),
 				data: expect.objectContaining({ status: BookingStatus.EXPIRED }),
 			}),
 		);
@@ -1583,8 +1589,13 @@ describe("Scenario 25 — Deposit paid, balance unpaid, booking expires, deposit
 
 		await expireHandler.execute({ bookingId: "book-25", changedBy: "system" });
 
-		expect(prisma.booking.update).toHaveBeenCalledWith(
+		// guarded updateBookingAtomically uses updateMany filtered by current status
+		expect(prisma.booking.updateMany).toHaveBeenCalledWith(
 			expect.objectContaining({
+				where: expect.objectContaining({
+					id: "book-25",
+					status: BookingStatus.DEPOSIT_PAID,
+				}),
 				data: expect.objectContaining({ status: BookingStatus.EXPIRED }),
 			}),
 		);

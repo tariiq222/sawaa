@@ -45,9 +45,9 @@ describe('SupportGroupCard (programs)', () => {
     expect(screen.getByText(/7 spots left/)).toBeTruthy();
   });
 
-  it('shows "Free" when price is zero', () => {
+  it('shows "مجاني" when price is zero', () => {
     render(<SupportGroupCard group={{ ...base, price: '0' }} />);
-    expect(screen.getByText('Free')).toBeTruthy();
+    expect(screen.getByText('مجاني')).toBeTruthy();
   });
 
   it('shows "Full" pill when the program is full', () => {

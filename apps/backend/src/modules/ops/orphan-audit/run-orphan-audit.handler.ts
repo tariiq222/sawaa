@@ -59,25 +59,40 @@ export class RunOrphanAuditHandler {
 
     let orphansFound = 0;
 
+    // Collect all distinct, non-null referenced ids, then resolve which ones
+    // actually exist in ONE findMany per check (was an N+1 findFirst per row),
+    // and diff the missing ids in memory.
+    const refIds = [
+      ...new Set(
+        candidates
+          .map((candidate) => candidate[check.childField])
+          .filter((refId): refId is string => Boolean(refId)),
+      ),
+    ];
+
+    if (refIds.length === 0) {
+      return 0;
+    }
+
+    const parentModel = (this.prisma as unknown as Record<string, unknown>)[
+      check.parentModel
+    ] as {
+      findMany: (args: unknown) => Promise<Array<Record<string, string>>>;
+    };
+
+    const existingParents = await parentModel.findMany({
+      where: { id: { in: refIds } },
+      select: { id: true },
+    });
+    const existingIds = new Set(existingParents.map((p) => p.id));
+
     for (const candidate of candidates) {
       const refId = candidate[check.childField];
       if (!refId) continue; // nullable field, skip nulls
+      if (existingIds.has(refId)) continue;
 
-      const parentModel = (this.prisma as unknown as Record<string, unknown>)[
-        check.parentModel
-      ] as {
-        findFirst: (args: unknown) => Promise<Record<string, string> | null>;
-      };
-
-      const parent = await parentModel.findFirst({
-        where: { id: refId },
-        select: { id: true },
-      });
-
-      if (!parent) {
-        orphansFound++;
-        await this.writeOrphanLog(check, candidate['id'], refId);
-      }
+      orphansFound++;
+      await this.writeOrphanLog(check, candidate['id'], refId);
     }
 
     if (orphansFound > 0) {

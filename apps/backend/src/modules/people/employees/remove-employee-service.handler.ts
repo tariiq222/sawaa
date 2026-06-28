@@ -40,6 +40,12 @@ export class RemoveEmployeeServiceHandler {
 				tx.employeeServiceOption.deleteMany({
 					where: { employeeServiceId: record.id },
 				}),
+				// ServiceDurationOption.employeeServiceId is a plain cross-BC string
+				// (no FK), so practitioner-owned duration rows orphan unless cleaned
+				// up here alongside the price-override rows.
+				tx.serviceDurationOption.deleteMany({
+					where: { employeeServiceId: record.id },
+				}),
 				tx.employeeService.delete({
 					where: {
 						employeeId_serviceId: {

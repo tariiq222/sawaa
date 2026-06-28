@@ -25,7 +25,7 @@ function buildPrisma() {
   return {
     sessionPackage: { findFirst: sessionPackageFindFirst },
     employeeService: { ...employeeService, findFirst: employeeServiceFindFirst },
-    employeeServiceOption: { findFirst: employeeServiceOptionFindFirst },
+    employeeServiceOption: { findFirst: employeeServiceOptionFindFirst, findMany: jest.fn().mockResolvedValue([]) },
     serviceDurationOption: {
       ...serviceDurationOption,
       findFirst: serviceDurationOptionFindFirst,
@@ -85,10 +85,10 @@ describe('UpdateSessionPackageHandler', () => {
     tx = prisma._tx;
     prisma.sessionPackage.findFirst.mockResolvedValue(existingPackage());
     prisma.employeeService.findMany.mockResolvedValue([
-      { employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID },
+      { id: 'es-1', employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID },
     ]);
     prisma.serviceDurationOption.findMany.mockResolvedValue([
-      { id: DURATION_OPTION_ID, serviceId: SERVICE_ID },
+      { id: DURATION_OPTION_ID, serviceId: SERVICE_ID, price: { toString: () => '10000' } },
     ]);
     prisma.employeeService.findFirst.mockResolvedValue({ id: 'es-1' });
     prisma.employeeServiceOption.findFirst.mockResolvedValue(null);

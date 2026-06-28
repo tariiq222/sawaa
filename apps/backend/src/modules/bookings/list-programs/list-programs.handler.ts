@@ -8,6 +8,9 @@ export interface ListProgramsQuery {
   branchId?: string;
 }
 
+// Bound an otherwise-unlimited list query (admin programs view).
+const MAX_PROGRAMS = 200;
+
 @Injectable()
 export class ListProgramsHandler {
   constructor(private readonly prisma: PrismaService) {}
@@ -20,6 +23,7 @@ export class ListProgramsHandler {
         ...(query.branchId ? { branchId: query.branchId } : {}),
       },
       orderBy: [{ createdAt: 'desc' }],
+      take: MAX_PROGRAMS,
       include: {
         supervisors: { select: { employeeId: true } },
         _count: { select: { enrollments: true } },

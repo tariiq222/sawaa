@@ -23,7 +23,7 @@ function buildPrisma() {
   return {
     employeeService,
     serviceDurationOption,
-    employeeServiceOption: { findFirst: jest.fn() },
+    employeeServiceOption: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
     sessionPackage: { create: sessionPackageCreate },
     _tx: tx,
   };
@@ -81,10 +81,14 @@ describe('CreateSessionPackageHandler', () => {
    */
   function mockHappyPath({ basePrice = 10_000 }: { basePrice?: number } = {}) {
     prisma.employeeService.findMany.mockResolvedValue([
-      { employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID },
+      { id: 'es-1', employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID },
     ]);
     prisma.serviceDurationOption.findMany.mockResolvedValue([
-      { id: DURATION_OPTION_ID, serviceId: SERVICE_ID },
+      {
+        id: DURATION_OPTION_ID,
+        serviceId: SERVICE_ID,
+        price: { toString: () => String(basePrice) },
+      },
     ]);
     prisma.employeeService.findFirst.mockResolvedValue({ id: 'es-1' });
     prisma.employeeServiceOption.findFirst.mockResolvedValue(null);
@@ -270,11 +274,11 @@ describe('CreateSessionPackageHandler', () => {
   describe('multi-item payload', () => {
     it('passes all items to createMany in input order', async () => {
       prisma.employeeService.findMany.mockResolvedValue([
-        { employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID },
+        { id: 'es-1', employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID },
       ]);
       prisma.serviceDurationOption.findMany.mockResolvedValue([
-        { id: DURATION_OPTION_ID, serviceId: SERVICE_ID },
-        { id: 'dur-2', serviceId: SERVICE_ID },
+        { id: DURATION_OPTION_ID, serviceId: SERVICE_ID, price: { toString: () => '5000' } },
+        { id: 'dur-2', serviceId: SERVICE_ID, price: { toString: () => '5000' } },
       ]);
       prisma.employeeService.findFirst.mockResolvedValue({ id: 'es-1' });
       prisma.employeeServiceOption.findFirst.mockResolvedValue(null);

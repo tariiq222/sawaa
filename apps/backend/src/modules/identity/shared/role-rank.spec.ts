@@ -1,5 +1,11 @@
 import { ForbiddenException } from '@nestjs/common';
-import { ROLE_RANK, actorRankOf, assertCanAssignRole } from './role-rank';
+import {
+  ROLE_RANK,
+  actorRankOf,
+  targetRankOf,
+  assertCanAssignRole,
+  assertCanManageUser,
+} from './role-rank';
 
 /**
  * Privilege-escalation gate shared by every role-mutation path
@@ -143,6 +149,54 @@ describe('role-rank', () => {
       } catch (e: any) {
         expect(e).toBeInstanceOf(ForbiddenException);
       }
+    });
+  });
+
+  describe('targetRankOf', () => {
+    it('returns the table rank for a normal target', () => {
+      expect(targetRankOf({ role: 'ADMIN', isSuperAdmin: false })).toBe(ROLE_RANK.ADMIN);
+      expect(targetRankOf({ role: 'RECEPTIONIST', isSuperAdmin: false })).toBe(ROLE_RANK.RECEPTIONIST);
+    });
+
+    it('lifts a super-admin target to SUPER_ADMIN rank regardless of stored role', () => {
+      expect(targetRankOf({ role: 'ADMIN', isSuperAdmin: true })).toBe(ROLE_RANK.SUPER_ADMIN);
+      expect(targetRankOf({ role: 'EMPLOYEE', isSuperAdmin: true })).toBe(ROLE_RANK.SUPER_ADMIN);
+    });
+  });
+
+  describe('assertCanManageUser', () => {
+    const actor = (role: any, isSuperAdmin = false) => ({ id: 'actor', role, isSuperAdmin });
+    const target = (role: any, isSuperAdmin = false) => ({ id: 'target', role, isSuperAdmin });
+
+    it('allows a strictly higher-rank actor to manage a lower-rank target', () => {
+      expect(() => assertCanManageUser(actor('ADMIN'), target('RECEPTIONIST'))).not.toThrow();
+      expect(() => assertCanManageUser(actor('ACCOUNTANT'), target('EMPLOYEE'))).not.toThrow();
+      expect(() => assertCanManageUser(actor('ADMIN', true), target('ADMIN'))).not.toThrow();
+    });
+
+    it('throws on EQUAL rank (horizontal escalation guard)', () => {
+      expect(() => assertCanManageUser(actor('ADMIN'), target('ADMIN'))).toThrow(
+        'Cannot modify a user at or above your rank',
+      );
+    });
+
+    it('throws on HIGHER-rank target (vertical escalation guard)', () => {
+      expect(() => assertCanManageUser(actor('RECEPTIONIST'), target('ADMIN'))).toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('throws when an ADMIN targets a SUPER_ADMIN (super-admin lift on target)', () => {
+      expect(() => assertCanManageUser(actor('ADMIN'), target('ADMIN', true))).toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('throws on self-action even for a SUPER_ADMIN', () => {
+      const self = { id: 'same', role: 'ADMIN' as const, isSuperAdmin: true };
+      expect(() => assertCanManageUser(self, { ...self })).toThrow(
+        'Cannot perform this action on your own account',
+      );
     });
   });
 });
