@@ -17,7 +17,7 @@ describe('DashboardFinanceController', () => {
       'upsertMoyasarConfig', 'testMoyasarConfig', 'generateInvoicePdf',
       'getPayment', 'applyInvoiceDiscount',
       'createPackagePurchase', 'listClientPackagePurchases',
-      'refundPackagePurchase',
+      'refundPackagePurchase', 'ensureBookingInvoice', 'manualRefundPayment',
     ];
 
     handlers = {};
@@ -34,6 +34,7 @@ describe('DashboardFinanceController', () => {
       handlerMocks[1] as any,  // getInvoice
       handlerMocks[18] as any, // generateInvoicePdf
       handlerMocks[2] as any,  // processPayment
+      handlerMocks[24] as any, // ensureBookingInvoice
       handlerMocks[20] as any, // applyInvoiceDiscount
       handlerMocks[3] as any,  // listPayments
       handlerMocks[19] as any, // getPayment
@@ -46,6 +47,7 @@ describe('DashboardFinanceController', () => {
       handlerMocks[10] as any, // deleteCoupon
       handlerMocks[11] as any, // getPaymentStats
       handlerMocks[12] as any, // refundPayment
+      handlerMocks[25] as any, // manualRefundPayment
       handlerMocks[13] as any, // verifyPayment
       handlerMocks[14] as any, // bankTransferUpload
       handlerMocks[15] as any, // getMoyasarConfig

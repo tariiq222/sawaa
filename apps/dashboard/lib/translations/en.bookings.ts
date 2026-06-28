@@ -385,6 +385,7 @@ export const enBookings: Record<string, string> = {
   "bookings.recordPayment.title": "Record Payment",
   "bookings.recordPayment.description": "Record a payment for this booking, with an optional discount.",
   "bookings.recordPayment.noInvoice": "This booking has no invoice yet.",
+  "bookings.recordPayment.preparingInvoice": "Preparing invoice…",
   "bookings.recordPayment.outstanding": "Outstanding",
   "bookings.recordPayment.method": "Payment method",
   "bookings.recordPayment.method.cash": "Cash",

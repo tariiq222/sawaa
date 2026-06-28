@@ -13,6 +13,7 @@ import {
   EyeIcon,
   Invoice01Icon,
   Calendar03Icon,
+  ArrowTurnBackwardIcon,
 } from "@hugeicons/core-free-icons"
 import {
   DropdownMenu,
@@ -31,6 +32,7 @@ import { usePaymentMutations } from "@/hooks/use-payments"
 import { ApiError } from "@/lib/api"
 import { generateInvoicePdf } from "@/lib/api/invoices"
 import { RecordPaymentDialog } from "@/components/features/bookings/record-payment-dialog"
+import { BookingRefundDialog } from "@/components/features/bookings/booking-refund-dialog"
 import type { Booking } from "@/lib/types/booking"
 
 export type QuickStatusActionType = "confirm" | "checkin" | "complete" | "noshow" | "reschedule"
@@ -102,6 +104,7 @@ export function ActionsCell({
   const queryClient = useQueryClient()
   const { verifyMut } = usePaymentMutations()
   const [invoiceLoading, setInvoiceLoading] = useState(false)
+  const [refundOpen, setRefundOpen] = useState(false)
 
   // Generate (or reuse) the invoice PDF and open it in a new tab — works for any status.
   const handleInvoicePdf = async () => {
@@ -129,6 +132,10 @@ export function ActionsCell({
   const isPending = verifyMut.isPending
   // Terminal bookings are over: no editing. Invoice stays reachable for review.
   const hasInvoice = !!booking.invoice
+  // Off-gateway refund: only cash/bank-transfer/mada/tabby payments (no Moyasar
+  // card gateway). Card refunds go through the admin-only gateway path.
+  const canManualRefund =
+    !!payment && payment.status === "paid" && payment.method !== "moyasar"
 
   const invalidateBookings = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
@@ -167,6 +174,23 @@ export function ActionsCell({
         >
           <HugeiconsIcon icon={Invoice01Icon} size={16} strokeWidth={2.2} />
         </button>
+      )}
+      {canManualRefund && payment && (
+        <>
+          <button
+            className={intentIconBtn.neutral}
+            aria-label={t("refund.title")}
+            onClick={() => setRefundOpen(true)}
+          >
+            <HugeiconsIcon icon={ArrowTurnBackwardIcon} size={16} strokeWidth={2.2} />
+          </button>
+          <BookingRefundDialog
+            paymentId={payment.id}
+            maxAmount={payment.amount}
+            open={refundOpen}
+            onOpenChange={setRefundOpen}
+          />
+        </>
       )}
       <button
         className={intentIconBtn.danger}
@@ -238,7 +262,13 @@ export function PaymentStatusCell({ booking }: { booking: Booking }) {
   const { t } = useLocale()
   const payment = booking.payment
   const hasOutstanding = (booking.invoice?.outstanding ?? 0) > 0
-  const canRecordPayment = !!booking.invoice && hasOutstanding && payment?.status !== "awaiting"
+  // Pay-at-clinic bookings have no invoice yet — still allow recording a payment
+  // (the dialog materialises a DRAFT invoice on open). Needs a price and a client
+  // (the backend cannot invoice a guest booking without one).
+  const bookingPrice = booking.priceSnapshot ?? booking.service?.price ?? 0
+  const noInvoiceButPayable = !booking.invoice && bookingPrice > 0 && !!booking.clientId
+  const canRecordPayment =
+    (hasOutstanding || noInvoiceButPayable) && payment?.status !== "awaiting"
 
   const [recordOpen, setRecordOpen] = useState(false)
 

@@ -9,6 +9,8 @@ import {
   verifyPayment,
   recordPayment,
   applyInvoiceDiscount,
+  ensureBookingInvoice,
+  manualRefundPayment,
 } from "@/lib/api/payments"
 import type { PaymentListQuery } from "@/lib/types/payment"
 import type { PaymentStatus, PaymentMethod } from "@/lib/types/common"
@@ -32,7 +34,17 @@ export function usePaymentMutations() {
     },
   })
 
-  return { refundMut, verifyMut }
+  // Off-gateway (cash/bank-transfer) refund issued from the bookings list.
+  const manualRefundMut = useMutation({
+    mutationFn: ({ id, reason, amount }: { id: string; reason: string; amount?: number }) =>
+      manualRefundPayment(id, { reason, amount }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all })
+    },
+  })
+
+  return { refundMut, verifyMut, manualRefundMut }
 }
 
 /* ─── Manual payment recording (from the bookings list "unpaid" cell) ─── */
@@ -64,7 +76,13 @@ export function useRecordPaymentMutations() {
     onSuccess: invalidate,
   })
 
-  return { applyDiscountMut, recordMut }
+  // Lazily materialise a DRAFT invoice for a booking that has none (pay-at-clinic)
+  // so reception can record an upfront payment against it.
+  const ensureInvoiceMut = useMutation({
+    mutationFn: (bookingId: string) => ensureBookingInvoice(bookingId),
+  })
+
+  return { applyDiscountMut, recordMut, ensureInvoiceMut }
 }
 
 /* ─── List Hook ─── */

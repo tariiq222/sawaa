@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import {
@@ -28,7 +28,7 @@ import { useDiscountReasons } from "@/hooks/use-discount-reasons"
 import { usePaymentSettings } from "@/hooks/use-organization-settings"
 import { showApiError } from "@/lib/mutation-helpers"
 import { sarToHalalas, halalasToSar } from "@/lib/money"
-import type { Booking } from "@/lib/types/booking"
+import type { Booking, BookingInvoice } from "@/lib/types/booking"
 
 interface RecordPaymentDialogProps {
   booking: Booking
@@ -63,7 +63,7 @@ export function RecordPaymentDialog({ booking, open, onOpenChange }: RecordPayme
 
 function RecordPaymentForm({ booking, onClose }: { booking: Booking; onClose: () => void }) {
   const { t } = useLocale()
-  const { applyDiscountMut, recordMut } = useRecordPaymentMutations()
+  const { applyDiscountMut, recordMut, ensureInvoiceMut } = useRecordPaymentMutations()
   const { data: reasons = [] } = useDiscountReasons()
   const { data: paymentSettings } = usePaymentSettings()
 
@@ -74,7 +74,19 @@ function RecordPaymentForm({ booking, onClose }: { booking: Booking; onClose: ()
     return list.length > 0 ? list : METHOD_OPTIONS.filter((m) => m.value === "CASH")
   }, [paymentSettings])
 
-  const invoice = booking.invoice
+  // Pay-at-clinic bookings carry no invoice until completion. Materialise a DRAFT
+  // one on open so reception can record an upfront payment against it.
+  const [ensured, setEnsured] = useState<BookingInvoice | null>(booking.invoice)
+  useEffect(() => {
+    if (booking.invoice || ensured) return
+    ensureInvoiceMut
+      .mutateAsync(booking.id)
+      .then(setEnsured)
+      .catch((err) => showApiError(err, { fallback: t("bookings.recordPayment.errorToast"), t }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const invoice = ensured
   // Outstanding before any discount entered in this dialog.
   const baseOutstandingSar = halalasToSar(invoice?.outstanding ?? 0)
   const subtotalSar = halalasToSar(invoice?.subtotal ?? 0)
@@ -132,7 +144,11 @@ function RecordPaymentForm({ booking, onClose }: { booking: Booking; onClose: ()
     <>
       <DialogBody>
           {!invoice ? (
-            <p className="text-sm text-muted-foreground">{t("bookings.recordPayment.noInvoice")}</p>
+            <p className="text-sm text-muted-foreground">
+              {ensureInvoiceMut.isError
+                ? t("bookings.recordPayment.noInvoice")
+                : t("bookings.recordPayment.preparingInvoice")}
+            </p>
           ) : (
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2">

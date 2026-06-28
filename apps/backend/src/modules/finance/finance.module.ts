@@ -29,6 +29,7 @@ import { DeleteCouponHandler } from './coupons/delete-coupon.handler';
 import { GetPaymentStatsHandler } from './get-payment-stats/get-payment-stats.handler';
 import { GetEmployeeEarningsHandler } from './get-employee-earnings/get-employee-earnings.handler';
 import { RefundPaymentHandler } from './refund-payment/refund-payment.handler';
+import { ManualRefundPaymentHandler } from './refund-payment/manual-refund-payment.handler';
 import { VerifyPaymentHandler } from './verify-payment/verify-payment.handler';
 import { MoyasarApiClient } from './moyasar-api/moyasar-api.client';
 
@@ -51,9 +52,11 @@ import { SendInvoiceReceiptHandler } from './issue-invoice-receipt/send-invoice-
 import { InvoicePdfRendererService } from './issue-invoice-receipt/invoice-pdf-renderer.service';
 import { GenerateInvoicePdfHandler } from './generate-invoice-pdf/generate-invoice-pdf.handler';
 import { ApplyInvoiceDiscountHandler } from './apply-invoice-discount/apply-invoice-discount.handler';
+import { EnsureBookingInvoiceHandler } from './ensure-booking-invoice/ensure-booking-invoice.handler';
 
 const handlers = [
   CreateInvoiceHandler,
+  EnsureBookingInvoiceHandler,
   GenerateInvoicePdfHandler,
   ProcessPaymentHandler,
   ApplyInvoiceDiscountHandler,
@@ -75,6 +78,7 @@ const handlers = [
   GetPaymentStatsHandler,
   GetEmployeeEarningsHandler,
   RefundPaymentHandler,
+  ManualRefundPaymentHandler,
   VerifyPaymentHandler,
   InitClientPaymentHandler,
   RequestRefundHandler,
