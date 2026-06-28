@@ -21,6 +21,17 @@ export async function verifyPayment(
   return api.patch<Payment>(`/dashboard/finance/payments/${id}/verify`, payload)
 }
 
+/**
+ * Manually refund a cash/bank-transfer payment (off-gateway). Reception-allowed.
+ * amount in integer halalas; omit for a full refund. Reason required.
+ */
+export async function manualRefundPayment(
+  id: string,
+  payload: { reason: string; amount?: number },
+): Promise<Payment> {
+  return api.patch<Payment>(`/dashboard/finance/payments/${id}/manual-refund`, payload)
+}
+
 export async function fetchPayments(
   query: PaymentListQuery = {},
 ): Promise<PaginatedResponse<Payment>> {
@@ -46,6 +57,24 @@ export async function recordPayment(payload: {
   method: "CASH" | "BANK_TRANSFER" | "MADA" | "TABBY"
 }): Promise<Payment> {
   return api.post<Payment>("/dashboard/finance/payments", payload)
+}
+
+/** Invoice shape returned when ensuring a booking has a (DRAFT) invoice. All amounts in halalas. */
+export interface EnsuredBookingInvoice {
+  id: string
+  subtotal: number
+  vatRate: number
+  total: number
+  outstanding: number
+  status: string
+}
+
+/**
+ * Ensure a booking has an invoice (creates a DRAFT one on demand for
+ * pay-at-clinic bookings) and return it. Idempotent.
+ */
+export async function ensureBookingInvoice(bookingId: string): Promise<EnsuredBookingInvoice> {
+  return api.post<EnsuredBookingInvoice>(`/dashboard/finance/bookings/${bookingId}/invoice`, {})
 }
 
 /** Apply or clear a manual discount on an unpaid invoice. discountAmt in integer halalas (0 clears). */

@@ -385,6 +385,7 @@ export const arBookings: Record<string, string> = {
   "bookings.recordPayment.title": "تسجيل دفعة",
   "bookings.recordPayment.description": "سجّل دفعة لهذا الحجز، مع خصم اختياري.",
   "bookings.recordPayment.noInvoice": "لا توجد فاتورة لهذا الحجز بعد.",
+  "bookings.recordPayment.preparingInvoice": "جارٍ تجهيز الفاتورة…",
   "bookings.recordPayment.outstanding": "المبلغ المستحق",
   "bookings.recordPayment.method": "طريقة الدفع",
   "bookings.recordPayment.method.cash": "نقداً",

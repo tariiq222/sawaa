@@ -30,7 +30,10 @@ export const BUILT_IN: Record<string, readonly Rule[]> = {
   RECEPTIONIST: [
     { action: ['create', 'read', 'update'], subject: 'Booking' },
     { action: ['create', 'read', 'update'], subject: 'Client' },
-    { action: ['create', 'read'], subject: 'Payment' },
+    // `update` lets reception issue a MANUAL (cash/bank-transfer) refund — the
+    // off-gateway refund endpoint is gated on update:Payment. Gateway (card)
+    // refunds remain admin/owner-only (manage:Setting).
+    { action: ['create', 'read', 'update'], subject: 'Payment' },
     { action: ['create', 'read'], subject: 'Invoice' },
     { action: 'read', subject: 'Coupon' },
     { action: 'read', subject: 'Employee' },

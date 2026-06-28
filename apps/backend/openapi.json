@@ -11692,6 +11692,87 @@
         ]
       }
     },
+    "/api/v1/dashboard/finance/bookings/{bookingId}/invoice": {
+      "post": {
+        "operationId": "DashboardFinanceController_ensureBookingInvoiceEndpoint",
+        "parameters": [
+          {
+            "description": "Booking UUID",
+            "in": "path",
+            "name": "bookingId",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Invoice ensured"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Booking has no payable amount or no client"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Booking not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ensure a (DRAFT) invoice exists for a booking and return it",
+        "tags": [
+          "Dashboard / Finance"
+        ]
+      }
+    },
     "/api/v1/dashboard/finance/clients/{clientId}/package-purchases": {
       "get": {
         "operationId": "DashboardFinanceController_listClientPackagePurchasesEndpoint",
@@ -13575,6 +13656,97 @@
           }
         ],
         "summary": "Get a single payment by id",
+        "tags": [
+          "Dashboard / Finance"
+        ]
+      }
+    },
+    "/api/v1/dashboard/finance/payments/{id}/manual-refund": {
+      "patch": {
+        "operationId": "DashboardFinanceController_manualRefundPaymentEndpoint",
+        "parameters": [
+          {
+            "description": "Payment UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundPaymentDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Payment refunded"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Payment is a card payment or amount exceeds balance"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Payment not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Manually refund a cash/bank-transfer payment (off-gateway)",
         "tags": [
           "Dashboard / Finance"
         ]

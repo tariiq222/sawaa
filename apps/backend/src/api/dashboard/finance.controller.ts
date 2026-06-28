@@ -19,6 +19,7 @@ import { GetInvoiceHandler } from '../../modules/finance/get-invoice/get-invoice
 import { GenerateInvoicePdfHandler } from '../../modules/finance/generate-invoice-pdf/generate-invoice-pdf.handler';
 import { ProcessPaymentHandler } from '../../modules/finance/process-payment/process-payment.handler';
 import { ProcessPaymentDto } from '../../modules/finance/process-payment/process-payment.dto';
+import { EnsureBookingInvoiceHandler } from '../../modules/finance/ensure-booking-invoice/ensure-booking-invoice.handler';
 import { ApplyInvoiceDiscountHandler } from '../../modules/finance/apply-invoice-discount/apply-invoice-discount.handler';
 import { ApplyInvoiceDiscountDto } from '../../modules/finance/apply-invoice-discount/apply-invoice-discount.dto';
 import { UserId } from '../../common/auth/user-id.decorator';
@@ -39,6 +40,7 @@ import { UpdateCouponDto } from '../../modules/finance/coupons/update-coupon.dto
 import { DeleteCouponHandler } from '../../modules/finance/coupons/delete-coupon.handler';
 import { GetPaymentStatsHandler } from '../../modules/finance/get-payment-stats/get-payment-stats.handler';
 import { RefundPaymentHandler } from '../../modules/finance/refund-payment/refund-payment.handler';
+import { ManualRefundPaymentHandler } from '../../modules/finance/refund-payment/manual-refund-payment.handler';
 import { RefundPaymentDto } from '../../modules/finance/refund-payment/refund-payment.dto';
 import { VerifyPaymentHandler } from '../../modules/finance/verify-payment/verify-payment.handler';
 import { VerifyPaymentDto } from '../../modules/finance/verify-payment/verify-payment.dto';
@@ -78,6 +80,7 @@ export class DashboardFinanceController {
     private readonly getInvoice: GetInvoiceHandler,
     private readonly generateInvoicePdf: GenerateInvoicePdfHandler,
     private readonly processPayment: ProcessPaymentHandler,
+    private readonly ensureBookingInvoice: EnsureBookingInvoiceHandler,
     private readonly applyInvoiceDiscount: ApplyInvoiceDiscountHandler,
     private readonly listPayments: ListPaymentsHandler,
     private readonly getPayment: GetPaymentHandler,
@@ -90,6 +93,7 @@ export class DashboardFinanceController {
     private readonly deleteCoupon: DeleteCouponHandler,
     private readonly getPaymentStats: GetPaymentStatsHandler,
     private readonly refundPayment: RefundPaymentHandler,
+    private readonly manualRefundPayment: ManualRefundPaymentHandler,
     private readonly verifyPayment: VerifyPaymentHandler,
     private readonly bankTransferUpload: BankTransferUploadHandler,
     private readonly getMoyasarConfig: GetMoyasarConfigHandler,
@@ -201,6 +205,17 @@ export class DashboardFinanceController {
     return this.processPayment.execute({ ...body });
   }
 
+  @Post('bookings/:bookingId/invoice')
+  @CheckPermissions({ action: 'manage', subject: 'Invoice' })
+  @ApiOperation({ summary: 'Ensure a (DRAFT) invoice exists for a booking and return it' })
+  @ApiParam({ name: 'bookingId', description: 'Booking UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiCreatedResponse({ description: 'Invoice ensured' })
+  @ApiResponse({ status: 400, description: 'Booking has no payable amount or no client', type: ApiErrorDto })
+  @ApiResponse({ status: 404, description: 'Booking not found', type: ApiErrorDto })
+  ensureBookingInvoiceEndpoint(@Param('bookingId', ParseUUIDPipe) bookingId: string) {
+    return this.ensureBookingInvoice.execute({ bookingId });
+  }
+
   @Patch('invoices/:id/discount')
   @CheckPermissions({ action: 'manage', subject: 'Invoice' })
   @ApiOperation({ summary: 'Apply or clear a manual discount on an unpaid invoice' })
@@ -300,6 +315,24 @@ export class DashboardFinanceController {
     @Body() body: RefundPaymentDto,
   ) {
     return this.refundPayment.execute({ paymentId: id, ...body });
+  }
+
+  @Patch('payments/:id/manual-refund')
+  // Off-gateway (cash/bank-transfer) refund — no money moves through Moyasar,
+  // reception hands the cash back. Gated on update:Payment so RECEPTION (and
+  // admin/owner) can issue it; card/gateway refunds stay on manage:Setting above.
+  @CheckPermissions({ action: 'update', subject: 'Payment' })
+  @ApiOperation({ summary: 'Manually refund a cash/bank-transfer payment (off-gateway)' })
+  @ApiParam({ name: 'id', description: 'Payment UUID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({ description: 'Payment refunded' })
+  @ApiResponse({ status: 400, description: 'Payment is a card payment or amount exceeds balance', type: ApiErrorDto })
+  @ApiResponse({ status: 404, description: 'Payment not found', type: ApiErrorDto })
+  manualRefundPaymentEndpoint(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UserId() userId: string,
+    @Body() body: RefundPaymentDto,
+  ) {
+    return this.manualRefundPayment.execute({ paymentId: id, performedBy: userId, ...body });
   }
 
   @Patch('payments/:id/verify')
