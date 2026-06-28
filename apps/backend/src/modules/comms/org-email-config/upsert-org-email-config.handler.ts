@@ -36,8 +36,12 @@ export class UpsertOrgEmailConfigHandler {
           credentialsCiphertext = undefined; // keep existing
         } else {
           throw new BadRequestException({
-            ar: 'بيانات اعتماد SMTP مطلوبة',
-            en: 'SMTP credentials are required',
+            message: 'SMTP credentials are required',
+            code: 'EMAIL_CREDENTIALS_REQUIRED',
+            localized: {
+              ar: 'بيانات اعتماد SMTP مطلوبة',
+              en: 'SMTP credentials are required',
+            },
           });
         }
         break;
@@ -51,8 +55,12 @@ export class UpsertOrgEmailConfigHandler {
           credentialsCiphertext = undefined; // keep existing
         } else {
           throw new BadRequestException({
-            ar: 'مفتاح Resend API مطلوب',
-            en: 'Resend API key is required',
+            message: 'Resend API key is required',
+            code: 'EMAIL_CREDENTIALS_REQUIRED',
+            localized: {
+              ar: 'مفتاح Resend API مطلوب',
+              en: 'Resend API key is required',
+            },
           });
         }
         break;
@@ -66,8 +74,12 @@ export class UpsertOrgEmailConfigHandler {
           credentialsCiphertext = undefined; // keep existing
         } else {
           throw new BadRequestException({
-            ar: 'مفتاح SendGrid API مطلوب',
-            en: 'SendGrid API key is required',
+            message: 'SendGrid API key is required',
+            code: 'EMAIL_CREDENTIALS_REQUIRED',
+            localized: {
+              ar: 'مفتاح SendGrid API مطلوب',
+              en: 'SendGrid API key is required',
+            },
           });
         }
         break;
@@ -81,8 +93,12 @@ export class UpsertOrgEmailConfigHandler {
           credentialsCiphertext = undefined; // keep existing
         } else {
           throw new BadRequestException({
-            ar: 'مفتاح Mailchimp API مطلوب',
-            en: 'Mailchimp API key is required',
+            message: 'Mailchimp API key is required',
+            code: 'EMAIL_CREDENTIALS_REQUIRED',
+            localized: {
+              ar: 'مفتاح Mailchimp API مطلوب',
+              en: 'Mailchimp API key is required',
+            },
           });
         }
         break;
@@ -104,8 +120,12 @@ export class UpsertOrgEmailConfigHandler {
     } else {
       if (credentialsCiphertext === undefined || credentialsCiphertext === null) {
         throw new BadRequestException({
-          ar: 'بيانات الاعتماد مطلوبة عند الإنشاء',
-          en: 'Credentials are required when creating a new config',
+          message: 'Credentials are required when creating a new config',
+          code: 'EMAIL_CREDENTIALS_REQUIRED',
+          localized: {
+            ar: 'بيانات الاعتماد مطلوبة عند الإنشاء',
+            en: 'Credentials are required when creating a new config',
+          },
         });
       }
       row = await this.prisma.organizationEmailConfig.create({

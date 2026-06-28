@@ -24,7 +24,7 @@ export function useDepartments() {
 
   const query: DepartmentListQuery = {
     page,
-    perPage: 20,
+    limit: 20,
     search: debouncedSearch || undefined,
     isActive,
   }
@@ -66,7 +66,7 @@ export function useDepartments() {
 
 /** Flat list of active departments for use in dropdowns/selects */
 export function useDepartmentOptions() {
-  const query: DepartmentListQuery = { page: 1, perPage: 100, isActive: true }
+  const query: DepartmentListQuery = { page: 1, limit: 100, isActive: true }
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.departments.list(query),
     queryFn: () => fetchDepartments(query),

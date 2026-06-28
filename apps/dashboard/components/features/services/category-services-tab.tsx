@@ -18,7 +18,7 @@ export function CategoryServicesTab({ categoryId }: Props) {
   const router = useRouter()
   const isAr = locale === "ar"
 
-  const listFilters = { categoryId: categoryId!, perPage: 50, includeHidden: false }
+  const listFilters = { categoryId: categoryId!, limit: 50, includeHidden: false }
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.services.list(listFilters),

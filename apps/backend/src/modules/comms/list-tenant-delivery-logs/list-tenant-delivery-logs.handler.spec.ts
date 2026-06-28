@@ -25,7 +25,7 @@ describe('ListTenantDeliveryLogsHandler', () => {
 
     await handler.execute({
       page: 1,
-      perPage: 20,
+      limit: 20,
       status: 'FAILED' as never,
       channel: 'EMAIL' as never,
     });
@@ -47,7 +47,7 @@ describe('ListTenantDeliveryLogsHandler', () => {
     prisma.notificationDeliveryLog.findMany.mockResolvedValue([]);
     prisma.notificationDeliveryLog.count.mockResolvedValue(0);
 
-    await handler.execute({ page: 2, perPage: 50 });
+    await handler.execute({ page: 2, limit: 50 });
 
     expect(prisma.notificationDeliveryLog.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: {}, skip: 50, take: 50 }),
@@ -59,17 +59,17 @@ describe('ListTenantDeliveryLogsHandler', () => {
     prisma.notificationDeliveryLog.findMany.mockResolvedValue(rows);
     prisma.notificationDeliveryLog.count.mockResolvedValue(1);
 
-    const result = await handler.execute({ page: 1, perPage: 20 });
+    const result = await handler.execute({ page: 1, limit: 20 });
 
     expect(result.items).toBe(rows);
-    expect(result.meta).toMatchObject({ page: 1, perPage: 20, total: 1, totalPages: 1 });
+    expect(result.meta).toMatchObject({ page: 1, limit: 20, total: 1, totalPages: 1 });
   });
 
   it('projects only the public-safe fields (NO internal payload / metadata)', async () => {
     prisma.notificationDeliveryLog.findMany.mockResolvedValue([]);
     prisma.notificationDeliveryLog.count.mockResolvedValue(0);
 
-    await handler.execute({ page: 1, perPage: 10 });
+    await handler.execute({ page: 1, limit: 10 });
 
     const select = (prisma.notificationDeliveryLog.findMany as jest.Mock).mock.calls[0][0].select;
     expect(select).toEqual(

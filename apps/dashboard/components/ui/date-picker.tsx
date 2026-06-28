@@ -45,6 +45,10 @@ export interface DatePickerProps {
   dir?: "rtl" | "ltr"
   /** Suppress Next.js hydration mismatch warning on dynamic date values */
   suppressHydrationWarning?: boolean
+  /** Trigger id for label/aria wiring */
+  id?: string
+  /** id of the element describing this control (e.g. error message) */
+  "aria-describedby"?: string
 }
 
 export function DatePicker({
@@ -58,6 +62,8 @@ export function DatePicker({
   error = false,
   required = false,
   dir,
+  id,
+  "aria-describedby": ariaDescribedBy,
 }: DatePickerProps) {
   const { locale, t } = useLocale()
   const [open, setOpen] = React.useState(false)
@@ -94,6 +100,7 @@ export function DatePicker({
       <PopoverTrigger asChild>
         <Button
           type="button"
+          id={id}
           variant="outline"
           disabled={disabled}
           dir={dir}
@@ -107,6 +114,7 @@ export function DatePicker({
           )}
           aria-required={required}
           aria-invalid={error}
+          aria-describedby={ariaDescribedBy}
         >
           <HugeiconsIcon
             icon={Calendar03Icon}

@@ -27,8 +27,8 @@ export class UpdateClientHandler {
       });
       if (duplicate) {
         throw new ConflictException({
-          error: 'CLIENT_PHONE_EXISTS',
           message: 'Phone number already registered for this client',
+          code: 'CLIENT_PHONE_EXISTS',
         });
       }
     }
@@ -43,8 +43,8 @@ export class UpdateClientHandler {
       });
       if (duplicate) {
         throw new ConflictException({
-          error: 'CLIENT_EMAIL_EXISTS',
           message: 'Email already registered for another client',
+          code: 'CLIENT_EMAIL_EXISTS',
         });
       }
     }

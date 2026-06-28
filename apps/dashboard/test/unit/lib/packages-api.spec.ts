@@ -24,11 +24,11 @@ describe("packages api", () => {
     vi.clearAllMocks()
   })
 
-  it("fetchPackages maps perPage → limit and forwards the new isPublic filter", async () => {
+  it("fetchPackages forwards page/limit and the new isPublic filter", async () => {
     getMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
     await fetchPackages({
       page: 3,
-      perPage: 20,
+      limit: 20,
       search: "استشارة",
       isActive: true,
       isPublic: true,

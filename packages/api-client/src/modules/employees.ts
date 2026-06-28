@@ -30,7 +30,7 @@ export async function listEmployees(
 ): Promise<EmployeeListResponse> {
   const qs = buildQueryString({
     page: query.page,
-    limit: query.perPage,
+    limit: query.limit,
     isActive: query.isActive,
   })
   return apiRequest<EmployeeListResponse>(`/dashboard/people/employees${qs}`)

@@ -103,6 +103,7 @@ export const arNav: Record<string, string> = {
   "common.min": "دقيقة",
   "common.years": "سنة",
   "common.errorLoading": "تعذّر تحميل البيانات",
+  "common.skipToContent": "تخطّي إلى المحتوى",
   "table.previous": "السابق",
   "table.next": "التالي",
   "table.pagination.page": "الصفحة",

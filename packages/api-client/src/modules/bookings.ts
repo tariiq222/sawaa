@@ -22,7 +22,7 @@ export async function listBookings(
 ): Promise<BookingListResponse> {
   const qs = buildQueryString({
     page: query.page,
-    limit: query.perPage,
+    limit: query.limit,
     status: query.status,
     type: query.type,
     employeeId: query.employeeId,

@@ -24,3 +24,6 @@ export enum DevicePlatform {
   IOS = 'ios',
   ANDROID = 'android',
 }
+
+// String-literal union companion (see payment.ts for the nominal-enum rationale).
+export type NotificationTypeValue = `${NotificationType}`;

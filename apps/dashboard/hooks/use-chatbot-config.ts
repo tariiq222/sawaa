@@ -15,7 +15,7 @@ export function useKnowledgeBase() {
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState<KbDocumentStatus | undefined>()
 
-  const filters: KnowledgeBaseQuery = { page, perPage: 20, status }
+  const filters: KnowledgeBaseQuery = { page, limit: 20, status }
 
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.chatbot.knowledgeBase.list(filters),

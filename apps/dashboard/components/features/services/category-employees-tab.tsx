@@ -32,7 +32,7 @@ export function CategoryEmployeesTab({
 function CategoryEmployeesTabEdit({ categoryId }: { categoryId: string }) {
   const { t } = useLocale()
 
-  const listFilters = { categoryId, perPage: 100, includeHidden: true }
+  const listFilters = { categoryId, limit: 100, includeHidden: true }
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.services.list(listFilters),

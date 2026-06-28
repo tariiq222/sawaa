@@ -103,6 +103,7 @@ export const enNav: Record<string, string> = {
   "common.min": "min",
   "common.years": "years",
   "common.errorLoading": "Failed to load data",
+  "common.skipToContent": "Skip to main content",
   "table.previous": "Previous",
   "table.next": "Next",
   "table.pagination.page": "Page",

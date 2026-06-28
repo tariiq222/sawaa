@@ -81,7 +81,7 @@ describe("chatbot api", () => {
   describe("fetchChatSessions", () => {
     it("calls /dashboard/comms/chat/conversations with pagination", async () => {
       getMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
-      await fetchChatSessions({ page: 2, perPage: 20 })
+      await fetchChatSessions({ page: 2, limit: 20 })
       expect(getMock).toHaveBeenCalledWith(
         expect.stringContaining("/dashboard/comms/chat/conversations"),
         expect.objectContaining({ page: 2, limit: 20 }),

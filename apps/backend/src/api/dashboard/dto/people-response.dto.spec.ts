@@ -138,10 +138,10 @@ describe('EmployeeResponseDto (output shape)', () => {
 
 describe('ListMetaDto (output shape)', () => {
   it('constructs pagination meta with the right field shape', () => {
-    const m: ListMetaDto = { total: 42, page: 1, perPage: 20, totalPages: 3, hasNextPage: true, hasPreviousPage: false };
+    const m: ListMetaDto = { total: 42, page: 1, limit: 20, totalPages: 3, hasNextPage: true, hasPreviousPage: false };
     expect(m.total).toBe(42);
     expect(m.page).toBe(1);
-    expect(m.perPage).toBe(20);
+    expect(m.limit).toBe(20);
     expect(m.totalPages).toBe(3);
     expect(m.hasNextPage).toBe(true);
     expect(m.hasPreviousPage).toBe(false);
@@ -152,7 +152,7 @@ describe('PaginatedClientsDto (output shape)', () => {
   it('holds an items array and a meta block', () => {
     const p: PaginatedClientsDto = {
       items: [makeClient()],
-      meta: { total: 1, page: 1, perPage: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
+      meta: { total: 1, page: 1, limit: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
     };
     expect(p.items).toHaveLength(1);
     expect(p.items[0].name).toBe('Sara Al-Harbi');
@@ -164,7 +164,7 @@ describe('PaginatedEmployeesDto (output shape)', () => {
   it('holds an items array and a meta block', () => {
     const p: PaginatedEmployeesDto = {
       items: [makeEmployee()],
-      meta: { total: 1, page: 1, perPage: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
+      meta: { total: 1, page: 1, limit: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
     };
     expect(p.items).toHaveLength(1);
     expect(p.items[0].employmentType).toBe('FULL_TIME');

@@ -64,7 +64,7 @@ export interface GroupCertificate {
 
 export interface GroupListQuery {
   page?: number
-  perPage?: number
+  limit?: number
   search?: string
   employeeId?: string
   status?: GroupStatus

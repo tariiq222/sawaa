@@ -24,7 +24,7 @@ export function RatingsManagementTab() {
 
   const { data, isLoading } = useQuery({
     queryKey: [...queryKeys.employees.ratings("all"), page],
-    queryFn: () => fetchAllRatings({ page, perPage: 20 }),
+    queryFn: () => fetchAllRatings({ page, limit: 20 }),
   })
 
   const mutation = useMutation({

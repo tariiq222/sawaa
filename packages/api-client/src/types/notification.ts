@@ -10,7 +10,7 @@ export interface NotificationListItem {
 
 export interface NotificationListQuery {
   page?: number
-  perPage?: number
+  limit?: number
 }
 
 export interface UnreadCountResponse {

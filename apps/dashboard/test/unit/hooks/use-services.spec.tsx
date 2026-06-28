@@ -71,13 +71,13 @@ function resetAll() {
 describe("useServices (list)", () => {
   beforeEach(resetAll)
 
-  it("fetches with default page/perPage and includeHidden:true", async () => {
+  it("fetches with default page/limit and includeHidden:true", async () => {
     servicesApi.fetchServices.mockResolvedValue({ items: [], meta: { total: 0 } })
     const { Wrapper } = makeWrapper()
     const { result } = renderHook(() => useServices(), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(servicesApi.fetchServices).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, perPage: 20, includeHidden: true }),
+      expect.objectContaining({ page: 1, limit: 20, includeHidden: true }),
     )
   })
 
@@ -141,12 +141,12 @@ describe("useServicesListStats / useCategories", () => {
     expect(result.current.data).toEqual({ total: 3 })
   })
 
-  it("useCategories fetches with a large perPage and unwraps items", async () => {
+  it("useCategories fetches with a large limit and unwraps items", async () => {
     servicesApi.fetchCategories.mockResolvedValue({ items: [{ id: "c-1" }], meta: { total: 1 } })
     const { Wrapper } = makeWrapper()
     const { result } = renderHook(() => useCategories(), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(servicesApi.fetchCategories).toHaveBeenCalledWith({ page: 1, perPage: 200 })
+    expect(servicesApi.fetchCategories).toHaveBeenCalledWith({ page: 1, limit: 200 })
     expect(result.current.data).toEqual([{ id: "c-1" }])
   })
 })

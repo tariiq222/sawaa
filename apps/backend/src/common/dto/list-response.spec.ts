@@ -8,7 +8,7 @@ describe('toListResponse', () => {
       meta: {
         total: 25,
         page: 2,
-        perPage: 10,
+        limit: 10,
         totalPages: 3,
         hasNextPage: true,
         hasPreviousPage: true,
@@ -40,16 +40,16 @@ describe('toListResponse', () => {
       expect(meta.hasPreviousPage).toBe(false);
     });
 
-    it('perPage=0 falls back to 1 instead of dividing by zero', () => {
+    it('limit=0 falls back to 1 instead of dividing by zero', () => {
       const { meta } = toListResponse([], 5, 1, 0);
-      expect(meta.perPage).toBe(1);
+      expect(meta.limit).toBe(1);
       expect(meta.totalPages).toBe(5);
       expect(Number.isFinite(meta.totalPages)).toBe(true);
     });
 
-    it('negative perPage falls back to 1', () => {
+    it('negative limit falls back to 1', () => {
       const { meta } = toListResponse([], 3, 1, -10);
-      expect(meta.perPage).toBe(1);
+      expect(meta.limit).toBe(1);
       expect(meta.totalPages).toBe(3);
     });
 
@@ -60,7 +60,7 @@ describe('toListResponse', () => {
       expect(meta.hasPreviousPage).toBe(true);
     });
 
-    it('exact multiple of perPage does not add a phantom page', () => {
+    it('exact multiple of limit does not add a phantom page', () => {
       expect(toListResponse([], 20, 1, 10).meta.totalPages).toBe(2);
     });
   });

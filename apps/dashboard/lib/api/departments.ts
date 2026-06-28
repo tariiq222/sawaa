@@ -12,7 +12,7 @@ export async function fetchDepartments(
 ): Promise<PaginatedResponse<Department>> {
   return api.get("/dashboard/organization/departments", {
     page: query.page,
-    limit: query.perPage,
+    limit: query.limit,
     isActive: query.isActive,
     search: query.search,
   })

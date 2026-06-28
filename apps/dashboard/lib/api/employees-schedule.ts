@@ -213,22 +213,22 @@ export async function setEmployeeServiceOptions(
 
 export async function fetchEmployeeRatings(
   id: string,
-  query: { page?: number; perPage?: number } = {},
+  query: { page?: number; limit?: number } = {},
 ): Promise<PaginatedResponse<Rating>> {
   const res = await api.get<PaginatedResponse<RawRating> | RawRating[]>(
     `/dashboard/people/employees/${id}/ratings`,
-    { page: query.page, limit: query.perPage },
+    { page: query.page, limit: query.limit },
   )
 
   if (Array.isArray(res)) {
     const page = query.page ?? 1
-    const perPage = query.perPage ?? 20
+    const limit = query.limit ?? 20
     return {
       items: res.map(mapRating),
       meta: {
         total: res.length,
         page,
-        perPage,
+        limit,
         totalPages: 1,
         hasNextPage: false,
         hasPreviousPage: page > 1,
@@ -243,22 +243,22 @@ export async function fetchEmployeeRatings(
 }
 
 export async function fetchAllRatings(
-  query: { page?: number; perPage?: number } = {},
+  query: { page?: number; limit?: number } = {},
 ): Promise<PaginatedResponse<Rating>> {
   const res = await api.get<PaginatedResponse<RawRating> | RawRating[]>(
     `/dashboard/organization/ratings`,
-    { page: query.page, limit: query.perPage },
+    { page: query.page, limit: query.limit },
   )
 
   if (Array.isArray(res)) {
     const page = query.page ?? 1
-    const perPage = query.perPage ?? 20
+    const limit = query.limit ?? 20
     return {
       items: res.map(mapRating),
       meta: {
         total: res.length,
         page,
-        perPage,
+        limit,
         totalPages: 1,
         hasNextPage: false,
         hasPreviousPage: page > 1,

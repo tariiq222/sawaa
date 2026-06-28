@@ -31,8 +31,8 @@ export function StepDepartment({ onSelect }: StepDepartmentProps) {
   const { t, locale } = useLocale()
 
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.departments.list({ isActive: true, perPage: 100 }),
-    queryFn: () => fetchDepartments({ isActive: true, perPage: 100 }),
+    queryKey: queryKeys.departments.list({ isActive: true, limit: 100 }),
+    queryFn: () => fetchDepartments({ isActive: true, limit: 100 }),
     staleTime: 5 * 60 * 1000,
   })
 

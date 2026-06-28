@@ -1032,7 +1032,7 @@ export class DashboardPeopleController {
           properties: {
             total: { type: 'integer' },
             page: { type: 'integer' },
-            perPage: { type: 'integer' },
+            limit: { type: 'integer' },
             totalPages: { type: 'integer' },
             hasNextPage: { type: 'boolean' },
             hasPreviousPage: { type: 'boolean' },

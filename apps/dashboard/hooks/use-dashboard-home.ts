@@ -30,21 +30,21 @@ export function useDashboardHome(visible: VisibleWidgets) {
 
   const todayBookings = useQuery({
     queryKey: queryKeys.bookings.list({ scope: "home-today", from: today.from }),
-    queryFn: () => fetchBookings({ dateFrom: today.from, dateTo: today.to, perPage: 1 }),
+    queryFn: () => fetchBookings({ dateFrom: today.from, dateTo: today.to, limit: 1 }),
     enabled: visible.stats.bookings,
     staleTime: 60_000,
   })
 
   const pendingPayments = useQuery({
     queryKey: queryKeys.payments.list({ scope: "home-pending" }),
-    queryFn: () => fetchPayments({ status: "PENDING", perPage: 1 }),
+    queryFn: () => fetchPayments({ status: "PENDING", limit: 1 }),
     enabled: visible.stats.pendingPayments || visible.attentionAlerts.pendingPayments,
     staleTime: 60_000,
   })
 
   const cancelRequests = useQuery({
     queryKey: queryKeys.bookings.list({ scope: "home-cancel" }),
-    queryFn: () => fetchBookings({ status: "cancel_requested", perPage: 1 }),
+    queryFn: () => fetchBookings({ status: "cancel_requested", limit: 1 }),
     enabled: visible.attentionAlerts.cancelRequests,
     staleTime: 60_000,
   })

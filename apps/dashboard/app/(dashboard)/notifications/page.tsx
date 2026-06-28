@@ -52,7 +52,7 @@ function groupByDay(items: Notification[], t: (k: string) => string) {
 function NotificationsContent() {
   const { t } = useLocale()
   const [page, setPage] = useState(1)
-  const query: NotificationListQuery = { page, perPage: 50 }
+  const query: NotificationListQuery = { page, limit: 50 }
 
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.notifications.list(query),

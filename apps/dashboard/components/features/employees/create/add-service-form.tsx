@@ -58,7 +58,7 @@ export function AddServiceForm({
       <div className="px-4 py-4 space-y-4">
       {/* Service — read-only when editing, select when adding */}
       <div className="flex flex-col gap-1.5">
-        <Label className="text-xs">{t("employees.services.serviceLabel")}</Label>
+        <Label className="text-xs" htmlFor="asf-service">{t("employees.services.serviceLabel")}</Label>
         {isEditing ? (
           <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-foreground">
             {editingServiceName ?? ""}
@@ -70,7 +70,11 @@ export function AddServiceForm({
               name="serviceId"
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger>
+                  <SelectTrigger
+                    id="asf-service"
+                    aria-invalid={form.formState.errors.serviceId ? "true" : undefined}
+                    aria-describedby={form.formState.errors.serviceId ? "asf-service-error" : undefined}
+                  >
                     <SelectValue
                       placeholder={t("employees.services.selectService")}
                     />
@@ -96,7 +100,7 @@ export function AddServiceForm({
               )}
             />
             {form.formState.errors.serviceId && (
-              <p className="text-xs text-destructive">
+              <p id="asf-service-error" className="text-xs text-destructive">
                 {form.formState.errors.serviceId.message}
               </p>
             )}

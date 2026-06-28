@@ -1,7 +1,7 @@
 export interface PaginationMeta {
   total: number
   page: number
-  perPage: number
+  limit: number
   totalPages: number
   hasNextPage: boolean
   hasPreviousPage: boolean
@@ -14,7 +14,7 @@ export interface PaginatedResponse<T> {
 
 export interface PaginationParams {
   page?: number
-  perPage?: number
+  limit?: number
   search?: string
   sortBy?: string
   sortOrder?: 'asc' | 'desc'

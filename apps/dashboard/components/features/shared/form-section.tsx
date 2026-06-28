@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { useId, isValidElement, cloneElement, type ReactNode, type ReactElement } from "react"
 import { Label } from "@sawaa/ui"
 import { cn } from "@/lib/utils"
 
@@ -23,6 +23,13 @@ export function FormSection({ title, description, children, className }: {
   )
 }
 
+/**
+ * Wires WCAG 3.3.1 / 4.1.3 error semantics: when `error` is present, the
+ * single child control receives `aria-invalid="true"` and `aria-describedby`
+ * pointing at the error message, and the error <p> gets a matching id.
+ * Falls back to rendering children untouched when there is no single element
+ * child (e.g. composite controls), so existing markup is never broken.
+ */
 export function FormField({ label, required, children, error, className }: {
   label?: string
   required?: boolean
@@ -30,11 +37,29 @@ export function FormField({ label, required, children, error, className }: {
   error?: string
   className?: string
 }) {
+  const reactId = useId()
+  const errorId = `field-error-${reactId}`
+
+  let control = children
+  if (error && isValidElement(children)) {
+    const child = children as ReactElement<{
+      "aria-invalid"?: boolean | "true" | "false"
+      "aria-describedby"?: string
+    }>
+    const describedBy = [child.props["aria-describedby"], errorId]
+      .filter(Boolean)
+      .join(" ")
+    control = cloneElement(child, {
+      "aria-invalid": "true",
+      "aria-describedby": describedBy,
+    })
+  }
+
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       {label && <Label>{label}{required && <span className="ms-0.5 text-destructive">*</span>}</Label>}
-      {children}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {control}
+      {error && <p id={errorId} className="text-xs text-destructive">{error}</p>}
     </div>
   )
 }

@@ -94,7 +94,7 @@ export function VerifyDialog({
             className="flex flex-col gap-4"
           >
             <div className="flex flex-col gap-2">
-              <Label>{t("payments.verify.actionLabel")}</Label>
+              <Label htmlFor="verify-action">{t("payments.verify.actionLabel")}</Label>
               <Select
                 value={form.watch("action") ?? ""}
                 onValueChange={(v) =>
@@ -103,7 +103,11 @@ export function VerifyDialog({
                   })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  id="verify-action"
+                  aria-invalid={form.formState.errors.action ? "true" : undefined}
+                  aria-describedby={form.formState.errors.action ? "verify-action-error" : undefined}
+                >
                   <SelectValue placeholder={t("payments.verify.selectAction")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -116,7 +120,7 @@ export function VerifyDialog({
                 </SelectContent>
               </Select>
               {form.formState.errors.action && (
-                <p className="text-xs text-error">
+                <p id="verify-action-error" className="text-xs text-error">
                   {form.formState.errors.action.message}
                 </p>
               )}

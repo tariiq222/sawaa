@@ -146,7 +146,9 @@
     --surface-solid: #FFFFFF;
     --surface-muted: #EFF4F3;
     --muted: #E6F3EF;
-    --muted-foreground: #5C7872;
+    /* #577069 = 4.88:1 on --background (#F2F5F4) — clears WCAG AA 4.5:1 for
+       small text. Was #5C7872 (4.37:1, AA fail). */
+    --muted-foreground: #577069;
     /* --card is a shadcn-compat alias of --surface. Do not diverge. */
     --card: var(--surface);
     --card-foreground: #2B3A39;
@@ -173,7 +175,10 @@
     --success-soft: #DCFCE7;
     --warning: #C2410C;
     --warning-soft: #FFEDD5;
-    --error: #DC2626;
+    /* #C81E1E = 4.70:1 on --error-soft (#FEE2E2) for 11px StatusBadge text —
+       clears WCAG AA 4.5:1. Was #DC2626 (3.95:1, AA fail). Consistent with the
+       warning (4.52:1) and success (4.57:1) chip pairs. */
+    --error: #C81E1E;
     --error-soft: #FEE2E2;
     --destructive: var(--error);
     --info: #0369A1;

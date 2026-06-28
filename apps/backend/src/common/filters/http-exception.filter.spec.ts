@@ -57,6 +57,32 @@ describe('HttpExceptionFilter', () => {
     expect(body.code).toBe('ERR_1');
   });
 
+  it('forces `error` to the HTTP reason phrase, ignoring a handler-supplied error', () => {
+    // A handler that smuggles a machine code into `error` must NOT override the
+    // reason phrase — the machine code belongs in `code`.
+    const exception = new HttpException(
+      { message: 'dup', error: 'DEPARTMENT_NAME_EXISTS', code: 'DEPARTMENT_NAME_EXISTS' },
+      409,
+    );
+    filter.catch(exception, createHost());
+    const body = mockResponse.json.mock.calls[0][0];
+    expect(body.error).toBe('CONFLICT');
+    expect(body.code).toBe('DEPARTMENT_NAME_EXISTS');
+    expect(body.message).toBe('dup');
+  });
+
+  it('surfaces localized {ar,en} as a single custom key for 4xx', () => {
+    const exception = new HttpException(
+      { message: 'Credentials required', code: 'SMS_CREDENTIALS_REQUIRED', localized: { ar: 'مطلوب', en: 'Required' } },
+      400,
+    );
+    filter.catch(exception, createHost());
+    const body = mockResponse.json.mock.calls[0][0];
+    expect(body.error).toBe('BAD_REQUEST');
+    expect(body.code).toBe('SMS_CREDENTIALS_REQUIRED');
+    expect(body.localized).toEqual({ ar: 'مطلوب', en: 'Required' });
+  });
+
   it('should handle HttpException with string response', () => {
     const exception = new HttpException('Simple error', 400);
     filter.catch(exception, createHost());

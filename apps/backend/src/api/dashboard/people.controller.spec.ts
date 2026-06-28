@@ -791,7 +791,7 @@ describe('DashboardPeopleController (e2e)', () => {
     it('returns 200 with paginated ratings', async () => {
       mockListEmployeeRatings.execute.mockResolvedValue({
         items: [{ id: uuid(6), employeeId: uuid(2), score: 5, comment: 'Great', isPublic: true, createdAt: '2026-01-01T00:00:00Z' }],
-        meta: { total: 1, page: 1, perPage: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
+        meta: { total: 1, page: 1, limit: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
       });
 
       const res = await request(app.getHttpServer())

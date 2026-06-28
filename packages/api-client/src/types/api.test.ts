@@ -16,8 +16,8 @@ describe('buildQueryString (exported from types/api)', () => {
   })
 
   it('encodes keys and stringifies values', () => {
-    expect(buildQueryString({ page: 2, perPage: 25, search: 'hello world' })).toBe(
-      '?page=2&perPage=25&search=hello+world',
+    expect(buildQueryString({ page: 2, limit: 25, search: 'hello world' })).toBe(
+      '?page=2&limit=25&search=hello+world',
     )
   })
 

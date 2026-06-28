@@ -33,7 +33,7 @@ describe("clients api", () => {
   it("fetches client list with pagination and search params", async () => {
     getMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
 
-    await fetchClients({ page: 2, perPage: 10, search: "محمد" })
+    await fetchClients({ page: 2, limit: 10, search: "محمد" })
 
     expect(getMock).toHaveBeenCalledWith("/dashboard/people/clients", {
       page: 2,

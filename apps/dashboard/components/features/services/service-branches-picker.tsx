@@ -28,8 +28,8 @@ export function ServiceBranchesPicker({ value, onChange }: ServiceBranchesPicker
   const router = useRouter()
 
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.branches.list({ page: 1, perPage: 100 }),
-    queryFn: () => fetchBranches({ page: 1, perPage: 100 }),
+    queryKey: queryKeys.branches.list({ page: 1, limit: 100 }),
+    queryFn: () => fetchBranches({ page: 1, limit: 100 }),
     staleTime: 5 * 60 * 1000,
   })
 

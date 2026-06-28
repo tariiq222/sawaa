@@ -2,8 +2,8 @@
  * useRatings — TanStack Query hook unit tests.
  *
  * Contract under test:
- *   - useRatings({page,perPage}) → fetch via fetchAllRatings, expose
- *     { ratings, meta, isLoading, error, refetch }. The page/perPage args
+ *   - useRatings({page,limit}) → fetch via fetchAllRatings, expose
+ *     { ratings, meta, isLoading, error, refetch }. The page/limit args
  *     must be forwarded to the api and into the query key so a paginated
  *     refetch is not confused with another page.
  *   - Error normalization: when the api throws an ApiError, surface its
@@ -58,32 +58,32 @@ describe("useRatings", () => {
   it("fetches ratings with the provided pagination", async () => {
     fetchAllRatings.mockResolvedValueOnce({
       items: [SAMPLE_RATING],
-      meta: { total: 1, page: 1, perPage: 10, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
+      meta: { total: 1, page: 1, limit: 10, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
     })
 
     const { result } = renderHook(
-      () => useRatings({ page: 1, perPage: 10 }),
+      () => useRatings({ page: 1, limit: 10 }),
       { wrapper: makeWrapper() },
     )
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(fetchAllRatings).toHaveBeenCalledWith({ page: 1, perPage: 10 })
+    expect(fetchAllRatings).toHaveBeenCalledWith({ page: 1, limit: 10 })
     expect(result.current.ratings).toEqual([SAMPLE_RATING])
     expect(result.current.meta?.total).toBe(1)
   })
 
-  it("defaults to page=1, perPage=20 when no args provided", async () => {
+  it("defaults to page=1, limit=20 when no args provided", async () => {
     fetchAllRatings.mockResolvedValueOnce({
       items: [],
-      meta: { total: 0, page: 1, perPage: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
+      meta: { total: 0, page: 1, limit: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
     })
 
     const { result } = renderHook(() => useRatings(), { wrapper: makeWrapper() })
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(fetchAllRatings).toHaveBeenCalledWith({ page: 1, perPage: 20 })
+    expect(fetchAllRatings).toHaveBeenCalledWith({ page: 1, limit: 20 })
     expect(result.current.ratings).toEqual([])
     expect(result.current.meta).not.toBeNull()
   })
@@ -91,7 +91,7 @@ describe("useRatings", () => {
   it("treats a missing response as empty (defensive empty arrays)", async () => {
     fetchAllRatings.mockResolvedValueOnce(undefined as unknown as {
       items: typeof SAMPLE_RATING[]
-      meta: { total: number; page: number; perPage: number; totalPages: number; hasNextPage: boolean; hasPreviousPage: boolean }
+      meta: { total: number; page: number; limit: number; totalPages: number; hasNextPage: boolean; hasPreviousPage: boolean }
     })
 
     const { result } = renderHook(() => useRatings(), { wrapper: makeWrapper() })
@@ -144,7 +144,7 @@ describe("useRatingMutations", () => {
     updateRatingVisibility.mockResolvedValueOnce(undefined)
     fetchAllRatings.mockResolvedValue({
       items: [SAMPLE_RATING],
-      meta: { total: 1, page: 1, perPage: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
+      meta: { total: 1, page: 1, limit: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
     })
 
     const { result } = renderHook(

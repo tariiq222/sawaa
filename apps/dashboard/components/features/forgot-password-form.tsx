@@ -110,9 +110,11 @@ export function ForgotPasswordForm() {
             placeholder="you@example.com"
             autoComplete="email"
             disabled={loading}
+            aria-invalid={fieldError ? "true" : undefined}
+            aria-describedby={fieldError ? "email-error" : undefined}
           />
           {fieldError && (
-            <p className="text-sm text-error">{fieldError}</p>
+            <p id="email-error" className="text-sm text-error">{fieldError}</p>
           )}
         </div>
 

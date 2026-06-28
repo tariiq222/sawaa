@@ -74,19 +74,19 @@ export function IntakeFormPage({ mode, initialDraft, onSave, isSaving, isLoading
 
   const { data: employeesData } = useQuery({
     queryKey: ["employees", "scope-select"],
-    queryFn: () => fetchEmployees({ page: 1, perPage: 100 }),
+    queryFn: () => fetchEmployees({ page: 1, limit: 100 }),
     enabled: draft.scope === "employee",
   })
 
   const { data: servicesData } = useQuery({
     queryKey: ["services", "scope-select"],
-    queryFn: () => fetchServices({ page: 1, perPage: 100 }),
+    queryFn: () => fetchServices({ page: 1, limit: 100 }),
     enabled: draft.scope === "service",
   })
 
   const { data: branchesData } = useQuery({
     queryKey: ["branches", "scope-select"],
-    queryFn: () => fetchBranches({ page: 1, perPage: 100 }),
+    queryFn: () => fetchBranches({ page: 1, limit: 100 }),
     // Only fetch branches when multi_branch is enabled and scope is "branch"
     enabled: isMultiBranch && draft.scope === "branch",
   })

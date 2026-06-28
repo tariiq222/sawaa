@@ -18,7 +18,7 @@ export interface Department {
 
 export interface DepartmentListQuery {
   page?: number
-  perPage?: number
+  limit?: number
   search?: string
   isActive?: boolean
 }

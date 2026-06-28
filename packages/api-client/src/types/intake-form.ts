@@ -31,7 +31,7 @@ export interface IntakeFormDetail extends IntakeFormListItem {
 
 export interface IntakeFormListQuery {
   page?: number
-  perPage?: number
+  limit?: number
   search?: string
   type?: FormType
   scope?: FormScope

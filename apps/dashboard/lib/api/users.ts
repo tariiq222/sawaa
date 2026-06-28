@@ -24,7 +24,7 @@ export async function fetchUsers(
 ): Promise<PaginatedResponse<User>> {
   return api.get<PaginatedResponse<User>>("/dashboard/identity/users", {
     page: query.page,
-    limit: query.perPage,
+    limit: query.limit,
     search: query.search,
     isActive: query.isActive,
   })

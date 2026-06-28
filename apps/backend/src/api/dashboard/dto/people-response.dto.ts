@@ -117,7 +117,7 @@ export class ListMetaDto {
   page!: number;
 
   @ApiProperty({ description: 'Records per page', example: 20 })
-  perPage!: number;
+  limit!: number;
 
   @ApiProperty({ description: 'Total number of pages', example: 3 })
   totalPages!: number;

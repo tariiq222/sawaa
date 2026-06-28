@@ -24,7 +24,7 @@ export async function SawaaLayout({ children }: ThemeLayoutProps) {
     <div className="theme-sawaa">
       <SkipLink />
       <Navbar />
-      <main id="main-content" className="relative pt-[88px]">
+      <main id="main-content" tabIndex={-1} className="relative pt-[88px] focus:outline-none">
         {children}
       </main>
       <Footer clinics={clinics} supportGroups={supportGroups} />

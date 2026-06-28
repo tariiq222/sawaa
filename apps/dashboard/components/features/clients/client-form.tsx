@@ -33,14 +33,27 @@ export function Field({ label, error, children, required, htmlFor: htmlForProp }
 }) {
   const generatedId = useId()
   const id = htmlForProp ?? generatedId
+  const errorId = `${id}-error`
 
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={id}>{label}{required && " *"}</Label>
       {isValidElement(children)
-        ? cloneElement(children as React.ReactElement<{ id?: string }>, { id })
+        ? cloneElement(
+            children as React.ReactElement<{
+              id?: string
+              "aria-invalid"?: boolean | "true" | "false"
+              "aria-describedby"?: string
+            }>,
+            {
+              id,
+              ...(error
+                ? { "aria-invalid": "true", "aria-describedby": errorId }
+                : {}),
+            },
+          )
         : children}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p id={errorId} className="text-xs text-destructive">{error}</p>}
     </div>
   )
 }

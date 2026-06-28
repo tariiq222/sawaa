@@ -22,7 +22,7 @@ export async function listPayments(
 ): Promise<PaymentListResponse> {
   const qs = buildQueryString({
     page: query.page,
-    limit: query.perPage,
+    limit: query.limit,
     search: query.search,
     status: query.status,
     method: query.method,

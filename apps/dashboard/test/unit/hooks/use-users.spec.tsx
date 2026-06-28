@@ -43,12 +43,12 @@ describe("useUsers", () => {
     Object.values(apiMocks).forEach((m) => m.mockReset())
   })
 
-  it("fetches users with default page=1 perPage=20 and no filters", async () => {
+  it("fetches users with default page=1 limit=20 and no filters", async () => {
     apiMocks.fetchUsers.mockResolvedValue({ items: [], meta: { total: 0 } })
     const { Wrapper } = makeWrapper()
     const { result } = renderHook(() => useUsers(), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(apiMocks.fetchUsers).toHaveBeenCalledWith({ page: 1, perPage: 20, search: undefined })
+    expect(apiMocks.fetchUsers).toHaveBeenCalledWith({ page: 1, limit: 20, search: undefined })
   })
 
   it("setSearch resets page to 1 and passes search to the API", async () => {

@@ -17,7 +17,7 @@ export function useActivityLogs() {
 
   const query: ActivityLogQuery = {
     page,
-    perPage: 20,
+    limit: 20,
     module,
     action,
     dateFrom: dateFrom || undefined,

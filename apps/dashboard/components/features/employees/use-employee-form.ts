@@ -412,7 +412,7 @@ export function useEmployeeForm({
 
       let targetBranches = branchIds
       if (targetBranches.length === 0) {
-        const res = await fetchBranches({ page: 1, perPage: 100 })
+        const res = await fetchBranches({ page: 1, limit: 100 })
         const main = res.items.find((b) => b.isMain) ?? res.items[0]
         if (main) targetBranches = [main.id]
       }

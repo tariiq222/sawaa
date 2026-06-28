@@ -25,7 +25,7 @@ describe('ListActivityHandler', () => {
 
     const result = await handler.execute({});
     expect(result.meta.page).toBe(1);
-    expect(result.meta.perPage).toBe(50);
+    expect(result.meta.limit).toBe(50);
     expect(prisma.activityLog.findMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 0, take: 50 }));
   });
 

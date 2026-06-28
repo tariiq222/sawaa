@@ -41,7 +41,11 @@ describe('UpsertOrgSmsConfigHandler', () => {
       .execute({ provider: 'UNIFONIC' } as never)
       .catch((e) => e);
     expect(thrown).toBeDefined();
-    expect(thrown.getResponse().en).toMatch(/Unifonic credentials are required/);
+    const res = thrown.getResponse();
+    expect(res.message).toMatch(/Unifonic credentials are required/);
+    expect(res.code).toBe('SMS_CREDENTIALS_REQUIRED');
+    expect(res.localized.en).toMatch(/Unifonic credentials are required/);
+    expect(res.localized.ar).toBeTruthy();
     expect(prisma.organizationSmsConfig.create).not.toHaveBeenCalled();
   });
 
@@ -51,7 +55,11 @@ describe('UpsertOrgSmsConfigHandler', () => {
       .execute({ provider: 'TAQNYAT' } as never)
       .catch((e) => e);
     expect(thrown).toBeDefined();
-    expect(thrown.getResponse().en).toMatch(/Taqnyat credentials are required/);
+    const res = thrown.getResponse();
+    expect(res.message).toMatch(/Taqnyat credentials are required/);
+    expect(res.code).toBe('SMS_CREDENTIALS_REQUIRED');
+    expect(res.localized.en).toMatch(/Taqnyat credentials are required/);
+    expect(res.localized.ar).toBeTruthy();
     expect(prisma.organizationSmsConfig.create).not.toHaveBeenCalled();
   });
 

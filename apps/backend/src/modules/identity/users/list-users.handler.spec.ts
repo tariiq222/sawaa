@@ -80,7 +80,7 @@ describe('ListUsersHandler', () => {
     );
   });
 
-  it('returns a canonical list response with items + meta (total / page / perPage / totalPages)', async () => {
+  it('returns a canonical list response with items + meta (total / page / limit / totalPages)', async () => {
     const items = [{ id: 'u1' }, { id: 'u2' }];
     prisma.user.findMany.mockResolvedValue(items);
     prisma.user.count.mockResolvedValue(25);
@@ -92,7 +92,7 @@ describe('ListUsersHandler', () => {
       meta: {
         total: 25,
         page: 2,
-        perPage: 10,
+        limit: 10,
         totalPages: 3,
         hasNextPage: true,
         hasPreviousPage: true,

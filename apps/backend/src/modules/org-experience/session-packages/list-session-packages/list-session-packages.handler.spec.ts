@@ -67,7 +67,7 @@ describe('ListSessionPackagesHandler', () => {
     expect(res.items).toEqual([]);
     expect(res.meta.total).toBe(0);
     expect(res.meta.page).toBe(1);
-    expect(res.meta.perPage).toBe(20);
+    expect(res.meta.limit).toBe(20);
   });
 
   it('always filters out archived packages', async () => {

@@ -28,8 +28,12 @@ export class UpsertOrgSmsConfigHandler {
     } else if (cmd.provider === 'UNIFONIC') {
       if (!cmd.unifonic) {
         throw new BadRequestException({
-          ar: 'بيانات اعتماد Unifonic مطلوبة',
-          en: 'Unifonic credentials are required',
+          message: 'Unifonic credentials are required',
+          code: 'SMS_CREDENTIALS_REQUIRED',
+          localized: {
+            ar: 'بيانات اعتماد Unifonic مطلوبة',
+            en: 'Unifonic credentials are required',
+          },
         });
       }
       credentialsCiphertext = this.credentials.encrypt(
@@ -39,8 +43,12 @@ export class UpsertOrgSmsConfigHandler {
     } else if (cmd.provider === 'TAQNYAT') {
       if (!cmd.taqnyat) {
         throw new BadRequestException({
-          ar: 'بيانات اعتماد Taqnyat مطلوبة',
-          en: 'Taqnyat credentials are required',
+          message: 'Taqnyat credentials are required',
+          code: 'SMS_CREDENTIALS_REQUIRED',
+          localized: {
+            ar: 'بيانات اعتماد Taqnyat مطلوبة',
+            en: 'Taqnyat credentials are required',
+          },
         });
       }
       credentialsCiphertext = this.credentials.encrypt(

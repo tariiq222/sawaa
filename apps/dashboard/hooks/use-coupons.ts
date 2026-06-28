@@ -20,7 +20,7 @@ export function useCoupons() {
 
   const query: CouponListQuery = {
     page,
-    perPage: 20,
+    limit: 20,
     search: search || undefined,
     status: status as CouponListQuery["status"],
   }

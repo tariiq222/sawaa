@@ -63,8 +63,8 @@ export function AssignEmployeesDialog({
   const [selected, setSelected] = useState<string[]>([])
 
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.employees.list({ perPage: 200, isActive: undefined }),
-    queryFn: () => fetchEmployees({ perPage: 200 }),
+    queryKey: queryKeys.employees.list({ limit: 200, isActive: undefined }),
+    queryFn: () => fetchEmployees({ limit: 200 }),
     staleTime: 5 * 60 * 1000,
     enabled: open,
   })

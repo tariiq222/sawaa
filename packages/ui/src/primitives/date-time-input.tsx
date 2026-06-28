@@ -37,6 +37,10 @@ export interface DateTimeInputProps {
   placeholder?: string
   id?: string
   name?: string
+  /** Links the control to an external error message for screen readers (WCAG 3.3.1) */
+  "aria-describedby"?: string
+  /** Explicit invalid state; defaults to the `error` prop when omitted */
+  "aria-invalid"?: boolean | "true" | "false"
 }
 
 export function DateTimeInput({
@@ -51,6 +55,8 @@ export function DateTimeInput({
   placeholder,
   id,
   name,
+  "aria-describedby": ariaDescribedBy,
+  "aria-invalid": ariaInvalid,
 }: DateTimeInputProps) {
   // Normalize ISO full strings to "YYYY-MM-DDTHH:mm" (required by datetime-local)
   const normalizedValue = React.useMemo(() => {
@@ -74,6 +80,8 @@ export function DateTimeInput({
       required={required}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
+      aria-describedby={ariaDescribedBy}
+      aria-invalid={ariaInvalid ?? (error ? "true" : undefined)}
       className={cn(
         // Match shadcn Input styling exactly
         "flex h-9 w-full rounded-md border border-border bg-background px-3 py-1",

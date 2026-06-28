@@ -39,8 +39,8 @@ export class CreateClientHandler {
       });
       if (existingByEmail) {
         throw new ConflictException({
-          error: 'CLIENT_EMAIL_EXISTS',
           message: 'Email already registered for another client',
+          code: 'CLIENT_EMAIL_EXISTS',
         });
       }
     }

@@ -82,6 +82,6 @@ describe('ListEmployeeRatingsHandler', () => {
     const result = await handler.execute({ employeeId: 'emp-1' });
 
     expect(result.items).toEqual([{ id: 'r1', score: 5 }]);
-    expect(result.meta).toMatchObject({ page: 1, perPage: 20, total: 1, totalPages: 1 });
+    expect(result.meta).toMatchObject({ page: 1, limit: 20, total: 1, totalPages: 1 });
   });
 });

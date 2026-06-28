@@ -19,6 +19,25 @@ export class ApiErrorDto {
   message!: string | string[];
 
   @ApiPropertyOptional({
+    example: 'DEPARTMENT_NAME_EXISTS',
+    description:
+      'Stable machine-readable error code for programmatic handling. ' +
+      'Distinct from `error`, which always holds the HTTP reason phrase.',
+  })
+  code?: string;
+
+  @ApiPropertyOptional({
+    description: 'Bilingual human-readable message. Present only on errors that carry localized copy.',
+    example: { ar: 'القسم بهذا الاسم موجود مسبقاً', en: 'Department with this name already exists' },
+    type: 'object',
+    properties: {
+      ar: { type: 'string' },
+      en: { type: 'string' },
+    },
+  })
+  localized?: { ar: string; en: string };
+
+  @ApiPropertyOptional({
     example: 'req-7f9c2e1a',
     description: 'Correlation ID for log lookup',
   })

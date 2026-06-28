@@ -56,7 +56,7 @@ export function useServices() {
 
   const query: ServiceListQuery = {
     page,
-    perPage: 20,
+    limit: 20,
     search: debouncedSearch || undefined,
     categoryId,
     isActive,
@@ -102,7 +102,7 @@ export function useServices() {
 export function useAllServices() {
   const query: ServiceListQuery = {
     page: 1,
-    perPage: 200,
+    limit: 200,
     includeHidden: true,
   }
 
@@ -136,7 +136,7 @@ export function useCategories() {
   return useQuery({
     queryKey: queryKeys.services.categories({ all: true }),
     queryFn: async () => {
-      const res = await fetchCategories({ page: 1, perPage: 200 })
+      const res = await fetchCategories({ page: 1, limit: 200 })
       return res.items
     },
     staleTime: 30 * 60 * 1000, // 30 min — categories rarely change
@@ -157,7 +157,7 @@ export function useCategoriesList() {
 
   const query: CategoryListQuery = {
     page,
-    perPage: 20,
+    limit: 20,
     search: debouncedSearch || undefined,
     isActive,
   }
