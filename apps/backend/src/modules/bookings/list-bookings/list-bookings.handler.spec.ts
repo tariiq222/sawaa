@@ -79,7 +79,7 @@ describe('ListBookingsHandler', () => {
     const result = await handler.execute({ page: 2, limit: 10 });
     expect(result.meta.totalPages).toBe(3);
     expect(result.meta.page).toBe(2);
-    expect(result.meta.perPage).toBe(10);
+    expect(result.meta.limit).toBe(10);
   });
 
   it('auto-filters by Employee when role=EMPLOYEE', async () => {

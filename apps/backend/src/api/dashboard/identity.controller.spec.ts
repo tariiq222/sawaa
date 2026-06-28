@@ -225,6 +225,7 @@ describe('DashboardIdentityController (e2e)', () => {
       const res = await request(app.getHttpServer())
         .patch('/dashboard/identity/users/00000000-0000-0000-0000-000000000001')
         .set('Authorization', 'Bearer fake-jwt')
+        .set('x-test-actor-id', 'actor-user')
         .send({ name: 'Updated' })
         .expect(200);
 
@@ -269,6 +270,7 @@ describe('DashboardIdentityController (e2e)', () => {
       return request(app.getHttpServer())
         .delete('/dashboard/identity/users/00000000-0000-0000-0000-000000000001')
         .set('Authorization', 'Bearer fake-jwt')
+        .set('x-test-actor-id', 'actor-user')
         .expect(204);
     });
 
@@ -287,6 +289,7 @@ describe('DashboardIdentityController (e2e)', () => {
       return request(app.getHttpServer())
         .patch('/dashboard/identity/users/00000000-0000-0000-0000-000000000001/deactivate')
         .set('Authorization', 'Bearer fake-jwt')
+        .set('x-test-actor-id', 'actor-user')
         .expect(204);
     });
   });
@@ -298,6 +301,7 @@ describe('DashboardIdentityController (e2e)', () => {
       return request(app.getHttpServer())
         .patch('/dashboard/identity/users/00000000-0000-0000-0000-000000000001/activate')
         .set('Authorization', 'Bearer fake-jwt')
+        .set('x-test-actor-id', 'actor-user')
         .expect(204);
     });
   });

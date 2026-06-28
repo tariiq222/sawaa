@@ -76,30 +76,48 @@ export function ChangePasswordDialog({ open, onOpenChange }: Props) {
         <DialogBody>
           <form id="change-password-form" onSubmit={onSubmit} className="flex flex-col gap-5">
             <div className="flex flex-col gap-1.5">
-              <Label>{t("changePassword.current")} *</Label>
-              <Input type="password" {...form.register("currentPassword")} />
+              <Label htmlFor="cp-current">{t("changePassword.current")} *</Label>
+              <Input
+                id="cp-current"
+                type="password"
+                aria-invalid={form.formState.errors.currentPassword ? "true" : undefined}
+                aria-describedby={form.formState.errors.currentPassword ? "cp-current-error" : undefined}
+                {...form.register("currentPassword")}
+              />
               {form.formState.errors.currentPassword && (
-                <p className="text-xs text-destructive">
+                <p id="cp-current-error" className="text-xs text-destructive">
                   {form.formState.errors.currentPassword.message}
                 </p>
               )}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label>{t("changePassword.new")} *</Label>
-              <Input type="password" {...form.register("newPassword")} />
+              <Label htmlFor="cp-new">{t("changePassword.new")} *</Label>
+              <Input
+                id="cp-new"
+                type="password"
+                aria-invalid={form.formState.errors.newPassword ? "true" : undefined}
+                aria-describedby={form.formState.errors.newPassword ? "cp-new-error" : undefined}
+                {...form.register("newPassword")}
+              />
               {form.formState.errors.newPassword && (
-                <p className="text-xs text-destructive">
+                <p id="cp-new-error" className="text-xs text-destructive">
                   {form.formState.errors.newPassword.message}
                 </p>
               )}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label>{t("changePassword.confirm")} *</Label>
-              <Input type="password" {...form.register("confirmPassword")} />
+              <Label htmlFor="cp-confirm">{t("changePassword.confirm")} *</Label>
+              <Input
+                id="cp-confirm"
+                type="password"
+                aria-invalid={form.formState.errors.confirmPassword ? "true" : undefined}
+                aria-describedby={form.formState.errors.confirmPassword ? "cp-confirm-error" : undefined}
+                {...form.register("confirmPassword")}
+              />
               {form.formState.errors.confirmPassword && (
-                <p className="text-xs text-destructive">
+                <p id="cp-confirm-error" className="text-xs text-destructive">
                   {form.formState.errors.confirmPassword.message}
                 </p>
               )}

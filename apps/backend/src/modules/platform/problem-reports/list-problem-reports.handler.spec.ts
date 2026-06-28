@@ -24,7 +24,7 @@ describe('ListProblemReportsHandler', () => {
 
     const result = await handler.execute({});
     expect(result.meta.page).toBe(1);
-    expect(result.meta.perPage).toBe(20);
+    expect(result.meta.limit).toBe(20);
     expect(prisma.problemReport.findMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 0, take: 20 }));
   });
 

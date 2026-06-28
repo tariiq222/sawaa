@@ -147,11 +147,14 @@ interface PeekedError {
   message: string
 }
 
-// Mirror dashboard's parseErrorBody — handle the four NestJS shapes:
+// Handle the NestJS error shapes the backend emits:
+//   { statusCode, error, message, code }                ← canonical envelope (code = machine code)
 //   { statusCode, message, error: string }              ← default
 //   { statusCode, message: string[], error }            ← validation
-//   { statusCode, message: { error, message }, error }  ← custom conflict
-//   { error: { code, message } }                        ← legacy envelope
+//   { statusCode, message: { error, message }, error }  ← legacy custom conflict
+//   { error: { code, message } }                        ← legacy nested envelope
+// `error` always carries the HTTP reason phrase; the machine code lives in the
+// dedicated top-level `code` field, so it takes precedence when present.
 async function peekErrorBody(res: Response): Promise<PeekedError> {
   const body = (await res
     .clone()
@@ -166,6 +169,7 @@ async function peekErrorBody(res: Response): Promise<PeekedError> {
       ? (body.error as { code?: string; message?: string })
       : null
   const code: string =
+    (typeof body.code === 'string' ? (body.code as string) : undefined) ??
     nestedMessage?.error ??
     errorObj?.code ??
     (typeof body.error === 'string' ? (body.error as string) : undefined) ??

@@ -26,6 +26,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { StatusBadge, PaymentStatusBadge } from "@/components/features/status-badge"
 import { useLocale } from "@/components/locale-provider"
+import { useAuth } from "@/components/providers/auth-provider"
 import { useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
 import { usePaymentMutations } from "@/hooks/use-payments"
@@ -102,6 +103,7 @@ export function ActionsCell({
   t: (key: string) => string
 }) {
   const queryClient = useQueryClient()
+  const { canDo } = useAuth()
   const { verifyMut } = usePaymentMutations()
   const [invoiceLoading, setInvoiceLoading] = useState(false)
   const [refundOpen, setRefundOpen] = useState(false)
@@ -134,8 +136,12 @@ export function ActionsCell({
   const hasInvoice = !!booking.invoice
   // Off-gateway refund: only cash/bank-transfer/mada/tabby payments (no Moyasar
   // card gateway). Card refunds go through the admin-only gateway path.
+  // Backend gate: PATCH /payments/:id/manual-refund requires `update:Payment`.
   const canManualRefund =
-    !!payment && payment.status === "paid" && payment.method !== "moyasar"
+    !!payment &&
+    payment.status === "paid" &&
+    payment.method !== "moyasar" &&
+    canDo("payment", "update")
 
   const invalidateBookings = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all })
@@ -260,6 +266,7 @@ export function isPartiallyPaid(booking: Booking): boolean {
 
 export function PaymentStatusCell({ booking }: { booking: Booking }) {
   const { t } = useLocale()
+  const { canDo } = useAuth()
   const payment = booking.payment
   const hasOutstanding = (booking.invoice?.outstanding ?? 0) > 0
   // Pay-at-clinic bookings have no invoice yet — still allow recording a payment
@@ -267,8 +274,12 @@ export function PaymentStatusCell({ booking }: { booking: Booking }) {
   // (the backend cannot invoice a guest booking without one).
   const bookingPrice = booking.priceSnapshot ?? booking.service?.price ?? 0
   const noInvoiceButPayable = !booking.invoice && bookingPrice > 0 && !!booking.clientId
+  // Backend gate: POST /dashboard/finance/payments requires `manage:Payment`
+  // (and manage:Invoice for the DRAFT-invoice sub-call).
   const canRecordPayment =
-    (hasOutstanding || noInvoiceButPayable) && payment?.status !== "awaiting"
+    (hasOutstanding || noInvoiceButPayable) &&
+    payment?.status !== "awaiting" &&
+    canDo("payment", "manage")
 
   const [recordOpen, setRecordOpen] = useState(false)
 

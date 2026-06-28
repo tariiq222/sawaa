@@ -108,7 +108,7 @@ export async function fetchActivityLogs(
 ): Promise<PaginatedResponse<ActivityLog>> {
   const response = await api.get<PaginatedResponse<BackendActivityLog>>("/dashboard/ops/activity", {
     page: query.page,
-    limit: query.perPage,
+    limit: query.limit,
     sortBy: query.sortBy,
     sortOrder: query.sortOrder,
     entity: normalizeEntityFilter(query.module),

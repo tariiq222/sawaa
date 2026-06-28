@@ -20,8 +20,8 @@ export class UpdateDepartmentHandler {
       });
       if (existing) {
         throw new ConflictException({
-          error: 'DEPARTMENT_NAME_EXISTS',
           message: 'Department with this Arabic name already exists',
+          code: 'DEPARTMENT_NAME_EXISTS',
         });
       }
     }

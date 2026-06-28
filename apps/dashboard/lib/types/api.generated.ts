@@ -4257,10 +4257,26 @@ export interface components {
         };
         ApiErrorDto: {
             /**
+             * @description Stable machine-readable error code for programmatic handling. Distinct from `error`, which always holds the HTTP reason phrase.
+             * @example DEPARTMENT_NAME_EXISTS
+             */
+            code?: string;
+            /**
              * @description Short error category
              * @example Bad Request
              */
             error: string;
+            /**
+             * @description Bilingual human-readable message. Present only on errors that carry localized copy.
+             * @example {
+             *       "ar": "القسم بهذا الاسم موجود مسبقاً",
+             *       "en": "Department with this name already exists"
+             *     }
+             */
+            localized?: {
+                ar?: string;
+                en?: string;
+            };
             /**
              * @description Human-readable message or array of validation messages
              * @example validation failed
@@ -6289,15 +6305,15 @@ export interface components {
              */
             hasPreviousPage: boolean;
             /**
+             * @description Records per page
+             * @example 20
+             */
+            limit: number;
+            /**
              * @description 1-based page number
              * @example 1
              */
             page: number;
-            /**
-             * @description Records per page
-             * @example 20
-             */
-            perPage: number;
             /**
              * @description Total matching records
              * @example 42
@@ -11311,7 +11327,7 @@ export interface operations {
                 /** @description Page number */
                 page?: number;
                 /** @description Items per page */
-                perPage?: number;
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -14580,8 +14596,8 @@ export interface operations {
                         meta?: {
                             hasNextPage?: boolean;
                             hasPreviousPage?: boolean;
+                            limit?: number;
                             page?: number;
-                            perPage?: number;
                             total?: number;
                             totalPages?: number;
                         };
@@ -14815,7 +14831,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Action denied by permission policy */
+            /** @description Cannot modify a user at or above your rank */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -14897,7 +14913,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Action denied by permission policy */
+            /** @description Cannot modify a user at or above your rank */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -14963,7 +14979,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Action denied by permission policy */
+            /** @description Cannot modify a user at or above your rank */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -15029,7 +15045,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Action denied by permission policy */
+            /** @description Cannot modify a user at or above your rank */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -15819,8 +15835,8 @@ export interface operations {
                         meta?: {
                             hasNextPage?: boolean;
                             hasPreviousPage?: boolean;
+                            limit?: number;
                             page?: number;
-                            perPage?: number;
                             total?: number;
                             totalPages?: number;
                         };
@@ -21263,8 +21279,8 @@ export interface operations {
                         meta?: {
                             hasNextPage?: boolean;
                             hasPreviousPage?: boolean;
+                            limit?: number;
                             page?: number;
-                            perPage?: number;
                             total?: number;
                             totalPages?: number;
                         };

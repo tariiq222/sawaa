@@ -12,13 +12,24 @@ const buildPrismaProxy = (
   parentExists: boolean,
 ) => {
   const activityLogCreate = jest.fn().mockResolvedValue(undefined);
-  // Return objects with id + a stubbed cross-BC field (clientId/employeeId/etc.)
-  const findMany = jest.fn().mockResolvedValue(
-    orphanIds.map((id) => ({ id, clientId: id, employeeId: id, serviceId: id, branchId: id })),
-  );
-  const parentFindFirst = jest
-    .fn()
-    .mockResolvedValue(parentExists ? { id: orphanIds[0] } : null);
+  // Child candidate rows carry id + a stubbed cross-BC field (clientId/etc.).
+  const childRows = orphanIds.map((id) => ({
+    id,
+    clientId: id,
+    employeeId: id,
+    serviceId: id,
+    branchId: id,
+  }));
+  // The handler now batches both child candidates and parent existence checks
+  // through findMany. We distinguish them by the parent query's `id: { in: [] }`
+  // filter: parent lookups carry that filter, child candidate scans do not.
+  const findMany = jest.fn().mockImplementation((args: { where?: { id?: { in?: string[] } } }) => {
+    const isParentLookup = Boolean(args?.where?.id?.in);
+    if (isParentLookup) {
+      return Promise.resolve(parentExists ? orphanIds.map((id) => ({ id })) : []);
+    }
+    return Promise.resolve(childRows);
+  });
 
   const prisma = new Proxy(
     {
@@ -29,12 +40,12 @@ const buildPrismaProxy = (
       get(target, prop: string) {
         if (prop in target) return target[prop as keyof typeof target];
         // Any other model access (booking, client, invoice, etc.)
-        return { findMany, findFirst: parentFindFirst };
+        return { findMany };
       },
     },
   );
 
-  return { prisma, activityLogCreate, findMany, parentFindFirst };
+  return { prisma, activityLogCreate, findMany };
 };
 
 describe('RunOrphanAuditHandler', () => {

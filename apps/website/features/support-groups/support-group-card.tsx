@@ -8,7 +8,7 @@ interface SupportGroupCardProps {
 
 export function SupportGroupCard({ group, onSelect, isSelected }: SupportGroupCardProps) {
   const formatPrice = (price: number, currency: string) => {
-    if (price === 0) return 'Free';
+    if (price === 0) return 'مجاني';
     return new Intl.NumberFormat('ar-SA', {
       style: 'currency',
       currency,
@@ -40,7 +40,7 @@ export function SupportGroupCard({ group, onSelect, isSelected }: SupportGroupCa
       onKeyDown={(e) => e.key === 'Enter' && onSelect?.(group)}
     >
       {isSelected && (
-        <div className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
+        <div className="absolute -top-2 -end-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>

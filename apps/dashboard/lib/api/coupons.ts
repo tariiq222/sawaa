@@ -21,7 +21,7 @@ export async function fetchCoupons(
 ): Promise<PaginatedResponse<Coupon>> {
   return api.get<PaginatedResponse<Coupon>>("/dashboard/finance/coupons", {
     page: query.page,
-    limit: query.perPage,
+    limit: query.limit,
     search: query.search,
     status: query.status,
   })

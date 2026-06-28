@@ -175,7 +175,7 @@ describe("employees-schedule api", () => {
             createdAt: "2026-05-01T00:00:00.000Z",
           },
         ],
-        meta: { total: 1, page: 1, perPage: 20, totalPages: 1 },
+        meta: { total: 1, page: 1, limit: 20, totalPages: 1 },
       })
 
       const result = await fetchEmployeeRatings("p-1", { page: 1 })
@@ -187,9 +187,9 @@ describe("employees-schedule api", () => {
       })
     })
 
-    it("sends page and perPage params", async () => {
+    it("sends page and limit params", async () => {
       getMock.mockResolvedValueOnce({ items: [], meta: {} })
-      await fetchEmployeeRatings("p-1", { page: 3, perPage: 50 })
+      await fetchEmployeeRatings("p-1", { page: 3, limit: 50 })
       expect(getMock).toHaveBeenCalledWith("/dashboard/people/employees/p-1/ratings", { page: 3, limit: 50 })
     })
 

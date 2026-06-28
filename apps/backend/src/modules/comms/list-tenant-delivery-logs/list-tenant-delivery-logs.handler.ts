@@ -20,8 +20,8 @@ export class ListTenantDeliveryLogsHandler {
       this.prisma.notificationDeliveryLog.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: (cmd.page - 1) * cmd.perPage,
-        take: cmd.perPage,
+        skip: (cmd.page - 1) * cmd.limit,
+        take: cmd.limit,
         select: {
           id: true,
           // organizationId removed in single-tenant migration
@@ -47,9 +47,9 @@ export class ListTenantDeliveryLogsHandler {
       items,
       meta: {
         page: cmd.page,
-        perPage: cmd.perPage,
+        limit: cmd.limit,
         total,
-        totalPages: total === 0 ? 0 : Math.ceil(total / cmd.perPage),
+        totalPages: total === 0 ? 0 : Math.ceil(total / cmd.limit),
       },
     };
   }

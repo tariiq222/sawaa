@@ -56,16 +56,23 @@ export function ScheduleProgramDialog({
           className="space-y-4"
         >
           <DialogBody>
-            <label className="block">
+            <label htmlFor="schedule-program-start" className="block">
               <span className="text-sm font-medium">{t('programs.detail.startDate')}</span>
               <DateTimeInput
+                id="schedule-program-start"
                 value={startDate}
                 onChange={(value: string) => setStartDate(value)}
                 required
+                error={!!error}
+                aria-describedby={error ? "schedule-program-start-error" : undefined}
                 className="mt-1"
               />
             </label>
-            {error && <p className="text-sm text-(--text-error)">{error}</p>}
+            {error && (
+              <p id="schedule-program-start-error" className="text-sm text-(--text-error)">
+                {error}
+              </p>
+            )}
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

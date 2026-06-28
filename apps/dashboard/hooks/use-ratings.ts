@@ -9,10 +9,10 @@ import type { Rating } from "@/lib/types/rating"
 
 /* ─── Query ─── */
 
-export function useRatings({ page = 1, perPage = 20 }: { page?: number; perPage?: number } = {}) {
+export function useRatings({ page = 1, limit = 20 }: { page?: number; limit?: number } = {}) {
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: queryKeys.ratings.list({ page, perPage }),
-    queryFn: () => fetchAllRatings({ page, perPage }),
+    queryKey: queryKeys.ratings.list({ page, limit }),
+    queryFn: () => fetchAllRatings({ page, limit }),
     staleTime: 60_000,
   })
 

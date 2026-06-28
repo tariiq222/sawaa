@@ -129,7 +129,11 @@ export function ContactForm() {
 
   const fieldError = (name: keyof FormState) =>
     errors[name] ? (
-      <span className="text-[0.8rem]" style={{ color: 'var(--sw-error, #d92d20)' }}>
+      <span
+        id={`contact-${name}-error`}
+        className="text-[0.8rem]"
+        style={{ color: 'var(--sw-error, #d92d20)' }}
+      >
         {errors[name]}
       </span>
     ) : null;
@@ -138,21 +142,32 @@ export function ContactForm() {
     <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         {(['name', 'phone', 'email', 'subject'] as const).map((name) => (
-          <label key={name} className="flex flex-col gap-1.5 text-start">
+          <label key={name} htmlFor={`contact-${name}`} className="flex flex-col gap-1.5 text-start">
             {fieldLabel(name, name !== 'name')}
             <input
+              id={`contact-${name}`}
               type={name === 'email' ? 'email' : name === 'phone' ? 'tel' : 'text'}
               value={form[name]}
               onChange={update(name)}
+              aria-invalid={errors[name] ? true : undefined}
+              aria-describedby={errors[name] ? `contact-${name}-error` : undefined}
               className={inputClass}
             />
             {fieldError(name)}
           </label>
         ))}
       </div>
-      <label className="flex flex-col gap-1.5 text-start">
+      <label htmlFor="contact-body" className="flex flex-col gap-1.5 text-start">
         {fieldLabel('body', false)}
-        <textarea rows={5} value={form.body} onChange={update('body')} className={`${inputClass} resize-y`} />
+        <textarea
+          id="contact-body"
+          rows={5}
+          value={form.body}
+          onChange={update('body')}
+          aria-invalid={errors.body ? true : undefined}
+          aria-describedby={errors.body ? 'contact-body-error' : undefined}
+          className={`${inputClass} resize-y`}
+        />
         {fieldError('body')}
       </label>
 

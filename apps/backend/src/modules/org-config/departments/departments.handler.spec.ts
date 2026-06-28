@@ -56,6 +56,17 @@ describe('CreateDepartmentHandler', () => {
     await expect(handler.execute({ nameAr: 'عيادة' })).rejects.toThrow(ConflictException);
   });
 
+  it('carries the machine code in `code` (not `error`) on duplicate nameAr', async () => {
+    const prisma = buildPrisma();
+    prisma.department.findFirst = jest.fn().mockResolvedValue(mockDept);
+    const handler = new CreateDepartmentHandler(prisma as never, cache);
+    const thrown = await handler.execute({ nameAr: 'عيادة' }).catch((e) => e);
+    const res = thrown.getResponse();
+    expect(res.code).toBe('DEPARTMENT_NAME_EXISTS');
+    expect(res.error).toBeUndefined();
+    expect(res.message).toMatch(/already exists/);
+  });
+
   it('allows same nameAr in two different orgs', async () => {
     const prismaA = buildPrisma();
     prismaA.department.findFirst = jest.fn().mockResolvedValue(null);

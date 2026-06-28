@@ -10,6 +10,7 @@ import { AquaBackground, sawaaColors, sawaaRadius } from '@/theme/sawaa';
 import { Glass } from '@/theme/components/Glass';
 import { useDir } from '@/hooks/useDir';
 import { getFontName } from '@/theme/fonts';
+import { formatHalalas } from '@/lib/money';
 import { useTherapist } from '@/hooks/queries';
 
 const SPECIALTIES = [
@@ -187,7 +188,7 @@ export default function EmployeeProfileScreen() {
                 {dir.isRTL ? 'السعر لكل جلسة' : 'Per session'}
               </Text>
               <Text style={[styles.ctaPriceVal, { fontFamily: f700 }]}>
-                {'٢٥٠ ⃁'}
+                {`${formatHalalas(employee?.minServicePrice ?? 0, { locale: dir.isRTL ? 'ar-SA' : 'en-US' })} ﷼`}
               </Text>
             </View>
             <Pressable

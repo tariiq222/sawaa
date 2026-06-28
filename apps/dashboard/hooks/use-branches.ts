@@ -21,7 +21,7 @@ export function useBranches() {
 
   const query: BranchListQuery = {
     page,
-    perPage: 50,
+    limit: 50,
     search: debouncedSearch || undefined,
     isActive,
   }

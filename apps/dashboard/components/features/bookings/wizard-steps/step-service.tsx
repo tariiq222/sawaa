@@ -65,7 +65,7 @@ export function StepService({ categoryId, onSelect }: StepServiceProps) {
   const isRtl = locale === "ar"
   const [search, setSearch] = useState("")
 
-  const filters = { isActive: true, perPage: 100, categoryId }
+  const filters = { isActive: true, limit: 100, categoryId }
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.services.list(filters),
     queryFn: () => fetchServices(filters),

@@ -2,6 +2,7 @@
 
 import { DataTable } from '@/components/features/data-table';
 import { EmptyState } from '@/components/features/empty-state';
+import { FormattedCurrency } from '@/components/features/shared/sar-symbol';
 import { useLocale } from '@/components/locale-provider';
 import type { ProgramEnrollmentSummary } from '@/lib/types/program';
 
@@ -10,7 +11,7 @@ export function ProgramEnrollmentsTable({
 }: {
   enrollments: ProgramEnrollmentSummary[];
 }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   if (!enrollments.length) {
     return <EmptyState title={t('programs.detail.noEnrollments')} />;
   }
@@ -51,8 +52,11 @@ export function ProgramEnrollmentsTable({
           accessorFn: (e) => e.booking.price,
           cell: ({ row }) => (
             <span className="tabular-nums text-sm">
-              {(Number(row.original.booking.price) / 100).toFixed(2)}{' '}
-              {t(`programs.currency.${row.original.booking.currency}`)}
+              <FormattedCurrency
+                amount={Number(row.original.booking.price)}
+                locale={locale}
+                decimals={2}
+              />
             </span>
           ),
         },

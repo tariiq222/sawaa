@@ -116,7 +116,7 @@ describe("useDashboardHome — query composition", () => {
     expect(params.dateFrom.endsWith("-01")).toBe(true)
   })
 
-  it("calls fetchBookings({dateFrom, dateTo, perPage:1}) for today when bookings stat is visible", async () => {
+  it("calls fetchBookings({dateFrom, dateTo, limit:1}) for today when bookings stat is visible", async () => {
     fetchBookings.mockResolvedValueOnce({ items: [], meta: { total: 7 } })
 
     const { Wrapper } = makeWrapper()
@@ -130,12 +130,12 @@ describe("useDashboardHome — query composition", () => {
 
     const callsForToday = fetchBookings.mock.calls.filter((c) => {
       const p = c[0] as Record<string, unknown>
-      return p.dateFrom && p.dateTo && p.dateFrom === p.dateTo && p.perPage === 1
+      return p.dateFrom && p.dateTo && p.dateFrom === p.dateTo && p.limit === 1
     })
     expect(callsForToday.length).toBeGreaterThanOrEqual(1)
   })
 
-  it("calls fetchBookings({status: cancel_requested, perPage:1}) when cancelRequests alert is visible", async () => {
+  it("calls fetchBookings({status: cancel_requested, limit:1}) when cancelRequests alert is visible", async () => {
     fetchBookings.mockResolvedValueOnce({ items: [], meta: { total: 2 } })
 
     const { Wrapper } = makeWrapper()
@@ -145,12 +145,12 @@ describe("useDashboardHome — query composition", () => {
 
     const cancelCalls = fetchBookings.mock.calls.filter((c) => {
       const p = c[0] as Record<string, unknown>
-      return p.status === "cancel_requested" && p.perPage === 1
+      return p.status === "cancel_requested" && p.limit === 1
     })
     expect(cancelCalls.length).toBe(1)
   })
 
-  it("calls fetchPayments({status: PENDING, perPage:1}) when pendingPayments is visible", async () => {
+  it("calls fetchPayments({status: PENDING, limit:1}) when pendingPayments is visible", async () => {
     fetchPayments.mockResolvedValueOnce({ items: [], meta: { total: 3 } })
 
     const { Wrapper } = makeWrapper()
@@ -159,7 +159,7 @@ describe("useDashboardHome — query composition", () => {
     await waitFor(() => expect(fetchPayments).toHaveBeenCalledTimes(1))
     expect(fetchPayments).toHaveBeenCalledWith({
       status: "PENDING",
-      perPage: 1,
+      limit: 1,
     })
   })
 })
@@ -248,7 +248,7 @@ describe("useDashboardHome — enabled flags", () => {
     expect(fetchBookings).toHaveBeenCalledTimes(1)
     expect(fetchBookings).toHaveBeenCalledWith({
       status: "cancel_requested",
-      perPage: 1,
+      limit: 1,
     })
   })
 })

@@ -13,7 +13,7 @@ interface ClientBookingsPanelProps {
 }
 
 export function ClientBookingsPanel({ clientId, t, formatDate }: ClientBookingsPanelProps) {
-  const bookingsQuery = { page: 1, perPage: 20, clientId }
+  const bookingsQuery = { page: 1, limit: 20, clientId }
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.bookings.list(bookingsQuery),
     queryFn: () => fetchBookings(bookingsQuery),

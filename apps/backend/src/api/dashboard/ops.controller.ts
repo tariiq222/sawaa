@@ -124,7 +124,7 @@ export class DashboardOpsController {
           properties: {
             total: { type: 'number' },
             page: { type: 'number' },
-            perPage: { type: 'number' },
+            limit: { type: 'number' },
             totalPages: { type: 'number' },
             hasNextPage: { type: 'boolean' },
             hasPreviousPage: { type: 'boolean' },

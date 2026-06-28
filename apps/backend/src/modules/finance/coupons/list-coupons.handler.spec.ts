@@ -17,7 +17,7 @@ describe('ListCouponsHandler', () => {
     const result = await handler.execute({});
     expect(result.items).toEqual([]);
     expect(result.meta.page).toBe(1);
-    expect(result.meta.perPage).toBe(20);
+    expect(result.meta.limit).toBe(20);
   });
 
   it('filters by search', async () => {
@@ -58,6 +58,6 @@ describe('ListCouponsHandler', () => {
   it('uses custom pagination', async () => {
     const result = await handler.execute({ page: 2, limit: 10 });
     expect(result.meta.page).toBe(2);
-    expect(result.meta.perPage).toBe(10);
+    expect(result.meta.limit).toBe(10);
   });
 });

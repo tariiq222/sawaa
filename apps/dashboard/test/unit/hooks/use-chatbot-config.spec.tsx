@@ -47,7 +47,7 @@ describe("useKnowledgeBase", () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
 
     expect(fetchKnowledgeBase).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, perPage: 20 }),
+      expect.objectContaining({ page: 1, limit: 20 }),
     )
     expect(result.current.entries).toEqual(items)
   })

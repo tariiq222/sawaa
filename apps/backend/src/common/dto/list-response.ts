@@ -9,7 +9,7 @@
 interface ListMeta {
   total: number;
   page: number;
-  perPage: number;
+  limit: number;
   totalPages: number;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
@@ -28,16 +28,16 @@ export function toListResponse<T>(
   items: T[],
   total: number,
   page: number,
-  perPage: number,
+  limit: number,
 ): ListResponse<T> {
-  const safePerPage = perPage > 0 ? perPage : 1;
-  const totalPages = Math.max(1, Math.ceil(total / safePerPage));
+  const safeLimit = limit > 0 ? limit : 1;
+  const totalPages = Math.max(1, Math.ceil(total / safeLimit));
   return {
     items,
     meta: {
       total,
       page,
-      perPage: safePerPage,
+      limit: safeLimit,
       totalPages,
       hasNextPage: page < totalPages,
       hasPreviousPage: page > 1,

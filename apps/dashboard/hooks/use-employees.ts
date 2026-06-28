@@ -118,7 +118,7 @@ export function useEmployees() {
 
   const query: EmployeeListQuery = {
     page: urlPage,
-    perPage: 20,
+    limit: 20,
     search: debouncedSearch || undefined,
     isActive: urlIsActive,
     sortBy: urlSortBy,

@@ -40,7 +40,7 @@ describe("useChatSessions", () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
 
     expect(fetchChatSessions).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, perPage: 20 }),
+      expect.objectContaining({ page: 1, limit: 20 }),
     )
     expect(result.current.sessions).toEqual(items)
     expect(result.current.meta).toEqual({ total: 1 })

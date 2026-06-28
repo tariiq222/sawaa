@@ -42,7 +42,7 @@ describe("useNotifications", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(fetchNotifications).toHaveBeenCalledWith(expect.objectContaining({ page: 1, perPage: 20 }))
+    expect(fetchNotifications).toHaveBeenCalledWith(expect.objectContaining({ page: 1, limit: 20 }))
     expect(result.current.notifications).toEqual(items)
   })
 
@@ -57,14 +57,14 @@ describe("useNotifications", () => {
 describe("useDashboardNotifications", () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it("fetches with perPage 5", async () => {
+  it("fetches with limit 5", async () => {
     fetchNotifications.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
 
     const { result } = renderHook(() => useDashboardNotifications(), { wrapper: makeWrapper() })
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(fetchNotifications).toHaveBeenCalledWith(expect.objectContaining({ perPage: 5 }))
+    expect(fetchNotifications).toHaveBeenCalledWith(expect.objectContaining({ limit: 5 }))
   })
 })
 

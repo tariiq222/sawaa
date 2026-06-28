@@ -19,8 +19,8 @@ describe('ListTenantDeliveryLogsDto', () => {
     expect(errors).toHaveLength(0);
   });
 
-  it('accepts valid page and perPage', async () => {
-    const errors = await validateDto({ page: 1, perPage: 20 });
+  it('accepts valid page and limit', async () => {
+    const errors = await validateDto({ page: 1, limit: 20 });
     expect(errors).toHaveLength(0);
   });
 
@@ -44,18 +44,18 @@ describe('ListTenantDeliveryLogsDto', () => {
     expect(errors.some((e) => e.property === 'page')).toBe(true);
   });
 
-  it('rejects perPage < 1', async () => {
-    const errors = await validateDto({ perPage: 0 });
-    expect(errors.some((e) => e.property === 'perPage')).toBe(true);
+  it('rejects limit < 1', async () => {
+    const errors = await validateDto({ limit: 0 });
+    expect(errors.some((e) => e.property === 'limit')).toBe(true);
   });
 
-  it('rejects perPage > 100', async () => {
-    const errors = await validateDto({ perPage: 101 });
-    expect(errors.some((e) => e.property === 'perPage')).toBe(true);
+  it('rejects limit > 100', async () => {
+    const errors = await validateDto({ limit: 101 });
+    expect(errors.some((e) => e.property === 'limit')).toBe(true);
   });
 
-  it('accepts perPage at the Max(100) boundary', async () => {
-    const errors = await validateDto({ perPage: 100 });
-    expect(errors.some((e) => e.property === 'perPage')).toBe(false);
+  it('accepts limit at the Max(100) boundary', async () => {
+    const errors = await validateDto({ limit: 100 });
+    expect(errors.some((e) => e.property === 'limit')).toBe(false);
   });
 });

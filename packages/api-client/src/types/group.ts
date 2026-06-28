@@ -16,7 +16,7 @@ export interface GroupListItem {
 
 export interface GroupListQuery {
   page?: number
-  perPage?: number
+  limit?: number
   search?: string
   status?: GroupStatus
 }

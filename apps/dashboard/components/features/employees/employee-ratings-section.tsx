@@ -37,7 +37,7 @@ export function EmployeeRatingsSection({
 
   const { data, isLoading } = useQuery({
     queryKey: [...queryKeys.employees.ratings(employeeId), page],
-    queryFn: () => fetchEmployeeRatings(employeeId, { page, perPage: 5 }),
+    queryFn: () => fetchEmployeeRatings(employeeId, { page, limit: 5 }),
     enabled: !!employeeId,
   })
 

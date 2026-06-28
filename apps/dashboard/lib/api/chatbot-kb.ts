@@ -20,7 +20,7 @@ export async function fetchKnowledgeBase(
 ): Promise<KnowledgeBaseResponse> {
   return api.get<KnowledgeBaseResponse>("/dashboard/ai/knowledge-base", {
     page: query.page,
-    limit: query.perPage,
+    limit: query.limit,
     status: query.status,
   })
 }

@@ -70,20 +70,25 @@ export function BookingRescheduleTab({ booking, onSuccess }: BookingRescheduleTa
     <form onSubmit={onSubmit} className="flex flex-col gap-5 pt-1">
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
-          <Label className="text-sm font-medium text-foreground">{t("bookings.reschedule.dateLabel")}</Label>
+          <Label className="text-sm font-medium text-foreground" htmlFor="resched-date">{t("bookings.reschedule.dateLabel")}</Label>
           <Controller control={form.control} name="date" render={({ field }) => (
-            <DatePicker value={field.value} onChange={field.onChange} placeholder={t("bookings.reschedule.datePlaceholder")} className="w-full bg-surface-muted" />
+            <DatePicker id="resched-date" value={field.value} onChange={field.onChange} placeholder={t("bookings.reschedule.datePlaceholder")} className="w-full bg-surface-muted" error={!!form.formState.errors.date} aria-describedby={form.formState.errors.date ? "resched-date-error" : undefined} />
           )} />
           {form.formState.errors.date && (
-            <p className="text-xs text-destructive">{form.formState.errors.date.message}</p>
+            <p id="resched-date-error" className="text-xs text-destructive">{form.formState.errors.date.message}</p>
           )}
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label className="text-sm font-medium text-foreground">{t("bookings.reschedule.timeLabel")}</Label>
+          <Label className="text-sm font-medium text-foreground" htmlFor="resched-time">{t("bookings.reschedule.timeLabel")}</Label>
           <Controller control={form.control} name="startTime" render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange} disabled={!canFetchSlots}>
-              <SelectTrigger className="w-full h-10 bg-surface-muted border-border">
+              <SelectTrigger
+                id="resched-time"
+                className="w-full h-10 bg-surface-muted border-border"
+                aria-invalid={form.formState.errors.startTime ? "true" : undefined}
+                aria-describedby={form.formState.errors.startTime ? "resched-time-error" : undefined}
+              >
                 <SelectValue placeholder={slotPlaceholder} />
               </SelectTrigger>
               <SelectContent>
@@ -99,7 +104,7 @@ export function BookingRescheduleTab({ booking, onSuccess }: BookingRescheduleTa
             </Select>
           )} />
           {form.formState.errors.startTime && (
-            <p className="text-xs text-destructive">{form.formState.errors.startTime.message}</p>
+            <p id="resched-time-error" className="text-xs text-destructive">{form.formState.errors.startTime.message}</p>
           )}
         </div>
       </div>

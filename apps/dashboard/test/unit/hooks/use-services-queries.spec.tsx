@@ -96,7 +96,7 @@ describe("useServices", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     expect(fetchServices).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, perPage: 20, includeHidden: true }),
+      expect.objectContaining({ page: 1, limit: 20, includeHidden: true }),
     )
     expect(result.current.services).toEqual(items)
     expect(result.current.meta).toEqual({ total: 1 })
@@ -251,7 +251,7 @@ describe("useCategories", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(fetchCategories).toHaveBeenCalledWith({ page: 1, perPage: 200 })
+    expect(fetchCategories).toHaveBeenCalledWith({ page: 1, limit: 200 })
     expect(result.current.data).toEqual(cats)
   })
 })

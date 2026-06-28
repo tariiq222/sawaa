@@ -57,14 +57,21 @@ export function CancelProgramDialog({
             <label className="block">
               <span className="text-sm font-medium">{t('programs.dialog.cancel.reasonLabel')}</span>
               <Textarea
+                id="cancel-program-reason"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 required
                 className="mt-1"
                 rows={3}
+                aria-invalid={error ? "true" : undefined}
+                aria-describedby={error ? "cancel-program-reason-error" : undefined}
               />
             </label>
-            {error && <p className="text-sm text-(--text-error)">{error}</p>}
+            {error && (
+              <p id="cancel-program-reason-error" className="text-sm text-(--text-error)">
+                {error}
+              </p>
+            )}
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

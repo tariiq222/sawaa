@@ -21,7 +21,7 @@ export function useClients() {
 
   const query: ClientListQuery = {
     page,
-    perPage: 20,
+    limit: 20,
     search: debouncedSearch || undefined,
     isActive,
   }

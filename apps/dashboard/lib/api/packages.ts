@@ -24,7 +24,7 @@ export async function fetchPackages(
     "/dashboard/organization/packages",
     {
       page: query.page,
-      limit: query.perPage,
+      limit: query.limit,
       search: query.search,
       isActive: query.isActive,
       isPublic: query.isPublic,

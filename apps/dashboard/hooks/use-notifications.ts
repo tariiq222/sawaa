@@ -16,7 +16,7 @@ import type { NotificationListQuery } from "@/lib/types/notification"
 export function useNotifications() {
   const [page, setPage] = useState(1)
 
-  const query: NotificationListQuery = { page, perPage: 20 }
+  const query: NotificationListQuery = { page, limit: 20 }
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.notifications.list(query),
@@ -38,7 +38,7 @@ export function useNotifications() {
 /* ─── Dashboard Feed (5 items, no pagination) ─── */
 
 export function useDashboardNotifications() {
-  const query: NotificationListQuery = { perPage: 5 }
+  const query: NotificationListQuery = { limit: 5 }
   return useQuery({
     queryKey: queryKeys.notifications.list(query),
     queryFn: () => fetchNotifications(query),

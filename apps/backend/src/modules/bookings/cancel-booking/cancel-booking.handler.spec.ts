@@ -18,6 +18,7 @@ type MockPrisma = {
   payment: { findFirst: jest.Mock };
   bookingStatusLog: { create: jest.Mock };
   coupon: { updateMany: jest.Mock };
+  programEnrollment: { deleteMany: jest.Mock };
   $transaction: jest.Mock;
 };
 
@@ -27,6 +28,7 @@ const buildMockPrisma = (): MockPrisma => {
     payment: { findFirst: jest.fn() },
     bookingStatusLog: { create: jest.fn() },
     coupon: { updateMany: jest.fn() },
+    programEnrollment: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
     $transaction: jest.fn(async (cb: (tx: MockPrisma) => Promise<unknown>) => await cb(prisma)),
   };
   return prisma;
@@ -39,6 +41,7 @@ describe('CancelBookingHandler', () => {
   let settingsHandler: { execute: jest.Mock };
   let zoomMeetingService: { deleteMeeting: jest.Mock };
   let refundHandler: { createRefundRequestInTx: jest.Mock };
+  let groupCapacity: { decrementEnrollment: jest.Mock };
 
   const baseSettings = {
     freeCancelBeforeHours: 24,
@@ -62,6 +65,7 @@ describe('CancelBookingHandler', () => {
     settingsHandler = { execute: jest.fn().mockResolvedValue(baseSettings) };
     zoomMeetingService = { deleteMeeting: jest.fn().mockResolvedValue(undefined) };
     refundHandler = { createRefundRequestInTx: jest.fn() };
+    groupCapacity = { decrementEnrollment: jest.fn().mockResolvedValue(undefined) };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -72,7 +76,7 @@ describe('CancelBookingHandler', () => {
         { provide: GetBookingSettingsHandler, useValue: settingsHandler },
         { provide: ZoomMeetingService, useValue: zoomMeetingService },
         { provide: RefundPaymentHandler, useValue: refundHandler },
-        { provide: ProgramCapacityService, useValue: { decrementEnrollment: jest.fn().mockResolvedValue(undefined) } },
+        { provide: ProgramCapacityService, useValue: groupCapacity },
       ],
     }).compile();
 
@@ -703,6 +707,58 @@ describe('CancelBookingHandler', () => {
       });
 
       expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('program enrollment capacity (group bookings)', () => {
+    it('frees the seat: deletes the enrollment row and decrements enrolledCount when cancelling a program booking', async () => {
+      prisma.booking.findFirst.mockResolvedValue({
+        ...baseBooking,
+        status: BookingStatus.CONFIRMED,
+        programId: 'prog-1',
+      });
+      prisma.booking.update.mockResolvedValue({
+        ...baseBooking,
+        status: BookingStatus.CANCELLED,
+        programId: 'prog-1',
+      });
+
+      await handler.execute({
+        bookingId: 'book-1',
+        reason: CancellationReason.CLIENT_REQUESTED,
+        changedBy: 'user-1',
+      });
+
+      // Seat row removed so the client can re-enroll.
+      expect(prisma.programEnrollment.deleteMany).toHaveBeenCalledWith({
+        where: { bookingId: 'book-1' },
+      });
+      // Guarded capacity decrement runs inside the same tx (the mock prisma
+      // is itself the tx), with the booking's programId.
+      expect(groupCapacity.decrementEnrollment).toHaveBeenCalledTimes(1);
+      expect(groupCapacity.decrementEnrollment).toHaveBeenCalledWith(prisma, 'prog-1');
+    });
+
+    it('does NOT touch program enrollment for a non-program booking', async () => {
+      prisma.booking.findFirst.mockResolvedValue({
+        ...baseBooking,
+        status: BookingStatus.CONFIRMED,
+        programId: null,
+      });
+      prisma.booking.update.mockResolvedValue({
+        ...baseBooking,
+        status: BookingStatus.CANCELLED,
+        programId: null,
+      });
+
+      await handler.execute({
+        bookingId: 'book-1',
+        reason: CancellationReason.CLIENT_REQUESTED,
+        changedBy: 'user-1',
+      });
+
+      expect(prisma.programEnrollment.deleteMany).not.toHaveBeenCalled();
+      expect(groupCapacity.decrementEnrollment).not.toHaveBeenCalled();
     });
   });
 });

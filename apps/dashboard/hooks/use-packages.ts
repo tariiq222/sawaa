@@ -27,7 +27,7 @@ export function usePackagesList() {
 
   const query: PackageListQuery = {
     page,
-    perPage: 20,
+    limit: 20,
     search: debouncedSearch || undefined,
     isActive,
   }

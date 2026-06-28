@@ -106,17 +106,17 @@ export function EmployeeBookingsChart({ employeeId }: Props) {
 
   const { data: donutData, isLoading: donutLoading } = useQuery({
     queryKey: ["pbc-donut", employeeId, donutPeriod],
-    queryFn: () => fetchBookings({ employeeId, ...getRange(donutPeriod), perPage: 200 }),
+    queryFn: () => fetchBookings({ employeeId, ...getRange(donutPeriod), limit: 200 }),
     enabled: !!employeeId,
   })
   const { data: barData, isLoading: barLoading } = useQuery({
     queryKey: ["pbc-bar", employeeId, barPeriod],
-    queryFn: () => fetchBookings({ employeeId, ...getRange(barPeriod), perPage: 200 }),
+    queryFn: () => fetchBookings({ employeeId, ...getRange(barPeriod), limit: 200 }),
     enabled: !!employeeId,
   })
   const { data: lineData, isLoading: lineLoading } = useQuery({
     queryKey: ["pbc-line", employeeId, linePeriod],
-    queryFn: () => fetchBookings({ employeeId, ...getRange(linePeriod), perPage: 200 }),
+    queryFn: () => fetchBookings({ employeeId, ...getRange(linePeriod), limit: 200 }),
     enabled: !!employeeId,
   })
 

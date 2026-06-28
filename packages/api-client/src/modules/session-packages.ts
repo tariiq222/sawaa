@@ -35,7 +35,7 @@ export async function listSessionPackages(
 ): Promise<SessionPackageListResponse> {
   const qs = buildQueryString({
     page: query.page,
-    limit: query.perPage,
+    limit: query.limit,
     search: query.search,
     isActive: query.isActive,
     isPublic: query.isPublic,

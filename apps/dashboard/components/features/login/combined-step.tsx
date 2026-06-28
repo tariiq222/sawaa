@@ -54,6 +54,8 @@ export function CombinedStep({ loading, error, onSubmit, onBack, onClearError }:
             }}
             disabled={loading}
             className="pe-10"
+            aria-invalid={fieldError ? "true" : undefined}
+            aria-describedby={fieldError ? "password-error" : undefined}
           />
           <button
             type="button"
@@ -65,7 +67,7 @@ export function CombinedStep({ loading, error, onSubmit, onBack, onClearError }:
           </button>
         </div>
         {fieldError && (
-          <p className="text-sm text-error">{fieldError}</p>
+          <p id="password-error" className="text-sm text-error">{fieldError}</p>
         )}
       </div>
 

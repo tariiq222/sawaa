@@ -33,10 +33,31 @@
       },
       "ApiErrorDto": {
         "properties": {
+          "code": {
+            "description": "Stable machine-readable error code for programmatic handling. Distinct from `error`, which always holds the HTTP reason phrase.",
+            "example": "DEPARTMENT_NAME_EXISTS",
+            "type": "string"
+          },
           "error": {
             "description": "Short error category",
             "example": "Bad Request",
             "type": "string"
+          },
+          "localized": {
+            "description": "Bilingual human-readable message. Present only on errors that carry localized copy.",
+            "example": {
+              "ar": "القسم بهذا الاسم موجود مسبقاً",
+              "en": "Department with this name already exists"
+            },
+            "properties": {
+              "ar": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              }
+            },
+            "type": "object"
           },
           "message": {
             "description": "Human-readable message or array of validation messages",
@@ -2949,14 +2970,14 @@
             "example": false,
             "type": "boolean"
           },
+          "limit": {
+            "description": "Records per page",
+            "example": 20,
+            "type": "number"
+          },
           "page": {
             "description": "1-based page number",
             "example": 1,
-            "type": "number"
-          },
-          "perPage": {
-            "description": "Records per page",
-            "example": 20,
             "type": "number"
           },
           "total": {
@@ -2973,7 +2994,7 @@
         "required": [
           "total",
           "page",
-          "perPage",
+          "limit",
           "totalPages",
           "hasNextPage",
           "hasPreviousPage"
@@ -10292,7 +10313,7 @@
           {
             "description": "Items per page",
             "in": "query",
-            "name": "perPage",
+            "name": "limit",
             "required": false,
             "schema": {
               "default": 20,
@@ -14457,10 +14478,10 @@
                         "hasPreviousPage": {
                           "type": "boolean"
                         },
-                        "page": {
+                        "limit": {
                           "type": "number"
                         },
-                        "perPage": {
+                        "page": {
                           "type": "number"
                         },
                         "total": {
@@ -14676,7 +14697,7 @@
                 }
               }
             },
-            "description": "Action denied by permission policy"
+            "description": "Cannot modify a user at or above your rank"
           },
           "404": {
             "content": {
@@ -14917,7 +14938,7 @@
                 }
               }
             },
-            "description": "Action denied by permission policy"
+            "description": "Cannot modify a user at or above your rank"
           },
           "404": {
             "content": {
@@ -14998,7 +15019,7 @@
                 }
               }
             },
-            "description": "Action denied by permission policy"
+            "description": "Cannot modify a user at or above your rank"
           },
           "404": {
             "content": {
@@ -15079,7 +15100,7 @@
                 }
               }
             },
-            "description": "Action denied by permission policy"
+            "description": "Cannot modify a user at or above your rank"
           },
           "404": {
             "content": {
@@ -16219,10 +16240,10 @@
                         "hasPreviousPage": {
                           "type": "boolean"
                         },
-                        "page": {
+                        "limit": {
                           "type": "number"
                         },
-                        "perPage": {
+                        "page": {
                           "type": "number"
                         },
                         "total": {
@@ -23391,10 +23412,10 @@
                         "hasPreviousPage": {
                           "type": "boolean"
                         },
-                        "page": {
+                        "limit": {
                           "type": "integer"
                         },
-                        "perPage": {
+                        "page": {
                           "type": "integer"
                         },
                         "total": {

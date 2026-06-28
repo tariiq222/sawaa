@@ -29,12 +29,12 @@ describe("employees api", () => {
     it("sends all query params to /dashboard/people/employees", async () => {
       getMock.mockResolvedValueOnce({
         items: [],
-        meta: { total: 0, page: 1, perPage: 20 },
+        meta: { total: 0, page: 1, limit: 20 },
       })
 
       await fetchEmployees({
         page: 2,
-        perPage: 15,
+        limit: 15,
         search: "سارة",
         isActive: true,
         minRating: 4,

@@ -54,7 +54,7 @@ describe('ListContactMessagesHandler', () => {
     expect(result.items).toHaveLength(2);
     expect(result.meta).toEqual({
       page: 1,
-      perPage: 2,
+      limit: 2,
       total: 7,
       totalPages: 4,
       hasNextPage: true,

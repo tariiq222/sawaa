@@ -29,7 +29,7 @@ export async function fetchCategories(
 ): Promise<PaginatedResponse<ServiceCategory>> {
   return api.get<PaginatedResponse<ServiceCategory>>("/dashboard/organization/categories", {
     page: query.page,
-    limit: query.perPage,
+    limit: query.limit,
     search: query.search,
     isActive: query.isActive,
     departmentId: query.departmentId,
@@ -85,7 +85,7 @@ export async function fetchServices(
 ): Promise<PaginatedResponse<Service>> {
   return api.get<PaginatedResponse<Service>>("/dashboard/organization/services", {
     page: query.page,
-    limit: query.perPage,
+    limit: query.limit,
     isActive: query.isActive,
     categoryId: query.categoryId,
     search: query.search,

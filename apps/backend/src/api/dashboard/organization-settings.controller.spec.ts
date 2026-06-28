@@ -511,7 +511,7 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
     it('returns 200 with the list payload', async () => {
       mockListSessionPackages.execute.mockResolvedValue({
         items: [{ id: uuid(1), nameAr: 'باقة العائلة' }],
-        meta: { total: 1, page: 1, perPage: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
+        meta: { total: 1, page: 1, limit: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
       });
 
       const res = await request(app.getHttpServer())
@@ -523,7 +523,7 @@ describe('DashboardOrganizationSettingsController (e2e)', () => {
     });
 
     it('forwards query string filters to the handler', async () => {
-      mockListSessionPackages.execute.mockResolvedValue({ items: [], meta: { total: 0, page: 1, perPage: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false } });
+      mockListSessionPackages.execute.mockResolvedValue({ items: [], meta: { total: 0, page: 1, limit: 20, totalPages: 1, hasNextPage: false, hasPreviousPage: false } });
 
       await request(app.getHttpServer())
         .get('/dashboard/organization/packages?isActive=true&search=family')

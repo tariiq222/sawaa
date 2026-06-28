@@ -137,7 +137,7 @@ export interface Booking {
 
 export interface BookingListQuery {
   page?: number
-  perPage?: number
+  limit?: number
   status?: BookingStatus
   type?: BookingType
   deliveryType?: DeliveryType

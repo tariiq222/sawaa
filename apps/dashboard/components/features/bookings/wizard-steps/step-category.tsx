@@ -35,7 +35,7 @@ interface StepCategoryProps {
 export function StepCategory({ departmentId, onSelect }: StepCategoryProps) {
   const { t, locale } = useLocale()
 
-  const filters = { departmentId, isActive: true, perPage: 100 }
+  const filters = { departmentId, isActive: true, limit: 100 }
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.services.categories(filters),
     queryFn: () => fetchCategories(filters),

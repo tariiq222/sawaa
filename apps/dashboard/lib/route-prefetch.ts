@@ -46,44 +46,44 @@ function entry(
  */
 export const ROUTE_PREFETCH: Record<string, PrefetchEntry> = {
   "/bookings": entry(
-    queryKeys.bookings.list({ page: 1, perPage: 20 }),
-    () => fetchBookings({ page: 1, perPage: 20 }),
+    queryKeys.bookings.list({ page: 1, limit: 20 }),
+    () => fetchBookings({ page: 1, limit: 20 }),
   ),
   "/clients": entry(
-    queryKeys.clients.list({ page: 1, perPage: 20 }),
-    () => fetchClients({ page: 1, perPage: 20 }),
+    queryKeys.clients.list({ page: 1, limit: 20 }),
+    () => fetchClients({ page: 1, limit: 20 }),
   ),
   "/employees": entry(
-    queryKeys.employees.list({ page: 1, perPage: 20 }),
-    () => fetchEmployees({ page: 1, perPage: 20 }),
+    queryKeys.employees.list({ page: 1, limit: 20 }),
+    () => fetchEmployees({ page: 1, limit: 20 }),
   ),
   "/payments": entry(
-    queryKeys.payments.list({ page: 1, perPage: 20 }),
-    () => fetchPayments({ page: 1, perPage: 20 }),
+    queryKeys.payments.list({ page: 1, limit: 20 }),
+    () => fetchPayments({ page: 1, limit: 20 }),
   ),
   "/services": entry(
     queryKeys.services.list({}),
     () => fetchServices({}),
   ),
   "/users": entry(
-    queryKeys.users.list({ page: 1, perPage: 20 }),
-    () => fetchUsers({ page: 1, perPage: 20 }),
+    queryKeys.users.list({ page: 1, limit: 20 }),
+    () => fetchUsers({ page: 1, limit: 20 }),
   ),
   "/coupons": entry(
-    queryKeys.coupons.list({ page: 1, perPage: 20 }),
-    () => fetchCoupons({ page: 1, perPage: 20 }),
+    queryKeys.coupons.list({ page: 1, limit: 20 }),
+    () => fetchCoupons({ page: 1, limit: 20 }),
   ),
   "/intake-forms": entry(
     queryKeys.intakeForms.list({}),
     () => fetchIntakeForms({}),
   ),
   "/notifications": entry(
-    queryKeys.notifications.list({ page: 1, perPage: 20 }),
-    () => fetchNotifications({ page: 1, perPage: 20 }),
+    queryKeys.notifications.list({ page: 1, limit: 20 }),
+    () => fetchNotifications({ page: 1, limit: 20 }),
   ),
   "/chatbot": entry(
-    queryKeys.chatbot.sessions.list({ page: 1, perPage: 20 }),
-    () => fetchChatSessions({ page: 1, perPage: 20 }),
+    queryKeys.chatbot.sessions.list({ page: 1, limit: 20 }),
+    () => fetchChatSessions({ page: 1, limit: 20 }),
   ),
 }
 

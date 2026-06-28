@@ -42,11 +42,17 @@ export class GetIntakeFormResponsesHandler {
         }),
     );
 
-    await Promise.all(
-      formIds.map(async (formId) => {
-        countByForm.set(formId, await this.prisma.intakeResponse.count({ where: { formId } }));
-      }),
-    );
+    // Single grouped aggregate instead of one count() per distinct form (N+1).
+    if (formIds.length > 0) {
+      const grouped = await this.prisma.intakeResponse.groupBy({
+        by: ['formId'],
+        where: { formId: { in: formIds } },
+        _count: true,
+      });
+      for (const g of grouped) {
+        countByForm.set(g.formId, g._count);
+      }
+    }
 
     return responses.map((r) => {
       const scope = scopeByForm.get(r.formId) ?? { scopeLabel: null, serviceId: null, employeeId: null, branchId: null };

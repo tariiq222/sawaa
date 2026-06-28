@@ -57,7 +57,7 @@ describe("useBookings", () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
 
     expect(fetchBookings).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, perPage: 20 }),
+      expect.objectContaining({ page: 1, limit: 20 }),
     )
     expect(result.current.bookings).toEqual(items)
     expect(result.current.meta).toEqual({ total: 1 })
@@ -124,7 +124,7 @@ describe("useTodayBookings", () => {
       expect.objectContaining({
         dateFrom: "2026-03-27",
         dateTo: "2026-03-27",
-        perPage: 10,
+        limit: 10,
       }),
     )
     expect(result.current.data?.items).toEqual(items)

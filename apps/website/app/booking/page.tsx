@@ -984,7 +984,7 @@ function BookingWizardInner() {
                 <rect x="2.5" y="6" width="9" height="6" rx="1.5" />
                 <path d="M4.5 6V4.5a2.5 2.5 0 1 1 5 0V6" />
               </svg>
-              {isAr ? 'حجز آمن وسرّي' : 'Private & secure'}
+              {isAr ? 'موعد آمن وسرّي' : 'Private & secure'}
             </span>
           </div>
 

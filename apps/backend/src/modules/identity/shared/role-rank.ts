@@ -22,6 +22,38 @@ export function actorRankOf(actor: { role: UserRole; isSuperAdmin: boolean }): n
 }
 
 /**
+ * Effective rank of a target user. Mirrors {@link actorRankOf} so a super admin
+ * is always treated as top rank regardless of their stored built-in role.
+ */
+export function targetRankOf(target: { role: UserRole; isSuperAdmin: boolean }): number {
+  return target.isSuperAdmin ? ROLE_RANK.SUPER_ADMIN : ROLE_RANK[target.role];
+}
+
+/**
+ * Guard a destructive user-management action (deactivate / activate / update /
+ * delete) against horizontal and vertical privilege escalation. An actor may
+ * only act on a target they STRICTLY outrank, and may never act on themselves.
+ *
+ * This is the same rank gate enforced by the role-change path
+ * ({@link assertCanAssignRole}); it is shared so every user-mutation slice
+ * applies it identically.
+ *
+ * @throws ForbiddenException when actor === target, or when the actor does not
+ *   strictly outrank the target.
+ */
+export function assertCanManageUser(
+  actor: { id: string; role: UserRole; isSuperAdmin: boolean },
+  target: { id: string; role: UserRole; isSuperAdmin: boolean },
+): void {
+  if (actor.id === target.id) {
+    throw new ForbiddenException('Cannot perform this action on your own account');
+  }
+  if (actorRankOf(actor) <= targetRankOf(target)) {
+    throw new ForbiddenException('Cannot modify a user at or above your rank');
+  }
+}
+
+/**
  * Guard a built-in role assignment against horizontal/vertical privilege
  * escalation. Throws ForbiddenException if the actor is trying to grant a role
  * at or above their own rank, or to grant SUPER_ADMIN without being one.

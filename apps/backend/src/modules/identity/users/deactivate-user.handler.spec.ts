@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database';
 import { DeactivateUserHandler } from './deactivate-user.handler';
+
+const ACTOR_ID = '00000000-0000-0000-0000-0000000000aa';
+const TARGET_ID = '00000000-0000-0000-0000-0000000000bb';
 
 describe('DeactivateUserHandler', () => {
   let handler: DeactivateUserHandler;
@@ -22,52 +25,107 @@ describe('DeactivateUserHandler', () => {
     prisma = module.get<PrismaService>(PrismaService) as any;
   });
 
-  it('resolves when the user exists and is set to isActive=false', async () => {
-    prisma.user.findUnique.mockResolvedValue({ id: 'u1' });
-    prisma.user.update.mockResolvedValue({ id: 'u1', isActive: false });
+  /** Resolve actor first, then target — matches the Promise.all order in the handler. */
+  function mockActorThenTarget(
+    actor: { id: string; role: string; isSuperAdmin: boolean } | null,
+    target: { id: string; role: string; isSuperAdmin: boolean } | null,
+  ) {
+    prisma.user.findUnique
+      .mockResolvedValueOnce(actor as any)
+      .mockResolvedValueOnce(target as any);
+  }
+
+  it('deactivates when a higher-rank actor targets a lower-rank user', async () => {
+    mockActorThenTarget(
+      { id: ACTOR_ID, role: 'ADMIN', isSuperAdmin: false },
+      { id: TARGET_ID, role: 'RECEPTIONIST', isSuperAdmin: false },
+    );
+    prisma.user.update.mockResolvedValue({ id: TARGET_ID, isActive: false });
 
     await expect(
-      handler.execute({ userId: '00000000-0000-0000-0000-000000000001' }),
+      handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID }),
     ).resolves.toBeUndefined();
 
     expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: '00000000-0000-0000-0000-000000000001' },
+      where: { id: TARGET_ID },
       data: { isActive: false },
     });
   });
 
-  it('looks up the user by id BEFORE attempting the update', async () => {
-    prisma.user.findUnique.mockResolvedValue({ id: 'u1' });
-    prisma.user.update.mockResolvedValue({ id: 'u1', isActive: false });
-
-    await handler.execute({ userId: 'u1' });
-
-    expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { id: 'u1' } });
-    expect(prisma.user.findUnique).toHaveBeenCalledTimes(1);
-  });
-
-  it('throws NotFoundException and does NOT update when the user does not exist', async () => {
-    prisma.user.findUnique.mockResolvedValue(null);
-    await expect(handler.execute({ userId: 'ghost' })).rejects.toThrow(NotFoundException);
+  it('rejects (403) when a lower-rank actor targets a higher-rank user', async () => {
+    mockActorThenTarget(
+      { id: ACTOR_ID, role: 'RECEPTIONIST', isSuperAdmin: false },
+      { id: TARGET_ID, role: 'ADMIN', isSuperAdmin: false },
+    );
+    await expect(
+      handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID }),
+    ).rejects.toThrow(ForbiddenException);
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
-  it('does NOT receive any other user fields (defensive: name/email/etc. are untouched)', async () => {
-    prisma.user.findUnique.mockResolvedValue({ id: 'u1' });
-    prisma.user.update.mockResolvedValue({ id: 'u1', isActive: false });
+  it('rejects (403) when actor and target are at equal rank', async () => {
+    mockActorThenTarget(
+      { id: ACTOR_ID, role: 'ADMIN', isSuperAdmin: false },
+      { id: TARGET_ID, role: 'ADMIN', isSuperAdmin: false },
+    );
+    await expect(
+      handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID }),
+    ).rejects.toThrow(ForbiddenException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
 
-    await handler.execute({ userId: 'u1' });
+  it('rejects (403) when an ADMIN targets a SUPER_ADMIN', async () => {
+    mockActorThenTarget(
+      { id: ACTOR_ID, role: 'ADMIN', isSuperAdmin: false },
+      { id: TARGET_ID, role: 'ADMIN', isSuperAdmin: true },
+    );
+    await expect(
+      handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID }),
+    ).rejects.toThrow(ForbiddenException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
 
-    const call = prisma.user.update.mock.calls[0][0];
-    expect(call.data).toEqual({ isActive: false });
-    expect((call.data as any).email).toBeUndefined();
-    expect((call.data as any).name).toBeUndefined();
-    expect((call.data as any).role).toBeUndefined();
+  it('rejects (403) self-deactivation even for a SUPER_ADMIN', async () => {
+    mockActorThenTarget(
+      { id: ACTOR_ID, role: 'ADMIN', isSuperAdmin: true },
+      { id: ACTOR_ID, role: 'ADMIN', isSuperAdmin: true },
+    );
+    await expect(
+      handler.execute({ actorUserId: ACTOR_ID, userId: ACTOR_ID }),
+    ).rejects.toThrow(ForbiddenException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('throws NotFoundException and does NOT update when the target does not exist', async () => {
+    mockActorThenTarget(
+      { id: ACTOR_ID, role: 'ADMIN', isSuperAdmin: false },
+      null,
+    );
+    await expect(
+      handler.execute({ actorUserId: ACTOR_ID, userId: 'ghost' }),
+    ).rejects.toThrow(NotFoundException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('throws ForbiddenException when the actor does not exist', async () => {
+    mockActorThenTarget(
+      null,
+      { id: TARGET_ID, role: 'RECEPTIONIST', isSuperAdmin: false },
+    );
+    await expect(
+      handler.execute({ actorUserId: 'ghost', userId: TARGET_ID }),
+    ).rejects.toThrow(ForbiddenException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
   it('propagates Prisma errors when update rejects', async () => {
-    prisma.user.findUnique.mockResolvedValue({ id: 'u1' });
+    mockActorThenTarget(
+      { id: ACTOR_ID, role: 'ADMIN', isSuperAdmin: false },
+      { id: TARGET_ID, role: 'RECEPTIONIST', isSuperAdmin: false },
+    );
     prisma.user.update.mockRejectedValue(new Error('DB down'));
-    await expect(handler.execute({ userId: 'u1' })).rejects.toThrow('DB down');
+    await expect(
+      handler.execute({ actorUserId: ACTOR_ID, userId: TARGET_ID }),
+    ).rejects.toThrow('DB down');
   });
 });

@@ -29,8 +29,12 @@ describe('ExpireBookingHandler', () => {
   it('expires PENDING booking', async () => {
     const prisma = buildPrisma();
     await newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'user-42' });
-    expect(prisma.booking.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.EXPIRED }) }),
+    // Status write goes through the guarded helper (updateMany where status=current).
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: 'book-1', status: BookingStatus.PENDING }),
+        data: expect.objectContaining({ status: BookingStatus.EXPIRED }),
+      }),
     );
   });
 
@@ -56,9 +60,52 @@ describe('ExpireBookingHandler — group booking statuses', () => {
     const prisma = buildPrisma();
     prisma.booking.findUnique = jest.fn().mockResolvedValue({ ...mockBooking, status: BookingStatus.AWAITING_PAYMENT });
     await newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'system' });
-    expect(prisma.booking.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: BookingStatus.EXPIRED }) }),
+    expect(prisma.booking.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: 'book-1', status: BookingStatus.AWAITING_PAYMENT }),
+        data: expect.objectContaining({ status: BookingStatus.EXPIRED }),
+      }),
     );
+  });
+});
+
+describe('ExpireBookingHandler — concurrent-status guard', () => {
+  it('bails (BadRequestException) when the booking is no longer in an expirable status', async () => {
+    const prisma = buildPrisma();
+    // fetchBookingOrFail still sees an expirable status...
+    prisma.booking.findUnique = jest
+      .fn()
+      .mockResolvedValue({ ...mockBooking, status: BookingStatus.AWAITING_PAYMENT });
+    // ...but the guarded write finds 0 rows matching status=AWAITING_PAYMENT,
+    // i.e. a concurrent PAYMENT_CONFIRMED flipped it. updateBookingAtomically
+    // must reject instead of double-writing / double-refunding.
+    prisma.booking.updateMany = jest.fn().mockResolvedValue({ count: 0 });
+
+    await expect(
+      newHandler(prisma).execute({ bookingId: 'book-1', changedBy: 'system' }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('does NOT publish a refund/cancel event when the guarded write bails', async () => {
+    const prisma = buildPrisma();
+    prisma.booking.findUnique = jest
+      .fn()
+      .mockResolvedValue({ ...mockBooking, status: BookingStatus.AWAITING_PAYMENT });
+    prisma.payment.findFirst = jest
+      .fn()
+      .mockResolvedValue({ id: 'pay-1', amount: 10_000, refundedAmount: 0 });
+    prisma.booking.updateMany = jest.fn().mockResolvedValue({ count: 0 });
+    const eventBus = buildEventBus();
+    const refundHandler = buildRefundHandler();
+
+    await expect(
+      newHandler(prisma, eventBus, refundHandler).execute({ bookingId: 'book-1', changedBy: 'system' }),
+    ).rejects.toThrow(BadRequestException);
+
+    // The refund request is created inside the tx, after the guarded write; a
+    // bail rolls the whole tx back and the cancel event never publishes.
+    expect(refundHandler.createRefundRequestInTx).not.toHaveBeenCalled();
+    expect(eventBus.publish).not.toHaveBeenCalled();
   });
 });
 

@@ -164,7 +164,7 @@ describe("services api", () => {
       getMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
       await fetchServices({
         page: 2,
-        perPage: 50,
+        limit: 50,
         categoryId: "cat-1",
         isActive: false,
         includeHidden: false,

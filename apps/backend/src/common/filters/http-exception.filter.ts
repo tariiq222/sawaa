@@ -62,10 +62,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
     // Never leak internal error details to the client for 5xx responses.
     const message = status >= 500 ? 'An unexpected error occurred' : rawMessage;
 
-    const error =
-      typeof exceptionResponse === 'object' && exceptionResponse !== null
-        ? (exceptionResponse as Record<string, unknown>)['error'] ?? HttpStatus[status]
-        : HttpStatus[status];
+    // `error` ALWAYS holds the HTTP reason phrase (e.g. "Conflict", "Bad Request").
+    // A handler-supplied `error` (which used to smuggle a machine code) is
+    // intentionally ignored — machine codes belong in the dedicated `code` field.
+    const error = HttpStatus[status];
 
     const requestContext = RequestContextStorage.get();
 

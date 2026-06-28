@@ -10,9 +10,9 @@ function buildPrisma() {
     sessionPackage: {
       findFirst: jest.fn(),
     },
-    employeeService: { findFirst: jest.fn() },
-    employeeServiceOption: { findFirst: jest.fn() },
-    serviceDurationOption: { findFirst: jest.fn() },
+    employeeService: { findFirst: jest.fn(), findMany: jest.fn() },
+    employeeServiceOption: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+    serviceDurationOption: { findFirst: jest.fn(), findMany: jest.fn() },
   };
 }
 
@@ -60,12 +60,18 @@ describe('GetSessionPackageHandler', () => {
   beforeEach(async () => {
     prisma = buildPrisma();
     prisma.employeeService.findFirst.mockResolvedValue({ id: 'es-1' });
+    prisma.employeeService.findMany.mockResolvedValue([
+      { id: 'es-1', employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID },
+    ]);
     prisma.employeeServiceOption.findFirst.mockResolvedValue(null);
     prisma.serviceDurationOption.findFirst.mockResolvedValue({
       id: DURATION_OPTION_ID,
       serviceId: SERVICE_ID,
       price: { toString: () => '10000' },
     });
+    prisma.serviceDurationOption.findMany.mockResolvedValue([
+      { id: DURATION_OPTION_ID, serviceId: SERVICE_ID, price: { toString: () => '10000' } },
+    ]);
 
     const module = await Test.createTestingModule({
       providers: [

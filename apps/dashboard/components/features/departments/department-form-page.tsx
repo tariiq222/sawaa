@@ -48,7 +48,7 @@ export function DepartmentFormPage(props: Props) {
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.departments.list({ all: true }),
-    queryFn: () => fetchDepartments({ perPage: 200 }),
+    queryFn: () => fetchDepartments({ limit: 200 }),
     enabled: isEdit,
   })
 
@@ -158,19 +158,29 @@ export function DepartmentFormPage(props: Props) {
       <form onSubmit={onSubmit} className="flex flex-col gap-5 pb-24">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
-            <Label>{t("departments.field.nameAr")} *</Label>
-            <Input {...form.register("nameAr")} />
+            <Label htmlFor="dept-nameAr">{t("departments.field.nameAr")} *</Label>
+            <Input
+              id="dept-nameAr"
+              aria-invalid={form.formState.errors.nameAr ? "true" : undefined}
+              aria-describedby={form.formState.errors.nameAr ? "dept-nameAr-error" : undefined}
+              {...form.register("nameAr")}
+            />
             {form.formState.errors.nameAr && (
-              <p className="text-xs text-destructive">
+              <p id="dept-nameAr-error" className="text-xs text-destructive">
                 {t(form.formState.errors.nameAr.message ?? "")}
               </p>
             )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>{t("departments.field.nameEn")} *</Label>
-            <Input {...form.register("nameEn")} />
+            <Label htmlFor="dept-nameEn">{t("departments.field.nameEn")} *</Label>
+            <Input
+              id="dept-nameEn"
+              aria-invalid={form.formState.errors.nameEn ? "true" : undefined}
+              aria-describedby={form.formState.errors.nameEn ? "dept-nameEn-error" : undefined}
+              {...form.register("nameEn")}
+            />
             {form.formState.errors.nameEn && (
-              <p className="text-xs text-destructive">
+              <p id="dept-nameEn-error" className="text-xs text-destructive">
                 {t(form.formState.errors.nameEn.message ?? "")}
               </p>
             )}
@@ -179,19 +189,29 @@ export function DepartmentFormPage(props: Props) {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
-            <Label>{t("departments.field.descriptionAr")}</Label>
-            <Input {...form.register("descriptionAr")} />
+            <Label htmlFor="dept-descriptionAr">{t("departments.field.descriptionAr")}</Label>
+            <Input
+              id="dept-descriptionAr"
+              aria-invalid={form.formState.errors.descriptionAr ? "true" : undefined}
+              aria-describedby={form.formState.errors.descriptionAr ? "dept-descriptionAr-error" : undefined}
+              {...form.register("descriptionAr")}
+            />
             {form.formState.errors.descriptionAr && (
-              <p className="text-xs text-destructive">
+              <p id="dept-descriptionAr-error" className="text-xs text-destructive">
                 {t(form.formState.errors.descriptionAr.message ?? "")}
               </p>
             )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>{t("departments.field.descriptionEn")}</Label>
-            <Input {...form.register("descriptionEn")} />
+            <Label htmlFor="dept-descriptionEn">{t("departments.field.descriptionEn")}</Label>
+            <Input
+              id="dept-descriptionEn"
+              aria-invalid={form.formState.errors.descriptionEn ? "true" : undefined}
+              aria-describedby={form.formState.errors.descriptionEn ? "dept-descriptionEn-error" : undefined}
+              {...form.register("descriptionEn")}
+            />
             {form.formState.errors.descriptionEn && (
-              <p className="text-xs text-destructive">
+              <p id="dept-descriptionEn-error" className="text-xs text-destructive">
                 {t(form.formState.errors.descriptionEn.message ?? "")}
               </p>
             )}
@@ -200,28 +220,34 @@ export function DepartmentFormPage(props: Props) {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
-            <Label>{t("departments.field.icon")}</Label>
+            <Label htmlFor="dept-icon">{t("departments.field.icon")}</Label>
             <Input
+              id="dept-icon"
+              aria-invalid={form.formState.errors.icon ? "true" : undefined}
+              aria-describedby={form.formState.errors.icon ? "dept-icon-error" : undefined}
               {...form.register("icon")}
               placeholder={t("departments.field.iconPlaceholder")}
             />
             {form.formState.errors.icon && (
-              <p className="text-xs text-destructive">
+              <p id="dept-icon-error" className="text-xs text-destructive">
                 {t(form.formState.errors.icon.message ?? "")}
               </p>
             )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>{t("departments.field.sortOrder")}</Label>
+            <Label htmlFor="dept-sortOrder">{t("departments.field.sortOrder")}</Label>
             <Input
+              id="dept-sortOrder"
               type="number"
               min={0}
               max={9999}
+              aria-invalid={form.formState.errors.sortOrder ? "true" : undefined}
+              aria-describedby={form.formState.errors.sortOrder ? "dept-sortOrder-error" : undefined}
               {...form.register("sortOrder", { valueAsNumber: true })}
               className="h-9 text-sm tabular-nums"
             />
             {form.formState.errors.sortOrder && (
-              <p className="text-xs text-destructive">
+              <p id="dept-sortOrder-error" className="text-xs text-destructive">
                 {t(form.formState.errors.sortOrder.message ?? "")}
               </p>
             )}

@@ -89,7 +89,7 @@ describe('bookings module', () => {
   it('builds booking list query params (omits undefined/null fields)', async () => {
     await listBookings({
       page: 2,
-      perPage: 25,
+      limit: 25,
       status: 'confirmed',
       employeeId: 'emp-1',
     })
@@ -177,7 +177,7 @@ describe('employees module', () => {
   })
 
   it('builds employee list query params', async () => {
-    await listEmployees({ page: 1, perPage: 10, isActive: true })
+    await listEmployees({ page: 1, limit: 10, isActive: true })
     expect(lastRequest()[0]).toBe(
       'http://api.test/dashboard/people/employees?page=1&limit=10&isActive=true',
     )
@@ -391,10 +391,10 @@ describe('payments module', () => {
   it('builds listPayments query params (omits undefined fields)', async () => {
     vi.mocked(fetch).mockReset()
     vi.mocked(fetch).mockResolvedValueOnce(
-      okJson({ items: [], meta: { total: 0, page: 1, perPage: 25, totalPages: 0, hasNextPage: false, hasPreviousPage: false } }),
+      okJson({ items: [], meta: { total: 0, page: 1, limit: 25, totalPages: 0, hasNextPage: false, hasPreviousPage: false } }),
     )
 
-    await listPayments({ page: 3, perPage: 25, status: 'COMPLETED', method: 'CASH' })
+    await listPayments({ page: 3, limit: 25, status: 'COMPLETED', method: 'CASH' })
 
     expect(lastRequest()[0]).toBe(
       'http://api.test/dashboard/finance/payments?page=3&limit=25&status=COMPLETED&method=CASH',

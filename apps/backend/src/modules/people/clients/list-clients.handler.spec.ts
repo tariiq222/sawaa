@@ -63,7 +63,7 @@ describe('ListClientsHandler', () => {
     expect(result.items).toHaveLength(1);
     expect(result.meta.total).toBe(1);
     expect(result.meta.page).toBe(1);
-    expect(result.meta.perPage).toBe(10);
+    expect(result.meta.limit).toBe(10);
   });
 
   it('applies isActive filter', async () => {

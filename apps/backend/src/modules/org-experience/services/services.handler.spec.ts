@@ -63,6 +63,9 @@ const buildPrisma = () => {
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       groupBy: jest.fn().mockResolvedValue([]),
     },
+    serviceDurationOption: {
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(prisma));

@@ -38,7 +38,7 @@ describe('GetIntakeFormResponsesHandler', () => {
     const handler = await buildHandler({
       intakeResponse: {
         findMany: jest.fn().mockResolvedValue([makeResponse()]),
-        count: jest.fn().mockResolvedValue(3),
+        groupBy: jest.fn().mockResolvedValue([{ formId: 'form-1', _count: 3 }]),
       },
       service: { findUnique: jest.fn() },
       employee: { findUnique: jest.fn() },
@@ -57,7 +57,7 @@ describe('GetIntakeFormResponsesHandler', () => {
     const handler = await buildHandler({
       intakeResponse: {
         findMany: jest.fn().mockResolvedValue([makeResponse({ scope: 'SERVICE', scopeId: 'svc-1' })]),
-        count: jest.fn().mockResolvedValue(1),
+        groupBy: jest.fn().mockResolvedValue([{ formId: 'form-1', _count: 1 }]),
       },
       service: { findUnique: jest.fn().mockResolvedValue({ nameAr: 'استشارة أسرية' }) },
       employee: { findUnique: jest.fn() },
@@ -74,7 +74,7 @@ describe('GetIntakeFormResponsesHandler', () => {
     const handler = await buildHandler({
       intakeResponse: {
         findMany: jest.fn().mockResolvedValue([makeResponse({ scope: 'EMPLOYEE', scopeId: 'emp-1' })]),
-        count: jest.fn().mockResolvedValue(2),
+        groupBy: jest.fn().mockResolvedValue([{ formId: 'form-1', _count: 2 }]),
       },
       service: { findUnique: jest.fn() },
       employee: { findUnique: jest.fn().mockResolvedValue({ name: 'د. منى' }) },
@@ -90,7 +90,7 @@ describe('GetIntakeFormResponsesHandler', () => {
     const handler = await buildHandler({
       intakeResponse: {
         findMany: jest.fn().mockResolvedValue([makeResponse({ scope: 'BRANCH', scopeId: 'br-1' })]),
-        count: jest.fn().mockResolvedValue(1),
+        groupBy: jest.fn().mockResolvedValue([{ formId: 'form-1', _count: 1 }]),
       },
       service: { findUnique: jest.fn() },
       employee: { findUnique: jest.fn() },
@@ -104,7 +104,7 @@ describe('GetIntakeFormResponsesHandler', () => {
 
   it('returns empty array when no responses exist', async () => {
     const handler = await buildHandler({
-      intakeResponse: { findMany: jest.fn().mockResolvedValue([]), count: jest.fn() },
+      intakeResponse: { findMany: jest.fn().mockResolvedValue([]), groupBy: jest.fn() },
       service: { findUnique: jest.fn() },
       employee: { findUnique: jest.fn() },
       branch: { findUnique: jest.fn() },

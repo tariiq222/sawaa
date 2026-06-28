@@ -37,7 +37,7 @@ export function AllRatingsTab({ employees }: AllRatingsTabProps) {
   const { data, isLoading } = useQuery({
     queryKey: [...queryKeys.employees.ratings(selectedEmployee), page],
     queryFn: () =>
-      fetchEmployeeRatings(selectedEmployee, { page, perPage: 20 }),
+      fetchEmployeeRatings(selectedEmployee, { page, limit: 20 }),
     enabled: !!selectedEmployee,
   })
 

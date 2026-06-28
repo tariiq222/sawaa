@@ -36,7 +36,7 @@ export async function fetchChatSessions(
     "/dashboard/comms/chat/conversations",
     {
       page: query.page,
-      limit: query.perPage,
+      limit: query.limit,
       handedOff:
         query.handedOff !== undefined ? String(query.handedOff) : undefined,
       language: query.language,

@@ -19,7 +19,7 @@ describe("activity-log api", () => {
     getMock.mockResolvedValueOnce({ items: [], meta: { total: 0 } })
     await fetchActivityLogs({
       page: 1,
-      perPage: 10,
+      limit: 10,
       module: "bookings",
       action: "updated",
       dateFrom: "2026-04-01",

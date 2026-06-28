@@ -139,6 +139,25 @@ export class ReconcileRefundsCron {
     // invoice/payment (the approve transaction never committed) — apply it once.
     if (status === 'paid') {
       const newStatus = await this.rlsTransaction.withTransaction(async (tx) => {
+        // P1 (money-safety): gate the finalize on status='PROCESSING' with a
+        // conditional updateMany and bail if it claimed zero rows. Without this
+        // re-check inside the tx, the cron and the approve handler (or a second
+        // cron pass) could both reach this block for the same row and each
+        // unconditionally increment invoice.refundedAmount / payment.refundedAmount
+        // — a double-applied refund. The guard makes the accounting fire EXACTLY
+        // once: only the writer that wins the PROCESSING → COMPLETED flip applies
+        // the ledger. Mirrors ReconcilePaymentsCron's in-tx PENDING re-check.
+        const { count } = await tx.refundRequest.updateMany({
+          where: { id: refundRequestId, status: 'PROCESSING' },
+          data: { status: 'COMPLETED' },
+        });
+        if (count === 0) {
+          this.logger.debug(
+            `reconcile-refunds: RefundRequest ${refundRequestId} already finalized by another writer — skipping accounting`,
+          );
+          return null;
+        }
+
         const invoiceForAccounting = await tx.invoice.findUniqueOrThrow({
           where: { id: invoiceId },
           select: { total: true, vatAmt: true, refundedAmount: true },
@@ -150,10 +169,6 @@ export class ReconcileRefundsCron {
           thisRefundAmount: refundAmount,
         });
 
-        await tx.refundRequest.update({
-          where: { id: refundRequestId },
-          data: { status: 'COMPLETED' },
-        });
         await tx.invoice.update({
           where: { id: invoiceId },
           data: {
@@ -180,6 +195,7 @@ export class ReconcileRefundsCron {
         });
         return accounting.newInvoiceStatus;
       });
+      if (newStatus === null) return;
       this.logger.log(
         `reconcile-refunds: RefundRequest ${refundRequestId} → COMPLETED ` +
           `(reconciled from Moyasar 'paid', invoice ${newStatus})`,

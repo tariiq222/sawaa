@@ -57,7 +57,7 @@ function CategorySettingsTabEdit({
   const createdRef = useRef(false)
   const [createdServiceId, setCreatedServiceId] = useState<string | null>(null)
 
-  const listFilters = { categoryId, perPage: 100, includeHidden: true }
+  const listFilters = { categoryId, limit: 100, includeHidden: true }
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.services.list(listFilters),

@@ -19,6 +19,9 @@ const buildPrisma = () => ({
   employeeService: {
     deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
   },
+  serviceDurationOption: {
+    deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+  },
 });
 
 const buildRlsTransaction = (prisma: ReturnType<typeof buildPrisma>) => ({
@@ -59,6 +62,7 @@ describe('ArchiveServiceHandler', () => {
     expect(prisma.booking.count).toHaveBeenCalledWith({ where: { serviceId } });
     expect(rlsTransaction.withTransaction).toHaveBeenCalledTimes(1);
     expect(prisma.employeeService.deleteMany).toHaveBeenCalledWith({ where: { serviceId } });
+    expect(prisma.serviceDurationOption.deleteMany).toHaveBeenCalledWith({ where: { serviceId } });
     expect(prisma.service.delete).toHaveBeenCalledWith({ where: { id: serviceId } });
     expect(prisma.service.update).not.toHaveBeenCalled();
     expect(result).toEqual(mockService);
@@ -76,6 +80,7 @@ describe('ArchiveServiceHandler', () => {
     });
     expect(rlsTransaction.withTransaction).not.toHaveBeenCalled();
     expect(prisma.employeeService.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.serviceDurationOption.deleteMany).not.toHaveBeenCalled();
     expect(prisma.service.delete).not.toHaveBeenCalled();
     expect(result).toEqual(mockService);
   });

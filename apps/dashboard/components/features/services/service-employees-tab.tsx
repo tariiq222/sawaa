@@ -39,8 +39,8 @@ export function ServiceEmployeesTab({ serviceId, isCreate, pendingIds = [], onPe
 
   /* ── Create mode: fetch all employees to resolve pending names ── */
   const { data: allEmployeesData } = useQuery({
-    queryKey: queryKeys.employees.list({ perPage: 200, isActive: undefined }),
-    queryFn: () => fetchEmployees({ perPage: 200 }),
+    queryKey: queryKeys.employees.list({ limit: 200, isActive: undefined }),
+    queryFn: () => fetchEmployees({ limit: 200 }),
     staleTime: 5 * 60 * 1000,
     enabled: !!isCreate,
   })

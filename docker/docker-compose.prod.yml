@@ -8,19 +8,11 @@
 # on unknown/invalid required vars.
 
 services:
-  migrate:
-    build:
-      context: ..
-      dockerfile: apps/backend/Dockerfile
-    container_name: sawaa-migrate
-    command: ["sh", "-c", "npx prisma migrate deploy --schema=prisma/schema"]
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: "no"
-
+  # NOTE: No dedicated `migrate` service. Migrations run via the backend image's
+  # runtime CMD (`prisma migrate deploy && node dist/main.js` in apps/backend/Dockerfile),
+  # which is the authoritative prod path used by the Dokploy/Swarm push-to-main deploy.
+  # A separate migrate service here only fired on manual `docker-compose.prod.yml up`
+  # and re-ran the same migrate deploy twice on cold start, so it was removed.
   backend:
     stop_grace_period: 40s
     stop_signal: SIGTERM
@@ -53,6 +45,10 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       MINIO_BUCKET: ${MINIO_BUCKET:-sawaa}
       MINIO_USE_SSL: "${MINIO_USE_SSL:-false}"
+      # Public endpoint for presigned URLs. Without it, minio.service.ts signs
+      # invoice/attachment URLs against the internal minio:9000 host and browsers
+      # get 404 — they must be signed against the externally reachable host.
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT}
 
       # CORS — comma-separated, no trailing slash
       CORS_ORIGINS: ${CORS_ORIGINS}
@@ -99,6 +95,11 @@ services:
       ZOOM_PROVIDER_ENCRYPTION_KEY: ${ZOOM_PROVIDER_ENCRYPTION_KEY}
       SMS_WEBHOOK_URL_BASE: ${SMS_WEBHOOK_URL_BASE:-}
 
+      # Moyasar + Email provider credential encryption — both REQUIRED at boot.
+      # Declared explicitly (not relying on per-key merge from the base compose).
+      MOYASAR_ENCRYPTION_KEY: ${MOYASAR_ENCRYPTION_KEY}
+      EMAIL_PROVIDER_ENCRYPTION_KEY: ${EMAIL_PROVIDER_ENCRYPTION_KEY}
+
       # Legacy SaaS billing (disabled by default for Sawa single-company mode)
       MOYASAR_PLATFORM_SECRET_KEY: ${MOYASAR_PLATFORM_SECRET_KEY:-}
       MOYASAR_PLATFORM_WEBHOOK_SECRET: ${MOYASAR_PLATFORM_WEBHOOK_SECRET:-}
@@ -119,6 +120,11 @@ services:
       DASHBOARD_PUBLIC_URL: ${DASHBOARD_PUBLIC_URL}
       API_PUBLIC_URL: ${API_PUBLIC_URL}
 
+      # Platform settings encryption — REQUIRED in production. Backend aborts boot
+      # silently without it (env.validation.ts), and Swarm keeps serving the old
+      # version, so a missing value looks like a "no-op" deploy.
+      PLATFORM_SETTINGS_KEY: ${PLATFORM_SETTINGS_KEY}
+
       # Super-admin bootstrap (min 16 chars)
       SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD}
 
@@ -126,8 +132,8 @@ services:
       INTERNAL_METRICS_ALLOWED_IPS: ${INTERNAL_METRICS_ALLOWED_IPS}
       INTERNAL_METRICS_TOKEN: ${INTERNAL_METRICS_TOKEN}
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
       minio:

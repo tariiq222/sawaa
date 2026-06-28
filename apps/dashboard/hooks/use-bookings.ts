@@ -65,7 +65,7 @@ export function useBookings() {
 
   const query: BookingListQuery = {
     page,
-    perPage: 20,
+    limit: 20,
     status: filters.status !== "all" ? filters.status : undefined,
     type: filters.type !== "all" ? filters.type : undefined,
     deliveryType: filters.delivery !== "all" ? filters.delivery : undefined,
@@ -115,7 +115,7 @@ export function useBookings() {
 /* ─── Today's Bookings Hook ─── */
 
 export function useTodayBookings(date: string) {
-  const query: BookingListQuery = { dateFrom: date, dateTo: date, perPage: 10 }
+  const query: BookingListQuery = { dateFrom: date, dateTo: date, limit: 10 }
   return useQuery({
     queryKey: queryKeys.bookings.list(query),
     queryFn: () => fetchBookings(query),

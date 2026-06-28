@@ -25,7 +25,7 @@ describe("prefetchRouteData", () => {
     expect(prefetchQuery).toHaveBeenCalledTimes(1)
     expect(prefetchQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: queryKeys.bookings.list({ page: 1, perPage: 20 }),
+        queryKey: queryKeys.bookings.list({ page: 1, limit: 20 }),
       }),
     )
   })
@@ -42,9 +42,9 @@ describe("prefetchRouteData", () => {
   it("keeps each route's queryKey aligned with lib/query-keys", () => {
     const { qc, prefetchQuery } = makeQueryClient()
     const expected: Record<string, readonly unknown[]> = {
-      "/clients": queryKeys.clients.list({ page: 1, perPage: 20 }),
+      "/clients": queryKeys.clients.list({ page: 1, limit: 20 }),
       "/services": queryKeys.services.list({}),
-      "/chatbot": queryKeys.chatbot.sessions.list({ page: 1, perPage: 20 }),
+      "/chatbot": queryKeys.chatbot.sessions.list({ page: 1, limit: 20 }),
     }
     for (const [href, queryKey] of Object.entries(expected)) {
       prefetchQuery.mockClear()

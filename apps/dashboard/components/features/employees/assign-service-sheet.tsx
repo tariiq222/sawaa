@@ -143,13 +143,17 @@ export function AssignServiceSheet({
           >
             {/* Service Select */}
             <div className="flex flex-col gap-1.5">
-              <Label>{t("detail.service")}</Label>
+              <Label htmlFor="ass-service">{t("detail.service")}</Label>
               <Controller
                 control={form.control}
                 name="serviceId"
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
+                    <SelectTrigger
+                      id="ass-service"
+                      aria-invalid={form.formState.errors.serviceId ? "true" : undefined}
+                      aria-describedby={form.formState.errors.serviceId ? "ass-service-error" : undefined}
+                    >
                       <SelectValue
                         placeholder={t("employees.services.selectService")}
                       />
@@ -172,7 +176,7 @@ export function AssignServiceSheet({
                 )}
               />
               {form.formState.errors.serviceId && (
-                <p className="text-xs text-destructive">
+                <p id="ass-service-error" className="text-xs text-destructive">
                   {form.formState.errors.serviceId.message}
                 </p>
               )}

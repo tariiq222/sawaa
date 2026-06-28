@@ -31,7 +31,7 @@ export function useUsers() {
 
   const query: UserListQuery = {
     page,
-    perPage: 20,
+    limit: 20,
     search: search || undefined,
   }
 

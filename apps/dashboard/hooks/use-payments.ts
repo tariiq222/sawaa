@@ -97,7 +97,7 @@ export function usePayments() {
 
   const query: PaymentListQuery = {
     page,
-    perPage: 20,
+    limit: 20,
     search: search || undefined,
     status: status !== "all" ? status : undefined,
     method: method !== "all" ? method : undefined,

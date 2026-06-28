@@ -45,9 +45,11 @@ export function IdentifierStep({ loading, error, onSubmit, onClearError }: Props
             if (fieldError) setFieldError("")
           }}
           disabled={loading}
+          aria-invalid={fieldError ? "true" : undefined}
+          aria-describedby={fieldError ? "identifier-error" : undefined}
         />
         {fieldError && (
-          <p className="text-sm text-error">{fieldError}</p>
+          <p id="identifier-error" className="text-sm text-error">{fieldError}</p>
         )}
       </div>
       {!!error && (

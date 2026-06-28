@@ -24,9 +24,9 @@ export function useChatSession(sessionId: string) {
 
 export function useChatSessions() {
   const [page, setPage] = useState(1)
-  const [filters, setFiltersState] = useState<Omit<ChatSessionListQuery, "page" | "perPage">>({})
+  const [filters, setFiltersState] = useState<Omit<ChatSessionListQuery, "page" | "limit">>({})
 
-  const query: ChatSessionListQuery = { page, perPage: 20, ...filters }
+  const query: ChatSessionListQuery = { page, limit: 20, ...filters }
 
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.chatbot.sessions.list(query),
@@ -34,7 +34,7 @@ export function useChatSessions() {
     staleTime: 60 * 1000,
   })
 
-  const setFilters = (f: Omit<ChatSessionListQuery, "page" | "perPage">) => {
+  const setFilters = (f: Omit<ChatSessionListQuery, "page" | "limit">) => {
     setFiltersState(f)
     setPage(1)
   }

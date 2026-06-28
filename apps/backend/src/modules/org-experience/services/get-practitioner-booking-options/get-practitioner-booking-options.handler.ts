@@ -132,16 +132,27 @@ export class GetPractitionerBookingOptionsHandler {
         });
 
         if (svcOpts.length > 0) {
+          // Batch all employee overrides for this delivery type's rows in one
+          // query, then map in memory (was an N+1 findFirst per row).
+          const rowIds = svcOpts.map((r) => r.id);
+          const overrides = await this.prisma.employeeServiceOption.findMany({
+            where: {
+              employeeServiceId: link.id,
+              durationOptionId: { in: rowIds },
+              isActive: true,
+            },
+            select: {
+              durationOptionId: true,
+              priceOverride: true,
+              durationOverride: true,
+            },
+          });
+          const overrideByOption = new Map(
+            overrides.map((o) => [o.durationOptionId, o]),
+          );
+
           for (const row of svcOpts) {
-            // Check employee override
-            const override = await this.prisma.employeeServiceOption.findFirst({
-              where: {
-                employeeServiceId: link.id,
-                durationOptionId: row.id,
-                isActive: true,
-              },
-              select: { priceOverride: true, durationOverride: true },
-            });
+            const override = overrideByOption.get(row.id);
             options.push({
               deliveryType: dt,
               durationOptionId: row.id,

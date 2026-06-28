@@ -14,6 +14,7 @@ describe('RemoveEmployeeServiceHandler', () => {
         { provide: PrismaService, useValue: {
     employeeService: { findUnique: jest.fn(), delete: jest.fn() },
     employeeServiceOption: { deleteMany: jest.fn() },
+    serviceDurationOption: { deleteMany: jest.fn() },
         } },
         { provide: RlsTransactionService, useValue: {
     withTransaction: jest.fn(),
@@ -46,6 +47,9 @@ describe('RemoveEmployeeServiceHandler', () => {
     await handler.execute({ employeeId: 'e1', serviceId: 's1' });
 
     expect((prisma.employeeServiceOption.deleteMany as jest.Mock)).toHaveBeenCalledWith({
+      where: { employeeServiceId: 'link-1' },
+    });
+    expect((prisma.serviceDurationOption.deleteMany as jest.Mock)).toHaveBeenCalledWith({
       where: { employeeServiceId: 'link-1' },
     });
     expect((rlsTransaction.withTransaction as jest.Mock)).toHaveBeenCalledTimes(1);

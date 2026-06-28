@@ -52,8 +52,8 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
   })
 
   const { data: allEmployees, isLoading: loadingAll } = useQuery({
-    queryKey: queryKeys.employees.list({ isActive: true, perPage: 100 }),
-    queryFn: () => fetchEmployees({ isActive: true, perPage: 100 }),
+    queryKey: queryKeys.employees.list({ isActive: true, limit: 100 }),
+    queryFn: () => fetchEmployees({ isActive: true, limit: 100 }),
     enabled: !serviceId,
     staleTime: 5 * 60 * 1000,
   })

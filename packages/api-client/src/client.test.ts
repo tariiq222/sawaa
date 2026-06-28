@@ -359,6 +359,41 @@ describe('ApiError + peekErrorBody precedence', () => {
     )
   })
 
+  it('reads the machine code from the canonical top-level `code` field', async () => {
+    // Canonical envelope: `error` holds the HTTP reason phrase, `code` holds the
+    // machine code. The dashboard matches on `code` (e.g. DEPARTMENT_NAME_EXISTS).
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse(
+        {
+          statusCode: 409,
+          error: 'Conflict',
+          message: 'Department with this Arabic name already exists',
+          code: 'DEPARTMENT_NAME_EXISTS',
+        },
+        409,
+      ),
+    )
+
+    const err = await apiRequest('/dashboard/anything').catch((e) => e)
+    expect(err).toBeInstanceOf(ApiError)
+    expect((err as ApiError).code).toBe('DEPARTMENT_NAME_EXISTS')
+    expect((err as ApiError).message).toBe(
+      'Department with this Arabic name already exists',
+    )
+  })
+
+  it('prefers top-level `code` over a string `error` reason phrase', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse(
+        { statusCode: 409, error: 'Conflict', message: 'dup', code: 'WINS' },
+        409,
+      ),
+    )
+
+    const err = await apiRequest('/dashboard/anything').catch((e) => e)
+    expect((err as ApiError).code).toBe('WINS')
+  })
+
   it('decodes the legacy flat { error: string, message: string } envelope', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       jsonResponse({ error: 'CONFLICT', message: 'duplicate' }, 409),
