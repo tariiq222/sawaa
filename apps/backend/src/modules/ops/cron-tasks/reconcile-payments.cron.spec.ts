@@ -58,11 +58,11 @@ function buildPrisma(args: {
   const { stuckRows, invoice = defaultInvoice, deposit = null } = args;
   return {
     $queryRaw: jest.fn().mockImplementation((strings: TemplateStringsArray) => {
-      if (strings[0].includes('hashtext')) return Promise.resolve([{ v: BigInt(12345) }]);
-      if (strings[0].includes('pg_try_advisory_lock')) return Promise.resolve([{ acquired: true }]);
-      if (strings[0].includes('pg_advisory_unlock')) return Promise.resolve([]);
+      // withCronLeader lease acquire — returns a row when the lease is won.
+      if (strings[0].includes('CronLock')) return Promise.resolve([{ name: 'lock' }]);
       return Promise.resolve([]);
     }),
+    $executeRaw: jest.fn().mockResolvedValue(1),
     payment: {
       findMany: jest.fn().mockResolvedValue(stuckRows),
     },

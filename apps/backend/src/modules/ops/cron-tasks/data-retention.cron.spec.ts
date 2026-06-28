@@ -3,15 +3,15 @@ import { DataRetentionCron } from './data-retention.cron';
 const DAY_MS = 24 * 60 * 60_000;
 
 /**
- * withCronLeader issues three $queryRaw calls per run:
- *   1) lock id, 2) acquired:true, 3..) unlock.
+ * withCronLeader acquires a lease via one $queryRaw (returns a row when
+ * acquired) and releases via $executeRaw.
  */
 const buildPrisma = () => ({
   $queryRaw: jest
     .fn()
-    .mockResolvedValueOnce([{ v: BigInt(13579) }])
     .mockResolvedValueOnce([{ acquired: true }])
     .mockResolvedValue([]),
+  $executeRaw: jest.fn().mockResolvedValue(1),
   otpCode: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
   activityLog: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) },
   notification: { deleteMany: jest.fn().mockResolvedValue({ count: 3 }) },
@@ -126,13 +126,14 @@ describe('DataRetentionCron', () => {
     expect(prisma.notificationDeliveryLog.deleteMany).toHaveBeenCalledTimes(1);
   });
 
-  it('releases the advisory lock after the sweep', async () => {
+  it('acquires and releases the cron lease around the sweep', async () => {
     const prisma = buildPrisma();
     const cron = new DataRetentionCron(prisma as never, buildConfig() as never);
 
     await cron.execute();
 
-    // lock id + acquire + unlock = at least 3 raw calls
-    expect(prisma.$queryRaw.mock.calls.length).toBeGreaterThanOrEqual(3);
+    // Lease acquire is one $queryRaw; release is one $executeRaw.
+    expect(prisma.$queryRaw).toHaveBeenCalled();
+    expect(prisma.$executeRaw).toHaveBeenCalled();
   });
 });

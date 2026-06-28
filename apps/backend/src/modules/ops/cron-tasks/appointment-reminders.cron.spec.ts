@@ -7,12 +7,11 @@ const buildPrisma = (
   bookings: Array<Record<string, unknown>> = [],
   reminderBeforeMinutes: number | null = 60,
 ) => ({
-  // withCronLeader: first $queryRaw → lock id, second → acquired:true, third → unlock
   $queryRaw: jest
     .fn()
-    .mockResolvedValueOnce([{ v: BigInt(98765) }])
     .mockResolvedValueOnce([{ acquired: true }])
     .mockResolvedValue([]),
+  $executeRaw: jest.fn().mockResolvedValue(1),
   organizationSettings: {
     findFirst: jest
       .fn()
