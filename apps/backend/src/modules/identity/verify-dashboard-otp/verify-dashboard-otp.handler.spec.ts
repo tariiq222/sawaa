@@ -73,6 +73,9 @@ describe('VerifyDashboardOtpHandler', () => {
         { provide: PrismaService, useValue: {
           otpCode: { findFirst: jest.fn(), update: jest.fn() },
           user: { findFirst: jest.fn() },
+          // P1-8: handler now loads DB system-role permissions for the user's
+          // built-in role (mirrors JwtStrategy). Default to none → BUILT_IN map.
+          customRole: { findFirst: jest.fn().mockResolvedValue(null) },
         } },
         { provide: TokenService, useValue: {
           issueTokenPair: jest.fn(),
@@ -226,6 +229,41 @@ describe('VerifyDashboardOtpHandler', () => {
 
     const result = await handler.execute({ identifier: 'test@test.com', code: '123456' });
     expect(result.user.permissions).toContain('booking:*');
+  });
+
+  // P1-8: DB system-role permission edits must be reflected in the returned
+  // permissions[] (UI source of truth), matching JwtStrategy enforcement.
+  it('reflects DB system-role permissions over the built-in map (P1-8)', async () => {
+    prisma.otpCode.findFirst.mockResolvedValue(createOtpRecord());
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+    prisma.otpCode.update.mockResolvedValue({});
+    // RECEPTIONIST built-in is create/read/update Booking; the DB row narrows it.
+    prisma.user.findFirst.mockResolvedValue(createUser({ role: 'RECEPTIONIST' }));
+    prisma.customRole.findFirst.mockResolvedValue({
+      permissions: [{ action: 'read', subject: 'Booking' }],
+    });
+    tokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', refreshToken: 'rt' });
+
+    const result = await handler.execute({ identifier: 'test@test.com', code: '123456' });
+
+    expect(prisma.customRole.findFirst).toHaveBeenCalledWith({
+      where: { systemKey: 'RECEPTIONIST' },
+      select: { permissions: { select: { action: true, subject: true } } },
+    });
+    expect(result.user.permissions).toEqual(['booking:read']);
+  });
+
+  it('does not load system-role permissions for SUPER_ADMIN (manage:all from code) (P1-8)', async () => {
+    prisma.otpCode.findFirst.mockResolvedValue(createOtpRecord());
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+    prisma.otpCode.update.mockResolvedValue({});
+    prisma.user.findFirst.mockResolvedValue(createUser({ role: 'SUPER_ADMIN', isSuperAdmin: true }));
+    tokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', refreshToken: 'rt' });
+
+    const result = await handler.execute({ identifier: 'test@test.com', code: '123456' });
+
+    expect(prisma.customRole.findFirst).not.toHaveBeenCalled();
+    expect(result.user.permissions).toContain('*');
   });
 
   describe('identifier-level failed-verify lockout window', () => {

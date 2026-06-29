@@ -39,6 +39,7 @@ import { IsString, MinLength, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { ApiPublicResponses, ApiErrorDto } from '../../common/swagger';
 import { flattenPermissions } from '../../modules/identity/casl/flatten-permissions';
+import { loadSystemRolePermissions } from '../../modules/identity/shared/load-system-role-permissions';
 import { PlatformSettingsService } from '../../modules/platform/settings/platform-settings.service';
 
 class ChangePasswordDto {
@@ -136,7 +137,10 @@ export class AuthController {
       };
     }
 
-    const response = this.authResponseBuilder.build({ accessToken, refreshToken }, user);
+    // P1-8: hand the builder the DB system-role permissions so the returned
+    // permissions[] matches what JwtStrategy enforces.
+    const systemRolePermissions = await loadSystemRolePermissions(this.prisma, user.role);
+    const response = this.authResponseBuilder.build({ accessToken, refreshToken }, user, systemRolePermissions);
     this.setRefreshCookie(res, refreshToken, body.rememberMe);
     return response;
   }
@@ -239,7 +243,17 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Missing or invalid JWT', type: ApiErrorDto })
   async meEndpoint(@UserId() userId: string) {
     const user = await this.getCurrentUser.execute({ userId } satisfies GetCurrentUserQuery);
-    return { ...user, permissions: flattenPermissions(user) };
+    // P1-8: include DB system-role permissions so `me` reflects the same
+    // effective permissions JwtStrategy enforces on every request.
+    const systemRolePermissions = await loadSystemRolePermissions(this.prisma, user.role);
+    return {
+      ...user,
+      permissions: flattenPermissions({
+        role: user.role,
+        customRole: user.customRole,
+        systemRolePermissions,
+      }),
+    };
   }
 
   @Patch('password/change')

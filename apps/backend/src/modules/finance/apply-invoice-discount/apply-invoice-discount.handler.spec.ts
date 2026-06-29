@@ -6,6 +6,8 @@ type Tx = {
   invoice: { findFirst: jest.Mock; update: jest.Mock };
   payment: { findMany: jest.Mock; delete: jest.Mock };
   discountReason: { findFirst: jest.Mock };
+  couponRedemption: { findMany: jest.Mock; deleteMany: jest.Mock };
+  coupon: { updateMany: jest.Mock };
 };
 
 function makeHandler(tx: Tx, moyasar: { getPaymentStatus: jest.Mock } = { getPaymentStatus: jest.fn() }) {
@@ -36,6 +38,11 @@ function makeTx(overrides: Partial<Tx> = {}): Tx {
       delete: jest.fn().mockResolvedValue({ id: 'pay-x' }),
     },
     discountReason: { findFirst: jest.fn().mockResolvedValue({ id: 'reason-1' }) },
+    couponRedemption: {
+      findMany: jest.fn().mockResolvedValue([]),
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
+    coupon: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     ...overrides,
   };
 }
@@ -207,5 +214,82 @@ describe('ApplyInvoiceDiscountHandler', () => {
     await expect(
       handler.execute({ invoiceId: 'inv-1', appliedBy: 'u', discountAmt: 1000, discountReasonId: 'gone' }),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  // ─── P1-6: a manual discount must reverse any coupon redemptions ──────────────
+
+  it('P1-6: reverses orphaned coupon redemptions and decrements usedCount when a manual discount overwrites them', async () => {
+    const tx = makeTx({
+      couponRedemption: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { id: 'red-1', couponId: 'coupon-A' },
+            { id: 'red-2', couponId: 'coupon-A' },
+            { id: 'red-3', couponId: 'coupon-B' },
+          ]),
+        deleteMany: jest.fn().mockResolvedValue({ count: 3 }),
+      },
+    });
+    const handler = makeHandler(tx);
+
+    await handler.execute({
+      invoiceId: 'inv-1',
+      appliedBy: 'user-1',
+      discountAmt: 2000,
+      discountReasonId: 'reason-1',
+    });
+
+    // All redemption rows for this invoice are dropped.
+    expect(tx.couponRedemption.deleteMany).toHaveBeenCalledWith({ where: { invoiceId: 'inv-1' } });
+    // usedCount is decremented per coupon by the number of rows removed (A: 2, B: 1).
+    expect(tx.coupon.updateMany).toHaveBeenCalledWith({
+      where: { id: 'coupon-A', usedCount: { gte: 2 } },
+      data: { usedCount: { decrement: 2 } },
+    });
+    expect(tx.coupon.updateMany).toHaveBeenCalledWith({
+      where: { id: 'coupon-B', usedCount: { gte: 1 } },
+      data: { usedCount: { decrement: 1 } },
+    });
+    // The manual discount still lands.
+    const data = tx.invoice.update.mock.calls[0][0].data;
+    expect(Number(data.discountAmt)).toBe(2000);
+    expect(Number(data.total)).toBe(9200);
+  });
+
+  it('P1-6: does not touch coupons when the invoice has no redemptions', async () => {
+    const tx = makeTx();
+    const handler = makeHandler(tx);
+
+    await handler.execute({
+      invoiceId: 'inv-1',
+      appliedBy: 'user-1',
+      discountAmt: 1000,
+      discountReasonId: 'reason-1',
+    });
+
+    expect(tx.couponRedemption.deleteMany).not.toHaveBeenCalled();
+    expect(tx.coupon.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('P1-6: clears a coupon discount (manual amount 0) by reversing redemptions', async () => {
+    const tx = makeTx({
+      couponRedemption: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'red-1', couponId: 'coupon-A' }]),
+        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    });
+    const handler = makeHandler(tx);
+
+    await handler.execute({ invoiceId: 'inv-1', appliedBy: 'user-1', discountAmt: 0 });
+
+    expect(tx.couponRedemption.deleteMany).toHaveBeenCalledWith({ where: { invoiceId: 'inv-1' } });
+    expect(tx.coupon.updateMany).toHaveBeenCalledWith({
+      where: { id: 'coupon-A', usedCount: { gte: 1 } },
+      data: { usedCount: { decrement: 1 } },
+    });
+    const data = tx.invoice.update.mock.calls[0][0].data;
+    expect(Number(data.discountAmt)).toBe(0);
+    expect(Number(data.total)).toBe(11500); // full VAT restored
   });
 });

@@ -107,18 +107,29 @@ export default function BookingPaymentScreen() {
         booking.invoiceId,
         method === 'apple_pay' ? 'APPLE_PAY' : 'ONLINE_CARD',
       );
+
+      // Track whether the user explicitly dismissed/cancelled the gateway
+      // browser. The backend (polled on the success screen) is the source of
+      // truth for the payment state, but if the user backed out without
+      // completing the redirect we must NOT optimistically claim success.
+      let webResult: WebBrowser.WebBrowserAuthSessionResult | null = null;
       if (payment.redirectUrl) {
-        await WebBrowser.openAuthSessionAsync(
+        webResult = await WebBrowser.openAuthSessionAsync(
           payment.redirectUrl,
           `${APP_SCHEME}://booking/payment-callback`,
         );
       }
+
       router.replace({
         pathname: '/(client)/booking/success',
         params: {
           bookingId: booking.id,
           invoiceId: booking.invoiceId,
           paymentId: payment.paymentId,
+          // 'success' | 'cancel' | 'dismiss' | 'locked' — the success screen
+          // uses this to short-circuit to the failed state when the user aborted
+          // the gateway and the backend has not confirmed the payment.
+          webResult: webResult?.type ?? 'success',
         },
       });
     } catch (err) {

@@ -59,6 +59,11 @@ export class EventBusService {
   ): Promise<void> {
     const queue = this.getQueue();
     await queue.add(eventName, event, {
+      // At-least-once delivery: a handler that throws must be retried, not
+      // dropped. Set attempts + backoff explicitly so the contract holds
+      // regardless of the queue's defaultJobOptions.
+      attempts: 5,
+      backoff: { type: 'exponential', delay: 2000 },
       removeOnComplete: { age: 3600, count: 1000 },
       removeOnFail: { age: 24 * 3600 },
     });

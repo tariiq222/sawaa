@@ -32,7 +32,7 @@ export function UserListPage() {
   const activeTab = searchParams.get("tab") === "roles" ? "roles" : "users"
   const { t, locale } = useLocale()
   const { canDo } = useAuth()
-  const { users, meta, isLoading, error, search, setSearch } = useUsers()
+  const { users, meta, isLoading, error, search, setSearch, page, setPage } = useUsers()
   const canReadRoles = canDo("role", "read")
   const { activateMut, deactivateMut } = useUserMutations()
 
@@ -117,7 +117,19 @@ export function UserListPage() {
               {Array.from({ length: 5 }).map((_, i) => <Skeleton key={`row-${i}`} className="h-12 rounded-lg" />)}
             </div>
           ) : (
-            <DataTable columns={columns} data={users} emptyTitle={t("users.empty.title")} emptyDescription={t("users.empty.description")} emptyAction={canDo("user", "create") ? { label: t("users.addUser"), onClick: () => router.push("/users/create") } : undefined} />
+            <DataTable
+              columns={columns}
+              data={users}
+              emptyTitle={t("users.empty.title")}
+              emptyDescription={t("users.empty.description")}
+              emptyAction={canDo("user", "create") ? { label: t("users.addUser"), onClick: () => router.push("/users/create") } : undefined}
+              serverPaginated
+              page={meta?.page ?? page}
+              totalPages={meta?.totalPages ?? 1}
+              hasPreviousPage={meta?.hasPreviousPage ?? false}
+              hasNextPage={meta?.hasNextPage ?? false}
+              onPageChange={setPage}
+            />
           )}
         </TabsContent>
 

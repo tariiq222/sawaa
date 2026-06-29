@@ -102,7 +102,14 @@ export class ClientLoginHandler {
 
     await Promise.all([redisClient.del(identifierKey), redisClient.del(ipKey)]);
 
-    const tokens = await this.clientTokens.issueTokenPair({ id: client.id, email: client.email });
+    // P1-7: pass the live tokenVersion so a prior password reset (which bumps
+    // the version) does not lock the client out — the strategy compares the
+    // JWT claim against Client.tokenVersion.
+    const tokens = await this.clientTokens.issueTokenPair({
+      id: client.id,
+      email: client.email,
+      tokenVersion: client.tokenVersion,
+    });
 
     this.logger.log(`Client login: ${client.id} (${maskIdentifier(identifier)})`);
 

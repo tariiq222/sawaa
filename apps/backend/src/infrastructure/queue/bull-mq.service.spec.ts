@@ -75,4 +75,28 @@ describe('BullMqService', () => {
     expect(conn.password).toBe('secret');
     expect(conn.maxRetriesPerRequest).toBeNull();
   });
+
+  it('should set defaultJobOptions with attempts>1 and backoff on the Queue', () => {
+    const { Queue } = jest.requireMock('bullmq');
+    service.getQueue('retryable');
+
+    const [, opts] = Queue.mock.calls.at(-1);
+    expect(opts.defaultJobOptions).toBeDefined();
+    expect(opts.defaultJobOptions.attempts).toBeGreaterThan(1);
+    expect(opts.defaultJobOptions.backoff).toEqual(
+      expect.objectContaining({ type: 'exponential' }),
+    );
+  });
+
+  it('should NOT pass job-level retry options to the Worker (BullMQ ignores them there)', () => {
+    const { Worker } = jest.requireMock('bullmq');
+    service.createWorker('retryable', jest.fn());
+
+    const [, , workerOpts] = Worker.mock.calls.at(-1);
+    // Retry/backoff must live on the Queue, not the Worker.
+    expect(workerOpts.attempts).toBeUndefined();
+    expect(workerOpts.backoff).toBeUndefined();
+    // Worker-scoped options remain.
+    expect(workerOpts.maxStalledCount).toBe(3);
+  });
 });

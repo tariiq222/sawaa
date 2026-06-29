@@ -4,6 +4,9 @@ import { PrismaService, RlsTransactionService } from '../../../../infrastructure
 import { DiscountType } from '@prisma/client';
 import { CreateSessionPackageHandler } from './create-session-package.handler';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
+import { CacheService } from '../../../../infrastructure/cache';
+
+const cacheProvider = { provide: CacheService, useValue: { invalidatePrefix: jest.fn() } };
 
 /**
  * Build a per-test Prisma stub. Each method the handler may call is a
@@ -66,6 +69,7 @@ describe('CreateSessionPackageHandler', () => {
           provide: RlsTransactionService,
           useValue: { withTransaction: jest.fn((fn: (t: typeof tx) => Promise<unknown>) => fn(tx)) },
         },
+        cacheProvider,
       ],
     }).compile();
 
@@ -190,6 +194,7 @@ describe('CreateSessionPackageHandler', () => {
           ComputePackagePriceService,
           { provide: PrismaService, useValue: prisma },
           { provide: RlsTransactionService, useValue: rls },
+          cacheProvider,
         ],
       }).compile();
       const h = module.get(CreateSessionPackageHandler);

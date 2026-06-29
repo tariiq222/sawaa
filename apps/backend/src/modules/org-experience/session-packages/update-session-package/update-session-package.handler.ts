@@ -5,6 +5,8 @@ import { toHalalas } from '../../../finance/money.helper';
 import { UpdateSessionPackageDto } from './update-session-package.dto';
 import { CreateSessionPackageItemDto } from '../create-session-package/create-session-package.dto';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
+import { CacheService } from '../../../../infrastructure/cache';
+import { PUBLIC_PACKAGES_CACHE_KEY } from '../list-public-packages/public-packages.cache';
 
 export type UpdateSessionPackageCommand = UpdateSessionPackageDto & { packageId: string };
 
@@ -28,6 +30,7 @@ export class UpdateSessionPackageHandler {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly pricing: ComputePackagePriceService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(dto: UpdateSessionPackageCommand) {
@@ -62,7 +65,7 @@ export class UpdateSessionPackageHandler {
 
     // 2. Apply the update atomically: replace items if provided, then patch fields.
     //    Package-level discount is deprecated and never written here.
-    return this.rlsTransaction.withTransaction(async (tx) => {
+    const updated = await this.rlsTransaction.withTransaction(async (tx) => {
       if (itemsProvided) {
         await tx.sessionPackageItem.deleteMany({ where: { packageId: dto.packageId } });
         await tx.sessionPackageItem.createMany({
@@ -100,6 +103,10 @@ export class UpdateSessionPackageHandler {
         include: { items: true },
       });
     });
+
+    await this.cache.invalidatePrefix(PUBLIC_PACKAGES_CACHE_KEY);
+
+    return updated;
   }
 
   // ── helpers ─────────────────────────────────────────────────────────────

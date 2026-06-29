@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Check } from 'lucide-react-native';
+import { Check, Clock, X } from 'lucide-react-native';
 
 import {
   AquaBackground,
@@ -21,7 +21,7 @@ import { useDir } from '@/hooks/useDir';
 import { useReduceMotion } from '@/hooks/useA11y';
 import { getFontName } from '@/theme/fonts';
 import { clientBookingsService, type ClientBookingRow } from '@/services/client/bookings';
-import { clientPaymentsService, type ClientInvoice } from '@/services/client/payments';
+import { usePaymentStatus, type PaymentPhase } from './use-payment-status';
 
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -51,10 +51,11 @@ export default function BookingSuccessScreen() {
   const insets = useSafeAreaInsets();
   const dir = useDir();
   const reduceMotion = useReduceMotion();
-  const { bookingId, invoiceId, paymentId } = useLocalSearchParams<{
+  const { bookingId, invoiceId, paymentId, webResult } = useLocalSearchParams<{
     bookingId?: string;
     invoiceId?: string;
     paymentId?: string;
+    webResult?: string;
   }>();
   const f400 = getFontName(dir.locale, '400');
   const f600 = getFontName(dir.locale, '600');
@@ -62,8 +63,10 @@ export default function BookingSuccessScreen() {
 
   const [booking, setBooking] = useState<ClientBookingRow | null>(null);
   const [loading, setLoading] = useState(!!bookingId);
-  const [invoice, setInvoice] = useState<ClientInvoice | null>(null);
-  const [invoiceLoading, setInvoiceLoading] = useState(!!invoiceId);
+
+  // Payment phase is derived by polling the backend (the source of truth). The
+  // WebBrowser result alone is NOT trusted: see use-payment-status for the rules.
+  const { phase, checkAgain } = usePaymentStatus(invoiceId, webResult);
 
   useEffect(() => {
     if (!bookingId) return;
@@ -82,43 +85,43 @@ export default function BookingSuccessScreen() {
     return () => { cancelled = true; };
   }, [bookingId]);
 
-  useEffect(() => {
-    if (!invoiceId) {
-      setInvoice(null);
-      setInvoiceLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setInvoiceLoading(true);
-    (async () => {
-      try {
-        const data = await clientPaymentsService.getInvoice(invoiceId);
-        if (!cancelled) setInvoice(data);
-      } catch {
-        if (!cancelled) setInvoice(null);
-      } finally {
-        if (!cancelled) setInvoiceLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [invoiceId]);
-
   const therapistName = booking?.employee
     ? (dir.isRTL ? booking.employee.nameAr : booking.employee.nameEn) ?? booking.employee.nameAr ?? booking.employee.nameEn
     : null;
-  const fallbackPaymentCopy = dir.isRTL
-    ? 'سنتواصل معكِ قريباً لترتيب الدفع وإرسال تفاصيل الجلسة'
-    : 'We\'ll reach out shortly to arrange payment and send session details';
-  const hasPendingPayment = invoice?.payments?.some((payment) =>
-    payment.status === 'PENDING' || payment.status === 'PENDING_VERIFICATION',
-  ) ?? false;
-  const paymentStatusCopy = invoiceLoading
-    ? (dir.isRTL ? 'جاري تحديث حالة الدفع...' : 'Checking payment status...')
-    : invoice?.status === 'PAID'
-      ? (dir.isRTL ? 'تم استلام الدفع' : 'Payment received')
-      : invoice?.status === 'PENDING' || hasPendingPayment
-        ? (dir.isRTL ? 'بانتظار التحقق من الدفع' : 'Awaiting payment verification')
-        : fallbackPaymentCopy;
+
+  const headerCopy: Record<PaymentPhase, { title: string; subtitle: string }> = {
+    polling: {
+      title: dir.isRTL ? 'جاري تأكيد الدفع' : 'Confirming payment',
+      subtitle: dir.isRTL ? 'جاري تحديث حالة الدفع...' : 'Checking payment status...',
+    },
+    confirmed: {
+      title: dir.isRTL ? 'تم تأكيد موعدك' : 'Appointment confirmed',
+      subtitle: invoiceId
+        ? (dir.isRTL ? 'تم استلام الدفع' : 'Payment received')
+        : (dir.isRTL
+          ? 'سنتواصل معكِ قريباً لترتيب الدفع وإرسال تفاصيل الجلسة'
+          : 'We\'ll reach out shortly to arrange payment and send session details'),
+    },
+    pending: {
+      title: dir.isRTL ? 'الدفع قيد المعالجة' : 'Payment processing',
+      subtitle: dir.isRTL
+        ? 'لم نتلقَّ تأكيد الدفع بعد. يمكنكِ التحقق مرة أخرى.'
+        : 'We have not received payment confirmation yet. You can check again.',
+    },
+    failed: {
+      title: dir.isRTL ? 'لم يكتمل الدفع' : 'Payment not completed',
+      subtitle: dir.isRTL
+        ? 'لم يتم استلام الدفع. لم يتم تأكيد موعدك بعد.'
+        : 'We did not receive your payment. Your appointment is not confirmed yet.',
+    },
+  };
+  const { title: headerTitle, subtitle: paymentStatusCopy } = headerCopy[phase];
+  const phaseColor =
+    phase === 'failed'
+      ? sawaaSemantic.danger
+      : phase === 'pending' || phase === 'polling'
+        ? sawaaSemantic.warning
+        : sawaaSemantic.success;
 
   const centeredText = { textAlign: 'center', writingDirection: dir.writingDirection } as const;
   const startText = { textAlign: dir.textAlign, writingDirection: dir.writingDirection } as const;
@@ -155,8 +158,14 @@ export default function BookingSuccessScreen() {
     <AquaBackground>
       <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <Animated.View entering={reduceMotion ? undefined : ZoomIn.duration(600).easing(Easing.out(Easing.cubic))}>
-          <View style={styles.iconCircle}>
-            <Check size={56} color={sawaaSemantic.success} strokeWidth={2.5} />
+          <View style={[styles.iconCircle, { backgroundColor: withAlpha(phaseColor, 0.14), borderColor: withAlpha(phaseColor, 0.3) }]}>
+            {phase === 'failed' ? (
+              <X size={56} color={phaseColor} strokeWidth={2.5} />
+            ) : phase === 'confirmed' ? (
+              <Check size={56} color={phaseColor} strokeWidth={2.5} />
+            ) : (
+              <Clock size={56} color={phaseColor} strokeWidth={2.5} />
+            )}
           </View>
         </Animated.View>
 
@@ -165,7 +174,7 @@ export default function BookingSuccessScreen() {
           style={styles.textBlock}
         >
           <Text style={[styles.title, { fontFamily: f700 }, centeredText]}>
-            {dir.isRTL ? 'تم تأكيد موعدك' : 'Appointment confirmed'}
+            {headerTitle}
           </Text>
           <Text style={[styles.subtitle, { fontFamily: f400, fontWeight: '400' }, centeredText]}>
             {paymentStatusCopy}
@@ -212,11 +221,25 @@ export default function BookingSuccessScreen() {
           entering={reduceMotion ? undefined : FadeInDown.delay(480).duration(700).easing(Easing.out(Easing.cubic))}
           style={styles.actions}
         >
-          <PrimaryButton
-            label={dir.isRTL ? 'عرض مواعيدي' : 'View my appointments'}
-            onPress={() => router.replace('/(client)/(tabs)/appointments')}
-            fontFamily={f700}
-          />
+          {phase === 'pending' ? (
+            <PrimaryButton
+              label={dir.isRTL ? 'تحقق مرة أخرى' : 'Check again'}
+              onPress={checkAgain}
+              fontFamily={f700}
+            />
+          ) : phase === 'failed' ? (
+            <PrimaryButton
+              label={dir.isRTL ? 'إعادة المحاولة' : 'Try again'}
+              onPress={() => router.back()}
+              fontFamily={f700}
+            />
+          ) : (
+            <PrimaryButton
+              label={dir.isRTL ? 'عرض مواعيدي' : 'View my appointments'}
+              onPress={() => router.replace('/(client)/(tabs)/appointments')}
+              fontFamily={f700}
+            />
+          )}
           <Pressable
             accessibilityRole="button"
             onPress={() => router.replace('/(client)/(tabs)/home')}
@@ -249,9 +272,7 @@ const styles = StyleSheet.create({
     borderRadius: sawaaRadius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: withAlpha(sawaaSemantic.success, 0.14),
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: withAlpha(sawaaSemantic.success, 0.3),
   },
   textBlock: { alignItems: 'center', gap: sawaaSpacing.sm },
   title: {

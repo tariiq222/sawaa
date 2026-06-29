@@ -15,11 +15,12 @@ import { useAuth } from "@/components/providers/auth-provider"
 import { useEmployeeMutations } from "@/hooks/use-employee-mutations"
 import { formatRef } from "@/lib/utils"
 import type { Employee, EmployeeSortField } from "@/lib/types/employee"
+import type { PaginationMeta } from "@/lib/types/common"
 import type { SortingState } from "@tanstack/react-table"
 
 interface EmployeesListContentProps {
   employees: Employee[]
-  meta: { total: number } | null
+  meta: PaginationMeta | null
   isLoading: boolean
   error: string | null
   search: string
@@ -29,6 +30,8 @@ interface EmployeesListContentProps {
   sortBy?: EmployeeSortField
   sortOrder?: "asc" | "desc"
   setSort?: (sortBy: EmployeeSortField | undefined, sortOrder: "asc" | "desc" | undefined) => void
+  page?: number
+  setPage?: (page: number) => void
   hasFilters: boolean
   resetFilters: () => void
 }
@@ -47,6 +50,8 @@ export function EmployeesListContent({
   sortBy,
   sortOrder,
   setSort,
+  page,
+  setPage,
   hasFilters,
   resetFilters,
 }: EmployeesListContentProps) {
@@ -132,6 +137,12 @@ export function EmployeesListContent({
               ? t("employees.empty.filteredDescription")
               : t("employees.empty.description")
           }
+          serverPaginated
+          page={meta?.page ?? page ?? 1}
+          totalPages={meta?.totalPages ?? 1}
+          hasPreviousPage={meta?.hasPreviousPage ?? false}
+          hasNextPage={meta?.hasNextPage ?? false}
+          onPageChange={setPage}
         />
       )}
 

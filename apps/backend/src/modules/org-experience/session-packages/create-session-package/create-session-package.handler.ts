@@ -4,6 +4,8 @@ import { DiscountType, Prisma } from '@prisma/client';
 import { toHalalas } from '../../../finance/money.helper';
 import { CreateSessionPackageDto } from './create-session-package.dto';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
+import { CacheService } from '../../../../infrastructure/cache';
+import { PUBLIC_PACKAGES_CACHE_KEY } from '../list-public-packages/public-packages.cache';
 
 export type CreateSessionPackageCommand = CreateSessionPackageDto;
 
@@ -27,6 +29,7 @@ export class CreateSessionPackageHandler {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly pricing: ComputePackagePriceService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute(dto: CreateSessionPackageCommand) {
@@ -85,6 +88,8 @@ export class CreateSessionPackageHandler {
         include: { items: true },
       }),
     );
+
+    await this.cache.invalidatePrefix(PUBLIC_PACKAGES_CACHE_KEY);
 
     return created;
   }

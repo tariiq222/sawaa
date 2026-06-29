@@ -84,10 +84,17 @@ export class VerifyMobileOtpHandler {
         throw new UnauthorizedException('Invalid OTP code');
       }
 
-      await this.prisma.otpCode.update({
-        where: { id: otpRecord.id },
+      // Atomically consume the code: only the first concurrent request whose
+      // predicate still matches (not yet consumed, not expired) wins. This
+      // prevents a double-consume race that would otherwise issue two token
+      // pairs for a single OTP.
+      const consumed = await this.prisma.otpCode.updateMany({
+        where: { id: otpRecord.id, consumedAt: null, expiresAt: { gt: now } },
         data: { consumedAt: new Date() },
       });
+      if (consumed.count !== 1) {
+        throw new BadRequestException('Invalid or expired code');
+      }
 
       let tokenUser = user;
       if (cmd.purpose === MobileOtpPurposeDto.REGISTER) {

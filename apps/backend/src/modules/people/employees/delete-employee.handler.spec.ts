@@ -7,6 +7,9 @@ import { PrismaService, RlsTransactionService } from '../../../infrastructure/da
 const buildPrisma = () => ({
   $queryRaw: jest.fn(),
   employee: { findFirst: jest.fn(), delete: jest.fn() },
+  employeeService: { findMany: jest.fn().mockResolvedValue([]) },
+  employeeServiceOption: { deleteMany: jest.fn() },
+  serviceDurationOption: { deleteMany: jest.fn() },
   booking: { count: jest.fn() },
   programSupervisor: { count: jest.fn() },
   invoice: { count: jest.fn() },
@@ -81,6 +84,48 @@ describe('DeleteEmployeeHandler', () => {
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
     });
     expect(prisma.$queryRaw).toHaveBeenCalled();
+    expect(prisma.employee.delete).toHaveBeenCalledWith({ where: { id: 'emp-1' } });
+  });
+
+  it('deletes practitioner-owned ServiceDurationOption/EmployeeServiceOption rows before cascade (no orphans)', async () => {
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+    prisma.booking.count.mockResolvedValue(0);
+    prisma.programSupervisor.count.mockResolvedValue(0);
+    prisma.invoice.count.mockResolvedValue(0);
+    prisma.rating.count.mockResolvedValue(0);
+    prisma.employee.delete.mockResolvedValue({ id: 'emp-1' });
+    // The employee has two EmployeeService links; their ids own cross-BC rows
+    // (ServiceDurationOption.employeeServiceId / EmployeeServiceOption.employeeServiceId
+    // are plain strings with no FK), which would orphan on cascade delete.
+    prisma.employeeService.findMany.mockResolvedValue([{ id: 'es-1' }, { id: 'es-2' }]);
+
+    await handler.execute({ employeeId: 'emp-1' });
+
+    expect(prisma.employeeService.findMany).toHaveBeenCalledWith({
+      where: { employeeId: 'emp-1' },
+      select: { id: true },
+    });
+    expect(prisma.employeeServiceOption.deleteMany).toHaveBeenCalledWith({
+      where: { employeeServiceId: { in: ['es-1', 'es-2'] } },
+    });
+    expect(prisma.serviceDurationOption.deleteMany).toHaveBeenCalledWith({
+      where: { employeeServiceId: { in: ['es-1', 'es-2'] } },
+    });
+  });
+
+  it('skips orphan cleanup when the employee has no service links', async () => {
+    prisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+    prisma.booking.count.mockResolvedValue(0);
+    prisma.programSupervisor.count.mockResolvedValue(0);
+    prisma.invoice.count.mockResolvedValue(0);
+    prisma.rating.count.mockResolvedValue(0);
+    prisma.employee.delete.mockResolvedValue({ id: 'emp-1' });
+    prisma.employeeService.findMany.mockResolvedValue([]);
+
+    await handler.execute({ employeeId: 'emp-1' });
+
+    expect(prisma.employeeServiceOption.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.serviceDurationOption.deleteMany).not.toHaveBeenCalled();
     expect(prisma.employee.delete).toHaveBeenCalledWith({ where: { id: 'emp-1' } });
   });
 });

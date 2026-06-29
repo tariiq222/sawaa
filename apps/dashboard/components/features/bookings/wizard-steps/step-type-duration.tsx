@@ -32,6 +32,17 @@ interface StepTypeDurationProps {
     type: string,
     durationOptionId: string | null,
   ) => void
+  /**
+   * Currently selected duration option id, used to highlight the active
+   * duration choice when the selected type exposes more than one option.
+   */
+  selectedDurationOptionId: string | null
+  /**
+   * Called when the operator picks a specific duration option for the
+   * already-selected delivery type. Lets the receptionist choose between
+   * e.g. 30-min and 60-min sessions instead of always getting the default.
+   */
+  onSelectDuration: (durationOptionId: string) => void
 }
 
 /* ─── Helpers ─── */
@@ -108,8 +119,10 @@ export function StepTypeDuration({
   serviceId,
   selectedType,
   onSelectType,
+  selectedDurationOptionId,
+  onSelectDuration,
 }: StepTypeDurationProps) {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const { data: serviceTypes = [], isLoading } = useQuery<EmployeeServiceType[]>({
     queryKey: queryKeys.employees.serviceTypes(employeeId, serviceId),
     queryFn: () => fetchEmployeeServiceTypes(employeeId, serviceId),
@@ -148,6 +161,27 @@ export function StepTypeDuration({
     ? activeTypes.find((st) => st.deliveryType === selectedType)
     : undefined
 
+  // Duration options for the selected type, ordered by the backend's
+  // sortOrder. A picker is shown only when there is more than one — a
+  // single option is resolved silently (handled by resolveDurationOptionId).
+  const durationOptions = selectedServiceType?.durationOptions ?? []
+  const showDurationPicker = durationOptions.length > 1
+  const activeDurationId =
+    selectedDurationOptionId ??
+    (selectedServiceType ? resolveDurationOptionId(selectedServiceType) : null)
+  const selectedOption = durationOptions.find((o) => o.id === activeDurationId)
+
+  // Price + duration shown in the info line follow the selected duration
+  // option when present, falling back to the type-level price/duration.
+  const infoPrice = selectedOption
+    ? Number(selectedOption.price)
+    : selectedServiceType?.price != null
+      ? Number(selectedServiceType.price)
+      : null
+  const infoDuration = selectedOption
+    ? selectedOption.durationMinutes
+    : selectedServiceType?.duration ?? null
+
   if (isLoading) return <StepTypeDurationSkeleton />
 
   return (
@@ -183,10 +217,42 @@ export function StepTypeDuration({
         )}
       </div>
 
-      {/* Price + duration info line — shown when a type is selected */}
-      {selectedServiceType && (
+      {/* Duration section — shown only when the selected type exposes
+          more than one duration option (e.g. 30-min vs 60-min). */}
+      {selectedServiceType && showDurationPicker && (
+        <div className="flex flex-col gap-3">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+            {t("bookings.wizard.step.typeDuration.durationTitle")}
+          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {durationOptions.map((opt) => {
+              const label = locale === "ar" ? opt.labelAr ?? opt.label : opt.label
+              return (
+                <WizardCard
+                  key={opt.id}
+                  onClick={() => onSelectDuration(opt.id)}
+                  selected={opt.id === activeDurationId}
+                  className="py-4"
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-sm font-bold text-foreground leading-tight">
+                      {label || `${opt.durationMinutes} ${t("bookings.wizard.step.typeDuration.minutes")}`}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {opt.durationMinutes} {t("bookings.wizard.step.typeDuration.minutes")} · {formatPrice(Number(opt.price))} {t("bookings.wizard.step.service.currency")}
+                    </span>
+                  </div>
+                </WizardCard>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Price + duration info line — follows the selected duration option */}
+      {selectedServiceType && infoPrice != null && infoDuration != null && (
         <p className="text-sm text-muted-foreground">
-          {formatPrice(Number(selectedServiceType.price))} {t("bookings.wizard.step.service.currency")} · {selectedServiceType.duration} {t("bookings.wizard.step.typeDuration.minutes")}
+          {formatPrice(infoPrice)} {t("bookings.wizard.step.service.currency")} · {infoDuration} {t("bookings.wizard.step.typeDuration.minutes")}
         </p>
       )}
     </div>

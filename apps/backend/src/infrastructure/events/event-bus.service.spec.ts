@@ -42,6 +42,17 @@ describe('EventBusService', () => {
     expect(mockQueue.add).toHaveBeenCalledWith('test.event', event, expect.any(Object));
   });
 
+  it('should publish with attempts>1 and exponential backoff for at-least-once delivery', async () => {
+    const event = { eventId: 'e1', source: 'test', version: 1, occurredAt: new Date(), payload: {} };
+    await service.publish('test.event', event);
+
+    const [, , opts] = mockQueue.add.mock.calls.at(-1);
+    expect(opts.attempts).toBeGreaterThan(1);
+    expect(opts.backoff).toEqual(
+      expect.objectContaining({ type: 'exponential', delay: 2000 }),
+    );
+  });
+
   it('should subscribe and create worker on first subscription', () => {
     const handler = jest.fn();
     service.subscribe('test.event', handler);

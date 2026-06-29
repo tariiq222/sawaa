@@ -135,6 +135,28 @@ describe('AuthResponseBuilder', () => {
       expect(res.user.permissions).toEqual(expect.arrayContaining(['user:*', 'report:read']));
     });
 
+    // P1-8: DB-stored system-role permissions must override the hardcoded
+    // BUILT_IN map, exactly as JwtStrategy feeds them into CASL — otherwise the
+    // returned permissions[] (used by the dashboard UI) drifts from enforcement.
+    it('reflects DB system-role permissions over the built-in map (P1-8)', () => {
+      const res = builder.build(
+        tokens,
+        baseUser({ role: 'RECEPTIONIST', customRole: null }) as any,
+        [{ action: 'read', subject: 'Booking' }],
+      );
+      expect(res.user.permissions).toEqual(['booking:read']);
+    });
+
+    it('falls back to the built-in map when no system-role permissions are supplied (P1-8)', () => {
+      const res = builder.build(
+        tokens,
+        baseUser({ role: 'ADMIN', customRole: null }) as any,
+        null,
+      );
+      // ADMIN built-in includes manage:User → "user:*".
+      expect(res.user.permissions).toEqual(expect.arrayContaining(['user:*']));
+    });
+
     it('returns empty permissions when role is null and no customRole (defensive)', () => {
       const res = builder.build(
         tokens,

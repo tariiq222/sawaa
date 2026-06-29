@@ -12,6 +12,7 @@ import { PrismaService } from '../../../../../infrastructure/database';
 import { MoyasarApiClient } from '../../../moyasar-api/moyasar-api.client';
 import { InitClientPaymentDto } from './init-client-payment.dto';
 import { DEFAULT_ORG_ID } from '../../../../../common/constants';
+import { reconcileOrDiscardInFlightPayment } from './reconcile-in-flight-payment.helper';
 
 const PAYMENT_INIT_BOOKING_STATUSES: readonly BookingStatus[] = [
   BookingStatus.PENDING,
@@ -76,46 +77,22 @@ export class InitClientPaymentHandler {
       if (existingPayment.status === PaymentStatus.COMPLETED) {
         throw new ConflictException('Payment for this invoice has already been completed');
       }
-      // G3: a row with a gatewayRef means a live Moyasar session already exists
-      // for this invoice. Deleting it blind (the old P1-7 mitigation) let the
-      // client finish that old session AND the fresh one we create below =
-      // double charge with no internal trace of the first. Reconcile against the
-      // gateway before discarding: only a terminally-failed session is safe to
-      // replace. The `client:<invoiceId>` idempotencyKey is @unique, so at most
-      // one row exists per invoice — this also guards concurrent inits.
-      if (existingPayment.gatewayRef) {
-        let gatewayStatus: string;
-        try {
-          const gw = await this.moyasar.getPaymentStatus(
-            DEFAULT_ORG_ID,
-            existingPayment.gatewayRef,
-          );
-          gatewayStatus = gw.status;
-        } catch (error) {
-          if (error instanceof Error) {
-            this.logger.error(
-              `Failed to reconcile in-flight payment ${existingPayment.id} for invoice ${invoice.id}`,
-              error.stack,
-            );
-          }
-          // Fail closed: never recreate a session we could not verify.
-          throw new ConflictException(
-            'تعذّر التحقق من حالة الدفعة الجارية، حاول مرة أخرى لاحقاً',
-          );
-        }
-        if (['paid', 'captured', 'authorized'].includes(gatewayStatus)) {
-          throw new ConflictException('Payment for this invoice has already been completed');
-        }
-        if (gatewayStatus === 'initiated') {
-          throw new ConflictException(
+      // G3: reconcile the in-flight session against the gateway before discarding
+      // it, then delete so a fresh PENDING payment can be created below. Shared
+      // verbatim with InitPackagePurchaseHandler to prevent drift (a drift =
+      // double charge). The `client:<invoiceId>` idempotencyKey is @unique, so at
+      // most one row exists per invoice — this also guards concurrent inits.
+      await reconcileOrDiscardInFlightPayment(
+        this.prisma,
+        this.moyasar,
+        this.logger,
+        existingPayment,
+        {
+          alreadyPaid: 'Payment for this invoice has already been completed',
+          inFlight:
             'هناك دفعة قيد التنفيذ لهذه الفاتورة، أكمل الدفع الحالي أو انتظر انتهاء الجلسة',
-          );
-        }
-        // failed / voided / refunded → the session is dead, safe to discard.
-      }
-      // No gatewayRef yet, or a terminally-failed session: discard and recreate
-      // so the client always receives a valid redirectUrl.
-      await this.prisma.payment.delete({ where: { id: existingPayment.id } });
+        },
+      );
     }
 
     // P0: charge only the OUTSTANDING balance, not the full invoice total. An

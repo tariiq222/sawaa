@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { AvailableSlot, Service, EmployeeWithUser } from '@sawaa/shared';
 import { useT, useLocale } from '@/features/locale/locale-provider';
 import { clientLoginApi, getMeApi } from '@/features/auth/auth.api';
+import { normalizeSaudiPhone } from '@/features/auth/auth.schema';
 import { setClient as setAuthClient } from '@/features/auth/auth-store';
 import { useCurrentClient } from '@/features/auth/use-current-client';
 import { grossWithVat, halalasToSarNumber } from '@/lib/money';
@@ -68,20 +69,28 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
   const isAr = locale === 'ar';
   const { client, isLoading: clientLoading, refetch } = useCurrentClient();
 
-  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPhone, setLoginPhone] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
   const handleInlineLogin = async () => {
     setLoginError(null);
-    if (!loginEmail || !loginPassword) {
-      setLoginError(isAr ? 'الرجاء إدخال البريد وكلمة المرور.' : 'Please enter email and password.');
+    // Phone-first login — mirrors the standalone /login page. Registration on
+    // the website is phone-first, so the inline booking login must accept a
+    // Saudi phone number (normalized to E.164) rather than an email.
+    const normalizedPhone = normalizeSaudiPhone(loginPhone.trim());
+    if (!normalizedPhone) {
+      setLoginError(isAr ? 'الرجاء إدخال رقم جوال سعودي صحيح.' : 'Please enter a valid Saudi phone number.');
+      return;
+    }
+    if (!loginPassword) {
+      setLoginError(isAr ? 'الرجاء إدخال كلمة المرور.' : 'Please enter your password.');
       return;
     }
     setLoginLoading(true);
     try {
-      await clientLoginApi({ email: loginEmail, password: loginPassword });
+      await clientLoginApi({ phone: normalizedPhone, password: loginPassword });
       const me = await getMeApi();
       setAuthClient(me);
       await refetch();
@@ -90,8 +99,8 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
         err instanceof Error
           ? err.message
           : isAr
-            ? 'فشل تسجيل الدخول. تأكد من البريد وكلمة المرور.'
-            : 'Login failed. Check your email and password.',
+            ? 'فشل تسجيل الدخول. تأكد من رقم الجوال وكلمة المرور.'
+            : 'Login failed. Check your phone number and password.',
       );
     } finally {
       setLoginLoading(false);
@@ -181,23 +190,24 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
 
             <div className="flex flex-col">
               <label className={fieldLabelClass} style={fieldLabelStyle}>
-                {isAr ? 'البريد الإلكتروني' : 'Email'}
+                {isAr ? 'رقم الجوال' : 'Phone number'}
               </label>
               <div className="relative">
                 <FieldIcon>
                   <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="3.5" width="12" height="9" rx="1.5" />
-                    <path d="M2.5 4.5l5.5 4 5.5-4" />
+                    <rect x="4.5" y="1.5" width="7" height="13" rx="1.5" />
+                    <path d="M7 12.5h2" />
                   </svg>
                 </FieldIcon>
                 <input
-                  type="email"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className={baseInputClass}
+                  type="tel"
+                  inputMode="tel"
+                  value={loginPhone}
+                  onChange={(e) => setLoginPhone(e.target.value)}
+                  placeholder="05XXXXXXXX"
+                  className={`${baseInputClass} text-start`}
                   style={inputStyle(false)}
-                  autoComplete="email"
+                  autoComplete="tel"
                   dir="ltr"
                   required
                 />

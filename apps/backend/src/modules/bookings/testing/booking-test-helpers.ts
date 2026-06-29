@@ -31,6 +31,7 @@ const buildPrismaRaw = () => ({
   bookingStatusLog: {
     create: jest.fn().mockResolvedValue({ id: 'log-1' }),
     count: jest.fn().mockResolvedValue(0),
+    findFirst: jest.fn().mockResolvedValue(null),
   },
   businessHour: {
     findUnique: jest.fn().mockResolvedValue({

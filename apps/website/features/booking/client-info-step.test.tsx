@@ -141,12 +141,13 @@ describe('ClientInfoStep', () => {
       ),
     );
     // The login form has placeholder-based inputs (no id/htmlFor wiring);
-    // assert the inputs are present via their placeholders.
-    expect(screen.getByPlaceholderText('name@example.com')).toBeTruthy();
+    // assert the inputs are present via their placeholders. The phone field is
+    // the primary identifier (registration is phone-first).
+    expect(screen.getByPlaceholderText('05XXXXXXXX')).toBeTruthy();
     expect(screen.getByPlaceholderText('••••••••')).toBeTruthy();
   });
 
-  it('requires both email and password before calling the API', async () => {
+  it('requires a valid phone and password before calling the API', async () => {
     useCurrentClientMock.mockReturnValue({
       client: null,
       isLoading: false,
@@ -166,12 +167,43 @@ describe('ClientInfoStep', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /Sign in/i }));
     expect(
-      await screen.findByText(/Please enter email and password/),
+      await screen.findByText(/valid Saudi phone number/i),
     ).toBeTruthy();
     expect(clientLoginApiMock).not.toHaveBeenCalled();
   });
 
-  it('calls clientLoginApi then getMeApi then refetch on successful inline login', async () => {
+  it('rejects a non-Saudi phone before calling the API', async () => {
+    useCurrentClientMock.mockReturnValue({
+      client: null,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    render(
+      withLocale(
+        <ClientInfoStep
+          slot={slot}
+          service={service}
+          employee={employee}
+          onSubmitInfo={vi.fn()}
+          isSubmitting={false}
+        />,
+      ),
+    );
+    fireEvent.change(screen.getByPlaceholderText('05XXXXXXXX'), {
+      target: { value: '12345' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), {
+      target: { value: 'Secret1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Sign in/i }));
+    expect(
+      await screen.findByText(/valid Saudi phone number/i),
+    ).toBeTruthy();
+    expect(clientLoginApiMock).not.toHaveBeenCalled();
+  });
+
+  it('calls clientLoginApi with a normalized phone then getMeApi then refetch on successful inline login', async () => {
     const refetch = vi.fn().mockResolvedValue(undefined);
     useCurrentClientMock.mockReturnValue({
       client: null,
@@ -192,15 +224,15 @@ describe('ClientInfoStep', () => {
         />,
       ),
     );
-    fireEvent.change(screen.getByPlaceholderText('name@example.com'), {
-      target: { value: 'sara@test.com' },
+    fireEvent.change(screen.getByPlaceholderText('05XXXXXXXX'), {
+      target: { value: '0500000000' },
     });
     fireEvent.change(screen.getByPlaceholderText('••••••••'), {
       target: { value: 'Secret1' },
     });
     fireEvent.click(screen.getByRole('button', { name: /Sign in/i }));
     await waitFor(() => expect(clientLoginApiMock).toHaveBeenCalledWith({
-      email: 'sara@test.com',
+      phone: '+966500000000',
       password: 'Secret1',
     }));
     await waitFor(() => expect(getMeApiMock).toHaveBeenCalled());
@@ -227,8 +259,8 @@ describe('ClientInfoStep', () => {
         />,
       ),
     );
-    fireEvent.change(screen.getByPlaceholderText('name@example.com'), {
-      target: { value: 'a@b.co' },
+    fireEvent.change(screen.getByPlaceholderText('05XXXXXXXX'), {
+      target: { value: '0500000000' },
     });
     fireEvent.change(screen.getByPlaceholderText('••••••••'), {
       target: { value: 'badbad1' },

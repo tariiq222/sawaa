@@ -58,24 +58,34 @@ export class GetPublicAvailabilityDaysHandler {
     const start = query.startDate ? new Date(`${query.startDate}T00:00:00`) : new Date();
     start.setHours(0, 0, 0, 0);
 
-    const out: AvailabilityDay[] = [];
+    // Build the per-day probes and run them concurrently. Each probe is an
+    // independent read against check-availability, so fanning them out with
+    // Promise.all turns the sequential N-roundtrip strip into a single batch
+    // without changing any result. Index `i` is preserved so the output order
+    // still matches the requested window (day 0 first, day N-1 last).
+    const dates: Date[] = [];
     for (let i = 0; i < days; i++) {
       const d = new Date(start);
       d.setDate(d.getDate() + i);
-      const slots = await this.checkAvailability.execute({
-        employeeId: query.employeeId,
-        branchId,
-        serviceId,
-        date: d,
-        // Day-strip probe: a missing ServiceBookingConfig must grey the days
-        // out, not 400 the whole strip.
-        silentOnMissingConfig: true,
-      });
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      out.push({ date: `${y}-${m}-${day}`, hasSlots: slots.length > 0 });
+      dates.push(d);
     }
-    return out;
+
+    return Promise.all(
+      dates.map(async (d) => {
+        const slots = await this.checkAvailability.execute({
+          employeeId: query.employeeId,
+          branchId,
+          serviceId,
+          date: d,
+          // Day-strip probe: a missing ServiceBookingConfig must grey the days
+          // out, not 400 the whole strip.
+          silentOnMissingConfig: true,
+        });
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return { date: `${y}-${m}-${day}`, hasSlots: slots.length > 0 };
+      }),
+    );
   }
 }

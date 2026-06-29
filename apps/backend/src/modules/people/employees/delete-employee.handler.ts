@@ -104,6 +104,27 @@ export class DeleteEmployeeHandler {
 					);
 				}
 
+				// Orphan cleanup (people → org-experience): EmployeeService cascades
+				// when the employee is deleted, but ServiceDurationOption and
+				// EmployeeServiceOption reference EmployeeService.id via a plain
+				// cross-BC string (no FK). Deleting them here, keyed by the
+				// employee's EmployeeService ids (esIds), prevents practitioner-owned
+				// duration rows and price-override rows from orphaning. Same class as
+				// the prior production orphan bug in remove-employee-service.handler.
+				const employeeServices = await tx.employeeService.findMany({
+					where: { employeeId: cmd.employeeId },
+					select: { id: true },
+				});
+				const esIds = employeeServices.map((es) => es.id);
+				if (esIds.length > 0) {
+					await tx.employeeServiceOption.deleteMany({
+						where: { employeeServiceId: { in: esIds } },
+					});
+					await tx.serviceDurationOption.deleteMany({
+						where: { employeeServiceId: { in: esIds } },
+					});
+				}
+
 				await tx.employee.delete({ where: { id: cmd.employeeId } });
 			},
 			{ isolationLevel: Prisma.TransactionIsolationLevel.Serializable },

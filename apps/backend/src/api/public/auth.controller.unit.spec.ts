@@ -26,6 +26,8 @@ describe('AuthController (unit)', () => {
     mockPrisma = {
       refreshToken: { findMany: jest.fn(), update: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       user: { findUnique: jest.fn() },
+      // P1-8: login/me now load DB system-role permissions (mirrors JwtStrategy).
+      customRole: { findFirst: jest.fn().mockResolvedValue(null) },
     };
     mockTokens = { issueTokenPair: jest.fn() };
     mockGetCurrentUser = { execute: jest.fn() };

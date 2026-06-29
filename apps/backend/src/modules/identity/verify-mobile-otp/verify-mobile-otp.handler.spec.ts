@@ -9,7 +9,7 @@ import { TokenService } from '../shared/token.service';
 
 const prismaMock = {
   user: { findFirst: jest.fn(), update: jest.fn() },
-  otpCode: { findFirst: jest.fn(), update: jest.fn() },
+  otpCode: { findFirst: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
 };
 const tokensMock = { issueTokenPair: jest.fn() };
 const clsMock = {
@@ -137,7 +137,7 @@ describe('VerifyMobileOtpHandler', () => {
       lockedUntil: null,
       consumedAt: null,
     });
-    prismaMock.otpCode.update.mockResolvedValue({});
+    prismaMock.otpCode.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.user.update.mockResolvedValue({
       id: 'u1',
       email: 'a@b.com',
@@ -155,9 +155,13 @@ describe('VerifyMobileOtpHandler', () => {
       purpose: MobileOtpPurposeDto.REGISTER,
     });
 
-    expect(prismaMock.otpCode.update).toHaveBeenCalledWith(
+    expect(prismaMock.otpCode.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'o1' },
+        where: expect.objectContaining({
+          id: 'o1',
+          consumedAt: null,
+          expiresAt: { gt: expect.any(Date) },
+        }),
         data: expect.objectContaining({ consumedAt: expect.any(Date) }),
       }),
     );
@@ -191,7 +195,7 @@ describe('VerifyMobileOtpHandler', () => {
       lockedUntil: null,
       consumedAt: null,
     });
-    prismaMock.otpCode.update.mockResolvedValue({});
+    prismaMock.otpCode.updateMany.mockResolvedValue({ count: 1 });
     tokensMock.issueTokenPair.mockResolvedValue({ accessToken: 'a', refreshToken: 'r' });
 
     const out = await handler.execute({
@@ -200,9 +204,13 @@ describe('VerifyMobileOtpHandler', () => {
       purpose: MobileOtpPurposeDto.LOGIN,
     });
 
-    expect(prismaMock.otpCode.update).toHaveBeenCalledWith(
+    expect(prismaMock.otpCode.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'o1' },
+        where: expect.objectContaining({
+          id: 'o1',
+          consumedAt: null,
+          expiresAt: { gt: expect.any(Date) },
+        }),
         data: expect.objectContaining({ consumedAt: expect.any(Date) }),
       }),
     );
@@ -232,5 +240,48 @@ describe('VerifyMobileOtpHandler', () => {
     await expect(
       handler.execute({ identifier: '+966500000000', code: goodCode, purpose: MobileOtpPurposeDto.LOGIN }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('concurrent verify: second call fails — only one token pair is issued (no double-consume race)', async () => {
+    // Both concurrent requests read the same still-unconsumed OTP record via
+    // findFirst (the predicate races against the consume step), so the atomic
+    // guard must live in the consume step, not the read.
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'u1',
+      email: 'a@b.com',
+      phone: '+966500000000',
+      isActive: true,
+      phoneVerifiedAt: new Date(),
+      customRoleId: null,
+      customRole: null,
+    });
+    prismaMock.otpCode.findFirst.mockResolvedValue({
+      id: 'o1',
+      codeHash: goodCodeHash,
+      expiresAt: new Date(Date.now() + 60000),
+      attempts: 0,
+      maxAttempts: 5,
+      lockedUntil: null,
+      consumedAt: null,
+    });
+    // Simulate the DB-level atomic predicate: the first updateMany matches the
+    // row (count 1), the second finds it already consumed (count 0).
+    prismaMock.otpCode.updateMany
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 0 });
+    tokensMock.issueTokenPair.mockResolvedValue({ accessToken: 'a', refreshToken: 'r' });
+
+    const [first, second] = await Promise.allSettled([
+      handler.execute({ identifier: '+966500000000', code: goodCode, purpose: MobileOtpPurposeDto.LOGIN }),
+      handler.execute({ identifier: '+966500000000', code: goodCode, purpose: MobileOtpPurposeDto.LOGIN }),
+    ]);
+
+    expect(first.status).toBe('fulfilled');
+    expect(second.status).toBe('rejected');
+    if (second.status === 'rejected') {
+      expect(second.reason).toBeInstanceOf(BadRequestException);
+    }
+    // The losing request must NOT receive a token pair.
+    expect(tokensMock.issueTokenPair).toHaveBeenCalledTimes(1);
   });
 });

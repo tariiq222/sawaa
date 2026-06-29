@@ -117,6 +117,34 @@ export class ApplyInvoiceDiscountHandler {
         reasonId = reason.id;
       }
 
+      // P1-6: A manual discount fully overwrites the invoice's discountAmt. Any
+      // coupon redemptions previously applied to this invoice would otherwise be
+      // left orphaned — their `discount` no longer sums to invoice.discountAmt
+      // and their parent coupon's usedCount stays inflated (so a one-shot coupon
+      // could be silently "spent" without ever discounting an invoice, and a
+      // per-user-limited coupon would be wrongly blocked on the next attempt).
+      // Reverse them in the SAME transaction: drop the redemption rows and
+      // decrement each coupon's usedCount by the number of rows removed. This is
+      // order-independent — applying a manual discount always supersedes coupons.
+      const redemptions = await tx.couponRedemption.findMany({
+        where: { invoiceId: cmd.invoiceId },
+        select: { id: true, couponId: true },
+      });
+      if (redemptions.length > 0) {
+        const removedPerCoupon = new Map<string, number>();
+        for (const r of redemptions) {
+          removedPerCoupon.set(r.couponId, (removedPerCoupon.get(r.couponId) ?? 0) + 1);
+        }
+        await tx.couponRedemption.deleteMany({ where: { invoiceId: cmd.invoiceId } });
+        for (const [couponId, removed] of removedPerCoupon) {
+          // Guard against driving usedCount negative on legacy/inconsistent rows.
+          await tx.coupon.updateMany({
+            where: { id: couponId, usedCount: { gte: removed } },
+            data: { usedCount: { decrement: removed } },
+          });
+        }
+      }
+
       const vatBase = subtotal.minus(discountAmt);
       const vatRate = new Prisma.Decimal(invoice.vatRate.toString());
       const { vatAmtHalalas, totalHalalas } = computeVat(vatBase, vatRate);

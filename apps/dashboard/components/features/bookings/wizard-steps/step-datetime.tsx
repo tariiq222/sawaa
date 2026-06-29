@@ -24,6 +24,12 @@ interface StepDatetimeProps {
   serviceId: string
   deliveryType: string
   durationOptionId: string | null
+  /**
+   * Duration (minutes) of the chosen duration option. When set it
+   * overrides the type-level default so the slot grid reflects the exact
+   * session length the operator picked (e.g. 60-min vs 30-min).
+   */
+  durationMins?: number | null
   selectedDate: string | null
   selectedTime: string | null
   onSelectDate: (date: string) => void
@@ -36,6 +42,7 @@ export function StepDatetime({
   serviceId,
   deliveryType,
   durationOptionId,
+  durationMins,
   selectedDate,
   selectedTime,
   onSelectDate,
@@ -51,6 +58,7 @@ export function StepDatetime({
     serviceId,
     deliveryType,
     date: selectedDate ?? '',
+    durationMins: durationMins ?? undefined,
   })
 
   const { availableDates, loading: daysLoading, enabled: daysEnabled, daysError } = useAvailableDays({

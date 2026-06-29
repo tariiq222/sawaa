@@ -58,9 +58,35 @@ function buildPricing() {
   };
 }
 
-function buildHandler(prisma = buildPrisma(), pricing = buildPricing()) {
-  const handler = new ListPublicPackagesHandler(prisma as never, pricing as never);
-  return { handler, prisma, pricing };
+/**
+ * Minimal in-memory stand-in for CacheService.getOrSet that mirrors the real
+ * read-through semantics: serve a cached value if present, otherwise run the
+ * loader once and remember its result under the key.
+ */
+function buildCache() {
+  const store = new Map<string, unknown>();
+  return {
+    getOrSet: jest.fn(async (key: string, loader: () => Promise<unknown>, _ttl?: number) => {
+      if (store.has(key)) return store.get(key);
+      const value = await loader();
+      store.set(key, value);
+      return value;
+    }),
+    invalidatePrefix: jest.fn(),
+  };
+}
+
+function buildHandler(
+  prisma = buildPrisma(),
+  pricing = buildPricing(),
+  cache = buildCache(),
+) {
+  const handler = new ListPublicPackagesHandler(
+    prisma as never,
+    pricing as never,
+    cache as never,
+  );
+  return { handler, prisma, pricing, cache };
 }
 
 describe('ListPublicPackagesHandler', () => {
@@ -114,6 +140,23 @@ describe('ListPublicPackagesHandler', () => {
     expect(result).toEqual([]);
     // computeMany is invoked with an empty batch and returns [].
     expect(pricing.computeMany).toHaveBeenCalledWith([]);
+  });
+
+  it('caches the catalog: the loader runs once across two calls (P1-20)', async () => {
+    const { handler, prisma, pricing, cache } = buildHandler();
+    prisma.sessionPackage.findMany.mockResolvedValue([publicPackage]);
+
+    const first = await handler.execute();
+    const second = await handler.execute();
+
+    // Same payload served both times, but the underlying loader (DB + pricing)
+    // executed exactly once — the second call is a cache hit.
+    expect(second).toEqual(first);
+    expect(cache.getOrSet).toHaveBeenCalledTimes(2);
+    expect(cache.getOrSet.mock.calls[0][0]).toBe('ref:public-packages');
+    expect(cache.getOrSet.mock.calls[0][2]).toBe(300);
+    expect(prisma.sessionPackage.findMany).toHaveBeenCalledTimes(1);
+    expect(pricing.computeMany).toHaveBeenCalledTimes(1);
   });
 
   it('prices each package independently when several are public', async () => {

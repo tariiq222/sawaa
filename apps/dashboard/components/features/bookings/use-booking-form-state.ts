@@ -223,7 +223,13 @@ export function useBookingFormState() {
    * the full (client, service, employee, duration) triple.
    */
   const selectDurationOption = useCallback((durationOptionId: string | null) => {
-    setState((prev) => ({ ...prev, durationOptionId }))
+    // Changing the duration changes both the available slots and the price,
+    // so any previously-picked date/time is reset to force a fresh choice.
+    setState((prev) =>
+      prev.durationOptionId === durationOptionId
+        ? prev
+        : { ...prev, durationOptionId, date: null, startTime: null },
+    )
   }, [])
 
   /** Selecting a date resets time */

@@ -25,6 +25,7 @@ interface TxMock {
   payment: { findUnique: jest.Mock; update: jest.Mock; aggregate: jest.Mock };
   invoice: { update: jest.Mock };
   activityLog: { create: jest.Mock };
+  outboxEvent: { create: jest.Mock };
 }
 
 const defaultInvoice: InvoiceRow = {
@@ -47,6 +48,7 @@ function buildTx(opts: { currentStatus?: PaymentStatus; paidAfter?: number } = {
     },
     invoice: { update: jest.fn().mockResolvedValue({}) },
     activityLog: { create: jest.fn().mockResolvedValue({}) },
+    outboxEvent: { create: jest.fn().mockResolvedValue({ id: 'outbox_1' }) },
   };
 }
 
@@ -89,12 +91,11 @@ function buildMoyasar(statusByRef: Record<string, { status: string; amount: numb
   };
 }
 
-const buildCron = (prisma: unknown, tx: TxMock, moyasar: unknown, eventBus: { publish: jest.Mock }) =>
+const buildCron = (prisma: unknown, tx: TxMock, moyasar: unknown) =>
   new ReconcilePaymentsCron(
     prisma as never,
     { withTransaction: jest.fn((fn: (t: TxMock) => unknown) => fn(tx)) } as never,
     moyasar as never,
-    eventBus as never,
     null,
   );
 
@@ -113,13 +114,12 @@ describe('ReconcilePaymentsCron', () => {
   });
   afterEach(() => jest.restoreAllMocks());
 
-  it('finalizes a fully-paid card payment → COMPLETED + invoice PAID + PaymentCompletedEvent', async () => {
+  it('finalizes a fully-paid card payment → COMPLETED + invoice PAID + outbox PaymentCompletedEvent', async () => {
     const tx = buildTx({ paidAfter: 10_000 });
     const prisma = buildPrisma({ stuckRows: [row()] });
     const moyasar = buildMoyasar({ m_1: { status: 'paid', amount: 10_000 } });
-    const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
 
-    await buildCron(prisma, tx, moyasar, eventBus).execute();
+    await buildCron(prisma, tx, moyasar).execute();
 
     expect(moyasar.getPaymentStatus).toHaveBeenCalledWith(DEFAULT_ORG_ID, 'm_1');
     expect(tx.payment.update).toHaveBeenCalledWith({
@@ -130,99 +130,129 @@ describe('ReconcilePaymentsCron', () => {
       where: { id: 'inv_1' },
       data: expect.objectContaining({ status: 'PAID' }),
     });
-    expect(eventBus.publish).toHaveBeenCalledTimes(1);
-    expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.completed', expect.anything());
+    expect(tx.outboxEvent.create).toHaveBeenCalledTimes(1);
+    expect(tx.outboxEvent.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          aggregateId: 'inv_1',
+          eventType: 'finance.payment.completed',
+        }),
+      }),
+    );
   });
 
-  it('lands PARTIALLY_PAID and emits no completion event for a non-deposit partial top-up', async () => {
+  // P1-12: the domain event MUST be staged in the SAME transaction as the
+  // payment/invoice write. If it were published after commit and the process
+  // crashed in that window, the reconcile cron — which re-reads the row and
+  // no-ops once it is COMPLETED — could never re-emit it, leaving a paid
+  // booking unconfirmed forever. Asserting the create happens on the tx client
+  // (not a post-commit publish) proves the event cannot be lost.
+  it('writes the completion event to the outbox inside the transaction', async () => {
+    const tx = buildTx({ paidAfter: 10_000 });
+    const prisma = buildPrisma({ stuckRows: [row()] });
+    const moyasar = buildMoyasar({ m_1: { status: 'paid', amount: 10_000 } });
+
+    await buildCron(prisma, tx, moyasar).execute();
+
+    // The outbox row is created via the tx client, and the payment update on the
+    // same tx client must have happened in the same unit of work.
+    expect(tx.outboxEvent.create).toHaveBeenCalled();
+    expect(tx.payment.update).toHaveBeenCalled();
+    const updateOrder = tx.payment.update.mock.invocationCallOrder[0];
+    const outboxOrder = tx.outboxEvent.create.mock.invocationCallOrder[0];
+    expect(outboxOrder).toBeGreaterThan(updateOrder);
+  });
+
+  it('lands PARTIALLY_PAID and stages no completion event for a non-deposit partial top-up', async () => {
     const tx = buildTx({ paidAfter: 6_000 }); // only part of the 10000 total collected
     const prisma = buildPrisma({ stuckRows: [row({ amount: 6_000 })] });
     const moyasar = buildMoyasar({ m_1: { status: 'paid', amount: 6_000 } });
-    const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
 
-    await buildCron(prisma, tx, moyasar, eventBus).execute();
+    await buildCron(prisma, tx, moyasar).execute();
 
     expect(tx.invoice.update).toHaveBeenCalledWith({
       where: { id: 'inv_1' },
       data: expect.objectContaining({ status: 'PARTIALLY_PAID' }),
     });
-    expect(eventBus.publish).not.toHaveBeenCalled();
+    expect(tx.outboxEvent.create).not.toHaveBeenCalled();
   });
 
-  it('emits DepositPaidEvent when a deposit-sized payment lands PARTIALLY_PAID', async () => {
+  it('stages DepositPaidEvent in the outbox when a deposit-sized payment lands PARTIALLY_PAID', async () => {
     const tx = buildTx({ paidAfter: 3_000 });
     const prisma = buildPrisma({
       stuckRows: [row({ amount: 3_000 })],
       deposit: { depositEnabled: true, depositAmount: 3_000 },
     });
     const moyasar = buildMoyasar({ m_1: { status: 'paid', amount: 3_000 } });
-    const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
 
-    await buildCron(prisma, tx, moyasar, eventBus).execute();
+    await buildCron(prisma, tx, moyasar).execute();
 
-    expect(eventBus.publish).toHaveBeenCalledTimes(1);
-    expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.deposit_paid', expect.anything());
+    expect(tx.outboxEvent.create).toHaveBeenCalledTimes(1);
+    expect(tx.outboxEvent.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ eventType: 'finance.payment.deposit_paid' }),
+      }),
+    );
   });
 
-  it('finalizes a failed/voided payment → FAILED + PaymentFailedEvent', async () => {
+  it('finalizes a failed/voided payment → FAILED + outbox PaymentFailedEvent', async () => {
     const tx = buildTx();
     const prisma = buildPrisma({ stuckRows: [row()] });
     const moyasar = buildMoyasar({ m_1: { status: 'failed', amount: 10_000 } });
-    const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
 
-    await buildCron(prisma, tx, moyasar, eventBus).execute();
+    await buildCron(prisma, tx, moyasar).execute();
 
     expect(tx.payment.update).toHaveBeenCalledWith({
       where: { id: 'pay_1' },
       data: expect.objectContaining({ status: PaymentStatus.FAILED }),
     });
     expect(tx.invoice.update).not.toHaveBeenCalled();
-    expect(eventBus.publish).toHaveBeenCalledWith('finance.payment.failed', expect.anything());
+    expect(tx.outboxEvent.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ eventType: 'finance.payment.failed' }),
+      }),
+    );
   });
 
   it('leaves a still-initiated payment untouched (client may be mid-3DS)', async () => {
     const tx = buildTx();
     const prisma = buildPrisma({ stuckRows: [row()] });
     const moyasar = buildMoyasar({ m_1: { status: 'initiated', amount: 10_000 } });
-    const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
 
-    await buildCron(prisma, tx, moyasar, eventBus).execute();
+    await buildCron(prisma, tx, moyasar).execute();
 
     expect(tx.payment.update).not.toHaveBeenCalled();
-    expect(eventBus.publish).not.toHaveBeenCalled();
+    expect(tx.outboxEvent.create).not.toHaveBeenCalled();
   });
 
   it('refuses to finalize when Moyasar amount does not match the row amount', async () => {
     const tx = buildTx();
     const prisma = buildPrisma({ stuckRows: [row({ amount: 10_000 })] });
     const moyasar = buildMoyasar({ m_1: { status: 'paid', amount: 9_999 } });
-    const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
 
-    await buildCron(prisma, tx, moyasar, eventBus).execute();
+    await buildCron(prisma, tx, moyasar).execute();
 
     expect(tx.payment.update).not.toHaveBeenCalled();
-    expect(eventBus.publish).not.toHaveBeenCalled();
+    expect(tx.outboxEvent.create).not.toHaveBeenCalled();
   });
 
   it('no-ops (no event) when a webhook already finalized the row inside the tx', async () => {
     const tx = buildTx({ currentStatus: PaymentStatus.COMPLETED });
     const prisma = buildPrisma({ stuckRows: [row()] });
     const moyasar = buildMoyasar({ m_1: { status: 'paid', amount: 10_000 } });
-    const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
 
-    await buildCron(prisma, tx, moyasar, eventBus).execute();
+    await buildCron(prisma, tx, moyasar).execute();
 
     expect(tx.payment.update).not.toHaveBeenCalled();
-    expect(eventBus.publish).not.toHaveBeenCalled();
+    expect(tx.outboxEvent.create).not.toHaveBeenCalled();
   });
 
   it('is a no-op when there are no stuck rows', async () => {
     const tx = buildTx();
     const prisma = buildPrisma({ stuckRows: [] });
     const moyasar = buildMoyasar({});
-    const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
 
-    await buildCron(prisma, tx, moyasar, eventBus).execute();
+    await buildCron(prisma, tx, moyasar).execute();
 
     expect(moyasar.getPaymentStatus).not.toHaveBeenCalled();
   });
@@ -236,9 +266,8 @@ describe('ReconcilePaymentsCron', () => {
         .mockRejectedValueOnce(new Error('network'))
         .mockResolvedValueOnce({ id: 'm_ok', status: 'paid', amount: 10_000, currency: 'SAR' }),
     };
-    const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
 
-    await buildCron(prisma, tx, moyasar, eventBus).execute();
+    await buildCron(prisma, tx, moyasar).execute();
 
     expect(moyasar.getPaymentStatus).toHaveBeenCalledTimes(2);
     expect(tx.payment.update).toHaveBeenCalledWith({
@@ -251,9 +280,8 @@ describe('ReconcilePaymentsCron', () => {
     const tx = buildTx();
     const prisma = buildPrisma({ stuckRows: [] });
     const moyasar = buildMoyasar({});
-    const eventBus = { publish: jest.fn().mockResolvedValue(undefined) };
 
-    await buildCron(prisma, tx, moyasar, eventBus).execute();
+    await buildCron(prisma, tx, moyasar).execute();
 
     const call = (prisma.payment.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where).toEqual(

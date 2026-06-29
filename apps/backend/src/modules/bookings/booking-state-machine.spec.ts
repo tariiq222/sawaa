@@ -109,8 +109,49 @@ describe('BookingStateMachine — assertTransition', () => {
       expect(assertTransition(BookingStatus.CANCEL_REQUESTED, 'APPROVE_CANCEL')).toBe(BookingStatus.CANCELLED);
     });
 
-    it('REJECT_CANCEL: CANCEL_REQUESTED → CONFIRMED', () => {
-      expect(assertTransition(BookingStatus.CANCEL_REQUESTED, 'REJECT_CANCEL')).toBe(BookingStatus.CONFIRMED);
+    it('REJECT_CANCEL without restoreTo: CANCEL_REQUESTED → PENDING (safe default, never CONFIRMED)', () => {
+      // P1-9 regression: rejecting a cancel must NOT promote an unpaid booking to
+      // CONFIRMED. With no known pre-request status it falls back to PENDING.
+      expect(assertTransition(BookingStatus.CANCEL_REQUESTED, 'REJECT_CANCEL')).toBe(BookingStatus.PENDING);
+      expect(assertTransition(BookingStatus.CANCEL_REQUESTED, 'REJECT_CANCEL')).not.toBe(BookingStatus.CONFIRMED);
+    });
+
+    it('REJECT_CANCEL restores the pre-request status from BookingStatusLog.fromStatus', () => {
+      // A confirmed (paid) booking whose cancel is rejected returns to CONFIRMED.
+      expect(
+        assertTransition(BookingStatus.CANCEL_REQUESTED, 'REJECT_CANCEL', BookingStatus.CONFIRMED),
+      ).toBe(BookingStatus.CONFIRMED);
+      // A deposit-paid booking returns to DEPOSIT_PAID, not CONFIRMED.
+      expect(
+        assertTransition(BookingStatus.CANCEL_REQUESTED, 'REJECT_CANCEL', BookingStatus.DEPOSIT_PAID),
+      ).toBe(BookingStatus.DEPOSIT_PAID);
+      // A pending booking returns to PENDING.
+      expect(
+        assertTransition(BookingStatus.CANCEL_REQUESTED, 'REJECT_CANCEL', BookingStatus.PENDING),
+      ).toBe(BookingStatus.PENDING);
+    });
+
+    it('P1-9: REJECT_CANCEL on an unpaid (AWAITING_PAYMENT) booking restores AWAITING_PAYMENT, not CONFIRMED', () => {
+      // The exact bug: an unpaid booking that requested cancel must NOT be promoted
+      // to CONFIRMED when the cancel is rejected — it stays awaiting payment.
+      const restored = assertTransition(
+        BookingStatus.CANCEL_REQUESTED,
+        'REJECT_CANCEL',
+        BookingStatus.AWAITING_PAYMENT,
+      );
+      expect(restored).toBe(BookingStatus.AWAITING_PAYMENT);
+      expect(restored).not.toBe(BookingStatus.CONFIRMED);
+    });
+
+    it('REJECT_CANCEL rejects a non-restorable pre-request status', () => {
+      // CONFIRMED/PENDING/AWAITING_PAYMENT/DEPOSIT_PAID are the only legal sources of
+      // CANCEL_REQUESTED; anything else (e.g. a terminal status) must be refused.
+      expect(() =>
+        assertTransition(BookingStatus.CANCEL_REQUESTED, 'REJECT_CANCEL', BookingStatus.CANCELLED),
+      ).toThrow(BadRequestException);
+      expect(() =>
+        assertTransition(BookingStatus.CANCEL_REQUESTED, 'REJECT_CANCEL', BookingStatus.CANCEL_REQUESTED),
+      ).toThrow(BadRequestException);
     });
 
     it('COMPLETE: CONFIRMED → COMPLETED', () => {

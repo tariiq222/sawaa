@@ -6,6 +6,7 @@ import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { TokenService } from '../shared/token.service';
 import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/identifier-detector';
 import { flattenPermissions } from '../casl/flatten-permissions';
+import { loadSystemRolePermissions } from '../shared/load-system-role-permissions';
 import type { VerifyDashboardOtpCommand } from './verify-dashboard-otp.command';
 
 const LOCKOUT_WINDOW_MINUTES = 15;
@@ -146,6 +147,10 @@ export class VerifyDashboardOtpHandler {
 
     const [firstName = '', ...rest] = (user.name ?? '').trim().split(/\s+/);
 
+    // P1-8: load DB system-role permissions so the dashboard-OTP login response
+    // carries the same effective permissions JwtStrategy enforces.
+    const systemRolePermissions = await loadSystemRolePermissions(this.prisma, user.role);
+
     return {
       ...tokens,
       expiresIn: 900,
@@ -164,6 +169,7 @@ export class VerifyDashboardOtpHandler {
         permissions: flattenPermissions({
           role: user.role,
           customRole: user.customRole,
+          systemRolePermissions,
         }),
       },
     };

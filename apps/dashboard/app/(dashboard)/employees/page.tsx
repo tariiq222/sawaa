@@ -43,6 +43,8 @@ function EmployeesPageInner() {
     setSort,
     hasFilters,
     resetFilters,
+    page,
+    setPage,
   } = useEmployees()
 
   return (
@@ -83,6 +85,8 @@ function EmployeesPageInner() {
         setSort={setSort}
         hasFilters={hasFilters}
         resetFilters={resetFilters}
+        page={page}
+        setPage={setPage}
       />
 
     </ListPageShell>

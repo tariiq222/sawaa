@@ -92,11 +92,31 @@ describe('ClientRefreshHandler', () => {
     ]);
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 1 });
-    prisma.client.findFirst.mockResolvedValue({ id: 'c1', email: 'a@b.com', isActive: true, deletedAt: null });
+    prisma.client.findFirst.mockResolvedValue({ id: 'c1', email: 'a@b.com', isActive: true, deletedAt: null, tokenVersion: 0 });
     clientTokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', rawRefresh: 'rt' });
 
     const result = await handler.execute('rawToken123', 'c1');
     expect(result.accessToken).toBe('at');
     expect(result.refreshToken).toBe('rt');
+  });
+
+  // P1-7: refresh must carry the live tokenVersion so rotated access tokens are
+  // not rejected by the strategy after a password reset bumped the version.
+  it('passes the live tokenVersion through on refresh (P1-7)', async () => {
+    prisma.clientRefreshToken.findMany.mockResolvedValue([
+      { id: 't1', tokenHash: 'h1', tokenSelector: 'rawToken' },
+    ]);
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+    prisma.clientRefreshToken.updateMany.mockResolvedValue({ count: 1 });
+    prisma.client.findFirst.mockResolvedValue({ id: 'c1', email: 'a@b.com', isActive: true, deletedAt: null, tokenVersion: 3 });
+    clientTokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', rawRefresh: 'rt' });
+
+    await handler.execute('rawToken123', 'c1');
+
+    expect(clientTokens.issueTokenPair).toHaveBeenCalledWith({
+      id: 'c1',
+      email: 'a@b.com',
+      tokenVersion: 3,
+    });
   });
 });

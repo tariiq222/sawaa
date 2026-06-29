@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
+import { CacheService } from '../../../../infrastructure/cache';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
+import {
+  PUBLIC_PACKAGES_CACHE_KEY,
+  PUBLIC_PACKAGES_CACHE_TTL_SECONDS,
+} from './public-packages.cache';
 
 /**
  * Public, unauthenticated catalog of sellable session packages.
@@ -16,15 +21,31 @@ import { ComputePackagePriceService } from '../../compute-package-price.service'
  * price the client sees is identical to what gets frozen at purchase time.
  *
  * Ordered by (sortOrder asc, createdAt desc) to match the dashboard list order.
+ *
+ * Read-through cached (P1-20): the catalog is unauthenticated slow-changing
+ * reference data, so the whole computed payload is cached under a single fixed
+ * key for {@link PUBLIC_PACKAGES_CACHE_TTL_SECONDS}. Cache failures fall through
+ * to the loader (best-effort). Invalidate with
+ * `CacheService.invalidatePrefix(PUBLIC_PACKAGES_CACHE_KEY)` from the package /
+ * department / category / duration-option mutation handlers.
  */
 @Injectable()
 export class ListPublicPackagesHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pricing: ComputePackagePriceService,
+    private readonly cache: CacheService,
   ) {}
 
   async execute() {
+    return this.cache.getOrSet(
+      PUBLIC_PACKAGES_CACHE_KEY,
+      () => this.load(),
+      PUBLIC_PACKAGES_CACHE_TTL_SECONDS,
+    );
+  }
+
+  private async load() {
     const packages = await this.prisma.sessionPackage.findMany({
       where: { isPublic: true, isActive: true, archivedAt: null },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],

@@ -49,13 +49,15 @@ function formatDate(d: Date, isRTL: boolean): string {
 }
 
 export default function BookingConfirmScreen() {
-  const { serviceId, employeeId, branchId, deliveryType, scheduledAt, durationOptionId } = useLocalSearchParams<{
+  const { serviceId, employeeId, branchId, deliveryType, scheduledAt, durationOptionId, chargedPrice, currency } = useLocalSearchParams<{
     serviceId?: string;
     employeeId?: string;
     branchId?: string;
     deliveryType?: DeliveryType;
     scheduledAt?: string;
     durationOptionId?: string;
+    chargedPrice?: string;
+    currency?: string;
   }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -108,9 +110,18 @@ export default function BookingConfirmScreen() {
   const kindAr = isOnline ? 'استشارة عن بُعد' : 'موعد عيادة';
   const kindEn = isOnline ? 'Remote consultation' : 'In-clinic visit';
 
-  // service.price is integer halalas (API). VAT/total are computed
-  // server-side on the invoice — not derived client-side here.
-  const subtotal = service ? Number(service.price) : 0;
+  // Prefer the practitioner's charged price (integer halalas) selected in the
+  // duration/delivery step — this is the price the backend will actually
+  // invoice. Fall back to the service base price only when no option was
+  // carried (P1-22: previously always showed the base price). VAT/total are
+  // computed server-side on the invoice — not derived client-side here.
+  const carriedPrice = chargedPrice != null && chargedPrice !== '' ? Number(chargedPrice) : null;
+  const subtotal =
+    carriedPrice != null && Number.isFinite(carriedPrice)
+      ? carriedPrice
+      : service
+        ? Number(service.price)
+        : 0;
   const total = subtotal;
   const formatMoney = (halalas: number) =>
     `${formatHalalas(halalas, { locale: dir.isRTL ? 'ar-SA' : 'en-US' })} ⃁`;
@@ -155,7 +166,7 @@ export default function BookingConfirmScreen() {
         scheduledAt,
         durationOptionId,
         amount: String(total),
-        currency: service?.currency,
+        currency: currency ?? service?.currency,
       },
     });
   };
