@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
+import { MinioService } from '../../../infrastructure/storage/minio.service';
+import { signMediaImageUrl } from '../../media/media-image-url.helper';
 import { EventBusService } from '../../../infrastructure/events';
 import { ServiceDeactivatedEvent } from '../events/service-deactivated.event';
 import { ServiceReactivatedEvent } from '../events/service-reactivated.event';
@@ -11,11 +14,17 @@ export type UpdateServiceCommand = UpdateServiceDto & { serviceId: string };
 
 @Injectable()
 export class UpdateServiceHandler {
+  private readonly mediaBucket: string;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventBus: EventBusService,
     private readonly cache: CacheService,
-  ) {}
+    private readonly storage: MinioService,
+    config: ConfigService,
+  ) {
+    this.mediaBucket = config.getOrThrow<string>('MINIO_BUCKET');
+  }
 
   async execute(dto: UpdateServiceCommand) {
     const service = await this.prisma.service.findFirst({
@@ -110,6 +119,13 @@ export class UpdateServiceHandler {
       await this.eventBus.publish(event.eventName, event.toEnvelope()).catch(() => undefined);
     }
 
-    return updated;
+    // Sign the stored image keys at read time (audit D.1).
+    return {
+      ...updated,
+      imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, updated.imageUrl),
+      category: updated.category
+        ? { ...updated.category, imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, updated.category.imageUrl) }
+        : updated.category,
+    };
   }
 }

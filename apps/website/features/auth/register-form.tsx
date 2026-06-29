@@ -3,6 +3,7 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useT } from '@/features/locale/locale-provider';
+import type { MessageKey } from '@/features/locale/dictionary';
 import { validatePassword, normalizeSaudiPhone } from './auth.schema';
 import { clientRegisterApi, getMeApi } from './auth.api';
 import { setClient } from './auth-store';
@@ -91,7 +92,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     setError(null);
     const pwError = validatePassword(password);
     if (pwError) {
-      setError(pwError);
+      setError(t(pwError as MessageKey));
       return;
     }
     if (!otpToken) {

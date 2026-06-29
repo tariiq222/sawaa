@@ -75,14 +75,19 @@ describe('ContactForm', () => {
     );
   });
 
-  it('surfaces the API error message when submission fails', async () => {
-    submitMock.mockRejectedValue(new Error('Network down'));
+  it('shows a fixed i18n failure message and never the raw API error', async () => {
+    // The raw error (which may be English / JSON from the backend) must not be
+    // rendered — the form shows a fixed plain message via the i18n layer.
+    submitMock.mockRejectedValue(new Error('{"statusCode":400,"message":"Network down"}'));
     render(withLocale('en', <ContactForm />));
     fillField(/name/i, 'Sara');
     fillField(/email/i, 'sara@test.com');
     fillField(/message/i, 'Looking forward to the session.');
     fireEvent.click(screen.getByRole('button', { name: /send/i }));
-    await waitFor(() => expect(screen.getByText('Network down')).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText(/Couldn't send your message\. Please try again\./i)).toBeTruthy(),
+    );
+    expect(screen.queryByText(/Network down/)).toBeNull();
   });
 
   it('renders Arabic validation error when locale is ar', async () => {

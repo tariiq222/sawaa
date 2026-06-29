@@ -1,8 +1,10 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../infrastructure/database';
 import { EventBusService } from '../../../infrastructure/events';
 import { CacheService } from '../../../infrastructure/cache';
+import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { CreateServiceHandler } from './create-service.handler';
 
 describe('CreateServiceHandler', () => {
@@ -18,6 +20,8 @@ describe('CreateServiceHandler', () => {
     } },
     { provide: EventBusService, useValue: { publish: jest.fn().mockResolvedValue(undefined) } },
     { provide: CacheService, useValue: { getOrSet: (_k: string, l: () => Promise<unknown>) => l(), invalidatePrefix: jest.fn() } },
+    { provide: MinioService, useValue: { getSignedUrl: jest.fn((bucket: string, key: string) => Promise.resolve(`signed:${bucket}/${key}`)) } },
+    { provide: ConfigService, useValue: { getOrThrow: jest.fn(() => 'sawaa-media') } },
       ],
     }).compile();
 

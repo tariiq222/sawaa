@@ -181,7 +181,9 @@ describe('ProfileTab', () => {
       expect(updateMock).not.toHaveBeenCalled();
     });
 
-    it('shows the email-taken message when the API returns 409 Conflict', async () => {
+    it('shows a neutral conflict message when the API returns 409 Conflict', async () => {
+      // 409 covers a duplicate email OR phone with no machine-readable code,
+      // so the message stays neutral instead of naming the email specifically.
       updateMock.mockRejectedValue(new ApiError(409, 'Conflict', {}, 'EMAIL_TAKEN'));
       render(withLocale('ar', <ProfileTab />));
 
@@ -190,7 +192,7 @@ describe('ProfileTab', () => {
       });
       fireEvent.click(screen.getByRole('button', { name: 'حفظ التغييرات' }));
 
-      expect(await screen.findByText('هذا البريد الإلكتروني مستخدم في حساب آخر.')).toBeTruthy();
+      expect(await screen.findByText('هذا البريد أو الجوال مستخدم في حساب آخر')).toBeTruthy();
       expect(setClientMock).not.toHaveBeenCalled();
     });
   });

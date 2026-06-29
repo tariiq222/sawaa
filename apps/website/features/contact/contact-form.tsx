@@ -66,9 +66,11 @@ export function ContactForm() {
       });
       setStatus('success');
       setForm(INITIAL);
-    } catch (err) {
+    } catch {
+      // Render a fixed plain-Arabic failure message via i18n; never surface the
+      // raw backend error text (English / JSON) to the user.
       setStatus('error');
-      setErrorMsg((err as Error).message);
+      setErrorMsg(t('contact.form.errors.submitFailed'));
     }
   };
 

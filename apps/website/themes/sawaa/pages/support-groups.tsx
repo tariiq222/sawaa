@@ -3,89 +3,29 @@ import {
   ArrowLeft,
   BadgeCheck,
   Users,
-  Heart,
-  HandHeart,
-  Baby,
-  Smile,
-  Brain,
-  ClipboardList,
-  RefreshCw,
-  Sparkles,
-  type LucideIcon,
+  CalendarDays,
+  Tag,
 } from 'lucide-react';
-import { getPublicCatalog, findDepartment } from '@/features/public-catalog/public';
-import { listPublicEmployees } from '@/features/therapists/public';
+import { getPublicGroupSessions, type SupportGroup } from '@/features/support-groups/support-groups.api';
 import { getLocale } from '@/features/locale/public';
 import { t as translate, type MessageKey } from '@/features/locale/dictionary';
-
-const GROUP_DEPARTMENT_KEYWORDS = { ar: ['جماعية'], en: ['group'] };
-
-const ICON_MAP: Record<string, LucideIcon> = {
-  Sparkles,
-  Users,
-  Heart,
-  HandHeart,
-  Baby,
-  Smile,
-  Brain,
-  ClipboardList,
-  RefreshCw,
-};
-
-function resolveIcon(name: string | null): LucideIcon {
-  if (!name) return Users;
-  return ICON_MAP[name] ?? Users;
-}
-
-interface GroupEntry {
-  id: string;
-  nameAr: string;
-  nameEn: string | null;
-  serviceCount: number;
-  therapistCount: number;
-}
+import { halalasToSarNumber } from '@/lib/money';
 
 export async function SawaaSupportGroupsPage() {
   const locale = await getLocale();
-  const [catalog, therapists] = await Promise.all([
-    getPublicCatalog().catch(() => ({ departments: [], categories: [], services: [] })),
-    listPublicEmployees().catch(() => []),
-  ]);
+  const programs = await getPublicGroupSessions().catch(() => [] as SupportGroup[]);
   const t = (key: MessageKey) => translate(locale, key);
 
-  const groupDept = findDepartment(catalog.departments, GROUP_DEPARTMENT_KEYWORDS);
-  const groups: GroupEntry[] = groupDept
-    ? catalog.categories
-        .filter((c) => c.departmentId === groupDept.id && c.isActive)
-        .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((c) => {
-          const categoryServiceIds = new Set(
-            catalog.services.filter((s) => s.categoryId === c.id).map((s) => s.id),
-          );
-          const therapistCount = therapists.filter((th) =>
-            th.serviceIds.some((id) => categoryServiceIds.has(id)),
-          ).length;
-          return {
-            id: c.id,
-            nameAr: c.nameAr,
-            nameEn: c.nameEn,
-            serviceCount: categoryServiceIds.size,
-            therapistCount,
-          };
-        })
-        .filter((c) => c.serviceCount > 0)
-    : [];
-
-  const total = groups.length;
-  const totalServices = groups.reduce((sum, g) => sum + g.serviceCount, 0);
+  const total = programs.length;
+  const totalSeats = programs.reduce((sum, p) => sum + Math.max(0, p.maxParticipants - p.enrolledCount), 0);
 
   return (
     <>
-      <GroupsHero locale={locale} t={t} total={total} totalServices={totalServices} />
+      <GroupsHero t={t} total={total} totalSeats={totalSeats} />
 
       <section className="relative pb-24 md:pb-28 -mt-6">
         <div className="max-w-[1260px] mx-auto px-5 sm:px-6 md:px-8">
-          <GroupsGrid groups={groups} locale={locale} t={t} />
+          <GroupsGrid programs={programs} locale={locale} t={t} />
         </div>
       </section>
 
@@ -95,13 +35,12 @@ export async function SawaaSupportGroupsPage() {
 }
 
 interface HeroProps {
-  locale: 'ar' | 'en';
   t: (key: MessageKey) => string;
   total: number;
-  totalServices: number;
+  totalSeats: number;
 }
 
-function GroupsHero({ t, total, totalServices }: HeroProps) {
+function GroupsHero({ t, total, totalSeats }: HeroProps) {
   return (
     <section
       className="relative -mt-[88px] pt-[120px] md:pt-[140px] pb-16 md:pb-20 overflow-hidden"
@@ -148,7 +87,7 @@ function GroupsHero({ t, total, totalServices }: HeroProps) {
           style={{ borderTop: '1px solid color-mix(in srgb, var(--sw-secondary-700) 8%, transparent)' }}
         >
           <Stat value={String(total).padStart(2, '0')} label={t('supportGroups.statTotal')} />
-          <Stat value={String(totalServices).padStart(2, '0')} label={t('supportGroups.statServices')} withDivider />
+          <Stat value={String(totalSeats).padStart(2, '0')} label={t('supportGroups.statServices')} withDivider />
           <Stat icon={<BadgeCheck className="w-7 h-7" strokeWidth={1.6} aria-hidden />} label={t('clinics.statLicensed')} withDivider />
         </div>
       </div>
@@ -204,13 +143,13 @@ function Stat({ value, label, icon, withDivider }: StatProps) {
 }
 
 interface GridProps {
-  groups: GroupEntry[];
+  programs: SupportGroup[];
   locale: 'ar' | 'en';
   t: (key: MessageKey) => string;
 }
 
-function GroupsGrid({ groups, locale, t }: GridProps) {
-  if (groups.length === 0) {
+function GroupsGrid({ programs, locale, t }: GridProps) {
+  if (programs.length === 0) {
     return (
       <div className="flex justify-center mt-8">
         <div
@@ -231,15 +170,27 @@ function GroupsGrid({ groups, locale, t }: GridProps) {
     );
   }
 
+  const intl = locale === 'ar' ? 'ar' : 'en-US';
+  const fmtMoney = (halalas: number) =>
+    new Intl.NumberFormat(intl, { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(
+      halalasToSarNumber(halalas),
+    );
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
-      {groups.map((c, i) => {
-        const Icon = resolveIcon(null);
-        const href = `/support-groups/${encodeURIComponent(c.id)}`;
-        const name = locale === 'en' && c.nameEn ? c.nameEn : c.nameAr;
+      {programs.map((p, i) => {
+        const href = `/support-groups/${encodeURIComponent(p.id)}`;
+        const name = locale === 'en' && p.nameEn ? p.nameEn : p.nameAr;
+        const description =
+          (locale === 'en' && p.publicDescriptionEn) ||
+          p.publicDescriptionAr ||
+          p.descriptionAr ||
+          t('supportGroups.defaultDescription');
+        const seatsLeft = Math.max(0, p.maxParticipants - p.enrolledCount);
+        const isFull = seatsLeft === 0;
         return (
           <Link
-            key={c.id}
+            key={p.id}
             href={href}
             aria-label={`${t('supportGroups.viewCta')} — ${name}`}
             className="group relative block bg-white rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sw-primary-500)] focus-visible:ring-offset-2"
@@ -260,31 +211,42 @@ function GroupsGrid({ groups, locale, t }: GridProps) {
                 boxShadow: '0 0 0 1px color-mix(in srgb, var(--primary) 14%, transparent)',
               }}
             >
-              <Icon className="w-7 h-7" style={{ color: 'var(--sw-primary-700)' }} strokeWidth={1.6} />
+              <Users className="w-7 h-7" style={{ color: 'var(--sw-primary-700)' }} strokeWidth={1.6} />
             </div>
 
             <span
               className="inline-flex items-center gap-1 text-[0.65rem] font-bold px-2 py-0.5 rounded-full mb-3"
-              style={{ background: 'var(--sw-primary-50)', color: 'var(--sw-primary-700)' }}
+              style={{
+                background: isFull ? 'var(--sw-neutral-100)' : 'var(--sw-primary-50)',
+                color: isFull ? 'var(--sw-neutral-600)' : 'var(--sw-primary-700)',
+              }}
             >
               <Users className="w-2.5 h-2.5" />
-              {t('supportGroups.badge')}
+              {isFull
+                ? t('supportGroups.detail.full')
+                : `${seatsLeft} ${seatsLeft === 1 ? t('supportGroups.detail.seatLeft') : t('supportGroups.detail.seatsLeft')}`}
             </span>
 
             <h3 className="text-lg font-bold mb-2 leading-tight" style={{ color: 'var(--sw-secondary-700)' }}>
               {name}
             </h3>
             <p className="text-[0.875rem] leading-relaxed mb-5" style={{ color: 'var(--sw-neutral-600)' }}>
-              {t('supportGroups.defaultDescription')}
+              {description}
             </p>
 
             <div
               className="flex items-center gap-4 pt-4 mb-4"
               style={{ borderTop: '1px dashed color-mix(in srgb, var(--sw-secondary-700) 10%, transparent)' }}
             >
-              <Meter value={c.serviceCount} label={t('supportGroups.meterServices')} />
+              <Meter
+                icon={<CalendarDays className="w-3.5 h-3.5" />}
+                value={`${p.daysCount} ${t('supportGroups.detail.days')}`}
+              />
               <span aria-hidden className="w-px self-stretch" style={{ background: 'color-mix(in srgb, var(--sw-secondary-700) 8%, transparent)' }} />
-              <Meter value={c.therapistCount} label={t('supportGroups.meterTherapists')} />
+              <Meter
+                icon={<Tag className="w-3.5 h-3.5" />}
+                value={fmtMoney(Number(p.price))}
+              />
             </div>
 
             <span className="inline-flex items-center gap-1.5 text-[0.75rem] font-bold uppercase tracking-wider" style={{ color: 'var(--sw-primary-700)' }}>
@@ -303,14 +265,12 @@ function GroupsGrid({ groups, locale, t }: GridProps) {
   );
 }
 
-function Meter({ value, label }: { value: number; label: string }) {
+function Meter({ icon, value }: { icon: React.ReactNode; value: string }) {
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[1.25rem] font-extrabold tabular-nums leading-none" style={{ color: 'var(--sw-secondary-700)' }}>
-        {String(value).padStart(2, '0')}
-      </span>
-      <span className="text-[0.7rem]" style={{ color: 'var(--sw-neutral-500)' }}>
-        {label}
+    <div className="inline-flex items-center gap-1.5">
+      <span style={{ color: 'var(--sw-primary-600)' }}>{icon}</span>
+      <span className="text-[0.8125rem] font-bold tabular-nums" style={{ color: 'var(--sw-secondary-700)' }}>
+        {value}
       </span>
     </div>
   );

@@ -1,4 +1,5 @@
 import type { SupportGroup } from './support-groups.api';
+import { halalasToSarNumber } from '@/lib/money';
 
 interface SupportGroupCardProps {
   group: SupportGroup;
@@ -7,12 +8,13 @@ interface SupportGroupCardProps {
 }
 
 export function SupportGroupCard({ group, onSelect, isSelected }: SupportGroupCardProps) {
-  const formatPrice = (price: number, currency: string) => {
-    if (price === 0) return 'مجاني';
+  // `group.price` is integer halalas; convert to SAR before formatting.
+  const formatPrice = (halalas: number, currency: string) => {
+    if (halalas === 0) return 'مجاني';
     return new Intl.NumberFormat('ar-SA', {
       style: 'currency',
       currency,
-    }).format(price);
+    }).format(halalasToSarNumber(halalas));
   };
 
   const formatDate = (dateStr: string) => {

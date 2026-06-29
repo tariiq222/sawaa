@@ -8,6 +8,7 @@ import { useT } from '@/features/locale/locale-provider';
 import type { Locale } from '@/features/locale/locale';
 import { halalasToSar } from '@/lib/money';
 import { isInvoicePayable } from './status-labels';
+import { AccountLoadError } from './load-error';
 import { Calendar, Clock, User as UserIcon, Video, AlertCircle, ArrowRight, CalendarCheck, CalendarRange, Wallet } from 'lucide-react';
 
 interface OverviewTabProps {
@@ -18,11 +19,21 @@ interface OverviewTabProps {
 export function OverviewTab({ locale, onGoToInvoices }: OverviewTabProps) {
   const tt = useT();
 
-  const { data: bookingsData, isLoading: bookingsLoading } = useQuery({
+  const {
+    data: bookingsData,
+    isLoading: bookingsLoading,
+    isError: bookingsError,
+    refetch: refetchBookings,
+  } = useQuery({
     queryKey: ['client', 'bookings'],
     queryFn: () => getMyBookingsApi(1, 50),
   });
-  const { data: invoicesData, isLoading: invoicesLoading } = useQuery({
+  const {
+    data: invoicesData,
+    isLoading: invoicesLoading,
+    isError: invoicesError,
+    refetch: refetchInvoices,
+  } = useQuery({
     queryKey: ['client', 'invoices'],
     queryFn: () => getMyInvoicesApi(),
   });
@@ -37,6 +48,19 @@ export function OverviewTab({ locale, onGoToInvoices }: OverviewTabProps) {
     );
   }
 
+  // A failed/expired fetch on either query must surface a distinct error +
+  // retry state instead of rendering misleading zeros / empty overview tiles.
+  if (bookingsError || invoicesError) {
+    return (
+      <AccountLoadError
+        onRetry={() => {
+          if (bookingsError) void refetchBookings();
+          if (invoicesError) void refetchInvoices();
+        }}
+      />
+    );
+  }
+
   const bookings = bookingsData?.items ?? [];
   const invoices = invoicesData?.items ?? [];
   const now = new Date();
@@ -47,6 +71,9 @@ export function OverviewTab({ locale, onGoToInvoices }: OverviewTabProps) {
   const next = upcoming[0] ?? null;
 
   const unpaidInvoices = invoices.filter((inv) => isInvoicePayable(inv.status));
+  // NOTE (H.7): this sums only the first invoices page (getMyInvoicesApi defaults
+  // to page 1, size 50). The API returns no aggregate unpaid-total field, so for
+  // a client with >50 invoices this is a page-1 figure, not the true grand total.
   const unpaidTotal = unpaidInvoices.reduce((sum, inv) => sum + inv.total, 0);
   const currency = unpaidInvoices[0]?.currency ?? invoices[0]?.currency ?? 'SAR';
 

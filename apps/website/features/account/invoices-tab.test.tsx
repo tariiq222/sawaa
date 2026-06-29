@@ -76,6 +76,30 @@ describe('InvoicesTab', () => {
     expect(await screen.findByText('لا توجد فواتير بعد')).toBeTruthy();
   });
 
+  it('renders a distinct error + retry state on a failed fetch, not the empty state', async () => {
+    getInvoicesMock.mockRejectedValue(new Error('boom'));
+    render(wrap('ar', <InvoicesTab locale="ar" />));
+
+    expect(await screen.findByText('تعذّر تحميل البيانات، حاول مرة أخرى')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /إعادة المحاولة/ })).toBeTruthy();
+    // The "you have nothing" empty state must NOT show on error.
+    expect(screen.queryByText('لا توجد فواتير بعد')).toBeNull();
+  });
+
+  it('retry button refetches the invoices query', async () => {
+    getInvoicesMock.mockRejectedValueOnce(new Error('boom'));
+    getInvoicesMock.mockResolvedValueOnce({
+      items: [invoice()],
+      total: 1,
+      page: 1,
+      pageSize: 50,
+    });
+    render(wrap('ar', <InvoicesTab locale="ar" />));
+
+    fireEvent.click(await screen.findByRole('button', { name: /إعادة المحاولة/ }));
+    expect(await screen.findByText('جلسة إرشاد أسري')).toBeTruthy();
+  });
+
   it('renders invoice cards with Arabic status labels and totals in SAR', async () => {
     getInvoicesMock.mockResolvedValue({
       items: [

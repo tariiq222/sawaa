@@ -8,10 +8,12 @@ import type { ClientBookingItem } from '@sawaa/shared';
 import { getMyBookingsApi } from '@/features/auth/auth.api';
 import { initPayment } from '@/features/booking/booking.api';
 import { paymentStatusKey, PAYMENT_STATUS_TOKEN, isInvoicePayable } from '@/features/account/status-labels';
+import { AccountLoadError } from '@/features/account/load-error';
 import { halalasToSar } from '@/lib/money';
 import { t } from '@/features/locale/dictionary';
 import { useT } from '@/features/locale/locale-provider';
 import type { Locale } from '@/features/locale/locale';
+import { localizedName } from '@/features/locale/localized-name';
 import { Calendar, Clock, MapPin, ChevronRight, CalendarPlus, CreditCard } from 'lucide-react';
 
 interface ClientBookingsListProps {
@@ -38,7 +40,7 @@ export function ClientBookingsList({ locale, initialBookings, initialTotal }: Cl
   const [activeTab, setActiveTab] = useState<Tab>('upcoming');
 
   const hasInitial = !!initialBookings && initialBookings.length > 0;
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['client', 'bookings'],
     queryFn: () => getMyBookingsApi(1, 50),
     initialData: hasInitial
@@ -68,6 +70,12 @@ export function ClientBookingsList({ locale, initialBookings, initialTotal }: Cl
         ))}
       </div>
     );
+  }
+
+  // A failed fetch with no data to fall back on must surface a distinct error +
+  // retry state, not the "book your first session" empty CTA.
+  if (isError && bookings.length === 0) {
+    return <AccountLoadError onRetry={() => void refetch()} />;
   }
 
   if (total === 0 && bookings.length === 0) {
@@ -170,10 +178,15 @@ function BookingsEmpty({ locale }: { locale: Locale }) {
 
 const STATUS_TOKEN: Record<string, string> = {
   PENDING: 'var(--warning)',
+  PENDING_GROUP_FILL: 'var(--warning)',
+  AWAITING_PAYMENT: 'var(--warning)',
+  DEPOSIT_PAID: 'var(--sw-primary-600)',
   CONFIRMED: 'var(--success)',
   COMPLETED: 'var(--sw-primary-600)',
   CANCELLED: 'var(--error)',
   CANCEL_REQUESTED: 'var(--warning)',
+  NO_SHOW: 'var(--error)',
+  EXPIRED: 'var(--sw-neutral-400)',
 };
 
 function BookingCard({
@@ -202,6 +215,9 @@ function BookingCard({
 
   const statusKey = `booking.status.${booking.status.toLowerCase()}`;
   const statusColor = STATUS_TOKEN[booking.status] ?? 'var(--sw-neutral-400)';
+  const serviceLabel = localizedName(locale, booking.serviceName, booking.serviceNameAr);
+  const employeeLabel = localizedName(locale, booking.employeeName, booking.employeeNameAr);
+  const branchLabel = localizedName(locale, booking.branchName, booking.branchNameAr);
   const payKey = paymentStatusKey(booking.paymentStatus);
   const payColor = PAYMENT_STATUS_TOKEN[booking.paymentStatus ?? 'UNKNOWN'] ?? 'var(--warning)';
   const payable = !!booking.invoiceId && isInvoicePayable(booking.invoiceStatus) && !isCancelled(booking);
@@ -246,7 +262,7 @@ function BookingCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-bold text-[var(--sw-secondary-700)] truncate">
-            {booking.serviceName}
+            {serviceLabel}
           </h3>
           <div className="shrink-0 flex items-center gap-1.5 flex-wrap justify-end">
             <StatusPill color={statusColor} label={t(locale, statusKey as never) ?? booking.status} />
@@ -254,8 +270,8 @@ function BookingCard({
           </div>
         </div>
         <p className="text-sm text-[var(--sw-body)] mt-1 truncate">
-          {booking.employeeName}
-          {booking.branchName ? ` · ${booking.branchName}` : ''}
+          {employeeLabel}
+          {booking.branchName ? ` · ${branchLabel}` : ''}
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--sw-neutral-500)]">
           <span className="inline-flex items-center gap-1">
@@ -266,7 +282,7 @@ function BookingCard({
           </span>
           {booking.branchName && (
             <span className="inline-flex items-center gap-1 sm:hidden">
-              <MapPin size={11} aria-hidden="true" /> {booking.branchName}
+              <MapPin size={11} aria-hidden="true" /> {branchLabel}
             </span>
           )}
         </div>

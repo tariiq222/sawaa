@@ -36,11 +36,18 @@ describe('publicFetch', () => {
     expect(url).toBe('http://api.local/api/v1/public/branches');
   });
 
-  it('always sets Content-Type: application/json when not overridden', async () => {
+  it('sets Content-Type: application/json when a body is sent and not overridden', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
+    await publicFetch('/foo', { method: 'POST', body: JSON.stringify({ a: 1 }) });
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.headers.get('Content-Type')).toBe('application/json');
+  });
+
+  it('does not set Content-Type on a bodyless request', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
     await publicFetch('/foo');
     const [, init] = fetchMock.mock.calls[0];
-    expect(init.headers.get('Content-Type')).toBe('application/json');
+    expect(init.headers.get('Content-Type')).toBeNull();
   });
 
   it('preserves caller-provided Content-Type without overriding it', async () => {
@@ -113,12 +120,20 @@ describe('publicFetch', () => {
       }
     });
 
-    it('does not throw when the response is exactly 200 with an empty body (returns undefined cast)', async () => {
+    it('returns undefined on a 204 No Content response without parsing the body', async () => {
+      const jsonSpy = vi.fn(() => Promise.reject(new Error('204 no content')));
+      fetchMock.mockResolvedValue({ ok: true, status: 204, json: jsonSpy });
+      await expect(publicFetch('/foo')).resolves.toBeUndefined();
+      expect(jsonSpy).not.toHaveBeenCalled();
+    });
+
+    it('returns undefined when a 2xx body fails to parse (empty body)', async () => {
       fetchMock.mockResolvedValue({
         ok: true,
-        json: () => Promise.reject(new Error('204 no content')),
+        status: 200,
+        json: () => Promise.reject(new Error('unexpected end of JSON input')),
       });
-      await expect(publicFetch('/foo')).rejects.toThrow(); // publicFetch still tries json() — documents the contract.
+      await expect(publicFetch('/foo')).resolves.toBeUndefined();
     });
   });
 

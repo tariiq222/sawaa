@@ -22,6 +22,15 @@ const buildCache = () =>
     invalidatePrefix: jest.fn(),
   }) as any;
 
+// Category read paths sign `imageUrl` at read time (audit D.1). These mocks
+// satisfy the constructor dependencies; mockCategory has no imageUrl, so the
+// signer returns null and getSignedUrl is never hit here.
+const buildStorage = () =>
+  ({ getSignedUrl: jest.fn((bucket: string, key: string) => Promise.resolve(`signed:${bucket}/${key}`)) }) as any;
+
+const buildConfig = () =>
+  ({ getOrThrow: jest.fn(() => 'sawaa-media') }) as any;
+
 const buildPrisma = () => {
   const prisma = {
     serviceCategory: {
@@ -45,7 +54,7 @@ const buildRlsTransaction = (prisma: ReturnType<typeof buildPrisma>) =>
 describe('CreateCategoryHandler', () => {
   it('creates a category scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new CreateCategoryHandler(prisma as never, buildRlsTransaction(prisma), buildCache());
+    const handler = new CreateCategoryHandler(prisma as never, buildRlsTransaction(prisma), buildCache(), buildStorage(), buildConfig());
     const result = await handler.execute({ nameAr: 'فحص', nameEn: 'Checkup' });
     // org scoping moved to RLS / removed in single-tenant migration
     expect(prisma.serviceCategory.create).toHaveBeenCalledWith(
@@ -58,7 +67,7 @@ describe('CreateCategoryHandler', () => {
 describe('ListCategoriesHandler', () => {
   it('returns categories scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new ListCategoriesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, buildCache());
+    const handler = new ListCategoriesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, buildCache(), buildStorage(), buildConfig());
     const result = await handler.execute({ page: 1, limit: 10 });
     expect(prisma.serviceCategory.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.any(Object) }),
@@ -68,7 +77,7 @@ describe('ListCategoriesHandler', () => {
 
   it('passes search term to where clause', async () => {
     const prisma = buildPrisma();
-    const handler = new ListCategoriesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, buildCache());
+    const handler = new ListCategoriesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, buildCache(), buildStorage(), buildConfig());
     await handler.execute({ page: 1, limit: 10, search: 'فحص' });
     const call = (prisma.serviceCategory.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where).toMatchObject({
@@ -80,7 +89,7 @@ describe('ListCategoriesHandler', () => {
 
   it('omits search clause when search is undefined', async () => {
     const prisma = buildPrisma();
-    const handler = new ListCategoriesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, buildCache());
+    const handler = new ListCategoriesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, buildCache(), buildStorage(), buildConfig());
     await handler.execute({ page: 1, limit: 10 });
     const call = (prisma.serviceCategory.findMany as jest.Mock).mock.calls[0][0];
     expect(call.where).not.toHaveProperty('OR');
@@ -90,7 +99,7 @@ describe('ListCategoriesHandler', () => {
 describe('UpdateCategoryHandler', () => {
   it('updates category fields scoped by org', async () => {
     const prisma = buildPrisma();
-    const handler = new UpdateCategoryHandler(prisma as never, buildRlsTransaction(prisma), buildCache());
+    const handler = new UpdateCategoryHandler(prisma as never, buildRlsTransaction(prisma), buildCache(), buildStorage(), buildConfig());
     await handler.execute({ categoryId: 'cat-1', nameEn: 'Updated' });
     expect(prisma.serviceCategory.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'cat-1' } }),
@@ -101,7 +110,7 @@ describe('UpdateCategoryHandler', () => {
   it('throws NotFoundException when category not found', async () => {
     const prisma = buildPrisma();
     prisma.serviceCategory.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new UpdateCategoryHandler(prisma as never, buildRlsTransaction(prisma), buildCache());
+    const handler = new UpdateCategoryHandler(prisma as never, buildRlsTransaction(prisma), buildCache(), buildStorage(), buildConfig());
     await expect(handler.execute({ categoryId: 'bad', nameEn: 'x' })).rejects.toThrow(NotFoundException);
   });
 });

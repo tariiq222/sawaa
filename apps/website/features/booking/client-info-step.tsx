@@ -146,10 +146,10 @@ export function ClientInfoStep({ slot, service, employee, vatRate = 0, selectedP
         >
           {isAuthed
             ? isAr
-              ? 'تأكّد من بياناتك ثم أكّد الحجز والدفع.'
+              ? 'تأكّد من بياناتك ثم أكّد موعدك والدفع.'
               : 'Confirm your details, then complete the booking and payment.'
             : isAr
-              ? 'لإتمام الحجز، سجّل الدخول إلى حسابك أو أنشئ حساباً جديداً. بياناتك سرّية ولا تُستخدم خارج المركز.'
+              ? 'لإتمام حجز موعدك، سجّل الدخول إلى حسابك أو أنشئ حساباً جديداً. بياناتك سرّية ولا تُستخدم خارج المركز.'
               : 'To book, sign in to your account or create one. Your data is private and never leaves the centre.'}
         </p>
       </header>

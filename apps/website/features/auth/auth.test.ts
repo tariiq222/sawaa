@@ -9,15 +9,15 @@ import {
 describe('auth.schema', () => {
   describe('validatePassword', () => {
     it('rejects passwords shorter than 8 characters', () => {
-      expect(validatePassword('Ab1')).toBe('Password must be at least 8 characters');
+      expect(validatePassword('Ab1')).toBe('auth.password.tooShort');
     });
 
     it('rejects passwords without uppercase letter', () => {
-      expect(validatePassword('abcdefgh1')).toBe('Password must contain at least 1 uppercase letter');
+      expect(validatePassword('abcdefgh1')).toBe('auth.password.needUppercase');
     });
 
     it('rejects passwords without digit', () => {
-      expect(validatePassword('ABCDEFGHa')).toBe('Password must contain at least 1 digit');
+      expect(validatePassword('ABCDEFGHa')).toBe('auth.password.needDigit');
     });
 
     it('accepts valid password', () => {
@@ -27,11 +27,11 @@ describe('auth.schema', () => {
 
   describe('validateEmail', () => {
     it('rejects empty email', () => {
-      expect(validateEmail('')).toBe('Invalid email address');
+      expect(validateEmail('')).toBe('auth.invalidEmail');
     });
 
     it('rejects invalid email format', () => {
-      expect(validateEmail('notanemail')).toBe('Invalid email address');
+      expect(validateEmail('notanemail')).toBe('auth.invalidEmail');
     });
 
     it('accepts valid email', () => {

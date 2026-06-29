@@ -299,7 +299,7 @@ export function SummaryRail(sel: SummarySelection) {
           <rect x="2.5" y="6" width="9" height="6" rx="1.5" />
           <path d="M4.5 6V4.5a2.5 2.5 0 1 1 5 0V6" />
         </svg>
-        {isAr ? 'حجزك وبياناتك سرّية تماماً.' : 'Your booking and details stay fully private.'}
+        {isAr ? 'موعدك وبياناتك سرّية تماماً.' : 'Your booking and details stay fully private.'}
       </p>
     </aside>
   );

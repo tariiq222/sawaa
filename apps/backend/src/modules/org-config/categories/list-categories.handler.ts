@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
-import { toListResponse } from '../../../common/dto';
+import { MinioService } from '../../../infrastructure/storage/minio.service';
+import { signMediaImageUrl } from '../../media/media-image-url.helper';
+import { toListResponse, type ListResponse } from '../../../common/dto';
 import { ListCategoriesDto } from './list-categories.dto';
 import { CATEGORIES_CACHE_PREFIX } from './categories.cache';
 
@@ -10,11 +13,17 @@ export type ListCategoriesQuery = ListCategoriesDto;
 
 @Injectable()
 export class ListCategoriesHandler {
+  private readonly mediaBucket: string;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly cache: CacheService,
-  ) {}
+    private readonly storage: MinioService,
+    config: ConfigService,
+  ) {
+    this.mediaBucket = config.getOrThrow<string>('MINIO_BUCKET');
+  }
 
   async execute(dto: ListCategoriesQuery) {
     const page = dto.page ?? 1;
@@ -31,7 +40,7 @@ export class ListCategoriesHandler {
       search: dto.search ?? null,
     });
 
-    return this.cache.getOrSet(`${CATEGORIES_CACHE_PREFIX}${keyParams}`, async () => {
+    const response = await this.cache.getOrSet(`${CATEGORIES_CACHE_PREFIX}${keyParams}`, async () => {
       const where: Prisma.ServiceCategoryWhereInput = {
         ...(dto.departmentId !== undefined && { departmentId: dto.departmentId }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
@@ -80,5 +89,19 @@ export class ListCategoriesHandler {
 
       return toListResponse(items, total, page, limit);
     });
+
+    // Sign category images at read time. The cached payload holds bare object
+    // keys; mint fresh short-lived presigned URLs per response (signed
+    // concurrently) so the admin preview never serves an expired signature.
+    type CategoryItem = (typeof response.items)[number];
+    const items: CategoryItem[] = await Promise.all(
+      response.items.map(async (cat) => ({
+        ...cat,
+        imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, cat.imageUrl),
+      })),
+    );
+
+    const result: ListResponse<CategoryItem> = { ...response, items };
+    return result;
   }
 }

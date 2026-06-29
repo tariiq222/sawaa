@@ -1,7 +1,15 @@
 import { Test } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
+import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { ListServicesHandler } from './list-services.handler';
+
+const storageProvider = {
+  provide: MinioService,
+  useValue: { getSignedUrl: jest.fn((bucket: string, key: string) => Promise.resolve(`signed:${bucket}/${key}`)) },
+};
+const configProvider = { provide: ConfigService, useValue: { getOrThrow: jest.fn(() => 'sawaa-media') } };
 
 describe('ListServicesHandler', () => {
   let handler: ListServicesHandler;
@@ -26,6 +34,8 @@ describe('ListServicesHandler', () => {
             invalidatePrefix: jest.fn(),
           },
         },
+        storageProvider,
+        configProvider,
       ],
     }).compile();
     handler = module.get(ListServicesHandler);

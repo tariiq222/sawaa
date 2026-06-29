@@ -1,6 +1,9 @@
 import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
+import { MinioService } from '../../../infrastructure/storage/minio.service';
+import { signMediaImageUrl } from '../../media/media-image-url.helper';
 import { EventBusService } from '../../../infrastructure/events';
 import { ServiceCreatedEvent } from '../events/service-created.event';
 import { CreateServiceDto } from './create-service.dto';
@@ -10,11 +13,17 @@ export type CreateServiceCommand = CreateServiceDto;
 
 @Injectable()
 export class CreateServiceHandler {
+  private readonly mediaBucket: string;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventBus: EventBusService,
     private readonly cache: CacheService,
-  ) {}
+    private readonly storage: MinioService,
+    config: ConfigService,
+  ) {
+    this.mediaBucket = config.getOrThrow<string>('MINIO_BUCKET');
+  }
 
   async execute(dto: CreateServiceCommand) {
     this.validateBusinessRules(dto);
@@ -65,7 +74,14 @@ export class CreateServiceHandler {
     const event = new ServiceCreatedEvent({ serviceId: service.id });
     this.eventBus.publish(event.eventName, event.toEnvelope()).catch(() => {});
 
-    return service;
+    // Sign the stored image keys at read time (audit D.1).
+    return {
+      ...service,
+      imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, service.imageUrl),
+      category: service.category
+        ? { ...service.category, imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, service.category.imageUrl) }
+        : service.category,
+    };
   }
 
   private validateBusinessRules(dto: CreateServiceCommand): void {

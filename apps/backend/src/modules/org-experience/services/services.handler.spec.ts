@@ -8,6 +8,13 @@ const cache = {
   getOrSet: jest.fn((_k: string, loader: () => Promise<unknown>) => loader()),
   invalidatePrefix: jest.fn(),
 } as never;
+
+// Service read paths sign `imageUrl` at read time (audit D.1). These mocks
+// satisfy the constructor dependencies; mockService has null imageUrl/category,
+// so the signer returns null and getSignedUrl is never hit here.
+const buildStorage = () =>
+  ({ getSignedUrl: jest.fn((bucket: string, key: string) => Promise.resolve(`signed:${bucket}/${key}`)) }) as never;
+const buildConfig = () => ({ getOrThrow: jest.fn(() => 'sawaa-media') }) as never;
 import { UpdateServiceHandler } from './update-service.handler';
 import { ListServicesHandler } from './list-services.handler';
 import { GetServiceHandler } from './get-service.handler';
@@ -81,7 +88,7 @@ const buildRlsTransaction = (prisma: ReturnType<typeof buildPrisma>) => ({
 describe('CreateServiceHandler', () => {
   it('creates service when name is unique', async () => {
     const prisma = buildPrisma();
-    const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache);
+    const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache, buildStorage(), buildConfig());
     const result = await handler.execute({ nameAr: 'قص الشعر', nameEn: 'Haircut', categoryId: 'cat-1', durationMins: 30, price: 50 });
     expect(prisma.service.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ nameAr: 'قص الشعر' }) }),
@@ -92,7 +99,7 @@ describe('CreateServiceHandler', () => {
   it('throws ConflictException when name already exists', async () => {
     const prisma = buildPrisma();
     prisma.service.findFirst = jest.fn().mockResolvedValue(mockService);
-    const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache);
+    const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache, buildStorage(), buildConfig());
     await expect(
       handler.execute({ nameAr: 'قص الشعر', nameEn: 'Haircut', categoryId: 'cat-1', durationMins: 30, price: 50 }),
     ).rejects.toThrow(ConflictException);
@@ -100,7 +107,7 @@ describe('CreateServiceHandler', () => {
 
   it('throws BadRequestException when depositAmount exceeds price', async () => {
     const prisma = buildPrisma();
-    const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache);
+    const handler = new CreateServiceHandler(prisma as never, buildEventBus() as never, cache, buildStorage(), buildConfig());
     await expect(
       handler.execute({ nameAr: 'خدمة', nameEn: 'Service', categoryId: 'cat-1', durationMins: 30, price: 100, depositEnabled: true, depositAmount: 150 }),
     ).rejects.toThrow(BadRequestException);
@@ -114,7 +121,7 @@ describe('GetServiceHandler', () => {
   it('returns service by id', async () => {
     const prisma = buildPrisma();
     prisma.service.findFirst = jest.fn().mockResolvedValue(mockService);
-    const handler = new GetServiceHandler(prisma as never);
+    const handler = new GetServiceHandler(prisma as never, buildStorage(), buildConfig());
     const result = await handler.execute({ serviceId: serviceUuid });
     expect(prisma.service.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: serviceUuid }) }),
@@ -125,7 +132,7 @@ describe('GetServiceHandler', () => {
   it('throws NotFoundException when service not found', async () => {
     const prisma = buildPrisma();
     prisma.service.findFirst = jest.fn().mockResolvedValue(null);
-    const handler = new GetServiceHandler(prisma as never);
+    const handler = new GetServiceHandler(prisma as never, buildStorage(), buildConfig());
     await expect(handler.execute({ serviceId: serviceUuid })).rejects.toThrow(NotFoundException);
   });
 });
@@ -137,7 +144,7 @@ describe('UpdateServiceHandler', () => {
   it('updates service', async () => {
     const prisma = buildPrisma();
     prisma.service.findFirst = jest.fn().mockResolvedValue(mockService);
-    const handler = new UpdateServiceHandler(prisma as never, buildEventBus() as never, cache);
+    const handler = new UpdateServiceHandler(prisma as never, buildEventBus() as never, cache, buildStorage(), buildConfig());
     const result = await handler.execute({ serviceId, durationMins: 45 });
     expect(prisma.service.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: serviceId }) }),
@@ -147,14 +154,14 @@ describe('UpdateServiceHandler', () => {
 
   it('throws NotFoundException when service not found', async () => {
     const prisma = buildPrisma();
-    const handler = new UpdateServiceHandler(prisma as never, buildEventBus() as never, cache);
+    const handler = new UpdateServiceHandler(prisma as never, buildEventBus() as never, cache, buildStorage(), buildConfig());
     await expect(handler.execute({ serviceId: 'missing', durationMins: 45 })).rejects.toThrow(NotFoundException);
   });
 
   it('throws BadRequestException when depositAmount would exceed updated price', async () => {
     const prisma = buildPrisma();
     prisma.service.findFirst = jest.fn().mockResolvedValue({ ...mockService, depositEnabled: true, depositAmount: '80.00' });
-    const handler = new UpdateServiceHandler(prisma as never, buildEventBus() as never, cache);
+    const handler = new UpdateServiceHandler(prisma as never, buildEventBus() as never, cache, buildStorage(), buildConfig());
     await expect(handler.execute({ serviceId, price: 50 })).rejects.toThrow(BadRequestException);
   });
 
@@ -163,7 +170,7 @@ describe('UpdateServiceHandler', () => {
     prisma.service.findFirst = jest.fn().mockResolvedValue(mockService); // isActive: true
     prisma.service.update = jest.fn().mockResolvedValue({ ...mockService, isActive: false });
     const eventBus = buildEventBus();
-    const handler = new UpdateServiceHandler(prisma as never, eventBus as never, cache);
+    const handler = new UpdateServiceHandler(prisma as never, eventBus as never, cache, buildStorage(), buildConfig());
 
     await handler.execute({ serviceId, isActive: false });
 
@@ -180,7 +187,7 @@ describe('UpdateServiceHandler', () => {
     prisma.service.findFirst = jest.fn().mockResolvedValue(mockServiceInactive); // isActive: false
     prisma.service.update = jest.fn().mockResolvedValue(mockService);
     const eventBus = buildEventBus();
-    const handler = new UpdateServiceHandler(prisma as never, eventBus as never, cache);
+    const handler = new UpdateServiceHandler(prisma as never, eventBus as never, cache, buildStorage(), buildConfig());
 
     await handler.execute({ serviceId, isActive: true });
 
@@ -197,7 +204,7 @@ describe('UpdateServiceHandler', () => {
     prisma.service.findFirst = jest.fn().mockResolvedValue(mockService); // isActive: true
     prisma.service.update = jest.fn().mockResolvedValue(mockService);
     const eventBus = buildEventBus();
-    const handler = new UpdateServiceHandler(prisma as never, eventBus as never, cache);
+    const handler = new UpdateServiceHandler(prisma as never, eventBus as never, cache, buildStorage(), buildConfig());
 
     await handler.execute({ serviceId, isActive: true }); // same value
 
@@ -209,7 +216,7 @@ describe('UpdateServiceHandler', () => {
     prisma.service.findFirst = jest.fn().mockResolvedValue(mockService);
     prisma.service.update = jest.fn().mockResolvedValue(mockService);
     const eventBus = buildEventBus();
-    const handler = new UpdateServiceHandler(prisma as never, eventBus as never, cache);
+    const handler = new UpdateServiceHandler(prisma as never, eventBus as never, cache, buildStorage(), buildConfig());
 
     await handler.execute({ serviceId, durationMins: 45 });
 
@@ -220,7 +227,7 @@ describe('UpdateServiceHandler', () => {
 describe('ListServicesHandler', () => {
   it('returns paginated services', async () => {
     const prisma = buildPrisma();
-    const handler = new ListServicesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, cache);
+    const handler = new ListServicesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, cache, buildStorage(), buildConfig());
     const result = await handler.execute({});
     expect(prisma.service.findMany).toHaveBeenCalled();
     expect(result.items).toHaveLength(1);
@@ -229,7 +236,7 @@ describe('ListServicesHandler', () => {
 
   it('excludes hidden services by default', async () => {
     const prisma = buildPrisma();
-    const handler = new ListServicesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, cache);
+    const handler = new ListServicesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, cache, buildStorage(), buildConfig());
     await handler.execute({});
     const callArgs = (prisma.service.findMany as jest.Mock).mock.calls[0][0] as { where: Record<string, unknown> };
     expect(callArgs.where.isHidden).toBe(false);
@@ -237,7 +244,7 @@ describe('ListServicesHandler', () => {
 
   it('includes hidden services when includeHidden = true', async () => {
     const prisma = buildPrisma();
-    const handler = new ListServicesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, cache);
+    const handler = new ListServicesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, cache, buildStorage(), buildConfig());
     await handler.execute({ includeHidden: true });
     const callArgs = (prisma.service.findMany as jest.Mock).mock.calls[0][0] as { where: Record<string, unknown> };
     expect(callArgs.where.isHidden).toBeUndefined();
@@ -245,7 +252,7 @@ describe('ListServicesHandler', () => {
 
   it('adds search OR clause when search is provided', async () => {
     const prisma = buildPrisma();
-    const handler = new ListServicesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, cache);
+    const handler = new ListServicesHandler(prisma as never, { withTransaction: jest.fn((fn: any) => fn(prisma)) } as never, cache, buildStorage(), buildConfig());
     await handler.execute({ search: 'قص' });
     const callArgs = (prisma.service.findMany as jest.Mock).mock.calls[0][0] as { where: Record<string, unknown> };
     expect(callArgs.where.OR).toBeDefined();

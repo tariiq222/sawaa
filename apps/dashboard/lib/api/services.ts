@@ -68,14 +68,10 @@ export async function uploadCategoryImage(categoryId: string, file: File): Promi
   // Step 1: upload file to media storage (via api client for refresh handling)
   const uploaded = await api.postForm<{ id: string; storageKey: string }>("/dashboard/media/upload", formData)
 
-  // Step 2: get presigned URL — backend max expiry is 900s (15 min)
-  const presignedData = await api.get<{ url: string }>(
-    `/dashboard/media/${uploaded.id}/presigned-url`,
-    { expirySeconds: 900 },
-  )
-
-  // Step 3: attach the image URL to the category
-  return api.patch<ServiceCategory>(`/dashboard/organization/categories/${categoryId}`, { imageUrl: presignedData.url })
+  // Step 2: persist the bare object KEY (not a presigned URL). The backend
+  // mints a short-lived presigned URL at read time. Storing the presigned URL
+  // here would 403 once its signature expired (~15 min) — see audit D.1.
+  return api.patch<ServiceCategory>(`/dashboard/organization/categories/${categoryId}`, { imageUrl: uploaded.storageKey })
 }
 
 /* ─── Services ─── */
@@ -164,14 +160,10 @@ export async function uploadServiceImage(serviceId: string, file: File): Promise
   // Step 1: upload file to media storage (via api client for refresh handling)
   const uploaded = await api.postForm<{ id: string; storageKey: string }>("/dashboard/media/upload", formData)
 
-  // Step 2: get presigned URL — backend max expiry is 900s (15 min)
-  const presignedData = await api.get<{ url: string }>(
-    `/dashboard/media/${uploaded.id}/presigned-url`,
-    { expirySeconds: 900 },
-  )
-
-  // Step 3: attach the image URL to the service
-  return api.patch<Service>(`/dashboard/organization/services/${serviceId}`, { imageUrl: presignedData.url })
+  // Step 2: persist the bare object KEY (not a presigned URL). The backend
+  // mints a short-lived presigned URL at read time. Storing the presigned URL
+  // here would 403 once its signature expired (~15 min) — see audit D.1.
+  return api.patch<Service>(`/dashboard/organization/services/${serviceId}`, { imageUrl: uploaded.storageKey })
 }
 
 /* ─── Service Employees ─── */

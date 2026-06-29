@@ -1,6 +1,6 @@
 import { Controller, Post, Get, Body, Query, UseGuards, Param, ParseUUIDPipe } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiOkResponse, ApiCreatedResponse, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery, ApiOkResponse, ApiCreatedResponse, ApiResponse } from '@nestjs/swagger';
 import { Public } from '../../common/guards/jwt.guard';
 import { ApiPublicResponses } from '../../common/swagger';
 import { CreatePublicBookingHandler } from '../../modules/bookings/public/create-public-booking.handler';
@@ -43,7 +43,13 @@ export class PublicBookingsController {
     schema: {
       type: 'object',
       additionalProperties: true,
-      properties: { invoiceId: { type: 'string', format: 'uuid', nullable: true } },
+      properties: {
+        id: { type: 'string', format: 'uuid', description: 'Created booking ID (read by the website to navigate to the booking/payment page)' },
+        bookingNumber: { type: 'string', description: 'Human-readable booking reference' },
+        status: { type: 'string', description: 'Booking status' },
+        paymentStatus: { type: 'string', description: 'Payment status' },
+        invoiceId: { type: 'string', format: 'uuid', nullable: true },
+      },
     },
   })
   async create(
@@ -81,6 +87,12 @@ export class PublicProgramsController {
   @Throttle({ default: { ttl: 60_000, limit: 60 } })
   @Get()
   @ApiOperation({ summary: 'List public programs (isPublic=true, OPEN|MIN_REACHED, not FULL)' })
+  @ApiQuery({
+    name: 'departmentId',
+    required: false,
+    format: 'uuid',
+    description: 'Optional department filter; when omitted, programs from all departments are returned',
+  })
   @ApiOkResponse({ description: 'Array of programs with computed isFull badge' })
   async list(@Query('departmentId') departmentId?: string) {
     const programs = await this.listPublicPrograms.execute(departmentId);

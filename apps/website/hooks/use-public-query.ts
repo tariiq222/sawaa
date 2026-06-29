@@ -18,6 +18,8 @@ export function usePublicMutation<T, V = unknown>(path: string, method: 'POST' |
     mutationFn: (variables) =>
       publicFetch<T>(path, {
         method,
+        // Public authed mutations rely on the httpOnly session cookie; send it.
+        credentials: 'include',
         body: JSON.stringify(variables),
       }),
   });

@@ -20,6 +20,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { SectionIntro } from '@/features/site-content/public';
+import { safeImageSrc } from '@/lib/image-url';
 import { useLocale, useT } from '@/features/locale/locale-provider';
 import { AnimatedSection } from '../ui/animated-section';
 import { SectionHeader } from '../ui/section-header';
@@ -178,6 +179,8 @@ export function Clinics({ clinics, intro }: Props) {
               const href = `/booking?categoryId=${encodeURIComponent(c.id)}`;
               const name = clinicName(c);
               const description = clinicDescription(c);
+              // Guard against a bare object key reaching next/image (throws).
+              const img = safeImageSrc(c.image);
               return (
                 <AnimatedSection key={c.id} delay={i * 40} className="flex-shrink-0">
                   <Link
@@ -193,16 +196,16 @@ export function Clinics({ clinics, intro }: Props) {
                       className="relative w-full h-[160px] rounded-xl overflow-hidden mb-4 flex items-center justify-center"
                       style={{
                         boxShadow: `0 0 0 1px ${tone.ring}`,
-                        background: c.image
+                        background: img
                           ? undefined
                           : c.iconBgColor
                           ? `${c.iconBgColor}22`
                           : `linear-gradient(135deg, ${tone.soft} 0%, ${tone.ring} 100%)`,
                       }}
                     >
-                      {c.image ? (
+                      {img ? (
                         <Image
-                          src={c.image}
+                          src={img}
                           alt={name}
                           width={300}
                           height={160}

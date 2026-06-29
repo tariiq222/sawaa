@@ -16,8 +16,12 @@ export interface AuthedBookingPayload {
   durationOptionId?: string;
   /** Delivery channel (IN_PERSON or ONLINE) */
   deliveryType?: 'IN_PERSON' | 'ONLINE';
-  /** Legacy booking type — prefer deliveryType for new code */
-  bookingType?: 'INDIVIDUAL' | 'ONLINE' | 'WALK_IN' | 'GROUP';
+  /**
+   * Legacy booking type — prefer deliveryType for new code. Mirrors the backend
+   * `BookingType` enum (INDIVIDUAL | WALK_IN | GROUP); ONLINE is a deliveryType,
+   * not a booking type, so it is rejected in this position by the contract.
+   */
+  bookingType?: 'INDIVIDUAL' | 'WALK_IN' | 'GROUP';
   couponCode?: string;
   notes?: string;
 }
@@ -84,7 +88,7 @@ export async function getPublicAvailability(
   opts: {
     durationOptionId?: string;
     deliveryType?: 'IN_PERSON' | 'ONLINE';
-    bookingType?: 'INDIVIDUAL' | 'ONLINE' | 'WALK_IN' | 'GROUP';
+    bookingType?: 'INDIVIDUAL' | 'WALK_IN' | 'GROUP';
   } = {},
 ): Promise<AvailableSlot[]> {
   const params = new URLSearchParams({ date });

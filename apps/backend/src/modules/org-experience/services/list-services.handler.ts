@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
-import { toListResponse } from '../../../common/dto';
+import { MinioService } from '../../../infrastructure/storage/minio.service';
+import { signMediaImageUrl } from '../../media/media-image-url.helper';
+import { toListResponse, type ListResponse } from '../../../common/dto';
 import { ListServicesDto } from './list-services.dto';
 import { SERVICES_CACHE_PREFIX } from './services.cache';
 
@@ -9,11 +12,17 @@ export type ListServicesCommand = ListServicesDto;
 
 @Injectable()
 export class ListServicesHandler {
+  private readonly mediaBucket: string;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly cache: CacheService,
-  ) {}
+    private readonly storage: MinioService,
+    config: ConfigService,
+  ) {
+    this.mediaBucket = config.getOrThrow<string>('MINIO_BUCKET');
+  }
 
   async execute(dto: ListServicesCommand) {
     const page = dto.page ?? 1;
@@ -32,7 +41,7 @@ export class ListServicesHandler {
       search: dto.search ?? null,
     });
 
-    return this.cache.getOrSet(`${SERVICES_CACHE_PREFIX}${keyParams}`, async () => {
+    const response = await this.cache.getOrSet(`${SERVICES_CACHE_PREFIX}${keyParams}`, async () => {
       const where = {
         ...(dto.includeArchived !== true && { archivedAt: null }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
@@ -93,5 +102,23 @@ export class ListServicesHandler {
 
       return toListResponse(items, total, page, limit);
     });
+
+    // Sign service images (and the embedded category image) at read time. The
+    // cached payload holds bare object keys; mint fresh short-lived presigned
+    // URLs per response (signed concurrently) so the admin list never serves an
+    // expired signature.
+    type ServiceItem = (typeof response.items)[number];
+    const items: ServiceItem[] = await Promise.all(
+      response.items.map(async (svc) => ({
+        ...svc,
+        imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, svc.imageUrl),
+        category: svc.category
+          ? { ...svc.category, imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, svc.category.imageUrl) }
+          : svc.category,
+      })),
+    );
+
+    const result: ListResponse<ServiceItem> = { ...response, items };
+    return result;
   }
 }

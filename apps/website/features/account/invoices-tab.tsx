@@ -10,6 +10,7 @@ import { useT } from '@/features/locale/locale-provider';
 import type { Locale } from '@/features/locale/locale';
 import { halalasToSar } from '@/lib/money';
 import { invoiceStatusKey, INVOICE_STATUS_TOKEN, isInvoicePayable } from './status-labels';
+import { AccountLoadError } from './load-error';
 import { Receipt, Calendar, ArrowRight, CreditCard, RotateCcw } from 'lucide-react';
 
 interface InvoicesTabProps {
@@ -17,7 +18,7 @@ interface InvoicesTabProps {
 }
 
 export function InvoicesTab({ locale }: InvoicesTabProps) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['client', 'invoices'],
     queryFn: () => getMyInvoicesApi(),
   });
@@ -30,6 +31,12 @@ export function InvoicesTab({ locale }: InvoicesTabProps) {
         ))}
       </div>
     );
+  }
+
+  // A failed/expired fetch must surface a distinct error + retry state instead
+  // of collapsing into the "you have nothing" empty state.
+  if (isError) {
+    return <AccountLoadError onRetry={() => void refetch()} />;
   }
 
   const invoices = data?.items ?? [];

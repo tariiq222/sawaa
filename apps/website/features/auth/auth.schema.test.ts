@@ -8,25 +8,21 @@ import {
 
 describe('auth.schema', () => {
   describe('validatePassword', () => {
-    it('rejects an empty string with the length message', () => {
-      expect(validatePassword('')).toBe('Password must be at least 8 characters');
+    it('rejects an empty string with the length key', () => {
+      expect(validatePassword('')).toBe('auth.password.tooShort');
     });
 
     it('rejects a password shorter than 8 characters', () => {
-      expect(validatePassword('Aa1')).toBe('Password must be at least 8 characters');
-      expect(validatePassword('Aa1bbbb')).toBe('Password must be at least 8 characters');
+      expect(validatePassword('Aa1')).toBe('auth.password.tooShort');
+      expect(validatePassword('Aa1bbbb')).toBe('auth.password.tooShort');
     });
 
     it('rejects when no uppercase letter is present', () => {
-      expect(validatePassword('longpassword1')).toBe(
-        'Password must contain at least 1 uppercase letter',
-      );
+      expect(validatePassword('longpassword1')).toBe('auth.password.needUppercase');
     });
 
     it('rejects when no digit is present', () => {
-      expect(validatePassword('LongPassword')).toBe(
-        'Password must contain at least 1 digit',
-      );
+      expect(validatePassword('LongPassword')).toBe('auth.password.needDigit');
     });
 
     it('accepts an 8+ character password with uppercase and a digit', () => {
@@ -36,25 +32,23 @@ describe('auth.schema', () => {
 
     it('checks uppercase before digit (length > uppercase > digit ordering)', () => {
       // Short + no uppercase + no digit → length wins
-      expect(validatePassword('a1')).toBe('Password must be at least 8 characters');
+      expect(validatePassword('a1')).toBe('auth.password.tooShort');
       // Long enough + no uppercase + no digit → uppercase wins
-      expect(validatePassword('longpassword')).toBe(
-        'Password must contain at least 1 uppercase letter',
-      );
+      expect(validatePassword('longpassword')).toBe('auth.password.needUppercase');
     });
   });
 
   describe('validateEmail', () => {
     it('rejects an empty string', () => {
-      expect(validateEmail('')).toBe('Invalid email address');
+      expect(validateEmail('')).toBe('auth.invalidEmail');
     });
 
     it('rejects malformed emails (no @, no domain, no TLD, spaces)', () => {
-      expect(validateEmail('plainaddress')).toBe('Invalid email address');
-      expect(validateEmail('user@')).toBe('Invalid email address');
-      expect(validateEmail('user@domain')).toBe('Invalid email address');
-      expect(validateEmail('@domain.com')).toBe('Invalid email address');
-      expect(validateEmail('user @domain.com')).toBe('Invalid email address');
+      expect(validateEmail('plainaddress')).toBe('auth.invalidEmail');
+      expect(validateEmail('user@')).toBe('auth.invalidEmail');
+      expect(validateEmail('user@domain')).toBe('auth.invalidEmail');
+      expect(validateEmail('@domain.com')).toBe('auth.invalidEmail');
+      expect(validateEmail('user @domain.com')).toBe('auth.invalidEmail');
     });
 
     it('accepts well-formed emails', () => {

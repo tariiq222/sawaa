@@ -1,12 +1,15 @@
 import { Test } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
+import { MinioService } from '../../../infrastructure/storage/minio.service';
 import { ListCategoriesHandler } from './list-categories.handler';
 
 describe('ListCategoriesHandler', () => {
   let handler: ListCategoriesHandler;
   let cache: { getOrSet: jest.Mock; invalidatePrefix: jest.Mock };
   let rls: { withTransaction: jest.Mock };
+  let storage: { getSignedUrl: jest.Mock };
 
   beforeEach(async () => {
     cache = {
@@ -27,16 +30,60 @@ describe('ListCategoriesHandler', () => {
       ),
     };
 
+    storage = {
+      getSignedUrl: jest.fn((bucket: string, key: string) =>
+        Promise.resolve(`https://signed.example.com/${bucket}/${key}?sig=test`),
+      ),
+    };
+
     const module = await Test.createTestingModule({
       providers: [
         ListCategoriesHandler,
         { provide: PrismaService, useValue: {} },
         { provide: RlsTransactionService, useValue: rls },
         { provide: CacheService, useValue: cache },
+        { provide: MinioService, useValue: storage },
+        { provide: ConfigService, useValue: { getOrThrow: jest.fn(() => 'sawaa-media') } },
       ],
     }).compile();
 
     handler = module.get(ListCategoriesHandler);
+  });
+
+  it('signs a non-null category imageUrl into a fresh presigned URL at read time', async () => {
+    rls.withTransaction.mockImplementationOnce((cb: any) =>
+      cb({
+        serviceCategory: {
+          findMany: jest.fn().mockResolvedValue([
+            { id: 'c1', nameAr: 'شعر', bookingMode: 'SERVICES', imageUrl: 'org-1/abc.png', _count: { services: 1 }, department: null },
+          ]),
+          count: jest.fn().mockResolvedValue(1),
+        },
+      }),
+    );
+
+    const result = await handler.execute({} as never);
+
+    expect(storage.getSignedUrl).toHaveBeenCalledWith('sawaa-media', 'org-1/abc.png', 300);
+    expect(result.items[0].imageUrl).toBe('https://signed.example.com/sawaa-media/org-1/abc.png?sig=test');
+  });
+
+  it('leaves a null category imageUrl as null without signing', async () => {
+    rls.withTransaction.mockImplementationOnce((cb: any) =>
+      cb({
+        serviceCategory: {
+          findMany: jest.fn().mockResolvedValue([
+            { id: 'c1', nameAr: 'شعر', bookingMode: 'SERVICES', imageUrl: null, _count: { services: 1 }, department: null },
+          ]),
+          count: jest.fn().mockResolvedValue(1),
+        },
+      }),
+    );
+
+    const result = await handler.execute({} as never);
+
+    expect(result.items[0].imageUrl).toBeNull();
+    expect(storage.getSignedUrl).not.toHaveBeenCalled();
   });
 
   it('passes departmentId, isActive and search into the where clause', async () => {

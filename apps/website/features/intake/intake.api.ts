@@ -71,7 +71,16 @@ export async function fetchApplicableIntakeForms(
   const list = Array.isArray(json)
     ? json
     : ((json as { data?: unknown }).data ?? []);
-  return (Array.isArray(list) ? list : []) as IntakeForm[];
+  // Backend serializes `fieldType` lowercased (e.g. `checkbox`); the UI switch
+  // and the IntakeFieldType union are upper-case. Normalize on read so every
+  // field renders its proper control instead of falling through to TEXT.
+  return (Array.isArray(list) ? list : []).map((form) => ({
+    ...(form as IntakeForm),
+    fields: ((form as IntakeForm).fields ?? []).map((field) => ({
+      ...field,
+      fieldType: String(field.fieldType).toUpperCase() as IntakeFieldType,
+    })),
+  }));
 }
 
 /**

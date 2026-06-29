@@ -5,11 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Locale } from '@/features/locale/locale';
+import { localizedName } from '@/features/locale/localized-name';
 import { halalasToSar } from '@/lib/money';
 import { t } from '@/features/locale/dictionary';
 import { useT } from '@/features/locale/locale-provider';
 import { useCurrentClient } from '@/features/auth/public';
 import { IntakeFormsSection } from '@/features/intake/intake-forms-section';
+import { AccountLoadError } from './load-error';
 import type { ClientBookingItem } from '@sawaa/shared';
 import {
   getMyBookingApi,
@@ -46,10 +48,15 @@ interface BookingDetailFeatureProps {
 
 const STATUS_TOKEN: Record<string, string> = {
   PENDING: 'var(--warning)',
+  PENDING_GROUP_FILL: 'var(--warning)',
+  AWAITING_PAYMENT: 'var(--warning)',
+  DEPOSIT_PAID: 'var(--sw-primary-600)',
   CONFIRMED: 'var(--success)',
   COMPLETED: 'var(--sw-primary-600)',
   CANCELLED: 'var(--error)',
   CANCEL_REQUESTED: 'var(--warning)',
+  NO_SHOW: 'var(--error)',
+  EXPIRED: 'var(--sw-neutral-400)',
 };
 
 const INPUT =
@@ -69,7 +76,7 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
   const [cancelledStatus, setCancelledStatus] = useState<'CANCELLED' | 'CANCEL_REQUESTED' | null>(null);
   const [cancelNotice, setCancelNotice] = useState<string | null>(null);
 
-  const { data: booking, isLoading } = useQuery({
+  const { data: booking, isLoading, isError, refetch } = useQuery({
     queryKey: ['client', 'bookings', 'detail', bookingId],
     queryFn: () => getMyBookingApi(bookingId),
     enabled: !!client && !!bookingId,
@@ -82,6 +89,12 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
         <div className="h-44 rounded-2xl bg-[var(--sw-neutral-100)] animate-pulse" aria-hidden="true" />
       </div>
     );
+  }
+  // A thrown error (expired session, 500, network) gets a distinct error +
+  // retry state; the notFound copy is reserved for an actual 404 / empty
+  // success where the query resolved with no booking.
+  if (isError) {
+    return <AccountLoadError onRetry={() => void refetch()} />;
   }
   if (!booking) {
     return (
@@ -105,6 +118,9 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
   const displayStatus = cancelledStatus ?? booking.status;
   const statusKey = `booking.status.${displayStatus.toLowerCase()}`;
   const statusColor = STATUS_TOKEN[displayStatus] ?? 'var(--sw-neutral-400)';
+  const serviceLabel = localizedName(locale, booking.serviceName, booking.serviceNameAr);
+  const employeeLabel = localizedName(locale, booking.employeeName, booking.employeeNameAr);
+  const branchLabel = localizedName(locale, booking.branchName, booking.branchNameAr);
   const canAct = displayStatus === 'PENDING' || displayStatus === 'CONFIRMED';
   // The booking-detail payload may carry context IDs even though the shared
   // ClientBookingItem type does not declare them yet. Read them defensively;
@@ -164,9 +180,9 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
               {tt('booking.summary.service')}
             </p>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--sw-secondary-700)] leading-tight">
-              {booking.serviceName}
+              {serviceLabel}
             </h1>
-            <p className="text-sm text-[var(--sw-body)] mt-2">{booking.employeeName}</p>
+            <p className="text-sm text-[var(--sw-body)] mt-2">{employeeLabel}</p>
           </div>
           <StatusPill color={statusColor} label={t(locale, statusKey as never) ?? displayStatus} />
         </div>
@@ -188,9 +204,9 @@ export function BookingDetailFeature({ bookingId, locale }: BookingDetailFeature
           label={tt('booking.detail.time')}
           value={`${timeStr} · ${booking.durationMins} ${tt('booking.minutesShort')}`}
         />
-        <DetailTile icon={<UserIcon size={16} />} label={tt('booking.detail.therapist')} value={booking.employeeName} />
+        <DetailTile icon={<UserIcon size={16} />} label={tt('booking.detail.therapist')} value={employeeLabel} />
         {booking.branchName && (
-          <DetailTile icon={<MapPin size={16} />} label={tt('booking.detail.branch')} value={booking.branchName} />
+          <DetailTile icon={<MapPin size={16} />} label={tt('booking.detail.branch')} value={branchLabel} />
         )}
       </section>
 
@@ -493,7 +509,10 @@ function RescheduleModal({
           {t(locale, 'booking.reschedule')}
         </h3>
         <p className="text-sm text-[var(--sw-body)] mt-1 leading-relaxed">
-          {tt('booking.reschedulePrompt')} <span className="font-semibold">{booking.serviceName}</span>
+          {tt('booking.reschedulePrompt')}{' '}
+          <span className="font-semibold">
+            {localizedName(locale, booking.serviceName, booking.serviceNameAr)}
+          </span>
         </p>
       </div>
 

@@ -3,6 +3,7 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useT } from '@/features/locale/locale-provider';
+import type { MessageKey } from '@/features/locale/dictionary';
 import { validateEmail, normalizeSaudiPhone } from './auth.schema';
 import { requestOtp } from '@/features/otp/otp.api';
 import { OtpChannel, OtpPurpose } from '@sawaa/shared';
@@ -39,7 +40,7 @@ export function ForgotPasswordForm({ onSuccess }: ForgotPasswordFormProps) {
     if (trimmed.includes('@')) {
       const emailError = validateEmail(trimmed);
       if (emailError) {
-        setError(emailError);
+        setError(t(emailError as MessageKey));
         return;
       }
       channel = OtpChannel.EMAIL;

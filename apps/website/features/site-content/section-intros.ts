@@ -42,7 +42,7 @@ export const SECTION_INTRO_DEFAULTS: HomeSectionIntros = {
     titlePrefix: 'عيادات',
     titleHighlight: 'متخصصة',
     titleSuffix: '',
-    subtitle: 'كل عيادة صُممت لتغطية احتياج محدد بأعلى جودة',
+    subtitle: 'كل عيادة صُممت لتغطية احتياج محدد',
   },
   supportGroups: {
     tag: 'مجموعات الدعم',
@@ -77,7 +77,7 @@ export const SECTION_INTRO_DEFAULTS: HomeSectionIntros = {
     titlePrefix: 'أسئلة',
     titleHighlight: 'يطرحها الكثير',
     titleSuffix: '',
-    subtitle: 'إجابات سريعة عن أكثر ما يهمّك قبل الحجز',
+    subtitle: 'إجابات سريعة عن أكثر ما يهمّك قبل حجز موعدك',
   },
   cta: {
     tag: 'ابدأ رحلتك',

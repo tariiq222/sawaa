@@ -77,6 +77,22 @@ describe('intake.api — fetchApplicableIntakeForms', () => {
     publicFetchMock.mockResolvedValueOnce({ unexpected: true });
     expect(await fetchApplicableIntakeForms({ serviceId: 'svc1' })).toEqual([]);
   });
+
+  it('normalizes the lowercase wire `fieldType` to the upper-case union', async () => {
+    // The backend serializes fieldType lowercased (e.g. `checkbox`); without
+    // normalization every field falls through to a plain TEXT input.
+    publicFetchMock.mockResolvedValue([
+      {
+        ...sampleForm,
+        fields: [
+          { ...sampleForm.fields[0], fieldType: 'checkbox' as unknown as 'CHECKBOX' },
+          { ...sampleForm.fields[0], id: 'f2', fieldType: 'select' as unknown as 'SELECT' },
+        ],
+      },
+    ]);
+    const [form] = await fetchApplicableIntakeForms({ serviceId: 'svc1' });
+    expect(form.fields.map((f) => f.fieldType)).toEqual(['CHECKBOX', 'SELECT']);
+  });
 });
 
 describe('intake.api — submitIntakeResponse', () => {

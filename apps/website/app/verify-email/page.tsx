@@ -28,8 +28,10 @@ function VerifyEmailContent() {
       `${getApiBase()}/public/verify-email?token=${encodeURIComponent(token)}`,
     )
       .then(async (r) => {
+        // Drain the body, but never surface the backend message — it is English
+        // (e.g. BadRequestException) and would leak into the Arabic UI.
         const j = await r.json().catch(() => ({}))
-        if (!r.ok) throw new Error(j?.message ?? "فشل التحقق من البريد")
+        if (!r.ok) throw new Error("فشل التحقق من البريد")
         return j
       })
       .then(() => {

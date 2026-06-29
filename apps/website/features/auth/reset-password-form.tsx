@@ -3,6 +3,7 @@
 import { useState, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useT } from '@/features/locale/locale-provider';
+import type { MessageKey } from '@/features/locale/dictionary';
 import { validatePassword } from './auth.schema';
 import { clientResetPasswordApi } from './auth.api';
 import { verifyOtp } from '@/features/otp/otp.api';
@@ -66,7 +67,7 @@ export function ResetPasswordForm({ initialIdentifier, onSuccess }: ResetPasswor
     setError(null);
     const pwError = validatePassword(newPassword);
     if (pwError) {
-      setError(pwError);
+      setError(t(pwError as MessageKey));
       return;
     }
     if (!otpToken) {

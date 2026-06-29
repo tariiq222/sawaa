@@ -27,18 +27,23 @@ describe('contact.api — submitContactMessage', () => {
     });
   });
 
-  it('throws the response body text on non-ok response', async () => {
+  it('throws a clean status-only error and never surfaces the raw body text', async () => {
     fetchMock.mockResolvedValue({
       ok: false,
       status: 422,
-      text: () => Promise.resolve('validation failed'),
+      text: () => Promise.resolve('{"statusCode":422,"message":"validation failed"}'),
     });
+    // The raw backend body (English / JSON) must NOT leak into the error the UI
+    // would render — only the status is kept, for logging.
     await expect(
       submitContactMessage({ name: 'A', body: 'hi' }),
-    ).rejects.toThrow('validation failed');
+    ).rejects.toThrow('Contact submission failed: 422');
+    await expect(
+      submitContactMessage({ name: 'A', body: 'hi' }),
+    ).rejects.not.toThrow(/validation failed/);
   });
 
-  it('falls back to status-code message when body text is empty', async () => {
+  it('keeps the status code in the thrown error for logging', async () => {
     fetchMock.mockResolvedValue({
       ok: false,
       status: 500,
@@ -46,6 +51,6 @@ describe('contact.api — submitContactMessage', () => {
     });
     await expect(
       submitContactMessage({ name: 'A', body: 'hi' }),
-    ).rejects.toThrow('Submission failed: 500');
+    ).rejects.toThrow('Contact submission failed: 500');
   });
 });

@@ -73,9 +73,10 @@ export function ProfileTab() {
       queryClient.setQueryData(CURRENT_CLIENT_QUERY_KEY, updated);
       setMessage({ ok: true, text: tt('account.profile.saved') });
     } catch (err) {
-      // Backend answers 409 Conflict when the email belongs to another account.
+      // Backend answers 409 Conflict for a duplicate email OR phone, with no
+      // machine-readable code to tell them apart, so the message stays neutral.
       if (err instanceof ApiError && err.status === 409) {
-        setMessage({ ok: false, text: tt('account.profile.emailTaken') });
+        setMessage({ ok: false, text: tt('account.profile.conflict') });
       } else {
         setMessage({ ok: false, text: tt('account.profile.saveError') });
       }

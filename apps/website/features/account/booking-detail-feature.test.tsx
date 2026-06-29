@@ -107,6 +107,16 @@ describe('BookingDetailFeature', () => {
     expect(screen.queryByRole('button', { name: 'إلغاء الموعد' })).toBeNull();
   });
 
+  it('renders a distinct error + retry state on a failed fetch, not the notFound copy', async () => {
+    getBookingMock.mockRejectedValue(new Error('boom'));
+    render(wrap('ar', <BookingDetailFeature bookingId="bk_1" locale="ar" />));
+
+    expect(await screen.findByText('تعذّر تحميل البيانات، حاول مرة أخرى')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /إعادة المحاولة/ })).toBeTruthy();
+    // notFound copy is reserved for a real 404 / empty success, not a thrown error.
+    expect(screen.queryByText(/الموعد غير موجود/)).toBeNull();
+  });
+
   it('shows the approval-pending message and a localized CANCEL_REQUESTED pill', async () => {
     getBookingMock.mockResolvedValue(booking());
     cancelMock.mockResolvedValue({ status: 'CANCEL_REQUESTED', requiresApproval: true });

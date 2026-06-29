@@ -596,6 +596,233 @@
         ],
         "type": "string"
       },
+      "CatalogCategoryDto": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Short-lived presigned image URL (signed per response), or null",
+            "nullable": true,
+            "type": "object"
+          },
+          "nameAr": {
+            "example": "استشارات",
+            "type": "string"
+          },
+          "nameEn": {
+            "example": "Consultations",
+            "nullable": true,
+            "type": "object"
+          },
+          "sortOrder": {
+            "description": "Display order",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "imageUrl",
+          "sortOrder"
+        ],
+        "type": "object"
+      },
+      "CatalogDepartmentDto": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "nameAr": {
+            "example": "الاستشارات الأسرية",
+            "type": "string"
+          },
+          "nameEn": {
+            "example": "Family Counseling",
+            "nullable": true,
+            "type": "object"
+          },
+          "sortOrder": {
+            "description": "Display order",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "nameAr",
+          "nameEn",
+          "sortOrder"
+        ],
+        "type": "object"
+      },
+      "CatalogServiceBookingConfigDto": {
+        "properties": {
+          "deliveryType": {
+            "enum": [
+              "IN_PERSON",
+              "ONLINE"
+            ],
+            "type": "string"
+          },
+          "durationMins": {
+            "example": 45,
+            "type": "number"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "price": {
+            "description": "Price in integer halalas (Prisma Decimal serialized as string)",
+            "example": "15000",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "deliveryType",
+          "price",
+          "durationMins"
+        ],
+        "type": "object"
+      },
+      "CatalogServiceDto": {
+        "properties": {
+          "bookingConfigs": {
+            "description": "Active per-delivery-type booking configs",
+            "items": {
+              "$ref": "#/components/schemas/CatalogServiceBookingConfigDto"
+            },
+            "type": "array"
+          },
+          "categoryId": {
+            "description": "Owning service category",
+            "format": "uuid",
+            "type": "string"
+          },
+          "currency": {
+            "example": "SAR",
+            "type": "string"
+          },
+          "descriptionAr": {
+            "nullable": true,
+            "type": "object"
+          },
+          "descriptionEn": {
+            "nullable": true,
+            "type": "object"
+          },
+          "durationMins": {
+            "example": 45,
+            "type": "number"
+          },
+          "durationOptions": {
+            "description": "Service-level duration options (practitioner-owned rows excluded)",
+            "items": {
+              "$ref": "#/components/schemas/CatalogServiceDurationOptionDto"
+            },
+            "type": "array"
+          },
+          "iconBgColor": {
+            "nullable": true,
+            "type": "object"
+          },
+          "iconName": {
+            "nullable": true,
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Short-lived presigned image URL (signed per response), or null",
+            "nullable": true,
+            "type": "object"
+          },
+          "nameAr": {
+            "example": "جلسة استشارة فردية",
+            "type": "string"
+          },
+          "nameEn": {
+            "example": "Individual Counseling Session",
+            "nullable": true,
+            "type": "object"
+          },
+          "price": {
+            "description": "Price in integer halalas (Prisma Decimal serialized as string)",
+            "example": "15000",
+            "type": "string"
+          },
+          "showDuration": {
+            "description": "Whether to display the duration on the booking surface",
+            "type": "boolean"
+          },
+          "showPrice": {
+            "description": "Whether to display the price on the booking surface",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "categoryId",
+          "nameAr",
+          "nameEn",
+          "descriptionAr",
+          "descriptionEn",
+          "durationMins",
+          "price",
+          "currency",
+          "imageUrl",
+          "iconName",
+          "iconBgColor",
+          "showPrice",
+          "showDuration",
+          "durationOptions",
+          "bookingConfigs"
+        ],
+        "type": "object"
+      },
+      "CatalogServiceDurationOptionDto": {
+        "properties": {
+          "durationMins": {
+            "example": 45,
+            "type": "number"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "label": {
+            "example": "45 دقيقة",
+            "nullable": true,
+            "type": "object"
+          },
+          "price": {
+            "description": "Price in integer halalas (Prisma Decimal serialized as string)",
+            "example": "15000",
+            "type": "string"
+          },
+          "sortOrder": {
+            "description": "Display order",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "durationMins",
+          "price",
+          "sortOrder"
+        ],
+        "type": "object"
+      },
       "ChangePasswordDto": {
         "properties": {
           "currentPassword": {
@@ -3671,6 +3898,161 @@
           "invoiceId",
           "amount",
           "method"
+        ],
+        "type": "object"
+      },
+      "PublicBrandingDto": {
+        "properties": {
+          "colorAccent": {
+            "description": "Accent color",
+            "example": "#d8a657",
+            "nullable": true,
+            "type": "object"
+          },
+          "colorAccentDark": {
+            "description": "Accent color (dark variant)",
+            "example": "#b9863f",
+            "nullable": true,
+            "type": "object"
+          },
+          "colorBackground": {
+            "description": "Background color",
+            "example": "#f7f5f0",
+            "nullable": true,
+            "type": "object"
+          },
+          "colorPrimary": {
+            "description": "Primary brand color",
+            "example": "#1f6f5c",
+            "nullable": true,
+            "type": "object"
+          },
+          "colorPrimaryDark": {
+            "description": "Primary color (dark variant)",
+            "example": "#13503f",
+            "nullable": true,
+            "type": "object"
+          },
+          "colorPrimaryLight": {
+            "description": "Primary color (light variant)",
+            "example": "#2f8f78",
+            "nullable": true,
+            "type": "object"
+          },
+          "contactEmail": {
+            "description": "Public contact email",
+            "example": "info@sawaa.app",
+            "nullable": true,
+            "type": "object"
+          },
+          "contactPhone": {
+            "description": "Public contact phone",
+            "example": "+966500000000",
+            "nullable": true,
+            "type": "object"
+          },
+          "faviconUrl": {
+            "description": "Favicon URL (currently fixed in-app, always null)",
+            "example": null,
+            "nullable": true,
+            "type": "object"
+          },
+          "fontFamily": {
+            "description": "Font family",
+            "example": "Handicrafts",
+            "nullable": true,
+            "type": "object"
+          },
+          "fontUrl": {
+            "description": "Font URL (currently fixed in-app, always null)",
+            "example": null,
+            "nullable": true,
+            "type": "object"
+          },
+          "logoUrl": {
+            "description": "Logo URL (currently fixed in-app, always null)",
+            "example": null,
+            "nullable": true,
+            "type": "object"
+          },
+          "organizationNameAr": {
+            "description": "Organization name (Arabic)",
+            "example": "مركز سواء",
+            "type": "string"
+          },
+          "organizationNameEn": {
+            "description": "Organization name (English)",
+            "example": "Sawa Center",
+            "nullable": true,
+            "type": "object"
+          },
+          "productTagline": {
+            "description": "Product tagline",
+            "example": "للاستشارات الأسرية",
+            "nullable": true,
+            "type": "object"
+          },
+          "timeFormat": {
+            "description": "Display time format preference",
+            "enum": [
+              "12h",
+              "24h"
+            ],
+            "example": "12h",
+            "type": "string"
+          }
+        },
+        "required": [
+          "organizationNameAr",
+          "organizationNameEn",
+          "productTagline",
+          "logoUrl",
+          "faviconUrl",
+          "colorPrimary",
+          "colorPrimaryLight",
+          "colorPrimaryDark",
+          "colorAccent",
+          "colorAccentDark",
+          "colorBackground",
+          "fontFamily",
+          "fontUrl",
+          "timeFormat",
+          "contactPhone",
+          "contactEmail"
+        ],
+        "type": "object"
+      },
+      "PublicCatalogDto": {
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogCategoryDto"
+            },
+            "type": "array"
+          },
+          "departments": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogDepartmentDto"
+            },
+            "type": "array"
+          },
+          "services": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogServiceDto"
+            },
+            "type": "array"
+          },
+          "vatRate": {
+            "description": "Fractional VAT rate (0.15 = 15%); 0 when the center is not VAT-registered or settings are missing",
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "departments",
+          "categories",
+          "services",
+          "vatRate"
         ],
         "type": "object"
       },
@@ -30221,9 +30603,26 @@
                 "schema": {
                   "additionalProperties": true,
                   "properties": {
+                    "bookingNumber": {
+                      "description": "Human-readable booking reference",
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "Created booking ID (read by the website to navigate to the booking/payment page)",
+                      "format": "uuid",
+                      "type": "string"
+                    },
                     "invoiceId": {
                       "format": "uuid",
                       "nullable": true,
+                      "type": "string"
+                    },
+                    "paymentStatus": {
+                      "description": "Payment status",
+                      "type": "string"
+                    },
+                    "status": {
+                      "description": "Booking status",
                       "type": "string"
                     }
                   },
@@ -30527,6 +30926,13 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBrandingDto"
+                }
+              }
+            },
             "description": "PublicBranding shape"
           },
           "400": {
@@ -32126,10 +32532,12 @@
         "operationId": "PublicProgramsController_list",
         "parameters": [
           {
+            "description": "Optional department filter; when omitted, programs from all departments are returned",
             "in": "query",
             "name": "departmentId",
-            "required": true,
+            "required": false,
             "schema": {
+              "format": "uuid",
               "type": "string"
             }
           }
@@ -32352,6 +32760,13 @@
         "parameters": [],
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicCatalogDto"
+                }
+              }
+            },
             "description": "Active departments, categories, and services"
           },
           "400": {

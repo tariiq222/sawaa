@@ -1,19 +1,28 @@
+/**
+ * Same `string | null` contract as `validateSaudiPhone`: the returned string
+ * is an i18n key — callers must render it through `useT()`/`t(locale, key)`.
+ * Mirrors the backend password policy (min 8, >=1 uppercase, >=1 digit).
+ */
 export function validatePassword(password: string): string | null {
   if (!password || password.length < 8) {
-    return 'Password must be at least 8 characters';
+    return 'auth.password.tooShort';
   }
   if (!/[A-Z]/.test(password)) {
-    return 'Password must contain at least 1 uppercase letter';
+    return 'auth.password.needUppercase';
   }
   if (!/[0-9]/.test(password)) {
-    return 'Password must contain at least 1 digit';
+    return 'auth.password.needDigit';
   }
   return null;
 }
 
+/**
+ * Same `string | null` contract as `validateSaudiPhone`: the returned string
+ * is an i18n key — callers must render it through `useT()`/`t(locale, key)`.
+ */
 export function validateEmail(email: string): string | null {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return 'Invalid email address';
+    return 'auth.invalidEmail';
   }
   return null;
 }

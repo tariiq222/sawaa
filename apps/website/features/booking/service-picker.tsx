@@ -103,7 +103,7 @@ export function ServicePicker({
         >
           {lockedTherapistName
             ? isAr
-              ? `اختر نوع الجلسة، وراح نكمل الحجز مع ${lockedTherapistName}.`
+              ? `اختر نوع الجلسة، وراح نكمل حجز موعدك مع ${lockedTherapistName}.`
               : `Pick a session and we will continue your booking with ${lockedTherapistName}.`
             : isAr
               ? 'اختر نوع الجلسة اللي تناسبك.'

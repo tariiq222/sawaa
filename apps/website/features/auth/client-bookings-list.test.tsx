@@ -150,6 +150,16 @@ describe('ClientBookingsList', () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
+  it('renders a distinct error + retry state on a failed fetch, not the empty CTA', async () => {
+    getBookingsMock.mockRejectedValue(new Error('boom'));
+    render(wrap('ar', <ClientBookingsList locale="ar" />));
+
+    expect(await screen.findByText('تعذّر تحميل البيانات، حاول مرة أخرى')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /إعادة المحاولة/ })).toBeTruthy();
+    // The "book your first session" empty CTA must NOT show on error.
+    expect(screen.queryByText('ما عندك مواعيد بعد')).toBeNull();
+  });
+
   it('hides pay now for paid invoices', async () => {
     getBookingsMock.mockResolvedValue({
       items: [booking({ invoiceStatus: 'PAID' })],

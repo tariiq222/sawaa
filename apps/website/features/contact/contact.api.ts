@@ -9,7 +9,9 @@ export async function submitContactMessage(payload: CreateContactMessagePayload)
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(text || `Submission failed: ${res.status}`);
+    // Do NOT surface the raw backend body to the UI — it leaks English error
+    // text / JSON into the Arabic form. Keep only the status for logging; the
+    // form renders a fixed plain-Arabic message via the i18n layer.
+    throw new Error(`Contact submission failed: ${res.status}`);
   }
 }

@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { CacheService } from '../../../infrastructure/cache';
+import { MinioService } from '../../../infrastructure/storage/minio.service';
+import { signMediaImageUrl } from '../../media/media-image-url.helper';
 import { CreateCategoryDto } from './create-category.dto';
 import { CATEGORIES_CACHE_PREFIX } from './categories.cache';
 import { DEPARTMENTS_CACHE_PREFIX } from '../departments/departments.cache';
@@ -10,11 +13,17 @@ export type CreateCategoryCommand = CreateCategoryDto;
 
 @Injectable()
 export class CreateCategoryHandler {
+  private readonly mediaBucket: string;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly cache: CacheService,
-  ) {}
+    private readonly storage: MinioService,
+    config: ConfigService,
+  ) {
+    this.mediaBucket = config.getOrThrow<string>('MINIO_BUCKET');
+  }
 
   async execute(dto: CreateCategoryCommand) {
     const category = await this.rlsTransaction.withTransaction(async (tx) => {
@@ -51,6 +60,11 @@ export class CreateCategoryHandler {
     await this.cache.invalidatePrefix(CATEGORIES_CACHE_PREFIX);
     await this.cache.invalidatePrefix(DEPARTMENTS_CACHE_PREFIX); // departments list embeds active categories
 
-    return category;
+    // The persisted `imageUrl` is a bare object key; return a freshly minted
+    // presigned URL so the dashboard can render the just-created image.
+    return {
+      ...category,
+      imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, category.imageUrl),
+    };
   }
 }
