@@ -76,11 +76,17 @@ describe('RegisterHandler', () => {
     otpSession.verifySession.mockReturnValue({ purpose: OtpPurpose.CLIENT_LOGIN, channel: OtpChannel.EMAIL, identifier: 'a@b.com' });
     passwords.hash.mockResolvedValue('h');
     prisma.client.findFirst.mockResolvedValue(null);
-    prisma.client.create.mockResolvedValue({ id: 'c1' });
+    prisma.client.create.mockResolvedValue({ id: 'c1', tokenVersion: 0 });
     clientTokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', rawRefresh: 'rt' });
 
     const result = await handler.execute({ name: 'John', password: 'p' } as any, mockRequest('Bearer tok') as Request);
     expect(result.clientId).toBe('c1');
+    // P1-7: issued token must carry the row's live tokenVersion.
+    expect(clientTokens.issueTokenPair).toHaveBeenCalledWith({
+      id: 'c1',
+      email: 'a@b.com',
+      tokenVersion: 0,
+    });
     expect(result.accessToken).toBe('at');
     expect(prisma.client.create).toHaveBeenCalled();
     const createData = prisma.client.create.mock.calls[0][0].data;
@@ -96,7 +102,7 @@ describe('RegisterHandler', () => {
     otpSession.verifySession.mockReturnValue({ purpose: OtpPurpose.CLIENT_LOGIN, channel: OtpChannel.SMS, identifier: '+966501234567' });
     passwords.hash.mockResolvedValue('h');
     prisma.client.findFirst.mockResolvedValue(null);
-    prisma.client.create.mockResolvedValue({ id: 'c2' });
+    prisma.client.create.mockResolvedValue({ id: 'c2', tokenVersion: 0 });
     clientTokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', rawRefresh: 'rt' });
 
     const result = await handler.execute({ password: 'p' } as any, mockRequest('Bearer tok') as Request);
@@ -120,11 +126,17 @@ describe('RegisterHandler', () => {
     otpSession.verifySession.mockReturnValue({ purpose: OtpPurpose.CLIENT_LOGIN, channel: OtpChannel.EMAIL, identifier: 'a@b.com' });
     passwords.hash.mockResolvedValue('h');
     prisma.client.findFirst.mockResolvedValue({ id: 'c1', passwordHash: null, name: 'Old', emailVerified: null, phoneVerified: null });
-    prisma.client.update.mockResolvedValue({ id: 'c1' });
+    // P1-7: a merged guest row may already carry a bumped tokenVersion.
+    prisma.client.update.mockResolvedValue({ id: 'c1', tokenVersion: 2 });
     clientTokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', rawRefresh: 'rt' });
 
     const result = await handler.execute({ name: 'New', password: 'p' } as any, mockRequest('Bearer tok') as Request);
     expect(result.clientId).toBe('c1');
+    expect(clientTokens.issueTokenPair).toHaveBeenCalledWith({
+      id: 'c1',
+      email: 'a@b.com',
+      tokenVersion: 2,
+    });
     expect(prisma.client.update).toHaveBeenCalled();
     const updateData = prisma.client.update.mock.calls[0][0].data;
     expect(updateData.emailVerified).toBeInstanceOf(Date);
@@ -139,7 +151,7 @@ describe('RegisterHandler', () => {
     otpSession.verifySession.mockReturnValue({ purpose: OtpPurpose.CLIENT_LOGIN, channel: OtpChannel.SMS, identifier: '+966501234567' });
     passwords.hash.mockResolvedValue('h');
     prisma.client.findFirst.mockResolvedValue({ id: 'c1', passwordHash: null, name: 'Old', emailVerified: new Date(), phoneVerified: null });
-    prisma.client.update.mockResolvedValue({ id: 'c1' });
+    prisma.client.update.mockResolvedValue({ id: 'c1', tokenVersion: 0 });
     clientTokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', rawRefresh: 'rt' });
 
     const result = await handler.execute({ password: 'p' } as any, mockRequest('Bearer tok') as Request);
@@ -152,7 +164,7 @@ describe('RegisterHandler', () => {
     otpSession.verifySession.mockReturnValue({ purpose: OtpPurpose.CLIENT_LOGIN, channel: OtpChannel.EMAIL, identifier: 'a@b.com' });
     passwords.hash.mockResolvedValue('h');
     prisma.client.findFirst.mockResolvedValue({ id: 'c1', passwordHash: null, name: 'OldName', emailVerified: null, phoneVerified: null });
-    prisma.client.update.mockResolvedValue({ id: 'c1' });
+    prisma.client.update.mockResolvedValue({ id: 'c1', tokenVersion: 0 });
     clientTokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', rawRefresh: 'rt' });
 
     await handler.execute({ password: 'p' } as any, mockRequest('Bearer tok') as Request);

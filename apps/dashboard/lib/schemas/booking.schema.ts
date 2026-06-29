@@ -94,6 +94,7 @@ export const bookingPosPayloadSchema = z.object({
   serviceId: z.string().min(1),
   type: z.enum(["individual", "group", "walk_in"]),
   deliveryType: z.enum(["IN_PERSON", "ONLINE"]),
+  durationOptionId: z.string().min(1).optional(),
   date: z.string().min(1),
   startTime: z.string().min(1),
   payAtClinic: z.boolean().optional(),

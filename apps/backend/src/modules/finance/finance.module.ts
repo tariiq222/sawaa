@@ -47,6 +47,7 @@ import { GetMoyasarConfigHandler } from './moyasar-config/get-moyasar-config.han
 import { UpsertMoyasarConfigHandler } from './moyasar-config/upsert-moyasar-config.handler';
 import { TestMoyasarConfigHandler } from './moyasar-config/test-moyasar-config.handler';
 import { OnBookingCancelledRefundHandler } from './events/on-booking-cancelled.handler';
+import { OnBookingCancelApprovedRefundHandler } from './events/on-booking-cancel-approved.handler';
 import { IssueInvoiceReceiptHandler } from './issue-invoice-receipt/issue-invoice-receipt.handler';
 import { SendInvoiceReceiptHandler } from './issue-invoice-receipt/send-invoice-receipt.handler';
 import { InvoicePdfRendererService } from './issue-invoice-receipt/invoice-pdf-renderer.service';
@@ -103,6 +104,7 @@ const handlers = [
     BookingConfirmedHandler,
     MoyasarApiClient,
     OnBookingCancelledRefundHandler,
+    OnBookingCancelApprovedRefundHandler,
     IssueInvoiceReceiptHandler,
     SendInvoiceReceiptHandler,
     InvoicePdfRendererService,
@@ -113,6 +115,7 @@ export class FinanceModule implements OnModuleInit {
   constructor(
     private readonly bookingConfirmedHandler: BookingConfirmedHandler,
     private readonly onBookingCancelledRefundHandler: OnBookingCancelledRefundHandler,
+    private readonly onBookingCancelApprovedRefundHandler: OnBookingCancelApprovedRefundHandler,
     private readonly issueInvoiceReceiptHandler: IssueInvoiceReceiptHandler,
     private readonly sendInvoiceReceiptHandler: SendInvoiceReceiptHandler,
     private readonly activatePackagePurchaseHandler: ActivatePackagePurchaseHandler,
@@ -122,6 +125,7 @@ export class FinanceModule implements OnModuleInit {
   onModuleInit(): void {
     this.bookingConfirmedHandler.register();
     this.onBookingCancelledRefundHandler.register();
+    this.onBookingCancelApprovedRefundHandler.register();
     this.issueInvoiceReceiptHandler.register();
     this.sendInvoiceReceiptHandler.register(this.eventBus);
     // Phase 4 self-purchase: activate a PENDING package purchase + issue its

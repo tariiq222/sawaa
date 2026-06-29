@@ -8,7 +8,6 @@ import { showApiError } from "@/lib/mutation-helpers"
 import { DataTable } from "@/components/features/data-table"
 import { ErrorBanner } from "@/components/features/error-banner"
 import { FilterBar } from "@/components/features/filter-bar"
-import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
 
 import { getServiceColumns } from "./service-columns"
@@ -127,24 +126,13 @@ export function ServicesTabContent() {
           data={services}
           emptyTitle={t("services.empty.title")}
           emptyDescription={t("services.empty.description")}
+          serverPaginated
+          page={meta?.page ?? page}
+          totalPages={meta?.totalPages ?? 1}
+          hasPreviousPage={meta?.hasPreviousPage ?? false}
+          hasNextPage={meta?.hasNextPage ?? false}
+          onPageChange={setPage}
         />
-      )}
-
-      {/* Pagination */}
-      {meta && meta.totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-border pt-2">
-          <p className="tabular-nums text-sm text-muted-foreground">
-            {page} / {meta.totalPages}
-          </p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-              {t("table.previous")}
-            </Button>
-            <Button variant="outline" size="sm" disabled={page >= meta.totalPages} onClick={() => setPage(page + 1)}>
-              {t("table.next")}
-            </Button>
-          </div>
-        </div>
       )}
 
       <ServiceDetailSheet

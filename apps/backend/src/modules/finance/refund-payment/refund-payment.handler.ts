@@ -21,7 +21,8 @@ interface CreateRefundRequestInTxResult {
   idempotencyKey: string;
   payment: {
     id: string;
-    gatewayRef: string;
+    /** null for off-gateway (cash/bank-transfer) payments settled in-tx */
+    gatewayRef: string | null;
     /** integer halalas (converted from Decimal at the read boundary) */
     amount: number;
     invoice: {
@@ -200,9 +201,6 @@ export class RefundPaymentHandler {
     // The outstanding-balance clamp below is the real guard against over-refund;
     // here we only assert the status is in a refundable state.
     assertValidTransition(row.status as PaymentStatus, PaymentStatus.PARTIALLY_REFUNDED);
-    if (!row.gatewayRef) {
-      throw new BadRequestException('Payment has no gateway reference; use manual refund path');
-    }
 
     const existingInFlightRefund = await tx.refundRequest.findFirst({
       where: { paymentId: cmd.paymentId, status: RefundStatus.PROCESSING },
@@ -212,9 +210,21 @@ export class RefundPaymentHandler {
       throw new BadRequestException('Payment refund is already processing');
     }
 
+    const isOffGateway = !row.gatewayRef;
+
     const invoice = await tx.invoice.findUniqueOrThrow({
       where: { id: row.invoiceId },
-      select: { id: true, bookingId: true, clientId: true, currency: true },
+      select: {
+        id: true,
+        bookingId: true,
+        clientId: true,
+        currency: true,
+        // total/vatAmt/refundedAmount only needed for the off-gateway path,
+        // where the refund is settled fully inside this transaction.
+        total: true,
+        vatAmt: true,
+        refundedAmount: true,
+      },
     });
 
     // Refund amount (integer halalas). When the caller supplies a partial
@@ -239,6 +249,67 @@ export class RefundPaymentHandler {
     // recorded two RefundRequest rows. ApproveRefundHandler already keys on
     // refundRequestId; this aligns both code paths.
     const idempotencyKey = `refund:${refundRequestId}`;
+
+    // P1-1 (money-safety): off-gateway payments (cash/bank-transfer) have NO
+    // gatewayRef, so there is no external call to make. Throwing here used to
+    // abort the entire cancellation transaction, leaving the booking un-cancelled
+    // and the customer with no refund. Instead, settle the refund fully inside
+    // THIS transaction (RefundRequest born COMPLETED, Payment + Invoice updated)
+    // — mirroring ManualRefundPaymentHandler. The downstream finalize subscriber
+    // sees the request already COMPLETED and skips Moyasar entirely.
+    if (isOffGateway) {
+      const accounting = computeRefundAccounting({
+        invoiceTotal: invoice.total,
+        invoiceVatAmt: invoice.vatAmt,
+        alreadyRefundedAmount: invoice.refundedAmount,
+        thisRefundAmount: refundAmount,
+      });
+      await tx.refundRequest.create({
+        data: {
+          id: refundRequestId,
+          invoiceId: invoice.id,
+          paymentId: row.id,
+          clientId: invoice.clientId,
+          amount: refundAmount,
+          reason: cmd.reason,
+          status: RefundStatus.COMPLETED,
+          processedAt: new Date(),
+          processedBy: cmd.performedBy ?? 'system',
+        },
+        select: { id: true },
+      });
+      const paymentStatus =
+        accounting.newInvoiceStatus === 'REFUNDED'
+          ? PaymentStatus.REFUNDED
+          : PaymentStatus.PARTIALLY_REFUNDED;
+      await tx.payment.update({
+        where: { id: row.id },
+        data: {
+          status: paymentStatus,
+          failureReason: cmd.reason,
+          refundedAmount: { increment: refundAmount },
+        },
+      });
+      await tx.invoice.update({
+        where: { id: invoice.id },
+        data: {
+          status: accounting.newInvoiceStatus,
+          refundedAmount: accounting.newRefundedAmount,
+          refundedVatAmt: accounting.newRefundedVatAmt,
+        },
+      });
+
+      return {
+        refundRequestId,
+        idempotencyKey,
+        payment: {
+          id: row.id,
+          gatewayRef: null,
+          amount: fullAmount,
+          invoice,
+        },
+      };
+    }
 
     await tx.refundRequest.create({
       data: {

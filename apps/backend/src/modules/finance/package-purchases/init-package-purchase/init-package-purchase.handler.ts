@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -17,6 +16,7 @@ import { ComputePackagePriceService } from '../../../org-experience/compute-pack
 import { MoyasarApiClient } from '../../moyasar-api/moyasar-api.client';
 import { DEFAULT_ORG_ID } from '../../../../common/constants';
 import { InitPackagePurchaseDto } from './init-package-purchase.dto';
+import { reconcileOrDiscardInFlightPayment } from '../../payments/client/init-client-payment/reconcile-in-flight-payment.helper';
 
 export type InitPackagePurchaseCommand = InitPackagePurchaseDto & {
   /** Authenticated client id (set by the controller from the client session). */
@@ -214,45 +214,21 @@ export class InitPackagePurchaseHandler {
           throw new BadRequestException('This purchase has already been paid');
         }
         if (payment) {
-          // P1-6 (G3): a row with a gatewayRef means a live Moyasar session
-          // already exists for this purchase. Deleting it blind would let the
-          // client finish that old session AND the fresh one we create below =
-          // double charge with no internal trace of the first. Reconcile against
-          // the gateway before discarding — only a terminally-failed session is
-          // safe to replace. Mirrors InitClientPaymentHandler.
-          if (payment.gatewayRef) {
-            let gatewayStatus: string;
-            try {
-              const gw = await this.moyasar.getPaymentStatus(
-                DEFAULT_ORG_ID,
-                payment.gatewayRef,
-              );
-              gatewayStatus = gw.status;
-            } catch (error) {
-              if (error instanceof Error) {
-                this.logger.error(
-                  `Failed to reconcile in-flight package payment ${payment.id} for invoice ${invoice.id}`,
-                  error.stack,
-                );
-              }
-              // Fail closed: never recreate a session we could not verify.
-              throw new ConflictException(
-                'تعذّر التحقق من حالة الدفعة الجارية، حاول مرة أخرى لاحقاً',
-              );
-            }
-            if (['paid', 'captured', 'authorized'].includes(gatewayStatus)) {
-              throw new ConflictException('This purchase has already been paid');
-            }
-            if (gatewayStatus === 'initiated') {
-              throw new ConflictException(
+          // P1-6 (G3): reconcile the in-flight session against the gateway before
+          // discarding it, then delete so a fresh PENDING payment can be created
+          // below. Shared verbatim with InitClientPaymentHandler to prevent drift
+          // (a drift = double charge).
+          await reconcileOrDiscardInFlightPayment(
+            this.prisma,
+            this.moyasar,
+            this.logger,
+            payment,
+            {
+              alreadyPaid: 'This purchase has already been paid',
+              inFlight:
                 'هناك دفعة قيد التنفيذ لهذه الباقة، أكمل الدفع الحالي أو انتظر انتهاء الجلسة',
-              );
-            }
-            // failed / voided / refunded → the session is dead, safe to discard.
-          }
-          // No gatewayRef yet, or a terminally-failed session: discard and
-          // recreate so the client always receives a valid redirect.
-          await this.prisma.payment.delete({ where: { id: payment.id } });
+            },
+          );
         }
         const fresh = await this.prisma.payment.create({
           data: {

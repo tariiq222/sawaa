@@ -51,6 +51,7 @@ export class RegisterHandler {
       : await this.prisma.client.findFirst({ where: { phone: identifier } });
 
     let clientId: string;
+    let tokenVersion: number;
 
     if (existing) {
       if (existing.passwordHash) {
@@ -71,6 +72,7 @@ export class RegisterHandler {
         },
       });
       clientId = updated.id;
+      tokenVersion = updated.tokenVersion;
       this.logger.log(`Guest-to-account merge: client ${clientId} (${maskIdentifier(identifier)})`);
     } else {
       const created = await this.prisma.client.create({
@@ -88,12 +90,17 @@ export class RegisterHandler {
         },
       });
       clientId = created.id;
+      tokenVersion = created.tokenVersion;
       this.logger.log(`New client registration: ${clientId} (${maskIdentifier(identifier)})`);
     }
 
+    // P1-7: pass the live tokenVersion so the issued token survives the
+    // strategy's tokenVersion check (e.g. after a guest-to-account merge whose
+    // row may already carry a bumped version).
     const tokens = await this.clientTokens.issueTokenPair({
       id: clientId,
       email: isEmailChannel ? identifier : null,
+      tokenVersion,
     });
 
     return {

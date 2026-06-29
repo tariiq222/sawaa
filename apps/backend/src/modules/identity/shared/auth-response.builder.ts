@@ -30,6 +30,10 @@ export class AuthResponseBuilder {
   build(
     tokens: { accessToken: string; refreshToken: string },
     user: User & { customRole: { permissions: { action: string; subject: string }[] } | null },
+    // P1-8: DB-stored permissions for the user's built-in system role. When
+    // present they override the hardcoded BUILT_IN map, exactly as JwtStrategy
+    // does — keeping the returned permissions[] in sync with enforcement.
+    systemRolePermissions?: Array<{ action: string; subject: string }> | null,
   ): AuthResponse {
     const [firstName = '', ...rest] = (user.name ?? '').trim().split(/\s+/);
     const ttl = this.config.get<string>('JWT_ACCESS_TTL') ?? '15m';
@@ -52,6 +56,7 @@ export class AuthResponseBuilder {
         permissions: flattenPermissions({
           role: user.role,
           customRole: user.customRole,
+          systemRolePermissions: systemRolePermissions ?? null,
         }),
       },
     };

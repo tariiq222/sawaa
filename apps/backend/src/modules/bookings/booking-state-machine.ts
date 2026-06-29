@@ -179,12 +179,23 @@ export const VALID_TRANSITIONS: Record<
   },
 
   /**
-   * Staff rejects a cancel request → booking returns to CONFIRMED.
+   * Staff rejects a cancel request → booking returns to the status it held
+   * BEFORE the client requested cancellation (its `BookingStatusLog.fromStatus`).
+   *
+   * The `to` recorded here (PENDING) is only the *safe fallback* used when the
+   * caller cannot supply the pre-request status. It must NOT promote an unpaid
+   * booking to CONFIRMED — doing so bypasses payment (an unpaid/deposit-only
+   * appointment would silently become a fully-confirmed, paid slot). PENDING is
+   * the conservative default: it never grants a confirmed paid slot for free and
+   * still allows the booking to be re-confirmed, paid, or expired normally.
+   *
+   * Callers should pass the real pre-request status via the `restoreTo` argument
+   * to `assertTransition` so the booking is restored exactly to where it was.
    * Handler: reject-cancel-booking/reject-cancel-booking.handler.ts
    */
   REJECT_CANCEL: {
     from: [BookingStatus.CANCEL_REQUESTED],
-    to: BookingStatus.CONFIRMED,
+    to: BookingStatus.PENDING,
   },
 
   /**
@@ -242,6 +253,18 @@ export const VALID_TRANSITIONS: Record<
   },
 };
 
+// ─── Cancel-request restore set ─────────────────────────────────────────────────
+
+/**
+ * Statuses a booking may legitimately have held immediately BEFORE a client
+ * requested cancellation. This is exactly the source set of CLIENT_REQUEST_CANCEL
+ * (the only way to reach CANCEL_REQUESTED from an active booking). When a staff
+ * member rejects the cancel request, the booking must be restored to one of these
+ * — never silently promoted to CONFIRMED.
+ */
+export const REJECT_CANCEL_RESTORE_STATUSES: ReadonlySet<BookingStatus> =
+  new Set(VALID_TRANSITIONS.CLIENT_REQUEST_CANCEL.from);
+
 // ─── Terminal states ──────────────────────────────────────────────────────────
 
 export const TERMINAL_STATUSES: ReadonlySet<BookingStatus> = new Set([
@@ -261,11 +284,20 @@ export const TERMINAL_STATUSES: ReadonlySet<BookingStatus> = new Set([
  * (either PENDING or CONFIRMED), not always CONFIRMED. The table stores
  * CONFIRMED as the canonical `to`; this function corrects that for PENDING.
  *
- * Throws `BadRequestException` if the transition is not valid from `from`.
+ * Special case — REJECT_CANCEL must restore the booking to the status it held
+ * before the client requested cancellation. The caller passes that status via
+ * `restoreTo` (read from the matching `BookingStatusLog.fromStatus`). When it is
+ * provided and is a legitimate pre-request status it is honoured; otherwise the
+ * conservative table default (PENDING) is returned so an unpaid booking is never
+ * promoted to CONFIRMED and granted a paid slot for free.
+ *
+ * Throws `BadRequestException` if the transition is not valid from `from`, or if
+ * a non-restorable `restoreTo` is supplied for REJECT_CANCEL.
  */
 export function assertTransition(
   from: BookingStatus,
   transition: BookingTransition,
+  restoreTo?: BookingStatus | null,
 ): BookingStatus {
   const rule = VALID_TRANSITIONS[transition];
 
@@ -285,6 +317,22 @@ export function assertTransition(
   // RESCHEDULE self-loop: preserve the actual current status
   if (transition === 'RESCHEDULE') {
     return from;
+  }
+
+  // REJECT_CANCEL: restore the pre-request status instead of forcing CONFIRMED.
+  if (transition === 'REJECT_CANCEL') {
+    if (restoreTo == null) {
+      // Pre-request status unknown — fall back to the safe, non-promoting default.
+      return rule.to;
+    }
+    if (!REJECT_CANCEL_RESTORE_STATUSES.has(restoreTo)) {
+      const allowed = [...REJECT_CANCEL_RESTORE_STATUSES].join(', ');
+      throw new BadRequestException(
+        `Cannot restore a rejected cancel request to status '${restoreTo}'. ` +
+          `Restorable statuses: [${allowed}].`,
+      );
+    }
+    return restoreTo;
   }
 
   return rule.to;

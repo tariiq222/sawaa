@@ -48,7 +48,13 @@ export class ClientRefreshHandler {
       throw new UnauthorizedException('Client not found or inactive');
     }
 
-    const tokens = await this.clientTokens.issueTokenPair({ id: clientId, email: client.email });
+    // P1-7: carry the live tokenVersion through refresh so rotated access
+    // tokens stay valid against the strategy's tokenVersion check.
+    const tokens = await this.clientTokens.issueTokenPair({
+      id: clientId,
+      email: client.email,
+      tokenVersion: client.tokenVersion,
+    });
 
     return {
       accessToken: tokens.accessToken,

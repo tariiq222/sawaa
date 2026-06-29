@@ -95,6 +95,7 @@ describe('ClientLoginHandler', () => {
         passwordHash: 'hashed_pw',
         loginAttempts: 0,
         lockoutUntil: null,
+        tokenVersion: 0,
       });
       queueAttempts(1, 1);
       mockPasswords.verify.mockResolvedValue(true);
@@ -127,6 +128,35 @@ describe('ClientLoginHandler', () => {
       expect(mockClientTokens.issueTokenPair).toHaveBeenCalledWith({
         id: 'cl-1',
         email: 'test@example.com',
+        tokenVersion: 0,
+      });
+    });
+
+    // P1-7: a password reset bumps Client.tokenVersion. Login must issue a token
+    // carrying the *live* version, otherwise the strategy's tokenVersion check
+    // rejects every freshly-issued token and locks the client out.
+    it('passes the live tokenVersion through to the issued token after a reset (P1-7)', async () => {
+      mockPrisma.client.findFirst.mockResolvedValue({
+        id: 'cl-reset',
+        email: 'reset@example.com',
+        passwordHash: 'hashed_pw',
+        loginAttempts: 0,
+        lockoutUntil: null,
+        tokenVersion: 1, // bumped by a prior password reset
+      });
+      queueAttempts(1, 1);
+      mockPasswords.verify.mockResolvedValue(true);
+      mockPrisma.client.update.mockResolvedValue({ id: 'cl-reset' });
+
+      await handler.execute(
+        { email: 'reset@example.com', password: 'SecurePass123' },
+        '1.2.3.4',
+      );
+
+      expect(mockClientTokens.issueTokenPair).toHaveBeenCalledWith({
+        id: 'cl-reset',
+        email: 'reset@example.com',
+        tokenVersion: 1,
       });
     });
 
@@ -300,6 +330,7 @@ describe('ClientLoginHandler', () => {
         passwordHash: 'hashed_pw',
         loginAttempts: 0,
         lockoutUntil: null,
+        tokenVersion: 0,
       });
       queueAttempts(1, 1);
       mockPasswords.verify.mockResolvedValue(true);
@@ -318,7 +349,7 @@ describe('ClientLoginHandler', () => {
       expect(result.clientId).toBe('cl-p1');
       expect(mockRedisClient.del).toHaveBeenCalledWith('client_login:id:+966501234567');
       // Token pair still issued with the (null) email — service accepts string | null.
-      expect(mockClientTokens.issueTokenPair).toHaveBeenCalledWith({ id: 'cl-p1', email: null });
+      expect(mockClientTokens.issueTokenPair).toHaveBeenCalledWith({ id: 'cl-p1', email: null, tokenVersion: 0 });
     });
 
     it('throws constant Invalid credentials for unknown phone', async () => {

@@ -73,6 +73,8 @@ describe('AuthController (e2e)', () => {
     user: {
       findUnique: jest.fn(),
     },
+    // P1-8: login/me now load DB system-role permissions (mirrors JwtStrategy).
+    customRole: { findFirst: jest.fn().mockResolvedValue(null) },
   });
 
   const buildApp = async (mockPrisma: any, jwtGuardValue: any) => {

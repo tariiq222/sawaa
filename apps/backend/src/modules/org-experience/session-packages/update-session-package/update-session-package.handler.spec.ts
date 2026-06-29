@@ -4,6 +4,9 @@ import { PrismaService, RlsTransactionService } from '../../../../infrastructure
 import { DiscountType } from '@prisma/client';
 import { UpdateSessionPackageHandler } from './update-session-package.handler';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
+import { CacheService } from '../../../../infrastructure/cache';
+
+const cacheProvider = { provide: CacheService, useValue: { invalidatePrefix: jest.fn() } };
 
 function buildPrisma() {
   const sessionPackageFindFirst = jest.fn();
@@ -108,6 +111,7 @@ describe('UpdateSessionPackageHandler', () => {
           provide: RlsTransactionService,
           useValue: { withTransaction: jest.fn((fn: (t: typeof tx) => Promise<unknown>) => fn(tx)) },
         },
+        cacheProvider,
       ],
     }).compile();
 

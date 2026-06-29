@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
+import { CacheService } from '../../../../infrastructure/cache';
+import { PUBLIC_PACKAGES_CACHE_KEY } from '../list-public-packages/public-packages.cache';
 
 export type ArchiveSessionPackageCommand = { packageId: string };
 
@@ -11,7 +13,10 @@ export type ArchiveSessionPackageCommand = { packageId: string };
  */
 @Injectable()
 export class ArchiveSessionPackageHandler {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+  ) {}
 
   async execute(dto: ArchiveSessionPackageCommand) {
     const existing = await this.prisma.sessionPackage.findFirst({
@@ -26,6 +31,8 @@ export class ArchiveSessionPackageHandler {
       where: { id: dto.packageId },
       data: { archivedAt: new Date(), isActive: false },
     });
+
+    await this.cache.invalidatePrefix(PUBLIC_PACKAGES_CACHE_KEY);
 
     return { id: dto.packageId };
   }

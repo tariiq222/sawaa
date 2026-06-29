@@ -1,15 +1,26 @@
 import type { PaginatedResponse, PaginationParams } from './api'
 
-export type BookingStatus =
-  | 'pending'
-  | 'pending_group_fill'
-  | 'awaiting_payment'
-  | 'confirmed'
-  | 'cancelled'
-  | 'completed'
-  | 'no_show'
-  | 'expired'
-  | 'cancel_requested'
+/**
+ * Booking status values (snake_case in UI/API, mapped to UPPER_CASE in the DB
+ * enum). This runtime tuple is the single source of truth for `BookingStatus`;
+ * it mirrors the backend `BookingStatus` enum in apps/backend/openapi.json.
+ * Keep the two in sync — the colocated booking.test.ts enforces this against
+ * the committed OpenAPI spec (the enum-drift gate).
+ */
+export const BOOKING_STATUSES = [
+  'pending',
+  'pending_group_fill',
+  'awaiting_payment',
+  'deposit_paid',
+  'confirmed',
+  'cancelled',
+  'completed',
+  'no_show',
+  'expired',
+  'cancel_requested',
+] as const
+
+export type BookingStatus = (typeof BOOKING_STATUSES)[number]
 
 /**
  * Booking kind (snake_case in UI/API, mapped to UPPER_CASE in DB).

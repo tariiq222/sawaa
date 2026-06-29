@@ -27,11 +27,21 @@ describe('SendPushHandler', () => {
     expect(fcm.sendPush).not.toHaveBeenCalled();
   });
 
-  it('does not throw when fcm.sendPush rejects', async () => {
+  it('rethrows when fcm.sendPush rejects so the dispatcher retry path engages (P1-11)', async () => {
     const fcm = buildFcm(true);
     fcm.sendPush = jest.fn().mockRejectedValue(new Error('FCM error'));
     const handler = new SendPushHandler(fcm as unknown as FcmService);
-    await expect(handler.execute({ token: 'bad-token', title: 'T', body: 'B' })).resolves.not.toThrow();
+    await expect(handler.execute({ token: 'bad-token', title: 'T', body: 'B' })).rejects.toThrow(
+      'FCM error',
+    );
+  });
+
+  it('does not throw when FCM is unavailable (deliberate skip, not a failure)', async () => {
+    const fcm = buildFcm(false);
+    fcm.sendPush = jest.fn().mockRejectedValue(new Error('FCM error'));
+    const handler = new SendPushHandler(fcm as unknown as FcmService);
+    await expect(handler.execute({ token: 'tok', title: 'T', body: 'B' })).resolves.toBeUndefined();
+    expect(fcm.sendPush).not.toHaveBeenCalled();
   });
 
   it('passes data payload to FCM', async () => {

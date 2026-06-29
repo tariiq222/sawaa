@@ -83,9 +83,14 @@ describe('Booking state machine — impossible sequences (integration)', () => {
       expect(result).toBe(BookingStatus.CANCELLED);
     });
 
-    it('CANCEL_REQUESTED → REJECT_CANCEL → CONFIRMED (staff reinstates booking)', () => {
-      const result = assertTransition(BookingStatus.CANCEL_REQUESTED, 'REJECT_CANCEL');
+    it('CANCEL_REQUESTED → REJECT_CANCEL restores the pre-request status (CONFIRMED) when supplied', () => {
+      const result = assertTransition(BookingStatus.CANCEL_REQUESTED, 'REJECT_CANCEL', BookingStatus.CONFIRMED);
       expect(result).toBe(BookingStatus.CONFIRMED);
+    });
+
+    it('CANCEL_REQUESTED → REJECT_CANCEL falls back to PENDING (never auto-promotes to a paid slot) when no pre-request status is supplied', () => {
+      const result = assertTransition(BookingStatus.CANCEL_REQUESTED, 'REJECT_CANCEL');
+      expect(result).toBe(BookingStatus.PENDING);
     });
 
     it('CONFIRMED cannot go directly to APPROVE_CANCEL (must be CANCEL_REQUESTED first)', () => {

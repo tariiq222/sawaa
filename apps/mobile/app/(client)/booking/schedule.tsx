@@ -33,6 +33,8 @@ export default function BookingScheduleScreen() {
     deliveryType?: DeliveryType;
     durationMins?: string;
     durationOptionId?: string;
+    chargedPrice?: string;
+    currency?: string;
   }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -145,6 +147,8 @@ export default function BookingScheduleScreen() {
         deliveryType: params.deliveryType ?? 'in_person',
         scheduledAt: selectedSlot.startTime,
         durationOptionId: params.durationOptionId,
+        chargedPrice: params.chargedPrice,
+        currency: params.currency,
       },
     });
   };

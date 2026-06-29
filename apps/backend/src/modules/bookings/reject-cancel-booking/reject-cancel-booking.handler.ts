@@ -29,7 +29,17 @@ export class RejectCancelBookingHandler {
     if (!booking) {
       throw new NotFoundException(`Booking ${cmd.bookingId} not found`);
     }
-    const nextStatus = assertTransition(booking.status, 'REJECT_CANCEL');
+
+    // Restore the booking to the status it held BEFORE the client requested
+    // cancellation, read from the matching status-log row. Without this the
+    // booking would fall back to the safe PENDING default and an originally
+    // CONFIRMED/AWAITING_PAYMENT booking would lose its prior state.
+    const requestLog = await this.prisma.bookingStatusLog.findFirst({
+      where: { bookingId: cmd.bookingId, toStatus: booking.status },
+      orderBy: { createdAt: 'desc' },
+    });
+    const restoreTo = requestLog?.fromStatus ?? null;
+    const nextStatus = assertTransition(booking.status, 'REJECT_CANCEL', restoreTo);
 
     const [updated] = await this.rlsTransaction.withTransaction((tx) => Promise.all([
       updateBookingAtomically(tx, {

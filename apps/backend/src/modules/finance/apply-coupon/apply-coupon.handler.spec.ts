@@ -245,6 +245,45 @@ describe('ApplyCouponHandler — halalas invariants', () => {
     expect(written?.total).toBe(9200);
   });
 
+  // ─── P1-5: stacked coupons must not push discount above subtotal ─────────
+
+  it('P1-5: FIXED 2000 coupon stacked on existing 9500 discount clamps cumulative discount to subtotal (10 000)', async () => {
+    // Existing discount 9500 + this coupon 2000 = 11 500 naive, which would push
+    // discountAmt ABOVE the 10 000 subtotal (inconsistent invoice row). The
+    // cumulative discount must clamp to 10 000, and the redemption row must record
+    // only the 500 this coupon actually subtracted (delta after the clamp).
+    const invoice = buildInvoice({ discountAmt: 9500, vatRate: 0.15 });
+    const coupon = buildCoupon({ discountType: 'FIXED', discountValue: 2000 });
+    const { handler, prisma } = buildHandler(invoice, coupon);
+    await handler.execute(cmd);
+
+    const written = captureInvoiceUpdate(prisma);
+    // Cumulative discount clamped to subtotal.
+    expect(written?.discountAmt).toBe(10000);
+    // Redemption records only the allowed contribution (10000 − 9500 = 500),
+    // so sum(redemptions) stays consistent with invoice.discountAmt.
+    expect(captureRedemptionDiscount(prisma)).toBe(500);
+    // newVatBase = max(0, 10000 − 10000) = 0 → no VAT, total 0.
+    expect(written?.vatAmt).toBe(0);
+    expect(written?.total).toBe(0);
+  });
+
+  it('P1-5: a coupon stacked on a fully-discounted invoice records 0 contribution (never negative)', async () => {
+    // The subtotal is already fully covered by prior discounts; this coupon can
+    // subtract nothing more. discountAmt stays at the subtotal and the redemption
+    // records 0 rather than a negative amount.
+    const invoice = buildInvoice({ discountAmt: 10000, vatRate: 0.15 });
+    const coupon = buildCoupon({ discountType: 'FIXED', discountValue: 3000 });
+    const { handler, prisma } = buildHandler(invoice, coupon);
+    await handler.execute(cmd);
+
+    const written = captureInvoiceUpdate(prisma);
+    expect(written?.discountAmt).toBe(10000);
+    expect(captureRedemptionDiscount(prisma)).toBe(0);
+    expect(written?.vatAmt).toBe(0);
+    expect(written?.total).toBe(0);
+  });
+
   // ─── No toDecimalPlaces(2) artifacts ─────────────────────────────────────
 
   it('all written amounts are integers (no fractional halalas)', async () => {

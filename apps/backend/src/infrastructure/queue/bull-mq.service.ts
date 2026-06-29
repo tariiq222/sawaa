@@ -53,7 +53,13 @@ export class BullMqService implements OnModuleDestroy, OnModuleInit {
     const existing = this.queues.get(name);
     if (existing) return existing;
 
-    const queue = new Queue(name, { connection: this.buildConnection() });
+    const queue = new Queue(name, {
+      connection: this.buildConnection(),
+      // defaultJobOptions belong on the Queue, not the Worker — BullMQ applies
+      // attempts/backoff/removeOn* at enqueue time. Passing them to the Worker
+      // is silently ignored, which previously left every job at attempts=1.
+      defaultJobOptions: DEFAULT_JOB_OPTIONS,
+    });
     this.queues.set(name, queue);
     this.logger.log(`Queue created: ${name}`);
     return queue;
@@ -72,7 +78,9 @@ export class BullMqService implements OnModuleDestroy, OnModuleInit {
       throw new Error(`Worker already registered for queue "${name}"`);
     }
     const worker = new Worker<TData, TResult>(name, processor, {
-      ...DEFAULT_JOB_OPTIONS,
+      // Only worker-scoped options here. Job-level retry/backoff/cleanup are
+      // set as defaultJobOptions on the Queue (see getQueue) — the Worker
+      // ignores them, so spreading DEFAULT_JOB_OPTIONS here was a no-op.
       ...options,
       connection: this.buildConnection(),
       maxStalledCount: 3,

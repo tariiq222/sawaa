@@ -4,7 +4,6 @@ import { Prisma } from '@prisma/client';
 import { ClsService } from 'nestjs-cls';
 import { PaymentMethod, PaymentStatus } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { EventBusService } from '../../../infrastructure/events';
 import { MoyasarCredentialsService } from '../../../infrastructure/payments/moyasar-credentials.service';
 import { DEFAULT_ORG_ID, PAYMENT_CONFIG_SINGLETON_KEY, SINGLE_TENANT_CONTEXT_ID, SYSTEM_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../../common/constants';
 import { errorMessage } from '../../../common/helpers/error-message.helper';
@@ -77,7 +76,6 @@ export class MoyasarWebhookHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
-    private readonly eventBus: EventBusService,
     private readonly cls: ClsService,
     private readonly creds: MoyasarCredentialsService,
     private readonly moyasarApi: MoyasarApiClient,
@@ -396,11 +394,12 @@ export class MoyasarWebhookHandler {
           }
         }
 
-        // Wrap payment upsert + invoice update in a single transaction to ensure
-        // atomicity — if either fails, both roll back and no inconsistent state is stored.
-        // `dbPaymentId` is the internal Payment ROW id; `paymentId` (above) is the
-        // Moyasar gateway payment id — they are distinct values.
-        const { dbPaymentId, invoiceFullyPaid } = await this.rlsTransaction.withTransaction(async (tx) => {
+        // Wrap payment upsert + invoice update + domain-event outbox write in a
+        // single transaction to ensure atomicity — if any step fails, all roll
+        // back and no inconsistent state is stored. `savedPayment.id` is the
+        // internal Payment ROW id; `paymentId` (above) is the Moyasar gateway
+        // payment id — they are distinct values.
+        await this.rlsTransaction.withTransaction(async (tx) => {
           const payment = await tx.payment.findFirst({
             where: { OR: [{ gatewayRef: paymentId }, { idempotencyKey: `moyasar:${paymentId}` }] },
             orderBy: [{ gatewayRef: 'desc' }, { updatedAt: 'desc' }],
@@ -459,63 +458,90 @@ export class MoyasarWebhookHandler {
             });
           }
 
-          return { dbPaymentId: savedPayment.id, invoiceFullyPaid: fullyPaid };
+          // P1-12: write domain events to the OutboxEvent table INSIDE this same
+          // transaction instead of publishing directly after commit. The previous
+          // code awaited eventBus.publish() AFTER the tx committed — if the process
+          // crashed (or the broker was unreachable) in that window, the event was
+          // lost forever: the payment was COMPLETED and the invoice PAID, but the
+          // booking never confirmed and no receipt was sent, and nothing could
+          // rescue it. By staging the event in the same atomic write, the
+          // OutboxPublisherCron guarantees at-least-once delivery — mirrors the
+          // create-booking outbox pattern.
+          //
+          // PaymentCompletedEvent is staged ONLY when the invoice is fully PAID —
+          // downstream consumers (booking confirmation, receipts) must not react
+          // to a still-outstanding invoice.
+          if (status === PaymentStatus.COMPLETED && fullyPaid) {
+            const event = new PaymentCompletedEvent({
+              paymentId: savedPayment.id,
+              invoiceId: invoice.id,
+              bookingId: invoice.bookingId,
+              packagePurchaseId: invoice.packagePurchaseId,
+              amount: amountHalalas,
+              currency: invoice.currency,
+              organizationId: DEFAULT_ORG_ID,
+            });
+            await tx.outboxEvent.create({
+              data: {
+                aggregateId: invoice.id,
+                eventType: event.eventName,
+                payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+              },
+            });
+          } else if (
+            status === PaymentStatus.COMPLETED &&
+            isDepositPayment({
+              paidAfter: paidAfterWrite,
+              total: Math.round(Number(invoice.total)),
+              depositAmount,
+            })
+          ) {
+            // The card payment exactly matched the configured deposit and the
+            // invoice is still PARTIALLY_PAID — move the booking to DEPOSIT_PAID
+            // (reserving staff time) without confirming the appointment.
+            const event = new DepositPaidEvent({
+              paymentId: savedPayment.id,
+              invoiceId: invoice.id,
+              bookingId: invoice.bookingId,
+              amount: amountHalalas,
+              currency: invoice.currency,
+              organizationId: DEFAULT_ORG_ID,
+            });
+            await tx.outboxEvent.create({
+              data: {
+                aggregateId: invoice.id,
+                eventType: event.eventName,
+                payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+              },
+            });
+          } else if (status === PaymentStatus.FAILED) {
+            const failedEvent = new PaymentFailedEvent({
+              paymentId: savedPayment.id,
+              invoiceId: invoice.id,
+              clientId: invoice.clientId,
+              amount: amountHalalas,
+              currency: invoice.currency,
+              reason: message,
+            });
+            await tx.outboxEvent.create({
+              data: {
+                aggregateId: invoice.id,
+                eventType: failedEvent.eventName,
+                payload: failedEvent.toEnvelope() as unknown as Prisma.InputJsonValue,
+              },
+            });
+          }
+
         });
 
-        // Event emission is intentionally OUTSIDE the transaction:
-        // - The payment and invoice are durably committed.
-        // - If eventBus.publish fails, BullMQ will retry (at-least-once semantics).
-        // - Consumers (e.g. booking confirmation) are idempotent.
-        //
-        // The success metric increments on ANY COMPLETED card payment (a partial
-        // top-up is still a successful charge), but PaymentCompletedEvent fires
-        // ONLY when the invoice is fully PAID — downstream consumers (booking
-        // confirmation, receipts) must not react to a still-outstanding invoice.
+        // Metrics are best-effort observability only — they carry no fulfillment
+        // semantics, so they stay outside the transaction. The success metric
+        // increments on ANY COMPLETED card payment (a partial top-up is still a
+        // successful charge).
         if (status === PaymentStatus.COMPLETED) {
           this.appMetrics?.paymentAttempts.labels({ result: 'succeeded' }).inc();
-        }
-        if (status === PaymentStatus.COMPLETED && invoiceFullyPaid) {
-          const event = new PaymentCompletedEvent({
-            paymentId: dbPaymentId,
-            invoiceId: invoice.id,
-            bookingId: invoice.bookingId,
-            packagePurchaseId: invoice.packagePurchaseId,
-            amount: amountHalalas,
-            currency: invoice.currency,
-            organizationId: DEFAULT_ORG_ID,
-          });
-          await this.eventBus.publish(event.eventName, event.toEnvelope());
-        } else if (
-          status === PaymentStatus.COMPLETED &&
-          isDepositPayment({
-            paidAfter: paidAfterWrite,
-            total: Math.round(Number(invoice.total)),
-            depositAmount,
-          })
-        ) {
-          // The card payment exactly matched the configured deposit and the
-          // invoice is still PARTIALLY_PAID — move the booking to DEPOSIT_PAID
-          // (reserving staff time) without confirming the appointment.
-          const event = new DepositPaidEvent({
-            paymentId: dbPaymentId,
-            invoiceId: invoice.id,
-            bookingId: invoice.bookingId,
-            amount: amountHalalas,
-            currency: invoice.currency,
-            organizationId: DEFAULT_ORG_ID,
-          });
-          await this.eventBus.publish(event.eventName, event.toEnvelope());
         } else if (status === PaymentStatus.FAILED) {
           this.appMetrics?.paymentAttempts.labels({ result: 'failed' }).inc();
-          const failedEvent = new PaymentFailedEvent({
-            paymentId: dbPaymentId,
-            invoiceId: invoice.id,
-            clientId: invoice.clientId,
-            amount: amountHalalas,
-            currency: invoice.currency,
-            reason: message,
-          });
-          await this.eventBus.publish(failedEvent.eventName, failedEvent.toEnvelope());
         }
 
         return {} as MoyasarWebhookResult;

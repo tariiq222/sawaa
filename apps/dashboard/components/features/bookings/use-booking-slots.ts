@@ -15,6 +15,8 @@ interface UseBookingSlotsOptions {
   serviceId: string
   deliveryType?: string
   date: string
+  /** Explicit session length (minutes) from the chosen duration option. */
+  durationMins?: number
 }
 
 export function useCreateBookingSlots({
@@ -22,6 +24,7 @@ export function useCreateBookingSlots({
   serviceId,
   deliveryType,
   date,
+  durationMins,
 }: UseBookingSlotsOptions) {
   // Fetch services that belong to this employee
   const { data: employeeServices = [], isLoading: employeeServicesLoading } = useQuery<EmployeeService[]>({
@@ -39,6 +42,9 @@ export function useCreateBookingSlots({
   })
 
   const selectedDuration = React.useMemo((): number | undefined => {
+    // An explicit duration option (e.g. 60-min) overrides the type default.
+    if (durationMins != null) return durationMins
+
     // Use service type duration directly from the selected delivery type
     const pst = serviceTypes.find(
       (st) => st.deliveryType === (deliveryType ?? "")
@@ -47,7 +53,7 @@ export function useCreateBookingSlots({
 
     const es = employeeServices.find((s) => s.serviceId === serviceId)
     return es?.service?.duration
-  }, [serviceTypes, deliveryType, employeeServices, serviceId])
+  }, [serviceTypes, deliveryType, employeeServices, serviceId, durationMins])
 
   const canFetchSlots = !!employeeId && !!date && !!selectedDuration
 

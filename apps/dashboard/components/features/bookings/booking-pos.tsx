@@ -162,8 +162,22 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
       durationOptionId,
     )
     selectDurationOption(resolvedId)
-    setOpenSection("datetime")
+    // When the type has a single duration option the wizard advances
+    // straight to date/time; with multiple options the operator stays on
+    // this step to pick a duration first.
+    const matchHasMultiple = (matchingServiceType?.durationOptions?.length ?? 0) > 1
+    setOpenSection(matchHasMultiple ? "typeDuration" : "datetime")
     // DurationOption change re-arms the badge so the new triple can match.
+    setUseCredit(false)
+    setCreditDismissed(false)
+  }
+
+  // Operator picks a specific duration option for the already-selected
+  // delivery type. Re-arms the credit badge (the triple changed) and
+  // advances to the date/time step.
+  const handleSelectDuration = (durationOptionId: string) => {
+    selectDurationOption(durationOptionId)
+    setOpenSection("datetime")
     setUseCredit(false)
     setCreditDismissed(false)
   }
@@ -253,13 +267,33 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
     enabled: !!state.employeeId && !!state.serviceId,
     staleTime: 0,
   })
-  const servicePriceHalalas = useMemo(() => {
-    if (!state.deliveryType || serviceTypes.length === 0) return null
-    const match = serviceTypes.find(
+  const selectedServiceType = useMemo(() => {
+    if (!state.deliveryType || serviceTypes.length === 0) return undefined
+    return serviceTypes.find(
       (st) => st.deliveryType.toLowerCase() === state.deliveryType?.toLowerCase() && st.isActive,
     )
-    return match?.price != null ? Number(match.price) : null
   }, [serviceTypes, state.deliveryType])
+
+  const selectedDurationOption = useMemo(() => {
+    if (!selectedServiceType || !state.durationOptionId) return undefined
+    return selectedServiceType.durationOptions?.find((o) => o.id === state.durationOptionId)
+  }, [selectedServiceType, state.durationOptionId])
+
+  // Price + duration follow the chosen duration option when present,
+  // falling back to the type-level values otherwise.
+  const servicePriceHalalas = useMemo(() => {
+    if (selectedDurationOption) return Number(selectedDurationOption.price)
+    return selectedServiceType?.price != null ? Number(selectedServiceType.price) : null
+  }, [selectedServiceType, selectedDurationOption])
+
+  const selectedDurationMins = selectedDurationOption?.durationMinutes ?? null
+
+  const durationSummaryLabel = selectedDurationOption
+    ? (locale === "ar"
+        ? selectedDurationOption.labelAr ?? selectedDurationOption.label
+        : selectedDurationOption.label) ||
+      `${selectedDurationOption.durationMinutes} ${t("bookings.wizard.step.typeDuration.minutes")}`
+    : null
 
   const handleSubmit = async () => {
     if (!state.clientId || !state.serviceId || !state.employeeId || !state.deliveryType || !state.date || !state.startTime)
@@ -312,6 +346,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
       serviceId: state.serviceId,
       type: "individual" as const,
       deliveryType: state.deliveryType,
+      durationOptionId: state.durationOptionId ?? undefined,
       date: state.date,
       startTime: state.startTime,
       payAtClinic: state.payAtClinic,
@@ -454,6 +489,8 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
                 serviceId={state.serviceId!}
                 selectedType={state.deliveryType}
                 onSelectType={handleSelectDeliveryType}
+                selectedDurationOptionId={state.durationOptionId}
+                onSelectDuration={handleSelectDuration}
               />
             ) : (
               <PosSectionHint hint={t("bookings.pos.hint.needService")} />
@@ -475,7 +512,8 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
                   employeeId={state.employeeId!}
                   serviceId={state.serviceId!}
                   deliveryType={state.deliveryType!}
-                  durationOptionId={null}
+                  durationOptionId={state.durationOptionId}
+                  durationMins={selectedDurationMins}
                   selectedDate={state.date}
                   selectedTime={state.startTime}
                   onSelectDate={selectDate}
@@ -518,7 +556,7 @@ export function BookingPos({ onSuccess, onCancel }: BookingPosProps) {
             serviceName={state.serviceName}
             employeeName={state.employeeName}
             type={state.deliveryType}
-            durationLabel={null}
+            durationLabel={durationSummaryLabel}
             date={state.date}
             startTime={state.startTime}
             servicePriceHalalas={servicePriceHalalas}

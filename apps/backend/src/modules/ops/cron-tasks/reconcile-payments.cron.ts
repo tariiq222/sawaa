@@ -1,7 +1,6 @@
 import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
-import { ActivityAction, PaymentMethod, PaymentStatus } from '@prisma/client';
+import { ActivityAction, PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
-import { EventBusService } from '../../../infrastructure/events';
 import { MoyasarApiClient, MoyasarPaymentStatus } from '../../finance/moyasar-api/moyasar-api.client';
 import { PaymentCompletedEvent } from '../../finance/events/payment-completed.event';
 import { PaymentFailedEvent } from '../../finance/events/payment-failed.event';
@@ -51,7 +50,6 @@ export class ReconcilePaymentsCron {
     private readonly prisma: PrismaService,
     private readonly rlsTransaction: RlsTransactionService,
     private readonly moyasar: MoyasarApiClient,
-    private readonly eventBus: EventBusService,
     @Optional() private readonly appMetrics: AppMetricsService | null = null,
   ) {}
 
@@ -238,6 +236,59 @@ export class ReconcilePaymentsCron {
         },
       });
 
+      // P1-12: stage the domain event in the OutboxEvent table INSIDE this same
+      // transaction instead of publishing after commit. The old code awaited
+      // eventBus.publish() AFTER the tx committed — if the process crashed in
+      // that window, the event was lost: the payment was COMPLETED and the
+      // invoice PAID, but the booking never confirmed and no receipt was sent.
+      // The reconcile cron is itself the rescue for stuck PENDING rows, so it
+      // re-reads the row each tick and no-ops once finalized — meaning a lost
+      // post-commit event could NEVER be re-emitted. Staging it atomically lets
+      // the OutboxPublisherCron guarantee at-least-once delivery.
+      //
+      // PaymentCompletedEvent confirms the booking ONLY when the invoice is
+      // fully PAID; a deposit-sized partial stages DepositPaidEvent instead.
+      if (fullyPaid) {
+        const event = new PaymentCompletedEvent({
+          paymentId: paymentRowId,
+          invoiceId: invoice.id,
+          bookingId: invoice.bookingId,
+          packagePurchaseId: invoice.packagePurchaseId,
+          amount: amountHalalas,
+          currency: invoice.currency,
+          organizationId: DEFAULT_ORG_ID,
+        });
+        await tx.outboxEvent.create({
+          data: {
+            aggregateId: invoice.id,
+            eventType: event.eventName,
+            payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+          },
+        });
+      } else if (
+        isDepositPayment({
+          paidAfter: paidAfterWrite,
+          total,
+          depositAmount: deposit.enabled ? deposit.depositAmount : null,
+        })
+      ) {
+        const event = new DepositPaidEvent({
+          paymentId: paymentRowId,
+          invoiceId: invoice.id,
+          bookingId: invoice.bookingId,
+          amount: amountHalalas,
+          currency: invoice.currency,
+          organizationId: DEFAULT_ORG_ID,
+        });
+        await tx.outboxEvent.create({
+          data: {
+            aggregateId: invoice.id,
+            eventType: event.eventName,
+            payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+          },
+        });
+      }
+
       applied = true;
     });
 
@@ -249,39 +300,6 @@ export class ReconcilePaymentsCron {
     }
 
     this.appMetrics?.paymentAttempts.labels({ result: 'succeeded' }).inc();
-
-    // Events fire OUTSIDE the tx (durably committed above). Consumers are
-    // idempotent and BullMQ retries delivery. PaymentCompletedEvent confirms
-    // the booking ONLY when the invoice is fully PAID; a deposit-sized partial
-    // emits DepositPaidEvent instead.
-    if (fullyPaid) {
-      const event = new PaymentCompletedEvent({
-        paymentId: paymentRowId,
-        invoiceId: invoice.id,
-        bookingId: invoice.bookingId,
-        packagePurchaseId: invoice.packagePurchaseId,
-        amount: amountHalalas,
-        currency: invoice.currency,
-        organizationId: DEFAULT_ORG_ID,
-      });
-      await this.eventBus.publish(event.eventName, event.toEnvelope());
-    } else if (
-      isDepositPayment({
-        paidAfter: paidAfterWrite,
-        total,
-        depositAmount: deposit.enabled ? deposit.depositAmount : null,
-      })
-    ) {
-      const event = new DepositPaidEvent({
-        paymentId: paymentRowId,
-        invoiceId: invoice.id,
-        bookingId: invoice.bookingId,
-        amount: amountHalalas,
-        currency: invoice.currency,
-        organizationId: DEFAULT_ORG_ID,
-      });
-      await this.eventBus.publish(event.eventName, event.toEnvelope());
-    }
 
     this.logger.log(
       `reconcile-payments: Payment ${paymentRowId} → COMPLETED (reconciled from Moyasar 'paid', invoice ${fullyPaid ? 'PAID' : 'PARTIALLY_PAID'})`,
@@ -317,21 +335,32 @@ export class ReconcilePaymentsCron {
           description: `Reconciled from Moyasar → FAILED (invoice ${invoice.id})`,
         },
       });
+
+      // P1-12: stage PaymentFailedEvent in the outbox INSIDE the tx (see
+      // finalizeCompleted) so a crash between commit and publish cannot lose it
+      // — the OutboxPublisherCron delivers it at-least-once.
+      const event = new PaymentFailedEvent({
+        paymentId: paymentRowId,
+        invoiceId: invoice.id,
+        clientId: invoice.clientId,
+        amount: amountHalalas,
+        currency: invoice.currency,
+        reason: 'Reconciled from Moyasar (failed/voided)',
+      });
+      await tx.outboxEvent.create({
+        data: {
+          aggregateId: invoice.id,
+          eventType: event.eventName,
+          payload: event.toEnvelope() as unknown as Prisma.InputJsonValue,
+        },
+      });
+
       applied = true;
     });
 
     if (!applied) return;
 
     this.appMetrics?.paymentAttempts.labels({ result: 'failed' }).inc();
-    const event = new PaymentFailedEvent({
-      paymentId: paymentRowId,
-      invoiceId: invoice.id,
-      clientId: invoice.clientId,
-      amount: amountHalalas,
-      currency: invoice.currency,
-      reason: 'Reconciled from Moyasar (failed/voided)',
-    });
-    await this.eventBus.publish(event.eventName, event.toEnvelope());
 
     this.logger.warn(
       `reconcile-payments: Payment ${paymentRowId} → FAILED (reconciled from Moyasar failed/voided)`,

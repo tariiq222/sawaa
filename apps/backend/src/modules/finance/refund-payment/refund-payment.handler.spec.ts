@@ -243,12 +243,49 @@ describe('RefundPaymentHandler', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('throws BadRequestException when payment has no gatewayRef', async () => {
+    it('P1-1: settles an off-gateway (no gatewayRef) refund fully in-tx as COMPLETED', async () => {
+      // Off-gateway (cash/bank-transfer) payment: no gatewayRef. The cancellation
+      // transaction must NOT abort — instead the refund is born COMPLETED and the
+      // payment + invoice are updated inside this same tx, with no Moyasar call.
       prisma.$queryRaw.mockResolvedValue(makePaymentRow({ gatewayRef: null }));
+      prisma.refundRequest.findFirst.mockResolvedValue(null);
+      prisma.invoice.findUniqueOrThrow.mockResolvedValue(makeInvoice({ total: 100, vatAmt: 0, refundedAmount: 0 }));
+      prisma.refundRequest.create.mockResolvedValue({ id: 'rr-new' });
+      prisma.payment.update.mockResolvedValue({ id: 'pay-1', status: RefundStatus.COMPLETED });
+      prisma.invoice.update.mockResolvedValue({ id: 'inv-1' });
 
-      await expect(
-        handler.createRefundRequestInTx(prisma as any, { paymentId: 'pay-1', reason: 'test' }),
-      ).rejects.toThrow(BadRequestException);
+      const result = await handler.createRefundRequestInTx(prisma as any, {
+        paymentId: 'pay-1',
+        reason: 'off-gateway cancel',
+        performedBy: 'admin-1',
+      });
+
+      expect(result.refundRequestId).toBe('test-uuid-1234');
+      expect(result.idempotencyKey).toBe('refund:test-uuid-1234');
+      expect(result.payment.gatewayRef).toBeNull();
+      // Born COMPLETED — the downstream finalize step sees it done and skips Moyasar.
+      expect(prisma.refundRequest.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: RefundStatus.COMPLETED }),
+        }),
+      );
+      // Payment + invoice settled in the same tx; no external gateway call here.
+      expect(prisma.payment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'pay-1' },
+          data: expect.objectContaining({
+            status: PaymentStatus.REFUNDED,
+            refundedAmount: { increment: 100 },
+          }),
+        }),
+      );
+      expect(prisma.invoice.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'inv-1' },
+          data: expect.objectContaining({ status: 'REFUNDED' }),
+        }),
+      );
+      expect(moyasar.createRefund).not.toHaveBeenCalled();
     });
 
     it('throws BadRequestException when an in-flight refund already exists', async () => {

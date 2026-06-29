@@ -10,6 +10,7 @@ export type {
 } from './user'
 export type { PaginationMeta, PaginatedResponse, PaginationParams } from './api'
 export { buildQueryString } from './api'
+export { BOOKING_STATUSES } from './booking'
 export type {
   BookingStatus,
   BookingType,

@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database';
 import { ArchiveSessionPackageHandler } from './archive-session-package.handler';
+import { CacheService } from '../../../../infrastructure/cache';
 
 const PACKAGE_ID = '00000000-0000-4000-a000-0000000000aa';
 
@@ -24,7 +25,11 @@ describe('ArchiveSessionPackageHandler', () => {
     prisma.sessionPackage.update.mockResolvedValue({ id: PACKAGE_ID });
 
     const module = await Test.createTestingModule({
-      providers: [ArchiveSessionPackageHandler, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        ArchiveSessionPackageHandler,
+        { provide: PrismaService, useValue: prisma },
+        { provide: CacheService, useValue: { invalidatePrefix: jest.fn() } },
+      ],
     }).compile();
     handler = module.get(ArchiveSessionPackageHandler);
   });
