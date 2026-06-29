@@ -48,6 +48,11 @@ export function BookingRescheduleTab({ booking, onSuccess }: BookingRescheduleTa
     serviceId:        booking.serviceId,
     deliveryType:     booking.deliveryType ?? "",
     date:             watchedDate,
+    // The booking already carries its resolved session length. Pass it through
+    // so slots load even when the recompute-from-catalog path can't (the detail
+    // API returns deliveryType lowercased, which won't match the raw enum on the
+    // service-types lookup).
+    durationMins:     booking.durationMinutesSnapshot ?? undefined,
   })
 
   const onSubmit = form.handleSubmit(async (data) => {

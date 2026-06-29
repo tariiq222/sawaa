@@ -45,9 +45,12 @@ export function useCreateBookingSlots({
     // An explicit duration option (e.g. 60-min) overrides the type default.
     if (durationMins != null) return durationMins
 
-    // Use service type duration directly from the selected delivery type
+    // Use service type duration directly from the selected delivery type.
+    // Compare case-insensitively: serviceTypes carry the raw enum (IN_PERSON),
+    // while some callers pass the UI-lowercased value (in_person).
+    const wanted = (deliveryType ?? "").toUpperCase()
     const pst = serviceTypes.find(
-      (st) => st.deliveryType === (deliveryType ?? "")
+      (st) => st.deliveryType?.toUpperCase() === wanted
     )
     if (pst?.isActive && pst?.duration != null) return pst.duration
 
