@@ -155,6 +155,47 @@ describe('MinioService', () => {
     expect(makeBucket).not.toHaveBeenCalled();
   });
 
+  // Regression: env.validation declares MINIO_PUBLIC_USE_SSL as Joi.boolean(),
+  // so ConfigService returns a real boolean. The old `=== 'true'` check then
+  // evaluated to false, signing presigned URLs as http://host:443 — which the
+  // browser (https, default port) could not match → SignatureDoesNotMatch.
+  it('signs the public client as https with no explicit port when *_USE_SSL is a coerced boolean', async () => {
+    const { Client } = require('minio');
+    Client.mockClear();
+
+    await Test.createTestingModule({
+      providers: [
+        MinioService,
+        {
+          provide: ConfigService,
+          useValue: {
+            getOrThrow: jest.fn((key: string) => {
+              if (key === 'MINIO_ENDPOINT') return 'minio-internal';
+              if (key === 'MINIO_PORT') return 9000;
+              if (key === 'MINIO_ACCESS_KEY') return 'key';
+              if (key === 'MINIO_SECRET_KEY') return 'secret';
+              if (key === 'MINIO_BUCKET') return 'test-bucket';
+              return undefined;
+            }),
+            get: jest.fn((key: string) => {
+              if (key === 'MINIO_USE_SSL') return false; // boolean, Joi-coerced
+              if (key === 'MINIO_PUBLIC_ENDPOINT') return 'sawaa-s3.example.io';
+              if (key === 'MINIO_PUBLIC_USE_SSL') return true; // boolean — used to break
+              if (key === 'MINIO_PUBLIC_PORT') return 443;
+              return undefined;
+            }),
+          },
+        },
+      ],
+    }).compile();
+
+    // First Client = internal client, second = the presign (public) client.
+    const signArgs = Client.mock.calls[1][0];
+    expect(signArgs.endPoint).toBe('sawaa-s3.example.io');
+    expect(signArgs.useSSL).toBe(true);
+    expect(signArgs.port).toBeUndefined();
+  });
+
   it('should swallow MinIO errors on init so the server still boots', async () => {
     const { Client } = require('minio');
     const bucketExists = jest.fn().mockRejectedValue(new Error('MinIO down'));

@@ -22,28 +22,28 @@ const styles = StyleSheet.create({
     direction: 'rtl',
   },
 
-  // Header
+  // Header — mirrored: brand block on the LEFT, document-type on the RIGHT.
   header: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingBottom: 16,
   },
-  brandBlock: { alignItems: 'flex-end', maxWidth: 240 },
+  brandBlock: { alignItems: 'flex-start', maxWidth: 240 },
   logo: { maxWidth: 150, maxHeight: 56, objectFit: 'contain', marginBottom: 4 },
   sellerName: { fontSize: 20, fontWeight: 'bold' },
-  sellerSub: { fontSize: 9, color: MUTED, marginTop: 3, textAlign: 'right' },
-  docTypeBox: { alignItems: 'flex-start' },
-  docTitleAr: { fontSize: 13, fontWeight: 'bold' },
-  docTitleEn: { fontSize: 8, color: MUTED, marginTop: 2, letterSpacing: 0.5 },
-  invoiceNo: { fontSize: 9, color: MUTED, marginTop: 8 },
-  invoiceNoVal: { fontSize: 12, fontWeight: 'bold', color: INK },
+  sellerSub: { fontSize: 9, color: MUTED, marginTop: 3, textAlign: 'left' },
+  docTypeBox: { alignItems: 'flex-end' },
+  docTitleAr: { fontSize: 13, fontWeight: 'bold', textAlign: 'right' },
+  docTitleEn: { fontSize: 8, color: MUTED, marginTop: 2, letterSpacing: 0.5, textAlign: 'right' },
+  invoiceNo: { fontSize: 9, color: MUTED, marginTop: 8, textAlign: 'right' },
+  invoiceNoVal: { fontSize: 12, fontWeight: 'bold', color: INK, textAlign: 'right' },
 
   // Info grid
   infoGrid: { flexDirection: 'row-reverse', marginTop: 18, gap: 12 },
   infoCard: { flex: 1, backgroundColor: SOFT, borderRadius: 6, padding: 12 },
-  infoCardLabel: { fontSize: 8, color: MUTED, marginBottom: 6, fontWeight: 'bold' },
-  infoRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: 4 },
+  infoCardLabel: { fontSize: 8, color: MUTED, marginBottom: 6, fontWeight: 'bold', textAlign: 'right' },
+  infoRow: { flexDirection: 'row-reverse', justifyContent: 'flex-start', marginBottom: 4, gap: 6 },
   infoKey: { fontSize: 9, color: MUTED },
   infoVal: { fontSize: 9, fontWeight: 'bold' },
 
@@ -86,20 +86,22 @@ const styles = StyleSheet.create({
   grandKey: { fontSize: 11, fontWeight: 'bold', color: '#ffffff' },
   grandVal: { fontSize: 13, fontWeight: 'bold', color: '#ffffff' },
 
-  // QR + footer
+  // QR + footer — mirrored: QR on the LEFT, thank-you/reference text on the RIGHT.
   bottom: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
     marginTop: 28,
     paddingTop: 16,
     borderTop: `1pt solid ${LINE}`,
   },
+  // Fills the space beside the QR so its text actually right-aligns.
+  footerCol: { flex: 1, alignItems: 'flex-end' },
   qrBox: { alignItems: 'center' },
   qr: { width: 96, height: 96 },
   qrCaption: { fontSize: 7, color: MUTED, marginTop: 4 },
-  footerText: { fontSize: 7.5, color: MUTED, textAlign: 'left', maxWidth: 260, lineHeight: 1.5 },
-  ref: { fontSize: 7, color: '#9ca3af', marginTop: 6 },
+  footerText: { fontSize: 7.5, color: MUTED, textAlign: 'right', maxWidth: 260, lineHeight: 1.5 },
+  ref: { fontSize: 7, color: '#9ca3af', marginTop: 6, textAlign: 'right' },
 });
 
 export interface InvoicePdfData {
@@ -253,7 +255,7 @@ export const InvoicePdf: React.FC<{ data: InvoicePdfData }> = ({ data }) => {
           ) : (
             <View />
           )}
-          <View>
+          <View style={styles.footerCol}>
             <Text style={styles.footerText}>شكراً لكم.</Text>
             <Text style={styles.ref}>رقم المرجع: {data.invoiceId}</Text>
           </View>

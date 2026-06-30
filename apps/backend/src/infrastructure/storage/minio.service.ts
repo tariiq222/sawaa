@@ -8,6 +8,14 @@ import { Client } from 'minio';
 export const FINANCE_RECEIPTS_BUCKET = 'finance-receipts';
 export const FINANCE_INVOICES_BUCKET = 'finance-invoices';
 
+// Boolean env vars (MINIO_USE_SSL, MINIO_PUBLIC_USE_SSL) are declared as
+// `Joi.boolean()` in env.validation, so ConfigService returns a real boolean
+// after schema coercion — but a plain `=== 'true'` string check would then be
+// false even when the value is `true`. That silently signed presigned URLs as
+// `http://host:443`, which the browser (https, default port) cannot match,
+// producing `SignatureDoesNotMatch`. Accept both shapes.
+const asBool = (v: unknown): boolean => v === true || v === 'true';
+
 interface IStorageService {
   uploadFile(bucket: string, key: string, buffer: Buffer, mimetype: string): Promise<string>;
   deleteFile(bucket: string, key: string): Promise<void>;
@@ -30,7 +38,7 @@ export class MinioService implements IStorageService, OnModuleInit {
   constructor(private readonly config: ConfigService) {
     const endpoint = this.config.getOrThrow<string>('MINIO_ENDPOINT');
     const port = this.config.getOrThrow<number>('MINIO_PORT');
-    const useSSL = this.config.get<string>('MINIO_USE_SSL') === 'true';
+    const useSSL = asBool(this.config.get('MINIO_USE_SSL'));
     const accessKey = this.config.getOrThrow<string>('MINIO_ACCESS_KEY');
     const secretKey = this.config.getOrThrow<string>('MINIO_SECRET_KEY');
     // Pin the region so presigned-URL generation never issues a getBucketRegion
@@ -43,7 +51,7 @@ export class MinioService implements IStorageService, OnModuleInit {
 
     const publicEndpoint = this.config.get<string>('MINIO_PUBLIC_ENDPOINT');
     if (publicEndpoint) {
-      const publicUseSSL = this.config.get<string>('MINIO_PUBLIC_USE_SSL') === 'true';
+      const publicUseSSL = asBool(this.config.get('MINIO_PUBLIC_USE_SSL'));
       const publicPort = Number(this.config.get<number>('MINIO_PUBLIC_PORT') ?? (publicUseSSL ? 443 : 80));
       // Omit the port when it's the scheme default. Passing port 443 explicitly
       // makes minio-js embed ":443" in the signed Host header, but browsers send
