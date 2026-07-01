@@ -9,9 +9,10 @@ export interface ListClientPackagePurchasesQuery {
 
 export interface ClientPackageCreditRow {
   id: string;
-  serviceId: string;
-  employeeId: string;
-  durationOptionId: string;
+  // null on flexible (rule-based) credits, which are not pinned to one triple.
+  serviceId: string | null;
+  employeeId: string | null;
+  durationOptionId: string | null;
   serviceNameAr: string;
   serviceNameEn: string | null;
   employeeNameAr: string;
@@ -87,10 +88,11 @@ export class ListClientPackagePurchasesHandler {
     // Bulk-resolve every display name referenced by the credits + purchases
     // (cross-BC IDs are plain strings — no Prisma join). Four lookups instead
     // of one-per-row keeps the round-trips constant.
+    const notNull = (x: string | null): x is string => x != null;
     const packageIds = [...new Set(purchases.map((p) => p.packageId))];
-    const serviceIds = [...new Set(purchases.flatMap((p) => p.credits.map((c) => c.serviceId)))];
-    const employeeIds = [...new Set(purchases.flatMap((p) => p.credits.map((c) => c.employeeId)))];
-    const durationOptionIds = [...new Set(purchases.flatMap((p) => p.credits.map((c) => c.durationOptionId)))];
+    const serviceIds = [...new Set(purchases.flatMap((p) => p.credits.map((c) => c.serviceId)).filter(notNull))];
+    const employeeIds = [...new Set(purchases.flatMap((p) => p.credits.map((c) => c.employeeId)).filter(notNull))];
+    const durationOptionIds = [...new Set(purchases.flatMap((p) => p.credits.map((c) => c.durationOptionId)).filter(notNull))];
 
     const [packages, services, employees, durationOptions] = await Promise.all([
       packageIds.length > 0
@@ -173,9 +175,9 @@ export class ListClientPackagePurchasesHandler {
         notes: purchase.notes,
         createdAt: purchase.createdAt.toISOString(),
         credits: purchase.credits.map((credit) => {
-          const service = serviceMap.get(credit.serviceId);
-          const employee = employeeMap.get(credit.employeeId);
-          const duration = durationMap.get(credit.durationOptionId);
+          const service = credit.serviceId ? serviceMap.get(credit.serviceId) : undefined;
+          const employee = credit.employeeId ? employeeMap.get(credit.employeeId) : undefined;
+          const duration = credit.durationOptionId ? durationMap.get(credit.durationOptionId) : undefined;
           const category = service?.category ?? null;
           const department = category?.department ?? null;
           const serviceIsBookable =

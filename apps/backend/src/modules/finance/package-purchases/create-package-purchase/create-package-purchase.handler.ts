@@ -8,6 +8,7 @@ import { PrismaService, RlsTransactionService } from '../../../../infrastructure
 import { EventBusService } from '../../../../infrastructure/events';
 import { ComputePackagePriceService } from '../../../org-experience/compute-package-price.service';
 import { ProcessPaymentHandler } from '../../process-payment/process-payment.handler';
+import { buildCreditConstraintCreate } from '../build-credit-constraints.helper';
 import { CreatePackagePurchaseDto } from './create-package-purchase.dto';
 
 export type CreatePackagePurchaseCommand = CreatePackagePurchaseDto & {
@@ -64,7 +65,12 @@ export class CreatePackagePurchaseHandler {
     // 1. Load the package definition (cross-BC IDs — items are real FK rows).
     const pkg = await this.prisma.sessionPackage.findFirst({
       where: { id: dto.packageId, archivedAt: null },
-      include: { items: { orderBy: { sortOrder: 'asc' } } },
+      include: {
+        items: {
+          orderBy: { sortOrder: 'asc' },
+          include: { constraints: { include: { targets: true } } },
+        },
+      },
     });
     if (!pkg) {
       throw new NotFoundException(`SessionPackage ${dto.packageId} not found`);
@@ -92,12 +98,17 @@ export class CreatePackagePurchaseHandler {
         serviceId: it.serviceId,
         employeeId: it.employeeId,
         durationOptionId: it.durationOptionId,
+        unitPrice: it.unitPrice != null ? Number(it.unitPrice) : null,
         paidQuantity: it.paidQuantity,
         freeQuantity: it.freeQuantity,
         discountType: it.discountType,
         discountValue: Number(it.discountValue),
       })),
     });
+
+    // itemUnitPrices aligns 1:1 with pkg.items (same order); index-key it so
+    // flexible items (no durationOptionId) resolve their unit price too.
+    const unitPriceByIndex = price.itemUnitPrices.map((u) => u.unitPrice);
 
     // 4 + 5: create purchase, credits, invoice in one transaction.
     const { purchase, invoiceId } = await this.rlsTransaction.withTransaction(async (tx) => {
@@ -119,28 +130,23 @@ export class CreatePackagePurchaseHandler {
       // free sessions (paid=0, free≥1 is the free-only item shape per plan).
       // `unitPriceSnapshot` is the per-item unit price (not the subtotal) so
       // the FIFO credit-consumption logic in Phase 3 has the right number.
-      const unitPriceByDuration = new Map<string, number>();
-      for (const item of pkg.items) {
-        if (unitPriceByDuration.has(item.durationOptionId)) continue;
-        const resolved = price.itemUnitPrices.find(
-          (u) => u.durationOptionId === item.durationOptionId,
-        );
-        unitPriceByDuration.set(item.durationOptionId, resolved?.unitPrice ?? 0);
+      // Per-credit create (not createMany) so each credit snapshots its item's
+      // eligibility constraints — the rule the matching engine reads at booking.
+      for (let idx = 0; idx < pkg.items.length; idx++) {
+        const item = pkg.items[idx];
+        await tx.packageCredit.create({
+          data: {
+            purchaseId: purchase.id,
+            serviceId: item.serviceId,
+            employeeId: item.employeeId,
+            durationOptionId: item.durationOptionId,
+            unitPriceSnapshot: new Prisma.Decimal(unitPriceByIndex[idx] ?? 0),
+            totalQuantity: item.paidQuantity + item.freeQuantity,
+            usedQuantity: 0,
+            constraints: { create: buildCreditConstraintCreate(item) },
+          },
+        });
       }
-
-      await tx.packageCredit.createMany({
-        data: pkg.items.map((item) => ({
-          purchaseId: purchase.id,
-          serviceId: item.serviceId,
-          employeeId: item.employeeId,
-          durationOptionId: item.durationOptionId,
-          unitPriceSnapshot: new Prisma.Decimal(
-            unitPriceByDuration.get(item.durationOptionId) ?? 0,
-          ),
-          totalQuantity: item.paidQuantity + item.freeQuantity,
-          usedQuantity: 0,
-        })),
-      });
 
       // Single invoice for the full finalPrice. VAT = 0 — center is not
       // VAT-registered. status=DRAFT ("awaiting payment") so ProcessPaymentHandler
@@ -203,19 +209,14 @@ export class CreatePackagePurchaseHandler {
       purchase,
       invoiceId,
       paymentId: payment.id,
-      credits: pkg.items.map((item) => {
-        const unitPrice = price.itemUnitPrices.find(
-          (u) => u.durationOptionId === item.durationOptionId,
-        )?.unitPrice ?? 0;
-        return {
-          serviceId: item.serviceId,
-          employeeId: item.employeeId,
-          durationOptionId: item.durationOptionId,
-          unitPriceSnapshot: unitPrice,
-          totalQuantity: item.paidQuantity + item.freeQuantity,
-          usedQuantity: 0,
-        };
-      }),
+      credits: pkg.items.map((item, idx) => ({
+        serviceId: item.serviceId,
+        employeeId: item.employeeId,
+        durationOptionId: item.durationOptionId,
+        unitPriceSnapshot: unitPriceByIndex[idx] ?? 0,
+        totalQuantity: item.paidQuantity + item.freeQuantity,
+        usedQuantity: 0,
+      })),
     };
   }
 }

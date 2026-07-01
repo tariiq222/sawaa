@@ -18,20 +18,66 @@ import type { PaginatedQuery } from "./common"
 
 export type PackageDiscountType = "PERCENTAGE" | "FIXED"
 
+/* ─── Constraint dimensions / modes ─── */
+
+/**
+ * A package item's eligibility is expressed per dimension:
+ *   SERVICE → service ids · PRACTITIONER → employee ids ·
+ *   DURATION → durationOption id · DELIVERY_TYPE → 'IN_PERSON' | 'ONLINE'.
+ */
+export type PackageConstraintDimension =
+  | "SERVICE"
+  | "PRACTITIONER"
+  | "DURATION"
+  | "DELIVERY_TYPE"
+
+/** ANY = no targets (matches all) · INCLUDE/EXCLUDE = ≥1 target. */
+export type PackageConstraintMode = "ANY" | "INCLUDE" | "EXCLUDE"
+
+/** Write-side constraint (what we send on create/update). */
+export interface PackageConstraintInput {
+  dimension: PackageConstraintDimension
+  mode: PackageConstraintMode
+  /** Omitted/empty for ANY; ≥1 id for INCLUDE/EXCLUDE. */
+  targetIds?: string[]
+}
+
+/** Read-side constraint (what GET returns — targets nested as rows). */
+export interface PackageConstraintResponse {
+  dimension: PackageConstraintDimension
+  mode: PackageConstraintMode
+  targets: { targetId: string }[]
+}
+
 /* ─── Entities ─── */
 
+/**
+ * A package item is EITHER single-specific (legacy triple present) OR flexible
+ * (rule-based via `constraints`). The legacy triple is now nullable; when an
+ * item is flexible it carries a fixed prepaid `unitPrice` (halalas) instead of
+ * a price derived from one service/practitioner/duration.
+ *
+ * `constraints` is optional on read: older packages (and any endpoint that does
+ * not eager-load them) omit it — the form falls back to the legacy triple.
+ */
 export interface SessionPackageItem {
   id: string
   packageId: string
-  serviceId: string
-  employeeId: string
-  durationOptionId: string
+  serviceId: string | null
+  employeeId: string | null
+  durationOptionId: string | null
+  /** Fixed prepaid unit price (integer halalas) for flexible items. null = derive. */
+  unitPrice: number | string | null
+  /** Optional display label. */
+  label?: string | null
   paidQuantity: number
   freeQuantity: number
   /** Per-item discount applied to (paid × unit). null = no discount. */
   discountType: PackageDiscountType | null
   discountValue: number | string
   sortOrder: number
+  /** Multi-dimensional eligibility. Absent on older data → use the legacy triple. */
+  constraints?: PackageConstraintResponse[]
 }
 
 /**
@@ -74,9 +120,18 @@ export interface SessionPackage {
 /* ─── Item payloads (write side) ─── */
 
 export interface CreatePackageItemPayload {
-  serviceId: string
-  employeeId: string
-  durationOptionId: string
+  /** Legacy single-service UUID. Omit for flexible items (use constraints). */
+  serviceId?: string
+  /** Legacy single-practitioner UUID. Omit for flexible items (use constraints). */
+  employeeId?: string
+  /** Legacy single ServiceDurationOption UUID. Omit for flexible items (use constraints). */
+  durationOptionId?: string
+  /** Multi-dimensional eligibility. Preferred over the legacy triple — always sent. */
+  constraints?: PackageConstraintInput[]
+  /** Fixed prepaid unit price (integer halalas). Required for flexible items. */
+  unitPrice?: number
+  /** Optional display label. */
+  label?: string
   paidQuantity: number
   freeQuantity?: number
   /** Per-item discount. PERCENTAGE: 0-100. FIXED: integer halalas. null/omit = none. */

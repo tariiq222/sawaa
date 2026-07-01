@@ -13,20 +13,51 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { DiscountType } from '@prisma/client';
+import { DiscountType, PackageConstraintDimension, PackageConstraintMode } from '@prisma/client';
+
+/**
+ * One eligibility constraint on a package item. `mode = ANY` needs no targets;
+ * INCLUDE/EXCLUDE list the allowed/blocked target IDs for that dimension
+ * (service IDs, employee IDs, duration-option IDs, or delivery-type values).
+ */
+export class PackageConstraintInputDto {
+  @ApiProperty({ description: 'Constraint dimension', enum: PackageConstraintDimension, example: PackageConstraintDimension.PRACTITIONER })
+  @IsEnum(PackageConstraintDimension)
+  dimension!: PackageConstraintDimension;
+
+  @ApiProperty({ description: 'Matching mode', enum: PackageConstraintMode, example: PackageConstraintMode.ANY })
+  @IsEnum(PackageConstraintMode)
+  mode!: PackageConstraintMode;
+
+  @ApiPropertyOptional({ description: 'Target IDs for INCLUDE/EXCLUDE. Empty/omitted for ANY.', type: [String] })
+  @IsOptional() @IsArray() @IsString({ each: true })
+  targetIds?: string[];
+}
 
 export class CreateSessionPackageItemDto {
-  @ApiProperty({ description: 'Service UUID', format: 'uuid', example: '00000000-0000-4000-a000-000000000000' })
-  @IsUUID()
-  serviceId!: string;
+  @ApiPropertyOptional({ description: 'Legacy single-service UUID. Omit for flexible items (use constraints).', format: 'uuid', example: '00000000-0000-4000-a000-000000000000' })
+  @IsOptional() @IsUUID()
+  serviceId?: string;
 
-  @ApiProperty({ description: 'Employee (practitioner) UUID', format: 'uuid', example: '00000000-0000-4000-a000-000000000000' })
-  @IsUUID()
-  employeeId!: string;
+  @ApiPropertyOptional({ description: 'Legacy single-practitioner UUID. Omit for flexible items (use constraints).', format: 'uuid', example: '00000000-0000-4000-a000-000000000000' })
+  @IsOptional() @IsUUID()
+  employeeId?: string;
 
-  @ApiProperty({ description: 'ServiceDurationOption UUID', format: 'uuid', example: '00000000-0000-4000-a000-000000000000' })
-  @IsUUID()
-  durationOptionId!: string;
+  @ApiPropertyOptional({ description: 'Legacy single ServiceDurationOption UUID. Omit for flexible items (use constraints).', format: 'uuid', example: '00000000-0000-4000-a000-000000000000' })
+  @IsOptional() @IsUUID()
+  durationOptionId?: string;
+
+  @ApiPropertyOptional({ description: 'Eligibility constraints (multi-dimensional). Preferred over the legacy triple.', type: [PackageConstraintInputDto] })
+  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => PackageConstraintInputDto)
+  constraints?: PackageConstraintInputDto[];
+
+  @ApiPropertyOptional({ description: 'Fixed prepaid unit price in integer halalas. Required for flexible (non single-specific) items.', minimum: 0, example: 20000 })
+  @IsOptional() @IsInt() @Min(0)
+  unitPrice?: number;
+
+  @ApiPropertyOptional({ description: 'Optional display label for the item', maxLength: 200, example: 'استشارة فردية — أي معالج' })
+  @IsOptional() @IsString() @MaxLength(200)
+  label?: string;
 
   @ApiProperty({ description: 'Number of paid sessions the client gets', minimum: 0, example: 4 })
   @IsInt() @Min(0)

@@ -5,6 +5,7 @@ import { PrismaService, RlsTransactionService } from '../../../../infrastructure
 import { EventBusService, type DomainEventEnvelope } from '../../../../infrastructure/events';
 import { DEFAULT_ORG_ID, SYSTEM_CONTEXT_CLS_KEY, TENANT_CLS_KEY } from '../../../../common/constants';
 import { ComputePackagePriceService } from '../../../org-experience/compute-package-price.service';
+import { buildCreditConstraintCreate } from '../build-credit-constraints.helper';
 import type { PaymentCompletedPayload } from '../../events/payment-completed.event';
 
 /**
@@ -104,10 +105,18 @@ export class ActivatePackagePurchaseHandler {
                 serviceId: true,
                 employeeId: true,
                 durationOptionId: true,
+                unitPrice: true,
                 paidQuantity: true,
                 freeQuantity: true,
                 discountType: true,
                 discountValue: true,
+                constraints: {
+                  select: {
+                    dimension: true,
+                    mode: true,
+                    targets: { select: { targetId: true } },
+                  },
+                },
               },
             },
           },
@@ -131,6 +140,7 @@ export class ActivatePackagePurchaseHandler {
             serviceId: it.serviceId,
             employeeId: it.employeeId,
             durationOptionId: it.durationOptionId,
+            unitPrice: it.unitPrice != null ? Number(it.unitPrice) : null,
             paidQuantity: it.paidQuantity,
             freeQuantity: it.freeQuantity,
             discountType: it.discountType,
@@ -139,14 +149,9 @@ export class ActivatePackagePurchaseHandler {
         });
       });
 
-      const unitPriceByDuration = new Map<string, number>();
-      for (const item of pkg.items) {
-        if (unitPriceByDuration.has(item.durationOptionId)) continue;
-        const resolved = price.itemUnitPrices.find(
-          (u) => u.durationOptionId === item.durationOptionId,
-        );
-        unitPriceByDuration.set(item.durationOptionId, resolved?.unitPrice ?? 0);
-      }
+      // itemUnitPrices aligns 1:1 with pkg.items (same order) — index-key it so
+      // flexible items (no durationOptionId) resolve correctly too.
+      const unitPriceByIndex = price.itemUnitPrices.map((u) => u.unitPrice);
 
       await this.cls.run(async () => {
         this.cls.set(TENANT_CLS_KEY, {
@@ -170,19 +175,23 @@ export class ActivatePackagePurchaseHandler {
             return;
           }
 
-          await tx.packageCredit.createMany({
-            data: pkg.items.map((item) => ({
-              purchaseId: packagePurchaseId,
-              serviceId: item.serviceId,
-              employeeId: item.employeeId,
-              durationOptionId: item.durationOptionId,
-              unitPriceSnapshot: new Prisma.Decimal(
-                unitPriceByDuration.get(item.durationOptionId) ?? 0,
-              ),
-              totalQuantity: item.paidQuantity + item.freeQuantity,
-              usedQuantity: 0,
-            })),
-          });
+          // Per-credit create (not createMany) so each credit snapshots its
+          // item's eligibility constraints for the matching engine.
+          for (let idx = 0; idx < pkg.items.length; idx++) {
+            const item = pkg.items[idx];
+            await tx.packageCredit.create({
+              data: {
+                purchaseId: packagePurchaseId,
+                serviceId: item.serviceId,
+                employeeId: item.employeeId,
+                durationOptionId: item.durationOptionId,
+                unitPriceSnapshot: new Prisma.Decimal(unitPriceByIndex[idx] ?? 0),
+                totalQuantity: item.paidQuantity + item.freeQuantity,
+                usedQuantity: 0,
+                constraints: { create: buildCreditConstraintCreate(item) },
+              },
+            });
+          }
         });
       });
 

@@ -164,6 +164,27 @@ export function useEmployees() {
   }
 }
 
+/**
+ * Flat list of all employees — used by pickers/selects that must show every
+ * practitioner, not a paginated page. Backend PaginationDto caps `limit` at 200.
+ * Used by the package scope editor when the item is not scoped to one service.
+ */
+export function useAllEmployees() {
+  const query: EmployeeListQuery = { page: 1, limit: 200 }
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: queryKeys.employees.list(query),
+    queryFn: () => fetchEmployees(query),
+    staleTime: 5 * 60 * 1000,
+  })
+
+  return {
+    employees: data?.items ?? [],
+    isLoading,
+    error: error instanceof Error ? error.message : null,
+  }
+}
+
 /* ─── Detail Hook ─── */
 
 export function useEmployee(id: string | null) {

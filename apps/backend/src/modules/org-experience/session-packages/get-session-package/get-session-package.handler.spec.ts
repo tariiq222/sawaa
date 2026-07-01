@@ -102,7 +102,12 @@ describe('GetSessionPackageHandler', () => {
     await handler.execute({ packageId: PACKAGE_ID });
     expect(prisma.sessionPackage.findFirst).toHaveBeenCalledWith({
       where: { id: PACKAGE_ID, archivedAt: null },
-      include: { items: { orderBy: { sortOrder: 'asc' } } },
+      include: {
+        items: {
+          orderBy: { sortOrder: 'asc' },
+          include: { constraints: { include: { targets: true } } },
+        },
+      },
     });
   });
 

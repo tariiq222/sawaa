@@ -56,6 +56,15 @@ export class TransferCreditHandler {
       throw new NotFoundException('Package credit not found');
     }
 
+    // Transfer re-points a credit's single practitioner, so it only applies to
+    // legacy single-specific credits. A flexible (rule-based) credit has no fixed
+    // service/duration to validate against — reject the transfer for it.
+    const creditServiceId = credit.serviceId;
+    const creditDurationOptionId = credit.durationOptionId;
+    if (!creditServiceId || !creditDurationOptionId) {
+      throw new BadRequestException('This credit is not transferable');
+    }
+
     // No-op guard: transferring to the current owner is meaningless and would
     // mask a UI bug. Reject explicitly.
     if (credit.employeeId === cmd.toEmployeeId) {
@@ -76,7 +85,7 @@ export class TransferCreditHandler {
 
     // 3. Target must offer the SAME service (active EmployeeService link).
     const employeeService = await this.prisma.employeeService.findFirst({
-      where: { employeeId: cmd.toEmployeeId, serviceId: credit.serviceId, isActive: true },
+      where: { employeeId: cmd.toEmployeeId, serviceId: creditServiceId, isActive: true },
       select: { id: true },
     });
     if (!employeeService) {
@@ -85,7 +94,7 @@ export class TransferCreditHandler {
 
     // 4. The frozen duration option must still belong to that service + be active.
     const durationOption = await this.prisma.serviceDurationOption.findFirst({
-      where: { id: credit.durationOptionId, serviceId: credit.serviceId, isActive: true },
+      where: { id: creditDurationOptionId, serviceId: creditServiceId, isActive: true },
       select: { id: true, serviceId: true },
     });
     if (!durationOption) {

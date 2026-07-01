@@ -1,5 +1,12 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { DiscountType, PackagePurchaseStatus, PaymentMethod, Prisma } from '@prisma/client';
+import {
+  DiscountType,
+  PackageConstraintDimension,
+  PackageConstraintMode,
+  PackagePurchaseStatus,
+  PaymentMethod,
+  Prisma,
+} from '@prisma/client';
 import { DEFAULT_ORG_ID } from '../../../../common/constants';
 import { ComputePackagePriceService } from '../../../org-experience/compute-package-price.service';
 import { CreatePackagePurchaseHandler } from './create-package-purchase.handler';
@@ -25,6 +32,7 @@ const ITEM = {
   paidQuantity: 4,
   freeQuantity: 1,
   sortOrder: 0,
+  constraints: [] as unknown[],
 };
 
 const SUBTOTAL_HALALAS = 40_000; // 4 paid × 10_000
@@ -58,7 +66,7 @@ function buildPrisma() {
       create: jest.fn().mockResolvedValue({ id: PURCHASE_ID }),
       findFirst: jest.fn().mockResolvedValue(null), // duplicate-check; null by default → not duplicate
     },
-    packageCredit: { createMany: jest.fn() },
+    packageCredit: { create: jest.fn().mockResolvedValue({}) },
     invoice: {
       findUnique: jest.fn().mockResolvedValue(null), // no existing invoice by default
       create: jest.fn(),
@@ -182,10 +190,11 @@ describe('CreatePackagePurchaseHandler', () => {
 
       await handler.execute(validDto());
 
-      expect(tx.packageCredit.createMany).toHaveBeenCalledTimes(1);
-      const creditRows = tx.packageCredit.createMany.mock.calls[0][0].data;
-      expect(creditRows).toHaveLength(1);
-      expect(creditRows[0]).toEqual(
+      // Per-item create (not createMany) so each credit can carry its own
+      // nested constraints.create payload.
+      expect(tx.packageCredit.create).toHaveBeenCalledTimes(1);
+      const creditData = tx.packageCredit.create.mock.calls[0][0].data;
+      expect(creditData).toEqual(
         expect.objectContaining({
           serviceId: SERVICE_ID,
           employeeId: EMPLOYEE_ID,
@@ -198,8 +207,70 @@ describe('CreatePackagePurchaseHandler', () => {
       // We don't assert the exact number here because ComputePackagePriceService
       // resolves it internally — but it MUST be set and equal to one session
       // price (subtotal / paidQuantity).
-      expect(Number(creditRows[0].unitPriceSnapshot)).toBe(SUBTOTAL_HALALAS / ITEM.paidQuantity);
+      expect(Number(creditData.unitPriceSnapshot)).toBe(SUBTOTAL_HALALAS / ITEM.paidQuantity);
       // purchaseId on every credit must match the created purchase — verified via return value below.
+    });
+
+    it('synthesizes INCLUDE constraints from the item triple when the item has no explicit constraints', async () => {
+      mockHappyPath(prisma);
+      const { handler, tx } = buildHandler(prisma);
+
+      await handler.execute(validDto());
+
+      const creditData = tx.packageCredit.create.mock.calls[0][0].data;
+      expect(creditData.constraints.create).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            dimension: PackageConstraintDimension.SERVICE,
+            mode: PackageConstraintMode.INCLUDE,
+            targets: { create: [{ targetId: SERVICE_ID }] },
+          }),
+          expect.objectContaining({
+            dimension: PackageConstraintDimension.PRACTITIONER,
+            mode: PackageConstraintMode.INCLUDE,
+            targets: { create: [{ targetId: EMPLOYEE_ID }] },
+          }),
+          expect.objectContaining({
+            dimension: PackageConstraintDimension.DURATION,
+            mode: PackageConstraintMode.INCLUDE,
+            targets: { create: [{ targetId: DURATION_OPTION_ID }] },
+          }),
+        ]),
+      );
+    });
+
+    it('snapshots explicit item constraints verbatim onto the created credit instead of synthesizing from the triple', async () => {
+      const itemWithExplicitConstraints = {
+        ...ITEM,
+        constraints: [
+          {
+            dimension: PackageConstraintDimension.PRACTITIONER,
+            mode: PackageConstraintMode.ANY,
+            targets: [],
+          },
+        ],
+      };
+      prisma.sessionPackage.findFirst.mockResolvedValue({
+        ...PACKAGE_ROW,
+        items: [itemWithExplicitConstraints],
+      });
+      prisma.client.findFirst.mockResolvedValue({ id: CLIENT_ID });
+      prisma._tx.invoice.create.mockResolvedValue({ id: INVOICE_ID });
+      const { handler, tx } = buildHandler(prisma);
+
+      await handler.execute(validDto());
+
+      expect(tx.packageCredit.create).toHaveBeenCalledTimes(1);
+      const creditData = tx.packageCredit.create.mock.calls[0][0].data;
+      // Explicit constraints are copied verbatim — no SERVICE/DURATION
+      // synthesis happens when the item already declares its own rules.
+      expect(creditData.constraints.create).toEqual([
+        {
+          dimension: PackageConstraintDimension.PRACTITIONER,
+          mode: PackageConstraintMode.ANY,
+          targets: { create: [] },
+        },
+      ]);
     });
 
     it('issues ONE invoice with subtotal=fullSubtotal, discount=fullDiscount, vat=0, total=finalPrice, linked via packagePurchaseId', async () => {

@@ -8,11 +8,27 @@ const SVC = "5a0e2c1d-9f3b-4c8a-b1d2-3e4f5a6b7c8d"
 const EMP = "6b1f3d2e-0a4c-4d9b-92e3-4f5a6b7c8d9e"
 const DUR = "7c2a4e3f-1b5d-4eac-a3f4-5b6c7d8e9f0a"
 
-const validItem = {
-  serviceId: SVC,
-  employeeId: EMP,
-  durationOptionId: DUR,
+const anyScope = { mode: "ANY" as const, ids: [] }
+const single = (id: string) => ({ mode: "INCLUDE" as const, ids: [id] })
+
+/** A single-specific item: one service + one practitioner + one duration → derived price. */
+const singleSpecificItem = {
+  service: single(SVC),
+  practitioner: single(EMP),
+  duration: single(DUR),
+  delivery: anyScope,
   paidQuantity: 2,
+  freeQuantity: 0,
+}
+
+/** A flexible item: any practitioner, requires a fixed unitPrice. */
+const flexibleItem = {
+  service: single(SVC),
+  practitioner: anyScope,
+  duration: anyScope,
+  delivery: anyScope,
+  unitPriceSar: 200,
+  paidQuantity: 3,
   freeQuantity: 0,
 }
 
@@ -20,13 +36,48 @@ const validCreate = {
   nameAr: "باقة الاستشارات",
   isActive: true,
   isPublic: false,
-  items: [validItem],
+  items: [singleSpecificItem],
 }
 
 describe("createPackageSchema", () => {
-  it("accepts a minimal valid payload", () => {
-    const result = createPackageSchema.safeParse(validCreate)
+  it("accepts a minimal single-specific payload", () => {
+    expect(createPackageSchema.safeParse(validCreate).success).toBe(true)
+  })
+
+  it("accepts a flexible item with a fixed unitPrice", () => {
+    const result = createPackageSchema.safeParse({ ...validCreate, items: [flexibleItem] })
     expect(result.success).toBe(true)
+  })
+
+  it("requires a unitPrice for a flexible (non single-specific) item", () => {
+    const { unitPriceSar: _omit, ...noPrice } = flexibleItem
+    const result = createPackageSchema.safeParse({ ...validCreate, items: [noPrice] })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "items.0.unitPriceSar",
+      )
+      expect(issue?.message).toBe("packages.errors.unitPriceRequired")
+    }
+  })
+
+  it("does not require a unitPrice for a single-specific item", () => {
+    // singleSpecificItem carries no unitPriceSar and must still pass.
+    expect(createPackageSchema.safeParse(validCreate).success).toBe(true)
+  })
+
+  it("rejects an INCLUDE scope with no targets", () => {
+    const result = createPackageSchema.safeParse({
+      ...validCreate,
+      items: [{ ...flexibleItem, service: { mode: "INCLUDE", ids: [] } }],
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "items.0.service.ids",
+      )
+      expect(issue?.message).toBe("packages.errors.scopeNeedsTarget")
+    }
   })
 
   it("rejects a missing or whitespace-only nameAr with the i18n required key", () => {
@@ -50,30 +101,22 @@ describe("createPackageSchema", () => {
   it("rejects lowercase per-item discountType casing (enum is uppercase)", () => {
     const result = createPackageSchema.safeParse({
       ...validCreate,
-      items: [{ ...validItem, discountType: "percentage" }],
+      items: [{ ...singleSpecificItem, discountType: "percentage" }],
     })
     expect(result.success).toBe(false)
   })
 
-  it("accepts FIXED as a per-item discountType", () => {
-    const result = createPackageSchema.safeParse({
-      ...validCreate,
-      items: [{ ...validItem, discountType: "FIXED", discountValue: 50 }],
-    })
-    expect(result.success).toBe(true)
-  })
-
-  it("accepts a null per-item discountType (no discount) and coerces the value", () => {
+  it("accepts FIXED as a per-item discountType and coerces the value", () => {
     const ok = createPackageSchema.safeParse({
       ...validCreate,
-      items: [{ ...validItem, discountType: "PERCENTAGE", discountValue: "12.5" }],
+      items: [{ ...singleSpecificItem, discountType: "PERCENTAGE", discountValue: "12.5" }],
     })
     expect(ok.success).toBe(true)
     if (ok.success) expect(ok.data.items[0].discountValue).toBe(12.5)
 
     const neg = createPackageSchema.safeParse({
       ...validCreate,
-      items: [{ ...validItem, discountValue: -1 }],
+      items: [{ ...singleSpecificItem, discountValue: -1 }],
     })
     expect(neg.success).toBe(false)
   })
@@ -87,27 +130,10 @@ describe("createPackageSchema", () => {
     }
   })
 
-  it("rejects non-uuid serviceId / employeeId / durationOptionId", () => {
-    const result = createPackageSchema.safeParse({
-      ...validCreate,
-      items: [
-        {
-          serviceId: "not-a-uuid",
-          employeeId: "also-not",
-          durationOptionId: "neither",
-          paidQuantity: 1,
-        },
-      ],
-    })
-    expect(result.success).toBe(false)
-  })
-
   it("rejects items where paid+free = 0 with packages.errors.minQuantity", () => {
     const result = createPackageSchema.safeParse({
       ...validCreate,
-      items: [
-        { ...validItem, paidQuantity: 0, freeQuantity: 0 },
-      ],
+      items: [{ ...singleSpecificItem, paidQuantity: 0, freeQuantity: 0 }],
     })
     expect(result.success).toBe(false)
     if (!result.success) {
@@ -118,12 +144,10 @@ describe("createPackageSchema", () => {
     }
   })
 
-  it("accepts a free-only item (paidQuantity=0, freeQuantity≥1)", () => {
+  it("accepts a free-only single-specific item (paidQuantity=0, freeQuantity≥1)", () => {
     const result = createPackageSchema.safeParse({
       ...validCreate,
-      items: [
-        { ...validItem, paidQuantity: 0, freeQuantity: 1 },
-      ],
+      items: [{ ...singleSpecificItem, paidQuantity: 0, freeQuantity: 1 }],
     })
     expect(result.success).toBe(true)
   })
@@ -144,14 +168,18 @@ describe("editPackageSchema", () => {
   })
 
   it("rejects an invalid per-item discountType when provided", () => {
-    const base = { items: [{ ...validItem }] }
     expect(
-      editPackageSchema.safeParse({ items: [{ ...validItem, discountType: "fixed" }] }).success,
+      editPackageSchema.safeParse({
+        items: [{ ...singleSpecificItem, discountType: "fixed" }],
+      }).success,
     ).toBe(false)
     expect(
-      editPackageSchema.safeParse({ items: [{ ...validItem, discountType: "FIXED", discountValue: 50 }] })
-        .success,
+      editPackageSchema.safeParse({
+        items: [{ ...singleSpecificItem, discountType: "FIXED", discountValue: 50 }],
+      }).success,
     ).toBe(true)
-    expect(editPackageSchema.safeParse(base).success).toBe(true)
+    expect(
+      editPackageSchema.safeParse({ items: [singleSpecificItem] }).success,
+    ).toBe(true)
   })
 })

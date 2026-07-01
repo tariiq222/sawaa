@@ -16,9 +16,13 @@ import { PrismaService } from '../../infrastructure/database';
  * The discount applies to the item's PAYABLE amount (paidQuantity × unitPrice).
  */
 export type PackageItemInput = {
-  durationOptionId: string;
-  employeeId: string;
-  serviceId: string;
+  // Legacy single-specific triple — nullable for flexible (rule-based) items.
+  durationOptionId?: string | null;
+  employeeId?: string | null;
+  serviceId?: string | null;
+  // Fixed prepaid unit price (integer halalas). When set, it is used directly and
+  // the legacy triple lookup is skipped — this is how flexible items are priced.
+  unitPrice?: number | null;
   paidQuantity: number;
   freeQuantity: number;
   discountType?: DiscountType | null;
@@ -31,7 +35,7 @@ export type ComputePackagePriceParams = {
 
 /** Per-line price breakdown (all integer halalas) for transparent display. */
 export type PackageLinePrice = {
-  durationOptionId: string;
+  durationOptionId: string | null; // null for flexible (rule-based) items
   unitPrice: number; // per-session price
   fullValue: number; // (paid + free) × unitPrice — true value / cost
   freeValue: number; // free × unitPrice — value given for free
@@ -48,7 +52,8 @@ export type PackagePriceResult = {
   // ── Display-only fields (never persisted to the purchase snapshot) ──
   fullValue: number; // Σ fullValue — total true value incl. free sessions
   freeValue: number; // Σ freeValue — total value of free sessions
-  itemUnitPrices: { durationOptionId: string; unitPrice: number }[];
+  // Per-item unit prices in item order (aligns 1:1 with the input items array).
+  itemUnitPrices: { durationOptionId: string | null; unitPrice: number }[];
   lines: PackageLinePrice[];
 };
 
@@ -85,9 +90,23 @@ type UnitPriceResolver = (item: PackageItemInput) => number;
 export class ComputePackagePriceService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Price a single package. Resolves its items' unit prices in 3 bulk queries. */
-  async compute(params: ComputePackagePriceParams): Promise<PackagePriceResult> {
-    const resolver = await this.buildUnitPriceResolver(params.items);
+  /**
+   * Price a single package. Resolves its items' unit prices in 3 bulk queries.
+   *
+   * `strict` (default true) throws when a legacy item's employee-service link or
+   * duration price cannot be resolved — the right behaviour for create/purchase.
+   * Read/display handlers pass `strict: false` so a stale link (e.g. a
+   * practitioner who stopped offering the service) degrades to the service
+   * default price instead of 500-ing the whole catalog.
+   */
+  async compute(
+    params: ComputePackagePriceParams,
+    opts: { strict?: boolean } = {},
+  ): Promise<PackagePriceResult> {
+    const resolver = await this.buildUnitPriceResolver(
+      params.items,
+      opts.strict ?? true,
+    );
     return ComputePackagePriceService.priceItems(params.items, resolver);
   }
 
@@ -99,9 +118,13 @@ export class ComputePackagePriceService {
    */
   async computeMany(
     itemGroups: PackageItemInput[][],
+    opts: { strict?: boolean } = {},
   ): Promise<PackagePriceResult[]> {
     const allItems = itemGroups.flat();
-    const resolver = await this.buildUnitPriceResolver(allItems);
+    const resolver = await this.buildUnitPriceResolver(
+      allItems,
+      opts.strict ?? true,
+    );
     return itemGroups.map((items) =>
       ComputePackagePriceService.priceItems(items, resolver),
     );
@@ -112,7 +135,7 @@ export class ComputePackagePriceService {
     items: PackageItemInput[],
     unitPriceOf: UnitPriceResolver,
   ): PackagePriceResult {
-    const itemUnitPrices: { durationOptionId: string; unitPrice: number }[] = [];
+    const itemUnitPrices: { durationOptionId: string | null; unitPrice: number }[] = [];
     const lines: PackageLinePrice[] = [];
     let subtotal = 0;
     let discountAmount = 0;
@@ -121,7 +144,7 @@ export class ComputePackagePriceService {
 
     for (const item of items) {
       const unitPrice = unitPriceOf(item);
-      itemUnitPrices.push({ durationOptionId: item.durationOptionId, unitPrice });
+      itemUnitPrices.push({ durationOptionId: item.durationOptionId ?? null, unitPrice });
 
       const payable = item.paidQuantity * unitPrice;
       const lineFull = (item.paidQuantity + item.freeQuantity) * unitPrice;
@@ -138,7 +161,7 @@ export class ComputePackagePriceService {
       fullValue += lineFull;
       freeValue += lineFree;
       lines.push({
-        durationOptionId: item.durationOptionId,
+        durationOptionId: item.durationOptionId ?? null,
         unitPrice,
         fullValue: lineFull,
         freeValue: lineFree,
@@ -190,6 +213,7 @@ export class ComputePackagePriceService {
    */
   private async buildUnitPriceResolver(
     items: PackageItemInput[],
+    strict = true,
   ): Promise<UnitPriceResolver> {
     if (items.length === 0) {
       return () => {
@@ -197,9 +221,13 @@ export class ComputePackagePriceService {
       };
     }
 
-    const employeeIds = [...new Set(items.map((i) => i.employeeId))];
-    const serviceIds = [...new Set(items.map((i) => i.serviceId))];
-    const durationOptionIds = [...new Set(items.map((i) => i.durationOptionId))];
+    // Flexible items carry a fixed `unitPrice` and skip the legacy triple lookup.
+    // Only items WITHOUT a unitPrice need the employee/service/duration resolution.
+    const legacyItems = items.filter((i) => i.unitPrice == null);
+    const notNull = (x: string | null | undefined): x is string => x != null;
+    const employeeIds = [...new Set(legacyItems.map((i) => i.employeeId).filter(notNull))];
+    const serviceIds = [...new Set(legacyItems.map((i) => i.serviceId).filter(notNull))];
+    const durationOptionIds = [...new Set(legacyItems.map((i) => i.durationOptionId).filter(notNull))];
 
     // 1. Active EmployeeService links → map `${employeeId}:${serviceId}` → id.
     const links = await this.prisma.employeeService.findMany({
@@ -247,18 +275,33 @@ export class ComputePackagePriceService {
     const durationMap = new Map(durationOptions.map((d) => [d.id, d.price]));
 
     return (item: PackageItemInput): number => {
+      // Flexible item: fixed prepaid price, no lookup.
+      if (item.unitPrice != null) {
+        return Math.round(item.unitPrice);
+      }
+      if (!item.employeeId || !item.serviceId || !item.durationOptionId) {
+        if (!strict) return 0;
+        throw new Error(
+          'A non-flexible package item must have serviceId, employeeId and durationOptionId (or a fixed unitPrice)',
+        );
+      }
       const employeeServiceId = linkMap.get(`${item.employeeId}:${item.serviceId}`);
-      if (!employeeServiceId) {
+      // Prefer the practitioner's price override when the link is active.
+      if (employeeServiceId) {
+        const override = overrideMap.get(`${employeeServiceId}:${item.durationOptionId}`);
+        if (override !== null && override !== undefined) {
+          return this.toHalalas(override);
+        }
+      } else if (strict) {
+        // In strict mode (create/purchase) a stale link is a hard error; in
+        // display mode we fall through to the service-default price below.
         throw new Error(
           `No active employee service link for employeeId=${item.employeeId}, serviceId=${item.serviceId}`,
         );
       }
-      const override = overrideMap.get(`${employeeServiceId}:${item.durationOptionId}`);
-      if (override !== null && override !== undefined) {
-        return this.toHalalas(override);
-      }
       const price = durationMap.get(item.durationOptionId);
       if (price === null || price === undefined) {
+        if (!strict) return 0;
         throw new Error(
           `ServiceDurationOption not found for durationOptionId=${item.durationOptionId}`,
         );

@@ -441,17 +441,38 @@ model SessionPackage {
   @@index([isPublic])
 }
 
-// بند الباقة = (خدمة + معالج محدد + مدة محددة + كمية مدفوعة + كمية مجانية).
-// serviceId / employeeId / durationOptionId = plain cross-BC refs (no Prisma FK),
-// matching the existing cross-BC convention. No @@unique — the same service+employee
-// may appear with different durations; uniqueness is enforced by handler validation.
+// Dimensions along which a package item / credit can be scoped, and the matching mode.
+// A booking (service, practitioner, duration, delivery type) redeems a credit when EVERY
+// constrained dimension passes: ANY → pass; INCLUDE → value in targets; EXCLUDE → value
+// not in targets. A dimension with no constraint row behaves as ANY.
+enum PackageConstraintDimension {
+  SERVICE
+  PRACTITIONER
+  DURATION
+  DELIVERY_TYPE
+}
+
+enum PackageConstraintMode {
+  ANY
+  INCLUDE
+  EXCLUDE
+}
+
+// بند الباقة = رصيد جلسات محكوم بقيود متعددة الأبعاد (خدمة/معالج/مدة/نوع حضور).
+// serviceId / employeeId / durationOptionId are LEGACY single-specific refs kept nullable
+// for backward compatibility; new items express eligibility via `constraints` instead.
+// unitPrice = fixed prepaid price used when the item is not single-specific (price cannot
+// be derived from one employee/service/duration); null = derive via the legacy path.
 model SessionPackageItem {
   id               String         @id @default(uuid())
   packageId        String
   package          SessionPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
-  serviceId        String
-  employeeId       String
-  durationOptionId String
+  serviceId        String?
+  employeeId       String?
+  durationOptionId String?
+  /// Stored in integer halalas (1 SAR = 100). Fixed unit price for flexible items; null = derive.
+  unitPrice        Decimal?       @db.Decimal(12, 2)
+  label            String?
   paidQuantity     Int
   freeQuantity     Int            @default(0)
   // Per-item discount applied to (paidQuantity × unitPrice). null type = no discount.
@@ -462,7 +483,35 @@ model SessionPackageItem {
   sortOrder        Int            @default(0)
   createdAt        DateTime       @default(now())
 
+  constraints SessionPackageItemConstraint[]
+
   @@index([packageId])
+}
+
+// One row per constrained dimension on a package item. `mode` = ANY has no targets.
+model SessionPackageItemConstraint {
+  id        String                     @id @default(uuid())
+  itemId    String
+  item      SessionPackageItem         @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  dimension PackageConstraintDimension
+  mode      PackageConstraintMode
+
+  targets SessionPackageItemConstraintTarget[]
+
+  @@unique([itemId, dimension])
+  @@index([itemId])
+}
+
+// A target value for an INCLUDE/EXCLUDE constraint: serviceId, employeeId,
+// durationOptionId, or a delivery-type enum value (as string), per the dimension.
+model SessionPackageItemConstraintTarget {
+  id           String                       @id @default(uuid())
+  constraintId String
+  constraint   SessionPackageItemConstraint @relation(fields: [constraintId], references: [id], onDelete: Cascade)
+  targetId     String
+
+  @@unique([constraintId, targetId])
+  @@index([constraintId])
 }
 
 // ─── Discount Reasons ──────────────────────────────────────────────────────────
