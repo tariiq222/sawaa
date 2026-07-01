@@ -2361,6 +2361,13 @@
       },
       "CreateSessionPackageItemDto": {
         "properties": {
+          "constraints": {
+            "description": "Eligibility constraints (multi-dimensional). Preferred over the legacy triple.",
+            "items": {
+              "$ref": "#/components/schemas/PackageConstraintInputDto"
+            },
+            "type": "array"
+          },
           "discountType": {
             "description": "Per-item discount type applied to (paid × unit price). Omit/null for no discount.",
             "enum": [
@@ -2378,13 +2385,13 @@
             "type": "number"
           },
           "durationOptionId": {
-            "description": "ServiceDurationOption UUID",
+            "description": "Legacy single ServiceDurationOption UUID. Omit for flexible items (use constraints).",
             "example": "00000000-0000-4000-a000-000000000000",
             "format": "uuid",
             "type": "string"
           },
           "employeeId": {
-            "description": "Employee (practitioner) UUID",
+            "description": "Legacy single-practitioner UUID. Omit for flexible items (use constraints).",
             "example": "00000000-0000-4000-a000-000000000000",
             "format": "uuid",
             "type": "string"
@@ -2396,6 +2403,12 @@
             "minimum": 0,
             "type": "number"
           },
+          "label": {
+            "description": "Optional display label for the item",
+            "example": "استشارة فردية — أي معالج",
+            "maxLength": 200,
+            "type": "string"
+          },
           "paidQuantity": {
             "description": "Number of paid sessions the client gets",
             "example": 4,
@@ -2403,7 +2416,7 @@
             "type": "number"
           },
           "serviceId": {
-            "description": "Service UUID",
+            "description": "Legacy single-service UUID. Omit for flexible items (use constraints).",
             "example": "00000000-0000-4000-a000-000000000000",
             "format": "uuid",
             "type": "string"
@@ -2413,12 +2426,15 @@
             "example": 0,
             "minimum": 0,
             "type": "number"
+          },
+          "unitPrice": {
+            "description": "Fixed prepaid unit price in integer halalas. Required for flexible (non single-specific) items.",
+            "example": 20000,
+            "minimum": 0,
+            "type": "number"
           }
         },
         "required": [
-          "serviceId",
-          "employeeId",
-          "durationOptionId",
           "paidQuantity"
         ],
         "type": "object"
@@ -3720,6 +3736,43 @@
           "COMPLETED"
         ],
         "type": "string"
+      },
+      "PackageConstraintInputDto": {
+        "properties": {
+          "dimension": {
+            "description": "Constraint dimension",
+            "enum": [
+              "SERVICE",
+              "PRACTITIONER",
+              "DURATION",
+              "DELIVERY_TYPE"
+            ],
+            "example": "PRACTITIONER",
+            "type": "string"
+          },
+          "mode": {
+            "description": "Matching mode",
+            "enum": [
+              "ANY",
+              "INCLUDE",
+              "EXCLUDE"
+            ],
+            "example": "ANY",
+            "type": "string"
+          },
+          "targetIds": {
+            "description": "Target IDs for INCLUDE/EXCLUDE. Empty/omitted for ANY.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "dimension",
+          "mode"
+        ],
+        "type": "object"
       },
       "PackagePurchaseStatus": {
         "enum": [
@@ -8654,6 +8707,19 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "description": "Delivery type of the booking (for DELIVERY_TYPE-scoped credits)",
+            "in": "query",
+            "name": "deliveryType",
+            "required": false,
+            "schema": {
+              "enum": [
+                "IN_PERSON",
+                "ONLINE"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -9987,6 +10053,145 @@
           }
         ],
         "summary": "Get the status transition log for a booking",
+        "tags": [
+          "Dashboard / Bookings"
+        ]
+      }
+    },
+    "/api/v1/dashboard/bookings/{id}/timeline": {
+      "get": {
+        "operationId": "DashboardBookingsController_getBookingTimeline",
+        "parameters": [
+          {
+            "description": "Booking ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "example": "00000000-0000-0000-0000-000000000000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "properties": {
+                      "actor": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "amount": {
+                        "description": "Halalas",
+                        "nullable": true,
+                        "type": "integer"
+                      },
+                      "at": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "fromStatus": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "enum": [
+                          "CREATED",
+                          "STATUS_CHANGE",
+                          "RESCHEDULE",
+                          "PAYMENT",
+                          "REFUND",
+                          "ACTIVITY"
+                        ],
+                        "type": "string"
+                      },
+                      "meta": {
+                        "additionalProperties": true,
+                        "nullable": true,
+                        "type": "object"
+                      },
+                      "method": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "paymentStatus": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "reason": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "refundStatus": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "toStatus": {
+                        "nullable": true,
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Chronological timeline merging creation, status changes, payments, refunds and activity (oldest first)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the full activity timeline for a booking",
         "tags": [
           "Dashboard / Bookings"
         ]

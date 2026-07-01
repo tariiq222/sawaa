@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, ConflictException, ForbiddenException, Optional } from '@nestjs/common';
-import { BookingStatus, Prisma, type DeliveryType } from '@prisma/client';
+import { ActivityAction, BookingStatus, Prisma, type DeliveryType } from '@prisma/client';
 
 /** Re-map a Postgres exclusion violation (23P01) to a domain 409 conflict. */
 function mapDbConflict(err: unknown): never {
@@ -127,8 +127,27 @@ export class RescheduleBookingHandler {
               reason: 'rescheduled',
             },
           }),
+          // Forward audit: the status-log row above cannot carry the old/new
+          // times (it has no metadata column), so the reschedule renders as a
+          // confusing same-status transition. Record a structured ActivityLog
+          // entry the booking timeline surfaces as a RESCHEDULE event with the
+          // actual time change. Same transaction → never orphaned.
+          tx.activityLog.create({
+            data: {
+              userId: cmd.changedBy,
+              action: ActivityAction.UPDATE,
+              entity: 'Booking',
+              entityId: cmd.bookingId,
+              description: 'Booking rescheduled',
+              metadata: {
+                fromScheduledAt: booking.scheduledAt.toISOString(),
+                toScheduledAt: newScheduledAt.toISOString(),
+                durationMins,
+              },
+            },
+          }),
         ]);
-    }, { isolationLevel: 'Serializable' }).catch(mapDbConflict) as [Awaited<ReturnType<typeof this.prisma.booking.update>>, unknown];
+    }, { isolationLevel: 'Serializable' }).catch(mapDbConflict) as [Awaited<ReturnType<typeof this.prisma.booking.update>>, unknown, unknown];
 
     if (booking.zoomMeetingId) {
       // Best effort update — only for ONLINE delivery type bookings

@@ -357,6 +357,7 @@ export const arMisc: Record<string, string> = {
   "detail.tabs.details": "التفاصيل",
   "detail.tabs.reschedule": "تعديل الموعد",
   "detail.tabs.invoice": "الفاتورة",
+  "detail.tabs.statusLog": "سجل الموعد",
   "detail.invoice.title": "تفاصيل الفاتورة",
   "detail.invoice.subtotal": "الإجمالي قبل الضريبة",
   "detail.invoice.discount": "الخصم",
