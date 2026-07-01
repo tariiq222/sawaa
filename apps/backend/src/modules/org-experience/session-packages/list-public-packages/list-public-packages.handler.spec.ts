@@ -122,13 +122,14 @@ describe('ListPublicPackagesHandler', () => {
           serviceId: SERVICE_ID,
           employeeId: EMPLOYEE_ID,
           durationOptionId: DURATION_OPTION_ID,
+          unitPrice: null,
           paidQuantity: 4,
           freeQuantity: 1,
           discountType: DiscountType.PERCENTAGE,
           discountValue: 10,
         },
       ],
-    ]);
+    ], { strict: false });
   });
 
   it('returns an empty array when no public packages exist (no crash)', async () => {
@@ -139,7 +140,7 @@ describe('ListPublicPackagesHandler', () => {
 
     expect(result).toEqual([]);
     // computeMany is invoked with an empty batch and returns [].
-    expect(pricing.computeMany).toHaveBeenCalledWith([]);
+    expect(pricing.computeMany).toHaveBeenCalledWith([], { strict: false });
   });
 
   it('caches the catalog: the loader runs once across two calls (P1-20)', async () => {

@@ -1,4 +1,10 @@
-import { DiscountType, PackagePurchaseStatus, Prisma } from '@prisma/client';
+import {
+  DiscountType,
+  PackageConstraintDimension,
+  PackageConstraintMode,
+  PackagePurchaseStatus,
+  Prisma,
+} from '@prisma/client';
 import { ActivatePackagePurchaseHandler } from './activate-package-purchase.handler';
 
 const PURCHASE_ID = '00000000-0000-4000-a000-000000000010';
@@ -11,8 +17,16 @@ const pkgItem = {
   serviceId: SERVICE_ID,
   employeeId: EMPLOYEE_ID,
   durationOptionId: DURATION_OPTION_ID,
+  unitPrice: null,
   paidQuantity: 4,
   freeQuantity: 1,
+  discountType: null,
+  discountValue: new Prisma.Decimal(0),
+  constraints: [] as {
+    dimension: PackageConstraintDimension;
+    mode: PackageConstraintMode;
+    targets: { targetId: string }[];
+  }[],
 };
 
 const pkgRow = {
@@ -39,7 +53,7 @@ function buildCls() {
 function buildTx() {
   return {
     packagePurchase: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
-    packageCredit: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    packageCredit: { create: jest.fn().mockResolvedValue({ id: 'credit-1' }) },
   };
 }
 
@@ -121,10 +135,9 @@ describe('ActivatePackagePurchaseHandler', () => {
 
       await getSubscriber()(envelope());
 
-      expect(tx.packageCredit.createMany).toHaveBeenCalledTimes(1);
-      const rows = tx.packageCredit.createMany.mock.calls[0][0].data;
-      expect(rows).toHaveLength(1);
-      expect(rows[0]).toEqual(
+      expect(tx.packageCredit.create).toHaveBeenCalledTimes(1);
+      const data = tx.packageCredit.create.mock.calls[0][0].data;
+      expect(data).toEqual(
         expect.objectContaining({
           purchaseId: PURCHASE_ID,
           serviceId: SERVICE_ID,
@@ -134,7 +147,63 @@ describe('ActivatePackagePurchaseHandler', () => {
           usedQuantity: 0,
         }),
       );
-      expect(Number(rows[0].unitPriceSnapshot)).toBe(10_000);
+      expect(Number(data.unitPriceSnapshot)).toBe(10_000);
+      // No explicit constraints on the item — synthesised from the legacy triple
+      // (service/practitioner/duration), one INCLUDE row per non-null field.
+      expect(data.constraints.create).toEqual([
+        expect.objectContaining({
+          dimension: PackageConstraintDimension.SERVICE,
+          mode: PackageConstraintMode.INCLUDE,
+          targets: { create: [{ targetId: SERVICE_ID }] },
+        }),
+        expect.objectContaining({
+          dimension: PackageConstraintDimension.PRACTITIONER,
+          mode: PackageConstraintMode.INCLUDE,
+          targets: { create: [{ targetId: EMPLOYEE_ID }] },
+        }),
+        expect.objectContaining({
+          dimension: PackageConstraintDimension.DURATION,
+          mode: PackageConstraintMode.INCLUDE,
+          targets: { create: [{ targetId: DURATION_OPTION_ID }] },
+        }),
+      ]);
+    });
+
+    it('carries explicit item constraints verbatim onto the issued credit instead of synthesising', async () => {
+      const flexibleItem = {
+        ...pkgItem,
+        unitPrice: new Prisma.Decimal(12_000),
+        constraints: [
+          {
+            dimension: PackageConstraintDimension.PRACTITIONER,
+            mode: PackageConstraintMode.ANY,
+            targets: [],
+          },
+        ],
+      };
+      const prisma = buildPrisma(pendingPurchase, { ...pkgRow, items: [flexibleItem] });
+      const pricing = {
+        compute: jest.fn().mockResolvedValue({
+          subtotal: 40_000,
+          discountAmount: 4_000,
+          finalPrice: 36_000,
+          itemUnitPrices: [{ durationOptionId: DURATION_OPTION_ID, unitPrice: 12_000 }],
+        }),
+      };
+      const { tx, getSubscriber } = buildHandler(prisma, pricing);
+
+      await getSubscriber()(envelope());
+
+      expect(tx.packageCredit.create).toHaveBeenCalledTimes(1);
+      const data = tx.packageCredit.create.mock.calls[0][0].data;
+      expect(Number(data.unitPriceSnapshot)).toBe(12_000);
+      expect(data.constraints.create).toEqual([
+        expect.objectContaining({
+          dimension: PackageConstraintDimension.PRACTITIONER,
+          mode: PackageConstraintMode.ANY,
+          targets: { create: [] },
+        }),
+      ]);
     });
   });
 
@@ -154,7 +223,7 @@ describe('ActivatePackagePurchaseHandler', () => {
       await getSubscriber()(envelope());
 
       expect(tx.packagePurchase.updateMany).not.toHaveBeenCalled();
-      expect(tx.packageCredit.createMany).not.toHaveBeenCalled();
+      expect(tx.packageCredit.create).not.toHaveBeenCalled();
     });
 
     it('does NOT issue credits when the purchase is REFUNDED', async () => {
@@ -163,7 +232,7 @@ describe('ActivatePackagePurchaseHandler', () => {
 
       await getSubscriber()(envelope());
 
-      expect(tx.packageCredit.createMany).not.toHaveBeenCalled();
+      expect(tx.packageCredit.create).not.toHaveBeenCalled();
     });
 
     it('issues NO credits when the status-guarded flip races to count=0', async () => {
@@ -174,7 +243,7 @@ describe('ActivatePackagePurchaseHandler', () => {
       await getSubscriber()(envelope());
 
       expect(tx.packagePurchase.updateMany).toHaveBeenCalled();
-      expect(tx.packageCredit.createMany).not.toHaveBeenCalled();
+      expect(tx.packageCredit.create).not.toHaveBeenCalled();
     });
 
     it('skips silently when the purchase is unknown', async () => {
@@ -183,7 +252,7 @@ describe('ActivatePackagePurchaseHandler', () => {
 
       await getSubscriber()(envelope());
 
-      expect(tx.packageCredit.createMany).not.toHaveBeenCalled();
+      expect(tx.packageCredit.create).not.toHaveBeenCalled();
     });
   });
 
@@ -202,7 +271,7 @@ describe('ActivatePackagePurchaseHandler', () => {
 
       await getSubscriber()(envelope());
 
-      expect(tx.packageCredit.createMany).not.toHaveBeenCalled();
+      expect(tx.packageCredit.create).not.toHaveBeenCalled();
     });
   });
 });

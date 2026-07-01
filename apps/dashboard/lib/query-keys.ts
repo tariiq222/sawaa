@@ -12,6 +12,7 @@ export const queryKeys = {
     list: (filters?: object) => ["bookings", "list", filters] as const,
     detail: (id: string) => ["bookings", "detail", id] as const,
     statusLog: (id: string) => ["bookings", "status-log", id] as const,
+    timeline: (id: string) => ["bookings", "timeline", id] as const,
   },
 
   /* ─── Clients ─── */

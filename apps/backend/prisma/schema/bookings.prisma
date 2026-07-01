@@ -328,26 +328,54 @@ model PackagePurchase {
   @@index([status])
 }
 
-// الدلو = رصيد بند مشترى (خدمة + معالج + مدة). remaining = totalQuantity − usedQuantity.
-// serviceId / employeeId / durationOptionId = plain cross-BC refs (no Prisma FK).
+// الدلو = رصيد بند مشترى محكوم بقيود متعددة الأبعاد. remaining = totalQuantity − usedQuantity.
+// serviceId / employeeId / durationOptionId are LEGACY single-specific refs kept nullable
+// for backward compatibility; eligibility is a snapshot of the item's `constraints` taken
+// at purchase time so later package edits never affect existing purchases.
 model PackageCredit {
   id                String          @id @default(uuid())
   purchaseId        String
   purchase          PackagePurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
-  serviceId         String
-  employeeId        String
-  durationOptionId  String
+  serviceId         String?
+  employeeId        String?
+  durationOptionId  String?
   /// Stored in integer halalas (1 SAR = 100). See packages/shared/money.
   unitPriceSnapshot Decimal         @db.Decimal(12, 2)
   totalQuantity     Int
   usedQuantity      Int             @default(0)
   createdAt         DateTime        @default(now())
 
-  usages PackageCreditUsage[]
+  usages      PackageCreditUsage[]
+  constraints PackageCreditConstraint[]
 
   @@index([purchaseId])
   // Composite index supports FIFO credit-matching lookups by (service, employee, duration).
   @@index([serviceId, employeeId, durationOptionId])
+}
+
+// Snapshot of a package item's eligibility constraint for one credit bucket, frozen at
+// purchase time. See PackageConstraintDimension / PackageConstraintMode in organization.prisma.
+model PackageCreditConstraint {
+  id        String                     @id @default(uuid())
+  creditId  String
+  credit    PackageCredit              @relation(fields: [creditId], references: [id], onDelete: Cascade)
+  dimension PackageConstraintDimension
+  mode      PackageConstraintMode
+
+  targets PackageCreditConstraintTarget[]
+
+  @@unique([creditId, dimension])
+  @@index([creditId])
+}
+
+model PackageCreditConstraintTarget {
+  id           String                  @id @default(uuid())
+  constraintId String
+  constraint   PackageCreditConstraint @relation(fields: [constraintId], references: [id], onDelete: Cascade)
+  targetId     String
+
+  @@unique([constraintId, targetId])
+  @@index([constraintId])
 }
 
 // سجل استهلاك/إرجاع الرصيد. bookingId = plain cross-BC ref to Booking (no FK).

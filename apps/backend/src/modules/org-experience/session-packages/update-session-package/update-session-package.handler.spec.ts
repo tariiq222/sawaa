@@ -1,38 +1,44 @@
 import { Test } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService, RlsTransactionService } from '../../../../infrastructure/database';
-import { DiscountType } from '@prisma/client';
+import { DiscountType, PackageConstraintDimension, PackageConstraintMode } from '@prisma/client';
 import { UpdateSessionPackageHandler } from './update-session-package.handler';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
 import { CacheService } from '../../../../infrastructure/cache';
 
 const cacheProvider = { provide: CacheService, useValue: { invalidatePrefix: jest.fn() } };
 
+/**
+ * Build a per-test Prisma stub. `validatePackageItems` (package-constraints.helper)
+ * issues bulk queries directly against `this.prisma` (service/employee/serviceDurationOption
+ * findMany + employeeService findMany for single-specific links); the pricing service
+ * additionally reads employeeService/employeeServiceOption/serviceDurationOption to resolve
+ * unit prices. The transaction wrapper hands its callback a `tx` proxy used only for the
+ * item delete + per-item create + package update.
+ */
 function buildPrisma() {
   const sessionPackageFindFirst = jest.fn();
-  const employeeService = { findMany: jest.fn() };
-  const serviceDurationOption = { findMany: jest.fn() };
-  const employeeServiceFindFirst = jest.fn();
-  const employeeServiceOptionFindFirst = jest.fn();
-  const serviceDurationOptionFindFirst = jest.fn();
+  const service = { findMany: jest.fn() };
+  const employee = { findMany: jest.fn() };
+  const employeeService = { findMany: jest.fn(), findFirst: jest.fn() };
+  const serviceDurationOption = { findMany: jest.fn(), findFirst: jest.fn() };
   const sessionPackageItemDeleteMany = jest.fn();
-  const sessionPackageItemCreateMany = jest.fn();
+  const sessionPackageItemCreate = jest.fn();
   const sessionPackageUpdate = jest.fn();
   const tx = {
     sessionPackage: { update: sessionPackageUpdate },
     sessionPackageItem: {
       deleteMany: sessionPackageItemDeleteMany,
-      createMany: sessionPackageItemCreateMany,
+      create: sessionPackageItemCreate,
     },
   };
   return {
     sessionPackage: { findFirst: sessionPackageFindFirst },
-    employeeService: { ...employeeService, findFirst: employeeServiceFindFirst },
-    employeeServiceOption: { findFirst: employeeServiceOptionFindFirst, findMany: jest.fn().mockResolvedValue([]) },
-    serviceDurationOption: {
-      ...serviceDurationOption,
-      findFirst: serviceDurationOptionFindFirst,
-    },
+    service,
+    employee,
+    employeeService,
+    employeeServiceOption: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+    serviceDurationOption,
     _tx: tx,
   };
 }
@@ -87,12 +93,22 @@ describe('UpdateSessionPackageHandler', () => {
     prisma = buildPrisma();
     tx = prisma._tx;
     prisma.sessionPackage.findFirst.mockResolvedValue(existingPackage());
-    prisma.employeeService.findMany.mockResolvedValue([
-      { id: 'es-1', employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID },
-    ]);
+
+    // validatePackageItems bulk lookups (legacy triple → single INCLUDE constraint each).
+    prisma.service.findMany.mockResolvedValue([{ id: SERVICE_ID }]);
+    prisma.employee.findMany.mockResolvedValue([{ id: EMPLOYEE_ID }]);
+    // Same findMany mock backs both validatePackageItems' existence/isActive check
+    // (needs id/serviceId) and ComputePackagePriceService's durationMap (needs price).
     prisma.serviceDurationOption.findMany.mockResolvedValue([
       { id: DURATION_OPTION_ID, serviceId: SERVICE_ID, price: { toString: () => '10000' } },
     ]);
+    // Same findMany mock backs both validatePackageItems' link check (needs
+    // employeeId/serviceId) and ComputePackagePriceService's linkMap (needs id too).
+    prisma.employeeService.findMany.mockResolvedValue([
+      { id: 'es-1', employeeId: EMPLOYEE_ID, serviceId: SERVICE_ID },
+    ]);
+
+    // Pricing-service lookups (unit price resolution for the legacy triple).
     prisma.employeeService.findFirst.mockResolvedValue({ id: 'es-1' });
     prisma.employeeServiceOption.findFirst.mockResolvedValue(null);
     prisma.serviceDurationOption.findFirst.mockResolvedValue({
@@ -100,6 +116,9 @@ describe('UpdateSessionPackageHandler', () => {
       serviceId: SERVICE_ID,
       price: { toString: () => '10000' },
     });
+
+    tx.sessionPackageItem.deleteMany.mockResolvedValue({ count: 1 });
+    tx.sessionPackageItem.create.mockResolvedValue({ id: 'new-item-1' });
     tx.sessionPackage.update.mockResolvedValue({ id: PACKAGE_ID });
 
     const module = await Test.createTestingModule({
@@ -156,11 +175,14 @@ describe('UpdateSessionPackageHandler', () => {
     expect(data.discountValue).toBeUndefined();
   });
 
-  describe('items replacement', () => {
-    it('replaces items atomically (deleteMany + createMany) with per-item discount fields when items are provided', async () => {
-      tx.sessionPackageItem.deleteMany.mockResolvedValue({ count: 1 });
-      tx.sessionPackageItem.createMany.mockResolvedValue({ count: 1 });
+  it('includes items with constraints and targets on the final package update', async () => {
+    await handler.execute({ packageId: PACKAGE_ID, nameAr: 'باقة محدّثة' } as any);
+    const call = tx.sessionPackage.update.mock.calls[0][0];
+    expect(call.include).toEqual({ items: { include: { constraints: { include: { targets: true } } } } });
+  });
 
+  describe('items replacement', () => {
+    it('replaces items atomically (deleteMany + per-item create) with per-item discount + constraint rows when items are provided', async () => {
       await handler.execute({
         packageId: PACKAGE_ID,
         items: [
@@ -176,27 +198,43 @@ describe('UpdateSessionPackageHandler', () => {
       } as any);
 
       expect(tx.sessionPackageItem.deleteMany).toHaveBeenCalledWith({ where: { packageId: PACKAGE_ID } });
-      expect(tx.sessionPackageItem.createMany).toHaveBeenCalledWith({
-        data: [
-          {
-            packageId: PACKAGE_ID,
-            serviceId: SERVICE_ID,
-            employeeId: EMPLOYEE_ID,
-            durationOptionId: DURATION_OPTION_ID,
-            paidQuantity: 8,
-            freeQuantity: 2,
-            discountType: null,
-            discountValue: 0,
-            sortOrder: 0,
-          },
-        ],
+      expect(tx.sessionPackageItem.create).toHaveBeenCalledTimes(1);
+      const createArg = tx.sessionPackageItem.create.mock.calls[0][0];
+      expect(createArg.data).toEqual({
+        packageId: PACKAGE_ID,
+        serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID,
+        durationOptionId: DURATION_OPTION_ID,
+        unitPrice: null,
+        label: null,
+        paidQuantity: 8,
+        freeQuantity: 2,
+        discountType: null,
+        discountValue: 0,
+        sortOrder: 0,
+        constraints: {
+          create: [
+            {
+              dimension: PackageConstraintDimension.SERVICE,
+              mode: PackageConstraintMode.INCLUDE,
+              targets: { create: [{ targetId: SERVICE_ID }] },
+            },
+            {
+              dimension: PackageConstraintDimension.PRACTITIONER,
+              mode: PackageConstraintMode.INCLUDE,
+              targets: { create: [{ targetId: EMPLOYEE_ID }] },
+            },
+            {
+              dimension: PackageConstraintDimension.DURATION,
+              mode: PackageConstraintMode.INCLUDE,
+              targets: { create: [{ targetId: DURATION_OPTION_ID }] },
+            },
+          ],
+        },
       });
     });
 
     it('persists per-item PERCENTAGE discount on item row during replacement', async () => {
-      tx.sessionPackageItem.deleteMany.mockResolvedValue({ count: 1 });
-      tx.sessionPackageItem.createMany.mockResolvedValue({ count: 1 });
-
       await handler.execute({
         packageId: PACKAGE_ID,
         items: [
@@ -213,15 +251,15 @@ describe('UpdateSessionPackageHandler', () => {
         ],
       } as any);
 
-      const createManyData = tx.sessionPackageItem.createMany.mock.calls[0][0].data[0];
-      expect(createManyData.discountType).toBe(DiscountType.PERCENTAGE);
-      expect(createManyData.discountValue).toBe(20);
+      const createData = tx.sessionPackageItem.create.mock.calls[0][0].data;
+      expect(createData.discountType).toBe(DiscountType.PERCENTAGE);
+      expect(createData.discountValue).toBe(20);
     });
 
     it('does not touch items when no items are provided', async () => {
       await handler.execute({ packageId: PACKAGE_ID, nameAr: 'باقة محدّثة' } as any);
       expect(tx.sessionPackageItem.deleteMany).not.toHaveBeenCalled();
-      expect(tx.sessionPackageItem.createMany).not.toHaveBeenCalled();
+      expect(tx.sessionPackageItem.create).not.toHaveBeenCalled();
     });
 
     it('rejects items with paidQuantity + freeQuantity = 0', async () => {
@@ -303,9 +341,6 @@ describe('UpdateSessionPackageHandler', () => {
     });
 
     it('accepts a valid per-item PERCENTAGE discount when items are replaced', async () => {
-      tx.sessionPackageItem.deleteMany.mockResolvedValue({ count: 1 });
-      tx.sessionPackageItem.createMany.mockResolvedValue({ count: 1 });
-
       await handler.execute({
         packageId: PACKAGE_ID,
         items: [
@@ -322,9 +357,65 @@ describe('UpdateSessionPackageHandler', () => {
       } as any);
 
       // Item must have been written with the per-item discount.
-      const createManyData = tx.sessionPackageItem.createMany.mock.calls[0][0].data[0];
-      expect(createManyData.discountType).toBe(DiscountType.PERCENTAGE);
-      expect(createManyData.discountValue).toBe(25);
+      const createData = tx.sessionPackageItem.create.mock.calls[0][0].data;
+      expect(createData.discountType).toBe(DiscountType.PERCENTAGE);
+      expect(createData.discountValue).toBe(25);
+    });
+  });
+
+  describe('flexible items', () => {
+    it('replaces items with a flexible item (SERVICE INCLUDE single + PRACTITIONER ANY + DURATION ANY) and creates its constraint rows', async () => {
+      // Flexible items skip the single-specific employee/duration linkage checks —
+      // only the SERVICE INCLUDE target needs to resolve via prisma.service.findMany.
+      prisma.service.findMany.mockResolvedValue([{ id: SERVICE_ID }]);
+
+      await handler.execute({
+        packageId: PACKAGE_ID,
+        items: [
+          {
+            constraints: [
+              { dimension: PackageConstraintDimension.SERVICE, mode: PackageConstraintMode.INCLUDE, targetIds: [SERVICE_ID] },
+              { dimension: PackageConstraintDimension.PRACTITIONER, mode: PackageConstraintMode.ANY },
+              { dimension: PackageConstraintDimension.DURATION, mode: PackageConstraintMode.ANY },
+            ],
+            unitPrice: 15_000,
+            paidQuantity: 3,
+            freeQuantity: 0,
+            sortOrder: 0,
+          },
+        ],
+      } as any);
+
+      expect(tx.sessionPackageItem.deleteMany).toHaveBeenCalledWith({ where: { packageId: PACKAGE_ID } });
+      expect(tx.sessionPackageItem.create).toHaveBeenCalledTimes(1);
+      const createData = tx.sessionPackageItem.create.mock.calls[0][0].data;
+
+      // Flexible item: SERVICE is a single-target INCLUDE so serviceId is still
+      // derived as a legacy ref, but PRACTITIONER/DURATION are ANY so those
+      // single-specific refs stay null (item is not single-specific overall).
+      expect(createData.serviceId).toBe(SERVICE_ID);
+      expect(createData.employeeId).toBeNull();
+      expect(createData.durationOptionId).toBeNull();
+      expect(createData.unitPrice).toBe(15_000);
+      expect(createData.paidQuantity).toBe(3);
+
+      expect(createData.constraints.create).toEqual([
+        {
+          dimension: PackageConstraintDimension.SERVICE,
+          mode: PackageConstraintMode.INCLUDE,
+          targets: { create: [{ targetId: SERVICE_ID }] },
+        },
+        {
+          dimension: PackageConstraintDimension.PRACTITIONER,
+          mode: PackageConstraintMode.ANY,
+          targets: { create: [] },
+        },
+        {
+          dimension: PackageConstraintDimension.DURATION,
+          mode: PackageConstraintMode.ANY,
+          targets: { create: [] },
+        },
+      ]);
     });
   });
 });

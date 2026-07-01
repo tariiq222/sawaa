@@ -13,6 +13,12 @@ import { BookingCreatedEvent } from '../events/booking-created.event';
 import { DEFAULT_ORG_ID } from '../../../common/constants';
 import { hashToInt32 } from '../booking-lifecycle.helper';
 import { STAFF_TIME_BLOCKING_BOOKING_STATUSES } from '../active-booking-statuses';
+import {
+  BookingTarget,
+  CreditConstraint,
+  creditMatchesTarget,
+  specificityScore,
+} from '../package-credit-matching.helper';
 import { BookFromCreditDto } from './book-from-credit.dto';
 
 export type BookFromCreditCommand = Omit<BookFromCreditDto, 'scheduledAt'> & {
@@ -71,8 +77,13 @@ export class BookFromCreditHandler {
       );
     }
 
-    // ── Resolve the credit bucket (pre-lock view, used to validate the slot) ──
-    const credit = await this.resolveCredit(cmd);
+    // ── Resolve the credit bucket + the concrete booking target ──
+    // Flexible credits: the caller supplies the target and it is validated against
+    // the credit's constraints. Legacy credits: the target is the credit's triple.
+    const { credit, target } = await this.resolveCreditAndTarget(cmd);
+    const creditServiceId = target.serviceId;
+    const creditEmployeeId = target.employeeId;
+    const creditDurationOptionId = target.durationOptionId;
 
     // ── Validate the supporting entities + slot (mirrors create-booking) ──
     const branch = await this.prisma.branch.findFirst({
@@ -89,14 +100,14 @@ export class BookFromCreditHandler {
     if (!client) throw new NotFoundException('Client not found');
 
     const employee = await this.prisma.employee.findFirst({
-      where: { id: credit.employeeId },
+      where: { id: creditEmployeeId },
       select: { id: true, name: true, isActive: true },
     });
     if (!employee) throw new NotFoundException('Employee not found');
     if (employee.isActive === false) throw new BadRequestException('Employee is not active');
 
     const service = await this.prisma.service.findFirst({
-      where: { id: credit.serviceId },
+      where: { id: creditServiceId },
       select: {
         id: true,
         nameAr: true,
@@ -112,7 +123,7 @@ export class BookFromCreditHandler {
 
     // Duration is FIXED by the credit's durationOptionId — never the caller's.
     const durationOption = await this.prisma.serviceDurationOption.findFirst({
-      where: { id: credit.durationOptionId },
+      where: { id: creditDurationOptionId },
       select: { id: true, durationMins: true, deliveryType: true },
     });
     if (!durationOption) throw new NotFoundException('Credit duration option not found');
@@ -145,9 +156,9 @@ export class BookFromCreditHandler {
     }
 
     await this.assertSlotAvailable({
-      employeeId: credit.employeeId,
+      employeeId: creditEmployeeId,
       branchId: cmd.branchId,
-      serviceId: credit.serviceId,
+      serviceId: creditServiceId,
       scheduledAt,
       durationMins,
       deliveryType,
@@ -159,7 +170,7 @@ export class BookFromCreditHandler {
         // Advisory lock on employee + slot window — same pattern as
         // create-booking — so two concurrent bookings cannot both pass the
         // overlap check.
-        const lockKey1 = hashToInt32(credit.employeeId);
+        const lockKey1 = hashToInt32(creditEmployeeId);
         const lockKey2 = hashToInt32(`${scheduledAt.toISOString()}:${endsAt.toISOString()}`);
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey1}::int, ${lockKey2}::int)`;
 
@@ -171,7 +182,7 @@ export class BookFromCreditHandler {
 
         const conflict = await tx.booking.findFirst({
           where: {
-            employeeId: credit.employeeId,
+            employeeId: creditEmployeeId,
             status: { in: [...STAFF_TIME_BLOCKING_BOOKING_STATUSES] },
             scheduledAt: { lt: bufferedEnd },
             endsAt: { gt: bufferedStart },
@@ -232,9 +243,9 @@ export class BookFromCreditHandler {
           data: {
             branchId: cmd.branchId,
             clientId: cmd.clientId,
-            employeeId: credit.employeeId,
-            serviceId: credit.serviceId,
-            durationOptionId: credit.durationOptionId,
+            employeeId: creditEmployeeId,
+            serviceId: creditServiceId,
+            durationOptionId: creditDurationOptionId,
             scheduledAt,
             endsAt,
             durationMins,
@@ -292,7 +303,7 @@ export class BookFromCreditHandler {
               targetClientId: cmd.clientId,
               creditId: credit.id,
               purchaseId: credit.purchaseId,
-              employeeId: credit.employeeId,
+              employeeId: creditEmployeeId,
               scheduledAt: scheduledAt.toISOString(),
             } as Prisma.InputJsonValue,
           },
@@ -341,11 +352,48 @@ export class BookFromCreditHandler {
   }
 
   /**
-   * Resolve the credit bucket. With an explicit creditId we load that bucket
-   * (must belong to the client, be ACTIVE, have remaining). Otherwise we
-   * FIFO-select the oldest ACTIVE purchase's credit matching the exact triple.
+   * Resolve the credit bucket AND the concrete booking target.
+   *
+   *  - With a triple (service/employee/duration), the target is the caller's:
+   *    an explicit creditId is validated against the credit's constraints; without
+   *    one, the narrowest eligible credit (then FIFO) is auto-selected.
+   *  - With only a creditId (no triple), the target is the credit's legacy triple
+   *    (a flexible credit rejects this — it needs an explicit target).
    */
-  private async resolveCredit(cmd: BookFromCreditCommand) {
+  private async resolveCreditAndTarget(
+    cmd: BookFromCreditCommand,
+  ): Promise<{
+    credit: {
+      id: string;
+      purchaseId: string;
+      serviceId: string | null;
+      employeeId: string | null;
+      durationOptionId: string | null;
+      totalQuantity: number;
+      usedQuantity: number;
+      constraints: CreditConstraint[];
+    };
+    target: BookingTarget;
+  }> {
+    const select = {
+      id: true,
+      purchaseId: true,
+      serviceId: true,
+      employeeId: true,
+      durationOptionId: true,
+      totalQuantity: true,
+      usedQuantity: true,
+      constraints: {
+        select: {
+          dimension: true,
+          mode: true,
+          targets: { select: { targetId: true } },
+        },
+      },
+    } as const;
+
+    const hasTriple = !!(cmd.serviceId && cmd.employeeId && cmd.durationOptionId);
+
     if (cmd.creditId) {
       const credit = await this.prisma.packageCredit.findFirst({
         where: {
@@ -353,47 +401,74 @@ export class BookFromCreditHandler {
           usedQuantity: { lt: this.prisma.packageCredit.fields.totalQuantity },
           purchase: { clientId: cmd.clientId, status: PackagePurchaseStatus.ACTIVE },
         },
-        select: {
-          id: true,
-          purchaseId: true,
-          serviceId: true,
-          employeeId: true,
-          durationOptionId: true,
-          totalQuantity: true,
-          usedQuantity: true,
-        },
+        select,
       });
       if (!credit) {
         throw new NotFoundException('No usable package credit found for this id');
       }
-      return credit;
+
+      if (hasTriple) {
+        const target: BookingTarget = {
+          serviceId: cmd.serviceId!,
+          employeeId: cmd.employeeId!,
+          durationOptionId: cmd.durationOptionId!,
+          deliveryType: cmd.deliveryType ?? null,
+        };
+        if (!creditMatchesTarget(credit, target)) {
+          throw new BadRequestException('The selected credit is not valid for this booking');
+        }
+        return { credit, target };
+      }
+
+      // Legacy path: derive the target from the credit's own triple.
+      if (!credit.serviceId || !credit.employeeId || !credit.durationOptionId) {
+        throw new BadRequestException(
+          'This credit needs an explicit service, practitioner and duration',
+        );
+      }
+      return {
+        credit,
+        target: {
+          serviceId: credit.serviceId,
+          employeeId: credit.employeeId,
+          durationOptionId: credit.durationOptionId,
+          deliveryType: cmd.deliveryType ?? null,
+        },
+      };
     }
 
-    const credit = await this.prisma.packageCredit.findFirst({
+    if (!hasTriple) {
+      throw new BadRequestException(
+        'Provide either creditId or the full (serviceId, employeeId, durationOptionId) triple',
+      );
+    }
+
+    const target: BookingTarget = {
+      serviceId: cmd.serviceId!,
+      employeeId: cmd.employeeId!,
+      durationOptionId: cmd.durationOptionId!,
+      deliveryType: cmd.deliveryType ?? null,
+    };
+
+    // Auto-select: all client's ACTIVE credits with remaining, filter by the
+    // matching engine, then narrowest-first (specificity) then FIFO.
+    const candidates = await this.prisma.packageCredit.findMany({
       where: {
-        serviceId: cmd.serviceId,
-        employeeId: cmd.employeeId,
-        durationOptionId: cmd.durationOptionId,
         usedQuantity: { lt: this.prisma.packageCredit.fields.totalQuantity },
         purchase: { clientId: cmd.clientId, status: PackagePurchaseStatus.ACTIVE },
       },
       orderBy: [{ purchase: { createdAt: 'asc' } }, { createdAt: 'asc' }],
-      select: {
-        id: true,
-        purchaseId: true,
-        serviceId: true,
-        employeeId: true,
-        durationOptionId: true,
-        totalQuantity: true,
-        usedQuantity: true,
-      },
+      select,
     });
+    const credit = candidates
+      .filter((c) => creditMatchesTarget(c, target))
+      .sort((a, b) => specificityScore(b) - specificityScore(a))[0];
     if (!credit) {
       throw new NotFoundException(
         'No matching package credit with remaining capacity for this client',
       );
     }
-    return credit;
+    return { credit, target };
   }
 
   private async assertSlotAvailable(input: {

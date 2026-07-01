@@ -21,7 +21,7 @@ import { BookingActions } from "./booking-actions"
 import { DetailsBody } from "./booking-details-body"
 import { BookingIntakeResponses } from "./booking-intake-responses"
 import { BookingRescheduleTab } from "./booking-reschedule-tab"
-import { BookingStatusLog } from "./booking-status-log"
+import { BookingTimeline } from "./booking-timeline"
 import { BookingInvoiceTab } from "./booking-invoice-tab"
 
 /* ── Props ── */
@@ -31,7 +31,7 @@ interface BookingDetailSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onAction: () => void
-  defaultTab?: "details" | "reschedule" | "invoice"
+  defaultTab?: "details" | "reschedule" | "invoice" | "statusLog"
 }
 
 /* ── Main Dialog ── */
@@ -82,9 +82,6 @@ export function BookingDetailSheet({ booking, open, onOpenChange, onAction, defa
       <DetailSection title={t("intakeForms.responses.title")}>
         <BookingIntakeResponses bookingId={booking.id} />
       </DetailSection>
-      <DetailSection title={t("bookings.statusLog.title")}>
-        <BookingStatusLog bookingId={booking.id} />
-      </DetailSection>
     </>
   )
 
@@ -112,44 +109,43 @@ export function BookingDetailSheet({ booking, open, onOpenChange, onAction, defa
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto bg-surface-muted">
-          {canReschedule || hasInvoice ? (
-            <Tabs key={`${booking.id}-${activeTab}`} defaultValue={activeTab} className="h-full">
-              <div className="px-6 pt-4">
-                <TabsList className="h-8 p-0.5">
-                  <TabsTrigger value="details" className="h-7 px-3 text-xs">{t("detail.tabs.details")}</TabsTrigger>
-                  {canReschedule && (
-                    <TabsTrigger value="reschedule" className="h-7 px-3 text-xs">{t("detail.tabs.reschedule")}</TabsTrigger>
-                  )}
-                  {hasInvoice && (
-                    <TabsTrigger value="invoice" className="h-7 px-3 text-xs">{t("detail.tabs.invoice")}</TabsTrigger>
-                  )}
-                </TabsList>
-              </div>
-
-              <TabsContent value="details" className="px-6 pt-4 pb-6 flex flex-col gap-6">
-                {detailsBody}
-              </TabsContent>
-
-              {canReschedule && (
-                <TabsContent value="reschedule" className="px-6 pt-4 pb-6">
-                  <BookingRescheduleTab
-                    booking={booking}
-                    onSuccess={() => { onOpenChange(false); onAction() }}
-                  />
-                </TabsContent>
-              )}
-
-              {hasInvoice && (
-                <TabsContent value="invoice" className="px-6 pt-4 pb-6">
-                  <BookingInvoiceTab booking={booking} t={t} locale={locale} />
-                </TabsContent>
-              )}
-            </Tabs>
-          ) : (
-            <div className="px-6 pt-4 pb-6 flex flex-col gap-6">
-              {detailsBody}
+          <Tabs key={`${booking.id}-${activeTab}`} defaultValue={activeTab} className="h-full">
+            <div className="px-6 pt-4">
+              <TabsList className="h-8 p-0.5">
+                <TabsTrigger value="details" className="h-7 px-3 text-xs">{t("detail.tabs.details")}</TabsTrigger>
+                {canReschedule && (
+                  <TabsTrigger value="reschedule" className="h-7 px-3 text-xs">{t("detail.tabs.reschedule")}</TabsTrigger>
+                )}
+                {hasInvoice && (
+                  <TabsTrigger value="invoice" className="h-7 px-3 text-xs">{t("detail.tabs.invoice")}</TabsTrigger>
+                )}
+                <TabsTrigger value="statusLog" className="h-7 px-3 text-xs">{t("detail.tabs.statusLog")}</TabsTrigger>
+              </TabsList>
             </div>
-          )}
+
+            <TabsContent value="details" className="px-6 pt-4 pb-6 flex flex-col gap-6">
+              {detailsBody}
+            </TabsContent>
+
+            {canReschedule && (
+              <TabsContent value="reschedule" className="px-6 pt-4 pb-6">
+                <BookingRescheduleTab
+                  booking={booking}
+                  onSuccess={() => { onOpenChange(false); onAction() }}
+                />
+              </TabsContent>
+            )}
+
+            {hasInvoice && (
+              <TabsContent value="invoice" className="px-6 pt-4 pb-6">
+                <BookingInvoiceTab booking={booking} t={t} locale={locale} />
+              </TabsContent>
+            )}
+
+            <TabsContent value="statusLog" className="px-6 pt-4 pb-6">
+              <BookingTimeline bookingId={booking.id} />
+            </TabsContent>
+          </Tabs>
         </div>
 
       </DialogContent>

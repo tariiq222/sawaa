@@ -80,6 +80,34 @@ export async function fetchBookingStatusLog(id: string): Promise<BookingStatusLo
   return api.get<BookingStatusLogEntry[]>(`/dashboard/bookings/${id}/status-log`)
 }
 
+export type BookingTimelineKind =
+  | "CREATED"
+  | "STATUS_CHANGE"
+  | "RESCHEDULE"
+  | "PAYMENT"
+  | "REFUND"
+  | "ACTIVITY"
+
+export interface BookingTimelineEntry {
+  id: string
+  kind: BookingTimelineKind
+  at: string
+  actor: string | null
+  fromStatus: string | null
+  toStatus: string | null
+  reason: string | null
+  /** Integer halalas. */
+  amount: number | null
+  method: string | null
+  paymentStatus: string | null
+  refundStatus: string | null
+  meta: { fromScheduledAt?: string; toScheduledAt?: string } | null
+}
+
+export async function fetchBookingTimeline(id: string): Promise<BookingTimelineEntry[]> {
+  return api.get<BookingTimelineEntry[]>(`/dashboard/bookings/${id}/timeline`)
+}
+
 export async function createBooking(
   payload: CreateBookingPayload,
 ): Promise<Booking> {

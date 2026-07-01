@@ -30,7 +30,12 @@ export class GetPublicPackageHandler {
         isActive: true,
         archivedAt: null,
       },
-      include: { items: { orderBy: { sortOrder: 'asc' } } },
+      include: {
+        items: {
+          orderBy: { sortOrder: 'asc' },
+          include: { constraints: { include: { targets: true } } },
+        },
+      },
     });
     if (!pkg) {
       // Same 404 for "does not exist" and "exists but not public" — do not leak
@@ -43,12 +48,13 @@ export class GetPublicPackageHandler {
         serviceId: i.serviceId,
         employeeId: i.employeeId,
         durationOptionId: i.durationOptionId,
+        unitPrice: i.unitPrice != null ? Number(i.unitPrice) : null,
         paidQuantity: i.paidQuantity,
         freeQuantity: i.freeQuantity,
         discountType: i.discountType,
         discountValue: Number(i.discountValue),
       })),
-    });
+    }, { strict: false });
 
     return { ...pkg, price };
   }

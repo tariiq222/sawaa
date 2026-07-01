@@ -52,7 +52,12 @@ export class ListSessionPackagesHandler {
         skip,
         take: limit,
         orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
-        include: { items: { orderBy: { sortOrder: 'asc' } } },
+        include: {
+          items: {
+            orderBy: { sortOrder: 'asc' },
+            include: { constraints: { include: { targets: true } } },
+          },
+        },
       }),
       this.prisma.sessionPackage.count({ where }),
     ]);
@@ -65,12 +70,14 @@ export class ListSessionPackagesHandler {
           serviceId: i.serviceId,
           employeeId: i.employeeId,
           durationOptionId: i.durationOptionId,
+          unitPrice: i.unitPrice != null ? Number(i.unitPrice) : null,
           paidQuantity: i.paidQuantity,
           freeQuantity: i.freeQuantity,
           discountType: i.discountType,
           discountValue: Number(i.discountValue),
         })),
       ),
+      { strict: false },
     );
     const priced = items.map((pkg, idx) => ({
       ...pkg,

@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PackagePurchaseStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database';
+import {
+  creditMatchesTarget,
+  specificityScore,
+} from '../package-credit-matching.helper';
 import { GetMatchingCreditsDto } from './get-matching-credits.dto';
 
 export type GetMatchingCreditsQuery = GetMatchingCreditsDto;
@@ -8,9 +12,10 @@ export type GetMatchingCreditsQuery = GetMatchingCreditsDto;
 export interface MatchingCredit {
   creditId: string;
   purchaseId: string;
-  serviceId: string;
-  employeeId: string;
-  durationOptionId: string;
+  // null on flexible (rule-based) credits, which are not pinned to one triple.
+  serviceId: string | null;
+  employeeId: string | null;
+  durationOptionId: string | null;
   totalQuantity: number;
   usedQuantity: number;
   remaining: number;
@@ -18,9 +23,10 @@ export interface MatchingCredit {
 }
 
 /**
- * Return a client's ACTIVE session-package credits that match the exact
- * (service, employee, duration) triple and still have remaining capacity,
- * in FIFO order (oldest purchase first — the order they would be consumed).
+ * Return a client's ACTIVE session-package credits eligible for the given
+ * booking target (service, employee, duration[, delivery type]) with remaining
+ * capacity. Ordered by consumption priority: narrowest credit first (highest
+ * specificity), then FIFO (oldest purchase, then oldest credit).
  *
  * Read-only suggestion source for the dashboard booking wizard.
  */
@@ -31,9 +37,6 @@ export class GetMatchingCreditsHandler {
   async execute(query: GetMatchingCreditsQuery): Promise<MatchingCredit[]> {
     const credits = await this.prisma.packageCredit.findMany({
       where: {
-        serviceId: query.serviceId,
-        employeeId: query.employeeId,
-        durationOptionId: query.durationOptionId,
         purchase: {
           clientId: query.clientId,
           status: PackagePurchaseStatus.ACTIVE,
@@ -49,10 +52,28 @@ export class GetMatchingCreditsHandler {
         totalQuantity: true,
         usedQuantity: true,
         createdAt: true,
+        constraints: {
+          select: {
+            dimension: true,
+            mode: true,
+            targets: { select: { targetId: true } },
+          },
+        },
       },
     });
 
+    const target = {
+      serviceId: query.serviceId,
+      employeeId: query.employeeId,
+      durationOptionId: query.durationOptionId,
+      deliveryType: query.deliveryType ?? null,
+    };
+
     return credits
+      .filter((c) => c.totalQuantity - c.usedQuantity > 0)
+      .filter((c) => creditMatchesTarget(c, target))
+      // Narrowest first, then keep the DB's FIFO order (stable sort).
+      .sort((a, b) => specificityScore(b) - specificityScore(a))
       .map((c) => ({
         creditId: c.id,
         purchaseId: c.purchaseId,
@@ -63,7 +84,6 @@ export class GetMatchingCreditsHandler {
         usedQuantity: c.usedQuantity,
         remaining: c.totalQuantity - c.usedQuantity,
         createdAt: c.createdAt,
-      }))
-      .filter((c) => c.remaining > 0);
+      }));
   }
 }

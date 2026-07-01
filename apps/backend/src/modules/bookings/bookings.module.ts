@@ -17,6 +17,7 @@ import { CompleteBookingHandler } from './complete-booking/complete-booking.hand
 import { NoShowBookingHandler } from './no-show-booking/no-show-booking.handler';
 import { ExpireBookingHandler } from './expire-booking/expire-booking.handler';
 import { ListBookingStatusLogHandler } from './list-booking-status-log/list-booking-status-log.handler';
+import { GetBookingTimelineHandler } from './get-booking-timeline/get-booking-timeline.handler';
 import { PaymentCompletedEventHandler } from './payment-completed-handler/payment-completed.handler';
 import { DepositPaidEventHandler } from './deposit-paid-handler/deposit-paid.handler';
 import { RefundCompletedEventHandler } from './refund-completed-handler/refund-completed.handler';
@@ -73,6 +74,7 @@ const handlers = [
   NoShowBookingHandler,
   ExpireBookingHandler,
   ListBookingStatusLogHandler,
+  GetBookingTimelineHandler,
   GetBookingSettingsHandler,
   UpsertBookingSettingsHandler,
   RequestCancelBookingHandler,

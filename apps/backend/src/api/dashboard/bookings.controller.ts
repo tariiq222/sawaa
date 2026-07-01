@@ -34,6 +34,7 @@ import { NoShowBookingHandler } from '../../modules/bookings/no-show-booking/no-
 import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
 import { CheckAvailabilityDto } from '../../modules/bookings/check-availability/check-availability.dto';
 import { ListBookingStatusLogHandler } from '../../modules/bookings/list-booking-status-log/list-booking-status-log.handler';
+import { GetBookingTimelineHandler } from '../../modules/bookings/get-booking-timeline/get-booking-timeline.handler';
 import { ApproveCancelBookingHandler } from '../../modules/bookings/approve-cancel-booking/approve-cancel-booking.handler';
 import { ApproveCancelBookingDto } from '../../modules/bookings/approve-cancel-booking/approve-cancel-booking.dto';
 import { RejectCancelBookingHandler } from '../../modules/bookings/reject-cancel-booking/reject-cancel-booking.handler';
@@ -67,6 +68,7 @@ export class DashboardBookingsController {
     private readonly noShowHandler: NoShowBookingHandler,
     private readonly availabilityHandler: CheckAvailabilityHandler,
     private readonly statusLogHandler: ListBookingStatusLogHandler,
+    private readonly timelineHandler: GetBookingTimelineHandler,
     private readonly approveCancelHandler: ApproveCancelBookingHandler,
     private readonly rejectCancelHandler: RejectCancelBookingHandler,
     private readonly bookFromCreditHandler: BookFromCreditHandler,
@@ -279,6 +281,41 @@ export class DashboardBookingsController {
   })
   getBookingStatusLog(@Param('id', ParseUUIDPipe) id: string) {
     return this.statusLogHandler.execute({ bookingId: id });
+  }
+
+  @Get(':id/timeline')
+  @CheckPermissions({ action: 'read', subject: 'Booking' })
+  @ApiOperation({ summary: 'Get the full activity timeline for a booking' })
+  @ApiParam({ name: 'id', description: 'Booking ID', example: '00000000-0000-0000-0000-000000000000' })
+  @ApiOkResponse({
+    description:
+      'Chronological timeline merging creation, status changes, payments, refunds and activity (oldest first)',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          kind: {
+            type: 'string',
+            enum: ['CREATED', 'STATUS_CHANGE', 'RESCHEDULE', 'PAYMENT', 'REFUND', 'ACTIVITY'],
+          },
+          at: { type: 'string', format: 'date-time' },
+          actor: { type: 'string', nullable: true },
+          fromStatus: { type: 'string', nullable: true },
+          toStatus: { type: 'string', nullable: true },
+          reason: { type: 'string', nullable: true },
+          amount: { type: 'integer', nullable: true, description: 'Halalas' },
+          method: { type: 'string', nullable: true },
+          paymentStatus: { type: 'string', nullable: true },
+          refundStatus: { type: 'string', nullable: true },
+          meta: { type: 'object', nullable: true, additionalProperties: true },
+        },
+      },
+    },
+  })
+  getBookingTimeline(@Param('id', ParseUUIDPipe) id: string) {
+    return this.timelineHandler.execute({ bookingId: id });
   }
 
   @Get(':id')

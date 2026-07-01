@@ -38,8 +38,8 @@ import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { usePackage, usePackageMutations } from "@/hooks/use-packages"
 import { uploadPackageImage } from "@/lib/api/packages"
 import { useLocale } from "@/components/locale-provider"
-import { sarToHalalas } from "@/lib/money"
 import { computePackagePrice } from "@/lib/package-price"
+import { isSingleSpecificItem, itemToScopes } from "@/lib/package-scope"
 import { queryKeys } from "@/lib/query-keys"
 import {
   createPackageSchema,
@@ -47,10 +47,10 @@ import {
   type PackageFormData,
 } from "@/lib/schemas/package.schema"
 import { PackageFormFields } from "./package-form-fields"
+import { DEFAULT_VALUES, buildItemPayload } from "./package-form-helpers"
 import type { PackageLineDetail } from "./package-item-builder"
 import type {
   CreateSessionPackagePayload,
-  PackageDiscountType,
   SessionPackage,
   UpdateSessionPackagePayload,
 } from "@/lib/types/package"
@@ -58,31 +58,6 @@ import type {
 /* ─── Types ─── */
 
 type Props = { mode: "create" } | { mode: "edit"; packageId: string }
-
-const DEFAULT_VALUES: PackageFormData = {
-  nameAr: "",
-  nameEn: "",
-  descriptionAr: "",
-  descriptionEn: "",
-  imageUrl: null,
-  iconName: null,
-  iconBgColor: null,
-  sortOrder: 0,
-  isActive: true,
-  isPublic: false,
-  items: [],
-}
-
-/* ─── Helpers ─── */
-
-/** Per-item FIXED discount is entered in SAR; convert to halalas for storage. */
-function itemStorageDiscount(
-  type: PackageDiscountType | null | undefined,
-  value: number | undefined,
-): number {
-  if (!type || !value) return 0
-  return type === "FIXED" ? sarToHalalas(value) : value
-}
 
 /* ─── Component ─── */
 
@@ -160,20 +135,26 @@ export function PackageFormPage(props: Props) {
         sortOrder: pkg.sortOrder,
         isActive: pkg.isActive,
         isPublic: pkg.isPublic,
-        items: pkg.items.map((it) => ({
-          serviceId: it.serviceId,
-          employeeId: it.employeeId,
-          durationOptionId: it.durationOptionId,
-          paidQuantity: it.paidQuantity,
-          freeQuantity: it.freeQuantity,
-          discountType: it.discountType ?? null,
-          // FIXED stored as halalas → display in SAR; PERCENTAGE stays as-is.
-          discountValue:
-            it.discountType === "FIXED"
-              ? Number(it.discountValue) / 100
-              : Number(it.discountValue ?? 0),
-          sortOrder: it.sortOrder,
-        })),
+        items: pkg.items.map((it) => {
+          const scopes = itemToScopes(it)
+          const singleSpecific = isSingleSpecificItem(scopes)
+          return {
+            ...scopes,
+            // Flexible items carry a fixed unit price (halalas) → display in SAR.
+            unitPriceSar:
+              !singleSpecific && it.unitPrice != null ? Number(it.unitPrice) / 100 : undefined,
+            label: it.label ?? "",
+            paidQuantity: it.paidQuantity,
+            freeQuantity: it.freeQuantity,
+            discountType: it.discountType ?? null,
+            // FIXED stored as halalas → display in SAR; PERCENTAGE stays as-is.
+            discountValue:
+              it.discountType === "FIXED"
+                ? Number(it.discountValue) / 100
+                : Number(it.discountValue ?? 0),
+            sortOrder: it.sortOrder,
+          }
+        }),
       })
     }
   }, [pkg, form])
@@ -192,20 +173,9 @@ export function PackageFormPage(props: Props) {
 
   const onSubmit = form.handleSubmit(async (data) => {
     try {
-      const items = (data.items ?? []).map((it, i) => ({
-        serviceId: it.serviceId,
-        employeeId: it.employeeId,
-        durationOptionId: it.durationOptionId,
-        paidQuantity: Number(it.paidQuantity ?? 0),
-        freeQuantity: Number(it.freeQuantity ?? 0),
-        discountType: it.discountType ?? null,
-        discountValue: itemStorageDiscount(it.discountType, it.discountValue),
-        sortOrder: Number(it.sortOrder ?? i),
-      }))
-
-      // Defensive strict-mode parse so a missing nameAr etc. on create
-      // surfaces as a real Zod error (the form's base schema permits
-      // them to be optional).
+      // Defensive strict-mode parse so a missing nameAr / invalid scope / missing
+      // flexible unitPrice surfaces as a real Zod error before we hit the network
+      // (the form's base schema permits some fields to be optional).
       const strict = isEdit ? editPackageSchema : createPackageSchema
       const strictResult = strict.safeParse(data)
       if (!strictResult.success) {
@@ -217,6 +187,9 @@ export function PackageFormPage(props: Props) {
         return
       }
       const strictData = strictResult.data
+
+      // Build the payload from the validated data (scopes → constraints + price).
+      const items = (strictData.items ?? []).map((it, i) => buildItemPayload(it, i))
 
       if (isEdit) {
         await updateMut.mutateAsync({

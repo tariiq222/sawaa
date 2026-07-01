@@ -519,6 +519,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/bookings/{id}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the full activity timeline for a booking */
+        get: operations["DashboardBookingsController_getBookingTimeline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/bookings/{id}/zoom/retry": {
         parameters: {
             query?: never;
@@ -4622,6 +4639,101 @@ export interface components {
          * @enum {string}
          */
         CancellationReason: "CLIENT_REQUESTED" | "EMPLOYEE_UNAVAILABLE" | "NO_SHOW" | "SYSTEM_EXPIRED" | "OTHER";
+        CatalogCategoryDto: {
+            /** Format: uuid */
+            id: string;
+            /** @description Short-lived presigned image URL (signed per response), or null */
+            imageUrl: Record<string, never> | null;
+            /** @example استشارات */
+            nameAr: string;
+            /** @example Consultations */
+            nameEn: Record<string, never> | null;
+            /**
+             * @description Display order
+             * @example 0
+             */
+            sortOrder: number;
+        };
+        CatalogDepartmentDto: {
+            /** Format: uuid */
+            id: string;
+            /** @example الاستشارات الأسرية */
+            nameAr: string;
+            /** @example Family Counseling */
+            nameEn: Record<string, never> | null;
+            /**
+             * @description Display order
+             * @example 0
+             */
+            sortOrder: number;
+        };
+        CatalogServiceBookingConfigDto: {
+            /** @enum {string} */
+            deliveryType: "IN_PERSON" | "ONLINE";
+            /** @example 45 */
+            durationMins: number;
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description Price in integer halalas (Prisma Decimal serialized as string)
+             * @example 15000
+             */
+            price: string;
+        };
+        CatalogServiceDto: {
+            /** @description Active per-delivery-type booking configs */
+            bookingConfigs: components["schemas"]["CatalogServiceBookingConfigDto"][];
+            /**
+             * Format: uuid
+             * @description Owning service category
+             */
+            categoryId: string;
+            /** @example SAR */
+            currency: string;
+            descriptionAr: Record<string, never> | null;
+            descriptionEn: Record<string, never> | null;
+            /** @example 45 */
+            durationMins: number;
+            /** @description Service-level duration options (practitioner-owned rows excluded) */
+            durationOptions: components["schemas"]["CatalogServiceDurationOptionDto"][];
+            iconBgColor: Record<string, never> | null;
+            iconName: Record<string, never> | null;
+            /** Format: uuid */
+            id: string;
+            /** @description Short-lived presigned image URL (signed per response), or null */
+            imageUrl: Record<string, never> | null;
+            /** @example جلسة استشارة فردية */
+            nameAr: string;
+            /** @example Individual Counseling Session */
+            nameEn: Record<string, never> | null;
+            /**
+             * @description Price in integer halalas (Prisma Decimal serialized as string)
+             * @example 15000
+             */
+            price: string;
+            /** @description Whether to display the duration on the booking surface */
+            showDuration: boolean;
+            /** @description Whether to display the price on the booking surface */
+            showPrice: boolean;
+        };
+        CatalogServiceDurationOptionDto: {
+            /** @example 45 */
+            durationMins: number;
+            /** Format: uuid */
+            id: string;
+            /** @example 45 دقيقة */
+            label: Record<string, never> | null;
+            /**
+             * @description Price in integer halalas (Prisma Decimal serialized as string)
+             * @example 15000
+             */
+            price: string;
+            /**
+             * @description Display order
+             * @example 0
+             */
+            sortOrder: number;
+        };
         ChangePasswordDto: {
             /**
              * @description Current account password
@@ -5732,6 +5844,8 @@ export interface components {
             sortOrder: number;
         };
         CreateSessionPackageItemDto: {
+            /** @description Eligibility constraints (multi-dimensional). Preferred over the legacy triple. */
+            constraints?: components["schemas"]["PackageConstraintInputDto"][];
             /**
              * @description Per-item discount type applied to (paid × unit price). Omit/null for no discount.
              * @example PERCENTAGE
@@ -5746,16 +5860,16 @@ export interface components {
             discountValue: number;
             /**
              * Format: uuid
-             * @description ServiceDurationOption UUID
+             * @description Legacy single ServiceDurationOption UUID. Omit for flexible items (use constraints).
              * @example 00000000-0000-4000-a000-000000000000
              */
-            durationOptionId: string;
+            durationOptionId?: string;
             /**
              * Format: uuid
-             * @description Employee (practitioner) UUID
+             * @description Legacy single-practitioner UUID. Omit for flexible items (use constraints).
              * @example 00000000-0000-4000-a000-000000000000
              */
-            employeeId: string;
+            employeeId?: string;
             /**
              * @description Number of free bonus sessions bundled with the paid ones
              * @default 0
@@ -5763,21 +5877,31 @@ export interface components {
              */
             freeQuantity: number;
             /**
+             * @description Optional display label for the item
+             * @example استشارة فردية — أي معالج
+             */
+            label?: string;
+            /**
              * @description Number of paid sessions the client gets
              * @example 4
              */
             paidQuantity: number;
             /**
              * Format: uuid
-             * @description Service UUID
+             * @description Legacy single-service UUID. Omit for flexible items (use constraints).
              * @example 00000000-0000-4000-a000-000000000000
              */
-            serviceId: string;
+            serviceId?: string;
             /**
              * @description Display order within the package
              * @example 0
              */
             sortOrder?: number;
+            /**
+             * @description Fixed prepaid unit price in integer halalas. Required for flexible (non single-specific) items.
+             * @example 20000
+             */
+            unitPrice?: number;
         };
         CreateUserDto: {
             /**
@@ -6670,6 +6794,22 @@ export interface components {
         };
         /** @enum {string} */
         OnboardingStatus: "PENDING" | "IN_PROGRESS" | "COMPLETED";
+        PackageConstraintInputDto: {
+            /**
+             * @description Constraint dimension
+             * @example PRACTITIONER
+             * @enum {string}
+             */
+            dimension: "SERVICE" | "PRACTITIONER" | "DURATION" | "DELIVERY_TYPE";
+            /**
+             * @description Matching mode
+             * @example ANY
+             * @enum {string}
+             */
+            mode: "ANY" | "INCLUDE" | "EXCLUDE";
+            /** @description Target IDs for INCLUDE/EXCLUDE. Empty/omitted for ANY. */
+            targetIds?: string[];
+        };
         /** @enum {string} */
         PackagePurchaseStatus: "PENDING" | "ACTIVE" | "COMPLETED" | "REFUNDED";
         PaginatedClientsDto: {
@@ -6743,6 +6883,99 @@ export interface components {
             invoiceId: string;
             /** @description Payment method used */
             method: components["schemas"]["PaymentMethod"];
+        };
+        PublicBrandingDto: {
+            /**
+             * @description Accent color
+             * @example #d8a657
+             */
+            colorAccent: Record<string, never> | null;
+            /**
+             * @description Accent color (dark variant)
+             * @example #b9863f
+             */
+            colorAccentDark: Record<string, never> | null;
+            /**
+             * @description Background color
+             * @example #f7f5f0
+             */
+            colorBackground: Record<string, never> | null;
+            /**
+             * @description Primary brand color
+             * @example #1f6f5c
+             */
+            colorPrimary: Record<string, never> | null;
+            /**
+             * @description Primary color (dark variant)
+             * @example #13503f
+             */
+            colorPrimaryDark: Record<string, never> | null;
+            /**
+             * @description Primary color (light variant)
+             * @example #2f8f78
+             */
+            colorPrimaryLight: Record<string, never> | null;
+            /**
+             * @description Public contact email
+             * @example info@sawaa.app
+             */
+            contactEmail: Record<string, never> | null;
+            /**
+             * @description Public contact phone
+             * @example +966500000000
+             */
+            contactPhone: Record<string, never> | null;
+            /**
+             * @description Favicon URL (currently fixed in-app, always null)
+             * @example null
+             */
+            faviconUrl: Record<string, never> | null;
+            /**
+             * @description Font family
+             * @example Handicrafts
+             */
+            fontFamily: Record<string, never> | null;
+            /**
+             * @description Font URL (currently fixed in-app, always null)
+             * @example null
+             */
+            fontUrl: Record<string, never> | null;
+            /**
+             * @description Logo URL (currently fixed in-app, always null)
+             * @example null
+             */
+            logoUrl: Record<string, never> | null;
+            /**
+             * @description Organization name (Arabic)
+             * @example مركز سواء
+             */
+            organizationNameAr: string;
+            /**
+             * @description Organization name (English)
+             * @example Sawa Center
+             */
+            organizationNameEn: Record<string, never> | null;
+            /**
+             * @description Product tagline
+             * @example للاستشارات الأسرية
+             */
+            productTagline: Record<string, never> | null;
+            /**
+             * @description Display time format preference
+             * @example 12h
+             * @enum {string}
+             */
+            timeFormat: "12h" | "24h";
+        };
+        PublicCatalogDto: {
+            categories: components["schemas"]["CatalogCategoryDto"][];
+            departments: components["schemas"]["CatalogDepartmentDto"][];
+            services: components["schemas"]["CatalogServiceDto"][];
+            /**
+             * @description Fractional VAT rate (0.15 = 15%); 0 when the center is not VAT-registered or settings are missing
+             * @example 0
+             */
+            vatRate: number;
         };
         PublicEmployeeResponseDto: {
             /**
@@ -9871,6 +10104,8 @@ export interface operations {
                 employeeId: string;
                 /** @description Duration option ID */
                 durationOptionId: string;
+                /** @description Delivery type of the booking (for DELIVERY_TYPE-scoped credits) */
+                deliveryType?: "IN_PERSON" | "ONLINE";
             };
             header?: never;
             path?: never;
@@ -10788,6 +11023,83 @@ export interface operations {
                         id?: string;
                         reason?: string | null;
                         toStatus?: string;
+                    }[];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardBookingsController_getBookingTimeline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Booking ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Chronological timeline merging creation, status changes, payments, refunds and activity (oldest first) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        actor?: string | null;
+                        /** @description Halalas */
+                        amount?: number | null;
+                        /** Format: date-time */
+                        at?: string;
+                        fromStatus?: string | null;
+                        id?: string;
+                        /** @enum {string} */
+                        kind?: "CREATED" | "STATUS_CHANGE" | "RESCHEDULE" | "PAYMENT" | "REFUND" | "ACTIVITY";
+                        meta?: {
+                            [key: string]: unknown;
+                        } | null;
+                        method?: string | null;
+                        paymentStatus?: string | null;
+                        reason?: string | null;
+                        refundStatus?: string | null;
+                        toStatus?: string | null;
                     }[];
                 };
             };
@@ -26210,8 +26522,19 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /** @description Human-readable booking reference */
+                        bookingNumber?: string;
+                        /**
+                         * Format: uuid
+                         * @description Created booking ID (read by the website to navigate to the booking/payment page)
+                         */
+                        id?: string;
                         /** Format: uuid */
                         invoiceId?: string | null;
+                        /** @description Payment status */
+                        paymentStatus?: string;
+                        /** @description Booking status */
+                        status?: string;
                     } & {
                         [key: string]: unknown;
                     };
@@ -26463,7 +26786,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicBrandingDto"];
+                };
             };
             /** @description Validation failed */
             400: {
@@ -27612,8 +27937,9 @@ export interface operations {
     };
     PublicProgramsController_list: {
         parameters: {
-            query: {
-                departmentId: string;
+            query?: {
+                /** @description Optional department filter; when omitted, programs from all departments are returned */
+                departmentId?: string;
             };
             header?: never;
             path?: never;
@@ -27808,7 +28134,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicCatalogDto"];
+                };
             };
             /** @description Validation failed */
             400: {

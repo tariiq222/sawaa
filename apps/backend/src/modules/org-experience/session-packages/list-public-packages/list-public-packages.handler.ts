@@ -49,7 +49,12 @@ export class ListPublicPackagesHandler {
     const packages = await this.prisma.sessionPackage.findMany({
       where: { isPublic: true, isActive: true, archivedAt: null },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
-      include: { items: { orderBy: { sortOrder: 'asc' } } },
+      include: {
+        items: {
+          orderBy: { sortOrder: 'asc' },
+          include: { constraints: { include: { targets: true } } },
+        },
+      },
     });
 
     // Price every package in ONE batched lookup set (P1-4): the public catalog
@@ -61,12 +66,14 @@ export class ListPublicPackagesHandler {
           serviceId: i.serviceId,
           employeeId: i.employeeId,
           durationOptionId: i.durationOptionId,
+          unitPrice: i.unitPrice != null ? Number(i.unitPrice) : null,
           paidQuantity: i.paidQuantity,
           freeQuantity: i.freeQuantity,
           discountType: i.discountType,
           discountValue: Number(i.discountValue),
         })),
       ),
+      { strict: false },
     );
     return packages.map((pkg, idx) => ({ ...pkg, price: prices[idx] }));
   }

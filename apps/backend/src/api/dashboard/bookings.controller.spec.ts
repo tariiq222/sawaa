@@ -16,6 +16,7 @@ import { CompleteBookingHandler } from '../../modules/bookings/complete-booking/
 import { NoShowBookingHandler } from '../../modules/bookings/no-show-booking/no-show-booking.handler';
 import { CheckAvailabilityHandler } from '../../modules/bookings/check-availability/check-availability.handler';
 import { ListBookingStatusLogHandler } from '../../modules/bookings/list-booking-status-log/list-booking-status-log.handler';
+import { GetBookingTimelineHandler } from '../../modules/bookings/get-booking-timeline/get-booking-timeline.handler';
 import { ApproveCancelBookingHandler } from '../../modules/bookings/approve-cancel-booking/approve-cancel-booking.handler';
 import { RejectCancelBookingHandler } from '../../modules/bookings/reject-cancel-booking/reject-cancel-booking.handler';
 import { BookFromCreditHandler } from '../../modules/bookings/book-from-credit/book-from-credit.handler';
@@ -41,6 +42,7 @@ describe('DashboardBookingsController (e2e)', () => {
   const mockNoShow = { execute: jest.fn() };
   const mockAvailability = { execute: jest.fn() };
   const mockStatusLog = { execute: jest.fn() };
+  const mockTimeline = { execute: jest.fn() };
   const mockApproveCancel = { execute: jest.fn() };
   const mockRejectCancel = { execute: jest.fn() };
   const mockBookFromCredit = { execute: jest.fn() };
@@ -65,6 +67,7 @@ describe('DashboardBookingsController (e2e)', () => {
         { provide: NoShowBookingHandler, useValue: mockNoShow },
         { provide: CheckAvailabilityHandler, useValue: mockAvailability },
         { provide: ListBookingStatusLogHandler, useValue: mockStatusLog },
+        { provide: GetBookingTimelineHandler, useValue: mockTimeline },
         { provide: ApproveCancelBookingHandler, useValue: mockApproveCancel },
         { provide: RejectCancelBookingHandler, useValue: mockRejectCancel },
         { provide: BookFromCreditHandler, useValue: mockBookFromCredit },

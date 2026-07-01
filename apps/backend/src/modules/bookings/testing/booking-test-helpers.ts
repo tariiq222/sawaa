@@ -33,6 +33,10 @@ const buildPrismaRaw = () => ({
     count: jest.fn().mockResolvedValue(0),
     findFirst: jest.fn().mockResolvedValue(null),
   },
+  activityLog: {
+    create: jest.fn().mockResolvedValue({ id: 'activity-1' }),
+    findMany: jest.fn().mockResolvedValue([]),
+  },
   businessHour: {
     findUnique: jest.fn().mockResolvedValue({
       branchId: 'branch-1', dayOfWeek: future.getDay(),

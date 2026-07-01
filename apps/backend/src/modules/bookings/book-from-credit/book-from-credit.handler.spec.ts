@@ -1,5 +1,10 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { PackagePurchaseStatus, Prisma } from '@prisma/client';
+import {
+  PackageConstraintDimension,
+  PackageConstraintMode,
+  PackagePurchaseStatus,
+  Prisma,
+} from '@prisma/client';
 import { BookFromCreditHandler } from './book-from-credit.handler';
 
 // ─── Canonical ids ───────────────────────────────────────────────────────────
@@ -20,6 +25,17 @@ const DURATION_OPTION = {
   durationMins: 45,
   deliveryType: 'IN_PERSON',
 };
+
+/**
+ * Legacy credits carry no snapshot constraints — the matching engine falls
+ * back to synthesizing INCLUDE constraints from the credit's own triple, so
+ * an empty array here reproduces the pre-flexible-packages equality match.
+ */
+const LEGACY_CONSTRAINTS: Array<{
+  dimension: PackageConstraintDimension;
+  mode: PackageConstraintMode;
+  targets: { targetId: string }[];
+}> = [];
 
 /** A locked-credit row as returned by the `SELECT ... FOR UPDATE` raw query. */
 function lockedCreditRow(overrides: Partial<{ usedQuantity: number; totalQuantity: number }> = {}) {
@@ -84,8 +100,14 @@ function buildPrisma() {
     },
     serviceDurationOption: { findFirst: jest.fn().mockResolvedValue(DURATION_OPTION) },
     // `fields` mirrors Prisma's field-reference API used for the column-to-column
-    // `usedQuantity < totalQuantity` filter in resolveCredit.
-    packageCredit: { findFirst: jest.fn(), fields: { totalQuantity: 'totalQuantity' } },
+    // `usedQuantity < totalQuantity` filter in resolveCreditAndTarget.
+    // `findFirst` backs the creditId path; `findMany` backs the no-creditId
+    // (triple) candidate-search path.
+    packageCredit: {
+      findFirst: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
+      fields: { totalQuantity: 'totalQuantity' },
+    },
     serviceCategory: { findFirst: jest.fn().mockResolvedValue(null) },
   };
 }
@@ -149,6 +171,7 @@ describe('BookFromCreditHandler', () => {
         id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
         employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
         totalQuantity: 5, usedQuantity: 0,
+        constraints: LEGACY_CONSTRAINTS,
         purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
       });
       const { handler, tx } = buildHandler({ prisma });
@@ -163,12 +186,16 @@ describe('BookFromCreditHandler', () => {
 
     it('FIFO-selects the OLDEST active purchase credit when no creditId is given', async () => {
       const prisma = buildPrisma();
-      prisma.packageCredit.findFirst.mockResolvedValue({
-        id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
-        employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
-        totalQuantity: 5, usedQuantity: 0,
-        purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE, createdAt: new Date() },
-      });
+      // No-creditId (triple) path now fetches candidates via findMany, then
+      // filters via the matching engine and picks narrowest-then-FIFO in JS.
+      prisma.packageCredit.findMany.mockResolvedValue([
+        {
+          id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
+          employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
+          totalQuantity: 5, usedQuantity: 0,
+          constraints: LEGACY_CONSTRAINTS,
+        },
+      ]);
       const { handler } = buildHandler({ prisma });
 
       await handler.execute({
@@ -180,11 +207,13 @@ describe('BookFromCreditHandler', () => {
         scheduledAt: FUTURE,
       });
 
-      const findArgs = prisma.packageCredit.findFirst.mock.calls[0][0];
-      // EXACT match on the (service, employee, duration) triple.
-      expect(findArgs.where.serviceId).toBe(SERVICE_ID);
-      expect(findArgs.where.employeeId).toBe(EMPLOYEE_ID);
-      expect(findArgs.where.durationOptionId).toBe(DURATION_OPTION_ID);
+      const findArgs = prisma.packageCredit.findMany.mock.calls[0][0];
+      // Candidate search filters by the calling client's ACTIVE purchases with
+      // remaining capacity; the (service, employee, duration) match itself
+      // happens afterwards via the matching engine, not in the where clause.
+      expect(findArgs.where.purchase).toEqual(
+        expect.objectContaining({ clientId: CLIENT_ID, status: PackagePurchaseStatus.ACTIVE }),
+      );
       // FIFO ordering = oldest purchase first.
       expect(findArgs.orderBy).toEqual(
         expect.arrayContaining([{ purchase: { createdAt: 'asc' } }]),
@@ -193,7 +222,7 @@ describe('BookFromCreditHandler', () => {
 
     it('throws NotFoundException when no matching credit with remaining capacity exists', async () => {
       const prisma = buildPrisma();
-      prisma.packageCredit.findFirst.mockResolvedValue(null);
+      prisma.packageCredit.findMany.mockResolvedValue([]);
       const { handler } = buildHandler({ prisma });
 
       await expect(
@@ -216,6 +245,97 @@ describe('BookFromCreditHandler', () => {
     });
   });
 
+  describe('flexible credit constraints (creditId + explicit triple)', () => {
+    /** A flexible credit with no legacy triple — PRACTITIONER is ANY, everything else unconstrained. */
+    function flexibleCreditAnyPractitioner() {
+      return {
+        id: CREDIT_ID, purchaseId: PURCHASE_ID,
+        serviceId: null, employeeId: null, durationOptionId: null,
+        totalQuantity: 5, usedQuantity: 0,
+        constraints: [
+          {
+            dimension: PackageConstraintDimension.PRACTITIONER,
+            mode: PackageConstraintMode.ANY,
+            targets: [],
+          },
+        ],
+        purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
+      };
+    }
+
+    it('succeeds when the explicit triple satisfies the credit constraints (PRACTITIONER ANY)', async () => {
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue(flexibleCreditAnyPractitioner());
+      const { handler, tx } = buildHandler({ prisma });
+
+      await handler.execute({
+        clientId: CLIENT_ID,
+        creditId: CREDIT_ID,
+        serviceId: SERVICE_ID,
+        employeeId: EMPLOYEE_ID,
+        durationOptionId: DURATION_OPTION_ID,
+        branchId: BRANCH_ID,
+        scheduledAt: FUTURE,
+      });
+
+      expect(tx.booking.create).toHaveBeenCalledTimes(1);
+      const bookingData = tx.booking.create.mock.calls[0][0].data;
+      expect(bookingData.employeeId).toBe(EMPLOYEE_ID);
+      expect(bookingData.serviceId).toBe(SERVICE_ID);
+      expect(bookingData.durationOptionId).toBe(DURATION_OPTION_ID);
+      expect(bookingData.packageCreditId).toBe(CREDIT_ID);
+    });
+
+    it('throws 400 "The selected credit is not valid for this booking" when the triple violates an EXCLUDE constraint', async () => {
+      const EXCLUDED_EMPLOYEE_ID = '00000000-0000-4000-a000-000000000099';
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue({
+        id: CREDIT_ID, purchaseId: PURCHASE_ID,
+        serviceId: null, employeeId: null, durationOptionId: null,
+        totalQuantity: 5, usedQuantity: 0,
+        constraints: [
+          {
+            dimension: PackageConstraintDimension.PRACTITIONER,
+            mode: PackageConstraintMode.EXCLUDE,
+            targets: [{ targetId: EXCLUDED_EMPLOYEE_ID }],
+          },
+        ],
+        purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
+      });
+      const { handler, tx } = buildHandler({ prisma });
+
+      await expect(
+        handler.execute({
+          clientId: CLIENT_ID,
+          creditId: CREDIT_ID,
+          serviceId: SERVICE_ID,
+          employeeId: EXCLUDED_EMPLOYEE_ID, // the one practitioner this credit excludes
+          durationOptionId: DURATION_OPTION_ID,
+          branchId: BRANCH_ID,
+          scheduledAt: FUTURE,
+        }),
+      ).rejects.toThrow(new BadRequestException('The selected credit is not valid for this booking'));
+      expect(tx.booking.create).not.toHaveBeenCalled();
+    });
+
+    it('throws 400 when a creditId-only flexible credit (no legacy triple) is booked without an explicit target', async () => {
+      const prisma = buildPrisma();
+      prisma.packageCredit.findFirst.mockResolvedValue(flexibleCreditAnyPractitioner());
+      const { handler } = buildHandler({ prisma });
+
+      await expect(
+        handler.execute({
+          clientId: CLIENT_ID,
+          creditId: CREDIT_ID,
+          branchId: BRANCH_ID,
+          scheduledAt: FUTURE,
+        } as never),
+      ).rejects.toThrow(
+        new BadRequestException('This credit needs an explicit service, practitioner and duration'),
+      );
+    });
+  });
+
   describe('fixed duration from the credit', () => {
     it('takes the duration from the credit durationOptionId and ignores any caller-supplied duration', async () => {
       const prisma = buildPrisma();
@@ -223,6 +343,7 @@ describe('BookFromCreditHandler', () => {
         id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
         employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
         totalQuantity: 5, usedQuantity: 0,
+        constraints: LEGACY_CONSTRAINTS,
         purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
       });
       // duration option says 45 mins.
@@ -245,6 +366,7 @@ describe('BookFromCreditHandler', () => {
         id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
         employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
         totalQuantity: 5, usedQuantity: 0,
+        constraints: LEGACY_CONSTRAINTS,
         purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
       });
     }
@@ -307,6 +429,7 @@ describe('BookFromCreditHandler', () => {
       id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
       employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
       totalQuantity: 5, usedQuantity: 0,
+      constraints: LEGACY_CONSTRAINTS,
     });
     const { handler, tx } = buildHandler({ prisma });
     const STAFF_USER_ID = 'staff-user-99';
@@ -344,6 +467,7 @@ describe('BookFromCreditHandler', () => {
       id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
       employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
       totalQuantity: 5, usedQuantity: 0,
+      constraints: LEGACY_CONSTRAINTS,
     });
     const { handler, tx } = buildHandler({ prisma });
     const cmdWithoutUserId = { ...baseCmd() } as Record<string, unknown>;
@@ -376,6 +500,7 @@ describe('BookFromCreditHandler', () => {
         id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
         employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
         totalQuantity: 5, usedQuantity: 0,
+        constraints: LEGACY_CONSTRAINTS,
         purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
       });
     }
@@ -431,6 +556,7 @@ describe('BookFromCreditHandler', () => {
         id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
         employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
         totalQuantity: 1, usedQuantity: 0, // pre-lock view: looked available
+        constraints: LEGACY_CONSTRAINTS,
         purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
       });
       const tx = buildTx(lockedCreditRow({ totalQuantity: 1, usedQuantity: 1 })); // locked view: exhausted
@@ -469,6 +595,7 @@ describe('BookFromCreditHandler', () => {
         id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
         employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
         totalQuantity: 1, usedQuantity: 0,
+        constraints: LEGACY_CONSTRAINTS,
         purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
       };
 
@@ -496,6 +623,7 @@ describe('BookFromCreditHandler', () => {
         id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
         employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
         totalQuantity: 5, usedQuantity: 0,
+        constraints: LEGACY_CONSTRAINTS,
         purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
       });
     }
@@ -539,6 +667,7 @@ describe('BookFromCreditHandler', () => {
         id: CREDIT_ID, purchaseId: PURCHASE_ID, serviceId: SERVICE_ID,
         employeeId: EMPLOYEE_ID, durationOptionId: DURATION_OPTION_ID,
         totalQuantity: 1, usedQuantity: 0,
+        constraints: LEGACY_CONSTRAINTS,
         purchase: { id: PURCHASE_ID, status: PackagePurchaseStatus.ACTIVE },
       });
     }

@@ -4,12 +4,15 @@ import { DiscountType, Prisma } from '@prisma/client';
 import { toHalalas } from '../../../finance/money.helper';
 import { CreateSessionPackageDto } from './create-session-package.dto';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
+import {
+  buildItemCreateData,
+  buildPriceInput,
+  validatePackageItems,
+} from '../package-constraints.helper';
 import { CacheService } from '../../../../infrastructure/cache';
 import { PUBLIC_PACKAGES_CACHE_KEY } from '../list-public-packages/public-packages.cache';
 
 export type CreateSessionPackageCommand = CreateSessionPackageDto;
-
-const ITEM_QUANTITY_MESSAGE = 'Each item must have at least one session (paidQuantity + freeQuantity >= 1)';
 
 /**
  * Create a new SessionPackage + its items atomically.
@@ -33,20 +36,13 @@ export class CreateSessionPackageHandler {
   ) {}
 
   async execute(dto: CreateSessionPackageCommand) {
-    await this.validateItems(dto.items);
+    // Normalise + validate items (constraints or legacy triple, existence, links).
+    const normalized = await validatePackageItems(this.prisma, dto.items);
 
     // Compute per-item prices (discount lives on each item now) and validate
     // every item's discount against its own payable amount.
     const price = await this.pricing.compute({
-      items: dto.items.map((i) => ({
-        durationOptionId: i.durationOptionId,
-        employeeId: i.employeeId,
-        serviceId: i.serviceId,
-        paidQuantity: i.paidQuantity,
-        freeQuantity: i.freeQuantity ?? 0,
-        discountType: i.discountType ?? null,
-        discountValue: this.normalizeItemDiscountValue(i.discountType, i.discountValue),
-      })),
+      items: dto.items.map((item, i) => buildPriceInput(item, normalized[i])),
     });
     this.validateItemDiscounts(dto.items, price.lines);
 
@@ -68,80 +64,19 @@ export class CreateSessionPackageHandler {
           isPublic: dto.isPublic ?? false,
           sortOrder: dto.sortOrder ?? 0,
           items: {
-            createMany: {
-              data: dto.items.map((item, idx) => ({
-                serviceId: item.serviceId,
-                employeeId: item.employeeId,
-                durationOptionId: item.durationOptionId,
-                paidQuantity: item.paidQuantity,
-                freeQuantity: item.freeQuantity ?? 0,
-                discountType: item.discountType ?? null,
-                discountValue: this.normalizeItemDiscountValue(
-                  item.discountType,
-                  item.discountValue,
-                ) as unknown as Prisma.Decimal,
-                sortOrder: item.sortOrder ?? idx,
-              })),
-            },
+            // Nested create (not createMany) to persist each item's constraints.
+            create: dto.items.map((item, idx) =>
+              buildItemCreateData(item, normalized[idx], idx),
+            ),
           },
         },
-        include: { items: true },
+        include: { items: { include: { constraints: { include: { targets: true } } } } },
       }),
     );
 
     await this.cache.invalidatePrefix(PUBLIC_PACKAGES_CACHE_KEY);
 
     return created;
-  }
-
-  private async validateItems(items: CreateSessionPackageDto['items']): Promise<void> {
-    // 1. Every item must have at least one session (paid + free >= 1).
-    const emptyItem = items.findIndex((i) => (i.paidQuantity ?? 0) + (i.freeQuantity ?? 0) < 1);
-    if (emptyItem !== -1) {
-      throw new BadRequestException(ITEM_QUANTITY_MESSAGE);
-    }
-
-    // 2. EmployeeService link must exist (the practitioner offers this service).
-    const employeeServiceIds = await this.prisma.employeeService.findMany({
-      where: {
-        isActive: true,
-        OR: items.map((i) => ({ employeeId: i.employeeId, serviceId: i.serviceId })),
-      },
-      select: { employeeId: true, serviceId: true },
-    });
-    const linkKey = (e: string, s: string) => `${e}::${s}`;
-    const validLinks = new Set(employeeServiceIds.map((l) => linkKey(l.employeeId, l.serviceId)));
-    const missingLink = items.find((i) => !validLinks.has(linkKey(i.employeeId, i.serviceId)));
-    if (missingLink) {
-      throw new BadRequestException('Employee does not provide this service');
-    }
-
-    // 3. Each durationOptionId must belong to the item's serviceId and be active.
-    const durationOptionIds = items.map((i) => i.durationOptionId);
-    const durationOptions = await this.prisma.serviceDurationOption.findMany({
-      where: { id: { in: durationOptionIds }, isActive: true },
-      select: { id: true, serviceId: true },
-    });
-    const optionToService = new Map(durationOptions.map((o) => [o.id, o.serviceId]));
-    const mismatched = items.find((i) => optionToService.get(i.durationOptionId) !== i.serviceId);
-    if (mismatched) {
-      throw new BadRequestException('Duration option not found for this service');
-    }
-  }
-
-  /**
-   * Returns the value to persist on `SessionPackageItem.discountValue`.
-   *   - no type → 0
-   *   - PERCENTAGE → rawValue as-is (0-100)
-   *   - FIXED      → rawValue rounded to integer halalas
-   */
-  private normalizeItemDiscountValue(
-    discountType: DiscountType | null | undefined,
-    rawValue: number | undefined,
-  ): number {
-    if (!discountType || !rawValue) return 0;
-    if (discountType === DiscountType.PERCENTAGE) return rawValue;
-    return toHalalas(rawValue).toNumber();
   }
 
   /**
