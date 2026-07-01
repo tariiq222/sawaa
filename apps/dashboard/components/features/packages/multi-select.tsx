@@ -31,6 +31,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@sawaa/ui"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
 
+import { cn } from "@/lib/utils"
+
 export interface MultiSelectOption {
   value: string
   label: string
@@ -41,20 +43,20 @@ interface MultiSelectProps {
   value: string[]
   onChange: (next: string[]) => void
   placeholder: string
-  /** Shown as "{count} محدد" when items are selected. */
-  countLabel: (count: number) => string
   searchPlaceholder: string
   emptyLabel: string
   disabled?: boolean
   id?: string
 }
 
+/** How many selected labels to spell out before collapsing the rest into "+N". */
+const MAX_SHOWN_LABELS = 3
+
 export function MultiSelect({
   options,
   value,
   onChange,
   placeholder,
-  countLabel,
   searchPlaceholder,
   emptyLabel,
   disabled,
@@ -66,7 +68,14 @@ export function MultiSelect({
     onChange(value.includes(val) ? value.filter((v) => v !== val) : [...value, val])
   }
 
-  const triggerLabel = value.length > 0 ? countLabel(value.length) : placeholder
+  // Show the actual selected names (not just a count); collapse the overflow.
+  const selectedLabels = value
+    .map((v) => options.find((o) => o.value === v)?.label)
+    .filter((l): l is string => Boolean(l))
+  const shown = selectedLabels.slice(0, MAX_SHOWN_LABELS).join("، ")
+  const extra = selectedLabels.length - MAX_SHOWN_LABELS
+  const triggerLabel =
+    selectedLabels.length > 0 ? (extra > 0 ? `${shown} +${extra}` : shown) : placeholder
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -80,7 +89,13 @@ export function MultiSelect({
           disabled={disabled}
           className="w-full justify-between font-normal"
         >
-          <span className={value.length > 0 ? "text-foreground" : "text-muted-foreground"}>
+          <span
+            className={cn(
+              "min-w-0 truncate text-start",
+              value.length > 0 ? "text-foreground" : "text-muted-foreground",
+            )}
+            title={selectedLabels.join("، ")}
+          >
             {triggerLabel}
           </span>
           <HugeiconsIcon

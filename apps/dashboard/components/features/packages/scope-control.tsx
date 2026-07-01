@@ -103,7 +103,6 @@ export function ScopeControl({
           value={ids}
           onChange={(next) => onChange({ mode, ids: next })}
           placeholder={selectPlaceholder}
-          countLabel={(c) => t("packages.scope.selectedCount").replace("{count}", String(c))}
           searchPlaceholder={searchPlaceholder}
           emptyLabel={emptyLabel}
           disabled={disabled}
