@@ -4,6 +4,7 @@ import { Reflector } from '@nestjs/core';
 import request from 'supertest';
 import { DashboardProgramsController } from './programs.controller';
 import { CreateProgramHandler } from '../../modules/bookings/create-program/create-program.handler';
+import { UpdateProgramHandler } from '../../modules/bookings/update-program/update-program.handler';
 import { ListProgramsHandler } from '../../modules/bookings/list-programs/list-programs.handler';
 import { GetProgramHandler } from '../../modules/bookings/get-program/get-program.handler';
 import { PublishProgramHandler } from '../../modules/bookings/publish-program/publish-program.handler';
@@ -28,6 +29,7 @@ describe('DashboardProgramsController (authorization)', () => {
   let app: INestApplication;
 
   const mockCreate = { execute: jest.fn().mockResolvedValue({ id: 'p1' }) };
+  const mockUpdate = { execute: jest.fn().mockResolvedValue({ id: 'p1' }) };
   const mockList = { execute: jest.fn().mockResolvedValue([]) };
   const mockGet = { execute: jest.fn().mockResolvedValue({ id: 'p1' }) };
   const mockPublish = { execute: jest.fn().mockResolvedValue({ id: 'p1' }) };
@@ -48,6 +50,7 @@ describe('DashboardProgramsController (authorization)', () => {
         // so Nest can construct it via DI.
         CaslGuard,
         { provide: CreateProgramHandler, useValue: mockCreate },
+        { provide: UpdateProgramHandler, useValue: mockUpdate },
         { provide: ListProgramsHandler, useValue: mockList },
         { provide: GetProgramHandler, useValue: mockGet },
         { provide: PublishProgramHandler, useValue: mockPublish },
