@@ -31,6 +31,7 @@ import {
   fetchPrograms,
   fetchProgram,
   createProgram,
+  updateProgram,
   publishProgram,
   scheduleProgram,
   cancelProgram,
@@ -41,7 +42,10 @@ import {
 
 describe("programs api — dashboard endpoints", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    // Use resetAllMocks (not clearAllMocks) so queued mockResolvedValueOnce /
+    // mockRejectedValueOnce values do NOT leak between tests when a RED-phase
+    // test queues a mock then throws before consuming it.
+    vi.resetAllMocks()
   })
 
   // ─── List ────────────────────────────────────────────────────────────────
@@ -119,6 +123,35 @@ describe("programs api — dashboard endpoints", () => {
       await expect(
         createProgram({} as Parameters<typeof createProgram>[0]),
       ).rejects.toThrow("Unprocessable Entity")
+    })
+  })
+
+  // ─── Update ──────────────────────────────────────────────────────────────
+
+  describe("updateProgram", () => {
+    it("PATCHes /dashboard/programs/:id with the editable payload", async () => {
+      patchMock.mockResolvedValueOnce({ id: "p-1", status: "DRAFT" })
+      const payload = {
+        nameAr: "برنامج محدّث",
+        daysCount: 5,
+        hoursPerDay: 3,
+        minParticipants: 4,
+        maxParticipants: 12,
+        price: 75000,
+        supervisorIds: ["s-1"],
+      }
+      await updateProgram("p-1", payload)
+      expect(patchMock).toHaveBeenCalledWith(
+        "/dashboard/programs/p-1",
+        payload,
+      )
+    })
+
+    it("propagates api-layer errors", async () => {
+      patchMock.mockRejectedValueOnce(new Error("Terminal status"))
+      await expect(
+        updateProgram("p-1", {} as Parameters<typeof updateProgram>[1]),
+      ).rejects.toThrow("Terminal status")
     })
   })
 

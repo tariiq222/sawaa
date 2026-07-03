@@ -9,6 +9,7 @@ import type {
   ProgramSummary,
   PublicProgramListItem,
   ScheduleProgramPayload,
+  UpdateProgramPayload,
 } from '@/lib/types/program';
 
 export async function fetchPrograms(query: ListProgramsQuery = {}): Promise<ProgramSummary[]> {
@@ -25,6 +26,10 @@ export async function fetchProgram(idOrRef: string): Promise<ProgramDetail> {
 
 export async function createProgram(payload: CreateProgramPayload) {
   return api.post('/dashboard/programs', payload);
+}
+
+export async function updateProgram(id: string, payload: UpdateProgramPayload) {
+  return api.patch(`/dashboard/programs/${id}`, payload);
 }
 
 export async function publishProgram(id: string) {

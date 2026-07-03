@@ -6,5 +6,6 @@ Sentry.init({
   environment: process.env.NODE_ENV,
   tracesSampleRate: 0.1,
   release: process.env.SENTRY_RELEASE,
+  sendDefaultPii: false,
   beforeSend: redactSentryEvent,
 })

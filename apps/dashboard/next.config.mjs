@@ -29,7 +29,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "connect-src 'self' https://*.sawaa.sa https://api.sawaa.sa https://*.moyasar.com",
+      "connect-src 'self' https://*.sawaa.sa https://api.sawaa.sa https://*.moyasar.com https://errors.webvue.pro",
       "frame-src https://*.moyasar.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",

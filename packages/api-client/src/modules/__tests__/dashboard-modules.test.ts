@@ -98,6 +98,46 @@ describe('bookings module', () => {
     )
   })
 
+  it('maps bookingType + fromDate/toDate to the backend DTO names', async () => {
+    await listBookings({
+      bookingType: 'individual',
+      fromDate: '2026-05-01T00:00:00.000Z',
+      toDate: '2026-05-31T23:59:59.000Z',
+    })
+    const url = lastRequest()[0] as string
+    expect(url).toContain('bookingType=individual')
+    expect(url).toContain('fromDate=2026-05-01T00%3A00%3A00.000Z')
+    expect(url).toContain('toDate=2026-05-31T23%3A59%3A59.000Z')
+    // Old, unsupported field names must NOT leak into the query string.
+    expect(url).not.toContain('dateFrom=')
+    expect(url).not.toContain('dateTo=')
+    expect(url).not.toMatch(/[?&]type=/)
+  })
+
+  it('forwards deliveryType, search, and isGuest to the backend', async () => {
+    await listBookings({
+      deliveryType: 'IN_PERSON',
+      search: 'bkg-1',
+      isGuest: true,
+    })
+    const url = lastRequest()[0] as string
+    expect(url).toContain('deliveryType=IN_PERSON')
+    expect(url).toContain('search=bkg-1')
+    expect(url).toContain('isGuest=true')
+  })
+
+  it('forwards branchId, serviceId, and source to the backend', async () => {
+    await listBookings({
+      branchId: 'branch-1',
+      serviceId: 'svc-1',
+      source: 'RECEPTION',
+    })
+    const url = lastRequest()[0] as string
+    expect(url).toContain('branchId=branch-1')
+    expect(url).toContain('serviceId=svc-1')
+    expect(url).toContain('source=RECEPTION')
+  })
+
   it('omits the query string entirely when no params are provided', async () => {
     await listBookings()
     expect(lastRequest()[0]).toBe('http://api.test/dashboard/bookings')

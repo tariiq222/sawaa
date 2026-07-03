@@ -122,6 +122,13 @@ export interface CreateProgramPayload {
   supervisorIds: string[];
 }
 
+/**
+ * Edit payload — same field set as CreateProgramPayload, but every field is
+ * optional because the form may submit a partial change. The dashboard
+ * edit form currently submits the full shape; both flows are accepted.
+ */
+export type UpdateProgramPayload = Partial<CreateProgramPayload>;
+
 export interface ScheduleProgramPayload {
   startDate: string;
 }

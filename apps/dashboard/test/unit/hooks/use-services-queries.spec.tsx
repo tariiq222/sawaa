@@ -54,6 +54,11 @@ vi.mock("@/lib/api/services", () => ({
   deleteCategory,
   setDurationOptions,
   setServiceBookingTypes,
+  DEFAULT_SERVICES_LIST_QUERY: {
+    page: 1,
+    limit: 20,
+    includeHidden: true,
+  },
 }))
 
 vi.mock("@/lib/api/intake-forms", () => ({
@@ -228,15 +233,14 @@ describe("useServices", () => {
     )
   })
 
-  it("passes undefined search when search is empty", async () => {
+  it("omits search from the query when search is empty", async () => {
     fetchServices.mockResolvedValue({ items: [], meta: { total: 0 } })
 
     const { result } = renderHook(() => useServices(), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(fetchServices).toHaveBeenCalledWith(
-      expect.objectContaining({ search: undefined }),
-    )
+    const calledWith = fetchServices.mock.calls[0]?.[0] as { search?: string } | undefined
+    expect(calledWith?.search).toBeUndefined()
   })
 })
 

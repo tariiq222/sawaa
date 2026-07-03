@@ -18,6 +18,7 @@ import {
   fetchServiceBookingTypes,
   setServiceBookingTypes,
   fetchServiceEmployees,
+  DEFAULT_SERVICES_LIST_QUERY,
 } from "@/lib/api/services"
 import {
   fetchIntakeForms as fetchIntakeFormsApi,
@@ -55,12 +56,11 @@ export function useServices() {
   }, [search])
 
   const query: ServiceListQuery = {
+    ...DEFAULT_SERVICES_LIST_QUERY,
     page,
-    limit: 20,
-    search: debouncedSearch || undefined,
-    categoryId,
-    isActive,
-    includeHidden: true, // Admin dashboard shows all services
+    ...(debouncedSearch ? { search: debouncedSearch } : {}),
+    ...(categoryId !== undefined ? { categoryId } : {}),
+    ...(isActive !== undefined ? { isActive } : {}),
   }
 
   const { data, isLoading, error, refetch } = useQuery({

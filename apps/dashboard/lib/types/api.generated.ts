@@ -2634,7 +2634,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update an existing program (DRAFT|OPEN|MIN_REACHED|SCHEDULED) */
+        patch: operations["DashboardProgramsController_update"];
         trace?: never;
     };
     "/api/v1/dashboard/programs/{id}/cancel": {
@@ -8015,6 +8016,32 @@ export interface components {
              * @enum {string}
              */
             status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+        };
+        UpdateProgramDto: {
+            /** Format: uuid */
+            branchId?: string;
+            currency?: string;
+            daysCount?: number;
+            /** Format: uuid */
+            departmentId?: string;
+            /** @description Deposit amount in integer halalas (must be <= price) */
+            depositAmount?: number;
+            depositEnabled?: boolean;
+            descriptionAr?: string;
+            descriptionEn?: string;
+            hoursPerDay?: number;
+            isPublic?: boolean;
+            maxParticipants?: number;
+            minParticipants?: number;
+            /** @description Arabic display name */
+            nameAr?: string;
+            /** @description English display name */
+            nameEn?: string;
+            /** @description Price in integer halalas */
+            price?: number;
+            publicDescriptionAr?: string;
+            publicDescriptionEn?: string;
+            supervisorIds?: string[];
         };
         UpdateRatingVisibilityDto: {
             /**
@@ -23055,6 +23082,65 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Program detail with enrollments and supervisors */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid authentication */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Action denied by permission policy */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unhandled server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DashboardProgramsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProgramDto"];
+            };
+        };
+        responses: {
             200: {
                 headers: {
                     [name: string]: unknown;

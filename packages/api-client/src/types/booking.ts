@@ -36,6 +36,13 @@ export type BookingType = 'individual' | 'walk_in' | 'group'
  */
 export type DeliveryType = 'IN_PERSON' | 'ONLINE'
 
+/**
+ * Origin of a booking — mirrors the backend Prisma `BookingSource` enum.
+ * RECEPTION = created by staff at the front desk (dashboard / mobile-employee).
+ * ONLINE    = self-service booking from the public website.
+ */
+export type BookingSource = 'RECEPTION' | 'ONLINE'
+
 export interface BookingListItem {
   id: string
   date: string
@@ -85,11 +92,22 @@ export interface BookingStats {
 
 export interface BookingListQuery extends PaginationParams {
   status?: BookingStatus
-  type?: BookingType
+  /** Filter by booking kind (INDIVIDUAL / GROUP / WALK_IN on the backend). */
+  bookingType?: BookingType
+  /** Filter by delivery channel (IN_PERSON / ONLINE on the backend). */
+  deliveryType?: DeliveryType
   employeeId?: string
   clientId?: string
-  dateFrom?: string
-  dateTo?: string
+  branchId?: string
+  serviceId?: string
+  /** Filter by booking origin (RECEPTION / ONLINE on the backend). */
+  source?: BookingSource
+  /** Return bookings on or after this date (ISO 8601). */
+  fromDate?: string
+  /** Return bookings on or before this date (ISO 8601). */
+  toDate?: string
+  /** Filter guest (online) vs walk-in bookings. */
+  isGuest?: boolean
 }
 
 export interface CreateBookingPayload {

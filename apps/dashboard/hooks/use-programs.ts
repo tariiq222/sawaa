@@ -9,6 +9,7 @@ import {
   fetchPrograms,
   publishProgram,
   scheduleProgram,
+  updateProgram,
 } from '@/lib/api/programs';
 import type {
   CancelProgramPayload,
@@ -18,6 +19,7 @@ import type {
   ProgramDetail,
   ProgramSummary,
   ScheduleProgramPayload,
+  UpdateProgramPayload,
 } from '@/lib/types/program';
 import { queryKeys } from '@/lib/query-keys';
 
@@ -46,6 +48,18 @@ export function useCreateProgram() {
     mutationFn: (payload: CreateProgramPayload) => createProgram(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.programs.lists() });
+    },
+  });
+}
+
+export function useUpdateProgram() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateProgramPayload }) =>
+      updateProgram(id, payload),
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.programs.lists() });
+      qc.invalidateQueries({ queryKey: queryKeys.programs.detail(id) });
     },
   });
 }

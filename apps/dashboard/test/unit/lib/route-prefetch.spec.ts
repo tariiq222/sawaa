@@ -43,7 +43,11 @@ describe("prefetchRouteData", () => {
     const { qc, prefetchQuery } = makeQueryClient()
     const expected: Record<string, readonly unknown[]> = {
       "/clients": queryKeys.clients.list({ page: 1, limit: 20 }),
-      "/services": queryKeys.services.list({}),
+      "/services": queryKeys.services.list({
+        page: 1,
+        limit: 20,
+        includeHidden: true,
+      }),
       "/chatbot": queryKeys.chatbot.sessions.list({ page: 1, limit: 20 }),
     }
     for (const [href, queryKey] of Object.entries(expected)) {
@@ -51,6 +55,39 @@ describe("prefetchRouteData", () => {
       prefetchRouteData(href, qc)
       expect(prefetchQuery).toHaveBeenCalledWith(expect.objectContaining({ queryKey }))
     }
+  })
+
+  it("prefetches /services with the default useServices filters (page 1, limit 20, includeHidden:true)", () => {
+    const { qc, prefetchQuery } = makeQueryClient()
+    prefetchRouteData("/services", qc)
+    expect(prefetchQuery).toHaveBeenCalledTimes(1)
+    expect(prefetchQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: queryKeys.services.list({
+          page: 1,
+          limit: 20,
+          includeHidden: true,
+        }),
+      }),
+    )
+  })
+
+  it("uses a structurally identical queryKey to useServices initial render (no extra undefined fields)", () => {
+    const { qc, prefetchQuery } = makeQueryClient()
+    prefetchRouteData("/services", qc)
+    const actualKey =
+      (prefetchQuery.mock.calls[0]?.[0] as { queryKey: readonly unknown[] }).queryKey
+    const expectedKey = ["services", "list", {
+      page: 1,
+      limit: 20,
+      includeHidden: true,
+    }]
+    expect(actualKey).toEqual(expectedKey)
+    expect(Object.keys(actualKey[2] as object)).toEqual([
+      "page",
+      "limit",
+      "includeHidden",
+    ])
   })
 
   it("swallows prefetch rejections instead of surfacing them", async () => {

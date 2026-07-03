@@ -23,6 +23,7 @@ const {
   fetchPrograms,
   fetchProgram,
   createProgram,
+  updateProgram,
   publishProgram,
   scheduleProgram,
   cancelProgram,
@@ -31,6 +32,7 @@ const {
   fetchPrograms: vi.fn(),
   fetchProgram: vi.fn(),
   createProgram: vi.fn(),
+  updateProgram: vi.fn(),
   publishProgram: vi.fn(),
   scheduleProgram: vi.fn(),
   cancelProgram: vi.fn(),
@@ -41,6 +43,7 @@ vi.mock("@/lib/api/programs", () => ({
   fetchPrograms,
   fetchProgram,
   createProgram,
+  updateProgram,
   publishProgram,
   scheduleProgram,
   cancelProgram,
@@ -51,6 +54,7 @@ import {
   usePrograms,
   useProgram,
   useCreateProgram,
+  useUpdateProgram,
   usePublishProgram,
   useScheduleProgram,
   useCancelProgram,
@@ -208,6 +212,60 @@ describe("useCreateProgram", () => {
         })
       }),
     ).rejects.toThrow("Unprocessable Entity")
+  })
+})
+
+describe("useUpdateProgram", () => {
+  it("calls updateProgram with id + payload and invalidates list + detail", async () => {
+    updateProgram.mockResolvedValueOnce({ id: "p-1", status: "DRAFT" })
+
+    const { Wrapper, qc } = makeWrapper()
+    const spy = vi.spyOn(qc, "invalidateQueries")
+
+    const { result } = renderHook(() => useUpdateProgram(), { wrapper: Wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        id: "p-1",
+        payload: {
+          nameAr: "محدّث",
+          daysCount: 5,
+          hoursPerDay: 4,
+          minParticipants: 4,
+          maxParticipants: 12,
+          price: 75000,
+          supervisorIds: ["s-1"],
+        },
+      })
+    })
+
+    expect(updateProgram).toHaveBeenCalledWith("p-1", {
+      nameAr: "محدّث",
+      daysCount: 5,
+      hoursPerDay: 4,
+      minParticipants: 4,
+      maxParticipants: 12,
+      price: 75000,
+      supervisorIds: ["s-1"],
+    })
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["programs", "list"] })
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["programs", "detail", "p-1"] })
+  })
+
+  it("propagates the api error", async () => {
+    updateProgram.mockRejectedValueOnce(new Error("Terminal status"))
+
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(() => useUpdateProgram(), { wrapper: Wrapper })
+
+    await expect(
+      act(async () => {
+        await result.current.mutateAsync({
+          id: "p-1",
+          payload: { nameAr: "x" },
+        })
+      }),
+    ).rejects.toThrow("Terminal status")
   })
 })
 

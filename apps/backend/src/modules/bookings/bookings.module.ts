@@ -49,6 +49,7 @@ import { EnrollInProgramHandler } from './enroll-in-program/enroll-in-program.ha
 import { ListProgramsHandler } from './list-programs/list-programs.handler';
 import { GetProgramHandler } from './get-program/get-program.handler';
 import { CreateProgramHandler } from './create-program/create-program.handler';
+import { UpdateProgramHandler } from './update-program/update-program.handler';
 import { PublishProgramHandler } from './publish-program/publish-program.handler';
 import { ScheduleProgramHandler } from './schedule-program/schedule-program.handler';
 import { CancelProgramHandler } from './cancel-program/cancel-program.handler';
@@ -98,6 +99,7 @@ const handlers = [
   ListProgramsHandler,
   GetProgramHandler,
   CreateProgramHandler,
+  UpdateProgramHandler,
   PublishProgramHandler,
   ScheduleProgramHandler,
   CancelProgramHandler,

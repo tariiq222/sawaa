@@ -24,11 +24,17 @@ export async function listBookings(
     page: query.page,
     limit: query.limit,
     status: query.status,
-    type: query.type,
+    bookingType: query.bookingType,
+    deliveryType: query.deliveryType,
     employeeId: query.employeeId,
     clientId: query.clientId,
-    dateFrom: query.dateFrom,
-    dateTo: query.dateTo,
+    branchId: query.branchId,
+    serviceId: query.serviceId,
+    source: query.source,
+    fromDate: query.fromDate,
+    toDate: query.toDate,
+    search: query.search,
+    isGuest: query.isGuest,
   })
   return apiRequest<BookingListResponse>(`/dashboard/bookings${qs}`)
 }

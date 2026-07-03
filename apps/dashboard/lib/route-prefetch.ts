@@ -17,7 +17,7 @@ import { fetchBookings } from "@/lib/api/bookings"
 import { fetchClients } from "@/lib/api/clients"
 import { fetchEmployees } from "@/lib/api/employees"
 import { fetchPayments } from "@/lib/api/payments"
-import { fetchServices } from "@/lib/api/services"
+import { fetchServices, DEFAULT_SERVICES_LIST_QUERY } from "@/lib/api/services"
 import { fetchUsers } from "@/lib/api/users"
 import { fetchCoupons } from "@/lib/api/coupons"
 import { fetchIntakeForms } from "@/lib/api/intake-forms"
@@ -62,8 +62,8 @@ export const ROUTE_PREFETCH: Record<string, PrefetchEntry> = {
     () => fetchPayments({ page: 1, limit: 20 }),
   ),
   "/services": entry(
-    queryKeys.services.list({}),
-    () => fetchServices({}),
+    queryKeys.services.list(DEFAULT_SERVICES_LIST_QUERY),
+    () => fetchServices(DEFAULT_SERVICES_LIST_QUERY),
   ),
   "/users": entry(
     queryKeys.users.list({ page: 1, limit: 20 }),

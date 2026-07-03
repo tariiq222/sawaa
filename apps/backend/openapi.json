@@ -5668,6 +5668,79 @@
         ],
         "type": "object"
       },
+      "UpdateProgramDto": {
+        "properties": {
+          "branchId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "daysCount": {
+            "minimum": 1,
+            "type": "number"
+          },
+          "departmentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "depositAmount": {
+            "description": "Deposit amount in integer halalas (must be <= price)",
+            "type": "number"
+          },
+          "depositEnabled": {
+            "type": "boolean"
+          },
+          "descriptionAr": {
+            "type": "string"
+          },
+          "descriptionEn": {
+            "type": "string"
+          },
+          "hoursPerDay": {
+            "minimum": 1,
+            "type": "number"
+          },
+          "isPublic": {
+            "type": "boolean"
+          },
+          "maxParticipants": {
+            "minimum": 1,
+            "type": "number"
+          },
+          "minParticipants": {
+            "minimum": 1,
+            "type": "number"
+          },
+          "nameAr": {
+            "description": "Arabic display name",
+            "type": "string"
+          },
+          "nameEn": {
+            "description": "English display name",
+            "type": "string"
+          },
+          "price": {
+            "description": "Price in integer halalas",
+            "minimum": 0,
+            "type": "number"
+          },
+          "publicDescriptionAr": {
+            "type": "string"
+          },
+          "publicDescriptionEn": {
+            "type": "string"
+          },
+          "supervisorIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "UpdateRatingVisibilityDto": {
         "properties": {
           "isPublic": {
@@ -26034,6 +26107,84 @@
           }
         ],
         "summary": "Get a single program by UUID or numeric ref",
+        "tags": [
+          "Dashboard / Programs"
+        ]
+      },
+      "patch": {
+        "operationId": "DashboardProgramsController_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProgramDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Missing or invalid authentication"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Action denied by permission policy"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unhandled server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update an existing program (DRAFT|OPEN|MIN_REACHED|SCHEDULED)",
         "tags": [
           "Dashboard / Programs"
         ]

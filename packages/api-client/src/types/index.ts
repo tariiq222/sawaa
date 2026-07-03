@@ -15,6 +15,7 @@ export type {
   BookingStatus,
   BookingType,
   DeliveryType,
+  BookingSource,
   BookingListItem,
   BookingStats,
   BookingListQuery,

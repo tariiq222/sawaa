@@ -15,6 +15,7 @@ import { JwtGuard } from '../../common/guards/jwt.guard';
 import { CaslGuard, CheckPermissions } from '../../common/guards/casl.guard';
 import { ApiStandardResponses } from '../../common/swagger';
 import { CreateProgramHandler } from '../../modules/bookings/create-program/create-program.handler';
+import { UpdateProgramHandler } from '../../modules/bookings/update-program/update-program.handler';
 import { ListProgramsHandler } from '../../modules/bookings/list-programs/list-programs.handler';
 import { GetProgramHandler } from '../../modules/bookings/get-program/get-program.handler';
 import { PublishProgramHandler } from '../../modules/bookings/publish-program/publish-program.handler';
@@ -22,6 +23,7 @@ import { ScheduleProgramHandler } from '../../modules/bookings/schedule-program/
 import { CancelProgramHandler } from '../../modules/bookings/cancel-program/cancel-program.handler';
 import { EnrollInProgramHandler } from '../../modules/bookings/enroll-in-program/enroll-in-program.handler';
 import { CreateProgramDto } from '../../modules/bookings/create-program/create-program.dto';
+import { UpdateProgramDto } from '../../modules/bookings/update-program/update-program.dto';
 import {
   CancelProgramDto,
   EnrollClientDto,
@@ -36,6 +38,7 @@ import {
 export class DashboardProgramsController {
   constructor(
     private readonly createProgram: CreateProgramHandler,
+    private readonly updateProgram: UpdateProgramHandler,
     private readonly listPrograms: ListProgramsHandler,
     private readonly getProgram: GetProgramHandler,
     private readonly publishProgram: PublishProgramHandler,
@@ -71,6 +74,17 @@ export class DashboardProgramsController {
   @ApiOkResponse({ description: 'Program detail with enrollments and supervisors' })
   async getOne(@Param('id') id: string) {
     return this.getProgram.execute(id);
+  }
+
+  @Patch(':id')
+  @CheckPermissions({ action: 'manage', subject: 'Booking' })
+  @ApiOperation({ summary: 'Update an existing program (DRAFT|OPEN|MIN_REACHED|SCHEDULED)' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateProgramDto,
+  ) {
+    return this.updateProgram.execute(id, dto);
   }
 
   @Patch(':id/publish')

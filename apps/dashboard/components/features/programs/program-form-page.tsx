@@ -15,8 +15,8 @@ import {
   toCreateProgramPayload,
   type CreateProgramFormValues,
 } from '@/lib/schemas/program.schema';
-import { useCreateProgram, useProgram } from '@/hooks/use-programs';
-import type { ProgramDetail } from '@/lib/types/program';
+import { useCreateProgram, useProgram, useUpdateProgram } from '@/hooks/use-programs';
+import type { CreateProgramPayload, ProgramDetail, UpdateProgramPayload } from '@/lib/types/program';
 
 interface ProgramFormPageProps {
   mode: 'create' | 'edit';
@@ -59,10 +59,43 @@ function fromExisting(existing: ProgramDetail | undefined): CreateProgramFormVal
   };
 }
 
+/**
+ * Pure submit helper — routes the program form to the correct mutation
+ * based on `mode`. Centralised so the wiring can be unit-tested without
+ * rendering the form tree.
+ *
+ * `create` and `update` are objects exposing the `mutateAsync` method of
+ * the corresponding TanStack Query mutation — the caller injects them so
+ * the helper stays free of React / query-client concerns.
+ *
+ * Returns the mutation result (the backend's `{ id }` payload, possibly
+ * plus `status`/`supervisorIds` on edit). The caller decides where to
+ * navigate afterwards.
+ */
+export async function submitProgram(args: {
+  mode: 'create' | 'edit';
+  programId?: string;
+  create: { mutateAsync: (payload: CreateProgramPayload) => Promise<unknown> };
+  update: { mutateAsync: (input: { id: string; payload: UpdateProgramPayload }) => Promise<unknown> };
+  values: CreateProgramFormValues;
+}): Promise<{ id: string }> {
+  const payload = toCreateProgramPayload(args.values);
+  if (args.mode === 'edit') {
+    if (!args.programId) {
+      throw new Error('submitProgram: programId is required for mode="edit"');
+    }
+    const result = (await args.update.mutateAsync({ id: args.programId, payload })) as { id: string };
+    return { id: result.id };
+  }
+  const result = (await args.create.mutateAsync(payload)) as { id: string };
+  return { id: result.id };
+}
+
 export function ProgramFormPage({ mode, programId }: ProgramFormPageProps) {
   const { t } = useLocale();
   const router = useRouter();
   const create = useCreateProgram();
+  const update = useUpdateProgram();
   const { data: existing, isLoading: loadingExisting } = useProgram(mode === 'edit' ? programId ?? '' : '');
 
   const form = useForm<CreateProgramFormValues>({
@@ -75,8 +108,15 @@ export function ProgramFormPage({ mode, programId }: ProgramFormPageProps) {
   }, [existing, form]);
 
   async function onSubmit(values: CreateProgramFormValues) {
-    const payload = toCreateProgramPayload(values);
-    const result = await create.mutateAsync(payload);
+    // submitProgram routes the mutation based on mode — create uses
+    // useCreateProgram, edit uses useUpdateProgram with the programId.
+    const result = await submitProgram({
+      mode,
+      programId,
+      create,
+      update,
+      values,
+    });
     const id = (result as { id: string }).id;
     router.push(`/programs/${id}`);
   }
@@ -84,6 +124,8 @@ export function ProgramFormPage({ mode, programId }: ProgramFormPageProps) {
   if (mode === 'edit' && loadingExisting) {
     return <p className="text-sm text-(--text-muted)">{t('common.loading')}</p>;
   }
+
+  const pending = mode === 'edit' ? update.isPending : create.isPending;
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit as never)} className="space-y-6">
@@ -110,8 +152,8 @@ export function ProgramFormPage({ mode, programId }: ProgramFormPageProps) {
         <Button type="button" variant="ghost" onClick={() => router.push('/programs')}>
           {t('common.cancel')}
         </Button>
-        <Button type="submit" variant="default" disabled={create.isPending}>
-          {create.isPending ? t('common.saving') : t('common.save')}
+        <Button type="submit" variant="default" disabled={pending}>
+          {pending ? t('common.saving') : t('common.save')}
         </Button>
       </div>
     </form>

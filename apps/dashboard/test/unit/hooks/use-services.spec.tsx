@@ -18,6 +18,11 @@ const servicesApi = vi.hoisted(() => ({
   fetchServiceBookingTypes: vi.fn(),
   setServiceBookingTypes: vi.fn(),
   fetchServiceEmployees: vi.fn(),
+  DEFAULT_SERVICES_LIST_QUERY: {
+    page: 1,
+    limit: 20,
+    includeHidden: true,
+  },
 }))
 
 const intakeFormsApi = vi.hoisted(() => ({
@@ -62,10 +67,18 @@ function makeWrapper() {
   return { Wrapper, qc }
 }
 
+function resetMocks(record: Record<string, unknown>) {
+  Object.values(record).forEach((m) => {
+    if (typeof (m as { mockReset?: () => void })?.mockReset === "function") {
+      (m as { mockReset: () => void }).mockReset()
+    }
+  })
+}
+
 function resetAll() {
-  Object.values(servicesApi).forEach((m) => m.mockReset())
-  Object.values(intakeFormsApi).forEach((m) => m.mockReset())
-  Object.values(employeesApi).forEach((m) => m.mockReset())
+  resetMocks(servicesApi)
+  resetMocks(intakeFormsApi)
+  resetMocks(employeesApi)
 }
 
 describe("useServices (list)", () => {
@@ -79,6 +92,23 @@ describe("useServices (list)", () => {
     expect(servicesApi.fetchServices).toHaveBeenCalledWith(
       expect.objectContaining({ page: 1, limit: 20, includeHidden: true }),
     )
+  })
+
+  it("initial query exactly matches DEFAULT_SERVICES_LIST_QUERY (no undefined filter fields)", async () => {
+    servicesApi.DEFAULT_SERVICES_LIST_QUERY = {
+      page: 1,
+      limit: 20,
+      includeHidden: true,
+    }
+    servicesApi.fetchServices.mockResolvedValue({ items: [], meta: { total: 0 } })
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(() => useServices(), { wrapper: Wrapper })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(servicesApi.fetchServices).toHaveBeenCalledWith({
+      page: 1,
+      limit: 20,
+      includeHidden: true,
+    })
   })
 
   it("setCategoryId resets page to 1 and drives the API filter", async () => {

@@ -76,6 +76,18 @@ export async function uploadCategoryImage(categoryId: string, file: File): Promi
 
 /* ─── Services ─── */
 
+/**
+ * Default filter shape for the services list page (page 1 of the dashboard
+ * admin view). Shared by the `useServices` hook AND the sidebar route
+ * prefetch for `/services` so they warm the same query key — change here,
+ * both sides move together.
+ */
+export const DEFAULT_SERVICES_LIST_QUERY: ServiceListQuery = {
+  page: 1,
+  limit: 20,
+  includeHidden: true,
+}
+
 export async function fetchServices(
   query: ServiceListQuery = {},
 ): Promise<PaginatedResponse<Service>> {
