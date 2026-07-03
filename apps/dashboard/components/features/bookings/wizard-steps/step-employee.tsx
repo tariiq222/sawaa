@@ -1,7 +1,8 @@
 "use client"
 
 import { useMemo } from "react"
-import { useQueries, useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
+import { HugeiconsIcon } from "@hugeicons/react"
 
 import { WizardCard } from "@/components/features/bookings/wizard-card"
 import { useLocale } from "@/components/locale-provider"
@@ -15,14 +16,17 @@ import type { ServiceEmployee } from "@/lib/types/service"
 import { EmployeeAvatar, normalizeEmployeeAvatarSrc } from "@/components/features/shared/employee-avatar"
 export { EmployeeAvatar, normalizeEmployeeAvatarSrc }
 
-/* ─── Helpers ─── */
+import {
+  formatLocalizedDate,
+  getDeliveryTypeMeta,
+  getTodayInRiyadh,
+  useNearestSlotHints,
+} from "@/components/features/bookings/wizard-steps/step-employee-hint"
 
 function getEmployeeNameFromFull(p: Employee, locale: string): string {
   if (locale === "ar" && p.nameAr) return p.nameAr
   return `${p.user.firstName} ${p.user.lastName}`.trim()
 }
-
-/* ─── Skeleton ─── */
 
 function StepEmployeeSkeleton() {
   return (
@@ -33,8 +37,6 @@ function StepEmployeeSkeleton() {
     </div>
   )
 }
-
-/* ─── Step component ─── */
 
 interface StepEmployeeProps {
   serviceId: string
@@ -75,27 +77,50 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
     [serviceId, serviceEmployees, allEmployees],
   )
 
-  // Fetch each candidate's weekly schedule in parallel. An employee with no
-  // active availability window can never be booked, so the wizard disables it.
-  const availabilityQueries = useQueries({
-    queries: employees.map((p) => ({
-      queryKey: queryKeys.employees.availability(p.id),
-      queryFn: () => fetchAvailability(p.id),
-      staleTime: 5 * 60 * 1000,
-    })),
+  // Weekly schedule per practitioner — drives the existing
+  // "no schedule → disabled card" behaviour and disables the hint.
+  const availabilityData = useQuery({
+    queryKey: ["step-employee", "availability-batch", employees.map((p) => p.id)],
+    queryFn: async () => {
+      const results = await Promise.all(
+        employees.map((p) => fetchAvailability(p.id).catch(() => [])),
+      )
+      return results
+    },
+    enabled: employees.length > 0,
+    staleTime: 5 * 60 * 1000,
   })
   const noScheduleById = useMemo(() => {
     const map: Record<string, boolean> = {}
     employees.forEach((p, i) => {
-      const q = availabilityQueries[i]
-      // Only mark as "no schedule" once we have data; while loading keep it
-      // enabled so a card is never wrongly disabled mid-fetch.
-      if (q?.data !== undefined) {
-        map[p.id] = !q.data.some((w) => w.isActive)
+      const arr = availabilityData.data?.[i]
+      if (arr !== undefined) {
+        map[p.id] = !arr.some((w) => w.isActive)
       }
     })
     return map
-  }, [employees, availabilityQueries])
+  }, [employees, availabilityData.data])
+
+  // Map of practitioner → their active IN_PERSON/ONLINE service types for
+  // the selected service. Drives the "nearest slot" hint comparisons.
+  const serviceTypesByEmployee = useMemo(() => {
+    const map = new Map<string, ServiceEmployee["serviceTypes"]>()
+    if (!serviceId || !serviceEmployees) return map
+    for (const se of serviceEmployees) {
+      if (se.isActive && se.employee?.isActive) {
+        map.set(se.employee.id, se.serviceTypes ?? [])
+      }
+    }
+    return map
+  }, [serviceId, serviceEmployees])
+
+  const today = getTodayInRiyadh()
+  const nearestByEmployee = useNearestSlotHints({
+    employees,
+    serviceTypesByEmployee,
+    serviceId,
+    noScheduleById,
+  })
 
   if (loadingByService || loadingAll) return <StepEmployeeSkeleton />
 
@@ -105,6 +130,9 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
         const name = getEmployeeNameFromFull(p, locale)
         const title = p.title ?? ""
         const noSchedule = noScheduleById[p.id] === true
+        const nearest = noSchedule ? null : nearestByEmployee[p.id] ?? null
+        const isToday = nearest?.date === today
+        const typeMeta = nearest ? getDeliveryTypeMeta(nearest.deliveryType) : null
 
         return (
           <WizardCard
@@ -124,6 +152,39 @@ export function StepEmployee({ serviceId, onSelect }: StepEmployeeProps) {
                   <span className="truncate text-xs text-muted-foreground">
                     {title}
                   </span>
+                )}
+                {nearest && typeMeta && (
+                  <div
+                    data-testid="step-employee-nearest-slot"
+                    className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums"
+                  >
+                    <HugeiconsIcon
+                      icon={typeMeta.icon}
+                      size={14}
+                      className="shrink-0 text-primary/70"
+                    />
+                    <span className="font-medium text-foreground/80">
+                      {t(typeMeta.labelKey)}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span>
+                      {isToday
+                        ? t("bookings.wizard.step.employee.availableToday")
+                        : t("bookings.wizard.step.employee.nextAvailable")}
+                    </span>
+                    {!isToday && (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span className="text-foreground/70">
+                          {formatLocalizedDate(nearest.date, locale)}
+                        </span>
+                      </>
+                    )}
+                    <span aria-hidden="true">·</span>
+                    <span className="font-semibold text-foreground/90">
+                      {nearest.time}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>

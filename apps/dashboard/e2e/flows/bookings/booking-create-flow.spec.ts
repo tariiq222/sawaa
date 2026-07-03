@@ -13,15 +13,20 @@ import {
   seedService,
   seedEmployee,
   assignEmployeeToService,
+  assignEmployeeToBranch,
   cleanupClient,
   cleanupService,
   cleanupEmployee,
+  ensureValidMainBranchId,
+  setBranchBusinessHours,
+  cleanupBranch,
 } from '../../fixtures/seed';
 
 let token = '';
 let seededClientId = '';
 let seededServiceId = '';
 let seededEmployeeId = '';
+let seededBranchId = '';
 
 test.beforeAll(async () => {
   const organization = await getTestTenant();
@@ -50,6 +55,22 @@ test.beforeAll(async () => {
 
   // Ensure employee is assigned to the service so they appear in the wizard
   await assignEmployeeToService(token, employee.id, service.id);
+
+  // Prepare a bookable schedule for the seeded employee so the wizard's
+  // "nearest slot" hint has at least one available day. The wizard hits
+  // GET /employees/:id/available-days, and that backend handler hardcodes
+  // the main branch via getMainBranch() — so the employee MUST be linked
+  // to the MAIN branch with hours configured, not an arbitrary secondary
+  // branch. We create a fresh main branch (ensureValidMainBranchId
+  // demotes any prior main branch and returns a UUID), set its 09:00-17:00
+  // schedule, and link the employee to it. seedEmployee already sets the
+  // employee's per-day availability window. Without this, available-days
+  // returns [] and the hint is suppressed (`noSchedule = true`).
+  seededBranchId = await ensureValidMainBranchId(token);
+  await setBranchBusinessHours(token, seededBranchId);
+  await assignEmployeeToBranch(token, seededBranchId, employee.id).catch(
+    () => undefined
+  );
 });
 
 test.afterAll(async () => {
@@ -61,6 +82,9 @@ test.afterAll(async () => {
   }
   if (seededEmployeeId) {
     await cleanupEmployee(seededEmployeeId, token).catch(() => undefined);
+  }
+  if (seededBranchId) {
+    await cleanupBranch(seededBranchId, token).catch(() => undefined);
   }
 });
 
@@ -131,6 +155,29 @@ test.describe('Booking Create Wizard — user flow', () => {
     // visibility confirms the service click resolved.
     const employeeBtn = page.locator('button', { hasText: /موظف حجز/ }).first();
     await expect(employeeBtn).toBeVisible({ timeout: 10_000 });
+
+    // Scoped hint assertion: with the bookable branch + business hours +
+    // employee availability prepared in beforeAll, the nearest-slot hint
+    // under the employee tile must render with modality label, availability
+    // label, and HH:mm time. The hint never renders when noSchedule is true
+    // (i.e. available-days returned [] for the employee), which is the RED
+    // condition the previous attempt hit. Pattern matches both ar + en to
+    // stay robust against the persisted locale.
+    const employeeCard = posContainer
+      .locator('button', { hasText: /موظف حجز/ })
+      .first();
+    const hint = employeeCard.locator(
+      '[data-testid="step-employee-nearest-slot"]'
+    );
+    await expect(hint).toBeVisible({ timeout: 10_000 });
+    await expect(hint).toContainText(
+      /حضوري|In[- ]?[Pp]erson|عن بعد|Online/
+    );
+    await expect(hint).toContainText(
+      /متاح اليوم|أقرب موعد|Available today|Next available/
+    );
+    await expect(hint).toContainText(/\d{2}:\d{2}/);
+
     await employeeBtn.click();
 
     // Try to select a type if options are available — wait up to 3s for the
