@@ -1263,3 +1263,136 @@ export async function seedUser(
 export async function cleanupUser(id: string, token: string): Promise<void> {
   await apiDelete(`/dashboard/identity/users/${id}`, token)
 }
+
+// ─── Program ─────────────────────────────────────────────────────────────
+
+/**
+ * Program test payload — only the fields that matter for smoke tests.
+ *
+ * CreateProgramDto REQUIRES a valid UUID for `departmentId` AND `branchId`,
+ * AND `supervisorIds` must be a non-empty array of valid employee UUIDs
+ * (`@IsUUID('all', { each: true })` + the dashboard zod schema's
+ * `supervisorIds.min(1)`). The backend handler additionally 404s on a
+ * missing department/branch/supervisor. The dashboard's `ProgramFormPage`
+ * `fromExisting()` helper copies the GET detail into the form defaults —
+ * so if any of those three fields is empty on the loaded program, RHF
+ * validation blocks submit and NO PATCH fires.
+ *
+ * seedProgram guarantees a COMPLETE, EDITABLE DRAFT program so the load
+ * → reset → submit pipeline in the edit-form smoke is deterministic.
+ */
+export interface SeedProgramInput {
+  nameAr?: string
+  nameEn?: string
+  /** Override the auto-resolved department UUID (default: clinic). */
+  departmentId?: string
+  /** Override the auto-resolved branch UUID (always created fresh). */
+  branchId?: string
+  /** Override the auto-created supervisor (default: a fresh `seedEmployee`). */
+  supervisorIds?: string[]
+  daysCount?: number
+  hoursPerDay?: number
+  minParticipants?: number
+  maxParticipants?: number
+  /** Price in integer HALALAS (10000 = 100 SAR). */
+  priceHalalas?: number
+}
+
+export interface SeededProgram {
+  id: string
+  ref: number
+  status: string
+  supervisorIds: string[]
+  branchId: string
+  departmentId: string
+}
+
+/**
+ * Create a DRAFT program via POST /dashboard/programs.
+ *
+ * Resolves:
+ *  - `branchId` via `ensureValidBranchId()` — always creates a fresh branch
+ *    (the seeded DEFAULT_BRANCH_ID has an invalid UUID variant and is
+ *    rejected by `@IsUUID()`).
+ *  - `departmentId` via `ensureClinicDepartmentId()` — reuses the clinic
+ *    department ("عيادات سواء" / "Sawa Clinics") or creates one if missing.
+ *  - `supervisorIds` (default: one fresh `seedEmployee`).
+ *
+ * Every other field uses sensible defaults so the resulting program passes
+ * both the backend DTO validation AND the dashboard zod schema on the edit
+ * form's submit.
+ */
+export async function seedProgram(
+  token: string,
+  overrides: SeedProgramInput = {}
+): Promise<SeededProgram> {
+  const suffix = uniqueSuffix()
+
+  const branchId = overrides.branchId ?? (await ensureValidBranchId(token))
+  const departmentId =
+    overrides.departmentId ??
+    (await ensureClinicDepartmentId(token).catch(() => undefined))
+
+  let supervisorIds = overrides.supervisorIds
+  if (!supervisorIds || supervisorIds.length === 0) {
+    const supervisor = await seedEmployee(token, {
+      name: `مشرف برنامج ${suffix}`,
+    })
+    supervisorIds = [supervisor.id]
+  }
+
+  if (!departmentId) {
+    throw new Error(
+      `[seed] seedProgram: failed to resolve a departmentId — ` +
+        `ensureClinicDepartmentId returned undefined. Aborting rather than ` +
+        `creating a program with departmentId: null (handler 404s).`,
+    )
+  }
+
+  const body = {
+    departmentId,
+    branchId,
+    nameAr: overrides.nameAr ?? `برنامج اختبار ${suffix}`,
+    nameEn: overrides.nameEn ?? `E2E Program ${suffix}`,
+    daysCount: overrides.daysCount ?? 4,
+    hoursPerDay: overrides.hoursPerDay ?? 2,
+    minParticipants: overrides.minParticipants ?? 1,
+    maxParticipants: overrides.maxParticipants ?? 10,
+    price: overrides.priceHalalas ?? 10000,
+    currency: "SAR",
+    depositEnabled: false,
+    isPublic: false,
+    supervisorIds,
+  }
+
+  const created = await apiPost<{
+    id: string
+    ref: number
+    status: string
+    supervisorIds: string[]
+  }>("/dashboard/programs", token, body)
+
+  return {
+    id: created.id,
+    ref: created.ref,
+    status: created.status,
+    supervisorIds: created.supervisorIds ?? supervisorIds,
+    branchId,
+    departmentId,
+  }
+}
+
+/**
+ * Best-effort teardown: the programs controller exposes no DELETE endpoint,
+ * so cancelling a DRAFT (`DRAFT → CANCELLED`) is the cleanest terminal
+ * transition. Failure here is swallowed so a leaked DRAFT in the dev DB
+ * never breaks an otherwise-passing test (mirrors `cleanupBranch`).
+ */
+export async function cleanupProgram(
+  id: string,
+  token: string
+): Promise<void> {
+  await apiPatch(`/dashboard/programs/${id}/cancel`, token, {
+    reason: "e2e test cleanup",
+  }).catch(() => undefined)
+}
