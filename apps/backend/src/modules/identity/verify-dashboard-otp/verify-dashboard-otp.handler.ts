@@ -8,6 +8,8 @@ import { detectChannel, normalizeIdentifier, AuthChannel } from '../shared/ident
 import { flattenPermissions } from '../casl/flatten-permissions';
 import { loadSystemRolePermissions } from '../shared/load-system-role-permissions';
 import type { VerifyDashboardOtpCommand } from './verify-dashboard-otp.command';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { DashboardTwoFactorChallengeService } from '../dashboard-two-factor-challenge.service';
 
 const LOCKOUT_WINDOW_MINUTES = 15;
 
@@ -56,6 +58,8 @@ export class VerifyDashboardOtpHandler {
     private readonly prisma: PrismaService,
     private readonly tokens: TokenService,
     private readonly redis: RedisService,
+    private readonly settings: PlatformSettingsService,
+    private readonly twoFactorChallenges: DashboardTwoFactorChallengeService,
   ) {}
 
   async execute(cmd: VerifyDashboardOtpCommand): Promise<VerifyDashboardOtpResult> {
@@ -120,14 +124,6 @@ export class VerifyDashboardOtpHandler {
       throw new UnauthorizedException('Invalid OTP code');
     }
 
-    await this.prisma.otpCode.update({
-      where: { id: otpRecord.id },
-      data: { consumedAt: new Date() },
-    });
-
-    // Successful verify clears the windowed failure counter.
-    await redisClient.del(failedKey);
-
     const userWhere = channel === 'EMAIL' ? { email: identifier } : { phone: identifier };
     const user = await this.prisma.user.findFirst({
       where: userWhere,
@@ -140,6 +136,23 @@ export class VerifyDashboardOtpHandler {
     if (!user.isActive) {
       throw new UnauthorizedException('Account is inactive');
     }
+
+    const requiresTwoFactor = user.isSuperAdmin && await this.settings.get<boolean>('security.twoFactor.required');
+    if (requiresTwoFactor) {
+      await this.twoFactorChallenges.assertValid(cmd.twoFactorChallenge, user.id, identifier);
+    }
+
+    await this.prisma.otpCode.update({
+      where: { id: otpRecord.id },
+      data: { consumedAt: new Date() },
+    });
+
+    if (requiresTwoFactor) {
+      await this.twoFactorChallenges.consume(cmd.twoFactorChallenge, user.id, identifier);
+    }
+
+    // Successful verify clears the windowed failure counter.
+    await redisClient.del(failedKey);
 
     const tokens = await this.tokens.issueTokenPair(user, {
       isSuperAdmin: user.isSuperAdmin ?? false,

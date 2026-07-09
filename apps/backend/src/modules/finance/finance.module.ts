@@ -7,6 +7,7 @@ import { EventBusService } from '../../infrastructure/events/event-bus.service';
 import { MessagingModule } from '../../infrastructure/messaging.module';
 import { PaymentsInfraModule } from '../../infrastructure/payments/payments.module';
 import { StorageModule } from '../../infrastructure/storage';
+import { TelemetryModule } from '../../infrastructure/telemetry/telemetry.module';
 import { OrgExperienceModule } from '../org-experience/org-experience.module';
 import { CreateInvoiceHandler } from './create-invoice/create-invoice.handler';
 import { BookingConfirmedHandler } from './create-invoice/booking-confirmed.handler';
@@ -97,7 +98,7 @@ const handlers = [
 ];
 
 @Module({
-  imports: [DatabaseModule, MessagingModule, PaymentsInfraModule, StorageModule, OrgExperienceModule, EmailModule],
+  imports: [DatabaseModule, MessagingModule, PaymentsInfraModule, StorageModule, OrgExperienceModule, EmailModule, TelemetryModule],
   controllers: [DashboardFinanceController, RefundsController],
   providers: [
     ...handlers,

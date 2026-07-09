@@ -5,6 +5,8 @@ import { PrismaService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { TokenService } from '../shared/token.service';
 import { VerifyDashboardOtpHandler } from './verify-dashboard-otp.handler';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { DashboardTwoFactorChallengeService } from '../dashboard-two-factor-challenge.service';
 
 jest.mock('bcryptjs', () => ({
   compare: jest.fn(),
@@ -54,6 +56,8 @@ describe('VerifyDashboardOtpHandler', () => {
     multi: jest.Mock;
   };
   let redisMulti: { incr: jest.Mock; expire: jest.Mock; exec: jest.Mock };
+  let settings: { get: jest.Mock };
+  let challenges: { assertValid: jest.Mock; consume: jest.Mock };
 
   beforeEach(async () => {
     redisMulti = {
@@ -83,12 +87,16 @@ describe('VerifyDashboardOtpHandler', () => {
         { provide: RedisService, useValue: {
           getClient: jest.fn().mockReturnValue(redisClient),
         } },
+        { provide: PlatformSettingsService, useValue: { get: jest.fn().mockResolvedValue(false) } },
+        { provide: DashboardTwoFactorChallengeService, useValue: { assertValid: jest.fn(), consume: jest.fn() } },
       ],
     }).compile();
 
     handler = module.get<VerifyDashboardOtpHandler>(VerifyDashboardOtpHandler);
     prisma = module.get(PrismaService);
     tokens = module.get(TokenService);
+    settings = module.get(PlatformSettingsService);
+    challenges = module.get(DashboardTwoFactorChallengeService);
 
     jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
     jest.setSystemTime(mockDate);
@@ -215,6 +223,24 @@ describe('VerifyDashboardOtpHandler', () => {
 
     const result = await handler.execute({ identifier: 'test@test.com', code: '123456' });
     expect(result.user.isSuperAdmin).toBe(true);
+  });
+
+  it('requires and consumes the password-step challenge for a super-admin when 2FA is enabled', async () => {
+    prisma.otpCode.findFirst.mockResolvedValue(createOtpRecord());
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+    prisma.otpCode.update.mockResolvedValue({});
+    prisma.user.findFirst.mockResolvedValue(createUser({ isSuperAdmin: true }));
+    tokens.issueTokenPair.mockResolvedValue({ accessToken: 'at', refreshToken: 'rt' });
+    settings.get.mockResolvedValue(true);
+
+    await handler.execute({
+      identifier: 'test@test.com',
+      code: '123456',
+      twoFactorChallenge: '6f9619ff-8b86-d011-b42d-00cf4fc964ff',
+    });
+
+    expect(challenges.assertValid).toHaveBeenCalledWith('6f9619ff-8b86-d011-b42d-00cf4fc964ff', 'u-1', 'test@test.com');
+    expect(challenges.consume).toHaveBeenCalledWith('6f9619ff-8b86-d011-b42d-00cf4fc964ff', 'u-1', 'test@test.com');
   });
 
   it('should handle user with customRole', async () => {

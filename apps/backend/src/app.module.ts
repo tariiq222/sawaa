@@ -31,7 +31,7 @@ import { CommsModule } from "./modules/comms/comms.module";
 import { MobileClientModule } from "./api/mobile/client/mobile-client.module";
 import { MobileEmployeeModule } from "./api/mobile/employee/mobile-employee.module";
 import { PublicModule } from "./api/public/public.module";
-import { AppMetricsService } from "./infrastructure/telemetry/app-metrics.service";
+import { TelemetryModule } from "./infrastructure/telemetry/telemetry.module";
 
 @Module({
   imports: [
@@ -70,6 +70,7 @@ import { AppMetricsService } from "./infrastructure/telemetry/app-metrics.servic
     AiInfraModule,
     StorageModule,
     MailModule,
+    TelemetryModule,
     IdentityModule,
     PlatformModule,
     PeopleModule,
@@ -89,7 +90,6 @@ import { AppMetricsService } from "./infrastructure/telemetry/app-metrics.servic
     PublicModule,
   ],
   providers: [
-    AppMetricsService,
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_GUARD, useClass: SingleTenantThrottlerGuard },
     // Global authentication: every route requires a valid admin JWT unless

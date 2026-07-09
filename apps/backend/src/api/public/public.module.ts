@@ -32,13 +32,11 @@ import { PlatformModule } from '../../modules/platform/platform.module';
 import { OpsModule } from '../../modules/ops/ops.module';
 import { PublicHealthController } from './health.controller';
 import { PublicTestimonialsController } from './testimonials.controller';
-import { AppMetricsService } from '../../infrastructure/telemetry/app-metrics.service';
-import { DbMetricsService } from '../../infrastructure/telemetry/db-metrics.service';
+import { TelemetryModule } from '../../infrastructure/telemetry/telemetry.module';
 import { PublicMetricsController } from './metrics.controller';
 
 @Module({
-  imports: [DatabaseModule, BookingsModule, OrgExperienceModule, IdentityModule, PeopleModule, CommsModule, FinanceModule, OrgConfigModule, PlatformModule, OpsModule],
+  imports: [DatabaseModule, BookingsModule, OrgExperienceModule, IdentityModule, PeopleModule, CommsModule, FinanceModule, OrgConfigModule, PlatformModule, OpsModule, TelemetryModule],
   controllers: [AuthController, PublicAuthController, PublicMeController, PublicBrandingController, PublicCatalogController, PublicSlotsController, PublicEmployeesController, PublicContactMessagesController, PublicOtpController, PublicAvailabilityController, PublicBookingsController, PublicProgramsController, PublicIntakeFormsController, PublicPaymentsController, PublicPackagesController, PublicBranchesController, PublicInvoicesController, PublicRefundsController, PublicSmsWebhooksController, PublicPaymentWebhookController, PublicVerifyEmailController, PublicHealthController, PublicMetricsController, PublicTestimonialsController],
-  providers: [AppMetricsService, DbMetricsService],
 })
 export class PublicModule {}

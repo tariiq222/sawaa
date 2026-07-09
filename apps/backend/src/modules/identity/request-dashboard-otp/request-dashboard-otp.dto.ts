@@ -1,5 +1,5 @@
-import { IsNotEmpty, IsString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class RequestDashboardOtpDto {
   @ApiProperty({
@@ -9,4 +9,9 @@ export class RequestDashboardOtpDto {
   @IsNotEmpty()
   @IsString()
   identifier!: string;
+
+  @ApiPropertyOptional({ description: 'Short-lived password-step proof required only for super-admin 2FA', format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  twoFactorChallenge?: string;
 }

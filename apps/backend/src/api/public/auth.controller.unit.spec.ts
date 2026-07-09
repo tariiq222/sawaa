@@ -16,7 +16,6 @@ describe('AuthController (unit)', () => {
   let mockPerformPasswordReset: any;
   let mockRequestDashboardOtp: any;
   let mockVerifyDashboardOtp: any;
-  let mockSettings: any;
   let mockAuthResponseBuilder: any;
   let mockLookupUser: any;
 
@@ -37,7 +36,6 @@ describe('AuthController (unit)', () => {
     mockPerformPasswordReset = { execute: jest.fn() };
     mockRequestDashboardOtp = { execute: jest.fn() };
     mockVerifyDashboardOtp = { execute: jest.fn() };
-    mockSettings = { get: jest.fn() };
     mockAuthResponseBuilder = {
       build: jest.fn().mockImplementation((_tokens: any, user: any) => ({
         accessToken: _tokens.accessToken,
@@ -65,7 +63,6 @@ describe('AuthController (unit)', () => {
       mockPerformPasswordReset,
       mockRequestDashboardOtp,
       mockVerifyDashboardOtp,
-      mockSettings,
       mockAuthResponseBuilder,
       mockLookupUser,
     );
@@ -82,16 +79,15 @@ describe('AuthController (unit)', () => {
   describe('loginEndpoint', () => {
     it('should require OTP for superAdmin when 2FA enabled', async () => {
       mockLogin.execute.mockResolvedValue({
-        accessToken: 'at',
-        refreshToken: 'rt',
+        requiresOtp: true,
+        twoFactorChallenge: '6f9619ff-8b86-d011-b42d-00cf4fc964ff',
         user: { id: 'u1', email: 'a@b.com', name: 'Admin', isActive: true, role: 'ADMIN', isSuperAdmin: true, customRole: null },
       });
-      mockSettings.get.mockResolvedValue(true);
       mockConfig.get.mockReturnValue('15m');
 
       const res = mockRes();
       const result = await controller.loginEndpoint({ email: 'a@b.com', password: 'p' } as any, '127.0.0.1', res);
-      expect(result).toEqual({ requiresOtp: true });
+      expect(result).toEqual({ requiresOtp: true, twoFactorChallenge: '6f9619ff-8b86-d011-b42d-00cf4fc964ff' });
       expect(res.cookie).not.toHaveBeenCalled();
     });
 
@@ -101,7 +97,6 @@ describe('AuthController (unit)', () => {
         refreshToken: 'rt',
         user: { id: 'u1', email: 'a@b.com', name: 'User', isActive: true, role: 'ADMIN', isSuperAdmin: false, customRole: null },
       });
-      mockSettings.get.mockResolvedValue(true);
       mockConfig.get.mockReturnValue('15m');
 
       const res = mockRes();

@@ -102,6 +102,24 @@ describe('UpdateClientProfileHandler', () => {
     );
   });
 
+  it('updates the client-owned avatar URL without using the administrative client updater', async () => {
+    mockPrisma.client.findFirst.mockResolvedValue(existingClient);
+    mockPrisma.client.update.mockResolvedValue({
+      ...updatedProfile,
+      avatarUrl: 'https://cdn.example.com/avatars/sara.jpg',
+    });
+
+    await handler.execute('cl-1', {
+      avatarUrl: 'https://cdn.example.com/avatars/sara.jpg',
+    } as any);
+
+    expect(mockPrisma.client.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { avatarUrl: 'https://cdn.example.com/avatars/sara.jpg' },
+      }),
+    );
+  });
+
   it('updates phone and resets phoneVerified when phone changes', async () => {
     mockPrisma.client.findFirst
       .mockResolvedValueOnce(existingClient) // load client

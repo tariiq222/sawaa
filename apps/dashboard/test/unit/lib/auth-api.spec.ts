@@ -96,6 +96,8 @@ describe("auth api", () => {
     expect(stored).toContain(fakeUser.role)
     expect(localStorage.getItem("sawaa_access_token")).toBeNull()
     expect(sessionStorage.getItem("sawaa_access_token")).toBeNull()
+    expect(result.requiresOtp).not.toBe(true)
+    if (result.requiresOtp) throw new Error("Expected authenticated login response")
     expect(result.accessToken).toBe("token123")
   })
 

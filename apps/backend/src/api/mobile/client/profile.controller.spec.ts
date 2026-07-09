@@ -4,6 +4,7 @@ import request from 'supertest';
 import { MobileClientProfileController } from './profile.controller';
 import { GetClientHandler } from '../../../modules/people/clients/get-client.handler';
 import { UpdateClientHandler } from '../../../modules/people/clients/update-client.handler';
+import { UpdateClientProfileHandler } from '../../../modules/identity/client-auth/update-client-profile.handler';
 import { ClientSessionGuard } from '../../../common/guards/client-session.guard';
 
 describe('MobileClientProfileController (e2e)', () => {
@@ -11,6 +12,7 @@ describe('MobileClientProfileController (e2e)', () => {
 
   const mockGetClient = { execute: jest.fn() };
   const mockUpdateClient = { execute: jest.fn() };
+  const mockUpdateClientProfile = { execute: jest.fn() };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -18,6 +20,7 @@ describe('MobileClientProfileController (e2e)', () => {
       providers: [
         { provide: GetClientHandler, useValue: mockGetClient },
         { provide: UpdateClientHandler, useValue: mockUpdateClient },
+        { provide: UpdateClientProfileHandler, useValue: mockUpdateClientProfile },
       ],
     })
       .overrideGuard(ClientSessionGuard)
@@ -60,8 +63,23 @@ describe('MobileClientProfileController (e2e)', () => {
   });
 
   describe('PATCH /mobile/client/profile', () => {
+    it.each([
+      ['notes', 'Internal note'],
+      ['source', 'ONLINE'],
+      ['isActive', false],
+    ])('rejects the administrative-only %s field', async (field, value) => {
+      await request(app.getHttpServer())
+        .patch('/mobile/client/profile')
+        .set('Authorization', 'Bearer fake-jwt')
+        .send({ [field]: value })
+        .expect(400);
+
+      expect(mockUpdateClient.execute).not.toHaveBeenCalled();
+      expect(mockUpdateClientProfile.execute).not.toHaveBeenCalled();
+    });
+
     it('returns 200 on update', async () => {
-      mockUpdateClient.execute.mockResolvedValue({ id: 'client-1', name: 'Sara Updated' });
+      mockUpdateClientProfile.execute.mockResolvedValue({ id: 'client-1', name: 'Sara Updated' });
 
       const res = await request(app.getHttpServer())
         .patch('/mobile/client/profile')
@@ -70,9 +88,8 @@ describe('MobileClientProfileController (e2e)', () => {
         .expect(200);
 
       expect(res.body.name).toBe('Sara Updated');
-      expect(mockUpdateClient.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ clientId: 'client-1', name: 'Sara Updated' }),
-      );
+      expect(mockUpdateClientProfile.execute).toHaveBeenCalledWith('client-1', { name: 'Sara Updated' });
+      expect(mockUpdateClient.execute).not.toHaveBeenCalled();
     });
 
     it('returns 400 for invalid gender', async () => {

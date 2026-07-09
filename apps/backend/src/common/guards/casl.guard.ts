@@ -51,9 +51,9 @@ type RequestUser = {
  * permissions take effect immediately — the guard never falls back to the
  * hardcoded BUILT_IN map when `req.user.permissions` is present.
  *
- * **Fallback path:** if `req.user.permissions` is absent or empty, the guard
- * derives the ability via `buildForUser(user)` (hardcoded BUILT_IN rules) so
- * that strategies which do not set `permissions` still work correctly.
+ * **Fallback path:** if `req.user.permissions` is absent, the guard derives the
+ * ability via `buildForUser(user)` so strategies which do not set permissions
+ * still work correctly. An explicit empty array is a deny-all permission set.
  *
  * Must run after JwtGuard so req.user is populated.
  */
@@ -78,10 +78,10 @@ export class CaslGuard implements CanActivate {
     if (!user) throw new ForbiddenException('No authenticated user');
 
     // Primary path: use the pre-computed permissions from JWT validation (DB is
-    // the authority).  Fallback: derive from role/customRole for strategies that
-    // do not populate req.user.permissions.
+    // the authority), including an explicit empty array. Fallback only when a
+    // strategy does not populate req.user.permissions.
     const ability =
-      Array.isArray(user.permissions) && user.permissions.length > 0
+      Array.isArray(user.permissions)
         ? this.abilityFactory.buildFromPermissions(user.permissions)
         : this.abilityFactory.buildForUser(user);
 

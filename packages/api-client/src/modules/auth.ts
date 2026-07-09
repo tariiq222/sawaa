@@ -12,8 +12,15 @@ export interface LoginPayload {
   rememberMe?: boolean
 }
 
-export async function login(payload: LoginPayload): Promise<AuthResponse> {
-  return apiRequest<AuthResponse>('/auth/login', {
+export type TwoFactorRequiredResponse = {
+  requiresOtp: true
+  twoFactorChallenge: string
+}
+
+export type LoginResponse = AuthResponse | TwoFactorRequiredResponse
+
+export async function login(payload: LoginPayload): Promise<LoginResponse> {
+  return apiRequest<LoginResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
@@ -68,7 +75,8 @@ export type { AuthResponse, ChangePasswordPayload, TokenPair, UserPayload }
 /* ─── OTP (dashboard) ─────────────────────────────────────────────────── */
 
 export interface RequestDashboardOtpPayload {
-  email: string
+  identifier: string
+  twoFactorChallenge?: string
 }
 
 export interface RequestDashboardOtpResponse {
@@ -88,8 +96,9 @@ export async function requestDashboardOtp(
 }
 
 export interface VerifyDashboardOtpPayload {
-  email: string
+  identifier: string
   code: string
+  twoFactorChallenge?: string
 }
 
 export async function verifyDashboardOtp(

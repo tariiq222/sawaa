@@ -20,7 +20,7 @@ export class UpdateClientProfileHandler {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(clientId: string, dto: UpdateClientProfileDto): Promise<ClientProfile> {
-    if (dto.name === undefined && dto.phone === undefined && dto.email === undefined) {
+    if (dto.name === undefined && dto.phone === undefined && dto.email === undefined && dto.avatarUrl === undefined) {
       throw new BadRequestException('لا توجد بيانات لتحديثها');
     }
 
@@ -80,6 +80,8 @@ export class UpdateClientProfileHandler {
       data.lastName = lastName;
     }
 
+    if (dto.avatarUrl !== undefined) data.avatarUrl = dto.avatarUrl;
+
     try {
       const updated = await this.prisma.client.update({
         where: { id: clientId },
@@ -91,6 +93,7 @@ export class UpdateClientProfileHandler {
           phone: true,
           emailVerified: true,
           phoneVerified: true,
+          avatarUrl: true,
           accountType: true,
           claimedAt: true,
           createdAt: true,

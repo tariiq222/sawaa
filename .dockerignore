@@ -5,6 +5,10 @@ dist/
 .turbo/
 apps/dashboard/playwright/.auth/
 .git/
+.sawaa-data/
+outputs/
+.secrets/
+secrets/
 .env
 .env.*
 **/.env

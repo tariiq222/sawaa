@@ -40,7 +40,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { ApiPublicResponses, ApiErrorDto } from '../../common/swagger';
 import { flattenPermissions } from '../../modules/identity/casl/flatten-permissions';
 import { loadSystemRolePermissions } from '../../modules/identity/shared/load-system-role-permissions';
-import { PlatformSettingsService } from '../../modules/platform/settings/platform-settings.service';
 
 class ChangePasswordDto {
   @ApiProperty({ description: 'Current account password', example: 'P@ssw0rd123' })
@@ -70,7 +69,6 @@ export class AuthController {
     private readonly performPasswordReset: PerformPasswordResetHandler,
     private readonly requestDashboardOtp: RequestDashboardOtpHandler,
     private readonly verifyDashboardOtp: VerifyDashboardOtpHandler,
-    private readonly settings: PlatformSettingsService,
     private readonly authResponseBuilder: AuthResponseBuilder,
     private readonly lookupUser: LookupUserHandler,
   ) {}
@@ -89,6 +87,7 @@ export class AuthController {
       type: 'object',
       properties: {
         requiresOtp: { type: 'boolean', description: 'True when 2FA is required — use OTP flow to complete login' },
+        twoFactorChallenge: { type: 'string', format: 'uuid', description: 'Short-lived challenge required to request and verify the super-admin OTP' },
         accessToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
         expiresIn: { type: 'number', example: 900 },
         user: {
@@ -118,15 +117,11 @@ export class AuthController {
     @Ip() ip: string,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { user, accessToken, refreshToken } = await this.login.execute({ email: body.email, password: body.password, ip, rememberMe: body.rememberMe });
-
-    // If 2FA required and user is super-admin → require OTP step
-    if (user?.isSuperAdmin) {
-      const require2fa = await this.settings.get<boolean>('security.twoFactor.required');
-      if (require2fa) {
-        return { requiresOtp: true };
-      }
+    const result = await this.login.execute({ email: body.email, password: body.password, ip, rememberMe: body.rememberMe });
+    if (result.requiresOtp) {
+      return { requiresOtp: true, twoFactorChallenge: result.twoFactorChallenge };
     }
+    const { user, accessToken, refreshToken } = result;
 
     if (!user) {
       this.setRefreshCookie(res, refreshToken, body.rememberMe);

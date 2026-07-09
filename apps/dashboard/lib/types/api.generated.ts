@@ -7171,6 +7171,11 @@ export interface components {
              * @example user@example.com
              */
             identifier: string;
+            /**
+             * Format: uuid
+             * @description Short-lived password-step proof required only for super-admin 2FA
+             */
+            twoFactorChallenge?: string;
         };
         RequestMobileLoginOtpDto: {
             /**
@@ -8639,6 +8644,11 @@ export interface components {
              * @example user@example.com
              */
             identifier: string;
+            /**
+             * Format: uuid
+             * @description Short-lived password-step proof required only for super-admin 2FA
+             */
+            twoFactorChallenge?: string;
         };
         VerifyMobileOtpDto: {
             /**
@@ -8726,6 +8736,11 @@ export interface operations {
                         expiresIn?: number;
                         /** @description True when 2FA is required — use OTP flow to complete login */
                         requiresOtp?: boolean;
+                        /**
+                         * Format: uuid
+                         * @description Short-lived challenge required to request and verify the super-admin OTP
+                         */
+                        twoFactorChallenge?: string;
                         user?: {
                             avatarUrl?: string | null;
                             /** Format: email */

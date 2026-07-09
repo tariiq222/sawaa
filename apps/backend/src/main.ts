@@ -17,6 +17,7 @@ import { AppMetricsService } from './infrastructure/telemetry/app-metrics.servic
 import { configureCors } from './cors';
 import { setShuttingDown } from './common/shutdown.state';
 import { csrfMiddleware } from './common/middleware/csrf.middleware';
+import { InFlightRequestTracker } from './common/shutdown/request-tracker';
 
 async function bootstrap(): Promise<void> {
   // rawBody: true preserves the untouched request body buffer on req.rawBody,
@@ -150,13 +151,11 @@ async function bootstrap(): Promise<void> {
 
   app.enableShutdownHooks();
 
-  let requestCount = 0;
+  const requestTracker = new InFlightRequestTracker();
   const server = app.getHttpServer();
 
-  server.on('request', (req: unknown, res: { on: (event: string, fn: () => void) => void }) => {
-    requestCount++;
-    res.on('finish', () => { requestCount--; });
-    res.on('close', () => { requestCount--; });
+  server.on('request', (_req: unknown, res: { on: (event: 'finish' | 'close', fn: () => void) => unknown }) => {
+    requestTracker.track(res);
   });
 
   await app.listen(port);
@@ -167,10 +166,10 @@ async function bootstrap(): Promise<void> {
     setShuttingDown();
     server.close(() => Logger.log('HTTP server closed', 'Bootstrap'));
     const deadline = Date.now() + 30_000;
-    while (requestCount > 0 && Date.now() < deadline) {
+    while (requestTracker.count > 0 && Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 100));
     }
-    Logger.log(`SIGTERM: ${requestCount} requests still in-flight, proceeding shutdown`, 'Bootstrap');
+    Logger.log(`SIGTERM: ${requestTracker.count} requests still in-flight, proceeding shutdown`, 'Bootstrap');
     await app.close();
     process.exit(0);
   });
@@ -180,7 +179,7 @@ async function bootstrap(): Promise<void> {
     setShuttingDown();
     server.close(() => Logger.log('HTTP server closed', 'Bootstrap'));
     const deadline = Date.now() + 30_000;
-    while (requestCount > 0 && Date.now() < deadline) {
+    while (requestTracker.count > 0 && Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 100));
     }
     await app.close();

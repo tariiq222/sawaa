@@ -4396,6 +4396,11 @@
             "description": "Email address or Saudi mobile number (E.164 format)",
             "example": "user@example.com",
             "type": "string"
+          },
+          "twoFactorChallenge": {
+            "description": "Short-lived password-step proof required only for super-admin 2FA",
+            "format": "uuid",
+            "type": "string"
           }
         },
         "required": [
@@ -6510,6 +6515,11 @@
             "description": "Email address or Saudi mobile number (E.164 format)",
             "example": "user@example.com",
             "type": "string"
+          },
+          "twoFactorChallenge": {
+            "description": "Short-lived password-step proof required only for super-admin 2FA",
+            "format": "uuid",
+            "type": "string"
           }
         },
         "required": [
@@ -6666,6 +6676,11 @@
                     "requiresOtp": {
                       "description": "True when 2FA is required — use OTP flow to complete login",
                       "type": "boolean"
+                    },
+                    "twoFactorChallenge": {
+                      "description": "Short-lived challenge required to request and verify the super-admin OTP",
+                      "format": "uuid",
+                      "type": "string"
                     },
                     "user": {
                       "properties": {

@@ -5,6 +5,8 @@ import { RequestDashboardOtpHandler } from './request-dashboard-otp.handler';
 import { NotificationChannelRegistry } from '../../comms/notification-channel/notification-channel-registry';
 import { PrismaService, RlsTransactionService } from '../../../infrastructure/database';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { DashboardTwoFactorChallengeService } from '../dashboard-two-factor-challenge.service';
 
 describe('RequestDashboardOtpHandler', () => {
   let handler: RequestDashboardOtpHandler;
@@ -28,6 +30,7 @@ describe('RequestDashboardOtpHandler', () => {
         count: jest.fn().mockResolvedValue(0),
         delete: jest.fn().mockResolvedValue({ id: 'otp-1' }),
       },
+      user: { findFirst: jest.fn().mockResolvedValue(null) },
       $transaction: jest.fn().mockImplementation(async (fn: any) =>
         fn({
           otpCode: {
@@ -64,6 +67,8 @@ describe('RequestDashboardOtpHandler', () => {
             getClient: jest.fn().mockReturnValue(redisClient),
           },
         },
+        { provide: PlatformSettingsService, useValue: { get: jest.fn().mockResolvedValue(false) } },
+        { provide: DashboardTwoFactorChallengeService, useValue: { assertValid: jest.fn() } },
       ],
     }).compile();
 

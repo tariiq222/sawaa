@@ -34,6 +34,8 @@ export interface TokenPair {
 }
 
 export interface AuthResponse extends TokenPair {
+  /** Present only as false on authenticated login responses; true denotes the separate 2FA challenge shape. */
+  requiresOtp?: false
   user: UserPayload
 }
 

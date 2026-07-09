@@ -21,7 +21,7 @@ import { PackageReportsHandler } from './generate-report/package-reports.handler
 import { HealthCheckHandler } from './health-check/health-check.handler';
 import { RedisService } from '../../infrastructure/cache/redis.service';
 import { DbRowCountCron } from './cron-tasks/db-row-count.cron';
-import { DbMetricsService } from '../../infrastructure/telemetry/db-metrics.service';
+import { TelemetryModule } from '../../infrastructure/telemetry/telemetry.module';
 import { RunOrphanAuditHandler } from './orphan-audit/run-orphan-audit.handler';
 
 import { ReconcileRefundsCron } from './cron-tasks/reconcile-refunds.cron';
@@ -62,10 +62,10 @@ const cronHandlers = [
 // FinanceModule is imported to make MoyasarApiClient available to
 // ReconcileRefundsCron. MoyasarApiClient is exported by FinanceModule.
 @Module({
-  imports: [DatabaseModule, MessagingModule, TerminusModule, BookingsModule, FinanceModule, EmailModule],
+  imports: [DatabaseModule, MessagingModule, TerminusModule, BookingsModule, FinanceModule, EmailModule, TelemetryModule],
   controllers: [DashboardOpsController],
-  providers: [...handlers, ...cronHandlers, RedisService, CronTasksService, DbMetricsService, RunOrphanAuditHandler],
-  exports: [...handlers, RunOrphanAuditHandler, DbMetricsService],
+  providers: [...handlers, ...cronHandlers, RedisService, CronTasksService, RunOrphanAuditHandler],
+  exports: [...handlers, RunOrphanAuditHandler],
 })
 export class OpsModule implements OnModuleInit {
   constructor(private readonly cronTasks: CronTasksService) {}

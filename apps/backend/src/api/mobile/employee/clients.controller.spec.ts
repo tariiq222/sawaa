@@ -94,6 +94,73 @@ describe('MobileEmployeeClientsController (e2e)', () => {
         }),
       );
     });
+
+    it('selects and returns only employee-safe client fields', async () => {
+      mockPrisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' });
+      mockPrisma.booking.findMany.mockResolvedValue([{ clientId: uuid(1) }]);
+      mockPrisma.client.findMany.mockResolvedValue([
+        {
+          id: uuid(1),
+          name: 'Sara',
+          firstName: 'Sara',
+          lastName: 'Al-Harbi',
+          phone: '+966501234567',
+          email: 'sara@example.com',
+          gender: 'FEMALE',
+          dateOfBirth: new Date('1990-06-15T00:00:00.000Z'),
+          avatarUrl: null,
+          isActive: true,
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+        },
+      ]);
+      mockPrisma.client.count.mockResolvedValue(1);
+
+      const res = await request(app.getHttpServer())
+        .get('/mobile/employee/clients')
+        .set('Authorization', 'Bearer fake-jwt')
+        .expect(200);
+
+      expect(mockPrisma.client.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: {
+            id: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            email: true,
+            gender: true,
+            dateOfBirth: true,
+            avatarUrl: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+      );
+      expect(res.body.data[0]).toEqual(
+        expect.objectContaining({
+          id: uuid(1),
+          name: 'Sara',
+          firstName: 'Sara',
+          lastName: 'Al-Harbi',
+          email: 'sara@example.com',
+        }),
+      );
+      expect(res.body.data[0]).not.toEqual(
+        expect.objectContaining({
+          passwordHash: expect.anything(),
+          tokenVersion: expect.anything(),
+          nationalId: expect.anything(),
+          allergies: expect.anything(),
+          chronicConditions: expect.anything(),
+          notes: expect.anything(),
+          emergencyName: expect.anything(),
+          emergencyPhone: expect.anything(),
+        }),
+      );
+    });
   });
 
   describe('GET /mobile/employee/clients/:clientId/history', () => {

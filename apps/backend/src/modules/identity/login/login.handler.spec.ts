@@ -6,6 +6,8 @@ import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { PasswordService } from '../shared/password.service';
 import { TokenService } from '../shared/token.service';
 import { ClsService } from 'nestjs-cls';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { DashboardTwoFactorChallengeService } from '../dashboard-two-factor-challenge.service';
 
 describe('LoginHandler', () => {
   let handler: LoginHandler;
@@ -15,6 +17,8 @@ describe('LoginHandler', () => {
   let redisClient: { multi: jest.Mock; incr: jest.Mock; expire: jest.Mock; exec: jest.Mock; del: jest.Mock };
   let redis: { getClient: jest.Mock };
   let cls: { set: jest.Mock };
+  let settings: { get: jest.Mock };
+  let challenges: { create: jest.Mock };
 
   beforeEach(async () => {
     const createChain = (execResult: unknown = [[null, 1], [null, 1]]) => ({
@@ -37,6 +41,8 @@ describe('LoginHandler', () => {
     password = { verify: jest.fn() };
     tokens = { issueTokenPair: jest.fn().mockResolvedValue({ accessToken: 'at', refreshToken: 'rt' }) };
     cls = { set: jest.fn() };
+    settings = { get: jest.fn().mockResolvedValue(false) };
+    challenges = { create: jest.fn().mockResolvedValue('6f9619ff-8b86-d011-b42d-00cf4fc964ff') };
 
     const module = await Test.createTestingModule({
       providers: [
@@ -46,6 +52,8 @@ describe('LoginHandler', () => {
         { provide: PasswordService, useValue: password },
         { provide: TokenService, useValue: tokens },
         { provide: ClsService, useValue: cls },
+        { provide: PlatformSettingsService, useValue: settings },
+        { provide: DashboardTwoFactorChallengeService, useValue: challenges },
       ],
     }).compile();
 
@@ -67,8 +75,25 @@ describe('LoginHandler', () => {
     });
     password.verify.mockResolvedValue(true);
     const result = await handler.execute(cmd);
+    expect(result.requiresOtp).not.toBe(true);
+    if (result.requiresOtp) throw new Error('Expected password login to issue tokens');
     expect(result.accessToken).toBe('at');
     expect(redisClient.del).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns an opaque 2FA challenge and never issues tokens for a super-admin when enabled', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u1', email: 'a@b.com', isActive: true, passwordHash: 'hash', failedLoginAttempts: 0, lockedUntil: null, isSuperAdmin: true, customRole: null,
+    });
+    password.verify.mockResolvedValue(true);
+    settings.get.mockResolvedValue(true);
+
+    await expect(handler.execute(cmd)).resolves.toEqual(expect.objectContaining({
+      requiresOtp: true,
+      twoFactorChallenge: '6f9619ff-8b86-d011-b42d-00cf4fc964ff',
+    }));
+    expect(challenges.create).toHaveBeenCalledWith('u1', 'a@b.com');
+    expect(tokens.issueTokenPair).not.toHaveBeenCalled();
   });
 
   it('throws when user not found', async () => {

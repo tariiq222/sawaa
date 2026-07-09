@@ -7,7 +7,7 @@
  */
 
 import { authApi } from "@sawaa/api-client"
-import type { AuthResponse, UserPayload } from "@sawaa/api-client"
+import type { AuthResponse, LoginResponse, UserPayload } from "@sawaa/api-client"
 import { clearLegacyAccessTokenStorage, setAccessToken } from "@/lib/api"
 
 export type AuthUser = UserPayload
@@ -30,25 +30,27 @@ function toCachedHint(u: UserPayload): CachedUserHint {
   }
 }
 
+export type PasswordLoginResponse = LoginResponse
+
 export async function login(
   identifier: string,
   password: string,
   rememberMe?: boolean,
-): Promise<AuthResponse> {
+): Promise<PasswordLoginResponse> {
   const data = await authApi.login({ email: identifier, password, rememberMe })
-  persistAuth(data)
+  if (!data.requiresOtp) persistAuth(data)
   return data
 }
 
-export async function requestDashboardOtp(identifier: string): Promise<{ success: boolean }> {
+export async function requestDashboardOtp(identifier: string, twoFactorChallenge?: string): Promise<{ success: boolean }> {
   // Delegates to the typed @sawaa/api-client module so the central envelope
   // unwrap, refresh-mutex and CSRF behaviour are applied uniformly.
-  await authApi.requestDashboardOtp({ email: identifier })
+  await authApi.requestDashboardOtp({ identifier, twoFactorChallenge })
   return { success: true }
 }
 
-export async function verifyDashboardOtp(identifier: string, code: string): Promise<AuthResponse> {
-  const data = await authApi.verifyDashboardOtp({ email: identifier, code })
+export async function verifyDashboardOtp(identifier: string, code: string, twoFactorChallenge?: string): Promise<AuthResponse> {
+  const data = await authApi.verifyDashboardOtp({ identifier, code, twoFactorChallenge })
   persistAuth(data)
   return data
 }

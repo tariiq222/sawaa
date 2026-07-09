@@ -6,6 +6,7 @@ import {
   ApiNotFoundResponse, ApiExtraModels, getSchemaPath,
 } from '@nestjs/swagger';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import type { Prisma } from '@prisma/client';
 import { ApiStandardResponses } from '../../../common/swagger';
 import { ClientResponseDto } from '../../dashboard/dto/people-response.dto';
 import { JwtGuard } from '../../../common/guards/jwt.guard';
@@ -13,6 +14,21 @@ import { CaslGuard, CheckPermissions } from '../../../common/guards/casl.guard';
 import { CurrentUser, JwtUser } from '../../../common/auth/current-user.decorator';
 import { PrismaService } from '../../../infrastructure/database';
 import { resolveEmployeeId } from './resolve-employee-id.helper';
+
+const employeeClientSelect = {
+  id: true,
+  name: true,
+  firstName: true,
+  lastName: true,
+  phone: true,
+  email: true,
+  gender: true,
+  dateOfBirth: true,
+  avatarUrl: true,
+  isActive: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.ClientSelect;
 
 export class EmployeeClientListQuery {
   @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
@@ -89,6 +105,7 @@ export class MobileEmployeeClientsController {
     const [data, total] = await Promise.all([
       this.prisma.client.findMany({
         where,
+        select: employeeClientSelect,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { name: 'asc' },

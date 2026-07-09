@@ -16,6 +16,7 @@ export function useLoginFlow() {
   const [loading, setLoading] = useState(false)
   const [otpSentAt, setOtpSentAt] = useState<number | null>(null)
   const [lookupResult, setLookupResult] = useState<{ exists: boolean; hasPassword: boolean } | null>(null)
+  const [twoFactorChallenge, setTwoFactorChallenge] = useState<string | null>(null)
 
   const clearError = useCallback(() => setError(null), [])
 
@@ -68,7 +69,14 @@ export function useLoginFlow() {
     setError(null)
     try {
       const res = await apiLogin(identifier, password, rememberMe)
-      loginWithTokens(res)
+      if (res.requiresOtp) {
+        setTwoFactorChallenge(res.twoFactorChallenge)
+        await requestDashboardOtp(identifier, res.twoFactorChallenge)
+        setOtpSentAt(Date.now())
+        setStep("otp")
+      } else {
+        loginWithTokens(res)
+      }
     } catch (e) {
       setError(e)
     } finally {
@@ -80,32 +88,33 @@ export function useLoginFlow() {
     setLoading(true)
     setError(null)
     try {
-      const res = await verifyDashboardOtp(identifier, code)
+      const res = await verifyDashboardOtp(identifier, code, twoFactorChallenge ?? undefined)
       loginWithTokens(res)
     } catch (e) {
       setError(e)
     } finally {
       setLoading(false)
     }
-  }, [identifier, loginWithTokens])
+  }, [identifier, loginWithTokens, twoFactorChallenge])
 
   const resendOtp = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      await requestDashboardOtp(identifier)
+      await requestDashboardOtp(identifier, twoFactorChallenge ?? undefined)
       setOtpSentAt(Date.now())
     } catch (e) {
       setError(e)
     } finally {
       setLoading(false)
     }
-  }, [identifier])
+  }, [identifier, twoFactorChallenge])
 
   const backToIdentifier = useCallback(() => {
     setStep("identifier")
     setError(null)
     setLookupResult(null)
+    setTwoFactorChallenge(null)
   }, [])
 
   const backToMethod = useCallback(() => {

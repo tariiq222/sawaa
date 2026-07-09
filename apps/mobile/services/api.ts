@@ -16,6 +16,53 @@ import {
 
 const ORG_SUSPENDED_CODE = 'ORG_SUSPENDED';
 
+let refreshAccessTokenPromise: Promise<string | null> | null = null;
+
+async function clearSession(): Promise<void> {
+  await deleteSecureItem('accessToken');
+  await deleteSecureItem('refreshToken');
+  store.dispatch(logout());
+}
+
+function refreshAccessToken(): Promise<string | null> {
+  if (!refreshAccessTokenPromise) {
+    refreshAccessTokenPromise = (async () => {
+      const refreshToken = await getSecureItem('refreshToken');
+      if (!refreshToken) {
+        return null;
+      }
+
+      try {
+        // Backend exposes POST /auth/refresh — older mobile versions hit
+        // /auth/refresh-token by mistake, so refreshes silently failed and
+        // users got logged out at every 15-minute access-token expiry.
+        const { data } = await axios.post<
+          ApiResponse<{ accessToken: string; refreshToken?: string }>
+        >(`${API_URL}/auth/refresh`, { refreshToken });
+
+        if (!data.success || !data.data) {
+          return null;
+        }
+
+        await setSecureItem('accessToken', data.data.accessToken);
+        if (data.data.refreshToken) {
+          await setSecureItem('refreshToken', data.data.refreshToken);
+        }
+
+        return data.data.accessToken;
+      } catch (refreshError) {
+        // Every concurrent 401 awaits this same promise, so cleanup runs once.
+        await clearSession();
+        throw refreshError;
+      }
+    })().finally(() => {
+      refreshAccessTokenPromise = null;
+    });
+  }
+
+  return refreshAccessTokenPromise;
+}
+
 const api = axios.create({
   baseURL: API_URL,
   timeout: 15000,
@@ -64,34 +111,15 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = await getSecureItem('refreshToken');
-        if (!refreshToken) {
-          return Promise.reject(error);
-        }
-
-        // Backend exposes POST /auth/refresh — older mobile versions hit
-        // /auth/refresh-token by mistake, so refreshes silently failed and
-        // users got logged out at every 15-minute access-token expiry.
-        const { data } = await axios.post<
-          ApiResponse<{ accessToken: string; refreshToken?: string }>
-        >(`${API_URL}/auth/refresh`, { refreshToken });
-
-        if (data.success && data.data) {
-          await setSecureItem('accessToken', data.data.accessToken);
-          if (data.data.refreshToken) {
-            await setSecureItem('refreshToken', data.data.refreshToken);
-          }
-
+        const accessToken = await refreshAccessToken();
+        if (accessToken) {
           if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           }
           return api(originalRequest);
         }
       } catch {
-        // Refresh failed — clear tokens + Redux state
-        await deleteSecureItem('accessToken');
-        await deleteSecureItem('refreshToken');
-        store.dispatch(logout());
+        // refreshAccessToken() has already cleared the shared session.
       }
     }
 

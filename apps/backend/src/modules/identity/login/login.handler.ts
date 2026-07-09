@@ -6,6 +6,8 @@ import { PasswordService } from '../shared/password.service';
 import { TokenService, TokenPair } from '../shared/token.service';
 import type { User } from '@prisma/client';
 import type { LoginCommand } from './login.command';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { DashboardTwoFactorChallengeService } from '../dashboard-two-factor-challenge.service';
 
 const LOCKOUT_WINDOW_MINUTES = 15;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -21,9 +23,11 @@ export class LoginHandler {
     private readonly tokens: TokenService,
     private readonly cls: ClsService,
     private readonly redis: RedisService,
+    private readonly settings: PlatformSettingsService,
+    private readonly twoFactorChallenges: DashboardTwoFactorChallengeService,
   ) {}
 
-  async execute(cmd: LoginCommand): Promise<TokenPair & { user: User & { customRole: { permissions: { action: string; subject: string }[] } | null } }> {
+  async execute(cmd: LoginCommand): Promise<LoginResult> {
     const ip = cmd.ip ?? 'unknown';
     const emailKey = `staff_login:email:${cmd.email}`;
     const ipKey = `staff_login:ip:${ip}`;
@@ -50,7 +54,7 @@ export class LoginHandler {
     try {
       const result = await this.doLogin(cmd);
       await Promise.all([redisClient.del(emailKey), redisClient.del(ipKey)]);
-      return result as TokenPair & { user: User & { customRole: { permissions: { action: string; subject: string }[] } | null } };
+      return result;
     } catch (err) {
       if (err instanceof UnauthorizedException) {
         await Promise.all([
@@ -62,7 +66,7 @@ export class LoginHandler {
     }
   }
 
-  private async doLogin(cmd: LoginCommand): Promise<TokenPair & { user: User & { customRole: { permissions: { action: string; subject: string }[] } | null } }> {
+  private async doLogin(cmd: LoginCommand): Promise<LoginResult> {
     const user = await this.prisma.user.findUnique({
       where: { email: cmd.email },
       include: { customRole: { include: { permissions: true } } },
@@ -108,6 +112,12 @@ export class LoginHandler {
       });
     }
 
+    const requiresTwoFactor = user.isSuperAdmin && await this.settings.get<boolean>('security.twoFactor.required');
+    if (requiresTwoFactor) {
+      const twoFactorChallenge = await this.twoFactorChallenges.create(user.id, user.email.trim().toLowerCase());
+      return { user, requiresOtp: true, twoFactorChallenge };
+    }
+
     const tokens = await this.tokens.issueTokenPair(user, {
       isSuperAdmin: user.isSuperAdmin ?? false,
     });
@@ -115,3 +125,8 @@ export class LoginHandler {
     return { ...tokens, user };
   }
 }
+
+type LoginUser = User & { customRole: { permissions: { action: string; subject: string }[] } | null };
+export type LoginResult =
+  | (TokenPair & { user: LoginUser; requiresOtp?: false })
+  | { user: LoginUser; requiresOtp: true; twoFactorChallenge: string };

@@ -45,6 +45,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enforce immutable Prisma migration history
+        if: github.event_name == 'pull_request'
+        run: node scripts/check-prisma-migration-immutability.mjs origin/${{ github.base_ref }}
 
       - name: Start MinIO
         run: |

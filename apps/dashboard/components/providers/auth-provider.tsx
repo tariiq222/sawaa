@@ -85,6 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (identifier: string, password: string) => {
     const res = await apiLogin(identifier, password)
+    if (res.requiresOtp) {
+      throw new Error("Two-factor verification is required")
+    }
     setUser(res.user)
     setPermissions(res.user.permissions ?? [])
     scheduleRefresh(res.expiresIn)

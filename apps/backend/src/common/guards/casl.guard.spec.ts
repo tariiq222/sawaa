@@ -103,11 +103,9 @@ describe('CaslGuard', () => {
       const user = {
         role: 'ADMIN',
         customRole: null,
-        permissions: [], // empty → guard uses fallback buildForUser, BUILT_IN applies
+        permissions: [],
       };
-      // When permissions is empty the guard falls back to buildForUser(user) which
-      // uses BUILT_IN ADMIN rules — so manage:User IS allowed via the fallback.
-      expect(guard.canActivate(createContext(null, user))).toBe(true);
+      expect(() => guard.canActivate(createContext(null, user))).toThrow(ForbiddenException);
     });
   });
 

@@ -17,6 +17,8 @@ import {
   MAX_FAILED_VERIFY_ATTEMPTS,
 } from '../verify-dashboard-otp/verify-dashboard-otp.handler';
 import type { RequestDashboardOtpCommand } from './request-dashboard-otp.command';
+import { PlatformSettingsService } from '../../platform/settings/platform-settings.service';
+import { DashboardTwoFactorChallengeService } from '../dashboard-two-factor-challenge.service';
 
 const OTP_EXPIRY_MINUTES = 5;
 const OTP_MIN = 100_000;
@@ -32,12 +34,16 @@ export class RequestDashboardOtpHandler {
     private readonly rlsTransaction: RlsTransactionService,
     private readonly channelRegistry: NotificationChannelRegistry,
     private readonly redis: RedisService,
+    private readonly settings: PlatformSettingsService,
+    private readonly twoFactorChallenges: DashboardTwoFactorChallengeService,
   ) {}
 
   async execute(cmd: RequestDashboardOtpCommand): Promise<{ success: boolean }> {
     const channel: AuthChannel = detectChannel(cmd.identifier);
     const identifier = normalizeIdentifier(cmd.identifier, channel);
     const otpChannel: OtpChannel = channel === 'EMAIL' ? OtpChannel.EMAIL : OtpChannel.SMS;
+
+    await this.requireTwoFactorChallengeWhenNeeded(cmd.twoFactorChallenge, identifier, channel);
 
     // The failed-verify counter is keyed by identifier (not by OTP row), so
     // requesting a fresh code while locked out is refused — re-issuance must
@@ -113,5 +119,18 @@ export class RequestDashboardOtpHandler {
     }
 
     return { success: true };
+  }
+
+  private async requireTwoFactorChallengeWhenNeeded(
+    challenge: string | undefined,
+    identifier: string,
+    channel: AuthChannel,
+  ): Promise<void> {
+    if (!await this.settings.get<boolean>('security.twoFactor.required')) return;
+    const user = await this.prisma.user.findFirst({
+      where: channel === 'EMAIL' ? { email: identifier } : { phone: identifier },
+      select: { id: true, isSuperAdmin: true },
+    });
+    if (user?.isSuperAdmin) await this.twoFactorChallenges.assertValid(challenge, user.id, identifier);
   }
 }

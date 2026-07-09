@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsEmail, IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsEmail, IsOptional, IsString, IsUrl, Length, Matches } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { NormalizePhone } from '../shared/normalize-phone.transform';
 
@@ -40,4 +40,9 @@ export class UpdateClientProfileDto {
   @Transform(trimLower)
   @IsEmail({}, { message: 'البريد الإلكتروني غير صالح' })
   email?: string;
+
+  @ApiPropertyOptional({ description: 'Avatar image URL', example: 'https://cdn.example.com/avatars/sara.jpg' })
+  @IsOptional()
+  @IsUrl({}, { message: 'رابط الصورة الشخصية غير صالح' })
+  avatarUrl?: string;
 }

@@ -63,6 +63,8 @@ import { GetEmployeeAccountHandler } from './employee-account/get-employee-accou
 import { CreateEmployeeAccountHandler } from './employee-account/create-employee-account.handler';
 import { UpdateEmployeeAccountHandler } from './employee-account/update-employee-account.handler';
 import { SystemRolesBootstrap } from './roles/system-roles.bootstrap';
+import { DashboardTwoFactorChallengeService } from './dashboard-two-factor-challenge.service';
+import { PlatformSettingsModule } from '../platform/settings/platform-settings.module';
 
 const handlers = [
   LoginHandler, RefreshTokenHandler, LogoutHandler,
@@ -103,6 +105,7 @@ const handlers = [
     PassportModule.register({ defaultStrategy: 'jwt' }),
     NotificationChannelModule,
     CommsModule,
+    PlatformSettingsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -129,6 +132,7 @@ const handlers = [
     OwnerProvisioningService,
     AuthResponseBuilder,
     SystemRolesBootstrap,
+    DashboardTwoFactorChallengeService,
   ],
   exports: [
     CaslAbilityFactory,
@@ -144,6 +148,7 @@ const handlers = [
     RegisterHandler,
     OwnerProvisioningService,
     AuthResponseBuilder,
+    DashboardTwoFactorChallengeService,
     ...handlers,
   ],
 })

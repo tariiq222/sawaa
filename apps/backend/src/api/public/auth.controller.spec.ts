@@ -14,7 +14,6 @@ import { RequestPasswordResetHandler } from '../../modules/identity/user-passwor
 import { PerformPasswordResetHandler } from '../../modules/identity/user-password-reset/perform-password-reset/perform-password-reset.handler';
 import { RequestDashboardOtpHandler } from '../../modules/identity/request-dashboard-otp/request-dashboard-otp.handler';
 import { VerifyDashboardOtpHandler } from '../../modules/identity/verify-dashboard-otp/verify-dashboard-otp.handler';
-import { PlatformSettingsService } from '../../modules/platform/settings/platform-settings.service';
 import { Reflector } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import { JwtGuard, IS_PUBLIC_KEY } from '../../common/guards/jwt.guard';
@@ -35,7 +34,6 @@ describe('AuthController (e2e)', () => {
   const mockPerformPasswordReset = { execute: jest.fn() };
   const mockRequestDashboardOtp = { execute: jest.fn() };
   const mockVerifyDashboardOtp = { execute: jest.fn() };
-  const mockSettings = { get: jest.fn() };
   const mockAuthResponseBuilder = {
     build: jest.fn().mockImplementation((tokens, user) => ({
       accessToken: tokens.accessToken,
@@ -92,7 +90,6 @@ describe('AuthController (e2e)', () => {
         { provide: PerformPasswordResetHandler, useValue: mockPerformPasswordReset },
         { provide: RequestDashboardOtpHandler, useValue: mockRequestDashboardOtp },
         { provide: VerifyDashboardOtpHandler, useValue: mockVerifyDashboardOtp },
-        { provide: PlatformSettingsService, useValue: mockSettings },
         { provide: AuthResponseBuilder, useValue: mockAuthResponseBuilder },
         { provide: LookupUserHandler, useValue: mockLookupUser },
       ],

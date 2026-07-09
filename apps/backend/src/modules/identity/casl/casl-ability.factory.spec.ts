@@ -139,14 +139,21 @@ describe('CaslAbilityFactory', () => {
     });
   });
 
-  // When DB systemRolePermissions are empty array (not null), treat as "no override"
-  it('falls back to BUILT_IN when systemRolePermissions is empty array', () => {
+  it('denies built-in role permissions when DB systemRolePermissions is an empty array', () => {
     const ability = factory.buildForUser({
       role: 'ADMIN',
       customRole: null,
       systemRolePermissions: [],
     });
-    // Empty array → condition `length > 0` is false → fallback to BUILT_IN
+    // An explicit empty DB grant set revokes every built-in permission.
+    expect(ability.can('manage', 'User')).toBe(false);
+  });
+
+  it('falls back to BUILT_IN when systemRolePermissions is undefined', () => {
+    const ability = factory.buildForUser({
+      role: 'ADMIN',
+      customRole: null,
+    });
     expect(ability.can('manage', 'User')).toBe(true);
   });
 });

@@ -96,6 +96,13 @@ describe('authApi.login', () => {
     expect(result).toEqual(fakeAuth)
   })
 
+  it('returns a 2FA challenge without treating it as an authenticated session', async () => {
+    const challenge = { requiresOtp: true as const, twoFactorChallenge: '6f9619ff-8b86-d011-b42d-00cf4fc964ff' }
+    vi.mocked(fetch).mockResolvedValueOnce(mockJsonResponse({ success: true, data: challenge }))
+
+    await expect(authApi.login({ email: 'admin@sawaa.app', password: 'pw' })).resolves.toEqual(challenge)
+  })
+
   it('throws ApiError with status + message on failure', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       mockJsonResponse({ message: 'Bad credentials' }, 401),
@@ -241,20 +248,20 @@ describe('authApi.performStaffPasswordReset', () => {
 })
 
 describe('authApi.requestDashboardOtp', () => {
-  it('POSTs /auth/otp/request-dashboard with email and unwraps the masked identifier response', async () => {
+  it('POSTs /auth/otp/request-dashboard with identifier and an optional 2FA challenge', async () => {
     const otpResponse = { maskedIdentifier: 'a***@sawaa.app', expiresInSeconds: 300 }
     storedAccess = fakeAccess
     vi.mocked(fetch).mockResolvedValueOnce(
       mockJsonResponse({ success: true, data: otpResponse }),
     )
 
-    const result = await authApi.requestDashboardOtp({ email: 'admin@sawaa.app' })
+    const result = await authApi.requestDashboardOtp({ identifier: 'admin@sawaa.app', twoFactorChallenge: '6f9619ff-8b86-d011-b42d-00cf4fc964ff' })
 
     expect(result).toEqual(otpResponse)
     const [url, init] = vi.mocked(fetch).mock.calls[0]!
     expect(url).toBe('http://api.test/auth/otp/request-dashboard')
     expect(init?.method).toBe('POST')
-    expect(JSON.parse(init?.body as string)).toEqual({ email: 'admin@sawaa.app' })
+    expect(JSON.parse(init?.body as string)).toEqual({ identifier: 'admin@sawaa.app', twoFactorChallenge: '6f9619ff-8b86-d011-b42d-00cf4fc964ff' })
     const headers = init?.headers as Record<string, string>
     expect(headers.Authorization).toBe(`Bearer ${fakeAccess}`)
   })
@@ -265,7 +272,7 @@ describe('authApi.requestDashboardOtp', () => {
     )
 
     await expect(
-      authApi.requestDashboardOtp({ email: 'admin@sawaa.app' }),
+      authApi.requestDashboardOtp({ identifier: 'admin@sawaa.app' }),
     ).rejects.toMatchObject({
       status: 429,
       code: 'OTP_RATE_LIMIT',
@@ -274,14 +281,15 @@ describe('authApi.requestDashboardOtp', () => {
 })
 
 describe('authApi.verifyDashboardOtp', () => {
-  it('POSTs /auth/otp/verify-dashboard with email+code and returns AuthResponse', async () => {
+  it('POSTs /auth/otp/verify-dashboard with identifier, code, and optional challenge', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       mockJsonResponse({ success: true, data: fakeAuth }),
     )
 
     const result = await authApi.verifyDashboardOtp({
-      email: 'admin@sawaa.app',
+      identifier: 'admin@sawaa.app',
       code: '123456',
+      twoFactorChallenge: '6f9619ff-8b86-d011-b42d-00cf4fc964ff',
     })
 
     expect(result).toEqual(fakeAuth)
@@ -289,8 +297,9 @@ describe('authApi.verifyDashboardOtp', () => {
     expect(url).toBe('http://api.test/auth/otp/verify-dashboard')
     expect(init?.method).toBe('POST')
     expect(JSON.parse(init?.body as string)).toEqual({
-      email: 'admin@sawaa.app',
+      identifier: 'admin@sawaa.app',
       code: '123456',
+      twoFactorChallenge: '6f9619ff-8b86-d011-b42d-00cf4fc964ff',
     })
   })
 
@@ -306,7 +315,7 @@ describe('authApi.verifyDashboardOtp', () => {
     )
 
     await expect(
-      authApi.verifyDashboardOtp({ email: 'admin@sawaa.app', code: '000000' }),
+      authApi.verifyDashboardOtp({ identifier: 'admin@sawaa.app', code: '000000' }),
     ).rejects.toMatchObject({
       status: 422,
       code: 'INVALID_OTP',

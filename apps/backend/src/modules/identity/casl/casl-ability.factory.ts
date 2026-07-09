@@ -72,8 +72,9 @@ export class CaslAbilityFactory {
     if (effectiveRole === 'SUPER_ADMIN') {
       // SUPER_ADMIN always gets manage:all from code — never from DB
       can('manage', 'all');
-    } else if (user.systemRolePermissions && user.systemRolePermissions.length > 0) {
-      // System role permissions from DB override the hardcoded BUILT_IN map
+    } else if (user.systemRolePermissions !== null && user.systemRolePermissions !== undefined) {
+      // A DB-sourced permission list, including an explicit empty array, overrides
+      // the hardcoded BUILT_IN map. An empty list is an intentional deny-all grant.
       for (const p of user.systemRolePermissions) {
         if (isWildcard(p.action, p.subject)) continue;
         can(p.action, p.subject);
