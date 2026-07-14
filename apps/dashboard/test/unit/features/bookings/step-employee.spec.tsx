@@ -120,6 +120,17 @@ function setupSingle(weekly: Array<{ isActive: boolean }> = [{ isActive: true }]
   fetchAvailability.mockResolvedValue(weekly)
 }
 
+function riyadhToday() {
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone: "Asia/Riyadh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date())
+  const value = Object.fromEntries(parts.map(({ type, value }) => [type, value]))
+  return `${value.year}-${value.month}-${value.day}`
+}
+
 // React's font/image rendering + locale stub means the rendered tree
 // contains both Arabic label + English slot time. We test on the AR
 // locale to mirror the production RTL view.
@@ -146,9 +157,8 @@ beforeEach(() => {
 
 describe("StepEmployee — nearest slot hint", () => {
   it("renders today's hint with Riyadh wall-clock time", async () => {
-    const today = "2026-07-03"
     setupSingle()
-    fetchAvailableDays.mockResolvedValue([today])
+    fetchAvailableDays.mockResolvedValue([riyadhToday()])
     fetchSlots.mockResolvedValue([{ startTime: "06:00", endTime: "07:00" }]) // 06:00 UTC → 09:00 Riyadh
     renderStep()
     expect(await screen.findByText("أحمد")).toBeInTheDocument()

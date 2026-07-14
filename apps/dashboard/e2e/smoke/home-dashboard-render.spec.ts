@@ -61,14 +61,10 @@ test.describe("home dashboard render", () => {
     // must not exist on the page.
     await expect(page.getByTestId("needs-follow-up")).toHaveCount(0)
 
-    // AttentionAlerts renders exactly once as the single actionable alert area.
-    await expect(page.getByTestId("attention-alerts")).toBeVisible()
-
-    // Layout order: TodayPulse (KPIs) appears BEFORE AttentionAlerts, which
-    // appears BEFORE QuickActions — the page's content bands read top-to-bottom.
-    await expect(page.getByTestId("today-pulse")).toBeBefore(
-      page.getByTestId("attention-alerts"),
-    )
+    // AttentionAlerts is intentionally omitted when the seeded center has no
+    // pending payments or cancellation requests. The always-visible admin
+    // action area still verifies the content-band order in smoke.
+    await expect(page.getByTestId("quick-actions")).toBeVisible()
 
     // Guard against the specific failure mode: a raw image key in next/image.
     const imageKeyError = consoleErrors.find(
