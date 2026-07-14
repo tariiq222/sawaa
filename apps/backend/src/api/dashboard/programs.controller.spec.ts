@@ -22,8 +22,8 @@ import { CaslGuard } from '../../common/guards/casl.guard';
  *
  * Only JwtGuard is overridden — to inject the role under test onto req.user.
  * CaslGuard runs for real and evaluates the controller's @CheckPermissions
- * metadata against BUILT_IN rules (req.user.permissions is intentionally left
- * empty so the guard falls back to buildForUser → BUILT_IN[role]).
+ * metadata against BUILT_IN rules (req.user.permissions is intentionally
+ * absent so the guard falls back to buildForUser → BUILT_IN[role]).
  */
 describe('DashboardProgramsController (authorization)', () => {
   let app: INestApplication;
@@ -59,8 +59,8 @@ describe('DashboardProgramsController (authorization)', () => {
         { provide: EnrollInProgramHandler, useValue: mockEnroll },
       ],
     })
-      // Override only JwtGuard: inject the role under test, leave permissions
-      // empty so CaslGuard falls back to BUILT_IN[role].
+      // Override only JwtGuard: inject the role under test and omit permissions
+      // so CaslGuard falls back to BUILT_IN[role].
       .overrideGuard(JwtGuard)
       .useValue({
         canActivate: (ctx: any) => {
@@ -68,7 +68,6 @@ describe('DashboardProgramsController (authorization)', () => {
             sub: 'user-1',
             role: currentRole,
             customRole: null,
-            permissions: [],
           };
           return true;
         },
