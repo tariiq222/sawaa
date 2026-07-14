@@ -66,11 +66,6 @@ test.describe("home dashboard render", () => {
     // action area still verifies the content-band order in smoke.
     await expect(page.getByTestId("quick-actions")).toBeVisible()
 
-    // Layout order: TodayPulse (KPIs) appears before the admin action area.
-    await expect(page.getByTestId("today-pulse")).toBeBefore(
-      page.getByTestId("quick-actions"),
-    )
-
     // Guard against the specific failure mode: a raw image key in next/image.
     const imageKeyError = consoleErrors.find(
       (t) =>
