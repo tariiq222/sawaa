@@ -260,53 +260,12 @@ test.describe("Session Packages — dashboard lifecycle", () => {
     await expect(addItemBtn).toBeVisible({ timeout: 10_000 });
     await addItemBtn.click();
 
-    // Address the item-builder Select triggers by their stable form-field ids,
-    // NOT by global combobox index — the per-item discount select (and any
-    // future field) shifts positional indices and silently breaks this flow.
-    // Order in the row: service → employee → duration.
-    const serviceTrigger = page.locator('[id="items.0.serviceId"]');
-    const employeeTrigger = page.locator('[id="items.0.employeeId"]');
-    const durationTrigger = page.locator('[id="items.0.durationOptionId"]');
-    await expect(serviceTrigger).toBeVisible({ timeout: 10_000 });
-
-    // ── Service select ────────────────────────────────────────────────
-    await serviceTrigger.click();
-    // The option label is `nameAr` (we are in `ar` locale) — match the
-    // AR name verbatim so regex chars in the suffix (digits + spaces) are
-    // treated literally.
-    const serviceOption = page
-      .getByRole("option")
-      .filter({ hasText: seededServiceNameAr })
-      .first();
-    await expect(serviceOption).toBeVisible({ timeout: 15_000 });
-    await serviceOption.click();
-
-    // ── Employee select — gated on service; wait for the data load ────
-    await expect
-      .poll(async () => await employeeTrigger.isEnabled(), { timeout: 15_000 })
-      .toBe(true);
-    await employeeTrigger.click();
-    const employeeOption = page
-      .getByRole("option")
-      .filter({ hasText: employeeName })
-      .first();
-    await expect(employeeOption).toBeVisible({ timeout: 15_000 });
-    await employeeOption.click();
-
-    // ── Duration select — also gated on service ───────────────────────
-    await expect
-      .poll(async () => await durationTrigger.isEnabled(), { timeout: 15_000 })
-      .toBe(true);
-    await durationTrigger.click();
-    // Duration labels are "labelAr · durationMins د · price"; pick the
-    // first option that has a minute count (the disabled "unavailable"
-    // placeholder has no `\d+ د`).
-    const firstDurationOption = page
-      .getByRole("option")
-      .filter({ hasText: /\d+\s*د/ })
-      .first();
-    await expect(firstDurationOption).toBeVisible({ timeout: 15_000 });
-    await firstDurationOption.click();
+    // The current rule-based builder starts each item as flexible (ANY scope).
+    // Set its fixed price instead of targeting the removed legacy
+    // serviceId/employeeId/durationOptionId comboboxes.
+    const unitPriceInput = page.locator('#items\\.0\\.unitPriceSar');
+    await expect(unitPriceInput).toBeVisible({ timeout: 10_000 });
+    await unitPriceInput.fill("150");
 
     // ── paidQuantity + freeQuantity — default 1/0 from the row append.
     //   Bump paidQuantity to 4 so the credit has room for the

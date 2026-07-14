@@ -53,6 +53,7 @@ const ALL_VISIBLE: VisibleWidgets = {
   },
   quickActions: [],
   todayTimeline: true,
+  todayPulse: true,
   activityFeed: true,
   revenueChart: true,
   recentPayments: true,
@@ -72,6 +73,7 @@ const ALL_HIDDEN: VisibleWidgets = {
   },
   quickActions: [],
   todayTimeline: false,
+  todayPulse: false,
   activityFeed: false,
   revenueChart: false,
   recentPayments: false,
@@ -95,6 +97,13 @@ function makeWrapper() {
 // We use any date — the hook will use whatever Date returns at test runtime.
 beforeEach(() => {
   vi.clearAllMocks()
+  // Default fallbacks so any call without an explicit once/implementation still
+  // resolves with a valid paginated shape — TanStack Query logs "Query data
+  // cannot be undefined" otherwise. Per-test mockResolvedValueOnce still wins
+  // for the first matching call before falling back to these.
+  fetchBookings.mockResolvedValue({ items: [], meta: { total: 0 } })
+  fetchOverviewReport.mockResolvedValue({})
+  fetchPayments.mockResolvedValue({ items: [], meta: { total: 0 } })
 })
 
 describe("useDashboardHome — query composition", () => {

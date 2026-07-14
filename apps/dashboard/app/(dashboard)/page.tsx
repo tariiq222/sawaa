@@ -8,6 +8,7 @@ import { GreetingHeader } from "@/components/features/dashboard/greeting-header"
 import { QuickActions } from "@/components/features/dashboard/quick-actions"
 import { HomeStats } from "@/components/features/dashboard/home-stats"
 import { AttentionAlerts } from "@/components/features/dashboard/attention-alerts"
+import { TodayPulse } from "@/components/features/dashboard/today-pulse"
 import { SectionHeader } from "@/components/features/section-header"
 import { useAuth } from "@/components/providers/auth-provider"
 import { useLocale } from "@/components/locale-provider"
@@ -35,6 +36,9 @@ export default function DashboardPage() {
   const {
     overview,
     todayBookingsCount,
+    todayConfirmedCount,
+    todayPendingCount,
+    todayAwaitingPaymentCount,
     pendingPaymentsCount,
     cancelRequestsCount,
     isLoading,
@@ -52,10 +56,12 @@ export default function DashboardPage() {
         </section>
       </Suspense>
 
-      <AttentionAlerts
-        pendingPayments={pendingPaymentsCount}
-        cancelRequests={cancelRequestsCount}
-        visible={visible.attentionAlerts}
+      <TodayPulse
+        visible={visible.todayPulse}
+        total={todayBookingsCount}
+        confirmed={todayConfirmedCount}
+        pending={todayPendingCount}
+        awaitingPayment={todayAwaitingPaymentCount}
       />
 
       <HomeStats
@@ -63,6 +69,12 @@ export default function DashboardPage() {
         pendingPayments={pendingPaymentsCount}
         visible={visible.stats}
         isLoading={isLoading}
+      />
+
+      <AttentionAlerts
+        pendingPayments={pendingPaymentsCount}
+        cancelRequests={cancelRequestsCount}
+        visible={visible.attentionAlerts}
       />
 
       {visible.quickActions.length > 0 && (

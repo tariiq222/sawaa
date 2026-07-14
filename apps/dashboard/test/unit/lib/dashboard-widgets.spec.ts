@@ -60,11 +60,13 @@ describe('getVisibleWidgets', () => {
     expect(v.stats.bookings).toBe(true)
     expect(v.stats.clients).toBe(true)
     expect(v.todayTimeline).toBe(true)
+    expect(v.todayPulse).toBe(true)
   })
 
   it('unknown role degrades to greeting + activity feed only', () => {
     const v = getVisibleWidgets(null, () => false)
     expect(v.todayTimeline).toBe(false)
+    expect(v.todayPulse).toBe(false)
     expect(v.quickActions).toEqual([])
     expect(v.activityFeed).toBe(true)
   })
