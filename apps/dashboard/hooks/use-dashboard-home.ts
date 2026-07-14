@@ -35,6 +35,58 @@ export function useDashboardHome(visible: VisibleWidgets) {
     staleTime: 60_000,
   })
 
+  // Today bookings split by status — feeds the TodayPulse KPI strip
+  // (pending/awaiting-payment tiles). Reuses the same today range +
+  // fetchBookings + limit:1 pattern as `todayBookings`, so no new API
+  // surface is introduced.
+  const todayConfirmedBookings = useQuery({
+    queryKey: queryKeys.bookings.list({
+      scope: "home-today-confirmed",
+      from: today.from,
+    }),
+    queryFn: () =>
+      fetchBookings({
+        dateFrom: today.from,
+        dateTo: today.to,
+        status: "confirmed",
+        limit: 1,
+      }),
+    enabled: visible.stats.bookings,
+    staleTime: 60_000,
+  })
+
+  const todayPendingBookings = useQuery({
+    queryKey: queryKeys.bookings.list({
+      scope: "home-today-pending",
+      from: today.from,
+    }),
+    queryFn: () =>
+      fetchBookings({
+        dateFrom: today.from,
+        dateTo: today.to,
+        status: "pending",
+        limit: 1,
+      }),
+    enabled: visible.stats.bookings,
+    staleTime: 60_000,
+  })
+
+  const todayAwaitingPaymentBookings = useQuery({
+    queryKey: queryKeys.bookings.list({
+      scope: "home-today-awaiting-payment",
+      from: today.from,
+    }),
+    queryFn: () =>
+      fetchBookings({
+        dateFrom: today.from,
+        dateTo: today.to,
+        status: "awaiting_payment",
+        limit: 1,
+      }),
+    enabled: visible.stats.bookings,
+    staleTime: 60_000,
+  })
+
   const pendingPayments = useQuery({
     queryKey: queryKeys.payments.list({ scope: "home-pending" }),
     queryFn: () => fetchPayments({ status: "PENDING", limit: 1 }),
@@ -52,6 +104,9 @@ export function useDashboardHome(visible: VisibleWidgets) {
   return {
     overview: overview.data,
     todayBookingsCount: todayBookings.data?.meta.total ?? 0,
+    todayConfirmedCount: todayConfirmedBookings.data?.meta.total ?? 0,
+    todayPendingCount: todayPendingBookings.data?.meta.total ?? 0,
+    todayAwaitingPaymentCount: todayAwaitingPaymentBookings.data?.meta.total ?? 0,
     pendingPaymentsCount: pendingPayments.data?.meta.total ?? 0,
     cancelRequestsCount: cancelRequests.data?.meta.total ?? 0,
     isLoading: statsEnabled && overview.isLoading,

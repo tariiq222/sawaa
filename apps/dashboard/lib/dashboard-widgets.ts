@@ -13,6 +13,7 @@ export interface VisibleWidgets {
   }
   quickActions: QuickActionKey[]
   todayTimeline: boolean
+  todayPulse: boolean
   activityFeed: boolean
   revenueChart: boolean
   recentPayments: boolean
@@ -58,6 +59,7 @@ export function getVisibleWidgets(
     },
     quickActions,
     todayTimeline: canBookingRead,
+    todayPulse: canBookingRead,
     activityFeed: true,
     revenueChart: canReportRead && canPaymentRead,
     recentPayments: canPaymentRead,

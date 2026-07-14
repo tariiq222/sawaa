@@ -4,16 +4,9 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
-  MoreHorizontalIcon,
-  Download01Icon,
+  DocumentAttachmentIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "@sawaa/ui"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@sawaa/ui"
 import { InvoiceStatusBadge } from "@/components/features/status-badge"
 import { ApiError } from "@/lib/api"
 import { generateInvoicePdf } from "@/lib/api/invoices"
@@ -109,21 +102,18 @@ export function getInvoiceColumns(
     header: "",
     cell: ({ row }) => {
       const invoice = row.original
+      const actionLabel = invoice.hasPdf ? t("invoices.downloadPdf") : t("invoices.generatePdf")
+
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm">
-              <HugeiconsIcon icon={MoreHorizontalIcon} size={16} />
-              <span className="sr-only">{t("invoices.col.actions")}</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleGeneratePdf(invoice.id, t)}>
-              <HugeiconsIcon icon={Download01Icon} size={14} />
-              {invoice.hasPdf ? t("invoices.downloadPdf") : t("invoices.generatePdf")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          aria-label={actionLabel}
+          title={actionLabel}
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => handleGeneratePdf(invoice.id, t)}
+        >
+          <HugeiconsIcon icon={DocumentAttachmentIcon} size={16} />
+        </Button>
       )
     },
   })

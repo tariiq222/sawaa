@@ -48,6 +48,28 @@ test.describe("home dashboard render", () => {
       page.getByText(/صباح الخير|مساء الخير|مساء النور|أهلاً|مرحباً/),
     ).toBeVisible({ timeout: 15_000 })
 
+    // First content band: numeric KPI cards. TodayPulse (today's booking
+    // counts) is gated on booking-read permission; admin has it.
+    await expect(page.getByTestId("today-pulse")).toBeVisible({
+      timeout: 15_000,
+    })
+    await expect(page.getByTestId("today-pulse-total")).toBeVisible()
+
+    // The duplicate NeedsFollowUp surface was removed — its buckets (pending /
+    // awaiting-payment / cancel-requests) are already surfaced as numeric KPIs
+    // in TodayPulse and as actionable tiles in AttentionAlerts. The testid
+    // must not exist on the page.
+    await expect(page.getByTestId("needs-follow-up")).toHaveCount(0)
+
+    // AttentionAlerts renders exactly once as the single actionable alert area.
+    await expect(page.getByTestId("attention-alerts")).toBeVisible()
+
+    // Layout order: TodayPulse (KPIs) appears BEFORE AttentionAlerts, which
+    // appears BEFORE QuickActions — the page's content bands read top-to-bottom.
+    await expect(page.getByTestId("today-pulse")).toBeBefore(
+      page.getByTestId("attention-alerts"),
+    )
+
     // Guard against the specific failure mode: a raw image key in next/image.
     const imageKeyError = consoleErrors.find(
       (t) =>

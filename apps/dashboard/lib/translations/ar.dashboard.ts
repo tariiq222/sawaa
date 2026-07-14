@@ -93,4 +93,9 @@ export const arDashboard: Record<string, string> = {
   "dashboard.range.today": "اليوم",
   "dashboard.range.week": "هذا الأسبوع",
   "dashboard.range.month": "هذا الشهر",
+  "dashboard.todayPulse.title": "نبض اليوم",
+  "dashboard.todayPulse.total": "إجمالي اليوم",
+  "dashboard.todayPulse.confirmed": "مؤكدة",
+  "dashboard.todayPulse.pending": "بانتظار",
+  "dashboard.todayPulse.awaitingPayment": "بانتظار الدفع",
 }

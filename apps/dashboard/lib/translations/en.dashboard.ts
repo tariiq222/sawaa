@@ -93,4 +93,9 @@ export const enDashboard: Record<string, string> = {
   "dashboard.range.today": "Today",
   "dashboard.range.week": "This week",
   "dashboard.range.month": "This month",
+  "dashboard.todayPulse.title": "Today's Pulse",
+  "dashboard.todayPulse.total": "Today's total",
+  "dashboard.todayPulse.confirmed": "Confirmed",
+  "dashboard.todayPulse.pending": "Pending",
+  "dashboard.todayPulse.awaitingPayment": "Awaiting payment",
 }
