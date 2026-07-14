@@ -3423,70 +3423,22 @@
             "description": "Avatar image URL",
             "example": "https://cdn.example.com/avatars/sara.jpg",
             "nullable": true,
-            "type": "object"
-          },
-          "dateOfBirth": {
-            "description": "Date of birth (ISO 8601)",
-            "example": "1990-06-15",
-            "nullable": true,
-            "type": "object"
+            "type": "string"
           },
           "email": {
             "description": "Email address",
             "example": "user@example.com",
-            "nullable": true,
-            "type": "object"
-          },
-          "gender": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ClientGender"
-              }
-            ],
-            "description": "Gender",
-            "example": "FEMALE"
-          },
-          "isActive": {
-            "description": "Whether the account is active",
-            "example": true,
-            "type": "boolean"
+            "type": "string"
           },
           "name": {
             "description": "Full display name",
             "example": "Sara Al-Harbi",
             "type": "string"
           },
-          "notes": {
-            "description": "Personal notes",
-            "example": "Prefers morning appointments",
-            "nullable": true,
-            "type": "object"
-          },
           "phone": {
             "description": "Saudi mobile number",
             "example": "+966501234567",
-            "nullable": true,
-            "type": "object"
-          },
-          "preferredLocale": {
-            "description": "Preferred locale (ISO 639-1)",
-            "example": "ar",
-            "nullable": true,
-            "type": "object"
-          },
-          "pushEnabled": {
-            "description": "Push notifications enabled",
-            "example": true,
-            "type": "boolean"
-          },
-          "source": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ClientSource"
-              }
-            ],
-            "description": "Acquisition source",
-            "example": "ONLINE"
+            "type": "string"
           }
         },
         "type": "object"
@@ -5275,6 +5227,11 @@
       },
       "UpdateClientProfileDto": {
         "properties": {
+          "avatarUrl": {
+            "description": "Avatar image URL",
+            "example": "https://cdn.example.com/avatars/sara.jpg",
+            "type": "string"
+          },
           "email": {
             "description": "Email address. Can only be set while the account has no email yet (phone-registered accounts adding an email later).",
             "example": "client@example.com",
