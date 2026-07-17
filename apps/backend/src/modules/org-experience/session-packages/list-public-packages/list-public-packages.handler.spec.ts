@@ -81,12 +81,17 @@ function buildHandler(
   pricing = buildPricing(),
   cache = buildCache(),
 ) {
+  const storage = {
+    getSignedUrl: jest.fn((_bucket: string, key: string) => Promise.resolve(`signed:${key}`)),
+  };
   const handler = new ListPublicPackagesHandler(
     prisma as never,
     pricing as never,
     cache as never,
+    storage as never,
+    { getOrThrow: jest.fn(() => 'sawaa-media') } as never,
   );
-  return { handler, prisma, pricing, cache };
+  return { handler, prisma, pricing, cache, storage };
 }
 
 describe('ListPublicPackagesHandler', () => {
@@ -130,6 +135,18 @@ describe('ListPublicPackagesHandler', () => {
         },
       ],
     ], { strict: false });
+  });
+
+  it('signs stored image keys before returning the public catalog', async () => {
+    const { handler, prisma, storage } = buildHandler();
+    prisma.sessionPackage.findMany.mockResolvedValue([
+      { ...publicPackage, imageUrl: 'packages/public.png' },
+    ]);
+
+    const result = await handler.execute();
+
+    expect(storage.getSignedUrl).toHaveBeenCalledWith('sawaa-media', 'packages/public.png', 300);
+    expect(result[0].imageUrl).toBe('signed:packages/public.png');
   });
 
   it('returns an empty array when no public packages exist (no crash)', async () => {

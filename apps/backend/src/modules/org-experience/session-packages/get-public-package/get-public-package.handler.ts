@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../../infrastructure/database';
+import { MinioService } from '../../../../infrastructure/storage/minio.service';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
+import { signMediaImageUrl } from '../../../media/media-image-url.helper';
 
 export type GetPublicPackageCommand = { packageId: string };
 
@@ -17,10 +20,16 @@ export type GetPublicPackageCommand = { packageId: string };
  */
 @Injectable()
 export class GetPublicPackageHandler {
+  private readonly mediaBucket: string;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly pricing: ComputePackagePriceService,
-  ) {}
+    private readonly storage: MinioService,
+    config: ConfigService,
+  ) {
+    this.mediaBucket = config.getOrThrow<string>('MINIO_BUCKET');
+  }
 
   async execute(dto: GetPublicPackageCommand) {
     const pkg = await this.prisma.sessionPackage.findFirst({
@@ -56,6 +65,10 @@ export class GetPublicPackageHandler {
       })),
     }, { strict: false });
 
-    return { ...pkg, price };
+    return {
+      ...pkg,
+      imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, pkg.imageUrl),
+      price,
+    };
   }
 }

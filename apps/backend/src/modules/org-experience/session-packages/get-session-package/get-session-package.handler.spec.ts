@@ -1,6 +1,8 @@
 import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../../infrastructure/database';
+import { MinioService } from '../../../../infrastructure/storage/minio.service';
 import { DiscountType } from '@prisma/client';
 import { GetSessionPackageHandler } from './get-session-package.handler';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
@@ -56,6 +58,7 @@ const fixturePackage = (itemOverrides: Record<string, unknown> = {}) => ({
 describe('GetSessionPackageHandler', () => {
   let handler: GetSessionPackageHandler;
   let prisma: ReturnType<typeof buildPrisma>;
+  let storage: { getSignedUrl: jest.Mock };
 
   beforeEach(async () => {
     prisma = buildPrisma();
@@ -72,12 +75,17 @@ describe('GetSessionPackageHandler', () => {
     prisma.serviceDurationOption.findMany.mockResolvedValue([
       { id: DURATION_OPTION_ID, serviceId: SERVICE_ID, price: { toString: () => '10000' } },
     ]);
+    storage = {
+      getSignedUrl: jest.fn((_bucket: string, key: string) => Promise.resolve(`signed:${key}`)),
+    };
 
     const module = await Test.createTestingModule({
       providers: [
         GetSessionPackageHandler,
         ComputePackagePriceService,
         { provide: PrismaService, useValue: prisma },
+        { provide: MinioService, useValue: storage },
+        { provide: ConfigService, useValue: { getOrThrow: jest.fn(() => 'sawaa-media') } },
       ],
     }).compile();
     handler = module.get(GetSessionPackageHandler);
@@ -122,6 +130,18 @@ describe('GetSessionPackageHandler', () => {
     expect(result.price.itemUnitPrices).toEqual([
       { durationOptionId: DURATION_OPTION_ID, unitPrice: 10_000 },
     ]);
+  });
+
+  it('returns a fresh signed image URL for a persisted storage key', async () => {
+    prisma.sessionPackage.findFirst.mockResolvedValue({
+      ...fixturePackage(),
+      imageUrl: 'packages/family.png',
+    });
+
+    const result = await handler.execute({ packageId: PACKAGE_ID });
+
+    expect(storage.getSignedUrl).toHaveBeenCalledWith('sawaa-media', 'packages/family.png', 300);
+    expect(result.imageUrl).toBe('signed:packages/family.png');
   });
 
   it('computes correctly when the item carries a PERCENTAGE discount', async () => {

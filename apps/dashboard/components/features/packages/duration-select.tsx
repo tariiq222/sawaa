@@ -35,9 +35,16 @@ interface Props {
   selectedId: string | undefined
   choices: DurationChoice[]
   onChange: (scope: ScopeFormData) => void
+  error?: string
 }
 
-export function DurationSelect({ id, selectedId, choices, onChange }: Props) {
+export function DurationSelect({
+  id,
+  selectedId,
+  choices,
+  onChange,
+  error,
+}: Props) {
   const { t } = useLocale()
   const empty = choices.length === 0
 
@@ -47,11 +54,15 @@ export function DurationSelect({ id, selectedId, choices, onChange }: Props) {
       <Select
         value={selectedId || NONE}
         onValueChange={(v) =>
-          onChange(v === NONE ? { mode: "ANY", ids: [] } : { mode: "INCLUDE", ids: [v] })
+          onChange(
+            v === NONE
+              ? { mode: "ANY", ids: [] }
+              : { mode: "INCLUDE", ids: [v] }
+          )
         }
         disabled={empty}
       >
-        <SelectTrigger id={id}>
+        <SelectTrigger id={id} aria-invalid={error ? "true" : undefined}>
           <SelectValue
             placeholder={
               empty
@@ -68,13 +79,18 @@ export function DurationSelect({ id, selectedId, choices, onChange }: Props) {
           ) : (
             choices.map((d) => (
               <SelectItem key={d.id} value={d.id}>
-                {t(`packages.items.deliveryType.${d.deliveryType}`)} · {d.durationMins}{" "}
-                {t("common.min")} · {formatPrice(d.price)}
+                {t(`packages.items.deliveryType.${d.deliveryType}`)} ·{" "}
+                {d.durationMins} {t("common.min")} · {formatPrice(d.price)}
               </SelectItem>
             ))
           )}
         </SelectContent>
       </Select>
+      {error && (
+        <p role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

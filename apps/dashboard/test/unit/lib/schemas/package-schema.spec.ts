@@ -151,6 +151,90 @@ describe("createPackageSchema", () => {
     })
     expect(result.success).toBe(true)
   })
+
+  it("rejects a percentage discount above the backend maximum", () => {
+    const result = createPackageSchema.safeParse({
+      ...validCreate,
+      items: [{ ...flexibleItem, discountType: "PERCENTAGE", discountValue: 101 }],
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.join(".") === "items.0.discountValue")).toBe(true)
+    }
+  })
+
+  it("rejects a fixed discount above the flexible item's payable amount", () => {
+    const result = createPackageSchema.safeParse({
+      ...validCreate,
+      items: [{ ...flexibleItem, paidQuantity: 2, unitPriceSar: 100, discountType: "FIXED", discountValue: 201 }],
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.join(".") === "items.0.discountValue")).toBe(true)
+    }
+  })
+
+  it("rejects an empty duration target when the duration scope is constrained", () => {
+    const result = createPackageSchema.safeParse({
+      ...validCreate,
+      items: [{ ...singleSpecificItem, duration: { mode: "INCLUDE", ids: [] } }],
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.join(".") === "items.0.duration.ids")).toBe(true)
+    }
+  })
+
+  it("rejects stale targets left under an ANY scope", () => {
+    const result = createPackageSchema.safeParse({
+      ...validCreate,
+      items: [{ ...flexibleItem, practitioner: { mode: "ANY", ids: [EMP] } }],
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.join(".") === "items.0.practitioner.ids")).toBe(true)
+    }
+  })
+
+  it("requires a single service before duration can be constrained", () => {
+    const result = createPackageSchema.safeParse({
+      ...validCreate,
+      items: [{ ...flexibleItem, service: anyScope, duration: single(DUR) }],
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some(
+        (i) => i.path.join(".") === "items.0.duration.mode" && i.message === "packages.errors.durationNeedsService",
+      )).toBe(true)
+    }
+  })
+
+  it.each([
+    ["negative", -1, 0, "packages.errors.nonNegative"],
+    ["fractional", 1.5, 0, "packages.errors.wholeNumber"],
+  ])("rejects %s session quantities", (_label, paidQuantity, freeQuantity, message) => {
+    const result = createPackageSchema.safeParse({
+      ...validCreate,
+      items: [{ ...flexibleItem, paidQuantity, freeQuantity }],
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some(
+        (i) => i.path.join(".") === "items.0.paidQuantity" && i.message === message,
+      )).toBe(true)
+    }
+  })
+
+  it("accepts discount boundary values", () => {
+    expect(createPackageSchema.safeParse({
+      ...validCreate,
+      items: [{ ...flexibleItem, paidQuantity: 2, unitPriceSar: 100, discountType: "PERCENTAGE", discountValue: 100 }],
+    }).success).toBe(true)
+    expect(createPackageSchema.safeParse({
+      ...validCreate,
+      items: [{ ...flexibleItem, paidQuantity: 2, unitPriceSar: 100, discountType: "FIXED", discountValue: 200 }],
+    }).success).toBe(true)
+  })
 })
 
 describe("editPackageSchema", () => {

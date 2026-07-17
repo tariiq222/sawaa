@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../../infrastructure/database';
 import { CacheService } from '../../../../infrastructure/cache';
+import { MinioService } from '../../../../infrastructure/storage/minio.service';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
+import { signMediaImageUrl } from '../../../media/media-image-url.helper';
 import {
   PUBLIC_PACKAGES_CACHE_KEY,
   PUBLIC_PACKAGES_CACHE_TTL_SECONDS,
@@ -31,11 +34,17 @@ import {
  */
 @Injectable()
 export class ListPublicPackagesHandler {
+  private readonly mediaBucket: string;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly pricing: ComputePackagePriceService,
     private readonly cache: CacheService,
-  ) {}
+    private readonly storage: MinioService,
+    config: ConfigService,
+  ) {
+    this.mediaBucket = config.getOrThrow<string>('MINIO_BUCKET');
+  }
 
   async execute() {
     return this.cache.getOrSet(
@@ -75,6 +84,10 @@ export class ListPublicPackagesHandler {
       ),
       { strict: false },
     );
-    return packages.map((pkg, idx) => ({ ...pkg, price: prices[idx] }));
+    return Promise.all(packages.map(async (pkg, idx) => ({
+      ...pkg,
+      imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, pkg.imageUrl),
+      price: prices[idx],
+    })));
   }
 }

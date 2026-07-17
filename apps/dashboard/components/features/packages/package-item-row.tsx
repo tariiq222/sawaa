@@ -51,7 +51,12 @@ interface ItemRowProps {
   onLineChange?: (index: number, detail: PackageLineDetail) => void
 }
 
-export function PackageItemRow({ index, fieldArrayName, onRemove, onLineChange }: ItemRowProps) {
+export function PackageItemRow({
+  index,
+  fieldArrayName,
+  onRemove,
+  onLineChange,
+}: ItemRowProps) {
   const { t, locale } = useLocale()
   const { control, watch, setValue, formState } = useFormContext()
 
@@ -92,7 +97,9 @@ export function PackageItemRow({ index, fieldArrayName, onRemove, onLineChange }
     ? serviceEmployees.map((e) => ({
         value: e.employee.id,
         label:
-          [e.employee.user?.firstName, e.employee.user?.lastName].filter(Boolean).join(" ") ||
+          [e.employee.user?.firstName, e.employee.user?.lastName]
+            .filter(Boolean)
+            .join(" ") ||
           e.employee.nameAr ||
           e.employee.id.slice(0, 8),
       }))
@@ -104,7 +111,11 @@ export function PackageItemRow({ index, fieldArrayName, onRemove, onLineChange }
           e.id.slice(0, 8),
       }))
 
-  const singleSpecific = isSingleSpecificItem({ service, practitioner, duration })
+  const singleSpecific = isSingleSpecificItem({
+    service,
+    practitioner,
+    duration,
+  })
   const showDuration =
     service.mode === "INCLUDE" &&
     service.ids.length === 1 &&
@@ -113,21 +124,25 @@ export function PackageItemRow({ index, fieldArrayName, onRemove, onLineChange }
 
   // Duration choices for the single selected practitioner (effective rows).
   const selectedPractitionerId = practitioner.ids[0]
-  const selectedEmployee = serviceEmployees.find((e) => e.employee.id === selectedPractitionerId)
-  const durationChoices = (selectedEmployee?.effectiveDurations ?? []).flatMap((g) =>
-    g.durations.map((d) => ({
-      id: d.id,
-      deliveryType: d.deliveryType,
-      durationMins: d.durationMins,
-      price: d.price,
-    })),
+  const selectedEmployee = serviceEmployees.find(
+    (e) => e.employee.id === selectedPractitionerId
+  )
+  const durationChoices = (selectedEmployee?.effectiveDurations ?? []).flatMap(
+    (g) =>
+      g.durations.map((d) => ({
+        id: d.id,
+        deliveryType: d.deliveryType,
+        durationMins: d.durationMins,
+        price: d.price,
+      }))
   )
   const selectedDuration = durationChoices.find((d) => d.id === duration.ids[0])
 
   // ── Pricing ────────────────────────────────────────────────────────────────
   const paid = Number(watch(p.paid) ?? 0)
   const free = Number(watch(p.free) ?? 0)
-  const discountType = (watch(p.discountType) as PackageDiscountType | null | undefined) ?? null
+  const discountType =
+    (watch(p.discountType) as PackageDiscountType | null | undefined) ?? null
   const rawDiscountValue = Number(watch(p.discountValue) ?? 0)
   const storageDiscountValue =
     discountType === "FIXED" ? sarToHalalas(rawDiscountValue) : rawDiscountValue
@@ -141,7 +156,11 @@ export function PackageItemRow({ index, fieldArrayName, onRemove, onLineChange }
   const payable = paid * unitPrice
   const fullValue = (paid + free) * unitPrice
   const freeValue = free * unitPrice
-  const lineDiscount = applyItemDiscount(payable, discountType, storageDiscountValue)
+  const lineDiscount = applyItemDiscount(
+    payable,
+    discountType,
+    storageDiscountValue
+  )
   const net = Math.max(0, payable - lineDiscount)
 
   const serviceLabel = service.ids
@@ -153,9 +172,11 @@ export function PackageItemRow({ index, fieldArrayName, onRemove, onLineChange }
     service,
     practitioner,
     delivery,
-    serviceNames: service.ids.map((id) => serviceOptions.find((o) => o.value === id)?.label ?? id),
+    serviceNames: service.ids.map(
+      (id) => serviceOptions.find((o) => o.value === id)?.label ?? id
+    ),
     practitionerNames: practitioner.ids.map(
-      (id) => practitionerOptions.find((o) => o.value === id)?.label ?? id,
+      (id) => practitionerOptions.find((o) => o.value === id)?.label ?? id
     ),
   }
   const summary = buildItemSummary(summaryInput, t)
@@ -170,18 +191,36 @@ export function PackageItemRow({ index, fieldArrayName, onRemove, onLineChange }
       discountValue: storageDiscountValue,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, serviceLabel, summary, paid, free, unitPrice, discountType, storageDiscountValue])
+  }, [
+    index,
+    serviceLabel,
+    summary,
+    paid,
+    free,
+    unitPrice,
+    discountType,
+    storageDiscountValue,
+  ])
 
   const errors = formState.errors
   const itemErr = (
     Array.isArray(errors?.[fieldArrayName])
-      ? (errors[fieldArrayName] as Array<Record<string, { ids?: { message?: string }; message?: string }>>)[index]
+      ? (
+          errors[fieldArrayName] as Array<
+            Record<string, { ids?: { message?: string }; message?: string }>
+          >
+        )[index]
       : undefined
   ) as
     | {
         service?: { ids?: { message?: string } }
         practitioner?: { ids?: { message?: string } }
+        duration?: { ids?: { message?: string }; mode?: { message?: string } }
+        delivery?: { ids?: { message?: string } }
         unitPriceSar?: { message?: string }
+        paidQuantity?: { message?: string }
+        freeQuantity?: { message?: string }
+        discountValue?: { message?: string }
       }
     | undefined
 
@@ -192,8 +231,11 @@ export function PackageItemRow({ index, fieldArrayName, onRemove, onLineChange }
     <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-3">
       <div className="flex items-start justify-between gap-2">
         <span className="text-xs text-muted-foreground">
-          {t("packages.items.itemNumber")} <span className="tabular-nums">{index + 1}</span>
-          {summary && <span className="ms-2 text-muted-foreground/80">— {summary}</span>}
+          {t("packages.items.itemNumber")}{" "}
+          <span className="tabular-nums">{index + 1}</span>
+          {summary && (
+            <span className="ms-2 text-muted-foreground/80">— {summary}</span>
+          )}
         </span>
         <button
           type="button"
@@ -204,6 +246,11 @@ export function PackageItemRow({ index, fieldArrayName, onRemove, onLineChange }
           <HugeiconsIcon icon={Cancel01Icon} size={16} />
         </button>
       </div>
+      {itemErr?.duration?.mode?.message && (
+        <p role="alert" className="text-xs text-destructive">
+          {t(itemErr.duration.mode.message)}
+        </p>
+      )}
 
       {/* Scope editors */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -221,7 +268,11 @@ export function PackageItemRow({ index, fieldArrayName, onRemove, onLineChange }
               selectPlaceholder={t("packages.items.servicePlaceholder")}
               searchPlaceholder={t("packages.scope.searchServices")}
               emptyLabel={t("packages.scope.noServices")}
-              error={itemErr?.service?.ids?.message ? t(itemErr.service.ids.message) : undefined}
+              error={
+                itemErr?.service?.ids?.message
+                  ? t(itemErr.service.ids.message)
+                  : undefined
+              }
             />
           )}
         />
@@ -240,7 +291,9 @@ export function PackageItemRow({ index, fieldArrayName, onRemove, onLineChange }
               searchPlaceholder={t("packages.scope.searchPractitioners")}
               emptyLabel={t("packages.scope.noPractitioners")}
               error={
-                itemErr?.practitioner?.ids?.message ? t(itemErr.practitioner.ids.message) : undefined
+                itemErr?.practitioner?.ids?.message
+                  ? t(itemErr.practitioner.ids.message)
+                  : undefined
               }
             />
           )}
@@ -259,6 +312,11 @@ export function PackageItemRow({ index, fieldArrayName, onRemove, onLineChange }
                 selectedId={duration.ids[0]}
                 choices={durationChoices}
                 onChange={setScope(p.duration)}
+                error={
+                  itemErr?.duration?.ids?.message
+                    ? t(itemErr.duration.ids.message)
+                    : undefined
+                }
               />
             )}
           />
@@ -267,7 +325,17 @@ export function PackageItemRow({ index, fieldArrayName, onRemove, onLineChange }
         <Controller
           control={control}
           name={p.delivery}
-          render={() => <DeliveryControl scope={delivery} onChange={setScope(p.delivery)} />}
+          render={() => (
+            <DeliveryControl
+              scope={delivery}
+              onChange={setScope(p.delivery)}
+              error={
+                itemErr?.delivery?.ids?.message
+                  ? t(itemErr.delivery.ids.message)
+                  : undefined
+              }
+            />
+          )}
         />
       </div>
 
@@ -293,7 +361,26 @@ export function PackageItemRow({ index, fieldArrayName, onRemove, onLineChange }
           payable,
           discountType,
         }}
-        unitPriceError={itemErr?.unitPriceSar?.message ? t(itemErr.unitPriceSar.message) : undefined}
+        unitPriceError={
+          itemErr?.unitPriceSar?.message
+            ? t(itemErr.unitPriceSar.message)
+            : undefined
+        }
+        paidError={
+          itemErr?.paidQuantity?.message
+            ? t(itemErr.paidQuantity.message)
+            : undefined
+        }
+        freeError={
+          itemErr?.freeQuantity?.message
+            ? t(itemErr.freeQuantity.message)
+            : undefined
+        }
+        discountValueError={
+          itemErr?.discountValue?.message
+            ? t(itemErr.discountValue.message)
+            : undefined
+        }
       />
     </div>
   )

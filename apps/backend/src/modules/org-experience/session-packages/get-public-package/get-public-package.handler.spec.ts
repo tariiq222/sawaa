@@ -46,8 +46,16 @@ function buildPricing() {
 }
 
 function buildHandler(prisma = buildPrisma(), pricing = buildPricing()) {
-  const handler = new GetPublicPackageHandler(prisma as never, pricing as never);
-  return { handler, prisma, pricing };
+  const storage = {
+    getSignedUrl: jest.fn((_bucket: string, key: string) => Promise.resolve(`signed:${key}`)),
+  };
+  const handler = new GetPublicPackageHandler(
+    prisma as never,
+    pricing as never,
+    storage as never,
+    { getOrThrow: jest.fn(() => 'sawaa-media') } as never,
+  );
+  return { handler, prisma, pricing, storage };
 }
 
 describe('GetPublicPackageHandler', () => {
@@ -61,6 +69,19 @@ describe('GetPublicPackageHandler', () => {
 
     expect(result.id).toBe(PACKAGE_ID);
     expect(result.price.finalPrice).toBe(36_000);
+  });
+
+  it('signs a stored image key for the public package detail', async () => {
+    const { handler, prisma, storage } = buildHandler();
+    prisma.sessionPackage.findFirst.mockResolvedValue({
+      ...publicPackage,
+      imageUrl: 'packages/public-detail.png',
+    });
+
+    const result = await handler.execute({ packageId: PACKAGE_ID });
+
+    expect(storage.getSignedUrl).toHaveBeenCalledWith('sawaa-media', 'packages/public-detail.png', 300);
+    expect(result.imageUrl).toBe('signed:packages/public-detail.png');
   });
 
   it('scopes the lookup to public + active + non-archived (cannot reach private packages by id)', async () => {

@@ -1,5 +1,7 @@
 import { Test } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../../infrastructure/database';
+import { MinioService } from '../../../../infrastructure/storage/minio.service';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
 import { ListSessionPackagesHandler } from './list-session-packages.handler';
 
@@ -44,15 +46,21 @@ describe('ListSessionPackagesHandler', () => {
   let handler: ListSessionPackagesHandler;
   let prisma: ReturnType<typeof buildPrisma>;
   let pricing: ReturnType<typeof buildPricing>;
+  let storage: { getSignedUrl: jest.Mock };
 
   beforeEach(async () => {
     prisma = buildPrisma();
     pricing = buildPricing();
+    storage = {
+      getSignedUrl: jest.fn((_bucket: string, key: string) => Promise.resolve(`signed:${key}`)),
+    };
     const module = await Test.createTestingModule({
       providers: [
         ListSessionPackagesHandler,
         { provide: PrismaService, useValue: prisma },
         { provide: ComputePackagePriceService, useValue: pricing },
+        { provide: MinioService, useValue: storage },
+        { provide: ConfigService, useValue: { getOrThrow: jest.fn(() => 'sawaa-media') } },
       ],
     }).compile();
     handler = module.get(ListSessionPackagesHandler);
@@ -139,6 +147,16 @@ describe('ListSessionPackagesHandler', () => {
         freeValue: 18000,
       }),
     );
+  });
+
+  it('signs stored package image keys in list responses', async () => {
+    prisma.sessionPackage.findMany.mockResolvedValue([{ id: 'a', imageUrl: 'packages/a.png', items: [] }]);
+    prisma.sessionPackage.count.mockResolvedValue(1);
+
+    const res = await handler.execute({});
+
+    expect(storage.getSignedUrl).toHaveBeenCalledWith('sawaa-media', 'packages/a.png', 300);
+    expect(res.items[0].imageUrl).toBe('signed:packages/a.png');
   });
 
   it('honors a custom page + limit', async () => {
