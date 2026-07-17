@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { getMock, postMock, patchMock, deleteMock } = vi.hoisted(() => ({
+const { getMock, postMock, postFormMock, patchMock, deleteMock } = vi.hoisted(() => ({
   getMock: vi.fn(),
   postMock: vi.fn(),
+  postFormMock: vi.fn(),
   patchMock: vi.fn(),
   deleteMock: vi.fn(),
 }))
 
 vi.mock("@/lib/api", () => ({
-  api: { get: getMock, post: postMock, patch: patchMock, delete: deleteMock },
+  api: { get: getMock, post: postMock, postForm: postFormMock, patch: patchMock, delete: deleteMock },
 }))
 
 import {
@@ -17,6 +18,7 @@ import {
   createPackage,
   updatePackage,
   deletePackage,
+  uploadPackageImage,
 } from "@/lib/api/packages"
 
 describe("packages api", () => {
@@ -88,6 +90,21 @@ describe("packages api", () => {
     await deletePackage("pkg-1")
     expect(deleteMock).toHaveBeenCalledWith(
       "/dashboard/organization/packages/pkg-1",
+    )
+  })
+
+  it("persists the stable media storage key when uploading a package image", async () => {
+    postFormMock.mockResolvedValueOnce({ id: "media-1", storageKey: "packages/pkg-1/cover.png" })
+    patchMock.mockResolvedValueOnce({ id: "pkg-1" })
+    const file = new File(["image"], "cover.png", { type: "image/png" })
+
+    await uploadPackageImage("pkg-1", file)
+
+    expect(postFormMock).toHaveBeenCalledWith("/dashboard/media/upload", expect.any(FormData))
+    expect(getMock).not.toHaveBeenCalled()
+    expect(patchMock).toHaveBeenCalledWith(
+      "/dashboard/organization/packages/pkg-1",
+      { imageUrl: "packages/pkg-1/cover.png" },
     )
   })
 })

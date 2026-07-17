@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../../infrastructure/database';
+import { MinioService } from '../../../../infrastructure/storage/minio.service';
 import { toListResponse } from '../../../../common/dto';
 import { ComputePackagePriceService } from '../../compute-package-price.service';
 import { ListSessionPackagesDto } from './list-session-packages.dto';
+import { signMediaImageUrl } from '../../../media/media-image-url.helper';
 
 export type ListSessionPackagesCommand = ListSessionPackagesDto;
 
@@ -24,10 +27,16 @@ export type ListSessionPackagesCommand = ListSessionPackagesDto;
  */
 @Injectable()
 export class ListSessionPackagesHandler {
+  private readonly mediaBucket: string;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly pricing: ComputePackagePriceService,
-  ) {}
+    private readonly storage: MinioService,
+    config: ConfigService,
+  ) {
+    this.mediaBucket = config.getOrThrow<string>('MINIO_BUCKET');
+  }
 
   async execute(dto: ListSessionPackagesCommand) {
     const page = dto.page ?? 1;
@@ -79,14 +88,15 @@ export class ListSessionPackagesHandler {
       ),
       { strict: false },
     );
-    const priced = items.map((pkg, idx) => ({
+    const priced = await Promise.all(items.map(async (pkg, idx) => ({
       ...pkg,
+      imageUrl: await signMediaImageUrl(this.storage, this.mediaBucket, pkg.imageUrl),
       subtotal: prices[idx].subtotal,
       discountAmount: prices[idx].discountAmount,
       finalPrice: prices[idx].finalPrice,
       fullValue: prices[idx].fullValue,
       freeValue: prices[idx].freeValue,
-    }));
+    })));
 
     return toListResponse(priced, total, page, limit);
   }

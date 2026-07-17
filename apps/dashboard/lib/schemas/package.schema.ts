@@ -21,8 +21,20 @@
  */
 
 import { z } from "zod"
+import { validatePackageItem } from "./package-item-validation"
 
 const REQUIRED = "common.required"
+const NON_NEGATIVE = "packages.errors.nonNegative"
+const WHOLE_NUMBER = "packages.errors.wholeNumber"
+const numberField = () =>
+  z.coerce.number({ invalid_type_error: "packages.errors.invalidNumber" })
+const optionalNonNegativeNumber = () =>
+  z
+    .union([
+      numberField().min(0, NON_NEGATIVE),
+      z.nan().transform(() => undefined),
+    ])
+    .optional()
 
 /* ─── Per-dimension scope ─── */
 
@@ -53,43 +65,17 @@ export const packageItemSchema = z
     duration: scopeSchema,
     delivery: scopeSchema,
     /** Fixed prepaid unit price in SAR (flexible items only). Converted to halalas on submit. */
-    unitPriceSar: z.coerce.number().min(0).optional(),
-    paidQuantity: z.coerce.number().int().min(0, "packages.errors.minQuantity"),
-    freeQuantity: z.coerce.number().int().min(0).optional(),
+    unitPriceSar: optionalNonNegativeNumber(),
+    paidQuantity: numberField().int(WHOLE_NUMBER).min(0, NON_NEGATIVE),
+    freeQuantity: numberField().int(WHOLE_NUMBER).min(0, NON_NEGATIVE),
     // Per-item discount. FIXED value is rendered in SAR; the submit handler
     // converts to halalas. PERCENTAGE stays 0-100. null = no discount.
     discountType: z.enum(["PERCENTAGE", "FIXED"]).nullable().optional(),
-    discountValue: z.coerce.number().min(0).optional(),
+    discountValue: numberField().min(0, NON_NEGATIVE).optional(),
     label: z.string().trim().max(200).optional(),
-    sortOrder: z.coerce.number().int().min(0).optional(),
+    sortOrder: numberField().int(WHOLE_NUMBER).min(0, NON_NEGATIVE).optional(),
   })
-  .superRefine((item, ctx) => {
-    // INCLUDE/EXCLUDE require at least one target per dimension.
-    for (const dim of ["service", "practitioner", "delivery"] as const) {
-      const s = item[dim]
-      if (s.mode !== "ANY" && s.ids.length === 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: [dim, "ids"],
-          message: "packages.errors.scopeNeedsTarget",
-        })
-      }
-    }
-
-    const singleService = isSingleInclude(item.service)
-    const singlePractitioner = isSingleInclude(item.practitioner)
-    const singleSpecific =
-      singleService && singlePractitioner && isSingleInclude(item.duration)
-
-    // A flexible (non single-specific) item needs a fixed unit price.
-    if (!singleSpecific && !(item.unitPriceSar && item.unitPriceSar > 0)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["unitPriceSar"],
-        message: "packages.errors.unitPriceRequired",
-      })
-    }
-  })
+  .superRefine(validatePackageItem)
 
 export type PackageItemFormData = z.infer<typeof packageItemSchema>
 
@@ -122,7 +108,7 @@ const basePackageSchema = z.object({
   imageUrl: z.string().trim().max(500).nullable().optional(),
   iconName: z.string().trim().max(100).nullable().optional(),
   iconBgColor: z.string().trim().max(20).nullable().optional(),
-  sortOrder: z.coerce.number().int().min(0).optional(),
+  sortOrder: numberField().int(WHOLE_NUMBER).min(0, NON_NEGATIVE).optional(),
   isActive: z.boolean().optional(),
   isPublic: z.boolean().optional(),
   items: itemsArray.optional(),

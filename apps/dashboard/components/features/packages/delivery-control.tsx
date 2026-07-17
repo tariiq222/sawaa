@@ -20,14 +20,22 @@ const VALUES = ["IN_PERSON", "ONLINE"] as const
 interface DeliveryControlProps {
   scope: ScopeFormData
   onChange: (next: ScopeFormData) => void
+  error?: string
 }
 
-export function DeliveryControl({ scope, onChange }: DeliveryControlProps) {
+export function DeliveryControl({
+  scope,
+  onChange,
+  error,
+}: DeliveryControlProps) {
   const { t } = useLocale()
-  const current = scope.mode === "INCLUDE" && scope.ids.length === 1 ? scope.ids[0] : ANY
+  const current =
+    scope.mode === "INCLUDE" && scope.ids.length === 1 ? scope.ids[0] : ANY
 
   const set = (v: string) =>
-    onChange(v === ANY ? { mode: "ANY", ids: [] } : { mode: "INCLUDE", ids: [v] })
+    onChange(
+      v === ANY ? { mode: "ANY", ids: [] } : { mode: "INCLUDE", ids: [v] }
+    )
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -47,13 +55,20 @@ export function DeliveryControl({ scope, onChange }: DeliveryControlProps) {
               "flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
               current === v
                 ? "bg-surface text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
-            {v === ANY ? t("packages.scope.any") : t(`packages.items.deliveryType.${v}`)}
+            {v === ANY
+              ? t("packages.scope.any")
+              : t(`packages.items.deliveryType.${v}`)}
           </button>
         ))}
       </div>
+      {error && (
+        <p role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

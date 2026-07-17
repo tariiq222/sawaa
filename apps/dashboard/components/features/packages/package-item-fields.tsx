@@ -52,9 +52,19 @@ interface Props {
   paths: ItemFieldsPaths
   money: ItemFieldsMoney
   unitPriceError?: string
+  paidError?: string
+  freeError?: string
+  discountValueError?: string
 }
 
-export function PackageItemFields({ paths, money, unitPriceError }: Props) {
+export function PackageItemFields({
+  paths,
+  money,
+  unitPriceError,
+  paidError,
+  freeError,
+  discountValueError,
+}: Props) {
   const { t } = useLocale()
   const { control, register, setValue } = useFormContext()
 
@@ -65,37 +75,54 @@ export function PackageItemFields({ paths, money, unitPriceError }: Props) {
           <Label htmlFor={paths.paid}>{t("packages.items.paidQuantity")}</Label>
           <Input
             id={paths.paid}
+            aria-invalid={paidError ? "true" : undefined}
             type="number"
             min={0}
             className="tabular-nums"
             onFocus={(e) => e.currentTarget.select()}
             {...register(paths.paid, { valueAsNumber: true })}
           />
+          {paidError && (
+            <p role="alert" className="text-xs text-destructive">
+              {paidError}
+            </p>
+          )}
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={paths.free}>{t("packages.items.freeQuantity")}</Label>
           <Input
             id={paths.free}
+            aria-invalid={freeError ? "true" : undefined}
             type="number"
             min={0}
             className="tabular-nums"
             onFocus={(e) => e.currentTarget.select()}
             {...register(paths.free, { valueAsNumber: true })}
           />
+          {freeError && (
+            <p role="alert" className="text-xs text-destructive">
+              {freeError}
+            </p>
+          )}
         </div>
 
         {money.singleSpecific ? (
           <div className="flex flex-col gap-1.5">
             <Label>{t("packages.items.unitPrice")}</Label>
-            <div className="flex h-9 items-center rounded-md border border-border bg-surface-muted px-3 text-sm tabular-nums text-muted-foreground">
-              {money.hasDerivedPrice ? formatPrice(money.unitPrice) : t("packages.items.derivedPrice")}
+            <div className="flex h-9 items-center rounded-md border border-border bg-surface-muted px-3 text-sm text-muted-foreground tabular-nums">
+              {money.hasDerivedPrice
+                ? formatPrice(money.unitPrice)
+                : t("packages.items.derivedPrice")}
             </div>
           </div>
         ) : (
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor={paths.unitPrice}>{t("packages.items.unitPrice")}</Label>
+            <Label htmlFor={paths.unitPrice}>
+              {t("packages.items.unitPrice")}
+            </Label>
             <Input
               id={paths.unitPrice}
+              aria-invalid={unitPriceError ? "true" : undefined}
               type="number"
               min={0}
               step="0.01"
@@ -104,12 +131,18 @@ export function PackageItemFields({ paths, money, unitPriceError }: Props) {
               onFocus={(e) => e.currentTarget.select()}
               {...register(paths.unitPrice, { valueAsNumber: true })}
             />
-            {unitPriceError && <p className="text-xs text-destructive">{unitPriceError}</p>}
+            {unitPriceError && (
+              <p role="alert" className="text-xs text-destructive">
+                {unitPriceError}
+              </p>
+            )}
           </div>
         )}
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor={paths.discountType}>{t("packages.items.discountType")}</Label>
+          <Label htmlFor={paths.discountType}>
+            {t("packages.items.discountType")}
+          </Label>
           <Controller
             control={control}
             name={paths.discountType}
@@ -119,7 +152,9 @@ export function PackageItemFields({ paths, money, unitPriceError }: Props) {
                 onValueChange={(v) => {
                   if (v === DISCOUNT_NONE) {
                     field.onChange(null)
-                    setValue(paths.discountValue, 0 as never, { shouldDirty: true })
+                    setValue(paths.discountValue, 0 as never, {
+                      shouldDirty: true,
+                    })
                   } else {
                     field.onChange(v)
                   }
@@ -129,9 +164,15 @@ export function PackageItemFields({ paths, money, unitPriceError }: Props) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={DISCOUNT_NONE}>{t("packages.items.discountNone")}</SelectItem>
-                  <SelectItem value="PERCENTAGE">{t("packages.create.discountPercentage")}</SelectItem>
-                  <SelectItem value="FIXED">{t("packages.create.discountFixed")}</SelectItem>
+                  <SelectItem value={DISCOUNT_NONE}>
+                    {t("packages.items.discountNone")}
+                  </SelectItem>
+                  <SelectItem value="PERCENTAGE">
+                    {t("packages.create.discountPercentage")}
+                  </SelectItem>
+                  <SelectItem value="FIXED">
+                    {t("packages.create.discountFixed")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -141,15 +182,23 @@ export function PackageItemFields({ paths, money, unitPriceError }: Props) {
 
       {money.discountType && (
         <div className="flex flex-col gap-1.5 md:max-w-[12rem]">
-          <Label htmlFor={paths.discountValue}>{t("packages.items.discountValue")}</Label>
+          <Label htmlFor={paths.discountValue}>
+            {t("packages.items.discountValue")}
+          </Label>
           <Input
             id={paths.discountValue}
+            aria-invalid={discountValueError ? "true" : undefined}
             type="number"
             min={0}
             className="tabular-nums"
             onFocus={(e) => e.currentTarget.select()}
             {...register(paths.discountValue, { valueAsNumber: true })}
           />
+          {discountValueError && (
+            <p role="alert" className="text-xs text-destructive">
+              {discountValueError}
+            </p>
+          )}
         </div>
       )}
 
@@ -166,13 +215,17 @@ export function PackageItemFields({ paths, money, unitPriceError }: Props) {
               <span>
                 {money.free} {t("packages.summary.free")}
               </span>
-              <span className="tabular-nums">-{formatPrice(money.freeValue)}</span>
+              <span className="tabular-nums">
+                -{formatPrice(money.freeValue)}
+              </span>
             </div>
           )}
           {money.lineDiscount > 0 && (
             <div className="flex items-center justify-between text-success">
               <span>{t("packages.summary.discount")}</span>
-              <span className="tabular-nums">-{formatPrice(money.lineDiscount)}</span>
+              <span className="tabular-nums">
+                -{formatPrice(money.lineDiscount)}
+              </span>
             </div>
           )}
           <div className="flex items-center justify-between border-t border-border pt-1 font-semibold text-foreground">

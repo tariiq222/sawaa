@@ -31,12 +31,18 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { AlertCircleIcon } from "@hugeicons/core-free-icons"
 
-import { FormSection, FormField } from "@/components/features/shared/form-section"
+import {
+  FormSection,
+  FormField,
+} from "@/components/features/shared/form-section"
 import { ServiceAvatarPicker } from "@/components/features/shared/service-avatar-picker"
 import { useLocale } from "@/components/locale-provider"
 import type { PackageFormData } from "@/lib/schemas/package.schema"
 import type { PackagePriceBreakdown } from "@/lib/types/package"
-import { PackageItemBuilder, type PackageLineDetail } from "./package-item-builder"
+import {
+  PackageItemBuilder,
+  type PackageLineDetail,
+} from "./package-item-builder"
 import { PackagePriceSummary } from "./package-price-summary"
 
 interface PackageFormFieldsProps {
@@ -60,7 +66,9 @@ export function PackageFormFields({
   const errors = form.formState.errors
 
   const itemsError =
-    errors.items && typeof errors.items === "object" && "message" in errors.items
+    errors.items &&
+    typeof errors.items === "object" &&
+    "message" in errors.items
       ? translateError((errors.items as { message?: string }).message)
       : undefined
 
@@ -110,18 +118,23 @@ export function PackageFormFields({
               }}
             />
             <div className="flex min-w-0 flex-col gap-1">
-              <p className="text-sm font-semibold text-foreground">{t("packages.section.basic")}</p>
+              <p className="text-sm font-semibold text-foreground">
+                {t("packages.section.basic")}
+              </p>
               <p className="text-xs text-muted-foreground">
                 {t("packages.create.basicDesc")} &mdash;{" "}
-                <span className="text-destructive">*</span> {t("packages.create.requiredFields")}
+                <span className="text-destructive">*</span>{" "}
+                {t("packages.create.requiredFields")}
               </p>
-              <p className="text-xs text-muted-foreground">{t("packages.create.avatarHint")}</p>
+              <p className="text-xs text-muted-foreground">
+                {t("packages.create.avatarHint")}
+              </p>
             </div>
           </div>
 
           {/* Right: compact status/visibility card */}
           <div className="w-full shrink-0 rounded-lg border border-border bg-surface-muted p-3 sm:w-auto">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
               {t("packages.section.status")}
             </p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -131,7 +144,10 @@ export function PackageFormFields({
                   className="flex items-center justify-between gap-2 rounded-md border border-border bg-surface px-2 py-1.5"
                 >
                   <div className="flex min-w-0 items-center gap-1">
-                    <Label htmlFor={item.id} className="cursor-pointer truncate text-xs leading-none">
+                    <Label
+                      htmlFor={item.id}
+                      className="cursor-pointer truncate text-xs leading-none"
+                    >
                       {item.label}
                     </Label>
                     <Popover>
@@ -141,10 +157,18 @@ export function PackageFormFields({
                           className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
                           aria-label={item.label}
                         >
-                          <HugeiconsIcon icon={AlertCircleIcon} size={12} strokeWidth={2} />
+                          <HugeiconsIcon
+                            icon={AlertCircleIcon}
+                            size={12}
+                            strokeWidth={2}
+                          />
                         </button>
                       </PopoverTrigger>
-                      <PopoverContent side="bottom" align="end" className="w-64">
+                      <PopoverContent
+                        side="bottom"
+                        align="end"
+                        className="w-64"
+                      >
                         <PopoverHeader>
                           <PopoverTitle>{item.label}</PopoverTitle>
                           <PopoverDescription>{item.desc}</PopoverDescription>
@@ -190,12 +214,23 @@ export function PackageFormFields({
         title={t("packages.section.items")}
         description={t("packages.items.description")}
       >
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div
+          className="grid grid-cols-1 gap-6 lg:grid-cols-3"
+          data-package-section="items"
+          tabIndex={-1}
+        >
           {/* Left: items then display order */}
           <div className="flex flex-col gap-6 lg:col-span-2">
             <div className="flex flex-col">
-              <PackageItemBuilder fieldArrayName="items" onLineChange={onLineChange} />
-              {itemsError && <p className="mt-3 text-xs text-destructive">{itemsError}</p>}
+              <PackageItemBuilder
+                fieldArrayName="items"
+                onLineChange={onLineChange}
+              />
+              {itemsError && (
+                <p role="alert" className="mt-3 text-xs text-destructive">
+                  {itemsError}
+                </p>
+              )}
             </div>
 
             <div className="border-t border-border pt-5">
@@ -213,7 +248,11 @@ export function PackageFormFields({
                       min={0}
                       className="tabular-nums"
                       value={field.value ?? 0}
-                      onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+                      onChange={(e) =>
+                        field.onChange(
+                          e.target.value === "" ? 0 : Number(e.target.value)
+                        )
+                      }
                     />
                   )}
                 />

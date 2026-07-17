@@ -541,10 +541,8 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
       const res = await createPackage({
         nameAr: tag("pack-crud"),
         nameEn: "CRUD Pack",
-        discountType: "PERCENTAGE",
-        discountValue: 10,
         isPublic: true,
-        items: [validItem()],
+        items: [validItem({ discountType: "PERCENTAGE", discountValue: 10 })],
       });
 
       expect(res.status).toBe(201);
@@ -557,8 +555,10 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
         include: { items: true },
       });
       expect(row).not.toBeNull();
+      // Package-level discount is a deprecated neutral sentinel. The effective
+      // discount belongs to the item row.
       expect(row!.discountType).toBe("PERCENTAGE");
-      expect(Number(row!.discountValue)).toBe(10);
+      expect(Number(row!.discountValue)).toBe(0);
       expect(row!.isPublic).toBe(true);
       expect(row!.archivedAt).toBeNull();
       expect(row!.items).toHaveLength(1);
@@ -566,14 +566,14 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
       expect(row!.items[0].employeeId).toBe(ctx.employeeId);
       expect(row!.items[0].paidQuantity).toBe(4);
       expect(row!.items[0].freeQuantity).toBe(1);
+      expect(row!.items[0].discountType).toBe("PERCENTAGE");
+      expect(Number(row!.items[0].discountValue)).toBe(10);
     });
 
     it("rejects a PERCENTAGE discount > 100 with 400", async () => {
       const res = await createPackage({
         nameAr: tag("pack-badpct"),
-        discountType: "PERCENTAGE",
-        discountValue: 150,
-        items: [validItem()],
+        items: [validItem({ discountType: "PERCENTAGE", discountValue: 150 })],
       });
       expect(res.status).toBe(400);
       expect(JSON.stringify(res.body)).toMatch(/PERCENTAGE|between 0 and 100/i);
@@ -583,9 +583,7 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
       // subtotal = 4 paid × 30000 = 120000 halalas. A 200000 FIXED discount is illegal.
       const res = await createPackage({
         nameAr: tag("pack-badfixed"),
-        discountType: "FIXED",
-        discountValue: 200_000,
-        items: [validItem()],
+        items: [validItem({ discountType: "FIXED", discountValue: 200_000 })],
       });
       expect(res.status).toBe(400);
       expect(JSON.stringify(res.body)).toMatch(/FIXED|exceed the computed subtotal/i);
@@ -595,8 +593,6 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
       // emp3 has no EmployeeService link for this service.
       const res = await createPackage({
         nameAr: tag("pack-noemp"),
-        discountType: "PERCENTAGE",
-        discountValue: 0,
         items: [validItem({ employeeId: ctx.employee3Id })],
       });
       expect(res.status).toBe(400);
@@ -606,9 +602,14 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
     it("lists packages and returns the computed price on detail", async () => {
       const created = await createPackage({
         nameAr: tag("pack-priced"),
-        discountType: "PERCENTAGE",
-        discountValue: 10,
-        items: [validItem({ paidQuantity: 4, freeQuantity: 0 })],
+        items: [
+          validItem({
+            paidQuantity: 4,
+            freeQuantity: 0,
+            discountType: "PERCENTAGE",
+            discountValue: 10,
+          }),
+        ],
       });
       expect(created.status).toBe(201);
       const packageId = created.body.id as string;
@@ -633,8 +634,6 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
     it("updates a package (PATCH) and persists the change", async () => {
       const created = await createPackage({
         nameAr: tag("pack-update"),
-        discountType: "PERCENTAGE",
-        discountValue: 10,
         items: [validItem()],
       });
       expect(created.status).toBe(201);
@@ -653,8 +652,6 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
     it("archives a package (DELETE → archivedAt set, excluded from list)", async () => {
       const created = await createPackage({
         nameAr: tag("pack-archive"),
-        discountType: "FIXED",
-        discountValue: 0,
         items: [validItem()],
       });
       expect(created.status).toBe(201);
@@ -684,9 +681,14 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
       // 4 paid + 1 free @ 30000 → subtotal 120000, 10% off = 12000, final 108000.
       const pkg = await createPackage({
         nameAr: tag("pack-sale"),
-        discountType: "PERCENTAGE",
-        discountValue: 10,
-        items: [validItem({ paidQuantity: 4, freeQuantity: 1 })],
+        items: [
+          validItem({
+            paidQuantity: 4,
+            freeQuantity: 1,
+            discountType: "PERCENTAGE",
+            discountValue: 10,
+          }),
+        ],
       });
       expect(pkg.status).toBe(201);
 
@@ -741,8 +743,6 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
     it("rejects an ONLINE_CARD manual purchase with 400 (must use the webhook flow)", async () => {
       await createPackage({
         nameAr: tag("pack-online-reject"),
-        discountType: "FIXED",
-        discountValue: 0,
         items: [validItem()],
       });
       const res = await purchasePackage({ method: "ONLINE_CARD" });
@@ -759,8 +759,6 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
     it("creates a price=0 booking, consumes one credit, and creates NO new invoice", async () => {
       await createPackage({
         nameAr: tag("pack-consume"),
-        discountType: "FIXED",
-        discountValue: 0,
         items: [validItem({ paidQuantity: 3, freeQuantity: 0 })],
       });
       const sale = await purchasePackage();
@@ -822,8 +820,6 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
       // A single-session credit (paid=1, free=0 → totalQuantity=1).
       await createPackage({
         nameAr: tag("pack-race"),
-        discountType: "FIXED",
-        discountValue: 0,
         items: [validItem({ paidQuantity: 1, freeQuantity: 0 })],
       });
       const sale = await purchasePackage();
@@ -904,8 +900,6 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
       // Single-session credit so consuming it auto-completes the purchase.
       await createPackage({
         nameAr: tag("pack-cancel"),
-        discountType: "FIXED",
-        discountValue: 0,
         items: [validItem({ paidQuantity: 1, freeQuantity: 0 })],
       });
       const sale = await purchasePackage();
@@ -963,8 +957,6 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
     it("marks the purchase REFUNDED, records the refund, and voids the credits", async () => {
       await createPackage({
         nameAr: tag("pack-refund"),
-        discountType: "FIXED",
-        discountValue: 0,
         items: [validItem({ paidQuantity: 2, freeQuantity: 0 })],
       });
       const sale = await purchasePackage();
@@ -1025,8 +1017,6 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
     it("transfers to an employee who provides the service/duration (price snapshot unchanged)", async () => {
       await createPackage({
         nameAr: tag("pack-transfer"),
-        discountType: "FIXED",
-        discountValue: 0,
         items: [validItem({ paidQuantity: 2, freeQuantity: 0 })],
       });
       const sale = await purchasePackage();
@@ -1053,8 +1043,6 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
     it("rejects a transfer to an employee who does NOT provide the service with 400", async () => {
       await createPackage({
         nameAr: tag("pack-transfer-bad"),
-        discountType: "FIXED",
-        discountValue: 0,
         items: [validItem({ paidQuantity: 2, freeQuantity: 0 })],
       });
       const sale = await purchasePackage();
@@ -1085,8 +1073,6 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
     it("RECEPTIONIST (no manage:Setting) is forbidden from refunding a purchase", async () => {
       await createPackage({
         nameAr: tag("pack-authz"),
-        discountType: "FIXED",
-        discountValue: 0,
         items: [validItem({ paidQuantity: 1, freeQuantity: 0 })],
       });
       const sale = await purchasePackage();
@@ -1110,8 +1096,6 @@ describeRealE2e("Session Packages — real-DB e2e (CRUD, purchase, credit bookin
         .post("/api/v1/dashboard/organization/packages")
         .send({
           nameAr: tag("pack-noauth"),
-          discountType: "FIXED",
-          discountValue: 0,
           items: [validItem()],
         });
       expect(res.status).toBe(401);

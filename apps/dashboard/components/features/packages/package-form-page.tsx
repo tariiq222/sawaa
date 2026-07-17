@@ -25,9 +25,15 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
 import { FormProvider, useForm } from "react-hook-form"
+import type { FieldErrors } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { showApiError } from "@/lib/mutation-helpers"
+import { showPackageApiError } from "@/lib/package-errors"
+import {
+  collectPackageErrorPaths,
+  focusPackageError,
+  packageIssuePaths,
+} from "@/lib/package-validation"
 
 import { Button } from "@sawaa/ui"
 import { Skeleton } from "@sawaa/ui"
@@ -88,24 +94,29 @@ export function PackageFormPage(props: Props) {
   // Live pricing aggregation. The item builder calls onLineChange when each
   // row's resolved detail changes; the parent keeps the per-row detail so the
   // `<PackagePriceSummary>` can render a per-service breakdown + subtotal.
-  const [lineDetails, setLineDetails] = useState<Record<number, PackageLineDetail>>({})
-  const onLineChange = useCallback((index: number, detail: PackageLineDetail) => {
-    setLineDetails((prev) => {
-      const cur = prev[index]
-      if (
-        cur &&
-        cur.serviceName === detail.serviceName &&
-        cur.paidQuantity === detail.paidQuantity &&
-        cur.freeQuantity === detail.freeQuantity &&
-        cur.unitPrice === detail.unitPrice &&
-        cur.discountType === detail.discountType &&
-        cur.discountValue === detail.discountValue
-      ) {
-        return prev
-      }
-      return { ...prev, [index]: detail }
-    })
-  }, [])
+  const [lineDetails, setLineDetails] = useState<
+    Record<number, PackageLineDetail>
+  >({})
+  const onLineChange = useCallback(
+    (index: number, detail: PackageLineDetail) => {
+      setLineDetails((prev) => {
+        const cur = prev[index]
+        if (
+          cur &&
+          cur.serviceName === detail.serviceName &&
+          cur.paidQuantity === detail.paidQuantity &&
+          cur.freeQuantity === detail.freeQuantity &&
+          cur.unitPrice === detail.unitPrice &&
+          cur.discountType === detail.discountType &&
+          cur.discountValue === detail.discountValue
+        ) {
+          return prev
+        }
+        return { ...prev, [index]: detail }
+      })
+    },
+    []
+  )
   const lineItems = Object.keys(lineDetails)
     .map(Number)
     .sort((a, b) => a - b)
@@ -118,7 +129,7 @@ export function PackageFormPage(props: Props) {
       freeQuantity: d.freeQuantity,
       discountType: d.discountType,
       discountValue: d.discountValue,
-    })),
+    }))
   )
 
   // ── Hydrate form on edit load ───────────────────────────────────────────
@@ -142,7 +153,9 @@ export function PackageFormPage(props: Props) {
             ...scopes,
             // Flexible items carry a fixed unit price (halalas) → display in SAR.
             unitPriceSar:
-              !singleSpecific && it.unitPrice != null ? Number(it.unitPrice) / 100 : undefined,
+              !singleSpecific && it.unitPrice != null
+                ? Number(it.unitPrice) / 100
+                : undefined,
             label: it.label ?? "",
             paidQuantity: it.paidQuantity,
             freeQuantity: it.freeQuantity,
@@ -164,12 +177,22 @@ export function PackageFormPage(props: Props) {
   useEffect(() => {
     setLineDetails((prev) => {
       const next: Record<number, PackageLineDetail> = {}
-      for (let i = 0; i < watchedItems.length; i++) if (prev[i]) next[i] = prev[i]
+      for (let i = 0; i < watchedItems.length; i++)
+        if (prev[i]) next[i] = prev[i]
       return next
     })
   }, [watchedItems.length])
 
   const translateError = (msg?: string) => (msg ? t(msg) : undefined)
+
+  const reportValidationFailure = (paths: string[]) => {
+    toast.error(t("packages.errors.submitSummary"))
+    if (paths[0]) focusPackageError(paths[0])
+  }
+
+  const onInvalid = (errors: FieldErrors<PackageFormData>) => {
+    reportValidationFailure(collectPackageErrorPaths(errors))
+  }
 
   const onSubmit = form.handleSubmit(async (data) => {
     try {
@@ -181,24 +204,32 @@ export function PackageFormPage(props: Props) {
       if (!strictResult.success) {
         // Push errors into RHF so the existing <p>error</p> blocks render.
         for (const issue of strictResult.error.issues) {
-          const key = issue.path.join(".") as Parameters<typeof form.setError>[0]
+          const key = issue.path.join(".") as Parameters<
+            typeof form.setError
+          >[0]
           form.setError(key, { type: "validate", message: issue.message })
         }
+        reportValidationFailure(packageIssuePaths(strictResult.error.issues))
         return
       }
       const strictData = strictResult.data
 
       // Build the payload from the validated data (scopes → constraints + price).
-      const items = (strictData.items ?? []).map((it, i) => buildItemPayload(it, i))
+      const items = (strictData.items ?? []).map((it, i) =>
+        buildItemPayload(it, i)
+      )
 
       if (isEdit) {
+        let imageUploadFailed = false
         await updateMut.mutateAsync({
           id: pkg!.id,
           nameAr: strictData.nameAr,
           nameEn: strictData.nameEn || undefined,
           descriptionAr: strictData.descriptionAr || undefined,
           descriptionEn: strictData.descriptionEn || undefined,
-          imageUrl: strictData.imageUrl?.startsWith("blob:") ? undefined : (strictData.imageUrl ?? null),
+          imageUrl: strictData.imageUrl?.startsWith("blob:")
+            ? undefined
+            : (strictData.imageUrl ?? null),
           iconName: strictData.iconName ?? null,
           iconBgColor: strictData.iconBgColor ?? null,
           sortOrder: Number(strictData.sortOrder ?? 0),
@@ -207,17 +238,29 @@ export function PackageFormPage(props: Props) {
           items,
         } satisfies { id: string } & UpdateSessionPackagePayload)
         if (pendingAvatarFile.current) {
-          await uploadPackageImage(pkg!.id, pendingAvatarFile.current)
-          pendingAvatarFile.current = null
+          try {
+            await uploadPackageImage(pkg!.id, pendingAvatarFile.current)
+          } catch {
+            imageUploadFailed = true
+          } finally {
+            pendingAvatarFile.current = null
+          }
         }
-        toast.success(t("packages.edit.success"))
+        if (imageUploadFailed) {
+          toast.warning(t("packages.errors.uploadWarning"))
+        } else {
+          toast.success(t("packages.edit.success"))
+        }
       } else {
+        let imageUploadFailed = false
         const created = await createMut.mutateAsync({
           nameAr: strictData.nameAr ?? "",
           nameEn: strictData.nameEn || undefined,
           descriptionAr: strictData.descriptionAr || undefined,
           descriptionEn: strictData.descriptionEn || undefined,
-          imageUrl: strictData.imageUrl?.startsWith("blob:") ? undefined : (strictData.imageUrl ?? null),
+          imageUrl: strictData.imageUrl?.startsWith("blob:")
+            ? undefined
+            : (strictData.imageUrl ?? null),
           iconName: strictData.iconName ?? null,
           iconBgColor: strictData.iconBgColor ?? null,
           sortOrder: Number(strictData.sortOrder ?? 0),
@@ -226,21 +269,30 @@ export function PackageFormPage(props: Props) {
           items,
         } satisfies CreateSessionPackagePayload)
         if (pendingAvatarFile.current) {
-          await uploadPackageImage(created.id, pendingAvatarFile.current)
-          pendingAvatarFile.current = null
+          try {
+            await uploadPackageImage(created.id, pendingAvatarFile.current)
+          } catch {
+            imageUploadFailed = true
+          } finally {
+            pendingAvatarFile.current = null
+          }
         }
-        toast.success(t("packages.create.success"))
+        if (imageUploadFailed) {
+          toast.warning(t("packages.errors.uploadWarning"))
+        } else {
+          toast.success(t("packages.create.success"))
+        }
       }
       // Best-effort cache revalidation before navigating.
       qc.invalidateQueries({ queryKey: queryKeys.packages.all })
       router.push("/packages")
     } catch (err) {
-      showApiError(err, {
+      showPackageApiError(err, {
         fallback: t(isEdit ? "packages.edit.error" : "packages.create.error"),
         t,
       })
     }
-  })
+  }, onInvalid)
 
   if (isEdit && isLoading) {
     return (
@@ -248,7 +300,10 @@ export function PackageFormPage(props: Props) {
         <Skeleton className="h-8 w-48" />
         <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={`skeleton-${i}`} className="h-48 w-full rounded-xl" />
+            <Skeleton
+              key={`skeleton-${i}`}
+              className="h-48 w-full rounded-xl"
+            />
           ))}
         </div>
       </ListPageShell>
@@ -259,14 +314,21 @@ export function PackageFormPage(props: Props) {
     return (
       <ListPageShell>
         <Breadcrumbs />
-        <PageHeader title={t("packages.notFound.title")} description={t("packages.notFound.desc")} />
-        <Button variant="ghost" onClick={() => router.push("/packages")}>{t("packages.notFound.back")}</Button>
+        <PageHeader
+          title={t("packages.notFound.title")}
+          description={t("packages.notFound.desc")}
+        />
+        <Button variant="ghost" onClick={() => router.push("/packages")}>
+          {t("packages.notFound.back")}
+        </Button>
       </ListPageShell>
     )
   }
 
   const title = isEdit ? t("packages.edit.title") : t("packages.create.title")
-  const description = isEdit ? (pkg?.nameAr ?? "") : t("packages.create.description")
+  const description = isEdit
+    ? (pkg?.nameAr ?? "")
+    : t("packages.create.description")
   const submitLabel = isPending
     ? t(isEdit ? "packages.edit.submitting" : "packages.create.submitting")
     : t(isEdit ? "packages.edit.submit" : "packages.create.submit")
@@ -280,17 +342,32 @@ export function PackageFormPage(props: Props) {
           <PackageFormFields
             form={form}
             onLineChange={onLineChange}
-            onImageSelect={(file) => { pendingAvatarFile.current = file }}
+            onImageSelect={(file) => {
+              pendingAvatarFile.current = file
+            }}
             lineItems={lineItems}
             breakdown={breakdown}
             translateError={translateError}
           />
 
-          <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <Button type="button" variant="ghost" size="lg" className="rounded-lg" onClick={() => router.push("/packages")}>
+          <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-3 border-t border-border bg-background px-4 py-3 sm:-mx-6 sm:flex-row sm:justify-end sm:px-6">
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              className="rounded-lg"
+              onClick={() => router.push("/packages")}
+            >
               {t(isEdit ? "packages.edit.cancel" : "packages.create.cancel")}
             </Button>
-            <Button type="submit" size="lg" className="rounded-lg" disabled={isPending}>{submitLabel}</Button>
+            <Button
+              type="submit"
+              size="lg"
+              className="rounded-lg"
+              disabled={isPending}
+            >
+              {submitLabel}
+            </Button>
           </div>
         </form>
       </ListPageShell>

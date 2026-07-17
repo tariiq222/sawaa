@@ -60,8 +60,8 @@ export async function deletePackage(id: string): Promise<void> {
 }
 
 /**
- * Uploads an image and attaches its presigned URL to the package.
- * Mirrors `uploadServiceImage`: media upload → presigned URL → PATCH imageUrl.
+ * Uploads an image and attaches its stable storage key to the package.
+ * Package readers mint a fresh signed URL whenever the entity is read.
  */
 export async function uploadPackageImage(packageId: string, file: File): Promise<SessionPackage> {
   const formData = new FormData()
@@ -71,11 +71,7 @@ export async function uploadPackageImage(packageId: string, file: File): Promise
     "/dashboard/media/upload",
     formData,
   )
-  const presignedData = await api.get<{ url: string }>(
-    `/dashboard/media/${uploaded.id}/presigned-url`,
-    { expirySeconds: 900 },
-  )
   return api.patch<SessionPackage>(`/dashboard/organization/packages/${packageId}`, {
-    imageUrl: presignedData.url,
+    imageUrl: uploaded.storageKey,
   })
 }

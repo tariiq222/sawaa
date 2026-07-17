@@ -47,6 +47,7 @@ interface MultiSelectProps {
   emptyLabel: string
   disabled?: boolean
   id?: string
+  ariaInvalid?: boolean
 }
 
 /** How many selected labels to spell out before collapsing the rest into "+N". */
@@ -61,11 +62,14 @@ export function MultiSelect({
   emptyLabel,
   disabled,
   id,
+  ariaInvalid,
 }: MultiSelectProps) {
   const [open, setOpen] = useState(false)
 
   const toggle = (val: string) => {
-    onChange(value.includes(val) ? value.filter((v) => v !== val) : [...value, val])
+    onChange(
+      value.includes(val) ? value.filter((v) => v !== val) : [...value, val]
+    )
   }
 
   // Show the actual selected names (not just a count); collapse the overflow.
@@ -75,7 +79,11 @@ export function MultiSelect({
   const shown = selectedLabels.slice(0, MAX_SHOWN_LABELS).join("، ")
   const extra = selectedLabels.length - MAX_SHOWN_LABELS
   const triggerLabel =
-    selectedLabels.length > 0 ? (extra > 0 ? `${shown} +${extra}` : shown) : placeholder
+    selectedLabels.length > 0
+      ? extra > 0
+        ? `${shown} +${extra}`
+        : shown
+      : placeholder
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -86,13 +94,14 @@ export function MultiSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-invalid={ariaInvalid ? "true" : undefined}
           disabled={disabled}
           className="w-full justify-between font-normal"
         >
           <span
             className={cn(
               "min-w-0 truncate text-start",
-              value.length > 0 ? "text-foreground" : "text-muted-foreground",
+              value.length > 0 ? "text-foreground" : "text-muted-foreground"
             )}
             title={selectedLabels.join("، ")}
           >
@@ -120,7 +129,10 @@ export function MultiSelect({
                     onSelect={() => toggle(opt.value)}
                     className="gap-2"
                   >
-                    <Checkbox checked={checked} className="pointer-events-none" />
+                    <Checkbox
+                      checked={checked}
+                      className="pointer-events-none"
+                    />
                     <span className="truncate">{opt.label}</span>
                   </CommandItem>
                 )
