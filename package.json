@@ -45,7 +45,8 @@
       "protobufjs@<7.6.1": ">=7.6.1",
       "hono@<4.12.25": ">=4.12.25",
       "multer@<2.2.0": ">=2.2.0",
-      "nodemailer@<9.0.1": ">=9.0.1"
+      "nodemailer@<9.0.1": ">=9.0.1",
+      "websocket-driver@<0.7.5": ">=0.7.5"
     },
     "onlyBuiltDependencies": [
       "@prisma/client",
