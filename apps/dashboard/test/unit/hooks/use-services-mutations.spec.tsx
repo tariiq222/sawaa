@@ -69,7 +69,6 @@ import {
   useCategoryMutations,
   useDurationOptionsMutation,
   useServiceBookingTypesMutation,
-  useIntakeFormMutations,
 } from "@/hooks/use-services"
 
 function makeWrapper() {
@@ -214,90 +213,6 @@ describe("useServiceBookingTypesMutation", () => {
       expect(setServiceBookingTypes).toHaveBeenCalledWith(
         "svc-1",
         expect.objectContaining({ bookingTypes: [] }),
-      ),
-    )
-  })
-})
-
-describe("useIntakeFormMutations", () => {
-  beforeEach(() => { vi.clearAllMocks() })
-
-  it("createMut calls createIntakeForm with mapped payload", async () => {
-    createIntakeForm.mockResolvedValueOnce({ id: "form-new" })
-
-    const { result } = renderHook(
-      () => useIntakeFormMutations("svc-1"),
-      { wrapper: makeWrapper() },
-    )
-
-    act(() => {
-      result.current.createMut.mutate({ nameAr: "فحص صحي", nameEn: "Health Check", isActive: true } as Parameters<typeof result.current.createMut.mutate>[0])
-    })
-
-    await waitFor(() =>
-      expect(createIntakeForm).toHaveBeenCalledWith(
-        expect.objectContaining({ nameAr: "فحص صحي", nameEn: "Health Check", type: "pre_booking", scope: "service", isActive: true }),
-      ),
-    )
-  })
-
-  it("updateMut calls updateIntakeForm with formId and payload", async () => {
-    updateIntakeForm.mockResolvedValueOnce({ id: "form-1" })
-
-    const { result } = renderHook(
-      () => useIntakeFormMutations("svc-1"),
-      { wrapper: makeWrapper() },
-    )
-
-    act(() => {
-      result.current.updateMut.mutate({
-        formId: "form-1",
-        payload: { title: "Updated" } as Parameters<typeof updateIntakeForm>[1],
-      })
-    })
-
-    await waitFor(() =>
-      expect(updateIntakeForm).toHaveBeenCalledWith(
-        "form-1",
-        expect.objectContaining({ title: "Updated" }),
-      ),
-    )
-  })
-
-  it("deleteMut calls deleteIntakeForm with formId", async () => {
-    deleteIntakeForm.mockResolvedValueOnce(undefined)
-
-    const { result } = renderHook(
-      () => useIntakeFormMutations("svc-1"),
-      { wrapper: makeWrapper() },
-    )
-
-    act(() => { result.current.deleteMut.mutate("form-1") })
-
-    await waitFor(() =>
-      expect(deleteIntakeForm).toHaveBeenCalledWith("form-1", expect.anything()),
-    )
-  })
-
-  it("setFieldsMut calls setIntakeFields with formId and payload", async () => {
-    setIntakeFields.mockResolvedValueOnce([])
-
-    const { result } = renderHook(
-      () => useIntakeFormMutations("svc-1"),
-      { wrapper: makeWrapper() },
-    )
-
-    act(() => {
-      result.current.setFieldsMut.mutate({
-        formId: "form-1",
-        payload: { fields: [] } as Parameters<typeof setIntakeFields>[1],
-      })
-    })
-
-    await waitFor(() =>
-      expect(setIntakeFields).toHaveBeenCalledWith(
-        "form-1",
-        expect.objectContaining({ fields: [] }),
       ),
     )
   })

@@ -45,7 +45,8 @@ interface BasicInfoTabProps {
 
 export function BasicInfoTab({ form, onImageSelect, serviceId }: BasicInfoTabProps) {
   const { t, locale } = useLocale()
-  const { data: categories, isLoading: loadingCategories } = useCategories()
+  const { data: categoriesData, isLoading: loadingCategories } = useCategories()
+  const categories = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.items ?? [])
   const { options: departments } = useDepartmentOptions()
   // Single-branch center: branch restrictions UI is hidden; services apply to the only branch.
   const isMultiBranch = false

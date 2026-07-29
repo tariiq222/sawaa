@@ -78,7 +78,7 @@ export function PackageItemRow({
   const duration = (watch(p.duration) as ScopeFormData) ?? emptyScope
   const delivery = (watch(p.delivery) as ScopeFormData) ?? emptyScope
 
-  const { services } = useAllServices()
+  const { data: services } = useAllServices()
   const { employees: allEmployees } = useAllEmployees()
 
   // A single specific service scopes the practitioner options + enables duration.

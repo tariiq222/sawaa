@@ -81,7 +81,8 @@ export function ServiceFormPage({ mode, serviceId }: ServiceFormPageProps) {
   const apiServiceId = service?.id ?? ""
 
   const { data: existingBookingTypes } = useServiceBookingTypes(apiServiceId)
-  const { data: allCategories } = useCategories()
+  const { data: allCategoriesData } = useCategories()
+  const allCategories = Array.isArray(allCategoriesData) ? allCategoriesData : (allCategoriesData?.items ?? [])
   const { options: allDepartments } = useDepartmentOptions()
 
   /* ── Mutations ── */
