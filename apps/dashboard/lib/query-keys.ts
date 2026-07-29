@@ -116,6 +116,7 @@ export const queryKeys = {
   /* ─── Reports ─── */
   reports: {
     overview: (filters?: object) => ["reports", "overview", filters] as const,
+    dashboardHome: () => ["reports", "dashboard-home"] as const,
     revenue: (filters?: object) => ["reports", "revenue", filters] as const,
     bookings: (filters?: object) => ["reports", "bookings", filters] as const,
     clients: (filters?: object) => ["reports", "clients", filters] as const,

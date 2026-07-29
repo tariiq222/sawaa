@@ -14,6 +14,7 @@ export interface DashboardStats {
   todayBookings: number;
   confirmedToday: number;
   pendingToday: number;
+  awaitingPaymentToday: number;
   cancelRequests: number;
   newClientsToday: number;
   pendingPayments?: number;
@@ -43,6 +44,7 @@ export class GetDashboardStatsHandler {
           todayBookings: 0,
           confirmedToday: 0,
           pendingToday: 0,
+          awaitingPaymentToday: 0,
           cancelRequests: 0,
           newClientsToday: 0,
         };
@@ -83,6 +85,8 @@ export class GetDashboardStatsHandler {
       todayBookings: todayBookingsCount,
       confirmedToday: countByStatus.get(BookingStatus.CONFIRMED) ?? 0,
       pendingToday: countByStatus.get(BookingStatus.PENDING) ?? 0,
+      awaitingPaymentToday:
+        countByStatus.get(BookingStatus.AWAITING_PAYMENT) ?? 0,
       cancelRequests: cancelRequestedCount,
       newClientsToday: newClientsTodayCount,
     };
