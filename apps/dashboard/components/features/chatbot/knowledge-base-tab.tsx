@@ -3,6 +3,7 @@
 import { toast } from "sonner"
 
 import { DataTable } from "@/components/features/data-table"
+import { ErrorBanner } from "@/components/features/error-banner"
 import { Skeleton } from "@sawaa/ui"
 import { useLocale } from "@/components/locale-provider"
 import {
@@ -14,7 +15,7 @@ import { showApiError } from "@/lib/mutation-helpers"
 
 export function KnowledgeBaseTab() {
   const { t } = useLocale()
-  const { entries, loading: entriesLoading } = useKnowledgeBase()
+  const { entries, loading: entriesLoading, error, refetch } = useKnowledgeBase()
   const { deleteKbEntryMut } = useChatbotMutations()
 
   const handleDeleteEntry = async (id: string) => {
@@ -37,15 +38,23 @@ export function KnowledgeBaseTab() {
     )
   }
 
+  if (error) {
+    return (
+      <ErrorBanner
+        message={error}
+        onRetry={refetch}
+        retryLabel={t("common.retry")}
+      />
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6 pt-4">
-      {/* Knowledge base entries (read-only) */}
       <DataTable
         columns={columns}
         data={entries}
         emptyTitle={t("chatbot.kb.empty")}
       />
-      {/* Files upload و sync محذوفان مؤقتاً — endpoints غير جاهزة */}
     </div>
   )
 }

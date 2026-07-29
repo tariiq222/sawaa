@@ -28,7 +28,7 @@ export function useChatSessions() {
 
   const query: ChatSessionListQuery = { page, limit: 20, ...filters }
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.chatbot.sessions.list(query),
     queryFn: () => fetchChatSessions(query),
     staleTime: 60 * 1000,
@@ -53,6 +53,7 @@ export function useChatSessions() {
     meta: data?.meta ?? null,
     loading: isLoading,
     error: error?.message ?? null,
+    refetch: () => { void refetch() },
     filters,
     setFilters,
     resetFilters,
