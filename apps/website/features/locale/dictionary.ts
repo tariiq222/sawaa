@@ -485,6 +485,17 @@ export const dictionary = {
     'legal.terms.law.title': 'القانون الحاكم وتسوية النزاعات',
     'legal.terms.law.body':
       'تخضع هذه الشروط وتُفسَّر وفقاً للأنظمة المعمول بها في المملكة العربية السعودية، وتختص الجهات القضائية المختصة في المملكة بالنظر في أي نزاع ينشأ عن استخدام الموقع أو الخدمات.',
+    // Cookie consent banner (GDPR/PDPL — explicit opt-in for analytics)
+    'consent.title': 'إعدادات ملفات تعريف الارتباط',
+    'consent.body':
+      'يستخدم هذا الموقع ملفات تعريف الارتباط اللازمة لتشغيله. بموافقتك نستخدم أيضاً ملفات تعريف ارتباط تحليلية لقياس أداء الموقع. يمكنك تعديل تفضيلاتك في أي وقت من أسفل الصفحة.',
+    'consent.details':
+      'ملفات تعريف الارتباط الأساسية لا يمكن تعطيلها (ضرورية للجلسة). التحليلية تساعدنا على فهم استخدام الزوار (مثل Plausible، بدون ملفات تعريف ارتباط، دون مشاركة بيانات مع أطراف ثالثة).',
+    'consent.showDetails': 'اعرف أكثر',
+    'consent.hideDetails': 'إخفاء التفاصيل',
+    'consent.acceptAll': 'اقبل الكل',
+    'consent.essentialOnly': 'الأساسية فقط',
+    'consent.decline': 'أرفض',
   },
   en: {
     'nav.home': 'Home',
@@ -970,6 +981,17 @@ export const dictionary = {
     'legal.privacy.changes.title': 'Changes to This Privacy Policy',
     'legal.privacy.changes.body':
       'We may update this policy from time to time to reflect changes in our practices or in the regulations in force. We will notify you of material changes via the site or email where appropriate. The last-updated date is shown at the top of the page.',
+    // Cookie consent banner (GDPR/PDPL — explicit opt-in for analytics)
+    'consent.title': 'Cookie Settings',
+    'consent.body':
+      'This site uses cookies that are necessary for it to operate. With your consent we also use analytics cookies to measure site performance. You can change your preferences at any time from the bottom of the page.',
+    'consent.details':
+      'Essential cookies cannot be disabled (required for the session). Analytics helps us understand how visitors use the site (e.g. Plausible, no cookies, no data sharing with third parties).',
+    'consent.showDetails': 'Learn more',
+    'consent.hideDetails': 'Hide details',
+    'consent.acceptAll': 'Accept all',
+    'consent.essentialOnly': 'Essential only',
+    'consent.decline': 'Decline',
   },
 } satisfies Record<Locale, Record<string, string>>;
 

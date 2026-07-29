@@ -3,6 +3,8 @@ import { BrandingProvider, BrandingStyle, getPublicBrandingForSsr } from '@/feat
 import { QueryProvider } from '@/providers/query-provider';
 import { getLocale, localeDir } from '@/features/locale/locale';
 import { LocaleProvider } from '@/features/locale/locale-provider';
+import { CookieConsentBanner } from '@/components/consent/cookie-consent-banner';
+import { AnalyticsLoader } from '@/components/analytics/analytics-loader';
 import './globals.css';
 import {
   generateMedicalBusinessSchema,
@@ -121,7 +123,11 @@ export default async function RootLayout({
       <body>
         <QueryProvider>
           <LocaleProvider locale={locale}>
-            <BrandingProvider branding={branding}>{children}</BrandingProvider>
+            <BrandingProvider branding={branding}>
+              {children}
+              <CookieConsentBanner />
+              <AnalyticsLoader />
+            </BrandingProvider>
           </LocaleProvider>
         </QueryProvider>
       </body>
