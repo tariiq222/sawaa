@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { BrandingProvider, BrandingStyle, getPublicBrandingForSsr } from '@/features/branding/public';
 import { QueryProvider } from '@/providers/query-provider';
 import { getLocale, localeDir } from '@/features/locale/locale';
@@ -19,13 +19,37 @@ export async function generateMetadata(): Promise<Metadata> {
       title: branding.organizationNameAr,
       description: branding.productTagline ?? 'مركز متخصص في الاستشارات النفسية والأسرية وعلاج الإدمان بسرية تامة وكوادر سعودية مؤهلة.',
       icons: branding.faviconUrl ? { icon: branding.faviconUrl } : undefined,
+      metadataBase: new URL(SITE_URL),
+      openGraph: {
+        // Required so Next.js can resolve relative og:url fields to
+        // absolute URLs. The branding-driven ogTitle/ogDescription is
+        // added per page by buildPageMetadata().
+        siteName: branding.organizationNameAr,
+        locale: 'ar_SA',
+        type: 'website',
+      },
+      robots: { index: true, follow: true },
     };
   } catch {
     return {
       title: 'مركز سواء للاستشارات الأسرية',
       description: 'مركز متخصص في الاستشارات النفسية والأسرية بسرية تامة وكوادر سعودية مؤهلة',
+      metadataBase: new URL(SITE_URL),
     };
   }
+}
+
+// In Next 15+ the viewport/themeColor/etc. live in a dedicated export
+// so the root <meta name=\"viewport\"> is emitted in <head>.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b1220' },
+  ],
+  colorScheme: 'light',
 }
 
 export default async function RootLayout({
