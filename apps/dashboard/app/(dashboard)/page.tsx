@@ -12,12 +12,14 @@ import { TodayPulse } from "@/components/features/dashboard/today-pulse"
 import { SectionHeader } from "@/components/features/section-header"
 import { useAuth } from "@/components/providers/auth-provider"
 import { useLocale } from "@/components/locale-provider"
+import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { getVisibleWidgets } from "@/lib/dashboard-widgets"
 import { useDashboardHome } from "@/hooks/use-dashboard-home"
 
 export default function DashboardPage() {
   const { user, canDo } = useAuth()
   const { locale, t } = useLocale()
+  const reduceMotion = useReducedMotion()
 
   const userRole = user?.role ?? null
   const visible = useMemo(
@@ -45,7 +47,7 @@ export default function DashboardPage() {
   } = useDashboardHome(visible)
 
   return (
-    <div className="flex flex-col gap-8 animate-in fade-in duration-300">
+    <div className={`flex flex-col gap-8 ${reduceMotion ? "" : "animate-in fade-in duration-300"}`}>
       <Suspense fallback={<div className="h-20 animate-pulse rounded-2xl bg-muted" />}>
         <section className="flex flex-col gap-5">
           <GreetingHeader
