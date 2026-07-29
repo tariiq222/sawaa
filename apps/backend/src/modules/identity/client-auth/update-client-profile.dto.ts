@@ -1,6 +1,7 @@
 import { Transform } from 'class-transformer';
 import { IsEmail, IsOptional, IsString, IsUrl, Length, Matches } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { SAUDI_PHONE_REGEX, SAUDI_PHONE_ERROR_AR } from '@sawaa/shared/validators/phone';
 import { NormalizePhone } from '../shared/normalize-phone.transform';
 
 const trim = ({ value }: { value: unknown }) =>
@@ -8,10 +9,6 @@ const trim = ({ value }: { value: unknown }) =>
 
 const trimLower = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim().toLowerCase() : value;
-
-// Saudi phone only: +966 then 5 then 8 digits (local number 5XXXXXXXX) —
-// same policy as the dashboard clients update DTO.
-const PHONE_REGEX = /^\+9665\d{8}$/;
 
 export class UpdateClientProfileDto {
   @ApiPropertyOptional({ description: 'Full name', example: 'أحمد محمد العتيبي' })
@@ -28,7 +25,7 @@ export class UpdateClientProfileDto {
   @IsOptional()
   @IsString()
   @NormalizePhone()
-  @Matches(PHONE_REGEX, { message: 'رقم الجوال يجب أن يكون رقماً سعودياً بصيغة ‎+9665XXXXXXXX' })
+  @Matches(SAUDI_PHONE_REGEX, { message: SAUDI_PHONE_ERROR_AR })
   phone?: string;
 
   @ApiPropertyOptional({
