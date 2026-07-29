@@ -1,7 +1,7 @@
 import './instrument';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { writeFileSync } from 'fs';
 import { resolve } from 'path';
@@ -58,7 +58,11 @@ async function bootstrap(): Promise<void> {
     }));
   }
 
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api');
+  // URI versioning: controllers can opt into v2 via @Version('2') when needed.
+  // defaultVersion='1' preserves the existing /api/v1/... URL shape, so existing
+  // clients and reverse-proxy rewrites are unaffected.
+  app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
   configureCors(app);
 
