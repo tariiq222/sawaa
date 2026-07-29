@@ -10,28 +10,11 @@ import {
   setBreaks,
   createVacation,
   deleteVacation,
-  assignService,
-  updateEmployeeService,
-  setEmployeeServiceOptions,
-  removeEmployeeService,
   createEmployeeAccount,
   updateEmployeeAccount,
-  setEmployeeCustomPricing,
-  setEmployeeDurations,
-  setEmployeeDeliveryTypes,
-  setEmployeePricingMode,
 } from "@/lib/api/employees"
-import type {
-  EmployeeAccountRole,
-  SetCustomPricingPayload,
-  SetPractitionerDurationsPayload,
-} from "@/lib/api/employees"
-import type {
-  AssignServicePayload,
-  SetEmployeeServiceOptionsPayload,
-  UpdateServicePayload,
-  OnboardEmployeePayload,
-} from "@/lib/types/employee"
+import type { EmployeeAccountRole } from "@/lib/api/employees"
+import type { OnboardEmployeePayload } from "@/lib/types/employee"
 
 // EmployeeAccountRole re-exported for convenience
 export type { EmployeeAccountRole }
