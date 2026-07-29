@@ -52,6 +52,73 @@ export interface OrganizationSchema {
   logo?: string;
 }
 
+export interface BreadcrumbItem {
+  name: string;
+  url: string;
+}
+
+export interface BreadcrumbListSchema {
+  '@context': 'https://schema.org';
+  '@type': 'BreadcrumbList';
+  itemListElement: Array<{
+    '@type': 'ListItem';
+    position: number;
+    name: string;
+    item: string;
+  }>;
+}
+
+/**
+ * LocalBusiness is more specific than Organization for an entity that has
+ * a physical location and operating hours. Google uses it for the local
+ * pack and for opening-hours rich results.
+ */
+export interface LocalBusinessSchema {
+  '@context': 'https://schema.org';
+  '@type': 'LocalBusiness';
+  '@id': string;
+  name: string;
+  description?: string;
+  url: string;
+  telephone?: string;
+  email?: string;
+  image?: string;
+  priceRange?: string;
+  address: {
+    '@type': 'PostalAddress';
+    streetAddress?: string;
+    addressLocality: string;
+    addressRegion?: string;
+    postalCode?: string;
+    addressCountry: string;
+  };
+  geo?: {
+    '@type': 'GeoCoordinates';
+    latitude: number;
+    longitude: number;
+  };
+  openingHoursSpecification?: Array<{
+    '@type': 'OpeningHoursSpecification';
+    dayOfWeek: string | string[];
+    opens: string;
+    closes: string;
+  }>;
+  sameAs?: string[];
+}
+
+export interface FAQPageSchema {
+  '@context': 'https://schema.org';
+  '@type': 'FAQPage';
+  mainEntity: Array<{
+    '@type': 'Question';
+    name: string;
+    acceptedAnswer: {
+      '@type': 'Answer';
+      text: string;
+    };
+  }>;
+}
+
 /**
  * SECURITY (P1): JSON-LD is injected into the page via
  * dangerouslySetInnerHTML. If any CMS-controlled string in the schema
@@ -83,4 +150,63 @@ export function generateBookActionSchema(data: BookActionSchema): string {
 
 export function generateOrganizationSchema(data: OrganizationSchema): string {
   return jsonLdEscape(JSON.stringify(data));
+}
+
+/**
+ * Builds a BreadcrumbList from a flat array of {name, url} entries.
+ * `url` is the absolute URL of the breadcrumb target — Google
+ * recommends absolute URLs for breadcrumb structured data.
+ */
+export function generateBreadcrumbListSchema(
+  items: BreadcrumbItem[],
+): BreadcrumbListSchema {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  }
+}
+
+export function generateLocalBusinessSchema(
+  data: LocalBusinessSchema,
+): LocalBusinessSchema {
+  return data
+}
+
+/**
+ * Convenience wrapper that JSON-stringifies + escapes the LocalBusiness
+ * schema in one call (so callers don't have to remember to call
+ * jsonLdEscape — the same module-private escape the other generators
+ * use).
+ */
+export function generateLocalBusinessJsonLd(data: LocalBusinessSchema): string {
+  return jsonLdEscape(JSON.stringify(data))
+}
+
+/**
+ * FAQPage rich-result schema. Google displays eligible FAQPage schemas
+ * directly in search results. Each item MUST be a Question with an
+ * acceptedAnswer.Answer. Limit to ~10 questions per page for best
+ * results.
+ */
+export function generateFAQPageSchema(
+  faqs: Array<{ question: string; answer: string }>,
+): FAQPageSchema {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  }
 }

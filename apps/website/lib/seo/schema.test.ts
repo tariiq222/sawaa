@@ -3,6 +3,9 @@ import {
   generateMedicalBusinessSchema,
   generateBookActionSchema,
   generateOrganizationSchema,
+  generateBreadcrumbListSchema,
+  generateLocalBusinessSchema,
+  generateFAQPageSchema,
 } from './schema';
 
 describe('JSON-LD schema generators (lib/seo/schema.ts)', () => {
@@ -173,4 +176,84 @@ describe('JSON-LD schema generators (lib/seo/schema.ts)', () => {
       expect(JSON.parse(out).address.streetAddress).toBe('A < B </script>');
     });
   });
-});
+
+  describe('generateBreadcrumbListSchema', () => {
+    it('produces a BreadcrumbList with sequential position numbers', () => {
+      const out = generateBreadcrumbListSchema([
+        { name: 'الرئيسية', url: 'https://sawaa.sa' },
+        { name: 'المعالجون', url: 'https://sawaa.sa/therapists' },
+        { name: 'د. أحمد', url: 'https://sawaa.sa/therapists/ahmed' },
+      ])
+      expect(out['@type']).toBe('BreadcrumbList')
+      expect(out.itemListElement).toHaveLength(3)
+      expect(out.itemListElement[0]).toEqual({
+        '@type': 'ListItem',
+        position: 1,
+        name: 'الرئيسية',
+        item: 'https://sawaa.sa',
+      })
+      expect(out.itemListElement[2].position).toBe(3)
+    })
+
+    it('handles a single-item trail', () => {
+      const out = generateBreadcrumbListSchema([
+        { name: 'Home', url: 'https://sawaa.sa' },
+      ])
+      expect(out.itemListElement).toHaveLength(1)
+      expect(out.itemListElement[0].position).toBe(1)
+    })
+  })
+
+  describe('generateLocalBusinessSchema', () => {
+    it('returns the schema with @id and required address fields', () => {
+      const out = generateLocalBusinessSchema({
+        '@context': 'https://schema.org',
+        '@type': 'LocalBusiness',
+        '@id': 'https://sawaa.sa#org',
+        name: 'مركز سواء',
+        url: 'https://sawaa.sa',
+        telephone: '+966-11-000-0000',
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: '123 King Fahd Rd',
+          addressLocality: 'Riyadh',
+          addressCountry: 'SA',
+        },
+        geo: { '@type': 'GeoCoordinates', latitude: 24.7136, longitude: 46.6753 },
+        openingHoursSpecification: [
+          { '@type': 'OpeningHoursSpecification', dayOfWeek: 'Sunday', opens: '09:00', closes: '21:00' },
+        ],
+      })
+      expect(out['@type']).toBe('LocalBusiness')
+      expect(out['@id']).toBe('https://sawaa.sa#org')
+      expect(out.address['@type']).toBe('PostalAddress')
+      expect(out.geo?.latitude).toBe(24.7136)
+      expect(out.openingHoursSpecification?.[0].opens).toBe('09:00')
+    })
+  })
+
+  describe('generateFAQPageSchema', () => {
+    it('maps each Q/A pair into a Question with acceptedAnswer.Answer', () => {
+      const out = generateFAQPageSchema([
+        {
+          question: 'ما هي ساعات العمل؟',
+          answer: 'من الأحد للخميس 9ص - 9م',
+        },
+        {
+          question: 'هل تقدمون استشارات عن بعد؟',
+          answer: 'نعم، عبر Zoom',
+        },
+      ])
+      expect(out['@type']).toBe('FAQPage')
+      expect(out.mainEntity).toHaveLength(2)
+      expect(out.mainEntity[0]).toEqual({
+        '@type': 'Question',
+        name: 'ما هي ساعات العمل؟',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'من الأحد للخميس 9ص - 9م',
+        },
+      })
+    })
+  })
+})

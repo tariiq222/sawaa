@@ -4,7 +4,11 @@ import { QueryProvider } from '@/providers/query-provider';
 import { getLocale, localeDir } from '@/features/locale/locale';
 import { LocaleProvider } from '@/features/locale/locale-provider';
 import './globals.css';
-import { generateMedicalBusinessSchema } from '@/lib/seo/schema';
+import {
+  generateMedicalBusinessSchema,
+  generateLocalBusinessSchema,
+  generateLocalBusinessJsonLd,
+} from '@/lib/seo/schema';
 
 const SITE_URL = process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://sawaa.sa';
 
@@ -42,6 +46,36 @@ export default async function RootLayout({
     medicalSpecialty: 'MentalHealth',
   });
 
+  // LocalBusiness gives Google the data needed for the local pack and
+  // opening-hours rich results. The address + geo come from the branding
+  // contact info; fall back to a stable placeholder until operations
+  // adds real values via the branding admin.
+  const localBusinessSchema = generateLocalBusinessSchema({
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    '@id': `${SITE_URL}#organization`,
+    name: branding.organizationNameAr,
+    description: branding.productTagline ?? undefined,
+    url: SITE_URL,
+    telephone: branding.contactPhone ?? undefined,
+    email: branding.contactEmail ?? undefined,
+    image: branding.logoUrl ?? undefined,
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Riyadh',
+      addressRegion: 'Riyadh Province',
+      addressCountry: 'SA',
+    },
+    openingHoursSpecification: [
+      {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'],
+        opens: '09:00',
+        closes: '21:00',
+      },
+    ],
+  });
+
   return (
     <html lang={locale} dir={dir}>
       <head>
@@ -54,6 +88,10 @@ export default async function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: medicalBusinessSchema }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: generateLocalBusinessJsonLd(localBusinessSchema) }}
         />
       </head>
       <body>
