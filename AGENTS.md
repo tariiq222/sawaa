@@ -68,7 +68,17 @@ pnpm --filter=dashboard run e2e -- path/to/spec.ts
 
 Sawa serves exactly one counseling center. There is no organization switching and no subscription billing, and Prisma queries carry no `organizationId` filters.
 
-A few inert stubs intentionally survive in the frontend as dead code: the dashboard's `useTerminology` hook (`hooks/use-terminology.ts`) and the mobile app's `memberships`/`tenant-switch` services. They are inert — the backend endpoints they target do not exist, the membership query is `enabled: false`, and `switchOrganization()` throws by design. Do not wire them up; treat them as removed.
+**Dead scaffolding status (verified 2026-07-29):**
+
+| File | Status | Action |
+|------|--------|--------|
+| `apps/dashboard/hooks/use-terminology.ts` | **Deleted 2026-06-22** | None — already removed. Do not reintroduce. |
+| `apps/mobile/hooks/useTerminology.ts` | **Inert** (calls dead endpoint, falls back to provided label) | Treat as removed. Do not wire to new endpoints. |
+| `apps/mobile/services/organization.ts` | **Empty export** (dead) | Treat as removed. |
+| `apps/mobile/components/features/settings/OrganizationSwitcherSection.tsx` | **Returns null** (no-op) | Treat as removed. |
+| `apps/mobile/hooks/useTerminology.test.ts` | Tests pass against fallback only | Treat as removed. |
+
+Do not wire any of the above to new endpoints. See [apps/dashboard/CLAUDE.md](apps/dashboard/CLAUDE.md) and [apps/mobile/CLAUDE.md](apps/mobile/CLAUDE.md) for per-app details.
 
 Provider credentials (Zoom, SMS, Email, Moyasar) are encrypted with AES-256-GCM using a static `DEFAULT_ORG_ID` constant as AAD — see [apps/backend/src/common/constants.ts](apps/backend/src/common/constants.ts).
 
@@ -136,8 +146,12 @@ When changing backend endpoints or DTOs:
 
 ## Per-app conventions
 
-Each app has its own AGENTS.md with stack-specific rules:
-- [apps/backend/AGENTS.md](apps/backend/AGENTS.md) — domain clusters, handler pattern, prisma split-schema
-- [apps/dashboard/AGENTS.md](apps/dashboard/AGENTS.md)
-- [apps/mobile/AGENTS.md](apps/mobile/AGENTS.md)
-- [packages/ui/AGENTS.md](packages/ui/AGENTS.md)
+Each app has its own **CLAUDE.md** (this repo does NOT use per-app AGENTS.md) with stack-specific rules:
+- [apps/backend/CLAUDE.md](apps/backend/CLAUDE.md) — domain clusters, handler pattern, prisma split-schema
+- [apps/dashboard/CLAUDE.md](apps/dashboard/CLAUDE.md) — Layer rules, i18n, design tokens, file limits
+- [apps/mobile/CLAUDE.md](apps/mobile/CLAUDE.md) — Expo Router, state separation, Liquid Glass
+- [apps/website/CLAUDE.md](apps/website/CLAUDE.md)
+- [packages/shared/CLAUDE.md](packages/shared/CLAUDE.md)
+- [packages/api-client/CLAUDE.md](packages/api-client/CLAUDE.md)
+- [packages/ui/CLAUDE.md](packages/ui/CLAUDE.md) — primitives + carve-outs list
+- [packages/test-helpers-pw/CLAUDE.md](packages/test-helpers-pw/CLAUDE.md)

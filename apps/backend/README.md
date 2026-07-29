@@ -2,15 +2,15 @@
 
 NestJS 11 modular monolith — **Domain Clusters + Vertical Slices** (see [CLAUDE.md](./CLAUDE.md)).
 
-- Architecture spec: [`docs/superpowers/specs/2026-04-11-backend-architecture-design.md`](../../docs/superpowers/specs/2026-04-11-backend-architecture-design.md)
-
 ## Quick start
 
 ```bash
 cp .env.example .env
 npm install
-npm run dev   # http://localhost:5100 (PORT=5100)
+npm run dev   # http://localhost:5200 (PORT=5200 in dev)
 ```
+
+> **Note:** The Docker image uses `PORT=5100` for the internal container port. Local development runs on `5200` (matching `.env.example` and `package.json`).
 
 ## Layout
 
@@ -55,4 +55,4 @@ modules/identity/
     ...
 ```
 
-No shared `controllers/`, `services/`, or `repositories/` folders. Controllers live separately under `src/api/<audience>/`. See [CLAUDE.md](./CLAUDE.md) and `docs/superpowers/specs/2026-04-11-backend-architecture-design.md`.
+No shared `controllers/`, `services/`, or `repositories/` folders. Controllers live separately under `src/api/<audience>/`. See [CLAUDE.md](./CLAUDE.md) for the full architectural specification.
