@@ -46,17 +46,17 @@ export default defineConfig({
         "tailwind.config.*",
         "postcss.config.*",
       ],
-      // Ratchet: raised after additional hook / api / schema coverage
-      // (provider-config hooks: moyasar/zoom/sms/email, ratings,
-      // top-performers, discount-reasons CRUD, and the 6 content schemas:
-      // blog-posts / faq / feature-cards / hero / section-intros /
-      // support-groups). Set ~1.5 points below measured coverage to lock in
-      // gains without flaking under concurrent runs.
+      // Ratchet: raised after Phase 1 (useServices split into 3 files,
+      // useEmployeeServiceMutations split, useDashboardHome rewritten to
+      // single stats endpoint, ~10 new handler tests) and Phase 2. Measured
+      // after Phase 1: stmts 33.96 / branches 24.66 / funcs 31.76 / lines 34.44.
+      // Set ~1.5 points below current to lock in gains without flaking.
+      // Next ratchet: revisit after Phase 3 e2e + new unit tests.
       thresholds: {
-        statements: 31,
-        branches: 21,
-        functions: 30,
-        lines: 32,
+        statements: 33,
+        branches: 24,
+        functions: 31,
+        lines: 34,
       },
       reporter: ["text", "lcov", "html"],
     },
