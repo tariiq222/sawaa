@@ -24,21 +24,42 @@ const STATIC_ROUTES: Array<{
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
-  const entries: MetadataRoute.Sitemap = STATIC_ROUTES.map(({ path, changeFrequency, priority }) => ({
-    url: `${BASE_URL}${path}`,
-    lastModified: now,
-    changeFrequency,
-    priority,
-  }));
+  const entries: MetadataRoute.Sitemap = STATIC_ROUTES.map(({ path, changeFrequency, priority }) => {
+    const url = `${BASE_URL}${path}`;
+    return {
+      url,
+      lastModified: now,
+      changeFrequency,
+      priority,
+      // Bilingual site serves the same URL to both locales via cookie;
+      // declaring hreflang here is a strong signal for Google to surface
+      // the right language version in search results.
+      alternates: {
+        languages: {
+          'ar-SA': url,
+          en: url,
+          'x-default': url,
+        },
+      },
+    };
+  });
 
   const therapists = await listPublicEmployees().catch(() => []);
   for (const therapist of therapists) {
     if (!therapist.slug) continue;
+    const url = `${BASE_URL}/therapists/${encodeURIComponent(therapist.slug)}`;
     entries.push({
-      url: `${BASE_URL}/therapists/${encodeURIComponent(therapist.slug)}`,
+      url,
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.7,
+      alternates: {
+        languages: {
+          'ar-SA': url,
+          en: url,
+          'x-default': url,
+        },
+      },
     });
   }
 

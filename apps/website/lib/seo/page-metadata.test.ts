@@ -53,7 +53,9 @@ describe('buildPageMetadata (lib/seo/page-metadata.ts)', () => {
       titleAr: 'تواصل',
       descriptionAr: 'تواصل معنا',
     });
-    expect(m.alternates).toEqual({ canonical: 'https://example.com/contact' });
+    expect(m.alternates).toMatchObject({
+      canonical: 'https://example.com/contact',
+    });
     expect(m.openGraph).toMatchObject({
       type: 'website',
       url: 'https://example.com/contact',
@@ -73,8 +75,31 @@ describe('buildPageMetadata (lib/seo/page-metadata.ts)', () => {
       titleAr: 't',
       descriptionAr: 'd',
     });
-    expect(m.alternates).toEqual({ canonical: 'https://sawaa.sa/therapists' });
+    expect(m.alternates).toMatchObject({
+      canonical: 'https://sawaa.sa/therapists',
+    });
     expect(m.openGraph?.url).toBe('https://sawaa.sa/therapists');
+  });
+
+  it('emits bilingual hreflang links (ar-SA + en + x-default)', async () => {
+    process.env.NEXT_PUBLIC_WEBSITE_URL = 'https://example.com';
+    vi.resetModules();
+    const { buildPageMetadata } = await import('./page-metadata');
+    const m = buildPageMetadata({
+      branding,
+      path: '/therapists',
+      titleAr: 'المعالجون',
+      descriptionAr: '...',
+    });
+    // alternates.languages must point all three locales to the same
+    // URL (single-URL bilingual site per Google's hreflang guidance).
+    expect(m.alternates).toMatchObject({
+      languages: {
+        'ar-SA': 'https://example.com/therapists',
+        en: 'https://example.com/therapists',
+        'x-default': 'https://example.com/therapists',
+      },
+    });
   });
 
   it('produces a Twitter card with summary_large_image and the same title/description', async () => {
