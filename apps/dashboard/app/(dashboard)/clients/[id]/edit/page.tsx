@@ -17,8 +17,17 @@ import { useClient, useClientMutations } from "@/hooks/use-clients"
 import { showApiError } from "@/lib/mutation-helpers"
 import { editClientSchema, type EditClientFormData, splitFullName, composeFullName } from "@/lib/schemas/client.schema"
 import { ClientFormFields } from "@/components/features/clients/client-form"
+import { PermissionGuard } from "@/components/features/permission-guard"
 
 export default function EditClientPage() {
+  return (
+    <PermissionGuard module="client" action="update">
+      <EditClientPageInner />
+    </PermissionGuard>
+  )
+}
+
+function EditClientPageInner() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const { t } = useLocale()

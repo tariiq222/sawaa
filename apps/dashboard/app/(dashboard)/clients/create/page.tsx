@@ -15,8 +15,17 @@ import { useLocale } from "@/components/locale-provider"
 import { showApiError } from "@/lib/mutation-helpers"
 import { createClientSchema, type CreateClientFormData, splitFullName } from "@/lib/schemas/client.schema"
 import { ClientFormFields } from "@/components/features/clients/client-form"
+import { PermissionGuard } from "@/components/features/permission-guard"
 
 export default function CreateClientPage() {
+  return (
+    <PermissionGuard module="client" action="create">
+      <CreateClientPageInner />
+    </PermissionGuard>
+  )
+}
+
+function CreateClientPageInner() {
   const router = useRouter()
   const { t } = useLocale()
 
