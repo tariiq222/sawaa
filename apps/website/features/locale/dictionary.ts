@@ -455,6 +455,18 @@ export const dictionary = {
     'legal.privacy.contact.title': 'التواصل بشأن الخصوصية',
     'legal.privacy.contact.body':
       'لأي استفسار أو طلب يتعلق بخصوصية بياناتك أو لممارسة حقوقك، تواصل مع مسؤول حماية البيانات لدى مركز سواء عبر البريد الإلكتروني support@sawaa.sa أو هاتف 0558446605.',
+    'legal.privacy.complaint.title': 'الشكاوى إلى الجهة التنظيمية',
+    'legal.privacy.complaint.body':
+      'إذا لم تتم معالجة طلبك خلال المدة النظامية، يحق لك تقديم شكوى إلى الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا) عبر موقعها الرسمي أو عبر القنوات المعتمدة لديها، عملاً بأحكام نظام حماية البيانات الشخصية ولوائحه التنفيذية في المملكة العربية السعودية.',
+    'legal.privacy.cookies.title': 'ملفات تعريف الارتباط (Cookies)',
+    'legal.privacy.cookies.body':
+      'يستخدم الموقع ملفات تعريف الارتباط الضرورية لتشغيل الجلسات وحفظ تفضيلات اللغة. لا تُستخدم ملفات تعريف ارتباط تحليلية أو إعلانية إلا بعد الحصول على موافقتك الصريحة عبر شريط الموافقة على ملفات الارتباط. يمكنك تعديل تفضيلاتك أو سحب موافقتك في أي وقت من خلال إعدادات ملفات تعريف الارتباط في أسفل الموقع.',
+    'legal.privacy.minors.title': 'بيانات القاصرين',
+    'legal.privacy.minors.body':
+      'لا يجمع الموقع بيانات شخصية من أشخاص تقل أعمارهم عن ثمانية عشر (18) عاماً إلا بإشراف وموافقة ولي الأمر، ووفقاً للوائح المعمول بها في المملكة. إذا تبيّن لنا جمع بيانات قاصر دون موافقة ولي الأمر فسنعمل على حذفها فور التحقق.',
+    'legal.privacy.changes.title': 'التغييرات على سياسة الخصوصية',
+    'legal.privacy.changes.body':
+      'قد نُحدّث هذه السياسة من وقت لآخر لتعكس التغييرات في ممارساتنا أو في الأنظمة المعمول بها. سنُعلمك بالتغييرات الجوهرية عبر الموقع أو البريد الإلكتروني عند الاقتضاء. تاريخ آخر تحديث مذكور في أعلى الصفحة.',
     'legal.terms.title': 'الشروط والأحكام',
     'legal.terms.intro':
       'تحكم هذه الشروط والأحكام استخدامك لموقع مركز سواء للاستشارات الأسرية وخدماته. باستخدامك الموقع أو حجز أي خدمة فإنك تقرّ بموافقتك على هذه الشروط. يُرجى قراءتها بعناية قبل استخدام الخدمة.',
@@ -946,6 +958,18 @@ export const dictionary = {
     'legal.terms.law.title': 'Governing Law & Dispute Resolution',
     'legal.terms.law.body':
       'These terms are governed by and construed in accordance with the laws in force in the Kingdom of Saudi Arabia, and the competent judicial authorities in the Kingdom shall have jurisdiction over any dispute arising from use of the site or services.',
+    'legal.privacy.complaint.title': 'Complaints to the Regulator',
+    'legal.privacy.complaint.body':
+      'If your request is not handled within the statutory period, you have the right to file a complaint with the Saudi Data and AI Authority (SDAIA) through its official website or the approved channels, in accordance with the provisions of the Personal Data Protection Law and its implementing regulations in the Kingdom of Saudi Arabia.',
+    'legal.privacy.cookies.title': 'Cookies',
+    'legal.privacy.cookies.body':
+      'The site uses strictly necessary cookies for sessions and language preferences. Analytics or advertising cookies are only set after your explicit consent via the cookie consent banner. You can change your preferences or withdraw consent at any time from the cookie settings link at the bottom of the site.',
+    'legal.privacy.minors.title': 'Minors\u2019 Data',
+    'legal.privacy.minors.body':
+      'The site does not knowingly collect personal data from anyone under eighteen (18) years of age except under the supervision and consent of a parent or guardian, in accordance with applicable regulations in the Kingdom. If we discover we have collected data from a minor without verifiable parental consent, we will delete it as soon as we verify the request.',
+    'legal.privacy.changes.title': 'Changes to This Privacy Policy',
+    'legal.privacy.changes.body':
+      'We may update this policy from time to time to reflect changes in our practices or in the regulations in force. We will notify you of material changes via the site or email where appropriate. The last-updated date is shown at the top of the page.',
   },
 } satisfies Record<Locale, Record<string, string>>;
 
