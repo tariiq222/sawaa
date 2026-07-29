@@ -1,0 +1,38 @@
+# Dependabot — automated dependency updates for pnpm workspaces.
+#
+# Per CLAUDE.md: pnpm overrides in package.json handle known CVEs manually,
+# but Dependabot adds a second, continuous signal — PRs land weekly so we
+# notice transitive bumps without re-running pnpm audit by hand.
+
+version: 2
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    # Group patch + minor bumps so PR volume stays manageable.
+    groups:
+      patch-and-minor:
+        update-types: ["minor", "patch"]
+      major-versions:
+        update-types: ["major"]
+    # PR limits keep the queue reviewable.
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    # Standard ignore rules — same as Renovate defaults.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+        # Until v2 lands we don't want surprise majors.
+    # Pull-request settings
+    pull-request-body:
+      notes: |
+        Triggered by Dependabot. Review the changelog for breaking changes.
+        CI will run the standard backend + dashboard + website checks.
