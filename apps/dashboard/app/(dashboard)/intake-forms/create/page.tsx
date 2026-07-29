@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { IntakeFormPage } from "@/components/features/intake-forms/intake-form-page"
 import { useIntakeFormMutations } from "@/hooks/use-intake-forms"
 import { useLocale } from "@/components/locale-provider"
+import { showApiError } from "@/lib/mutation-helpers"
 import type { IntakeFormDraft } from "@/lib/types/intake-form"
 
 export default function CreateIntakeFormPage() {
@@ -43,8 +44,8 @@ export default function CreateIntakeFormPage() {
 
       toast.success(t("intakeForms.createSuccess"))
       router.push("/intake-forms")
-    } catch {
-      toast.error(t("intakeForms.createError"))
+    } catch (err) {
+      showApiError(err, { fallback: t("intakeForms.createError"), t })
     }
   }
 
