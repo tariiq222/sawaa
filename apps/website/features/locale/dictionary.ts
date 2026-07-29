@@ -9,6 +9,7 @@ export const dictionary = {
     'nav.burnout': 'اختبار الإرهاق',
     'nav.account': 'حسابي',
     'nav.logout': 'تسجيل الخروج',
+    'nav.about': 'من نحن',
     'contact.title': 'تواصل معنا',
     'contact.description': 'لأي استفسار، املأ النموذج أدناه وسنعود إليك قريباً.',
     'contact.tag': 'تواصل',
@@ -496,6 +497,11 @@ export const dictionary = {
     'consent.acceptAll': 'اقبل الكل',
     'consent.essentialOnly': 'الأساسية فقط',
     'consent.decline': 'أرفض',
+    // Floating WhatsApp button (2.13)
+    'whatsapp.greeting': 'مرحبًا، كيف يمكننا مساعدتك؟',
+    'whatsapp.body': 'تواصل معنا عبر واتساب للإجابة على استفساراتك أو لحجز جلسة.',
+    'whatsapp.cta': 'محادثة عبر واتساب',
+    'whatsapp.dismiss': 'إخفاء الزر',
   },
   en: {
     'nav.home': 'Home',
@@ -505,6 +511,7 @@ export const dictionary = {
     'nav.burnout': 'Burnout Test',
     'nav.account': 'My Account',
     'nav.logout': 'Sign Out',
+    'nav.about': 'About',
     'contact.title': 'Contact Us',
     'contact.description': 'For any inquiry, fill the form below and we will get back to you.',
     'contact.tag': 'Contact',
@@ -992,6 +999,11 @@ export const dictionary = {
     'consent.acceptAll': 'Accept all',
     'consent.essentialOnly': 'Essential only',
     'consent.decline': 'Decline',
+    // Floating WhatsApp button (2.13)
+    'whatsapp.greeting': 'Hi, how can we help?',
+    'whatsapp.body': 'Chat with us on WhatsApp to get answers or book a session.',
+    'whatsapp.cta': 'Chat on WhatsApp',
+    'whatsapp.dismiss': 'Dismiss',
   },
 } satisfies Record<Locale, Record<string, string>>;
 

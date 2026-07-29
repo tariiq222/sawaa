@@ -13,6 +13,7 @@ const navLinks = [
   { key: 'nav.therapists', href: '/therapists' },
   { key: 'nav.supportGroups', href: '/support-groups' },
   { key: 'nav.burnout', href: '/burnout-test' },
+  { key: 'nav.about', href: '/about' },
   { key: 'nav.contact', href: '/contact' },
 ] as const;
 

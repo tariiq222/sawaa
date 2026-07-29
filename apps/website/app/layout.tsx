@@ -5,6 +5,7 @@ import { getLocale, localeDir } from '@/features/locale/locale';
 import { LocaleProvider } from '@/features/locale/locale-provider';
 import { CookieConsentBanner } from '@/components/consent/cookie-consent-banner';
 import { AnalyticsLoader } from '@/components/analytics/analytics-loader';
+import { FloatingWhatsApp } from '@/components/cta/floating-whatsapp';
 import './globals.css';
 import {
   generateMedicalBusinessSchema,
@@ -127,6 +128,9 @@ export default async function RootLayout({
               {children}
               <CookieConsentBanner />
               <AnalyticsLoader />
+              <FloatingWhatsApp
+                phone={branding.contactPhone ?? ''}
+              />
             </BrandingProvider>
           </LocaleProvider>
         </QueryProvider>
