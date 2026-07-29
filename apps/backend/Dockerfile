@@ -12,6 +12,18 @@
 #   only stub package.json files are present (no source). typescript ends up missing.
 #   The deps stage still provides a cached download layer; shared-build installs
 #   with full source present so devDeps (typescript) are correctly resolved.
+#
+# Migration path to pnpm deploy (Phase 3+):
+#   `pnpm deploy --filter=backend` produces a self-contained directory at
+#   apps/backend/.deploy with prod deps + workspace packages baked in. That
+#   would let us collapse stages 1-3 into a single deploy step + a single
+#   COPY in stage 4. We don't use it yet because the symlink hack below
+#   has been reliable in production for 18+ months and the migration
+#   requires integration testing we can't do from this environment.
+#   TODOs:
+#     - Replace ln -sf symlink lines with `pnpm deploy` output
+#     - Drop the manual prisma generate because pnpm deploy handles it
+#     - Delete the duplicate pnpm install in app-build (lines 92)
 
 # ── Stage 1: deps ────────────────────────────────────────────────────────────
 FROM node:20-bookworm-slim AS deps
