@@ -257,6 +257,12 @@
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
     "logoutConfirm": "Are you sure you want to logout?",
+    "edit": "Edit",
+    "signOut": "Sign out",
+    "crisisSupport": {
+      "title": "Crisis support · 24/7",
+      "subtitle": "Instant expert call"
+    },
     "paymentsComingSoon": "Payments feature will be available soon.",
     "notificationsComingSoon": "Notification settings will be available soon.",
     "languageComingSoon": "Language switching will be available soon.",
@@ -264,6 +270,16 @@
     "faqComingSoon": "FAQ will be available soon.",
     "privacyComingSoon": "Privacy Policy will be available soon.",
     "termsComingSoon": "Terms of Service will be available soon."
+  },
+  "chat": {
+    "headerTitle": "Sawaa",
+    "headerSubtitle": "AI-powered",
+    "inputPlaceholder": "Type a message…"
+  },
+  "suspended": {
+    "title": "Account Suspended",
+    "message": "Your account has been temporarily suspended. Please contact administration for inquiries.",
+    "contactAdmin": "Contact Administration"
   },
   "client": {
     "home": "Home",

@@ -98,11 +98,11 @@ export default function ChatTabScreen() {
                 resizeMode="contain"
               />
               <Text style={[styles.headerTitle, { fontFamily: f700 }]}>
-                {dir.isRTL ? 'سَواء' : 'Sawaa'}
+                {t('chat.headerTitle')}
               </Text>
             </View>
             <Text style={[styles.headerSub, { fontFamily: f400, fontWeight: '400' }]}>
-              {dir.isRTL ? 'دائمًا متاح · سرّي تمامًا' : 'Always here · Private'}
+              {t('chat.headerSubtitle')}
             </Text>
           </View>
           <View style={styles.headerSide}>
@@ -195,7 +195,7 @@ export default function ChatTabScreen() {
               <TextInput
                 value={text}
                 onChangeText={setText}
-                placeholder={t('chatbot.placeholder', dir.isRTL ? 'اكتبي رسالتكِ…' : 'Type a message…')}
+                placeholder={t('chat.inputPlaceholder')}
                 placeholderTextColor={sawaaColors.ink[400]}
                 style={[
                   styles.input,
