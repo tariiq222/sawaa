@@ -9,10 +9,10 @@ import { useLocale } from "@/components/locale-provider"
 
 export default function RatingsPage() {
   return (
-    <PermissionGuard module="employee" action="read">
+    <PermissionGuard module="booking" action="read">
       <RatingsPageInner />
     </PermissionGuard>
-  )
+  );
 }
 
 function RatingsPageInner() {
