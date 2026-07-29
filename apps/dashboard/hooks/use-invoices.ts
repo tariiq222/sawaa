@@ -39,6 +39,7 @@ export function useInvoices() {
     meta: data?.meta ?? null,
     isLoading,
     error: error?.message ?? null,
+    refetch: () => { void query.refetch() },
     page,
     setPage,
     search,

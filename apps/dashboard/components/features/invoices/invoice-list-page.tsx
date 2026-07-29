@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/features/page-header"
 import { Breadcrumbs } from "@/components/features/breadcrumbs"
 import { FilterBar } from "@/components/features/filter-bar"
 import { DataTable } from "@/components/features/data-table"
+import { ErrorBanner } from "@/components/features/error-banner"
 import { getInvoiceColumns } from "@/components/features/invoices/invoice-columns"
 import { Skeleton } from "@sawaa/ui"
 import { useInvoices } from "@/hooks/use-invoices"
@@ -12,7 +13,7 @@ import { useLocale } from "@/components/locale-provider"
 
 export function InvoiceListPage() {
   const { t } = useLocale()
-  const { invoices, meta, isLoading, error: _error, search, setSearch, page, setPage } = useInvoices()
+  const { invoices, meta, isLoading, error, refetch, search, setSearch, page, setPage } = useInvoices()
 
   const hasFilters = search !== ""
   const resetFilters = () => {
@@ -40,7 +41,13 @@ export function InvoiceListPage() {
         onReset={resetFilters}
       />
 
-      {isLoading ? (
+      {error ? (
+        <ErrorBanner
+          message={error}
+          onRetry={refetch}
+          retryLabel={t("common.retry")}
+        />
+      ) : isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => <Skeleton key={`row-${i}`} className="h-12 rounded-lg" />)}
         </div>

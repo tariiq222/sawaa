@@ -16,9 +16,16 @@ vi.mock("@/hooks/use-invoices", () => ({
     invoices: [],
     isLoading: false,
     error: null,
+    refetch: vi.fn(),
     search: "",
     setSearch: vi.fn(),
   }),
+}))
+
+vi.mock("@/components/features/error-banner", () => ({
+  ErrorBanner: ({ message }: { message: string }) => (
+    <div data-testid="error-banner">{message}</div>
+  ),
 }))
 
 import { InvoiceListPage } from "@/components/features/invoices/invoice-list-page"
