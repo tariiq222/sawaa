@@ -33276,56 +33276,6 @@
         ]
       }
     },
-    "/api/v1/public/sms/webhooks/{provider}/{organizationId}": {
-      "post": {
-        "deprecated": true,
-        "operationId": "PublicSmsWebhooksController_handleLegacy_v1",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "provider",
-            "required": true,
-            "schema": {
-              "enum": [
-                "UNIFONIC",
-                "TAQNYAT"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "description": "Deprecated legacy path param; must match the default organization and is ignored internally",
-            "in": "path",
-            "name": "organizationId",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "received": {
-                      "type": "boolean"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": ""
-          }
-        },
-        "summary": "Inbound SMS delivery-receipt webhook (legacy path)",
-        "tags": [
-          "Public / SMS Webhooks"
-        ]
-      }
-    },
     "/api/v1/public/testimonials": {
       "get": {
         "operationId": "PublicTestimonialsController_list_v1",
