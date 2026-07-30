@@ -83,7 +83,7 @@ export function buildCancelProgramSchema(t: (k: string) => string) {
 }
 export type CancelProgramFormValues = z.infer<ReturnType<typeof buildCancelProgramSchema>>;
 
-export function buildEnrollInProgramSchema(t: (k: string) => string) {
+export function buildEnrollInProgramSchema(_t: (k: string) => string) {
   return z.object({
     clientId: z.string().uuid(),
   });
